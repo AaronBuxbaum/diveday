@@ -28,6 +28,7 @@ function template(overrides: Partial<CourseTemplateSource> = {}): CourseTemplate
       excludes: ["Park fees"],
       scheduleDays: [{ title: "Training", items: ["Skills"] }],
       faqs: [{ question: "Is gear included?", answer: "Yes." }],
+      learningMaterials: [],
       isIntroCourse: false,
     },
     ...overrides,

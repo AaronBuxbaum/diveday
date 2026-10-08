@@ -95,6 +95,67 @@ describe("CourseHero price currency (task 35)", () => {
   });
 });
 
+describe("CourseHero private course", () => {
+  it("says a private course is available, and links to asking the shop", () => {
+    render(
+      <CourseHero
+        course={course({ privatePriceCents: 90_000 })}
+        totalCents={48_000}
+        currency="usd"
+        locale="en-US"
+        t={t}
+        inquiryHref="#get-in-touch"
+      />,
+    );
+
+    expect(screen.getByText(/Private course available/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ask the shop" })).toHaveAttribute(
+      "href",
+      "#get-in-touch",
+    );
+    // Per diver or per group is the shop's to explain; the price never shows.
+    expect(screen.queryByText(/\$900/)).not.toBeInTheDocument();
+  });
+
+  it("names no door when the shop has no inbox", () => {
+    render(
+      <CourseHero
+        course={course({ privatePriceCents: 90_000 })}
+        totalCents={null}
+        currency="usd"
+        locale="en-US"
+        t={t}
+      />,
+    );
+
+    expect(screen.getByText("Private course available")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Ask the shop" })).not.toBeInTheDocument();
+  });
+
+  it("calls a private intro a session, since a taster is not a course", () => {
+    render(
+      <CourseHero
+        course={course({ privatePriceCents: 30_000, isIntroCourse: true })}
+        totalCents={null}
+        currency="usd"
+        locale="en-US"
+        t={t}
+      />,
+    );
+
+    expect(screen.getByText("Private session available")).toBeInTheDocument();
+    expect(screen.queryByText("Private course available")).not.toBeInTheDocument();
+  });
+
+  it("says nothing when the course has no private price", () => {
+    render(
+      <CourseHero course={course()} totalCents={48_000} currency="usd" locale="en-US" t={t} />,
+    );
+
+    expect(screen.queryByText(/Private course/)).not.toBeInTheDocument();
+  });
+});
+
 /**
  * A caption belongs to the photo it was written for, and there is no longer a
  * shape in which it can slide onto a neighbour: the gallery is one object per

@@ -545,6 +545,9 @@
     "jumpDates": "Fechas",
     "jumpQuestions": "Preguntas",
     "jumpContact": "Contacto",
+    "privateAvailable": "Curso privado disponible",
+    "privateSessionAvailable": "Sesión privada disponible",
+    "privateAsk": "Pregunta al centro",
     "nextDate": "Próxima fecha",
     "nextOpenDate": "Próxima fecha disponible",
     "moreDates": "Más fechas",
@@ -734,6 +737,8 @@
     "metaTitle": "Tu preparación para la salida — DiveDay",
     "namelessFallback": "buceador",
     "allSetHeading": "Lo tienes todo listo",
+    "materialsDone": "El centro ya los ha marcado como terminados",
+    "materialsHeadingStarted": "Materiales del curso",
     "openingPayment": "Abriendo el pago…",
     "cancelledHeading": "Esta reserva se canceló",
     "unavailableHeading": "Este enlace de preparación no está disponible",
@@ -4059,6 +4064,8 @@
     "tripReminder": {
       "weekSubject": "Sales esta semana — {tripTitle}",
       "weekBody": "Un recordatorio rápido de que {tripTitle} con {shopName} sale esta semana.",
+      "weekSubjectCourse": "Tu curso empieza esta semana: {tripTitle}",
+      "weekBodyCourse": "Un recordatorio rápido de que {tripTitle} con {shopName} empieza esta semana.",
       "dockNote": "Preséntate en el muelle {dock} antes.",
       "daySubject": "Sales mañana — {tripTitle}",
       "dayOpenerFirstTimer": "Mañana buceas con {shopName}. Abajo tienes todo lo que necesitas para el día.",
@@ -4066,6 +4073,13 @@
       "arrival": "Procura estar en el muelle a las {time}, {dock} antes de zarpar.",
       "hotelPickupArrival": "Tu recogida de la mañana está programada a las {time} en {location}.",
       "hotelNotSet": "tu hotel"
+    },
+    "courseMaterials": {
+      "heading": "Antes de tu primer día"
+    },
+    "courseDays": {
+      "heading": "Los días de tu curso",
+      "day": "Día {number}: {date}, {time}"
     },
     "tripRecap": {
       "subject": "Tu inmersión con {shopName} — {tripTitle}",
@@ -4204,6 +4218,9 @@
       "body": "{shopName}: {tripTitle} sale {when} ({date}, {time}). Preséntate en el muelle {minutes} min antes.",
       "contact": "¿Preguntas? Escríbenos al {phone}.",
       "medicalReviewNote": "Revisa si una respuesta médica necesita el visto bueno de un médico",
+      "courseBody": "{shopName}: {tripTitle} empieza {when} ({date}, {time}).",
+      "materials": "Antes de tu primer día: {names}.",
+      "materialsWithLink": "Antes de tu primer día: {names} ({url}).",
       "recap": "{shopName}: ¡gracias por bucear {tripTitle}! Tu resumen: {recapUrl}",
       "waiver": "{shopName}: firma tu exención de buceo antes de bucear — {url}",
       "waiverForTrip": "{shopName}: firma tu exención de buceo para {tripTitle} — {url}",

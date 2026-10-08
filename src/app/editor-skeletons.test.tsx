@@ -46,7 +46,7 @@ function railClasses(): { nav: string; list: string } {
 /**
  * The width class each stub draws at, in order: the dive-site editor names one
  * per section (its labels wrap 3/3/2/2/1 at 390, which eleven uniform stubs
- * cannot), and the course editor's eight labels wrap as uniform `w-24` stubs do
+ * cannot), and the course editor's nine labels wrap as uniform `w-24` stubs do
  * at every swept width, so it names none.
  */
 const SITE_STUB_WIDTHS = () =>

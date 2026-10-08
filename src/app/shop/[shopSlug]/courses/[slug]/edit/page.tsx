@@ -38,7 +38,9 @@ import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 import { ConflictGuardedForm } from "./_components/ConflictGuardedForm";
 import { DayByDayEditor } from "./_components/DayByDayEditor";
+import { courseEditNotices } from "./_components/edit-notices";
 import { FaqEditor } from "./_components/FaqEditor";
+import { LearningMaterialsSection } from "./_components/LearningMaterialsSection";
 import { courseTemplateFieldLabels } from "./_components/template-field-labels";
 import { UnsavedChangesGuard, UnsavedChangesNote } from "./_components/UnsavedChangesGuard";
 import { pullCourseTemplateUpdatesAction, saveCourseContentAction } from "./actions";
@@ -135,36 +137,7 @@ export default async function EditCoursePage({
     "replace-template-copy",
   );
 
-  // No `shown`/`hidden` entry: the visibility form below the save bar neither
-  // redirects nor flashes a notice. The header's own line ("Live at …" /
-  // "Hidden from divers") and the button's own word both flip on the same
-  // render, so a banner repeating them would be a caption on a photograph of
-  // itself (the copy-restraint skill, deletion 1).
-  const messages: Record<string, string> = {
-    saved: t("courses.edit.noticeSaved"),
-    "template-updated": t("courses.edit.templateUpdates.updated"),
-    "template-replaced": t("courses.edit.templateUpdates.replaced"),
-  };
-  const errors: Record<string, string> = {
-    invalid: t("courses.edit.errorInvalid"),
-    // The one refusal this page's own controls can produce. It is reachable
-    // even with the visibility form unrendered, because the gate is the
-    // closure's and a stale tab still holds a posting form.
-    "not-authorized": t("courses.edit.errorNotAuthorized"),
-    // Specific, because "something was invalid" on an eight-section form is a
-    // scavenger hunt — and a half-filled pair is the one thing this editor
-    // refuses that the writer cannot see from the boxes.
-    "faq-incomplete": t("courses.edit.errorFaqIncomplete"),
-    images: t("courses.edit.errorImages"),
-    upload: t("courses.edit.errorUpload"),
-    "too-many-photos": t("courses.edit.errorTooManyPhotos", {
-      max: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
-    }),
-    // A half-edited depth marker. Refused at save rather than left to render
-    // its own braces to a diver — see saveCourseContentAction.
-    "depth-placeholder": t("courses.edit.errorDepthPlaceholder"),
-    "template-update-unavailable": t("courses.edit.templateUpdates.unavailable"),
-  };
+  const { messages, errors } = courseEditNotices(t);
   // `Object.hasOwn`, not `messages[notice]` / `errors[error]`: both params are
   // attacker-supplied, and a bare lookup walks the prototype —
   // `?notice=constructor` resolved to a *function*, which React then tried to
@@ -193,10 +166,13 @@ export default async function EditCoursePage({
     { id: "glance", label: t("courses.edit.glanceLegend") },
     { id: "enroll", label: t("courses.edit.enrollLegend") },
     { id: "fee-covers", label: t("courses.edit.feeCoversLegend") },
+    // `learningMaterialsJson`, like the day-by-day id: the save names it in
+    // `?field=` when the materials are refused, and `FieldErrorFocus` finds it.
+    { id: "learningMaterialsJson", label: t("courses.edit.materialsLegend") },
     { id: "scheduleDaysJson", label: t("courses.edit.dayByDayLegend") },
     { id: "faq", label: t("courses.edit.faqLegend") },
   ];
-  const [pitch, pricing, photos, glance, enroll, feeCovers, dayByDay, faq] = sections;
+  const [pitch, pricing, photos, glance, enroll, feeCovers, materials, dayByDay, faq] = sections;
 
   const templateFieldLabels = courseTemplateFieldLabels(t);
 
@@ -648,6 +624,13 @@ export default async function EditCoursePage({
                     </Field>
                   </FieldGrid>
                 </EditorSection>
+
+                <LearningMaterialsSection
+                  section={materials}
+                  stored={course.learningMaterials}
+                  storageKey={`course-draft:${course.id}`}
+                  t={t}
+                />
 
                 <EditorSection id={dayByDay.id} label={dayByDay.label} as="fieldset">
                   <DayByDayEditor

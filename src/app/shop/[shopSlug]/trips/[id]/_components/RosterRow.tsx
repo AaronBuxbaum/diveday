@@ -135,6 +135,8 @@ export function RosterRow({
     shopRentalItems,
     splitAsksDateOfBirth = false,
     certifyDefaultLevel = null,
+    courseHasMaterials = false,
+    courseMaterialsOpen = false,
   } = trip;
   const {
     readinessByBooking,
@@ -143,6 +145,7 @@ export function RosterRow({
     nitroxByBooking,
     notesByBooking,
     courseNextStepByBooking,
+    courseMaterialsDoneByPerson,
     sameNameHeldSeats,
     keepOpenBookingId,
     namesakeRefusedBookingId,
@@ -161,8 +164,21 @@ export function RosterRow({
     saveEmergencyContactAction,
     certifyDiverAction,
     saveCourseNextStepAction,
+    setCourseMaterialsDoneAction,
     updatePickupAction,
   } = actions;
+  // A course student whose learning materials nobody has marked done (ADR
+  // 20261008-course-learning-materials). Bookkeeping, never a gate: it is a
+  // quiet capsule on the name line and nothing in readiness reads it.
+  // "Done" is the person's, across every departure of the course
+  // (`courseMaterialsDoneByPerson`); this seat's own stamp is the fallback. The
+  // capsule stops once the session's last day has ended.
+  const materialsDone =
+    courseMaterialsDoneByPerson?.get(person.id) ??
+    (booking.courseMaterialsDoneAt
+      ? { at: booking.courseMaterialsDoneAt, byName: null as string | null }
+      : null);
+  const materialsPending = courseHasMaterials && courseMaterialsOpen && !materialsDone;
   const readiness = readinessByBooking.get(booking.id)?.readiness;
   const paymentStatus = readinessByBooking.get(booking.id)?.paymentStatus;
   const paymentSourceCode = paymentSourceLine(
@@ -396,6 +412,13 @@ export function RosterRow({
     depthShared ? (
       <Badge key="depth" tone="warning" size="sm">
         {t("trips.roster.depthChip")}
+      </Badge>
+    ) : null,
+    // Neutral, not warning: unfinished homework is the instructor's to chase,
+    // and it must never read as a reason this student cannot board.
+    materialsPending ? (
+      <Badge key="materials" tone="neutral" size="sm" toneMark={false}>
+        {t("trips.roster.materialsPending")}
       </Badge>
     ) : null,
   ]);
@@ -813,6 +836,22 @@ export function RosterRow({
         certifyDefaultLevel={certifyDefaultLevel}
         saveCourseNextStepAction={saveCourseNextStepAction}
         nextStep={courseNextStepByBooking?.get(booking.id) ?? ""}
+        setCourseMaterialsDoneAction={setCourseMaterialsDoneAction}
+        materialsDoneLine={
+          materialsDone
+            ? materialsDone.byName
+              ? t("trips.roster.materialsDoneLineBy", {
+                  date: formatShortDate(materialsDone.at, locale, shopTimezone),
+                  name: materialsDone.byName,
+                })
+              : t("trips.roster.materialsDoneLine", {
+                  date: formatShortDate(materialsDone.at, locale, shopTimezone),
+                })
+            : null
+        }
+        certifyMaterialsNote={
+          courseHasMaterials && !materialsDone ? t("trips.roster.certifyMaterialsNote") : null
+        }
       />
 
       {/* The waiver, when there is one to send. The control's own face is
@@ -908,6 +947,7 @@ export function RosterRow({
     certificationBlocked ||
     Boolean(certifyDiverAction) ||
     Boolean(saveCourseNextStepAction) ||
+    Boolean(setCourseMaterialsDoneAction) ||
     waiverControl.action !== null ||
     requiresPayment;
 
@@ -1262,6 +1302,9 @@ function SeatCourseControls({
   certifyDefaultLevel,
   saveCourseNextStepAction,
   nextStep,
+  setCourseMaterialsDoneAction,
+  materialsDoneLine,
+  certifyMaterialsNote = null,
 }: {
   bookingId: string;
   personId: string;
@@ -1270,9 +1313,47 @@ function SeatCourseControls({
   certifyDefaultLevel: CertificationLevel | null;
   saveCourseNextStepAction?: (formData: FormData) => void;
   nextStep: string;
+  setCourseMaterialsDoneAction?: (formData: FormData) => void;
+  /** "Materials done · Oct 7" once ticked; null while they are not. */
+  materialsDoneLine: string | null;
+  /**
+   * The neutral line beside Certify when the course has materials nobody has
+   * marked done. It informs and never blocks: the agency's own record is the
+   * evidence, and the instructor reads it there.
+   */
+  certifyMaterialsNote?: string | null;
 }) {
   return (
     <>
+      {/* The learning-materials tick (ADR 20261008-course-learning-materials):
+          one tap, and the same tap takes it back. The state is the name
+          line's capsule and the date line here, so the button only names
+          what it will do. */}
+      {setCourseMaterialsDoneAction ? (
+        <form
+          action={setCourseMaterialsDoneAction}
+          className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1"
+        >
+          <input type="hidden" name="bookingId" value={bookingId} />
+          <input type="hidden" name="done" value={materialsDoneLine ? "false" : "true"} />
+          {materialsDoneLine ? (
+            <span className="text-sm text-muted">{materialsDoneLine}</span>
+          ) : null}
+          <SubmitButton
+            pendingLabel={t("trips.roster.materialsSaving")}
+            className={
+              materialsDoneLine
+                ? buttonClass({ variant: "link", size: "sm", flush: true })
+                : buttonClass({ variant: "secondary", size: "sm" })
+            }
+          >
+            {materialsDoneLine
+              ? t("trips.roster.materialsMarkNotDone")
+              : t("trips.roster.materialsMarkDone")}
+          </SubmitButton>
+        </form>
+      ) : null}
+
       {/* The one path from "this shop taught and ran this course" to a card
           row (issues #717 and #975) — a per-student tap, collapsed by
           default. Present only on a course session's own roster. */}
@@ -1295,6 +1376,9 @@ function SeatCourseControls({
           >
             <input type="hidden" name="bookingId" value={bookingId} />
             <input type="hidden" name="personId" value={personId} />
+            {certifyMaterialsNote ? (
+              <p className="text-sm text-muted">{certifyMaterialsNote}</p>
+            ) : null}
             <Field
               label={t("trips.roster.certifyLevel")}
               description={t("trips.roster.certifyLevelHint")}

@@ -168,7 +168,10 @@ export function threadStatus(page: Page): Locator {
  *
  * Scoped through `data-thread-step` and `page.locator`: `e2e/fixtures.ts`
  * filters every `getBy*` to visible nodes, which a closed disclosure's
- * contents are not.
+ * contents are not. The `<details>` itself is filtered to visible here for
+ * the same reason the fixture filters: a hidden copy of the thread (a
+ * preserved `<Activity>` tree, outside `#main-content`) carries the same
+ * `data-thread-step`, and strict mode refuses the pair (PR #2260's CI).
  */
 export async function openThreadStep(page: Page, step: string): Promise<Locator> {
   // Direct children, not descendants, in BOTH steps below. Slice 7c put per-card
@@ -176,7 +179,7 @@ export async function openThreadStep(page: Page, step: string): Promise<Locator>
   // the cards within it, and Playwright refuses the ambiguity. The certification
   // step is the one that proves it: its body holds "Add your certification" and
   // "Add your nitrox card", so a descendant `summary` search finds three.
-  const details = page.locator(`[data-thread-step="${step}"] > details`);
+  const details = page.locator(`[data-thread-step="${step}"] > details`).filter({ visible: true });
   await details.waitFor();
   if (await details.evaluate((element: HTMLDetailsElement) => element.open)) return details;
   await details.locator(":scope > summary").click();
@@ -197,7 +200,7 @@ export async function openThreadStep(page: Page, step: string): Promise<Locator>
  * opening one leaves the others as they were.
  */
 export async function openRecapDoor(page: Page, door: string): Promise<Locator> {
-  const details = page.locator(`[data-recap-door="${door}"] details`);
+  const details = page.locator(`[data-recap-door="${door}"] details`).filter({ visible: true });
   await details.waitFor();
   if (await details.evaluate((element: HTMLDetailsElement) => element.open)) return details;
   await details.locator("summary").click();

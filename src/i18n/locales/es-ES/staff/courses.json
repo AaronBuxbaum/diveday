@@ -28,6 +28,8 @@
     "errorInvalid": "Eso no se guardó. Revisa los campos e inténtalo de nuevo.",
     "errorNotAuthorized": "Solo los propietarios, gerentes e instructores pueden ocultar o mostrar un curso.",
     "errorFaqIncomplete": "Cada pregunta necesita una respuesta, y cada respuesta una pregunta.",
+    "errorMaterialsIncomplete": "Cada material de estudio necesita un nombre.",
+    "errorMaterialsLink": "Cada enlace tiene que empezar por https://.",
     "errorImages": "Puedes mantener hasta ocho fotos en la galería. Elimina una antes de añadir más.",
     "errorUpload": "Esa foto no se subió. Prueba un JPG, PNG o WebP de menos de 5\u00a0MB.",
     "errorTooManyPhotos": "Añade hasta {max, plural, one {# foto nueva} other {# fotos nuevas}} de galería por guardado. Guarda este lote y añade más después.",
@@ -77,6 +79,8 @@
     "includedPlaceholder": "6 inmersiones en aguas abiertas\nEquipo de alquiler completo\nAlmuerzo ligero",
     "notIncludedLabel": "No incluido",
     "notIncludedPlaceholder": "Tasa del parque marino\nTraslados de hotel",
+    "materialsLegend": "Material de estudio",
+    "materialsDescription": "Cada alumno lo recibe con su reserva y otra vez una semana antes del día 1.",
     "dayByDayLegend": "Día a día",
     "faqLegend": "Preguntas de los buceadores",
     "savePage": "Guardar página del curso",
@@ -152,5 +156,17 @@
     "faqsMaxOne": "{max} pregunta es el máximo que admite una página de curso.",
     "faqsMaxOther": "{max} preguntas es el máximo que admite una página de curso.",
     "empty": "Aún no hay preguntas. Añade las que te hacen los buceadores en el mostrador."
+  },
+  "materials": {
+    "nameLabel": "Material n.º {number}",
+    "namePlaceholder": "eLearning de Open Water",
+    "linkLabel": "Enlace",
+    "linkHint": "Opcional. Empieza por https://. Si el precio incluye el eLearning, no enlaces la página de compra de la agencia: la agencia envía el acceso al alumno por correo.",
+    "noteLabel": "Nota",
+    "notePlaceholder": "Termínalo antes del día 1",
+    "remove": "Eliminar el material {number}",
+    "add": "Añadir un material",
+    "max": "Un curso admite hasta {max, plural, one {# material} other {# materiales}}.",
+    "empty": "Aún no hay nada. Añade el eLearning o la lectura que los alumnos terminan antes del día 1."
   }
 }

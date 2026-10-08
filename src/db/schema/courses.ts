@@ -14,7 +14,12 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { CourseTemplateSnapshot } from "@/lib/course-template-sync";
-import type { CourseFaq, CourseGalleryPhoto, CourseScheduleDay } from "@/lib/courses";
+import type {
+  CourseFaq,
+  CourseGalleryPhoto,
+  CourseLearningMaterial,
+  CourseScheduleDay,
+} from "@/lib/courses";
 import { certificationLevel, people, shops } from "./core";
 
 /**
@@ -100,6 +105,23 @@ export const courses = pgTable(
     excludes: jsonb("excludes").$type<string[]>().notNull().default([]),
     scheduleDays: jsonb("schedule_days").$type<CourseScheduleDay[]>().notNull().default([]),
     faqs: jsonb("faqs").$type<CourseFaq[]>().notNull().default([]),
+    /**
+     * **What a student works through before the first day** — name, optional
+     * `https:` link, optional one-line note — in the shop's own words, edited
+     * on the course page and delivered by the booking confirmation, the
+     * week-out reminder and `/ready` (ADR 20261008-course-learning-materials).
+     *
+     * Shop content, not template content: a template seeds it when the course
+     * is made and no template update ever rewrites it, because the links are
+     * usually the shop's own (an affiliate link into the agency's store). That
+     * is why it is absent from `COURSE_TEMPLATE_SYNC_FIELDS`. Written through
+     * `sanitizeLearningMaterials`, read through `readLearningMaterials`
+     * (src/lib/courses.ts), so a non-https link never reaches a diver.
+     */
+    learningMaterials: jsonb("learning_materials")
+      .$type<CourseLearningMaterial[]>()
+      .notNull()
+      .default([]),
     /**
      * Two additive amounts, not a price and a bundle total: an enrollment
      * invoices as `price_cents` + `e_learning_price_cents` on one bill, so

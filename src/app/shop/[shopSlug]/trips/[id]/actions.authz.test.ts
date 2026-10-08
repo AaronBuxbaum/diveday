@@ -609,6 +609,10 @@ describe("who may run each action on the trip page", () => {
     // beside a name on that session's own roster, and what it records is a
     // sentence rather than a credential.
     "saveCourseNextStepAction",
+    // The learning-materials tick (ADR 20261008-course-learning-materials),
+    // open on the same terms as the next step beside it: it appears only on a
+    // course session's own roster, and it is bookkeeping that gates nothing.
+    "setCourseMaterialsDoneAction",
     "updateBookingPickupAction",
   ];
 

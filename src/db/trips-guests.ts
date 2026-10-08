@@ -1,4 +1,5 @@
-import { courseCertifiesStudents } from "@/lib/courses";
+import { nowDate } from "@/lib/clock";
+import { courseCertifiesStudents, readLearningMaterials } from "@/lib/courses";
 import { demandRecommendation } from "@/lib/demand";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
 import {
@@ -11,6 +12,7 @@ import { isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { sameNameHeldSeats as findSameNameHeldSeats } from "./bookings";
 import type { AppDb } from "./client";
+import { type CourseMaterialsDone, courseMaterialsDoneByPerson } from "./course-materials";
 import { courseNextStepsByBooking } from "./course-next-step";
 import { findSimilarDivers, listBookableDivers } from "./divers";
 import { listLastMinuteList } from "./last-minute-list";
@@ -210,6 +212,18 @@ export async function getTripGuests(
     ),
   );
 
+  // Who finished the course's materials, read across every departure of the
+  // course, so a tick on the pool weekend shows on the open-water one (ADR
+  // 20261008-course-learning-materials).
+  const courseMaterialsDone = trip.courseId
+    ? await courseMaterialsDoneByPerson(db, {
+        shopId: shop.id,
+        courseId: trip.courseId,
+        personIds: roster.map(({ person }) => person.id),
+        around: trip.startsAt,
+      })
+    : new Map<string, CourseMaterialsDone>();
+
   return {
     trip,
     cancelled: trip.status === "cancelled",
@@ -247,6 +261,19 @@ export async function getTripGuests(
     certifies: courseCertifiesStudents(trip.course ?? null),
     /** The rung this course issues (`courses.certifies_level`), where "Certify diver" opens. */
     certifyDefaultLevel: trip.course?.certifiesLevel ?? null,
+    /**
+     * The course carries learning materials, so each seat says whether a
+     * staffer has marked them done (ADR 20261008-course-learning-materials).
+     * The tick itself is on the booking row the roster already read.
+     */
+    courseHasMaterials: readLearningMaterials(trip.course?.learningMaterials).length > 0,
+    /** Done, who and when, by person: the roster's capsule and done line read here. */
+    courseMaterialsDoneByPerson: courseMaterialsDone,
+    /**
+     * Until the session's last day ends, a student with materials still to do
+     * wears the capsule; afterwards it would only be noise on a finished roster.
+     */
+    courseMaterialsOpen: nowDate().getTime() < trip.endsAt.getTime(),
     // `orders/new` refuses without a payable account, so each seat's "Create
     // order" link points at connecting one instead of at a door that bounces.
     paymentsConnected: canAcceptPayments(stripeAccount),

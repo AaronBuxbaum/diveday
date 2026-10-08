@@ -28,6 +28,8 @@
     "errorInvalid": "That didn’t save. Check the fields and try again.",
     "errorNotAuthorized": "Hiding or showing a course is limited to owners, managers, and instructors.",
     "errorFaqIncomplete": "Every question needs an answer, and every answer a question.",
+    "errorMaterialsIncomplete": "Every learning material needs a name.",
+    "errorMaterialsLink": "Each link has to start with https://.",
     "errorImages": "You can keep up to eight gallery photos. Remove one before adding more.",
     "errorUpload": "That photo didn’t upload. Try a JPG, PNG, or WebP under 5\u00a0MB.",
     "errorTooManyPhotos": "Add up to {max} new gallery photos per save. Save this batch, then add more.",
@@ -77,6 +79,8 @@
     "includedPlaceholder": "6 open water dives\nFull rental gear\nLight lunch",
     "notIncludedLabel": "Not included",
     "notIncludedPlaceholder": "Marine park fee\nHotel transfers",
+    "materialsLegend": "Learning materials",
+    "materialsDescription": "Sent to each student with their booking, and again a week before day 1.",
     "dayByDayLegend": "Day by day",
     "faqLegend": "Questions divers ask",
     "savePage": "Save course page",
@@ -152,5 +156,17 @@
     "faqsMaxOne": "{max} question is the most a course page holds.",
     "faqsMaxOther": "{max} questions is the most a course page holds.",
     "empty": "No questions yet. Add the ones divers ask you at the counter."
+  },
+  "materials": {
+    "nameLabel": "Material {number}",
+    "namePlaceholder": "Open Water eLearning",
+    "linkLabel": "Link",
+    "linkHint": "Optional. Starts with https://. If the fee includes the eLearning, leave the agency’s store off: the agency emails the student their access.",
+    "noteLabel": "Note",
+    "notePlaceholder": "Finish before day 1",
+    "remove": "Remove material {number}",
+    "add": "Add a material",
+    "max": "A course holds up to {max, plural, one {# material} other {# materials}}.",
+    "empty": "Nothing yet. Add the eLearning or reading students finish before day 1."
   }
 }

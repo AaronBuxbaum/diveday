@@ -545,6 +545,9 @@
     "jumpDates": "Dates",
     "jumpQuestions": "Questions",
     "jumpContact": "Get in touch",
+    "privateAvailable": "Private course available",
+    "privateSessionAvailable": "Private session available",
+    "privateAsk": "Ask the shop",
     "nextDate": "Next date",
     "nextOpenDate": "Next open date",
     "moreDates": "More dates",
@@ -734,6 +737,8 @@
     "metaTitle": "Your trip readiness — DiveDay",
     "namelessFallback": "there",
     "allSetHeading": "You’re all set",
+    "materialsDone": "The shop has these marked done",
+    "materialsHeadingStarted": "Course materials",
     "openingPayment": "Opening payment…",
     "cancelledHeading": "This booking was canceled",
     "unavailableHeading": "This readiness link isn’t available",
@@ -4059,6 +4064,8 @@
     "tripReminder": {
       "weekSubject": "You sail this week — {tripTitle}",
       "weekBody": "A quick reminder that {tripTitle} with {shopName} sails this week.",
+      "weekSubjectCourse": "Your course starts this week: {tripTitle}",
+      "weekBodyCourse": "A quick reminder that {tripTitle} with {shopName} starts this week.",
       "dockNote": "Please be at the dock {dock} early.",
       "daySubject": "You sail tomorrow — {tripTitle}",
       "dayOpenerFirstTimer": "You dive with {shopName} tomorrow. Everything you need for the day is below.",
@@ -4066,6 +4073,13 @@
       "arrival": "Aim to be at the dock by {time}, {dock} before we sail.",
       "hotelPickupArrival": "Your morning pickup is scheduled for {time} at {location}.",
       "hotelNotSet": "your hotel"
+    },
+    "courseMaterials": {
+      "heading": "Before your first day"
+    },
+    "courseDays": {
+      "heading": "Your course days",
+      "day": "Day {number}: {date}, {time}"
     },
     "tripRecap": {
       "subject": "Your dive with {shopName} — {tripTitle}",
@@ -4204,6 +4218,9 @@
       "body": "{shopName}: {tripTitle} sails {when} ({date}, {time}). Please be at the dock {minutes} min early.",
       "contact": "Questions? Text us at {phone}.",
       "medicalReviewNote": "Check if a medical answer needs a doctor’s sign-off",
+      "courseBody": "{shopName}: {tripTitle} starts {when} ({date}, {time}).",
+      "materials": "Before your first day: {names}.",
+      "materialsWithLink": "Before your first day: {names} ({url}).",
       "recap": "{shopName}: thanks for diving {tripTitle}! Your recap: {recapUrl}",
       "waiver": "{shopName}: please sign your dive release before you dive — {url}",
       "waiverForTrip": "{shopName}: please sign your dive release for {tripTitle} — {url}",

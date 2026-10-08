@@ -44,6 +44,7 @@ export type TripRosterActions = {
   sendNewWaiverAction?: FormAction;
   certifyDiverAction?: FormAction;
   saveCourseNextStepAction?: FormAction;
+  setCourseMaterialsDoneAction?: FormAction;
   addInternalNoteAction: FormAction;
   deleteInternalNoteAction: FormAction;
   saveRosterEmergencyContactAction: FormAction;
@@ -221,6 +222,8 @@ export function TripRosterContent({
           shopRentalItems,
           splitAsksDateOfBirth: guests.splitAsksDateOfBirth,
           certifyDefaultLevel: guests.certifyDefaultLevel,
+          courseHasMaterials: guests.courseHasMaterials,
+          courseMaterialsOpen: guests.courseMaterialsOpen,
           compact,
           showSummaryHeading: !compact,
         }}
@@ -232,6 +235,7 @@ export function TripRosterContent({
           nitroxByBooking,
           notesByBooking,
           courseNextStepByBooking,
+          courseMaterialsDoneByPerson: guests.courseMaterialsDoneByPerson,
           sameNameHeldSeats: guests.sameNameHeldSeats,
           keepOpenBookingId,
           namesakeRefusedBookingId,
@@ -250,6 +254,9 @@ export function TripRosterContent({
           saveEmergencyContactAction: actions.saveRosterEmergencyContactAction,
           certifyDiverAction: guests.certifies ? actions.certifyDiverAction : undefined,
           saveCourseNextStepAction: actions.saveCourseNextStepAction,
+          setCourseMaterialsDoneAction: guests.courseHasMaterials
+            ? actions.setCourseMaterialsDoneAction
+            : undefined,
           updatePickupAction: actions.updateBookingPickupAction,
         }}
         slots={{

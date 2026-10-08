@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { SameNameHeldSeat } from "@/db/bookings";
+import type { CourseMaterialsDone } from "@/db/course-materials";
 import type { listBookingNotes } from "@/db/operations";
 import { depthWarningText } from "@/i18n/depth-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
@@ -79,6 +80,17 @@ export type RosterTrip = {
    * rung, or a specialty, is one change of the select away.
    */
   certifyDefaultLevel?: CertificationLevel | null;
+  /**
+   * This departure teaches a course with learning materials on it, so each
+   * seat says whether a staffer has marked them done (ADR
+   * 20261008-course-learning-materials).
+   */
+  courseHasMaterials?: boolean;
+  /**
+   * The session has not yet ended, so a student with materials still to do
+   * wears the "Materials not done" capsule. After the last day it is history.
+   */
+  courseMaterialsOpen?: boolean;
   /** The Trip surface already leads with its masthead capacity read. */
   compact?: boolean;
   /** Keep the old standalone Guests heading for the compatibility route. */
@@ -100,6 +112,11 @@ export type RosterRows = {
   notesByBooking: Map<string, RosterPrivateNote[]>;
   /** What each student's next step already says, so an instructor edits rather than retypes. */
   courseNextStepByBooking?: Map<string, string>;
+  /**
+   * Who finished the course's materials, by person, across every departure of
+   * the course (`courseMaterialsDoneByPerson`): the roster's "done" reads here.
+   */
+  courseMaterialsDoneByPerson?: ReadonlyMap<string, CourseMaterialsDone>;
   /** Per held seat, the other held seats a split may move with it (`sameNameHeldSeats`). */
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
   /**
@@ -164,6 +181,12 @@ export type RosterActions = {
    * offered one without the other would be a roster that half-taught.
    */
   saveCourseNextStepAction?: (formData: FormData) => void;
+  /**
+   * Tick a student's learning materials done, or take the tick back (ADR
+   * 20261008-course-learning-materials). Present only on a course session
+   * whose course carries materials.
+   */
+  setCourseMaterialsDoneAction?: (formData: FormData) => void;
   updatePickupAction?: (bookingId: string, formData: FormData) => void;
 };
 
