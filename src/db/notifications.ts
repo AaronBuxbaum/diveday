@@ -15,6 +15,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
+import { readLearningMaterials } from "@/lib/courses";
 import { nowDate, nowMs } from "@/lib/clock";
 import {
   DAILY_TICK_INTERVAL_MS,
@@ -44,6 +45,7 @@ import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import {
   bookings,
+  courses,
   notificationDeliveries,
   notificationDeliveryAttempts,
   notificationSendQueue,
@@ -1103,12 +1105,48 @@ export async function retryBookingConfirmation(
   bookingId: string,
   provider?: NotificationProvider,
 ) {
+  return sendStoredBookingConfirmation(db, shopId, bookingId, { isRetry: true, provider });
+}
+
+/**
+ * The booking confirmation for a student a staffer seated on a course session
+ * whose course carries learning materials (ADR 20261008-course-learning-materials).
+ * A staff seating otherwise sends only the waiver-on-join, so without this the
+ * student would first hear of the eLearning a week out. Returns null, and sends
+ * nothing, for a fun dive, a course with no materials, or a diver with no email.
+ */
+export async function sendCourseSeatConfirmation(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  provider?: NotificationProvider,
+) {
+  return sendStoredBookingConfirmation(db, shopId, bookingId, {
+    isRetry: false,
+    provider,
+    onlyWithMaterials: true,
+  });
+}
+
+async function sendStoredBookingConfirmation(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  options: { isRetry: boolean; provider?: NotificationProvider; onlyWithMaterials?: boolean },
+) {
   const [row] = await db
-    .select({ booking: bookings, person: people, trip: trips, shop: shops })
+    .select({
+      booking: bookings,
+      person: people,
+      trip: trips,
+      shop: shops,
+      courseMaterials: courses.learningMaterials,
+    })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
+    .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, bookings.shopId)))
     .where(
       and(
         eq(bookings.id, bookingId),
@@ -1118,6 +1156,8 @@ export async function retryBookingConfirmation(
     )
     .limit(1);
   if (!row?.person.email) return null;
+  const learningMaterials = readLearningMaterials(row.courseMaterials);
+  if (options.onlyWithMaterials && learningMaterials.length === 0) return null;
   const origin = publicAppUrl();
   const readinessCapability = origin
     ? await issueBookingCapability(db, {
@@ -1147,11 +1187,12 @@ export async function retryBookingConfirmation(
       readinessUrl: readinessCapability
         ? new URL(readinessLinkPath(readinessCapability.token), `${origin}/`).toString()
         : undefined,
+      ...(learningMaterials.length > 0 ? { learningMaterials } : {}),
       // A staff-triggered resend is a new logical send, not a replay of the
       // original booking confirmation's provider idempotency key.
       confirmedAt: nowDate(),
     },
-    { isRetry: true, provider },
+    { isRetry: options.isRetry, provider: options.provider },
   );
 }
 

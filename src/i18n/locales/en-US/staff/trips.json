@@ -416,6 +416,8 @@
     "nextStepSaving": "Saving…",
     "materialsPending": "Materials not done",
     "materialsDoneLine": "Materials done · {date}",
+    "materialsDoneLineBy": "Materials done · {date} · {name}",
+    "certifyMaterialsNote": "Materials not marked done; check the agency’s record before certifying.",
     "materialsMarkDone": "Mark materials done",
     "materialsMarkNotDone": "Mark not done",
     "materialsSaving": "Saving…",

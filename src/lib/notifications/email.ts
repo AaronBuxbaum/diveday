@@ -202,6 +202,8 @@ type TripReminderEmailInput = {
    * knows when day 2 is without opening anything.
    */
   scheduleDays?: { startsAt: Date; endsAt: Date }[];
+  /** A course session: the week-out note says it starts, and names no dock. */
+  courseSession?: boolean;
   /**
    * Whether this message can be replied to with a keyword (ADR
    * 20260909-reply-keywords). Decided by the sender, because it is a fact
@@ -877,23 +879,29 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
     };
   }
 
-  const weekBody = t("notifications.tripReminder.weekBody", {
-    tripTitle: input.tripTitle,
-    shopName: input.shopName,
-  });
-  const weekBodyHtml = t("notifications.tripReminder.weekBody", {
-    tripTitle: `<strong>${title}</strong>`,
-    shopName: shop,
-  });
-  const dockNote = t("notifications.tripReminder.dockNote", { dock });
+  // A course starts rather than sails, and its first day may be the pool or a
+  // classroom, so its week-out note names no dock.
+  const weekBodyKey = input.courseSession
+    ? "notifications.tripReminder.weekBodyCourse"
+    : "notifications.tripReminder.weekBody";
+  const weekBody = t(weekBodyKey, { tripTitle: input.tripTitle, shopName: input.shopName });
+  const weekBodyHtml = t(weekBodyKey, { tripTitle: `<strong>${title}</strong>`, shopName: shop });
+  const dockNote = input.courseSession
+    ? null
+    : t("notifications.tripReminder.dockNote", { dock });
   // The week-out nudge is the to-do list, and unfinished course materials are
   // on it. The sender stops passing them once a staffer marks them done.
   const materials = materialsSection(t, input.learningMaterials);
 
   return {
-    subject: t("notifications.tripReminder.weekSubject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${weekBody}\n\n${when.text}\n\n${dockNote}${todo.text}${materials.text}${readyText}${keywordText}`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${weekBodyHtml}</p>${when.html}<p>${dockNote}</p>${todo.html}${materials.html}${readyHtml}${keywordHtml}`,
+    subject: t(
+      input.courseSession
+        ? "notifications.tripReminder.weekSubjectCourse"
+        : "notifications.tripReminder.weekSubject",
+      { tripTitle: input.tripTitle },
+    ),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${weekBody}\n\n${when.text}${dockNote ? `\n\n${dockNote}` : ""}${todo.text}${materials.text}${readyText}${keywordText}`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${weekBodyHtml}</p>${when.html}${dockNote ? `<p>${dockNote}</p>` : ""}${todo.html}${materials.html}${readyHtml}${keywordHtml}`,
   };
 }
 

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { SameNameHeldSeat } from "@/db/bookings";
+import type { CourseMaterialsDone } from "@/db/course-materials";
 import type { listBookingNotes } from "@/db/operations";
 import { depthWarningText } from "@/i18n/depth-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
@@ -85,6 +86,11 @@ export type RosterTrip = {
    * 20261008-course-learning-materials).
    */
   courseHasMaterials?: boolean;
+  /**
+   * The session has not yet ended, so a student with materials still to do
+   * wears the "Materials not done" capsule. After the last day it is history.
+   */
+  courseMaterialsOpen?: boolean;
   /** The Trip surface already leads with its masthead capacity read. */
   compact?: boolean;
   /** Keep the old standalone Guests heading for the compatibility route. */
@@ -106,6 +112,11 @@ export type RosterRows = {
   notesByBooking: Map<string, RosterPrivateNote[]>;
   /** What each student's next step already says, so an instructor edits rather than retypes. */
   courseNextStepByBooking?: Map<string, string>;
+  /**
+   * Who finished the course's materials, by person, across every departure of
+   * the course (`courseMaterialsDoneByPerson`): the roster's "done" reads here.
+   */
+  courseMaterialsDoneByPerson?: ReadonlyMap<string, CourseMaterialsDone>;
   /** Per held seat, the other held seats a split may move with it (`sameNameHeldSeats`). */
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
   /**

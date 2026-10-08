@@ -6,6 +6,7 @@ import { type BookingOutcome, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { publishManifestEvent } from "./manifest-events";
+import { sendCourseSeatConfirmation } from "./notifications";
 import { recordTripActivity, type TripActivityEntry } from "./operations";
 import { type IssueAndDeliverWaiverResult, issueWaiverOnJoin } from "./waiver-issue";
 
@@ -234,6 +235,19 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
       errorCode: error instanceof Error ? error.name : "unknown_error",
     });
     waiver = "failed";
+  }
+
+  // A course student hears what to work through before day 1 now, not a week
+  // out: the same confirmation a self-booked student gets, sent only when the
+  // course carries learning materials (ADR 20261008-course-learning-materials).
+  // Best-effort like the waiver: the seat stands whatever the mail does.
+  try {
+    await sendCourseSeatConfirmation(db, input.shopId, outcome.bookingId);
+  } catch (error) {
+    log("booking.course_confirmation_failed", "error", {
+      bookingId: outcome.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
   }
 
   // `outcome.personName` rather than whatever was typed: the identity path

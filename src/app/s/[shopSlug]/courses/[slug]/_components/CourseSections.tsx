@@ -125,7 +125,9 @@ export function CourseHero({
           )}
           {privateAvailable ? (
             <p className="text-sm text-muted">
-              {t("course.privateAvailable")}
+              {course.isIntroCourse
+                ? t("course.privateSessionAvailable")
+                : t("course.privateAvailable")}
               {inquiryHref ? (
                 <>
                   {" · "}

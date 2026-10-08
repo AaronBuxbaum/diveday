@@ -1088,11 +1088,19 @@ new domain concept, define it here in the same PR.
   certification" next to an unlabelled gate is how a diver arrives believing they are eligible.
 - **Learning materials** — what a course asks a student to work through before day 1, usually the
   agency's eLearning: an ordered list of names, each with an optional `https:` link and note, kept
-  on the course. DiveDay sends it with the booking confirmation, repeats it on the 7-day reminder,
-  and shows it on the diver's thread. **Materials done** is a staffer's per-seat tick that the
-  student finished them, stamped with who and when. It is the shop's word, never the agency's, and
-  it gates nothing: its one effect is that the 7-day reminder stops asking
+  on the course. DiveDay sends it with the booking confirmation, whether the student booked
+  themselves or a staffer seated them, repeats it on the 7-day reminder, and shows it on the
+  diver's thread. **Materials done** is a staffer's tick that the student finished them, stamped
+  with who and when. It belongs to the student's enrollment, not one departure: ticked on the pool
+  weekend, it counts on the open-water weekend of the same course. It is the shop's word, never
+  the agency's, and it gates nothing: the 7-day reminder stops asking, and Certify shows a neutral
+  reminder to check the agency's record when it is missing
   ([20261008-course-learning-materials](../architecture/decisions/20261008-course-learning-materials.md)).
+- **Private session / private course** — a course with a private price can also be run for one
+  diver or one group on a date of their own. The course page says so ("Private course available",
+  or "Private session available" for an intro like Discover Scuba) and points at the inquiry form.
+  It never prints the private price, because whether that price is per diver or per group is the
+  shop's to explain.
 - **Instruction fee / e-learning fee** — a course invoices as two lines on one bill, and the diver
   makes a single payment for their sum. Enrollment assumes the e-learning is included; a student
   who already completed it elsewhere has that line cleared before the invoice goes out, or

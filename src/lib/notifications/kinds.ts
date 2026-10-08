@@ -388,6 +388,8 @@ const tripReminderFields = {
     .array(z.object({ startsAt: z.date(), endsAt: z.date() }))
     .max(MAX_SCHEDULE_DAYS)
     .optional(),
+  /** A course session: the week-out note says it starts, and names no dock. */
+  courseSession: z.boolean().optional(),
 };
 
 // The night-before brief's extra sections, carried only on the 24h cadence

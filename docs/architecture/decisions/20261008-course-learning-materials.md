@@ -28,19 +28,29 @@ word, never a fetched fact.
    material and a note. Agency URLs change and are the shop's to choose, so the shop adds the link.
    Template sync leaves the list alone (it is not in `COURSE_TEMPLATE_SYNC_FIELDS`): once copied, it
    is the shop's.
-3. **Delivery rides what already sends.** The booking confirmation lists the materials with links.
-   The 7-day reminder repeats them under "Before your first day" until a staffer ticks the seat.
-   `/ready/[token]` shows the same list, every link `rel="noreferrer"` because that URL is a bearer
-   capability.
-4. **The tick is two columns on `bookings`.** `course_materials_done_at` and
+3. **Delivery rides what already sends.** The booking confirmation lists the materials with links,
+   whichever door seated the student: a self-booking sends it, a staffer's resend carries it, and
+   `seatDiver` sends it for a course seat whose course has materials (a staff seating otherwise
+   sends only the waiver). The 7-day reminder repeats them under "Before your first day" until the
+   student is marked done. In the text message they are their own clause, never on the boarding
+   to-do list, and carry the first material's own `https:` link, never the readiness capability:
+   no reminder text carries one. `/ready/[token]` shows the same list, every link
+   `rel="noreferrer"` because that URL is a bearer capability; once the session has begun its
+   heading reads "Course materials".
+4. **The tick is two columns on `bookings`, read as the person's.** `course_materials_done_at` and
    `course_materials_done_by_person_id`, paired by a check constraint. Written by
    `recordCourseMaterialsDone`, which is scoped by `shop_id`, refuses a departure with no course,
-   and keeps the first stamp on a repeat tick. It sits on the departure's Divers tab beside Certify
-   and Next step, with a "Materials not done" capsule on the name line. Any live staffer may tick it,
-   like the next step.
+   and keeps the first stamp on a repeat tick. A course run as several departures is one
+   enrollment: `courseMaterialsDoneByPerson` counts a stamp on any live booking of the same person
+   for the same course starting within `COURSE_MATERIALS_WINDOW_DAYS` (120), and the roster, the
+   reminder and `/ready` all read "done" through it; taking the tick back clears it on all of
+   them. It sits on the departure's Divers tab beside Certify and Next step. The name line wears a
+   "Materials not done" capsule until the session's last day ends, and the done line names the
+   date and who marked it. Any live staffer may tick it, like the next step.
 5. **It informs, never gates.** Nothing in admission, readiness, the manifest or roll call reads the
-   tick. Its only consequence is that a ticked seat no longer keeps the 7-day reminder alive
-   (`reminderEarnsItsSend`'s `courseMaterialsDue`).
+   tick. Its consequences are that a ticked student no longer keeps the 7-day reminder alive
+   (`reminderEarnsItsSend`'s `courseMaterialsDue`), and that Certify, for a student not marked
+   done, shows one neutral line pointing at the agency's own record.
 6. **A multi-day course's reminder lists each day it meets** (from `trip_schedule_days`), with
    date and hours in the shop's zone.
 

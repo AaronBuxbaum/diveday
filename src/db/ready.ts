@@ -14,6 +14,7 @@ import { hasSailed } from "@/lib/trips";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { offerableWelcomeCue, type WelcomeCue } from "@/lib/welcome-cue";
 import type { AppDb } from "./client";
+import { courseMaterialsDoneByPerson } from "./course-materials";
 import { hasActiveRefresherCourse } from "./courses";
 import { getHelpRequestForBooking, type HelpRequest } from "./help-requests";
 import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "./nitrox";
@@ -225,8 +226,13 @@ export type ReadyPageData = {
    * so only `https:` links reach the page. Empty on a fun dive.
    */
   learningMaterials: CourseLearningMaterial[];
-  /** A staffer has marked this student's materials done. */
+  /**
+   * Someone marked this student's materials done, on this departure or another
+   * of the same course (`courseMaterialsDoneByPerson`).
+   */
   courseMaterialsDone: boolean;
+  /** The session's first day has begun: the list is reference now, not a to-do. */
+  courseStarted: boolean;
 };
 
 export async function getReadyPageData(
@@ -412,7 +418,18 @@ export async function getReadyPageData(
     }),
     welcomeShared: row.welcomeSharedAt !== null,
     learningMaterials: readLearningMaterials(trip.course?.learningMaterials),
-    courseMaterialsDone: row.courseMaterialsDoneAt !== null,
+    courseMaterialsDone:
+      row.courseMaterialsDoneAt !== null ||
+      (trip.courseId !== null &&
+        (
+          await courseMaterialsDoneByPerson(db, {
+            shopId: row.shopId,
+            courseId: trip.courseId,
+            personIds: [row.personId],
+            around: trip.startsAt,
+          })
+        ).has(row.personId)),
+    courseStarted: trip.startsAt.getTime() <= now.getTime(),
   };
 }
 

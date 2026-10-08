@@ -223,6 +223,7 @@ export function TripRosterContent({
           splitAsksDateOfBirth: guests.splitAsksDateOfBirth,
           certifyDefaultLevel: guests.certifyDefaultLevel,
           courseHasMaterials: guests.courseHasMaterials,
+          courseMaterialsOpen: guests.courseMaterialsOpen,
           compact,
           showSummaryHeading: !compact,
         }}
@@ -234,6 +235,7 @@ export function TripRosterContent({
           nitroxByBooking,
           notesByBooking,
           courseNextStepByBooking,
+          courseMaterialsDoneByPerson: guests.courseMaterialsDoneByPerson,
           sameNameHeldSeats: guests.sameNameHeldSeats,
           keepOpenBookingId,
           namesakeRefusedBookingId,

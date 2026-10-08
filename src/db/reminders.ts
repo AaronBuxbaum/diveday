@@ -4,7 +4,7 @@ import { reminderActionText } from "@/i18n/reminder-labels";
 import type { DiverLocale } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { HOUR_MS, nowDate } from "@/lib/clock";
-import { readLearningMaterials } from "@/lib/courses";
+import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/courses";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { firstTimerReassuranceText, forecastText } from "@/lib/night-before-brief";
 import {
@@ -36,6 +36,7 @@ import { maySendNow } from "@/lib/send-window";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
+import { courseMaterialsDoneByPerson } from "./course-materials";
 import {
   notificationProviderForDb,
   recordNotificationDelivery,
@@ -155,8 +156,14 @@ function reminderSmsBody(
     whoToText?: string | null;
     /** Whether this body may end with the reply line (ADR 20260909-reply-keywords). */
     replyKeywords?: boolean;
-    /** Unfinished course materials, by name — on the to-do list like a waiver. */
-    materialNames?: string[];
+    /**
+     * Unfinished course materials (ADR 20261008-course-learning-materials).
+     * Their own clause under the materials heading, never the boarding to-do:
+     * the eLearning is not something the boat checks.
+     */
+    materials?: CourseLearningMaterial[];
+    /** A course session: it starts rather than sails, and names no dock. */
+    courseSession?: boolean;
   },
 ): string {
   const when =
@@ -170,25 +177,46 @@ function reminderSmsBody(
   // Name the diver's own outstanding items rather than a generic nudge.
   const todo = input.outstanding.map((code) => reminderActionText(t, code));
   if (input.medicalReview) todo.push(t("notifications.sms.medicalReviewNote"));
-  todo.push(...(input.materialNames ?? []));
   const todoText = todo.length
     ? ` ${t("notifications.common.outstandingHeading")} ${todo.join("; ")}.`
     : "";
+  // A phone-only student has no email to click through, so the text carries
+  // the first material's own https link. Never the readiness capability: no
+  // reminder text carries one, and this is not the place to start.
+  const materials = input.materials ?? [];
+  const names = materials.map((material) => material.name).join("; ");
+  const firstLink = materials.find((material) => material.url)?.url;
+  const materialsText =
+    materials.length === 0
+      ? ""
+      : ` ${
+          firstLink
+            ? t("notifications.sms.materialsWithLink", { names, url: firstLink })
+            : t("notifications.sms.materials", { names })
+        }`;
   const contact =
     input.lead === "day" && input.whoToText
       ? ` ${t("notifications.sms.contact", { phone: input.whoToText })}`
       : "";
-  const body = t("notifications.sms.body", {
-    shopName: input.shopName,
-    tripTitle: input.tripTitle,
-    when,
-    date,
-    time,
-    minutes: input.dockCallMinutes,
-  });
+  const body = input.courseSession
+    ? t("notifications.sms.courseBody", {
+        shopName: input.shopName,
+        tripTitle: input.tripTitle,
+        when,
+        date,
+        time,
+      })
+    : t("notifications.sms.body", {
+        shopName: input.shopName,
+        tripTitle: input.tripTitle,
+        when,
+        date,
+        time,
+        minutes: input.dockCallMinutes,
+      });
   // Last, and only on a channel that can hear the answer.
   const keywords = input.replyKeywords ? ` ${t("notifications.replyKeyword.offer")}` : "";
-  return `${body}${conditions}${todoText}${contact}${keywords}`;
+  return `${body}${conditions}${todoText}${materialsText}${contact}${keywords}`;
 }
 
 /**
@@ -424,9 +452,25 @@ export async function sendDueReminders(
     // staffer marks them done (ADR 20261008-course-learning-materials). They
     // are a to-do of their own, so they also keep that nudge from being
     // suppressed as settled; the night-before brief never repeats them.
-    const materialsDue =
-      cadence.kind === "trip_reminder_7d" && !booking.courseMaterialsDoneAt
+    // "Done" is the person's, across every departure of the course
+    // (`courseMaterialsDoneByPerson`), so a tick on the pool weekend quiets
+    // the open-water weekend's nudge too.
+    const courseMaterialsList =
+      cadence.kind === "trip_reminder_7d" && trip.courseId && !booking.courseMaterialsDoneAt
         ? readLearningMaterials(courseMaterials)
+        : [];
+    const materialsDue =
+      trip.courseId &&
+      courseMaterialsList.length > 0 &&
+      !(
+        await courseMaterialsDoneByPerson(db, {
+          shopId: shop.id,
+          courseId: trip.courseId,
+          personIds: [person.id],
+          around: trip.startsAt,
+        })
+      ).has(person.id)
+        ? courseMaterialsList
         : [];
     const meetings = meetingsByTrip.get(trip.id) ?? [];
 
@@ -521,7 +565,8 @@ export async function sendDueReminders(
         forecast,
         whoToText,
         replyKeywords,
-        materialNames: materialsDue.map((material) => material.name),
+        materials: materialsDue,
+        courseSession: Boolean(trip.courseId),
       });
     const smsBody = reminderText(false);
     // The same reminder, plus the reply line, for the one text channel that
@@ -563,6 +608,7 @@ export async function sendDueReminders(
           ...(brief ? { brief } : {}),
           ...(materialsDue.length > 0 ? { learningMaterials: materialsDue } : {}),
           ...(meetings.length > 1 ? { scheduleDays: meetings } : {}),
+          ...(trip.courseId ? { courseSession: true } : {}),
         },
       });
     } else if (phone) {
