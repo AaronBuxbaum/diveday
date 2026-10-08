@@ -16,7 +16,9 @@ import {
   COURSE_CONTENT_LIMITS,
   courseDepthPlaceholderIssues,
   parseLines,
+  readLearningMaterials,
   sanitizeFaqs,
+  sanitizeLearningMaterials,
   sanitizeScheduleDays,
   splitCourseImageUrls,
 } from "@/lib/courses";
@@ -63,6 +65,11 @@ const contentSchemaFor = (currency: string) =>
     excludes: z.string().max(COURSE_CONTENT_LIMITS.excludes),
     scheduleDaysJson: z.string().max(COURSE_CONTENT_LIMITS.scheduleDaysJson),
     faqsJson: z.string().max(COURSE_CONTENT_LIMITS.faqsJson),
+    // Optional on the wire: a page rendered by the release before this
+    // section existed posts no field, and that is "no materials typed", never
+    // a refusal (AGENTS.md's expand/contract rule). Its absence keeps what the
+    // row already holds rather than clearing it — see below.
+    learningMaterialsJson: z.string().max(COURSE_CONTENT_LIMITS.learningMaterialsJson).optional(),
     price: moneyFor(currency),
     eLearningPrice: moneyFor(currency),
     privatePrice: moneyFor(currency),
@@ -166,6 +173,25 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   }
   if (faqs === null) redirect(`${base}?error=faq-incomplete&field=faqsJson`);
 
+  // What students work through before day 1 (ADR
+  // 20261008-course-learning-materials). A link that is not https is refused in
+  // its own words — the one refusal the writer cannot see from the boxes.
+  let learningMaterials = readLearningMaterials(course.learningMaterials);
+  if (value.learningMaterialsJson !== undefined) {
+    let materials: ReturnType<typeof sanitizeLearningMaterials>;
+    try {
+      materials = sanitizeLearningMaterials(JSON.parse(value.learningMaterialsJson));
+    } catch {
+      materials = { ok: false, reason: "invalid" };
+    }
+    if (!materials.ok) {
+      redirect(
+        `${base}?error=${materials.reason === "link" ? "materials-link" : "materials-incomplete"}&field=learningMaterialsJson`,
+      );
+    }
+    learningMaterials = materials.materials;
+  }
+
   // Depth markers, checked before anything is written.
   //
   // This is the one place shop-editable prose is also a small message format,
@@ -189,6 +215,11 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     ),
     ...scheduleDays.flatMap<[string, string]>((day) =>
       [day.title, ...day.items].map((text) => ["scheduleDaysJson", text] as [string, string]),
+    ),
+    ...learningMaterials.flatMap<[string, string]>((material) =>
+      [material.name, material.note ?? ""].map(
+        (text) => ["learningMaterialsJson", text] as [string, string],
+      ),
     ),
   ];
   const broken = depthChecked.find(([, text]) => courseDepthPlaceholderIssues(text).length > 0);
@@ -219,6 +250,7 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
       excludes: parseLines(value.excludes),
       scheduleDays,
       faqs,
+      learningMaterials,
     },
     { expectedVersion: Number.isNaN(expectedVersion) ? null : expectedVersion },
   );

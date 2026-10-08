@@ -515,6 +515,7 @@ export async function updateCourseContent(
       excludes: input.excludes,
       scheduleDays: input.scheduleDays,
       faqs: input.faqs,
+      learningMaterials: input.learningMaterials,
     })
     .where(
       and(
