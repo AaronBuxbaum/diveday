@@ -29,9 +29,9 @@ test("a tap on the manifest reaches the home and stays off the public schedule",
   // server sent back rather than an optimistic paint.
   await expect(headingIn).toHaveAttribute("aria-pressed", "true");
 
-  // The home's station chip carries the same word.
+  // The home's station chip carries the same word: "Heading in since 9:42 AM".
   await page.goto("/shop/blue-mantis");
-  await expect(page.getByText(/Heading in · /).first()).toBeVisible();
+  await expect(page.getByText(/Heading in since /).first()).toBeVisible();
 
   const visitor = await page.context().browser()?.newContext();
   if (!visitor) throw new Error("no browser to open a signed-out context with");

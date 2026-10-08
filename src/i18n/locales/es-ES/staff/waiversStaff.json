@@ -36,7 +36,7 @@
     "openRecord": "Abrir la ficha del buceador",
     "openTrip": "Abrir la salida",
     "integrityInvalid": "Integridad no coincide",
-    "integrityUnsealed": "Sin sellar",
+    "integrityUnsealed": "No se puede verificar si cambió",
     "medicalFlag": "Seguimiento médico marcado",
     "flaggedAnswersHeading": "Respuestas marcadas",
     "pagination": {

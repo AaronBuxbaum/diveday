@@ -32,6 +32,7 @@ import {
 } from "@/lib/manifests";
 import type { ReadinessBlocker } from "@/lib/readiness";
 import { SHARED_FACT_MIN } from "../../_components/shared-facts";
+import { HoldPlace } from "./HoldPlace";
 import { PersonBuddyList } from "./PersonBuddyList";
 import { PersonSheet, type PersonTrailEntry } from "./PersonSheet";
 import { personTrailWithCurrentRecord } from "./person-trail";
@@ -372,6 +373,9 @@ export function DiverRollCall({
       tabIndex={-1}
       className={`outline-none ${rollCallScrollMargin(isDeparture)}`}
     >
+      {/* The checklist above folds when the checkpoint changes; this keeps the
+          list where the crew's thumb was instead of letting it jump. */}
+      <HoldPlace holdKey={checkpoint} />
       {/* **"Skip to roll call" lands here, below the pinned count card**
           (pixel-craft class 9). With no scroll margin the section landed on
           the chrome bar, under the sticky card — 113px tall at 1280, 173 at

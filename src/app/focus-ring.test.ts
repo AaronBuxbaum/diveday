@@ -64,6 +64,15 @@ describe("the global focus ring", () => {
   it("is 3px of --focus-ring at a 2px offset", () => {
     expect(declarations(globalRule?.body ?? "")).toEqual(RING);
   });
+
+  it("rings a date box while focus is on its own calendar button", () => {
+    // Chromium's picker button is a Tab stop inside the box's shadow tree:
+    // the box matches :focus-within there, never :focus-visible, and
+    // DateField draws the button at opacity 0 under the house glyph.
+    const inner = layerBase.find((rule) => rule.prelude.includes(":focus-within:not(:focus)"));
+    expect(inner?.prelude).toMatch(/\binput\b/);
+    expect(declarations(inner?.body ?? "")).toEqual(RING);
+  });
 });
 
 describe("the ring utilities", () => {

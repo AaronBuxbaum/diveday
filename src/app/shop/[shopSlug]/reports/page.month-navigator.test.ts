@@ -7,38 +7,36 @@ import { describe, expect, it } from "vitest";
  * Server Component page that needs a database to render at all. So this pins
  * the source that decides the geometry; nothing here measures it.
  */
-const SOURCE = readFileSync(join(import.meta.dirname, "page.tsx"), "utf8");
-const NAV_START = SOURCE.indexOf('<nav aria-label={t("reports.chooseMonth")}');
-const NAVIGATOR = SOURCE.slice(NAV_START, SOURCE.indexOf("</nav>", NAV_START));
-const BOX_START = NAVIGATOR.indexOf("<DateField");
-const MONTH_BOX = NAVIGATOR.slice(BOX_START, NAVIGATOR.indexOf("/>", BOX_START));
+const PAGE = readFileSync(join(import.meta.dirname, "page.tsx"), "utf8");
+const NAV_START = PAGE.indexOf('<nav aria-label={t("reports.chooseMonth")}');
+const NAVIGATOR = PAGE.slice(NAV_START, PAGE.indexOf("</nav>", NAV_START));
+const JUMP = readFileSync(join(import.meta.dirname, "_components", "MonthJump.tsx"), "utf8");
+const BOX_START = JUMP.indexOf("<DateField");
+const MONTH_BOX = JUMP.slice(BOX_START, JUMP.indexOf("/>", BOX_START));
 
 /**
- * **One size across the month navigator, on one line at 390px.** Its arrows
- * are `icon`, 48px squares that sit level with `md`; between them the month
- * box was then 44px and "Go" was `sm`, 44px with a 14px label (the pixel
- * probe's `mismatched-controls` cluster on `reports` and `reports-figures`,
- * 2026-09-25). The row is `md`; the box is the one 48px text control.
- *
- * An `md` "Go" is wider, and the probe's 390px record left 2.4px beside the
- * next-month arrow. The box carried `w-40` beside the `w-full` in
- * `controlClass`, and the box drew at its intrinsic 191px; the width now
- * sits on a wrapper the input fills.
- *
- * The box is a `DateField` (K-54), so it wears the house calendar glyph
- * rather than the platform's; `wrapperClassName` is that component's
- * spelling of the width decision.
+ * **Arrows and one month box, applied on change** (UX audit 2026-10-07, item
+ * 22). The row was arrows, a month box and a "Go" button: three controls for
+ * one choice. The arrows are `icon`, 48px squares level with the 48px box,
+ * and the box's width sits on a wrapper the input fills (`controlClass`
+ * carries `w-full`).
  */
 describe("the reports month navigator", () => {
-  it("draws Go without sm, level with the month box", () => {
+  it("is two arrows and the month box, with no Go button", () => {
     expect(NAV_START, "the navigator is where this test looks for it").toBeGreaterThan(-1);
+    expect(NAVIGATOR).toContain("<MonthJump");
+    expect(NAVIGATOR).not.toContain('type="submit"');
+    expect(JUMP).not.toContain('type="submit"');
+  });
+
+  it("applies the month the moment one is picked", () => {
     expect(BOX_START, "the month box is a DateField").toBeGreaterThan(-1);
     expect(MONTH_BOX).toContain('type="month"');
-    expect(NAVIGATOR).not.toContain('size: "sm"');
+    expect(MONTH_BOX).toContain("requestSubmit()");
   });
 
   it("sets the month box's width on a wrapper, not beside the control's own w-full", () => {
-    expect(MONTH_BOX, "no width utility on the input itself").not.toMatch(/className=/);
     expect(MONTH_BOX).toContain('wrapperClassName="w-44"');
+    expect(MONTH_BOX, "no width utility on the input itself").not.toMatch(/\sclassName=/);
   });
 });

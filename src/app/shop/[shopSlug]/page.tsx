@@ -24,7 +24,7 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import { canPersonExportIncidentRecord } from "@/db/authz";
-import { sharedInHorizonReadiness } from "@/db/blockers";
+import { daySummaryBlocked, sharedInHorizonReadiness } from "@/db/blockers";
 import { hasArrivals, listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/closeout";
@@ -77,14 +77,13 @@ import {
   shopPath,
 } from "@/lib/staff-notices";
 import {
-  ACTION_KIND_META,
   assembleDaySpine,
   type DayStation,
   factOfScaleFor,
+  pressingRows,
   roleLensFor,
   spineIsQuiet,
   spineJobCount,
-  type TodayAction,
 } from "@/lib/today";
 import { hasSailed } from "@/lib/trips";
 import { shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -219,11 +218,6 @@ export default async function ShopPage({
       </Suspense>
     </main>
   );
-}
-
-/** Rows a staffer could still act on before a boat leaves. */
-function pressingRows(rows: readonly TodayAction[]): number {
-  return rows.filter((row) => ACTION_KIND_META[row.kind].tone !== "neutral").length;
 }
 
 /**
@@ -533,6 +527,7 @@ async function TodayBody({
         // has three boats on it, and the line under the date says what the day
         // *is* before it says what is left of it.
         boats: dayDepartures.length,
+        ...daySummaryBlocked(evidence, shop.timezone, now, work.blockedAboard),
         jobs: nextStation
           ? pressingRows(nextStation.rows)
           : spine.stations.reduce((total, station) => total + pressingRows(station.rows), 0) +
@@ -925,6 +920,7 @@ async function TodayBody({
           timeZone={shop.timezone}
           currency={shop.currency}
           crewedTripIds={lens === "boat" ? crewedTripIds : undefined}
+          readerPersonId={session.user.personId}
           withheldCount={withheldCount}
           drafts={spineDrafts}
           helpRequestAction={updateHelpRequestAction}

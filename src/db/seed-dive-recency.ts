@@ -1,5 +1,5 @@
 import { and, eq, ne } from "drizzle-orm";
-import { simulatorEmail } from "@/lib/simulator-email";
+import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import { bookings, people } from "./schema";
 
@@ -35,8 +35,8 @@ import { bookings, people } from "./schema";
  * never be the reason a shop fails to seed.
  */
 const ANSWERS = [
-  { email: simulatorEmail("tom.okafor"), band: "over_five_years" as const },
-  { email: simulatorEmail("priya.sharma"), band: "this_season" as const },
+  { email: demoEmail("tom.okafor"), band: "over_five_years" as const },
+  { email: demoEmail("priya.sharma"), band: "this_season" as const },
 ];
 
 export async function seedDiveRecency(db: DbExecutor, shopId: string) {

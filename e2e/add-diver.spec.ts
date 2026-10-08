@@ -422,8 +422,14 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   await page.getByRole("combobox", { name: /Search divers/ }).fill("booking");
   await page.getByRole("option", { name: "Add a booking" }).click();
   await expect(page).toHaveURL(/\/bookings\/new$/);
-  // The picker pages the season, so this spec's own departure can sit past the
-  // first page — the door resolves a chosen trip by id either way.
+  // The picker opens on today and tomorrow; a departure eight days out is one
+  // date away rather than pages of departures away (UX audit 2026-10-07,
+  // item 19). A plain GET form, so the chosen day is the URL.
+  await page.getByLabel("Day", { exact: true }).fill(daysFromNow(8));
+  await page.getByRole("button", { name: "Show", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`from=${daysFromNow(8)}`));
+  await expect(page.getByRole("link", { name: title })).toBeVisible();
+  // The door resolves a chosen trip by id either way.
   await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
   await expect(page.getByText(title).first()).toBeVisible();
 

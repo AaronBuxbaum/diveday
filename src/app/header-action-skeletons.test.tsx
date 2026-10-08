@@ -6,6 +6,7 @@ import PublicSiteLoading from "./s/[shopSlug]/sites/[siteSlug]/loading";
 import CoursesLoading from "./shop/[shopSlug]/courses/loading";
 import DiveSiteLoading from "./shop/[shopSlug]/dive-sites/[id]/loading";
 import DiveSitesLoading from "./shop/[shopSlug]/dive-sites/loading";
+import GearLoading from "./shop/[shopSlug]/gear/loading";
 import OrdersLoading from "./shop/[shopSlug]/orders/loading";
 import NewOrderLoading from "./shop/[shopSlug]/orders/new/loading";
 import StaffReviewsLoading from "./shop/[shopSlug]/reviews/loading";
@@ -35,6 +36,7 @@ const HEADERS_WITH_DOORS: [name: string, rows: number, Skeleton: ComponentType][
   ["orders", 1, OrdersLoading],
   ["new order", 1, NewOrderLoading],
   ["data export", 1, ExportLoading],
+  ["gear register", 1, GearLoading],
   ["schedule board", 2, ScheduleBoardLoading],
 ];
 

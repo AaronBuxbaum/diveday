@@ -71,12 +71,10 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await openTripTab(page, "Manifest");
 
   await expect(page.getByRole("heading", { name: "Roll call" })).toBeVisible();
-  // Blocked divers are said once, in the checkpoint panel, and only at the
-  // dock — the standalone "Blocked divers" banner that used to restate the
-  // panel's own count is gone, and so is the clause explaining what blocked
-  // means, which every row already carries. The count itself is asserted
-  // below, on the panel's count row.
-  await expect(page.getByText(/^\d+ (person is|people are) blocked\.$/)).toBeVisible();
+  // Blocked divers are said once, on the head count's own next line, and only
+  // at the dock (UX audit #17) — not as a banner, and not as a sentence in the
+  // half of the panel that scrolls away.
+  await expect(page.getByText(/^\d+ blocked$/)).toBeVisible();
   // Scoped to the roster list, not a bare text match: every unteamed diver's
   // name also appears on the buddy-team builder's checkbox below (ADR
   // 20260804-buddy-teams), so `getByText` is a strict-mode violation here.
@@ -91,8 +89,22 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await expect(priyaRow.getByRole("button", { name: "Mark boarded" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Mark boarded" }).first()).toBeVisible();
 
-  await page.locator("#roll-call-list").filter({ visible: true }).scrollIntoViewIfNeeded();
-  const checkpointScroll = await page.evaluate(() => window.scrollY);
+  // Switching checkpoints keeps the roll-call list where the crew was looking.
+  // Measured as the list's own top in the viewport, not as `scrollY`: an
+  // unfinished boat check stands open at the dock and folds to its one line
+  // after a dive (UX audit 2026-10-07, item 17), so ~270px above the list goes
+  // away on this switch, a few hundred milliseconds after it commits. The
+  // list's `HoldPlace` marker holds it still by moving `scrollY` that same
+  // distance — an unchanged `scrollY` would be the list jumping up the screen,
+  // not staying put.
+  const rollCallList = page.locator("#roll-call-list").filter({ visible: true });
+  // The list's top at the top of the screen, so the checklist that folds is
+  // wholly above the fold, where the crew is not looking. `IfNeeded` left it
+  // wherever it already sat, and on CI that was sometimes with the checklist
+  // still on screen: a fold you can see moves what is under it, by design.
+  await rollCallList.evaluate((list) => list.scrollIntoView({ block: "start" }));
+  const listTop = () => rollCallList.evaluate((list) => list.getBoundingClientRect().top);
+  const listTopAtDeparture = await listTop();
   await page
     .getByRole("link", { name: "After dive 1" })
     .evaluate((link: HTMLElement) => link.click());
@@ -100,9 +112,14 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   // After a dive, roll call is a physical head count — a blocked diver who is
   // aboard can still be recorded present, so boarding is offered here.
   await expect(page.getByRole("button", { name: "Mark boarded" }).first()).toBeVisible();
-  await expect
-    .poll(async () => Math.abs((await page.evaluate(() => window.scrollY)) - checkpointScroll))
-    .toBeLessThan(100);
+  // The fold is the change the list has to survive, so it is waited on first:
+  // the URL and the boarding button both arrive before it, and a position
+  // sampled then is the departure layout's, which passes without testing
+  // anything.
+  await expect(
+    page.getByRole("region", { name: /^Before you leave the dock:/ }).locator("details"),
+  ).not.toHaveAttribute("open");
+  await expect.poll(async () => Math.abs((await listTop()) - listTopAtDeparture)).toBeLessThan(4);
   await page
     .getByRole("link", { name: "Before departure" })
     .evaluate((link: HTMLElement) => link.click());
@@ -1030,11 +1047,14 @@ test("the crew records why the plan changed, and the plan itself does not move",
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
 
-  // At the dock the plan is read-only, with a quiet door to the log
-  // (issue #1184, D24).
+  // At the dock the plan is read-only (issue #1184, D24). A change is said in
+  // the dive log, at the checkpoint after the dive: the switch is the way
+  // there, with no sentence under the plan pointing at it (UX audit
+  // 2026-10-07, item 3).
   const planned = page.getByRole("heading", { name: "The plan" });
   await expect(planned).toBeVisible();
-  await page.getByRole("link", { name: "Changed the plan?" }).click();
+  await expect(page.getByText(/Changed the plan|Say why in the dive log/)).toHaveCount(0);
+  await page.getByRole("link", { name: "After dive 1" }).click();
   await expect(page).toHaveURL(/checkpoint=after_dive_1/);
 
   const summary = page.locator("summary").filter({ hasText: "Dive 1" });

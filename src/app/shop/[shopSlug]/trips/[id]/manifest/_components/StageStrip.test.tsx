@@ -62,6 +62,23 @@ describe("StageStrip", () => {
     expect(container.textContent).not.toMatch(/unknown/i);
   });
 
+  it("lays the five words on equal columns that never leave one alone on a line", () => {
+    // At 390 the wrapping flex row broke 4 + 1 and left "Home" by itself
+    // under "Boarding" (UX audit 2026-10-07, item 2). jsdom has no layout, so
+    // this pins the grid: three equal columns below `sm` (3 + 2), five from it.
+    render(<StageStrip action={noop} copy={copy} current={null} />);
+    const row = screen.getByRole("button", { name: "Home" }).closest("form")?.parentElement;
+    expect(row).toHaveClass("grid", "grid-cols-3", "sm:grid-cols-5");
+    expect(row).not.toHaveClass("flex-wrap");
+    for (const tap of copy.taps) {
+      expect(screen.getByRole("button", { name: tap.label })).toHaveClass(
+        "w-full",
+        "min-h-14",
+        "touch-manipulation",
+      );
+    }
+  });
+
   it("carries no drawing, no coral and no motion", () => {
     // The path walk in `illustration.test.ts` covers the import; this covers
     // the tokens and the animation class, which no import would show.

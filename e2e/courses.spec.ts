@@ -730,9 +730,7 @@ test("a diver with no workable date reaches the shop, and is offered flexible ti
 
   await inquiry.getByRole("button", { name: "Send", exact: true }).click();
   await expect(inquiry.getByText("Sent", { exact: true })).toBeVisible();
-  await expect(
-    inquiry.getByRole("link", { name: "success+front.desk@simulator.amazonses.com" }),
-  ).toBeVisible();
+  await expect(inquiry.getByRole("link", { name: "front.desk@mail.example" })).toBeVisible();
 });
 
 test("a blank inquiry is rejected, not defaulted — a way to reply is required", async ({
@@ -788,7 +786,7 @@ test("a diver's inquiry is recorded server-side and the shop's details stay reac
   // send, not just the mailto fallback — and still leaves the shop's own
   // contact details on screen underneath it.
   await expect(inquiry.getByText("Sent", { exact: true })).toBeVisible();
-  await expect(inquiry.getByText("success+front.desk@simulator.amazonses.com")).toBeVisible();
+  await expect(inquiry.getByText("front.desk@mail.example")).toBeVisible();
 });
 
 /**

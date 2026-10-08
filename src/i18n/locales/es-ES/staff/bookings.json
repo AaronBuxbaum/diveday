@@ -5,6 +5,14 @@
     "fullExcluded": "Las salidas completas no aparecen. Añade plazas, u otra salida ese día, desde el tablero.",
     "tripEmpty": "No queda ninguna plaza en las próximas salidas.",
     "tripEmptyAction": "Abrir el calendario",
+    "day": {
+      "label": "Día",
+      "show": "Mostrar",
+      "earlier": "Días anteriores",
+      "later": "Días siguientes",
+      "empty": "Ninguna salida de estos dos días tiene plazas libres.",
+      "nextOpen": "Próxima plaza libre: {date}"
+    },
     "seatsLeft": "{count, plural, one {# plaza libre} other {# plazas libres}}",
     "changeTrip": "¿No es esta? Elige otra salida.",
     "addToTrip": "Añadir a la salida",

@@ -4,13 +4,12 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { FlashParams } from "@/components/FlashParams";
 import { JsonLd } from "@/components/JsonLd";
+import { PhoneFootBar } from "@/components/PhoneFootBar";
 import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
-import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS, TONE_PANEL_LG_CLASS } from "@/components/ui/card";
-import { ledgerRowRoomClass } from "@/components/ui/ledger";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { readKnownDiver } from "@/db/booking-handoff";
 import { getBookingForTrip } from "@/db/bookings";
@@ -413,6 +412,15 @@ export default async function TripDetailPage({
   const requirementNote = combinedRequirement
     ? tripRequirementList(t, combinedRequirement, locale)
     : null;
+  // Who this trip is for: one line, no box, and the form's own first line (UX
+  // audit #25), so it is read with the party-size control it governs rather
+  // than floating above the card. It says only what the *trip* demands, never
+  // anything about the reader, which is what makes it safe on an anonymous
+  // page (DOM-M6), and nothing at all on a course session, whose own page
+  // states its admission rule.
+  const requirementSentence = requirementNote
+    ? t("trip.requirementNote", { list: requirementNote })
+    : null;
   // The embed's short confirmation needs exactly one fact beyond the booking
   // itself: whether both emails went. Everything the old in-page confirmation
   // read — the payment panel, readiness, rental fit, the nitrox card, the
@@ -682,35 +690,6 @@ export default async function TripDetailPage({
                 })}
               </p>
             ) : null}
-            {/* Full keeps the same sticky CTA rather than hiding it — a diver who
-                scrolls to a full boat still has one obvious next step (the wait
-                list), not a dead-ended thumb (task 12). Both destinations share
-                the `#book` anchor: `BookSpotSection` and `TripFullSection`'s
-                wait-list form each carry it. */}
-            {!confirmed && !inPast && !trip.conditionsHold ? (
-              // **A bar at the foot, not a pill over the page** (pixel-craft class
-              // 9, K-139). A 70×48 pill fixed 16px off the corner of a phone
-              // screen sat on the page's own controls at rest — the depth
-              // picker's caret, a sighting's "logged dives", a dive's "water" —
-              // with no room reserved for it. The bar spans the screen in the
-              // chrome's materials (the page ground behind a blur, one hairline,
-              // no shadow), and `data-foot-bar` is what `globals.css` ends the
-              // document that much lower by, so the page's last line and the
-              // shop's footer scroll clear of it.
-              <div
-                data-foot-bar=""
-                className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:hidden print:hidden"
-              >
-                <a href="#book" className={buttonClass({ className: "w-full" })}>
-                  {/* The verb, and nothing else. It carried the seat count too
-                      ("Book · 3 left"), which is the very fact the card it scrolls
-                      to states in its own corner — a floating pill repeating the
-                      number it is taking you to read (ADR 20260827-the-divers-thread,
-                      decision 2). */}
-                  {full ? t("booking.waitlistHeading") : t("booking.bookVerb")}
-                </a>
-              </div>
-            ) : null}
           </div>
           {/* **One rhythm below the hero** (pixel-craft class 4, K-162;
               forms-and-controls.md's section rhythm): every section from the
@@ -797,42 +776,11 @@ export default async function TripDetailPage({
                 <p className="mt-1 text-sm text-muted">{t("trip.conditionsChangedBody")}</p>
               </section>
             ) : null}
-            {/* Who this trip is for: one line, hairline-topped, no box. It was a
-                sunken bordered panel *inside* the raised booking card — a box
-                inside a box, and the first thing a diver met when they reached the
-                form. It still says only what the *trip* demands, never anything
-                about the reader, which is what makes it safe on an anonymous page
-                (DOM-M6), and it still says nothing at all on a course session,
-                whose own page states its admission rule. */}
-            {/* The other boats close their own list, and the requirement note
-                under them sits 16px below that closing rule rather than drawing a
-                second one; alone, it opens on a rule of its own (pixel-craft
-                class 6, K-16). The note heads the form's column (below), so the
-                16px is the boats' own `mb-4` in place of the section gap. An
-                empty block takes no room: its margins collapse through it. */}
-            <div
-              className={requirementNote && worthALookRows.length > 0 ? "mb-4 lg:mb-0" : undefined}
-            >
-              <TripAlternatives alternatives={worthALookRows} locale={locale} />
-            </div>
+            <TripAlternatives alternatives={worthALookRows} locale={locale} />
 
             {/* The form, terminal — or whichever state stands in its place —
                 and the contact line under it: the right-hand column from `lg`. */}
             <div className="space-y-10 lg:col-start-2 lg:row-span-6 lg:row-start-1">
-              {/* Who this trip is for, the form's own preface. On a phone it
-                  sits 16px under the other boats' closing rule (their block's
-                  `mb-4` above), or opens on its own rule alone; from `lg` it
-                  heads the right-hand column, so a diver reads it before the
-                  form there too rather than a screen below it. */}
-              {requirementNote ? (
-                // The ledger's room, so its words start where the alternatives'
-                // do, and its rule is as long as theirs.
-                <p
-                  className={`${worthALookRows.length > 0 ? "" : "border-t border-border pt-4 lg:border-t-0 lg:pt-0"} text-sm text-muted ${ledgerRowRoomClass}`}
-                >
-                  {t("trip.requirementNote", { list: requirementNote })}
-                </p>
-              ) : null}
               {confirmed ? (
                 <EmbedBookedNotice
                   shop={shop}
@@ -871,6 +819,7 @@ export default async function TripDetailPage({
                   contactPhone={shop.contactPhone}
                   alternatives={alternatives}
                   offerLastMinuteList={shop.lastMinuteListEnabled}
+                  requirement={requirementSentence}
                   terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
                 />
               ) : (
@@ -897,6 +846,7 @@ export default async function TripDetailPage({
                   balanceDueAt={trip.startsAt}
                   terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
                   knownDiver={knownDiverPanel}
+                  requirement={requirementSentence}
                   offerHandoff={offerHandoff.bind(null, tripRef)}
                 />
               )}
@@ -911,6 +861,16 @@ export default async function TripDetailPage({
             </div>
           </div>
         </div>
+        {/* Full keeps the same sticky CTA rather than hiding it — a diver who
+            scrolls to a full boat still has one obvious next step (the wait
+            list), not a dead-ended thumb (task 12). Both destinations share
+            the `#book` anchor: `BookSpotSection` and `TripFullSection`'s
+            wait-list form each carry it. */}
+        {!confirmed && !inPast && !trip.conditionsHold ? (
+          <PhoneFootBar href="#book">
+            {full ? t("booking.waitlistHeading") : t("booking.bookVerb")}
+          </PhoneFootBar>
+        ) : null}
       </main>
     </DiverIntlProvider>
   );

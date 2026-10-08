@@ -690,7 +690,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
         shopId: shop.id,
         tripId: session.id,
         fullName: "Priya Sharma",
-        email: "success+priya.sharma@simulator.amazonses.com",
+        email: "priya.sharma@mail.example",
       }),
     ).resolves.toMatchObject({ ok: true, personName: "Priya Sharma" });
 

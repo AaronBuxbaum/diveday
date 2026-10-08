@@ -44,7 +44,12 @@ async function fullDeparture(page: Page): Promise<string> {
   });
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, title);
-  await page.getByRole("link", { name: "Add diver" }).click();
+  // Tomorrow's boat is inside the arrivals window, where "Add a diver" is one
+  // search field and a booked seat is its empty result's "Add diver".
+  const find = page.getByRole("searchbox", { name: "Find a returning diver" });
+  await find.fill("Fills The Boat");
+  await find.press("Enter");
+  await page.getByRole("link", { name: "Add diver", exact: true }).first().click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill("Fills The Boat");
   await page.getByLabel("Email").fill(`call-fills-${e2eNow().getTime()}@example.com`);

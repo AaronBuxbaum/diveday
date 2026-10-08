@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { arrivalCardFacts, TripArrivalCard } from "./TripArrivalCard";
+import { diverTranslator } from "@/i18n/messages";
+import { arrivalCardFacts, siteRunsLine, TripArrivalCard } from "./TripArrivalCard";
 
 afterEach(cleanup);
 
@@ -105,6 +106,32 @@ describe("the Sites row", () => {
     // The order is the day's, never alphabetical.
     expect(screen.getByText("Molasses Reef, French Reef")).toBeInTheDocument();
     expect(screen.getByText("Plan")).toBeInTheDocument();
+  });
+
+  it("names a site once when the day dives it twice in a row (UX audit #14)", () => {
+    render(
+      <TripArrivalCard
+        shop={shop}
+        trip={trip}
+        locale="en-US"
+        sites={["Molasses Reef", "Molasses Reef"]}
+      />,
+    );
+    expect(screen.getByText("Molasses Reef, two dives")).toBeInTheDocument();
+  });
+
+  it("counts a run inside a longer list, and keeps a return to a site in order", () => {
+    const t = diverTranslator("en-US");
+    expect(siteRunsLine(["Molasses Reef", "Molasses Reef", "French Reef"], "en-US", t)).toBe(
+      "Molasses Reef (two dives), French Reef",
+    );
+    expect(siteRunsLine(["Molasses Reef", "French Reef", "Molasses Reef"], "en-US", t)).toBe(
+      "Molasses Reef, French Reef, Molasses Reef",
+    );
+    expect(siteRunsLine(["Molasses Reef"], "en-US", t)).toBe("Molasses Reef");
+    expect(
+      siteRunsLine(["Molasses Reef", "Molasses Reef"], "es-ES", diverTranslator("es-ES")),
+    ).toBe("Molasses Reef, dos inmersiones");
   });
 
   it("renders nothing at all when the caller names no sites", () => {

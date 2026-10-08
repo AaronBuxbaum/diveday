@@ -62,9 +62,10 @@ test.describe("as owner", () => {
     await page.goto(`/s/blue-mantis/trips/${tripId}`);
     await expect(page.getByRole("heading", { name: ADVANCED_CHARTER })).toBeVisible();
 
-    // Stated *before* the form, not after the seat is bought. The requirement is
-    // a property of the trip, so it discloses nothing about any reader — and it
-    // is one unboxed line now, with no heading over it (ADR
+    // Stated *before* the seat is bought: the form's own first line, above the
+    // party-size control it governs (UX audit #25). The requirement is a
+    // property of the trip, so it discloses nothing about any reader — and it
+    // is one unboxed line, with no heading over it (ADR
     // 20260827-the-divers-thread, decision 2: "who it's for, one line, no box").
     const requirement = page.getByText(
       "This charter is for divers with Advanced Open Water or higher.",
@@ -81,9 +82,7 @@ test.describe("as owner", () => {
     // above it — the shop has adjudicated him, so this is a settled
     // impossibility rather than an absence of evidence.
     await page.getByLabel("Name", { exact: true }).fill("Diego Alvarez");
-    await page
-      .getByLabel("Email", { exact: true })
-      .fill("success+diego.alvarez@simulator.amazonses.com");
+    await page.getByLabel("Email", { exact: true }).fill("diego.alvarez@mail.example");
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
 
     // What the *trip* requires, never what this person lacks (H-22). The
@@ -113,7 +112,7 @@ test.describe("as owner", () => {
     await page.goto(`/s/blue-mantis/trips/${tripId}`);
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
 
-    // The requirement is still disclosed above the form — a property of the
+    // The requirement is still disclosed in the form — a property of the
     // trip, and the half a deciding diver needs.
     await expect(
       page.getByText("This charter is for divers with Advanced Open Water or higher."),

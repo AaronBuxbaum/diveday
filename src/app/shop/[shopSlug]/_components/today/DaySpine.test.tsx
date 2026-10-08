@@ -3,10 +3,12 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  ACTION_KIND_META,
   assembleDaySpine,
   type FactOfScale,
   type SpineDeparture,
   type TodayAction,
+  type TodayActionKind,
 } from "@/lib/today";
 
 // The spine composes WaiverSendControl/ResendConfirmationControl/
@@ -145,6 +147,7 @@ function renderSpine({
   showPaymentsRow?: boolean;
   drafts?: SpineDraft[];
   crewedTripIds?: string[];
+  readerPersonId?: string;
   sessions?: React.ReactNode;
   firstRun?: React.ReactNode;
   firstBooking?: FirstBooking | null;
@@ -191,7 +194,7 @@ describe("a station owns its departure's facts", () => {
       "href",
       "/shop/blue-mantis/trips/t1",
     );
-    const needsYou = screen.getByText("Needs you").closest("div") as HTMLElement;
+    const needsYou = screen.getByText("Needs you").closest("div")?.parentElement as HTMLElement;
     // Both rows say their boat on a quiet line under their words.
     const labels = within(needsYou).getAllByText("Two-Tank Reef · 7:00 AM");
     expect(labels).toHaveLength(2);
@@ -332,18 +335,6 @@ describe("the station is a panel (16a)", () => {
     expect(container.querySelector('[class*="grid-cols-[112px_112px_1fr]"]')).toBeNull();
   });
 
-  it("offers the departure log on a live station as a quiet link, never a button", () => {
-    renderSpine({
-      departures: [departure({ tripId: "t1" })],
-      evening: evening([]),
-    });
-    const door = screen.getByRole("link", { name: "Generate log" });
-    expect(door).toHaveAttribute("href", "/shop/blue-mantis/trips/t1/log");
-    // `buttonClass()` always emits the control rung; the door is a text link.
-    expect(door.className).not.toContain("rounded-lg");
-    expect(door.className).toContain("text-primary");
-  });
-
   /**
    * **The title's chevron stays with its last word** (pixel-craft class 2,
    * K-464). The link is `inline-flex`, so a title that wrapped became one
@@ -470,7 +461,7 @@ describe("the desk group", () => {
         }),
       ],
     });
-    const needsYou = screen.getByText("Needs you").closest("div") as HTMLElement;
+    const needsYou = screen.getByText("Needs you").closest("div")?.parentElement as HTMLElement;
     const rows = within(needsYou).getAllByRole("listitem");
     // Warning before quiet, wherever each row is filed.
     expect(rows[0]).toHaveTextContent("Priya Sharma");
@@ -1126,7 +1117,7 @@ describe("the evening reading", () => {
       evening: evening([closed({ tripId: "t1" })]),
     });
 
-    const needsYou = screen.getByText("Needs you").closest("div") as HTMLElement;
+    const needsYou = screen.getByText("Needs you").closest("div")?.parentElement as HTMLElement;
     expect(
       within(needsYou).getByText("Confirm the shop units", { exact: true }),
     ).toBeInTheDocument();
@@ -1343,7 +1334,7 @@ describe("the evening reading", () => {
 
   it("offers the departure log only to a reader who may generate one", () => {
     renderSpine({ departures: [], evening: evening([closed({ tripId: "t1" })]) });
-    expect(screen.getByRole("link", { name: "Generate log" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Departure log" })).toBeInTheDocument();
 
     cleanup();
     renderSpine({
@@ -1351,33 +1342,134 @@ describe("the evening reading", () => {
       evening: evening([closed({ tripId: "t1" })], { canOpenLog: false }),
     });
     // Absent, never disabled — the gate is the render (AGENTS.md).
-    expect(screen.queryByRole("link", { name: "Generate log" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Departure log" })).toBeNull();
   });
 
-  it("offers it on a departure that has not come home, which is when it is wanted", () => {
-    // ADR 20260804-incident-export-owner-gate's 2026-08-12 amendment, verbatim:
-    // *offered on every departure row, not only the ones that are back, because
-    // the moment a shop most needs a departure's recorded facts is while the
-    // departure is still happening.* Moving the door onto the evening's station
-    // in 6d dropped it from the live one, which put an owner whose boat is
-    // overdue in the one place they could not reach the record of who is on it.
+  it("says how many rows the Needs you list holds, beside its heading", () => {
+    renderSpine({
+      departures: [departure({ tripId: "t1" })],
+      actions: [
+        action({ id: "a", departure: boat("t1") }),
+        action({ id: "b", departure: boat("t1") }),
+      ],
+    });
+    const heading = screen.getByRole("heading", { name: "Needs you" });
+    expect(heading.parentElement).toHaveTextContent("2 things");
+  });
+
+  it("leads a crew reader with their own boat's rows and folds the desk's into one line", () => {
+    // UX audit 2026-10-07, item 7: a captain's "what now" is the boat they
+    // crew, not the front desk's queue.
+    renderSpine({
+      departures: [
+        departure({ tripId: "mine", title: "Dawn Two-Tank" }),
+        departure({ tripId: "other", title: "Wreck Trip", startsAt: hoursFromNow(3) }),
+      ],
+      crewedTripIds: ["mine"],
+      actions: [
+        action({ id: "m", kind: "waiver", subject: "Priya Sharma", departure: boat("mine") }),
+        action({ id: "o", kind: "waiver", subject: "Sal Moretti", departure: boat("other") }),
+        action({
+          id: "d",
+          kind: "blocked_aboard",
+          subject: "Keiko Tanaka",
+          departure: boat("other"),
+        }),
+        action({ id: "r", kind: "reviews_pending", subject: "1 review", urgency: "later" }),
+      ],
+    });
+    const fold = screen.getByText("2 more for other boats and the desk").closest("details");
+    if (!fold) throw new Error("the desk rows did not fold");
+    expect(fold).not.toHaveAttribute("open");
+    expect(within(fold).getByText("Sal Moretti", { exact: false })).toBeInTheDocument();
+    expect(within(fold).getByText("1 review", { exact: false })).toBeInTheDocument();
+    // Their own boat's row and a danger row on any boat stay in full.
+    expect(within(fold).queryByText("Priya Sharma", { exact: false })).toBeNull();
+    expect(within(fold).queryByText("Keiko Tanaka", { exact: false })).toBeNull();
+    expect(screen.getByText("Priya Sharma", { exact: false })).toBeVisible();
+  });
+
+  const dangerKinds = (Object.keys(ACTION_KIND_META) as TodayActionKind[]).filter(
+    (kind) => ACTION_KIND_META[kind].tone === "danger",
+  );
+
+  it("has danger-tone kinds to keep open, so the next case is not vacuous", () => {
+    expect(dangerKinds.length).toBeGreaterThan(0);
+  });
+
+  it.each(dangerKinds)("never folds a %s row about another boat for a crew reader", (kind) => {
+    renderSpine({
+      departures: [
+        departure({ tripId: "mine", title: "Dawn Two-Tank" }),
+        departure({ tripId: "other", title: "Wreck Trip", startsAt: hoursFromNow(3) }),
+      ],
+      crewedTripIds: ["mine"],
+      actions: [
+        action({ id: "o", kind: "waiver", subject: "Sal Moretti", departure: boat("other") }),
+        action({ id: "d", kind, subject: "Keiko Tanaka", departure: boat("other") }),
+      ],
+    });
+    const fold = screen.getByText("1 more for other boats and the desk").closest("details");
+    if (!fold) throw new Error("the other boat's rows did not fold");
+    expect(within(fold).queryAllByText("Keiko Tanaka", { exact: false })).toEqual([]);
+    for (const shown of screen.getAllByText("Keiko Tanaka", { exact: false })) {
+      expect(shown.closest("details")).toBeNull();
+    }
+  });
+
+  it("keeps the reader's own credential row open while the desk's fold", () => {
+    renderSpine({
+      departures: [departure({ tripId: "mine", title: "Dawn Two-Tank" })],
+      crewedTripIds: ["mine"],
+      readerPersonId: "me",
+      actions: [
+        action({
+          id: "staff-credential:me",
+          kind: "staff_credential_due",
+          staffPersonId: "me",
+          subject: "Sal Moretti",
+          urgency: "later",
+        }),
+        action({
+          id: "staff-credential:them",
+          kind: "staff_credential_due",
+          staffPersonId: "them",
+          subject: "Keiko Tanaka",
+          urgency: "later",
+        }),
+      ],
+    });
+    const fold = screen.getByText("1 more for other boats and the desk").closest("details");
+    if (!fold) throw new Error("the other staffer's row did not fold");
+    expect(within(fold).getByText("Keiko Tanaka", { exact: false })).toBeInTheDocument();
+    expect(within(fold).queryByText("Sal Moretti", { exact: false })).toBeNull();
+    expect(screen.getByText("Sal Moretti", { exact: false })).toBeVisible();
+  });
+
+  it("folds nothing for a reader who crews none of today's boats", () => {
+    renderSpine({
+      departures: [departure({ tripId: "t1" })],
+      crewedTripIds: [],
+      actions: [action({ id: "o", subject: "Sal Moretti", departure: boat("t1") })],
+    });
+    expect(screen.queryByText(/for other boats and the desk/)).toBeNull();
+  });
+
+  it("keeps the log off a live departure's card, which is the day's briefing", () => {
+    // ADR 20260804-incident-export-owner-gate, amendment 2026-10-07: a live
+    // departure's log is one tap away on its Details tab, which is where an
+    // owner whose boat is overdue goes for it; the card stays a briefing.
     renderSpine({
       departures: [departure({ tripId: "t1" })],
       evening: evening([closed({ tripId: "t2", title: "Dawn Wall" })]),
     });
     const live = screen.getByRole("link", { name: "Two-Tank Reef" }).closest("li");
     if (!live) throw new Error("the live departure did not render a station");
-    expect(within(live).getByRole("link", { name: "Generate log" })).toHaveAttribute(
+    expect(within(live).queryByRole("link", { name: "Departure log" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Departure log" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/trips/t1/log",
+      "/shop/blue-mantis/trips/t2/log",
     );
-
-    cleanup();
-    renderSpine({
-      departures: [departure({ tripId: "t1" })],
-      evening: evening([closed({ tripId: "t2", title: "Dawn Wall" })], { canOpenLog: false }),
-    });
-    expect(screen.queryByRole("link", { name: "Generate log" })).toBeNull();
   });
 
   it("says how the head count ended, once, on the station that owns it", () => {
@@ -1628,7 +1720,7 @@ describe("the stage chip (slice 16c)", () => {
 
   it("carries the crew's word, the site and the time they said it", () => {
     withStage("underway");
-    expect(screen.getByText(/Out on Molasses Reef · /)).toBeInTheDocument();
+    expect(screen.getByText(/Out on Molasses Reef since /)).toBeInTheDocument();
   });
 
   it("falls back to the siteless word on a departure with no plan", () => {
@@ -1641,7 +1733,7 @@ describe("the stage chip (slice 16c)", () => {
       ],
       actions: [action({ id: "b", departure: boat("t1") })],
     });
-    expect(screen.getByText(/Out on the water · /)).toBeInTheDocument();
+    expect(screen.getByText(/Out on the water since /)).toBeInTheDocument();
   });
 });
 

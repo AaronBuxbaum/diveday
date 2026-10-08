@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
-import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, seededTripId } from "./helpers";
+import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
+import { createTrip, daysFromNow, e2eNow, openTripFromBoard, seededTripId } from "./helpers";
 
 /**
  * The staffing week (`/shop/[shopSlug]/staffing`): people down the side, the
@@ -10,7 +10,7 @@ import { createTrip, daysFromNow, e2eNow, seededTripId } from "./helpers";
  * Three things worth knowing before reading the assertions:
  *
  * - The seed gives **every** staff member one 12-hour shift *today*
- *   (`src/db/seed.ts`, "Demo schedule"), and the frozen clock puts today at
+ *   (`src/db/seed.ts`, `SEEDED_SHIFT` below), and the frozen clock puts today at
  *   Tuesday 21 July 2026, 09:30 in the shop's own zone — so the default week
  *   is Mon 20 – Sun 26 July and it is never empty.
  * - Paging is `?week=<ISO Monday>`, the schedule board's own grammar
@@ -20,14 +20,22 @@ import { createTrip, daysFromNow, e2eNow, seededTripId } from "./helpers";
  *   width. The fleet drives at 1279px, above the grid's `lg` floor, so role
  *   queries reach the grid and skip the day list; where a text query is
  *   unavoidable it takes the first (visible) match.
- * - **The seeded week is not a clean week.** The demo's headline charter is the
- *   one whose divemaster is driving it and whose captain is on the lines
- *   (`seed-trips.ts`, the DOM-M3 case), so nobody on it is supervising in the
- *   water — Today already says so, and this surface now agrees. Assertions here
- *   name their own departure rather than counting the week's chips.
+ * - **The seeded week is a clean week.** The DOM-M3 charter (the divemaster
+ *   driving, the captain on the lines) sails a week out, past this one
+ *   (`seed-trips.ts`); today's reef boat is crewed the ordinary way. Assertions
+ *   here still name their own departure rather than counting the week's chips.
  */
 
 const STAFFING = "/shop/blue-mantis/staffing";
+
+/**
+ * The seeded shift every member of the cast works today (`seedStaffShifts`,
+ * `src/db/seed.ts`), read by its hours: it carries no note, since a seed label
+ * on every chip read as a fixture rather than a shop (UX audit 2026-10-07,
+ * item 34). An hour before today's reef boat (2:30 PM at the frozen 9:30 AM
+ * clock) and twelve hours long.
+ */
+const SEEDED_SHIFT = "1:30 PM – 1:30 AM";
 
 /**
  * The Add-a-shift door's form, scoped by the disclosure's own id — the
@@ -47,7 +55,7 @@ const weekOf = (page: Page) => page.getByRole("region", { name: "Who’s working
  * to blue-mantis survives into every later spec in the same worker whenever
  * this test fails before reaching its own Remove step.
  *
- * A minted shop carries the same seeded "Demo schedule" shift for every member
+ * A minted shop carries the same seeded shift for every member
  * of the cast (`seedStaffShifts`, src/db/seed.ts), which is what the
  * before-and-after assertions below read.
  */
@@ -64,14 +72,14 @@ test("an owner puts a shift in a day, steps a week off it, and takes it back off
   // overlap.
   const shiftDay = daysFromNow(2);
   // Unique, so the assertions target this test's own shift rather than the
-  // seeded "Demo schedule" one.
+  // seeded one.
   const note = `Boat 2 ${e2eNow().getTime()}`;
 
   await page.goto(`/shop/${privateShop.slug}/staffing`);
   await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
   const week = weekOf(page);
   // The seeded shift is on today, which is inside the week the page opens on.
-  await expect(week.getByText("Demo schedule").first()).toBeVisible();
+  await expect(week.getByText(SEEDED_SHIFT).first()).toBeVisible();
 
   // The two add-forms became one door (decision 3), and it opens in place.
   await page.locator("#add-shift > summary").click();
@@ -95,7 +103,7 @@ test("an owner puts a shift in a day, steps a week off it, and takes it back off
   await page.getByRole("link", { name: "Next week" }).click();
   await expect(page).toHaveURL(/week=/);
   await expect(week.getByText(note)).toHaveCount(0);
-  await expect(week.getByText("Demo schedule")).toHaveCount(0);
+  await expect(week.getByText(SEEDED_SHIFT)).toHaveCount(0);
 
   // Back to the week that has it, and take it off. The chip is the disclosure;
   // Remove is what it opens onto.
@@ -110,7 +118,7 @@ test("an owner puts a shift in a day, steps a week off it, and takes it back off
   // assertion could read it.
   await expect(page.getByText("Shift removed.")).toBeVisible();
   await expect(week.getByText(note)).toHaveCount(0);
-  await expect(week.getByText("Demo schedule").first()).toBeVisible();
+  await expect(week.getByText(SEEDED_SHIFT).first()).toBeVisible();
 });
 
 /**
@@ -209,7 +217,7 @@ test.describe("staffing", () => {
     // refused, so a bookmark a shop kept still opens the page.
     await page.goto(`${STAFFING}?from=${daysFromNow(30)}&to=${daysFromNow(37)}`);
     await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
-    await expect(weekOf(page).getByText("Demo schedule").first()).toBeVisible();
+    await expect(weekOf(page).getByText(SEEDED_SHIFT).first()).toBeVisible();
     // Already on this week, so the way home is absent rather than disabled.
     await expect(page.getByRole("link", { name: "This week" })).toHaveCount(0);
   });
@@ -225,7 +233,7 @@ test.describe("staffing, as the daily crew", () => {
     // "a captain sees the board but none of its controls".
     await page.goto(STAFFING);
     await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
-    await expect(weekOf(page).getByText("Demo schedule").first()).toBeVisible();
+    await expect(weekOf(page).getByText(SEEDED_SHIFT).first()).toBeVisible();
 
     // No door, and no act inside a chip — a control that refuses is worse than
     // a control that is not there.
@@ -265,23 +273,60 @@ test.describe("staffing, as the daily crew", () => {
 });
 
 test.describe("a crew member asks to work a short-handed departure", () => {
-  // **The instructor, not the captain.** Sal crews every one of the seeded
-  // week's short-handed departures, so `crewRequestRefusal` answers
-  // `already_crewing` for all of them and the ask is correctly absent — the
-  // affordance is only offered where the write would accept it. Marcus crews
-  // the two course days and nothing else, which is the state this needs.
+  // **The instructor, not the captain**: the instructor crews the course days
+  // and nothing else, so the ask on a charter nobody crews is one the write
+  // would accept — the affordance is only offered where it would.
   signedInAs("instructor");
 
-  test("the ask lands on the departure, and the owner is the one who answers", async ({ page }) => {
-    // Reset-owned rows again, so the demo shop is the right place to write them.
+  test("the ask lands on the departure, and the owner is the one who answers", async ({
+    page,
+    browser,
+    workerBaseURL,
+    staffStorageState,
+  }) => {
+    // An owner builds the departure and seats a diver, then the instructor asks.
+    test.setTimeout(60_000);
+    // **The seeded week is a clean week** (this file's docblock): every demo
+    // boat carries its divemaster and assistant in the water, so the owner
+    // makes the short-handed departure the ask exists for. A booked diver and
+    // nobody crewing is `uncrewed_departure`; an empty boat needs nobody.
+    const title = `Short-handed Charter ${e2eNow().getTime()}`;
+    const ownerContext = await browser.newContext({
+      baseURL: workerBaseURL,
+      storageState: await staffStorageState("owner"),
+    });
+    try {
+      const owner = makeActivitySafe(await ownerContext.newPage());
+      await createTrip(owner, {
+        title,
+        date: daysFromNow(1),
+        departsAt: "09:00",
+        returnsAt: "13:00",
+        capacity: 6,
+      });
+      await owner.goto("/shop/blue-mantis/schedule/board");
+      await openTripFromBoard(owner, title);
+      // Inside the arrivals window "Add a diver" is one search field, and a
+      // booked seat is its empty result's "Add diver" (UX audit item 24).
+      const find = owner.getByRole("searchbox", { name: "Find a returning diver" });
+      await find.fill("Needs A Divemaster");
+      await find.press("Enter");
+      await owner.getByRole("link", { name: "Add diver", exact: true }).first().click();
+      await owner.waitForURL(/\/divers\/new/);
+      await owner.getByLabel("Full name").fill("Needs A Divemaster");
+      await owner.getByLabel("Email").fill(`short-${e2eNow().getTime()}@example.com`);
+      await owner.getByRole("button", { name: "Add to trip" }).click();
+      await owner.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
+    } finally {
+      await ownerContext.close();
+    }
+
     await page.goto(STAFFING);
     await page.getByRole("heading", { level: 1, name: "Schedule" }).waitFor();
     // By the accessible name, not the visible label: every gap's button reads
     // "Ask for this one", so the departure it is about lives in the `ariaLabel`
     // (`SubmitButton`) — which is also what a screen reader hears.
-    const ask = page.getByRole("button", { name: /^Ask to work / }).first();
-    // The ask only exists where a departure is short of crew, which the seeded
-    // week is — asserting on the state rather than skipping past it.
+    const ask = page.getByRole("button", { name: `Ask to work ${title}` }).first();
     await expect(ask).toBeVisible();
     await ask.click();
     await expect(page.getByText("Sent. The shop will see it on the week.")).toBeVisible();

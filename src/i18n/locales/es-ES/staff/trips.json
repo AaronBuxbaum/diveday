@@ -142,6 +142,7 @@
     "overRatio": "Ratio de alumnos excedida: añade un divemaster o AI",
     "overRatioInstructor": "Ratio de alumnos excedida: añade un instructor",
     "overIntroRatio": "Ratio de bautismo excedida: añade un instructor",
+    "toSort": "{count, plural, one {# cosa por resolver} other {# cosas por resolver}}",
     "prepGaps": "{count, plural, one {A # persona le faltan tallas de alquiler} other {A # personas les faltan tallas de alquiler}}",
     "awaitingPayment": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}",
     "noRequirements": "Define los requisitos para que alguien pueda embarcar",
@@ -325,6 +326,7 @@
     "noMatches": "Ningún buceador habitual coincide con “{query}”.",
     "nameLabel": "Nombre",
     "addToWaitlist": "Añadir a la lista de espera",
+    "addAsWalkIn": "Añadir como walk-in",
     "noMatchesHeading": "Ningún buceador habitual con ese nombre",
     "addDiver": "Añadir buceador",
     "addNewDiverAction": "Añadir buceador"

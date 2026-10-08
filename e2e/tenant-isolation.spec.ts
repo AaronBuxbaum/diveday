@@ -145,6 +145,12 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
     await expect(page.getByText(OTHER_SHOP_NAME), path).toHaveCount(0);
     await expect(page.getByText(OTHER_SHOP_DIVER), path).toHaveCount(0);
     await expect(page.getByRole("navigation", { name: "Main", exact: true }), path).toHaveCount(0);
+    // The one door is the reader's own day, off their session, never the
+    // shop the URL claimed (UX audit 2026-10-07, item 13).
+    await expect(page.getByRole("link", { name: "Back to Today" }), path).toHaveAttribute(
+      "href",
+      `/shop/${unique}`,
+    );
   }
 
   // A hand-supplied x-diveday-path claiming a public route must not soften
@@ -218,6 +224,11 @@ test("a mistyped id in a staff path segment is a 404, never a 500", async ({ pag
       page.getByRole("heading", { name: "We couldn’t find that page" }),
       path,
     ).toBeVisible();
+    // A staffer's miss goes back to their day, never to the sales site.
+    await expect(page.getByRole("link", { name: "Back to Today" }), path).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis",
+    );
   }
 });
 

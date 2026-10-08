@@ -815,7 +815,11 @@ export function OfflineManifestView() {
       <PullToRefresh onRefresh={reconcile}>
         <OfflineShellVersionBanner copy={shellVersionCopy} />
         {discardNotice}
-        <SkipLink href="#offline-roll-call" label={t("shared.offlineManifest.single.skipLink")} />
+        <SkipLink
+          href="#offline-roll-call"
+          label={t("shared.offlineManifest.single.skipLink")}
+          level="page"
+        />
         <OfflineTripHeader view={view} controls={controls} />
 
         {/* **Above the roster, deliberately.** This is the one document a crew has

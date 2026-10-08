@@ -594,7 +594,10 @@ So:
   the two Stripe secrets from 1Password, Meta's app credentials, the read-only usage tokens, and a
   couple of choices like `OPS_ALERT_EMAIL`. `pnpm env:manual` creates it, and on first run lifts
   those values out of a pre-split `.env.local` so nothing is re-pasted. `pnpm check:env` lists what
-  is still blank and what each one switches off — every line may legitimately stay empty.
+  is still blank and what each one switches off — every line may legitimately stay empty. The one
+  exception is a Vercel production build: `scripts/vercel-build.mjs` runs `pnpm check:env` before
+  the migrations, and it refuses the deploy when a registry row marked `requiredInProduction` (the
+  Upstash pair today) is unset on the project, so provision those before the next production deploy.
 - **`.env.local` is generated and overwritten on every deploy.** An edit there is lost; make it in
   `.env.manual`.
 - **A value the stack mints has no local override**, and putting one in `.env.manual` is refused

@@ -33,6 +33,45 @@ function countOf(marker: string): number {
   return SOURCE.split(marker).length - 1;
 }
 
+/**
+ * **The confirmation in the first paint** (UX audit #5). After a booking POST
+ * the diver used to land on a whole-page skeleton while the spine's seven reads
+ * ran, at the one moment they were waiting to be told it worked. The masthead
+ * and the earned moment need only the verified booking, so they render before
+ * a `<Suspense>` boundary and the thread streams into it.
+ */
+describe("the confirmation paints before the thread", () => {
+  it("renders the earned moment outside the thread's boundary", () => {
+    const suspense = positionOf("<Suspense fallback={<ReadyThreadBodySkeleton />}>");
+    expect(suspense).toBeGreaterThan(-1);
+    expect(positionOf("<EarnedMoment")).toBeLessThan(suspense);
+    // The thread's reads live in the promise the boundary renders, never above it.
+    const body = positionOf("const threadBody = (async () => {");
+    expect(body).toBeGreaterThan(-1);
+    const page = positionOf("export default async function DiverReadinessPage");
+    const thread = SOURCE.slice(body, suspense);
+    for (const read of ["issuePartySeatClaims(", "resolvePaymentReceipt(", "listTripDives("]) {
+      expect(SOURCE.slice(page, body)).not.toContain(read);
+      expect(thread).toContain(read);
+    }
+    expect(positionOf("<ThreadSpine")).toBeGreaterThan(body);
+  });
+
+  it("never leaves the page between starting the thread and rendering it", () => {
+    // `threadBody` starts running when it is built (it mints party claim
+    // tokens and refreshes a Stripe checkout), so an early return or throw
+    // after it would run those effects for a page that never shows them and
+    // drop the promise unhandled. At the page's own indent, the only exit
+    // between the promise and its boundary is the final render.
+    const body = positionOf("const threadBody = (async () => {");
+    const bodyEnd = SOURCE.indexOf("\n  })();", body);
+    const suspense = positionOf("<Suspense fallback={<ReadyThreadBodySkeleton />}>");
+    expect(bodyEnd).toBeGreaterThan(body);
+    const exits = SOURCE.slice(bodyEnd, suspense).match(/\n {2}(return|throw)\b/g) ?? [];
+    expect(exits).toEqual(["\n  return"]);
+  });
+});
+
 describe("the thread page's order", () => {
   it("runs status, spine, where to go, party, packing, then the rare acts", () => {
     const status = positionOf("<ThreadStatus");

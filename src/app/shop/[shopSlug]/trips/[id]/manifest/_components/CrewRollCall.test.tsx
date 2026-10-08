@@ -283,3 +283,62 @@ describe("the mark beside a name that wraps", () => {
     expect(row).toContainElement(screen.getByRole("button", { name: "Mark aboard" }));
   });
 });
+
+/**
+ * **A crew clash is said once, and each row says only which other boat** (UX
+ * audit 2026-10-07, item 3; issue #1779). Two clashing crew members each
+ * carried "Also rostered on … at the same time. Confirm who is aboard before
+ * you sail." — the same instruction twice, three lines each, on the list a crew
+ * reads in motion.
+ */
+describe("a crew member rostered on another boat", () => {
+  const clash = (title: string) => [{ tripId: "00000000-0000-4000-8000-0000000000aa", title }];
+  const keiko = crew({ clashes: clash("Wreck run") });
+  const sal = crew({
+    id: "00000000-0000-4000-8000-0000000000c2",
+    fullName: "Sal Moretti",
+    roles: ["captain"],
+    clashes: clash("Night dive"),
+  });
+
+  it("states the instruction once over the list, and names the other boat on each row", () => {
+    renderCrew({ members: [keiko, sal], checkpoint: "departure" });
+    expect(
+      screen.getAllByText(
+        "2 of the crew are also rostered on other boats at these hours. Confirm who sails.",
+      ),
+    ).toHaveLength(1);
+    expect(screen.getByText("Also rostered on Wreck run at these hours.")).toBeInTheDocument();
+    expect(screen.getByText("Also rostered on Night dive at these hours.")).toBeInTheDocument();
+    expect(screen.queryByText(/Confirm who is aboard/)).toBeNull();
+  });
+
+  it("stops counting a crew member once somebody has tapped them", () => {
+    renderCrew({
+      members: [
+        keiko,
+        {
+          ...sal,
+          rollCall: {
+            state: "boarded",
+            occurredAt: new Date("2026-09-11T11:00:00.000Z"),
+            recordedByName: "Keiko Tanaka",
+          } as RollCallRecord,
+        },
+      ],
+      checkpoint: "departure",
+    });
+    expect(
+      screen.getByText(
+        "1 of the crew is also rostered on another boat at these hours. Confirm who sails.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Also rostered on Night dive at these hours.")).toBeNull();
+  });
+
+  it("says nothing about another boat after a dive, where it would read as an excuse", () => {
+    renderCrew({ members: [keiko, sal], checkpoint: "after_dive_1" });
+    expect(screen.queryByText(/rostered on/)).toBeNull();
+    expect(screen.queryByText(/Confirm who sails/)).toBeNull();
+  });
+});

@@ -554,3 +554,27 @@ export function CourseFaqs({ faqs, t }: { faqs: CourseFaq[]; t: DiverTranslator 
     </section>
   );
 }
+
+/**
+ * Where the phone's foot bar points on a course page (UX audit #8). The dates
+ * panel sits about four screens down a phone page, so the trip page's foot bar
+ * comes here too, pointing where the dates panel's own primary act does: Book
+ * when a date has room, the wait list when every date is full, and, with no
+ * dates on the board, the date request. No dates and no address leaves no
+ * door to keep, and no bar.
+ */
+export function courseFootBar(
+  sessions: ReadonlyArray<{ capacity: number; booked: number }>,
+  inquiryHref: string | null,
+  t: DiverTranslator,
+): { href: string; label: string } | null {
+  if (sessions.length > 0) {
+    return {
+      href: "#dates",
+      label: sessions.some((session) => !isFull(session))
+        ? t("booking.bookVerb")
+        : t("course.joinWaitList"),
+    };
+  }
+  return inquiryHref ? { href: inquiryHref, label: t("course.requestDateLink") } : null;
+}

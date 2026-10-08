@@ -243,11 +243,18 @@ const DOOR_GLYPH_MARKS: Record<DoorGlyphId, readonly string[]> = {
  * not do.
  */
 export function EntryDone({
+  wordmark = false,
   glyph,
   title,
   text,
   action,
 }: {
+  /**
+   * Show the DiveDay mark above the drawn one — for a dead link that resolves
+   * no shop, where it is the only answer to "whose page is this?" (UX audit
+   * #28). Never alongside a shop's name: that page is the shop's.
+   */
+  wordmark?: boolean;
   /** Which situation this is — the component owns the drawing. */
   glyph: DoorGlyphId;
   title: string;
@@ -257,6 +264,7 @@ export function EntryDone({
 }) {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center px-6 py-12 text-center sm:py-16">
+      {wordmark ? <Wordmark className="mb-8 justify-center" /> : null}
       <div
         aria-hidden="true"
         className="grid size-14 place-items-center rounded-full bg-surface-sunken"

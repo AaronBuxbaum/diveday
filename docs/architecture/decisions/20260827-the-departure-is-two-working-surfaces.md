@@ -83,6 +83,8 @@ not recorded yet", or "Dive 1 — Molasses Reef, 18 m, 8:05 – 8:47" — with t
 the same treatment the boat checklist took in slice 5a. Paper carries that line rather than the
 blank form it used to print.
 
+*Amended 2026-10-07 (UX audit 2026-10-07, item 17).* The boat checklist is one tap away **once it is finished**. At the departure checkpoint, while any item is unchecked, it stands open above the roll call and folds to its "N of N checked" line the moment the last item is checked; after a dive it is a line either way. Collapsed at "0 of 5 checked", the one list that has to be done before the boat leaves was the one thing a captain could miss without being told.
+
 Paper is unaffected: the printed manifest keeps every contact, number and advisory in full. Screens
 hide; the sheet that goes ashore never does.
 

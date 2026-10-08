@@ -7,6 +7,7 @@ import {
   formatPercentChange,
   formatPointsChange,
   formatReportMoney,
+  hasComparableBaseline,
   type MonthlyReport,
   type MonthlyReportInput,
   monthHasActivity,
@@ -361,5 +362,15 @@ describe("formatPercentChange / formatPointsChange", () => {
   it("does not sign a flat zero as a gain", () => {
     expect(formatPercentChange(0)).toBe("0%");
     expect(formatPointsChange(0)).toBe("0pp");
+  });
+});
+
+describe("hasComparableBaseline (UX audit item 21)", () => {
+  it("drops a line against a month that had none of the thing", () => {
+    expect(hasComparableBaseline(compareMetric(4200, 0, 10))).toBe(false);
+  });
+
+  it("keeps a small but real baseline, which shows both raw numbers", () => {
+    expect(hasComparableBaseline(compareMetric(3, 2, 10))).toBe(true);
   });
 });

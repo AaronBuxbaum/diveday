@@ -54,7 +54,7 @@ async function context() {
 async function directInvitation(ctx: Awaited<ReturnType<typeof context>>) {
   const { db, shop, author, trip } = ctx;
   const [candidate] = await listBookableDivers(db, shop.id, trip.id, {
-    query: "simulator.amazonses.com",
+    query: "mail.example",
   });
   if (!candidate) throw new Error("expected a bookable seeded diver");
   await createDirectTripInvitation(db, {
@@ -166,7 +166,7 @@ describe("deliverTripInvitation", () => {
     // A diver already on file asks for a date, so the request resolves to a
     // person whose courtesy-email setting could have been consulted.
     const [asker] = await listBookableDivers(ctx.db, ctx.shop.id, ctx.trip.id, {
-      query: "simulator.amazonses.com",
+      query: "mail.example",
     });
     if (!asker?.person.email) throw new Error("expected a seeded diver with an email");
     const request = await recordCourseInquiry(ctx.db, {

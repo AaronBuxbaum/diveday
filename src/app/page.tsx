@@ -226,7 +226,7 @@ const STEPS: readonly {
     screen: (locale) => <FrontDeskReadinessFallback locale={locale} />,
   },
   {
-    // The same saved copy as the hero's phone, at the checkpoint the hero
+    // The same roll call as the hero's phone, at the checkpoint the hero
     // does not show: after the first dive, as a flat still, because a second
     // bezel on one page reads as two phones. The hero is the boat leaving;
     // this is who came back.

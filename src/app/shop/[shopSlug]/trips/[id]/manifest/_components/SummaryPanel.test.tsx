@@ -490,15 +490,11 @@ describe("uncalled crew while divers are still open", () => {
 });
 
 /**
- * **The prose under the pinned card starts on the card's content edge, and an
- * empty status line adds nothing** (K-554, K-558).
+ * **The prose under the pinned card starts on the card's content edge** (K-554).
  *
  * The card is `border p-4`, so its chips start 17px in; the prose block under
- * it was `px-4`, and its lines started a pixel left of the card's. And the
- * live status line stays mounted (it must exist before its words arrive), but
- * with divers still to call it has nothing to say, and the lines after it
- * still spaced themselves off it: 4px of margin above "1 person is blocked."
- * against a 0px line.
+ * it was `px-4`, and its lines started a pixel left of the card's. The live
+ * status line stays mounted: it must exist before its words arrive.
  */
 describe("who the people are", () => {
   it("leaves out a type nobody is, as the offline copy does", () => {
@@ -511,21 +507,28 @@ describe("who the people are", () => {
     expect(screen.queryByText(/rider/)).toBeNull();
   });
 
-  it("counts the blocked as people, since a snorkeler or rider can be one", () => {
-    // Regression (visual triage, PR #2224): a mixed boat's Boat tab said
-    // "4 divers are blocked." with a snorkeler and a rider among the four.
+  it("counts the blocked aboard as people, since a snorkeler or rider can be one", () => {
+    // Regression (visual triage, PR #2224): a mixed boat's Boat tab called a
+    // snorkeler and a rider among its blocked "divers".
     renderPanel({
       isDeparture: true,
       checkpoint: "departure",
+      completeness: completeness({ reason: null, complete: true }),
       summary: summary({
         totalDivers: 7,
         byType: { diver: 5, snorkeler: 1, rider: 1 },
         ready: 3,
         blocked: 4,
+        boarded: 5,
+        notBoarded: 0,
+        notBackAboard: 0,
+        awaiting: 2,
       }),
+      blockedAtDock: { undecided: 2, aboard: 2 },
+      notBackAboardDivers: [],
     });
-    expect(screen.getByText("4 people are blocked.")).toBeInTheDocument();
-    expect(screen.queryByText(/divers are blocked/)).toBeNull();
+    expect(screen.getByText("2 blocked people aboard")).toBeInTheDocument();
+    expect(screen.queryByText(/blocked divers/)).toBeNull();
   });
 });
 
@@ -554,12 +557,69 @@ describe("the prose under the pinned card", () => {
     expect(prose).toHaveClass("border-x", "border-transparent", "px-4");
   });
 
-  it("spaces nothing off the live line while it is empty", () => {
+  it("keeps the live line mounted while it is empty", () => {
     renderAwaiting();
     const live = document.querySelector('[aria-live="polite"]');
     expect(live?.tagName).toBe("P");
     expect(live).toBeEmptyDOMElement();
-    const blocked = screen.getByText("1 person is blocked.");
-    expect(blocked).toHaveClass("[p:empty+&]:mt-0");
+  });
+});
+
+/**
+ * **The headline never reassures over a blocked row** (UX audit 2026-10-07,
+ * item 16). "8 of 8 divers aboard" stood over three rows reading Blocked, and
+ * the count of them was a sentence in the half that scrolls away. The panel
+ * says the summary's two settled-out figures, never `blocked` itself: a
+ * blocked diver left ashore or released by the desk is outside the total, and
+ * counting them read "5 of 5 aboard, 3 blocked" (dive-domain review).
+ */
+describe("blocked divers at the head count", () => {
+  function renderBlocked(
+    isDeparture: boolean,
+    counts: { blocked: number; undecided: number; aboard: number },
+  ) {
+    return renderPanel({
+      isDeparture,
+      checkpoint: isDeparture ? "departure" : "after_dive_1",
+      completeness: completeness({ reason: null, complete: true }),
+      summary: summary({
+        totalDivers: 8,
+        ready: 8 - counts.blocked,
+        blocked: counts.blocked,
+        boarded: 5,
+        notBoarded: 0,
+        notBackAboard: 0,
+        awaiting: 3,
+      }),
+      blockedAtDock: { undecided: counts.undecided, aboard: counts.aboard },
+      notBackAboardDivers: [],
+    });
+  }
+
+  it("carries the undecided blocked count in the pinned card, beside the count it qualifies", () => {
+    renderBlocked(true, { blocked: 3, undecided: 3, aboard: 0 });
+    const line = screen.getByText("3 blocked");
+    expect(line).toHaveClass("text-danger");
+    // In the sticky card, not the prose that scrolls away under it.
+    expect(line.closest(".sticky")).not.toBeNull();
+    expect(screen.queryByText(/divers are blocked/)).toBeNull();
+  });
+
+  it("never says the roster's blocked figure, only the dock's", () => {
+    // Three blocked on the roster, all left ashore or released as not here:
+    // none undecided, none aboard. Nothing to say over the count.
+    renderBlocked(true, { blocked: 3, undecided: 0, aboard: 0 });
+    expect(screen.queryByText(/blocked/)).toBeNull();
+  });
+
+  it("says a blocked diver the crew marked aboard, apart from the undecided", () => {
+    renderBlocked(true, { blocked: 3, undecided: 1, aboard: 2 });
+    expect(screen.getByText("2 blocked people aboard")).toHaveClass("text-danger");
+    expect(screen.getByText("1 blocked")).toBeInTheDocument();
+  });
+
+  it("says nothing about blocked after a dive, where it gates nothing", () => {
+    renderBlocked(false, { blocked: 3, undecided: 1, aboard: 2 });
+    expect(screen.queryByText(/blocked/)).toBeNull();
   });
 });

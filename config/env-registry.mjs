@@ -564,8 +564,8 @@ export const ENV_GROUPS = [
     doc: [
       "The distributed rate-limit store (ADR 20260801-distributed-rate-limit-store):",
       "an Upstash Redis database's REST URL and token, read by src/lib/rate-limit.ts.",
-      "Vercel's Upstash integration sets both on the project; otherwise paste them",
-      "from the Upstash console. Vercel only: a local run, the e2e fleet and CI use",
+      "Vercel's Upstash for Redis integration sets both on the project under these",
+      "KV_ names; otherwise paste them from the Upstash console. Vercel only: a local run, the e2e fleet and CI use",
       "the in-process store on purpose. Absent in production, every limit is per",
       "serverless instance and so multiplied by however many are warm -- the app",
       "logs rate_limit.memory_store_in_production once per instance, and",
@@ -574,7 +574,7 @@ export const ENV_GROUPS = [
     ],
     keys: [
       {
-        key: "UPSTASH_REDIS_REST_URL",
+        key: "KV_REST_API_URL",
         from: "manual",
         targets: VERCEL,
         requiredInProduction: true,
@@ -582,11 +582,11 @@ export const ENV_GROUPS = [
           "rate limits fall back to a per-instance in-memory store, so sign-in, password reset and public booking limits are bypassable by fan-out",
       },
       {
-        key: "UPSTASH_REDIS_REST_TOKEN",
+        key: "KV_REST_API_TOKEN",
         from: "manual",
         targets: VERCEL,
         requiredInProduction: true,
-        absent: "as UPSTASH_REDIS_REST_URL",
+        absent: "as KV_REST_API_URL",
       },
     ],
   },

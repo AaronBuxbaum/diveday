@@ -145,7 +145,11 @@ export function WeekLedger({
         return (
           <Fragment key={row.id}>
             {newDay ? <DayRule parts={row.dayParts} stickyTop={stickyTop} /> : null}
-            <Row row={row} priceColumn={priceColumn !== null} />
+            <Row
+              row={row}
+              priceColumn={priceColumn !== null}
+              anchorId={newDay ? dayAnchorId(row.dayKey) : undefined}
+            />
           </Fragment>
         );
       })}
@@ -222,7 +226,26 @@ function DayRule({ parts, stickyTop }: { parts: WeekLedgerRow["dayParts"]; stick
  */
 const FACT = "inline-block";
 
-function Row({ row, priceColumn }: { row: WeekLedgerRow; priceColumn: boolean }) {
+/**
+ * Where `DayJumpStrip` lands for one day: the day's first row, never its sticky
+ * rule. A stuck rule's box is wherever it is pinned, so a jump measured from it
+ * scrolls to the wrong place; the row's `scroll-mt-16` clears the rule that will
+ * pin over it, the same inset a focused row keeps.
+ */
+export function dayAnchorId(dayKey: string): string {
+  return `day-${dayKey}`;
+}
+
+function Row({
+  row,
+  priceColumn,
+  anchorId,
+}: {
+  row: WeekLedgerRow;
+  priceColumn: boolean;
+  /** Set on a day's first row, the target of the day strip's link. */
+  anchorId?: string;
+}) {
   const meta: ReactNode[] = [];
   // The shop's own word leads the line, before the course and the site: it is
   // what the reader is scanning for once they have tapped a lens, and it is the
@@ -276,7 +299,7 @@ function Row({ row, priceColumn }: { row: WeekLedgerRow; priceColumn: boolean })
   // for everyone; the ink change is only the visual echo.
   const quiet = row.capacityTone === "full" || row.aboveLevel !== null;
   return (
-    <li>
+    <li id={anchorId} className={anchorId ? "scroll-mt-16" : undefined}>
       {/* `sm:items-baseline`: the seat group centres a 28px badge, taller than
           the title's 24px line, so top-aligned its price and chevron sat 2–3px
           below the title. On one baseline — the badge's word's — they share
@@ -345,7 +368,14 @@ function Row({ row, priceColumn }: { row: WeekLedgerRow; priceColumn: boolean })
           {row.capacityTone === "quiet" ? (
             <p className="text-base text-muted tabular-nums">{row.capacityText}</p>
           ) : (
-            <Badge tone={row.capacityTone === "full" ? "neutral" : "warning"} tabularNums>
+            // `toneMark={false}`: scarcity is a sales fact, and the warning
+            // triangle is rationed for safety (UX audit #26). The words and
+            // the tint carry it; "Only 2 spots left" never reads as colour alone.
+            <Badge
+              tone={row.capacityTone === "full" ? "neutral" : "warning"}
+              tabularNums
+              toneMark={false}
+            >
               {row.capacityText}
             </Badge>
           )}

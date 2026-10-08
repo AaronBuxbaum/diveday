@@ -383,6 +383,7 @@ export async function shopSenderFor(
       addressRegion: shops.addressRegion,
       addressPostalCode: shops.addressPostalCode,
       addressCountry: shops.addressCountry,
+      isDemo: shops.isDemo,
     })
     .from(shops)
     .where(eq(shops.id, shopId))

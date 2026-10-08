@@ -49,6 +49,7 @@ export function AddDiverSection({
   confirmPhone,
   confirmMatches,
   shopRentalItems,
+  walkInOpen = false,
   className = "",
 }: {
   shopSlug: string;
@@ -82,6 +83,14 @@ export function AddDiverSection({
    * than hides.
    */
   shopRentalItems?: readonly string[];
+  /**
+   * The departure's arrivals are open and it has not sailed: the band is one
+   * search field, and its door for someone new is "Add as a walk-in" (UX audit
+   * 2026-10-07, item 24), with "Add diver" beside it for the seat booked by
+   * phone: the arrivals window reaches a day and a half ahead, and a booking
+   * for tomorrow is not a walk-in.
+   */
+  walkInOpen?: boolean;
   className?: string;
 }) {
   const t = staffTranslator(locale);
@@ -89,6 +98,10 @@ export function AddDiverSection({
   // A candidate with no dive day says so only when a sibling has one; the rule
   // and the bias it corrects are in `noDiveDayNeedsSaying`.
   const sayNoDiveDay = noDiveDayNeedsSaying(confirmMatches ?? []);
+  const bookNewDiver = newDiverHref(shopSlug, { query, surface: "trip-guests", tripId });
+  const walkInNewDiver = newDiverHref(shopSlug, { query, surface: "walk-in", tripId });
+  const bookLabel = t("trips.addDiver.addNewDiverAction", { query });
+  const walkInLabel = t("trips.addDiver.addAsWalkIn");
   return (
     <div className={`flex flex-col gap-4 ${className}`.trim()}>
       <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
@@ -180,56 +193,73 @@ export function AddDiverSection({
             query={query}
             label={t("trips.addDiver.findLabel")}
             placeholder={t("trips.addDiver.findPlaceholder")}
-            addDiverHref={newDiverHref(shopSlug, {
-              query,
-              surface: "trip-guests",
-              tripId,
-            })}
-            addDiverLabel={t("trips.addDiver.addDiver")}
+            // At the counter the band is one field: someone new is offered by
+            // the search's own result, never a second door beside it.
+            addDiverHref={walkInOpen ? undefined : bookNewDiver}
+            addDiverLabel={walkInOpen ? undefined : t("trips.addDiver.addDiver")}
           />
 
           {searched ? (
             candidates.length > 0 ? (
-              <PersonCandidateList
-                candidates={candidates}
-                tripId={tripId}
-                seatAction={addExistingDiverAction}
-                inviteAction={inviteAction}
-                personHref={(personId) => `/shop/${shopSlug}/divers/${personId}`}
-                rowClassName="bg-surface"
-                // "Same as last time": the fit already on file carries onto the
-                // trip, so staff confirm rather than re-enter.
-                extraLine={({ rentalFit }) => (
-                  <p className="mt-0.5 text-xs text-muted">
-                    {rentalFit
-                      ? t("trips.addDiver.rentalFitOnFile", {
-                          fit: rentalFitLineText(
-                            t,
-                            locale,
-                            rentalFitLine(rentalFit, shopRentalItems),
-                          ),
-                        })
-                      : t("trips.addDiver.noRentalFitYet")}
-                  </p>
-                )}
-                inviteLabel={t("trips.invitations.directInvite")}
-                invitePendingLabel={t("trips.invitations.directInviting")}
-                invitePersonAriaLabel={(name) => t("trips.invitations.directInviteAria", { name })}
-                addLabel={t("trips.addDiver.addToTrip")}
-                pendingLabel={t("seatDiver.adding")}
-                addPersonAriaLabel={(name) => t("trips.addDiver.addPersonAriaLabel", { name })}
-                noEmailOnFile={t("trips.addDiver.noEmailOnFile")}
-              />
+              <>
+                <PersonCandidateList
+                  candidates={candidates}
+                  tripId={tripId}
+                  seatAction={addExistingDiverAction}
+                  inviteAction={inviteAction}
+                  personHref={(personId) => `/shop/${shopSlug}/divers/${personId}`}
+                  rowClassName="bg-surface"
+                  // "Same as last time": the fit already on file carries onto the
+                  // trip, so staff confirm rather than re-enter.
+                  extraLine={({ rentalFit }) => (
+                    <p className="mt-0.5 text-xs text-muted">
+                      {rentalFit
+                        ? t("trips.addDiver.rentalFitOnFile", {
+                            fit: rentalFitLineText(
+                              t,
+                              locale,
+                              rentalFitLine(rentalFit, shopRentalItems),
+                            ),
+                          })
+                        : t("trips.addDiver.noRentalFitYet")}
+                    </p>
+                  )}
+                  inviteLabel={t("trips.invitations.directInvite")}
+                  invitePendingLabel={t("trips.invitations.directInviting")}
+                  invitePersonAriaLabel={(name) =>
+                    t("trips.invitations.directInviteAria", { name })
+                  }
+                  addLabel={t("trips.addDiver.addToTrip")}
+                  pendingLabel={t("seatDiver.adding")}
+                  addPersonAriaLabel={(name) => t("trips.addDiver.addPersonAriaLabel", { name })}
+                  noEmailOnFile={t("trips.addDiver.noEmailOnFile")}
+                />
+                {/* The match list can miss the person at the desk (another Sam);
+                  the doors for someone new stay one tap away under it. */}
+                {walkInOpen ? (
+                  <div className="flex flex-wrap gap-x-4">
+                    <Link
+                      href={walkInNewDiver}
+                      className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
+                    >
+                      {walkInLabel}
+                    </Link>
+                    <Link
+                      href={bookNewDiver}
+                      className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
+                    >
+                      {bookLabel}
+                    </Link>
+                  </div>
+                ) : null}
+              </>
             ) : (
               <HandEntryPrompt
                 heading={t("trips.addDiver.noMatchesHeading")}
                 body={t("trips.addDiver.noMatches", { query })}
-                actionLabel={t("trips.addDiver.addNewDiverAction", { query })}
-                href={newDiverHref(shopSlug, {
-                  query,
-                  surface: "trip-guests",
-                  tripId,
-                })}
+                actionLabel={walkInOpen ? walkInLabel : bookLabel}
+                href={walkInOpen ? walkInNewDiver : bookNewDiver}
+                secondary={walkInOpen ? { label: bookLabel, href: bookNewDiver } : undefined}
               />
             )
           ) : null}

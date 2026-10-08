@@ -20,14 +20,8 @@ import { segmentedTrackClass } from "@/components/ui/segmented";
  * a full-width 48px bar for the switch and a 144px count panel, and the roll
  * call arrived about 174px below the grey list it replaced (K-263).
  */
-/** The five stage taps, each about as wide as its word (`StageStrip`). */
-const STAGE_TAP_WIDTHS = [
-  ["boarding", "w-24"],
-  ["underway", "w-24"],
-  ["surface", "w-20"],
-  ["heading_in", "w-28"],
-  ["home", "w-16"],
-] as const;
+/** The five stage taps (`StageStrip`). */
+const STAGE_TAPS = ["boarding", "underway", "surface", "heading_in", "home"] as const;
 
 export default function ManifestLoading() {
   return (
@@ -44,14 +38,15 @@ export default function ManifestLoading() {
       />
       {/* The count panel at rest: the checkpoint over the figure. */}
       <div className={sectionCardClass({ padding: "md", className: "mt-4 h-28" })} />
-      {/* Where the boat is: its label, then the five taps, which wrap to two
-          rows on a phone. `mt-6` is the prose line's `pt-2` under the panel
-          and the strip's own `mt-4`. */}
+      {/* Where the boat is: its label, then the five taps on the strip's own
+          equal columns, 3 + 2 on a phone and one line of five from `sm`.
+          `mt-6` is the prose line's `pt-2` under the panel and the strip's own
+          `mt-4`. */}
       <div className="mt-6">
         <div className="h-4 w-32 rounded bg-surface-sunken" />
-        <div className="mt-2 flex flex-wrap gap-2">
-          {STAGE_TAP_WIDTHS.map(([stage, width]) => (
-            <div key={stage} className={`h-11 ${width} rounded-lg bg-surface-sunken`} />
+        <div className="mt-2 grid grid-cols-3 gap-2 sm:max-w-2xl sm:grid-cols-5">
+          {STAGE_TAPS.map((stage) => (
+            <div key={stage} className="h-14 rounded-lg bg-surface-sunken" />
           ))}
         </div>
       </div>
@@ -62,6 +57,15 @@ export default function ManifestLoading() {
       </div>
       {/* From the boat check down, the page's one stack (K-189). */}
       <div className="mt-5 space-y-10">
+        {/* The boat check as its one line. It stands open at the dock until
+            every item is checked (`PreDepartureCheckList`), about 260px on a
+            phone, which this boundary cannot know before the page arrives:
+            reserving that height would jump the other way on every finished
+            check, so the roll call lands lower than this skeleton draws it
+            until the boat check is done. A thumb aimed at the first row while
+            the page streams in can land on a checklist item instead, which
+            records a check, never a roll-call result, and the same tap undoes
+            it (dive-domain review of UX audit 2026-10-07, item 17). */}
         <div className={sectionCardClass({ padding: "none", className: "h-14" })} />
         <div>
           <div className="h-7 w-40 max-w-full rounded bg-surface-sunken" />

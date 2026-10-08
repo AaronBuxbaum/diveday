@@ -257,12 +257,35 @@ describe("BookSpotSection — under the button", () => {
 });
 
 /**
- * The requirement note is the *page's*, above the form. It was a sunken
- * bordered panel inside this raised card — a box inside a box, and the first
- * thing a diver met on reaching the form.
+ * The requirement note was a sunken bordered panel inside this raised card (a
+ * box inside a box), then a line of the page's floating above the card, away
+ * from the party-size control it governs. It is the form's first line now:
+ * one sentence, no box (UX audit #25).
  */
 describe("BookSpotSection — no box inside the box", () => {
-  it("renders no requirement panel of its own", () => {
+  it("states who the trip is for as the form's first line, unboxed", () => {
+    const { container } = renderDiver(
+      <BookSpotSection
+        trip={trip()}
+        tripRef={tripRef}
+        remaining={6}
+        payAtBooking
+        perDiverPriceCents={9_500}
+        currency="usd"
+        locale="en-US"
+        timeZone="America/New_York"
+        rentalItems={[]}
+        rentalPricing={EMPTY_RENTAL_PRICING}
+        requirement="This charter is for divers with Advanced Open Water or higher."
+      />,
+    );
+
+    const note = screen.getByText("This charter is for divers with Advanced Open Water or higher.");
+    expect(container.querySelector("form")?.firstElementChild).toBe(note);
+    expect(note.className).not.toMatch(/\b(border|bg-)/);
+  });
+
+  it("renders no requirement line when the trip asks nothing", () => {
     renderDiver(
       <BookSpotSection
         trip={trip()}
@@ -503,6 +526,20 @@ describe("TripFullSection — the shop's own better answer", () => {
     renderFull([{ ...alternative, reason: "same_course" }]);
     expect(screen.getByText("Same course, Thu 7 Aug")).toBeInTheDocument();
     expect(screen.queryByText(/Same site/)).toBeNull();
+  });
+
+  it("states who the trip is for inside the wait-list form (UX audit #25)", () => {
+    const { container } = renderDiver(
+      <TripFullSection
+        shopSlug="reef-shop"
+        trip={trip({ booked: 8 })}
+        tripRef={tripRef}
+        remaining={0}
+        requirement="This charter is for divers with Advanced Open Water or higher."
+      />,
+    );
+    const note = screen.getByText("This charter is for divers with Advanced Open Water or higher.");
+    expect(container.querySelector("form")?.contains(note)).toBe(true);
   });
 
   it("renders no list at all when nothing is similar, and still offers the wait list", () => {

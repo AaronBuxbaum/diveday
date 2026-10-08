@@ -2587,8 +2587,8 @@ for (const scheme of ["light", "dark"] as const) {
           ADVANCED_CHARTER,
         );
         await page.goto(`/s/blue-mantis/trips/${tripId}`);
-        // One unboxed line above the form, no heading over it (ADR
-        // 20260827-the-divers-thread, decision 2).
+        // One unboxed line, the form's first, no heading over it (ADR
+        // 20260827-the-divers-thread, decision 2; UX audit #25).
         await page.getByText(/^This charter is for divers with/).waitFor();
         // The booking form is a Client Component below the note; wait for it to
         // hydrate so the shot is of the settled page, not of the form mounting.
@@ -3969,13 +3969,13 @@ for (const scheme of ["light", "dark"] as const) {
       // diver's own row. Priya Sharma is seeded blocked on a boat inside the
       // arrivals window, so the frame holds the instrument above the roster, a
       // blocked row with its reasons and no tap, cleared rows ending in their
-      // check-in taps, and the walk-in door under "Add a diver".
+      // check-in taps, and "Add a diver" as one search field.
       test(`the desk on a departure's Divers tab renders true to the design (${scheme})`, async ({
         page,
       }) => {
         await openCounterFor(page, "blue-mantis", "Priya Sharma");
         await page.getByText(/^\d+ of \d+ here$/).waitFor();
-        await page.getByRole("link", { name: "Add a walk-in" }).waitFor();
+        await page.getByRole("searchbox", { name: "Find a returning diver" }).waitFor();
         await capture(page, "trip-desk", scheme);
       });
 
@@ -4283,9 +4283,8 @@ for (const scheme of ["light", "dark"] as const) {
       // Staffing as a week (ADR 20260827-the-shops-shelves, decision 3):
       // people down the side, seven shop-local days across the top, shifts as
       // quiet chips, credentials as a ledger beneath. The demo's own week,
-      // gap row included — the seeded board carries the departure whose
-      // divemaster is driving it (`seed-trips.ts`, the DOM-M3 case), which
-      // Today already reports as uncrewed and this surface now agrees with.
+      // which carries no gap row: the DOM-M3 charter (`seed-trips.ts`) sails
+      // the week after, and the gap is photographed below on purpose.
       // Its 390 image is the day list, which is what the week collapses to
       // below `lg` (the same call H-63 made for the board).
       test(`the staffing week renders true to the design (${scheme})`, async ({ page }) => {
@@ -5828,8 +5827,8 @@ for (const scheme of ["light", "dark"] as const) {
        *
        * **Named for the departure, not for `/prep`, because that is where it
        * lands.** It starts on `/prep` like its siblings, but it is the only
-       * one here that *acts* — and slice 23c re-pointed `assignGearUnitAction`
-       * and its three siblings at the departure, since after the fold `/prep`
+       * one here that *acts* — and slice 23c re-pointed the Gear tab's
+       * redirecting forms at the departure, since after the fold `/prep`
        * is a page with no roster and no way back. The capture followed the
        * redirect and its baseline more than doubled (4053 → 8605 at 1280),
        * which is how the drift was found: a name that says `prep-` over a

@@ -124,10 +124,15 @@ test.describe("a standing crew clash", () => {
     // whatever weekday the frozen clock lands on.
     await page.goto(`/shop/${SHOP}/staffing?week=${weekStartOf(day)}`);
     await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
-    // Both chips say it, each naming the other boat: a manager fixes this from
-    // whichever one they opened. `.first()` because the week renders as a grid
-    // above `lg` and as a day list below it, and one of the two is hidden.
-    await expect(page.getByText(`Also rostered on ${drift}`).first()).toBeVisible();
-    await expect(page.getByText(`Also rostered on ${twoTank}`).first()).toBeVisible();
+    // One line for the one clash, under whichever of the two boats the day
+    // lists first, naming the other (UX audit 2026-10-07, item 34): both
+    // chips sit side by side in Marcus's day, and the boat's own Crew panel
+    // above says it from either end. Exactly one: the week also renders a day
+    // list below `lg`, but it is hidden here and `page.getByText` matches
+    // visible nodes only (`e2e/fixtures.ts`), so a second match would be the
+    // same fact said twice, under both boats.
+    const said = page.getByText(new RegExp(`^Also rostered on (${drift}|${twoTank})$`));
+    await expect(said.first()).toBeVisible();
+    await expect(said).toHaveCount(1);
   });
 });

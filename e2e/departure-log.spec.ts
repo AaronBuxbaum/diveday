@@ -1,5 +1,5 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { offlineCopySaved, openTripFromBoard, openTripTab, STAFF_DAY_HEADING } from "./helpers";
+import { offlineCopySaved, openTripFromBoard, openTripTab } from "./helpers";
 
 signedInAsOwner();
 
@@ -11,17 +11,14 @@ signedInAsOwner();
  * record a real roll-call fact first, then check it appears on the document
  * with its attribution.
  *
- * The door is the evening, not the manifest. Writing the day up is an evening
- * act, and an authority-facing document standing beside "Mark boarded" put it
- * on the surface a crew works at the rail. Since H-62 that evening is a state
- * of the shop home rather than a page of its own (ADR
- * 20260827-clearwater-surface-language, decision 4), so the door moved with
- * it — same one link per departure, on the departure's own station, whether
- * that departure is still ahead of the day or already settled.
+ * The door is not the manifest: an authority-facing document standing beside
+ * "Mark boarded" put it on the surface a crew works at the rail. It is the
+ * departure's Details tab, for every departure live or back, and the settled
+ * station on the shop home once the boat is back (ADR
+ * 20260804-incident-export-owner-gate, amendment 2026-10-07). The live Today
+ * card is the day's briefing and no longer carries it.
  */
-test("one tap from a departure's station opens the log with the recorded facts", async ({
-  page,
-}) => {
+test("the Details tab opens the log with the recorded facts", async ({ page }) => {
   // Board → trip → manifest, one roll-call write, the home, then the log —
   // several full server round trips over a 9-diver manifest.
   test.setTimeout(45_000);
@@ -29,6 +26,7 @@ test("one tap from a departure's station opens the log with the recorded facts",
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
   await offlineCopySaved(page);
+  const tripPath = new URL(page.url()).pathname.replace(/\/manifest$/, "");
 
   // Put one recorded fact on the departure so the document carries a real
   // timeline entry (the per-test DB reset contains the write).
@@ -48,19 +46,13 @@ test("one tap from a departure's station opens the log with the recorded facts",
   ).toBeVisible();
 
   // The manifest keeps the printer and nothing else — this door moved.
-  await expect(page.getByRole("link", { name: "Generate log" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Departure log" })).toHaveCount(0);
 
-  // **Every departure row, not only the ones that are back** — the ADR's
-  // amendment says so in as many words. The seeded demo day is deliberately
-  // mid-morning, so the reef trip is a *live* station rather than a settled
-  // one, and that is the case worth pinning: an owner whose boat is overdue
-  // needs the record of who is on it, and for a while after 6d moved this door
-  // onto the evening that was the one state where it did not exist.
-  await page.goto("/shop/blue-mantis");
-  const reefRow = page.locator("li", {
-    has: page.getByText("Two-Tank Reef — Molasses & French"),
-  });
-  await reefRow.getByRole("link", { name: "Generate log" }).first().click();
+  // **A live departure, not only one that is back.** The seeded demo day is
+  // mid-morning, so the reef trip is still live; an owner whose boat is
+  // overdue needs the record of who is on it, and Details is where it is.
+  await page.goto(`${tripPath}?view=details`);
+  await page.getByRole("link", { name: "Departure log" }).click();
   await page.waitForURL(/\/log$/);
 
   // The document header states what this is — and what it is not.
@@ -177,11 +169,10 @@ test.describe("the log is the owner's to produce", () => {
     await offlineCopySaved(page);
     const tripUrl = new URL(page.url());
 
-    // The evening is theirs to run; this one door is not on any of its
-    // stations.
-    await page.goto("/shop/blue-mantis");
-    await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Generate log" })).toHaveCount(0);
+    // The departure's Details tab is theirs to read; this one door is not on it.
+    await page.goto(`${tripUrl.pathname.replace(/\/manifest$/, "")}?view=details`);
+    await expect(page.getByRole("link", { name: "View public page" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Departure log" })).toHaveCount(0);
 
     // And the route itself refuses, however it was reached — a bookmark, a
     // deep link, or a role that changed under them. It lands back on the home

@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { arrivalsWindow, operationalWindow, withinWindow } from "@/lib/operational-window";
 import { seededShopContext } from "@/test/db";
-import { countBlockedDivers, inHorizonReadiness } from "./blockers";
+import { inHorizonReadiness } from "./blockers";
 import { listCheckInQueue } from "./check-in";
-import { getTodayWork } from "./today";
+import { countBlockedDiversNextBoatDay, getTodayWork } from "./today";
 
 /**
  * The cross-surface contract of the shared window model (task 141): the day
@@ -55,17 +55,20 @@ describe("one operational window across the readiness surfaces", () => {
     }
   });
 
-  it("the nav badge counts every distinct diver Today reports blocked, and never fewer", async () => {
+  it("the nav badge is the sum of the next boat day's cards plus the divers aboard, exactly", async () => {
     const { db, shop } = await seededShopContext();
     const [work, badge] = await Promise.all([
       getTodayWork(db, shop.id, shop.slug, shop.timezone, NOW),
-      countBlockedDivers(db, shop.id, NOW),
+      countBlockedDiversNextBoatDay(db, shop.id, shop.timezone, NOW),
     ]);
     const blockedToday = work.departures.reduce((sum, departure) => sum + departure.blocked, 0);
     expect(blockedToday).toBeGreaterThan(0);
-    // Today is one day inside the badge's window, so the badge is a superset —
-    // never a smaller number than the page it links away from.
-    expect(badge).toBeGreaterThanOrEqual(blockedToday);
+    // One figure: the Today row's badge, the cards' "N blocked" and the
+    // summary line under the date (UX audit 2026-10-07, item 1).
+    expect(badge.day).toBe("today");
+    expect(badge.onDay).toBe(blockedToday);
+    expect(badge.aboard).toBe(work.blockedAboard);
+    expect(badge.total).toBe(blockedToday + work.blockedAboard);
   });
 
   it("keeps every counter arrival inside its own window, and every future one inside the horizon", async () => {

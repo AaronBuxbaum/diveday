@@ -1,6 +1,10 @@
 {
   "operationalWindow": {},
   "skipToContent": "Saltar al contenido principal",
+  "notFound": {
+    "heading": "No pudimos encontrar esa página",
+    "backToToday": "Volver a Hoy"
+  },
   "publicPreview": {
     "youWorkHere": "Trabajas aquí: esta es la página que ven los buceadores.",
     "divesSee": "Los buceadores ven esta página.",
@@ -229,7 +233,7 @@
     "signOutPending": "Cerrando sesión…"
   },
   "shopNavLinks": {
-    "badgeBlocked": "{count, plural, one {# persona bloqueada} other {# personas bloqueadas}}",
+    "badgeBlocked": "{count, plural, one {# persona bloqueada, a bordo o en las próximas salidas} other {# personas bloqueadas, a bordo o en las próximas salidas}}",
     "today": "Hoy",
     "divers": "Buceadores",
     "board": "Agenda",

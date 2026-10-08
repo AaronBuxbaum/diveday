@@ -1,4 +1,4 @@
-import { simulatorEmail } from "@/lib/simulator-email";
+import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import { lastMinuteListEntries, people, personRoles } from "./schema";
 import { dateAt, nextCreatedAt } from "./seed-clock";
@@ -67,7 +67,7 @@ const AVAILABLE_UNTIL_DAYS = 30;
 const JOINERS = [
   {
     fullName: "Rowan Feld",
-    email: simulatorEmail("rowan.feld"),
+    email: demoEmail("rowan.feld"),
     phone: "+13055550196",
     availableFromDays: 1,
     /**
@@ -81,7 +81,7 @@ const JOINERS = [
   },
   {
     fullName: "Selah Mbeki",
-    email: simulatorEmail("selah.mbeki"),
+    email: demoEmail("selah.mbeki"),
     phone: "+13055550197",
     availableFromDays: 0,
     /**

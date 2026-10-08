@@ -49,10 +49,12 @@ test.describe("owner", () => {
 
   test("the month picker jumps straight to a far month", { tag: READ_ONLY }, async ({ page }) => {
     // The arrows are one month per click, so reaching last spring used to be a
-    // dozen page loads. One GET form, one month.
+    // dozen page loads. One month box, applied the moment a month is picked
+    // (UX audit item 22: no "Go" button).
     await page.goto("/shop/blue-mantis/reports");
-    await page.getByLabel("Jump to a month").fill("2026-03");
-    await page.getByRole("button", { name: "Go" }).click();
+    const box = page.getByLabel("Jump to a month");
+    await expect(box).toHaveAttribute("data-hydrated", "true");
+    await box.fill("2026-03");
 
     await expect(page).toHaveURL(/reports\?month=2026-03$/);
     await expect(page.getByRole("heading", { level: 2, name: "March 2026" })).toBeVisible();

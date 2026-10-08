@@ -37,6 +37,11 @@ describe("shopSenderOf (ADR 20260902-sender-standards-for-ses)", () => {
 
   it("is nothing at all for a shop with nothing on file", () => {
     expect(shopSenderOf(nothing, off)).toBeUndefined();
+    expect(shopSenderOf({ ...nothing, isDemo: false }, off)).toBeUndefined();
+  });
+
+  it("marks a demo shop's sends, so its seeded people's mail reaches the SES simulator", () => {
+    expect(shopSenderOf({ ...nothing, isDemo: true }, off)).toEqual({ demoShop: true });
   });
 
   // Issue #1288: a typed address is not a proven one. Until the shop opens the

@@ -21,6 +21,10 @@ import { declarations, readGlobalsCss, topLevelBlocks } from "@/test/stylesheet"
  */
 
 const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+const FOOT_BAR_SOURCE = readFileSync(
+  join(__dirname, "../../../../../components/PhoneFootBar.tsx"),
+  "utf8",
+);
 
 /**
  * Where a marker first appears in the route's source, or -1.
@@ -60,10 +64,10 @@ const ABOVE_THE_FORM = [
  * **One rule between two blocks, never two** (pixel-craft class 6). Each list
  * on this page closes itself unless the page knows the block under it opens on
  * a rule of its own: the day's run over a pitch that opens on its door. The
- * other boats always close theirs, and the requirement note under them draws
- * none: left open over the note's rule, the last boat stood in an 89px band
- * with its words 13px from the rule above and 46px from the one below (K-16
- * review, site-briefing).
+ * other boats always close theirs: left open over the requirement note's rule,
+ * the last boat stood in an 89px band with its words 13px from the rule above
+ * and 46px from the one below (K-16 review, site-briefing). The note has since
+ * moved inside the form (UX audit #25), so the boats close onto the section gap.
  */
 describe("the trip page's rules", () => {
   it("leaves the day's run open only over a pitch that opens on its door", () => {
@@ -72,23 +76,14 @@ describe("the trip page's rules", () => {
     );
   });
 
-  it("closes the other boats, and rules the requirement note only when it opens the block", () => {
+  it("closes the other boats, and puts the requirement inside the form it governs", () => {
     expect(SOURCE).not.toMatch(/<TripAlternatives[^>]*closed=/);
-    expect(positionOf("<TripAlternatives")).toBeLessThan(positionOf("{requirementNote ? ("));
-    // Alone, the note stands a section from the block above on the page's
-    // stack (K-162) and opens on its own rule; under the boats it sits 16px
-    // below their closing rule, the boats' block taking 16px in place of the
-    // section gap. It heads the form's column, so from `lg` it is still read
-    // before the form rather than a screen below it.
-    expect(SOURCE).toMatch(
-      /requirementNote && worthALookRows\.length > 0 \? "mb-4 lg:mb-0" : undefined/,
-    );
-    expect(SOURCE).toMatch(
-      /worthALookRows\.length > 0 \? "" : "border-t border-border pt-4 lg:border-t-0 lg:pt-0"/,
-    );
-    const formColumn = positionOf("lg:col-start-2 lg:row-span-6 lg:row-start-1");
-    expect(formColumn).toBeGreaterThan(-1);
-    expect(formColumn).toBeLessThan(positionOf("{requirementNote ? ("));
+    // Who the trip is for is the form's own first line (UX audit #25), never a
+    // line of the page's floating above the card, so there is no rule between
+    // the boats and the note to negotiate any more.
+    expect(SOURCE).not.toContain("{requirementNote ? (");
+    expect(SOURCE).toMatch(/<BookSpotSection[\s\S]*?requirement=\{requirementSentence\}/);
+    expect(SOURCE).toMatch(/<TripFullSection[\s\S]*?requirement=\{requirementSentence\}/);
   });
 });
 
@@ -150,16 +145,15 @@ describe("the trip page's order", () => {
     }
   });
 
-  it("runs pitch, then requirement, then the form, then the contact line", () => {
+  it("runs pitch, then the form (the requirement its first line), then the contact line", () => {
     // From `lg` the form and the contact line stand in a right-hand column,
     // but the source order — and so a phone's and a screen reader's — is this.
     const pitch = positionOf("<TripDayPlan");
     const conditions = positionOf("<ConditionsLine");
-    const requirement = positionOf("{requirementNote ? (");
     const form = positionOf("<BookSpotSection");
     const contact = positionOf("<ShopContactLinks");
 
-    for (const marker of [pitch, conditions, requirement, form, contact]) {
+    for (const marker of [pitch, conditions, form, contact]) {
       expect(marker).toBeGreaterThan(-1);
     }
     // The shop's own words about each site sit with the pitch, above the form —
@@ -168,8 +162,7 @@ describe("the trip page's order", () => {
     // write them. They reached no diver at all between slices 7c and 2026-08-28,
     // and from 16e they are behind `TripPitch`'s door rather than gone.
     expect(pitch).toBeLessThan(conditions);
-    expect(conditions).toBeLessThan(requirement);
-    expect(requirement).toBeLessThan(form);
+    expect(conditions).toBeLessThan(form);
     expect(form).toBeLessThan(contact);
   });
 
@@ -289,8 +282,10 @@ describe("the trip page's order", () => {
     // No control pinned by a corner offset any more: the pill was `fixed`
     // 16px off the screen's bottom corner.
     expect(SOURCE.match(/\bfixed (?:[\w-]+ )*bottom-4\b/g) ?? []).toEqual([]);
-    const bar = SOURCE.match(
-      /<div\s+data-foot-bar=""\s+className="([^"]*)"\s*>\s*(?:\{\/\*[\s\S]*?\*\/\}\s*)?<a href="#book" className=\{buttonClass\(\{ className: "w-full" \}\)\}>/,
+    // The bar is one component, shared with the course page (UX audit #8).
+    expect(SOURCE).toContain('<PhoneFootBar href="#book">');
+    const bar = FOOT_BAR_SOURCE.match(
+      /<div\s+data-foot-bar=""\s+className="([^"]*)"\s*>\s*<a href=\{href\} className=\{buttonClass\(\{ className: "w-full" \}\)\}>/,
     );
     expect(bar?.[1]).toBe(
       "fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:hidden print:hidden",

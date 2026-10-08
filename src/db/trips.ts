@@ -16,7 +16,7 @@
  * | `./trips-minimum.ts` | the minimum-head-count sweep: cancel what did not fill by its own deadline |
  * | `./trips-crew.ts` | who is working it, and the guards on changing that |
  * | `./trips-clashes.ts` | two departures in each other's way: the overlap rule, and one hull on two at once |
- * | `./trips-prep.ts` | the trip-prep page's one read: crew, gear and every diver's rental fit |
+ * | `./trips-prep.ts` | the trip-prep page's one read: crew, gear and every diver's rental fit; the screen a gear pick passes |
  * | `./trips-roster.ts` | who is on it: bookings, wait list, contacts |
  * | `./trips-queries.ts` | reading the board: schedule lists, aggregates, calendar feeds |
  *
@@ -71,7 +71,13 @@ export {
   reinstateTripClearingMinimum,
   type SweptDeparture,
 } from "./trips-minimum";
-export { getTripPrep, type TripPrep, type TripPrepShop } from "./trips-prep";
+export {
+  type GearPick,
+  getTripPrep,
+  screenGearPicks,
+  type TripPrep,
+  type TripPrepShop,
+} from "./trips-prep";
 export {
   type CourseSessionScope,
   countShopTrips,

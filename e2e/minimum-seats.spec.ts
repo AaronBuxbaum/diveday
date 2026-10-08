@@ -137,7 +137,12 @@ test("a departure that filled is left alone, and stops mentioning its minimum", 
   await openTripFromBoard(page, title);
   const tripUrl = page.url();
 
-  await page.getByRole("link", { name: "Add diver" }).click();
+  // Inside the arrivals window "Add a diver" is one search field, and a booked
+  // seat is its empty result's "Add diver" (UX audit item 24).
+  const find = page.getByRole("searchbox", { name: "Find a returning diver" });
+  await find.fill("Meets The Minimum");
+  await find.press("Enter");
+  await page.getByRole("link", { name: "Add diver", exact: true }).first().click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill("Meets The Minimum");
   await page.getByLabel("Email").fill(`meets-${e2eNow().getTime()}@example.com`);

@@ -41,6 +41,8 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 export function HeadCount({
   aboard,
   out,
+  blocked = 0,
+  blockedAboard = 0,
   t,
   people = false,
   className = "",
@@ -49,6 +51,14 @@ export function HeadCount({
   aboard: number;
   /** The population the count is about: everyone at the dock, or everyone who went out. */
   out: number;
+  /**
+   * Blocked divers still to decide about (`summary.blockedUndecided`), said
+   * beside the count — the dock only; the caller passes 0 after a dive, where
+   * blocked gates nothing.
+   */
+  blocked?: number;
+  /** Blocked divers the crew marked aboard anyway (`summary.blockedAboard`); the dock only. */
+  blockedAboard?: number;
   t: StaffTranslator;
   /**
    * The boat carries snorkelers or riders too (ADR
@@ -92,11 +102,34 @@ export function HeadCount({
           count is critical text on a roll call (principles.md §1, 16px), and a
           caption that straddled the water line inside an 80px circle was
           neither. `aria-hidden`: the progressbar's own text already says it. */}
-      <p aria-hidden="true" className="text-base font-semibold tabular-nums">
-        {people
-          ? t("participants.headCount.ofTotalAboardPeople", { total: out })
-          : t("manifest.ofTotalAboard", { total: out })}
-      </p>
+      {/* **The headline never reassures over a blocked row** (UX audit
+          2026-10-07, item 16). "8 of 8 divers aboard" stood at the top of a
+          roster with three rows reading Blocked, and the count of them was a
+          sentence in the half of the panel that scrolls away. It is the
+          count's own next line now, in the danger the rows wear, pinned with
+          the figure it qualifies. Two facts, never one sum: a blocked diver
+          still to decide about, and — louder — one the crew marked aboard
+          anyway. A blocked diver left ashore or released by the desk is
+          settled, and outside the total above, so neither counts them.
+          The words are not `aria-hidden`: the progressbar's text says the
+          count, and these say what the count does not. */}
+      <div className="text-base font-semibold tabular-nums">
+        <p aria-hidden="true">
+          {people
+            ? t("participants.headCount.ofTotalAboardPeople", { total: out })
+            : t("manifest.ofTotalAboard", { total: out })}
+        </p>
+        {blockedAboard > 0 ? (
+          <p className="font-bold text-danger">
+            {t("manifest.headCountBlockedAboard", { count: blockedAboard })}
+          </p>
+        ) : null}
+        {blocked > 0 ? (
+          <p className="font-bold text-danger">
+            {t("manifest.headCountBlocked", { count: blocked })}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

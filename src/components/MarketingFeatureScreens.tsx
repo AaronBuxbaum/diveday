@@ -59,8 +59,8 @@ const DAY_RULE_WORD = "text-sm font-bold tracking-[0.18em] uppercase";
  * (`src/app/s/[shopSlug]/trips/[id]/_components/BookingSections.tsx`): the
  * "Grab a spot" heading and the seats left, `BookingPartyFields`' numeral
  * track, `BookingGearFields`' rental pills and nitrox line, and the money
- * block over "Book and pay". The requirement line above it is the page's own
- * (`trips/[id]/page.tsx`, `trip.requirementNote`). Left out: the contact
+ * block over "Book and pay", with the requirement line as the form's first
+ * line (`trip.requirementNote`, UX audit #25). Left out: the contact
  * fields, the promo code and the payment hint under the button. From a 384px
  * panel the form and the money stand side by side; the page itself stacks
  * them.
@@ -75,14 +75,14 @@ export function BookingCardFallback({ locale }: { locale: DiverLocale }) {
     <div className="bg-background">
       <AppBar label={t("fallback.bookingCard.label")} />
       <div className={`@container ${MOCK_BODY}`}>
-        <p className="text-xs text-muted">{t("fallback.bookingCard.requirement")}</p>
-        <div className="mt-3 rounded-inset border border-border bg-surface p-4">
+        <div className="rounded-inset border border-border bg-surface p-4">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <h3 className="text-sm font-semibold">{t("fallback.bookingCard.heading")}</h3>
             <p className="text-xs font-medium text-primary tabular-nums">
               {t("fallback.spotsLeft", { count: 4 })}
             </p>
           </div>
+          <p className="mt-3 text-xs text-muted">{t("fallback.bookingCard.requirement")}</p>
           <div className="mt-3 grid gap-4 @sm:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] @sm:items-start">
             <div>
               <p className="text-xs font-semibold text-muted">{t("fallback.bookingCard.divers")}</p>
@@ -247,7 +247,7 @@ export function StorefrontFallback({ locale }: { locale: DiverLocale }) {
               <p className="mt-0.5 text-xs text-muted">City of Washington</p>
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              <Badge tone="warning" size="sm" tabularNums>
+              <Badge tone="warning" size="sm" tabularNums toneMark={false}>
                 {t("fallback.storefront.onlyLeft", { count: 2 })}
               </Badge>
               <p className="text-sm font-semibold tabular-nums">

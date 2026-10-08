@@ -68,6 +68,14 @@ export async function POST(request: Request) {
   // address within the shop the message tag names, so it lands even when the
   // message id was never tracked (the courtesy kinds record none). The line
   // carries counts and ids, never the address (PII-in-logs rule).
+  //
+  // `event.recipient` is the address SES sent to. For a demo shop's seeded
+  // person that is the simulator address (`success+priya.sharma@...`), not
+  // the `priya.sharma@mail.example` on `people.email`, so this lookup would
+  // miss them. Deliberately not mapped back: the seed only ever sends to the
+  // simulator's `success` outcome, which never produces a complaint, and a
+  // real diver can type a simulator address too, so a reverse mapping would
+  // file their complaint against someone else's row.
   if (event.status === "complained" && event.shopId && event.recipient) {
     const optedOut = await optOutAddressAfterComplaint(db, {
       shopId: event.shopId,
