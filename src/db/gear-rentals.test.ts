@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { seededShopContext, unseededTestDb } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createGearItem, deleteGearItem, reserveGearUnit } from "./gear";
+import { createCounterRental, linkCounterRentalOrder } from "./gear-counter-rentals";
 import { countGearRentalHolders, listGearRentals } from "./gear-rentals";
 import { bookingPayments, gearReservations, orders, people, shops } from "./schema";
 import { createTrip } from "./trips-create";
@@ -87,6 +88,9 @@ async function counterRental(
       personId: input.personId,
       reservedFrom: input.from,
       reservedUntil: input.until,
+      // One stamp for every row a test writes for a person: a counter rental is
+      // named by its transaction's stamp, and these rows stand in for one.
+      createdAt: new Date("2026-10-08T12:00:00Z"),
       ...stamps,
     })
     .returning();
@@ -300,6 +304,88 @@ describe("listGearRentals", () => {
     const second = await listGearRentals(db, shop.id, { todayLocal: TODAY, pageSize: 2, page: 9 });
     expect(second.page).toBe(2);
     expect(second.rows).toHaveLength(1);
+  });
+});
+
+describe("listGearRentals, counter rentals", () => {
+  /**
+   * A fresh database rather than the per-file rolled-back transaction, as in
+   * `gear-counter-rentals.test.ts`: a counter rental is named by the stamp
+   * Postgres gives its own transaction, and one long test transaction would
+   * give two rentals the same instant.
+   */
+  async function counterShop() {
+    const db = await unseededTestDb();
+    const [shop] = await db
+      .insert(shops)
+      .values({
+        name: "Counter Rentals",
+        slug: "counter-rentals-view",
+        timezone: "America/New_York",
+      })
+      .returning();
+    if (!shop) throw new Error("shop insert failed");
+    return { db, shop };
+  }
+
+  it("keeps one person's two counter rentals apart, each with its own invoice's money word", async () => {
+    const { db, shop } = await counterShop();
+    const ana = await walkIn(db, shop.id, "Ana Walk-In");
+    const bcd = await unit(db, shop.id, "BCD #1");
+    const reg = await unit(db, shop.id, "Reg #1");
+    const fins = await unit(db, shop.id, "Fins #1");
+    const first = await createCounterRental(db, {
+      shopId: shop.id,
+      personId: ana.id,
+      gearItemIds: [bcd.id, reg.id],
+      reservedFrom: TODAY,
+      reservedUntil: "2026-10-09",
+      todayLocal: TODAY,
+    });
+    const second = await createCounterRental(db, {
+      shopId: shop.id,
+      personId: ana.id,
+      gearItemIds: [fins.id],
+      reservedFrom: "2026-10-12",
+      reservedUntil: "2026-10-12",
+      todayLocal: TODAY,
+    });
+    if (!first.ok || !second.ok) throw new Error("rental refused");
+    const [order] = await db
+      .insert(orders)
+      .values({
+        shopId: shop.id,
+        personId: ana.id,
+        createdByPersonId: ana.id,
+        status: "paid",
+        currency: "usd",
+        totalCents: 6000,
+        stripeAccountId: "acct_counter",
+        stripeCustomerId: "cus_counter",
+        stripeInvoiceId: "in_counter_paid",
+      })
+      .returning();
+    if (!order) throw new Error("order insert failed");
+    await linkCounterRentalOrder(db, {
+      shopId: shop.id,
+      reservationIds: first.reservationIds,
+      orderId: order.id,
+    });
+
+    const page = await listGearRentals(db, shop.id, { todayLocal: TODAY });
+    expect(page.total).toBe(1);
+    const rentals = page.rows[0]?.rentals ?? [];
+    expect(rentals.map((rental) => rental.units.map((row) => row.label))).toEqual([
+      ["BCD #1", "Reg #1"],
+      ["Fins #1"],
+    ]);
+    expect(rentals.every((rental) => rental.bookingId === null)).toBe(true);
+    expect(rentals[0]?.units[0]?.money).toEqual({
+      source: "order",
+      status: "paid",
+      orderId: order.id,
+    });
+    expect(rentals[1]?.units[0]?.money).toBeNull();
   });
 });
 

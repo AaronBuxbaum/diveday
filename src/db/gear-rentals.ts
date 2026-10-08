@@ -22,9 +22,11 @@ import { liveTrip } from "./trips-live";
  * against it (the billing record of record), otherwise the booking's own
  * payment row — the same order of precedence the diver record's money word
  * reads (`bookingMoneyStatusKey`), so one booking never reads "Paid" on one
- * screen and "Unpaid" on the next. Null when nothing has been raised: nothing
- * is owed until something is, and a counter rental that no order names has no
- * money fact to show.
+ * screen and "Unpaid" on the next. A counter rental's is the order its rows
+ * point at (`gear_reservations.order_id`, written by
+ * `src/db/gear-counter-rentals.ts`). Null when nothing has been raised:
+ * nothing is owed until something is, and a counter rental paid in cash with
+ * no invoice has no money fact to show.
  */
 export type GearRentalMoney =
   | { source: "order"; status: OrderStatus; orderId: string }
@@ -43,6 +45,10 @@ export type GearRentalUnit = {
   holderPersonId: string;
   holderName: string;
   bookingId: string | null;
+  /** A counter rental's transaction stamp, its identity with the person; null on a trip rental. */
+  counterRentalStamp: string | null;
+  /** The invoice a counter rental was billed on, if any; null on a trip rental. */
+  counterOrderId: string | null;
   tripId: string | null;
   tripTitle: string | null;
   tripStartsAt: Date | null;
@@ -126,6 +132,12 @@ async function listOpenRentalUnits(db: AppDb, shopId: string): Promise<GearRenta
       holderPersonId: people.id,
       holderName: people.fullName,
       bookingId: bookings.id,
+      // Full precision, as `gear-counter-rentals.ts` groups: two rentals a
+      // microsecond apart are two rentals, which a millisecond `Date` cannot tell.
+      counterRentalStamp: sql<
+        string | null
+      >`case when ${gearReservations.bookingId} is null then ${gearReservations.createdAt}::text end`,
+      counterOrderId: gearReservations.orderId,
       tripId: trips.id,
       tripTitle: trips.title,
       tripStartsAt: trips.startsAt,
@@ -160,11 +172,45 @@ async function listOpenRentalUnits(db: AppDb, shopId: string): Promise<GearRenta
     .orderBy(asc(gearReservations.reservedUntil), asc(gearItems.kind), asc(gearItems.label));
 
   const bookingIds = [...new Set(rows.flatMap((row) => (row.bookingId ? [row.bookingId] : [])))];
-  const money = await moneyByBooking(db, shopId, bookingIds);
-  return rows.map((row) => ({
-    ...row,
-    money: row.bookingId ? (money.get(row.bookingId) ?? null) : null,
-  }));
+  const counterOrderIds = [
+    ...new Set(
+      rows.flatMap((row) => (!row.bookingId && row.counterOrderId ? [row.counterOrderId] : [])),
+    ),
+  ];
+  const [money, counterMoney] = await Promise.all([
+    moneyByBooking(db, shopId, bookingIds),
+    moneyByOrder(db, shopId, counterOrderIds),
+  ]);
+  // A rental is billed once, but its rows may not all carry the link; any row
+  // of the same rental that names an order speaks for the rest.
+  const counterOrderByRental = new Map<string, string>();
+  for (const row of rows) {
+    if (row.bookingId || !row.counterOrderId) continue;
+    counterOrderByRental.set(`${row.holderPersonId}:${row.counterRentalStamp}`, row.counterOrderId);
+  }
+  return rows.map((row) => {
+    if (row.bookingId) return { ...row, money: money.get(row.bookingId) ?? null };
+    const orderId = counterOrderByRental.get(`${row.holderPersonId}:${row.counterRentalStamp}`);
+    return { ...row, money: orderId ? (counterMoney.get(orderId) ?? null) : null };
+  });
+}
+
+/** A counter rental's money word: the status of the order its rows point at, shop-scoped. */
+async function moneyByOrder(
+  db: AppDb,
+  shopId: string,
+  orderIds: readonly string[],
+): Promise<Map<string, GearRentalMoney>> {
+  const byOrder = new Map<string, GearRentalMoney>();
+  if (orderIds.length === 0) return byOrder;
+  const rows = await db
+    .select({ id: orders.id, status: orders.status })
+    .from(orders)
+    .where(and(eq(orders.shopId, shopId), inArray(orders.id, [...orderIds])));
+  for (const row of rows) {
+    byOrder.set(row.id, { source: "order", status: row.status, orderId: row.id });
+  }
+  return byOrder;
 }
 
 /**

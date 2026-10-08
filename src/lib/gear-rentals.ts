@@ -27,6 +27,12 @@ export type GearRentalUnitInput = {
   holderName: string;
   /** Null for a counter rental, which no booking holds. */
   bookingId: string | null;
+  /**
+   * A counter rental's own identity: the full-precision `created_at` its one
+   * transaction stamped on every row (`src/db/gear-counter-rentals.ts`), so
+   * the person and this stamp name one rental. Null on a booking-held row.
+   */
+  counterRentalStamp: string | null;
 };
 
 /** How loudly a phase asks for the desk, most urgent first. */
@@ -48,7 +54,7 @@ function openPhase(unit: GearRentalUnitInput, todayLocal: CalendarDate): OpenRen
 }
 
 export type GearRental<T extends GearRentalUnitInput> = {
-  /** The booking id, or `counter:<person id>` for the units a person holds with none. */
+  /** The booking id, or `counter:<person id>:<stamp>` for a counter rental. */
   key: string;
   bookingId: string | null;
   /** The earliest day any unit in it is spoken for. */
@@ -69,7 +75,7 @@ export type GearRentalHolder<T extends GearRentalUnitInput> = {
 };
 
 function rentalKey(unit: GearRentalUnitInput): string {
-  return unit.bookingId ?? `counter:${unit.holderPersonId}`;
+  return unit.bookingId ?? `counter:${unit.holderPersonId}:${unit.counterRentalStamp ?? ""}`;
 }
 
 function byDueBack(

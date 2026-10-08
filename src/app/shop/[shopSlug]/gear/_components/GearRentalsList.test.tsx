@@ -29,6 +29,8 @@ function row(overrides: Partial<GearRentalUnit> & { reservationId: string }): Ge
     holderPersonId: "person-ana",
     holderName: "Ana Diaz",
     bookingId: "booking-ana",
+    counterRentalStamp: null,
+    counterOrderId: null,
     tripId: "trip-wreck",
     tripTitle: "Wreck Trip — Spiegel Grove",
     tripStartsAt: new Date("2026-10-10T12:00:00Z"),
@@ -85,20 +87,27 @@ describe("GearRentalsList", () => {
     expect(screen.getAllByText("Reserved")).toHaveLength(1);
   });
 
-  it("names a counter rental as one, with no ticket door to a departure", () => {
+  it("names a counter rental as one, with its own ticket and its invoice's money word", () => {
     renderList([
       row({
         reservationId: "c",
         bookingId: null,
+        counterRentalStamp: "2026-10-08 09:00:00.1+00",
+        counterOrderId: "order-c",
         tripId: null,
         tripTitle: null,
         tripStartsAt: null,
         holderName: "Walk In",
         holderPersonId: "person-walk",
+        money: { source: "order", status: "open", orderId: "order-c" },
       }),
     ]);
     expect(screen.getByText("Counter rental")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Rental ticket/ })).toBeNull();
+    expect(screen.getByRole("link", { name: "Rental ticket for Walk In" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/gear/rentals/c",
+    );
+    expect(screen.getByText("Open")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Walk In" })).toBeInTheDocument();
   });
 

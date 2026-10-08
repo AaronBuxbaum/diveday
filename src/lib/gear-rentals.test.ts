@@ -11,6 +11,7 @@ function unit(overrides: Partial<GearRentalUnitInput> & { reservationId: string 
     holderPersonId: "p-ana",
     holderName: "Ana Diaz",
     bookingId: "b-1",
+    counterRentalStamp: null,
     ...overrides,
   } satisfies GearRentalUnitInput;
 }
@@ -43,13 +44,43 @@ describe("groupGearRentals", () => {
     const holders = groupGearRentals(
       [
         unit({ reservationId: "trip", reservedUntil: "2026-10-09" }),
-        unit({ reservationId: "counter", bookingId: null, reservedUntil: "2026-10-12" }),
+        unit({
+          reservationId: "counter",
+          bookingId: null,
+          counterRentalStamp: "2026-10-08 09:00:00.123456+00",
+          reservedUntil: "2026-10-12",
+        }),
       ],
       TODAY,
     );
     expect(holders).toHaveLength(1);
-    expect(holders[0]?.rentals.map((rental) => rental.key)).toEqual(["b-1", "counter:p-ana"]);
+    expect(holders[0]?.rentals.map((rental) => rental.key)).toEqual([
+      "b-1",
+      "counter:p-ana:2026-10-08 09:00:00.123456+00",
+    ]);
     expect(holders[0]?.rentals[1]?.bookingId).toBeNull();
+  });
+
+  it("keeps two counter rentals of one person apart, by the transaction that wrote each", () => {
+    const counter = (reservationId: string, stamp: string) =>
+      unit({
+        reservationId,
+        bookingId: null,
+        counterRentalStamp: stamp,
+        reservedUntil: "2026-10-10",
+      });
+    const [holder] = groupGearRentals(
+      [
+        counter("a1", "2026-10-08 09:00:00.1+00"),
+        counter("a2", "2026-10-08 09:00:00.1+00"),
+        counter("b1", "2026-10-08 11:30:00.2+00"),
+      ],
+      TODAY,
+    );
+    expect(holder?.rentals.map((rental) => rental.units.map((row) => row.reservationId))).toEqual([
+      ["a1", "a2"],
+      ["b1"],
+    ]);
   });
 
   it("names each unit's phase in the register's own words, and the rental's most urgent", () => {

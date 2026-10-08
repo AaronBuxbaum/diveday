@@ -113,9 +113,14 @@ function RentalRow({
   const trip =
     first?.tripId && first.tripTitle ? { id: first.tripId, title: first.tripTitle } : null;
   const money = first?.money ?? null;
-  const ticketHref =
-    trip && rental.bookingId
+  // A trip rental prints from its departure's slip; a counter rental from its
+  // own ticket, which any of its reservation ids opens.
+  const ticketHref = rental.bookingId
+    ? trip
       ? shopPath(shopSlug, "trips", trip.id, "prep", "ticket", rental.bookingId)
+      : null
+    : first
+      ? shopPath(shopSlug, "gear", "rentals", first.reservationId)
       : null;
 
   return (
