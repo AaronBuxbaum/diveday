@@ -44,7 +44,7 @@ test("an oversize recap photo is rejected client-side before it ever reaches the
 test.describe("as owner", () => {
   signedInAsOwner();
 
-  test("the external review ask only appears once, right after a strong on-page rating (task 57)", async ({
+  test("the external review ask appears once, right after any on-page rating (task 57, #2095)", async ({
     page,
   }) => {
     await page.goto("/shop/blue-mantis/settings");
@@ -62,14 +62,11 @@ test.describe("as owner", () => {
     await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
     await expect(page.getByRole("link", { name: "Leave a public review" })).toHaveCount(0);
 
-    // A 3-star rating isn't "strong" — still no merged ask.
+    // Any rating gets the one merged ask, folded into the success state: a
+    // 3-star diver is offered the public review exactly as a 5-star one is.
+    // Offering it only after a good rating is review gating, which Google's
+    // review policy forbids (issue #2095).
     await page.getByRole("radio", { name: "3 out of 5 stars" }).check();
-    await page.getByRole("button", { name: "Leave my review" }).click();
-    await expect(page.getByText("Thanks. Your rating is up.")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Leave a public review" })).toHaveCount(0);
-
-    // A 5-star rating earns the one merged ask, folded into the success state.
-    await page.getByRole("radio", { name: "5 out of 5 stars" }).check();
     await page.getByRole("button", { name: "Leave my review" }).click();
     await expect(page.getByText("Thanks. Your rating is up.")).toBeVisible();
     // Read as text, not as a heading: slice 7d folded this second ask into the

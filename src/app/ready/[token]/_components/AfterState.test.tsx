@@ -486,7 +486,7 @@ describe("one primary at rest", () => {
   });
 
   it("demotes the review submit only once the Google door lights up", () => {
-    // The carry-it-to-Google door appears exactly when a strong rating has
+    // The carry-it-to-Google door appears exactly when a rating has
     // just landed — never beside the form — and while it is lit the form's own
     // submit steps back, so the page still points at one next action.
     const { container } = render(
@@ -509,6 +509,34 @@ describe("one primary at rest", () => {
     const loud = primaries(container);
     expect(loud).toHaveLength(1);
     expect(loud[0]?.textContent).toBe("recap.externalReviewCta");
+  });
+
+  /**
+   * **No review gating** (issue #2095). Google's review policy forbids
+   * offering the public review link only to divers who rated well, so the door
+   * opens after any submitted rating, one star as much as five.
+   */
+  it.each([1, 2, 3])("opens the Google door after a %i-star rating too", (rating) => {
+    render(
+      <AfterState
+        {...props({
+          shop: {
+            name: "Blue Mantis Divers",
+            slug: "blue-mantis",
+            depthUnit: "meters",
+            temperatureUnit: "celsius",
+            reviewUrl: "https://g.page/r/blue-mantis/review",
+            brandColor: null,
+            brandDisplayFont: null,
+          },
+          ownReview: { rating, comment: null },
+          params: { review: rating < 3 ? "pending" : "published" },
+        })}
+      />,
+    );
+    expect(screen.getByText("recap.externalReviewCta").closest("a")?.getAttribute("href")).toBe(
+      "https://g.page/r/blue-mantis/review",
+    );
   });
 
   it("keeps the Google door shut when nothing was just submitted", () => {

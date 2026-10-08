@@ -25,6 +25,7 @@ import {
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
 import { medicalWaiverMark } from "@/lib/waivers";
 import { welcomeCueFor } from "@/lib/welcome-cue";
+import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
 import { listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb, DbExecutor } from "./client";
@@ -1239,9 +1240,15 @@ async function reclaimReleasedSeat(
     missingAfterDive: boolean;
   },
 ): Promise<void> {
+  // The seat comes back as what it was, exactly as `undoBookingNoShow` puts it
+  // back (src/db/no-show.ts): `checked_in` when the arrival trail still says
+  // the desk saw the diver, `booked` otherwise. Restoring `booked` every time
+  // put a diver the counter had already checked in back on its "still to
+  // come" list (issue #1838). Both hold a seat (`SEAT_HELD_STATUSES`).
+  const standing = await standingArrivalStatus(tx, input.shopId, input.tripId, input.bookingId);
   const [updated] = await tx
     .update(bookings)
-    .set({ status: "booked" })
+    .set({ status: standing === "arrived" ? "checked_in" : "booked" })
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.status, "no_show")))
     .returning({ id: bookings.id });
   if (!updated) return;

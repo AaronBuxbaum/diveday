@@ -117,6 +117,20 @@ export const courses = pgTable(
      */
     minimumCertificationLevel: certificationLevel("minimum_certification_level"),
     /**
+     * **The rung this course leaves its students on**, or null for a course
+     * that issues none — a specialty, a refresher, a taster, or a course the
+     * shop built without a template (issue #2059). Agency fact like the gate
+     * above it: copied from the template when the course is made, carried by
+     * a template update (`COURSE_TEMPLATE_SYNC_FIELDS`), and offered to no
+     * editor. It replaced a lookup by `source_template_slug`, which kept
+     * answering for the original template however the shop rewrote its copy.
+     *
+     * Read by `listCourseSeatsInTraining` (a booked student counts as in
+     * training for this level) and by the roster's "Certify diver" select,
+     * which opens on it.
+     */
+    certifiesLevel: certificationLevel("certifies_level"),
+    /**
      * The one visibility switch: hides the course from the session picker and
      * takes its public page down. There is no separate draft/publish state —
      * a course is either offered, or it is hidden.

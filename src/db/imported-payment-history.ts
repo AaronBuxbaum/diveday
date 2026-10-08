@@ -5,7 +5,7 @@
  * actions, booking-payment effects, or an order-detail route by association.
  */
 
-import { and, count, desc, eq, gte, ilike, lte } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, lte } from "drizzle-orm";
 import type { CalendarDate } from "@/lib/calendar-date";
 import type { DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
@@ -70,6 +70,7 @@ export async function listImportedPaymentHistory(
         .orderBy(
           desc(importedPaymentHistory.occurredOn),
           desc(importedPaymentHistory.importedAt),
+          asc(people.fullName),
           desc(importedPaymentHistory.id),
         )
         .limit(limit)

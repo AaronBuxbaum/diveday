@@ -861,7 +861,7 @@ async function standingCrewClashes(
         gt(trips.endsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
       ),
     )
-    .orderBy(asc(trips.startsAt), asc(trips.id));
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
   const departures = new Map<string, { id: string; title: string; startsAt: Date; endsAt: Date }>();
   for (const trip of [...started, ...inWindow]) {
     if (!departures.has(trip.id)) {
@@ -1371,7 +1371,7 @@ async function blockedAboardOnBoatsOut(
         lte(trips.startsAt, now),
       ),
     )
-    .orderBy(asc(trips.startsAt), asc(trips.id));
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
   // A departure still inside the horizon is a live station already, and its
   // blocked divers come through the ordinary path with `aboard` set there.
   const candidates = sailed.filter((trip) => !inWindowTripIds.has(trip.id));

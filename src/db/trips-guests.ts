@@ -1,3 +1,4 @@
+import { courseCertifiesStudents } from "@/lib/courses";
 import { demandRecommendation } from "@/lib/demand";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
 import {
@@ -237,6 +238,15 @@ export async function getTripGuests(
      * (`SameNameHeldSeat.asksDateOfBirth`).
      */
     splitAsksDateOfBirth: Boolean(trip.course?.minimumAge),
+    /**
+     * Whether this roster may certify at all: a course session, and never an
+     * intro one (a DSD, a Try Scuba, a refresher). An intro issues no card, and
+     * a tap there would mint a verified one for a diver who has never been
+     * certified; `certifyDiverFromRosterAction` refuses it too (issue #2059).
+     */
+    certifies: courseCertifiesStudents(trip.course ?? null),
+    /** The rung this course issues (`courses.certifies_level`), where "Certify diver" opens. */
+    certifyDefaultLevel: trip.course?.certifiesLevel ?? null,
     // `orders/new` refuses without a payable account, so each seat's "Create
     // order" link points at connecting one instead of at a door that bounces.
     paymentsConnected: canAcceptPayments(stripeAccount),

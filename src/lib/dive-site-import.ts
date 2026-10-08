@@ -1,3 +1,4 @@
+import { isMarineLifeSlug, type MarineLifeSlug } from "@/db/marine-life-catalog";
 import { MAX_ENTERED_DEPTH_METERS } from "./depth-units";
 import { DIVE_SITE_DIFFICULTIES, type DiveSiteDifficulty } from "./dive-site-difficulty";
 import { type DiveSiteLandmark, parseDiveSiteLandmarks } from "./dive-site-landmarks";
@@ -247,20 +248,24 @@ function shapedRoutePoints(raw: string | null): { points: RoutePoint[] | null; k
   return { points, kept: points.length === parsed.length };
 }
 
-function shapedLandmarks(raw: string | null): {
+function shapedLandmarks(
+  raw: string | null,
+  ownedPhotoUrls: ReadonlySet<string>,
+): {
   landmarks: DiveSiteLandmark[] | null;
   kept: boolean;
 } {
   if (raw === null) return { landmarks: null, kept: true };
   const parsed = jsonArray(raw);
   if (parsed === null) return { landmarks: null, kept: false };
-  // A landmark photo from a file is dropped unless it is root-relative. Our
-  // storage URLs are public and carry no shop, so a stored URL in a CSV could
-  // name another shop's object, and the editor's next save that took it off
-  // would queue that object for deletion. The editor's own post can only keep
-  // a photo the site already held; a file has no such history to check.
+  // A landmark photo from a file follows the rule every other photo column
+  // does (`managedImageUrl`): root-relative, or a stored photo this shop
+  // already holds. The editor's own post can only keep a photo the site
+  // already held; a file has no such history, so the shop's holdings stand in.
   const landmarks = parseDiveSiteLandmarks(parsed).map(({ photoUrl, ...landmark }) =>
-    photoUrl?.startsWith("/") ? { ...landmark, photoUrl } : landmark,
+    photoUrl && managedImageUrl(photoUrl, ownedPhotoUrls) !== null
+      ? { ...landmark, photoUrl }
+      : landmark,
   );
   return { landmarks, kept: landmarks.length === parsed.length };
 }
@@ -279,11 +284,19 @@ function shapedLandmarks(raw: string | null): {
  * A root-relative path is kept because that is what a local dev and e2e
  * deployment stores; `//host/x` is not root-relative, it is protocol-relative,
  * and it is exactly the shape this refuses.
+ *
+ * **A stored URL is kept only when this shop already holds it** (issue #2078).
+ * Our storage URLs are public and their keys carry no shop, so "on our media
+ * origin" says nothing about whose object it is: a file naming another shop's
+ * photo, imported here, would let this shop's next editor save that removed it
+ * delete the other shop's object. `ownedPhotoUrls` is every photo this shop's
+ * own dive sites hold (`diveSitePhotoUrlsHeldByShop`), which is exactly what
+ * the shop's own bundle carries, so a restore still round-trips.
  */
-function managedImageUrl(value: string | null): string | null {
+function managedImageUrl(value: string | null, ownedPhotoUrls: ReadonlySet<string>): string | null {
   if (!value) return null;
   if (value.startsWith("/") && !value.startsWith("//")) return value;
-  return isManagedStorageUrl(value) ? value : null;
+  return isManagedStorageUrl(value) && ownedPhotoUrls.has(value) ? value : null;
 }
 
 function stringArray(raw: unknown[] | null): string[] | null {
@@ -301,7 +314,15 @@ function specialties(value: string | null): string[] | null {
     .filter(Boolean);
 }
 
-export function prepareDiveSiteImport(csv: string): PreparedDiveSiteImport {
+/**
+ * `ownedPhotoUrls` is every photo URL this shop's own dive sites already hold;
+ * a stored URL outside it is dropped (`managedImageUrl`). Omitted, no stored
+ * URL survives at all.
+ */
+export function prepareDiveSiteImport(
+  csv: string,
+  ownedPhotoUrls: ReadonlySet<string> = new Set(),
+): PreparedDiveSiteImport {
   // **The same four caps the contacts importer enforces**, from the module this
   // one already borrows `parseCsv` from (security review, issue #1771).
   //
@@ -397,7 +418,7 @@ export function prepareDiveSiteImport(csv: string): PreparedDiveSiteImport {
     const points = route.points;
     if (points && points.length > 0 && routeZoom === null) issues.push("route_without_zoom");
 
-    const shaped = shapedLandmarks(read(cells, "landmarks"));
+    const shaped = shapedLandmarks(read(cells, "landmarks"), ownedPhotoUrls);
     if (!shaped.kept) issues.push("invalid_landmarks");
     const parsedLandmarks = shaped.landmarks;
 
@@ -406,7 +427,9 @@ export function prepareDiveSiteImport(csv: string): PreparedDiveSiteImport {
     // Every gallery entry has to be ours, and there is a limit on how many the
     // editor will hold — a restore that wrote seven would leave a site the form
     // cannot save.
-    const imageUrls = listed?.map(managedImageUrl).filter((url): url is string => url !== null);
+    const imageUrls = listed
+      ?.map((url) => managedImageUrl(url, ownedPhotoUrls))
+      .filter((url): url is string => url !== null);
     if (imagesRaw !== null && (listed === null || imageUrls?.length !== listed.length))
       issues.push("invalid_image_urls");
     if (imageUrls && imageUrls.length > MAX_SITE_IMAGES) issues.push("too_many_images");
@@ -423,9 +446,9 @@ export function prepareDiveSiteImport(csv: string): PreparedDiveSiteImport {
     // quietly restoring a briefing with a missing picture.
     const satelliteRaw = read(cells, "satellite_image_url");
     const routeImageRaw = read(cells, "route_image_url");
-    if (satelliteRaw !== null && managedImageUrl(satelliteRaw) === null)
+    if (satelliteRaw !== null && managedImageUrl(satelliteRaw, ownedPhotoUrls) === null)
       issues.push("foreign_image_url");
-    if (routeImageRaw !== null && managedImageUrl(routeImageRaw) === null)
+    if (routeImageRaw !== null && managedImageUrl(routeImageRaw, ownedPhotoUrls) === null)
       issues.push("foreign_image_url");
 
     const deletedAt = read(cells, "deleted_at");
@@ -460,8 +483,8 @@ export function prepareDiveSiteImport(csv: string): PreparedDiveSiteImport {
       tideStationId: read(cells, "tide_station_id"),
       tideStationConfirmed: flag(read(cells, "tide_station_confirmed")),
       tidePreference,
-      satelliteImageUrl: managedImageUrl(read(cells, "satellite_image_url")),
-      routeImageUrl: managedImageUrl(read(cells, "route_image_url")),
+      satelliteImageUrl: managedImageUrl(read(cells, "satellite_image_url"), ownedPhotoUrls),
+      routeImageUrl: managedImageUrl(read(cells, "route_image_url"), ownedPhotoUrls),
       routePoints: points,
       routeLabel: read(cells, "route_label"),
       routeNote: read(cells, "route_note"),
@@ -469,6 +492,130 @@ export function prepareDiveSiteImport(csv: string): PreparedDiveSiteImport {
       imageUrls: imageUrls ?? null,
       planningNote: read(cells, "planning_note"),
       deletedAt,
+      issues,
+    };
+  });
+
+  return { rows, unknownColumns, fatal: null };
+}
+
+/**
+ * **Reading `dive_site_creatures.csv` back** — the field guide each restored
+ * site arrives without otherwise (issue #1841).
+ *
+ * The same contract as {@link prepareDiveSiteImport}: DiveDay's own file, so an
+ * unrecognised column refuses the file rather than being guessed at, and the
+ * same four caps bound it. Only three columns are read — `dive_site_id`,
+ * `catalog_slug` and `position` — because a row *is* a slug and a position;
+ * the name, kind, description, tip and image are DiveDay's own words rendered
+ * into the bundle for a person to read (ADR 20260813-marine-life-is-diveday-copy)
+ * and are recognised so the file is accepted whole, never written.
+ *
+ * **A slug DiveDay no longer carries is dropped, and the row says so**
+ * (`unknown_species`). Keeping it is not an option: a species outside
+ * `MARINE_LIFE_CATALOG` has no words in any locale, so nothing could render
+ * it. Refusing the whole site's guide over it would lose every species that
+ * *can* render for the sake of one that cannot. A counted drop keeps the rest
+ * and tells the staffer one went — the silent drop is the version this
+ * replaces.
+ */
+export const DIVE_SITE_CREATURE_IMPORT_COLUMNS = [
+  "id",
+  "dive_site_id",
+  "dive_site_name",
+  "position",
+  "name",
+  "kind",
+  "description",
+  "preparation_tip",
+  "image_url",
+  "catalog_slug",
+] as const;
+
+type CreatureColumn = (typeof DIVE_SITE_CREATURE_IMPORT_COLUMNS)[number];
+
+export type PreparedDiveSiteCreatureRow = {
+  /** 1-based, counting the header. */
+  rowNumber: number;
+  /** The bundle's site id: a key into the sites file, never a value written. */
+  diveSiteId: string | null;
+  catalogSlug: MarineLifeSlug | null;
+  position: number | null;
+  /** Why this row will be skipped, or empty if it will not be. */
+  issues: string[];
+};
+
+export type PreparedDiveSiteCreaturesImport = {
+  rows: PreparedDiveSiteCreatureRow[];
+  unknownColumns: string[];
+  fatal: PreparedDiveSiteImport["fatal"] | "no_slug_column" | null;
+};
+
+/**
+ * Whether a file's header is the field-guide file's rather than the sites
+ * file's. The two arrive in one upload (one bundle, one import — a shop asked
+ * to run two imports in order will run them in the wrong one), so the action
+ * tells them apart by what they carry, not by what the shop named them.
+ */
+export function isDiveSiteCreaturesCsv(csv: string): boolean {
+  const header = parseCsv(csv.slice(0, 4096))[0] ?? [];
+  const names = new Set(header.map(normalizeHeader));
+  return names.has("catalog_slug") && names.has("dive_site_id");
+}
+
+export function prepareDiveSiteCreaturesImport(csv: string): PreparedDiveSiteCreaturesImport {
+  // The caps the sites half and the contacts importer enforce, for the same
+  // reason: a restore is one server action against a shared database, and a
+  // file of bare rows is the whole attack.
+  if (new TextEncoder().encode(csv).length > MAX_IMPORT_BYTES)
+    return { rows: [], unknownColumns: [], fatal: "file_too_large" };
+  const grid = parseCsv(csv).filter((row) => row.some((cell) => cell.trim() !== ""));
+  const header = grid[0];
+  if (!header) return { rows: [], unknownColumns: [], fatal: "file_empty" };
+  if (header.length > MAX_IMPORT_COLUMNS)
+    return { rows: [], unknownColumns: [], fatal: "too_many_columns" };
+  if (grid.length - 1 > MAX_IMPORT_ROWS)
+    return { rows: [], unknownColumns: [], fatal: "too_many_rows" };
+  if (grid.some((row) => row.some((cell) => cell.length > MAX_IMPORT_CELL_LENGTH)))
+    return { rows: [], unknownColumns: [], fatal: "cell_too_long" };
+
+  const known = new Set<string>(DIVE_SITE_CREATURE_IMPORT_COLUMNS);
+  const indexes = new Map<CreatureColumn, number>();
+  const unknownColumns: string[] = [];
+  header.forEach((raw, index) => {
+    const name = normalizeHeader(raw);
+    if (!name) return;
+    if (!known.has(name)) {
+      unknownColumns.push(raw.trim() || name);
+      return;
+    }
+    if (!indexes.has(name as CreatureColumn)) indexes.set(name as CreatureColumn, index);
+  });
+  if (unknownColumns.length > 0) return { rows: [], unknownColumns, fatal: "unknown_columns" };
+  if (!indexes.has("catalog_slug") || !indexes.has("dive_site_id"))
+    return { rows: [], unknownColumns, fatal: "no_slug_column" };
+
+  const read = (cells: string[], column: CreatureColumn): string | null => {
+    const index = indexes.get(column);
+    return index === undefined ? null : text(cells[index]);
+  };
+
+  const rows = grid.slice(1).map((cells, index): PreparedDiveSiteCreatureRow => {
+    const issues: string[] = [];
+    const diveSiteId = read(cells, "dive_site_id");
+    if (!diveSiteId) issues.push("missing_dive_site_id");
+    const slug = read(cells, "catalog_slug");
+    const catalogSlug = slug && isMarineLifeSlug(slug) ? slug : null;
+    if (!catalogSlug) issues.push("unknown_species");
+    const positionRaw = read(cells, "position");
+    const position = finiteNumber(positionRaw);
+    if (positionRaw !== null && (position === null || !Number.isInteger(position) || position < 0))
+      issues.push("invalid_position");
+    return {
+      rowNumber: index + 2,
+      diveSiteId,
+      catalogSlug,
+      position: position !== null && Number.isInteger(position) && position >= 0 ? position : null,
       issues,
     };
   });

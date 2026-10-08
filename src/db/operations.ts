@@ -126,7 +126,6 @@ export async function addDiverNote(
  */
 export type DiverActivityCode =
   | "identity_confirmed"
-  | "identity_confirmed_at_counter"
   | "identity_split_off"
   | "medical_clearance_opened"
   | "record_exported";
@@ -483,7 +482,6 @@ export type TripActivityEntry =
         | "booking_removed"
         | "booking_restored"
         | "identity_confirmed"
-        | "identity_confirmed_at_counter"
         | "identity_split"
         | "seat_added"
         | "seat_added_walk_in";

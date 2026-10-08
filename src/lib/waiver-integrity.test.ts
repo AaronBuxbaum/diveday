@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   computeWaiverIntegrityHash,
+  guardianEmailRedacted,
   isWaiverIntegrityVersion,
+  signedIntegrityVersionFor,
   verifyWaiverIntegrity,
   WAIVER_INTEGRITY_VERSION_ERASED,
+  WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED,
   WAIVER_INTEGRITY_VERSION_MOVED,
   WAIVER_INTEGRITY_VERSION_SIGNED,
 } from "./waiver-integrity";
@@ -52,6 +55,8 @@ const record = {
   guardianSignatureMethod: null,
   guardianConsentedAt: null,
   guardianSignedAt: null,
+  guardianEmailErasedAt: null as Date | null,
+  guardianEmailErasedByPersonId: null as string | null,
   draftGuardian: null,
   completedAt: new Date("2026-07-29T01:00:00.000Z"),
   integrityHash: null,
@@ -172,12 +177,12 @@ describe("waiver integrity across erasure (ADR 20260802-diver-data-erasure)", ()
 
   it("refuses to call a record valid when it declares a version this build cannot check", () => {
     vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
-    expect(isWaiverIntegrityVersion(4)).toBe(false);
+    expect(isWaiverIntegrityVersion(5)).toBe(false);
     expect(
       verifyWaiverIntegrity({
         ...record,
         integrityHash: computeWaiverIntegrityHash(record),
-        integrityVersion: 4,
+        integrityVersion: 5,
       }),
     ).toBe("invalid");
     vi.unstubAllEnvs();
@@ -289,5 +294,96 @@ describe("waiver integrity over a release refiled with its seat (issue #2080)", 
       computeWaiverIntegrityHash(record, WAIVER_INTEGRITY_VERSION_SIGNED),
     );
     vi.unstubAllEnvs();
+  });
+});
+
+describe("waiver integrity over a guardian's address erased on request (H-103, issue #1673)", () => {
+  const coSigned = {
+    ...record,
+    guardianName: "Jonas Fischer",
+    guardianRelationship: "parent",
+    guardianEmail: "jonas@example.com",
+    guardianSignatureMethod: "typed_consent",
+    guardianConsentedAt: new Date("2026-07-29T01:00:00.000Z"),
+    guardianSignedAt: new Date("2026-07-29T01:00:00.000Z"),
+  };
+  /** What `eraseGuardianEmail` leaves: the address gone, the redaction stamped. */
+  const redacted = {
+    ...coSigned,
+    guardianEmail: null,
+    guardianEmailErasedAt: new Date("2026-10-07T09:00:00.000Z"),
+    guardianEmailErasedByPersonId: "00000000-0000-4000-8000-0000000000cc",
+  };
+  const sealed = () => ({
+    ...redacted,
+    integrityHash: computeWaiverIntegrityHash(redacted, WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED),
+    integrityVersion: WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED,
+  });
+
+  it("reads the release as tampered if the address is nulled under its v1 seal", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    // The one answer the decision ruled out: a stale v1 hash over a row with
+    // the address taken off.
+    expect(
+      verifyWaiverIntegrity({
+        ...redacted,
+        integrityHash: computeWaiverIntegrityHash(coSigned),
+        integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
+      }),
+    ).toBe("invalid");
+    vi.unstubAllEnvs();
+  });
+
+  it("verifies the redacted release under v4 and says it was redacted", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const record4 = sealed();
+    expect(verifyWaiverIntegrity(record4)).toBe("valid");
+    expect(guardianEmailRedacted(record4)).toBe(true);
+    expect(guardianEmailRedacted(coSigned)).toBe(false);
+    vi.unstubAllEnvs();
+  });
+
+  it("still catches every edit to who signed, to the redaction, or an address put back", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const record4 = sealed();
+    for (const tampered of [
+      { ...record4, guardianName: "Someone Else" },
+      { ...record4, guardianSignedAt: null },
+      { ...record4, guardianRelationship: "legal_guardian" },
+      { ...record4, signedName: "Somebody Else" },
+      { ...record4, medicalAnswers: null },
+      { ...record4, guardianEmailErasedAt: new Date("2020-01-01T00:00:00.000Z") },
+      { ...record4, guardianEmailErasedByPersonId: null },
+      // The stamp lifted, which would otherwise hide that a redaction happened.
+      { ...record4, guardianEmailErasedAt: null },
+      // An address written back after the guardian asked for it to be gone.
+      { ...record4, guardianEmail: "jonas@example.com" },
+    ]) {
+      expect(verifyWaiverIntegrity(tampered)).toBe("invalid");
+    }
+    vi.unstubAllEnvs();
+  });
+
+  it("keeps a v4 digest apart from every other version over the same row", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const v4 = computeWaiverIntegrityHash(redacted, WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED);
+    for (const version of [
+      WAIVER_INTEGRITY_VERSION_SIGNED,
+      WAIVER_INTEGRITY_VERSION_ERASED,
+      WAIVER_INTEGRITY_VERSION_MOVED,
+    ] as const) {
+      expect(computeWaiverIntegrityHash(redacted, version)).not.toBe(v4);
+    }
+    vi.unstubAllEnvs();
+  });
+
+  it("re-seals a still-signed release under the version its shop acts call for", () => {
+    expect(signedIntegrityVersionFor(record)).toBe(WAIVER_INTEGRITY_VERSION_SIGNED);
+    expect(
+      signedIntegrityVersionFor({ ...record, movedAt: new Date("2026-10-01T00:00:00.000Z") }),
+    ).toBe(WAIVER_INTEGRITY_VERSION_MOVED);
+    expect(
+      signedIntegrityVersionFor({ ...redacted, movedAt: new Date("2026-10-01T00:00:00.000Z") }),
+    ).toBe(WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED);
   });
 });

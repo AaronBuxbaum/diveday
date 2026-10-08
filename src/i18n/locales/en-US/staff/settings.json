@@ -441,7 +441,13 @@
         "retry": "Retry delete",
         "retrying": "Retrying…",
         "discharge": "Mark done at Stripe",
-        "discharging": "Saving…"
+        "discharging": "Saving…",
+        "failure": {
+          "account_not_owned": "Stripe account no longer connected",
+          "refused": "Stripe refused the delete",
+          "unreachable": "Stripe didn’t answer",
+          "not_confirmed": "Stripe didn’t confirm the delete"
+        }
       }
     },
     "summary": {
