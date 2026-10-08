@@ -13,6 +13,11 @@ import {
 } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import {
+  getCourseFormsForBooking,
+  type SignCourseFormOutcome,
+  signCourseForm,
+} from "@/db/course-forms";
 import { saveHelpRequest } from "@/db/help-requests";
 import { createNitroxCertification, setBookingNitrox } from "@/db/nitrox";
 import { recordDiverOwnLocale } from "@/db/people";
@@ -842,4 +847,60 @@ export async function emailFreshReadinessLinkAction(token: string) {
   }
 
   redirect(`${base(token)}?sent=${RESCUE_PARAM[await sendPlannedReadinessLink(db, plan)]}`);
+}
+
+const courseFormSignSchema = z.object({
+  formVersionId: z.uuid(),
+  signerName: z.string().trim().max(120),
+  acknowledged: z.literal("on").optional(),
+  guardianName: z.string().trim().max(120).optional(),
+  guardianRelationship: z.string().trim().max(40).optional(),
+  guardianAcknowledged: z.literal("on").optional(),
+});
+
+/** Each refusal's one word on the URL; the page picks the sentence. */
+const COURSE_FORM_ERROR: Record<Exclude<SignCourseFormOutcome, { ok: true }>["reason"], string> = {
+  unavailable: "unavailable",
+  version_changed: "version",
+  invalid_signature: "agreement",
+  name_mismatch: "name",
+  guardian_required: "guardian",
+  guardian_invalid: "guardian",
+};
+
+/**
+ * **Sign one course form from the readiness link** (ADR
+ * 20261008-course-forms). The link proves the bearer holds this enrollment
+ * (`contextFor`, rate-limited before it verifies), and `signCourseForm` checks
+ * everything else against the booking itself: the typed name is the student's,
+ * the version is the one the course asks for now, a minor's form carries a
+ * guardian. Back to the forms page while any are owed, then to the prep page.
+ */
+export async function signCourseFormFromReady(token: string, formData: FormData) {
+  const forms = `${base(token)}/forms`;
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(ctx.reason === "rate_limited" ? `${forms}?error=rate` : base(token));
+  refuseWhileHeld(token, ctx.data);
+  const parsed = courseFormSignSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${forms}?error=agreement`);
+  const guardianPosted =
+    parsed.data.guardianName !== undefined || parsed.data.guardianRelationship !== undefined;
+  const signed = await signCourseForm(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    formVersionId: parsed.data.formVersionId,
+    signerName: parsed.data.signerName,
+    agreed: parsed.data.acknowledged === "on",
+    guardian: guardianPosted
+      ? {
+          name: parsed.data.guardianName ?? "",
+          relationship: parsed.data.guardianRelationship ?? "",
+          agreed: parsed.data.guardianAcknowledged === "on",
+        }
+      : undefined,
+  });
+  if (!signed.ok) redirect(`${forms}?error=${COURSE_FORM_ERROR[signed.reason]}`);
+  const left = await getCourseFormsForBooking(ctx.db, ctx.data.shop.id, ctx.bookingId);
+  if (left && left.outstanding.length > 0) revalidateAndRedirect(forms, `${forms}?signed=1`);
+  revalidateAndRedirect(base(token), `${base(token)}?saved=course-forms`);
 }

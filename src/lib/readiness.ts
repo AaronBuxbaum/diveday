@@ -10,6 +10,12 @@ import type {
 import { checkMinimumAge } from "./age";
 import type { CalendarDate } from "./calendar-date";
 import { nowDate } from "./clock";
+import {
+  COURSE_FORMS_BLOCK_BOARDING,
+  type CourseFormSignature,
+  outstandingCourseForms,
+  type RequiredCourseForm,
+} from "./course-forms";
 import { guardianSignatureMissing } from "./guardian";
 import { isDiver, type ParticipantType } from "./participant-types";
 import { waiverState } from "./waivers";
@@ -186,6 +192,12 @@ export type ReadinessBlockerCode =
   | "medical_not_cleared"
   /** A minor signed alone; a parent or guardian has not (ADR 20260907-guardian-co-signature). */
   | "guardian_signature_missing"
+  /**
+   * A form the course asks every student to sign is unsigned for this
+   * enrollment — one blocker per form, carrying its title (ADR
+   * 20261008-course-forms). Raised only while `COURSE_FORMS_BLOCK_BOARDING`.
+   */
+  | "course_form_unsigned"
   | "certification_missing"
   | "certification_pending"
   | "certification_self_declared"
@@ -219,6 +231,8 @@ export type ReadinessBlockerParams = {
   specialty?: DiveSpecialty;
   age?: number;
   minimumAge?: number;
+  /** The shop's own title for an unsigned course form — the shop's words, not DiveDay's. */
+  formTitle?: string;
 };
 
 export type ReadinessBlocker = { code: ReadinessBlockerCode; params?: ReadinessBlockerParams };
@@ -242,6 +256,9 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   // beside it is not a signed release, and the fix is the waiver's own (a
   // fresh link that asks for both).
   guardian_signature_missing: "waiver",
+  // Paperwork the student signs, in the same family as the release: the sign
+  // step on the diver's own page is where both are answered.
+  course_form_unsigned: "waiver",
   certification_missing: "certification",
   certification_pending: "certification",
   certification_self_declared: "certification",
@@ -320,6 +337,9 @@ const ABOARD_KIND: Record<ReadinessBlockerCode, AboardBlockerKind> = {
   // rely on: as `unknown` as an unsigned one, and nobody aboard can supply
   // the missing signature.
   guardian_signature_missing: "unknown",
+  // A form the course asked for and nobody signed: nothing on file, and
+  // nobody aboard can sign it for them.
+  course_form_unsigned: "unknown",
   identity_unconfirmed: "unknown",
   readiness_unavailable: "unknown",
   requirements_not_configured: "unknown",
@@ -460,6 +480,18 @@ export type ReadinessInput = {
    * is the opposite case — a human decided.
    */
   statedFree?: boolean;
+  /**
+   * The forms this booking's course requires and every signature on file for
+   * the booking (ADR 20261008-course-forms). Absent on a departure that is not
+   * a course session, or on a course that asks for none.
+   */
+  courseForms?: {
+    shopId: string;
+    bookingId: string;
+    personId: string;
+    required: readonly RequiredCourseForm[];
+    signatures: readonly CourseFormSignature[];
+  };
   now?: Date;
 };
 
@@ -832,6 +864,19 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
       })
     ) {
       blockers.push({ code: "guardian_signature_missing" });
+    }
+  }
+
+  // The course's own forms, one blocker per form still unsigned for this
+  // enrollment. Independent of the departure's waiver setting: a course that
+  // lists a form has said, on its own, that every student signs it. Behind one
+  // switch until the owner rules on block-or-warn (ADR 20261008-course-forms).
+  if (COURSE_FORMS_BLOCK_BOARDING && input.courseForms) {
+    for (const form of outstandingCourseForms({
+      ...input.courseForms,
+      signer: { dateOfBirth: input.dateOfBirth, timezone: input.timezone ?? "UTC" },
+    })) {
+      blockers.push({ code: "course_form_unsigned", params: { formTitle: form.title } });
     }
   }
 

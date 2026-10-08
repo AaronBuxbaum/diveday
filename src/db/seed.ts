@@ -29,6 +29,10 @@ import {
   buddyTeamEvents,
   calendarFeeds,
   certifications,
+  courseFormRecords,
+  courseFormRequirements,
+  courseForms,
+  courseFormVersions,
   courseInquiries,
   courses,
   crewAssignmentRequests,
@@ -1214,6 +1218,14 @@ export async function resetDemoSchedule(
   // References people, so it clears before them like any other people-scoped row.
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
   await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));
+  // Course forms (ADR 20261008-course-forms), children first: a signed record
+  // references the booking, the person and the version; a requirement the
+  // course and the form; a version the form and its author. The demo seeds
+  // none, so a form a spec or a visitor wrote must not outlive the reset.
+  await db.delete(courseFormRecords).where(eq(courseFormRecords.shopId, shopId));
+  await db.delete(courseFormRequirements).where(eq(courseFormRequirements.shopId, shopId));
+  await db.delete(courseFormVersions).where(eq(courseFormVersions.shopId, shopId));
+  await db.delete(courseForms).where(eq(courseForms.shopId, shopId));
   // Per-channel delivery state hangs off the waiver record, so it goes first.
   await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));

@@ -12,6 +12,7 @@ import {
   type WaiverSendChannel,
   type WaiverSendCopy,
   type WaiverSendState,
+  waiverLinkPath,
   waiverSendStateFromOutcome,
 } from "@/app/actions/waiver-send-types";
 import { copyToClipboard } from "@/components/Copyable";
@@ -248,7 +249,7 @@ export function WaiverDeliveryActions({
       setToast(null);
       return;
     }
-    const url = new URL(`/waivers/${state.links[0].token}`, window.location.origin).toString();
+    const url = new URL(waiverLinkPath(state.links[0]), window.location.origin).toString();
     let alive = true;
     void copyToClipboard(url).then((ok) => {
       if (alive) setToast({ attempt, message: ok ? sendCopy.copied : sendCopy.copyFailed });

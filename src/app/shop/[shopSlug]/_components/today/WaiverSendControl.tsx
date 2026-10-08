@@ -13,6 +13,7 @@ import {
   type WaiverSendCopy,
   type WaiverSendState,
   type WaiverSendSurface,
+  waiverLinkPath,
   waiverSendStateFromOutcome,
 } from "@/app/actions/waiver-send-types";
 import { Copyable } from "@/components/Copyable";
@@ -44,8 +45,8 @@ function CopyLink({
 }) {
   const url =
     typeof window === "undefined"
-      ? `/waivers/${link.token}`
-      : new URL(`/waivers/${link.token}`, window.location.origin).toString();
+      ? waiverLinkPath(link)
+      : new URL(waiverLinkPath(link), window.location.origin).toString();
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">

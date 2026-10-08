@@ -86,6 +86,7 @@ import {
   buddyTeamEvents,
   calendarFeeds,
   certifications,
+  courseFormRecords,
   courseInquiries,
   formDrafts,
   gearReservations,
@@ -718,6 +719,22 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         .where(eq(waiverRecords.id, stripped.id));
     }
   }
+
+  // --- course form records: strip the names, keep the fact -------------------
+  // The release's own rule (ADR 20261008-course-forms): the typed name and a
+  // guardian's name are this person's (and a third party's) personal data and
+  // go; that a form was signed, which version, how and when, is the shop's
+  // record of an act and stays. The form's words are the shop's, not the
+  // diver's, so they stay too. No seal to re-mint: these rows carry none.
+  await tx
+    .update(courseFormRecords)
+    .set({
+      signedName: null,
+      guardianName: null,
+      anonymizedAt: now,
+      anonymizedByPersonId: ctx.actorPersonId,
+    })
+    .where(and(eq(courseFormRecords.shopId, shopId), eq(courseFormRecords.personId, personId)));
 
   // The per-channel mechanics behind the column above (ADR
   // 20260820-waiver-delivery-is-per-channel): one current row per channel, each

@@ -84,6 +84,7 @@ type ReadinessLinkEmailInput = {
   readinessUrl: string;
   expiresAt: Date;
   timezone: string;
+  purpose?: "course_forms";
 };
 
 type WaitlistInviteEmailInput = {
@@ -1539,18 +1540,33 @@ export function readinessLinkEmail(input: ReadinessLinkEmailInput): Notification
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
   const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
-  const body = t("notifications.readinessLink.body", {
+  // The course-forms send is the same link for a different reason: the release
+  // is signed and the course's forms are not (ADR 20261008-course-forms), so it
+  // must not tell the diver a link of theirs expired.
+  const words =
+    input.purpose === "course_forms"
+      ? ({
+          subject: "notifications.courseFormsLink.subject",
+          body: "notifications.courseFormsLink.body",
+          openLink: "notifications.courseFormsLink.openLink",
+        } as const)
+      : ({
+          subject: "notifications.readinessLink.subject",
+          body: "notifications.readinessLink.body",
+          openLink: "notifications.readinessLink.openLink",
+        } as const);
+  const body = t(words.body, {
     shopName: input.shopName,
     tripTitle: input.tripTitle,
   });
-  const bodyHtml = t("notifications.readinessLink.body", {
+  const bodyHtml = t(words.body, {
     shopName: escapeHtml(input.shopName),
     tripTitle: `<strong>${escapeHtml(input.tripTitle)}</strong>`,
   });
-  const openLink = t("notifications.readinessLink.openLink");
+  const openLink = t(words.openLink);
 
   return {
-    subject: t("notifications.readinessLink.subject", { tripTitle: input.tripTitle }),
+    subject: t(words.subject, { tripTitle: input.tripTitle }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${input.readinessUrl}\n\n${t(
       "notifications.readinessLink.expiry",
       { expiresAt },

@@ -8,6 +8,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { courseFormsAwaitingTextByCourse } from "@/db/course-forms";
 import { pagedCourses } from "@/db/courses";
 import { getShopBySlug } from "@/db/shops";
 import { nextSessionStartByCourse } from "@/db/trips";
@@ -88,7 +89,7 @@ export default async function CoursesPage({
   // Together rather than in sequence: only the second needs the page of
   // courses, and the permission read does not, so awaiting them one after the
   // other would buy a serial round trip for nothing.
-  const [canSchedule, nextSessions] = await Promise.all([
+  const [canSchedule, nextSessions, formsAwaitingText] = await Promise.all([
     // Scheduling is owner/manager/instructor work, so the button is absent —
     // not disabled — for anyone else (AGENTS.md: gate by not rendering). The
     // new-trip page re-checks against live roles either way.
@@ -108,6 +109,13 @@ export default async function CoursesPage({
       shop.id,
       courseList.map((course) => course.id),
       "shop",
+    ),
+    // The agency's forms a template set up with no text yet: nobody signs
+    // them until the shop pastes the wording in, so the row says so.
+    courseFormsAwaitingTextByCourse(
+      db,
+      shop.id,
+      courseList.map((course) => course.id),
     ),
   ]);
   const base = `/shop/${shopSlug}/courses`;
@@ -177,6 +185,13 @@ export default async function CoursesPage({
       </>
     ),
     ...(course.isActive ? {} : { hiddenLabel: st("courses.list.hidden") }),
+    ...(formsAwaitingText.has(course.id)
+      ? {
+          attention: st("courses.list.formsAwaitingText", {
+            forms: (formsAwaitingText.get(course.id) ?? []).map((form) => form.title).join(", "),
+          }),
+        }
+      : {}),
     // The catalog's whole point is that a course gets taught. This hands the
     // board's add panel (`?course=` opens it with the course preselected and
     // shapes the title) the one fact staff would otherwise re-pick from a

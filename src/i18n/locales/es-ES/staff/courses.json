@@ -15,7 +15,8 @@
     "emptyAction": "Abrir el calendario",
     "pagination": {
       "total": "{count, plural, one {# curso} other {# cursos}}"
-    }
+    },
+    "formsAwaitingText": "Pega el texto de la agencia: {forms}"
   },
   "edit": {
     "depthMarkersHint": "<marker>'{depth18}'</marker> se imprime como “18 metros” o “60 pies”, en la unidad del buceador. También <marker>'{depth12}'</marker>, <marker>'{depth21}'</marker>, <marker>'{depth30}'</marker> y <marker>'{depth40}'</marker>; añade <marker>n</marker> para un número sin unidad en un rango. Borra la marca para escribir tú la profundidad.",
@@ -125,7 +126,20 @@
     "unsavedInSection": "Cambios sin guardar en {section}",
     "unsavedInSections": "Cambios sin guardar en {count, plural, one {# sección} other {# secciones}}",
     "sectionsLabel": "Secciones",
-    "draftRestored": "Cambios sin guardar, recuperados de tu última visita"
+    "draftRestored": "Cambios sin guardar, recuperados de tu última visita",
+    "forms": {
+      "legend": "Formularios",
+      "description": "Cada estudiante los firma en su página de preparación antes del curso. Hasta entonces aparece como Bloqueado.",
+      "none": "Aún no hay formularios del curso.",
+      "writeLink": "Escribir un formulario del curso",
+      "orderLabel": "Orden de {form}",
+      "save": "Guardar formularios",
+      "saved": "Guardado. Los estudiantes de este curso firman ahora estos formularios.",
+      "invalid": "No se guardó. Uno de esos formularios se eliminó; recarga y vuelve a elegir.",
+      "notAuthorized": "Solo el personal que configura salidas puede elegir los formularios de un curso.",
+      "pasteWording": "Pega el texto de la agencia",
+      "awaitingText": "Ningún estudiante lo firma hasta que tenga su texto."
+    }
   },
   "dayByDay": {
     "dayLabel": "Día {number}",

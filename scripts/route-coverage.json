@@ -105,6 +105,7 @@
       "blowout.spec.ts",
       "booking.spec.ts",
       "certifications.spec.ts",
+      "course-forms.spec.ts",
       "courses.spec.ts",
       "dock-day-rhythm.spec.ts",
       "gear-fit-and-age.spec.ts",
@@ -132,6 +133,10 @@
     ],
     "a11y": ["a11y.spec.ts"]
   },
+  "/ready/[token]/forms": {
+    "e2e": ["course-forms.spec.ts"],
+    "visual": ["course-form-sign"]
+  },
   "/recap/[token]": {
     "e2e": ["a11y.spec.ts", "recap.spec.ts", "reviews.spec.ts"],
     "visual": ["recap"],
@@ -146,6 +151,7 @@
       "a11y.spec.ts",
       "boat-stage.spec.ts",
       "booking.spec.ts",
+      "course-forms.spec.ts",
       "courses.spec.ts",
       "courtesy-email-unsubscribe.spec.ts",
       "date-requests.spec.ts",
@@ -221,6 +227,7 @@
     "e2e": [
       "a11y.spec.ts",
       "booking.spec.ts",
+      "course-forms.spec.ts",
       "courses.spec.ts",
       "crew-languages.spec.ts",
       "dive-sites.spec.ts",
@@ -300,7 +307,7 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/courses/[slug]/edit": {
-    "e2e": ["courses.spec.ts", "search.spec.ts"],
+    "e2e": ["course-forms.spec.ts", "courses.spec.ts", "search.spec.ts"],
     "visual": ["course-edit"]
   },
   "/shop/[shopSlug]/dive-sites": {
@@ -446,6 +453,7 @@
       "blowout.spec.ts",
       "booking.spec.ts",
       "check-in.spec.ts",
+      "course-forms.spec.ts",
       "courses.spec.ts",
       "crew-clash.spec.ts",
       "depth-and-age-surfaces.spec.ts",
@@ -585,6 +593,7 @@
       "boat-loop.spec.ts",
       "certifications.spec.ts",
       "check-in.spec.ts",
+      "course-forms.spec.ts",
       "courses.spec.ts",
       "crew-clash.spec.ts",
       "day-spine.spec.ts",
@@ -679,7 +688,12 @@
     "visual": ["trip-packet"]
   },
   "/shop/[shopSlug]/waivers": {
-    "e2e": ["role-permissions.spec.ts", "tenant-isolation.spec.ts", "waivers.spec.ts"],
+    "e2e": [
+      "course-forms.spec.ts",
+      "role-permissions.spec.ts",
+      "tenant-isolation.spec.ts",
+      "waivers.spec.ts"
+    ],
     "visual": ["staff-waivers", "staff-waivers-record", "waiver-materiality-choice"],
     "a11y": ["a11y.spec.ts"]
   },

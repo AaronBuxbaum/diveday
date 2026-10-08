@@ -71,8 +71,70 @@ export type CourseTemplate = {
    * Required rather than optional so a new template has to answer it.
    */
   certifiesLevel: CertificationLevel | null;
+  /**
+   * **The forms this course's agency expects each student to sign**, by title
+   * and source (ADR 20261008-course-forms). A shop that creates or syncs this
+   * course gets each listed form it does not already have, attached to the
+   * course, with an empty body marked as needing its text: the shop pastes in
+   * its own current copy of the agency's form. An empty form asks nobody
+   * anything until it has text.
+   *
+   * Titles only, never wording: the toolchain that would fetch an official
+   * copy cannot return one verbatim, and the copies in circulation disagree on
+   * revision, so DiveDay ships no text it cannot show came from the agency.
+   * Absent where the agency's own instructor manual does not name the forms.
+   */
+  standardForms?: readonly StandardCourseForm[];
   content: CourseContent;
 };
+
+/**
+ * One form an agency names for a course, and where DiveDay read that it does.
+ * The source is for whoever maintains this list, never shown to a diver.
+ */
+export type StandardCourseForm = {
+  title: string;
+  source: {
+    agency: CourseTemplate["agency"];
+    productNumber: string;
+    /** Where the agency names this form as the course's paperwork. */
+    url: string;
+  };
+};
+
+/**
+ * PADI's own list of course paperwork: the PADI Instructor Manual 2021
+ * (product 79173), General Standards and Procedures, "Forms". Every PADI
+ * course signs the general release and the safe-practices statement unless a
+ * course has forms of its own; the EU release is product 10175.
+ */
+const PADI_INSTRUCTOR_MANUAL_2021 =
+  "https://pro-cms.padi.com/sites/default/files/documents/training-hub/79173_Instructor_Manual_2021_EN.pdf";
+
+/** The release and the safe-practices statement, signed before Open Water training. */
+const PADI_ENTRY_FORMS: readonly StandardCourseForm[] = [
+  {
+    title:
+      "Release of Liability/Assumption of Risk/Non-agency Acknowledgment Form – General Training",
+    source: { agency: "padi", productNumber: "10072", url: PADI_INSTRUCTOR_MANUAL_2021 },
+  },
+  {
+    title: "Standard Safe Diving Practices Statement of Understanding",
+    source: { agency: "padi", productNumber: "10060", url: PADI_INSTRUCTOR_MANUAL_2021 },
+  },
+];
+
+/**
+ * PADI's one document for continuing education (Advanced, Rescue and the
+ * specialties): the release, the safe-practices statement and the medical
+ * form bundled. DiveDay's release flow already asks the medical questions.
+ */
+const PADI_CONTINUING_EDUCATION_FORMS: readonly StandardCourseForm[] = [
+  {
+    title: "Continuing Education Administrative Document",
+    source: { agency: "padi", productNumber: "10038", url: PADI_INSTRUCTOR_MANUAL_2021 },
+  },
+];
 
 /** Bundled Wikimedia Commons imagery; see public/dive-sites/README.md for credits. */
 function bundledImage(filename: string): string {
@@ -199,6 +261,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 2,
     title: "Open Water Diver",
     agency: "padi",
+    standardForms: PADI_ENTRY_FORMS,
     description: "The foundational certification course for new divers.",
     minimumCertificationLevel: null,
     certifiesLevel: "open_water",
@@ -312,6 +375,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Advanced Open Water Diver",
     agency: "padi",
+    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description: "Build confidence and range with five adventure dives.",
     minimumCertificationLevel: "open_water",
     certifiesLevel: "advanced_open_water",
@@ -395,6 +459,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Rescue Diver",
     agency: "padi",
+    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description: "Problem prevention and rescue skills for experienced divers.",
     minimumCertificationLevel: "advanced_open_water",
     certifiesLevel: "rescue",
@@ -550,6 +615,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Nitrox Diver",
     agency: "padi",
+    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description: "Learn to plan and dive with Nitrox up to 40% oxygen.",
     minimumCertificationLevel: "open_water",
     certifiesLevel: null,
@@ -632,6 +698,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Peak Performance Buoyancy",
     agency: "padi",
+    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description: "Two dives spent fixing weighting, trim, and control.",
     minimumCertificationLevel: "open_water",
     certifiesLevel: null,
@@ -705,6 +772,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Night Diver",
     agency: "padi",
+    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description: "Three dives after dark, with lights, signals, and navigation.",
     minimumCertificationLevel: "open_water",
     certifiesLevel: null,
@@ -795,6 +863,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Deep Diver",
     agency: "padi",
+    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description: "Four dives that extend your limit to {depth40}, done properly.",
     minimumCertificationLevel: "advanced_open_water",
     certifiesLevel: null,
@@ -883,6 +952,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Wreck Diver",
     agency: "padi",
+    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description: "Four dives on wrecks, mapping, lines, and limited penetration.",
     minimumCertificationLevel: "advanced_open_water",
     certifiesLevel: null,
@@ -978,6 +1048,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Underwater Navigator",
     agency: "padi",
+    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description: "Three dives spent learning to find your way back without asking.",
     minimumCertificationLevel: "open_water",
     certifiesLevel: null,
@@ -1061,6 +1132,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Digital Underwater Photographer",
     agency: "padi",
+    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description:
       "Two dives on getting a photo worth keeping, in the water rather than in software.",
     minimumCertificationLevel: "open_water",
@@ -1142,6 +1214,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Drift Diver",
     agency: "padi",
+    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description: "Two dives learning to let the current do the work.",
     minimumCertificationLevel: "open_water",
     certifiesLevel: null,
@@ -1222,6 +1295,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Boat Diver",
     agency: "padi",
+    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description: "Two dives on being useful, and unbothered, on a dive boat.",
     minimumCertificationLevel: "open_water",
     certifiesLevel: null,
@@ -1296,6 +1370,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Search and Recovery Diver",
     agency: "padi",
+    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description: "Four dives on finding what went over the side, and bringing it up safely.",
     minimumCertificationLevel: "advanced_open_water",
     certifiesLevel: null,
@@ -1390,6 +1465,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Sidemount Diver",
     agency: "padi",
+    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description: "Confined water and three dives moving your tanks off your back onto your hips.",
     minimumCertificationLevel: "open_water",
     certifiesLevel: null,
@@ -1479,6 +1555,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Fish Identification",
     agency: "padi",
+    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description: "Two dives learning to name what you have been swimming past.",
     minimumCertificationLevel: "open_water",
     certifiesLevel: null,
@@ -1671,6 +1748,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Dry Suit Diver",
     agency: "padi",
+    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description: "Stay warm and comfortable diving in colder water with a dry suit.",
     minimumCertificationLevel: "open_water",
     certifiesLevel: null,
@@ -1790,6 +1868,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Equipment Specialist",
     agency: "padi",
+    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description: "Understand how your dive gear works and how to maintain and care for it.",
     minimumCertificationLevel: "open_water",
     certifiesLevel: null,
@@ -1841,6 +1920,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Underwater Naturalist",
     agency: "padi",
+    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description: "Look past the big animals to see the interactions and ecosystems of the reef.",
     minimumCertificationLevel: "open_water",
     certifiesLevel: null,

@@ -74,6 +74,7 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   // The same tap as an expired link: a fresh link goes out, and this time it
   // asks the guardian to sign too (ADR 20260907-guardian-co-signature).
   guardian_signature_missing: "today.blockerAction.reissueWaiver",
+  course_form_unsigned: "today.blockerAction.getCourseFormsSigned",
   certification_missing: "today.blockerAction.addCard",
   certification_pending: "today.blockerAction.verifyCard",
   // Never "Verify card": there is no number to look up with an agency, only a
@@ -105,6 +106,7 @@ const BLOCKER_GROUP_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = 
   medical_review: "today.blockerGroup.reviewMedicals",
   medical_not_cleared: "today.blockerGroup.contactDivers",
   guardian_signature_missing: "today.blockerGroup.reissueWaivers",
+  course_form_unsigned: "today.blockerGroup.getCourseFormsSigned",
   certification_missing: "today.blockerGroup.reviewCards",
   certification_pending: "today.blockerGroup.verifyCards",
   certification_self_declared: "today.blockerGroup.askForCards",
@@ -164,6 +166,7 @@ const BLOCKER_ROW_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   medical_review: "today.blockerRow.medicalReview",
   medical_not_cleared: "today.blockerRow.medicalNotCleared",
   guardian_signature_missing: "today.blockerRow.guardianSignatureMissing",
+  course_form_unsigned: "today.blockerRow.courseFormUnsigned",
   certification_missing: "today.blockerRow.certificationMissing",
   certification_pending: "today.blockerRow.certificationPending",
   certification_self_declared: "today.blockerRow.certificationSelfDeclared",

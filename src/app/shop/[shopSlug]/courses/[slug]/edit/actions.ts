@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
+import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { setCourseFormRequirements } from "@/db/course-forms";
 import {
   getCourseBySlug,
   pullCourseTemplateUpdates,
@@ -331,4 +333,52 @@ export async function pullCourseTemplateUpdatesAction(
       parsedMode.data === "preserve-shop-edits" ? "template-updated" : "template-replaced",
     ),
   );
+}
+
+/**
+ * **The forms this course asks each student to sign** (ADR
+ * 20261008-course-forms). A list of this shop's live course forms, in the
+ * order the student meets them: each ticked box posts `formId`, and its
+ * `order-<id>` box says where it goes (blank or nonsense sorts last, ties keep
+ * the page's order).
+ *
+ * Who a course asks for a signature is the same call as who a departure asks
+ * for a cert, so the same gate: `canPersonConfigureTrips`, checked here where
+ * a POST that skipped the page still lands. A list naming a form that is not
+ * this shop's, or no longer live, is refused whole by
+ * `setCourseFormRequirements` rather than half-saved.
+ */
+export async function saveCourseFormRequirementsAction(slug: string, formData: FormData) {
+  const staff = await requireStaffSession();
+  const db = await getDb();
+  const base = shopPath(staff.user.shopSlug, "courses", slug, "edit");
+  const anchor = `${base}#forms`;
+  if (!(await canPersonConfigureTrips(db, staff.user.shopId, staff.user.personId))) {
+    redirect(noticeUrl(anchor, "forms-not-authorized"));
+  }
+  const course = await getCourseBySlug(db, staff.user.shopId, slug);
+  if (!course) redirect(noticeUrl(shopPath(staff.user.shopSlug, "courses"), "invalid"));
+
+  const ids = formData.getAll("formId").map(String);
+  if (!ids.every((id) => z.uuid().safeParse(id).success)) {
+    redirect(noticeUrl(anchor, "forms-invalid"));
+  }
+  const orderOf = (id: string) => {
+    const value = Number.parseInt(String(formData.get(`order-${id}`) ?? ""), 10);
+    return Number.isFinite(value) && value > 0 ? value : Number.POSITIVE_INFINITY;
+  };
+  const ordered = ids
+    .map((id, index) => ({ id, index, order: orderOf(id) }))
+    .sort((a, b) => a.order - b.order || a.index - b.index)
+    .map((entry) => entry.id);
+
+  const result = await setCourseFormRequirements(db, {
+    shopId: staff.user.shopId,
+    courseId: course.id,
+    formIds: ordered,
+  });
+  if (!result.ok) redirect(noticeUrl(anchor, "forms-invalid"));
+  // Every roster and prep page reading this course's readiness changes with it.
+  revalidatePath(shopPath(staff.user.shopSlug), "layout");
+  revalidateAndRedirect(base, noticeUrl(anchor, "forms-saved"));
 }

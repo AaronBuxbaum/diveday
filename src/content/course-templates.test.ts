@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { COURSE_FORM_TITLE_MAX } from "@/lib/course-forms";
 import {
   COURSE_CONTENT_LIMITS,
   type CourseDepthFormat,
@@ -6,6 +7,32 @@ import {
   resolveCourseContentDepths,
 } from "@/lib/courses";
 import { COURSE_TEMPLATES } from "./course-templates";
+
+describe("standard course forms", () => {
+  it("names a title the form editor can hold, and where the agency names it", () => {
+    for (const template of COURSE_TEMPLATES) {
+      for (const form of template.standardForms ?? []) {
+        expect(form.title.length).toBeLessThanOrEqual(COURSE_FORM_TITLE_MAX);
+        expect(form.source.agency).toBe(template.agency);
+        expect(form.source.url).toMatch(/^https:\/\/[a-z-]+\.padi\.com\//);
+        expect(form.source.productNumber).toMatch(/^\d+$/);
+      }
+    }
+  });
+
+  it("asks Open Water for the release and the safe-practices statement, and continuing education for its one document", () => {
+    const products = (slug: string) =>
+      (COURSE_TEMPLATES.find((template) => template.slug === slug)?.standardForms ?? []).map(
+        (form) => form.source.productNumber,
+      );
+    expect(products("open-water-diver")).toEqual(["10072", "10060"]);
+    expect(products("advanced-open-water-diver")).toEqual(["10038"]);
+    expect(products("rescue-diver")).toEqual(["10038"]);
+    // No list where the manual names none DiveDay could read.
+    expect(products("discover-scuba-diving")).toEqual([]);
+    expect(products("divemaster")).toEqual([]);
+  });
+});
 
 /** Every string in a template that a diver ever reads. */
 function proseOf(template: (typeof COURSE_TEMPLATES)[number]): string[] {

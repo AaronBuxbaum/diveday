@@ -14,6 +14,7 @@ import { type CourseContent, canonicalAgency } from "@/lib/courses";
 import { REFRESHER_TEMPLATE_SLUGS } from "@/lib/re-entry";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
+import { attachStandardCourseForms } from "./course-forms";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import type { Course } from "./schema";
 import { courses, shops } from "./schema";
@@ -424,6 +425,16 @@ export async function pullCourseTemplateUpdates(
       .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
       .returning();
     if (!course) return { status: "unavailable" as const };
+    // A sync also sets up any standard form the template names and the shop
+    // does not have yet, empty until the shop pastes the agency's wording in
+    // (ADR 20261008-course-forms). It only adds; the shop's choices stand.
+    await attachStandardCourseForms(tx, {
+      shopId,
+      courseId: course.id,
+      titles: (getCourseTemplate(update.sourceTemplateSlug)?.standardForms ?? []).map(
+        (form) => form.title,
+      ),
+    });
     return { status: "updated" as const, course, mode, diff: update.diff };
   });
 }

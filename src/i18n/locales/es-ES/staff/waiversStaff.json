@@ -72,5 +72,30 @@
     "answerYes": "Sí",
     "answerNo": "No",
     "releaseHeading": "Lo que firmó"
+  },
+  "courseForms": {
+    "heading": "Formularios del curso",
+    "intro": "Formularios que un curso pide firmar a cada estudiante además de la exención. Elige cuáles en la página de cada curso.",
+    "versionLine": "Versión {version} · {date}",
+    "editDescription": "Guardar un cambio crea una versión nueva. Quien firmó una anterior vuelve a firmar.",
+    "saving": "Guardando…",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "deleteConfirm": "Eliminar este formulario",
+    "deleting": "Eliminando…",
+    "newForm": "Nuevo formulario del curso",
+    "create": "Añadir formulario",
+    "titleLabel": "Título",
+    "bodyLabel": "Texto que firma el estudiante",
+    "bodyPlaceholder": "Pega aquí el texto completo del formulario.",
+    "notice": {
+      "saved": "Guardado.",
+      "unchanged": "Sin cambios, así que no hay versión nueva.",
+      "invalid": "No se guardó. Pon un título al formulario y al menos unas frases de texto.",
+      "deleted": "Formulario eliminado. Los cursos ya no lo piden; las copias firmadas se conservan.",
+      "notFound": "Ese formulario ya no está aquí."
+    },
+    "needsText": "Falta tu texto",
+    "needsTextDescription": "Pega el texto de la agencia para este formulario. No se pide a ningún estudiante que lo firme hasta que tenga su texto."
   }
 }

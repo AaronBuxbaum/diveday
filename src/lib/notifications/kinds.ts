@@ -248,6 +248,13 @@ const readinessLinkSchema = z.object({
   readinessUrl: z.url().max(2_000),
   expiresAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
+  /**
+   * Why the link is going out. Absent is the rescue of an expired link, which
+   * every sender before course forms meant; `course_forms` is the waiver send
+   * finding the release signed and the course's forms still owed (ADR
+   * 20261008-course-forms), so the words say that instead of "expired".
+   */
+  purpose: z.enum(["course_forms"]).optional(),
 });
 
 const waitlistInviteSchema = z.object({
@@ -1162,7 +1169,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // both fail *retryably* leave one queued retry rather than two, which is
     // the correct number for one diver waiting on one link.
     case "readiness_link":
-      return `readiness-link/${notification.bookingId}/${notification.expiresAt.toISOString()}`;
+      return notification.purpose
+        ? `readiness-link/${notification.purpose}/${notification.bookingId}/${notification.expiresAt.toISOString()}`
+        : `readiness-link/${notification.bookingId}/${notification.expiresAt.toISOString()}`;
     case "booking_handoff":
       return `booking-handoff/${notification.bookingId}/${notification.expiresAt.toISOString()}`;
     // Keyed by invite timestamp so a genuine re-invite (a seat opens twice) is a

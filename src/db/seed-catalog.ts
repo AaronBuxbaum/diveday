@@ -6,6 +6,7 @@ import {
 } from "@/content/course-templates";
 import { courseSlug } from "@/lib/courses";
 import type { DbExecutor } from "./client";
+import { attachStandardCourseForms } from "./course-forms";
 import { courses } from "./schema";
 
 /**
@@ -291,6 +292,13 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
     const course = courseRows.find((row) => row.sourceTemplateSlug === template.slug);
     if (!course) continue;
     await db.update(courses).set(template.content).where(eq(courses.id, course.id));
+    // And the forms its agency expects, by title and empty, the same as a
+    // template sync sets up (ADR 20261008-course-forms).
+    await attachStandardCourseForms(db, {
+      shopId,
+      courseId: course.id,
+      titles: (template.standardForms ?? []).map((form) => form.title),
+    });
   }
   const openWaterCourse = courseRows.find((course) => course.title === "Open Water Diver");
   const courseIdByTitle = new Map(courseRows.map((course) => [course.title, course.id]));

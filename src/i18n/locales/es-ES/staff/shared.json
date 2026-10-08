@@ -222,7 +222,8 @@
       "underMinimumAge": "Por debajo de la edad mínima del curso: {age} en la fecha del curso, y se requieren {minimumAge}. Verifica la fecha de nacimiento registrada antes de embarcar.",
       "paymentDue": "Hay un pago pendiente para esta salida.",
       "paymentRefunded": "El pago fue reembolsado; cobra antes de embarcar.",
-      "readinessUnavailable": "La información de preparación no está disponible. No embarques a este buceador hasta verificarlo."
+      "readinessUnavailable": "La información de preparación no está disponible. No embarques a este buceador hasta verificarlo.",
+      "courseFormUnsigned": "Formulario del curso sin firmar: {form}."
     }
   },
   "shopNav": {

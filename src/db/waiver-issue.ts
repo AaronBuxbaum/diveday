@@ -1,10 +1,13 @@
 import { and, eq, isNull, ne } from "drizzle-orm";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { courseFormsLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { type CourtesyProviders, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import { smsProviderFromEnvironment, smsRecipient } from "@/lib/notifications/sms";
+import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
+import { getCourseFormsForBooking } from "./course-forms";
 import { sendAndRecordNotification, sendNotification } from "./notifications";
 import { getBookingReadiness } from "./readiness";
 import { bookings, people, shops, trips } from "./schema";
@@ -106,6 +109,8 @@ async function textWaiverLink(
     locale: string;
     completionUrl: string;
     providers?: CourtesyProviders;
+    /** The course-forms text rather than the release's (ADR 20261008-course-forms). */
+    courseForms?: boolean;
   },
 ): Promise<{ delivery: WaiverDelivery; providerMessageId?: string }> {
   const to = smsRecipient(input.phone);
@@ -116,11 +121,18 @@ async function textWaiverLink(
     {
       to,
       shopName: input.shopName,
-      body: waiverTextBody(t, {
-        shopName: input.shopName,
-        tripTitle: input.tripTitle,
-        completionUrl: input.completionUrl,
-      }),
+      body:
+        input.courseForms && input.tripTitle
+          ? t("notifications.sms.courseForms", {
+              shopName: input.shopName,
+              tripTitle: input.tripTitle,
+              url: input.completionUrl,
+            })
+          : waiverTextBody(t, {
+              shopName: input.shopName,
+              tripTitle: input.tripTitle,
+              completionUrl: input.completionUrl,
+            }),
       smsStopLine: t("notifications.sms.stopLine"),
     },
     providers,
@@ -153,6 +165,13 @@ export type IssueAndDeliverWaiverResult =
       diverName: string;
       /** The bearer link (token path) to hand over when delivery was not `sent`. */
       token: string;
+      /**
+       * The link's path when it is not `/waivers/<token>`: the release was
+       * already signed and the course's forms were not, so what went out (or
+       * is to be handed over) is the student's forms page on their readiness
+       * link (ADR 20261008-course-forms). Absent for every release link.
+       */
+      path?: string;
       delivery: WaiverDelivery;
     }
   | {
@@ -186,6 +205,94 @@ export type WaiverDeliveryOptions = {
 };
 
 /**
+ * **The release is signed; the course's forms are not** (ADR
+ * 20261008-course-forms). Mint a readiness link for this enrollment and hand
+ * over its forms page on the asked-for channel, by the same rules as the
+ * release's own link: best-effort, and anything not `sent` comes back for the
+ * staffer to pass on. Null when no form is owed, the seat is held for staff to
+ * confirm who it is, or the booking cannot carry a link — the caller then
+ * reports the release as already signed, which is the whole truth.
+ */
+async function deliverCourseFormsLink(
+  db: AppDb,
+  ctx: {
+    person: typeof people.$inferSelect;
+    trip: typeof trips.$inferSelect;
+    shop: typeof shops.$inferSelect;
+  },
+  bookingId: string,
+  options: WaiverDeliveryOptions,
+): Promise<IssueAndDeliverWaiverResult | null> {
+  const shopId = ctx.shop.id;
+  const forms = await getCourseFormsForBooking(db, shopId, bookingId);
+  if (!forms || forms.outstanding.length === 0 || forms.enrollment.identityHeld) return null;
+  const issued = await issueBookingCapability(db, {
+    shopId,
+    bookingId,
+    purpose: "readiness",
+    now: options.now,
+  });
+  if (!issued) return null;
+  const path = courseFormsLinkPath(issued.token);
+  const origin = publicAppUrl();
+  const url = origin ? new URL(path, `${origin}/`).toString() : null;
+  const channel = options.channel ?? "email";
+  const locale = recipientLocale(ctx.person.locale, ctx.shop.defaultLocale);
+  let delivery: WaiverDelivery = "no_app_origin";
+  if (!url) {
+    delivery = "no_app_origin";
+  } else if (channel === "link") {
+    delivery = "link_only";
+  } else if (channel === "text") {
+    delivery = (
+      await textWaiverLink(db, {
+        shopId,
+        phone: ctx.person.phone,
+        shopName: ctx.shop.name,
+        tripTitle: ctx.trip.title,
+        locale,
+        completionUrl: url,
+        providers: options.textProviders,
+        courseForms: true,
+      })
+    ).delivery;
+  } else if (!ctx.person.email) {
+    delivery = "no_email";
+  } else {
+    const result = await sendAndRecordNotification(db, {
+      kind: "readiness_link",
+      purpose: "course_forms",
+      bookingId,
+      shopId,
+      to: ctx.person.email,
+      locale,
+      diverName: ctx.person.fullName,
+      shopName: ctx.shop.name,
+      tripTitle: ctx.trip.title,
+      readinessUrl: url,
+      expiresAt: issued.expiresAt,
+      timezone: ctx.shop.timezone,
+    });
+    delivery =
+      result.status === "sent"
+        ? "sent"
+        : result.status === "not_configured"
+          ? "unconfigured"
+          : result.errorCode === "invalid_test_recipient"
+            ? "test_recipient"
+            : "failed";
+  }
+  return {
+    ok: true,
+    bookingId,
+    diverName: ctx.person.fullName,
+    token: issued.token,
+    path,
+    delivery,
+  };
+}
+
+/**
  * Get this booking's waiver link — the one the diver already holds when it is
  * still live, a fresh one otherwise (`issueWaiverRequest`) — and hand it over on
  * the asked-for channel. Delivery is best-effort: a missing address or number,
@@ -215,6 +322,13 @@ export async function issueAndDeliverWaiver(
     .limit(1);
 
   const outcome = await issueWaiverRequest(db, { shopId, bookingId, now: options.now });
+  if (!outcome.ok && outcome.reason === "already_completed" && ctx) {
+    // The release is signed. A course may still ask for its own forms, and the
+    // shop's one "send the waiver" act covers them too — so it hands over the
+    // student's forms page instead of reporting nothing to send.
+    const forms = await deliverCourseFormsLink(db, ctx, bookingId, options);
+    if (forms) return forms;
+  }
   if (!outcome.ok) {
     return {
       ok: false,
@@ -488,7 +602,13 @@ export async function emailFreshWaiverLink(
   return "failed";
 }
 
-export type WaiverBatchFallbackLink = { name: string; token: string; reason: WaiverDelivery };
+export type WaiverBatchFallbackLink = {
+  name: string;
+  token: string;
+  /** Set when the link is not the release's own (`IssueAndDeliverWaiverResult.path`). */
+  path?: string;
+  reason: WaiverDelivery;
+};
 
 /**
  * What a batch of waiver sends did, in the shape the surfaces already render:
@@ -546,6 +666,7 @@ export async function deliverWaiverBatch(
       outcome.links.push({
         name: result.diverName,
         token: result.token,
+        ...(result.path ? { path: result.path } : {}),
         reason: result.delivery,
       });
     }

@@ -867,6 +867,8 @@ export const BLOCKER_ACTIONS: Record<
   // them — and none of it happens on the departure they can no longer join.
   medical_not_cleared: { kind: "medical_not_cleared", target: "diver" },
   guardian_signature_missing: { kind: "waiver", target: "trip" },
+  // The roster is where a paper copy is recorded and the link is sent.
+  course_form_unsigned: { kind: "waiver", target: "trip" },
   certification_missing: { kind: "certification", target: "diver" },
   certification_pending: { kind: "certification", target: "diver" },
   certification_self_declared: { kind: "certification", target: "diver" },

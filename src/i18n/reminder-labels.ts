@@ -17,6 +17,7 @@ const REMINDER_ACTION_KEYS: Record<ReminderActionCode, DiverMessageKey> = {
   // tap away on the readiness page the same message links to — never in the
   // reminder itself (see `REMINDER_ACTION_CODES`).
   waiver_expired: "notifications.reminderAction.waiverExpired",
+  course_form_unsigned: "notifications.reminderAction.courseFormUnsigned",
   certification_missing: "notifications.reminderAction.certificationMissing",
   certification_insufficient: "notifications.reminderAction.certificationInsufficient",
   certification_self_declared: "notifications.reminderAction.certificationSelfDeclared",

@@ -2,6 +2,7 @@ import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { outstandingCourseForms } from "@/lib/course-forms";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
 import { isDiver, participantPriceCents } from "@/lib/participant-types";
 import type { CardUnreviewRefusal, CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
@@ -24,6 +25,7 @@ import {
   listCourseSeatsInTraining,
 } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
+import { courseFormSignaturesForBookings, requiredCourseFormsForTrips } from "./course-forms";
 import { paymentsByBooking } from "./payments";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import type { Certification, CertificationAgency, DiveSpecialty } from "./schema";
@@ -1555,6 +1557,15 @@ export async function listTripsReadiness(
   const bookingIds = waiverRows.map((row) => row.booking.id);
   const paymentByBooking = await paymentsByBooking(db, shopId, bookingIds);
   const personIds = waiverRows.map((row) => row.person.id);
+  // The forms each course session asks its students to sign, and every
+  // signature on these seats (ADR 20261008-course-forms). Sequential, not in
+  // `queryAll` above: the second read is skipped when no trip here is a
+  // course session that asks for any.
+  const courseFormsByTrip = await requiredCourseFormsForTrips(db, shopId, tripIds);
+  const courseFormSignatures =
+    courseFormsByTrip.size === 0
+      ? []
+      : await courseFormSignaturesForBookings(db, shopId, bookingIds);
 
   const [certificationRows, specialtyRows, nitroxRows, signedWaiversByPerson, courseSeatRows] =
     personIds.length === 0
@@ -1641,8 +1652,30 @@ export async function listTripsReadiness(
       now,
     });
 
+    const requiredCourseForms = courseFormsByTrip.get(tripId);
+    const courseForms = requiredCourseForms
+      ? {
+          shopId,
+          bookingId: row.booking.id,
+          personId: row.person.id,
+          required: requiredCourseForms,
+          signatures: courseFormSignatures,
+        }
+      : undefined;
+
     return {
       ...row,
+      /**
+       * The course forms this seat still owes, whatever
+       * `COURSE_FORMS_BLOCK_BOARDING` says — the rosters show them either way,
+       * as a blocker while the switch blocks and as a warning when it does not.
+       */
+      owedCourseForms: courseForms
+        ? outstandingCourseForms({
+            ...courseForms,
+            signer: { dateOfBirth: row.person.dateOfBirth, timezone },
+          })
+        : [],
       bookingWaiver: row.waiver,
       waiver: effectiveWaiver,
       // Carried on the row because the manifest needs it and only this function
@@ -1703,6 +1736,7 @@ export async function listTripsReadiness(
           !isDiver(row.booking.participantType) &&
           courseRow !== undefined &&
           participantPriceCents(courseRow, row.booking.participantType) === 0,
+        courseForms,
         now,
       }),
     };
