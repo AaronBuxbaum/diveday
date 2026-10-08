@@ -20,11 +20,6 @@ globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {
       fields: ["birthDate", "name"],
       dateFormat: "YYYY-MM-DD",
     },
-    tdi: {
-      url: "https://www.tdisdi.com/cert-search/",
-      fields: ["birthDate", "name"],
-      dateFormat: "YYYY-MM-DD",
-    },
     gue: {
       url: "https://www.gue.com/verifycard",
       fields: ["number"],

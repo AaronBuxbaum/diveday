@@ -107,8 +107,19 @@ function validQuery(query) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // Only this extension's own content script, on a DiveDay page, may ask.
-  if (sender.id !== chrome.runtime.id || !sender.tab) return false;
+  // Only this extension's own content script, in the top frame of a DiveDay
+  // staff page, may ask. The manifest's match pattern already says so; this
+  // says it again where the work happens.
+  if (sender.id !== chrome.runtime.id || !sender.tab || sender.frameId !== 0) return false;
+  let from;
+  try {
+    from = new URL(sender.url);
+  } catch {
+    return false;
+  }
+  const local = from.hostname === "localhost" || from.hostname === "127.0.0.1";
+  const diveDay = from.protocol === "https:" && from.hostname === "dive.day";
+  if ((!diveDay && !local) || !from.pathname.startsWith("/shop/")) return false;
   if (!message || message.type !== REQUEST_TYPE || !validQuery(message.query)) {
     sendResponse({ ok: false, reason: "unsupported" });
     return false;

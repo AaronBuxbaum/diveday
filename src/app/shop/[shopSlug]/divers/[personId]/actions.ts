@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { paperGuardianFrom, paperWaiverRefused } from "@/app/actions/paper-waiver-fields";
-import { certificationForAgencyCheck } from "@/db/agency-check";
+import { certificationForAgencyCheck, isAgencyCheckedCard } from "@/db/agency-check";
 import { anonymizeDiver } from "@/db/anonymize";
 import {
   canPersonDeleteDiver,
@@ -1003,6 +1003,11 @@ export async function agencyCheckAction(
   const shopId = staff.user.shopId;
 
   if (formData.get("intent") === "undo") {
+    // Only the review a check made, on this diver: never a sighting or a
+    // one-tap review, which have their own Undo.
+    if (!(await isAgencyCheckedCard(db, { shopId, personId, certificationId }))) {
+      return { ok: false, reason: "not-undoable" };
+    }
     const undone = await unreviewCertification(db, { shopId, certificationId });
     revalidatePath(base);
     return undone.ok ? { ok: true, verdict: "undone" } : { ok: false, reason: "not-undoable" };
@@ -1013,10 +1018,8 @@ export async function agencyCheckAction(
   const card = await certificationForAgencyCheck(db, { shopId, personId, certificationId });
   if (!card) return { ok: false, reason: "invalid" };
   const judged = judgeAgencyPage({
-    agency: card.query.agency,
+    ...card.query,
     level: card.level,
-    firstName: card.query.firstName,
-    lastName: card.query.lastName,
     pageText: pageText.slice(0, PAGE_TEXT_MAX_LENGTH),
   });
   if (judged.verdict === "level_unconfirmed") {

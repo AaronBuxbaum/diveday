@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { type AgencyCheckQuery, agencyCheckQuery } from "@/lib/agency-check";
 import { needsImportConfirm } from "@/lib/certification-cards";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
@@ -52,4 +52,28 @@ export async function certificationForAgencyCheck(
   if (row.status !== "pending" && !needsImportConfirm(row)) return null;
   const query = agencyCheckQuery(row);
   return query ? { query, level: row.level } : null;
+}
+
+/**
+ * Whether this card, on this diver at this shop, was certified by an agency
+ * check: the one review the check's own Undo may take back.
+ */
+export async function isAgencyCheckedCard(
+  db: AppDb,
+  input: { shopId: string; personId: string; certificationId: string },
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: certifications.id })
+    .from(certifications)
+    .where(
+      and(
+        eq(certifications.id, input.certificationId),
+        eq(certifications.shopId, input.shopId),
+        eq(certifications.personId, input.personId),
+        isNotNull(certifications.agencyCheckedAt),
+        isNull(certifications.deletedAt),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
 }

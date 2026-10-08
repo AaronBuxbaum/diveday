@@ -6,7 +6,7 @@ The extension decides nothing. It fills in the agency's form, waits for the answ
 
 ## Files
 
-- `manifest.json`: Manifest V3. Host permissions are the agencies' lookup sites only; the content script runs only on `dive.day` and localhost.
+- `manifest.json`: Manifest V3. Host permissions are the agencies' lookup sites only; the content script runs only on DiveDay's staff pages, `https://dive.day/shop/*`.
 - `protocol.js`: the wire format. The app's copy is `src/lib/cert-check-extension.ts`.
 - `agencies.js`: the lookup page for each agency. They must match `src/lib/agency-verification.ts`.
 - `fill.js`: finds each box by its name, label or placeholder, fills it, and submits.
@@ -18,8 +18,9 @@ The extension decides nothing. It fills in the agency's form, waits for the answ
 ## Try it locally
 
 1. Open `chrome://extensions` (or `edge://extensions`) and turn on Developer mode.
-2. Choose "Load unpacked" and pick this folder.
-3. Open a diver's record on `localhost:3000` or `dive.day` with a pending level card from one of the five agencies. "Check with <agency>" is now a button.
+2. To try it against `pnpm dev`, add `"http://localhost/shop/*"` to the content script's `matches` in `manifest.json`, and leave it out of anything you publish. Chrome ignores the port in a match pattern, so a published localhost pattern would let any local web app use the extension.
+3. Choose "Load unpacked" and pick this folder.
+4. Open a diver's record with a pending level card from one of the five agencies. "Check with <agency>" is now a button.
 
 Settings, Bookings & waivers, "Certification checks", says whether this browser has it.
 

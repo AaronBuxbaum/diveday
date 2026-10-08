@@ -121,6 +121,19 @@ describe("agencyCheckAction", () => {
     expect(row?.reviewNote).toBeNull();
   });
 
+  it("refuses to undo a review the check did not make", async () => {
+    const { db, shop, personId } = await context();
+    const card = await pendingCard(db, shop.id, personId, {
+      status: "verified",
+      reviewedAt: new Date("2026-10-01T00:00:00Z"),
+    });
+
+    const result = await agencyCheckAction(shop.slug, personId, null, check(card.id, null, "undo"));
+
+    expect(result).toEqual({ ok: false, reason: "not-undoable" });
+    expect((await cardRow(db, card.id))?.status).toBe("verified");
+  });
+
   it("writes nothing when the page shows the diver but not this level", async () => {
     const { db, shop, personId } = await context();
     const card = await pendingCard(db, shop.id, personId, { level: "rescue" });

@@ -28,7 +28,7 @@ async function installFakeExtension(page: Page, answer: "match" | "captcha") {
     }
     window.addEventListener("message", (event) => {
       const data = event.data;
-      if (!data || data.source !== "diveday-page" || data.type !== "agency-check") return;
+      if (data?.source !== "diveday-page" || data.type !== "agency-check") return;
       const name = `${data.query.firstName} ${data.query.lastName}`;
       window.postMessage(
         {
@@ -38,7 +38,7 @@ async function installFakeExtension(page: Page, answer: "match" | "captcha") {
           ok: true,
           pageText:
             mode === "match"
-              ? `Online Diver Check\n${name}\nOpen Water Diver`
+              ? `Online Diver Check\n${name}\nCard ${data.query.cardNumber}\nOpen Water Diver`
               : "Please confirm you are human",
         },
         window.location.origin,
@@ -50,7 +50,7 @@ async function installFakeExtension(page: Page, answer: "match" | "captcha") {
 async function diverWithPendingSsiCard(page: Page) {
   const stamp = Date.now();
   await page.goto(`/shop/${SHOP}/divers/new`);
-  await page.getByLabel("Full name").fill(`Agency Check ${stamp}`);
+  await page.getByLabel("Full name").fill(`Agency ${stamp} Checker`);
   await page.getByLabel("Email").fill(`agency-check-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add diver" }).click();
   await page.waitForURL(new RegExp(`/shop/${SHOP}/divers/[0-9a-f-]{36}`));

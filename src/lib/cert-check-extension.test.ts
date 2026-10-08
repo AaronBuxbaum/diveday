@@ -62,8 +62,8 @@ describe("the extension's agencies", () => {
     );
   });
 
-  it("talks only to DiveDay's own pages", () => {
+  it("talks only to DiveDay's own staff pages", () => {
     const matches = manifest.content_scripts.flatMap((script) => script.matches);
-    expect(matches).toEqual(["https://dive.day/*", "http://localhost/*", "http://127.0.0.1/*"]);
+    expect(matches).toEqual(["https://dive.day/shop/*"]);
   });
 });

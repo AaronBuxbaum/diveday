@@ -505,9 +505,7 @@ describe("the agency check, with the extension", () => {
 
   it("turns the link into a button that checks the card", () => {
     withExtension(() => {
-      renderGroup(
-        diver({ certifications: [pending("ssi")] } as unknown as Partial<DiverProfile>),
-      );
+      renderGroup(diver({ certifications: [pending("ssi")] } as unknown as Partial<DiverProfile>));
       expect(screen.getByRole("button", { name: "Check with SSI" })).toBeInTheDocument();
       expect(screen.queryByRole("link", { name: "Check with SSI" })).toBeNull();
     });
@@ -516,9 +514,7 @@ describe("the agency check, with the extension", () => {
   it("keeps the link where the record lacks what the agency's form asks for", () => {
     withExtension(() => {
       // NAUI searches by birth date, and this diver has none on file.
-      renderGroup(
-        diver({ certifications: [pending("naui")] } as unknown as Partial<DiverProfile>),
-      );
+      renderGroup(diver({ certifications: [pending("naui")] } as unknown as Partial<DiverProfile>));
       expect(screen.getByRole("link", { name: "Check with NAUI" })).toBeInTheDocument();
     });
   });
@@ -551,7 +547,9 @@ describe("the agency check, with the extension", () => {
         ],
       } as unknown as Partial<DiverProfile>),
     );
-    expect(screen.getByText(/^Checked with SSI by Rae Owner on Thu,\sOct\s8\.$/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/^Checked with SSI by Rae Owner on Thu,\sOct\s8\.$/),
+    ).toBeInTheDocument();
     expect(screen.getByText("Priya Sharma · Open Water Diver")).toBeInTheDocument();
   });
 });

@@ -330,7 +330,7 @@
     },
     "certCheck": {
       "heading": "Verificación de certificaciones",
-      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y marca la certificación como certificada cuando la agencia la muestra. Verifica SSI, NAUI, SDI, TDI, GUE y CMAS, en Chrome o Edge en un ordenador.",
+      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y marca la certificación como certificada cuando la agencia la muestra. Verifica SSI, NAUI, SDI, GUE y CMAS, en Chrome o Edge en un ordenador.",
       "added": "Añadida a este navegador",
       "notAdded": "Sin añadir",
       "install": "Añadir a Chrome"
