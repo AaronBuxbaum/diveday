@@ -61,6 +61,7 @@ import {
   waiverRecords,
   waiverTemplates,
   workOrderBills,
+  workOrderCare,
   workOrderEvents,
   workOrderItems,
   workOrderLines,
@@ -467,6 +468,11 @@ export const EXPORT_TABLES = {
     table: workOrderLines,
     order: [asc(workOrderLines.createdAt), asc(workOrderLines.id)],
     scope: { shopColumn: workOrderLines.shopId },
+  },
+  workOrderCare: {
+    table: workOrderCare,
+    order: [asc(workOrderCare.createdAt), asc(workOrderCare.id)],
+    scope: { shopColumn: workOrderCare.shopId },
   },
   workOrderEvents: {
     table: workOrderEvents,

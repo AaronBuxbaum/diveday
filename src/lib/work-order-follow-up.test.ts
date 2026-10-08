@@ -14,27 +14,43 @@ import {
 
 const today = "2026-10-08" as CalendarDate;
 
+const NO_DATES = { serviceDueOn: null, inspectionDueOn: null, hydroDueOn: null };
+
 describe("customerGearDueDates", () => {
-  it("reads a regulator's one due date as its service clock", () => {
-    expect(customerGearDueDates({ kind: "regulator", serviceDueOn: "2026-11-01" })).toEqual([
-      { clock: "service", dueOn: "2026-11-01" },
+  it("reads a regulator's one date as its service", () => {
+    expect(
+      customerGearDueDates({ ...NO_DATES, kind: "regulator", serviceDueOn: "2026-11-01" }),
+    ).toEqual([{ clock: "service", dueOn: "2026-11-01" }]);
+  });
+
+  it("reads a cylinder's two dates as two reminders, and never a service", () => {
+    expect(
+      customerGearDueDates({
+        kind: "tank",
+        serviceDueOn: "2026-10-20",
+        inspectionDueOn: "2026-11-01",
+        hydroDueOn: "2027-03-01",
+      }),
+    ).toEqual([
+      { clock: "visual_inspection", dueOn: "2026-11-01" },
+      { clock: "hydro_test", dueOn: "2027-03-01" },
     ]);
   });
 
-  it("reads a cylinder's date as its visual inspection", () => {
-    expect(customerGearDueDates({ kind: "tank", serviceDueOn: "2026-11-01" })).toEqual([
-      { clock: "visual_inspection", dueOn: "2026-11-01" },
-    ]);
+  it("ignores a cylinder's dates on any other kind", () => {
+    expect(
+      customerGearDueDates({ ...NO_DATES, kind: "regulator", hydroDueOn: "2026-11-01" }),
+    ).toEqual([]);
   });
 
   it("still reminds about a date staff set by hand on a kind with no interval", () => {
-    expect(customerGearDueDates({ kind: "wetsuit", serviceDueOn: "2026-11-01" })).toEqual([
-      { clock: "service", dueOn: "2026-11-01" },
-    ]);
+    expect(
+      customerGearDueDates({ ...NO_DATES, kind: "dive_computer", serviceDueOn: "2026-11-01" }),
+    ).toEqual([{ clock: "service", dueOn: "2026-11-01" }]);
   });
 
   it("has nothing to remind about without a date", () => {
-    expect(customerGearDueDates({ kind: "regulator", serviceDueOn: null })).toEqual([]);
+    expect(customerGearDueDates({ ...NO_DATES, kind: "regulator" })).toEqual([]);
   });
 });
 

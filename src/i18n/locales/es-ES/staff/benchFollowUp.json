@@ -26,7 +26,7 @@
     "sending": "Enviando…",
     "sent": "Enviada el {date}",
     "openOrder": "Ver pedido",
-    "description": "Orden de trabajo de servicio"
+    "description": "Orden de trabajo #{number}"
   },
   "notice": {
     "readySent": "Aviso de recogida enviado.",

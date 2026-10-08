@@ -1,11 +1,23 @@
 {
   "title": "Órdenes de trabajo",
+  "number": "N.º {number}",
   "status": {
     "received": "Recibido",
     "inProgress": "En proceso",
     "waitingOnParts": "Esperando repuestos",
     "ready": "Listo para recoger",
-    "pickedUp": "Entregado"
+    "pickedUp": "Entregado",
+    "backInService": "De nuevo en servicio",
+    "offTheBench": "Fuera del taller"
+  },
+  "outcomes": {
+    "done": "Hecho",
+    "declined": "Rechazado",
+    "unserviceable": "No se puede reparar",
+    "condemned": "Condenado"
+  },
+  "care": {
+    "other": "Otro trabajo"
   },
   "lineKinds": {
     "part": "Repuesto",
@@ -14,7 +26,7 @@
   "board": {
     "ariaLabel": "El taller",
     "group": "{label} — {count}",
-    "rowLink": "{subject}: {problem}",
+    "rowLink": "N.º {number} {subject}: {problem}",
     "late": "Atrasado",
     "promised": "Prometido {date}",
     "pieces": "{count, plural, one {# equipo} other {# equipos}}",
@@ -56,14 +68,13 @@
     "brandModelPlaceholder": "Apeks XTX200",
     "serialNumber": "Número de serie",
     "note": "Nota",
-    "serviceDueOn": "Próximo servicio",
     "reportedProblem": "Qué reporta el cliente",
-    "reportedProblemPlaceholder": "Se dispara bajo los 20 m",
+    "reportedProblemUnit": "Qué le pasa",
+    "reportedProblemPlaceholder": "Se dispara en la segunda etapa",
     "promisedOn": "Prometido para",
     "technician": "Técnico",
     "technicianNone": "Nadie por ahora",
     "optionalHint": "(opcional)",
-    "moveTo": "Mover a",
     "description": "Descripción",
     "descriptionPlaceholder": "Kit de servicio de segunda etapa",
     "quantity": "Cantidad",
@@ -75,12 +86,10 @@
     "eyebrow": "Orden de trabajo",
     "ownUnitSubject": "Equipo del centro · {kind}",
     "statusHeading": "Estado",
-    "notesHeading": "Notas",
     "technicianNotes": "Notas del taller",
     "technicianNotesHint": "(solo para el personal)",
     "workPerformed": "Trabajo realizado",
     "workPerformedHint": "(el cliente lee esto)",
-    "reportedHeading": "Qué entró",
     "piecesHeading": "El equipo",
     "serviceDue": "Servicio el {date}",
     "linesHeading": "Repuestos y mano de obra",
@@ -88,8 +97,6 @@
     "adding": "Agregando…",
     "deleteLine": "Eliminar",
     "deletingLine": "Eliminando…",
-    "deleteLineFor": "Eliminar {description}",
-    "saveLineFor": "Guardar {description}",
     "linesEmpty": "Todavía no hay repuestos ni mano de obra.",
     "total": "Total",
     "historyHeading": "Historial",
@@ -99,47 +106,69 @@
     "deleting": "Eliminando…",
     "restore": "Restaurar",
     "restoring": "Restaurando…",
-    "claimTag": "Etiqueta de entrega"
+    "claimTag": "Etiqueta de entrega",
+    "jobHeading": "El trabajo",
+    "inspectionDue": "Inspección visual el {date}",
+    "hydroDue": "Prueba hidrostática el {date}",
+    "pickedUpConfirm": "¿Cerrar esta orden? Una orden cerrada ya no se puede mover.",
+    "editLine": "Editar",
+    "lineMenu": "Cambiar {description}",
+    "lineTotal": "Total de la línea",
+    "lineActions": "Acciones",
+    "lineFold": "{kind} · {quantity} × {price}"
+  },
+  "work": {
+    "heading": "Trabajo hecho",
+    "description": "Solo una revisión marcada como aprobada fija la próxima fecha.",
+    "outcome": "¿Cómo terminó el trabajo?",
+    "outcomeNote": "Por qué",
+    "outcomeNoteHint": "(obligatorio si no se puede reparar o queda condenado)",
+    "performedOn": "Hecho el",
+    "notDone": "No hecho",
+    "passed": "Aprobado",
+    "failed": "No aprobado",
+    "nextDueOn": "Próxima fecha",
+    "nextDueDives": "O después de estas inmersiones",
+    "nextDue": "próxima el {date}",
+    "record": "Registrar el trabajo",
+    "recording": "Registrando…"
   },
   "history": {
     "created": "Abierta",
     "moved": "{from} a {to}",
     "handedTo": "Asignada a {name}",
-    "takenOff": "Sin técnico asignado",
-    "by": "por {name}"
+    "takenOff": "Sin asignar",
+    "by": "por {name}",
+    "workRecorded": "Trabajo registrado"
   },
   "tag": {
     "eyebrow": "Etiqueta de entrega",
     "piecesHeading": "Qué tenemos",
     "problemHeading": "Qué nos contaste",
-    "promised": "Prometido {date}"
+    "promised": "Prometido {date}",
+    "phone": "Llama al {phone}"
   },
   "diver": {
     "heading": "Su propio equipo",
-    "gearHeading": "En ficha",
     "gearEmpty": "Nada en ficha.",
-    "ordersHeading": "Órdenes de trabajo",
     "ordersEmpty": "Ninguna todavía.",
     "onTheBench": "{count, plural, one {# en el taller} other {# en el taller}}",
     "piecesOnFile": "{count, plural, one {# pieza en ficha} other {# piezas en ficha}}",
     "deletePiece": "Eliminar {label}",
     "deletePieceShort": "Eliminar",
     "deletingPiece": "Eliminando…",
-    "newOrder": "Nueva orden de trabajo"
+    "newOrder": "Nueva orden de trabajo",
+    "orderLink": "N.º {number}: {problem}"
   },
   "notice": {
     "opened": "Orden de trabajo abierta.",
     "moved": "Estado guardado.",
-    "assigned": "Técnico guardado.",
-    "notesSaved": "Guardado.",
-    "detailsSaved": "Guardado.",
     "lineAdded": "Línea agregada.",
     "lineSaved": "Línea guardada.",
     "lineDeleted": "Línea eliminada.",
     "deleted": "Orden de trabajo eliminada.",
     "restored": "Orden de trabajo restaurada.",
     "pieceAdded": "En el registro.",
-    "pieceSaved": "Guardado.",
     "pieceDeleted": "Pieza eliminada.",
     "pieceRestored": "Pieza restaurada.",
     "already": "Ya estaba en ese estado.",
@@ -154,6 +183,17 @@
     "emptyDescription": "Escribe para qué es la línea.",
     "invalidDate": "Esa fecha no existe. Revísala.",
     "notFound": "Ese registro ya no está aquí.",
-    "invalid": "No se guardó. Revisa el formulario e inténtalo de nuevo."
+    "invalid": "No se guardó. Revisa el formulario e inténtalo de nuevo.",
+    "saved": "Guardado.",
+    "workRecorded": "Trabajo registrado.",
+    "alreadyRecorded": "El trabajo de esta orden ya está registrado.",
+    "unknownTechnician": "Elige un técnico de tu personal.",
+    "noOutcome": "Indica cómo terminó el trabajo.",
+    "noCare": "Marca al menos una revisión como aprobada o no aprobada.",
+    "invalidCare": "Revisa el trabajo hecho e inténtalo de nuevo.",
+    "noteRequired": "Indica por qué.",
+    "futureDate": "Ese día todavía no ha llegado.",
+    "dueNotAfterPerformed": "La próxima fecha tiene que ser posterior al día del trabajo.",
+    "invalidDives": "Las inmersiones necesitan un número entero y una próxima fecha al lado."
   }
 }

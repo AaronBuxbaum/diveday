@@ -1,10 +1,11 @@
 import { type CalendarDate, calendarDaysBetween, shiftCalendarDate } from "./calendar-date";
 import type { GearItemKind, GearServiceKind } from "./gear";
 import {
+  type CustomerDueField,
+  customerDueFields,
   WORK_ORDER_QUANTITY_SCALE,
   type WorkOrderStatus,
   workOrderLineTotalCents,
-  workOrderServiceClock,
 } from "./work-orders";
 
 /**
@@ -28,28 +29,31 @@ export const READY_UNCOLLECTED_DAYS = 7;
 /** One date a customer's piece is due on, and which of its clocks that is. */
 export type CustomerGearDueDate = { clock: GearServiceKind; dueOn: CalendarDate };
 
+/** The clock each of a customer piece's dates is, in the words a reminder uses. */
+const DUE_FIELD_CLOCK: Record<CustomerDueField, GearServiceKind> = {
+  serviceDueOn: "service",
+  inspectionDueOn: "visual_inspection",
+  hydroDueOn: "hydro_test",
+};
+
 /**
  * **Every due date a customer's piece carries, the one place that reads them.**
  *
- * A piece carries one `service_due_on` today; a reminder is sent per entry
- * this returns, keyed by its clock, so a piece that later carries two dates (a
- * cylinder's visual inspection and its hydrostatic test) is two reminders
- * without a second reader anywhere. The clock is the one the register's
- * interval conventions give the kind; a date staff typed on a kind with no
- * interval is still a date the customer asked to be told about, and reads as
- * a plain service.
+ * A reminder is sent per entry this returns, keyed by its clock: a cylinder's
+ * visual inspection and hydro test are two dates and two reminders, every
+ * other kind its one service date. Which dates a kind has is layer 1's rule
+ * (`customerDueFields`); a date on a field the kind does not have is ignored.
  */
 export function customerGearDueDates(piece: {
   kind: GearItemKind;
   serviceDueOn: string | null;
+  inspectionDueOn: string | null;
+  hydroDueOn: string | null;
 }): CustomerGearDueDate[] {
-  if (!piece.serviceDueOn) return [];
-  return [
-    {
-      clock: workOrderServiceClock(piece.kind) ?? "service",
-      dueOn: piece.serviceDueOn as CalendarDate,
-    },
-  ];
+  return customerDueFields(piece.kind).flatMap((field) => {
+    const dueOn = piece[field];
+    return dueOn ? [{ clock: DUE_FIELD_CLOCK[field], dueOn: dueOn as CalendarDate }] : [];
+  });
 }
 
 /**

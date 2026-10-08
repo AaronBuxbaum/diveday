@@ -37,6 +37,8 @@ export type WorkOrderReadyEmailInput = {
   locale: DiverLocale;
   diverName: string;
   shopName: string;
+  /** The ticket's short number, the one on the claim tag. */
+  ticketNumber: number;
   pieces: readonly CustomerGearPiece[];
   workPerformed?: string;
 };
@@ -45,10 +47,11 @@ export type WorkOrderReadyEmailInput = {
 export function workOrderReadyEmail(input: WorkOrderReadyEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const number = String(input.ticketNumber);
   const ready = (shopName: string, pieces: string) =>
     input.pieces.length > 0
-      ? t("notifications.workOrderReady.ready", { shopName, pieces })
-      : t("notifications.workOrderReady.readyNoPieces", { shopName });
+      ? t("notifications.workOrderReady.ready", { shopName, pieces, number })
+      : t("notifications.workOrderReady.readyNoPieces", { shopName, number });
   const list = piecesText(t, input.locale, input.pieces);
   const work = input.workPerformed ? paragraphs(input.workPerformed) : [];
   const heading = t("notifications.workOrderReady.workHeading");
@@ -62,7 +65,7 @@ export function workOrderReadyEmail(input: WorkOrderReadyEmailInput): Notificati
       : "";
 
   return {
-    subject: t("notifications.workOrderReady.subject"),
+    subject: t("notifications.workOrderReady.subject", { number }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${ready(input.shopName, list)}${workText}\n`,
     html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${ready(escapeHtml(input.shopName), escapeHtml(list))}</p>${workHtml}`,
   };
@@ -72,15 +75,22 @@ export function workOrderReadyEmail(input: WorkOrderReadyEmailInput): Notificati
 export function workOrderReadyText(
   t: DiverTranslator,
   locale: DiverLocale,
-  input: { shopName: string; pieces: readonly CustomerGearPiece[]; workPerformed?: string | null },
+  input: {
+    shopName: string;
+    ticketNumber: number;
+    pieces: readonly CustomerGearPiece[];
+    workPerformed?: string | null;
+  },
 ): string {
+  const number = String(input.ticketNumber);
   const ready =
     input.pieces.length > 0
       ? t("notifications.smsWorkOrder.ready", {
           shopName: input.shopName,
+          number,
           pieces: piecesText(t, locale, input.pieces),
         })
-      : t("notifications.smsWorkOrder.readyNoPieces", { shopName: input.shopName });
+      : t("notifications.smsWorkOrder.readyNoPieces", { shopName: input.shopName, number });
   const work = input.workPerformed?.trim();
   return work
     ? `${ready} ${t("notifications.smsWorkOrder.work", {

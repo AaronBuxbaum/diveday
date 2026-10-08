@@ -447,7 +447,8 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "pre_departure_check_events",
   "gear_reservations",
   // The bench (ADR 20261008-gear-work-orders): a ticket, the customer's own
-  // gear it is about, its parts and labor, and its status history. Same
+  // gear it is about, its parts and labor, its Work done record, and its
+  // status history. Same
   // reasoning as the departures above — the history is read as part of a
   // record the shop still has, and a shop's answer to "when did you last
   // service this regulator?" is the reason the rows exist. The way one goes is
@@ -456,6 +457,7 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "work_orders",
   "work_order_items",
   "work_order_lines",
+  "work_order_care",
   "work_order_events",
   "recap_photos",
   "trip_recap_photos",

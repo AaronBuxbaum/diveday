@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "ecc9405c-b6e0-4de3-8d01-ffad9f51cd61",
+  "id": "d80ac4ab-21fe-4d81-90b2-61ab946717d6",
   "prevIds": [
-    "acbbbe68-799d-44f4-a1a2-d2f6a477af5c"
+    "a755bd5f-ae5e-4507-861c-9070e1ac9e88"
   ],
   "ddl": [
     {
@@ -964,9 +964,42 @@
     },
     {
       "values": [
+        "email",
+        "sms",
+        "whatsapp"
+      ],
+      "name": "customer_gear_notice_channel",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "ready_for_pickup",
+        "service_due"
+      ],
+      "name": "customer_gear_notice_kind",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "sending",
+        "sent",
+        "failed",
+        "not_configured",
+        "no_contact",
+        "opted_out"
+      ],
+      "name": "customer_gear_notice_status",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
         "created",
         "status_changed",
-        "technician_assigned"
+        "technician_assigned",
+        "work_recorded"
       ],
       "name": "work_order_event_kind",
       "entityType": "enums",
@@ -978,6 +1011,17 @@
         "labor"
       ],
       "name": "work_order_line_kind",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "done",
+        "declined",
+        "unserviceable",
+        "condemned"
+      ],
+      "name": "work_order_outcome",
       "entityType": "enums",
       "schema": "public"
     },
@@ -1709,7 +1753,31 @@
     },
     {
       "isRlsEnabled": false,
+      "name": "customer_gear_notices",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "customer_gear_reminder_settings",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "work_order_bills",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
       "name": "customer_gear_items",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "work_order_care",
       "entityType": "tables",
       "schema": "public"
     },
@@ -4749,6 +4817,19 @@
       "generated": null,
       "identity": null,
       "name": "reviewed_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "certifications"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "agency_checked_at",
       "entityType": "columns",
       "schema": "public",
       "table": "certifications"
@@ -20247,6 +20328,383 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "type": "customer_gear_notice_kind",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "kind",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "work_order_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "work_order_event_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "customer_gear_item_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "type": "gear_service_kind",
+      "typeSchema": "public",
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "due_clock",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "due_on",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "type": "customer_gear_notice_status",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'sending'",
+      "generated": null,
+      "identity": null,
+      "name": "status",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "type": "customer_gear_notice_channel",
+      "typeSchema": "public",
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "channel",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "sent_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "type": "bigserial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "seq",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_reminder_settings"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_reminder_settings"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "customer_gear_item_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_reminder_settings"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "reminders_off_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_reminder_settings"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "changed_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_reminder_settings"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_reminder_settings"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_reminder_settings"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_bills"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_bills"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "work_order_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_bills"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "order_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_bills"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "created_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_bills"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_bills"
+    },
+    {
+      "type": "bigserial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "seq",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_bills"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
       "table": "customer_gear_items"
     },
     {
@@ -20341,6 +20799,32 @@
       "table": "customer_gear_items"
     },
     {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "inspection_due_on",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_items"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "hydro_due_on",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "customer_gear_items"
+    },
+    {
       "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": false,
@@ -20391,6 +20875,136 @@
       "entityType": "columns",
       "schema": "public",
       "table": "customer_gear_items"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_care"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_care"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "work_order_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_care"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "customer_gear_item_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_care"
+    },
+    {
+      "type": "gear_service_kind",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "kind",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_care"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "passed",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_care"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "performed_on",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_care"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "next_due_on",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_care"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "next_due_dives",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_care"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_care"
     },
     {
       "type": "uuid",
@@ -20770,6 +21384,19 @@
       "table": "work_orders"
     },
     {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "number",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_orders"
+    },
+    {
       "type": "work_order_status",
       "typeSchema": "public",
       "notNull": true,
@@ -20882,6 +21509,84 @@
       "generated": null,
       "identity": null,
       "name": "picked_up_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_orders"
+    },
+    {
+      "type": "work_order_outcome",
+      "typeSchema": "public",
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "outcome",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_orders"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "outcome_note",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_orders"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "outcome_recorded_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_orders"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "outcome_recorded_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_orders"
+    },
+    {
+      "type": "gear_item_status",
+      "typeSchema": "public",
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "unit_prior_status",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_orders"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "unit_prior_service_note",
       "entityType": "columns",
       "schema": "public",
       "table": "work_orders"
@@ -27536,6 +28241,272 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "work_order_event_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "customer_gear_notices_ready_once",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "customer_gear_item_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "due_clock",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "due_on",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "customer_gear_notices_reminder_once",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "work_order_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "seq",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "customer_gear_notices_order_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "customer_gear_item_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "seq",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "customer_gear_notices_item_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "customer_gear_notices_shop_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "person_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "customer_gear_notices_person_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "customer_gear_item_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "customer_gear_reminder_settings_item_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "customer_gear_reminder_settings"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": "\"reminders_off_at\" is not null",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "customer_gear_reminder_settings_shop_off_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "customer_gear_reminder_settings"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "order_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "work_order_bills_order_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "work_order_bills"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "work_order_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "seq",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "work_order_bills_work_order_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "work_order_bills"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "work_order_bills_shop_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "work_order_bills"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "shop_id",
           "isExpression": false,
           "asc": true,
@@ -27587,6 +28558,48 @@
       "entityType": "indexes",
       "schema": "public",
       "table": "customer_gear_items"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "work_order_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "work_order_care_order_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "work_order_care"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "work_order_care_shop_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "work_order_care"
     },
     {
       "nameExplicit": true,
@@ -27836,6 +28849,34 @@
       "method": "btree",
       "concurrently": false,
       "name": "work_orders_shop_gear_item_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "work_orders"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "number",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "work_orders_shop_number_unique",
       "entityType": "indexes",
       "schema": "public",
       "table": "work_orders"
@@ -33156,6 +34197,227 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
+      "name": "customer_gear_notices_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "customer_gear_notices_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "work_order_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "work_orders",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "customer_gear_notices_work_order_id_work_orders_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "work_order_event_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "work_order_events",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "customer_gear_notices_d071sGz7b9pz_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "customer_gear_item_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "customer_gear_items",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "customer_gear_notices_qCgVQSEJoKL1_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "sent_by_person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "customer_gear_notices_sent_by_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "customer_gear_notices"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "customer_gear_reminder_settings_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "customer_gear_reminder_settings"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "customer_gear_item_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "customer_gear_items",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "customer_gear_reminder_settings_iDw4JOgthZ5q_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "customer_gear_reminder_settings"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "changed_by_person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "customer_gear_reminder_settings_g1kkt2Hcr09S_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "customer_gear_reminder_settings"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "work_order_bills_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "work_order_bills"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "work_order_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "work_orders",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "work_order_bills_work_order_id_work_orders_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "work_order_bills"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "order_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "orders",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "work_order_bills_order_id_orders_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "work_order_bills"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "created_by_person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "work_order_bills_created_by_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "work_order_bills"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
       "name": "customer_gear_items_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -33194,6 +34456,57 @@
       "entityType": "fks",
       "schema": "public",
       "table": "customer_gear_items"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "work_order_care_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "work_order_care"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "work_order_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "work_orders",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "work_order_care_work_order_id_work_orders_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "work_order_care"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "customer_gear_item_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "customer_gear_items",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "work_order_care_Io8cAocyVQ75_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "work_order_care"
     },
     {
       "nameExplicit": false,
@@ -33412,6 +34725,23 @@
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "name": "work_orders_technician_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "work_orders"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "outcome_recorded_by_person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "work_orders_outcome_recorded_by_person_id_people_id_fkey",
       "entityType": "fks",
       "schema": "public",
       "table": "work_orders"
@@ -34631,9 +35961,49 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "customer_gear_notices_pkey",
+      "schema": "public",
+      "table": "customer_gear_notices",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "customer_gear_reminder_settings_pkey",
+      "schema": "public",
+      "table": "customer_gear_reminder_settings",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "work_order_bills_pkey",
+      "schema": "public",
+      "table": "work_order_bills",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "customer_gear_items_pkey",
       "schema": "public",
       "table": "customer_gear_items",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "work_order_care_pkey",
+      "schema": "public",
+      "table": "work_order_care",
       "entityType": "pks"
     },
     {
@@ -35546,6 +36916,13 @@
       "entityType": "checks",
       "schema": "public",
       "table": "waiver_records"
+    },
+    {
+      "value": "\"next_due_on\" is null or \"next_due_on\" > \"performed_on\"",
+      "name": "work_order_care_due_after_performed",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "work_order_care"
     },
     {
       "value": "\"quantity_hundredths\" > 0",

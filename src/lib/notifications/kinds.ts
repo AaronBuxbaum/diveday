@@ -978,6 +978,7 @@ const workOrderReadySchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
+  ticketNumber: z.number().int().min(1),
   pieces: z.array(customerGearPieceSchema).max(20),
   workPerformed: z.string().trim().min(1).max(4000).optional(),
 });

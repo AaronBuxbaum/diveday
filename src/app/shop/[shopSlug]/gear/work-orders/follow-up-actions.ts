@@ -112,7 +112,7 @@ export async function sendWorkOrderBillAction(formData: FormData) {
     shopId: shop.id,
     workOrderId: detail.workOrder.id,
     actorPersonId: session.user.personId,
-    description: t("benchFollowUp.bill.description"),
+    description: t("benchFollowUp.bill.description", { number: detail.workOrder.number }),
     lineItems,
   });
   if (!outcome.ok) {

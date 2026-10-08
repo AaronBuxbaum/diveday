@@ -4239,9 +4239,9 @@
       "withModel": "{piece} ({model})"
     },
     "workOrderReady": {
-      "subject": "Your gear is ready to collect",
-      "ready": "Your gear is ready to collect from {shopName}: {pieces}.",
-      "readyNoPieces": "Your gear is ready to collect from {shopName}.",
+      "subject": "Ticket #{number}: your gear is ready to collect",
+      "ready": "Your gear on ticket #{number} is ready to collect from {shopName}: {pieces}.",
+      "readyNoPieces": "Your gear on ticket #{number} is ready to collect from {shopName}.",
       "workHeading": "What we did:"
     },
     "gearServiceDue": {
@@ -4257,8 +4257,8 @@
       "dropBySms": "Drop by any time before then."
     },
     "smsWorkOrder": {
-      "ready": "{shopName}: your gear is ready to collect ({pieces}).",
-      "readyNoPieces": "{shopName}: your gear is ready to collect.",
+      "ready": "{shopName}: your gear on ticket #{number} is ready to collect ({pieces}).",
+      "readyNoPieces": "{shopName}: your gear on ticket #{number} is ready to collect.",
       "work": "What we did: {work}"
     }
   },

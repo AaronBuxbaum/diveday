@@ -26,7 +26,7 @@ import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
 import { SUIT_CHOICES } from "@/lib/rentals";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { ROLL_CALL_GAP_KINDS, type TodaySeason } from "@/lib/today";
-import { WORK_ORDER_STATUSES } from "@/lib/work-orders";
+import { WORK_ORDER_OUTCOMES, WORK_ORDER_STATUSES } from "@/lib/work-orders";
 import { buddyAlertText } from "./buddy-labels";
 import {
   CARD_STATUS_KEYS,
@@ -111,7 +111,11 @@ import {
 } from "./today-labels";
 import { depthText, seaStateText, temperatureText, windText } from "./unit-labels";
 import { type WaiverRowState, waiverRowStateText } from "./waiver-labels";
-import { workOrderLineKindLabel, workOrderStatusLabel } from "./work-order-labels";
+import {
+  workOrderLineKindLabel,
+  workOrderOutcomeLabel,
+  workOrderStatusLabel,
+} from "./work-order-labels";
 
 /**
  * **Every code-to-message-key map in this directory, rendered** (issue #1701).
@@ -906,6 +910,13 @@ const CASES: readonly LabelMapCase[] = [
     map: "LINE_KIND_KEYS",
     rows: codeRows(WORK_ORDER_LINE_KINDS, (locale, kind) =>
       workOrderLineKindLabel(staffTranslator(locale), kind),
+    ),
+  },
+  {
+    module: "work-order-labels.ts",
+    map: "OUTCOME_KEYS",
+    rows: codeRows(WORK_ORDER_OUTCOMES, (locale, outcome) =>
+      workOrderOutcomeLabel(staffTranslator(locale), outcome),
     ),
   },
 ];

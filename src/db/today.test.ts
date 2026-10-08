@@ -3045,7 +3045,6 @@ describe("unclosed roll call (DOM-H3)", () => {
         shopId: shop.id,
         workOrderId: ready.workOrder.id,
         status: "ready",
-        todayLocal: today,
       });
       if (!moved.ok) throw new Error("move refused");
 

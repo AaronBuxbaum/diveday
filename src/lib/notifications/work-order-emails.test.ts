@@ -15,10 +15,14 @@ describe("the ready message", () => {
       locale: "en-US",
       diverName: "Maya Torres",
       shopName: "Blue <Mantis>",
+      ticketNumber: 12,
       pieces: [REGULATOR, { kind: "bcd" }],
       workPerformed: "Serviced both stages.\n\nReplaced the <HP> seat.",
     });
     expect(email.text).toContain("Blue <Mantis>");
+    // The number on the claim tag, so the counter finds the right shelf.
+    expect(email.subject).toContain("#12");
+    expect(email.text).toContain("ticket #12");
     expect(email.text).toContain("regulator (Apeks XTX200) and BCD");
     expect(email.text).toContain("Replaced the <HP> seat.");
     expect(email.html).toContain("Blue &lt;Mantis&gt;");
@@ -31,6 +35,7 @@ describe("the ready message", () => {
       locale: "es-ES",
       diverName: "Maya Torres",
       shopName: "Blue Mantis",
+      ticketNumber: 3,
       pieces: [{ kind: "dive_computer" }],
     });
     expect(email.text).toContain("computadora de buceo");
@@ -39,11 +44,13 @@ describe("the ready message", () => {
   it("keeps a text short: the work performed is cut, never the shop or the gear", () => {
     const text = workOrderReadyText(diverTranslator("en-US"), "en-US", {
       shopName: "Blue Mantis",
+      ticketNumber: 12,
       pieces: [REGULATOR],
       workPerformed: "x".repeat(600),
     });
     expect(text).toContain("Blue Mantis");
     expect(text).toContain("regulator (Apeks XTX200)");
+    expect(text).toContain("#12");
     expect(text.length).toBeLessThan(400);
   });
 });

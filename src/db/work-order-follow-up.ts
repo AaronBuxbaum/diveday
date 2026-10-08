@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import { type CalendarDate, calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -221,6 +221,7 @@ export async function sendWorkOrderReadyNotice(
         locale,
         diverName: person.fullName,
         shopName: shop.name,
+        ticketNumber: workOrder.number,
         pieces,
         ...(workPerformed ? { workPerformed: workPerformed.slice(0, 4000) } : {}),
       },
@@ -238,7 +239,12 @@ export async function sendWorkOrderReadyNotice(
     const { channel, delivery } = await sendCourtesyMessage(
       {
         to: phone,
-        body: workOrderReadyText(t, locale, { shopName: shop.name, pieces, workPerformed }),
+        body: workOrderReadyText(t, locale, {
+          shopName: shop.name,
+          ticketNumber: workOrder.number,
+          pieces,
+          workPerformed,
+        }),
         smsStopLine: t("notifications.sms.stopLine"),
         shopName: shop.name,
       },
@@ -592,9 +598,20 @@ export async function sendDueServiceReminders(
         isNull(customerGearItems.deletedAt),
         isNull(people.deletedAt),
         isNull(customerGearReminderSettings.remindersOffAt),
-        isNotNull(customerGearItems.serviceDueOn),
-        gte(customerGearItems.serviceDueOn, shiftCalendarDate(utcToday, -1)),
-        lte(customerGearItems.serviceDueOn, shiftCalendarDate(utcToday, 32)),
+        // Any of the piece's dates in the window; which dates count for its
+        // kind is `customerGearDueDates`' call, below.
+        or(
+          ...[
+            customerGearItems.serviceDueOn,
+            customerGearItems.inspectionDueOn,
+            customerGearItems.hydroDueOn,
+          ].map((due) =>
+            and(
+              gte(due, shiftCalendarDate(utcToday, -1)),
+              lte(due, shiftCalendarDate(utcToday, 32)),
+            ),
+          ),
+        ),
       ),
     );
   if (rows.length === 0) return summary;

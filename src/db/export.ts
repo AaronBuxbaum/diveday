@@ -68,6 +68,7 @@ import {
   tripScheduleDays,
   trips,
   userAccounts,
+  workOrderCare,
   workOrderLines,
 } from "./schema";
 
@@ -404,6 +405,8 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const workOrderLineRows = await readShopScoped(tx, "workOrderLines", shopId);
 
+  const workOrderCareRows = await readShopScoped(tx, "workOrderCare", shopId);
+
   const workOrderEventRows = await readShopScoped(tx, "workOrderEvents", shopId);
 
   const checklistItemRows = await readShopScoped(tx, "preDepartureChecklistItems", shopId);
@@ -573,6 +576,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     workOrderRows,
     workOrderItemRows,
     workOrderLineRows,
+    workOrderCareRows,
     workOrderEventRows,
     checklistItemRows,
     checklistItemLabel,
@@ -908,6 +912,18 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
         )
         .orderBy(asc(workOrderLines.createdAt), asc(workOrderLines.id))
     : [];
+  const workOrderCareRows = diverWorkOrderIds.length
+    ? await tx
+        .select()
+        .from(workOrderCare)
+        .where(
+          and(
+            inArray(workOrderCare.workOrderId, diverWorkOrderIds),
+            eq(workOrderCare.shopId, shopId),
+          ),
+        )
+        .orderBy(asc(workOrderCare.createdAt), asc(workOrderCare.id))
+    : [];
 
   const priorVisitRows = await readPersonScoped(tx, "priorVisits", shopId, personId);
 
@@ -980,6 +996,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     customerGearItemRows,
     workOrderRows,
     workOrderLineRows,
+    workOrderCareRows,
     gearItemLabel,
     priorVisitRows,
     importedPaymentHistoryRows,
@@ -1113,6 +1130,7 @@ export async function loadShopExportCounts(
     "work_orders.csv": await countShopScoped(db, "workOrders", shopId),
     "work_order_items.csv": await countShopScoped(db, "workOrderItems", shopId),
     "work_order_lines.csv": await countShopScoped(db, "workOrderLines", shopId),
+    "work_order_care.csv": await countShopScoped(db, "workOrderCare", shopId),
     "work_order_events.csv": await countShopScoped(db, "workOrderEvents", shopId),
     "pre_departure_checklist_items.csv": await countShopScoped(
       db,

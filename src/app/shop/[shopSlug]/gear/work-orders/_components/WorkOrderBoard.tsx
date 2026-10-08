@@ -51,6 +51,7 @@ export function WorkOrderBoard({
                   key={row.id}
                   href={`/shop/${shopSlug}/gear/work-orders/${row.id}`}
                   linkLabel={t("workOrders.board.rowLink", {
+                    number: row.number,
                     subject: row.personName ?? row.gearItemLabel ?? "",
                     problem: row.reportedProblem,
                   })}
@@ -64,11 +65,22 @@ export function WorkOrderBoard({
                 >
                   <div className="flex min-w-0 flex-col gap-1">
                     <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+                      <span className="text-muted text-sm tabular-nums">
+                        {t("workOrders.number", { number: row.number })}
+                      </span>
                       <span className="font-medium">{row.personName ?? row.gearItemLabel}</span>
                       {row.late ? <Badge tone="warning">{t("workOrders.board.late")}</Badge> : null}
-                      {row.status === "ready" ? (
+                      {/* The group says the status; a row adds one only where
+                          it says more: a customer's gear ready to collect, or
+                          how a shop unit left the bench. */}
+                      {row.status === "ready" || (row.gearItemId && row.status === "picked_up") ? (
                         <Badge tone={workOrderStatusTone(row.status)}>
-                          {workOrderStatusLabel(t, row.status)}
+                          {workOrderStatusLabel(
+                            t,
+                            row.status,
+                            row.gearItemId ? "unit" : "customer",
+                            row.outcome,
+                          )}
                         </Badge>
                       ) : null}
                     </div>

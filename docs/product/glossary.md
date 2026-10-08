@@ -2039,8 +2039,8 @@ new domain concept, define it here in the same PR.
   `visual_inspection` clocks, the `o2_clean` renewal, and clockless condition `note`s. The newest
   event of a kind *is* that clock; the earliest deadline is the unit's state (ok / due soon /
   overdue), which **informs, never gates** — the dock decides whether an overdue unit dives, not
-  the software. A care event is not itself a work order; collecting a work order writes one
-  (ADR 20261008-gear-work-orders).
+  the software. A care event is not itself a work order; only a work order's **Work done record**
+  writes one, for a check that passed (ADR 20261008-gear-work-orders).
 - **Sizing** — BCDs and wetsuits are sized (XS–XXL and height/weight dependent), so a prep list
   groups by item *and* size; an unrecorded size is shown as a loose end, not silently dropped.
 - **Complete rental fit** — a fit is complete when *every piece the diver takes from the shop* has
@@ -2137,27 +2137,49 @@ new domain concept, define it here in the same PR.
 - **Work order** — one open piece of bench work: what came in, whose it is, what the customer
   reports, who is working it, what was done, and the parts and labor it comes to. It covers
   **either** a customer's own gear **or** one of the shop's units, never both (the
-  `work_orders_one_subject` check). It moves between **received**, **in progress**, **waiting on
-  parts** and **ready for pickup** in any direction, and **picked up** is terminal: gear that comes
-  back is a new ticket. Collecting one writes the service clock the work implies — a
-  `gear_service_events` row for one of the shop's units, a next-service date on a customer's piece.
-  Every move appends to `work_order_events`, which is what answers "who said this was ready" a year
-  later. Parts and labor are **figures, not a charge**: money stays with orders and Stripe, and the
-  printed **claim tag** carries none of it.
+  `work_orders_one_subject` check), and carries a short **number** (#12), the shop's next and never
+  reused, which the claim tag, the board and a phone call use. It moves between **received**, **in
+  progress**, **waiting on parts** and **ready for pickup** in any direction, and **picked up** is
+  terminal: gear that comes back is a new ticket. A shop unit's ticket skips ready for pickup, and
+  its end reads **Back in service** when the work was done, **Off the bench** otherwise. Opening one
+  on a shop unit takes the unit off the wall (`needs_service`, the reported problem as its note).
+  **No status move writes a clock**, pickup included; that is the Work done record's job. Every move
+  appends to `work_order_events`, which is what answers "who said this was ready" a year later.
+  Parts and labor are **figures, not a charge**: money stays with orders and Stripe, and the printed
+  **claim tag** carries none of it.
+- **Work done record** — how a work order's job ended, written once by the technician: **done**,
+  **declined**, **unserviceable** or **condemned** (the last two say why), and for a done job each
+  check performed (`work_order_care`): service, visual inspection, hydro test, O2 clean or other
+  work, **passed or failed**, the day performed, and the next due date the technician confirmed.
+  Only a passed check moves a clock: on a shop unit through `recordGearService`, on a customer's
+  piece by setting the matching date. A failed check is kept as the record of the failure and
+  writes nothing. Declined, unserviceable and condemned write no clock; a condemned shop unit stays
+  off the wall with the reason as its note.
+- **Technician** — the staff member a work order is handed to (`technician_person_id`). Any person
+  with a staff role at the shop; never a diver, never another shop's person. Handing a ticket on is
+  its own history row; **Unassigned** is a ticket nobody holds.
+- **Late (work order)** — the promised day has passed on the shop's calendar and the ticket is still
+  open. Ready for pickup counts: the work is done and the customer has not collected, which is what
+  the promise exists to catch. A collected ticket is never late, however late it ran.
+- **Bench notes vs work performed** — two texts on a ticket. **Bench notes** are the shop's own talk
+  about the repair, for technicians, never shown to a customer and left out of the diver's export.
+  **Work performed** is what the customer is told was done. Neither moves a clock; the Work done
+  record does.
 - **Customer gear** — a piece of equipment a *diver* owns, on the shop's record because the bench
   has worked it or is about to (`customer_gear_items`): kind, make and model, serial number, and its
-  own next-service date. Not the shop's fleet (`gear_items`) and never rentable — the register, the
-  prep list and every manifest read ignore it.
+  own due dates: a cylinder's **visual inspection** and **hydro test**, every other kind's one
+  **service** date. Not the shop's fleet (`gear_items`) and never rentable — the register, the prep
+  list and every manifest read ignore it.
 - **Ready message** — what a customer is told when their ticket moves to ready for pickup: the shop,
-  the pieces and the work performed, by email or the courtesy text. It is sent once per ready
-  transition and can be resent from the ticket. It never goes for a ticket on one of the shop's own
-  units ([20261008-work-order-follow-up](../architecture/decisions/20261008-work-order-follow-up.md)).
+  the ticket number, the pieces and the work performed, by email or the courtesy text. It is sent
+  once per ready transition and can be resent from the ticket. It never goes for a ticket on one of
+  the shop's own units ([20261008-work-order-follow-up](../architecture/decisions/20261008-work-order-follow-up.md)).
 - **Bench bill** — the order a ticket's parts and labor raise through `createOrder`, linked in
   `work_order_bills`. It is an ordinary order, so only one can be open per ticket. With no Stripe
   account, the ticket shows the total and says it is collected at the counter.
-- **Service reminder** — the message a customer gets about a month before a piece's service date,
-  once per piece, clock and date. It is on by default and switched off per piece on the diver
-  record.
+- **Service reminder** — the message a customer gets about a month before each of a piece's due
+  dates, once per piece, clock and date, so a cylinder can get a visual-inspection reminder and a
+  hydro-test reminder. It is on by default and switched off per piece on the diver record.
 
 ## Records and evidence
 

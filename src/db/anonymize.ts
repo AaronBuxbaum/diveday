@@ -121,6 +121,7 @@ import {
   userAccounts,
   waiverDeliveries,
   waiverRecords,
+  workOrderLines,
   workOrders,
 } from "./schema";
 
@@ -1479,10 +1480,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // `reported_problem` is the customer's own account of the fault and is
   // `not null`, so it is redacted rather than cleared — a ticket with an empty
   // problem would read as a ticket nobody wrote anything on, which is the
-  // reading `[redacted]` exists to prevent. Bench notes and what the customer
-  // was told are free prose a technician may well have put a name in, and both
-  // clear. `work_order_lines` is untouched on purpose: a part number and an
-  // hour at the bench are written about equipment, never about a person.
+  // reading `[redacted]` exists to prevent. Bench notes, what the customer
+  // was told and the outcome note are free prose a technician may well have
+  // put a name in, and all three clear.
+  //
+  // A line's **description** is redacted too (security review of #2270): it
+  // is typed at the counter in this person's presence ("rebuilt Maya's own
+  // second stage"), and a part number is no defence for the line that is not
+  // one. Its kind, quantity and amount stay — what the shop charged is its own
+  // record — so the ticket's total still reads.
   //
   // The piece on file keeps its kind and model — that is what the service
   // history is *of* — and loses the staffer's note about it and the serial
@@ -1499,8 +1505,29 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       ),
     );
   await tx
+    .update(workOrderLines)
+    .set({ description: REDACTED_TEXT })
+    .where(
+      and(
+        eq(workOrderLines.shopId, shopId),
+        ne(workOrderLines.description, REDACTED_TEXT),
+        inArray(
+          workOrderLines.workOrderId,
+          tx
+            .select({ id: workOrders.id })
+            .from(workOrders)
+            .where(and(eq(workOrders.shopId, shopId), eq(workOrders.personId, personId))),
+        ),
+      ),
+    );
+  await tx
     .update(workOrders)
-    .set({ reportedProblem: REDACTED_TEXT, technicianNotes: null, workPerformed: null })
+    .set({
+      reportedProblem: REDACTED_TEXT,
+      technicianNotes: null,
+      workPerformed: null,
+      outcomeNote: null,
+    })
     .where(
       and(
         eq(workOrders.shopId, shopId),

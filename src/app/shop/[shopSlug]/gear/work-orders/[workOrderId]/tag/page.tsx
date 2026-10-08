@@ -30,7 +30,8 @@ export const metadata: Metadata = { title: "Claim tag — DiveDay" };
  * figures until the job is done, and a printed total on the way in is a price
  * promise nobody made. What is left is the only thing a claim tag is for —
  * *what we have, what you told us, and when to come back* — which is why the
- * page is a list of pieces, one sentence and one date.
+ * page is a list of pieces, one sentence and one date, under the ticket's
+ * number, with the shop's phone at the foot for the call that asks after it.
  */
 export default async function ClaimTagPage({
   params,
@@ -73,6 +74,12 @@ export default async function ClaimTagPage({
           <p className={`hidden ${EYEBROW_CLASS} print:block`}>{t("workOrders.tag.eyebrow")}</p>
           <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{subject}</h1>
           <p className="mt-1 text-muted">
+            {/* The ticket number is what the diver reads down the phone, so
+                it leads the line. */}
+            <span className="font-medium text-foreground tabular-nums">
+              {t("workOrders.number", { number: detail.workOrder.number })}
+            </span>
+            {" · "}
             {t("workOrders.detail.receivedOn", {
               date: formatShortDate(detail.workOrder.receivedAt, locale, shop.timezone),
             })}
@@ -131,7 +138,15 @@ export default async function ClaimTagPage({
           })}
         </p>
       ) : null}
-      <p className="mt-8 border-t border-border pt-4 text-muted text-sm">{shop.name}</p>
+      <p className="mt-8 border-t border-border pt-4 text-muted text-sm">
+        {shop.name}
+        {shop.contactPhone ? (
+          <>
+            {" · "}
+            {t("workOrders.tag.phone", { phone: shop.contactPhone })}
+          </>
+        ) : null}
+      </p>
     </div>
   );
 }

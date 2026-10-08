@@ -8,50 +8,58 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { LedgerRow } from "@/components/ui/ledger";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
+import { latestServiceClocks } from "@/db/gear";
 import { listStaff } from "@/db/trips-crew";
 import { getWorkOrderDetail } from "@/db/work-orders";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { workOrderStatusLabel, workOrderStatusTone } from "@/i18n/work-order-labels";
-import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { WORK_ORDER_TEXT_LIMITS } from "@/lib/work-orders";
+import type { WorkOrderOutcome } from "@/lib/work-orders";
 import { BillAndPickupCard } from "../_components/BillAndPickupCard";
+import { pieceDueLine } from "../_components/piece-dates";
 import { WorkOrderHistoryCard } from "../_components/WorkOrderHistoryCard";
+import { WorkOrderJobCard } from "../_components/WorkOrderJobCard";
 import { WorkOrderLinesCard } from "../_components/WorkOrderLinesCard";
 import { WorkOrderStatusCard } from "../_components/WorkOrderStatusCard";
-import {
-  deleteWorkOrderAction,
-  saveWorkOrderDetailsAction,
-  saveWorkOrderNotesAction,
-} from "../actions";
+import { WorkOrderWorkCard } from "../_components/WorkOrderWorkCard";
+import { deleteWorkOrderAction } from "../actions";
 
 const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   opened: { tone: "success", key: "workOrders.notice.opened" },
   moved: { tone: "success", key: "workOrders.notice.moved" },
-  assigned: { tone: "success", key: "workOrders.notice.assigned" },
-  "notes-saved": { tone: "success", key: "workOrders.notice.notesSaved" },
-  "details-saved": { tone: "success", key: "workOrders.notice.detailsSaved" },
+  saved: { tone: "success", key: "workOrders.notice.saved" },
+  "work-recorded": { tone: "success", key: "workOrders.notice.workRecorded" },
   "line-added": { tone: "success", key: "workOrders.notice.lineAdded" },
   "line-saved": { tone: "success", key: "workOrders.notice.lineSaved" },
   "line-deleted": { tone: "success", key: "workOrders.notice.lineDeleted" },
   restored: { tone: "success", key: "workOrders.notice.restored" },
   already: { tone: "warning", key: "workOrders.notice.already" },
   closed: { tone: "warning", key: "workOrders.notice.closed" },
+  "already-recorded": { tone: "warning", key: "workOrders.notice.alreadyRecorded" },
   "invalid-quantity": { tone: "danger", key: "workOrders.notice.invalidQuantity" },
   "invalid-amount": { tone: "danger", key: "workOrders.notice.invalidAmount" },
   "empty-description": { tone: "danger", key: "workOrders.notice.emptyDescription" },
   "empty-problem": { tone: "danger", key: "workOrders.notice.emptyProblem" },
   "invalid-date": { tone: "danger", key: "workOrders.notice.invalidDate" },
+  "unknown-technician": { tone: "danger", key: "workOrders.notice.unknownTechnician" },
+  "no-outcome": { tone: "danger", key: "workOrders.notice.noOutcome" },
+  "no-care": { tone: "danger", key: "workOrders.notice.noCare" },
+  "care-on-not-done": { tone: "danger", key: "workOrders.notice.invalidCare" },
+  "invalid-care": { tone: "danger", key: "workOrders.notice.invalidCare" },
+  "note-required": { tone: "danger", key: "workOrders.notice.noteRequired" },
+  "future-date": { tone: "danger", key: "workOrders.notice.futureDate" },
+  "due-not-after-performed": { tone: "danger", key: "workOrders.notice.dueNotAfterPerformed" },
+  "invalid-dives": { tone: "danger", key: "workOrders.notice.invalidDives" },
   "not-found": { tone: "danger", key: "workOrders.notice.notFound" },
   invalid: { tone: "danger", key: "workOrders.notice.invalid" },
 };
@@ -61,8 +69,9 @@ export const instant = true;
 export const metadata: Metadata = { title: "Work order — DiveDay" };
 
 /**
- * **One ticket, whole** (ADR 20261008-gear-work-orders): where it is, who has
- * it, what came in, what was done, what it comes to, and how it got here.
+ * **One ticket, whole** (ADR 20261008-gear-work-orders): where it goes next,
+ * the job, the gear, the Work done record, what it comes to, and how it got
+ * here.
  *
  * A deleted ticket's own record stays readable, read-only, with Restore where
  * the acts were — the rule a unit's record set (ADR 20260823's amendment to
@@ -95,7 +104,14 @@ export default async function WorkOrderPage({
   ]);
   if (!detail) notFound();
   const { workOrder } = detail;
+  // A shop unit's last reading of each clock, so the Work done form can carry
+  // the fleet's own interval forward instead of a convention.
+  const clocks = workOrder.gearItemId
+    ? ((await latestServiceClocks(db, shop.id, [workOrder.gearItemId])).get(workOrder.gearItemId) ??
+      [])
+    : [];
   const deleted = workOrder.deletedAt !== null;
+  const outcome = workOrder.outcome as WorkOrderOutcome | null;
   const banner = noticeFromParam(notice, NOTICES);
   const board = shopPath(shopSlug, "gear", "work-orders");
   const subject = detail.personName ?? detail.gearItemLabel ?? t("workOrders.title");
@@ -108,15 +124,25 @@ export default async function WorkOrderPage({
           <EyebrowBackLink href={board}>{t("workOrders.title")}</EyebrowBackLink>
           <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{subject}</h1>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-muted">
+            <span className="font-medium text-foreground tabular-nums">
+              {t("workOrders.number", { number: workOrder.number })}
+            </span>
             {deleted ? <Badge tone="neutral">{t("workOrders.detail.deletedBadge")}</Badge> : null}
             <Badge tone={workOrderStatusTone(workOrder.status)}>
-              {workOrderStatusLabel(t, workOrder.status)}
+              {workOrderStatusLabel(t, workOrder.status, detail.subject, outcome)}
             </Badge>
             {detail.late ? <Badge tone="warning">{t("workOrders.board.late")}</Badge> : null}
             <span className="text-sm">
-              {t("workOrders.detail.receivedOn", {
-                date: formatShortDate(workOrder.receivedAt, locale, shop.timezone),
-              })}
+              {[
+                t("workOrders.detail.receivedOn", {
+                  date: formatShortDate(workOrder.receivedAt, locale, shop.timezone),
+                }),
+                detail.technicianName
+                  ? t("workOrders.board.with", { name: detail.technicianName })
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </span>
           </p>
         </div>
@@ -141,79 +167,32 @@ export default async function WorkOrderPage({
           </p>
         ) : null}
 
-        <WorkOrderStatusCard workOrder={workOrder} staff={staff} readOnly={deleted} t={t} />
+        <WorkOrderStatusCard
+          workOrder={workOrder}
+          subject={detail.subject}
+          readOnly={deleted}
+          t={t}
+        />
 
-        <SectionCard title={t("workOrders.detail.reportedHeading")} padding="lg">
-          {deleted ? (
-            <>
-              <p className="whitespace-pre-line">{workOrder.reportedProblem}</p>
-              {workOrder.promisedOn ? (
-                <p className="mt-2 text-muted text-sm">
-                  {t("workOrders.board.promised", {
-                    date: formatCalendarDate(workOrder.promisedOn, locale),
-                  })}
-                </p>
-              ) : null}
-            </>
-          ) : (
-            <FieldGrid as="form" action={saveWorkOrderDetailsAction} columns={2}>
-              <input type="hidden" name="workOrderId" value={workOrder.id} />
-              <Field
-                label={t("workOrders.form.reportedProblem")}
-                htmlFor="reported-problem"
-                required
-                className="col-span-full"
-              >
-                <textarea
-                  id="reported-problem"
-                  name="reportedProblem"
-                  rows={3}
-                  required
-                  defaultValue={workOrder.reportedProblem}
-                  maxLength={WORK_ORDER_TEXT_LIMITS.reportedProblem}
-                  className={controlClass}
-                />
-              </Field>
-              <Field
-                label={t("workOrders.form.promisedOn")}
-                hint={t("workOrders.form.optionalHint")}
-                htmlFor="promised-on"
-              >
-                <DateField
-                  id="promised-on"
-                  name="promisedOn"
-                  defaultValue={workOrder.promisedOn ?? ""}
-                />
-              </Field>
-              <FieldActions>
-                <SubmitButton
-                  pendingLabel={t("workOrders.form.saving")}
-                  className={buttonClass({ variant: "secondary" })}
-                >
-                  {t("workOrders.form.save")}
-                </SubmitButton>
-              </FieldActions>
-            </FieldGrid>
-          )}
-        </SectionCard>
+        <WorkOrderJobCard
+          workOrder={workOrder}
+          unit={detail.subject === "unit"}
+          staff={staff}
+          technicianName={detail.technicianName}
+          readOnly={deleted}
+          locale={locale}
+          t={t}
+        />
 
         {detail.pieces.length > 0 ? (
-          <SectionCard title={t("workOrders.detail.piecesHeading")} padding="none">
+          <SectionCard title={t("workOrders.detail.piecesHeading")} padding="lg">
             <ul>
               {detail.pieces.map((piece) => (
                 <LedgerRow key={piece.id}>
                   <div className="flex min-w-0 flex-col gap-1">
                     <span className="font-medium">{gearItemKindLabel(t, piece.kind)}</span>
                     <span className="text-muted text-xs">
-                      {[
-                        piece.brandModel,
-                        piece.serialNumber,
-                        piece.serviceDueOn
-                          ? t("workOrders.detail.serviceDue", {
-                              date: formatCalendarDate(piece.serviceDueOn, locale),
-                            })
-                          : null,
-                      ]
+                      {[piece.brandModel, piece.serialNumber, ...pieceDueLine(piece, locale, t)]
                         .filter(Boolean)
                         .join(" · ")}
                     </span>
@@ -224,58 +203,13 @@ export default async function WorkOrderPage({
           </SectionCard>
         ) : null}
 
-        <SectionCard title={t("workOrders.detail.notesHeading")} padding="lg">
-          {deleted ? (
-            <>
-              {workOrder.technicianNotes ? (
-                <p className="whitespace-pre-line text-muted">{workOrder.technicianNotes}</p>
-              ) : null}
-              {workOrder.workPerformed ? (
-                <p className="mt-3 whitespace-pre-line">{workOrder.workPerformed}</p>
-              ) : null}
-            </>
-          ) : (
-            <FieldGrid as="form" action={saveWorkOrderNotesAction} columns={1}>
-              <input type="hidden" name="workOrderId" value={workOrder.id} />
-              <Field
-                label={t("workOrders.detail.technicianNotes")}
-                hint={t("workOrders.detail.technicianNotesHint")}
-                htmlFor="technician-notes"
-              >
-                <textarea
-                  id="technician-notes"
-                  name="technicianNotes"
-                  rows={3}
-                  defaultValue={workOrder.technicianNotes ?? ""}
-                  maxLength={WORK_ORDER_TEXT_LIMITS.technicianNotes}
-                  className={controlClass}
-                />
-              </Field>
-              <Field
-                label={t("workOrders.detail.workPerformed")}
-                hint={t("workOrders.detail.workPerformedHint")}
-                htmlFor="work-performed"
-              >
-                <textarea
-                  id="work-performed"
-                  name="workPerformed"
-                  rows={3}
-                  defaultValue={workOrder.workPerformed ?? ""}
-                  maxLength={WORK_ORDER_TEXT_LIMITS.workPerformed}
-                  className={controlClass}
-                />
-              </Field>
-              <FieldActions>
-                <SubmitButton
-                  pendingLabel={t("workOrders.form.saving")}
-                  className={buttonClass({ variant: "secondary" })}
-                >
-                  {t("workOrders.form.save")}
-                </SubmitButton>
-              </FieldActions>
-            </FieldGrid>
-          )}
-        </SectionCard>
+        <WorkOrderWorkCard
+          detail={detail}
+          previousClocks={clocks}
+          todayLocal={todayLocal}
+          locale={locale}
+          t={t}
+        />
 
         <WorkOrderLinesCard
           workOrderId={workOrder.id}
@@ -299,6 +233,8 @@ export default async function WorkOrderPage({
         />
         <WorkOrderHistoryCard
           events={detail.events}
+          subject={detail.subject}
+          outcome={outcome}
           locale={locale}
           timezone={shop.timezone}
           t={t}

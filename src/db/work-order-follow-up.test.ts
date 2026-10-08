@@ -35,7 +35,7 @@ import {
   addCustomerGearItem,
   createWorkOrder,
   deleteCustomerGearItem,
-  saveWorkOrderNotes,
+  saveWorkOrder,
   setWorkOrderStatus,
 } from "./work-orders";
 
@@ -76,7 +76,12 @@ async function piece(
   db: AppDb,
   shopId: string,
   personId: string,
-  input: { kind?: "regulator" | "tank" | "bcd"; serviceDueOn?: string } = {},
+  input: {
+    kind?: "regulator" | "tank" | "bcd";
+    serviceDueOn?: string;
+    inspectionDueOn?: string;
+    hydroDueOn?: string;
+  } = {},
 ) {
   const outcome = await addCustomerGearItem(db, {
     shopId,
@@ -84,6 +89,8 @@ async function piece(
     kind: input.kind ?? "regulator",
     brandModel: "Apeks XTX200",
     serviceDueOn: input.serviceDueOn ?? "",
+    inspectionDueOn: input.inspectionDueOn ?? "",
+    hydroDueOn: input.hydroDueOn ?? "",
   });
   if (!outcome.ok) throw new Error(`piece refused: ${outcome.reason}`);
   return outcome.item;
@@ -98,16 +105,17 @@ async function readyTicket(db: AppDb, shopId: string, personId: string, pieceId:
   });
   if (!outcome.ok) throw new Error(`ticket refused: ${outcome.reason}`);
   // What the customer is told was done: the words the message carries.
-  await saveWorkOrderNotes(db, {
+  await saveWorkOrder(db, {
     shopId,
     workOrderId: outcome.workOrder.id,
+    reportedProblem: "Free-flows at depth",
+    technicianPersonId: null,
     workPerformed: "Serviced both stages and replaced the HP seat.",
   });
   const moved = await setWorkOrderStatus(db, {
     shopId,
     workOrderId: outcome.workOrder.id,
     status: "ready",
-    todayLocal: TODAY,
   });
   if (!moved.ok) throw new Error(`move refused: ${moved.reason}`);
   return outcome.workOrder;
@@ -164,7 +172,6 @@ describe("the ready-for-pickup message", () => {
         shopId: shop.id,
         workOrderId: ticket.id,
         status,
-        todayLocal: TODAY,
       });
     }
 
@@ -216,7 +223,9 @@ describe("the ready-for-pickup message", () => {
 
     expect(outcome).toEqual({ ok: true, status: "sent", channel: "whatsapp" });
     expect(sms.sent).toHaveLength(0);
-    expect(whatsapp.sent[0]?.body).toContain("Bench Divers: your gear is ready to collect");
+    expect(whatsapp.sent[0]?.body).toContain(
+      "Bench Divers: your gear on ticket #1 is ready to collect",
+    );
     expect(whatsapp.sent[0]?.body).toContain("regulator (Apeks XTX200)");
     expect(whatsapp.sent[0]?.body).toContain("What we did: Serviced both stages");
   });
@@ -268,7 +277,6 @@ describe("the ready-for-pickup message", () => {
       shopId: shop.id,
       workOrderId: opened.workOrder.id,
       status: "ready",
-      todayLocal: TODAY,
     });
     const email = fakeEmail();
 
@@ -291,7 +299,6 @@ describe("the ready-for-pickup message", () => {
       shopId: shop.id,
       workOrderId: ticket.id,
       status: "picked_up",
-      todayLocal: TODAY,
     });
 
     expect(
@@ -555,7 +562,7 @@ describe("service-due reminders", () => {
     const maya = await diver(db, shop.id, "Maya Remind");
     const off = await piece(db, shop.id, maya.id, { serviceDueOn: "2026-08-15" });
     const gone = await piece(db, shop.id, maya.id, { kind: "bcd", serviceDueOn: "2026-08-15" });
-    const held = await piece(db, shop.id, maya.id, { kind: "tank", serviceDueOn: "2026-08-15" });
+    const held = await piece(db, shop.id, maya.id, { kind: "tank", inspectionDueOn: "2026-08-15" });
     await setCustomerGearReminders(db, { shopId: shop.id, customerGearItemId: off.id, on: false });
     await deleteCustomerGearItem(db, { shopId: shop.id, customerGearItemId: gone.id });
     await createWorkOrder(db, {
@@ -640,18 +647,25 @@ describe("service-due reminders", () => {
     expect(onlyTo(email.sent, maya.email ?? "")).toHaveLength(0);
   });
 
-  it("names a cylinder's clock as its visual inspection", async () => {
+  it("reminds about a cylinder's visual inspection and its hydro test separately", async () => {
     const { db, shop } = await context();
     const maya = await diver(db, shop.id, "Maya Remind");
-    await piece(db, shop.id, maya.id, { kind: "tank", serviceDueOn: "2026-08-01" });
+    await piece(db, shop.id, maya.id, {
+      kind: "tank",
+      inspectionDueOn: "2026-08-01",
+      hydroDueOn: "2026-08-10",
+    });
     const email = fakeEmail();
     await sendDueServiceReminders(db, {
       emailProvider: email.provider,
       whatsAppProviders: new Map(),
       appOrigin: "https://diveday.test",
     });
-    const [sent] = onlyTo(email.sent, maya.email ?? "");
-    expect(sent?.kind === "gear_service_due" && sent.clock).toBe("visual_inspection");
+    const sent = onlyTo(email.sent, maya.email ?? "");
+    expect(sent.map((n) => n.kind === "gear_service_due" && n.clock).sort()).toEqual([
+      "hydro_test",
+      "visual_inspection",
+    ]);
   });
 });
 
@@ -683,7 +697,6 @@ describe("what Today asks about the bench", () => {
       shopId: shop.id,
       workOrderId: fleet.workOrder.id,
       status: "ready",
-      todayLocal: TODAY,
     });
 
     const now = await listWorkOrdersNeedingAttention(db, shop.id, {

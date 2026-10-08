@@ -1,11 +1,23 @@
 {
   "title": "Work orders",
+  "number": "#{number}",
   "status": {
     "received": "Received",
     "inProgress": "In progress",
     "waitingOnParts": "Waiting on parts",
     "ready": "Ready for pickup",
-    "pickedUp": "Picked up"
+    "pickedUp": "Picked up",
+    "backInService": "Back in service",
+    "offTheBench": "Off the bench"
+  },
+  "outcomes": {
+    "done": "Done",
+    "declined": "Declined",
+    "unserviceable": "Can’t be serviced",
+    "condemned": "Condemned"
+  },
+  "care": {
+    "other": "Other work"
   },
   "lineKinds": {
     "part": "Part",
@@ -14,7 +26,7 @@
   "board": {
     "ariaLabel": "The bench",
     "group": "{label} — {count}",
-    "rowLink": "{subject}: {problem}",
+    "rowLink": "#{number} {subject}: {problem}",
     "late": "Late",
     "promised": "Promised {date}",
     "pieces": "{count, plural, one {# piece} other {# pieces}}",
@@ -56,14 +68,13 @@
     "brandModelPlaceholder": "Apeks XTX200",
     "serialNumber": "Serial number",
     "note": "Note",
-    "serviceDueOn": "Next service due",
     "reportedProblem": "What the customer reports",
-    "reportedProblemPlaceholder": "Free-flows below 20 m",
+    "reportedProblemUnit": "What’s wrong with it",
+    "reportedProblemPlaceholder": "Free-flows on the second stage",
     "promisedOn": "Promised by",
     "technician": "Technician",
     "technicianNone": "Nobody yet",
     "optionalHint": "(optional)",
-    "moveTo": "Move to",
     "description": "Description",
     "descriptionPlaceholder": "Second-stage service kit",
     "quantity": "Quantity",
@@ -75,12 +86,10 @@
     "eyebrow": "Work order",
     "ownUnitSubject": "Your own unit · {kind}",
     "statusHeading": "Status",
-    "notesHeading": "Notes",
     "technicianNotes": "Bench notes",
     "technicianNotesHint": "(staff only)",
     "workPerformed": "Work performed",
     "workPerformedHint": "(the customer reads this)",
-    "reportedHeading": "What came in",
     "piecesHeading": "The gear",
     "serviceDue": "Service due {date}",
     "linesHeading": "Parts and labor",
@@ -88,8 +97,6 @@
     "adding": "Adding…",
     "deleteLine": "Delete",
     "deletingLine": "Deleting…",
-    "deleteLineFor": "Delete {description}",
-    "saveLineFor": "Save {description}",
     "linesEmpty": "No parts or labor yet.",
     "total": "Total",
     "historyHeading": "History",
@@ -99,47 +106,69 @@
     "deleting": "Deleting…",
     "restore": "Restore",
     "restoring": "Restoring…",
-    "claimTag": "Claim tag"
+    "claimTag": "Claim tag",
+    "jobHeading": "The job",
+    "inspectionDue": "Visual inspection due {date}",
+    "hydroDue": "Hydro test due {date}",
+    "pickedUpConfirm": "Close this ticket? A closed ticket can’t be moved again.",
+    "editLine": "Edit",
+    "lineMenu": "Change {description}",
+    "lineTotal": "Line total",
+    "lineActions": "Actions",
+    "lineFold": "{kind} · {quantity} × {price}"
+  },
+  "work": {
+    "heading": "Work done",
+    "description": "Only a check marked passed sets a next due date.",
+    "outcome": "How did the job end?",
+    "outcomeNote": "Why",
+    "outcomeNoteHint": "(needed if it can’t be serviced or is condemned)",
+    "performedOn": "Done on",
+    "notDone": "Not done",
+    "passed": "Passed",
+    "failed": "Failed",
+    "nextDueOn": "Next due",
+    "nextDueDives": "Or after this many dives",
+    "nextDue": "next due {date}",
+    "record": "Record the work",
+    "recording": "Recording…"
   },
   "history": {
     "created": "Opened",
     "moved": "{from} to {to}",
     "handedTo": "Handed to {name}",
-    "takenOff": "Taken off the bench list",
-    "by": "by {name}"
+    "takenOff": "Unassigned",
+    "by": "by {name}",
+    "workRecorded": "Work recorded"
   },
   "tag": {
     "eyebrow": "Claim tag",
     "piecesHeading": "What we have",
     "problemHeading": "What you told us",
-    "promised": "Promised {date}"
+    "promised": "Promised {date}",
+    "phone": "Call {phone}"
   },
   "diver": {
     "heading": "Their own gear",
-    "gearHeading": "On file",
     "gearEmpty": "Nothing on file.",
-    "ordersHeading": "Work orders",
     "ordersEmpty": "None yet.",
     "onTheBench": "{count, plural, one {# on the bench} other {# on the bench}}",
     "piecesOnFile": "{count, plural, one {# piece on file} other {# pieces on file}}",
     "deletePiece": "Delete {label}",
     "deletePieceShort": "Delete",
     "deletingPiece": "Deleting…",
-    "newOrder": "New work order"
+    "newOrder": "New work order",
+    "orderLink": "#{number}: {problem}"
   },
   "notice": {
     "opened": "Work order opened.",
     "moved": "Status saved.",
-    "assigned": "Technician saved.",
-    "notesSaved": "Saved.",
-    "detailsSaved": "Saved.",
     "lineAdded": "Line added.",
     "lineSaved": "Line saved.",
     "lineDeleted": "Line deleted.",
     "deleted": "Work order deleted.",
     "restored": "Work order restored.",
     "pieceAdded": "On the record.",
-    "pieceSaved": "Saved.",
     "pieceDeleted": "Piece deleted.",
     "pieceRestored": "Piece restored.",
     "already": "It was already on that status.",
@@ -154,6 +183,17 @@
     "emptyDescription": "Say what the line is for.",
     "invalidDate": "That date doesn’t exist. Check it.",
     "notFound": "That record isn’t here anymore.",
-    "invalid": "That didn’t save. Check the form and try again."
+    "invalid": "That didn’t save. Check the form and try again.",
+    "saved": "Saved.",
+    "workRecorded": "Work recorded.",
+    "alreadyRecorded": "The work on this ticket is already recorded.",
+    "unknownTechnician": "Pick a technician from your staff.",
+    "noOutcome": "Say how the job ended.",
+    "noCare": "Mark at least one check passed or failed.",
+    "invalidCare": "Check the work done and try again.",
+    "noteRequired": "Say why.",
+    "futureDate": "That day hasn’t happened yet.",
+    "dueNotAfterPerformed": "A next due date has to come after the day the work was done.",
+    "invalidDives": "A dive count needs a whole number and a next due date beside it."
   }
 }
