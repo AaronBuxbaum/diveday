@@ -1,16 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
   canMoveWorkOrder,
+  customerDueField,
+  customerDueFields,
   isOpenWorkOrderStatus,
+  isWorkOrderOutcome,
   isWorkOrderStatus,
   OPEN_WORK_ORDER_STATUSES,
   parseWorkOrderQuantity,
-  suggestCustomerServiceDueOn,
+  suggestCareDueOn,
   WORK_ORDER_STATUSES,
+  wholeMonthsBetween,
+  workOrderCareKinds,
   workOrderIsLate,
   workOrderLineTotalCents,
+  workOrderMoves,
+  workOrderOutcomeNeedsNote,
   workOrderQuantityInput,
-  workOrderServiceClock,
+  workOrderReturnsUnitToService,
   workOrderStatusMoves,
   workOrderStatusRank,
   workOrderSubtotalsCents,
@@ -57,6 +64,167 @@ describe("work order statuses", () => {
       expect(canMoveWorkOrder("picked_up", status)).toBe(false);
     }
     expect(workOrderStatusMoves("picked_up")).toEqual([]);
+  });
+});
+
+describe("workOrderMoves: the one step forward, and the rest", () => {
+  it("names the step the bench takes next from every open status", () => {
+    expect(workOrderMoves("received").forward).toBe("in_progress");
+    expect(workOrderMoves("in_progress").forward).toBe("ready");
+    // A part arriving puts the ticket back on the bench, not straight to ready.
+    expect(workOrderMoves("waiting_on_parts").forward).toBe("in_progress");
+    expect(workOrderMoves("ready").forward).toBe("picked_up");
+  });
+
+  it("offers every other allowed move once, in counter order, after the forward one", () => {
+    for (const status of OPEN_WORK_ORDER_STATUSES) {
+      const { forward, others } = workOrderMoves(status);
+      expect([forward, ...others].sort()).toEqual([...workOrderStatusMoves(status)].sort());
+      expect(others).not.toContain(forward);
+      expect(others).toEqual(
+        [...others].sort((a, b) => workOrderStatusRank(a) - workOrderStatusRank(b)),
+      );
+    }
+    // Backwards stays possible: a ready regulator that leaks goes back on the bench.
+    expect(workOrderMoves("ready").others).toContain("in_progress");
+  });
+
+  it("offers nothing on a collected ticket", () => {
+    expect(workOrderMoves("picked_up")).toEqual({ forward: null, others: [] });
+  });
+
+  it("takes a shop unit's ticket from the bench straight off it, never through ready", () => {
+    // Nobody collects the shop's own regulator: "ready for pickup" is a state
+    // it would sit in for no one.
+    expect(workOrderMoves("in_progress", "unit").forward).toBe("picked_up");
+    for (const status of OPEN_WORK_ORDER_STATUSES) {
+      expect(workOrderStatusMoves(status, "unit")).not.toContain("ready");
+      expect(canMoveWorkOrder(status, "ready", "unit")).toBe(false);
+    }
+  });
+});
+
+describe("the Work done record", () => {
+  it("reads an outcome from a form value and refuses anything else", () => {
+    expect(isWorkOrderOutcome("condemned")).toBe(true);
+    expect(isWorkOrderOutcome("cancelled")).toBe(false);
+  });
+
+  it("asks why only of the outcomes a customer will ask about", () => {
+    expect(workOrderOutcomeNeedsNote("unserviceable")).toBe(true);
+    expect(workOrderOutcomeNeedsNote("condemned")).toBe(true);
+    expect(workOrderOutcomeNeedsNote("done")).toBe(false);
+    expect(workOrderOutcomeNeedsNote("declined")).toBe(false);
+  });
+
+  it("offers a piece's own clocks, then other work with no clock", () => {
+    expect(workOrderCareKinds("regulator")).toEqual(["service", "note"]);
+    expect(workOrderCareKinds("tank")).toEqual([
+      "visual_inspection",
+      "hydro_test",
+      "o2_clean",
+      "note",
+    ]);
+    expect(workOrderCareKinds("wetsuit")).toEqual(["note"]);
+  });
+});
+
+describe("the next-due date a Work done row is prefilled with", () => {
+  const performedOn = "2026-10-08";
+
+  it("counts from the day the work was performed", () => {
+    expect(
+      suggestCareDueOn({
+        subject: "customer",
+        itemKind: "regulator",
+        careKind: "service",
+        performedOn: "2026-09-01",
+      }),
+    ).toBe("2027-09-01");
+  });
+
+  it("never suggests a date for a cylinder, customer's or the shop's", () => {
+    for (const careKind of ["visual_inspection", "hydro_test", "o2_clean"] as const) {
+      for (const subject of ["customer", "unit"] as const) {
+        expect(suggestCareDueOn({ subject, itemKind: "tank", careKind, performedOn })).toBeNull();
+      }
+    }
+  });
+
+  it("carries a shop unit's own interval forward, a tank's included", () => {
+    expect(
+      suggestCareDueOn({
+        subject: "unit",
+        itemKind: "regulator",
+        careKind: "service",
+        performedOn,
+        previous: { servicedOn: "2026-01-15", nextDueOn: "2026-07-15" },
+      }),
+    ).toBe("2027-04-08");
+    // A tank's interval is the tank's own, typed by whoever inspected it last.
+    expect(
+      suggestCareDueOn({
+        subject: "unit",
+        itemKind: "tank",
+        careKind: "hydro_test",
+        performedOn,
+        previous: { servicedOn: "2021-10-08", nextDueOn: "2026-10-08" },
+      }),
+    ).toBe("2031-10-08");
+  });
+
+  it("suggests nothing for a customer's computer, torch or other piece", () => {
+    for (const itemKind of ["dive_computer", "torch", "other"] as const) {
+      expect(
+        suggestCareDueOn({ subject: "customer", itemKind, careKind: "service", performedOn }),
+      ).toBeNull();
+    }
+  });
+
+  it("suggests nothing for other work", () => {
+    expect(
+      suggestCareDueOn({ subject: "unit", itemKind: "regulator", careKind: "note", performedOn }),
+    ).toBeNull();
+  });
+
+  it("carries only whole-month intervals", () => {
+    expect(wholeMonthsBetween("2026-01-15", "2027-01-15")).toBe(12);
+    expect(wholeMonthsBetween("2026-01-15", "2026-03-02")).toBeNull();
+    expect(wholeMonthsBetween("2026-03-02", "2026-01-15")).toBeNull();
+  });
+});
+
+describe("a customer's piece's dates", () => {
+  it("gives a cylinder its two compliance dates and no service date", () => {
+    expect(customerDueFields("tank")).toEqual(["inspectionDueOn", "hydroDueOn"]);
+    expect(customerDueFields("regulator")).toEqual(["serviceDueOn"]);
+  });
+
+  it("sets the date matching the care performed", () => {
+    expect(customerDueField("service")).toBe("serviceDueOn");
+    expect(customerDueField("visual_inspection")).toBe("inspectionDueOn");
+    expect(customerDueField("hydro_test")).toBe("hydroDueOn");
+    expect(customerDueField("o2_clean")).toBeNull();
+    expect(customerDueField("note")).toBeNull();
+  });
+});
+
+describe("workOrderReturnsUnitToService", () => {
+  it("returns a unit only when every check passed and one of them answers its concern", () => {
+    expect(workOrderReturnsUnitToService("regulator", [{ kind: "service", passed: true }])).toBe(
+      true,
+    );
+    expect(
+      workOrderReturnsUnitToService("tank", [
+        { kind: "visual_inspection", passed: true },
+        { kind: "hydro_test", passed: false },
+      ]),
+    ).toBe(false);
+    // A note on a regulator is not a service.
+    expect(workOrderReturnsUnitToService("regulator", [{ kind: "note", passed: true }])).toBe(
+      false,
+    );
+    expect(workOrderReturnsUnitToService("regulator", [])).toBe(false);
   });
 });
 
@@ -143,23 +311,5 @@ describe("quantities", () => {
     expect(workOrderQuantityInput(150)).toBe("1.5");
     expect(workOrderQuantityInput(75)).toBe("0.75");
     expect(workOrderQuantityInput(225)).toBe("2.25");
-  });
-});
-
-describe("the next service date a finished ticket suggests", () => {
-  it("borrows the register's own interval for the piece's clock", () => {
-    expect(workOrderServiceClock("regulator")).toBe("service");
-    expect(suggestCustomerServiceDueOn("regulator", "2026-10-08")).toBe("2027-10-08");
-  });
-
-  it("uses a cylinder's visual inspection, the first clock with an interval", () => {
-    expect(workOrderServiceClock("tank")).toBe("visual_inspection");
-    expect(suggestCustomerServiceDueOn("tank", "2026-10-08")).toBe("2027-10-08");
-  });
-
-  it("suggests nothing for a piece that runs no clock", () => {
-    // Nobody should be reminded about a wetsuit.
-    expect(workOrderServiceClock("wetsuit")).toBeNull();
-    expect(suggestCustomerServiceDueOn("wetsuit", "2026-10-08")).toBeNull();
   });
 });

@@ -299,6 +299,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "work_order_events.actor_person_id": "who moved the ticket",
   "work_order_events.technician_person_id": "which technician the ticket was handed to",
   "work_orders.deleted_by_person_id": "who deleted the ticket",
+  "work_orders.outcome_recorded_by_person_id": "which technician recorded the work done",
   "work_orders.technician_person_id": "which technician is working it — a staff assignment",
   "waiver_materiality_decisions.actor_person_id": "who judged the answer material",
   "waiver_records.anonymized_by_person_id": "provenance for an erasure on a signed release",

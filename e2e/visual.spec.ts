@@ -7422,27 +7422,53 @@ for (const scheme of ["light", "dark"] as const) {
       // their late and ready badges, and the collected tail under them.
       test(`the work-order board renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/gear/work-orders");
-        await page.getByRole("heading", { level: 1, name: "Gear" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Work orders" }).waitFor();
         // The last seeded group's row — the board below the fold has settled.
         await page
-          .getByRole("link", { name: /Visual inspection due/ })
+          .getByRole("link", { name: /Battery hatch leaked/ })
           .first()
           .waitFor();
         await capture(page, "work-order-board", scheme);
       });
 
-      // One ticket, whole: the status and technician acts, what came in, the
-      // pieces, the bench notes, the parts and labor with their running
-      // total, and the history. The seeded in-progress ticket is the one
-      // carrying all of them at once.
+      // One ticket, whole: the moves, the job, the pieces, the Work done
+      // form, the parts and labor with their running total, and the
+      // history. The seeded in-progress ticket is the one carrying all of
+      // them at once.
       test(`a work order renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/gear/work-orders");
         await page
-          .getByRole("link", { name: /Breathes wet below 20 m/ })
+          .getByRole("link", { name: /Breathes wet at depth/ })
           .first()
           .click();
         await page.getByRole("heading", { level: 2, name: "Parts and labor" }).waitFor();
         await capture(page, "work-order-ticket", scheme);
+      });
+
+      // A collected ticket: no moves left, and the Work done record read
+      // back (how the job ended, each check, the next due date it set).
+      test(`a collected work order renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/gear/work-orders");
+        await page
+          .getByRole("link", { name: /Battery hatch leaked/ })
+          .first()
+          .click();
+        await page.getByRole("heading", { level: 2, name: "Work done" }).waitFor();
+        await capture(page, "work-order-ticket-collected", scheme);
+      });
+
+      // The shop's own unit on the bench: off the wall while it is here, and
+      // the Work done form carrying the unit's own interval forward.
+      test(`a work order on a shop unit renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/gear/work-orders");
+        await page
+          .getByRole("link", { name: /Second stage free-flows on the surface/ })
+          .first()
+          .click();
+        await page.getByRole("heading", { level: 2, name: "Work done" }).waitFor();
+        await capture(page, "work-order-ticket-unit", scheme);
       });
 
       // Opening a ticket, with the diver chosen: the pieces of theirs on file
@@ -7460,7 +7486,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`a work order's claim tag renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/gear/work-orders");
         await page
-          .getByRole("link", { name: /Breathes wet below 20 m/ })
+          .getByRole("link", { name: /Breathes wet at depth/ })
           .first()
           .click();
         await page.getByRole("link", { name: "Claim tag" }).click();

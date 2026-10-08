@@ -6,27 +6,27 @@ import { getShopById } from "@/db/shops";
 import {
   addCustomerGearItem,
   addWorkOrderLine,
-  assignWorkOrderTechnician,
   createWorkOrder,
   deleteCustomerGearItem,
   deleteWorkOrder,
   deleteWorkOrderLine,
+  recordWorkOrderWork,
   restoreCustomerGearItem,
   restoreWorkOrder,
-  saveWorkOrderDetails,
-  saveWorkOrderNotes,
+  saveWorkOrder,
   setWorkOrderStatus,
-  updateCustomerGearItem,
   updateWorkOrderLine,
+  type WorkOrderCareInput,
 } from "@/db/work-orders";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { GEAR_KIND_ORDER, type GearItemKind } from "@/lib/gear";
+import { GEAR_KIND_ORDER, type GearItemKind, type GearServiceKind } from "@/lib/gear";
 import { currencyFractionDigits, MAX_PRICE_MINOR_UNITS, majorToMinor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import {
+  isWorkOrderOutcome,
   isWorkOrderStatus,
   parseWorkOrderQuantity,
   WORK_ORDER_TEXT_LIMITS,
@@ -64,7 +64,6 @@ const pieceSchema = z.object({
   brandModel: z.string().trim().max(WORK_ORDER_TEXT_LIMITS.brandModel),
   serialNumber: z.string().trim().max(WORK_ORDER_TEXT_LIMITS.serialNumber),
   note: z.string().trim().max(WORK_ORDER_TEXT_LIMITS.itemNote),
-  serviceDueOn: z.string().trim().max(10),
   /** Where to land afterwards: the new-ticket form, or the diver's record. */
   returnTo: z.enum(["new", "diver"]).optional(),
 });
@@ -85,23 +84,6 @@ export async function addCustomerGearItemAction(formData: FormData) {
     ...input,
   });
   revalidateAndRedirect(back, noticeUrl(back, outcome.ok ? "piece-added" : outcome.reason));
-}
-
-/** Edit a piece, including the next-service date a finished ticket suggested. */
-export async function updateCustomerGearItemAction(formData: FormData) {
-  const { session, board, diver } = await requireWorkOrderSurface();
-  const parsed = pieceSchema
-    .extend({ customerGearItemId: z.uuid() })
-    .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) revalidateAndRedirect(board, noticeUrl(board, "invalid"));
-
-  const { returnTo, personId, ...input } = parsed.data;
-  const back = returnTo === "new" ? `${board}/new?personId=${personId}` : diver(personId);
-  const outcome = await updateCustomerGearItem(await getDb(), {
-    shopId: session.user.shopId,
-    ...input,
-  });
-  revalidateAndRedirect(back, noticeUrl(back, outcome.ok ? "piece-saved" : outcome.reason));
 }
 
 const pieceActionSchema = z.object({ customerGearItemId: z.uuid(), personId: z.uuid() });
@@ -186,7 +168,10 @@ export async function createWorkOrderAction(formData: FormData) {
 
 const orderActionSchema = z.object({ workOrderId: z.uuid() });
 
-/** Move a ticket, which is also what moves a service clock when it finishes. */
+/**
+ * Move a ticket. Only that: no move, pickup included, writes a service clock
+ * or touches a unit's register status; the Work done record does that.
+ */
 export async function setWorkOrderStatusAction(formData: FormData) {
   const { session, board, order } = await requireWorkOrderSurface();
   const parsed = orderActionSchema
@@ -196,43 +181,26 @@ export async function setWorkOrderStatusAction(formData: FormData) {
     revalidateAndRedirect(board, noticeUrl(board, "invalid"));
   }
   const landing = order(parsed.data.workOrderId);
-  const db = await getDb();
-  // The shop's own calendar day, which is what a service clock is written in.
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) revalidateAndRedirect(landing, noticeUrl(landing, "invalid"));
-  const outcome = await setWorkOrderStatus(db, {
+  const outcome = await setWorkOrderStatus(await getDb(), {
     shopId: session.user.shopId,
     workOrderId: parsed.data.workOrderId,
     status: parsed.data.status as WorkOrderStatus,
-    todayLocal: calendarDateInTimezone(nowDate(), shop.timezone),
     actorPersonId: session.user.personId,
   });
   revalidateAndRedirect(landing, noticeUrl(landing, outcome.ok ? "moved" : outcome.reason));
 }
 
-/** Hand a ticket to a technician, or take it back off everybody. */
-export async function assignWorkOrderTechnicianAction(formData: FormData) {
-  const { session, board, order } = await requireWorkOrderSurface();
-  const parsed = orderActionSchema
-    .extend({ technicianPersonId: z.union([z.uuid(), z.literal("")]) })
-    .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) revalidateAndRedirect(board, noticeUrl(board, "invalid"));
-
-  const landing = order(parsed.data.workOrderId);
-  const outcome = await assignWorkOrderTechnician(await getDb(), {
-    shopId: session.user.shopId,
-    workOrderId: parsed.data.workOrderId,
-    technicianPersonId: parsed.data.technicianPersonId || null,
-    actorPersonId: session.user.personId,
-  });
-  revalidateAndRedirect(landing, noticeUrl(landing, outcome.ok ? "assigned" : outcome.reason));
-}
-
-/** Bench notes and what the customer is told, saved together. */
-export async function saveWorkOrderNotesAction(formData: FormData) {
+/**
+ * The ticket's record, one form and one Save: what came in, the day promised,
+ * who has it, the bench notes and what the customer is told.
+ */
+export async function saveWorkOrderAction(formData: FormData) {
   const { session, board, order } = await requireWorkOrderSurface();
   const parsed = orderActionSchema
     .extend({
+      reportedProblem: z.string().trim().max(WORK_ORDER_TEXT_LIMITS.reportedProblem),
+      promisedOn: z.string().trim().max(10),
+      technicianPersonId: z.union([z.uuid(), z.literal("")]),
       technicianNotes: z.string().trim().max(WORK_ORDER_TEXT_LIMITS.technicianNotes),
       workPerformed: z.string().trim().max(WORK_ORDER_TEXT_LIMITS.workPerformed),
     })
@@ -240,34 +208,124 @@ export async function saveWorkOrderNotesAction(formData: FormData) {
   if (!parsed.success) revalidateAndRedirect(board, noticeUrl(board, "invalid"));
 
   const landing = order(parsed.data.workOrderId);
-  const outcome = await saveWorkOrderNotes(await getDb(), {
-    shopId: session.user.shopId,
-    workOrderId: parsed.data.workOrderId,
-    technicianNotes: parsed.data.technicianNotes,
-    workPerformed: parsed.data.workPerformed,
-  });
-  revalidateAndRedirect(landing, noticeUrl(landing, outcome.ok ? "notes-saved" : outcome.reason));
-}
-
-/** Edit what came in and the day it was promised. */
-export async function saveWorkOrderDetailsAction(formData: FormData) {
-  const { session, board, order } = await requireWorkOrderSurface();
-  const parsed = orderActionSchema
-    .extend({
-      reportedProblem: z.string().trim().max(WORK_ORDER_TEXT_LIMITS.reportedProblem),
-      promisedOn: z.string().trim().max(10),
-    })
-    .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) revalidateAndRedirect(board, noticeUrl(board, "invalid"));
-
-  const landing = order(parsed.data.workOrderId);
-  const outcome = await saveWorkOrderDetails(await getDb(), {
+  const outcome = await saveWorkOrder(await getDb(), {
     shopId: session.user.shopId,
     workOrderId: parsed.data.workOrderId,
     reportedProblem: parsed.data.reportedProblem,
     promisedOn: parsed.data.promisedOn,
+    technicianPersonId: parsed.data.technicianPersonId || null,
+    technicianNotes: parsed.data.technicianNotes,
+    workPerformed: parsed.data.workPerformed,
+    actorPersonId: session.user.personId,
   });
-  revalidateAndRedirect(landing, noticeUrl(landing, outcome.ok ? "details-saved" : outcome.reason));
+  revalidateAndRedirect(landing, noticeUrl(landing, outcome.ok ? "saved" : outcome.reason));
+}
+
+// The register's care kinds, as its own unit page parses them.
+const careKindValues: [GearServiceKind, ...GearServiceKind[]] = [
+  "service",
+  "hydro_test",
+  "visual_inspection",
+  "o2_clean",
+  "note",
+];
+
+/** One row of the Work done form, as the form posts it (`care.<n>.<field>`). */
+const careRowSchema = z.object({
+  /** Empty when the technician left the check unrecorded; the row is then skipped. */
+  result: z.enum(["", "passed", "failed"]),
+  kind: z.enum(careKindValues),
+  customerGearItemId: z.union([z.uuid(), z.literal("")]).optional(),
+  nextDueOn: z.string().trim().max(10).optional(),
+  nextDueDives: z.string().trim().max(6).optional(),
+});
+
+/**
+ * The rows of the Work done form, grouped by their index. The form is a fixed
+ * grid of checks per piece, so a row is only recorded once the technician has
+ * said passed or failed on it.
+ */
+function careRowsFrom(formData: FormData): Record<string, Record<string, string>> {
+  const rows: Record<string, Record<string, string>> = {};
+  for (const [name, value] of formData.entries()) {
+    const match = /^care\.(\d{1,3})\.([a-zA-Z]+)$/.exec(name);
+    if (!match || typeof value !== "string") continue;
+    const index = match[1] as string;
+    const field = match[2] as string;
+    rows[index] ??= {};
+    rows[index][field] = value;
+  }
+  return rows;
+}
+
+/**
+ * **The Work done record**: how the job ended and the checks behind it. The
+ * only act on a ticket that ever writes a clock, and only with the values the
+ * technician confirmed on this form.
+ */
+export async function recordWorkOrderWorkAction(formData: FormData) {
+  const { session, board, order } = await requireWorkOrderSurface();
+  const parsed = orderActionSchema
+    .extend({
+      outcome: z.string(),
+      outcomeNote: z.string().trim().max(WORK_ORDER_TEXT_LIMITS.outcomeNote),
+      performedOn: z.string().trim().max(10),
+    })
+    .safeParse({
+      workOrderId: formData.get("workOrderId"),
+      outcome: formData.get("outcome") ?? "",
+      outcomeNote: formData.get("outcomeNote") ?? "",
+      performedOn: formData.get("performedOn") ?? "",
+    });
+  if (!parsed.success) revalidateAndRedirect(board, noticeUrl(board, "invalid"));
+  const landing = order(parsed.data.workOrderId);
+  const outcome = parsed.data.outcome;
+  if (!isWorkOrderOutcome(outcome)) {
+    revalidateAndRedirect(landing, noticeUrl(landing, "no-outcome"));
+  }
+
+  const care: WorkOrderCareInput[] = [];
+  // Checks only count toward a job that was done; a declined or condemned job
+  // records no care, whatever the grid still holds.
+  if (outcome === "done") {
+    for (const raw of Object.values(careRowsFrom(formData))) {
+      const row = careRowSchema.safeParse(raw);
+      if (!row.success) revalidateAndRedirect(landing, noticeUrl(landing, "invalid-care"));
+      if (row.data.result === "") continue;
+      const passed = row.data.result === "passed";
+      const dives = row.data.nextDueDives ?? "";
+      if (dives !== "" && !/^\d{1,5}$/.test(dives)) {
+        revalidateAndRedirect(landing, noticeUrl(landing, "invalid-dives"));
+      }
+      care.push({
+        customerGearItemId: row.data.customerGearItemId || null,
+        kind: row.data.kind,
+        passed,
+        performedOn: parsed.data.performedOn,
+        // A failed check carries no next date, whatever was prefilled beside it.
+        nextDueOn: passed ? row.data.nextDueOn || undefined : undefined,
+        nextDueDives: passed && dives !== "" ? Number(dives) : undefined,
+      });
+    }
+  }
+
+  const db = await getDb();
+  // The shop's own calendar day, which "not in the future" is measured in.
+  const shop = await getShopById(db, session.user.shopId);
+  if (!shop) revalidateAndRedirect(landing, noticeUrl(landing, "invalid"));
+  const recorded = await recordWorkOrderWork(db, {
+    shopId: session.user.shopId,
+    workOrderId: parsed.data.workOrderId,
+    outcome,
+    outcomeNote: parsed.data.outcomeNote,
+    care,
+    todayLocal: calendarDateInTimezone(nowDate(), shop.timezone),
+    actorPersonId: session.user.personId,
+  });
+  revalidateAndRedirect(
+    landing,
+    noticeUrl(landing, recorded.ok ? "work-recorded" : recorded.reason),
+  );
 }
 
 const lineSchema = z.object({

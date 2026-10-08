@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   bigserial,
+  boolean,
   check,
   date,
   index,
@@ -13,7 +14,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { people, shops } from "./core";
-import { gearItemKind, gearItems } from "./gear";
+import { gearItemKind, gearItemStatus, gearItems, gearServiceKind } from "./gear";
 
 /**
  * Service work orders: a customer's own gear brought in for work, the ticket a
@@ -22,10 +23,12 @@ import { gearItemKind, gearItems } from "./gear";
  * orders" non-goal).
  *
  * Built on the register's vocabulary rather than beside it: a customer item
- * carries the same `gear_item_kind` as a fleet unit, and a work order on a
- * *fleet* unit writes that unit's ordinary `gear_service_events` row when it
- * is done, so the service clocks a shop already reads keep working. What stays
- * declined is retail: no parts catalog and no stock counting
+ * carries the same `gear_item_kind` as a fleet unit, and the care a technician
+ * records on a *fleet* unit's ticket is written through the register's own
+ * `recordGearService`, so the service clocks a shop already reads keep
+ * working. **No status move writes a clock.** Only the technician's explicit
+ * "Work done" record does (`work_order_care`), with the dates they confirm.
+ * What stays declined is retail: no parts catalog and no stock counting
  * ([vision.md](../../../docs/product/vision.md)).
  */
 
@@ -51,11 +54,32 @@ export const workOrderStatus = pgEnum("work_order_status", [
 /** What a line on the ticket is: a part fitted, or bench time. */
 export const workOrderLineKind = pgEnum("work_order_line_kind", ["part", "labor"]);
 
-/** What a history row records: the ticket opening, a status move, or a hand-over to a technician. */
+/**
+ * What a history row records: the ticket opening, a status move, a hand-over
+ * to a technician, or the technician's "Work done" record.
+ */
 export const workOrderEventKind = pgEnum("work_order_event_kind", [
   "created",
   "status_changed",
   "technician_assigned",
+  "work_recorded",
+]);
+
+/**
+ * **How the job ended**, which the technician says in so many words. `done`
+ * is the only outcome that carries care rows (`work_order_care`) and the only
+ * one that can move a clock; the other three write nothing to any clock.
+ * `declined` is the customer saying no to the quote, `unserviceable` is gear
+ * that cannot be fixed here (no parts, out of the shop's scope), and
+ * `condemned` is gear that must not be dived again — a failed hydro, a cracked
+ * first stage. A condemned shop unit stays out of the pool with the reason as
+ * its service note.
+ */
+export const workOrderOutcome = pgEnum("work_order_outcome", [
+  "done",
+  "declined",
+  "unserviceable",
+  "condemned",
 ]);
 
 /**
@@ -64,11 +88,13 @@ export const workOrderEventKind = pgEnum("work_order_event_kind", [
  * `gear_items` — and never a rental fit: `rental_fit_profiles` says what sizes
  * a diver takes *from* the shop.
  *
- * `service_due_on` is the one clock a customer item runs, and it is a single
- * date rather than the fleet's append-only event history: a shop owes a
- * customer a reminder, not a compliance record it can be audited on. Finishing
- * a work order sets it from the same interval conventions the fleet's service
- * form suggests (`src/lib/work-orders.ts`), and staff may edit it.
+ * A customer item runs dates rather than the fleet's append-only event
+ * history: a shop owes a customer a reminder, not a compliance record it can
+ * be audited on. Most kinds have one (`service_due_on`); a cylinder has its
+ * two compliance dates instead (`inspection_due_on`, `hydro_due_on`) and never
+ * a "service". A care row the technician records as passed sets the matching
+ * date from the date the work was *performed*, replacing whatever was there;
+ * with no recorded care, a date staff set stands.
  */
 export const customerGearItems = pgTable(
   "customer_gear_items",
@@ -86,8 +112,12 @@ export const customerGearItems = pgTable(
     serialNumber: text("serial_number"),
     /** Staff free text ("second stage is the customer's spare"). */
     note: text("note"),
-    /** When this piece is next due for service, in the shop's own calendar. */
+    /** When this piece is next due for service, in the shop's own calendar. Never a cylinder's. */
     serviceDueOn: date("service_due_on"),
+    /** A cylinder's next visual inspection (VIP). A cylinder has two dates and no "service". */
+    inspectionDueOn: date("inspection_due_on"),
+    /** A cylinder's next hydrostatic test. */
+    hydroDueOn: date("hydro_due_on"),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -112,9 +142,12 @@ export const customerGearItems = pgTable(
  * **Exactly one owner**, held by a check constraint: a customer's ticket
  * (`person_id`, with the pieces listed in `work_order_items`) or a bench
  * ticket on the shop's own unit (`gear_item_id`). The two read the same on the
- * board and part company in one place only — finishing a fleet ticket writes
- * that unit's `gear_service_events` row, where finishing a customer ticket
- * sets their item's `service_due_on`.
+ * board and part company in one place only — the care a technician records
+ * on a fleet ticket is written to that unit's `gear_service_events`, where on
+ * a customer ticket it sets their item's due dates.
+ *
+ * `number` is the short ticket number a customer quotes over the phone and the
+ * claim tag carries — per shop, from 1, never reused.
  *
  * Two prose fields, and which side of the counter each is on is the whole
  * reason there are two: `technician_notes` is staff-only shop talk, and
@@ -132,6 +165,8 @@ export const workOrders = pgTable(
     personId: uuid("person_id").references(() => people.id),
     /** The shop's own unit this ticket is about; null on a customer's ticket. */
     gearItemId: uuid("gear_item_id").references(() => gearItems.id, { onDelete: "cascade" }),
+    /** The shop's own ticket number, from 1 — what the claim tag and a phone call use. */
+    number: integer("number").notNull(),
     status: workOrderStatus("status").notNull().default("received"),
     /** What the customer said, in their words or the counter's ("free-flows at depth"). */
     reportedProblem: text("reported_problem").notNull(),
@@ -147,6 +182,19 @@ export const workOrders = pgTable(
     /** When it first became ready for pickup; kept if the status moves back. */
     readyAt: timestamp("ready_at", { withTimezone: true }),
     pickedUpAt: timestamp("picked_up_at", { withTimezone: true }),
+    /** How the job ended, once the technician says (the "Work done" record). */
+    outcome: workOrderOutcome("outcome"),
+    /** Why, in the technician's words: required for unserviceable and condemned. Staff only. */
+    outcomeNote: text("outcome_note"),
+    outcomeRecordedAt: timestamp("outcome_recorded_at", { withTimezone: true }),
+    outcomeRecordedByPersonId: uuid("outcome_recorded_by_person_id").references(() => people.id),
+    /**
+     * A shop unit's status and service note from before this ticket pulled it
+     * off the wall, so deleting the ticket puts back exactly what opening it
+     * changed. Null on a customer's ticket.
+     */
+    unitPriorStatus: gearItemStatus("unit_prior_status"),
+    unitPriorServiceNote: text("unit_prior_service_note"),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -162,6 +210,7 @@ export const workOrders = pgTable(
     index("work_orders_shop_gear_item_idx")
       .on(table.shopId, table.gearItemId)
       .where(sql`${table.deletedAt} is null`),
+    uniqueIndex("work_orders_shop_number_unique").on(table.shopId, table.number),
     check(
       "work_orders_one_subject",
       sql`(${table.personId} is not null and ${table.gearItemId} is null) or (${table.personId} is null and ${table.gearItemId} is not null)`,
@@ -258,7 +307,12 @@ export const workOrderEvents = pgTable(
     toStatus: workOrderStatus("to_status"),
     /** Who it was handed to, on a `technician_assigned` row; null means unassigned. */
     technicianPersonId: uuid("technician_person_id").references(() => people.id),
-    /** Who acted. Attribution only; nulled if that staff member is ever erased. */
+    /**
+     * Who acted. Attribution only, and kept: the house pattern for an actor
+     * column (`gear_service_events.recorded_by_person_id`) — erasing a staff
+     * member anonymizes the `people` row this points at, so the joined name
+     * reads as erased while the history keeps its shape.
+     */
     actorPersonId: uuid("actor_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /**
@@ -275,6 +329,46 @@ export const workOrderEvents = pgTable(
   ],
 );
 
+/**
+ * **The "Work done" record**: one row per check the technician performed on
+ * one piece — which care, whether it passed, the day it was performed, and the
+ * next due date they confirmed. The only path from a ticket to a clock.
+ *
+ * `customer_gear_item_id` names the piece on a customer's ticket and is null
+ * on a shop unit's (the ticket names the unit). `kind` borrows the register's
+ * own clocks; `note` is "other work, no clock". A failed row is kept as the
+ * record of the failure and moves nothing.
+ */
+export const workOrderCare = pgTable(
+  "work_order_care",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    workOrderId: uuid("work_order_id")
+      .notNull()
+      .references(() => workOrders.id, { onDelete: "cascade" }),
+    customerGearItemId: uuid("customer_gear_item_id").references(() => customerGearItems.id, {
+      onDelete: "cascade",
+    }),
+    kind: gearServiceKind("kind").notNull(),
+    passed: boolean("passed").notNull(),
+    performedOn: date("performed_on").notNull(),
+    nextDueOn: date("next_due_on"),
+    nextDueDives: integer("next_due_dives"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("work_order_care_order_idx").on(table.workOrderId),
+    index("work_order_care_shop_idx").on(table.shopId),
+    check(
+      "work_order_care_due_after_performed",
+      sql`${table.nextDueOn} is null or ${table.nextDueOn} > ${table.performedOn}`,
+    ),
+  ],
+);
+
 export type CustomerGearItem = typeof customerGearItems.$inferSelect;
 
 export type WorkOrder = typeof workOrders.$inferSelect;
@@ -288,5 +382,9 @@ export type WorkOrderLine = typeof workOrderLines.$inferSelect;
 export type WorkOrderLineKindValue = (typeof workOrderLineKind.enumValues)[number];
 
 export type WorkOrderEvent = typeof workOrderEvents.$inferSelect;
+
+export type WorkOrderCare = typeof workOrderCare.$inferSelect;
+
+export type WorkOrderOutcomeValue = (typeof workOrderOutcome.enumValues)[number];
 
 export type WorkOrderEventKindValue = (typeof workOrderEventKind.enumValues)[number];

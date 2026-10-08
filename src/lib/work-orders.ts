@@ -5,17 +5,27 @@ import {
   GEAR_SERVICE_KINDS_FOR,
   type GearItemKind,
   type GearServiceKind,
+  serviceConcernClearingKinds,
 } from "./gear";
 
 /**
  * Service work orders, framework-free (ADR 20261008-gear-work-orders): where a
  * ticket may go, what it adds up to, and when it is late.
  *
- * Everything about *care intervals* is borrowed rather than restated — a
- * finished ticket's next deadline comes from the register's own
- * `GEAR_SERVICE_INTERVAL_MONTHS`, so a shop reads one convention whether the
- * regulator is theirs or a customer's.
+ * **No status move ever touches a clock.** A clock moves only from the
+ * technician's explicit "Work done" record — which care was performed, whether
+ * it passed, on what day, and the next due date they confirmed. What this
+ * module offers is the *suggestion* that record's form is prefilled with, and
+ * for a cylinder it suggests nothing at all: a tank's compliance dates are
+ * typed by the person who did the inspection, every time.
  */
+
+/**
+ * Whose gear a ticket is about. A customer's ticket ends with the owner
+ * collecting it; a shop unit's ends with the unit going back on the wall, so
+ * it never waits in `ready` for somebody to come for it.
+ */
+export type WorkOrderSubject = "customer" | "unit";
 
 /** Every status, in counter order. */
 export const WORK_ORDER_STATUSES = [
@@ -54,6 +64,17 @@ export function workOrderStatusRank(status: WorkOrderStatus): number {
 }
 
 /**
+ * The statuses a ticket about this subject can ever be in. A shop unit's ticket
+ * skips `ready`: nobody collects the shop's own regulator, so "ready for
+ * pickup" would be a state it sits in for no one.
+ */
+export function workOrderStatusesFor(subject: WorkOrderSubject): readonly WorkOrderStatus[] {
+  return subject === "unit"
+    ? WORK_ORDER_STATUSES.filter((status) => status !== "ready")
+    : WORK_ORDER_STATUSES;
+}
+
+/**
  * Whether a status move is one the surface may offer.
  *
  * Deliberately permissive among the open statuses, in both directions: bench
@@ -67,15 +88,63 @@ export function workOrderStatusRank(status: WorkOrderStatus): number {
  * nothing on the bench to move. A ticket handed back by mistake is a new
  * ticket, which is the honest record of what happened.
  */
-export function canMoveWorkOrder(from: WorkOrderStatus, to: WorkOrderStatus): boolean {
+export function canMoveWorkOrder(
+  from: WorkOrderStatus,
+  to: WorkOrderStatus,
+  subject: WorkOrderSubject = "customer",
+): boolean {
   if (from === to) return false;
   if (from === "picked_up") return false;
-  return true;
+  return workOrderStatusesFor(subject).includes(to);
 }
 
 /** The statuses a ticket on `status` may be moved to, in counter order. */
-export function workOrderStatusMoves(status: WorkOrderStatus): readonly WorkOrderStatus[] {
-  return WORK_ORDER_STATUSES.filter((candidate) => canMoveWorkOrder(status, candidate));
+export function workOrderStatusMoves(
+  status: WorkOrderStatus,
+  subject: WorkOrderSubject = "customer",
+): readonly WorkOrderStatus[] {
+  return WORK_ORDER_STATUSES.filter((candidate) => canMoveWorkOrder(status, candidate, subject));
+}
+
+/**
+ * The step the bench takes next from each open status — the one move a ticket
+ * page offers as its primary act. A part arriving puts the ticket back on the
+ * bench rather than straight to ready, because somebody still has to fit it.
+ * A shop unit's ticket goes from the bench straight off it.
+ */
+const FORWARD_MOVE: Record<WorkOrderSubject, Record<WorkOrderStatus, WorkOrderStatus | null>> = {
+  customer: {
+    received: "in_progress",
+    in_progress: "ready",
+    waiting_on_parts: "in_progress",
+    ready: "picked_up",
+    picked_up: null,
+  },
+  unit: {
+    received: "in_progress",
+    in_progress: "picked_up",
+    waiting_on_parts: "in_progress",
+    ready: "picked_up",
+    picked_up: null,
+  },
+};
+
+/**
+ * The moves a ticket page offers, split the way it draws them: the forward
+ * step, and every other allowed move in counter order. Backwards stays on
+ * offer (`canMoveWorkOrder`), just never as the loudest button.
+ */
+export function workOrderMoves(
+  status: WorkOrderStatus,
+  subject: WorkOrderSubject = "customer",
+): {
+  forward: WorkOrderStatus | null;
+  others: readonly WorkOrderStatus[];
+} {
+  const allowed = workOrderStatusMoves(status, subject);
+  const forward = FORWARD_MOVE[subject][status];
+  if (forward === null || !allowed.includes(forward)) return { forward: null, others: allowed };
+  return { forward, others: allowed.filter((move) => move !== forward) };
 }
 
 /**
@@ -150,39 +219,138 @@ export function workOrderQuantityInput(hundredths: number): string {
   return `${whole}.${String(rest).padStart(2, "0").replace(/0$/, "")}`;
 }
 
+// ---------------------------------------------------------------------------
+// The "Work done" record
+// ---------------------------------------------------------------------------
+
+/** How a job ended. Only `done` carries care, and only care moves a clock. */
+export const WORK_ORDER_OUTCOMES = ["done", "declined", "unserviceable", "condemned"] as const;
+
+export type WorkOrderOutcome = (typeof WORK_ORDER_OUTCOMES)[number];
+
+export function isWorkOrderOutcome(value: string): value is WorkOrderOutcome {
+  return (WORK_ORDER_OUTCOMES as readonly string[]).includes(value);
+}
+
 /**
- * Which of the register's service clocks a piece of this kind runs, when it
- * runs one with an interval. A regulator's `service`, a cylinder's visual
- * inspection; soft goods run none, so a finished ticket on a wetsuit sets no
- * next date and nobody is reminded about a wetsuit.
+ * The two outcomes that must say why. "Unserviceable" and "condemned" are the
+ * words a customer will ask about, and a condemned shop unit's reason becomes
+ * its service note on the register.
  */
-export function workOrderServiceClock(kind: GearItemKind): GearServiceKind | null {
-  for (const clock of GEAR_SERVICE_KINDS_FOR[kind]) {
-    if (GEAR_SERVICE_INTERVAL_MONTHS[clock] !== null) return clock;
+export function workOrderOutcomeNeedsNote(outcome: WorkOrderOutcome): boolean {
+  return outcome === "unserviceable" || outcome === "condemned";
+}
+
+/**
+ * The care a technician can record on a piece of this kind: the register's own
+ * clocks for it, then `note` — "other work, no clock" — which every kind has.
+ */
+export function workOrderCareKinds(kind: GearItemKind): readonly GearServiceKind[] {
+  const clocks = GEAR_SERVICE_KINDS_FOR[kind].filter((care) => care !== "note");
+  return [...clocks, "note"];
+}
+
+/**
+ * The kinds of a customer's own gear for which the shop suggests a next service
+ * date: life support with a manufacturer service. A computer, a torch or
+ * anything else gets no suggestion (staff may still set one), and a cylinder
+ * never does — its dates are typed by whoever inspected it.
+ */
+const CUSTOMER_SERVICE_SUGGESTED: ReadonlySet<GearItemKind> = new Set(["regulator", "bcd"]);
+
+/**
+ * The next-due date a "Work done" row is prefilled with, counted from the day
+ * the work was **performed** (never the day the gear was collected).
+ *
+ * A shop unit carries its own interval forward: the gap between its last
+ * reading of this clock and that reading's due date, so a fleet that runs
+ * 6-month regulator service keeps running it. With nothing to carry, a unit
+ * borrows the register's convention — except a cylinder, which gets no default
+ * clock, ever. A customer's piece gets a suggestion only where
+ * `CUSTOMER_SERVICE_SUGGESTED` says so.
+ *
+ * Always a suggestion: the technician confirms or clears it, and what they
+ * confirm is what is written.
+ */
+export function suggestCareDueOn(input: {
+  subject: WorkOrderSubject;
+  itemKind: GearItemKind;
+  careKind: GearServiceKind;
+  performedOn: CalendarDate;
+  /** A unit's last reading of this clock, when it has one. */
+  previous?: { servicedOn: CalendarDate; nextDueOn: CalendarDate | null } | null;
+}): CalendarDate | null {
+  if (input.careKind === "note") return null;
+  if (input.subject === "unit" && input.previous?.nextDueOn) {
+    const months = wholeMonthsBetween(input.previous.servicedOn, input.previous.nextDueOn);
+    if (months !== null) return shiftCalendarDateMonths(input.performedOn, months);
   }
+  if (input.itemKind === "tank") return null;
+  if (input.subject === "customer") {
+    if (input.careKind !== "service" || !CUSTOMER_SERVICE_SUGGESTED.has(input.itemKind)) {
+      return null;
+    }
+  }
+  const months = GEAR_SERVICE_INTERVAL_MONTHS[input.careKind];
+  return months === null ? null : shiftCalendarDateMonths(input.performedOn, months);
+}
+
+/**
+ * The whole number of months from one date to another, when the second is the
+ * first moved by exactly that many months (`shiftCalendarDateMonths`); `null`
+ * when the gap is not a whole-month interval, which is then not carried.
+ */
+export function wholeMonthsBetween(from: CalendarDate, to: CalendarDate): number | null {
+  const [fromYear, fromMonth] = from.split("-").map(Number) as [number, number];
+  const [toYear, toMonth] = to.split("-").map(Number) as [number, number];
+  const months = (toYear - fromYear) * 12 + (toMonth - fromMonth);
+  if (months <= 0) return null;
+  return shiftCalendarDateMonths(from, months) === to ? months : null;
+}
+
+/** Which of a customer piece's dates a passed care row sets. */
+export type CustomerDueField = "serviceDueOn" | "inspectionDueOn" | "hydroDueOn";
+
+/**
+ * The date a passed care row on a customer's piece writes: a service sets the
+ * service date, a cylinder's two checks set their own. An O2 clean and other
+ * work keep no date on a customer's piece.
+ */
+export function customerDueField(careKind: GearServiceKind): CustomerDueField | null {
+  if (careKind === "service") return "serviceDueOn";
+  if (careKind === "visual_inspection") return "inspectionDueOn";
+  if (careKind === "hydro_test") return "hydroDueOn";
   return null;
 }
 
 /**
- * The next-service date a finished ticket suggests for a customer's piece —
- * the register's own interval for that kind of clock, counted from the day the
- * work was done. A suggestion, like the fleet's: staff own the date, and may
- * edit or clear it (`src/lib/gear.ts`, `suggestNextDueOn`).
+ * The dates a customer's piece shows and edits. A cylinder has its two
+ * compliance dates and no "service"; everything else has the one.
  */
-export function suggestCustomerServiceDueOn(
-  kind: GearItemKind,
-  finishedOn: CalendarDate,
-): CalendarDate | null {
-  const clock = workOrderServiceClock(kind);
-  if (!clock) return null;
-  const months = GEAR_SERVICE_INTERVAL_MONTHS[clock];
-  if (months === null) return null;
-  return shiftCalendarDateMonths(finishedOn, months);
+export function customerDueFields(kind: GearItemKind): readonly CustomerDueField[] {
+  return kind === "tank" ? ["inspectionDueOn", "hydroDueOn"] : ["serviceDueOn"];
+}
+
+/**
+ * Whether a recorded job puts a shop unit back on the wall: every check passed,
+ * and among them is the care that answers a service concern on that kind of
+ * unit (`serviceConcernClearingKinds`) — a regulator's service, a tank's own
+ * inspection, never a note on a regulator.
+ */
+export function workOrderReturnsUnitToService(
+  unitKind: GearItemKind,
+  care: readonly { kind: GearServiceKind; passed: boolean }[],
+): boolean {
+  if (care.length === 0) return false;
+  if (care.some((row) => !row.passed)) return false;
+  const clearing = serviceConcernClearingKinds(unitKind);
+  return care.some((row) => clearing.includes(row.kind));
 }
 
 /** How long a staffer's words on a ticket may be, so a textarea and the column agree. */
 export const WORK_ORDER_TEXT_LIMITS = {
   reportedProblem: 2000,
+  outcomeNote: 1000,
   technicianNotes: 4000,
   workPerformed: 4000,
   lineDescription: 200,

@@ -11,6 +11,7 @@ import { workOrderStatusLabel, workOrderStatusTone } from "@/i18n/work-order-lab
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { shopPath } from "@/lib/staff-notices";
 import { isOpenWorkOrderStatus } from "@/lib/work-orders";
+import { pieceDueLine } from "../../../gear/work-orders/_components/piece-dates";
 import { deleteCustomerGearItemAction } from "../../../gear/work-orders/actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
@@ -66,7 +67,10 @@ export function WorkOrdersGroup({
       open={open.length > 0 || Boolean(status)}
       stacked
     >
-      <InsetGroup label={t("workOrders.diver.gearHeading")} as="h3" bodyAs="ul">
+      {/* Unlabelled shells: the group's row label is its one heading. The
+          pieces come first and the tickets under them, each ticket led by its
+          number, which is what tells the two lists apart. */}
+      <InsetGroup bodyAs="ul">
         {pieces.length === 0 ? (
           <LedgerRow as="li">
             <span className="text-muted">{t("workOrders.diver.gearEmpty")}</span>
@@ -84,7 +88,7 @@ export function WorkOrdersGroup({
                   <SubmitButton
                     pendingLabel={t("workOrders.diver.deletingPiece")}
                     className={buttonClass({ variant: "ghost", size: "sm" })}
-                    aria-label={t("workOrders.diver.deletePiece", {
+                    ariaLabel={t("workOrders.diver.deletePiece", {
                       label: gearItemKindLabel(t, piece.kind),
                     })}
                   >
@@ -96,15 +100,7 @@ export function WorkOrdersGroup({
               <span className="flex min-w-0 flex-col gap-1">
                 <span className="font-medium">{gearItemKindLabel(t, piece.kind)}</span>
                 <span className="text-muted text-xs">
-                  {[
-                    piece.brandModel,
-                    piece.serialNumber,
-                    piece.serviceDueOn
-                      ? t("workOrders.detail.serviceDue", {
-                          date: formatCalendarDate(piece.serviceDueOn, locale),
-                        })
-                      : null,
-                  ]
+                  {[piece.brandModel, piece.serialNumber, ...pieceDueLine(piece, locale, t)]
                     .filter(Boolean)
                     .join(" · ")}
                 </span>
@@ -114,7 +110,7 @@ export function WorkOrdersGroup({
         )}
       </InsetGroup>
 
-      <InsetGroup label={t("workOrders.diver.ordersHeading")} as="h3" bodyAs="ul" className="mt-6">
+      <InsetGroup bodyAs="ul" className="mt-6">
         {orders.length === 0 ? (
           <LedgerRow as="li">
             <span className="text-muted">{t("workOrders.diver.ordersEmpty")}</span>
@@ -125,7 +121,10 @@ export function WorkOrdersGroup({
               as="li"
               key={order.id}
               href={shopPath(shopSlug, "gear", "work-orders", order.id)}
-              linkLabel={order.reportedProblem}
+              linkLabel={t("workOrders.diver.orderLink", {
+                number: order.number,
+                problem: order.reportedProblem,
+              })}
               trailing={
                 <Badge tone={workOrderStatusTone(order.status)}>
                   {workOrderStatusLabel(t, order.status)}
@@ -133,7 +132,12 @@ export function WorkOrdersGroup({
               }
             >
               <span className="flex min-w-0 flex-col gap-1">
-                <span className="font-medium">{order.reportedProblem}</span>
+                <span className="font-medium">
+                  <span className="text-muted tabular-nums">
+                    {t("workOrders.number", { number: order.number })}
+                  </span>{" "}
+                  {order.reportedProblem}
+                </span>
                 {order.promisedOn ? (
                   <span className="text-muted text-xs">
                     {t("workOrders.board.promised", {

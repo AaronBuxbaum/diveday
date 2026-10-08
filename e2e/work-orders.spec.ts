@@ -12,12 +12,12 @@ import { openDiverFileGroup } from "./helpers";
 test.describe("staff", () => {
   signedInAsOwner();
 
-  test("walks one ticket from the counter to collected", async ({ page }) => {
+  test("opens a ticket at the counter and puts it on the bench", async ({ page }) => {
     // The bench is the Gear section's second tab, and the register is the
     // first: the two are one pillar.
     await page.goto("/shop/blue-mantis/gear");
     await page.getByRole("link", { name: "Work orders", exact: true }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Gear" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Work orders" })).toBeVisible();
 
     await page.getByRole("link", { name: "New work order" }).first().click();
     // The diver comes from the same person search the rest of the staff
@@ -35,38 +35,65 @@ test.describe("staff", () => {
     await expect(page.getByText("On the record.")).toBeVisible();
 
     await page.getByLabel(/Apeks XTX50/).check();
-    await page.getByLabel("What the customer reports").fill("Second stage free-flows below 20 m.");
+    await page.getByLabel("What the customer reports").fill("Second stage free-flows when wet.");
     await page.getByRole("button", { name: "Open the work order" }).click();
 
     await expect(page.getByRole("heading", { level: 1, name: "Diego Alvarez" })).toBeVisible();
     await expect(page.getByText("Work order opened.")).toBeVisible();
     await expect(page.getByText("Received", { exact: true }).first()).toBeVisible();
+    // The ticket's number, what the counter reads down the phone.
+    await expect(page.getByText(/^#\d+$/).first()).toBeVisible();
 
-    // On the bench.
-    await page.locator("#work-order-status").selectOption("in_progress");
-    await page.getByRole("button", { name: "Save" }).first().click();
+    // On the bench: one button per move, the next step first.
+    await page.getByRole("button", { name: "In progress" }).click();
     await expect(page.getByText("Status saved.")).toBeVisible();
+  });
 
-    // What it cost: one part and the labor on it, with the running total in
-    // the shop's own currency.
+  test("prices a ticket from its table, and corrects a line from its menu", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/gear/work-orders");
+    await page
+      .getByRole("link", { name: /Breathes wet at depth/ })
+      .first()
+      .click();
+    await page.getByRole("heading", { level: 2, name: "Parts and labor" }).waitFor();
+
     await page.getByLabel("Description").last().fill("Second-stage service kit");
     await page.getByLabel("Price each").last().fill("42");
     await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByText("Line added.")).toBeVisible();
-    await expect(page.getByText("Total: $42.00")).toBeVisible();
 
-    // Ready for its owner, then collected — and collected is the end of it.
-    await page.locator("#work-order-status").selectOption("ready");
-    await page.getByRole("button", { name: "Save" }).first().click();
-    await expect(page.getByText("Ready for pickup").first()).toBeVisible();
+    // The table is for reading; a figure changes behind the line's own menu.
+    await page.getByRole("button", { name: "Change Second-stage service kit" }).last().click();
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    await page.locator("[data-row-menu]").getByLabel("Price each").fill("45");
+    await page.locator("[data-row-menu]").getByRole("button", { name: "Save" }).click();
+    await expect(page.getByText("Line saved.")).toBeVisible();
+    await expect(page.getByRole("cell", { name: "$45.00" }).first()).toBeVisible();
+  });
 
-    await page.locator("#work-order-status").selectOption("picked_up");
-    await page.getByRole("button", { name: "Save" }).first().click();
-    await expect(page.getByText("Picked up").first()).toBeVisible();
+  test("records the work done, then hands the gear back", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/gear/work-orders");
+    await page
+      .getByRole("link", { name: /Breathes wet at depth/ })
+      .first()
+      .click();
+    await page.getByRole("heading", { level: 2, name: "Work done" }).waitFor();
+
+    // The Work done record: the one act that moves a piece's due date, and
+    // only with what the technician marks passed.
+    await page.getByLabel("Service", { exact: true }).first().selectOption("passed");
+    await page.getByRole("button", { name: "Record the work" }).click();
+    await expect(page.getByText("Work recorded.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Record the work" })).toHaveCount(0);
+
+    // Ready for its owner, then collected, and collected is the end of it.
+    await page.getByRole("button", { name: "Ready for pickup" }).click();
+    await expect(page.getByText("Status saved.")).toBeVisible();
+    await page.getByRole("button", { name: "Picked up" }).click();
     // The history is what answers "who said this was ready" a year later.
     await expect(page.getByText("Ready for pickup to Picked up")).toBeVisible();
     // A collected ticket has nowhere left to move.
-    await expect(page.locator("#work-order-status")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "In progress" })).toHaveCount(0);
   });
 
   test("prints a claim tag with no money on it", async ({ page }) => {
@@ -80,6 +107,7 @@ test.describe("staff", () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.getByRole("heading", { name: "What we have" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "What you told us" })).toBeVisible();
+    await expect(page.getByText(/^#\d+$/)).toBeVisible();
     // Not a receipt and not a waiver: no total, nothing to sign.
     await expect(page.getByText("Total:")).toHaveCount(0);
   });
@@ -112,7 +140,7 @@ test.describe("staff", () => {
   test("deleting a ticket is soft, and the board offers it back", async ({ page }) => {
     await page.goto("/shop/blue-mantis/gear/work-orders");
     await page
-      .getByRole("link", { name: /Visual inspection due/ })
+      .getByRole("link", { name: /Second stage free-flows on the surface/ })
       .first()
       .click();
     await page.getByRole("button", { name: "Delete work order" }).click();

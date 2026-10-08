@@ -4,11 +4,13 @@
 import { and, eq } from "drizzle-orm";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import type { WorkOrderStatus } from "@/lib/work-orders";
+import type { GearServiceKind } from "@/lib/gear";
+import type { WorkOrderOutcome, WorkOrderStatus } from "@/lib/work-orders";
 import type { DbExecutor } from "./client";
 import {
   customerGearItems,
   gearItems,
+  workOrderCare,
   workOrderEvents,
   workOrderItems,
   workOrderLines,
@@ -17,11 +19,15 @@ import {
 
 /**
  * **The bench, mid-week** (ADR 20261008-gear-work-orders): three customers'
- * pieces and one of the shop's own cylinders, spread across the statuses a
+ * pieces and one of the shop's own regulators, spread across the statuses a
  * real Monday holds — one just dropped off, one open on the bench with parts
- * and labor on it, one waiting on a part that has not come, one ready for its
- * owner to collect, and one already collected so the board's quiet tail is not
- * empty.
+ * and labor on it, one waiting on a part that has not come, and one collected
+ * with its Work done record, so the board's quiet tail is not empty.
+ *
+ * The shop's own ticket is on Reg #4, the unit `seed-gear.ts` already pulled
+ * off the wall, with the same words as its service note: the ticket is the
+ * bench's side of a pull the register already shows, so nothing on the
+ * register moves for it.
  *
  * Dates hang off the (frozen in e2e) clock so every render is pixel-stable,
  * and nothing here is a trouble state: those are seeded per test through
@@ -37,13 +43,12 @@ export async function seedWorkOrders(
   const [first, second, third] = ctx.customers;
   if (!first || !second || !third) return;
 
-  // The shop's own cylinder that goes on a ticket, found by the tag
-  // `seed-gear.ts` gave it so the two scenarios cannot drift apart. Missing
-  // (the lean template seeds no fleet) simply means one fewer ticket.
-  const [benchTank] = await db
-    .select({ id: gearItems.id })
+  // Found by the tag `seed-gear.ts` gave it, so the two scenarios cannot drift
+  // apart. Missing (the lean template seeds no fleet) means one fewer ticket.
+  const [benchUnit] = await db
+    .select({ id: gearItems.id, status: gearItems.status, serviceNote: gearItems.serviceNote })
     .from(gearItems)
-    .where(and(eq(gearItems.shopId, shopId), eq(gearItems.label, "AL63-02")))
+    .where(and(eq(gearItems.shopId, shopId), eq(gearItems.label, "Reg #4")))
     .limit(1);
 
   const pieces = await db
@@ -87,6 +92,16 @@ export async function seedWorkOrders(
         brandModel: "Suunto Zoop Novo",
         serialNumber: "SU-55217",
       },
+      // A cylinder: two compliance dates, never a "service".
+      {
+        shopId,
+        personId: third.id,
+        kind: "tank" as const,
+        brandModel: "Faber FX100",
+        serialNumber: "FB-30716",
+        inspectionDueOn: day(40),
+        hydroDueOn: day(420),
+      },
     ])
     .returning({ id: customerGearItems.id, personId: customerGearItems.personId });
 
@@ -113,21 +128,60 @@ export async function seedWorkOrders(
       quantityHundredths?: number;
       unitAmountCents: number;
     }>;
+    /** The Work done record, on a ticket whose job has ended. */
+    work?: {
+      outcome: WorkOrderOutcome;
+      care: Array<{ pieceId: string; kind: GearServiceKind; passed: boolean; days: number }>;
+    };
   };
 
   const tickets: Ticket[] = [
     {
-      personId: third.id,
-      status: "received",
-      reportedProblem: "Second stage free-flows as soon as it gets wet. Overdue for a service.",
-      promisedOn: day(5),
-      receivedDays: 0,
-      pieceIds: [thirdRegulator.id],
+      personId: second.id,
+      status: "picked_up",
+      reportedProblem: "Battery hatch leaked on the last trip; display fogged.",
+      technician: true,
+      workPerformed: "New battery and hatch seal, pressure-tested.",
+      receivedDays: -16,
+      collectedDays: -9,
+      pieceIds: [secondComputer.id],
+      lines: [
+        { kind: "part", description: "Battery and hatch seal kit", unitAmountCents: 2400 },
+        { kind: "labor", description: "Computer battery service", unitAmountCents: 3000 },
+      ],
+      work: {
+        outcome: "done",
+        care: [{ pieceId: secondComputer.id, kind: "service", passed: true, days: -10 }],
+      },
     },
+    {
+      personId: second.id,
+      status: "waiting_on_parts",
+      reportedProblem: "Inflator sticks open. Needs a new power inflator assembly.",
+      technician: true,
+      technicianNotes: "Ordered from Zeagle 2 days ago, no ship date yet.",
+      receivedDays: -6,
+      pieceIds: [secondBcd.id],
+      lines: [{ kind: "part", description: "Power inflator assembly", unitAmountCents: 8900 }],
+    },
+    ...(benchUnit
+      ? [
+          {
+            gearItemId: benchUnit.id,
+            status: "in_progress" as const,
+            // The register's own words for the pull, so the unit reads the same.
+            reportedProblem: benchUnit.serviceNote ?? "Second stage free-flows on the surface.",
+            technician: true,
+            technicianNotes: "Seat is worn; kit on the shelf.",
+            receivedDays: -3,
+            pieceIds: [],
+          },
+        ]
+      : []),
     {
       personId: first.id,
       status: "in_progress",
-      reportedProblem: "Breathes wet below 20 m, and the computer’s backlight flickers.",
+      reportedProblem: "Breathes wet at depth, and the computer’s backlight flickers.",
       promisedOn: day(3),
       technician: true,
       technicianNotes: "Exhaust valve is curled. Battery hatch on the Perdix looks fine.",
@@ -146,53 +200,27 @@ export async function seedWorkOrders(
       ],
     },
     {
-      personId: second.id,
-      status: "waiting_on_parts",
-      reportedProblem: "Inflator sticks open. Needs a new power inflator assembly.",
-      technician: true,
-      technicianNotes: "Ordered from Zeagle 2 days ago, no ship date yet.",
-      receivedDays: -6,
-      pieceIds: [secondBcd.id],
-      lines: [{ kind: "part", description: "Power inflator assembly", unitAmountCents: 8900 }],
+      personId: third.id,
+      status: "received",
+      reportedProblem: "Second stage free-flows as soon as it gets wet. Overdue for a service.",
+      promisedOn: day(5),
+      receivedDays: 0,
+      pieceIds: [thirdRegulator.id],
     },
-    {
-      personId: second.id,
-      status: "picked_up",
-      reportedProblem: "Battery hatch leaked on the last trip; display fogged.",
-      technician: true,
-      workPerformed: "New battery and hatch seal, pressure-tested to 40 m.",
-      receivedDays: -16,
-      collectedDays: -9,
-      pieceIds: [secondComputer.id],
-      lines: [
-        { kind: "part", description: "Battery and hatch seal kit", unitAmountCents: 2400 },
-        { kind: "labor", description: "Computer battery service", unitAmountCents: 3000 },
-      ],
-    },
-    ...(benchTank
-      ? [
-          {
-            gearItemId: benchTank.id,
-            status: "ready" as const,
-            reportedProblem: "Visual inspection due; valve o-ring weeping.",
-            technician: true,
-            workPerformed: "Visual inspection passed, new valve o-ring, sticker applied.",
-            receivedDays: -4,
-            pieceIds: [],
-            lines: [
-              { kind: "labor" as const, description: "Visual inspection", unitAmountCents: 2000 },
-            ],
-          },
-        ]
-      : []),
   ];
 
-  for (const ticket of tickets) {
+  // Oldest first, so the ticket numbers run the way the counter wrote them.
+  for (const [index, ticket] of tickets.entries()) {
     const receivedAt = new Date(nowDate().getTime() + ticket.receivedDays * 86_400_000);
+    const collectedAt =
+      ticket.collectedDays === undefined
+        ? null
+        : new Date(nowDate().getTime() + ticket.collectedDays * 86_400_000);
     const [row] = await db
       .insert(workOrders)
       .values({
         shopId,
+        number: index + 1,
         personId: ticket.personId ?? null,
         gearItemId: ticket.gearItemId ?? null,
         status: ticket.status,
@@ -202,11 +230,13 @@ export async function seedWorkOrders(
         technicianNotes: ticket.technicianNotes ?? null,
         workPerformed: ticket.workPerformed ?? null,
         receivedAt,
-        readyAt: ticket.status === "ready" || ticket.status === "picked_up" ? receivedAt : null,
-        pickedUpAt:
-          ticket.collectedDays === undefined
-            ? null
-            : new Date(nowDate().getTime() + ticket.collectedDays * 86_400_000),
+        readyAt: ticket.status === "picked_up" ? collectedAt : null,
+        pickedUpAt: collectedAt,
+        outcome: ticket.work?.outcome ?? null,
+        outcomeRecordedAt: ticket.work ? collectedAt : null,
+        outcomeRecordedByPersonId: ticket.work ? ctx.technicianPersonId : null,
+        unitPriorStatus: ticket.gearItemId ? (benchUnit?.status ?? null) : null,
+        unitPriorServiceNote: ticket.gearItemId ? (benchUnit?.serviceNote ?? null) : null,
       })
       .returning({ id: workOrders.id });
     if (!row) continue;
@@ -232,6 +262,18 @@ export async function seedWorkOrders(
         })),
       );
     }
+    if (ticket.work && ticket.work.care.length > 0) {
+      await db.insert(workOrderCare).values(
+        ticket.work.care.map((care) => ({
+          shopId,
+          workOrderId: row.id,
+          customerGearItemId: care.pieceId,
+          kind: care.kind,
+          passed: care.passed,
+          performedOn: day(care.days),
+        })),
+      );
+    }
 
     // The history a ticket would have grown on its way here: opened, then one
     // row per status it passed through. Written in order, so the `seq` the
@@ -254,8 +296,25 @@ export async function seedWorkOrders(
         workOrderId: row.id,
         kind: "status_changed",
         fromStatus: "received",
-        toStatus: ticket.status,
+        toStatus: ticket.status === "picked_up" ? "ready" : ticket.status,
         createdAt: receivedAt,
+      });
+    }
+    if (ticket.work && collectedAt) {
+      events.push({
+        shopId,
+        workOrderId: row.id,
+        kind: "work_recorded",
+        actorPersonId: ctx.technicianPersonId,
+        createdAt: collectedAt,
+      });
+      events.push({
+        shopId,
+        workOrderId: row.id,
+        kind: "status_changed",
+        fromStatus: "ready",
+        toStatus: "picked_up",
+        createdAt: collectedAt,
       });
     }
     await db.insert(workOrderEvents).values(events);

@@ -563,6 +563,8 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
       "serial_number",
       "note",
       "service_due_on",
+      "inspection_due_on",
+      "hydro_due_on",
       "deleted_at",
       "created_at",
     ],
@@ -574,19 +576,23 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
         row.serialNumber,
         row.note,
         row.serviceDueOn,
+        row.inspectionDueOn,
+        row.hydroDueOn,
         row.deletedAt,
         row.createdAt,
       ]),
-    note: "This diver's own gear the shop has on file, and when each piece is next due for service.",
+    note: "This diver's own gear the shop has on file, and when each piece is next due: a service date, or a cylinder's visual inspection and hydro test dates.",
   },
   {
     file: "work_orders.csv",
     header: [
       "id",
+      "number",
       "status",
       "reported_problem",
       "promised_on",
       "work_performed",
+      "outcome",
       "received_at",
       "ready_at",
       "picked_up_at",
@@ -595,18 +601,22 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
     rows: ({ workOrderRows }) =>
       workOrderRows.map((row) => [
         row.id,
+        row.number,
         row.status,
         row.reportedProblem,
         row.promisedOn,
         row.workPerformed,
+        row.outcome,
         row.receivedAt,
         row.readyAt,
         row.pickedUpAt,
         row.deletedAt,
       ]),
-    // The bench notes are deliberately absent: they are the shop's internal
-    // shop talk about a repair, written for a technician and never shown to a
-    // customer, and a diver's own bundle is what the shop hands *them*.
+    // The bench notes and the outcome note are deliberately absent: they are
+    // the shop's internal talk about a repair, written for a technician and
+    // never shown to a customer, and a diver's own bundle is what the shop
+    // hands *them*. The outcome itself — done, declined, unserviceable,
+    // condemned — is theirs to know.
     note: "Service tickets for this diver's own gear, with what was reported and what was done.",
   },
   {
@@ -633,6 +643,29 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
         row.createdAt,
       ]),
     note: "The parts and labor on this diver's own service tickets, in the shop's currency's minor unit.",
+  },
+  {
+    file: "work_order_care.csv",
+    header: [
+      "id",
+      "work_order_id",
+      "customer_gear_item_id",
+      "kind",
+      "passed",
+      "performed_on",
+      "next_due_on",
+    ],
+    rows: ({ workOrderCareRows }) =>
+      workOrderCareRows.map((row) => [
+        row.id,
+        row.workOrderId,
+        row.customerGearItemId,
+        row.kind,
+        row.passed,
+        row.performedOn,
+        row.nextDueOn,
+      ]),
+    note: "The checks recorded on this diver's own gear: which care, whether it passed, the day it was done and the next due date the technician confirmed.",
   },
   {
     file: "prior_visits.csv",

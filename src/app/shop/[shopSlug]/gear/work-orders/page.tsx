@@ -17,7 +17,7 @@ import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { requireShopSurface } from "@/lib/session";
-import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../../_components/StaffSectionTabs";
 import { WorkOrderBoard } from "./_components/WorkOrderBoard";
 import { restoreWorkOrderAction } from "./actions";
@@ -91,7 +91,9 @@ export default async function WorkOrdersPage({
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice", "undoId"]} />
       <ShopPageHeader
-        title={t("shared.shopSections.gear")}
+        eyebrow={t("shared.shopSections.gear")}
+        eyebrowHref={shopPath(shopSlug, "gear")}
+        title={t("workOrders.title")}
         actions={
           total > 0 ? (
             <Link href={newOrderHref} className={buttonClass()}>
@@ -144,7 +146,7 @@ export default async function WorkOrdersPage({
                         <SubmitButton
                           pendingLabel={t("workOrders.board.restoring")}
                           className={buttonClass({ variant: "secondary", size: "sm" })}
-                          aria-label={t("workOrders.board.restoreOrder", {
+                          ariaLabel={t("workOrders.board.restoreOrder", {
                             name: row.personName ?? row.reportedProblem,
                           })}
                         >

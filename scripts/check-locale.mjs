@@ -241,10 +241,6 @@ export const DELIBERATELY_IDENTICAL = new Map([
     "example brand and model in a placeholder attribute",
   ],
   ["staff/workOrders.json detail.total", "the same word in both languages"],
-  [
-    "staff/workOrders.json board.rowLink",
-    "two placeholders and a colon; no words in it to translate",
-  ],
   ["staff/orders.json new.countryPlaceholder", "example country code in a placeholder attribute"],
   [
     "staff/diveSites.json form.depthRangePlaceholder",

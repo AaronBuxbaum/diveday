@@ -27,16 +27,24 @@ Constraints a lower-context agent must not miss:
   a work order, never a settings flag.
 - **A ticket is not money.** Parts and labor are the shop's working figures; invoicing stays with
   orders and Stripe, and the printed claim tag carries no total.
-- **Rental is somebody else's code.** Reservations, the due-back view and double-booking are
-  untouched by this record.
+- **Rental code is somebody else's.** Reservations, the due-back view and double-booking are not
+  edited by this record. A shop unit's register *status* is touched, through the register's own
+  writers: opening a ticket on a unit takes it off the wall (`needs_service`, the reported problem
+  as its note), so the packer stops handing out a regulator that is on the bench.
+- **Nothing a ticket does writes a clock except the Work done record.** A status move, pickup
+  included, never touches `gear_service_events` or a customer's due date.
 
 ## Decision
 
-Five tables (`customer_gear_items`, `work_orders`, `work_order_items`, `work_order_lines`,
-`work_order_events`), every one carrying `shop_id`, soft-deleted, outside the retention prune, and
-in both the shop and the diver export. A ticket moves through five statuses — received, in
+Six tables (`customer_gear_items`, `work_orders`, `work_order_items`, `work_order_lines`,
+`work_order_care`, `work_order_events`), every one carrying `shop_id`, outside the retention prune,
+and in both the shop and the diver export. Each ticket has a short number, the shop's next from 1
+and never reused (`work_orders_shop_number_unique`, allocated under a lock on the shop's row), which
+is what the claim tag, the board and a phone call use. A ticket moves through five statuses — received, in
 progress, waiting on parts, ready for pickup, picked up — any open status to any other, with
-`picked_up` terminal: a ticket that comes back is a new ticket. Status moves, technician handovers
+`picked_up` terminal: a ticket that comes back is a new ticket. A shop unit's ticket skips `ready`
+(nobody collects the shop's own regulator) and its closed state reads "Back in service" only when
+the work was recorded as done. Status moves, technician handovers
 and the opening append to `work_order_events`, ordered by a `bigserial` sequence so two acts in one
 second read in the order they happened.
 
@@ -44,8 +52,26 @@ The bench is the Gear section's second tab (`/shop/[shopSlug]/gear/work-orders`)
 by status with the open statuses first, a ticket page carrying status, technician, notes, work
 performed, parts and labor with a running total, and a printable claim tag that follows the rental
 slip's posture — no signature, no money. A diver's record grows one file group holding their own
-pieces and their tickets. Collecting a ticket writes the service clock the work implies: a
-`gear_service_events` row for one of the shop's units, `service_due_on` for a customer's piece.
+pieces and their tickets.
+
+**The Work done record** is the only path from a ticket to a clock. The technician says how the job
+ended (done, declined, unserviceable, condemned; the last two with a reason) and, for a done job,
+each check performed: which care (service, visual inspection, hydro test, O2 clean, or other work
+with no clock), passed or failed, the day it was performed, and the next due date they confirm. The
+form prefills that date: a shop unit carries its own previous interval forward, dive count
+included; a customer's regulator or BCD gets the conventional service interval; a cylinder, a
+computer, a torch and everything else get none. Then:
+
+- **A shop unit**: each passed check is written through the register's `recordGearService`, and the
+  unit returns to service only when every check passed and one of them answers a concern on that
+  kind of unit. A failed check writes nothing, so a failed hydro never reads as a fresh one.
+  Declined leaves the unit as it was; unserviceable or condemned keeps it off the wall with the
+  reason as its note. Deleting an open ticket puts the unit back as it was before, and restoring
+  takes it off again.
+- **A customer's piece**: a cylinder has two dates (visual inspection and hydro test) and every other
+  kind one service date. A passed check sets the matching date, counted from the day the work was
+  performed and never from pickup, and replaces a date staff typed; with no passed check the staff
+  date stands.
 
 Technicians are staff and the surfaces are ungated like the rest of gear (H-06, as amended
 2026-08-20): handing equipment over the counter and working it are day jobs.
@@ -64,8 +90,8 @@ Technicians are staff and the surfaces are ungated like the rest of gear (H-06, 
 
 ## Consequences
 
-The bench is now where a shop's service work lives, and the register's service clocks get written
-by the work that moved them rather than by hand. A shop that only rents sees one extra tab and
+The bench is now where a shop's service work lives, and the register's service clocks can be
+written by the recorded work that moved them, with the values a technician confirmed. A shop that only rents sees one extra tab and
 nothing else; a shop that only repairs can use DiveDay with no fleet at all, because a ticket on a
 customer's gear needs no `gear_items` row.
 

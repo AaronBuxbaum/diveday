@@ -12,7 +12,7 @@ export default function WorkOrdersLoading() {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-24" description={false} actions />
+        <ShopPageHeaderSkeleton titleWidth="w-40" description={false} actions />
         <StaffSectionTabsSkeleton section="gear" />
         <div className="mt-6 space-y-9">
           {[

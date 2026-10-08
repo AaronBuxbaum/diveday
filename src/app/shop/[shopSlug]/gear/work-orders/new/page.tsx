@@ -7,12 +7,15 @@ import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import {
+  ChoiceFieldset,
+  ChoiceRow,
   controlClass,
   DateField,
   Field,
   FieldActions,
   FieldGrid,
   FormStatus,
+  textareaClassFor,
 } from "@/components/ui/form";
 import { LedgerRow } from "@/components/ui/ledger";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
@@ -22,12 +25,12 @@ import { listBenchUnits, listCustomerGearItems, searchWorkOrderCustomers } from 
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { formatCalendarDate } from "@/lib/calendar-date";
 import { GEAR_KIND_ORDER } from "@/lib/gear";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { WORK_ORDER_TEXT_LIMITS } from "@/lib/work-orders";
+import { pieceDueLine } from "../_components/piece-dates";
 import { addCustomerGearItemAction, createWorkOrderAction } from "../actions";
 
 /** The refusals this form renders beside itself. */
@@ -38,6 +41,7 @@ const NOTICES: Record<string, StaffMessageKey> = {
   "two-subjects": "workOrders.notice.twoSubjects",
   "invalid-date": "workOrders.notice.invalidDate",
   "not-found": "workOrders.notice.notFound",
+  "unknown-technician": "workOrders.notice.unknownTechnician",
   invalid: "workOrders.notice.invalid",
   "piece-added": "workOrders.notice.pieceAdded",
 };
@@ -196,41 +200,42 @@ export default async function NewWorkOrderPage({
               {chosenUnit ? <input type="hidden" name="gearItemId" value={chosenUnit.id} /> : null}
 
               {personId && pieces.length > 0 ? (
-                <Field label={t("workOrders.new.piecesHeading")} group className="col-span-full">
-                  <ul className="flex flex-col gap-2">
-                    {pieces.map((piece) => (
-                      <li key={piece.id} className="flex items-baseline gap-3">
-                        <input
-                          type="checkbox"
-                          id={`piece-${piece.id}`}
-                          name="customerGearItemIds"
-                          value={piece.id}
-                          className="size-5 rounded border-border"
-                        />
-                        <label htmlFor={`piece-${piece.id}`} className="min-w-0">
-                          <span className="font-medium">{gearItemKindLabel(t, piece.kind)}</span>
-                          {piece.brandModel ? (
-                            <span className="text-muted"> · {piece.brandModel}</span>
-                          ) : null}
-                          {piece.serialNumber ? (
-                            <span className="text-muted"> · {piece.serialNumber}</span>
-                          ) : null}
-                          {piece.serviceDueOn ? (
-                            <span className="block text-muted text-xs">
-                              {t("workOrders.detail.serviceDue", {
-                                date: formatCalendarDate(piece.serviceDueOn, locale),
-                              })}
-                            </span>
-                          ) : null}
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
-                </Field>
+                <ChoiceFieldset
+                  legend={t("workOrders.new.piecesHeading")}
+                  className="col-span-full"
+                  bodyClassName="grid gap-1"
+                >
+                  {pieces.map((piece) => {
+                    const dates = pieceDueLine(piece, locale, t);
+                    return (
+                      <ChoiceRow
+                        key={piece.id}
+                        type="checkbox"
+                        name="customerGearItemIds"
+                        value={piece.id}
+                      >
+                        <span className="font-medium">{gearItemKindLabel(t, piece.kind)}</span>
+                        {piece.brandModel ? (
+                          <span className="text-muted"> · {piece.brandModel}</span>
+                        ) : null}
+                        {piece.serialNumber ? (
+                          <span className="text-muted"> · {piece.serialNumber}</span>
+                        ) : null}
+                        {dates.length > 0 ? (
+                          <span className="block text-muted text-xs">{dates.join(" · ")}</span>
+                        ) : null}
+                      </ChoiceRow>
+                    );
+                  })}
+                </ChoiceFieldset>
               ) : null}
 
               <Field
-                label={t("workOrders.form.reportedProblem")}
+                label={t(
+                  chosenUnit
+                    ? "workOrders.form.reportedProblemUnit"
+                    : "workOrders.form.reportedProblem",
+                )}
                 htmlFor="reported-problem"
                 required
                 className="col-span-full"
@@ -242,7 +247,7 @@ export default async function NewWorkOrderPage({
                   required
                   maxLength={WORK_ORDER_TEXT_LIMITS.reportedProblem}
                   placeholder={t("workOrders.form.reportedProblemPlaceholder")}
-                  className={controlClass}
+                  className={textareaClassFor(3)}
                 />
               </Field>
 
@@ -344,13 +349,6 @@ function AddPieceForm({
             maxLength={WORK_ORDER_TEXT_LIMITS.serialNumber}
             className={controlClass}
           />
-        </Field>
-        <Field
-          label={t("workOrders.form.serviceDueOn")}
-          hint={t("workOrders.form.optionalHint")}
-          htmlFor="piece-due"
-        >
-          <DateField id="piece-due" name="serviceDueOn" />
         </Field>
         <Field
           label={t("workOrders.form.note")}

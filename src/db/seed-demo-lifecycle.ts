@@ -108,6 +108,7 @@ import {
   waiverMaterialityDecisions,
   waiverRecords,
   waiverTemplates,
+  workOrderCare,
   workOrderEvents,
   workOrderItems,
   workOrderLines,
@@ -252,11 +253,12 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // Buddy pairs reference bookings, so they go before the bookings delete
   // (ADR 20260804-buddy-teams).
   await db.delete(buddyPairMembers).where(eq(buddyPairMembers.shopId, shopId));
-  // The bench, children first: lines, pieces and the status trail reference
-  // the ticket, and a ticket references a customer, a fleet unit, and the
-  // technician working it — so all of it clears before gear_items, bookings
-  // and the people purge (ADR 20261008-gear-work-orders).
+  // The bench, children first: lines, pieces, the Work done record and the
+  // status trail reference the ticket, and a ticket references a customer, a
+  // fleet unit, and the technician working it — so all of it clears before
+  // gear_items, bookings and the people purge (ADR 20261008-gear-work-orders).
   await db.delete(workOrderLines).where(eq(workOrderLines.shopId, shopId));
+  await db.delete(workOrderCare).where(eq(workOrderCare.shopId, shopId));
   await db.delete(workOrderItems).where(eq(workOrderItems.shopId, shopId));
   await db.delete(workOrderEvents).where(eq(workOrderEvents.shopId, shopId));
   await db.delete(workOrders).where(eq(workOrders.shopId, shopId));

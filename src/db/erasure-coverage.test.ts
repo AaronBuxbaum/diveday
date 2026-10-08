@@ -280,8 +280,8 @@ const ERASURE_KEEPS: Record<string, string> = {
     "that someone at a seat asked for help and when it was handled; a kind and a status, no words",
   work_order_items:
     "which of a diver's pieces one service ticket covered — two ids. Both ends are erased where they are stored: the piece's note and serial clear, the ticket's words are redacted",
-  work_order_lines:
-    "a part fitted or an hour at the bench, with what it cost — written about equipment, never about a person, and the shop's own record of what it charged",
+  work_order_care:
+    "a ticket's Work done record: which check, passed or failed, the day performed and the next due date — a care code, two dates and a boolean about equipment, no words",
   work_order_events:
     "a ticket's status trail: which status it moved to, when, and the staffer who moved it. No diver column and no free text",
   payment_operation_intents:
