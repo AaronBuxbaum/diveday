@@ -6,6 +6,7 @@ import {
   CHECK_REQUEST_TYPE,
   CHECK_RESULT_TYPE,
   CHECK_TIMEOUT_MS,
+  ELEARNING_REQUEST_TYPE,
   EXTENSION_MARKER_ATTRIBUTE,
   EXTENSION_MESSAGE_SOURCE,
   EXTENSION_READY_EVENT,
@@ -13,6 +14,7 @@ import {
   extensionVersion,
   PAGE_MESSAGE_SOURCE,
 } from "@/lib/cert-check-extension";
+import type { ElearningQuery } from "@/lib/elearning-check";
 
 function subscribe(onChange: () => void): () => void {
   window.addEventListener(EXTENSION_READY_EVENT, onChange);
@@ -39,8 +41,17 @@ export function useCertCheckExtension(): boolean {
 
 let nextRequest = 0;
 
-/** Ask the extension to look one diver up, and wait for the page it read. */
+/** Ask the extension to look one diver's card up, and wait for the page it read. */
 export function requestAgencyPage(query: AgencyCheckQuery): Promise<ExtensionCheckReply> {
+  return requestPage(CHECK_REQUEST_TYPE, query);
+}
+
+/** Ask the extension to look one course student's eLearning up (H-106). */
+export function requestElearningPage(query: ElearningQuery): Promise<ExtensionCheckReply> {
+  return requestPage(ELEARNING_REQUEST_TYPE, query);
+}
+
+function requestPage(type: string, query: object): Promise<ExtensionCheckReply> {
   nextRequest += 1;
   const requestId = `check-${nextRequest}-${Math.random().toString(36).slice(2)}`;
   return new Promise((resolve) => {
@@ -72,7 +83,7 @@ export function requestAgencyPage(query: AgencyCheckQuery): Promise<ExtensionChe
     }
     window.addEventListener("message", onMessage);
     window.postMessage(
-      { source: PAGE_MESSAGE_SOURCE, type: CHECK_REQUEST_TYPE, requestId, query },
+      { source: PAGE_MESSAGE_SOURCE, type, requestId, query },
       window.location.origin,
     );
   });

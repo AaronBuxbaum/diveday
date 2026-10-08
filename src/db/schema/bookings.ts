@@ -679,6 +679,11 @@ export const bookingCapabilityPurpose = pgEnum("booking_capability_purpose", [
   // 3): ten minutes, minted by the diver's own thread and consumed by the
   // booking it leads to. The one purpose whose expiry is not the trip's.
   "handoff",
+  // A course's forms and nothing else (ADR 20261008-course-forms): what staff
+  // copy or send when the release is signed and the forms are not. It opens
+  // `/ready/<token>/forms` and is refused by every other `/ready` door, so a
+  // link handed over the counter cannot read or change the diver's trip prep.
+  "course_forms",
 ]);
 
 /**
@@ -688,7 +693,9 @@ export const bookingCapabilityPurpose = pgEnum("booking_capability_purpose", [
  * holding an earlier email's link and a later reminder's link at once, and
  * both should keep working until they individually expire or are revoked.
  * Only the hash is stored; the raw bearer token exists solely in the
- * response that issued it.
+ * response that issued it — except a live `course_forms` link, which is also
+ * kept sealed (`token_sealed`) so a second send hands back the link the diver
+ * already holds, the waiver link's rule (ADR 20260820-waiver-links-are-reused-not-reissued).
  */
 export const bookingCapabilities = pgTable(
   "booking_capabilities",
@@ -705,6 +712,12 @@ export const bookingCapabilities = pgTable(
     issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    /**
+     * The token sealed under `SECRET_ENCRYPTION_KEY`, for a live `course_forms`
+     * row only; null for every other purpose, and nulled when the row is
+     * revoked. `token_hash` is still what every lookup matches.
+     */
+    tokenSealed: text("token_sealed"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

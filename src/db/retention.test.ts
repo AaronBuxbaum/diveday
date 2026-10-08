@@ -436,9 +436,29 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "trip_last_minute_promo_recipients",
   "trip_blowouts",
   "trip_blowout_divers",
+  // What the bench told a customer and the orders it raised (ADR
+  // 20261008-work-order-follow-up). Read with the ticket or the piece they are
+  // about, which the shop keeps; a reminder row is also what stops a second
+  // reminder for the same due date, so a window would re-arm one.
+  "customer_gear_notices",
+  "customer_gear_reminder_settings",
+  "work_order_bills",
   "buddy_pair_members",
   "pre_departure_check_events",
   "gear_reservations",
+  // The bench (ADR 20261008-gear-work-orders): a ticket, the customer's own
+  // gear it is about, its parts and labor, its Work done record, and its
+  // status history. Same
+  // reasoning as the departures above — the history is read as part of a
+  // record the shop still has, and a shop's answer to "when did you last
+  // service this regulator?" is the reason the rows exist. The way one goes is
+  // a delete or the erasure path, never a clock.
+  "customer_gear_items",
+  "work_orders",
+  "work_order_items",
+  "work_order_lines",
+  "work_order_care",
+  "work_order_events",
   "recap_photos",
   "trip_recap_photos",
   "trip_reviews",
@@ -450,6 +470,14 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "waiver_records",
   "waiver_materiality_decisions",
   "waiver_deliveries",
+  // Course forms (ADR 20261008-course-forms): the same signed evidence as the
+  // release, on the same footing. The forms, their versions and a course's
+  // list of them are the shop's own configuration; a signed record is erased
+  // by the erasure path (`src/db/anonymize.ts`), never aged out.
+  "course_forms",
+  "course_form_versions",
+  "course_form_requirements",
+  "course_form_records",
   // Seats and money: the shop's own books. `booking_payment_events` is the one
   // trail among these and it has a window (7 years); the rows here are the
   // seats, orders and tips that trail is about.

@@ -29,10 +29,15 @@ import {
   buddyTeamEvents,
   calendarFeeds,
   certifications,
+  courseFormRecords,
+  courseFormRequirements,
+  courseForms,
+  courseFormVersions,
   courseInquiries,
   courses,
   crewAssignmentRequests,
   crewAvailabilityBlocks,
+  customerGearItems,
   divePackageEntitlements,
   diveSiteCreatures,
   diveSiteMoments,
@@ -105,6 +110,11 @@ import {
   waiverMaterialityDecisions,
   waiverRecords,
   waiverTemplates,
+  workOrderCare,
+  workOrderEvents,
+  workOrderItems,
+  workOrderLines,
+  workOrders,
 } from "./schema";
 import { seedBackup } from "./seed-backup";
 import { seedBookings } from "./seed-bookings";
@@ -153,6 +163,7 @@ import { seedTripStage } from "./seed-trip-stage";
 import { seedTrips } from "./seed-trips";
 import { seedWaiverEvidence } from "./seed-waiver-evidence";
 import { seedWaiverVersions } from "./seed-waiver-versions";
+import { seedWorkOrders } from "./seed-work-orders";
 
 /**
  * Demo data: one Key Largo shop with staff, customers, and a week of trips.
@@ -935,6 +946,13 @@ export async function seedDemoSchedule(
     tripRows,
     bookingRows,
   });
+  // The bench: tickets on customers' own gear and on one of those units, so
+  // after `seedGear` (ADR 20261008-gear-work-orders).
+  await seedWorkOrders(db, shopId, {
+    timezone: shopRow?.timezone ?? DEMO_SHOP_TIMEZONE,
+    customers,
+    technicianPersonId: instructor.id,
+  });
   await seedCounterRental(db, shopId, {
     timezone: shopRow?.timezone ?? DEMO_SHOP_TIMEZONE,
     divers: customers,
@@ -1207,6 +1225,16 @@ export async function resetDemoSchedule(
   await db.delete(crewAssignmentRequests).where(eq(crewAssignmentRequests.shopId, shopId));
   await db.delete(crewAvailabilityBlocks).where(eq(crewAvailabilityBlocks.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
+  // The bench, children first: lines, pieces, the Work done record and the
+  // status trail reference the ticket, and a ticket references a customer, a
+  // fleet unit, and the technician working it — so all of it clears before
+  // gear_items, bookings and the people purge (ADR 20261008-gear-work-orders).
+  await db.delete(workOrderLines).where(eq(workOrderLines.shopId, shopId));
+  await db.delete(workOrderCare).where(eq(workOrderCare.shopId, shopId));
+  await db.delete(workOrderItems).where(eq(workOrderItems.shopId, shopId));
+  await db.delete(workOrderEvents).where(eq(workOrderEvents.shopId, shopId));
+  await db.delete(workOrders).where(eq(workOrders.shopId, shopId));
+  await db.delete(customerGearItems).where(eq(customerGearItems.shopId, shopId));
   // The gear register, children first: reservations reference gear_items and
   // bookings, service events reference gear_items and people (their recording
   // staffer) — so all three clear before bookings and the people purge below.
@@ -1219,6 +1247,14 @@ export async function resetDemoSchedule(
   // References people, so it clears before them like any other people-scoped row.
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
   await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));
+  // Course forms (ADR 20261008-course-forms), children first: a signed record
+  // references the booking, the person and the version; a requirement the
+  // course and the form; a version the form and its author. The demo seeds
+  // none, so a form a spec or a visitor wrote must not outlive the reset.
+  await db.delete(courseFormRecords).where(eq(courseFormRecords.shopId, shopId));
+  await db.delete(courseFormRequirements).where(eq(courseFormRequirements.shopId, shopId));
+  await db.delete(courseFormVersions).where(eq(courseFormVersions.shopId, shopId));
+  await db.delete(courseForms).where(eq(courseForms.shopId, shopId));
   // Per-channel delivery state hangs off the waiver record, so it goes first.
   await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));

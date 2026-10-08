@@ -18,9 +18,11 @@ import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
+import { recordPaperCourseFormAction } from "../actions";
 import { AddDiverSection } from "./AddDiverSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
+import type { RosterActions } from "./roster-model";
 import { TripInvitationGroup } from "./TripInvitationSection";
 import { TripNoticeBanner } from "./TripNoticeBanner";
 import { WaitlistGroup } from "./WaitlistSection";
@@ -45,6 +47,7 @@ export type TripRosterActions = {
   certifyDiverAction?: FormAction;
   saveCourseNextStepAction?: FormAction;
   setCourseMaterialsDoneAction?: FormAction;
+  elearningCheckAction?: RosterActions["elearningCheckAction"];
   addInternalNoteAction: FormAction;
   deleteInternalNoteAction: FormAction;
   saveRosterEmergencyContactAction: FormAction;
@@ -77,7 +80,6 @@ export function TripRosterContent({
   keepOpenBookingId,
   namesakeRefusedBookingId,
   participantTypeCertBookingId,
-  mayDiscount,
   mayWriteOffPayment,
   canManageOrders,
   compact = false,
@@ -107,7 +109,6 @@ export function TripRosterContent({
   namesakeRefusedBookingId?: string;
   /** The seat whose change into diving the card check just refused. */
   participantTypeCertBookingId?: string;
-  mayDiscount: boolean;
   mayWriteOffPayment: boolean;
   /** Whether this staffer may raise an invoice — see `RosterSection`. */
   canManageOrders: boolean;
@@ -235,6 +236,7 @@ export function TripRosterContent({
           nitroxByBooking,
           notesByBooking,
           courseNextStepByBooking,
+          elearningQueryByBooking: guests.elearningQueryByBooking,
           courseMaterialsDoneByPerson: guests.courseMaterialsDoneByPerson,
           sameNameHeldSeats: guests.sameNameHeldSeats,
           keepOpenBookingId,
@@ -257,6 +259,12 @@ export function TripRosterContent({
           setCourseMaterialsDoneAction: guests.courseHasMaterials
             ? actions.setCourseMaterialsDoneAction
             : undefined,
+          elearningCheckAction: guests.courseHasMaterials
+            ? actions.elearningCheckAction
+            : undefined,
+          // A course form signed on paper (ADR 20261008-course-forms). Bound
+          // here rather than on the page: only a seat that owes a form draws it.
+          recordPaperCourseFormAction: recordPaperCourseFormAction.bind(null, shopSlug, trip.id),
           updatePickupAction: actions.updateBookingPickupAction,
         }}
         slots={{

@@ -118,6 +118,9 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // page can mint in place, and the parent holding this page is the person
   // who has to sign it (ADR 20260907-guardian-co-signature).
   guardian_signature_missing: "action",
+  // The student signs it on this very page (ADR 20261008-course-forms).
+  course_form_unsigned: "action",
+  course_form_guardian_missing: "action",
   certification_missing: "action",
   certification_pending: "waiting",
   // "action", not "waiting": the diver said a level and nobody has seen a card,
@@ -278,6 +281,10 @@ export function nextDiverStep(items: readonly DiverChecklistItem[]): DiverCheckl
 export const REMINDER_ACTION_CODES = [
   "waiver_pending",
   "waiver_expired",
+  // Signed on the readiness page the reminder links to; no token of its own
+  // ever rides in the message (ADR 20261008-course-forms).
+  "course_form_unsigned",
+  "course_form_guardian_missing",
   "certification_missing",
   "certification_insufficient",
   // The two a diver now reaches the week before a dive with, since a stated

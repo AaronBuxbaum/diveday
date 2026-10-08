@@ -267,7 +267,7 @@ describe("what each consumer derives", () => {
     expect(bySection("inbox")).toEqual(["inbox", "requests", "reviews"]);
     expect(bySection("money")).toEqual(["orders", "reports", "promoCodes"]);
     expect(bySection("courses")).toEqual(["courses"]);
-    expect(bySection("gear")).toEqual(["gear", "rentOut"]);
+    expect(bySection("gear")).toEqual(["gear", "workOrders", "newWorkOrder", "rentOut"]);
     expect(bySection("settings")).toEqual([
       "diveSites",
       "waivers",

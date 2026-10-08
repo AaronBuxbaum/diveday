@@ -88,6 +88,12 @@ new domain concept, define it here in the same PR.
   It stamps `agency_checked_at`, with those words as the review note, and names the staffer whose
   browser ran it. Anything else writes nothing and leaves the link. Level cards only, for SSI, NAUI,
   SDI, GUE and CMAS; an unsighted self-declaration still needs its sighting.
+- **eLearning check** — the same extension reading a course student's PADI eLearning on the PADI
+  Pros' Site, searched by the student's email in the staffer's signed-in browser (H-106, ADR
+  20261008-cert-check-extension). The server ticks **Materials done** only when one record names
+  the student and their email, this course and no higher one, and a finished status; anything else
+  writes nothing. A seat already ticked is left as it was. PADI only, and a best guess of PADI's
+  page until a staffer tries it (#2259).
 - **Claimed certification** — a card recorded as evidence but not yet verified: the stored status is
   `pending`. It is what a card entered by hand starts as (the shop-owner-facing word is "claimed").
   A claimed card never satisfies readiness or authorizes a nitrox fill until staff **Mark certified** or an **Agency check** certifies it.
@@ -1102,7 +1108,8 @@ new domain concept, define it here in the same PR.
   diver's thread. **Materials done** is a staffer's tick that the student finished them, stamped
   with who and when. It belongs to the student's enrollment, not one departure: ticked on the pool
   weekend, it counts on the open-water weekend of the same course. It is the shop's word, never
-  the agency's, and it gates nothing: the 7-day reminder stops asking, and Certify shows a neutral
+  the agency's (the eLearning check ticks it only after reading PADI's page in the staffer's
+  browser), and it gates nothing: the 7-day reminder stops asking, and Certify shows a neutral
   reminder to check the agency's record when it is missing
   ([20261008-course-learning-materials](../architecture/decisions/20261008-course-learning-materials.md)).
 - **Private session / private course** — a course with a private price can also be run for one
@@ -1502,6 +1509,22 @@ new domain concept, define it here in the same PR.
   product boundary, not legal advice: a shop whose own counsel wants staff on a release still has
   the paper/in-person path, and if that ever becomes the norm it is a human decision to record
   (H-01/H-03), not a query to widen.
+- **Course form** — a form a course asks each student to sign as well as the release, such as an
+  agency's course release or a safe-diving-practices statement. The words are the shop's own, written
+  beside the release and versioned on every real edit (DiveDay ships none, H-10). Each course
+  chooses its forms, in order, on its own page. Unlike the release, a course form is **signed per
+  booking**: a signature counts for the enrollment it was signed on, at the **current version** —
+  which, once a session has started, also means the version that was current when it started, so an
+  edit made mid-course asks the next session to sign — with a guardian's co-signature for a minor,
+  and never carries to the next course. A student signs on their prep link's forms page or on the
+  **forms-only link** staff send, which opens that page and nothing else; staff can also record a
+  paper copy from the Divers tab. An unsigned one is the `course_form_unsigned` blocker (a minor's
+  with no guardian, `course_form_guardian_missing`), so the student reads Blocked until it is
+  signed. One switch,
+  `COURSE_FORMS_BLOCK_BOARDING`, turns that into a warning instead, and buying a seat never waits on
+  it (ADR 20261008-course-forms). A course template names its agency's **standard forms** by title.
+  Creating or syncing the course sets them up empty, and a form with no text is asked of nobody
+  until the shop pastes the agency's wording in.
 - **Sign once** — a diver signs the release once, not every trip. A **completed** signature is held
   against the diver (not just the booking it was signed on) and satisfies the waiver gate on any of
   their bookings while it stays **current**: signed against the shop's current release version and
@@ -2090,8 +2113,9 @@ new domain concept, define it here in the same PR.
   is refused on an overdue clock. A clock with a dive interval counts the unit's dives since its
   service: each returned trip rental adds the departure's planned dives, and each returned
   counter rental adds the dives the person said at the return (`dives_logged`, dated by the
-  window's first day), or nothing when nobody asked. Both are a floor. Deliberately not a work
-  order: no parts, no labor, no billing.
+  window's first day), or nothing when nobody asked. Both are a floor. A care event is not itself
+  a work order; only a work order's **Work done record** writes one, for a check that passed
+  (ADR 20261008-gear-work-orders).
 - **Sizing** — BCDs and wetsuits are sized (XS–XXL and height/weight dependent), so a prep list
   groups by item *and* size; an unrecorded size is shown as a loose end, not silently dropped.
 - **Complete rental fit** — a fit is complete when *every piece the diver takes from the shop* has
@@ -2180,6 +2204,57 @@ new domain concept, define it here in the same PR.
   So neither an uncertified request nor an imported-but-unconfirmed card can become a nitrox tank.
   Clearing a request is always allowed. `setBookingNitrox` also refuses to turn a request *on* when
   the shop's catalog doesn't offer nitrox, so a shop that never enabled it can never end up with one.
+
+- **The bench** — the shop's service work, beside the register as the Gear section's second tab: a
+  board of open **work orders** grouped by status, and one page per ticket. A shop that only rents
+  never opens it; a shop that only repairs can use it with no fleet at all
+  ([20261008-gear-work-orders](../architecture/decisions/20261008-gear-work-orders.md)).
+- **Work order** — one open piece of bench work: what came in, whose it is, what the customer
+  reports, who is working it, what was done, and the parts and labor it comes to. It covers
+  **either** a customer's own gear **or** one of the shop's units, never both (the
+  `work_orders_one_subject` check), and carries a short **number** (#12), the shop's next and never
+  reused, which the claim tag, the board and a phone call use. It moves between **received**, **in
+  progress**, **waiting on parts** and **ready for pickup** in any direction, and **picked up** is
+  terminal: gear that comes back is a new ticket. A shop unit's ticket skips ready for pickup, and
+  its end reads **Back in service** when the work was done, **Off the bench** otherwise. Opening one
+  on a shop unit takes the unit off the wall (`needs_service`, the reported problem as its note).
+  **No status move writes a clock**, pickup included; that is the Work done record's job. Every move
+  appends to `work_order_events`, which is what answers "who said this was ready" a year later.
+  Parts and labor are **figures, not a charge**: money stays with orders and Stripe, and the printed
+  **claim tag** carries none of it.
+- **Work done record** — how a work order's job ended, written once by the technician: **done**,
+  **declined**, **unserviceable** or **condemned** (the last two say why), and for a done job each
+  check performed (`work_order_care`): service, visual inspection, hydro test, O2 clean or other
+  work, **passed or failed**, the day performed, and the next due date the technician confirmed.
+  Only a passed check moves a clock: on a shop unit through `recordGearService`, on a customer's
+  piece by setting the matching date. A failed check is kept as the record of the failure and
+  writes nothing. Declined, unserviceable and condemned write no clock; a condemned shop unit stays
+  off the wall with the reason as its note.
+- **Technician** — the staff member a work order is handed to (`technician_person_id`). Any person
+  with a staff role at the shop; never a diver, never another shop's person. Handing a ticket on is
+  its own history row; **Unassigned** is a ticket nobody holds.
+- **Late (work order)** — the promised day has passed on the shop's calendar and the ticket is still
+  open. Ready for pickup counts: the work is done and the customer has not collected, which is what
+  the promise exists to catch. A collected ticket is never late, however late it ran.
+- **Bench notes vs work performed** — two texts on a ticket. **Bench notes** are the shop's own talk
+  about the repair, for technicians, never shown to a customer and left out of the diver's export.
+  **Work performed** is what the customer is told was done. Neither moves a clock; the Work done
+  record does.
+- **Customer gear** — a piece of equipment a *diver* owns, on the shop's record because the bench
+  has worked it or is about to (`customer_gear_items`): kind, make and model, serial number, and its
+  own due dates: a cylinder's **visual inspection** and **hydro test**, every other kind's one
+  **service** date. Not the shop's fleet (`gear_items`) and never rentable — the register, the prep
+  list and every manifest read ignore it.
+- **Ready message** — what a customer is told when their ticket moves to ready for pickup: the shop,
+  the ticket number, the pieces and the work performed, by email or the courtesy text. It is sent
+  once per ready transition and can be resent from the ticket. It never goes for a ticket on one of
+  the shop's own units ([20261008-work-order-follow-up](../architecture/decisions/20261008-work-order-follow-up.md)).
+- **Bench bill** — the order a ticket's parts and labor raise through `createOrder`, linked in
+  `work_order_bills`. It is an ordinary order, so only one can be open per ticket. With no Stripe
+  account, the ticket shows the total and says it is collected at the counter.
+- **Service reminder** — the message a customer gets about a month before each of a piece's due
+  dates, once per piece, clock and date, so a cylinder can get a visual-inspection reminder and a
+  hydro-test reminder. It is on by default and switched off per piece on the diver record.
 
 ## Records and evidence
 

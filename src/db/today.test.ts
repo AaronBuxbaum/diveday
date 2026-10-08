@@ -34,6 +34,7 @@ import {
   tripReviews,
   trips as tripsTable,
   tripWaitlistEntries,
+  workOrders as workOrdersTable,
 } from "./schema";
 import { markShopUnitsConfirmed } from "./shops";
 import { createStaffCredential } from "./staff-credentials";
@@ -52,6 +53,7 @@ import {
   upcomingTripsWithCounts,
 } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
+import { addCustomerGearItem, createWorkOrder, setWorkOrderStatus } from "./work-orders";
 
 const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
 
@@ -3004,6 +3006,83 @@ describe("unclosed roll call (DOM-H3)", () => {
         shop.timezone,
       );
       expect(otherWork.actions.filter((action) => action.kind.startsWith("gear_"))).toEqual([]);
+    });
+
+    it("asks about the bench: a ticket past its promise, and one ready a week and not collected", async () => {
+      const { db, shop } = ctx;
+      const today = calendarDateInTimezone(nowDate(), shop.timezone);
+      const booking = await anySeededBooking(db, shop.id);
+      const added = await addCustomerGearItem(db, {
+        shopId: shop.id,
+        personId: booking.personId,
+        kind: "regulator",
+        brandModel: "Apeks XTX200",
+        serviceDueOn: "",
+      });
+      const second = await addCustomerGearItem(db, {
+        shopId: shop.id,
+        personId: booking.personId,
+        kind: "bcd",
+        brandModel: "",
+        serviceDueOn: "",
+      });
+      if (!added.ok || !second.ok) throw new Error("piece refused");
+      const late = await createWorkOrder(db, {
+        shopId: shop.id,
+        personId: booking.personId,
+        customerGearItemIds: [added.item.id],
+        reportedProblem: "Free-flows at depth",
+        promisedOn: shiftCalendarDate(today, -2),
+      });
+      const ready = await createWorkOrder(db, {
+        shopId: shop.id,
+        personId: booking.personId,
+        customerGearItemIds: [second.item.id],
+        reportedProblem: "Inflator sticks",
+      });
+      if (!late.ok || !ready.ok) throw new Error("ticket refused");
+      const moved = await setWorkOrderStatus(db, {
+        shopId: shop.id,
+        workOrderId: ready.workOrder.id,
+        status: "ready",
+      });
+      if (!moved.ok) throw new Error("move refused");
+
+      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const lateRow = work.actions.find(
+        (action) => action.id === `work-order-late:${late.workOrder.id}`,
+      );
+      expect(lateRow).toMatchObject({
+        kind: "work_order_late",
+        urgency: "now",
+        href: `/shop/${shop.slug}/gear/work-orders/${late.workOrder.id}`,
+        actionLabel: "Open ticket",
+      });
+      expect(lateRow?.detail).toMatch(/^Promised .+, not ready yet\.$/);
+      // Ready today: the customer has a week before anybody chases them.
+      expect(work.actions.some((action) => action.kind === "work_order_uncollected")).toBe(false);
+
+      // A week on the shelf is a row.
+      await db
+        .update(workOrdersTable)
+        .set({ readyAt: new Date(nowMs() - 8 * 24 * 60 * 60 * 1000) })
+        .where(eq(workOrdersTable.id, ready.workOrder.id));
+      const weekOn = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      expect(
+        weekOn.actions.find(
+          (action) => action.id === `work-order-uncollected:${ready.workOrder.id}`,
+        ),
+      ).toMatchObject({ kind: "work_order_uncollected", urgency: "later" });
+
+      const otherWork = await getTodayWork(
+        db,
+        "00000000-0000-4000-8000-000000000000",
+        "other-shop",
+        shop.timezone,
+      );
+      expect(otherWork.actions.filter((action) => action.kind.startsWith("work_order_"))).toEqual(
+        [],
+      );
     });
   });
 });

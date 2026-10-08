@@ -86,7 +86,9 @@ import {
   buddyTeamEvents,
   calendarFeeds,
   certifications,
+  courseFormRecords,
   courseInquiries,
+  customerGearItems,
   formDrafts,
   gearReservations,
   importedPaymentHistory,
@@ -120,6 +122,8 @@ import {
   userAccounts,
   waiverDeliveries,
   waiverRecords,
+  workOrderLines,
+  workOrders,
 } from "./schema";
 
 export type AnonymizeDiverRefusal =
@@ -719,6 +723,22 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     }
   }
 
+  // --- course form records: strip the names, keep the fact -------------------
+  // The release's own rule (ADR 20261008-course-forms): the typed name and a
+  // guardian's name are this person's (and a third party's) personal data and
+  // go; that a form was signed, which version, how and when, is the shop's
+  // record of an act and stays. The form's words are the shop's, not the
+  // diver's, so they stay too. No seal to re-mint: these rows carry none.
+  await tx
+    .update(courseFormRecords)
+    .set({
+      signedName: null,
+      guardianName: null,
+      anonymizedAt: now,
+      anonymizedByPersonId: ctx.actorPersonId,
+    })
+    .where(and(eq(courseFormRecords.shopId, shopId), eq(courseFormRecords.personId, personId)));
+
   // The per-channel mechanics behind the column above (ADR
   // 20260820-waiver-delivery-is-per-channel): one current row per channel, each
   // carrying the provider's own bounce text. Swept by waiver record rather than
@@ -1005,7 +1025,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
 
     await tx
       .update(bookingCapabilities)
-      .set({ revokedAt: now, expiresAt: now })
+      .set({ revokedAt: now, expiresAt: now, tokenSealed: null })
       .where(
         and(
           inArray(bookingCapabilities.bookingId, bookingIds),
@@ -1467,6 +1487,71 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         ),
       );
   }
+
+  // --- the bench -----------------------------------------------------------
+  // Service work orders (ADR 20261008-gear-work-orders). The same call the
+  // gear register's return notes above make: what the shop did to a piece of
+  // equipment, when, and what it cost is the shop's own service record and
+  // stays; the **words written in this person's presence** go.
+  //
+  // `reported_problem` is the customer's own account of the fault and is
+  // `not null`, so it is redacted rather than cleared — a ticket with an empty
+  // problem would read as a ticket nobody wrote anything on, which is the
+  // reading `[redacted]` exists to prevent. Bench notes, what the customer
+  // was told and the outcome note are free prose a technician may well have
+  // put a name in, and all three clear.
+  //
+  // A line's **description** is redacted too (security review of #2270): it
+  // is typed at the counter in this person's presence ("rebuilt Maya's own
+  // second stage"), and a part number is no defence for the line that is not
+  // one. Its kind, quantity and amount stay — what the shop charged is its own
+  // record — so the ticket's total still reads.
+  //
+  // The piece on file keeps its kind and model — that is what the service
+  // history is *of* — and loses the staffer's note about it and the serial
+  // number, which identifies this person's own property the way a plate
+  // identifies a car.
+  await tx
+    .update(customerGearItems)
+    .set({ note: null, serialNumber: null })
+    .where(
+      and(
+        eq(customerGearItems.shopId, shopId),
+        eq(customerGearItems.personId, personId),
+        or(isNotNull(customerGearItems.note), isNotNull(customerGearItems.serialNumber)),
+      ),
+    );
+  await tx
+    .update(workOrderLines)
+    .set({ description: REDACTED_TEXT })
+    .where(
+      and(
+        eq(workOrderLines.shopId, shopId),
+        ne(workOrderLines.description, REDACTED_TEXT),
+        inArray(
+          workOrderLines.workOrderId,
+          tx
+            .select({ id: workOrders.id })
+            .from(workOrders)
+            .where(and(eq(workOrders.shopId, shopId), eq(workOrders.personId, personId))),
+        ),
+      ),
+    );
+  await tx
+    .update(workOrders)
+    .set({
+      reportedProblem: REDACTED_TEXT,
+      technicianNotes: null,
+      workPerformed: null,
+      outcomeNote: null,
+    })
+    .where(
+      and(
+        eq(workOrders.shopId, shopId),
+        eq(workOrders.personId, personId),
+        ne(workOrders.reportedProblem, REDACTED_TEXT),
+      ),
+    );
 
   // --- orders --------------------------------------------------------------
   // `stripe_customer_id` and `stripe_invoice_id` are NOT NULL pointers into the

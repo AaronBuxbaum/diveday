@@ -64,7 +64,7 @@ import {
  * fixes that: this file tried one, and it missed both a bare `person_id` with
  * no foreign key and anything holding a person under a column named something
  * else. So `OUTSIDE_CLOSURE_REASONS` below is the **whole** complement — every
- * one of the 24 tables outside the closure carries a written reason, and a new
+ * one of the 30 tables outside the closure carries a written reason, and a new
  * table lands in one list or the other on the day it is added. What is left
  * outside is judgement, not coverage: this guard makes someone answer for every
  * table, and a `security-reviewer` pass is what checks the answer.
@@ -278,6 +278,12 @@ const ERASURE_KEEPS: Record<string, string> = {
     "`subject_person_id` is a pointer by design and the name is joined at read, which resolves to the anonymized one after this runs",
   trip_help_requests:
     "that someone at a seat asked for help and when it was handled; a kind and a status, no words",
+  work_order_items:
+    "which of a diver's pieces one service ticket covered — two ids. Both ends are erased where they are stored: the piece's note and serial clear, the ticket's words are redacted",
+  work_order_care:
+    "a ticket's Work done record: which check, passed or failed, the day performed and the next due date — a care code, two dates and a boolean about equipment, no words",
+  work_order_events:
+    "a ticket's status trail: which status it moved to, when, and the staffer who moved it. No diver column and no free text",
   payment_operation_intents:
     'a Stripe object id and a status word. Every writer passes a status or a fixed sentence — `session.status`, `result.status`, "booking already has an active checkout attempt" — so `error_message` never carries provider prose about a person',
   processor_erasure_obligations:
@@ -287,6 +293,12 @@ const ERASURE_KEEPS: Record<string, string> = {
   push_subscriptions:
     "`person_id` is the staff member who opted a device in, and the erasure refuses anyone holding a staff role. This becomes a gap the day a diver-facing push subscription ships",
   trip_assignments: "which crew member works which departure — a staff roster row",
+  customer_gear_notices:
+    "that a ready message or a service reminder went to a diver, on which channel and how it went — a kind, a status and a date. Never the address or the words",
+  customer_gear_reminder_settings:
+    "whether a piece's service reminders are off — a timestamp on a piece whose note and serial the erasure clears",
+  work_order_bills:
+    "which order billed which ticket — two ids. The order keeps its own erasure answer, and the ticket's words are redacted",
   weekly_digest_sends:
     "that a staff member's Monday email went out for a week — a date, a delivery status and a token hash. Only staff receive it, and the erasure refuses anyone holding a staff role",
 
@@ -308,6 +320,8 @@ const ERASURE_KEEPS: Record<string, string> = {
   shop_promo_codes: "a discount the shop published, its window and its ceiling",
   trip_last_minute_promos:
     "that a shop offered a deal on a departure and to how many people. The addresses it reached are on the recipient rows, which the erasure redacts",
+  course_form_versions:
+    "the wording of a course form as the shop saved it, and the staffer who saved it. The signed copy is `course_form_records`, which the erasure redacts",
   waiver_materiality_decisions:
     "an owner's ruling on whether a template change was material — a decision about the shop’s text, not about any signer",
 
@@ -384,6 +398,8 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   courses: "the shop’s course catalog, copied from a template and then its own",
   waiver_templates:
     "the text a shop asks people to sign, versioned. The *signatures* are `waiver_records`, which the erasure strips and re-seals",
+  course_forms: "the course forms a shop asks students to sign, by title and agency code",
+  course_form_requirements: "which course asks for which form, and from when",
   trip_lenses: "the shop’s own word for a kind of day",
   trip_series:
     "the cadence a repeating departure is generated from. Its instances are ordinary `trips` rows",
@@ -459,7 +475,7 @@ const WRITTEN_VIA_HELPER: Record<string, string> = {
  * all ours) and never a `uuid` or an integer (both minted here).
  *
  * **Why a net and not the whole complement.** `OUTSIDE_CLOSURE_REASONS` above
- * can name every table outside the closure because there are 25 of them and a
+ * can name every table outside the closure because there are 30 of them and a
  * reviewer can read the list. The same move over columns is 1,438 sentences,
  * almost all of them "a timestamp", and a list nobody reads guards nothing. So
  * the limit is stated rather than implied: a handle under a name carrying none

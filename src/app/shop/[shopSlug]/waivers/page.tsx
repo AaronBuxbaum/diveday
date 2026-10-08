@@ -11,6 +11,7 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { Field, FieldGrid, FormStatus, textareaClassFor } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/ledger";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
+import { courseFormResignImpact, listCourseForms } from "@/db/course-forms";
 import {
   getCurrentWaiverTemplate,
   getSignedWaiverRecordForShop,
@@ -25,6 +26,7 @@ import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { DEFAULT_WAIVER_BODY } from "@/lib/waivers";
+import { type CourseFormNotice, CourseFormsSection } from "./_components/CourseFormsSection";
 import { PublishRelease, type PublishReleaseCopy } from "./_components/PublishRelease";
 import { SignatureLog } from "./_components/SignatureLog";
 import { saveWaiverAction } from "./actions";
@@ -82,10 +84,16 @@ export default async function WaiversPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string; count?: string; page?: string; record?: string }>;
+  searchParams: Promise<{
+    notice?: string;
+    count?: string;
+    page?: string;
+    record?: string;
+    form?: string;
+  }>;
 }) {
   const { shopSlug } = await params;
-  const { notice, count, page, record: recordParam } = await searchParams;
+  const { notice, count, page, record: recordParam, form: formParam } = await searchParams;
   // `waiver_records.id` is a `uuid` column, so a truncated or hand-edited
   // `?record=` does not resolve to nothing — it throws `invalid input syntax
   // for type uuid` and 500s this page. A malformed id is simply no pin: the
@@ -109,7 +117,7 @@ export default async function WaiversPage({
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const [current, atRisk, highlighted, auditPage] = await Promise.all([
+  const [current, atRisk, highlighted, auditPage, courseForms, resign] = await Promise.all([
     getCurrentWaiverTemplate(db, shop.id),
     // What publishing a new version would cost, in signatures. Read on every
     // render so the choice below can state it *before* the tap — the count in
@@ -120,7 +128,10 @@ export default async function WaiversPage({
     // A non-numeric or missing `?page=` reads as page 1; the query clamps it
     // into range so a bookmarked page past the end lands on the last real one.
     listWaiverIntegrityAudit(db, shop.id, { page: Number.parseInt(page ?? "", 10) }),
+    listCourseForms(db, shop.id),
+    courseFormResignImpact(db, shop.id),
   ]);
+  const courseFormNotice = courseFormNoticeFor(notice, formParam, t);
 
   const resigning = notice === "waiver-resigning" ? Number(count) : Number.NaN;
   // Two refusals, two sentences. `invalid` says the release is too short;
@@ -213,7 +224,7 @@ export default async function WaiversPage({
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["notice", "count"]} />
+      <FlashParams params={["notice", "count", "form"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={shopPath(shopSlug, "settings")}
@@ -312,6 +323,15 @@ export default async function WaiversPage({
         </SectionCard>
       </AutoOpenDetails>
 
+      <CourseFormsSection
+        forms={courseForms}
+        resign={resign}
+        notice={courseFormNotice}
+        locale={locale}
+        timezone={shop.timezone}
+        t={t}
+      />
+
       <section className="mt-10" aria-labelledby="signed-records-heading">
         <GroupLabel as="h2" id="signed-records-heading" className="scroll-mt-24">
           {t("waiversStaff.signatures.heading")}
@@ -342,4 +362,29 @@ export default async function WaiversPage({
       </section>
     </main>
   );
+}
+
+const COURSE_FORM_NOTICES = {
+  "course-form-saved": { key: "waiversStaff.courseForms.notice.saved", tone: "success" },
+  "course-form-unchanged": { key: "waiversStaff.courseForms.notice.unchanged", tone: "neutral" },
+  "course-form-invalid": { key: "waiversStaff.courseForms.notice.invalid", tone: "danger" },
+  "course-form-deleted": { key: "waiversStaff.courseForms.notice.deleted", tone: "success" },
+  "course-form-not-found": { key: "waiversStaff.courseForms.notice.notFound", tone: "warning" },
+} as const satisfies Record<string, { key: string; tone: NoticeTone }>;
+
+/**
+ * A course-form outcome and the form it belongs beside. `?form=` is a form
+ * id, `new`, or `list`; anything else names no form on this page, so the
+ * notice has nowhere to sit and is dropped rather than shown out of place.
+ */
+function courseFormNoticeFor(
+  notice: string | undefined,
+  form: string | undefined,
+  t: ReturnType<typeof staffTranslator>,
+): CourseFormNotice | undefined {
+  if (!notice || !Object.hasOwn(COURSE_FORM_NOTICES, notice)) return undefined;
+  const target = form === "new" || form === "list" ? form : uuidParam(form);
+  if (!target) return undefined;
+  const { key, tone } = COURSE_FORM_NOTICES[notice as keyof typeof COURSE_FORM_NOTICES];
+  return { form: target, tone, text: t(key) };
 }

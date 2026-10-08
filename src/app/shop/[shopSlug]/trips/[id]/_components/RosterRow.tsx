@@ -37,6 +37,7 @@ import { ageOnDate, birthdayCallout, isMinorOnDate, maxPlausibleBirthDate } from
 import type { CalendarDate } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { mailtoHref, telHref } from "@/lib/contact-links";
+import { COURSE_FORMS_BLOCK_BOARDING } from "@/lib/course-forms";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import { checkDrysuitCard } from "@/lib/drysuit-card";
@@ -51,6 +52,9 @@ import { paymentSourceLine } from "@/lib/payment-source";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { shopPath } from "@/lib/staff-notices";
 import { waiverState } from "@/lib/waivers";
+import { CourseFormsRowControl } from "./CourseFormsRowControl";
+import { ElearningCheck } from "./ElearningCheck";
+import { elearningCheckCopy } from "./elearning-check-copy";
 import { PaymentStatusControl, type PaymentStatusControlCopy } from "./PaymentStatusControl";
 import {
   PAYMENT_STATUSES_ALL,
@@ -145,6 +149,7 @@ export function RosterRow({
     nitroxByBooking,
     notesByBooking,
     courseNextStepByBooking,
+    elearningQueryByBooking,
     courseMaterialsDoneByPerson,
     sameNameHeldSeats,
     keepOpenBookingId,
@@ -165,6 +170,8 @@ export function RosterRow({
     certifyDiverAction,
     saveCourseNextStepAction,
     setCourseMaterialsDoneAction,
+    elearningCheckAction,
+    recordPaperCourseFormAction,
     updatePickupAction,
   } = actions;
   // A course student whose learning materials nobody has marked done (ADR
@@ -853,6 +860,17 @@ export function RosterRow({
           courseHasMaterials && !materialsDone ? t("trips.roster.certifyMaterialsNote") : null
         }
       />
+      {/* The materials tick, read off PADI's own eLearning page when the
+          DiveDay browser extension is here (H-106). */}
+      {elearningCheckAction ? (
+        <ElearningCheck
+          query={elearningQueryByBooking?.get(booking.id) ?? null}
+          bookingId={booking.id}
+          materialsDone={Boolean(materialsDone)}
+          action={elearningCheckAction}
+          copy={elearningCheckCopy(t)}
+        />
+      ) : null}
 
       {/* The waiver, when there is one to send. The control's own face is
           the status and its label is the next action; a signed waiver has
@@ -905,6 +923,22 @@ export function RosterRow({
           />
         </div>
       ) : null}
+
+      {/* The course's own forms, which the release's control above does not
+          speak for (ADR 20261008-course-forms). Withheld on a held seat, like
+          every other write onto the diver's record from this row. */}
+      {identityUnconfirmed ? null : (
+        <CourseFormsRowControl
+          tripId={tripId}
+          bookingId={booking.id}
+          owed={readinessByBooking.get(booking.id)?.owedCourseForms ?? []}
+          warnOnly={!COURSE_FORMS_BLOCK_BOARDING}
+          offerSend={!waiverControl.action}
+          requiresGuardian={requiresGuardian}
+          recordAction={recordPaperCourseFormAction}
+          t={t}
+        />
+      )}
 
       {/* Whenever this departure takes money — never relocated by what the
           status happens to be, so the control a staffer just used to mark a

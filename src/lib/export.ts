@@ -104,6 +104,14 @@ export const EXPORT_FILE_NOTES = {
     "The accountable staff assertion for each published waiver version: whether the edit changed the bargain, who chose, and when. This is audit history, not an inferred diff.",
   "waiver_records.csv":
     "Issued and signed waiver evidence; the signed text is the referenced template version and template_generation records the material terms generation the signer accepted. Only status 'completed' satisfies the waiver gate, and only while current (within a year of signing, against the shop's current release). 'medical_review' means a physician's sign-off is still outstanding — that diver is blocked from boarding, not merely flagged, even though the signature fields are filled in. signature_method 'imported' means the record was trusted from a prior shop's own acceptance during a contact import, never reviewed by this shop — imported_from_label and the import_source_*_url columns carry that record's provenance; only 'imported' rows ever populate them. integrity_hash and integrity_version carry the independent signed-metadata audit seal when present; unsealed legacy rows remain explicitly identifiable. Version 3 means the release was refiled under another diver record by a merge: moved_from_person_id, moved_at and moved_by_person_id say from where, when and by whom, and are inside the seal. Those three columns on an unsealed row mean an unsigned link followed a split seat to its new diver.",
+  "course_forms.csv":
+    "The shop's own course forms — the extra forms a course asks each student to sign beside the release. One row per form, with its current title; a deleted form carries its deleted_at stamp and its signed records stay in course_form_records.csv.",
+  "course_form_versions.csv":
+    "Every version of every course form's words, full text included. A saved edit is a new version, never an edit in place, so each signed record's form_version names text that is here.",
+  "course_form_requirements.csv":
+    "Which forms each course asks its students to sign, in the order they meet them (position). A row with deleted_at set is a form the course stopped asking for.",
+  "course_form_records.csv":
+    "Each course form a student signed, one row per booking and form version: the title, version and full text exactly as signed, the typed name, how it was signed ('typed_consent' online on the student's own link, 'in_person_attested' recorded from paper by the staffer in recorded_by_person_id), and a minor's guardian co-signature. A form counts for the booking it was signed on and only at the course's current version. anonymized_at means the student was erased and the names are blank by decision.",
   "rental_fit.csv": "Each diver's rental kit and sizes.",
   "gear_items.csv":
     "The shop's own rental fleet, one row per physical unit — the shop's tag, kind, size, serial number, and whether it is in service or pulled for service. Status is the shop's own operational call, never a certification of anything. A deleted unit is here too, carrying its deleted_at stamp: the row and its history stay, so this file is the whole fleet the shop has ever tagged.",
@@ -111,6 +119,18 @@ export const EXPORT_FILE_NOTES = {
     "Each unit's care history, oldest first: manufacturer services, tank hydrostatic tests and visual inspections, O2-clean renewals, and dated condition notes, each with the deadline staff set for that clock. The newest event of a kind is that clock's current state. This is the shop's own maintenance record — proof of care for a unit, not a work order.",
   "gear_reservations.csv":
     "Which unit was assigned to a booking or directly to a counter-rental holder, and for what dates, with the handover and return stamps. A reservation is fulfillment, never money: the rental charge lives in order_line_items.csv and booking_checkout_bookings.csv. A row with an empty returned_at is a unit still out.",
+  "customer_gear_items.csv":
+    "A diver's own gear the shop has on file — kind, make and model, serial number, the staff note about it, and when it is next due for service. Never the shop's rental fleet, which is gear_items.csv, and never a rental fit: this is kit the diver owns and brings in for work. A cylinder has two dates, inspection_due_on (its visual inspection) and hydro_due_on, and never a service_due_on; every other kind has service_due_on only. A passed check in work_order_care.csv sets the matching date from the day the work was performed; otherwise the date is what staff typed. A deleted piece is here too, carrying its deleted_at stamp.",
+  "work_orders.csv":
+    "Every service ticket, one row per drop-off, with the shop's own ticket number (number, from 1, never reused): what the customer reported, the day the shop promised it, where the ticket got to, the technician it was handed to, the bench notes (staff-only words, never shown to a customer) and the work performed (the words the customer is told), with the received, ready and picked-up stamps. Exactly one of person_id and gear_item_id is set — a customer's ticket or a bench ticket on the shop's own unit. outcome is how the job ended once the technician said so (done, declined, unserviceable or condemned), with their note and who recorded it; the checks behind a done job are in work_order_care.csv. unit_prior_status and unit_prior_service_note are what a shop unit was before the ticket took it off the wall. A ticket is not a charge: the total is parts and labor in work_order_lines.csv, and money taken lives in orders.csv. A deleted ticket is here too with who deleted it.",
+  "work_order_items.csv":
+    "Which of a customer's pieces each ticket covered — one row per piece per ticket. A ticket on the shop's own unit has no rows here; its unit is named on the ticket itself.",
+  "work_order_lines.csv":
+    "The parts fitted and the bench time on each ticket, in this shop's currency's minor unit. quantity_hundredths is a quantity times 100, so 150 is one and a half (hours, or units of a part), and the line's total is that times unit_amount_cents divided by 100. A zero amount is a real line at no charge — a warranty part. A deleted line keeps its deleted_at stamp and is not in the ticket's total.",
+  "work_order_care.csv":
+    "The Work done record: one row per check a technician performed on a ticket — which care (the same codes as gear_service_events.csv, with note meaning other work and no clock), on which customer piece (empty on a shop unit's ticket), whether it passed, the day it was performed, and the next due date and dive interval they confirmed. Only a passed check ever moved a clock; a failed one is kept as the record of the failure.",
+  "work_order_events.csv":
+    "Each ticket's own history, oldest first (seq is the order things actually happened in): the row that opened it, every status move with where it came from and went to, and every hand-over to a technician, each with the staff member who did it. This is what 'who had it, and for how long' is read out of.",
   "pre_departure_checklist_items.csv":
     "The shop's own pre-departure safety line, in the shop's own reading order (sort_order) — DiveDay authors none of it. A deleted item is here too, carrying its deleted_at stamp; its history in pre_departure_check_events.csv stays readable regardless.",
   "pre_departure_check_events.csv":
@@ -128,6 +148,10 @@ export const EXPORT_FILE_NOTES = {
   "orders.csv":
     "Shop-issued orders with their Stripe invoice references — reconcilable against the shop's own Stripe account, which stays the shop's.",
   "order_line_items.csv": "The lines on each order (trip fees, courses, rentals, nitrox, retail).",
+  "work_order_bills.csv":
+    "Which order billed which service ticket, one row per bill. A ticket whose bill was voided can be billed again, so a ticket may have more than one row; the newest is its bill. The money itself is in orders.csv and order_line_items.csv.",
+  "customer_gear_reminder_settings.csv":
+    "A customer piece whose service reminders were switched. A filled reminders_off_at means the customer asked not to be reminded about that piece; an empty one means reminders were turned back on. A piece with no row here gets reminders.",
   "tips.csv":
     "Crew tips a diver started from their post-trip recap page, with their Stripe references — reconcilable against the shop's own Stripe account, which stays the shop's. Only status 'paid' is real revenue; pending and expired rows are unfinished attempts.",
   "dive_sites.csv":

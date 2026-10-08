@@ -196,7 +196,7 @@ export type SetGearItemStatusOutcome =
  * a stale complaint on a fixed unit reads as an open one.
  */
 export async function setGearItemStatus(
-  db: AppDb,
+  db: DbExecutor,
   input: { shopId: string; gearItemId: string; status: GearItemStatus; serviceNote?: string },
 ): Promise<SetGearItemStatusOutcome> {
   const [item] = await db
@@ -358,7 +358,9 @@ export type RecordGearServiceOutcome =
  * unit as broken is the half-updated state this option exists to prevent.
  */
 export async function recordGearService(
-  db: AppDb,
+  // A transaction too: a work order's "Work done" record writes its checks
+  // through here inside its own transaction (ADR 20261008-gear-work-orders).
+  db: DbExecutor,
   input: {
     shopId: string;
     gearItemId: string;

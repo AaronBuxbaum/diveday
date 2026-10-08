@@ -172,7 +172,9 @@ describe("the diver record's skeleton", () => {
     const { container } = render(<DiverProfileLoading />);
     expect(container.querySelectorAll(".rounded-panel")).toHaveLength(0);
     const doors = container.querySelectorAll(".border-b");
-    expect(doors).toHaveLength(6);
+    // Seven doors: details, certifications, waiver, gear, the bench (ADR
+    // 20261008-gear-work-orders), notes, activity.
+    expect(doors).toHaveLength(7);
     for (const skeleton of doors) {
       expect([...box(skeleton, rule), ...box(skeleton, height)].sort()).toEqual(loadedDoor);
     }

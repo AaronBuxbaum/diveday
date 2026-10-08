@@ -116,13 +116,17 @@ export const areas = {
       "src/lib/gear.test.ts",
       "src/db/gear.test.ts",
       "src/db/gear-reservations.postgres.test.ts",
+      "src/lib/work-orders.test.ts",
+      "src/db/work-orders.test.ts",
       "e2e/gear.spec.ts",
+      "e2e/work-orders.spec.ts",
     ],
     invariants: [
       "Opt-in by presence: a shop with zero gear_items rows sees no gear UI and its prep flow is untouched — never a settings flag.",
       "Double-booking is refused by the database (the gear_reservations_no_overlap exclusion constraint), never only by an application-level check.",
       "Service clocks inform, never gate — an overdue unit can still be handed over, because the dock decides.",
-      "Rental only: no retail POS, no repair work orders — both stay declined (vision non-goals).",
+      "Rental and repair, never retail: the bench (work orders, parts and labor as figures) ships beside the register, but selling items and counting parts stock stay declined (vision non-goals, ADR 20261008-gear-work-orders).",
+      "A work order covers a customer's own gear (customer_gear_items) or one of the shop's units (gear_items), never both; picked_up is terminal and a ticket that comes back is a new ticket.",
       "rental_fit_profiles stays the universal always-on layer; the register never answers what size a diver needs.",
     ],
     validate: [

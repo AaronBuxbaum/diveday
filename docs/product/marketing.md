@@ -114,8 +114,10 @@ trust our claims can't. **Gear inventory is not on that list** — the gear regi
 2026-08-20 ([shipped.md](shipped.md), ADR
 [20260815-minimal-gear-register](../architecture/decisions/20260815-minimal-gear-register.md)), and
 the concession outlived it here and in the `/about` truths block until it was swept out. Retail POS
-and repair work orders stay declined as vision non-goals, but *rental* gear tracking is a shipped
-capability: it belongs in `productCapabilityIndex`, never in the concession list. The general rule
+stays declined as a vision non-goal; repair work orders no longer are — the bench shipped
+2026-10-08 (ADR
+[20261008-gear-work-orders](../architecture/decisions/20261008-gear-work-orders.md)) — and *rental*
+gear tracking is a shipped capability: it belongs in `productCapabilityIndex`, never in the concession list. The general rule
 this is an instance of — **when a slice ships, sweep the concessions before writing new copy**; a
 stale "we don't do X" costs more trust than the honest no ever bought. See
 [assessments/competitive-strategy.md](assessments/competitive-strategy.md) for why these are the

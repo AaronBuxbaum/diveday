@@ -12,8 +12,14 @@ import {
   bookingPayments,
   buddyPairMembers,
   certifications,
+  courseFormRecords,
+  courseFormRequirements,
+  courseForms,
+  courseFormVersions,
   courseInquiries,
   courses,
+  customerGearItems,
+  customerGearReminderSettings,
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
@@ -58,6 +64,12 @@ import {
   waiverMaterialityDecisions,
   waiverRecords,
   waiverTemplates,
+  workOrderBills,
+  workOrderCare,
+  workOrderEvents,
+  workOrderItems,
+  workOrderLines,
+  workOrders,
 } from "./schema";
 
 /**
@@ -202,6 +214,19 @@ export const EXPORT_TABLES = {
     table: orderLineItems,
     order: [asc(orderLineItems.orderId), asc(orderLineItems.createdAt), asc(orderLineItems.id)],
     scope: { shopColumn: orderLineItems.shopId },
+  },
+  // Which order billed which service ticket, and a customer piece's reminder
+  // switch (ADR 20261008-work-order-follow-up). Shop-scoped only: neither
+  // names a person, and both are read beside the ticket and the piece.
+  workOrderBills: {
+    table: workOrderBills,
+    order: [asc(workOrderBills.createdAt), asc(workOrderBills.id)],
+    scope: { shopColumn: workOrderBills.shopId },
+  },
+  customerGearReminderSettings: {
+    table: customerGearReminderSettings,
+    order: [asc(customerGearReminderSettings.createdAt), asc(customerGearReminderSettings.id)],
+    scope: { shopColumn: customerGearReminderSettings.shopId },
   },
   tripChangeEvents: {
     table: tripChangeEvents,
@@ -394,6 +419,32 @@ export const EXPORT_TABLES = {
     order: [asc(waiverRecords.createdAt), asc(waiverRecords.id)],
     scope: { shopColumn: waiverRecords.shopId, personColumn: waiverRecords.personId },
   },
+  // Course forms (ADR 20261008-course-forms): the shop's forms, every version
+  // of their words, which course asks for which, and each signed record.
+  courseForms: {
+    table: courseForms,
+    order: [asc(courseForms.createdAt), asc(courseForms.id)],
+    scope: { shopColumn: courseForms.shopId },
+  },
+  courseFormVersions: {
+    table: courseFormVersions,
+    order: [asc(courseFormVersions.formId), asc(courseFormVersions.version)],
+    scope: { shopColumn: courseFormVersions.shopId },
+  },
+  courseFormRequirements: {
+    table: courseFormRequirements,
+    order: [
+      asc(courseFormRequirements.courseId),
+      asc(courseFormRequirements.position),
+      asc(courseFormRequirements.id),
+    ],
+    scope: { shopColumn: courseFormRequirements.shopId },
+  },
+  courseFormRecords: {
+    table: courseFormRecords,
+    order: [asc(courseFormRecords.createdAt), asc(courseFormRecords.id)],
+    scope: { shopColumn: courseFormRecords.shopId, personColumn: courseFormRecords.personId },
+  },
   rentalFitProfiles: {
     table: rentalFitProfiles,
     order: [asc(rentalFitProfiles.createdAt), asc(rentalFitProfiles.id)],
@@ -423,6 +474,40 @@ export const EXPORT_TABLES = {
       asc(gearReservations.id),
     ],
     scope: { shopColumn: gearReservations.shopId },
+  },
+  // The bench (ADR 20261008-gear-work-orders). A diver's own pieces and the
+  // tickets about them are theirs as well as the shop's, so both carry a
+  // `personColumn` and travel in a diver's own bundle; the lines, the
+  // piece-to-ticket joins and the status trail are read with their ticket.
+  customerGearItems: {
+    table: customerGearItems,
+    order: [asc(customerGearItems.createdAt), asc(customerGearItems.id)],
+    scope: { shopColumn: customerGearItems.shopId, personColumn: customerGearItems.personId },
+  },
+  workOrders: {
+    table: workOrders,
+    order: [asc(workOrders.receivedAt), asc(workOrders.id)],
+    scope: { shopColumn: workOrders.shopId, personColumn: workOrders.personId },
+  },
+  workOrderItems: {
+    table: workOrderItems,
+    order: [asc(workOrderItems.createdAt), asc(workOrderItems.id)],
+    scope: { shopColumn: workOrderItems.shopId },
+  },
+  workOrderLines: {
+    table: workOrderLines,
+    order: [asc(workOrderLines.createdAt), asc(workOrderLines.id)],
+    scope: { shopColumn: workOrderLines.shopId },
+  },
+  workOrderCare: {
+    table: workOrderCare,
+    order: [asc(workOrderCare.createdAt), asc(workOrderCare.id)],
+    scope: { shopColumn: workOrderCare.shopId },
+  },
+  workOrderEvents: {
+    table: workOrderEvents,
+    order: [asc(workOrderEvents.seq)],
+    scope: { shopColumn: workOrderEvents.shopId },
   },
   preDepartureChecklistItems: {
     table: preDepartureChecklistItems,

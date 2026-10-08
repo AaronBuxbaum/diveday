@@ -86,6 +86,8 @@
     "gearOverdue": "Equipo atrasado",
     "gearDueBack": "Devolución hoy",
     "gearServiceDue": "Mantenimiento",
+    "workOrderLate": "Reparación atrasada",
+    "workOrderUncollected": "Reparación sin recoger",
     "staffCredentialDue": "Credencial",
     "unitsUnconfirmed": "Configuración",
     "helpRequest": "Solicitud de ayuda",
@@ -113,7 +115,8 @@
     "askForNitroxCard": "Pedir certificación de nitrox",
     "verifyNitroxCard": "Verificar certificación de nitrox",
     "takePayment": "Cobrar pago",
-    "checkReadiness": "Verificar disponibilidad"
+    "checkReadiness": "Verificar disponibilidad",
+    "getCourseFormsSigned": "Pedir firmas"
   },
   "blockerGroup": {
     "setRequirements": "Configurar requisitos",
@@ -134,7 +137,8 @@
     "askForNitroxCards": "Pedir certificaciones de nitrox",
     "verifyNitroxCards": "Verificar certificaciones de nitrox",
     "takePayments": "Cobrar pagos",
-    "checkReadiness": "Verificar disponibilidad"
+    "checkReadiness": "Verificar disponibilidad",
+    "getCourseFormsSigned": "Pedir firmas"
   },
   "pointingLabel": {
     "trip": "Ver lista",
@@ -306,6 +310,7 @@
     "underMinimumAge": "{count, plural, one {Por debajo de la edad mínima del curso.} other {# buceadores por debajo de la edad mínima del curso.}}",
     "paymentDue": "{count, plural, one {Pago pendiente.} other {# pagos pendientes.}}",
     "paymentRefunded": "{count, plural, one {Reembolsado, así que vuelve a deber el pago.} other {# buceadores reembolsados, así que vuelven a deber el pago.}}",
-    "readinessUnavailable": "{count, plural, one {No se pudo revisar si está listo.} other {No se pudo revisar si están listos # buceadores.}}"
+    "readinessUnavailable": "{count, plural, one {No se pudo revisar si está listo.} other {No se pudo revisar si están listos # buceadores.}}",
+    "courseFormUnsigned": "{count, plural, one {Formulario del curso sin firmar.} other {# formularios del curso sin firmar.}}"
   }
 }

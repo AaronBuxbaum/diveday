@@ -213,6 +213,7 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["diver.json marketing.privacy.processors.vercelTerm", "brand"],
   ["diver.json rental.itemLabels.gopro", "brand"],
   ["diver.json trip.rentalItems.gopro", "brand"],
+  ["diver.json notifications.gearPieces.gopro", "brand"],
   ["staff/inbox.json channel.whatsapp", "brand"],
   ["staff/integrations.json quickbooks.name", "brand"],
   ["staff/integrations.json shopify.name", "brand"],
@@ -236,6 +237,11 @@ export const DELIBERATELY_IDENTICAL = new Map([
     "staff/gear.json form.brandModelPlaceholder",
     "example brand and model in a placeholder attribute",
   ],
+  [
+    "staff/workOrders.json form.brandModelPlaceholder",
+    "example brand and model in a placeholder attribute",
+  ],
+  ["staff/workOrders.json detail.total", "the same word in both languages"],
   ["staff/orders.json new.countryPlaceholder", "example country code in a placeholder attribute"],
   [
     "staff/diveSites.json form.depthRangePlaceholder",

@@ -38,9 +38,11 @@ Constraints a lower-context agent must not miss:
 - **A shop has exactly one waiver, versioned shop-wide, never per-title** (`waiver_templates`'s
   unique index and its CR-015 fix comment) — a printed "rental ticket" is not a second waiver, and
   this ADR does not propose one.
-- Vision bounds this explicitly (this session's edit): gear rental only, never selling
-  (retail/barcode inventory) or repairing (work orders) — both stay declined
-  ([vision.md](../../product/vision.md#non-goals-for-now)).
+- Vision bounded this explicitly (this session's edit): gear rental only, never selling
+  (retail/barcode inventory) or repairing (work orders)
+  ([vision.md](../../product/vision.md#non-goals-for-now)). **The repair half was reversed on
+  2026-10-08** by [20261008-gear-work-orders](20261008-gear-work-orders.md): the bench is a
+  sibling surface to this register and writes its service clocks. Selling stays declined.
 
 ## Decision
 
@@ -153,9 +155,11 @@ schema sketch above, each for a reason worth keeping:
   newest event of a kind *is* that clock; nothing is denormalized onto the item row. This is what
   "what's due for service" actually means for a dive fleet: a tank runs two independent
   compliance clocks (US DOT hydro every five years, annual VIP) plus an O2-clean renewal, and a
-  shop wants the printable history as proof of care. Still deliberately not a work order — no
-  parts, no labor, no billing (`src/lib/gear.ts` holds the interval conventions; the form
-  suggests, staff decide).
+  shop wants the printable history as proof of care. Not a work order *here* — no parts, no labor,
+  no billing on a care event (`src/lib/gear.ts` holds the interval conventions; the form suggests,
+  staff decide). Work orders themselves arrived beside the register on 2026-10-08
+  ([20261008-gear-work-orders](20261008-gear-work-orders.md)), and collecting a ticket is now one
+  of the things that writes a `gear_service_events` row.
 - **Register-only kinds stay explicit.** `gear_item_kind` is the prep list's eight (including
   `boots`, which the original sketch's "reuse `RentableItemKind`" would have dropped) plus
   `tank`, `drysuit`, `hood`, `gloves`, `torch`, `dpv`, `smb`, `reel`, `camera`, `nitrox_analyzer`,

@@ -16,6 +16,7 @@ import { countGearItems } from "@/db/gear";
 import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { countBlockedDiversNextBoatDay, todayNextDepartureTripId } from "@/db/today";
+import { countWorkOrders } from "@/db/work-orders";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -182,7 +183,12 @@ const loadShopChrome = cache(async (shopSlug: string) => {
             tripId ? `/shop/${shopSlug}/trips/${tripId}/manifest` : undefined,
           ),
           hasActiveCourses(db, shop.id),
-          countGearItems(db, shop.id),
+          // The fleet **or** the bench: a shop that services customers'
+          // regulators and owns no rental kit of its own still has a Gear
+          // section (ADR 20261008-gear-work-orders).
+          Promise.all([countGearItems(db, shop.id), countWorkOrders(db, shop.id)]).then(
+            ([units, tickets]) => units + tickets,
+          ),
         ])
       : [0, undefined, false, 0];
 

@@ -1,0 +1,63 @@
+{
+  "card": {
+    "title": "Cobro y recogida"
+  },
+  "ready": {
+    "heading": "Aviso de recogida",
+    "pending": "Se envía al cliente cuando el trabajo está listo.",
+    "notSent": "Todavía no se ha enviado.",
+    "sentEmail": "Enviado por correo el {date}",
+    "sentSms": "Enviado por SMS el {date}",
+    "sentWhatsapp": "Enviado por WhatsApp el {date}",
+    "noContact": "No enviado: no hay correo ni teléfono en la ficha",
+    "notConfigured": "No enviado: los mensajes no están configurados",
+    "failed": "No enviado el {date}",
+    "send": "Enviar aviso de recogida",
+    "resend": "Reenviar",
+    "sending": "Enviando…"
+  },
+  "bill": {
+    "heading": "Factura",
+    "total": "Importe total: {amount}",
+    "atShop": "Se cobra en el mostrador.",
+    "ownerOnly": "La factura la envía un propietario o gerente.",
+    "needsEmail": "Agrega un correo a la ficha del cliente para enviarle la factura.",
+    "send": "Enviar la factura",
+    "sendAgain": "Enviar una factura nueva",
+    "sending": "Enviando…",
+    "sent": "Enviada el {date}",
+    "openOrder": "Ver pedido",
+    "description": "Orden de trabajo #{number}"
+  },
+  "notice": {
+    "readySent": "Aviso de recogida enviado.",
+    "readyNoContact": "No hay correo ni teléfono en la ficha, así que no se envió nada.",
+    "readyNotConfigured": "Este centro no tiene los mensajes configurados, así que no se envió nada.",
+    "readyFailed": "El aviso de recogida no se pudo enviar.",
+    "readyNotReady": "El trabajo no está listo, así que no se envió nada.",
+    "billSent": "Factura enviada.",
+    "billAlready": "Esta orden ya tiene una factura.",
+    "billNotConnected": "Conecta Stripe en Ajustes para enviar facturas.",
+    "billNotAuthorized": "Solo un propietario o gerente puede enviar una factura.",
+    "billInvalid": "Estas líneas no pueden ir en una factura. Revisa cada importe y cantidad.",
+    "billTaxLocation": "Los impuestos están activados, así que esta factura necesita la dirección de facturación del cliente. Envíala desde Pedidos.",
+    "billStripeFailed": "Stripe no pudo crear esa factura. Inténtalo de nuevo en un momento.",
+    "billNoLines": "Agrega primero repuestos o mano de obra.",
+    "remindersOff": "Recordatorios de mantenimiento desactivados para esa pieza.",
+    "remindersOn": "Recordatorios de mantenimiento activados para esa pieza."
+  },
+  "reminders": {
+    "off": "Sin recordatorios",
+    "lastSent": "Recordado el {date}",
+    "turnOff": "Detener recordatorios",
+    "turnOn": "Enviar recordatorios",
+    "turnOffFor": "Detener los recordatorios de mantenimiento de {label}",
+    "turnOnFor": "Enviar recordatorios de mantenimiento de {label}",
+    "saving": "Guardando…"
+  },
+  "today": {
+    "pastPromise": "Prometida para el {date}, todavía no está lista.",
+    "uncollected": "Listo desde el {date} y sin recoger.",
+    "openTicket": "Ver orden"
+  }
+}

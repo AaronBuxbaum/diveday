@@ -28,10 +28,12 @@ concretely here.
 4. **Gear** — rental *fit*: the sizes each diver takes from the shop, feeding trip prep and
    packing lists. Beneath it, opt-in by presence, the **gear register**: the shop's own fleet as
    tagged units, per-unit service clocks (tank hydro/VIP, regulator service), and date-ranged
-   reservations with a database-level double-booking guard — rental only, never selling or
-   repairing (see the non-goals;
-   [20260815-minimal-gear-register](../architecture/decisions/20260815-minimal-gear-register.md)).
-   A shop with no tracked fleet sees none of it.
+   reservations with a database-level double-booking guard
+   ([20260815-minimal-gear-register](../architecture/decisions/20260815-minimal-gear-register.md)).
+   Beside it, **the bench**: repair work orders on a customer's own gear or one of the shop's
+   units, with parts, labor and a printable claim tag
+   ([20261008-gear-work-orders](../architecture/decisions/20261008-gear-work-orders.md)). Never
+   selling (see the non-goals). A shop with no tracked fleet and no tickets sees none of it.
 5. **Boat manifests** — who's aboard, who's certified for the sites, roll call before departure
    and after every dive. A safety document first, a UI second.
 
@@ -46,9 +48,11 @@ concretely here.
 ## Non-goals (for now)
 
 - Not a dive-agency LMS (we track certs, we don't issue them).
-- Not a general POS/retail system — DiveDay manages gear *rental* only, never **selling** items
-  (retail/barcode inventory) or **repairing** them (work orders, parts, labor). A shop's existing
-  POS stays authoritative for both. **No other system is ever authoritative for DiveDay's own
+- Not a general POS/retail system — DiveDay never **sells** items (retail/barcode inventory, parts
+  stock on hand, a barcode at a till); a shop's existing POS stays authoritative for that. Gear
+  *rental* and gear *repair* are both ours: the bench ships work orders with parts and labor as
+  figures on a ticket, which is where the "never repairing them" half of this non-goal was dropped
+  (2026-10-08, [20261008-gear-work-orders](../architecture/decisions/20261008-gear-work-orders.md)). **No other system is ever authoritative for DiveDay's own
   data** either: a connector may push DiveDay's facts out and read back only enough to stay
   idempotent, never sync a provider's inventory, orders or certifications back in. Within that
   line DiveDay *does* call a provider's API when a shop authorizes it — Shopify and QuickBooks

@@ -4,11 +4,13 @@ import { AGENCY_VERIFICATION_PAGES } from "./agency-verification";
 import {
   CHECK_REQUEST_TYPE,
   CHECK_RESULT_TYPE,
+  ELEARNING_REQUEST_TYPE,
   EXTENSION_MARKER_ATTRIBUTE,
   EXTENSION_MESSAGE_SOURCE,
   EXTENSION_READY_EVENT,
   PAGE_MESSAGE_SOURCE,
 } from "./cert-check-extension";
+import { ELEARNING_AGENCIES } from "./elearning-check";
 
 /**
  * The extension (`extension/`) is plain scripts the browser loads as they are,
@@ -33,6 +35,7 @@ describe("the extension's copy of the protocol", () => {
       PAGE_SOURCE: PAGE_MESSAGE_SOURCE,
       EXTENSION_SOURCE: EXTENSION_MESSAGE_SOURCE,
       REQUEST_TYPE: CHECK_REQUEST_TYPE,
+      ELEARNING_REQUEST_TYPE,
       RESULT_TYPE: CHECK_RESULT_TYPE,
       PAGE_TEXT_MAX_LENGTH,
     });
@@ -57,9 +60,24 @@ describe("the extension's agencies", () => {
       const origin = new URL(spec.url).origin;
       expect(manifest.host_permissions).toContain(`${origin}/*`);
     }
+  });
+
+  it("asks for no host it does not open", () => {
+    const pages = [
+      ...Object.values(agencies),
+      ...Object.values(extension.ELEARNING as Record<string, { url: string }>),
+    ];
     expect(manifest.host_permissions).toHaveLength(
-      new Set(Object.values(agencies).map((a) => new URL(a.url).origin)).size,
+      new Set(pages.map((a) => new URL(a.url).origin)).size,
     );
+  });
+
+  it("reads eLearning only for the agencies the app checks it for", () => {
+    const elearning = extension.ELEARNING as Record<string, { url: string }>;
+    expect(Object.keys(elearning).sort()).toEqual([...ELEARNING_AGENCIES].sort());
+    for (const spec of Object.values(elearning)) {
+      expect(manifest.host_permissions).toContain(`${new URL(spec.url).origin}/*`);
+    }
   });
 
   it("talks only to DiveDay's own staff pages", () => {

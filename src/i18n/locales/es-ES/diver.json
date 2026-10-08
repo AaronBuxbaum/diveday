@@ -802,7 +802,9 @@
       "waiverDone": "Firmada y registrada.",
       "certificationDone": "Verificada y registrada.",
       "paymentDone": "Pagado. Gracias.",
-      "certificationMultipleNeeded": "Esta inmersión necesita más de una certificación registrada. Comparte los datos de cada una y tu centro confirmará que estás listo."
+      "certificationMultipleNeeded": "Esta inmersión necesita más de una certificación registrada. Comparte los datos de cada una y tu centro confirmará que estás listo.",
+      "courseFormUnsigned": "Tu curso tiene formularios para que firmes.",
+      "courseFormGuardianMissing": "Tu madre, padre o tutor legal tiene que firmar contigo los formularios del curso."
     },
     "gearAndSetup": "Equipo y ajuste",
     "dockCallLine": "Procura estar en el muelle a las {time}, {dock} antes de zarpar.",
@@ -898,7 +900,9 @@
     "intentUnavailable": "No se pudo guardar. Inténtalo de nuevo o díselo a la tripulación el mismo día.",
     "reEntrySaved": "Gracias. La tripulación estará pendiente de ti.",
     "reEntryUnavailable": "No se pudo guardar. Inténtalo de nuevo o díselo a la tripulación el mismo día.",
-    "savingIntent": "Guardando…"
+    "savingIntent": "Guardando…",
+    "signCourseForms": "Firmar formularios del curso",
+    "savedCourseForms": "Formularios del curso firmados."
   },
   "thread": {
     "stepsDoneSuffix": "de {total, plural, one {# paso completado} other {# pasos completados}}",
@@ -2779,7 +2783,9 @@
         "item11": "Una lista de precios de alquiler: el equipo completo, cada pieza y el nitrox por inmersión",
         "item12": "Unidades, historial de mantenimiento y alquileres anteriores importados desde una hoja de cálculo",
         "item13": "Una lista de Alquileres con todo lo que está fuera o reservado, por quién lo tiene: las unidades, las fechas y si está pagado",
-        "item14": "Alquileres en mostrador para quien no va en barco, con una factura cuando hay precio"
+        "item14": "Alquileres en mostrador para quien no va en barco, con una factura cuando hay precio",
+        "item15": "Órdenes de trabajo para el equipo de tus clientes: qué entró, repuestos y mano de obra, y una etiqueta de entrega",
+        "item16": "Un aviso de listo para recoger, la cuenta enviada por Stripe y un recordatorio de mantenimiento un mes antes de cada vencimiento"
       },
       "schedule": {
         "item1": "El horario como constructor: añade, mueve, copia y quita en el sitio",
@@ -3009,7 +3015,7 @@
         "exportNotes": {
           "note1": "Hazlo mientras tu instalación de EVE todavía abra y tu licencia esté activa; la exportación que puedes hacer hoy es la que hay que guardar.",
           "note2": "Los encabezados de tus columnas no tienen que coincidir con nada. DiveDay reconoce los nombres habituales que usan EVE y todos los demás sistemas, y te muestra cómo se mapeó cada columna antes de confirmar.",
-          "note3": "Si EVE te da también un informe de ventas o de reservas, llévatelo. Un archivo con una fila por reserva traslada el historial de visitas de tus habituales, para que un cliente de quince años no llegue pareciendo nuevo. Los recibos de caja y los partes de taller se quedan en EVE; mira la tabla de alcance abajo."
+          "note3": "Si EVE te da también un informe de ventas o de reservas, llévatelo. Un archivo con una fila por reserva traslada el historial de visitas de tus habituales, para que un cliente de quince años no llegue pareciendo nuevo. Los recibos de caja se quedan en EVE. Los partes de taller no se importan, así que pasa a DiveDay como órdenes de trabajo los que siguen en el taller y guarda los cerrados en tu exportación de EVE; mira la tabla de alcance abajo."
         }
       },
       "diveshop360": {
@@ -3055,7 +3061,7 @@
         "exportNotes": {
           "note1": "CSV manual, un conjunto a la vez, es el límite de DiveShop360 (sin API, sin exportación masiva, sin webhooks). Hacerlo tú mismo desde la administración es el único camino, y alcanza.",
           "note2": "Los encabezados de tus columnas no tienen que coincidir con nada. DiveDay reconoce los nombres habituales que usan DiveShop360 y todos los demás sistemas, y te muestra cómo se mapeó cada columna antes de confirmar.",
-          "note3": "Si puedes exportar también un informe de reservas o ventas, tráelo. Una fila por reserva se convierte aquí en el historial de visitas de tus buceadores. Los recibos de venta minorista, los partes de taller y tu web de comercio electrónico se quedan en DiveShop360; mira la tabla de alcance abajo."
+          "note3": "Si puedes exportar también un informe de reservas o ventas, tráelo. Una fila por reserva se convierte aquí en el historial de visitas de tus buceadores. Los recibos de venta minorista y tu web de comercio electrónico se quedan en DiveShop360. Los partes de taller no se importan, así que pasa a DiveDay como órdenes de trabajo los que siguen en el taller; mira la tabla de alcance abajo."
         },
         "importerNote": "DiveShop360 exporta los clientes y los datos de certificación como dos archivos separados. Importa primero el archivo de clientes. DiveDay empareja a las personas por correo, así que el de certificaciones suma a los mismos buceadores en vez de duplicarlos. Ese archivo suele traer una fila por certificación: un buceador con tres certificaciones aparece en tres filas, cada una aterriza en ese único buceador, y una fila que dice “PADI Deep Diver” se convierte en una certificación de especialidad de profundidad."
       },
@@ -3807,11 +3813,11 @@
       },
       "rentalGear": {
         "name": "Equipo de alquiler",
-        "summary": "Cada unidad de tu pared con su talla y su próximo mantenimiento, reservada para un buceador a la vez.",
+        "summary": "Cada unidad de tu pared con su talla y su próximo mantenimiento, reservada para un buceador a la vez, y el equipo de tus clientes en el taller.",
         "metaTitle": "Alquiler de equipo de buceo y control de mantenimiento",
         "metaDescription": "Lleva cada chaleco, regulador, neopreno y tanque por etiqueta, talla y fecha de mantenimiento. El personal aparta una unidad para una reserva, y el registro no se la da a un segundo buceador en las mismas fechas.",
         "title": "Sabe qué neopreno lleva cada buceador y qué regulador toca revisar.",
-        "lede": "Registra tus propias unidades por etiqueta, talla y número de serie, aparta una para una reserva desde la pestaña Equipo de la salida y mira la próxima fecha de mantenimiento de cada regulador, tanque y chaleco.",
+        "lede": "Registra tus propias unidades por etiqueta, talla y número de serie, aparta una para una reserva desde la pestaña Equipo de la salida y mira la próxima fecha de mantenimiento de cada regulador, tanque y chaleco. Cuando un cliente trae su propio regulador, entra al taller como orden de trabajo y se le avisa cuando está listo.",
         "screenLabel": "El registro de equipo: unidades por tipo con sus cantidades, y la etiqueta, el modelo, la talla y el estado de cada unidad.",
         "note1": "Los contadores muestran las unidades de cada tipo, así que un estante corto se nota antes de la mañana.",
         "note2": "Una unidad apartada nombra a su buceador, y el registro no se la da a nadie más.",
@@ -3821,7 +3827,7 @@
         "step2Title": "Los buceadores dan sus tallas después de reservar",
         "step2Body": "La pestaña Equipo convierte esas tallas en una lista para sacar y muestra las unidades libres, la talla exacta primero.",
         "step3Title": "Sale, vuelve y se revisa",
-        "step3Body": "Marca la salida y la vuelta de una unidad, imprime el comprobante de alquiler del buceador, y mira en la lista de tareas del día las devoluciones atrasadas y el mantenimiento que vence.",
+        "step3Body": "Marca la salida y la vuelta de una unidad, imprime el comprobante de alquiler del buceador, y mira en la lista de tareas del día las devoluciones atrasadas y el mantenimiento que vence. Las reparaciones van en órdenes de trabajo: el cliente se entera cuando la suya está lista y recibe la cuenta por correo.",
         "faq1Q": "¿Qué revisiones de mantenimiento controla?",
         "faq1A": "Servicio anual, prueba hidrostática, inspección visual y limpieza para oxígeno, cada una con su fecha de vencimiento, más un conteo de inmersiones donde el fabricante lo fija.",
         "faq2Q": "¿Y si dos buceadores quieren la misma unidad?",
@@ -3978,7 +3984,8 @@
       "nitroxSelfDeclared": "Trae tu certificación de nitrox para que el centro pueda verla",
       "specialtyMissing": "Envía a tu centro los datos de tu certificación de especialidad",
       "nitroxMissing": "Envía a tu centro los datos de tu certificación de nitrox",
-      "paymentDue": "Salda tu saldo pendiente"
+      "paymentDue": "Salda tu saldo pendiente",
+      "courseFormUnsigned": "Firma los formularios del curso"
     },
     "replyKeyword": {
       "offer": "Responde C para cancelar tu plaza o M para pedir un cambio de fecha.",
@@ -4224,13 +4231,66 @@
       "recap": "{shopName}: ¡gracias por bucear {tripTitle}! Tu resumen: {recapUrl}",
       "waiver": "{shopName}: firma tu exención de buceo antes de bucear — {url}",
       "waiverForTrip": "{shopName}: firma tu exención de buceo para {tripTitle} — {url}",
-      "stopLine": "Responde STOP para darte de baja."
+      "stopLine": "Responde STOP para darte de baja.",
+      "courseForms": "{shopName}: firma los formularios del curso {tripTitle} — {url}"
     },
     "whatsappTemplate": {
       "body": "¡Hola! Un aviso de '{{1}}': '{{2}}'",
       "exampleShopName": "Blue Mantis Divers",
       "exampleMessage": "Reef Runner zarpa el sábado a las 8:00. Presentaos en el muelle 30 minutos antes.",
       "testMessage": "Este es un mensaje de prueba de DiveDay. Tu conexión de WhatsApp funciona."
+    },
+    "gearPieces": {
+      "bcd": "chaleco",
+      "regulator": "regulador",
+      "wetsuit": "neopreno",
+      "boots": "botines",
+      "mask": "máscara",
+      "fins": "aletas",
+      "weights": "lastre",
+      "diveComputer": "computadora de buceo",
+      "gopro": "GoPro",
+      "tank": "tanque",
+      "drysuit": "traje seco",
+      "hood": "capucha",
+      "gloves": "guantes",
+      "torch": "linterna",
+      "dpv": "propulsor",
+      "smb": "boya de señalización",
+      "reel": "carrete",
+      "camera": "cámara",
+      "nitroxAnalyzer": "analizador de nitrox",
+      "o2Kit": "kit de oxígeno",
+      "other": "equipo",
+      "withModel": "{piece} ({model})"
+    },
+    "workOrderReady": {
+      "subject": "Orden #{number}: tu equipo está listo para recoger",
+      "ready": "Ya puedes recoger en {shopName} tu equipo de la orden #{number}: {pieces}.",
+      "readyNoPieces": "Ya puedes recoger en {shopName} tu equipo de la orden #{number}.",
+      "workHeading": "Lo que hicimos:"
+    },
+    "gearServiceDue": {
+      "subject": "Recordatorio de mantenimiento de {shopName}",
+      "due": {
+        "service": "La revisión de tu equipo ({piece}) vence el {date}.",
+        "hydroTest": "La prueba hidrostática de tu equipo ({piece}) vence el {date}.",
+        "visualInspection": "La inspección visual de tu equipo ({piece}) vence el {date}.",
+        "o2Clean": "La limpieza para oxígeno de tu equipo ({piece}) vence el {date}.",
+        "note": "Toca revisar tu equipo ({piece}) antes del {date}."
+      },
+      "dropBy": "Pasa por {shopName} cuando quieras antes de esa fecha.",
+      "dropBySms": "Pasa cuando quieras antes de esa fecha."
+    },
+    "smsWorkOrder": {
+      "ready": "{shopName}: ya puedes recoger tu equipo de la orden #{number} ({pieces}).",
+      "readyNoPieces": "{shopName}: ya puedes recoger tu equipo de la orden #{number}.",
+      "work": "Lo que hicimos: {work}"
+    },
+    "courseFormsLink": {
+      "subject": "Formularios del curso por firmar para {tripTitle}",
+      "body": "{shopName} pide a cada estudiante de {tripTitle} que firme los formularios del curso. Tu exención ya está firmada, así que solo faltan estos.",
+      "openLink": "Firmar los formularios del curso"
     }
   },
   "brand": {
@@ -4283,5 +4343,25 @@
       "rider": "Acompañante en el barco"
     },
     "priceLine": "{type} {price}"
+  },
+  "courseForms": {
+    "metaTitle": "Formularios del curso",
+    "progress": "Formulario {current} de {total}",
+    "agreementCheckbox": "He leído este formulario, lo entiendo y estoy de acuerdo con él.",
+    "guardianIntro": "{name} es menor de 18 años, así que su madre, padre o tutor legal también firma este formulario.",
+    "guardianAgreementCheckbox": "Soy la madre, el padre o el tutor legal de este estudiante. He leído este formulario, lo entiendo y lo acepto en su nombre.",
+    "signButton": "Firmar formulario",
+    "signatureNote": "Tu nombre escrito, tu conformidad y la hora de la firma se guardan con esta versión exacta del formulario.",
+    "errorAgreement": "Confirma que aceptas el formulario para continuar.",
+    "versionChanged": "El centro actualizó este formulario mientras lo tenías abierto. Lee la versión nueva abajo.",
+    "doneTitle": "Formularios del curso firmados",
+    "doneBody": "No queda nada por firmar para este curso.",
+    "backToPrep": "Volver a tu preparación",
+    "signing": "Firmando…",
+    "errorGuardian": "Una madre, un padre o un tutor legal también firma este formulario. Escribe su nombre, elige qué es del estudiante y marca su casilla.",
+    "errorUnavailable": "Este formulario ya no se puede firmar desde aquí. Pregunta al centro.",
+    "signedOne": "Firmado. El siguiente formulario está abajo.",
+    "linkDeadTitle": "Este enlace ya no funciona",
+    "linkDeadBody": "Pide a {shopName} que te envíe de nuevo los formularios del curso."
   }
 }

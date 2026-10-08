@@ -802,7 +802,9 @@
       "waiverDone": "Signed and on file.",
       "certificationDone": "Verified and on file.",
       "paymentDone": "Paid up. Thank you.",
-      "certificationMultipleNeeded": "This dive needs more than one certification on file. Share the details for each one it calls for, and your shop will confirm you’re set."
+      "certificationMultipleNeeded": "This dive needs more than one certification on file. Share the details for each one it calls for, and your shop will confirm you’re set.",
+      "courseFormUnsigned": "Your course has forms for you to sign.",
+      "courseFormGuardianMissing": "A parent or legal guardian has to sign your course forms with you."
     },
     "gearAndSetup": "Gear and setup",
     "dockCallLine": "Aim to be at the dock by {time}, {dock} before we sail.",
@@ -898,7 +900,9 @@
     "intentUnavailable": "That did not save. Try again, or tell the crew on the day.",
     "reEntrySaved": "Thanks. The crew will look out for you.",
     "reEntryUnavailable": "That did not save. Try again, or tell the crew on the day.",
-    "savingIntent": "Saving…"
+    "savingIntent": "Saving…",
+    "signCourseForms": "Sign course forms",
+    "savedCourseForms": "Course forms signed."
   },
   "thread": {
     "stepsDoneSuffix": "of {total} done",
@@ -2779,7 +2783,9 @@
         "item11": "A rental price list: the full set, each piece, and nitrox by the dive",
         "item12": "Units, service history and past rentals imported from a spreadsheet",
         "item13": "A Rentals list of everything out or reserved, by who has it: the units, the dates, and whether it’s paid",
-        "item14": "Counter rentals for someone who isn’t on a boat, with an invoice when there’s a price"
+        "item14": "Counter rentals for someone who isn’t on a boat, with an invoice when there’s a price",
+        "item15": "Work orders for customers’ own gear: what came in, parts and labor, and a claim tag",
+        "item16": "A ready-for-pickup message, the bill sent through Stripe, and a service reminder a month before each due date"
       },
       "schedule": {
         "item1": "The schedule as a builder: add, move, copy, remove in place",
@@ -3009,7 +3015,7 @@
         "exportNotes": {
           "note1": "Do this while your EVE install still opens and your license is active; an export you can run today is the one to keep.",
           "note2": "Your column headings do not have to match anything. DiveDay recognizes the common names EVE and every other system use, and shows you how each column mapped before you commit.",
-          "note3": "If EVE will give you a sales or booking report as well, take it. A file with one row per booking brings your regulars’ visit history across, so a fifteen-year customer does not arrive looking brand new. Register receipts and repair tickets stay in EVE; see the scope table below."
+          "note3": "If EVE will give you a sales or booking report as well, take it. A file with one row per booking brings your regulars’ visit history across, so a fifteen-year customer does not arrive looking brand new. Register receipts stay in EVE. Repair tickets do not import, so put any still on the bench into DiveDay as work orders and keep the closed ones in your EVE export; see the scope table below."
         }
       },
       "diveshop360": {
@@ -3055,7 +3061,7 @@
         "exportNotes": {
           "note1": "Manual CSV, one dataset at a time, is DiveShop360’s limit (no API, no bulk export, no webhooks). Doing it yourself from the admin is the only path, and it is enough.",
           "note2": "Your column headings do not have to match anything. DiveDay recognizes the common names DiveShop360 and every other system use, and shows you how each column mapped before you commit.",
-          "note3": "If you can also export a booking or sales report, bring it. One row per booking becomes your divers’ visit history here. Retail receipts, repair tickets, and your e-commerce site stay in DiveShop360; see the scope table below."
+          "note3": "If you can also export a booking or sales report, bring it. One row per booking becomes your divers’ visit history here. Retail receipts and your e-commerce site stay in DiveShop360. Repair tickets do not import, so put any still on the bench into DiveDay as work orders; see the scope table below."
         },
         "importerNote": "DiveShop360 exports customers and certification data as two separate files. Import the customer file first. DiveDay matches people by email, so the certification file adds to the same divers instead of duplicating them. That file usually holds one row per certification: a diver with three certifications appears on three rows, each landing on that one diver, and a row reading “PADI Deep Diver” becomes a deep specialty certification."
       },
@@ -3807,11 +3813,11 @@
       },
       "rentalGear": {
         "name": "Rental gear",
-        "summary": "Every unit on your wall with its size and service due, reserved for one diver at a time.",
+        "summary": "Every unit on your wall with its size and service due, reserved for one diver at a time, and your customers’ own gear on the bench.",
         "metaTitle": "Dive gear rental and service tracking",
         "metaDescription": "Track every BCD, regulator, wetsuit and cylinder by tag, size and service date. Staff reserve a unit to one booking, and the register won’t give it to a second diver on the same dates.",
         "title": "Know which wetsuit is on which diver, and which regulator is due for service.",
-        "lede": "List your own units by tag, size and serial, reserve one to a booking from the departure’s Gear tab, and see each regulator, cylinder and BCD’s next service date.",
+        "lede": "List your own units by tag, size and serial, reserve one to a booking from the departure’s Gear tab, and see each regulator, cylinder and BCD’s next service date. When a customer brings their own regulator in, it goes on the bench as a work order, and they hear when it’s ready.",
         "screenLabel": "The gear register: units by kind with their counts, then each unit’s tag, model, size and status.",
         "note1": "The chips count units of each kind, so a short shelf shows before the morning.",
         "note2": "A reserved unit names its diver, and the register won’t give it to anyone else.",
@@ -3821,7 +3827,7 @@
         "step2Title": "Divers give their sizes after booking",
         "step2Body": "The Gear tab turns those sizes into a list to pull and lists free units, exact size first.",
         "step3Title": "Out, back and serviced",
-        "step3Body": "Stamp a unit out and back, print the diver’s rental slip, and see overdue returns and service coming due on the day’s to-do list.",
+        "step3Body": "Stamp a unit out and back, print the diver’s rental slip, and see overdue returns and service coming due on the day’s to-do list. Repairs run on work orders: the customer is told when theirs is ready, and gets the bill by email.",
         "faq1Q": "Which service checks can it track?",
         "faq1A": "Annual service, hydrostatic test, visual inspection and oxygen cleaning, each with its due date, plus a dive count where the manufacturer sets one.",
         "faq2Q": "What if two divers want the same unit?",
@@ -3978,7 +3984,8 @@
       "nitroxSelfDeclared": "Bring your nitrox card so the shop can check it",
       "specialtyMissing": "Send your shop your specialty certification details",
       "nitroxMissing": "Send your shop your nitrox certification details",
-      "paymentDue": "Settle your balance"
+      "paymentDue": "Settle your balance",
+      "courseFormUnsigned": "Sign your course forms"
     },
     "replyKeyword": {
       "offer": "Reply C to cancel your seat, or M to ask about moving it.",
@@ -4224,13 +4231,66 @@
       "recap": "{shopName}: thanks for diving {tripTitle}! Your recap: {recapUrl}",
       "waiver": "{shopName}: please sign your dive release before you dive — {url}",
       "waiverForTrip": "{shopName}: please sign your dive release for {tripTitle} — {url}",
-      "stopLine": "Reply STOP to opt out."
+      "stopLine": "Reply STOP to opt out.",
+      "courseForms": "{shopName}: please sign your course forms for {tripTitle} — {url}"
     },
     "whatsappTemplate": {
       "body": "Hi! An update from '{{1}}': '{{2}}'",
       "exampleShopName": "Blue Mantis Divers",
       "exampleMessage": "Reef Runner departs Saturday at 8:00 AM. Dock call 30 minutes early.",
       "testMessage": "This is a test message from DiveDay. Your WhatsApp connection is working."
+    },
+    "gearPieces": {
+      "bcd": "BCD",
+      "regulator": "regulator",
+      "wetsuit": "wetsuit",
+      "boots": "boots",
+      "mask": "mask",
+      "fins": "fins",
+      "weights": "weights",
+      "diveComputer": "dive computer",
+      "gopro": "GoPro",
+      "tank": "tank",
+      "drysuit": "drysuit",
+      "hood": "hood",
+      "gloves": "gloves",
+      "torch": "dive light",
+      "dpv": "scooter",
+      "smb": "surface marker buoy",
+      "reel": "reel",
+      "camera": "camera",
+      "nitroxAnalyzer": "nitrox analyzer",
+      "o2Kit": "oxygen kit",
+      "other": "gear",
+      "withModel": "{piece} ({model})"
+    },
+    "workOrderReady": {
+      "subject": "Ticket #{number}: your gear is ready to collect",
+      "ready": "Your gear on ticket #{number} is ready to collect from {shopName}: {pieces}.",
+      "readyNoPieces": "Your gear on ticket #{number} is ready to collect from {shopName}.",
+      "workHeading": "What we did:"
+    },
+    "gearServiceDue": {
+      "subject": "Service reminder from {shopName}",
+      "due": {
+        "service": "Service on your {piece} is due on {date}.",
+        "hydroTest": "The hydrostatic test on your {piece} is due on {date}.",
+        "visualInspection": "The visual inspection on your {piece} is due on {date}.",
+        "o2Clean": "The oxygen cleaning on your {piece} is due on {date}.",
+        "note": "A check on your {piece} is due on {date}."
+      },
+      "dropBy": "Drop by {shopName} any time before then.",
+      "dropBySms": "Drop by any time before then."
+    },
+    "smsWorkOrder": {
+      "ready": "{shopName}: your gear on ticket #{number} is ready to collect ({pieces}).",
+      "readyNoPieces": "{shopName}: your gear on ticket #{number} is ready to collect.",
+      "work": "What we did: {work}"
+    },
+    "courseFormsLink": {
+      "subject": "Course forms to sign for {tripTitle}",
+      "body": "{shopName} asks every student on {tripTitle} to sign the course forms. Your release is already signed, so these are all that’s left.",
+      "openLink": "Sign your course forms"
     }
   },
   "brand": {
@@ -4283,5 +4343,25 @@
       "rider": "Riding along"
     },
     "priceLine": "{type} {price}"
+  },
+  "courseForms": {
+    "metaTitle": "Course forms",
+    "progress": "Form {current} of {total}",
+    "agreementCheckbox": "I have read this form, understand it, and agree to it.",
+    "guardianIntro": "{name} is under 18, so a parent or legal guardian signs this form too.",
+    "guardianAgreementCheckbox": "I am this student’s parent or legal guardian. I have read this form, understand it, and agree to it on their behalf.",
+    "signButton": "Sign form",
+    "signatureNote": "Your typed name, agreement, and signing time are saved with this exact version of the form.",
+    "errorAgreement": "Confirm you agree to the form to continue.",
+    "versionChanged": "The shop updated this form while you had it open. Read the new version below.",
+    "doneTitle": "Course forms signed",
+    "doneBody": "Nothing left to sign for this course.",
+    "backToPrep": "Back to your trip prep",
+    "signing": "Signing…",
+    "errorGuardian": "A parent or legal guardian signs this form too. Type their name, choose who they are to the student, and tick their box.",
+    "errorUnavailable": "This form can’t be signed from here any more. Ask the shop.",
+    "signedOne": "Signed. The next form is below.",
+    "linkDeadTitle": "This link no longer works",
+    "linkDeadBody": "Ask {shopName} to send your course forms again."
   }
 }

@@ -136,6 +136,11 @@ const SINGLETON_PER_PERSON_TABLES = ["rental_fit_profiles", "last_minute_list_en
 
 export const DIVER_HISTORY_TABLES = [
   "course_inquiries",
+  // What the bench told this diver about their own gear (ADR
+  // 20261008-work-order-follow-up). It follows the gear and the tickets to the
+  // survivor, or the survivor's ticket would read as never announced and the
+  // next pass would remind them a second time about a date already covered.
+  "customer_gear_notices",
   "bookings",
   "internal_notes",
   "trip_waitlist_entries",
@@ -146,6 +151,10 @@ export const DIVER_HISTORY_TABLES = [
   "dive_package_entitlements",
   "orders",
   "waiver_records",
+  // A signed course form, on the booking that moves with it (ADR
+  // 20261008-course-forms). No seal, so the plain repoint below carries it;
+  // its unique key is per booking, so the two sides cannot collide.
+  "course_form_records",
   "certifications",
   "specialty_certifications",
   "prior_visits",
@@ -156,6 +165,13 @@ export const DIVER_HISTORY_TABLES = [
   // unit on a removed diver's record: the survivor's prep page showed no gear
   // and the reservation still held the window.
   "gear_reservations",
+  // A diver's own gear on file, and the service tickets about it (ADR
+  // 20261008-gear-work-orders). Both name the diver directly, and both are
+  // the diver's — the shop is holding the regulator of whoever the survivor
+  // is. Leaving them behind would hide a ticket the shop is still working
+  // from the record the counter now opens.
+  "customer_gear_items",
+  "work_orders",
   "prior_gear_assignments",
   "nitrox_certifications",
   "trip_reviews",
@@ -248,6 +264,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "dive_sites.planning_note_by_person_id": "who wrote down what the site was like",
   "executed_dives.deleted_by_person_id": "who deleted the logged dive",
   "executed_dives.recorded_by_person_id": "who logged the dive",
+  "customer_gear_items.deleted_by_person_id": "who removed the piece from the record",
   "gear_items.deleted_by_person_id": "who retired the unit",
   "gear_service_events.recorded_by_person_id": "who serviced the unit",
   "internal_notes.created_by_person_id": "who wrote the note",
@@ -289,6 +306,14 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "trip_sightings.deleted_by_person_id": "who took the mis-tapped sighting back",
   "trip_sightings.recorded_by_person_id": "which crew member tapped the chip",
   "trip_stage_events.recorded_by_person_id": "who said where the boat was",
+  "customer_gear_notices.sent_by_person_id": "who pressed Resend on a ready message",
+  "customer_gear_reminder_settings.changed_by_person_id": "who switched a piece's reminders",
+  "work_order_bills.created_by_person_id": "who sent the bill",
+  "work_order_events.actor_person_id": "who moved the ticket",
+  "work_order_events.technician_person_id": "which technician the ticket was handed to",
+  "work_orders.deleted_by_person_id": "who deleted the ticket",
+  "work_orders.outcome_recorded_by_person_id": "which technician recorded the work done",
+  "work_orders.technician_person_id": "which technician is working it — a staff assignment",
   "waiver_materiality_decisions.actor_person_id": "who judged the answer material",
   "waiver_records.anonymized_by_person_id": "provenance for an erasure on a signed release",
   "waiver_records.medical_clearance_declined_by_person_id": "who declined the clearance",
@@ -298,6 +323,9 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "waiver_records.moved_by_person_id": "who refiled the release with its split seat",
   "waiver_records.moved_from_person_id": "where a refiled release sat before; inside its seal",
   "waiver_records.recorded_by_person_id": "who witnessed the signature",
+  "course_form_records.recorded_by_person_id": "who recorded the paper form",
+  "course_form_records.anonymized_by_person_id": "who erased the signer's names from the form",
+  "course_form_versions.created_by_person_id": "who wrote that version of the form",
 };
 
 /**
@@ -791,13 +819,21 @@ function sameRentalFit(a: DiverMergeRentalFit, b: DiverMergeRentalFit): boolean 
  */
 export const DIVER_MERGE_COUNT_GROUPS = {
   bookings: ["bookings"],
-  releases: ["waiver_records"],
+  // A signed course form is the same kind of paper as the release (ADR
+  // 20261008-course-forms), so the preview counts it with them.
+  releases: ["waiver_records", "course_form_records"],
   cards: ["certifications", "specialty_certifications", "nitrox_certifications"],
   orders: ["orders", "dive_package_entitlements", "imported_payment_history"],
   notes: ["internal_notes"],
-  messages: ["inbound_messages", "staff_replies"],
+  messages: ["inbound_messages", "staff_replies", "customer_gear_notices"],
   reviews: ["trip_reviews", "recap_pulses"],
-  gear: ["gear_reservations", "prior_gear_assignments", "rental_fit_profiles"],
+  gear: [
+    "gear_reservations",
+    "prior_gear_assignments",
+    "rental_fit_profiles",
+    "customer_gear_items",
+    "work_orders",
+  ],
   history: ["prior_visits"],
   lists: [
     "course_inquiries",

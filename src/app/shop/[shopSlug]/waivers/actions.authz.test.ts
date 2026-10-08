@@ -1,5 +1,8 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
+import { createCourseForm, listCourseForms } from "@/db/course-forms";
+import { courseForms, shops } from "@/db/schema";
 import { getCurrentWaiverTemplate } from "@/db/waivers";
 import { seededShopContext } from "@/test/db";
 import {
@@ -39,7 +42,9 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { saveWaiverAction } = await import("./actions");
+const { deleteCourseFormAction, saveCourseFormAction, saveWaiverAction } = await import(
+  "./actions"
+);
 
 /** Long enough to clear the 40-character minimum the schema enforces. */
 const NEW_BODY = "Rewritten release text posted by someone who should not be able to publish it.";
@@ -217,5 +222,144 @@ describe("publishing a waiver template", () => {
     // the banner, and one code can only ever render one sentence.
     expect(unstated).not.toBe(tooShort);
     expect(unstated).not.toContain("notice=invalid");
+  });
+});
+
+/**
+ * Course forms are the shop's legal instruments too (ADR 20261008-course-forms):
+ * the words a student signs before a course. The same owner/manager gate, run
+ * inside each action, where a POST that skipped the page still lands.
+ */
+describe("writing a course form", () => {
+  const FORM_BODY =
+    "Placeholder course form text. Replace it with your own form before you use it.";
+
+  /** The live form by that title — the demo shop may hold others. */
+  async function formTitled(db: AppDb, shopId: string, title: string) {
+    return (await listCourseForms(db, shopId)).find((form) => form.title === title);
+  }
+
+  function formPost(fields: Record<string, string>) {
+    const formData = new FormData();
+    for (const [key, value] of Object.entries(fields)) formData.set(key, value);
+    return formData;
+  }
+
+  it("refuses a captain, and writes no form", async () => {
+    const { db, shop, captain } = await context();
+    signIn(shop, captain);
+
+    const to = await redirectedTo(() =>
+      saveCourseFormAction(formPost({ title: "Course release", body: FORM_BODY })),
+    );
+
+    expect(to).toBe(`/shop/${shop.slug}?notice=waivers-not-authorized`);
+    expect(await formTitled(db, shop.id, "Course release")).toBeUndefined();
+  });
+
+  it("lets an owner add a form, and lands on that form", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+
+    const to = await redirectedTo(() =>
+      saveCourseFormAction(formPost({ title: "Course release", body: FORM_BODY })),
+    );
+
+    const form = await formTitled(db, shop.id, "Course release");
+    expect(form).toMatchObject({ title: "Course release", version: 1 });
+    expect(to).toBe(
+      `/shop/${shop.slug}/waivers?notice=course-form-saved&form=${form?.id}#course-form-${form?.id}`,
+    );
+  });
+
+  it("says 'unchanged' and writes no version when nothing changed", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const created = await createCourseForm(db, {
+      shopId: shop.id,
+      title: "Course release",
+      body: FORM_BODY,
+      actorPersonId: owner,
+    });
+
+    const to = await redirectedTo(() =>
+      saveCourseFormAction(
+        formPost({ formId: created.id, title: "Course release", body: FORM_BODY }),
+      ),
+    );
+
+    expect(to).toContain("notice=course-form-unchanged");
+    expect((await formTitled(db, shop.id, "Course release"))?.version).toBe(1);
+  });
+
+  it("refuses a form too short to be one, beside the new-form box", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+
+    const to = await redirectedTo(() =>
+      saveCourseFormAction(formPost({ title: "Course release", body: "Too short." })),
+    );
+
+    expect(to).toBe(
+      `/shop/${shop.slug}/waivers?notice=course-form-invalid&form=new#course-form-new`,
+    );
+    expect(await formTitled(db, shop.id, "Course release")).toBeUndefined();
+  });
+
+  it("will not version another shop's form", async () => {
+    const { db, shop, owner } = await context();
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Reef", slug: "other-reef-forms", timezone: "America/New_York" })
+      .returning();
+    if (!other) throw new Error("other shop insert failed");
+    const foreign = await createCourseForm(db, {
+      shopId: other.id,
+      title: "Their form",
+      body: FORM_BODY,
+      actorPersonId: owner,
+    });
+    signIn(shop, owner);
+
+    const to = await redirectedTo(() =>
+      saveCourseFormAction(
+        formPost({ formId: foreign.id, title: "Hijacked", body: `${FORM_BODY} Changed.` }),
+      ),
+    );
+
+    expect(to).toContain("notice=course-form-not-found");
+    const [theirs] = await listCourseForms(db, other.id);
+    expect(theirs).toMatchObject({ title: "Their form", version: 1 });
+  });
+
+  it("refuses a captain's delete, and an owner's delete is soft", async () => {
+    const { db, shop, owner, captain } = await context();
+    const created = await createCourseForm(db, {
+      shopId: shop.id,
+      title: "Course release",
+      body: FORM_BODY,
+      actorPersonId: owner,
+    });
+
+    signIn(shop, captain);
+    const refused = await redirectedTo(() =>
+      deleteCourseFormAction(formPost({ formId: created.id })),
+    );
+    expect(refused).toBe(`/shop/${shop.slug}?notice=waivers-not-authorized`);
+    expect(await formTitled(db, shop.id, "Course release")).toBeDefined();
+
+    signIn(shop, owner);
+    const deleted = await redirectedTo(() =>
+      deleteCourseFormAction(formPost({ formId: created.id })),
+    );
+    expect(deleted).toBe(
+      `/shop/${shop.slug}/waivers?notice=course-form-deleted&form=list#course-forms`,
+    );
+    expect(await formTitled(db, shop.id, "Course release")).toBeUndefined();
+    const [row] = await db
+      .select({ deletedAt: courseForms.deletedAt })
+      .from(courseForms)
+      .where(eq(courseForms.id, created.id));
+    expect(row?.deletedAt).toBeInstanceOf(Date);
   });
 });

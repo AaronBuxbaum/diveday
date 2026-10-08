@@ -36,6 +36,7 @@ import { GEAR_KIND_ORDER, type GearItemKind } from "@/lib/gear";
 import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { AddUnitDetails } from "./_components/AddUnitDetails";
 import { AddUnitLink } from "./_components/AddUnitLink";
 import { DeletedList } from "./_components/DeletedGearList";
@@ -128,7 +129,7 @@ export default async function GearRegisterPage({
   const { shopSlug } = await params;
   const search = await searchParams;
   const { notice, page, kind: kindParam } = search;
-  const { db, shop } = await requireShopSurface(shopSlug);
+  const { db, shop, session } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 
@@ -278,6 +279,15 @@ export default async function GearRegisterPage({
         // Rent out, then the page's primary "Add a unit"; the empty register
         // keeps its one door in the card below.
         actions={fleetTotal > 0 ? <RegisterHeaderActions shopSlug={shopSlug} t={t} /> : undefined}
+      />
+      {/* The register is the Gear section's first tab; the bench is the second
+          (ADR 20261008-gear-work-orders). */}
+      <StaffSectionTabs
+        shopSlug={shopSlug}
+        section="gear"
+        current="gear"
+        roles={session.user.roles}
+        t={t}
       />
 
       {notice === "deleted" && search.undoId ? (

@@ -22,10 +22,15 @@ import {
   buddyTeamEvents,
   calendarFeeds,
   certifications,
+  courseFormRecords,
+  courseFormRequirements,
+  courseForms,
+  courseFormVersions,
   courseInquiries,
   courses,
   crewAssignmentRequests,
   crewAvailabilityBlocks,
+  customerGearItems,
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
@@ -107,6 +112,12 @@ import {
   waiverMaterialityDecisions,
   waiverRecords,
   waiverTemplates,
+  workOrderBills,
+  workOrderCare,
+  workOrderEvents,
+  workOrderItems,
+  workOrderLines,
+  workOrders,
 } from "./schema";
 
 /**
@@ -162,7 +173,10 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(heldSends).where(eq(heldSends.shopId, shopId));
   await db.delete(formDrafts).where(eq(formDrafts.shopId, shopId));
 
-  // Order/checkout/booking dependents first.
+  // Order/checkout/booking dependents first. A ticket's bill names its order
+  // without a cascade (ADR 20261008-work-order-follow-up), so the link goes
+  // before the order it points at.
+  await db.delete(workOrderBills).where(eq(workOrderBills.shopId, shopId));
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
   await db.delete(paymentOperationIntents).where(eq(paymentOperationIntents.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
@@ -203,6 +217,11 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // The inbox: replies before the messages and people they name.
   await db.delete(staffReplies).where(eq(staffReplies.shopId, shopId));
   await db.delete(inboundMessages).where(eq(inboundMessages.shopId, shopId));
+  // Course forms, children first (records → requirements → versions → forms).
+  await db.delete(courseFormRecords).where(eq(courseFormRecords.shopId, shopId));
+  await db.delete(courseFormRequirements).where(eq(courseFormRequirements.shopId, shopId));
+  await db.delete(courseFormVersions).where(eq(courseFormVersions.shopId, shopId));
+  await db.delete(courseForms).where(eq(courseForms.shopId, shopId));
   // Per-channel delivery state hangs off the waiver record, so it goes first.
   await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
@@ -247,6 +266,16 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // Buddy pairs reference bookings, so they go before the bookings delete
   // (ADR 20260804-buddy-teams).
   await db.delete(buddyPairMembers).where(eq(buddyPairMembers.shopId, shopId));
+  // The bench, children first: lines, pieces, the Work done record and the
+  // status trail reference the ticket, and a ticket references a customer, a
+  // fleet unit, and the technician working it — so all of it clears before
+  // gear_items, bookings and the people purge (ADR 20261008-gear-work-orders).
+  await db.delete(workOrderLines).where(eq(workOrderLines.shopId, shopId));
+  await db.delete(workOrderCare).where(eq(workOrderCare.shopId, shopId));
+  await db.delete(workOrderItems).where(eq(workOrderItems.shopId, shopId));
+  await db.delete(workOrderEvents).where(eq(workOrderEvents.shopId, shopId));
+  await db.delete(workOrders).where(eq(workOrders.shopId, shopId));
+  await db.delete(customerGearItems).where(eq(customerGearItems.shopId, shopId));
   // The gear register, children first: reservations reference gear_items and
   // bookings, service events reference gear_items and people
   // (ADR 20260815-minimal-gear-register).

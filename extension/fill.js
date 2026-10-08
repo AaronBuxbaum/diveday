@@ -9,7 +9,7 @@
 
 /**
  * Fill the agency's form with one diver and submit it.
- * @param {{firstName: string, lastName: string, birthDate: string|null, cardNumber: string|null}} query
+ * @param {{firstName: string, lastName: string, birthDate?: string|null, cardNumber?: string|null, email?: string}} query
  * @param {{fields: string[], dateFormat: string, either?: boolean}} spec
  * @returns {{ok: true} | {ok: false, missing: string[]}}
  */
@@ -23,6 +23,7 @@ function fillAgencyForm(query, spec) {
     day: /(^|[^a-z])day([^a-z]|$)|dia|día/i,
     year: /year|año|ano/i,
     number: /number|card|cert|code|c[oó]digo|#/i,
+    email: /e-?mail|correo|student/i,
   };
 
   function describe(element) {
@@ -53,6 +54,14 @@ function fillAgencyForm(query, spec) {
     (element) =>
       visible(element) &&
       !/^(submit|button|checkbox|radio|file|image|reset|password|email)$/i.test(element.type),
+  );
+  // An email box is only ever filled with the student's email, never a name.
+  const emailBoxes = Array.from(document.querySelectorAll("input")).filter(
+    (element) =>
+      visible(element) &&
+      (element.type === "email" ||
+        ((element.type === "text" || element.type === "search") &&
+          PATTERNS.email.test(describe(element)))),
   );
 
   function find(pattern, except) {
@@ -87,6 +96,20 @@ function fillAgencyForm(query, spec) {
 
   const used = [];
   const missing = [];
+
+  // A sign-in page is never filled: typing a diver's details into an agency's
+  // sign-in form would be an attempt to sign in as them. The staffer signs in
+  // themselves, and the check falls back to the link until they have.
+  const asksForPassword = Array.from(document.querySelectorAll('input[type="password"]')).some(
+    visible,
+  );
+  if (asksForPassword) return { ok: false, missing: ["signedIn"] };
+  // A student's email goes only into a search, never a page that signs in,
+  // signs up or manages an account, whose first box may also ask for an email.
+  const typesEmail = Array.isArray(spec.fields) && spec.fields.includes("email");
+  if (typesEmail && /log-?in|sign-?in|sign-?up|register|account|auth/i.test(location.pathname)) {
+    return { ok: false, missing: ["signedIn"] };
+  }
 
   function fillName() {
     const first = find(PATTERNS.first, used);
@@ -160,7 +183,33 @@ function fillAgencyForm(query, spec) {
     return true;
   }
 
-  const fillers = { name: fillName, birthDate: fillBirthDate, number: fillNumber };
+  // A box that searches: by its type, a search landmark around it, or what it
+  // or its form's buttons say. An invite or newsletter box is not one.
+  function searches(box) {
+    const words = /search|find|look ?up|buscar/i;
+    if (box.type === "search" || box.closest('[role="search"]')) return true;
+    if (words.test(describe(box))) return true;
+    const buttons = box.form
+      ? Array.from(box.form.querySelectorAll('button, input[type="submit"]'))
+      : [];
+    return buttons.some((button) => words.test(button.textContent || button.value || ""));
+  }
+
+  function fillEmail() {
+    if (!query.email) return false;
+    const box = emailBoxes.find((element) => !used.includes(element) && searches(element));
+    if (!box) return false;
+    setValue(box, query.email);
+    used.push(box);
+    return true;
+  }
+
+  const fillers = {
+    name: fillName,
+    birthDate: fillBirthDate,
+    number: fillNumber,
+    email: fillEmail,
+  };
   if (spec.either) {
     // CMAS: the code alone when there is one, or names and birth date.
     const byNumber = Boolean(query.cardNumber) && fillNumber();
@@ -180,7 +229,7 @@ function fillAgencyForm(query, spec) {
         (element) => element.type === "submit" || element.tagName === "BUTTON",
       )) ||
     Array.from(document.querySelectorAll('button, input[type="submit"]')).find((element) =>
-      /search|verify|check|submit|buscar|verificar/i.test(
+      /search|find|verify|check|submit|buscar|verificar/i.test(
         element.textContent || element.value || "",
       ),
     );
@@ -199,7 +248,30 @@ function readAgencyPage() {
   return document.body ? document.body.innerText : "";
 }
 
+/**
+ * Only the part of an eLearning page about the email searched for: the lines
+ * near each line naming it, or, when none does, the page's first lines (enough
+ * to say "No results" or "Sign in"). Read with the staffer's PADI sign-in, the
+ * rest of the page may be about other students, and it is not DiveDay's to
+ * take.
+ * @param {string} text
+ * @param {string} email
+ */
+function excerptAround(text, email) {
+  const AROUND = 8;
+  const lines = text.split(/\r?\n/);
+  const wanted = email.trim().toLowerCase();
+  const keep = new Set();
+  lines.forEach((line, index) => {
+    if (!line.toLowerCase().includes(wanted)) return;
+    for (let at = Math.max(0, index - AROUND); at <= index + AROUND; at += 1) keep.add(at);
+  });
+  if (keep.size === 0) return lines.slice(0, 40).join("\n");
+  return lines.filter((_, index) => keep.has(index)).join("\n");
+}
+
 globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {
   fillAgencyForm,
   readAgencyPage,
+  excerptAround,
 });

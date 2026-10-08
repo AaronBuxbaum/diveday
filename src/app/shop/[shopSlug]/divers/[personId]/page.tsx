@@ -19,8 +19,10 @@ import { personThread } from "@/db/inbound-messages";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
+import { listCustomerGearItems, listWorkOrdersForPerson } from "@/db/work-orders";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { resolveDiverNotice } from "@/lib/diver-notices";
 import { bookingIsAhead, splitDiverStatus } from "@/lib/diver-status";
@@ -37,6 +39,7 @@ import { DiverNotesSection } from "./_components/DiverNotesSection";
 import { DiverRecordFoot } from "./_components/DiverRecordFoot";
 import { DiverStatusLedger } from "./_components/DiverStatusLedger";
 import { DiverStory } from "./_components/DiverStory";
+import { DiverWorkOrdersGroup } from "./_components/DiverWorkOrdersGroup";
 import { GearAndSizesWithRentals } from "./_components/GearAndSizesWithRentals";
 import { NoticeBanner } from "./_components/NoticeBanner";
 import { RestoreDiver } from "./_components/RestoreDiver";
@@ -165,6 +168,8 @@ export default async function DiverDetailPage({
     notes,
     activityPage,
     thread,
+    ownPieces,
+    diverWorkOrders,
   ] = await Promise.all([
     canPersonDeleteDiver(db, shop.id, session.user.personId),
     canPersonMergeDiver(db, shop.id, session.user.personId),
@@ -200,6 +205,12 @@ export default async function DiverDetailPage({
     // What this diver wrote and what the shop wrote back, interleaved by time.
     // Shop-scoped from the session like every read here.
     personThread(db, shop.id, personId),
+    // The diver's own gear and the bench's tickets on it (ADR
+    // 20261008-gear-work-orders), shop-scoped from the session like the rest.
+    listCustomerGearItems(db, shop.id, personId),
+    listWorkOrdersForPerson(db, shop.id, personId, {
+      todayLocal: calendarDateInTimezone(nowDate(), shop.timezone),
+    }),
   ]);
   // `orders/new` refuses outright without a payable account, so the story's
   // foot simply omits "New invoice" rather than offering a link that bounces.
@@ -435,6 +446,15 @@ export default async function DiverDetailPage({
             locale={locale}
             t={t}
             status={noticeForForm(diverNotice, "fit")}
+          />
+          <DiverWorkOrdersGroup
+            shop={shop}
+            personId={personId}
+            pieces={ownPieces}
+            orders={diverWorkOrders}
+            locale={locale}
+            t={t}
+            status={noticeForForm(diverNotice, "work-orders")}
           />
           <DiverNotesSection
             notes={notes}

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { drainHeldSends } from "@/db/held-sends";
 import { sendDueReminders } from "@/db/reminders";
+import { sendDueServiceReminders } from "@/db/work-order-follow-up";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
@@ -43,6 +44,9 @@ const CRON_MONITOR_CONFIG = {
  * rule table (`TRIP_REMINDER_RHYTHM`, issue #1177) holds the 7-day nudge back
  * from a diver with nothing left undone, and the summary counts those as
  * `settled` rather than as sent, skipped or failed.
+ *
+ * The same pass sends service-due reminders on customers' own gear, a month
+ * before each date (`sendDueServiceReminders`), on the same send window.
  */
 export async function GET(request: Request) {
   const refusal = requireCronSecret(request);
@@ -58,12 +62,31 @@ export async function GET(request: Request) {
     // The held sends whose client never came back (ADR 20260906-before-you-ask,
     // decision 2): a closed tab does not stop the mail, this tick sends it.
     const heldSends = await drainHeldSends(db);
+    // A customer's own gear coming due for service (ADR
+    // 20261008-work-order-follow-up). Here rather than on the daily tick for
+    // the reason the trip reminders moved here: it is held to each shop's own
+    // daytime, which a fixed UTC hour cannot serve. Isolated, so a broken
+    // reminder scan never costs a diver their dock-call reminder.
+    const serviceReminders = await sendDueServiceReminders(db).catch((error: unknown) => {
+      Sentry.captureException(error, { tags: { cron_scan: "service_reminders" } });
+      log("cron_trip_reminders.service_reminders_failed", "error", {
+        scan: "service_reminders",
+      });
+      return null;
+    });
     log("cron_trip_reminders.scan_complete", "info", {
       ...summary,
       heldSendsSent: heldSends.sent,
       heldSendsFailed: heldSends.failed,
+      serviceRemindersSent: serviceReminders?.sent,
+      serviceRemindersHeld: serviceReminders?.held,
+      serviceRemindersFailed: serviceReminders?.failed,
     });
-    Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
+    Sentry.captureCheckIn({
+      checkInId,
+      monitorSlug: CRON_MONITOR_SLUG,
+      status: serviceReminders ? "ok" : "error",
+    });
     return NextResponse.json(summary);
   } catch (error) {
     Sentry.captureException(error, { tags: { cron_scan: "trip_reminders" } });

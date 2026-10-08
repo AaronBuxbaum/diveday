@@ -1,0 +1,63 @@
+{
+  "card": {
+    "title": "Bill and pickup"
+  },
+  "ready": {
+    "heading": "Ready message",
+    "pending": "Goes to the customer when this ticket is ready.",
+    "notSent": "Not sent yet.",
+    "sentEmail": "Emailed {date}",
+    "sentSms": "Texted {date}",
+    "sentWhatsapp": "Sent on WhatsApp {date}",
+    "noContact": "Not sent: no email or phone on file",
+    "notConfigured": "Not sent: messages aren’t set up",
+    "failed": "Not sent {date}",
+    "send": "Send ready message",
+    "resend": "Resend",
+    "sending": "Sending…"
+  },
+  "bill": {
+    "heading": "Bill",
+    "total": "Total: {amount}",
+    "atShop": "Collected at the counter.",
+    "ownerOnly": "An owner or manager sends the bill.",
+    "needsEmail": "Add an email to the customer’s record to send the bill.",
+    "send": "Send the bill",
+    "sendAgain": "Send a new bill",
+    "sending": "Sending…",
+    "sent": "Sent {date}",
+    "openOrder": "Open order",
+    "description": "Work order #{number}"
+  },
+  "notice": {
+    "readySent": "Ready message sent.",
+    "readyNoContact": "No email or phone on file, so no message went.",
+    "readyNotConfigured": "Messages aren’t set up for this shop, so nothing went.",
+    "readyFailed": "The ready message didn’t go through.",
+    "readyNotReady": "The ticket isn’t ready, so nothing was sent.",
+    "billSent": "Bill sent.",
+    "billAlready": "This ticket already has a bill.",
+    "billNotConnected": "Connect Stripe in Settings to send bills.",
+    "billNotAuthorized": "Only an owner or manager can send a bill.",
+    "billInvalid": "These lines can’t go on a bill. Check each amount and quantity.",
+    "billTaxLocation": "Tax is on, so this bill needs the customer’s billing address. Send it from Orders.",
+    "billStripeFailed": "Stripe couldn’t create that bill. Try again in a moment.",
+    "billNoLines": "Add parts or labor first.",
+    "remindersOff": "Service reminders off for that piece.",
+    "remindersOn": "Service reminders on for that piece."
+  },
+  "reminders": {
+    "off": "No reminders",
+    "lastSent": "Reminded {date}",
+    "turnOff": "Stop reminders",
+    "turnOn": "Send reminders",
+    "turnOffFor": "Stop service reminders for {label}",
+    "turnOnFor": "Send service reminders for {label}",
+    "saving": "Saving…"
+  },
+  "today": {
+    "pastPromise": "Promised {date}, not ready yet.",
+    "uncollected": "Ready since {date} and not collected.",
+    "openTicket": "Open ticket"
+  }
+}

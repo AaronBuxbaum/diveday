@@ -126,6 +126,8 @@ export type StaffDestinationId =
   | "staffing"
   | "diveSites"
   | "gear"
+  | "workOrders"
+  | "newWorkOrder"
   | "rentOut"
   | "courses"
   | "reviews"
@@ -183,6 +185,8 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   staffing: "shared.shopNavLinks.staffing",
   diveSites: "shared.shopNavLinks.diveSites",
   gear: "shared.shopNavLinks.gear",
+  workOrders: "shared.shopNavLinks.workOrders",
+  newWorkOrder: "shared.shopNavLinks.newWorkOrder",
   rentOut: "shared.shopNavLinks.rentOut",
   courses: "shared.shopNavLinks.courses",
   reviews: "shared.shopNavLinks.reviews",
@@ -276,9 +280,14 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   { id: "reports", suffix: "/reports", section: "money", inPalette: true, gate: "reports" },
   { id: "promoCodes", suffix: "/promos", section: "money", inPalette: true, gate: "reports" },
   { id: "courses", suffix: "/courses", section: "courses", inPalette: true },
-  // The rental fleet (ADR 20260815-minimal-gear-register). Ungated: gear is
-  // any-staff work (H-06).
+  // The rental fleet (ADR 20260815-minimal-gear-register) and the bench beside
+  // it (ADR 20261008-gear-work-orders). Ungated: gear is any-staff work
+  // (H-06), and a technician is staff.
   { id: "gear", suffix: "/gear", section: "gear", inPalette: true },
+  { id: "workOrders", suffix: "/gear/work-orders", section: "gear", inPalette: true },
+  // The act, declared here because the registry is the only place a
+  // destination may be declared — the same call `addBooking` makes.
+  { id: "newWorkOrder", suffix: "/gear/work-orders/new", section: "gear", inPalette: true },
   // The counter-rental door: an act, like "Add a booking" (ADR
   // 20260815-minimal-gear-register, amended 2026-10-08). Any staff, as gear is.
   { id: "rentOut", suffix: "/gear/rentals/new", section: "gear", inPalette: true },
@@ -310,11 +319,21 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
  * because both read the week on screen.
  */
 export const STAFF_SECTION_TABS = {
+  gear: ["gear", "workOrders"],
   inbox: ["inbox", "requests", "reviews"],
   money: ["orders", "promoCodes", "reports"],
 } as const satisfies Partial<Record<StaffSection, readonly StaffDestinationId[]>>;
 
 export type TabbedStaffSection = keyof typeof STAFF_SECTION_TABS;
+
+/**
+ * A tab's word where it differs from the destination's label. Under Gear the
+ * fleet's tab says "Register" beside "Work orders", while the nav, the palette
+ * and every eyebrow that points back at the fleet keep calling it Gear.
+ */
+export const STAFF_SECTION_TAB_LABEL_KEYS: Partial<Record<StaffDestinationId, StaffMessageKey>> = {
+  gear: "shared.shopNavLinks.registerTab",
+};
 
 /**
  * The tabs this viewer sees for a section, in order. A tab gated away is
