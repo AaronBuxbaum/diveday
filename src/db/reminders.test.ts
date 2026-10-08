@@ -731,5 +731,46 @@ describe("sendDueReminders and the reminder rhythm", () => {
 
       expect(emailsFor(email, ctx.bookingId)).toHaveLength(0);
     });
+
+    it("tells the email it is a course session, so the week lead names no dock", async () => {
+      const ctx = await reminderContext();
+      await asCourseSession(ctx);
+      const email = fakeEmail();
+
+      await pass(ctx.db, ctx.inWeekBucket, email);
+
+      const [sent] = emailsFor(email, ctx.bookingId);
+      expect(sent && "courseSession" in sent ? sent.courseSession : null).toBe(true);
+    });
+
+    it("texts a phone-only student the materials in their own clause, with the first link", async () => {
+      // The review's finding: "Still to sort before you board:" is the boat's
+      // list. The eLearning is not on it, and a phone-only student has no
+      // email to click through, so the text carries the material's own link.
+      const ctx = await reminderContext();
+      await asCourseSession(ctx);
+      await ctx.db
+        .update(people)
+        .set({ email: null, phone: PHONE })
+        .where(eq(people.id, ctx.personId));
+      const sms = fakeSms();
+
+      await sendDueReminders(ctx.db, {
+        now: ctx.inWeekBucket,
+        emailProvider: fakeEmail().provider,
+        smsProvider: sms.provider,
+        appOrigin: null,
+      });
+
+      const [text] = sms.sent.filter((m) => m.to === PHONE);
+      expect(text?.body).toContain(
+        "Before your first day: Open Water eLearning (https://www.padi.com/).",
+      );
+      const todo = text?.body.split("Still to sort before you board:")[1] ?? "";
+      expect(todo.split("Before your first day:")[0]).not.toContain("Open Water eLearning");
+      expect(text?.body).not.toContain("/ready/");
+      // A course starts; it does not sail, and names no dock.
+      expect(text?.body).not.toContain("dock");
+    });
   });
 });

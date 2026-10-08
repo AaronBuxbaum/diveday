@@ -149,6 +149,14 @@ describe("course learning materials (ADR 20261008-course-learning-materials)", (
     });
     expect(email.text).not.toContain("Your course days");
   });
+
+  it("says a course starts, not sails, and names no dock", () => {
+    const email = tripReminderEmail({ ...base, lead: "week", courseSession: true });
+    expect(email.subject).toContain("Your course starts this week");
+    expect(email.text).toContain("starts this week");
+    expect(email.text).not.toContain("sails");
+    expect(email.text).not.toContain("dock");
+  });
 });
 
 describe("tripConditionsHoldEmail", () => {

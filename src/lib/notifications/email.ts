@@ -886,9 +886,7 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
     : "notifications.tripReminder.weekBody";
   const weekBody = t(weekBodyKey, { tripTitle: input.tripTitle, shopName: input.shopName });
   const weekBodyHtml = t(weekBodyKey, { tripTitle: `<strong>${title}</strong>`, shopName: shop });
-  const dockNote = input.courseSession
-    ? null
-    : t("notifications.tripReminder.dockNote", { dock });
+  const dockNote = input.courseSession ? null : t("notifications.tripReminder.dockNote", { dock });
   // The week-out nudge is the to-do list, and unfinished course materials are
   // on it. The sender stops passing them once a staffer marks them done.
   const materials = materialsSection(t, input.learningMaterials);

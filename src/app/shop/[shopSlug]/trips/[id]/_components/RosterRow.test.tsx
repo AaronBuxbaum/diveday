@@ -122,12 +122,16 @@ describe("RosterRow", () => {
  * posts the opposite of what is stored.
  */
 describe("RosterRow learning materials", () => {
-  function courseContext(): RosterRowContext {
+  function courseContext(over: { open?: boolean } = {}): RosterRowContext {
     const base = contextFor("ready");
     return {
       ...base,
-      trip: { ...base.trip, courseHasMaterials: true },
-      actions: { ...base.actions, setCourseMaterialsDoneAction: noop },
+      trip: { ...base.trip, courseHasMaterials: true, courseMaterialsOpen: over.open ?? true },
+      actions: {
+        ...base.actions,
+        setCourseMaterialsDoneAction: noop,
+        certifyDiverAction: noop,
+      },
     };
   }
   const withTick = (at: Date | null) => ({
@@ -165,6 +169,73 @@ describe("RosterRow learning materials", () => {
     expect(screen.getByText(/Materials done · Thu,\sAug\s20/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mark not done" })).toBeInTheDocument();
     expect(doneField(container)).toBe("false");
+  });
+
+  it("names who ticked it, read from the person's tick on any departure", () => {
+    const context = courseContext();
+    const { container } = render(
+      <ul>
+        <RosterRow
+          entry={withTick(null)}
+          settled={false}
+          context={{
+            ...context,
+            rows: {
+              ...context.rows,
+              courseMaterialsDoneByPerson: new Map([
+                [
+                  "p-1",
+                  { at: new Date("2026-08-20T15:00:00Z"), byPersonId: "s-1", byName: "Ana Ruiz" },
+                ],
+              ]),
+            },
+          }}
+        />
+      </ul>,
+    );
+    expect(screen.queryByText("Materials not done")).toBeNull();
+    expect(screen.getByText(/Materials done · Thu,\sAug\s20 · Ana Ruiz/)).toBeInTheDocument();
+    expect(doneField(container)).toBe("false");
+  });
+
+  it("drops the capsule once the session has ended, and keeps the tick", () => {
+    const { container } = render(
+      <ul>
+        <RosterRow
+          entry={withTick(null)}
+          settled={false}
+          context={courseContext({ open: false })}
+        />
+      </ul>,
+    );
+    expect(screen.queryByText("Materials not done")).toBeNull();
+    expect(doneField(container)).toBe("true");
+  });
+
+  it("notes a missing tick beside Certify without blocking it", () => {
+    render(
+      <ul>
+        <RosterRow entry={withTick(null)} settled={false} context={courseContext()} />
+      </ul>,
+    );
+    expect(
+      screen.getByText("Materials not marked done; check the agency’s record before certifying.", {
+        selector: "p",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("says nothing beside Certify once the materials are done", () => {
+    const { container } = render(
+      <ul>
+        <RosterRow
+          entry={withTick(new Date("2026-08-20T15:00:00Z"))}
+          settled={false}
+          context={courseContext()}
+        />
+      </ul>,
+    );
+    expect(container.textContent).not.toContain("Materials not marked done");
   });
 
   it("draws nothing for a course with no materials", () => {

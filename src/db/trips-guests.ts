@@ -1,3 +1,4 @@
+import { nowDate } from "@/lib/clock";
 import { courseCertifiesStudents, readLearningMaterials } from "@/lib/courses";
 import { demandRecommendation } from "@/lib/demand";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
@@ -6,7 +7,6 @@ import {
   lastMinuteEntryMatchesTripDate,
   orderLastMinuteRecipients,
 } from "@/lib/last-minute-list";
-import { nowDate } from "@/lib/clock";
 import { combineCertRequirements } from "@/lib/readiness";
 import { isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";

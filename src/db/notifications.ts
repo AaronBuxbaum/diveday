@@ -15,8 +15,8 @@ import {
   sql,
 } from "drizzle-orm";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
-import { readLearningMaterials } from "@/lib/courses";
 import { nowDate, nowMs } from "@/lib/clock";
+import { readLearningMaterials } from "@/lib/courses";
 import {
   DAILY_TICK_INTERVAL_MS,
   dailyPassesWithin,

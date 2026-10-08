@@ -161,7 +161,7 @@
     "nameLabel": "Material n.º {number}",
     "namePlaceholder": "eLearning de Open Water",
     "linkLabel": "Enlace",
-    "linkHint": "Opcional. Empieza por https://. Si el precio incluye el eLearning, no enlaces la tienda de la agencia: la agencia envía el acceso al alumno por correo.",
+    "linkHint": "Opcional. Empieza por https://. Si el precio incluye el eLearning, no enlaces la página de compra de la agencia: la agencia envía el acceso al alumno por correo.",
     "noteLabel": "Nota",
     "notePlaceholder": "Termínalo antes del día 1",
     "remove": "Eliminar el material {number}",
