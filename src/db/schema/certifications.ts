@@ -99,6 +99,16 @@ export const certifications = pgTable(
      */
     reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
     /**
+     * **The agency's own page said so** (H-105, ADR
+     * 20261008-cert-check-extension). Set when the review that certified this
+     * card was a check the DiveDay browser extension ran on the agency's lookup
+     * page from the staffer's own browser, and the page named this diver at
+     * this level. `reviewNote` then holds the agency's words that matched, and
+     * `reviewedByPersonId` the staffer whose browser ran the check. Null for
+     * every other review. Cleared with the rest of the review by Undo.
+     */
+    agencyCheckedAt: timestamp("agency_checked_at", { withTimezone: true }),
+    /**
      * Provenance for a card brought in by the contact importer
      * (ADR 20260724-import-verified-cards). A non-null `importedAt` is the
      * definitive "this card was migrated" marker — mirroring `waiverRecords`'

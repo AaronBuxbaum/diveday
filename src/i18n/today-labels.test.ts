@@ -41,17 +41,17 @@ describe("the shop home's pinned sentences", () => {
     expect(
       daySpineSummaryText(t, { boats: 2, blocked: 4, jobs: 3, nextDepartureTime: "5:30 AM" }),
     ).toBe(
-      "2 boats today, 4 divers blocked. 3 things need you before the 5:30 AM leaves the dock.",
+      "2 boats today, 4 people blocked. 3 things need you before the 5:30 AM leaves the dock.",
     );
     expect(daySpineSummaryText(t, { boats: 1, blocked: 1, jobs: 1, nextDepartureTime: null })).toBe(
-      "1 boat today, 1 diver blocked. 1 thing still needs you.",
+      "1 boat today, 1 person blocked. 1 thing still needs you.",
     );
   });
 
   it("names tomorrow's blocked divers once today's boats are all away, as the badge counts them", () => {
     expect(
       daySpineSummaryText(t, { boats: 3, blockedTomorrow: 2, jobs: 0, nextDepartureTime: null }),
-    ).toBe("3 boats today, 2 divers blocked for tomorrow. Nothing is waiting on you.");
+    ).toBe("3 boats today, 2 people blocked for tomorrow. Nothing is waiting on you.");
     expect(
       daySpineSummaryText(t, {
         boats: 3,
@@ -60,7 +60,7 @@ describe("the shop home's pinned sentences", () => {
         jobs: 1,
         nextDepartureTime: null,
       }),
-    ).toBe("3 boats today, 1 diver blocked aboard and 2 for tomorrow. 1 thing still needs you.");
+    ).toBe("3 boats today, 1 person blocked aboard and 2 for tomorrow. 1 thing still needs you.");
   });
 
   it("keeps the deadline half even when nothing is open before that boat", () => {

@@ -34,7 +34,7 @@
   "rollCallComplete": "Pase de lista completo",
   "aboardOfTotal": "{aboard} de {total, plural, one {# buceador} other {# buceadores}} a bordo",
   "headCountBlocked": "{count, plural, one {# bloqueado} other {# bloqueados}}",
-  "headCountBlockedAboard": "{count, plural, one {# buceador bloqueado a bordo} other {# buceadores bloqueados a bordo}}",
+  "headCountBlockedAboard": "{count, plural, one {# persona bloqueada a bordo} other {# personas bloqueadas a bordo}}",
   "progressAriaLabel": "Progreso del pase de lista",
   "ofTotalAboard": "de {total, plural, one {# buceador} other {# buceadores}} a bordo",
   "allAccountedFor": "Todos contabilizados, buceadores y tripulación. Listo para el siguiente control.",

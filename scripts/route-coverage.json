@@ -345,6 +345,7 @@
   "/shop/[shopSlug]/divers/[personId]": {
     "e2e": [
       "add-diver.spec.ts",
+      "agency-check.spec.ts",
       "certifications.spec.ts",
       "divers.spec.ts",
       "gear-fit-and-age.spec.ts",

@@ -3992,7 +3992,7 @@ for (const scheme of ["light", "dark"] as const) {
       // 20260827-clearwater-surface-language, decision 11) — so the shipped
       // capture showed the instrument painting all-clear over three divers
       // readiness will not clear. What it holds now is the honest reading: a
-      // red band on the meter, "3 divers can't board yet", and those three
+      // red band on the meter, "3 people can't board yet", and those three
       // still in "Still to clear" with their badges and their reasons. The
       // coral moment itself is pinned by `CounterInstrument.test.tsx`, which
       // can put a genuinely clear boat in front of it.
