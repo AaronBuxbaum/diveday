@@ -21,6 +21,8 @@ async function startRentalForCustomer(page: Page) {
   await page.getByRole("link", { name: `Rent to ${CUSTOMER}` }).click();
   // The window defaults to today; the free units for it are listed at once.
   await expect(page.getByRole("group", { name: "Units free for these days" })).toBeVisible();
+  // The person chosen rides the URL from here on.
+  return new URL(page.url()).searchParams.get("personId") ?? "";
 }
 
 test.describe("staff", () => {
@@ -78,14 +80,13 @@ test.describe("staff", () => {
   });
 
   test("the diver record shows a counter rental and opens its ticket", async ({ page }) => {
-    await startRentalForCustomer(page);
+    const personId = await startRentalForCustomer(page);
     await page.getByRole("checkbox", { name: /Fins #3/ }).check();
     await page.getByRole("button", { name: "Rent out", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: "Rented out." })).toBeVisible();
     const ticket = page.url().split("?")[0];
 
-    await page.goto("/shop/blue-mantis/divers");
-    await page.getByRole("link", { name: CUSTOMER }).first().click();
+    await page.goto(`/shop/blue-mantis/divers/${personId}`);
     await expect(page.getByRole("heading", { level: 1, name: CUSTOMER })).toBeVisible();
     const line = page.getByRole("link", { name: /Fins #3 · back by/ });
     await expect(line).toBeVisible();
