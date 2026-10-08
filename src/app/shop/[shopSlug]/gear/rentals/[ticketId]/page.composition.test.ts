@@ -10,14 +10,15 @@ const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
 
 describe("the counter-rental ticket", () => {
   /**
-   * The trip slip's deliberate absences (ADR 20260815-minimal-gear-register,
-   * amendment 2026-10-08): no signature line, because the one shop-wide waiver
-   * is the only signed page (CR-015), and no money, because billing lives on
-   * the order the ticket links to.
+   * Aaron, 2026-10-08 (ADR 20260815-minimal-gear-register, amended that day):
+   * the ticket ends with the shop's own terms and a "Received by" line, the
+   * same foot as the trip slip — a receipt for gear, never a release (CR-015),
+   * and still no money, because billing lives on the order it links to.
    */
-  it("carries no signature line and no money", () => {
+  it("ends with the shared terms and received-by foot, and carries no money", () => {
     const code = SOURCE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-    expect(code).not.toMatch(/signature|formatMoney|Cents\b|amount/i);
+    expect(code).toContain("<RentalTicketReceipt terms={shop.rentalTerms} t={t} />");
+    expect(code).not.toMatch(/formatMoney|Cents\b|amount/i);
   });
 
   it("hides every act and the order link from the paper", () => {

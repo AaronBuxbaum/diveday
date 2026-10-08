@@ -271,6 +271,10 @@
   "ticket": {
     "eyebrow": "Rental",
     "unitsHeading": "What you have",
-    "dueBack": "Back by {date}."
+    "dueBack": "Back by {date}.",
+    "termsHeading": "Rental terms",
+    "receivedBy": "Received by",
+    "printedName": "Printed name",
+    "date": "Date"
   }
 }

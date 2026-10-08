@@ -1988,12 +1988,19 @@ new domain concept, define it here in the same PR.
   the person-held **gear reservations** written together in one act, sharing one person and one
   creation instant, with one inclusive window that starts no earlier than the shop's today and
   runs at most 31 days. Staff open it from the register's "Rent out", the diver record's "Rent
-  gear" or ⌘K, and it lands on a printable **rental ticket** (who, the tags, the back-by date; no
-  signature line and no money). The set is handed over, brought home with one outcome, or
+  gear" or ⌘K, and it lands on a printable **rental ticket** (who, the tags, the back-by date,
+  then the shop's **rental terms** and a "Received by" line; no money). The set is handed over,
+  brought home with one outcome, or
   released if never collected, like a booking's rental set. Money is an ordinary staff invoice
   with one `rental` line per priced unit, linked to the rental by `gear_reservations.order_id`;
   the rental itself is never a charge. Trip-scoped reads (prep, manifests) never see one. ADR
   20260815-minimal-gear-register, amendment 2026-10-08.
+- **Rental terms** — the shop's own plain-text conditions for rented gear (`shops.rental_terms`,
+  optional, set in Settings → Rental gear), printed on every rental ticket, the trip slip and the
+  counter ticket alike, above a "Received by" line with a printed name and a date. The signature
+  says the person took the units; it is a receipt for gear, never a liability release, and the one
+  shop-wide waiver stays the only waiver (CR-015). No terms set prints none, and DiveDay supplies
+  no default. ADR 20260815-minimal-gear-register, the second amendment of 2026-10-08.
 - **Gear proposal** — the unit the Gear tab offers for a piece a diver wants, so staff confirm
   instead of choose (`proposeRentalUnits`, `src/lib/gear-proposals.ts`). A proposal is never a
   reservation and never a fit check, and it gates nothing: nothing is held until a staffer taps

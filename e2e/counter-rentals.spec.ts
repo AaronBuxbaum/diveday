@@ -41,6 +41,10 @@ test.describe("staff", () => {
     await expect(units).toContainText("Fins #2");
     await expect(page.getByText(/^Back by /)).toBeVisible();
     await expect(page.getByRole("button", { name: "Print" })).toBeVisible();
+    // The paper ends where the person signs for the gear (Aaron, 2026-10-08).
+    await expect(
+      page.locator("#rental-ticket").getByText("Received by", { exact: true }),
+    ).toBeVisible();
 
     await page.getByRole("button", { name: "Hand over" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Handed over." })).toBeVisible();

@@ -15,6 +15,8 @@
       "rentalsSaved": "Rental catalog saved.",
       "rentalPricesSaved": "Rental prices saved.",
       "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
+      "rentalTermsSaved": "Rental terms saved. Every rental ticket prints them.",
+      "rentalTermsInvalid": "Keep rental terms under 1,500 characters.",
       "contactSaved": "Contact details saved.",
       "contactConfirmationSent": "Contact details saved. Open the confirmation email we sent to that address so divers’ replies reach it.",
       "contactInvalid": "Use a complete email address, or empty the box to take it off your public pages.",
@@ -295,6 +297,15 @@
       "submit": "Save rental prices",
       "submitting": "Saving…",
       "value": "Full set {price}"
+    },
+    "rentalTerms": {
+      "heading": "Rental terms",
+      "description": "Printed on every rental ticket, above the line a diver signs for their gear.",
+      "detail": "Your own words, such as rinsing, lost gear, or late returns. Leave it empty to print none.",
+      "label": "Terms",
+      "submit": "Save rental terms",
+      "submitting": "Saving…",
+      "value": "On every ticket"
     },
     "stripe": {
       "notConnectedHeading": "No Stripe account connected",

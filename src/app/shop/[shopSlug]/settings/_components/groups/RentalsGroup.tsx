@@ -1,17 +1,32 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
-import { ChoicePill, FieldGrid, PriceField } from "@/components/ui/form";
+import {
+  ChoicePill,
+  Field,
+  FieldActions,
+  FieldGrid,
+  PriceField,
+  textareaClassFor,
+} from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { catalogItemLabel, rentableItemLabel } from "@/i18n/rental-labels";
 import { formatMoneyScanned } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
+import { RENTAL_TERMS_MAX_LENGTH } from "@/lib/rental-terms";
 import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
-import { saveRentalItemsAction, saveRentalPricingAction } from "../../actions";
+import {
+  saveRentalItemsAction,
+  saveRentalPricingAction,
+  saveRentalTermsAction,
+} from "../../actions";
 import { SettingsRow } from "../SettingsRows";
 import { RENTALS_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
 
-/** The Rental gear group: what a shop rents out and what it charges for it. */
+/**
+ * The Rental gear group: what a shop rents out, what it charges for it, and the
+ * terms every rental ticket prints.
+ */
 export function RentalsGroup({ view }: { view: SettingsView }) {
   const { shop, t, locale, banner, activeSection, notSet } = view;
   const offeredKinds = new Set(toRentableKinds(shop.rentalItems));
@@ -23,6 +38,7 @@ export function RentalsGroup({ view }: { view: SettingsView }) {
           price: formatMoneyScanned(shop.rentalPricing.setCents, shopCurrency, locale),
         })
       : notSet;
+  const rentalTermsValue = shop.rentalTerms ? t("settings.main.rentalTerms.value") : notSet;
   return (
     <SettingsGroup group={RENTALS_GROUP} label={t(RENTALS_GROUP.labelKey)}>
       <InsetGroup>
@@ -113,6 +129,39 @@ export function RentalsGroup({ view }: { view: SettingsView }) {
               {t("settings.main.rentalPricing.submit")}
             </SubmitButton>
           </form>
+        </SettingsRow>
+
+        {/* The shop's own words for every rental ticket, above its "Received
+            by" line (ADR 20260815-minimal-gear-register, amended 2026-10-08).
+            Never a release: the one waiver stays the only one (CR-015). */}
+        <SettingsRow
+          heading={t("settings.main.rentalTerms.heading")}
+          value={rentalTermsValue}
+          description={t("settings.main.rentalTerms.description")}
+          detail={t("settings.main.rentalTerms.detail")}
+          sectionId="rentalTerms"
+          activeSection={activeSection}
+        >
+          <SectionNotice banner={banner} section="rentalTerms" active={activeSection} />
+          <FieldGrid as="form" action={saveRentalTermsAction} columns={1} className="mt-4">
+            <Field label={t("settings.main.rentalTerms.label")}>
+              <textarea
+                name="rentalTerms"
+                rows={4}
+                maxLength={RENTAL_TERMS_MAX_LENGTH}
+                defaultValue={shop.rentalTerms ?? ""}
+                className={textareaClassFor(4)}
+              />
+            </Field>
+            <FieldActions>
+              <SubmitButton
+                pendingLabel={t("settings.main.rentalTerms.submitting")}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("settings.main.rentalTerms.submit")}
+              </SubmitButton>
+            </FieldActions>
+          </FieldGrid>
         </SettingsRow>
       </InsetGroup>
     </SettingsGroup>
