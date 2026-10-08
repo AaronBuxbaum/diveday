@@ -7,10 +7,13 @@ import { bookingArrivalEvents } from "./schema";
  * than a verdict on it — the question a writer of `bookings.status` asks before
  * it puts that slot back.
  *
- * The only reader of this trail that answers a writer rather than a person:
- * `undoBookingNoShow` (`src/db/no-show.ts`) puts a released seat back and needs
- * the state it was released *from*, and guessing that is how the slot and the
- * trail drift apart.
+ * The only reader of this trail that answers a writer rather than a person,
+ * and it has two callers that must agree: `undoBookingNoShow`
+ * (`src/db/no-show.ts`, the desk takes its release back) and
+ * `reclaimReleasedSeat` (`src/db/manifests.ts`, the crew board a diver the desk
+ * had released, issue #1838). Both put a released seat back and need the state
+ * it was released *from*, and guessing that is how the slot and the trail
+ * drift apart.
  *
  * **The trail is a record of who was seen, never of who dived** — and no
  * reader here may spend it as the latter. Until a `dive-domain-expert` review

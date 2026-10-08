@@ -13,6 +13,13 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   // so this key spelled `import-no_gear_column` matched nothing and a shop
   // whose CSV had no gear-tag column saw no banner at all (issue #1771).
   "import-no-gear-column": { tone: "danger", key: "gear.notice.importNoGearColumn" },
+  "import-file-empty": { tone: "danger", key: "gear.notice.importFileEmpty" },
+  // The four caps `prepareGearImport` shares with the contacts importer
+  // (issue #1846); a refused file with no banner reads as a silent success.
+  "import-file-too-large": { tone: "danger", key: "gear.notice.importFileTooLarge" },
+  "import-too-many-rows": { tone: "danger", key: "gear.notice.importTooManyRows" },
+  "import-too-many-columns": { tone: "danger", key: "gear.notice.importTooManyColumns" },
+  "import-cell-too-long": { tone: "danger", key: "gear.notice.importCellTooLong" },
 };
 
 /**

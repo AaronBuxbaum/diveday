@@ -558,6 +558,7 @@ export async function rollAllSeriesForward(
     // its own keyword, which would put the null clause in front of it and make
     // the SQL unparseable. A never-rolled run has to sort first — it is the one
     // most in need of a pass.
+    // diveday:allow-time-id-order: the nightly roll's queue order; no one is shown it.
     .orderBy(sql`${tripSeries.lastRolledAt} asc nulls first`, asc(tripSeries.id))
     .limit(SERIES_SWEEP_LIMIT + 1);
 

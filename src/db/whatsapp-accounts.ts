@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { CourtesyProvider } from "@/lib/notifications/courtesy";
@@ -10,7 +10,7 @@ import {
   whatsAppTextSender,
 } from "@/lib/notifications/whatsapp";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
-import type { DbExecutor } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { violatesUniqueIndex } from "./query-helpers";
 import type { ShopWhatsappAccount } from "./schema";
 import { shopWhatsappAccounts } from "./schema";
@@ -40,7 +40,13 @@ export type WhatsAppKeyRefusal = "encryption_key_unset" | "encryption_key_invali
  */
 export type WhatsAppConnectRefusal = WhatsAppKeyRefusal | "waba_already_connected";
 
-/** The unique index that makes a WABA resolve to one shop; named so its 23505 can be told apart. */
+/**
+ * The unique index that makes a WABA resolve to one shop; named so its 23505 can be told apart.
+ *
+ * It keeps the table right and nothing else: a Connect it refuses has already
+ * registered a number at Meta. The signup runs under {@link claimWhatsAppWaba}'s
+ * advisory lock on the WABA, whose scope is stated there (issue #1769).
+ */
 const WABA_UNIQUE_INDEX = "shop_whatsapp_accounts_waba_unique";
 
 export type ConnectWhatsAppInput = {
@@ -86,7 +92,46 @@ function resolveKey(options: WhatsAppSenderOptions): SecretKey | WhatsAppKeyRefu
   return result.status === "unset" ? "encryption_key_unset" : "encryption_key_invalid";
 }
 
+/**
+ * **The `template_name` of a row whose signup stopped after registering the
+ * number** (issue #1769, security re-review).
+ *
+ * Once Meta's register call has been made, the number may be bound to the PIN
+ * it carried, so that PIN must be kept even if subscribe or the template then
+ * fails — otherwise the next Connect mints a fresh one and Meta answers 133005.
+ * Such a row is *parked*: it holds the sealed PIN and claims the WABA, and every
+ * reader treats it as not connected (no sender, no account on the settings
+ * page). An empty template name is the marker because it is the honest state —
+ * no template has been provisioned — and nothing can send without one.
+ *
+ * A marker in an existing column rather than a column of its own, because this
+ * layer may not change the schema; a `setup_completed_at` column is the
+ * cleaner home for the same fact.
+ */
+export const SETUP_INCOMPLETE_TEMPLATE = "";
+
+/** Whether a stored row finished signup, rather than being parked to keep its PIN. */
+export function isWhatsAppSetupComplete(account: Pick<ShopWhatsappAccount, "templateName">) {
+  return account.templateName !== SETUP_INCOMPLETE_TEMPLATE;
+}
+
+/**
+ * The shop's connected WhatsApp account, or null — including for a row parked
+ * mid-signup ({@link SETUP_INCOMPLETE_TEMPLATE}), which is not connected.
+ */
 export async function getShopWhatsAppAccount(
+  db: DbExecutor,
+  shopId: string,
+): Promise<ShopWhatsappAccount | null> {
+  const row = await getShopWhatsAppRegistration(db, shopId);
+  return row && isWhatsAppSetupComplete(row) ? row : null;
+}
+
+/**
+ * The shop's stored row whether or not signup finished — for the signup flow
+ * alone, which needs a parked row's PIN back.
+ */
+export async function getShopWhatsAppRegistration(
   db: DbExecutor,
   shopId: string,
 ): Promise<ShopWhatsappAccount | null> {
@@ -96,6 +141,20 @@ export async function getShopWhatsAppAccount(
     .where(eq(shopWhatsappAccounts.shopId, shopId))
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * The PIN a stored row's number was registered with, or null when there is
+ * none or it cannot be opened. Only the signup flow asks: re-registering a
+ * parked number must send Meta the PIN it already holds.
+ */
+export function openRegistrationPin(
+  account: Pick<ShopWhatsappAccount, "registrationPinSealed">,
+  options: WhatsAppSenderOptions = {},
+): string | null {
+  const key = resolveKey(options);
+  if (typeof key === "string" || !account.registrationPinSealed) return null;
+  return openSecret(account.registrationPinSealed, key);
 }
 
 /**
@@ -176,18 +235,25 @@ export async function connectShopWhatsAppAccount(
     ? { registrationPinSealed: sealSecret(input.registrationPin.trim(), key) }
     : {};
   try {
-    const [account] = await db
-      .insert(shopWhatsappAccounts)
-      .values({ ...values, ...pin, connectedAt: now })
-      .onConflictDoUpdate({
-        target: shopWhatsappAccounts.shopId,
-        // `connectedAt` deliberately survives a re-connect — it is when this shop
-        // first switched WhatsApp on, not when it last rotated a token.
-        // `verifiedAt` deliberately does not: new credentials are unproven until
-        // a fresh test send proves them.
-        set: { ...values, ...pin, verifiedAt: null },
-      })
-      .returning();
+    // In its own savepoint (a transaction when `db` is not one), so a WABA
+    // collision rolls back only this insert. Under `claimWhatsAppWaba` the
+    // caller's transaction is still open, and a bare 23505 there would abort
+    // it and turn the worded refusal into "current transaction is aborted".
+    const account = await db.transaction(async (savepoint) => {
+      const [row] = await savepoint
+        .insert(shopWhatsappAccounts)
+        .values({ ...values, ...pin, connectedAt: now })
+        .onConflictDoUpdate({
+          target: shopWhatsappAccounts.shopId,
+          // `connectedAt` deliberately survives a re-connect — it is when this shop
+          // first switched WhatsApp on, not when it last rotated a token.
+          // `verifiedAt` deliberately does not: new credentials are unproven until
+          // a fresh test send proves them.
+          set: { ...values, ...pin, verifiedAt: null },
+        })
+        .returning();
+      return row;
+    });
     return { status: "connected", account };
   } catch (error) {
     if (violatesUniqueIndex(error, WABA_UNIQUE_INDEX)) {
@@ -195,6 +261,93 @@ export async function connectShopWhatsAppAccount(
     }
     throw error;
   }
+}
+
+export type WhatsAppWabaClaim<T> =
+  | { status: "held_elsewhere" }
+  | { status: "busy" }
+  | { status: "claimed"; value: T };
+
+/**
+ * The bounds the claim transaction runs under, set with `set local` so they
+ * end with it. `lock_timeout` and `statement_timeout` bound any one statement;
+ * `idle_in_transaction_session_timeout` bounds the gaps between them, which is
+ * where the Graph calls sit. Three calls of at most `GRAPH_REQUEST_TIMEOUT_MS`
+ * (10 s) each fit inside it; a request that hangs past it loses its connection
+ * and its lock, never the pool.
+ */
+const CLAIM_BOUNDS = [
+  sql`set local lock_timeout = '5s'`,
+  sql`set local statement_timeout = '15s'`,
+  sql`set local idle_in_transaction_session_timeout = '45s'`,
+];
+
+/** Rows out of a `tx.execute` result, whichever shape the driver returned. */
+function executedRows<T>(result: unknown): T[] {
+  if (Array.isArray(result)) return result as T[];
+  const rows = (result as { rows?: unknown })?.rows;
+  return Array.isArray(rows) ? (rows as T[]) : [];
+}
+
+async function tryTransactionLock(tx: DbExecutor, key: string): Promise<boolean> {
+  const result = await tx.execute(
+    sql`select pg_try_advisory_xact_lock(hashtext(${key})) as locked`,
+  );
+  return executedRows<{ locked: boolean }>(result)[0]?.locked === true;
+}
+
+/**
+ * **Run one shop's WhatsApp Connect with the WABA to itself** (issue #1769,
+ * H-83).
+ *
+ * `shop_whatsapp_accounts_waba_unique` keeps the table right, but the table is
+ * not the only state: registering a number at Meta mints a PIN, and a Connect
+ * whose row the index then refuses has already bound the number to a PIN
+ * DiveDay throws away. Recovery for that runs through Meta support, not here.
+ * Two staffers pressing Connect within the length of a Meta round trip both
+ * passed an unlocked pre-check, both registered, and one lost.
+ *
+ * So the holder check, `work` (steps 2–4 at Meta) and the insert run in one
+ * transaction holding two advisory locks, and a Connect that cannot take them
+ * is refused at once (`busy`) rather than queued. Refusing instead of waiting
+ * is the point (security review, #1769): a waiter holds a pooled connection
+ * for as long as the holder's Meta calls take, so a handful of posts would
+ * empty an instance's pool. The busy Connect has registered nothing; pressing
+ * Connect again once the first finishes reads the first one's row.
+ *
+ * **Scope of the locks.** Shop first, then WABA, always in that order so two
+ * Connects can never each hold the lock the other wants:
+ *
+ * - `hashtext('whatsapp-shop:' || shopId)` — one Connect per shop at a time,
+ *   so the same shop pressing Connect twice with two different WABAs cannot
+ *   register two numbers and keep one.
+ * - `hashtext('whatsapp-waba:' || wabaId)` — one Connect per WABA at a time,
+ *   across shops.
+ *
+ * A hash collision costs a spurious `busy`, never a wrong answer, because the
+ * refusal that matters is the row read under the lock. They are *transaction*
+ * locks: they end with the transaction, so a request that throws or a
+ * connection that drops releases them, and nothing is reserved that a crash
+ * could leave behind. The transaction also runs under {@link CLAIM_BOUNDS}.
+ *
+ * `work` gets the transaction and must write through it; it must not redirect
+ * (a thrown redirect would roll the row back). Answer with its value and let
+ * the caller redirect afterwards. Do the code exchange *before* calling this:
+ * it changes nothing at Meta, so it needs no lock and no open transaction.
+ */
+export async function claimWhatsAppWaba<T>(
+  db: AppDb,
+  input: { shopId: string; wabaId: string },
+  work: (tx: DbExecutor) => Promise<T>,
+): Promise<WhatsAppWabaClaim<T>> {
+  return db.transaction(async (tx): Promise<WhatsAppWabaClaim<T>> => {
+    for (const bound of CLAIM_BOUNDS) await tx.execute(bound);
+    if (!(await tryTransactionLock(tx, `whatsapp-shop:${input.shopId}`))) return { status: "busy" };
+    if (!(await tryTransactionLock(tx, `whatsapp-waba:${input.wabaId}`))) return { status: "busy" };
+    const holder = await shopIdForWhatsAppWaba(tx, input.wabaId);
+    if (holder && holder !== input.shopId) return { status: "held_elsewhere" };
+    return { status: "claimed", value: await work(tx) };
+  });
 }
 
 /** Disconnect by deleting the row — holding a live credential a shop revoked serves nobody. */
@@ -223,7 +376,8 @@ export async function markShopWhatsAppVerified(
 
 /**
  * A sender for one stored row, or null when the credential cannot be opened —
- * no key configured, or a key that no longer matches what sealed this row.
+ * no key configured, or a key that no longer matches what sealed this row — or
+ * the row is parked mid-signup ({@link SETUP_INCOMPLETE_TEMPLATE}).
  *
  * Null rather than a throw, because every caller's honest response is the same:
  * this shop has no usable WhatsApp, so use SMS. A key rotated without
@@ -234,6 +388,7 @@ export function whatsAppProviderForAccount(
   account: ShopWhatsappAccount,
   options: WhatsAppSenderOptions = {},
 ): CourtesyProvider | null {
+  if (!isWhatsAppSetupComplete(account)) return null;
   const key = resolveKey(options);
   if (typeof key === "string") return null;
   const accessToken = openSecret(account.accessTokenSealed, key);
@@ -256,6 +411,7 @@ export function whatsAppTextSenderForAccount(
   account: ShopWhatsappAccount,
   options: WhatsAppSenderOptions = {},
 ): WhatsAppTextSender | null {
+  if (!isWhatsAppSetupComplete(account)) return null;
   const key = resolveKey(options);
   if (typeof key === "string") return null;
   const accessToken = openSecret(account.accessTokenSealed, key);

@@ -1321,6 +1321,10 @@ export function normalizeLevel(raw: string | undefined): ImportLevel | null {
   // clearance nobody granted.
   if (TECHNICAL_CERT.test(value)) return null;
   // Order matters: "advanced open water" contains "open water".
+  // An Assistant Instructor is a professional below instructor: never the
+  // instructor rung, which would clear an instructor-led gate nobody granted.
+  // The divemaster rung is the highest one the card proves (dive-domain review).
+  if (/assistant instructor|\bai\b/.test(value)) return "divemaster";
   if (/instructor|owsi|\bidc\b|\bmsdt\b/.test(value)) return "instructor";
   if (/divemaster|dive master|\bdm\b/.test(value)) return "divemaster";
   if (/rescue/.test(value)) return "rescue";

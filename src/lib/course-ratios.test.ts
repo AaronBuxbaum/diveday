@@ -199,7 +199,47 @@ describe("courseCrewGap", () => {
   it("is over_ratio for a PADI entry-level course booked past its crew's capacity", () => {
     expect(
       courseCrewGap({ course: padiEntryLevel, instructorCount: 1, assistantCount: 0, booked: 9 }),
-    ).toEqual({ code: "over_ratio", booked: 9, capacity: 8, ratio: "entry_level" });
+    ).toEqual({
+      code: "over_ratio",
+      booked: 9,
+      capacity: 8,
+      ratio: "entry_level",
+      remedy: "assistant",
+    });
+  });
+
+  /**
+   * **Past 12 per instructor, only an instructor closes it** (dive-domain
+   * review of #1677). Assistants raise the entry-level cap 2 at a time, but
+   * never past the per-instructor ceiling, so a chip that says "add a
+   * divemaster" there names a fix that buys no seat.
+   */
+  it("names the fix: an assistant below the ceiling, an instructor past it", () => {
+    expect(
+      courseCrewGap({ course: padiEntryLevel, instructorCount: 1, assistantCount: 1, booked: 12 }),
+    ).toEqual({
+      code: "over_ratio",
+      booked: 12,
+      capacity: 10,
+      ratio: "entry_level",
+      remedy: "assistant",
+    });
+    expect(
+      courseCrewGap({ course: padiEntryLevel, instructorCount: 1, assistantCount: 2, booked: 13 }),
+    ).toEqual({
+      code: "over_ratio",
+      booked: 13,
+      capacity: 12,
+      ratio: "entry_level",
+      remedy: "instructor",
+    });
+    // Two instructors: the ceiling is 24, so 17 booked is still an assistant's.
+    expect(
+      courseCrewGap({ course: padiEntryLevel, instructorCount: 2, assistantCount: 0, booked: 17 }),
+    ).toMatchObject({ remedy: "assistant" });
+    expect(
+      courseCrewGap({ course: padiEntryLevel, instructorCount: 2, assistantCount: 4, booked: 25 }),
+    ).toMatchObject({ remedy: "instructor" });
   });
 
   it("credits certified assistants toward the ratio", () => {
@@ -208,7 +248,13 @@ describe("courseCrewGap", () => {
     ).toEqual({ code: "none" });
     expect(
       courseCrewGap({ course: padiEntryLevel, instructorCount: 1, assistantCount: 1, booked: 11 }),
-    ).toEqual({ code: "over_ratio", booked: 11, capacity: 10, ratio: "entry_level" });
+    ).toEqual({
+      code: "over_ratio",
+      booked: 11,
+      capacity: 10,
+      ratio: "entry_level",
+      remedy: "assistant",
+    });
   });
 
   it("is over_ratio for an intro (DSD) session past 2 per instructor", () => {
@@ -217,7 +263,7 @@ describe("courseCrewGap", () => {
     ).toEqual({ code: "none" });
     expect(
       courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 0, booked: 3 }),
-    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro" });
+    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro", remedy: "instructor" });
   });
 
   // Which rule the gap was measured against, so the warning can say "2 per
@@ -230,7 +276,13 @@ describe("courseCrewGap", () => {
       assistantCount: 2,
       booked: 3,
     });
-    expect(intro).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro" });
+    expect(intro).toEqual({
+      code: "over_ratio",
+      booked: 3,
+      capacity: 2,
+      ratio: "intro",
+      remedy: "instructor",
+    });
   });
 
   it("never lets an assistant raise an intro session's cap", () => {
@@ -238,7 +290,7 @@ describe("courseCrewGap", () => {
     // certify a 3-student DSD with a divemaster aboard as compliant.
     expect(
       courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 3, booked: 3 }),
-    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro" });
+    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro", remedy: "instructor" });
   });
 
   it("gates a non-PADI intro session exactly like a PADI one", () => {
@@ -250,10 +302,16 @@ describe("courseCrewGap", () => {
     ).toEqual({ code: "none" });
     expect(
       courseCrewGap({ course: ssiIntro, instructorCount: 1, assistantCount: 0, booked: 3 }),
-    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro" });
+    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro", remedy: "instructor" });
     expect(
       courseCrewGap({ course: ssiIntro, instructorCount: 1, assistantCount: 4, booked: 12 }),
-    ).toEqual({ code: "over_ratio", booked: 12, capacity: 2, ratio: "intro" });
+    ).toEqual({
+      code: "over_ratio",
+      booked: 12,
+      capacity: 2,
+      ratio: "intro",
+      remedy: "instructor",
+    });
   });
 
   it("still gates an intro session whose agency was typed 'PADI' (DATA-L2)", () => {
@@ -264,7 +322,7 @@ describe("courseCrewGap", () => {
         assistantCount: 0,
         booked: 3,
       }),
-    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro" });
+    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro", remedy: "instructor" });
   });
 
   it("holds a DSD session to the tighter 2:1 open-water ratio, not the OW 8:1 figure", () => {
@@ -275,12 +333,12 @@ describe("courseCrewGap", () => {
     ).toEqual({ code: "none" });
     expect(
       courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 0, booked: 3 }),
-    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro" });
+    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro", remedy: "instructor" });
   });
 
   it("does not credit assistants toward a DSD session's ratio (no published bonus)", () => {
     expect(
       courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 3, booked: 3 }),
-    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro" });
+    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro", remedy: "instructor" });
   });
 });

@@ -394,8 +394,10 @@ async function oweErasure(
   db: AppDb,
   session: DiveDaySession,
   target: "stripe_customer" | "stripe_invoice_snapshot",
+  lastError: string | null = null,
 ) {
   await db.insert(processorErasureObligations).values({
+    lastError,
     shopId: session.user.shopId,
     // Provenance only — the row this points at is already anonymized.
     personId: session.user.personId,
@@ -441,6 +443,20 @@ describe("the data-compliance queues in the Data group", () => {
     expect(ariaLabelsIn(element)).toContain(ERASURE_PANEL);
     // Two forms, both carrying the obligation id: retry and mark-done.
     expect(hiddenInputNamesIn(element).filter((name) => name === "obligationId")).toHaveLength(2);
+  });
+
+  it("says why an erasure is still owed in shop words, never Stripe's own string", async () => {
+    // Issue #1865: the row's `last_error` printed raw, in English, on a page
+    // whose every other line comes from a bundle.
+    const RAW = "HTTP 503: api_error";
+    const element = await renderSettings("owner", (db, session) =>
+      oweErasure(db, session, "stripe_customer", RAW),
+    );
+    const values = findElements<{ facts: readonly Fact[] }>(element, FactLine)
+      .flatMap((line) => line.props.facts)
+      .map((fact) => (fact && typeof fact === "object" ? fact.value : fact));
+    expect(values).toContain("Stripe didn’t answer");
+    expect(values).not.toContain(RAW);
   });
 
   it("offers an invoice snapshot only the attestation — no API can discharge it", async () => {

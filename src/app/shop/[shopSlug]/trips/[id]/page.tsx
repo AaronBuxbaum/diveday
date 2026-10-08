@@ -23,6 +23,7 @@ import { latestTripStage } from "@/db/trip-stages";
 import { getTripGuests } from "@/db/trips-guests";
 import { getTripOverview } from "@/db/trips-overview";
 import { loadTripSharedReads } from "@/db/trips-shared-reads";
+import { overRatioPulseKey, overRatioWarningText } from "@/i18n/crew-gap-labels";
 import { languageNameIn } from "@/i18n/language-labels";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
@@ -30,7 +31,6 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { staffTideStationText, staffTideWindowText } from "@/i18n/tide-labels";
 import { ratingLapsedDetailText } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
-import { DSD_RATIO } from "@/lib/course-ratios";
 import { oneWindowPerSite, tideWindowsForDeparture } from "@/lib/departure-tides";
 import { depthInUnit } from "@/lib/depth-units";
 import { parseDockDayRhythm } from "@/lib/diver-planning";
@@ -293,23 +293,7 @@ export default async function ManageTripPage({
           // divemaster at all, which is the case that matters most.
           needed: ratioGap.needed,
         });
-  // Two rules, two sentences: the entry-level cap is PADI's published Open
-  // Water training figure and a certified assistant raises it; the intro cap is
-  // PADI's tighter published Discover Scuba open-water figure (HD-6) that an
-  // assistant does not move. One generic string told a DSD manager to add a
-  // divemaster, which cannot work, and cited the wrong PADI number at them. The
-  // per-instructor figure is interpolated from `DSD_RATIO` so the sentence
-  // cannot drift away from the cap the gate actually enforces.
-  const overRatioWarning =
-    crewGap.code !== "over_ratio"
-      ? null
-      : crewGap.ratio === "intro"
-        ? t("trips.detail.overRatioWarningIntro", {
-            booked: crewGap.booked,
-            cap: crewGap.capacity,
-            perInstructor: DSD_RATIO.openWaterStudentsPerInstructor,
-          })
-        : t("trips.detail.overRatioWarning", { booked: crewGap.booked, cap: crewGap.capacity });
+  const overRatioWarning = overRatioWarningText(t, crewGap);
 
   // One resolution, handed to the section it belongs to. Whatever no rendered
   // section claims — a page-level permission refusal, or a section this
@@ -397,7 +381,7 @@ export default async function ManageTripPage({
         ...(crewGap.code === "over_ratio"
           ? [
               {
-                text: t("trips.pulse.overRatio"),
+                text: t(overRatioPulseKey(crewGap)),
                 href: "?view=details#crew",
                 tone: "danger" as const,
               },

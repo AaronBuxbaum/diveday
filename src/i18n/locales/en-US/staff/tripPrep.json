@@ -39,6 +39,8 @@
   "drysuitWeightCheck": "Drysuit: weight check in the water",
   "drysuitFins": "Pack fins that clear a drysuit boot",
   "drysuitFinsWithSize": "Shoe {size}: pack fins that clear a drysuit boot",
+  "drysuitGloves": "Drysuit: wet or dry gloves?",
+  "drysuitGlovesWithSize": "{size}, drysuit: wet or dry gloves?",
   "noLongerRented": "You no longer rent this",
   "notRecorded": "Not recorded",
   "emptyHeading": "Nothing to pack yet",

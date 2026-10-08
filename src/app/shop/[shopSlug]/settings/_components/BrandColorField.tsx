@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { controlClass } from "@/components/ui/form";
-import { DIVEDAY_BRAND_COLOR } from "@/lib/brand";
+import { DIVEDAY_BRAND_COLOR, parseBrandColor } from "@/lib/brand";
 
 /**
  * The brand colour, as a picker and a hex field that agree (Harbor, ADR
@@ -22,7 +22,9 @@ export function BrandColorField({
   placeholder: string;
 }) {
   const [value, setValue] = useState(initial ?? "");
-  const picked = /^#[0-9a-f]{6}$/i.test(value) ? value : DIVEDAY_BRAND_COLOR;
+  // The server's own normalization, so the preview is what Save will store:
+  // six digits with or without the `#` (issue #1897).
+  const picked = parseBrandColor(value).value ?? DIVEDAY_BRAND_COLOR;
   return (
     <div className="flex items-center gap-3">
       <input

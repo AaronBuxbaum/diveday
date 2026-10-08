@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   countBothClaims,
   countInWaterCrew,
+  divesOnTrip,
   effectiveCrewRoles,
   groupCrewAssignments,
   inWaterCrewRole,
@@ -252,6 +253,17 @@ describe("lapsedRungs", () => {
         DIVE_DAY,
       ),
     ).toEqual(["instructor"]);
+  });
+
+  it("lapses an Assistant Instructor's rating off the assistant rung only (issue #1850)", () => {
+    // The rung an AI stands on is the assistant one; their rating says nothing
+    // about whether they may teach as an instructor.
+    expect(lapsedRungs([rating("assistant_instructor_rating", "2026-10-09")], DIVE_DAY)).toEqual([
+      "certified_assistant",
+    ]);
+    expect(lapsedRungs([rating("assistant_instructor_rating", "2027-01-01")], DIVE_DAY)).toEqual(
+      [],
+    );
   });
 
   it("needs every rating for a rung lapsed — one current card is enough", () => {
@@ -529,5 +541,29 @@ describe("standingRatingsBesideJob", () => {
         shopRoles: ["owner", "captain", "divemaster", "manager", "instructor"],
       }),
     ).toEqual(["instructor", "divemaster", "captain"]);
+  });
+});
+
+/** Who needs a tank on the packing list (issue #1851). */
+describe("divesOnTrip", () => {
+  it.each([
+    ["captain", ["divemaster", "instructor"], false],
+    ["crew", ["divemaster"], false],
+    ["divemaster", ["captain"], true],
+    ["instructor", ["owner"], true],
+  ] as const)("reads the rostered job %s over the standing roles", (tripRole, shopRoles, wet) => {
+    expect(divesOnTrip({ tripRole, shopRoles })).toBe(wet);
+  });
+
+  it.each([
+    [["divemaster"], true],
+    [["assistant_instructor"], true],
+    [["instructor"], true],
+    [["captain"], false],
+    [["owner", "manager"], false],
+    [[], false],
+  ] as const)("falls back to the standing roles %j with no job rostered", (shopRoles, wet) => {
+    expect(divesOnTrip({ tripRole: null, shopRoles })).toBe(wet);
+    expect(divesOnTrip({ shopRoles })).toBe(wet);
   });
 });

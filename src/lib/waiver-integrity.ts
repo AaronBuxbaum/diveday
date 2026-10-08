@@ -42,6 +42,12 @@ function dateValue(value: Date | null): string | null {
  *   #2080). Version 1's field set plus who moved it, when, and from which
  *   record, so the new `person_id` verifies as the shop's act rather than
  *   reading as tampering.
+ * - **4** — a signed release whose **guardian's email was erased** on the
+ *   guardian's own request (H-103, issue #1673): every fact version 3 seals
+ *   except `guardian_email`, plus who erased it and when. The guardian is a
+ *   third party with no record of their own; the address was the one thing on
+ *   the release that was theirs to take back, and nulling it under version 1
+ *   would have made an honest release read as tampered.
  *
  * A record verifies against the version it declares in `integrity_version`,
  * never against a guess. A version this build does not know reads as `invalid`
@@ -51,18 +57,36 @@ function dateValue(value: Date | null): string | null {
 export const WAIVER_INTEGRITY_VERSION_SIGNED = 1;
 export const WAIVER_INTEGRITY_VERSION_ERASED = 2;
 export const WAIVER_INTEGRITY_VERSION_MOVED = 3;
+export const WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED = 4;
 
 export type WaiverIntegrityVersion =
   | typeof WAIVER_INTEGRITY_VERSION_SIGNED
   | typeof WAIVER_INTEGRITY_VERSION_ERASED
-  | typeof WAIVER_INTEGRITY_VERSION_MOVED;
+  | typeof WAIVER_INTEGRITY_VERSION_MOVED
+  | typeof WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED;
 
 export function isWaiverIntegrityVersion(value: number | null): value is WaiverIntegrityVersion {
   return (
     value === WAIVER_INTEGRITY_VERSION_SIGNED ||
     value === WAIVER_INTEGRITY_VERSION_ERASED ||
-    value === WAIVER_INTEGRITY_VERSION_MOVED
+    value === WAIVER_INTEGRITY_VERSION_MOVED ||
+    value === WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED
   );
+}
+
+/**
+ * The version a still-signed release is re-sealed under after an act by the
+ * shop: version 4 once its guardian's address has been erased — whatever
+ * happens to it afterwards, the address stays out — otherwise version 3 if it
+ * has been refiled, otherwise version 1. Erasure of the diver is not this
+ * question; it always seals version 2.
+ */
+export function signedIntegrityVersionFor(
+  record: Pick<WaiverRecord, "guardianEmailErasedAt" | "movedAt">,
+): WaiverIntegrityVersion {
+  if (record.guardianEmailErasedAt) return WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED;
+  if (record.movedAt) return WAIVER_INTEGRITY_VERSION_MOVED;
+  return WAIVER_INTEGRITY_VERSION_SIGNED;
 }
 
 /** The signed release fields whose meaning must not drift after completion. */
@@ -194,12 +218,40 @@ function movedMetadata(record: WaiverRecord): IntegrityValue {
   };
 }
 
+/**
+ * The redacted field set: everything version 3 seals — the move fields are
+ * null on a release that never moved — **minus `guardianEmail`**, plus the
+ * redaction itself, so *who took the address off and when* is inside the seal
+ * rather than an annotation beside it. The guardian's name, relationship,
+ * method and both timestamps stay sealed: they are who signed and when, and a
+ * co-signature lifted off a minor's release is still the tampering this
+ * catches.
+ *
+ * Only ever written over a record whose own seal verified at the moment of
+ * the erasure (`eraseGuardianEmail`), so it can never launder an earlier edit.
+ * The `version: 4` key separates it from every other digest.
+ */
+function guardianRedactedMetadata(record: WaiverRecord): IntegrityValue {
+  const { guardianEmail: _redacted, ...signed } = signedMetadata(record);
+  return {
+    ...signed,
+    version: WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED,
+    movedFromPersonId: record.movedFromPersonId,
+    movedAt: dateValue(record.movedAt),
+    movedByPersonId: record.movedByPersonId,
+    guardianEmailErasedAt: dateValue(record.guardianEmailErasedAt),
+    guardianEmailErasedByPersonId: record.guardianEmailErasedByPersonId,
+  };
+}
+
 export function waiverIntegrityMetadata(
   record: WaiverRecord,
   version: WaiverIntegrityVersion = WAIVER_INTEGRITY_VERSION_SIGNED,
 ): IntegrityValue {
   if (version === WAIVER_INTEGRITY_VERSION_ERASED) return erasedMetadata(record);
   if (version === WAIVER_INTEGRITY_VERSION_MOVED) return movedMetadata(record);
+  if (version === WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED)
+    return guardianRedactedMetadata(record);
   return signedMetadata(record);
 }
 
@@ -223,7 +275,26 @@ export function computeWaiverIntegrityHash(
 export function verifyWaiverIntegrity(record: WaiverRecord): WaiverIntegrityState {
   if (!record.integrityHash || !record.integrityVersion) return "unsealed";
   if (!isWaiverIntegrityVersion(record.integrityVersion)) return "invalid";
+  // A version 4 seal is the shop's own redaction, and only means that while
+  // the redaction stamp it covers is there and the address is gone. Either
+  // missing, the record is not the one that was sealed.
+  if (
+    record.integrityVersion === WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED &&
+    (!record.guardianEmailErasedAt || record.guardianEmail !== null)
+  )
+    return "invalid";
   return computeWaiverIntegrityHash(record, record.integrityVersion) === record.integrityHash
     ? "valid"
     : "invalid";
+}
+
+/**
+ * Whether a release's guardian address was erased on request — the note that
+ * travels with a valid version 4 seal, so a reader is told the release was
+ * redacted rather than left to wonder why the address is blank.
+ */
+export function guardianEmailRedacted(
+  record: Pick<WaiverRecord, "guardianEmailErasedAt">,
+): boolean {
+  return record.guardianEmailErasedAt !== null;
 }

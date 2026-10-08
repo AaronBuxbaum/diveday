@@ -64,6 +64,7 @@ const GAP_WORDS: GapWords = {
   no_instructor: "This course session has no instructor yet",
   over_ratio: "More divers booked than the crew can supervise",
   over_intro_ratio: "Over intro ratio",
+  over_ratio_instructor: "Over student ratio: add an instructor",
   uncrewed_course: "No instructor or crew",
   uncrewed_departure: "No divemaster",
   crew_below_target: "Under target",
@@ -286,6 +287,32 @@ describe("StaffingWeek", () => {
    * assignment to make (`gapAct`). A managing viewer gets "Assign ›" and
    * nothing else.
    */
+  /**
+   * Issue #1677. The two ratio chips sit in the same column, often with no
+   * sentence beside them, and the difference between them is who a manager
+   * goes to find: a divemaster raises the student cap, and only an instructor
+   * raises the intro (DSD / Try Scuba) cap. Each chip says which, in both
+   * locales, and neither says it in the needs-instructor chip's words.
+   */
+  // Past the per-instructor ceiling (12 for the student cap) an assistant buys
+  // no seat either, so that case names the instructor too (dive-domain review).
+  it.each([
+    ["en-US", /DM or AI/],
+    ["es-ES", /divemaster o AI/],
+  ] as const)("names who closes each ratio chip in %s", (locale, assistant) => {
+    const t = staffTranslator(locale);
+    const over = t("trips.pulse.overRatio");
+    const overCeiling = t("trips.pulse.overRatioInstructor");
+    const overIntro = t("trips.pulse.overIntroRatio");
+    expect(over).toMatch(assistant);
+    for (const instructorOnly of [overCeiling, overIntro]) {
+      expect(instructorOnly).toMatch(/instructor/);
+      expect(instructorOnly).not.toMatch(/divemaster|DM|AI/);
+      expect(instructorOnly).not.toBe(t("trips.pulse.needsInstructor"));
+    }
+    expect(new Set([over, overCeiling, overIntro]).size).toBe(3);
+  });
+
   it("tells a divemaster their ask adds no seats to an intro-ratio gap", () => {
     const dm = renderWeek({
       gaps: [{ ...GAP, gap: "over_intro_ratio" }],

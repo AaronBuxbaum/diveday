@@ -12,6 +12,9 @@ export const COURSE_TEMPLATE_SYNC_FIELDS = [
   "agency",
   "description",
   "minimumCertificationLevel",
+  // Template-owned like the gate above, and never in the shop-editable list
+  // below: which rung a course issues is the agency's fact (issue #2059).
+  "certifiesLevel",
   "minimumAge",
   "isIntroCourse",
   "summary",
@@ -46,6 +49,8 @@ export type CourseTemplateSnapshot = {
   agency: string;
   description: string;
   minimumCertificationLevel: CertificationLevel | null;
+  /** The rung the course leaves its students on, or null (`courses.certifies_level`). */
+  certifiesLevel: CertificationLevel | null;
   minimumAge: number | null;
   isIntroCourse: boolean;
   summary: string | null;
@@ -65,6 +70,7 @@ export type CourseTemplateSource = {
   agency: string;
   description: string;
   minimumCertificationLevel: CertificationLevel | null;
+  certifiesLevel: CertificationLevel | null;
   content: CourseContent;
 };
 
@@ -105,6 +111,7 @@ const courseTemplateSnapshotSchema = z.object({
   agency: z.string(),
   description: z.string(),
   minimumCertificationLevel: certificationLevelSchema,
+  certifiesLevel: certificationLevelSchema,
   minimumAge: z.number().int().nullable(),
   isIntroCourse: z.boolean(),
   summary: z.string().nullable(),
@@ -125,6 +132,7 @@ export function courseTemplateSnapshot(template: CourseTemplateSource): CourseTe
     agency: template.agency,
     description: template.description,
     minimumCertificationLevel: template.minimumCertificationLevel,
+    certifiesLevel: template.certifiesLevel,
     minimumAge: template.content.minimumAge,
     isIntroCourse: template.content.isIntroCourse,
     summary: template.content.summary,
@@ -148,6 +156,7 @@ export function courseTemplateSnapshotFromCourse(
     agency: course.agency,
     description: course.description ?? "",
     minimumCertificationLevel: course.minimumCertificationLevel,
+    certifiesLevel: course.certifiesLevel,
     minimumAge: course.minimumAge,
     isIntroCourse: course.isIntroCourse,
     summary: course.summary,
@@ -241,6 +250,7 @@ export function courseTemplateDatabaseFields(snapshot: CourseTemplateSnapshot) {
     agency: snapshot.agency,
     description: snapshot.description || null,
     minimumCertificationLevel: snapshot.minimumCertificationLevel,
+    certifiesLevel: snapshot.certifiesLevel,
     minimumAge: snapshot.minimumAge,
     isIntroCourse: snapshot.isIntroCourse,
     summary: snapshot.summary,

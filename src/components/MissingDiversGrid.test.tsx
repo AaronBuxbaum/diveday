@@ -175,6 +175,9 @@ describe("what the grid shows", () => {
     );
     const chip = screen.getByText("Blocked when saved");
     expect(chip.className).not.toMatch(/\btruncate\b/);
+    // Nor run its words out of an 80px tile: every other pill is one line
+    // (#2008), this one wraps into the tile (#1360).
+    expect(chip.className).not.toMatch(/\bwhitespace-nowrap\b/);
   });
 
   it("keeps the dock's absence calm and the after-dive one urgent", () => {

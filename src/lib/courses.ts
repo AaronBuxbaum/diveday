@@ -593,3 +593,14 @@ export function courseTotalCents(course: CoursePricing): number | null {
   if (charges.length === 0) return null;
   return charges.reduce((sum, charge) => sum + charge.amountCents, 0);
 }
+
+/**
+ * Whether a session of this course can certify a student from its roster.
+ * An intro session (a DSD, a Try Scuba, a refresher) issues no card, so it
+ * offers no Certify control; a fun dive has no course at all. The certify
+ * action refuses the intro case on its own (`courseCertifiesOnTrip`), so this
+ * is the courtesy and that is the gate.
+ */
+export function courseCertifiesStudents(course: { isIntroCourse: boolean } | null): boolean {
+  return course !== null && !course.isIntroCourse;
+}

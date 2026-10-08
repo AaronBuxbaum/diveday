@@ -42,6 +42,8 @@ const DIVER_SIZED_ITEM_KEYS: Record<RentalFitItem, DiverMessageKey> = {
   mask_fins: "rental.itemLabels.maskFins",
   weights: "rental.itemLabels.weights",
   drysuit: "rental.itemLabels.drysuit",
+  hood: "rental.itemLabels.hood",
+  gloves: "rental.itemLabels.gloves",
 };
 
 /** The recall sentence's three facts, or nothing. Assembled by the page from `fitConfirmation`. */
