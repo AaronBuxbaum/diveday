@@ -22,6 +22,7 @@ import {
   restoreDiver,
   updateDiver,
 } from "@/db/divers";
+import { eraseGuardianEmail } from "@/db/guardian-erasure";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import {
   createNitroxCertification,
@@ -159,7 +160,8 @@ const profileSchema = z.object({
   weights: z.string().optional(),
   diveComputer: z.string().optional(),
   gopro: z.string().optional(),
-  hoodGloves: z.string().optional(),
+  hood: z.string().optional(),
+  gloves: z.string().optional(),
   torch: z.string().optional(),
   smb: z.string().optional(),
   // Optional, not required, and deliberately not `.default("")`. The form
@@ -174,6 +176,8 @@ const profileSchema = z.object({
   bcdSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   wetsuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   drysuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  hoodSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  gloveSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   finSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   weightPreference: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.weightPreference).optional(),
 });
@@ -200,6 +204,7 @@ const FORM_ANCHORS: Record<string, string> = {
   remove: "#remove",
   restore: "#removed-heading",
   erase: "#erase-heading",
+  "guardian-email": "#guardian-email-heading",
   merge: "#merge",
   // `details` sits under the header, which is where a redirect lands anyway.
 };
@@ -983,12 +988,15 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
     rentsWeights: parsed.data.weights === "on",
     rentsDiveComputer: parsed.data.diveComputer === "on",
     rentsGopro: parsed.data.gopro === "on",
-    rentsHoodGloves: parsed.data.hoodGloves === "on",
+    rentsHood: parsed.data.hood === "on",
+    rentsGloves: parsed.data.gloves === "on",
     rentsTorch: parsed.data.torch === "on",
     rentsSmb: parsed.data.smb === "on",
     bcdSize: parsed.data.bcdSize,
     wetsuitSize: parsed.data.wetsuitSize,
     drysuitSize: parsed.data.drysuitSize,
+    hoodSize: parsed.data.hoodSize,
+    gloveSize: parsed.data.gloveSize,
     // One shoe-size answer, written to both columns — see RentalFit.tsx.
     bootSize: parsed.data.finSize,
     finSize: parsed.data.finSize,
@@ -1426,6 +1434,55 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
     roster,
     result.ok ? noticeUrl(roster, erasedNotice) : backTo(base, "erase-refused", "erase"),
   );
+}
+
+/**
+ * **Erase a co-signing guardian's email address, and nothing else** (H-103,
+ * issue #1673).
+ *
+ * The same owner-only gate as the diver's erasure, re-read here and again
+ * inside `eraseGuardianEmail`, because a server action is reachable without the
+ * page that draws its form. The staffer types the address to confirm, and it
+ * is compared with the one the form named — never trusted alone — while the
+ * domain call refuses any address that is not on this diver's releases in this
+ * shop. Unlike the diver's erasure it runs on a live record: the minor stays a
+ * diver, and only the parent's address goes.
+ */
+export async function eraseGuardianEmailAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-guardian-email",
+    "guardian-email",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
+  if (!(await canPersonErasePersonalData(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, backTo(base, "not-authorized-guardian-email", "guardian-email"));
+    return;
+  }
+  const email = String(formData.get("email") ?? "").trim();
+  const typed = String(formData.get("confirmEmail") ?? "").trim();
+  if (!email || typed.toLowerCase() !== email.toLowerCase()) {
+    revalidateAndRedirect(base, backTo(base, "guardian-email-mismatch", "guardian-email"));
+    return;
+  }
+  const result = await eraseGuardianEmail(db, {
+    shopId: staff.user.shopId,
+    personId,
+    email,
+    actorPersonId: staff.user.personId,
+  });
+  const notice = result.ok
+    ? "guardian-email-erased"
+    : result.reason === "not_authorized"
+      ? "not-authorized-guardian-email"
+      : "guardian-email-not-found";
+  revalidateAndRedirect(base, backTo(base, notice, "guardian-email"));
 }
 
 /**

@@ -57,6 +57,7 @@
     "coSignedLabel": "Cofirmada",
     "sealLabel": "Sello",
     "sealValid": "Sellada y sin cambios",
+    "sealValidGuardianRedacted": "Sellada. El correo del tutor se borró el {date}.",
     "replaced": "Sustituida el {date} por una exención más reciente.",
     "medicalHeading": "Cuestionario médico",
     "medicalReview": "Pendiente de la evaluación de un médico.",

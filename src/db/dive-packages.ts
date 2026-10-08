@@ -22,7 +22,7 @@ export async function listDivePackages(db: DbExecutor, shopId: string) {
     .select()
     .from(divePackages)
     .where(and(eq(divePackages.shopId, shopId), isNull(divePackages.deletedAt)))
-    .orderBy(asc(divePackages.createdAt), asc(divePackages.id));
+    .orderBy(asc(divePackages.createdAt), asc(divePackages.name), asc(divePackages.id));
 }
 
 /**
@@ -140,7 +140,11 @@ export async function listSpendableEntitlements(
         isNull(divePackageEntitlements.consumedAt),
       ),
     )
-    .orderBy(asc(divePackageEntitlements.createdAt), asc(divePackageEntitlements.id));
+    .orderBy(
+      asc(divePackageEntitlements.createdAt),
+      asc(divePackages.name),
+      asc(divePackageEntitlements.id),
+    );
   return rows;
 }
 

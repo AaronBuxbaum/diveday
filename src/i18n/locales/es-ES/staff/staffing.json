@@ -47,6 +47,7 @@
     "add": "Añadir una credencial",
     "kinds": {
       "instructor_rating": "Titulación de instructor",
+      "assistant_instructor_rating": "Titulación de Instructor Asistente",
       "divemaster_rating": "Titulación de divemaster",
       "liability_insurance": "Seguro de responsabilidad",
       "first_aid_cpr": "Primeros auxilios / RCP",
@@ -70,7 +71,7 @@
     "personNotFound": "Esa persona no está en la plantilla de este centro.",
     "requestApproved": "Aprobado, y ya está en la tripulación.",
     "requestApprovedNotAssigned": "Aprobado, pero la asignación fue rechazada. Asigna esa salida desde su propia página para ver por qué.",
-    "requestApprovedRatioOpen": "Aprobado, y ya está en la tripulación. Ese bautismo sigue con la ratio excedida: solo un instructor añade plazas.",
+    "requestApprovedRatioOpen": "Aprobado, y ya está en la tripulación. La sesión sigue con la ratio excedida: solo un instructor añade plazas.",
     "requestDeclined": "Rechazado.",
     "requestNotFound": "Eso ya no existe.",
     "requestSent": "Enviado. El centro lo verá en la semana.",

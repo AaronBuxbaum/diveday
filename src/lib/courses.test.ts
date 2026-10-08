@@ -4,6 +4,7 @@ import {
   COURSE_DEPTHS,
   type CourseContent,
   type CourseDepthFormat,
+  courseCertifiesStudents,
   courseCharges,
   courseDepthPlaceholderIssues,
   courseSlug,
@@ -425,5 +426,14 @@ describe("course depth placeholders", () => {
   it("resolves the staff-picker blurb too, since JSON-LD falls back to it", () => {
     const row = { ...blankContent, description: "Four dives to {depth40}." };
     expect(resolveCourseContentDepths(row, feet).description).toBe("Four dives to 130 feet.");
+  });
+});
+
+describe("courseCertifiesStudents", () => {
+  it("offers Certify on a course session, never on an intro or a fun dive", () => {
+    expect(courseCertifiesStudents({ isIntroCourse: false })).toBe(true);
+    // A DSD, a Try Scuba or a refresher issues no card.
+    expect(courseCertifiesStudents({ isIntroCourse: true })).toBe(false);
+    expect(courseCertifiesStudents(null)).toBe(false);
   });
 });

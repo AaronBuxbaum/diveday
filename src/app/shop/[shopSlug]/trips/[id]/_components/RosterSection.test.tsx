@@ -116,6 +116,7 @@ function renderRoster({
   arrival,
   sameNameHeldSeats,
   splitAsksDateOfBirth,
+  certifyDefaultLevel,
 }: {
   roster: RosterEntry[];
   readiness: ReadinessByBooking;
@@ -129,6 +130,8 @@ function renderRoster({
   arrival?: RosterArrival;
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
   splitAsksDateOfBirth?: boolean;
+  /** Present means this is a course session's roster, with a Certify control. */
+  certifyDefaultLevel?: "open_water" | "advanced_open_water" | null;
 }) {
   return render(
     <RosterSection
@@ -146,6 +149,7 @@ function renderRoster({
         mayWriteOffPayment: false,
         canManageOrders,
         splitAsksDateOfBirth,
+        certifyDefaultLevel,
         compact,
       }}
       rows={{
@@ -166,6 +170,7 @@ function renderRoster({
         addNoteAction: noop,
         deleteNoteAction: noop,
         saveEmergencyContactAction: noop,
+        certifyDiverAction: certifyDefaultLevel === undefined ? undefined : noop,
       }}
       slots={{ addDiverGroup, arrival }}
     />,
@@ -403,7 +408,8 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
         rentsDiveComputer: false,
         rentsGopro: false,
         rentsDrysuit: false,
-        rentsHoodGloves: false,
+        rentsHood: false,
+        rentsGloves: false,
         rentsTorch: false,
         rentsSmb: false,
         bcdSize: null,
@@ -554,7 +560,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       rentalFit,
     });
 
-    expect(screen.getByText(/Might be someone else/)).toBeVisible();
+    expect(screen.getByText(/Matched to this record on a guess/)).toBeVisible();
     expect(screen.getByRole("link", { name: "Marisol Vega" })).toBeVisible();
     // Both answers stand in the open, outside the row's fold (Aaron,
     // 2026-10-05: the old row offered one answer, behind the mark).
@@ -827,7 +833,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       rentalFit,
     });
 
-    expect(screen.getByText(/Might be someone else/).closest("details")).toBeNull();
+    expect(screen.getByText(/Matched to this record on a guess/).closest("details")).toBeNull();
   });
 
   it("renders the same facts as soon as the row is confirmed", () => {
@@ -875,7 +881,8 @@ describe("a diver in a drysuit with no drysuit card", () => {
           rentsWeights: false,
           rentsDiveComputer: false,
           rentsGopro: false,
-          rentsHoodGloves: false,
+          rentsHood: false,
+          rentsGloves: false,
           rentsTorch: false,
           rentsSmb: false,
           bcdSize: null,
@@ -1374,5 +1381,42 @@ describe("an earlier physician refusal under a cleared release", () => {
       waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
     });
     expect(screen.queryByText(/A physician did not clear this diver on/)).toBeNull();
+  });
+});
+
+describe("certifying a student from a course session's roster (issue #2059)", () => {
+  /** One per student row; every one of them opens the same way. */
+  function awardSelects() {
+    const selects = screen.getAllByRole("combobox", { name: /^Level/ }) as HTMLSelectElement[];
+    expect(selects).toHaveLength(2);
+    return selects;
+  }
+
+  it("opens on the level the course issues", () => {
+    renderRoster({ ...fixtures, certifyDefaultLevel: "advanced_open_water" });
+    for (const select of awardSelects()) expect(select.value).toBe("advanced_open_water");
+  });
+
+  /**
+   * **No level is put in front of the instructor when the course issues
+   * none** (dive-domain review). Opening on Open Water there turned a stray
+   * "Certify" tap into a verified card nobody chose.
+   */
+  it("opens on an empty, required choice when the course issues no level", () => {
+    renderRoster({ ...fixtures, certifyDefaultLevel: null });
+    const [select] = awardSelects();
+    expect(select?.value).toBe("");
+    expect(select).toBeRequired();
+    expect(select?.options[0]?.value).toBe("");
+    expect(select?.options[0]?.disabled).toBe(true);
+    expect([...(select?.options ?? [])].map((option) => option.value)).toContain(
+      "advanced_open_water",
+    );
+  });
+
+  it("draws no Certify control where the session certifies nobody", () => {
+    renderRoster({ ...fixtures });
+    expect(screen.queryByText("Certify")).toBeNull();
+    expect(screen.queryAllByRole("combobox", { name: /^Level/ })).toHaveLength(0);
   });
 });

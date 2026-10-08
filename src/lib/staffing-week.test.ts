@@ -554,6 +554,11 @@ describe("blackouts and requests", () => {
     // And the entry-level cap, which a certified assistant does raise, keeps
     // its own word and earns no warning.
     expect(place(false, { ...GAP, gap: "over_ratio" })?.viewerAskWontClose).toBe(false);
+
+    // Past the entry-level ceiling an assistant raises nothing either.
+    const ceiling: WeekGap = { ...GAP, gap: "over_ratio_instructor" };
+    expect(place(false, ceiling)?.viewerAskWontClose).toBe(true);
+    expect(place(true, ceiling)?.viewerAskWontClose).toBe(false);
   });
 
   /**
@@ -643,6 +648,9 @@ describe("blackouts and requests", () => {
     expect(place("over_intro_ratio", askOn({ inWaterRole: "instructor" }))).toBe(false);
     // The entry-level cap, which a certified assistant does raise.
     expect(place("over_ratio", askOn())).toBe(false);
+    // Past the entry-level ceiling, where only an instructor adds a seat.
+    expect(place("over_ratio_instructor", askOn())).toBe(true);
+    expect(place("over_ratio_instructor", askOn({ inWaterRole: "instructor" }))).toBe(false);
     // An answered request is history; the gap chip above it already says the
     // session is still short.
     expect(place("over_intro_ratio", askOn({ state: "approved" }))).toBe(false);
@@ -656,11 +664,37 @@ describe("blackouts and requests", () => {
 describe("staffGapForCourseGap", () => {
   it("keeps the intro cap apart from the entry-level one", () => {
     expect(
-      staffGapForCourseGap({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro" }),
+      staffGapForCourseGap({
+        code: "over_ratio",
+        booked: 3,
+        capacity: 2,
+        ratio: "intro",
+        remedy: "instructor",
+      }),
     ).toBe("over_intro_ratio");
     expect(
-      staffGapForCourseGap({ code: "over_ratio", booked: 9, capacity: 8, ratio: "entry_level" }),
+      staffGapForCourseGap({
+        code: "over_ratio",
+        booked: 9,
+        capacity: 8,
+        ratio: "entry_level",
+        remedy: "assistant",
+      }),
     ).toBe("over_ratio");
+  });
+
+  // Past the per-instructor ceiling an assistant buys nothing, so the chip
+  // names the instructor (dive-domain review of #1677).
+  it("gives the entry-level cap past its ceiling a chip of its own", () => {
+    expect(
+      staffGapForCourseGap({
+        code: "over_ratio",
+        booked: 13,
+        capacity: 12,
+        ratio: "entry_level",
+        remedy: "instructor",
+      }),
+    ).toBe("over_ratio_instructor");
   });
 
   it("passes the instructor gap through and says nothing about an adequate session", () => {

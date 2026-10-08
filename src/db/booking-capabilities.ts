@@ -131,6 +131,7 @@ async function retireOldestLiveCapabilities(
     )
     // Newest first, with `id` only as a tiebreaker so two rows minted in the
     // same instant still order deterministically.
+    // diveday:allow-time-id-order: which surplus capabilities are revoked; no list renders it.
     .orderBy(desc(bookingCapabilities.issuedAt), desc(bookingCapabilities.id));
   const doomed = live.slice(MAX_LIVE_CAPABILITIES_PER_PURPOSE - 1).map((row) => row.id);
   if (doomed.length === 0) return;

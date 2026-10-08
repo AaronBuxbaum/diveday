@@ -235,6 +235,17 @@ export function PrepBody({
         </span>
       );
     }
+    // A drysuit diver's gloves: wet gloves or dry gloves on rings are two
+    // different things off the rack, so the line asks (H-102).
+    if (piece.drysuitGloves) {
+      return (
+        <span className="font-medium text-warning">
+          {piece.size
+            ? t("tripPrep.drysuitGlovesWithSize", { size: piece.size })
+            : t("tripPrep.drysuitGloves")}
+        </span>
+      );
+    }
     if (piece.size) return piece.size;
     // An item that should have had a size and doesn't says so; one with no
     // size to record has nothing to say, because those are different problems.

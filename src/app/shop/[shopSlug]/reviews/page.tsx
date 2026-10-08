@@ -374,8 +374,8 @@ export default async function ReviewsPage({
             /* Nothing here yet is not something staff can fix by clicking — a
                review arrives when a diver opens the recap after a trip sails,
                and no setting turns that on. What *is* theirs to set is where a
-               happy diver goes next, so that is the door: the review link the
-               recap offers after a strong rating. */
+               diver goes next, so that is the door: the review link the
+               recap offers after every rating. */
             action={
               <div className="flex flex-col items-center gap-2">
                 <p className="max-w-md text-sm text-muted">{t("reviews.emptyReviewLinkBody")}</p>

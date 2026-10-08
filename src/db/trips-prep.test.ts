@@ -172,25 +172,39 @@ describe("getTripPrep", () => {
    * hand it were covered only by Playwright — and they are what says how many
    * tanks go on the boat.
    *
-   * The mixed case is set here rather than read off the seed: the reef boat
-   * now also carries the assistant instructor in the water (UX audit
-   * 2026-10-07, item 4), and the test is about the dry captain.
+   * The roster is set here rather than read off the seed: the reef boat now
+   * carries the ordinary roster plus the assistant instructor in the water (UX
+   * audit 2026-10-07, item 4), and these tests are about who stays dry
+   * (issue #1851).
    */
   describe("only the crew who actually dive count toward the tanks", () => {
+    it("reads the roster's jobs, not its standing roles", async () => {
+      const ctx = await context();
+      await setTripCrew(ctx.db, ctx.shop.id, ctx.tripId, [
+        { personId: ctx.byRole("divemaster"), tripRole: "captain" },
+        { personId: ctx.byRole("captain"), tripRole: "crew" },
+      ]);
+      const prep = await prepFor(ctx);
+      // Keiko (a divemaster) is driving and Sal (a captain) is on deck: no tank
+      // for either, though Keiko's standing role would have bought one.
+      expect(prep.checklist.crewCount).toBe(0);
+    });
+
     it("leaves the dry half of a mixed crew off the tank count", async () => {
       const ctx = await context();
       await setTripCrew(ctx.db, ctx.shop.id, ctx.tripId, [
-        ctx.byRole("divemaster"),
-        ctx.byRole("captain"),
+        { personId: ctx.byRole("divemaster"), tripRole: null },
+        { personId: ctx.byRole("captain"), tripRole: null },
       ]);
-      const prep = await prepFor(ctx);
-      // Keiko (divemaster) and Sal (captain) are both assigned; one tank, not two.
-      expect(prep.checklist.crewCount).toBe(1);
+      // Nobody has said who does what, so the standing roles decide: one tank.
+      expect((await prepFor(ctx)).checklist.crewCount).toBe(1);
     });
 
     it("counts a divemaster", async () => {
       const ctx = await context();
-      await setTripCrew(ctx.db, ctx.shop.id, ctx.tripId, [ctx.byRole("divemaster")]);
+      await setTripCrew(ctx.db, ctx.shop.id, ctx.tripId, [
+        { personId: ctx.byRole("divemaster"), tripRole: null },
+      ]);
       const prep = await prepFor(ctx);
       expect(prep.checklist.crewCount).toBe(1);
       expect(prep.checklist.tanks.total).toBe(
@@ -219,6 +233,39 @@ describe("getTripPrep", () => {
       const ctx = await context();
       await setTripCrew(ctx.db, ctx.shop.id, ctx.tripId, [ctx.byRole("owner")]);
       expect((await prepFor(ctx)).checklist.crewCount).toBe(0);
+    });
+
+    /**
+     * **The job on this boat, not the card in the drawer** (issue #1851). A
+     * divemaster rostered as the captain or the deckhand drives the boat or
+     * handles lines and stays dry; one rostered in the water needs a tank
+     * whatever their standing roles say.
+     */
+    it.each(["captain", "crew"] as const)(
+      "does not count a divemaster rostered as this trip's %s",
+      async (tripRole) => {
+        const ctx = await context();
+        await setTripCrew(ctx.db, ctx.shop.id, ctx.tripId, [
+          { personId: ctx.byRole("divemaster"), tripRole },
+        ]);
+        expect((await prepFor(ctx)).checklist.crewCount).toBe(0);
+      },
+    );
+
+    it("does not count an instructor rostered as the captain", async () => {
+      const ctx = await context();
+      await setTripCrew(ctx.db, ctx.shop.id, ctx.tripId, [
+        { personId: ctx.byRole("instructor"), tripRole: "captain" },
+      ]);
+      expect((await prepFor(ctx)).checklist.crewCount).toBe(0);
+    });
+
+    it("counts anyone rostered in the water, whatever their standing roles", async () => {
+      const ctx = await context();
+      await setTripCrew(ctx.db, ctx.shop.id, ctx.tripId, [
+        { personId: ctx.byRole("captain"), tripRole: "divemaster" },
+      ]);
+      expect((await prepFor(ctx)).checklist.crewCount).toBe(1);
     });
   });
 

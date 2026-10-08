@@ -22,6 +22,8 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "import-too-many-rows": { tone: "danger", key: "diveSites.notice.importTooManyRows" },
   "import-too-many-columns": { tone: "danger", key: "diveSites.notice.importTooManyColumns" },
   "import-cell-too-long": { tone: "danger", key: "diveSites.notice.importCellTooLong" },
+  "import-wrong-files": { tone: "danger", key: "diveSites.notice.importWrongFiles" },
+  "import-creatures-refused": { tone: "danger", key: "diveSites.notice.importCreaturesRefused" },
 };
 
 /**
@@ -32,7 +34,9 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
  * while the only file this accepts is one DiveDay wrote.
  */
 export function DiveSiteImportPanel({ t, notice }: { t: StaffTranslator; notice?: string }) {
-  const imported = notice?.match(/^imported-(\d+)-(\d+)-(\d+)-(\d+)$/);
+  // The last two numbers are the field guides, present only when the upload
+  // carried dive_site_creatures.csv (issue #1841).
+  const imported = notice?.match(/^imported-(\d+)-(\d+)-(\d+)-(\d+)(?:-(\d+)-(\d+))?$/);
   const banner = noticeFromParam(notice, NOTICES);
 
   return (
@@ -45,6 +49,12 @@ export function DiveSiteImportPanel({ t, notice }: { t: StaffTranslator; notice?
             deleted: imported[3],
             skipped: imported[4],
           })}
+          {imported[5] !== undefined
+            ? ` ${t("diveSites.notice.importedGuides", {
+                guides: imported[5],
+                dropped: imported[6] ?? "0",
+              })}`
+            : null}
         </StaffNoticeBanner>
       ) : banner ? (
         <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
@@ -66,6 +76,7 @@ export function DiveSiteImportPanel({ t, notice }: { t: StaffTranslator; notice?
           <CsvFileInput
             name="file"
             required
+            multiple
             copy={{
               choose: t("diveSites.import.chooseFile"),
               chooseAnother: t("diveSites.import.chooseDifferentFile"),

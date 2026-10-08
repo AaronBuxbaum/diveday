@@ -16,6 +16,11 @@
  * `./export-diver-files`); this file reads, under the one transaction, and
  * hands what it read to those lists. `export-bundle.snapshot.test.ts` pins the
  * output so a change to that wiring cannot move a cell unnoticed.
+ *
+ * Its `orderBy(createdAt, id)` clauses are exempt from the time-id-order
+ * guard (`scripts/check-time-id-order.mjs`, issue #1762): a CSV's row order is
+ * not something a person reads as meaningful, and stability within one
+ * database is all an export needs, which the id gives it.
  */
 
 import { and, asc, count, eq, getTableColumns, inArray, isNull, or } from "drizzle-orm";

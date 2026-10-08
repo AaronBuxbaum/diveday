@@ -200,7 +200,7 @@
     },
     "blockers": {
       "requirementsNotConfigured": "Trip requirements have not been configured yet.",
-      "identityUnconfirmed": "Might be someone else. Confirm who this is before boarding.",
+      "identityUnconfirmed": "Matched to this record on a guess: confirm who this is on the roster before boarding.",
       "waiverNotSent": "Waiver not signed. Not sent yet.",
       "waiverPending": "Waiver not signed. Link sent.",
       "waiverExpired": "Waiver link expired; issue a fresh link.",
@@ -433,7 +433,8 @@
       "diveComputer": "Dive computer",
       "gopro": "GoPro",
       "drysuit": "Drysuit",
-      "hoodGloves": "Hood & gloves",
+      "hood": "Hood",
+      "gloves": "Gloves",
       "torch": "Dive light",
       "smb": "Surface marker buoy"
     },
@@ -441,6 +442,8 @@
     "itemWithSize": "{item} {size}",
     "itemOverDrysuitBoot": "{item} over a drysuit boot",
     "itemOverDrysuitBootWithSize": "{item} over a drysuit boot, shoe {size}",
+    "itemDrysuitGloves": "{item}: drysuit, wet or dry?",
+    "itemDrysuitGlovesWithSize": "{item} {size}: drysuit, wet or dry?",
     "itemDrysuitWeightCheck": "{item}: drysuit, weight check in the water",
     "itemNoLongerRented": "{item} (shop no longer rents this)",
     "notRecorded": "No fit on file, not asked yet",

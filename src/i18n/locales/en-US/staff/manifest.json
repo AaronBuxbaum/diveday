@@ -119,6 +119,7 @@
   "medicalClearedByPhysician": "Cleared by physician",
   "medicalWaiverSigned": "Medical waiver signed",
   "medicalEarlierRefusal": "A physician did not clear this diver on {date} (earlier waiver)",
+  "medicalEarlierRefusalChip": "Doctor said no before",
   "medicalReferralUnresolved": "Re-signed after a referral with no physician clearance on file ({date})",
   "resolveBlockersLink": "Resolve blockers on Guests →",
   "addNoteSummary": "Add a note",

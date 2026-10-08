@@ -17,7 +17,7 @@ export async function listTripLenses(db: AppDb, shopId: string): Promise<TripLen
     .select()
     .from(tripLenses)
     .where(and(eq(tripLenses.shopId, shopId), isNull(tripLenses.deletedAt)))
-    .orderBy(asc(tripLenses.createdAt), asc(tripLenses.id));
+    .orderBy(asc(tripLenses.createdAt), asc(tripLenses.name), asc(tripLenses.id));
 }
 
 /**

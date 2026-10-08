@@ -248,7 +248,8 @@ export const SNORKELER_RENTABLE_KINDS: readonly string[] = [
   // Rides along with a wetsuit on the prep list (src/lib/dive-prep.ts), and
   // a snorkeler on a rocky entry wants them as much as a diver does.
   "boots",
-  "hood_gloves",
+  "hood",
+  "gloves",
   "gopro",
 ];
 

@@ -101,6 +101,7 @@ export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promis
         inArray(waiverRecords.status, ["completed", "medical_review"]),
       ),
     )
+    // diveday:allow-time-id-order: `createdAt` is unique per row here, so the id never decides.
     .orderBy(asc(waiverRecords.createdAt), asc(waiverRecords.id));
   if (records.length === 0) return;
 
