@@ -263,6 +263,7 @@ const EXCLUDED_TABLES = [
   "calendar_feeds", // bearer credentials for a staff calendar subscription, never exported
   "last_minute_list_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
+  "weekly_digest_sends", // the Monday email's send claims and opt-out link hashes — delivery plumbing and bearer credentials, never exported
   "shop_contact_email_confirmation_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   // The shop's own Meta access token (sealed) plus the provider linkage around
   // it. Never exported, for both reasons already on this list: it is a live
@@ -485,6 +486,10 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // carrying any size is a stated fit and `src/db/import.ts` stamps it — so
     // exporting it would carry an internal flag out and re-derive it anyway.
     "fit_stated_at",
+    // The one kind `rents_hood` and `rents_gloves` replaced (H-102, issue
+    // #1816). Nothing reads or writes it; it stays in the schema only until
+    // the release that still selects it has gone, and is not a fact to carry.
+    "rents_hood_gloves",
   ],
   gear_items: ["shop_id"],
   gear_service_events: ["shop_id"],
@@ -1352,7 +1357,7 @@ describe("full-shop export dataset", () => {
       const [person] = await db.insert(people).values({ shopId: shop.id, fullName }).returning();
       const [booking] = await db
         .insert(bookings)
-        .values({ shopId: shop.id, tripId: trip.id, personId: person.id })
+        .values({ bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: person.id })
         .returning();
       return booking;
     };

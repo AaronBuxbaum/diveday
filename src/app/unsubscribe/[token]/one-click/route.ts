@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { optOutPersonFromCourtesyEmailByToken } from "@/db/courtesy-email";
 import { unsubscribeLastMinuteListEntryByToken } from "@/db/last-minute-list";
+import { turnOffWeeklyDigestByToken } from "@/db/weekly-digest";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 
 /**
@@ -42,7 +43,9 @@ export async function POST(
   const db = await getDb();
   const lastMinute = await unsubscribeLastMinuteListEntryByToken(db, { token });
   if (!lastMinute) {
-    await optOutPersonFromCourtesyEmailByToken(db, { token });
+    const courtesy = await optOutPersonFromCourtesyEmailByToken(db, { token });
+    // The third kind, tried last: a staffer's own Monday email.
+    if (!courtesy) await turnOffWeeklyDigestByToken(db, { token });
   }
   // A mail client acts on the status code alone and never renders a body.
   return new NextResponse(null, { status: 200 });

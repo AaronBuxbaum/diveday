@@ -176,6 +176,29 @@ describe("buildThreadSteps", () => {
  * first-timer's spine is what it always was, and neither ever sees both rows
  * for the one fact.
  */
+describe("a seat that is not diving (ADR 20261007-participant-types)", () => {
+  // Regression (dive-domain review, PR #2224): a rider was asked for gear sizes
+  // and "When did you last dive?", and the thread could not finish without them.
+  it("gives a rider no gear step, first-timer or returning, and a settled day-of", () => {
+    for (const carriedFacts of [false, true]) {
+      const built = spine({ participantType: "rider", carriedFacts });
+      expect(built.steps.map((step) => step.id)).toEqual(["sign", "dayof"]);
+      expect(built.steps.find((step) => step.id === "dayof")?.state).toBe("done");
+    }
+  });
+
+  it("keeps a snorkeler's gear step, and settles the day-of the recency question would", () => {
+    const built = spine({ participantType: "snorkeler" });
+    expect(built.steps.map((step) => step.id)).toEqual(["sign", "gear", "dayof"]);
+    expect(built.current).toBe("gear");
+    expect(built.steps.find((step) => step.id === "dayof")?.state).toBe("done");
+  });
+
+  it("still asks a diver when they last dived", () => {
+    expect(spine({ participantType: "diver" }).steps.at(-1)?.state).toBe("your_turn");
+  });
+});
+
 describe("the returning diver's step", () => {
   it("takes the gear step's place, and never stands beside it", () => {
     const built = spine({ carriedFacts: true });

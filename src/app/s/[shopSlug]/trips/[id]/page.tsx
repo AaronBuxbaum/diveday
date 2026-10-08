@@ -45,7 +45,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { courseCharges, perDiverBookingPriceCents } from "@/lib/courses";
-import { checkoutCharge } from "@/lib/deposits";
+import { checkoutSeatTerms } from "@/lib/deposits";
 import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
 import { formatDateTimeTz, formatDayParts, formatShortDate, formatTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -384,8 +384,6 @@ export default async function TripDetailPage({
     courseBreakdown.find((line) => line.kind === "course_fee")?.amountCents ?? null;
   const eLearningFeeCents =
     courseBreakdown.find((line) => line.kind === "e_learning_fee")?.amountCents ?? null;
-  const charge = checkoutCharge(trip, trip.course);
-  const depositCents = charge?.isDeposit ? charge.amountCents : null;
   // **What this trip asks of anybody**, read for every visitor rather than only
   // for a diver who already holds a seat. `requirement` used to be fetched
   // inside the `confirmed` branch below and passed only into
@@ -589,6 +587,7 @@ export default async function TripDetailPage({
         "common",
         "course",
         "fallback",
+        "participants",
         "party",
         "rental",
         "trip",
@@ -894,7 +893,7 @@ export default async function TripDetailPage({
                   taxEnabled={shop.taxEnabled}
                   courseFeeCents={courseFeeCents}
                   eLearningFeeCents={eLearningFeeCents}
-                  depositCents={depositCents}
+                  {...checkoutSeatTerms(trip, trip.course)}
                   balanceDueAt={trip.startsAt}
                   terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
                   knownDiver={knownDiverPanel}

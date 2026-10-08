@@ -96,6 +96,8 @@ export type AnalyticsEvent =
         | "course_min_age"
         | "trip_prerequisite"
         | "trip_full"
+        | "divers_full"
+        | "participant_type_unavailable"
         | "course_ratio_full"
         | "already_booked";
     }

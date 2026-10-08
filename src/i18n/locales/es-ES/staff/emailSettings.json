@@ -1,0 +1,13 @@
+{
+  "title": "Correo",
+  "digest": {
+    "heading": "Correo de los lunes",
+    "description": "Las reservas y la ocupación de la semana pasada, las salidas de esta semana y lo que te está esperando. Se envía el lunes por la mañana, {zone}.",
+    "on": "Activado",
+    "off": "Desactivado",
+    "turnOn": "Activar",
+    "turnOff": "Desactivar",
+    "saving": "Guardando…",
+    "preview": "Ver el correo de esta semana"
+  }
+}

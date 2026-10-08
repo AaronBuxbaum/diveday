@@ -49,6 +49,7 @@ import {
   pendingOfflineEventCount,
   rejectedOfflineEventCount,
 } from "@/lib/offline-manifests";
+import { countParticipants, hasNonDivers, joinPassengerSplit } from "@/lib/participant-types";
 import type { PreDepartureCheckStatus } from "@/lib/pre-departure-check";
 import { OfflineChecklist } from "./offline-manifest/Checklist";
 import { OfflineCounter } from "./offline-manifest/Counter";
@@ -613,6 +614,7 @@ export function OfflineManifestView() {
     missingDivers,
     anyBuddies,
   } = view;
+  const passengerTypes = countParticipants(manifest.divers);
 
   /**
    * Queue one result on this device, for a diver or a crew member. One
@@ -915,6 +917,20 @@ export function OfflineManifestView() {
             </div>
           ))}
         </section>
+        {/* Who the passengers are, when they are not all divers (ADR
+            20261007-participant-types): read from the saved rows themselves,
+            so a copy saved before the summary carried the split still says it. */}
+        {hasNonDivers(passengerTypes) ? (
+          <p className="mt-2 text-sm text-muted tabular-nums">
+            {joinPassengerSplit(passengerTypes, (type, count) =>
+              type === "diver"
+                ? t("manifest.passengerDivers", { count })
+                : type === "snorkeler"
+                  ? t("manifest.passengerSnorkelers", { count })
+                  : t("manifest.passengerRiders", { count }),
+            )}
+          </p>
+        ) : null}
 
         <section className="mt-8">
           <h2 className={`flex items-center gap-2 ${SUB_TITLE_CLASS}`}>

@@ -16,6 +16,7 @@ import {
   getShopYear,
   pagedMonthlyReportTrips,
 } from "@/db/reporting";
+import { staffBookingsDetail } from "@/i18n/participant-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
@@ -389,9 +390,7 @@ export default async function ReportsPage({
     compareMonths(current, floorMonth) > 0 ? monthKey(addMonths(current, -1)) : null;
   const nextMonthKey = isThisMonth ? null : monthKey(next);
 
-  const bookingsDetail = isThisMonth
-    ? t("reports.metrics.bookingsThisMonth", { count: report.tripCount })
-    : t("reports.metrics.bookingsOther", { count: report.tripCount });
+  const bookingsDetail = staffBookingsDetail(t, report, isThisMonth);
 
   // A square 44px target holding one glyph, through the shared `size: "icon"`
   // rather than a hand-spelled `size-11` — this pair was one of the four

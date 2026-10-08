@@ -20,7 +20,7 @@
   "removeStandout": "Remove standout",
   "emptyHeading": "No reviews yet",
   "emptyDetail": "Divers are asked for one on their recap page after a trip sails.",
-  "emptyReviewLinkBody": "There is nothing to switch on here. A review arrives when a diver opens their recap. What is yours to set is where a happy one goes next.",
+  "emptyReviewLinkBody": "There is nothing to switch on here. A review arrives when a diver opens their recap. What is yours to set is where they go next.",
   "emptyReviewLinkAction": "Set your review link",
   "rating": "{rating} out of 5 stars",
   "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",

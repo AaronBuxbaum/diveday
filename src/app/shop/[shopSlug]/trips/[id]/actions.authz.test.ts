@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { createBooking } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
-import { bookings, tripRequirements, trips } from "@/db/schema";
+import { bookings, certifications, courses, tripRequirements, trips } from "@/db/schema";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { seededShopContext } from "@/test/db";
 import {
@@ -50,8 +51,14 @@ vi.mock("@/db/refunds", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
 const { refundBookingOnCancellation } = await import("@/db/refunds");
-const { markPaymentAction, removeBookingAction, reinstateTripAction, saveRequirementsAction } =
-  await import("./actions");
+const {
+  certifyDiverFromRosterAction,
+  markPaymentAction,
+  removeBookingAction,
+  reinstateTripAction,
+  saveRequirementsAction,
+  setParticipantTypeAction,
+} = await import("./actions");
 
 /**
  * A seeded ordinary charter — not a course session, whose rules are frozen —
@@ -362,6 +369,51 @@ describe("setting what a trip admits", () => {
   });
 });
 
+/**
+ * **An intro session certifies nobody, whatever is posted** (dive-domain
+ * review). The roster draws no Certify control on a DSD, but a form post
+ * reaches the action regardless, and a forged `award=open_water` must never
+ * mint the verified card the booking gate trusts.
+ */
+describe("certifying from an intro session's roster", () => {
+  it("refuses a forged open-water award on a DSD session and writes no card", async () => {
+    const { db, shop, owner } = await context();
+    const [seat] = await db
+      .select({
+        tripId: trips.id,
+        courseId: trips.courseId,
+        bookingId: bookings.id,
+        personId: bookings.personId,
+      })
+      .from(trips)
+      .innerJoin(bookings, and(eq(bookings.tripId, trips.id), eq(bookings.status, "booked")))
+      .where(and(eq(trips.shopId, shop.id), isNotNull(trips.courseId)))
+      .limit(1);
+    if (!seat?.courseId) throw new Error("seeded shop has no booked course session");
+    await db.update(courses).set({ isIntroCourse: true }).where(eq(courses.id, seat.courseId));
+    const cardsBefore = await db
+      .select({ id: certifications.id })
+      .from(certifications)
+      .where(eq(certifications.personId, seat.personId));
+    signIn(shop, owner);
+    const formData = new FormData();
+    formData.set("bookingId", seat.bookingId);
+    formData.set("personId", seat.personId);
+    formData.set("award", "open_water");
+
+    const to = await redirectedTo(() =>
+      certifyDiverFromRosterAction(shop.slug, seat.tripId, formData),
+    );
+
+    expect(to).toContain("notice=certify-failed");
+    const cardsAfter = await db
+      .select({ id: certifications.id })
+      .from(certifications)
+      .where(eq(certifications.personId, seat.personId));
+    expect(cardsAfter).toHaveLength(cardsBefore.length);
+  });
+});
+
 describe("putting a canceled trip back on the board", () => {
   it("refuses a captain — canceling today's charter is the crew's call, un-canceling is not", async () => {
     const { db, shop, tripId, captain } = await context();
@@ -472,6 +524,9 @@ describe("who may run each action on the trip page", () => {
     "setSeriesRepeatAction",
     "updateSeriesCadenceAction",
     "cancelOffCadenceSeriesAction",
+    // A snorkeler's and a rider's price and the divers-only limit are trip
+    // definition, beside the diver's own price in `saveDetails`.
+    "saveParticipantTermsAction",
   ];
 
   /** Money: what a dive costs, and writing off what it earned. */
@@ -482,6 +537,14 @@ describe("who may run each action on the trip page", () => {
    * business's call, owner or manager (`canRetireMedicalRefusal`).
    */
   const MEDICAL = ["sendNewWaiverAction"];
+
+  /**
+   * Open roster work with one certification call inside it. "Coming as" is
+   * any staffer's (said at the dock to whoever holds the roster), but "Change
+   * anyway" past a missing card is refused on `canPersonOverrideCertBlock`,
+   * owner, manager or instructor (ADR 20261007-participant-types).
+   */
+  const CERT_CALL = ["setParticipantTypeAction"];
 
   /**
    * The day's work, and deliberately open. Running the boat, the roster, the
@@ -599,6 +662,7 @@ describe("who may run each action on the trip page", () => {
     const weighsMoney = /canPerson(?:Refund|ManagePaymentSettings)\b/.test(body);
     if (refuses && weighsMoney) return "MONEY";
     if (refuses && /canPersonRetireMedicalRefusal\b/.test(body)) return "MEDICAL";
+    if (refuses && /canPersonOverrideCertBlock\b/.test(body)) return "CERT_CALL";
     if (refuses) return "REFUSES_SOMEBODY_UNACCOUNTED_FOR";
     return "OPEN_TO_ALL_STAFF";
   }
@@ -608,6 +672,7 @@ describe("who may run each action on the trip page", () => {
       ...TRIP_CONFIG.map((name) => [name, "TRIP_CONFIG"] as const),
       ...MONEY.map((name) => [name, "MONEY"] as const),
       ...MEDICAL.map((name) => [name, "MEDICAL"] as const),
+      ...CERT_CALL.map((name) => [name, "CERT_CALL"] as const),
       ...OPEN_TO_ALL_STAFF.map((name) => [name, "OPEN_TO_ALL_STAFF"] as const),
     ]);
     const bodies = actionBodies();
@@ -644,6 +709,66 @@ describe("who may run each action on the trip page", () => {
  * allowed to change (issue #714). The deal blast is a held send now, and its
  * gate is tested beside it (`src/app/actions/held-sends.test.ts`).
  */
+describe("changing a seat into diving past a missing card", () => {
+  async function snorkelerSeat(db: AppDb, shopId: string, tripId: string) {
+    const seated = await createBooking(db, {
+      actor: "staff",
+      shopId,
+      tripId,
+      participantType: "snorkeler",
+      fullName: "Lena Brandt",
+      email: "lena.brandt@example.com",
+    });
+    if (!seated.ok) throw new Error("snorkeler not seated");
+    return seated.bookingId;
+  }
+
+  function overrideForm(bookingId: string): FormData {
+    const data = new FormData();
+    data.set("bookingId", bookingId);
+    data.set("participantType", "diver");
+    data.set("confirmCertBlock", "1");
+    return data;
+  }
+
+  it('refuses a captain\'s "Change anyway" before anything is written', async () => {
+    const { db, shop, tripId, captain } = await context();
+    const bookingId = await snorkelerSeat(db, shop.id, tripId);
+    signIn(shop, captain);
+
+    const to = await redirectedTo(() =>
+      setParticipantTypeAction(shop.slug, tripId, overrideForm(bookingId)),
+    );
+
+    expect(to).toBe(`/shop/${shop.slug}/trips/${tripId}?notice=not-authorized`);
+    expect((await bookingRow(db, bookingId)).participantType).toBe("snorkeler");
+  });
+
+  it("lets an owner make the call", async () => {
+    const { db, shop, tripId, owner } = await context();
+    const bookingId = await snorkelerSeat(db, shop.id, tripId);
+    signIn(shop, owner);
+
+    const to = await redirectedTo(() =>
+      setParticipantTypeAction(shop.slug, tripId, overrideForm(bookingId)),
+    );
+
+    expect(to).not.toContain("notice=not-authorized");
+  });
+
+  it("refuses a trip id that is not a uuid", async () => {
+    const { shop, captain } = await context();
+    signIn(shop, captain);
+    const form = new FormData();
+    form.set("bookingId", "00000000-0000-4000-8000-000000000000");
+    form.set("participantType", "rider");
+
+    const to = await redirectedTo(() => setParticipantTypeAction(shop.slug, "not-a-uuid", form));
+
+    expect(to).not.toContain("notice=");
+  });
+});
+
 describe("money on the trip page", () => {
   /**
    * **The way *out* of a write-off is a write-off too.**

@@ -8,6 +8,7 @@ import { readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { isHeldSeat } from "@/lib/held-seat";
 import { rollCallLabel, rollCallRecordedTone, rollCallRowState } from "@/lib/manifests";
+import { joinedDiving, leftDiving } from "@/lib/participant-types";
 import type { OfflineTripControls } from "./controls";
 import {
   OFFLINE_BOAT_TARGET_CLASS,
@@ -193,6 +194,24 @@ function OfflineDiverRow({
             {diver.notHere ? (
               <Badge tone="neutral">{t("shared.offlineManifest.single.notHereBadge")}</Badge>
             ) : null}
+            {/* Snorkeler or rider, as on the live roll call (ADR
+              20261007-participant-types). Every row is still called;
+              this only says who the body is. */}
+            {leftDiving(diver) === "snorkeler" ? (
+              <Badge tone="warning">{t("manifest.participantType.bookedAsDiver.snorkeler")}</Badge>
+            ) : leftDiving(diver) === "rider" ? (
+              <Badge tone="warning">{t("manifest.participantType.bookedAsDiver.rider")}</Badge>
+            ) : joinedDiving(diver) === "snorkeler" ? (
+              <Badge tone="warning">
+                {t("manifest.participantType.bookedAsNonDiver.snorkeler")}
+              </Badge>
+            ) : joinedDiving(diver) === "rider" ? (
+              <Badge tone="warning">{t("manifest.participantType.bookedAsNonDiver.rider")}</Badge>
+            ) : diver.participantType === "snorkeler" ? (
+              <Badge tone="neutral">{t("manifest.participantType.snorkeler")}</Badge>
+            ) : diver.participantType === "rider" ? (
+              <Badge tone="neutral">{t("manifest.participantType.rider")}</Badge>
+            ) : null}
             {/* Same resolver the live manifest renders (DOM-H3):
               one word list, so a diver who has not come back from
               dive one cannot read "Not boarded" here and "Not back
@@ -269,17 +288,19 @@ function OfflineDiverRow({
                         : t("shared.offlineManifest.single.notOnFile")}
                     </span>
                   </p>
-                  <p>
-                    <span className="font-bold">
-                      {t("shared.offlineManifest.single.rentalFit")}
-                    </span>
-                    <span className="mt-0.5 block text-muted">
-                      {rentalFitLineText(t, locale, diver.rentalFit)}
-                      {diver.nitroxRequested
-                        ? ` ${t("shared.offlineManifest.single.nitroxRequestedSuffix")}`
-                        : ""}
-                    </span>
-                  </p>
+                  {diver.participantType === "rider" ? null : (
+                    <p>
+                      <span className="font-bold">
+                        {t("shared.offlineManifest.single.rentalFit")}
+                      </span>
+                      <span className="mt-0.5 block text-muted">
+                        {rentalFitLineText(t, locale, diver.rentalFit)}
+                        {diver.nitroxRequested
+                          ? ` ${t("shared.offlineManifest.single.nitroxRequestedSuffix")}`
+                          : ""}
+                      </span>
+                    </p>
+                  )}
                 </>
               )}
             </div>

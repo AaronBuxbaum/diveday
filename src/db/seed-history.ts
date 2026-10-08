@@ -623,6 +623,7 @@ export async function seedHistory(
     .insert(bookings)
     .values(
       plans.map((plan) => ({
+        bookedAs: "diver" as const,
         shopId,
         tripId: plan.tripId,
         personId: plan.personId,

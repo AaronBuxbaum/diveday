@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { assembleEveningClose } from "@/lib/closeout";
 import { rollCallCheckpoints } from "@/lib/roll-call";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { standingArrivalStatus } from "./arrival-provenance";
 import { getDayCloseout } from "./closeout";
 import { recordRollCall } from "./manifests";
@@ -25,8 +25,17 @@ import { listStaff } from "./trips";
 const HOUR = 60 * 60 * 1000;
 
 describe("day close-out (in-memory PGlite)", () => {
+  // One hydration for the file, one rolled-back transaction per test. Every
+  // test here reads the evening and writes only the rows it then reads back;
+  // none races, none asserts that two `defaultNow()` stamps differ (each trail
+  // it reads carries an explicit `occurredAt`), and the writers it calls
+  // (`markBookingNoShow`, `recordRollCall`, `recordTripStage`) open a
+  // savepoint under the wrapper, which is all they need here. Fourteen fresh
+  // hydrations timed out at 60s on a contended runner (issue #1820).
+  const shared = fileScopedShopContext();
+
   it("assembles today's state on the shop's own day", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = shared;
 
     const now = new Date(nowMs() + 60 * 60 * 1000); // 10:30 AM
     const state = await getDayCloseout(db, shop.id, shop.timezone, now);
@@ -36,7 +45,7 @@ describe("day close-out (in-memory PGlite)", () => {
   });
 
   it("seeds a completed local-day dive", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = shared;
     const now = new Date(nowMs() + 60 * 60 * 1000); // 10:30 AM
     const state = await getDayCloseout(db, shop.id, shop.timezone, now);
     const completed = state.departures.find(
@@ -51,7 +60,7 @@ describe("day close-out (in-memory PGlite)", () => {
   });
 
   it("carries a crew photo onto its departure's settled station", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = shared;
     const state = await getDayCloseout(db, shop.id, shop.timezone);
     const completed = state.departures.find(
       (departure) => departure.title === DEMO_COMPLETED_TRIP_TITLE,
@@ -75,7 +84,7 @@ describe("day close-out (in-memory PGlite)", () => {
   });
 
   it("reads the unreconciled head count that is still open", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = shared;
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("seed staff missing");
 
@@ -105,6 +114,7 @@ describe("day close-out (in-memory PGlite)", () => {
     const [booking] = await db
       .insert(bookingsTable)
       .values({
+        bookedAs: "diver",
         shopId: shop.id,
         tripId: trip.id,
         personId: diver.id,
@@ -137,7 +147,7 @@ describe("day close-out (in-memory PGlite)", () => {
    */
   describe("the crew the evening counts", () => {
     const crewOfCompletedTrip = async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = shared;
       const now = new Date(nowMs() + HOUR);
       const state = await getDayCloseout(db, shop.id, shop.timezone, now);
       const completed = state.departures.find(
@@ -246,7 +256,7 @@ describe("day close-out (in-memory PGlite)", () => {
      * the thing under test rather than a hand-written row.
      */
     const boatThatSailedShort = async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = shared;
       const [staff] = await listStaff(db, shop.id);
       if (!staff) throw new Error("seed staff missing");
       const now = new Date(nowMs() + HOUR);
@@ -276,7 +286,10 @@ describe("day close-out (in-memory PGlite)", () => {
       db: Awaited<ReturnType<typeof boatThatSailedShort>>["db"],
       values: { shopId: string; tripId: string; personId: string; status: "booked" | "checked_in" },
     ) => {
-      const [booking] = await db.insert(bookingsTable).values(values).returning();
+      const [booking] = await db
+        .insert(bookingsTable)
+        .values({ bookedAs: "diver", ...values })
+        .returning();
       if (!booking) throw new Error("fixture booking insert returned no row");
       return booking;
     };
@@ -342,9 +355,11 @@ describe("day close-out (in-memory PGlite)", () => {
       // a body on the boat at 06:50.
       //
       // The rail is the statement that *does* outrank it, and it needs no
-      // reader here: boarding a diver marked absent puts the booking back to
-      // `booked` (`reclaimReleasedSeat`, src/db/manifests.ts), so a diver the
-      // crew counted is never sitting at `no_show` when the evening reads it.
+      // reader here: boarding a diver marked absent takes the booking back to
+      // what it was before the release, `checked_in` when the desk had seen
+      // them and `booked` otherwise (`reclaimReleasedSeat`,
+      // src/db/manifests.ts), so a diver the crew counted is never sitting at
+      // `no_show` when the evening reads it.
       const ctx = await boatThatSailedShort();
       const { db, shop, staff, now, trip, divers } = ctx;
       await seat(db, {
@@ -644,7 +659,7 @@ describe("day close-out (in-memory PGlite)", () => {
     // `src/lib/closeout.ts`, but it only ever fires if the db half actually
     // carries the crew's last tap onto the departure — this is the test that
     // catches that being forgotten.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = shared;
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("seed staff missing");
 

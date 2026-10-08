@@ -481,6 +481,7 @@ export async function enforceMintedDemoCap(db: DbExecutor): Promise<void> {
     .select({ id: shops.id })
     .from(shops)
     .where(and(eq(shops.isDemo, true), ne(shops.slug, DEMO_SHOP_SLUG)))
+    // diveday:allow-time-id-order: an eviction order, not a list; the id makes it total (above).
     .orderBy(asc(shops.createdAt), asc(shops.id));
   const toEvict = live.length - (cap - 1);
   for (let i = 0; i < toEvict; i++) {

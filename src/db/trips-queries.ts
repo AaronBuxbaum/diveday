@@ -18,6 +18,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
+import type { SeatCounts } from "@/lib/participant-types";
 import {
   summarizeTripDiveSites,
   type TripDiveSiteRef,
@@ -70,6 +71,11 @@ export async function countShopTrips(db: DbExecutor, shopId: string): Promise<nu
 
 export type TripWithBookedCount = typeof trips.$inferSelect & {
   booked: number;
+  /**
+   * The divers among `booked` (ADR 20261007-participant-types): what the
+   * divemaster ratio supervises. Capacity and headcount stay on `booked`.
+   */
+  bookedDivers: number;
   course: typeof courses.$inferSelect | null;
   diveSite: typeof diveSites.$inferSelect | null;
 };
@@ -97,6 +103,7 @@ export async function upcomingTripsWithCounts(
       course: courses,
       diveSite: diveSites,
       booked: count(bookings.id),
+      bookedDivers: bookedDiversCount(),
     })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
@@ -113,7 +120,13 @@ export async function upcomingTripsWithCounts(
     .groupBy(trips.id, courses.id, diveSites.id)
     .orderBy(asc(trips.startsAt));
 
-  return rows.map(({ trip, course, diveSite, booked }) => ({ ...trip, course, diveSite, booked }));
+  return rows.map(({ trip, course, diveSite, booked, bookedDivers }) => ({
+    ...trip,
+    course,
+    diveSite,
+    booked,
+    bookedDivers,
+  }));
 }
 
 /**
@@ -190,7 +203,7 @@ export async function listShopDayDepartures(
         lt(trips.startsAt, to),
       ),
     )
-    .orderBy(asc(trips.startsAt), asc(trips.id));
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
 }
 
 /**
@@ -277,7 +290,7 @@ function hasSpaceHaving(hasSpace: boolean | undefined) {
  * its own question needs (reviewed 2026-09-11, after the public dive-site page
  * was found telling a stranger a released seat's boat was full):
  *
- * - `getStaffingView` (`./staffing.ts`) and `tripOverIntroRatio`
+ * - `getStaffingView` (`./staffing.ts`) and `tripRatioGapNeedsInstructor`
  *   (`./crew-requests.ts`) size crew against the count. A diver the desk wrote
  *   off can still be boarded at the rail (`reclaimReleasedSeat`,
  *   `./manifests.ts`), so the ratio has to already cover them; under-crewing a
@@ -299,6 +312,45 @@ export const seatHeld = inArray(bookings.status, [...SEAT_HELD_STATUSES]);
  * predicate the schedule does, rather than a second spelling of it.
  */
 export const liveBookingJoin = and(eq(bookings.tripId, trips.id), seatHeld);
+
+/**
+ * The divers among the seats a `liveBookingJoin` counts. `count(bookings.id)`
+ * rather than `count(*)`, so a departure with no seats counts zero through the
+ * left join. A function so each select gets its own expression.
+ */
+export const bookedDiversCount = () =>
+  sql<number>`count(${bookings.id}) filter (where ${bookings.participantType} = 'diver')`.mapWith(
+    Number,
+  );
+
+/**
+ * **Every seat held on a departure, and the divers among them** — the two
+ * numbers the two limits are measured against (ADR 20261007-participant-types).
+ *
+ * `seatHeld`, the same predicate the schedule counts with, so a seat released
+ * at the counter is free under both limits at once. One query, one snapshot:
+ * reading the two counts separately would let a concurrent write land between
+ * them on a reader that is not holding the trip-row lock. Every seat-granting
+ * caller holds it (`createBookingRecord`, `restoreBooking`,
+ * `setBookingParticipantType`, `undoBookingNoShow`, `setTripParticipantTerms`), which is what makes the
+ * answer a gate rather than advice.
+ */
+export async function heldSeatCounts(
+  tx: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<SeatCounts> {
+  const [row] = await tx
+    .select({
+      aboard: count(bookings.id),
+      divers: sql<number>`count(*) filter (where ${bookings.participantType} = 'diver')`.mapWith(
+        Number,
+      ),
+    })
+    .from(bookings)
+    .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, tripId), seatHeld));
+  return { aboard: row?.aboard ?? 0, divers: row?.divers ?? 0 };
+}
 
 /**
  * The schedule page's list, one keyset page at a time (ordered by departure,
@@ -344,6 +396,7 @@ export async function pagedUpcomingTripsWithCounts(
       course: courses,
       diveSite: diveSites,
       booked: count(bookings.id),
+      bookedDivers: bookedDiversCount(),
     })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
@@ -369,12 +422,17 @@ export async function pagedUpcomingTripsWithCounts(
     )
     .groupBy(trips.id, courses.id, diveSites.id)
     .having(hasSpaceHaving(options.hasSpace))
+    // diveday:allow-time-id-order: the keyset cursor is the (startsAt, id) pair (`src/db/cursor.ts`), so a title key here would skip or repeat rows across pages until the cursor carries it too.
     .orderBy(asc(trips.startsAt), asc(trips.id))
     .limit(limit + 1);
 
-  const page = rows
-    .slice(0, limit)
-    .map(({ trip, course, diveSite, booked }) => ({ ...trip, course, diveSite, booked }));
+  const page = rows.slice(0, limit).map(({ trip, course, diveSite, booked, bookedDivers }) => ({
+    ...trip,
+    course,
+    diveSite,
+    booked,
+    bookedDivers,
+  }));
   const last = page.at(-1);
   return {
     trips: page,
@@ -452,6 +510,7 @@ export async function offsetUpcomingTripsWithCounts(
           course: courses,
           diveSite: diveSites,
           booked: count(bookings.id),
+          bookedDivers: bookedDiversCount(),
         })
         .from(trips)
         .leftJoin(courses, eq(courses.id, trips.courseId))
@@ -460,17 +519,18 @@ export async function offsetUpcomingTripsWithCounts(
         .where(and(scope, liveTrip()))
         .groupBy(trips.id, courses.id, diveSites.id)
         .having(having)
-        .orderBy(asc(trips.startsAt), asc(trips.id))
+        .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id))
         .limit(limit)
         .offset(offset),
   });
 
   return {
-    trips: paged.rows.map(({ trip, course, diveSite, booked }) => ({
+    trips: paged.rows.map(({ trip, course, diveSite, booked, bookedDivers }) => ({
       ...trip,
       course,
       diveSite,
       booked,
+      bookedDivers,
     })),
     page: paged.page,
     pageCount: paged.pageCount,
@@ -974,7 +1034,7 @@ export async function weekBoard(
       ),
     )
     .groupBy(trips.id, diveSites.id)
-    .orderBy(asc(trips.startsAt), asc(trips.id));
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
 
   if (overlapping.length === 0) return { days, spans: [] };
 

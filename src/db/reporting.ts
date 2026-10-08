@@ -20,6 +20,7 @@ import {
 import { canViewShopReports, type Role } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { emptyParticipantCounts } from "@/lib/participant-types";
 import type { MonthlyReportInput, ReportTrip } from "@/lib/reporting";
 import type { ShopYearDay, ShopYearInput } from "@/lib/shop-year";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
@@ -131,6 +132,24 @@ export async function getMonthlyReport(
   endUtc: Date,
   options: { currency?: string; timeZone?: string } = {},
 ): Promise<MonthlyReportInput> {
+  // **The rule for deleted departures, and why the money joins skip it**
+  // (issue #1932). The trip spine, the waiver count and the referral count
+  // carry `liveTrip()`; the seven money queries below (`baseRevenue`,
+  // `recoveredDeposits`, `currentCheckoutTax`, `currentPassThrough`,
+  // `invoiceRevenue`, `invoiceBookingAmounts`, `tipTotals`) join on this alone.
+  // That is not a gap, and adding `liveTrip()` to them would filter against a
+  // state the product cannot produce: every one of them reaches `trips`
+  // *through* `bookings`, and `deleteTrip` (src/db/trips-schedule.ts) refuses
+  // with `has_roster` any departure that has ever held a booking, cancelled
+  // ones included, under a row lock. So a deleted departure has no payment, no
+  // checkout, no invoice and no tip, and the month's revenue and its seats
+  // always read the same boats. `reporting.test.ts` pins the refusal rather
+  // than a zero sum, because the refusal is what keeps this true.
+  //
+  // The one route to a deleted departure with bookings is the e2e-only
+  // `api/test/seed-off-season` route, gated to demo shops behind
+  // `e2eTestRouteAuthorized`; a capture of /reports after it can show revenue
+  // against no seats, and that is the seed, not this report.
   const inWindow = and(
     eq(trips.shopId, shopId),
     ne(trips.status, "cancelled"),
@@ -224,6 +243,10 @@ export async function getMonthlyReport(
   // since gone fully `paid`. A booking still `deposit_paid` keeps its deposit in
   // the base and is excluded here, so nothing is double-counted.
   //
+  // This seat's own trip ask (`trip_cents`) where the row has one, the same
+  // basis `markCheckoutPaidBySessionId` allocates on: a snorkeler's deposit is
+  // not the diver's (ADR 20261007-participant-types).
+  //
   // The share is the money that *settled*, on the same basis as the per-booking
   // payment rows the base sums: this diver's asked amount (deposit + their own
   // gear) scaled by what Stripe actually collected against what was asked
@@ -233,7 +256,7 @@ export async function getMonthlyReport(
   // where the payment ledger cannot, and `nullif` keeps a zero-total checkout
   // (nothing to recover) out of the sum instead of dividing by zero.
   const recoveredDepositCents = sql<string>`coalesce(sum(round(
-    (${bookingCheckouts.amountPerDiverCents} + ${bookingCheckoutBookings.gearCents} + ${bookingCheckoutBookings.passThroughCents})
+    (coalesce(${bookingCheckoutBookings.tripCents}, ${bookingCheckouts.amountPerDiverCents}) + ${bookingCheckoutBookings.gearCents} + ${bookingCheckoutBookings.passThroughCents})
       * coalesce(${bookingCheckouts.settledTotalCents}, ${bookingCheckouts.totalCents})::numeric
       / nullif(${bookingCheckouts.totalCents}, 0)
   )), 0)`;
@@ -516,6 +539,25 @@ export async function getMonthlyReport(
   // fact.
   const buddyReferredSeats = await buddyReferredSeatsForWindow(db, shopId, startUtc, endUtc);
 
+  // **The same seats, by what each person did aboard** (ADR
+  // 20261007-participant-types). Same basis as `seatsBooked` — active bookings
+  // on this month's live trips — so the split always sums to it.
+  const typeRows = await db
+    .select({ participantType: bookings.participantType, seats: count(bookings.id) })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        inWindow,
+        liveTrip(),
+        eq(bookings.shopId, shopId),
+        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+      ),
+    )
+    .groupBy(bookings.participantType);
+  const seatsByType = emptyParticipantCounts();
+  for (const row of typeRows) seatsByType[row.participantType] += Number(row.seats);
+
   const waiverByTrip = new Map(waiverRows.map((row) => [row.tripId, Number(row.waiverComplete)]));
 
   const reportTrips: ReportTrip[] = tripRows.map((row) => ({
@@ -561,6 +603,7 @@ export async function getMonthlyReport(
     tipCount: Number(tipTotals?.tipCount ?? 0),
     partnerReferredSeats: Number(referredTotals?.seats ?? 0),
     buddyReferredSeats,
+    seatsByType,
   };
 }
 
@@ -684,7 +727,7 @@ export async function pagedMonthlyReportTrips(
         )
         .where(and(inWindow, liveTrip()))
         .groupBy(trips.id, trips.title, trips.startsAt, trips.capacity)
-        .orderBy(asc(trips.startsAt), asc(trips.id))
+        .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id))
         .limit(limit)
         .offset(offset),
   });

@@ -22,7 +22,12 @@
   "summaryNotBackAboard": "Sin regresar a bordo",
   "summaryAshore": "En tierra",
   "summaryAwaiting": "Pendientes",
-  "soulsOnBoardLine": "Buceadores {divers} · Tripulación {crew} · Personas a bordo {souls}",
+  "soulsOnBoardLine": "Pasajeros {passengers} · Tripulación {crew} · Personas a bordo {souls}",
+  "soulsOnBoardLineSplit": "Pasajeros {passengers} ({split}) · Tripulación {crew} · Personas a bordo {souls}",
+  "passengerDivers": "{count, plural, one {# buceador} other {# buceadores}}",
+  "passengerSnorkelers": "{count, plural, one {# de snorkel} other {# de snorkel}}",
+  "passengerRiders": "{count, plural, one {# acompañante} other {# acompañantes}}",
+  "passengersWithSplit": "{passengers} ({split})",
   "soulsOnBoardCrewToConfirm": "({count, plural, one {# de la tripulación también está en otro barco a estas horas} other {# de la tripulación también están en otros barcos a estas horas}}, así que confirma quién zarpa.)",
   "checkpointNavAriaLabel": "Punto de control del pase de lista",
   "activeCheckpoint": "Punto de control activo",
@@ -32,8 +37,8 @@
   "ofTotalAboard": "de {total, plural, one {# buceador} other {# buceadores}} a bordo",
   "allAccountedFor": "Todos contabilizados, buceadores y tripulación. Listo para el siguiente control.",
   "notBackAboardOpen": "{count, plural, one {# buceador no ha regresado a bordo.} other {# buceadores no han regresado a bordo.}} Este control sigue abierto hasta contabilizarlos.",
-  "crewNoneAssignedYet": "Todos los buceadores están contabilizados. Todavía no hay nadie en la tripulación de esta salida. Añade a quienes navegaron para cerrar este control.",
-  "crewNoneAboard": "Todos los buceadores están contabilizados y toda la tripulación de esta salida figura en tierra, así que nadie a bordo está en la lista de tripulación. Añade a quienes navegaron.",
+  "crewNoneAssignedYet": "Todavía no hay nadie en la tripulación de esta salida. Añade a quienes navegaron para cerrar este control.",
+  "crewNoneAboard": "Todas las personas a bordo están contabilizadas y toda la tripulación de esta salida figura en tierra, así que nadie a bordo está en la lista de tripulación. Añade a quienes navegaron.",
   "crewNotBackAboard": "{count, plural, one {# tripulante no ha vuelto a bordo.} other {# tripulantes no han vuelto a bordo.}} Este control sigue abierto.",
   "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}} Cada persona de la tripulación necesita su propio resultado.",
   "blockedDeparture": "{count, plural, one {Hay # buceador bloqueado.} other {Hay # buceadores bloqueados.}}",
@@ -112,6 +117,7 @@
   "medicalClearedByPhysician": "Autorizado por un médico",
   "medicalWaiverSigned": "Exención médica firmada",
   "medicalEarlierRefusal": "Un médico no autorizó a esta persona el {date} (exención anterior)",
+  "medicalEarlierRefusalChip": "Rechazo médico previo",
   "medicalReferralUnresolved": "Firmada de nuevo tras una derivación médica sin autorización de un médico registrada ({date})",
   "resolveBlockersLink": "Resolver bloqueos en Buceadores →",
   "addNoteSummary": "Añadir una nota",
@@ -137,7 +143,7 @@
   "buddyFormSubmit": "Crear equipo de buceo",
   "buddyUnteamedOne": "{name} no tiene equipo de buceo, lo que es normal con un número impar.",
   "buddyEveryoneTeamed": "Todas las personas de esta salida ya están en un equipo de buceo.",
-  "overCapacityLine": "{count, plural, one {# buceador está a bordo por encima de las plazas del barco.} other {# buceadores están a bordo por encima de las plazas del barco.}} Aquí nada rechaza a una persona que la tripulación ya ha contado.",
+  "overCapacityLine": "{count, plural, one {# persona está a bordo por encima de las plazas del barco.} other {# personas están a bordo por encima de las plazas del barco.}} Aquí nada rechaza a una persona que la tripulación ya ha contado.",
   "buddySeparatedLine": "{count, plural, one {# equipo de buceo está dividido.} other {# equipos de buceo están divididos.}} Alguien está a bordo y alguien no.",
   "buddyErrorDuplicate": "Elige personas distintas. Nadie es su propio compañero.",
   "buddyErrorAlreadyTeamed": "Uno de esos buceadores ya está en un equipo de buceo. Deshaz ese equipo primero.",
@@ -198,6 +204,10 @@
     "arrival": "{count, plural, one {{names} se registró.} other {{names} se registraron.}}",
     "seatTaken": "{count, plural, one {{names} tomó una plaza.} other {{names} tomaron plazas.}}",
     "seatReleased": "{count, plural, one {{names} dejó su plaza.} other {{names} dejaron sus plazas.}}",
+    "nowDiving": "{count, plural, one {{names} ahora bucea.} other {{names} ahora bucean.}}",
+    "nowSnorkeling": "{count, plural, one {{names} ahora hace snorkel.} other {{names} ahora hacen snorkel.}}",
+    "nowRiding": "{count, plural, one {{names} ahora va de acompañante.} other {{names} ahora van de acompañantes.}}",
+    "balanceOwed": "{count, plural, one {{names} debe la diferencia de una plaza que ahora cuesta más.} other {{names} deben la diferencia de plazas que ahora cuestan más.}}",
     "gearChanged": "{count, plural, one {{names} ahora lleva otro equipo.} other {{names} ahora llevan otro equipo.}}",
     "pickupSet": "{count, plural, one {{names} tiene recogida en el hotel.} other {{names} tienen recogida en el hotel.}}",
     "helpRequest": "{count, plural, one {{names} pide una mano a la tripulación.} other {{names} piden una mano a la tripulación.}}",
@@ -219,5 +229,19 @@
     },
     "noteLabel": "Nota para el centro",
     "noteHint": "Los buceadores no ven esto."
+  },
+  "buddyErrorNotDiver": "Un equipo de buceo es solo de buceadores. Quien hace snorkel o va de acompañante no forma parte de uno.",
+  "participantType": {
+    "diver": "Buceador",
+    "snorkeler": "Snorkel",
+    "rider": "Acompañante",
+    "bookedAsDiver": {
+      "snorkeler": "Hace snorkel, reservó como buceador",
+      "rider": "Va de acompañante, reservó como buceador"
+    },
+    "bookedAsNonDiver": {
+      "snorkeler": "Bucea, reservó como snorkel",
+      "rider": "Bucea, reservó como acompañante"
+    }
   }
 }

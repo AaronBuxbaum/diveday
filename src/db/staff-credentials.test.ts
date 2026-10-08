@@ -3,12 +3,13 @@ import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import { people, personRoles } from "./schema";
+import { people, personRoles, staffCredentialKind } from "./schema";
 import {
   createStaffCredential,
   deleteStaffCredential,
   listStaffCredentials,
   reviewStaffCredential,
+  STAFF_CREDENTIAL_KINDS,
 } from "./staff-credentials";
 
 const OTHER_SHOP = "00000000-0000-0000-0000-000000000000";
@@ -69,6 +70,24 @@ describe("createStaffCredential", () => {
       issuedAt: "2024-03-01",
       renewsAt: "2027-03-01",
     });
+  });
+
+  it("files a lapsed Assistant Instructor's rating as its own kind (issue #1850)", async () => {
+    const { db, shop, staff } = await context();
+    const row = await createStaffCredential(db, {
+      ...card(staff, shop.id),
+      kind: "assistant_instructor_rating",
+      name: "Assistant Instructor",
+      renewsAt: "2026-01-31",
+    });
+    expect(row).toMatchObject({ kind: "assistant_instructor_rating", renewsAt: "2026-01-31" });
+  });
+
+  it("offers the save form every kind the column holds, so no kind renders and then refuses", () => {
+    // The form's list was once written out by hand, and a kind added to the
+    // enum alone rendered in the picker and could not be saved (issue #1850).
+    expect([...STAFF_CREDENTIAL_KINDS]).toEqual([...staffCredentialKind.enumValues]);
+    expect(STAFF_CREDENTIAL_KINDS).toContain("assistant_instructor_rating");
   });
 
   it("refuses a person with no staff role — a diver cannot hold a staff credential", async () => {

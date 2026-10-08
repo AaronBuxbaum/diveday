@@ -336,6 +336,15 @@ export const tripDeskEventKind = pgEnum("trip_desk_event_kind", [
   "help_request",
   "meeting_point",
   "plan_changed",
+  // A seat changed what it is doing aboard, one kind per new type so the
+  // strip can say it: "Ana Ruiz is snorkeling now" (ADR
+  // 20261007-participant-types).
+  "now_diving",
+  "now_snorkeling",
+  "now_riding",
+  // A type change raised a paid seat's price: the difference is owed, and
+  // nothing collects it on its own.
+  "balance_owed",
 ]);
 
 export const tripDeskEvents = pgTable(

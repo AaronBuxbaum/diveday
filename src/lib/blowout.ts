@@ -1,3 +1,4 @@
+import { offeredParticipantTypes, type ParticipantType, seatRefusal } from "./participant-types";
 import type { CertRequirementSource, SiteCertRequirement } from "./readiness";
 import { decideTripAdmission, type TripAdmissionEvidence } from "./trip-admission";
 
@@ -20,8 +21,12 @@ import { decideTripAdmission, type TripAdmissionEvidence } from "./trip-admissio
  * - **inside the offer horizon** — a blown-out Saturday diver wants next
  *   week, not next season;
  * - **not the blown-out trip itself**, whatever state the caller passes it in;
- * - **has a free seat** — an offer onto a full boat is a second
- *   disappointment queued behind the first;
+ * - **has a free seat of the diver's own type** — an offer onto a full boat,
+ *   or a diver's offer onto a boat whose diver seats are all taken, is a
+ *   second disappointment queued behind the first (`seatRefusal`);
+ * - **sells the seat's type** — a rider is offered only departures that
+ *   price a rider's seat, a snorkeler a snorkeler's (`offeredParticipantTypes`,
+ *   ADR 20261007-participant-types);
  * - **not a course session** — enrolment has its own admission rule
  *   (`course_prerequisite`, prepaid curriculum, multi-day commitment), so a
  *   charter seat is never "replaced" by a class;
@@ -50,6 +55,13 @@ export type BlowoutCandidateTrip = {
   capacity: number;
   /** Non-cancelled bookings currently holding seats. */
   activeBookings: number;
+  /** Those of them that are divers' seats; absent means every seat is a diver's. */
+  activeDivers?: number;
+  /** The divers-only limit, when the departure states one. */
+  diverCapacity?: number | null;
+  /** The snorkeler and rider prices; a null price is a seat type not sold. */
+  snorkelerPriceCents?: number | null;
+  riderPriceCents?: number | null;
   /** True when the departure is a scheduled course session (`trips.course_id`). */
   courseSession: boolean;
   /** The trip's own requirement row, or null when the shop configured none. */
@@ -66,6 +78,8 @@ export type BlowoutDiverContext = {
   identityUnconfirmed: boolean;
   /** Trips this person already actively holds a seat on (any status but cancelled). */
   bookedTripIds: readonly string[];
+  /** What the blown-out seat was: offered the same kind of seat elsewhere. Absent means diver. */
+  participantType?: ParticipantType;
 };
 
 export type BlowoutOfferInput = {
@@ -88,6 +102,7 @@ export function qualifyingAlternatives(input: BlowoutOfferInput): string[] {
   const maxOffers = input.maxOffers ?? BLOWOUT_MAX_OFFERS;
   const horizonEnd = input.now.getTime() + horizonDays * 24 * 60 * 60 * 1_000;
   const alreadyBooked = new Set(input.diver.bookedTripIds);
+  const type = input.diver.participantType ?? "diver";
 
   return input.candidates
     .filter((candidate) => {
@@ -97,13 +112,19 @@ export function qualifyingAlternatives(input: BlowoutOfferInput): string[] {
       const startsAtMs = candidate.startsAt.getTime();
       if (startsAtMs + 60 * 60 * 1000 <= input.now.getTime() || startsAtMs > horizonEnd)
         return false;
-      if (candidate.activeBookings >= candidate.capacity) return false;
+      if (!offeredParticipantTypes({ priceCents: null, ...candidate }).includes(type)) return false;
+      const held = {
+        aboard: candidate.activeBookings,
+        divers: candidate.activeDivers ?? candidate.activeBookings,
+      };
+      if (seatRefusal(type, candidate, held) !== null) return false;
       if (alreadyBooked.has(candidate.id)) return false;
       return decideTripAdmission({
         requirement: candidate.requirement,
         siteRequirement: candidate.siteRequirement,
         evidence: input.diver.evidence,
         identityUnconfirmed: input.diver.identityUnconfirmed,
+        participantType: type,
       }).admitted;
     })
     .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())

@@ -12,7 +12,7 @@ import {
   listCrewAvailabilityBlocks,
   requestCrewAssignment,
   saveCrewAvailabilityBlock,
-  tripOverIntroRatio,
+  tripRatioGapNeedsInstructor,
   withdrawCrewAssignmentRequest,
 } from "./crew-requests";
 import {
@@ -424,14 +424,20 @@ const OPEN_TEST_SESSION_OFFSET_MS = 180 * 24 * 60 * 60 * 1000;
  * plain "Approved, and they're on the crew" was the last thing the queue said
  * about it. The action asks the boat rather than inferring from who asked.
  */
-describe("tripOverIntroRatio", () => {
+describe("tripRatioGapNeedsInstructor", () => {
   /**
    * An instructor-crewed session on `courseTitle`, seated `withinRatio` through
    * the booking gate and then pushed one over by a row written directly —
    * `createBooking` refuses to *sell* the seat past the ratio, and the state
    * this reports on is one a data import or a crew change leaves behind.
    */
-  async function overRatioSession(courseTitle: string, withinRatio: number, tag: string) {
+  async function overRatioSession(
+    courseTitle: string,
+    withinRatio: number,
+    tag: string,
+    /** How many seats past the gate to write directly; one by default. */
+    overBy = 1,
+  ) {
     const { db, shop } = ctx;
     const [course] = await db
       .select()
@@ -463,22 +469,26 @@ describe("tripOverIntroRatio", () => {
         }),
       ).toMatchObject({ ok: true });
     }
-    const [extraDiver] = await db
-      .insert(people)
-      .values({
-        shopId: shop.id,
-        fullName: `Ratio Diver ${withinRatio}`,
-        email: `crew-request-${tag}-diver-${withinRatio}@example.com`,
-      })
-      .returning();
-    if (!extraDiver) throw new Error("failed to insert extra diver");
-    await db.insert(bookings).values({ shopId: shop.id, tripId: trip.id, personId: extraDiver.id });
+    for (let i = withinRatio; i < withinRatio + overBy; i++) {
+      const [extraDiver] = await db
+        .insert(people)
+        .values({
+          shopId: shop.id,
+          fullName: `Ratio Diver ${i}`,
+          email: `crew-request-${tag}-diver-${i}@example.com`,
+        })
+        .returning();
+      if (!extraDiver) throw new Error("failed to insert extra diver");
+      await db
+        .insert(bookings)
+        .values({ bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: extraDiver.id });
+    }
     return { db, shop, trip };
   }
 
   it("says an over-ratio intro session is still over it, and a divemaster does not change that", async () => {
     const { db, shop, trip } = await overRatioSession("Discover Scuba Diving", 2, "dsd-notice");
-    expect(await tripOverIntroRatio(db, shop.id, trip.id)).toBe(true);
+    expect(await tripRatioGapNeedsInstructor(db, shop.id, trip.id)).toBe(true);
 
     // The approval the notice is about: a real assignment that buys the cap
     // nothing, because the intro rule credits an assistant zero students.
@@ -490,19 +500,38 @@ describe("tripOverIntroRatio", () => {
       operation: "assign",
       personId: divemaster.person.id,
     });
-    expect(await tripOverIntroRatio(db, shop.id, trip.id)).toBe(true);
+    expect(await tripRatioGapNeedsInstructor(db, shop.id, trip.id)).toBe(true);
+  });
+
+  /**
+   * The entry-level cap past its per-instructor ceiling (12, whatever the
+   * assistants): a divemaster buys no seat there either, so the approval says
+   * so exactly as it does on an intro session (dive-domain review of #1677).
+   */
+  it("says an entry-level session past 12 per instructor is still over, with a divemaster aboard", async () => {
+    const { db, shop, trip } = await overRatioSession("Open Water Diver", 8, "ow-ceiling", 5);
+    expect(await tripRatioGapNeedsInstructor(db, shop.id, trip.id)).toBe(true);
+    const divemaster = (await listStaff(db, shop.id)).find(
+      (entry) => entry.roles.includes("divemaster") && !entry.roles.includes("instructor"),
+    );
+    if (!divemaster) throw new Error("seeded divemaster missing");
+    await changeTripCrew(db, shop.id, trip.id, {
+      operation: "assign",
+      personId: divemaster.person.id,
+    });
+    expect(await tripRatioGapNeedsInstructor(db, shop.id, trip.id)).toBe(true);
   });
 
   it("stays quiet for the entry-level cap and for a session inside its ratio", async () => {
     // Over ratio, but the entry-level one — a certified assistant does raise
     // that, so the plain success line is the honest answer there.
     const entryLevel = await overRatioSession("Open Water Diver", 8, "ow-notice");
-    expect(await tripOverIntroRatio(entryLevel.db, entryLevel.shop.id, entryLevel.trip.id)).toBe(
-      false,
-    );
+    expect(
+      await tripRatioGapNeedsInstructor(entryLevel.db, entryLevel.shop.id, entryLevel.trip.id),
+    ).toBe(false);
 
     // And a fun dive, which carries no course ratio at all.
     const { db, shop, trip } = await context();
-    expect(await tripOverIntroRatio(db, shop.id, trip.id)).toBe(false);
+    expect(await tripRatioGapNeedsInstructor(db, shop.id, trip.id)).toBe(false);
   });
 });

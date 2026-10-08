@@ -120,9 +120,15 @@ new domain concept, define it here in the same PR.
   purpose (see their own entries on why even an *imported* row waits for a staff confirm there).
 - **In training** — a diver with no card at a trip's level yet, holding a seat on a course session
   that certifies that level (or higher), ends before the trip starts, and has not ended yet. Which
-  courses certify a rung is agency fact, kept by template in `src/content/course-templates.ts`
-  (`courseTemplateCertifiedLevel`), and matches the importer: SSI Advanced Adventurer and SDI
-  Advanced Adventure Diver are the Advanced rung; specialties, refreshers and tasters certify none.
+  courses certify a rung is agency fact, written on each template in `src/content/course-templates.ts`
+  (`certifiesLevel`) and copied onto the course (`courses.certifies_level`, issue #2059), so a
+  template update carries it and no editor changes it; it matches the importer: SSI Advanced
+  Adventurer and SDI Advanced Adventure Diver are the Advanced rung; specialties, refreshers and
+  tasters certify none, and neither does a course a shop built without a template. The roster's
+  "Certify" select opens on it, or on an empty required choice where the course names none; an intro
+  session (`courses.is_intro_course`) draws no Certify control, and the action refuses one posted
+  anyway (`not_a_certifying_course`). A Rescue student counts as in training toward an Advanced trip
+  (the higher rung covers the lower one) at sale only.
   It is **never evidence**. At a charter's sale it counts toward the trip's level, so a fun dive the
   morning after an Open Water course can be sold. It does **not** satisfy a course's own
   prerequisite: Advanced still asks for a certified Open Water card (H-08's course baseline). At
@@ -164,7 +170,7 @@ new domain concept, define it here in the same PR.
   staff-verified card as displaceable and let an anonymous post re-grade it
   ([20260814-self-declared-cards](../architecture/decisions/20260814-self-declared-cards.md)).
 - **Declared uncertified** — a joiner's answer of *"I'm not certified yet"* on one of those same two
-  opt-ins: Discover Scuba and Try Scuba customers, snorkellers, the non-diving half of a couple,
+  opt-ins: Discover Scuba and Try Scuba customers, snorkelers, the non-diving half of a couple,
   somebody booked onto a course they have not started. It is **not a Self-declared certification and
   not a level**: it lands as one nullable stamp on the person (`people.no_certification_declared_at`)
   and never as a `certifications` row, because a Discover Scuba experience is not a certification and
@@ -321,8 +327,9 @@ new domain concept, define it here in the same PR.
   already count. The credit assumes a rating **in teaching status** — a lapsed AI is out of teaching
   status and uninsured, and is not a certified assistant. Since H-59's 2026-10-07 amendment (issue
   #1853) the **supervision claim** checks it, so far as the shop has recorded it: an AI whose every
-  recorded `instructor_rating` / `divemaster_rating` renewed before the departure counts for nothing
-  on Today, the staffing week and the trip page (see **Supervision claim**). Booking and rostering
+  recorded `instructor_rating` / `assistant_instructor_rating` / `divemaster_rating` renewed before the departure counts for nothing
+  on Today, the staffing week and the trip page (see **Supervision claim**); the AI's own rating is
+  filed as `assistant_instructor_rating` (issue #1850). Booking and rostering
   still give the credit, because H-59 kept those two gates closed.
   **It carries no permissions of its own** — DiveDay's authorization gates are
   unchanged by it, so a shop that wants their AI to hold a Divemaster's permissions files them as
@@ -498,7 +505,9 @@ new domain concept, define it here in the same PR.
   the shop has no evidence a second person exists at all. The distinction is evidence and nothing
   else: no surface renders it, readiness treats the record as co-signed, and the only readers are
   the integrity seal and the export bundle. The guardian's email is **optional**, and the one thing
-  it is for is a copy of what was signed (see **Guardian's copy** below).
+  it is for is a copy of what was signed (see **Guardian's copy** below). **It can be erased on
+  its own** (H-103): an owner takes it off from the child's record, and the release is re-sealed as
+  **redacted** (integrity version 4), still verifying, with who erased it and when inside the seal.
   **Two codes, and only two** — `parent` and `legal_guardian`, confirmed by the owner on 2026-09-10
   (issue 1541) rather than widened. Free text was rejected in the ADR because the code renders to
   staff in their own language, and that reason still holds. **The paper path is not an escape hatch
@@ -563,8 +572,8 @@ new domain concept, define it here in the same PR.
   as a booking gate (`INTRO_COURSE_RATIO` in `src/lib/course-ratios.ts`, derived from `DSD_RATIO`);
   the confined-water 4:1 number is recorded for reference, unenforced. A certified assistant aboard
   buys an intro session no extra seats; only another instructor does — which is why the staffing
-  week words this gap apart as "Over intro ratio" rather than the entry-level "Over student ratio"
-  (**Crew gap** below).
+  week words this gap apart as "Over intro ratio: add an instructor" rather than the entry-level
+  "Over student ratio: add a DM or AI" (**Crew gap** below).
   Applies to **every agency** — unlike the entry-level ratio below, the *reason* this figure is
   tighter (participants with no prior water time) does not depend on whose logo is on the course, so
   an SSI Try Scuba and a NAUI intro session take the same cap. An intro session stays gated **even
@@ -850,11 +859,15 @@ new domain concept, define it here in the same PR.
   statement about the *detector* rather than something a shop can arrange — no trip-creation door
   writes the mark onto a course session any more (issue #1342, see **Self-guided departure**) — and
   it is kept because a row written out of band still has to resolve correctly. Formerly "coverage
-  gap", which named a second vocabulary that no longer exists. **The six words a staffer reads** are
-  "No divemaster", "Under target", "Course needs instructor", "No instructor or crew",
-  "Over student ratio" and "Over intro ratio" — "student" says the agency cap rather than the
-  target two rows down, "intro" the one cap a divemaster cannot raise, and all six share the same
-  135px column of the staffing week (issues #1125, #1338, #1339).
+  gap", which named a second vocabulary that no longer exists. **The seven words a staffer reads**
+  are "No divemaster", "Under target", "Course needs instructor", "No instructor or crew",
+  "Over student ratio: add a DM or AI", "Over student ratio: add an instructor" and "Over intro
+  ratio: add an instructor". "Student" says the agency cap rather than the target two rows down;
+  each over-ratio chip names who a manager goes to find, which is the gap's `remedy`
+  (`src/lib/course-ratios.ts`): a divemaster or assistant instructor raises the student cap 2 at a
+  time, but never past 12 per instructor, so past that ceiling only another instructor adds a seat,
+  and an intro session credits an assistant nothing at all. All seven share the same 135px column of
+  the staffing week (issues #1125, #1338, #1339, #1677).
 - **Self-guided departure** — `trips.self_guided`. A departure the shop has said runs without an
   in-water guide: buddy pairs go in on their own. It silences the shop's own **Target
   diver:divemaster ratio** for that one sailing and reaches nothing else — never an agency training
@@ -1117,13 +1130,14 @@ new domain concept, define it here in the same PR.
   **souls on board** line, whose crew half is the same idea: assigned crew less the ones a human
   recorded ashore at the dock.
 - **Souls on board** — the industry's (and the coast guard's) term for how many *people* a vessel
-  left with: divers plus crew, one number, no distinction between who paid and who works. It is
+  left with: passengers (divers, snorkelers and riders) plus crew, one number, no distinction
+  between who paid and who works. It is
   printed at the top of the paper manifest and nowhere on screen, deliberately. On paper it is a
   **static** fact about the departure — how many the trip carries, how many crew it names — never a
   live roll-call count, because a "Boarded 6" printed at 07:12 is wrong by 07:20 and paper cannot
   correct itself. The screen answers the live question, in the checkpoint panel. **One screen does
-  count this way**: the shop home's evening homecoming line, which since 2026-09-05 reads "8 divers
-  and 2 crew out, 10 back" (issue #1346). It counted bookings until then, which left the crew out
+  count this way**: the shop home's evening homecoming line, which since 2026-09-05 reads "8
+  passengers and 2 crew out, 10 back" (issue #1346). It counted bookings until then, which left the crew out
   of both numbers on the one sentence in the product about who came home — and it says the two
   halves rather than one total, because a shop reading its own evening wants to know which is which.
   **Both halves now count who was carried, not who was rostered** (issue #1689): the diver half is
@@ -1276,7 +1290,36 @@ new domain concept, define it here in the same PR.
   decision 4). At the dock the heads-up keeps its old reading: there the crew is *assembling* a
   boat, so anyone not yet aboard is genuinely still to gather. The offline manifest shows teams read-only by name and states that the split-team read
   belongs to the live roll call — a saved snapshot cannot know who came back.
+  Buddy teams are **divers only**: a snorkeler or a rider on a departure can be on no team, and a
+  booking that is on one cannot be changed away from diving until it leaves the team.
   See [ADR 20260804-buddy-teams](../architecture/decisions/20260804-buddy-teams.md).
+- **Participant type** — what a booked person is doing on a departure: a **diver**, a
+  **snorkeler**, or a **rider** (`bookings.participant_type`, codes in
+  `src/lib/participant-types.ts`). Every booking has exactly one, and it defaults to diver. All
+  three hold a seat, are counted at every roll-call checkpoint, appear on the manifest, and sign
+  the shop's waiver and medical form. Only a diver is asked for a certification, may request
+  nitrox, goes on a buddy team, is packed tanks for, uses a dive package, or counts against the
+  departure's **diver seats**. A course session sells divers only. Staff change a booking's type
+  from the roster ("Coming as"): joining the dive runs the card check and needs "Change anyway" (an
+  owner, manager or instructor) to pass a missing card, nothing changes once the departure is home,
+  and joining is refused from the departure time on. See
+  [ADR 20261007-participant-types](../architecture/decisions/20261007-participant-types.md).
+- **Booked as** — the participant type a booking was made with (`bookings.booked_as`), set once by
+  every writer and never changed. A seat whose type moved since shows a warning-tone
+  note on the roster, the roll call and the offline copy: "Snorkeling, booked as diver" when it
+  left the dive, "Diving, booked as snorkeler" when it joined. Leaving the dive clears card checks
+  only, never a medical one, and joining a seat already boarded re-asks the boarding gate.
+- **Snorkeler** — a participant who is in the water at the surface with no tank. Needs no card,
+  rents surface kit only (mask and fins, wetsuit, boots, hood and gloves, camera), and pays the
+  departure's snorkeler price (`trips.snorkeler_price_cents`). The public form offers a snorkeler
+  seat only where the shop has named that price; zero means free, and no price means not sold.
+- **Rider** — a participant who stays on the boat: a partner, a parent, a photographer. Needs no
+  card, rents nothing, and pays the departure's rider price (`trips.rider_price_cents`) under the
+  same rule as a snorkeler's. A rider is still a body aboard and is counted at roll call.
+- **Diver seats** — an optional cap on how many **divers** a departure carries
+  (`trips.diver_capacity`), for a boat whose tanks or guides run out before its deck does. The
+  boat's own capacity always counts everyone aboard; the diver cap only refuses a diver, and a cap
+  at or above the capacity binds nothing. Both are enforced inside the booking transaction.
 - **Per-trip crew role** — what a crew member is rostered to *do on one sailing*
   (`instructor`/`divemaster`/`captain`/`crew`), as opposed to the shop-wide roles they hold. There
   is deliberately no `assistant_instructor` here: that is a rung a person holds, and the job an AI
@@ -1395,7 +1438,9 @@ new domain concept, define it here in the same PR.
   version and new links snapshot the current one. The exact template version is snapshotted into each
   issued record; a signed record is immutable and a replacement link creates a new record. Some
   answers on the medical form require a physician sign-off — that's a blocking state, not a checkbox,
-  and the only thing that ends it is a **physician clearance** recorded against that record.
+  and the only thing that ends it is a **physician clearance** recorded against that record. The
+  hold is a fact about the diver, not the trip: it blocks every departure, including one that does
+  not require the release (H-104).
 
   **Publishing a version invalidates every standing signature at the shop, at once.** A signature is
   held against the version it was signed on, so a new version leaves every booked diver on every
@@ -1601,6 +1646,7 @@ new domain concept, define it here in the same PR.
 - **First-timer track** — the night-before brief in a softer, what-happens-on-the-boat voice for a
   diver with no prior non-cancelled booking on a departed trip with the shop. Same data, extra
   reassurance; the signal is derived at send time, not stored.
+- **Monday email** (weekly digest) — the owner's service email about their own shop's week, sent once per person per shop-local week on Monday between 08:00 and 20:00 shop time (`/api/cron/weekly-digest`, hourly). Sections, each a count and a link into the staff app, appear only when they have something to say: last week's bookings made and seats filled against capacity (Reports' own query), this week's departures and seat fill and the divers still owing a waiver (the shared readiness horizon), reviews received and waiting on moderation, date requests still waiting, and Today rows that are past due. A week with none of these sends nothing. Last week's figures and Today's money and platform chores go only to someone Reports' gate admits (`canViewShopReports`, read from live roles); anyone else who opts in gets the rest. On by default for an owner, off for everyone else, and each staffer's own answer (`user_accounts.weekly_digest`) wins; it is turned off from the staffer's Email settings or the email's own one-click link. Transactional under H-09 (staff, about their own operation), so it carries no commercial postal footer. Demo shops never send; any staffer can preview this week's at `/shop/<slug>/settings/email/preview`. Logic in `src/lib/weekly-digest.ts`, reads and the send claim (`weekly_digest_sends`) in `src/db/weekly-digest.ts`.
 - **Post-trip recap** — the per-diver-per-trip reading of the day, delivered once per booking as the
   `trip_recap` kind no earlier than four hours after the departure ends. It rides the same
   delivery-row dedup as the reminders, and the dedicated hourly recap scan (`/api/cron/recaps`) keeps
@@ -1793,9 +1839,9 @@ new domain concept, define it here in the same PR.
 - **Rental set** — typically: **BCD** (jacket, sized), **regulator** ("reg", with octopus and
   SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, a **dive
   computer**, and a **tank/cylinder** (e.g. AL80 aluminum 80 cu ft). The dive computer is default-on
-  for every diver **and** part of the priced core set (H-06, reconfirmed 2026-08-02 — HD-9). Four
-  add-ons are off by default and priced separately: the **GoPro**, the **drysuit**, **hood &
-  gloves**, a **dive light** and an **SMB** (`RENTABLE_ITEMS`, `src/lib/rentals.ts`). A diver who skips a core
+  for every diver **and** part of the priced core set (H-06, reconfirmed 2026-08-02 — HD-9). Six
+  add-ons are off by default and priced separately: the **GoPro**, the **drysuit**, a **hood**,
+  **gloves**, a **dive light** and an **SMB** (`RENTABLE_ITEMS`, `src/lib/rentals.ts`). A diver who skips a core
   piece (brings their own dive computer, say) is quoted whichever is cheaper — the set price or the
   sum of the pieces they actually take — so skipping one never costs more than the full set would
   have (`quoteRentalFit`, `src/lib/rentals.ts`).
@@ -1846,8 +1892,10 @@ new domain concept, define it here in the same PR.
   the shop rather than quoted at zero. A shop that prices nothing keeps the "ask the shop what's
   included" behaviour.
 - **Rental fit** — a shop-scoped diver's reusable record of *which* pieces they take from the shop
-  and in *what size* (BCD, wetsuit, drysuit, boot, fin, usual weighting, plus the dive-computer,
-  GoPro, hood-and-gloves, dive-light and SMB add-ons).
+  and in *what size* (BCD, wetsuit, drysuit, hood, gloves, boot, fin, usual weighting, plus the
+  dive-computer, GoPro, dive-light and SMB add-ons). A **hood** and **gloves** are two kinds, each
+  with a free-text size (H-102), each racked by size and thickness ("M, 5 mm", "L, 3 mm"). A
+  drysuit diver's gloves are flagged on the packing line ("wet or dry gloves?").
   The **drysuit** is the one add-on that carries a size, and it is sized on its own scale — the
   manufacturer grid a rental wall is racked from (a girth letter, a trailing `T` for the tall cut),
   which shares the wetsuit's girth letters but carries a second axis the wetsuit scale has no room
@@ -1980,7 +2028,11 @@ new domain concept, define it here in the same PR.
   all, which is the judgement call.
 - **Trip prep list** — the derived packing list for one departure: tanks (one per diver per planned
   dive, split air/nitrox) plus rental kit grouped by item and size, with the divers each line is
-  for. Purely derived — nothing on it is an allocation. A diver who **dives dry** (above, rented
+  for. Crew get one air tank per planned dive when their job on this trip puts them in the water:
+  the job rostered for this departure decides it (instructor or divemaster yes, captain or deck
+  crew no), and only when no job is set do their standing roles (instructor, assistant instructor,
+  divemaster) stand in (`divesOnTrip`, `src/lib/crew-roles.ts`; issue #1851). Purely derived —
+  nothing on it is an allocation. A diver who **dives dry** (above, rented
   suit or their own) is the one diver whose weights line deliberately carries no number: every fit
   form asks usual weighting against a
   wetsuit ("Usually 12 lb with 3 mm suit"), and a drysuit needs two to four kilos more, so their
@@ -2297,7 +2349,7 @@ new domain concept, define it here in the same PR.
   (`src/db/bookings.ts`) is the only writer, reached from the trip roster's guest row, which is also the desk
   inside the arrivals window, and writes a trail line on the departure and on the *matched
   person's* record naming the staffer (`identity_confirmed`). The counter's own door
-  (`identity_confirmed_at_counter`, issue #1696) went with the Check-in tab on 2026-10-05: a window
+  (issue #1696) and its trail line went with the Check-in tab on 2026-10-05: a window
   that opens 36 hours ahead is no evidence the person was at the desk. **Open to every live staff role on
   purpose**: the flag is raised at the counter, and a staffer who cannot clear one they just
   raised strands a walk-in until a manager walks past — what carries the weight is the trail, not

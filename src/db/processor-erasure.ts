@@ -37,6 +37,7 @@ import { and, asc, eq, lt } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { type CustomerProvider, customerProviderFromEnvironment } from "@/lib/payments/customers";
+import { ERASURE_FAILURE_DETAIL } from "@/lib/payments/erasure-failure";
 import type { AppDb, DbExecutor } from "./client";
 import { idempotencyKeyFor } from "./payment-operations";
 import {
@@ -182,7 +183,7 @@ export async function attemptProcessorErasure(
   // call could only have failed. Either way the row stays `owed` and the owner
   // can close it by attestation.
   const owned = await accountBelongsToShop(db, obligation.stripeAccountId, obligation.shopId);
-  if (!owned) return recordFailedAttempt(db, obligation, "stripe account not owned by this shop");
+  if (!owned) return recordFailedAttempt(db, obligation, ERASURE_FAILURE_DETAIL.accountNotOwned);
 
   const result = await provider.deleteCustomer(
     obligation.stripeAccountId,
@@ -212,7 +213,8 @@ export async function attemptProcessorErasure(
   // `not_configured` is a failure like any other here, and deliberately so: a
   // deployment with no Stripe key has not erased anything at the processor, and
   // a ledger that quietly discharged the row would be claiming otherwise.
-  const error = result.status === "not_configured" ? "stripe not configured" : result.error;
+  const error =
+    result.status === "not_configured" ? ERASURE_FAILURE_DETAIL.notConfigured : result.error;
   return recordFailedAttempt(db, obligation, error);
 }
 
@@ -243,7 +245,9 @@ async function accountBelongsToShop(
 /**
  * One place that burns an attempt and records why, so every failure path —
  * Stripe's, and the ones that never reach Stripe — leaves the same shape on
- * the row: still `owed`, still visible, with the reason an owner can read.
+ * the row: still `owed`, still visible, with the detail behind it. An owner
+ * reads it as a code in shop words (`erasureFailureOf`,
+ * src/lib/payments/erasure-failure.ts), never as Stripe's own string.
  */
 async function recordFailedAttempt(
   db: DbExecutor,

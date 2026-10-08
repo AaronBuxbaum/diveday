@@ -220,7 +220,7 @@ async function otherTenant(db: Awaited<ReturnType<typeof context>>["db"], now: D
   if (!stranger || !trip) throw new Error("other tenant fixture failed");
   const [seat] = await db
     .insert(bookings)
-    .values({ shopId: shop.id, tripId: trip.id, personId: stranger.id })
+    .values({ bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: stranger.id })
     .returning();
   if (!seat) throw new Error("other tenant booking failed");
   return { shop, stranger, trip, seat };

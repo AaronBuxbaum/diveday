@@ -1,5 +1,13 @@
 import { HOUR_MS } from "@/lib/clock";
 import { type CoursePricing, perDiverBookingPriceCents } from "./courses";
+import {
+  isDiver,
+  type NonDiverParticipantType,
+  offeredParticipantTypes,
+  type ParticipantPricing,
+  type ParticipantType,
+  participantPriceCents,
+} from "./participant-types";
 
 /**
  * Deposit and cancellation-policy domain logic, framework-free. The mechanism
@@ -43,6 +51,83 @@ export function checkoutCharge(
     return { amountCents: deposit, isDeposit: true, balanceDueCents: fullCents - deposit };
   }
   return { amountCents: fullCents, isDeposit: false, balanceDueCents: 0 };
+}
+
+/**
+ * {@link checkoutCharge} for one seat of a given participant type (ADR
+ * 20261007-participant-types). A diver's seat is exactly the trip's own charge,
+ * course price included. A snorkeler's or a rider's is their own column with
+ * the trip's deposit policy applied to it, and never a course price — a
+ * non-diver is refused on a course session before it gets here, and if one
+ * slipped through it must not be billed a course fee.
+ *
+ * Null when this departure names no price for the type, or names zero: that
+ * seat is not charged at checkout, which is the same "never a $0 charge" rule
+ * as the diver's.
+ */
+export function seatCheckoutCharge(
+  trip: DepositTrip & ParticipantPricing,
+  course: CoursePricing | null,
+  type: ParticipantType,
+): CheckoutCharge | null {
+  if (isDiver(type)) return checkoutCharge(trip, course);
+  return checkoutCharge(
+    { priceCents: participantPriceCents(trip, type), depositCents: trip.depositCents },
+    null,
+  );
+}
+
+/**
+ * **What the public booking form quotes up front**: the diver seat's deposit
+ * (null when the seat pays its whole fare now), and each snorkeler and rider
+ * seat this departure sells, at its own price and deposit (ADR
+ * 20261007-participant-types). Resolved server-side, so the arithmetic never
+ * reaches the browser.
+ */
+export function checkoutSeatTerms(
+  trip: DepositTrip & ParticipantPricing & { courseId?: string | null },
+  course: CoursePricing | null,
+): {
+  depositCents: number | null;
+  otherSeatOffers: {
+    type: NonDiverParticipantType;
+    fareCents: number;
+    depositCents: number | null;
+  }[];
+} {
+  const charge = checkoutCharge(trip, course);
+  return {
+    depositCents: charge?.isDeposit ? charge.amountCents : null,
+    otherSeatOffers: offeredParticipantTypes(trip).flatMap((type) => {
+      if (isDiver(type)) return [];
+      const seat = seatCheckoutCharge(trip, null, type);
+      return [
+        {
+          type: type as NonDiverParticipantType,
+          fareCents: participantPriceCents(trip, type) ?? 0,
+          depositCents: seat?.isDeposit ? seat.amountCents : null,
+        },
+      ];
+    }),
+  };
+}
+
+/**
+ * **What one seat of this type costs in full**, before any deposit: a diver's
+ * seat the trip's (or the course's) per-diver price, exactly as before; a
+ * snorkeler's or a rider's its own column, never the diver's fare (ADR
+ * 20261007-participant-types). Null when the departure states no price for
+ * that seat. The figure `/ready` asks for, balances a deposit against, and
+ * gates its Pay step on, so it agrees with what checkout charges
+ * (`seatCheckoutCharge`).
+ */
+export function seatListPriceCents(
+  trip: { priceCents: number | null } & ParticipantPricing,
+  course: CoursePricing | null,
+  type: ParticipantType,
+): number | null {
+  if (isDiver(type)) return perDiverBookingPriceCents(trip, course);
+  return participantPriceCents(trip, type);
 }
 
 export type CancellationTrip = {

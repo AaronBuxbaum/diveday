@@ -65,6 +65,8 @@ export type ErrorCode =
   | "unavailable"
   | "course-unavailable"
   | "course-ratio-full"
+  | "divers-full"
+  | "type-unavailable"
   | "fit"
   | "pay"
   | "waiver"
@@ -78,6 +80,8 @@ export const ERROR_MESSAGE_KEYS: Record<ErrorCode, DiverMessageKey> = {
   unavailable: "booking.errors.unavailable",
   "course-unavailable": "booking.errors.courseUnavailable",
   "course-ratio-full": "booking.errors.courseRatioFull",
+  "divers-full": "booking.errors.diversFull",
+  "type-unavailable": "booking.errors.typeUnavailable",
   fit: "booking.errors.fit",
   pay: "booking.errors.pay",
   // Reuses `/ready`'s own wording for the same refusal, so a diver who lands

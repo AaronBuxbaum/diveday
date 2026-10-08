@@ -37,6 +37,7 @@ export type TripRosterActions = {
   markWaiverInPersonAction: PaperWaiverAction;
   markPaymentAction: FormAction;
   removeBookingAction: FormAction;
+  setParticipantTypeAction: FormAction;
   confirmDiverIdentityAction: FormAction;
   splitDiverIdentityAction: FormAction;
   /** Drawn only for an owner or manager (`canRetireMedicalRefusal`). */
@@ -74,6 +75,7 @@ export function TripRosterContent({
   undoBookingId,
   keepOpenBookingId,
   namesakeRefusedBookingId,
+  participantTypeCertBookingId,
   mayDiscount,
   mayWriteOffPayment,
   canManageOrders,
@@ -102,6 +104,8 @@ export function TripRosterContent({
   keepOpenBookingId?: string;
   /** The seat whose paper release was refused for a namesake co-signer (#1573). */
   namesakeRefusedBookingId?: string;
+  /** The seat whose change into diving the card check just refused. */
+  participantTypeCertBookingId?: string;
   mayDiscount: boolean;
   mayWriteOffPayment: boolean;
   /** Whether this staffer may raise an invoice — see `RosterSection`. */
@@ -217,6 +221,7 @@ export function TripRosterContent({
           canManageOrders,
           shopRentalItems,
           splitAsksDateOfBirth: guests.splitAsksDateOfBirth,
+          certifyDefaultLevel: guests.certifyDefaultLevel,
           compact,
           showSummaryHeading: !compact,
         }}
@@ -231,18 +236,20 @@ export function TripRosterContent({
           sameNameHeldSeats: guests.sameNameHeldSeats,
           keepOpenBookingId,
           namesakeRefusedBookingId,
+          participantTypeCertBookingId,
         }}
         actions={{
           markWaiverInPersonAction: actions.markWaiverInPersonAction,
           markPaymentAction: actions.markPaymentAction,
           removeBookingAction: actions.removeBookingAction,
+          setParticipantTypeAction: actions.setParticipantTypeAction,
           confirmIdentityAction: actions.confirmDiverIdentityAction,
           splitIdentityAction: actions.splitDiverIdentityAction,
           sendNewWaiverAction: actions.sendNewWaiverAction,
           addNoteAction: actions.addInternalNoteAction,
           deleteNoteAction: actions.deleteInternalNoteAction,
           saveEmergencyContactAction: actions.saveRosterEmergencyContactAction,
-          certifyDiverAction: actions.certifyDiverAction,
+          certifyDiverAction: guests.certifies ? actions.certifyDiverAction : undefined,
           saveCourseNextStepAction: actions.saveCourseNextStepAction,
           updatePickupAction: actions.updateBookingPickupAction,
         }}

@@ -131,8 +131,8 @@
     "until": "until {time}",
     "crewing": "You’re crewing",
     "crewRollCallOpen": "Every diver is aboard, and the crew roll call is still open.",
-    "allHome": "All boats are home: {divers, plural, one {# diver} other {# divers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back.",
-    "firstBoatHome": "Your first boat is home: {divers, plural, one {# diver} other {# divers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back.",
+    "allHome": "All boats are home: {divers, plural, one {# passenger} other {# passengers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back.",
+    "firstBoatHome": "Your first boat is home: {divers, plural, one {# passenger} other {# passengers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back.",
     "firstBooking": "Your first booking",
     "stage": {
       "boarding": "Boarding",
@@ -152,8 +152,8 @@
       "back": "{back} of {sailed} back",
       "backBy": "{back} of {sailed} back by {time}",
       "closedBy": "head count closed by {name}",
-      "backSouls": "{divers, plural, one {# diver} other {# divers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back",
-      "backSoulsBy": "{divers, plural, one {# diver} other {# divers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back by {time}",
+      "backSouls": "{divers, plural, one {# passenger} other {# passengers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back",
+      "backSoulsBy": "{divers, plural, one {# passenger} other {# passengers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back by {time}",
       "openSeats": {
         "label": "Unsold seats",
         "sentence": "{seats, plural, one {# seat went unsold} other {# seats went unsold}}: {facts}.",

@@ -190,7 +190,7 @@ export async function boatClashesByTrip(
         windowsOverlap(legWindow(tripScheduleDays, trips), legWindow(subjectDay, subject)),
       ),
     )
-    .orderBy(asc(trips.startsAt), asc(trips.id));
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
 
   const seen = new Set<string>();
   for (const row of rows) {
@@ -255,7 +255,7 @@ export async function boatMoveClashes(
         or(...proposed.map((window) => windowsOverlap(legWindow(tripScheduleDays, trips), window))),
       ),
     )
-    .orderBy(asc(trips.startsAt), asc(trips.id));
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
 
   const seen = new Set<string>();
   const clashes: BoatClash[] = [];

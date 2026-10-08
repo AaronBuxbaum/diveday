@@ -39,6 +39,8 @@
   "drysuitWeightCheck": "Traje seco: verificar el lastre en el agua",
   "drysuitFins": "Prepara aletas que entren sobre la bota del traje seco",
   "drysuitFinsWithSize": "Pie {size}: prepara aletas que entren sobre la bota del traje seco",
+  "drysuitGloves": "Traje seco: ¿guantes húmedos o secos?",
+  "drysuitGlovesWithSize": "{size}, traje seco: ¿guantes húmedos o secos?",
   "noLongerRented": "Ya no alquilas esto",
   "notRecorded": "No registrado",
   "emptyHeading": "Todavía no hay nada que preparar",

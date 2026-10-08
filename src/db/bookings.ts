@@ -1,15 +1,29 @@
-import { and, asc, count, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
-import type { ActivityCode } from "@/lib/activity";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { checkMinimumAge, isPlausibleDateOfBirth } from "@/lib/age";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
 import { countInWaterCrew, groupCrewAssignments } from "@/lib/crew-roles";
+import { seatListPriceCents } from "@/lib/deposits";
+import { typeChangedDeskEventKind } from "@/lib/desk-events";
 import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
+import {
+  holdsRegisterKind,
+  isDiver,
+  offeredParticipantTypes,
+  type ParticipantType,
+  seatRefusal,
+  typeChangeRefusal,
+} from "@/lib/participant-types";
+import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { personNamesMatch } from "@/lib/person-name";
 import type { ReEntryAsk } from "@/lib/re-entry";
-import { type CertificationLevel, hasVerifiedCertificationAtLeast } from "@/lib/readiness";
+import {
+  BLOCKER_CATEGORY,
+  type CertificationLevel,
+  hasVerifiedCertificationAtLeast,
+} from "@/lib/readiness";
 import { partnerReferralSlug } from "@/lib/referrals";
 import {
   decideTripAdmission,
@@ -18,7 +32,7 @@ import {
   type TripAdmissionEvidence,
   type TripAdmissionRefusal,
 } from "@/lib/trip-admission";
-import { hasSailed } from "@/lib/trips";
+import { hasReturned, hasSailed } from "@/lib/trips";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { inTrainingBefore, listCourseSeatsInTraining } from "./certifications-in-training";
@@ -32,16 +46,21 @@ import { getBookingPayment, setBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
-import { getTripRequirements, getTripSiteRequirement } from "./readiness";
+import { getBookingReadiness, getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
+  bookingCheckoutBookings,
+  bookingCheckouts,
   bookingPayments,
   bookings,
+  buddyPairMembers,
   certifications,
   courses,
+  gearItemKind,
   gearReservations,
   notificationSendQueue,
   people,
   personRoles,
+  rollCallEvents,
   shops,
   tripAssignments,
   trips,
@@ -50,7 +69,7 @@ import {
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { getShopCurrency } from "./stripe-accounts";
 import { liveTrip } from "./trips-live";
-import { seatHeld } from "./trips-queries";
+import { heldSeatCounts } from "./trips-queries";
 
 /**
  * A booking names its diver one of two ways: a walk-in supplies a name (and,
@@ -184,6 +203,17 @@ export type BookingRequest = {
    * completes, credited to nobody. Nothing about the booking depends on it.
    */
   referralSource?: string | null;
+  /**
+   * What this person is doing on the boat (ADR 20261007-participant-types).
+   * Omitted is a diver, which is every caller that predates the type and the
+   * stricter reading: a diver is asked for more, never less.
+   *
+   * A snorkeler or a rider holds a seat against the boat's capacity like
+   * anyone else, skips the certification gate (there is nothing to dive), is
+   * never counted against the divers-only limit, and is refused outright on a
+   * course session — a training dive is diving.
+   */
+  participantType?: ParticipantType;
 } & BookingPerson;
 
 /**
@@ -202,6 +232,17 @@ export type BookingRefusal =
       reason:
         | "trip_unavailable"
         | "trip_full"
+        /**
+         * The boat has room, but every seat this departure lets a diver take
+         * is taken (`trips.diver_capacity`). A snorkeler or a rider would
+         * still fit.
+         */
+        | "divers_full"
+        /**
+         * A snorkeler's or a rider's seat on a course session. A training dive
+         * is diving; there is no seat on it for someone who is not.
+         */
+        | "participant_type_unavailable"
         | "already_booked"
         | "course_unstaffed"
         | "course_prerequisite"
@@ -463,7 +504,17 @@ export async function tripAdmissionFor(
   courseSession: boolean,
   /** What the booker said about themselves on this submission, if the form asked. */
   declared?: SelfDeclaration,
+  /** A seat that is not a diver's is asked for no card, so nothing is read for it. */
+  participantType: ParticipantType = "diver",
 ): Promise<TripAdmission> {
+  if (!isDiver(participantType)) {
+    return decideTripAdmission({
+      requirement: null,
+      siteRequirement: null,
+      evidence: NO_EVIDENCE,
+      participantType,
+    });
+  }
   if (courseSession) {
     return decideTripAdmission({
       requirement: null,
@@ -545,9 +596,15 @@ async function settlePackageCoverage(
     bookingId: string;
     identityUnconfirmed: boolean;
     trip: { courseId: string | null; plannedDives: number };
+    /**
+     * A package is prepaid **dives**. A snorkeler's or a rider's seat dives
+     * nothing, so it spends none of the holder's: a regular who brings their
+     * partner along to ride must not find two of their own dives gone.
+     */
+    participantType: ParticipantType;
   },
 ) {
-  if (input.identityUnconfirmed) return [];
+  if (input.identityUnconfirmed || !isDiver(input.participantType)) return [];
   const spent = await consumeEntitlementsForBooking(tx, {
     shopId: input.shopId,
     personId: input.personId,
@@ -670,6 +727,23 @@ async function createBookingRecord(
     .for("update");
   if (trip?.status !== "scheduled" || trip.conditionsHold || hasSailed(trip.startsAt, nowDate())) {
     return { ok: false, reason: "trip_unavailable" };
+  }
+  const participantType: ParticipantType = req.participantType ?? "diver";
+  // A course session is diving by definition, and its admission rule, its
+  // ratio and its minimum age are all about the student in the water. Recording
+  // somebody as a snorkeler or a rider to get them aboard one would be a lie in
+  // the record the crew reads at the rail, so it is refused before anything
+  // else is read.
+  if (trip.courseId && !isDiver(participantType)) {
+    return { ok: false, reason: "participant_type_unavailable" };
+  }
+  // **The public form sells only what this departure prices**, read again
+  // here on the locked row rather than trusted from the form's own parse: a
+  // shop that cleared its rider price between the page loading and the post
+  // has stopped selling that seat. Staff may seat any type (a charter's
+  // partner who rides free); the anonymous form may not.
+  if (req.actor === "public" && !offeredParticipantTypes(trip).includes(participantType)) {
+    return { ok: false, reason: "participant_type_unavailable" };
   }
 
   const [course] = trip.courseId
@@ -821,13 +895,17 @@ async function createBookingRecord(
   // `seatHeld`, not "every status but cancelled": a seat a staffer marked
   // absent at the counter is the shop's to sell again, and this count is the
   // one gate every door that sells a seat lands on (issue #1209).
-  const [row] = await tx
-    .select({ booked: count(bookings.id) })
-    .from(bookings)
-    .where(and(eq(bookings.tripId, trip.id), seatHeld));
-  const booked = row?.booked ?? 0;
-  if (booked >= trip.capacity) {
-    return { ok: false, reason: "trip_full" };
+  //
+  // **Two limits, both read under the trip-row lock above** (ADR
+  // 20261007-participant-types). Every held seat counts against the boat —
+  // a snorkeler and a rider are bodies like anyone else — and divers alone
+  // count against `diver_capacity`. Never a pre-check: the counts are read
+  // here, inside the transaction that inserts.
+  const held = await heldSeatCounts(tx, trip.shopId, trip.id);
+  const booked = held.aboard;
+  const seatFull = seatRefusal(participantType, trip, held);
+  if (seatFull) {
+    return { ok: false, reason: seatFull };
   }
   if (entryLevelSeatCap !== null && booked >= entryLevelSeatCap) {
     return { ok: false, reason: "course_ratio_full" };
@@ -877,6 +955,7 @@ async function createBookingRecord(
     identityUnconfirmed,
     Boolean(trip.courseId),
     req.declared,
+    participantType,
   );
   if (!admission.admitted && !advisable(req, admission.refusal)) {
     return { ok: false, reason: "trip_prerequisite", refusal: admission.refusal };
@@ -932,6 +1011,13 @@ async function createBookingRecord(
       .update(bookings)
       .set({
         status: "booked",
+        // A reactivated row is a new booking and takes this booking's type.
+        // An old nitrox request rides along only for a diver: enriched air is
+        // something a diver breathes, and the column's check refuses it on
+        // anybody else's seat.
+        participantType,
+        bookedAs: participantType,
+        ...(isDiver(participantType) ? {} : { wantsNitrox: false }),
         conditionsBriefedAt: trip.conditionsUpdatedAt,
         // A reactivated row is a *new* booking and starts this booking's own
         // answers rather than inheriting its earlier life's — the same
@@ -971,6 +1057,7 @@ async function createBookingRecord(
       bookingId: existing.id,
       identityUnconfirmed,
       trip: { courseId: trip.courseId, plannedDives: trip.plannedDives },
+      participantType,
     });
     pending.push({ req, personId: person.id, identityUnconfirmed });
     return {
@@ -989,6 +1076,8 @@ async function createBookingRecord(
       shopId: req.shopId,
       tripId: trip.id,
       personId: person.id,
+      participantType,
+      bookedAs: participantType,
       conditionsBriefedAt: trip.conditionsUpdatedAt,
       diveIntent: req.diveIntent ?? null,
       reEntryAsk: req.reEntryAsk ?? null,
@@ -1054,6 +1143,7 @@ async function createBookingRecord(
     bookingId: created.id,
     identityUnconfirmed,
     trip: { courseId: trip.courseId, plannedDives: trip.plannedDives },
+    participantType,
   });
 
   return {
@@ -1214,6 +1304,8 @@ export async function bookingDiverName(db: AppDb, shopId: string, bookingId: str
 
 export type RestoreBookingOutcome =
   | "restored"
+  /** The boat has room, but not a diver's seat (`trips.diver_capacity`). */
+  | "divers_full"
   /**
    * The departure itself is gone — the crew stood it down, so there is no
    * manifest left to put anyone back on. Narrower than
@@ -1290,12 +1382,13 @@ export async function restoreBooking(
     // works. No hold check and no departure-time check here — see the doc
     // comment for why an undo is not a new booking.
     if (trip.status === "cancelled") return "trip_cancelled";
-    const [row] = await tx
-      .select({ booked: count(bookings.id) })
-      .from(bookings)
-      .where(and(eq(bookings.tripId, trip.id), seatHeld));
-    const booked = row?.booked ?? 0;
-    if (booked >= trip.capacity) return "trip_full";
+    // Both limits, exactly as a new seat is measured: the boat against every
+    // held seat, the divers-only limit against divers (ADR
+    // 20261007-participant-types).
+    const held = await heldSeatCounts(tx, trip.shopId, trip.id);
+    const booked = held.aboard;
+    const full = seatRefusal(booking.participantType, trip, held);
+    if (full) return full;
 
     if (trip.courseId) {
       const [course] = await tx
@@ -1322,8 +1415,360 @@ export async function restoreBooking(
       bookingId,
       identityUnconfirmed: booking.identityUnconfirmedAt !== null,
       trip: { courseId: trip.courseId, plannedDives: trip.plannedDives },
+      participantType: booking.participantType,
     });
     return "restored";
+  });
+}
+
+export type SetParticipantTypeOutcome =
+  | {
+      ok: true;
+      changed: boolean;
+      from: ParticipantType;
+      tripId: string;
+      /**
+       * A paid seat whose new type lists higher than its old one: the
+       * difference, which nothing collects on its own. Zero otherwise. The
+       * staffer is told and the catch-up strip says it (`balance_owed`); a
+       * payment is still taken the ordinary way, never here.
+       */
+      owedCents: number;
+    }
+  | {
+      ok: false;
+      reason: /** No live seat by that id on that departure at this shop. */
+        | "not_found"
+        /**
+         * The departure is cancelled or deleted, it has come home, or its
+         * departure time has passed and the change is *into* diving. A seat
+         * leaving the water stays possible between dives, which is when it
+         * happens; a seat joining the dive after the dock check would skip that
+         * check.
+         */
+        | "trip_unavailable"
+        /** A course session seats divers only. */
+        | "participant_type_unavailable"
+        /** Becoming a diver, and every diver's seat is taken. */
+        | "divers_full"
+        /**
+         * Leaving the water while on a buddy team. A team is divers who look
+         * after each other underwater; a teammate who is now riding leaves a
+         * team of one, or a pair that is silently a solo diver. Staff take
+         * them off the team first, which is a recorded act on its own trail.
+         */
+        | "on_buddy_team"
+        /**
+         * Joining the dive on a seat the rail already recorded boarded at
+         * departure, when the boarding gate would refuse it as a diver. The
+         * boarding record was granted to a snorkeler or a rider; it is never
+         * carried over to a diver it would not have been granted to. No
+         * override: the gate is the boarding gate, and the crew answer it.
+         */
+        | "boarded_not_ready";
+    }
+  | {
+      ok: false;
+      /**
+       * Becoming a diver, and the booking-time card check would refuse this
+       * person on this departure. Nothing was written: staff are asked to
+       * change it anyway, knowing which card is missing.
+       */
+      reason: "cert_blocked";
+      refusal: TripAdmissionRefusal;
+    };
+
+export type SetParticipantTypeInput = {
+  shopId: string;
+  /** The departure the staffer is looking at. A seat on any other is `not_found`. */
+  tripId: string;
+  bookingId: string;
+  to: ParticipantType;
+  /** The staffer making the change, named on the trail and the catch-up strip. */
+  actorPersonId: string;
+  /**
+   * "Change anyway", after a `cert_blocked` answer. Only ever skips the
+   * booking-time card check; the boarding gate still asks for the card, and
+   * a seat already boarded is refused outright (`boarded_not_ready`). The
+   * caller decides who may send it (`canOverrideCertBlock`).
+   */
+  confirmCertBlock?: boolean;
+};
+
+/**
+ * **Change what a seated person is doing on this boat** — the diver whose ears
+ * will not clear and who snorkels instead, the partner who decides to dive after
+ * all (ADR 20261007-participant-types).
+ *
+ * The seat stays the same seat: it already holds its place against the boat,
+ * so only the divers-only limit can refuse, and only a change *into* diving.
+ * Read under the same trip-row lock every seat-granting write takes, so a
+ * concurrent booking cannot take the last diver's seat between the count and
+ * the write; the booking row is locked too, so two staffers changing one seat
+ * at once are serialized rather than both reading the old type.
+ *
+ * **Leaving the water is the one door that clears a card block without a
+ * card**, so it is never silent. Inside this same transaction it writes the
+ * departure's trail (who, from what, to what, and which certification blockers
+ * the seat stopped facing) and a desk event for the manifest's catch-up strip,
+ * and the seat's `booked_as` stays what it was sold as, so every crew surface
+ * says "booked as diver" beside it. A physician's "no" is not a card block and
+ * is not cleared: the medical form is the same for every type.
+ *
+ * **Joining the water runs the booking-time card check** for this person, the
+ * same `tripAdmissionFor` a new diver's seat takes. A refusal is returned as
+ * `cert_blocked` with the missing card named, and only `confirmCertBlock`
+ * writes past it. The boarding gate still asks for the card: a seat not yet
+ * boarded meets it at the rail, and a seat the rail already recorded boarded
+ * at departure is re-checked here as a diver, inside this transaction, and the
+ * whole change rolls back (`boarded_not_ready`) when it would not pass.
+ *
+ * Money is left where it is (a refund stays staff-initiated, H-07), but a
+ * pending checkout that quoted this seat at its old type is retired, so it can
+ * never be completed at a price for a seat that no longer exists.
+ *
+ * A nitrox request comes off with the water: enriched air is something a diver
+ * breathes, and the column's check refuses it on anybody else's seat.
+ */
+export async function setBookingParticipantType(
+  db: AppDb,
+  input: SetParticipantTypeInput,
+): Promise<SetParticipantTypeOutcome> {
+  const outcome = await changeParticipantType(db, input).catch((error: unknown) => {
+    if (error instanceof BoardedNotReady) {
+      return { ok: false, reason: "boarded_not_ready" } as const;
+    }
+    throw error;
+  });
+  // The rail reads the type on every row; a change made at the desk is a
+  // manifest change like a new seat is (ADR 20260804-manifest-web-push).
+  if (outcome.ok && outcome.changed) {
+    await publishManifestEvent(db, input.shopId, outcome.tripId);
+  }
+  return outcome;
+}
+
+/** Thrown inside the change to roll it back whole; see `boarded_not_ready`. */
+class BoardedNotReady extends Error {}
+
+/** Whether the newest departure-checkpoint roll call for this seat is "boarded". */
+async function boardedAtDeparture(
+  tx: DbExecutor,
+  shopId: string,
+  tripId: string,
+  bookingId: string,
+): Promise<boolean> {
+  const [newest] = await tx
+    .select({ status: rollCallEvents.status })
+    .from(rollCallEvents)
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        eq(rollCallEvents.tripId, tripId),
+        eq(rollCallEvents.bookingId, bookingId),
+        eq(rollCallEvents.checkpoint, "departure"),
+      ),
+    )
+    .orderBy(
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
+    )
+    .limit(1);
+  return newest?.status === "boarded";
+}
+
+async function changeParticipantType(
+  db: AppDb,
+  input: SetParticipantTypeInput,
+): Promise<SetParticipantTypeOutcome> {
+  const { shopId, tripId, bookingId, to, actorPersonId } = input;
+  return db.transaction(async (tx): Promise<SetParticipantTypeOutcome> => {
+    // The trip first, then the seat: the order every seat-granting write
+    // locks in, so this cannot deadlock against a booking on the same boat.
+    const [trip] = await tx
+      .select()
+      .from(trips)
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+      .limit(1)
+      .for("update");
+    const [booking] = await tx
+      .select({
+        id: bookings.id,
+        tripId: bookings.tripId,
+        status: bookings.status,
+        participantType: bookings.participantType,
+        personId: bookings.personId,
+        identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      })
+      .from(bookings)
+      .where(
+        and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId), eq(bookings.tripId, tripId)),
+      )
+      .limit(1)
+      .for("update");
+    if (!booking || booking.status === "cancelled") return { ok: false, reason: "not_found" };
+    if (trip?.status !== "scheduled") return { ok: false, reason: "trip_unavailable" };
+    const from = booking.participantType;
+    if (from === to) return { ok: true, changed: false, from, tripId: trip.id, owedCents: 0 };
+    const now = nowDate();
+    // Home is final: the head count is closed and the record is what it was.
+    // Departure time is final only for joining the dive, which would skip the dock's
+    // card check; leaving the water between dives is exactly when it happens.
+    // The time on the board, not `hasSailed`'s grace: that buffer is for
+    // selling a seat to someone running late, not for who goes in the water.
+    if (hasReturned(trip.endsAt, now) || (isDiver(to) && now >= trip.startsAt)) {
+      return { ok: false, reason: "trip_unavailable" };
+    }
+    if (trip.courseId && !isDiver(to)) {
+      return { ok: false, reason: "participant_type_unavailable" };
+    }
+    if (isDiver(from) && !isDiver(to)) {
+      const [teamed] = await tx
+        .select({ bookingId: buddyPairMembers.bookingId })
+        .from(buddyPairMembers)
+        .where(and(eq(buddyPairMembers.shopId, shopId), eq(buddyPairMembers.bookingId, booking.id)))
+        .limit(1);
+      if (teamed) return { ok: false, reason: "on_buddy_team" };
+    }
+    const refusal = typeChangeRefusal(
+      from,
+      to,
+      trip,
+      await heldSeatCounts(tx, trip.shopId, trip.id),
+    );
+    if (refusal) return { ok: false, reason: refusal };
+
+    let certCheck: "none" | "cleared" | "overridden" = "none";
+    let cleared: string[] = [];
+    if (!isDiver(from) && isDiver(to)) {
+      const admission = await tripAdmissionFor(
+        tx,
+        shopId,
+        trip.id,
+        { id: booking.personId },
+        booking.identityUnconfirmedAt !== null,
+        Boolean(trip.courseId),
+      );
+      if (!admission.admitted) {
+        if (!input.confirmCertBlock) {
+          return { ok: false, reason: "cert_blocked", refusal: admission.refusal };
+        }
+        certCheck = "overridden";
+      }
+    } else if (isDiver(from) && !isDiver(to)) {
+      // What the seat stops being asked for at the rail, read before the
+      // write: the certification family only. A waiver, a medical hold and a
+      // payment are everyone's, and keep blocking whatever the type.
+      const readiness = await getBookingReadiness(tx, shopId, booking.id);
+      cleared = (readiness?.blockers ?? [])
+        .filter((blocker) => BLOCKER_CATEGORY[blocker.code] === "certification")
+        .map((blocker) => blocker.code);
+      if (cleared.length > 0) certCheck = "cleared";
+    }
+
+    await tx
+      .update(bookings)
+      .set({ participantType: to, ...(isDiver(to) ? {} : { wantsNitrox: false }) })
+      .where(and(eq(bookings.id, booking.id), eq(bookings.shopId, shopId)));
+    // Prepaid dives follow the water. A seat that stops diving gives back the
+    // dives it spent (a link undone, never an amount credited); a seat that
+    // starts diving spends one exactly as a fresh diver's seat would, under
+    // the same rules (an unpaid, identity-confirmed seat only).
+    if (!isDiver(to)) {
+      await releasePackageCoverageForBooking(tx, shopId, booking.id);
+      // And the tagged units the seat will not use now: a rider holds none, a
+      // snorkeler the surface kit. Unclaimed only, as a cancellation does;
+      // a unit already handed over is with the person and comes home the
+      // ordinary way.
+      await releaseUnclaimedGearReservations(tx, {
+        shopId,
+        bookingId: booking.id,
+        kinds: gearItemKind.enumValues.filter((kind) => !holdsRegisterKind(to, kind)),
+      });
+    } else if (booking.identityUnconfirmedAt === null) {
+      await settleConfirmedPackageCoverage(tx, {
+        shopId,
+        bookingId: booking.id,
+        personId: booking.personId,
+      });
+    }
+    // **A boarding record is not carried into the water.** The rail recorded
+    // this seat boarded at departure as a snorkeler or a rider; the boarding
+    // gate (`recordRollCall`) is asked again, now, as the diver it is
+    // becoming, and the whole change rolls back if it would refuse.
+    if (isDiver(to) && (await boardedAtDeparture(tx, shopId, trip.id, booking.id))) {
+      const readiness = await getBookingReadiness(tx, shopId, booking.id);
+      if (readiness?.status !== "ready") throw new BoardedNotReady();
+    }
+    // A paid seat that now lists higher owes the difference. Said, never
+    // collected here.
+    let owedCents = 0;
+    const payment = await getBookingPayment(tx, shopId, booking.id);
+    if (isCapturedPaymentStatus(payment?.status)) {
+      const before = seatListPriceCents(trip, null, from) ?? 0;
+      const after = seatListPriceCents(trip, null, to);
+      if (after !== null && after > before) owedCents = after - before;
+    }
+    // A pending checkout quoted this seat at its old type's price. Withdrawn,
+    // never completed at a figure for a seat that is no longer that seat; a
+    // completion that already landed is money that moved, and is left alone.
+    const linked = tx
+      .select({ id: bookingCheckoutBookings.checkoutId })
+      .from(bookingCheckoutBookings)
+      .where(
+        and(
+          eq(bookingCheckoutBookings.shopId, shopId),
+          eq(bookingCheckoutBookings.bookingId, booking.id),
+        ),
+      );
+    await tx
+      .update(bookingCheckouts)
+      .set({ status: "expired" })
+      .where(
+        and(
+          eq(bookingCheckouts.shopId, shopId),
+          eq(bookingCheckouts.status, "pending"),
+          inArray(bookingCheckouts.id, linked),
+        ),
+      );
+    const [subject] = await tx
+      .select({ fullName: people.fullName })
+      .from(people)
+      .where(and(eq(people.id, booking.personId), eq(people.shopId, shopId)))
+      .limit(1);
+    await recordTripActivity(tx, {
+      shopId,
+      tripId: trip.id,
+      actorPersonId,
+      entry: {
+        code: "participant_type_changed",
+        diver: subject?.fullName ?? "",
+        from,
+        type: to,
+        certCheck,
+        cleared: cleared.join(","),
+      },
+    });
+    await recordDeskEvent(tx, {
+      shopId,
+      tripId: trip.id,
+      kind: typeChangedDeskEventKind(to),
+      bookingId: booking.id,
+      subjectPersonId: booking.personId,
+      actorPersonId,
+    });
+    if (owedCents > 0) {
+      await recordDeskEvent(tx, {
+        shopId,
+        tripId: trip.id,
+        kind: "balance_owed",
+        bookingId: booking.id,
+        subjectPersonId: booking.personId,
+        actorPersonId,
+      });
+    }
+    return { ok: true, changed: true, from, tripId: trip.id, owedCents };
   });
 }
 
@@ -1726,6 +2171,7 @@ async function settleConfirmedPackageCoverage(
   const [row] = await tx
     .select({
       status: bookings.status,
+      participantType: bookings.participantType,
       courseId: trips.courseId,
       plannedDives: trips.plannedDives,
     })
@@ -1740,27 +2186,9 @@ async function settleConfirmedPackageCoverage(
     bookingId: input.bookingId,
     identityUnconfirmed: false,
     trip: { courseId: row.courseId, plannedDives: row.plannedDives },
+    participantType: row.participantType,
   });
 }
-
-/**
- * **Which control the attestation was made at.**
- *
- * Both doors write the same clearance, and the trail may not say the same
- * sentence about them (`dive-domain-expert` review of issue #1696): the whole
- * case for the counter's door is that the evidence there is different in kind —
- * the person is standing in front of the staffer — and a shop reading the trail
- * months later, when a stranger's dives are sitting under somebody else's name,
- * is asking precisely which of the two happened. Named rather than defaulted so
- * a third door cannot inherit somebody else's story by omission.
- */
-export type IdentityConfirmDoor = "counter" | "roster";
-
-/** One line per door, and `src/lib/activity.ts` holds the words. */
-const IDENTITY_CONFIRMED_CODE = {
-  counter: "identity_confirmed_at_counter",
-  roster: "identity_confirmed",
-} as const satisfies Record<IdentityConfirmDoor, ActivityCode>;
 
 /**
  * Staff confirm a flagged booking really is the person it was attached to
@@ -1799,8 +2227,6 @@ export async function confirmBookingIdentity(
     shopId: string;
     bookingId: string;
     actorPersonId: string;
-    /** Which control the staffer used — see {@link IdentityConfirmDoor}. */
-    door: IdentityConfirmDoor;
   },
 ) {
   const booking = await db.transaction(async (tx) => {
@@ -1824,7 +2250,7 @@ export async function confirmBookingIdentity(
     return row;
   });
   if (!booking) return false;
-  const code = IDENTITY_CONFIRMED_CODE[input.door];
+  const code = "identity_confirmed";
   const diver = await bookingDiverName(db, input.shopId, input.bookingId);
   if (diver) {
     await recordTripActivity(db, {

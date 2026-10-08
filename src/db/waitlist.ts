@@ -1,7 +1,8 @@
-import { and, count, eq, ne } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DiveDeclaration } from "@/lib/dive-declaration";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { seatRefusal } from "@/lib/participant-types";
 import { publicTripPath } from "@/lib/public-routes";
 import type { AppDb } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
@@ -10,7 +11,7 @@ import { findOrCreatePerson } from "./people";
 import { bookings, people, shops, trips, tripWaitlistEntries } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { liveTrip } from "./trips-live";
-import { seatHeld } from "./trips-queries";
+import { heldSeatCounts } from "./trips-queries";
 
 /**
  * Stamp a wait-list entry as invited, so the roster shows "Invited 2h ago" and
@@ -167,16 +168,18 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
       return { ok: false, reason: "trip_unavailable" };
     }
 
-    // `seatHeld`, the same predicate `createBookingRecord` counts with — this
+    // `heldSeatCounts`, the same counts `createBookingRecord` reads — this
     // decision has to be the one the booking door would make, or the two
     // disagree about the same boat. A seat a staffer released at the counter
     // is free, so the honest answer to "can I join the wait list?" is
     // `trip_available`: go and book it (issue #1209).
-    const [capacity] = await tx
-      .select({ booked: count(bookings.id) })
-      .from(bookings)
-      .where(and(eq(bookings.tripId, trip.id), seatHeld));
-    if ((capacity?.booked ?? 0) < trip.capacity) return { ok: false, reason: "trip_available" };
+    //
+    // A wait list is for a diver's seat, so "available" means a diver could
+    // book one: a boat with room aboard but every diver's seat taken is still
+    // full for this person (ADR 20261007-participant-types).
+    if (seatRefusal("diver", trip, await heldSeatCounts(tx, req.shopId, trip.id)) === null) {
+      return { ok: false, reason: "trip_available" };
+    }
 
     const { person, nameMatches } = await findOrCreatePerson(tx, {
       shopId: req.shopId,

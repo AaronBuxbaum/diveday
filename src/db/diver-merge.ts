@@ -194,6 +194,10 @@ export const STAFF_HISTORY_TABLES = [
   // about, somebody who works the boats, so either side of a merge holding one
   // is a staff record and the merge is refused rather than carried across.
   "trip_read_marks",
+  // The Monday email's claims (`src/db/weekly-digest.ts`). Only somebody with
+  // a staff login is ever sent one, so a record holding one is a staff record
+  // and the merge is refused, like the calendar feed above.
+  "weekly_digest_sends",
 ] as const;
 export const STAFF_PERSON_ONLY_TABLES = ["trip_assignments", "user_accounts"] as const;
 
@@ -287,6 +291,8 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "waiver_materiality_decisions.actor_person_id": "who judged the answer material",
   "waiver_records.anonymized_by_person_id": "provenance for an erasure on a signed release",
   "waiver_records.medical_clearance_declined_by_person_id": "who declined the clearance",
+  "waiver_records.guardian_email_erased_by_person_id":
+    "who erased the guardian's address; inside its seal",
   "waiver_records.medical_cleared_by_person_id": "who cleared the medical answer",
   "waiver_records.moved_by_person_id": "who refiled the release with its split seat",
   "waiver_records.moved_from_person_id": "where a refiled release sat before; inside its seal",
@@ -649,7 +655,7 @@ async function assessMerge(
       .from(trips)
       // diveday:allow-deleted-trips: a seat on a deleted departure still refuses the merge, so the preview names it too
       .where(and(eq(trips.shopId, shopId), inArray(trips.id, sharedTripIds)))
-      .orderBy(asc(trips.startsAt), asc(trips.id));
+      .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
     return refuse("booking_conflict", sharedDepartures);
   }
 

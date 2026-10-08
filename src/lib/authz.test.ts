@@ -14,6 +14,7 @@ import {
   canManagePaymentSettings,
   canManageStaffAccounts,
   canManageWaiverTemplates,
+  canOverrideCertBlock,
   canOverrideGearRequest,
   canReadMedicalClearanceDocument,
   canReadPrivateRecapPulse,
@@ -139,6 +140,20 @@ describe("canExportIncidentRecord (owner only)", () => {
   it("rejects empty and undefined roles", () => {
     expect(canExportIncidentRecord([])).toBe(false);
     expect(canExportIncidentRecord(undefined)).toBe(false);
+  });
+});
+
+describe("canOverrideCertBlock (owner/manager/instructor)", () => {
+  it("admits the roles that set a trip's card gate, and nobody else", () => {
+    for (const role of ["owner", "manager", "instructor"] as const) {
+      expect(canOverrideCertBlock([role])).toBe(true);
+    }
+    // Narrower than the gear override: sizing a diver is not a card call.
+    for (const role of ["divemaster", "captain", "crew", "diver"] as const) {
+      expect(canOverrideCertBlock([role])).toBe(false);
+    }
+    expect(canOverrideCertBlock([])).toBe(false);
+    expect(canOverrideCertBlock(undefined)).toBe(false);
   });
 });
 

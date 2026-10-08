@@ -1,12 +1,22 @@
 # Participant types — divers, snorkellers, and riders on one departure
 
-**Status: scoped, not scheduled.** Written 2026-08-20 at the product owner's request, alongside the
-H-28 decision that a trip may state a certification gate looser than one of its dive sites. H-28
-unblocks the mixed-**level** charter. This document is about the other half of the same boat: the
-people aboard who are not diving at all.
+**Status: shipped 2026-10-07** ([ADR 20261007-participant-types](../../architecture/decisions/20261007-participant-types.md);
+[shipped.md](../shipped.md#participants-who-are-not-divers-delivered-2026-10-07)). All four slices
+below landed together. The code spells the type **snorkeler** (US English); this document keeps the
+spelling it was written in. Written 2026-08-20 at the product owner's request, alongside the H-28
+decision that a trip may state a certification gate looser than one of its dive sites.
 
-Nothing here is approved scope. It exists so the size of the work is known before it is sequenced,
-and so the questions that need a human are asked before an agent starts building.
+The open questions at the end were not answered by a human. Each shipped with the conservative
+default, and each can still be reversed:
+
+1. A rider **signs the waiver and the medical form**, the same as everyone aboard, until H-01/H-03
+   say otherwise. The dive medical for a rider is a known overreach, filed as issue #2212.
+2. The diver limit is an optional column on the **trip** (`trips.diver_capacity`), and the boat's
+   own `capacity` counts everyone. It moves with the boat once ADR 20260804-boat-resource-model is
+   accepted.
+3. **One** snorkeler type. A guided type is an additive enum value.
+4. **No guessed price.** A departure sells a snorkeler or rider seat only once the shop names a
+   price for it (zero allowed), and never falls back to the diver's price.
 
 ## The shape of the problem
 

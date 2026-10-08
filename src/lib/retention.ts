@@ -115,7 +115,8 @@ export type RetainedTable =
   | "form_drafts"
   | "demo_entries"
   | "inbound_messages"
-  | "staff_replies";
+  | "staff_replies"
+  | "weekly_digest_sends";
 
 /**
  * The append-only trails this mechanism deliberately leaves unbounded, as a
@@ -277,6 +278,15 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
   inbound_messages: 400,
   /** Measured on `sent_at`; a reply outliving the message it answered says nothing. */
   staff_replies: 400,
+  /**
+   * 400 days, measured on `created_at`. A row is the claim that keeps the
+   * Monday email to one per person per week, plus the hash of the opt-out
+   * link that week's email carried. The claim stops mattering the moment its
+   * week ends; the link is what decides the window. A year-old email's
+   * "turn this off" still works for a season and a year, the same horizon the
+   * delivery trail keeps, and every newer email carries a live one of its own.
+   */
+  weekly_digest_sends: 400,
 };
 
 /**

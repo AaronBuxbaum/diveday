@@ -25,6 +25,7 @@ import {
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
 import { medicalWaiverMark } from "@/lib/waivers";
 import { welcomeCueFor } from "@/lib/welcome-cue";
+import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
 import { listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb, DbExecutor } from "./client";
@@ -893,6 +894,9 @@ export async function getTripManifests(
       // A held seat is named as booked here, once, so the alarm, the buddy
       // builder and every copy downstream inherit it (issue #1690).
       fullName: seatName(person.fullName, booking),
+      // Diver, snorkeler or rider — shown on the row, never used to drop it.
+      participantType: booking.participantType,
+      bookedAs: booking.bookedAs,
       email: person.email,
       emergencyContactName: person.emergencyContactName,
       emergencyContactPhone: person.emergencyContactPhone,
@@ -903,7 +907,12 @@ export async function getTripManifests(
       // The shop's own catalog. Without it the rail and the offline snapshot
       // read a dropped piece as an ordinary piece to fetch, and size a
       // drysuit diver's fins up over a boot that is not coming (issue #1804).
-      rentalFit: rentalFitLine(fitByBooking.get(booking.id) ?? null, shop.rentalItems),
+      // A snorkeler's line names surface kit only (ADR 20261007-participant-types).
+      rentalFit: rentalFitLine(
+        fitByBooking.get(booking.id) ?? null,
+        shop.rentalItems,
+        booking.participantType,
+      ),
       nitroxRequested: booking.wantsNitrox && certified.has(person.id),
       medicalWaiver: medicalByBooking.get(booking.id) ?? null,
       // Null/false whenever the shop holds no date of birth, so the captain's
@@ -1231,9 +1240,15 @@ async function reclaimReleasedSeat(
     missingAfterDive: boolean;
   },
 ): Promise<void> {
+  // The seat comes back as what it was, exactly as `undoBookingNoShow` puts it
+  // back (src/db/no-show.ts): `checked_in` when the arrival trail still says
+  // the desk saw the diver, `booked` otherwise. Restoring `booked` every time
+  // put a diver the counter had already checked in back on its "still to
+  // come" list (issue #1838). Both hold a seat (`SEAT_HELD_STATUSES`).
+  const standing = await standingArrivalStatus(tx, input.shopId, input.tripId, input.bookingId);
   const [updated] = await tx
     .update(bookings)
-    .set({ status: "booked" })
+    .set({ status: standing === "arrived" ? "checked_in" : "booked" })
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.status, "no_show")))
     .returning({ id: bookings.id });
   if (!updated) return;

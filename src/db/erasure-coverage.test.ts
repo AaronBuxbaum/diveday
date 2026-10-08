@@ -287,6 +287,8 @@ const ERASURE_KEEPS: Record<string, string> = {
   push_subscriptions:
     "`person_id` is the staff member who opted a device in, and the erasure refuses anyone holding a staff role. This becomes a gap the day a diver-facing push subscription ships",
   trip_assignments: "which crew member works which departure — a staff roster row",
+  weekly_digest_sends:
+    "that a staff member's Monday email went out for a week — a date, a delivery status and a token hash. Only staff receive it, and the erasure refuses anyone holding a staff role",
 
   // --- the shop's own objects, holding nobody ------------------------------
   trips:

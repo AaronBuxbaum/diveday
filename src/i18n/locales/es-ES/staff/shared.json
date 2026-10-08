@@ -196,7 +196,7 @@
     },
     "blockers": {
       "requirementsNotConfigured": "Aún no se han configurado los requisitos de la salida.",
-      "identityUnconfirmed": "Puede ser otra persona. Confirma quién es antes de embarcar.",
+      "identityUnconfirmed": "Asociada a esta ficha sin certeza: confirma quién es en el listado antes de embarcar.",
       "waiverNotSent": "Exención sin firmar. Aún no se ha enviado.",
       "waiverPending": "Exención sin firmar. Enlace enviado.",
       "waiverExpired": "El enlace de la exención caducó; emite uno nuevo.",
@@ -247,7 +247,8 @@
     "promoCodes": "Descuentos",
     "settings": "Ajustes",
     "team": "Equipo",
-    "calendarFeed": "Suscripción al calendario"
+    "calendarFeed": "Suscripción al calendario",
+    "emailSettings": "Ajustes de correo"
   },
   "shopSections": {
     "navAriaLabel": "Principal",
@@ -343,7 +344,7 @@
       "freshnessBanner": "{freshnessNote}. La disponibilidad refleja ese momento, y lo verificamos todo de nuevo en cuanto tengas señal.",
       "pendingRejectedCounts": "{pending} esperando para enviarse · {rejected} necesitan revisión",
       "checkpointNavAria": "Punto del pase de lista",
-      "statsDivers": "Buceadores",
+      "statsDivers": "Pasajeros",
       "statsBoarded": "Embarcados",
       "statsAwaiting": "Pendientes",
       "rollCallCompleteHeading": "Pase de lista completo",
@@ -428,7 +429,8 @@
       "diveComputer": "Ordenador de buceo",
       "gopro": "GoPro",
       "drysuit": "Traje seco",
-      "hoodGloves": "Capucha y guantes",
+      "hood": "Capucha",
+      "gloves": "Guantes",
       "torch": "Linterna",
       "smb": "Boya de superficie"
     },
@@ -436,6 +438,8 @@
     "itemWithSize": "{item} {size}",
     "itemOverDrysuitBoot": "{item} sobre la bota del traje seco",
     "itemOverDrysuitBootWithSize": "{item} sobre la bota del traje seco, pie {size}",
+    "itemDrysuitGloves": "{item}: traje seco, ¿húmedos o secos?",
+    "itemDrysuitGlovesWithSize": "{item} {size}: traje seco, ¿húmedos o secos?",
     "itemDrysuitWeightCheck": "{item}: traje seco, verificar el lastre en el agua",
     "itemNoLongerRented": "{item} (el centro ya no alquila esto)",
     "notRecorded": "No hay equipo registrado, aún no se ha preguntado",

@@ -34,7 +34,7 @@ import {
   userAccounts,
   waiverRecords,
 } from "./schema";
-import { getTripRoster, listStaff, setTripCrew } from "./trips";
+import { deleteTrip, getTripRoster, listStaff, setTripCrew } from "./trips";
 import { getCurrentWaiverTemplate } from "./waivers";
 
 type BookingStatus = "booked" | "checked_in" | "cancelled" | "no_show";
@@ -106,7 +106,10 @@ async function makeBooking(
   personId: string,
   status: BookingStatus = "booked",
 ): Promise<string> {
-  const [row] = await db.insert(bookings).values({ shopId, tripId, personId, status }).returning();
+  const [row] = await db
+    .insert(bookings)
+    .values({ bookedAs: "diver", shopId, tripId, personId, status })
+    .returning();
   if (!row) throw new Error("failed to insert booking");
   return row.id;
 }
@@ -498,6 +501,41 @@ describe("getMonthlyReport", () => {
     expect(empty).toMatchObject({ capacity: 12, activeBookings: 0, waiverComplete: 0 });
   });
 
+  // **Why the money queries carry no `liveTrip()`** (issue #1932). They reach
+  // `trips` through `bookings`, and `deleteTrip` refuses any departure that has
+  // ever held a booking, so a deleted departure has no money to contribute.
+  // The test pins that refusal rather than a zero sum: a sum over a deleted
+  // empty trip is zero whatever the queries do, and would keep passing the day
+  // the guard softened — the only day the revenue could start disagreeing with
+  // the seats.
+  it("cannot delete a departure that carries money, so revenue and seats read the same boats", async () => {
+    const { db, shop } = await seededShopContext();
+    const diver = await makePerson(db, shop.id, "Paid Diver");
+    const leaver = await makePerson(db, shop.id, "Cancelled Diver");
+    const paidTrip = await makeTrip(db, shop.id, new Date("2026-06-14T12:00:00Z"), 8, "Paid boat");
+    const paid = await makeBooking(db, shop.id, paidTrip, diver);
+    await pay(db, shop.id, paid, "paid", 12_000);
+    const cancelledTrip = await makeTrip(
+      db,
+      shop.id,
+      new Date("2026-06-15T12:00:00Z"),
+      8,
+      "Cancelled-seat boat",
+    );
+    const cancelled = await makeBooking(db, shop.id, cancelledTrip, leaver, "cancelled");
+    await pay(db, shop.id, cancelled, "deposit_paid", 4_000);
+
+    expect(await deleteTrip(db, shop.id, paidTrip)).toEqual({ ok: false, reason: "has_roster" });
+    expect(await deleteTrip(db, shop.id, cancelledTrip)).toEqual({
+      ok: false,
+      reason: "has_roster",
+    });
+
+    const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+    expect(report.trips.find((t) => t.title === "Paid boat")).toMatchObject({ activeBookings: 1 });
+    expect(report.trips.some((t) => t.title === "Cancelled-seat boat")).toBe(true);
+  });
+
   it("is scoped to the shop and reports zeroes for a month with no trips", async () => {
     const { db, shop } = await seededShopContext();
     const report = await getMonthlyReport(
@@ -730,7 +768,7 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
     const personId = await makePerson(db, shopId, name);
     const [row] = await db
       .insert(bookings)
-      .values({ shopId, tripId, personId, status, referralSource: partner })
+      .values({ bookedAs: "diver", shopId, tripId, personId, status, referralSource: partner })
       .returning();
     if (!row) throw new Error("failed to insert booking");
     return row.id;

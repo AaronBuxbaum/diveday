@@ -1158,6 +1158,130 @@ describe("physician clearance and the medical block", () => {
 });
 
 /**
+ * A medical answer is a fact about the diver, not about the trip (H-104,
+ * issue #2096): a departure that does not require the release still holds a
+ * diver whose questionnaire referred them to a physician, or whose physician
+ * said no. Only the release's own blockers follow the departure's setting.
+ */
+describe("the medical block on a departure that does not require the waiver", () => {
+  const heldNow = new Date("2026-07-24T12:00:00.000Z");
+  const noWaiverRequirement = {
+    ...requirement,
+    requiresWaiver: false,
+  } as unknown as TripRequirement;
+  const refusedAt = new Date("2026-07-23T09:00:00.000Z");
+
+  it.each([
+    ["an open referral", { status: "medical_review" }, "medical_review"],
+    [
+      "a physician's refusal",
+      { status: "medical_review", medicalClearanceDeclinedAt: refusedAt },
+      "medical_not_cleared",
+    ],
+  ] as const)("holds %s", (_label, overrides, code) => {
+    const result = calculateReadiness({
+      requirement: noWaiverRequirement,
+      waiver: { ...signedWaiver, ...overrides } as WaiverRecord,
+      certifications: [certification()],
+      now: heldNow,
+    });
+    expect(result.status).toBe("blocked");
+    expect(result.blockers).toEqual([{ code }]);
+  });
+
+  // Raised ahead of the requirements, like identity_unconfirmed: a departure
+  // nobody has configured yet still holds a diver a physician has to see
+  // (dive-domain review of #2096).
+  it.each([
+    ["an open referral", { status: "medical_review" }, "medical_review"],
+    [
+      "a physician's refusal",
+      { status: "medical_review", medicalClearanceDeclinedAt: refusedAt },
+      "medical_not_cleared",
+    ],
+  ] as const)("names %s on a departure with no requirements set", (_label, overrides, code) => {
+    const result = calculateReadiness({
+      requirement: null,
+      waiver: { ...signedWaiver, ...overrides } as WaiverRecord,
+      certifications: [certification()],
+      now: heldNow,
+    });
+    expect(result.status).toBe("blocked");
+    expect(result.blockers).toEqual([{ code }, { code: "requirements_not_configured" }]);
+  });
+
+  it("boards a cleared referral", () => {
+    const result = calculateReadiness({
+      requirement: noWaiverRequirement,
+      waiver: {
+        ...signedWaiver,
+        status: "medical_review",
+        medicalClearedAt: refusedAt,
+        medicalClearedByPersonId: "staff-1",
+      } as WaiverRecord,
+      certifications: [certification()],
+      now: heldNow,
+    });
+    expect(result.status).toBe("ready");
+  });
+
+  it("fails closed on a half-written clearance there too", () => {
+    const result = calculateReadiness({
+      requirement: noWaiverRequirement,
+      waiver: {
+        ...signedWaiver,
+        status: "medical_review",
+        medicalClearedAt: null,
+        medicalClearedByPersonId: "staff-1",
+      } as WaiverRecord,
+      certifications: [certification()],
+      now: heldNow,
+    });
+    expect(result.blockers).toContainEqual({ code: "medical_review" });
+  });
+
+  it.each([
+    ["no release at all", null],
+    ["an unsigned link", { status: "pending", expiresAt: new Date("2026-07-30T00:00:00.000Z") }],
+    ["a lapsed link", { status: "pending", expiresAt: new Date("2026-07-20T00:00:00.000Z") }],
+  ] as const)("still asks nothing of the release itself with %s", (_label, waiver) => {
+    const result = calculateReadiness({
+      requirement: noWaiverRequirement,
+      waiver: waiver as WaiverRecord | null,
+      certifications: [certification()],
+      now: heldNow,
+    });
+    expect(result.status).toBe("ready");
+  });
+
+  it("boards a clean release signed after the refusal (H-98)", () => {
+    // `effectiveWaiverForBooking` hands the engine the newer clean record; the
+    // refusal it stands over is a warning on the surfaces, not a blocker.
+    const result = calculateReadiness({
+      requirement: noWaiverRequirement,
+      waiver: signedWaiver,
+      certifications: [certification()],
+      now: heldNow,
+    });
+    expect(result.status).toBe("ready");
+  });
+
+  it("raises the medical code once on a departure that does require the waiver", () => {
+    const result = calculateReadiness({
+      requirement,
+      waiver: {
+        ...signedWaiver,
+        status: "medical_review",
+        medicalClearanceDeclinedAt: refusedAt,
+      } as WaiverRecord,
+      certifications: [certification()],
+      now: heldNow,
+    });
+    expect(result.blockers).toEqual([{ code: "medical_not_cleared" }]);
+  });
+});
+
+/**
  * `identity_unconfirmed` has two raisers — the by-email reuse and the counter's
  * name-match prompt (issue #1556) — and `src/db/bookings.ts` documents both
  * where it sets the flag. The module that turns the flag into a boarding
@@ -1183,5 +1307,69 @@ describe("the identity-unconfirmed docblock", () => {
     expect(block).toContain("#1556");
     // Where each is argued, so this stays a pointer rather than a second copy.
     expect(block).toContain("nameMatchLeavesIdentityInDoubt");
+  });
+});
+
+describe("calculateReadiness — participant types (ADR 20261007-participant-types)", () => {
+  it("asks a rider or a snorkeler for no card, but still for the waiver", () => {
+    for (const participantType of ["rider", "snorkeler"] as const) {
+      const unsigned = calculateReadiness({
+        requirement: nitroxRequirement,
+        waiver: null,
+        certifications: [],
+        participantType,
+        now,
+      });
+      const codes = unsigned.blockers.map((blocker) => blocker.code);
+      expect(codes).toContain("waiver_not_sent");
+      expect(codes.filter((code) => /^(certification|nitrox|specialty)_/.test(code))).toEqual([]);
+
+      expect(
+        calculateReadiness({
+          requirement: deepRequirement,
+          waiver: signedWaiver,
+          certifications: [],
+          participantType,
+          now,
+        }).status,
+      ).toBe("ready");
+    }
+  });
+
+  it("still asks a diver for the card", () => {
+    expect(
+      calculateReadiness({
+        requirement,
+        waiver: signedWaiver,
+        certifications: [],
+        participantType: "diver",
+        now,
+      }).blockers.map((blocker) => blocker.code),
+    ).toContain("certification_missing");
+  });
+
+  it("clears the payment gate for a non-diver seat the shop priced at nothing, and only that", () => {
+    const base = { requirement: paymentRequirement, waiver: signedWaiver, now };
+    const free = calculateReadiness({
+      ...base,
+      certifications: [],
+      participantType: "rider",
+      statedFree: true,
+    });
+    expect(free.status).toBe("ready");
+    const unpriced = calculateReadiness({
+      ...base,
+      certifications: [],
+      participantType: "rider",
+    });
+    expect(unpriced.status).toBe("blocked");
+    // A diver is never waved through on a stated-free flag.
+    const diverSeat = calculateReadiness({
+      ...base,
+      certifications: [certification()],
+      participantType: "diver",
+      statedFree: true,
+    });
+    expect(diverSeat.status).toBe("blocked");
   });
 });

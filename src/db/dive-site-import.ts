@@ -1,14 +1,21 @@
 import { and, eq, isNull } from "drizzle-orm";
 import type { CertificationLevel } from "@/lib/certification-levels";
-import type { PreparedDiveSiteImport, PreparedDiveSiteImportRow } from "@/lib/dive-site-import";
+import { MAX_SITE_CREATURES } from "@/lib/dive-site-field-guide";
+import type {
+  PreparedDiveSiteCreaturesImport,
+  PreparedDiveSiteImport,
+  PreparedDiveSiteImportRow,
+} from "@/lib/dive-site-import";
 import type { AppDb } from "./client";
 import {
   createDiveSite,
   type DiveSiteInput,
   refusingNameClash,
+  replaceDiveSiteCreatures,
   SITE_NAME_TAKEN,
   updateDiveSite,
 } from "./dive-sites";
+import type { MarineLifeSlug } from "./marine-life-catalog";
 import type { DiveSiteFitTone, DiveSpecialty } from "./schema";
 import { certificationLevel, diveSiteFitTone, diveSites, diveSpecialty } from "./schema";
 
@@ -23,6 +30,13 @@ export type DiveSiteImportSummary = {
    * otherwise read as a row that failed silently.
    */
   deleted: number;
+  /**
+   * Sites given back the field guide `dive_site_creatures.csv` carried, when
+   * the upload had one. Zero, with nothing skipped, when it did not.
+   */
+  guides: number;
+  /** Field-guide rows left out, with why — a retired species, a site not placed. */
+  creaturesSkipped: { rowNumber: number; issues: string[] }[];
 };
 
 /**
@@ -65,11 +79,12 @@ export type DiveSiteImportSummary = {
  *   slug is minted from the name because two libraries can collide on one, and
  *   `created_at` is when DiveDay first saw the row rather than anything the
  *   shop owns.
- * - **The field guide's species.** They are `dive_site_creatures.csv`, a file
- *   of its own with its own round trip, and `DiveSiteInput.creatures` left
- *   undefined is what "this caller does not manage them" means — so an existing
- *   site keeps the guide it has rather than being emptied. A restored site
- *   arrives without one. Filed rather than half-built.
+ * - **The field guide's species, unless the upload carries them.** They are
+ *   `dive_site_creatures.csv`, and `DiveSiteInput.creatures` left undefined is
+ *   what "this caller does not manage them" means — so with the sites file
+ *   alone an existing site keeps the guide it has rather than being emptied.
+ *   With the creatures file beside it, {@link restoreFieldGuides} gives every
+ *   site this pass placed the guide the bundle carried (issue #1841).
  * - **`planning_note_at` and `planning_note_by_person_id`.** The words are
  *   restored; the stamp is `planningNoteWrite`'s, and it attributes the note to
  *   whoever ran the import. Carrying a person id from a bundle would either
@@ -80,9 +95,22 @@ export async function commitDiveSiteImport(
   shopId: string,
   prepared: PreparedDiveSiteImport,
   importedByPersonId: string,
+  creatures?: PreparedDiveSiteCreaturesImport,
 ): Promise<DiveSiteImportSummary> {
-  const summary: DiveSiteImportSummary = { created: 0, updated: 0, skipped: [], deleted: 0 };
-  if (prepared.fatal) return summary;
+  const summary: DiveSiteImportSummary = {
+    created: 0,
+    updated: 0,
+    skipped: [],
+    deleted: 0,
+    guides: 0,
+    creaturesSkipped: [],
+  };
+  if (prepared.fatal || creatures?.fatal) return summary;
+  // The bundle's site id → the row this pass wrote for it. The creatures file
+  // joins on this and never on the database: the bundle's ids are keys, and a
+  // creature row naming an id this shop happens to hold, but that this file
+  // did not place, must not reach it — least of all from another shop's bundle.
+  const placed = new Map<string, string>();
 
   // One read of the library up front rather than two probes per row: a bundle
   // is the whole library, so the per-row reads would be the same table scanned
@@ -127,6 +155,7 @@ export async function commitDiveSiteImport(
       }
       summary.updated += 1;
       claimed.add(match.id);
+      if (row.sourceId) placed.set(row.sourceId, match.id);
       await applyDeletedState(db, shopId, match.id, row, summary);
       continue;
     }
@@ -145,12 +174,78 @@ export async function commitDiveSiteImport(
     }
     summary.created += 1;
     claimed.add(created.id);
+    if (row.sourceId) placed.set(row.sourceId, created.id);
     byId.set(created.id, { id: created.id, name: created.name, deletedAt: null });
     byName.set(created.name, { id: created.id, name: created.name, deletedAt: null });
     await applyDeletedState(db, shopId, created.id, row, summary);
   }
 
+  if (creatures) await restoreFieldGuides(db, shopId, creatures, placed, summary);
   return summary;
+}
+
+/**
+ * **Each placed site gets the guide the bundle carried, wholesale** — the
+ * shape `replaceDiveSiteCreatures` and the editor both write, so there is no
+ * diff to compute (issue #1841).
+ *
+ * - A row naming a site this file did not place is skipped and counted
+ *   (`site_not_restored`): a site whose own row was refused, or an id from
+ *   nowhere. Never looked up in the database — see `placed` above.
+ * - A species DiveDay no longer carries was already marked by the parser
+ *   (`unknown_species`) and is dropped with the rest of the guide kept.
+ * - Order is the file's `position`, then its row order; a repeated species and
+ *   anything past {@link MAX_SITE_CREATURES} are counted, never stored — the
+ *   editor would refuse to save either.
+ * - A placed site with no rows left gets an empty guide, because that is what
+ *   the bundle says it had.
+ */
+async function restoreFieldGuides(
+  db: AppDb,
+  shopId: string,
+  creatures: PreparedDiveSiteCreaturesImport,
+  placed: ReadonlyMap<string, string>,
+  summary: DiveSiteImportSummary,
+): Promise<void> {
+  const bySite = new Map<string, { slug: MarineLifeSlug; position: number; rowNumber: number }[]>();
+  for (const siteId of placed.values()) bySite.set(siteId, []);
+  for (const row of creatures.rows) {
+    if (row.issues.length > 0 || !row.diveSiteId || !row.catalogSlug) {
+      summary.creaturesSkipped.push({ rowNumber: row.rowNumber, issues: row.issues });
+      continue;
+    }
+    const siteId = placed.get(row.diveSiteId);
+    if (!siteId) {
+      summary.creaturesSkipped.push({ rowNumber: row.rowNumber, issues: ["site_not_restored"] });
+      continue;
+    }
+    bySite.get(siteId)?.push({
+      slug: row.catalogSlug,
+      position: row.position ?? Number.MAX_SAFE_INTEGER,
+      rowNumber: row.rowNumber,
+    });
+  }
+  for (const [siteId, entries] of bySite) {
+    entries.sort((a, b) => a.position - b.position || a.rowNumber - b.rowNumber);
+    const slugs: MarineLifeSlug[] = [];
+    for (const entry of entries) {
+      const issue = slugs.includes(entry.slug)
+        ? "duplicate_species"
+        : slugs.length >= MAX_SITE_CREATURES
+          ? "too_many_species"
+          : null;
+      if (issue) {
+        summary.creaturesSkipped.push({ rowNumber: entry.rowNumber, issues: [issue] });
+        continue;
+      }
+      slugs.push(entry.slug);
+    }
+    // One transaction per site: the delete and the insert land together, so a
+    // failed insert never leaves a site whose guide was emptied (security review).
+    await db.transaction((tx) => replaceDiveSiteCreatures(tx, shopId, siteId, slugs));
+    summary.guides += 1;
+  }
+  summary.creaturesSkipped.sort((a, b) => a.rowNumber - b.rowNumber);
 }
 
 /**

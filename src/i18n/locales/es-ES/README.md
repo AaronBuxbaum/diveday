@@ -264,7 +264,7 @@ across Latin America and the Caribbean.
 | --- | --- |
 | an intro session / intro course (DSD, Try Scuba) | un bautismo (de buceo) |
 | on this intro session | en este bautismo |
-| Over intro ratio | Ratio de bautismo excedida |
+| Over intro ratio: add an instructor | Ratio de bautismo excedida: añade un instructor |
 | Intro-course status | Estado de bautismo de buceo |
 
 The noun is **masculine**: `el`/`un`/`este`, and anything reaching back to it agrees (`lleno`,
@@ -403,6 +403,20 @@ they were not coming is not a no-show.
 | the freed seat (the shop wrote the diver off) | la plaza liberada |
 
 `src/i18n/no-show-copy.test.ts` fails if either sentence takes the other's verb, in either locale.
+
+## Who is aboard: **buceador**, **snorkel**, **acompañante**
+
+Settled 2026-10-07 with participant types (ADR 20261007-participant-types). A booking is a diver, a
+snorkeler or a rider, and the badge beside a name on the roster, the manifest and the offline
+manifest reads the type in one word.
+
+| English | Spanish |
+| --- | --- |
+| diver | buceador |
+| snorkeler | snorkel *(the activity names the person, as dive shops in the Caribbean say it)* |
+| rider (stays on the boat) | acompañante *(never "pasajero", which every person aboard is)* |
+| joining as | participa como |
+| diver seats (the divers-only cap) | plazas de buceo |
 
 ## How names sort: nothing to do here
 

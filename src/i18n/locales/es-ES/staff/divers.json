@@ -275,6 +275,15 @@
     "erasing": "Borrando…",
     "eraseDiver": "Borrar datos personales"
   },
+  "guardianEmail": {
+    "heading": "Correo del tutor",
+    "description": "El padre, la madre o el tutor que firmó la exención de este buceador puede pedir que se borre su correo. Su nombre y su firma siguen en la exención, que queda marcada como censurada.",
+    "summary": "Borrar {email}",
+    "confirmLabel": "Escribe {email} para confirmar",
+    "confirmHint": "Se borra de todas las exenciones que este tutor firmó aquí. No se puede deshacer.",
+    "erasing": "Borrando…",
+    "erase": "Borrar correo"
+  },
   "rentalFit": {
     "heading": "Ajuste de alquiler",
     "description": "La base de la lista de preparación: nunca una reserva ni un sustituto de la prueba de equipo en el muelle.",
@@ -295,6 +304,10 @@
     "drysuitSizePlaceholder": "ML",
     "drysuitSizeHintLabel": "Sobre la talla de traje seco",
     "drysuitSizeHint": "En la mayoría de los trajes secos de alquiler los escarpines van vulcanizados, así que esta talla también responde por los pies y la lista de preparación no lleva línea de botines. Si los del centro usan botines de roca aparte, escribe aquí también esa talla; es el único campo del equipo que verá quien prepara.",
+    "hoodSizeLabel": "Talla de capucha",
+    "hoodSizePlaceholder": "M, 5 mm",
+    "gloveSizeLabel": "Talla de guantes",
+    "gloveSizePlaceholder": "L, 3 mm",
     "finSizeLabel": "Talla de aletas y escarpines",
     "finSizePlaceholder": "US 9 / EU 42",
     "weightPreferenceLabel": "Preferencia de peso",
@@ -439,7 +452,11 @@
     "waiverIdentityUnconfirmed": "Esa plaza queda retenida hasta que alguien confirme quién es el buceador, así que todavía no se puede registrar una exención en papel en su ficha. Confírmalo en el listado de la salida y luego registra la exención.",
     "waiverMedicalAttestation": "Confirma que revisaste el cuestionario médico antes de registrar una exención en papel, o envía el enlace digital para que el buceador lo responda.",
     "waiverGuardianName": "El nombre de la madre, padre o tutor es el mismo del buceador, así que esta exención mostraría a una sola persona firmando dos veces. Escribe ese nombre tal como aparece en su propia identificación, y si el registro del buceador es más corto que su identificación, corrige el registro. Si las dos de verdad son idénticas, registra la exención en el mostrador de admisión o desde la lista de la salida, donde puedes confirmar que viste firmar a las dos personas.",
-    "waiverPaperRecorded": "Exención en papel registrada, firmada y archivada."
+    "waiverPaperRecorded": "Exención en papel registrada, firmada y archivada.",
+    "guardianEmailErased": "Correo del tutor borrado de todas las exenciones de este centro que lo tenían. Cada una queda marcada como censurada.",
+    "guardianEmailMismatch": "El correo que escribiste no coincide, así que no se borró nada. Escríbelo exactamente como aparece arriba.",
+    "guardianEmailNotFound": "Ese correo ya no está en las exenciones de este buceador. No se borró nada.",
+    "notAuthorizedGuardianEmail": "Borrar el correo de un tutor está limitado al propietario del centro. Pídeselo a esa persona."
   },
   "export": {
     "downloadButton": {

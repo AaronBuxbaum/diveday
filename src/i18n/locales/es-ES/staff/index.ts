@@ -34,6 +34,7 @@ import closeout from "./closeout.json";
 import courses from "./courses.json";
 import divers from "./divers.json";
 import diveSites from "./diveSites.json";
+import emailSettings from "./emailSettings.json";
 import feed from "./feed.json";
 import gear from "./gear.json";
 import inbox from "./inbox.json";
@@ -43,6 +44,7 @@ import lenses from "./lenses.json";
 import manifest from "./manifest.json";
 import orderLine from "./orderLine.json";
 import orders from "./orders.json";
+import participants from "./participants.json";
 import print from "./print.json";
 import promos from "./promos.json";
 import reports from "./reports.json";
@@ -63,6 +65,7 @@ import whatsapp from "./whatsapp.json";
 
 const staff = {
   calendar,
+  emailSettings,
   calls,
   staffing,
   feed,
@@ -101,6 +104,7 @@ const staff = {
   integrations,
   boats,
   lenses,
+  participants,
 };
 
 export default staff;

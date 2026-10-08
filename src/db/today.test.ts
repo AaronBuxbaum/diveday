@@ -563,7 +563,8 @@ describe("today's work queue (in-memory PGlite)", () => {
       rentsDiveComputer: false,
       rentsGopro: false,
       rentsDrysuit: false,
-      rentsHoodGloves: false,
+      rentsHood: false,
+      rentsGloves: false,
       rentsTorch: false,
       rentsSmb: false,
     };
@@ -1637,6 +1638,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       .insert(bookingsTable)
       .values(
         divers.map((diver) => ({
+          bookedAs: "diver" as const,
           shopId,
           tripId: trip.id,
           personId: diver.id,
@@ -3348,7 +3350,13 @@ describe("crew clashes on Today (H-80)", () => {
     if (!diver || !staff) throw new Error("seed people missing");
     const [booking] = await db
       .insert(bookingsTable)
-      .values({ shopId: shop.id, tripId: later.id, personId: diver.id, status: "checked_in" })
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: later.id,
+        personId: diver.id,
+        status: "checked_in",
+      })
       .returning();
     if (!booking) throw new Error("fixture booking not created");
     await db.insert(rollCallEventsTable).values({

@@ -13,6 +13,7 @@ import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import {
   canPersonManageOrders,
   canPersonManagePaymentSettings,
+  canPersonOverrideCertBlock,
   canPersonRefund,
   canPersonRetireMedicalRefusal,
 } from "@/db/authz";
@@ -22,6 +23,7 @@ import { latestTripStage } from "@/db/trip-stages";
 import { getTripGuests } from "@/db/trips-guests";
 import { getTripOverview } from "@/db/trips-overview";
 import { loadTripSharedReads } from "@/db/trips-shared-reads";
+import { overRatioPulseKey, overRatioWarningText } from "@/i18n/crew-gap-labels";
 import { languageNameIn } from "@/i18n/language-labels";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
@@ -29,7 +31,6 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { staffTideStationText, staffTideWindowText } from "@/i18n/tide-labels";
 import { ratingLapsedDetailText } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
-import { DSD_RATIO } from "@/lib/course-ratios";
 import { oneWindowPerSite, tideWindowsForDeparture } from "@/lib/departure-tides";
 import { depthInUnit } from "@/lib/depth-units";
 import { parseDockDayRhythm } from "@/lib/diver-planning";
@@ -53,13 +54,14 @@ import { tripPhaseOf } from "@/lib/trip-phase";
 import { acceptsNewDivers, isFull } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { buildArrivalDesk } from "./_arrivals/arrival-desk";
-import { CheckInQueueRefresh } from "./_arrivals/CheckInQueueRefresh";
 import { DESK_NOTICES } from "./_arrivals/notices";
 import { ConditionsSection } from "./_components/ConditionsSection";
 import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
+import { DeskRefresh } from "./_components/DeskRefresh";
 import { DetailsSection } from "./_components/DetailsSection";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
+import { participantTermsRows } from "./_components/ParticipantTermsSection";
 import { PrintTripBundleButton } from "./_components/PrintTripBundleButton";
 import { RequirementsSection } from "./_components/RequirementsSection";
 import {
@@ -72,6 +74,7 @@ import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBan
 import { TripAddDiverLink, TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
 import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRosterContent";
 import { TripStageBadge, TripTabs } from "./_components/TripTabs";
+import { DETAILS_FORMS, ROSTER_FORMS } from "./_components/trip-notice-tabs";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
 import {
   addInternalNoteAction,
@@ -98,6 +101,7 @@ import {
   saveRequirementsAction,
   saveRosterEmergencyContactAction,
   sendNewWaiverAction,
+  setParticipantTypeAction,
   setSeriesRepeatAction,
   splitDiverIdentityAction,
   undoRemoveBookingAction,
@@ -198,6 +202,7 @@ export default async function ManageTripPage({
     stageReading,
     mayRetireRefusal,
     canManageOrders,
+    mayOverrideCertBlock,
   ] = await Promise.all([
     // Both read the trip, its requirements, readiness and prep list; started
     // once here and handed to each (`src/db/trips-shared-reads.ts`).
@@ -218,6 +223,8 @@ export default async function ManageTripPage({
     // The per-seat "Create order" door (issue #1925): read for itself, not
     // borrowed from `mayDiscount`, though both are owner/manager today.
     canPersonManageOrders(db, shop.id, session.user.personId),
+    // Who is offered "Change anyway" past a missing card; the action re-checks.
+    canPersonOverrideCertBlock(db, shop.id, session.user.personId),
   ]);
   if (!overview || !guests) notFound();
   const {
@@ -284,23 +291,7 @@ export default async function ManageTripPage({
           // divemaster at all, which is the case that matters most.
           needed: ratioGap.needed,
         });
-  // Two rules, two sentences: the entry-level cap is PADI's published Open
-  // Water training figure and a certified assistant raises it; the intro cap is
-  // PADI's tighter published Discover Scuba open-water figure (HD-6) that an
-  // assistant does not move. One generic string told a DSD manager to add a
-  // divemaster, which cannot work, and cited the wrong PADI number at them. The
-  // per-instructor figure is interpolated from `DSD_RATIO` so the sentence
-  // cannot drift away from the cap the gate actually enforces.
-  const overRatioWarning =
-    crewGap.code !== "over_ratio"
-      ? null
-      : crewGap.ratio === "intro"
-        ? t("trips.detail.overRatioWarningIntro", {
-            booked: crewGap.booked,
-            cap: crewGap.capacity,
-            perInstructor: DSD_RATIO.openWaterStudentsPerInstructor,
-          })
-        : t("trips.detail.overRatioWarning", { booked: crewGap.booked, cap: crewGap.capacity });
+  const overRatioWarning = overRatioWarningText(t, crewGap);
 
   // One resolution, handed to the section it belongs to. Whatever no rendered
   // section claims — a page-level permission refusal, or a section this
@@ -388,7 +379,7 @@ export default async function ManageTripPage({
         ...(crewGap.code === "over_ratio"
           ? [
               {
-                text: t("trips.pulse.overRatio"),
+                text: t(overRatioPulseKey(crewGap)),
                 href: "?view=details#crew",
                 tone: "danger" as const,
               },
@@ -474,26 +465,14 @@ export default async function ManageTripPage({
     station: entry.stationLabel ? staffTideStationText(t, entry.stationLabel) : null,
   }));
 
-  const aboutForms = new Set([
-    "details",
-    "requirements",
-    "conditions",
-    "crew",
-    "series",
-    "lifecycle",
-    // Promote lives on Details (`TripPromoteAndActivity`), so its answer does.
-    "last-minute-deal",
-  ]);
-  const rosterForms = new Set(["roster", "add-diver"]);
   const rootPageNotice =
-    tripNotice && !aboutForms.has(tripNotice.form) && !rosterForms.has(tripNotice.form)
+    tripNotice && !DETAILS_FORMS.has(tripNotice.form) && !ROSTER_FORMS.has(tripNotice.form)
       ? tripNotice
       : undefined;
   const rosterPageNotice = tripNotice && tripNotice.form === "roster" ? tripNotice : undefined;
-  // **Details is its own tab**, and a save on it lands back on it: the About
-  // forms redirect to the departure with their `form`, which is enough to
-  // know which tab the answer belongs to, so no action needs to know the tab.
-  const showDetails = view === "details" || Boolean(tripNotice && aboutForms.has(tripNotice.form));
+  // **Details is its own tab**, and a save on it lands back on it.
+  const showDetails =
+    view === "details" || Boolean(tripNotice && DETAILS_FORMS.has(tripNotice.form));
   const now = nowDate();
   const acceptsDivers = acceptsNewDivers(trip, now);
   const phase = tripPhaseOf({
@@ -639,6 +618,7 @@ export default async function ManageTripPage({
     markWaiverInPersonAction: markWaiverInPersonAction.bind(null, shopSlug, tripId),
     markPaymentAction: markPaymentAction.bind(null, shopSlug, tripId),
     removeBookingAction: removeBookingAction.bind(null, shopSlug, tripId),
+    setParticipantTypeAction: setParticipantTypeAction.bind(null, shopSlug, tripId),
     // One door on this tab, desk or not: the arrivals window opens 36 hours
     // ahead, so a confirm made inside it is no evidence the diver was standing
     // at the counter (dive-domain review 2026-10-05).
@@ -909,6 +889,7 @@ export default async function ManageTripPage({
                     />
                   ) : undefined,
                 },
+                ...participantTermsRows({ trip, shop, locale, tripNotice, canConfigure, shopSlug }),
                 // **On every departure, whatever the crew schedule says**: who
                 // is aboard is manifest data (the crew roll call, the souls-on-
                 // board count), not planning (ADR 20261005-crew-schedule-is-a-setting).
@@ -1205,6 +1186,9 @@ export default async function ManageTripPage({
               // scoped to the seat the action named so a roster of minors does not
               // all sprout the staffer's confirmation.
               namesakeRefusedBookingId={notice === "waiver-guardian-name" ? bid : undefined}
+              participantTypeCertBookingId={
+                notice === "participant-type-cert" && mayOverrideCertBlock ? bid : undefined
+              }
               mayDiscount={mayDiscount}
               mayWriteOffPayment={mayWriteOffPayment}
               canManageOrders={canManageOrders}
@@ -1215,27 +1199,5 @@ export default async function ManageTripPage({
         )}
       </div>
     </>
-  );
-}
-
-/**
- * Pull-to-refresh while the desk is open — a phone at the counter re-reads the
- * list with the same gesture the boat's roll call uses. The rest of the week
- * the roster is an ordinary page, and its stack lies in the page's flow.
- */
-function DeskRefresh({
-  open,
-  copy,
-  children,
-}: {
-  open: boolean;
-  copy: { pulling: string; release: string; refreshing: string };
-  children: React.ReactNode;
-}) {
-  if (!open) return <>{children}</>;
-  return (
-    <CheckInQueueRefresh copy={copy}>
-      <div className="space-y-10">{children}</div>
-    </CheckInQueueRefresh>
   );
 }

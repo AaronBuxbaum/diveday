@@ -2597,6 +2597,27 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **"Joining as", with a price per type** (ADR 20261007-participant-types).
+       * A departure that sells snorkeler and rider seats asks each person what
+       * they are doing, and the hero states each type's price. Today's reef
+       * boat, through `/api/test/seed-trouble-states?mixedBoat=1`, which names
+       * the two prices unless the demo seed already has.
+       */
+      test(`the public trip page offers a snorkeler and a rider seat (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?mixedBoat=1");
+        expect(seeded.ok()).toBe(true);
+        const { mixedBoat } = (await seeded.json()) as { mixedBoat?: { tripId: string } };
+        if (!mixedBoat) throw new Error("seed-trouble-states found no departure to mix");
+        await page.goto(`/s/blue-mantis/trips/${mixedBoat.tripId}`);
+        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await expect(page.getByLabel("Joining as")).toBeVisible();
+        await capture(page, "public-trip-participant-types", scheme);
+      });
+
+      /**
        * **A dock day the departure's own legs lay out** (ADR
        * 20260815-per-leg-travel-minutes).
        *
@@ -4729,6 +4750,46 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-builder-move-blocked", scheme);
       });
 
+      /**
+       * **A snorkeler and a rider aboard** (ADR 20261007-participant-types):
+       * the roster's type badge, the Details row that sets their prices, the
+       * manifest head count's split and the roll-call badge, on today's reef
+       * boat. `/api/test/seed-trouble-states?mixedBoat=1` seats Mara and Owen
+       * Quint there through `seatDiver` unless the demo seed already has, so
+       * the capture reads the same on every layer of the stack.
+       */
+      test(`a departure carrying a snorkeler and a rider (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const seeded = await request.post("/api/test/seed-trouble-states?mixedBoat=1");
+        expect(seeded.ok()).toBe(true);
+        const { mixedBoat } = (await seeded.json()) as {
+          mixedBoat?: { tripId: string; snorkeler: string; rider: string };
+        };
+        if (!mixedBoat) throw new Error("seed-trouble-states found no departure to mix");
+
+        await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}`);
+        await expect(
+          page
+            .locator('#roster li[id^="booking-"]')
+            .filter({ hasText: mixedBoat.rider })
+            .first()
+            .getByText("Rider", { exact: true }),
+        ).toBeVisible();
+        await capture(page, "trip-roster-participant-types", scheme);
+
+        await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}?view=details`);
+        await expect(page.locator("details#participant-terms")).toBeVisible();
+        await capture(page, "trip-details-participant-terms", scheme);
+
+        await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}/manifest`);
+        await page.getByRole("heading", { name: "Roll call" }).waitFor();
+        await expect(page.getByText(/1 snorkeler · 1 rider/).first()).toBeVisible();
+        await capture(page, "manifest-participant-types", scheme);
+      });
+
       // The add-a-departure form as a shop meets it all week: the quick path,
       // which the board only ever shows as a button — every field a departure
       // is born with, price included, with the rare half collapsed behind
@@ -6492,6 +6553,22 @@ for (const scheme of ["light", "dark"] as const) {
         // heading resolves before the interesting part has mounted.
         await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
         await capture(page, "settings-calendar", scheme);
+      });
+
+      // The staffer's own Email settings: the Monday email's row, on for the
+      // owner by default, with its preview door.
+      test(`the email settings render true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/email");
+        await page.getByRole("button", { name: "Turn off" }).waitFor();
+        await capture(page, "settings-email", scheme);
+      });
+
+      // The Monday email itself, as the preview renders it from the frozen
+      // clock's week of the seeded demo shop: the one capture of an email body.
+      test(`the Monday email renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/email/preview");
+        await page.getByText(/Weeks run Monday to Sunday|no email goes out this Monday/).waitFor();
+        await capture(page, "weekly-digest-email", scheme);
       });
 
       // The courses catalog as one ledger (slice 9g of ADR

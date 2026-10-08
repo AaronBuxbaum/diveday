@@ -31,6 +31,7 @@ import {
   wrapEmailHtml,
 } from "./email";
 import type { Notification } from "./kinds";
+import { weeklyDigestEmail } from "./weekly-digest-email";
 
 /**
  * Which email body each notification kind renders to, and the document chrome
@@ -115,5 +116,6 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "founder_digest") return founderDigestEmail(notification);
   if (notification.kind === "course_inquiry") return courseInquiryEmail(notification);
   if (notification.kind === "staff_reply") return staffReplyEmail(notification);
+  if (notification.kind === "weekly_digest") return weeklyDigestEmail(notification);
   return passwordChangedEmail(notification);
 }

@@ -2,7 +2,7 @@ import { InsetGroup } from "@/components/ui/ledger";
 import { SettingsDoorRow } from "../SettingsRows";
 import { ACCOUNT_GROUP, SettingsGroup, type SettingsView } from "./kit";
 
-/** The Account group: the reader's own security and calendar, and Billing. */
+/** The Account group: the reader's own security, calendar and email, and Billing. */
 export function AccountGroup({
   view,
   canViewBilling,
@@ -22,6 +22,11 @@ export function AccountGroup({
         <SettingsDoorRow
           href={`/shop/${shopSlug}/settings/calendar`}
           heading={t("settings.main.calendar.heading")}
+        />
+
+        <SettingsDoorRow
+          href={`/shop/${shopSlug}/settings/email`}
+          heading={t("emailSettings.title")}
         />
 
         {/* What DiveDay itself costs: the trial, a free term, the card on

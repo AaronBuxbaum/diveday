@@ -203,7 +203,24 @@ export function courseSeatCapacity(
 export type CourseCrewGap =
   | { code: "none" }
   | { code: "no_instructor" }
-  | { code: "over_ratio"; booked: number; capacity: number; ratio: CourseRatioKind };
+  | {
+      code: "over_ratio";
+      booked: number;
+      capacity: number;
+      ratio: CourseRatioKind;
+      remedy: CourseCrewRemedy;
+    };
+
+/**
+ * **Who a manager goes to find** to close an `over_ratio` gap. A certified
+ * assistant raises the entry-level cap 2 at a time, but never past the
+ * per-instructor ceiling (12 for the entry-level rule), so once the bookings
+ * are past that ceiling only another instructor adds a seat; the intro cap
+ * credits an assistant nothing at all, so it is always `"instructor"`
+ * (dive-domain review of #1677). Moving a booking also closes a gap; this
+ * names the crew member, never the only fix.
+ */
+export type CourseCrewRemedy = "assistant" | "instructor";
 
 /**
  * The one computation of "does this course session have enough crew",
@@ -221,13 +238,19 @@ export function courseCrewGap(input: {
   if (input.instructorCount <= 0) return { code: "no_instructor" };
   const kind = courseRatioKind(input.course);
   if (kind === null) return { code: "none" };
-  const capacity = courseRatioCapacity(
-    RATIO_BY_KIND[kind],
-    input.instructorCount,
-    input.assistantCount,
-  );
+  const rule = RATIO_BY_KIND[kind];
+  const capacity = courseRatioCapacity(rule, input.instructorCount, input.assistantCount);
   if (input.booked > capacity) {
-    return { code: "over_ratio", booked: input.booked, capacity, ratio: kind };
+    const assistantsCanClose =
+      rule.assistantBonusPerInstructor > 0 &&
+      input.booked <= input.instructorCount * rule.maxStudentsPerInstructor;
+    return {
+      code: "over_ratio",
+      booked: input.booked,
+      capacity,
+      ratio: kind,
+      remedy: assistantsCanClose ? "assistant" : "instructor",
+    };
   }
   return { code: "none" };
 }

@@ -861,7 +861,7 @@ async function standingCrewClashes(
         gt(trips.endsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
       ),
     )
-    .orderBy(asc(trips.startsAt), asc(trips.id));
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
   const departures = new Map<string, { id: string; title: string; startsAt: Date; endsAt: Date }>();
   for (const trip of [...started, ...inWindow]) {
     if (!departures.has(trip.id)) {
@@ -1371,7 +1371,7 @@ async function blockedAboardOnBoatsOut(
         lte(trips.startsAt, now),
       ),
     )
-    .orderBy(asc(trips.startsAt), asc(trips.id));
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
   // A departure still inside the horizon is a live station already, and its
   // blocked divers come through the ordinary path with `aboard` set there.
   const candidates = sailed.filter((trip) => !inWindowTripIds.has(trip.id));
@@ -2150,7 +2150,7 @@ export async function getTodayWork(
     // this answer to know whether it applies (issue #1338, and the matching
     // walk in `staffingWeek`, src/db/staffing.ts).
     const ratioGap = divemasterRatioGap({
-      divers: trip.booked,
+      divers: trip.bookedDivers,
       divemasterCount: inWaterDivemasterCount(counts),
       diversPerDivemaster,
       // A departure the shop has marked self-guided raises neither of the
@@ -2200,7 +2200,7 @@ export async function getTodayWork(
       booked: trip.booked,
     });
     const rosterRatioGap = divemasterRatioGap({
-      divers: trip.booked,
+      divers: trip.bookedDivers,
       divemasterCount: inWaterDivemasterCount(counts.roster),
       diversPerDivemaster,
       selfGuided: trip.selfGuided,

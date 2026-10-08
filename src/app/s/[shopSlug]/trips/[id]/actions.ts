@@ -25,6 +25,7 @@ import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
 import { issueWaiverOnJoin } from "@/db/waiver-issue";
 import { diverTranslator } from "@/i18n/messages";
+import { describeCheckoutLine } from "@/i18n/participant-labels";
 import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
@@ -40,6 +41,7 @@ import {
 import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { isDiver, parsePartyTypes, rentsKind } from "@/lib/participant-types";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import {
   DIVER_NAME_MAX,
@@ -224,6 +226,21 @@ export async function bookSpot(
   // under that same condition, so parsing them under a looser one here would
   // read every checkbox as unchecked and silently zero out the diver's fit.
   const tripForGear = await getTripWithBooked(dbi, shopNow.id, tripId);
+  // What each person is coming as (ADR 20261007-participant-types), checked
+  // against what this departure sells rather than trusted from the form.
+  const parsedTypes = parsePartyTypes(
+    Array.from({ length: partySize.data }, (_, index) => formData.get(`participantType-${index}`)),
+    tripForGear,
+  );
+  if (!parsedTypes.ok) {
+    return {
+      error: t("booking.errors.checkFields"),
+      fieldErrors: {
+        [`participantType-${parsedTypes.index}`]: t("booking.fieldErrors.participantTypeInvalid"),
+      },
+    };
+  }
+  const partyTypes = parsedTypes.types;
   const perDiverPriceForGear = tripForGear
     ? perDiverBookingPriceCents(tripForGear, tripForGear.course)
     : null;
@@ -254,10 +271,16 @@ export async function bookSpot(
         // ticks both is charged for the suit that gets packed (H-78).
         rentedKinds: withOneSuit(
           offeredGearItems
+            .filter((item) => rentsKind(partyTypes[index], item.kind))
             .filter((item) => formData.get(`gear-${index}-${item.name}`) === "on")
             .map((item) => item.kind),
         ),
-        wantsNitrox: nitroxOfferedAtCheckout && formData.get(`nitrox-${index}`) === "on",
+        // A nitrox fill is a diver's alone; the database refuses it on any
+        // other seat, so it is never asked for one.
+        wantsNitrox:
+          isDiver(partyTypes[index]) &&
+          nitroxOfferedAtCheckout &&
+          formData.get(`nitrox-${index}`) === "on",
       });
     }
   }
@@ -309,6 +332,7 @@ export async function bookSpot(
       tripId,
       actor: "public" as const,
       fullName: entry.fullName,
+      participantType: partyTypes[index] ?? "diver",
       // No `declared`, and so no `admissionGate: "advise"` either: advising
       // rather than refusing was earned by the form warning a diver as they
       // answered, and there is no answer to warn about now. The sale-time gate
@@ -380,7 +404,11 @@ export async function bookSpot(
             ? "course-unavailable"
             : outcome.reason === "course_ratio_full"
               ? "course-ratio-full"
-              : "unavailable";
+              : outcome.reason === "divers_full"
+                ? "divers-full"
+                : outcome.reason === "participant_type_unavailable"
+                  ? "type-unavailable"
+                  : "unavailable";
     // "already_booked" is the one refusal that names a specific party member
     // (task 25) — `createBookingParty` reports which index it rolled back
     // on, so the form can highlight that diver's fieldset instead of the
@@ -518,7 +546,7 @@ export async function bookSpot(
         const selection = gearSelections[index];
         if (!selection) return;
         const rentedSet = new Set(selection.rentedKinds);
-        // **Every one of the eleven, checked by the compiler.** The writer's
+        // **Every one of the twelve, checked by the compiler.** The writer's
         // flags went optional so a caller with nothing to say about a piece can
         // stay quiet (issue #1755) — but this caller is the checkout, where a
         // tick is a paid line item, and a flag dropped here would take a gear
@@ -534,7 +562,8 @@ export async function bookSpot(
           rentsDiveComputer: rentedSet.has("dive_computer"),
           rentsGopro: rentedSet.has("gopro"),
           rentsDrysuit: rentedSet.has("drysuit"),
-          rentsHoodGloves: rentedSet.has("hood_gloves"),
+          rentsHood: rentedSet.has("hood"),
+          rentsGloves: rentedSet.has("gloves"),
           rentsTorch: rentedSet.has("torch"),
           rentsSmb: rentedSet.has("smb"),
         } satisfies Record<RentalFitField, boolean>;
@@ -774,8 +803,7 @@ async function startCheckoutUrl(
     tripPromo: input.tripPromo,
     shopPromo: input.shopPromo,
     gearLines: input.gearLines,
-    describeLine: ({ isDeposit, tripTitle }) =>
-      isDeposit ? t("checkoutLine.deposit", { tripTitle }) : t("checkoutLine.full", { tripTitle }),
+    describeLine: (parts) => describeCheckoutLine(t, parts),
   }).catch(() => null);
   return outcome?.ok ? (outcome.checkout.checkoutUrl ?? null) : null;
 }
