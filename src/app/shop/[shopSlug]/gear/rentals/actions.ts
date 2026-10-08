@@ -11,18 +11,21 @@ import {
   createCounterRental,
   getCounterRentalTicket,
   linkCounterRentalOrder,
+  recordCounterRentalCardSighting,
   releaseCounterRental,
   returnCounterRental,
 } from "@/db/gear-counter-rentals";
 import { createOrder, type NewOrderLineItem } from "@/db/orders";
+import { certificationAgency, certificationLevel } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { isPlausibleCardNumber } from "@/lib/card-number";
 import { nowDate } from "@/lib/clock";
-import { counterRentalDays } from "@/lib/counter-rentals";
+import { counterRentalCoreKinds, counterRentalDays, isOneCoreSet } from "@/lib/counter-rentals";
 import { GEAR_RETURN_OUTCOMES } from "@/lib/gear";
 import { majorToMinor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -35,7 +38,13 @@ import {
 import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { counterRentalFormPath, PRICE_FIELD_PREFIX, UNIT_FIELD } from "./rental-form";
+import {
+  CONFIRM_FIELD_PREFIX,
+  counterRentalFormPath,
+  PRICE_FIELD_PREFIX,
+  SET_PRICE_FIELD,
+  UNIT_FIELD,
+} from "./rental-form";
 
 /**
  * The counter-rental writes (ADR 20260815-minimal-gear-register, amended
@@ -89,6 +98,7 @@ export async function createCounterRentalAction(formData: FormData) {
 
   const wantsInvoice = formData.get("invoice") === "on";
   let lineCents = new Map<string, number>();
+  let setCents: number | null = null;
   if (wantsInvoice) {
     if (!(await canPersonManageOrders(db, shop.id, session.user.personId))) {
       redirect(noticeUrl(form, "not-authorized"));
@@ -109,6 +119,12 @@ export async function createCounterRentalAction(formData: FormData) {
       if (!price.success) redirect(noticeUrl(form, "invalid"));
       lineCents.set(unitId, majorToMinor(price.data, shop.currency));
     }
+    const rawSet = String(formData.get(SET_PRICE_FIELD) ?? "").trim();
+    if (rawSet) {
+      const price = priceSchema.safeParse(rawSet);
+      if (!price.success) redirect(noticeUrl(form, "invalid"));
+      setCents = majorToMinor(price.data, shop.currency);
+    }
   }
 
   const outcome = await createCounterRental(db, {
@@ -118,42 +134,72 @@ export async function createCounterRentalAction(formData: FormData) {
     reservedFrom: from,
     reservedUntil: until,
     todayLocal,
+    // A flagged soft-goods unit the staffer ticked "lend anyway" on. Life
+    // support is refused whatever is posted here.
+    confirmedFlaggedIds: units.filter(
+      (unitId) => formData.get(`${CONFIRM_FIELD_PREFIX}${unitId}`) === "on",
+    ),
   });
   if (!outcome.ok) {
+    // The unit travels by id, never by name: the page looks its label up in
+    // this shop, so a URL cannot put words of its own on the screen.
     redirect(
-      noticeUrl(
-        form,
-        outcome.reason,
-        outcome.reason === "unit_unavailable" && outcome.unitLabel
-          ? { unit: outcome.unitLabel }
-          : undefined,
-      ),
+      noticeUrl(form, outcome.reason, "unitId" in outcome ? { unit: outcome.unitId } : undefined),
     );
   }
 
   const ticket = shopPath(slug, "gear", "rentals", outcome.ticketId);
   const gear = shopPath(slug, "gear");
-  const billed = [...lineCents.values()].some((cents) => cents > 0);
+  const billed = [...lineCents.values(), setCents ?? 0].some((cents) => cents > 0);
   if (!wantsInvoice || !billed) revalidateAndRedirect(gear, noticeUrl(ticket, "rented"));
 
   // The invoice's words come from the staffer's bundle, as on the new-order
   // form, and are frozen onto the invoice by `createOrder`. One line per unit
   // with a price above zero: a unit lent free is not a line on a bill.
+  //
+  // **The set line**, when the form offered one and the rental really is one
+  // core set (re-checked here against what was written, not trusted from the
+  // form): one line at the set price, and the set's units carry no line of
+  // their own. Anything picked beside the set is priced as itself.
   const rental = await getCounterRentalTicket(db, shop.id, outcome.ticketId);
   const t = staffTranslator(await requestLocale(shop.defaultLocale));
   const days = counterRentalDays(from, until);
-  const lineItems: NewOrderLineItem[] = (rental?.units ?? []).flatMap((unit) => {
-    const cents = lineCents.get(unit.gearItemId) ?? 0;
-    if (cents <= 0) return [];
-    return [
-      {
-        kind: "rental",
-        description: t("counterRentals.invoiceLine", { label: unit.label, days }),
-        quantity: 1,
-        unitAmountCents: cents,
-      },
-    ];
-  });
+  const rented = rental?.units ?? [];
+  const coreKinds = counterRentalCoreKinds(shop.rentalItems);
+  const asSet =
+    setCents !== null &&
+    isOneCoreSet(
+      coreKinds,
+      rented.map((unit) => unit.kind),
+    );
+  const setLine: NewOrderLineItem[] =
+    asSet && setCents !== null && setCents > 0
+      ? [
+          {
+            kind: "rental",
+            description: t("counterRentals.setLine", { days }),
+            quantity: 1,
+            unitAmountCents: setCents,
+          },
+        ]
+      : [];
+  const lineItems: NewOrderLineItem[] = [
+    ...setLine,
+    ...rented.flatMap((unit): NewOrderLineItem[] => {
+      if (asSet && coreKinds.includes(unit.kind)) return [];
+      const cents = lineCents.get(unit.gearItemId) ?? 0;
+      if (cents <= 0) return [];
+      return [
+        {
+          kind: "rental",
+          description: t("counterRentals.invoiceLine", { label: unit.label, days }),
+          quantity: 1,
+          unitAmountCents: cents,
+        },
+      ];
+    }),
+  ];
+  if (lineItems.length === 0) revalidateAndRedirect(gear, noticeUrl(ticket, "rented"));
   const order = await createOrder(db, {
     shopId: shop.id,
     personId,
@@ -207,10 +253,75 @@ export async function addCounterRentalPersonAction(formData: FormData) {
   );
 }
 
+const cardSeenSchema = z.object({
+  personId: z.uuid(),
+  from: dateSchema,
+  until: dateSchema,
+  card: z.union([
+    z.literal("specialty:drysuit").transform(() => ({ card: "drysuit" as const })),
+    z
+      .string()
+      .startsWith("level:")
+      .transform((value) => value.slice("level:".length))
+      .pipe(z.enum(certificationLevel.enumValues))
+      .transform((level) => ({ card: "level" as const, level })),
+  ]),
+  agency: z.enum(certificationAgency.enumValues),
+  identifier: z.string().trim().max(120).refine(isPlausibleCardNumber),
+});
+
+/**
+ * **Card seen** — the staffer holding the person's card writes it down and
+ * certifies it in one act, recorded as theirs (`recordCounterRentalCardSighting`).
+ * The way past the card rule for life support, and the only one.
+ */
+export async function recordCounterRentalCardAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const slug = session.user.shopSlug;
+  const parsed = cardSeenSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    const personId = String(formData.get("personId") ?? "");
+    const back = z.uuid().safeParse(personId).success
+      ? counterRentalFormPath(slug, {
+          personId,
+          from: String(formData.get("from") ?? ""),
+          until: String(formData.get("until") ?? ""),
+        })
+      : shopPath(slug, "gear", "rentals", "new");
+    redirect(noticeUrl(back, "card-invalid"));
+  }
+  const { personId, from, until, card, agency, identifier } = parsed.data;
+  const form = counterRentalFormPath(slug, { personId, from, until });
+  const outcome = await recordCounterRentalCardSighting(await getDb(), {
+    shopId: session.user.shopId,
+    personId,
+    seenByPersonId: session.user.personId,
+    agency,
+    identifier,
+    sighting: card,
+  });
+  revalidateAndRedirect(
+    shopPath(slug, "divers", personId),
+    noticeUrl(
+      form,
+      outcome.ok
+        ? "card-recorded"
+        : outcome.reason === "duplicate_card"
+          ? "card-duplicate"
+          : "card-not-recorded",
+    ),
+  );
+}
+
 const ticketSchema = z.object({ ticketId: z.uuid() });
 const returnSchema = ticketSchema.extend({
   outcome: z.enum(GEAR_RETURN_OUTCOMES),
   note: z.string().trim().max(400).optional(),
+  // Optional: blank is "not asked", which counts nothing on the dive clock.
+  dives: z
+    .union([z.literal(""), z.coerce.number().int().min(0).max(200)])
+    .optional()
+    .transform((value) => (value === "" || value === undefined ? null : value)),
 });
 
 function ticketLanding(slug: string, parsed: { success: boolean; data?: { ticketId: string } }) {
@@ -247,10 +358,14 @@ export async function returnCounterRentalAction(formData: FormData) {
     ticketId: parsed.data.ticketId,
     outcome: parsed.data.outcome,
     note: parsed.data.note,
+    dives: parsed.data.dives,
   });
+  // A unit flagged at the return is not "back on the wall": it waits for the
+  // bench, and the notice says so.
+  const returned = parsed.data.outcome === "service_concern" ? "returned-flagged" : "returned";
   revalidateAndRedirect(
     shopPath(session.user.shopSlug, "gear"),
-    noticeUrl(ticket, outcome.ok ? "returned" : outcome.reason),
+    noticeUrl(ticket, outcome.ok ? returned : outcome.reason),
   );
 }
 

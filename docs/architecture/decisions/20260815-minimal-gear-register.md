@@ -356,20 +356,67 @@ amendment records what was built on it and the calls the build made.
   what was never collected) mirror the trip set's.
 - **Money goes through `createOrder`, as promised.** One `rental` line per unit with a price
   above zero, prefilled from `shops.rental_pricing` times the days and editable; a zero total,
-  or "Send an invoice" left off, raises no order. Sending it is owner/manager work behind the
+  or "Send an invoice" left off, raises no order. When the picks are exactly one of each core
+  kind the shop offers and the shop prices a set, one set line replaces those units' lines,
+  prefilled at the set price times the days; the action re-checks the set against what it
+  wrote before billing it. Sending it is owner/manager work behind the
   money step-up and a connected Stripe account, like the new-order form; renting itself stays
   any-staff (H-06). The rental is written first and the invoice only after it stands, so the
   one partial outcome is Stripe failing, which leaves the rental and says so.
-- **One column was added: `gear_reservations.order_id`**, nullable, a link and never money.
-  Nothing else can say which invoice billed a rental, and the order page needs its way back to
+- **Two columns were added.** `gear_reservations.order_id`, nullable, a link and never money:
+  nothing else can say which invoice billed a rental, and the order page needs its way back to
   the ticket. It is written only by `linkCounterRentalOrder`, which refuses a booking-held row
-  and an order for a different person.
+  and an order for a different person, and while it is set the rental cannot be released (a
+  release deletes the rows the invoice points at; the invoice is voided first, on the order).
+  `gear_reservations.dives_logged`, nullable, 0 to 200: the dives the person said they did,
+  asked at the return and optional.
 - **The ticket** (`/shop/[shopSlug]/gear/rentals/[ticketId]`) prints like the trip slip, with
   the slip's absences: no signature line, no money. On screen it links the order.
 - **Reads that see counter rentals**: the register's groups, a unit's record, Today's due-back
   and overdue rows and the service concerns all join the holder as
   `coalesce(bookings.person_id, gear_reservations.person_id)`. Trip-scoped reads (prep,
-  manifests, a departure's assignments) stay booking-only by construction.
+  manifests, a departure's assignments) stay booking-only by construction, with one line of
+  information: a booked diver holding units on a counter rental over the departure's window has
+  "Has … on a counter rental until …" on their Gear tab row. No count moves for it.
+
+Then the dive-domain and security reviews of PR #2256 (2026-10-08) added the counter's safety
+rules. A boat has a crew that checks every diver's card and every regulator at the dock; across
+the counter nobody does, and the unit is gone for days.
+
+- **Life support needs a verified card.** The life-support kinds are regulator, BCD, tank, dive
+  computer, drysuit, DPV, O2 kit and nitrox analyzer (`COUNTER_LIFE_SUPPORT_KINDS` in
+  `src/lib/counter-rentals.ts`); everything else (mask, fins, boots, wetsuit, hood, gloves, torch,
+  SMB, reel, camera, lead, other) is soft goods and goes to anybody. Renting any life-support
+  kind needs a certification that passes `validVerifiedCertification`, the predicate boarding
+  reads, so a pending card, a self-declaration or a "no card" declaration clears nothing. A
+  drysuit also needs the drysuit specialty card (`holdsSpecialtyCard`). The refusal is the
+  writer's (`not_certified`, `no_drysuit_card`), worded on the form, and the form shows the
+  person's highest verified level, cards still waiting for review, and whether they are a minor
+  on the first day.
+- **The way past it is "Card seen", and it is the diver record's own act.** A staffer holding the
+  card writes its agency and number and certifies it in one step
+  (`recordCounterRentalCardSighting`), which records them as the reviewer and when. There is no
+  bare attestation tick: a tick records nothing anybody can check with the agency afterwards
+  (ADR 20260804-card-evidence-is-the-number).
+- **The service screen: the one place a service clock gates.** Everywhere else a clock informs and
+  the dock decides (H-06). At the counter there is no dock, so a life-support unit is refused
+  (`unit_needs_service`) when it is kept back the way a departure's proposals keep a unit back
+  (`gearServiceKeepsUnitBack`: an overdue clock or an open service concern), with the clock read
+  **as of the window's last day**. A flagged soft-goods unit sorts last on the form and goes only
+  with its own "Lend anyway" tick (`unit_needs_confirm`). This exception is the counter's alone;
+  trip assignment is unchanged.
+- **Dives on a counter rental** count on the unit's dive clock when the return says how many
+  (`dives_logged`), dated by the window's first day, and count nothing when it does not: a floor,
+  like the trip side's planned dives.
+- **Counter tanks are air only, for now.** Nothing at the counter models a nitrox fill (no mix, no
+  analysis, no nitrox card check); a shop filling a counter tank with nitrox records it outside
+  DiveDay. A nitrox fill on a counter rental is future work, and it will need the nitrox card and
+  the analysis record the boat side keeps.
+- **The waiver is not re-checked at the counter. This is a known gap.** The one shop-wide waiver
+  is signed per booking (CR-015), and a counter rental has no booking, so there is nothing for the
+  counter to read. A person renting gear who has never booked a boat may have signed nothing.
+  Closing it needs a waiver that belongs to the person rather than the booking, which CR-015
+  does not have yet.
 
 ## Amendment 2026-10-08 (second) — rental tickets carry the shop's terms and a "Received by" line
 

@@ -372,6 +372,22 @@ export function gearServiceIsDue(
   return serviceState.state === "due_soon" || serviceState.state === "overdue";
 }
 
+/**
+ * **A unit the software does not choose on anybody's behalf**: a service clock
+ * that has run out, or a return flagged as a service concern that nobody has
+ * answered with care since (`serviceConcernStillOpen`). The one reading for
+ * both places that ask it: the departure's proposals never propose such a unit
+ * (`src/lib/gear-proposals.ts`), and the counter refuses to lend it as life
+ * support (`src/db/gear-counter-rentals.ts`), where no crew checks it at a
+ * dock before it is used.
+ */
+export function gearServiceKeepsUnitBack(unit: {
+  serviceState: { state: string };
+  serviceConcern?: boolean;
+}): boolean {
+  return unit.serviceState.state === "overdue" || Boolean(unit.serviceConcern);
+}
+
 /** The inclusive shop-local date range a reservation covers. */
 export type ReservationWindow = { from: CalendarDate; until: CalendarDate };
 

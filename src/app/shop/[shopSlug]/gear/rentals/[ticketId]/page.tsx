@@ -8,6 +8,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
+import { controlClass, Field } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { getCounterRentalTicket } from "@/db/gear-counter-rentals";
 import { gearItemKindLabel, gearPhaseLabel, gearReturnOutcomeLabel } from "@/i18n/gear-labels";
@@ -44,6 +45,8 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   },
   "handed-over": { tone: "success", key: "counterRentals.ticket.notice.handedOver" },
   returned: { tone: "success", key: "counterRentals.ticket.notice.returned" },
+  "returned-flagged": { tone: "warning", key: "counterRentals.ticket.notice.returnedFlagged" },
+  invoiced: { tone: "warning", key: "counterRentals.ticket.notice.invoiced" },
   released: { tone: "success", key: "counterRentals.ticket.notice.released" },
   "not-found": { tone: "warning", key: "counterRentals.ticket.notice.notFound" },
   "concern-needs-words": {
@@ -198,7 +201,22 @@ export default async function CounterRentalTicketPage({
                   noteLabel: t("gear.prep.returnNoteLabel"),
                   notePlaceholder: t("gear.prep.returnNotePlaceholder"),
                 }}
-              />
+              >
+                {/* Optional, and the only count the dive clock gets for a
+                    counter rental: blank counts nothing (ADR
+                    20260815-minimal-gear-register, amendment 2026-10-08). */}
+                <Field label={t("counterRentals.ticket.divesLabel")} className="max-w-48">
+                  <input
+                    type="number"
+                    name="dives"
+                    min={0}
+                    max={200}
+                    step={1}
+                    inputMode="numeric"
+                    className={controlClass}
+                  />
+                </Field>
+              </GearReturnPane>
             ) : null}
           </section>
         ) : null}
@@ -207,7 +225,12 @@ export default async function CounterRentalTicketPage({
           {t("gear.ticket.dueBack", { date: formatCalendarDate(ticket.reservedUntil, locale) })}
         </p>
         <RentalTicketReceipt terms={shop.rentalTerms} t={t} />
-        <p className="mt-8 border-t border-border pt-4 text-sm text-muted">{shop.name}</p>
+        {/* Who to call when it breaks, or when it will be late — the slip is
+            the one page the person carries away. */}
+        <p className="mt-8 border-t border-border pt-4 text-sm text-muted">
+          {shop.name}
+          {shop.contactPhone ? ` · ${shop.contactPhone}` : ""}
+        </p>
       </div>
     </main>
   );

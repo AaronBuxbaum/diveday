@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
+import type { Certification, SpecialtyCertification } from "@/db/schema";
 import {
   COUNTER_RENTAL_MAX_DAYS,
   checkCounterRentalWindow,
+  counterRentalCardRefusal,
+  counterRentalCardSummary,
+  counterRentalCoreKinds,
   counterRentalDayRateCents,
   counterRentalDays,
   counterRentalLineCents,
+  counterRentalSetCents,
+  isLifeSupportKind,
 } from "./counter-rentals";
 import type { RentalPricing } from "./rentals";
 
@@ -94,5 +100,129 @@ describe("counterRentalLineCents", () => {
 
   it("stays null for an unpriced kind, so the form leaves the box for the staffer", () => {
     expect(counterRentalLineCents(PRICING, "tank", 3)).toBeNull();
+  });
+});
+
+function card(overrides: Partial<Certification> = {}): Certification {
+  return {
+    level: "open_water",
+    status: "verified",
+    selfDeclaredAt: null,
+    ...overrides,
+  } as Certification;
+}
+
+function specialty(overrides: Partial<SpecialtyCertification> = {}): SpecialtyCertification {
+  return {
+    specialty: "drysuit",
+    status: "verified",
+    importedAt: null,
+    reviewedAt: null,
+    ...overrides,
+  } as SpecialtyCertification;
+}
+
+const NO_CARDS = { certifications: [], specialtyCertifications: [] };
+
+describe("counterRentalCardRefusal", () => {
+  it("lends soft goods to anybody, card or none", () => {
+    expect(
+      counterRentalCardRefusal(["fins", "mask", "wetsuit", "weights", "torch"], NO_CARDS),
+    ).toBe(null);
+  });
+
+  it("refuses every life-support kind without a verified card", () => {
+    for (const kind of [
+      "regulator",
+      "bcd",
+      "tank",
+      "dive_computer",
+      "drysuit",
+      "dpv",
+      "o2_kit",
+      "nitrox_analyzer",
+    ] as const) {
+      expect(isLifeSupportKind(kind)).toBe(true);
+      expect(counterRentalCardRefusal(["fins", kind], NO_CARDS)).toBe("not_certified");
+    }
+  });
+
+  it("is not cleared by a pending card or a self-declaration", () => {
+    const pending = card({ status: "pending" });
+    const declared = card({ status: "pending", selfDeclaredAt: new Date("2026-10-01") });
+    expect(
+      counterRentalCardRefusal(["regulator"], {
+        certifications: [pending, declared],
+        specialtyCertifications: [],
+      }),
+    ).toBe("not_certified");
+  });
+
+  it("lends life support on a verified card, and asks a drysuit for its own card", () => {
+    const cards = { certifications: [card()], specialtyCertifications: [] };
+    expect(counterRentalCardRefusal(["regulator", "bcd"], cards)).toBe(null);
+    expect(counterRentalCardRefusal(["drysuit"], cards)).toBe("no_drysuit_card");
+    expect(
+      counterRentalCardRefusal(["drysuit"], {
+        ...cards,
+        specialtyCertifications: [specialty({ status: "pending" })],
+      }),
+    ).toBe("no_drysuit_card");
+    expect(
+      counterRentalCardRefusal(["drysuit"], {
+        ...cards,
+        specialtyCertifications: [specialty()],
+      }),
+    ).toBe(null);
+  });
+});
+
+describe("counterRentalCardSummary", () => {
+  it("names the highest verified level and counts the cards that do not count yet", () => {
+    expect(
+      counterRentalCardSummary({
+        certifications: [
+          card(),
+          card({ level: "rescue" }),
+          card({ level: "instructor", status: "pending" }),
+        ],
+        specialtyCertifications: [specialty()],
+      }),
+    ).toEqual({ verifiedLevel: "rescue", drysuit: true, unverified: 1 });
+    expect(counterRentalCardSummary(NO_CARDS)).toEqual({
+      verifiedLevel: null,
+      drysuit: false,
+      unverified: 0,
+    });
+  });
+});
+
+describe("the set price", () => {
+  const core = counterRentalCoreKinds(["bcd", "regulator", "wetsuit", "mask_fins"]);
+
+  it("reads the core set from what the shop offers, fins carrying the pair", () => {
+    expect(core).toEqual(["bcd", "regulator", "wetsuit", "fins"]);
+  });
+
+  it("prices exactly one full set at the set price times the days", () => {
+    expect(
+      counterRentalSetCents(PRICING, core, ["bcd", "regulator", "wetsuit", "fins", "mask"], 3),
+    ).toBe(18_000);
+  });
+
+  it("prices nothing as a set when a piece is missing, doubled, or the shop has no set price", () => {
+    expect(counterRentalSetCents(PRICING, core, ["bcd", "regulator", "wetsuit"], 1)).toBe(null);
+    expect(
+      counterRentalSetCents(PRICING, core, ["bcd", "bcd", "regulator", "wetsuit", "fins"], 1),
+    ).toBe(null);
+    expect(
+      counterRentalSetCents(
+        { ...PRICING, setCents: null },
+        core,
+        ["bcd", "regulator", "wetsuit", "fins"],
+        1,
+      ),
+    ).toBe(null);
+    expect(counterRentalSetCents(PRICING, [], ["bcd"], 1)).toBe(null);
   });
 });

@@ -1,12 +1,43 @@
-import { and, asc, eq, inArray, isNotNull, isNull, type SQL, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNotNull, isNull, lte, type SQL, sql } from "drizzle-orm";
 import type { CalendarDate } from "@/lib/calendar-date";
+import type { CertificationLevel } from "@/lib/certification-levels";
 import { nowDate } from "@/lib/clock";
-import { type CounterRentalWindowRefusal, checkCounterRentalWindow } from "@/lib/counter-rentals";
-import type { GearItemKind, GearReturnOutcome } from "@/lib/gear";
+import {
+  type CounterRentalCardRefusal,
+  type CounterRentalWindowRefusal,
+  checkCounterRentalWindow,
+  counterRentalCardRefusal,
+  isLifeSupportKind,
+} from "@/lib/counter-rentals";
+import {
+  type GearItemKind,
+  type GearReturnOutcome,
+  gearServiceKeepsUnitBack,
+  gearServiceState,
+} from "@/lib/gear";
 import type { AppDb } from "./client";
-import type { GearReservationActionOutcome } from "./gear";
+import {
+  type GearReservationActionOutcome,
+  latestServiceClocks,
+  openServiceConcerns,
+} from "./gear";
 import { violatesExclusionConstraint } from "./query-helpers";
-import { gearItems, gearReservations, orders, people } from "./schema";
+import {
+  type CertificationReviewRefusal,
+  createCertification,
+  createSpecialtyCertification,
+  reviewCertification,
+  reviewSpecialtyCertification,
+} from "./readiness";
+import {
+  type CertificationAgency,
+  certifications,
+  gearItems,
+  gearReservations,
+  orders,
+  people,
+  specialtyCertifications,
+} from "./schema";
 
 /**
  * **Counter rentals** — units lent to a person who is not on a boat that day
@@ -40,9 +71,21 @@ export type CreateCounterRentalOutcome =
         | "too_many_units"
         | "person_not_found"
         | "unit_not_found"
-        | "unit_out_of_service";
+        | "unit_out_of_service"
+        | CounterRentalCardRefusal;
     }
-  | { ok: false; reason: "unit_unavailable"; unitLabel: string };
+  | {
+      ok: false;
+      /**
+       * `unit_unavailable`: the exclusion constraint refused it.
+       * `unit_needs_service`: life support whose clock runs out inside the
+       * window, or that came home with a concern nobody has serviced since.
+       * `unit_needs_confirm`: soft goods carrying one of those flags, which
+       * the staffer did not confirm lending anyway.
+       */
+      reason: "unit_unavailable" | "unit_needs_service" | "unit_needs_confirm";
+      unitId: string;
+    };
 
 /**
  * The person a counter rental may be written for: this shop's, and not
@@ -53,13 +96,216 @@ export async function counterRentalPerson(
   db: AppDb,
   shopId: string,
   personId: string,
-): Promise<{ id: string; fullName: string; email: string | null; phone: string | null } | null> {
+): Promise<{
+  id: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  dateOfBirth: CalendarDate | null;
+} | null> {
   const [row] = await db
-    .select({ id: people.id, fullName: people.fullName, email: people.email, phone: people.phone })
+    .select({
+      id: people.id,
+      fullName: people.fullName,
+      email: people.email,
+      phone: people.phone,
+      dateOfBirth: people.dateOfBirth,
+    })
     .from(people)
     .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.deletedAt)))
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * The cards the counter reads before lending life support: this person's live
+ * level and specialty cards in this shop, whatever their status. The predicate
+ * (`counterRentalCardRefusal`) decides which of them count.
+ */
+export async function counterRentalCards(db: AppDb, shopId: string, personId: string) {
+  const [levels, specialties] = await Promise.all([
+    db
+      .select()
+      .from(certifications)
+      .where(
+        and(
+          eq(certifications.shopId, shopId),
+          eq(certifications.personId, personId),
+          isNull(certifications.deletedAt),
+        ),
+      ),
+    db
+      .select()
+      .from(specialtyCertifications)
+      .where(
+        and(
+          eq(specialtyCertifications.shopId, shopId),
+          eq(specialtyCertifications.personId, personId),
+          isNull(specialtyCertifications.deletedAt),
+        ),
+      ),
+  ]);
+  return { certifications: levels, specialtyCertifications: specialties };
+}
+
+/** A card a staffer holds in their hand at the counter, and what it is. */
+export type CounterRentalCardSighting =
+  | { card: "level"; level: CertificationLevel }
+  | { card: "drysuit" };
+
+/**
+ * **"Card seen"** — the counter's way past the card rule, and the only one.
+ * It is the diver record's own capture-then-certify act, done in one step by
+ * the staffer holding the card: the card is written with its agency and
+ * number, then marked verified with that staffer as the reviewer, so the
+ * record says who saw it and when (`reviewed_by_person_id`, `reviewed_at`).
+ * There is no bare "I checked" box: a tick records nothing anybody can look
+ * up afterwards, and the card number is what a shop checks with the agency
+ * (ADR 20260804-card-evidence-is-the-number).
+ *
+ * A card this shop already holds by the same agency and number is refused
+ * (`duplicate_card`): it is already on the diver record, waiting to be
+ * confirmed there, and a second row would split one card in two.
+ */
+export async function recordCounterRentalCardSighting(
+  db: AppDb,
+  input: {
+    shopId: string;
+    personId: string;
+    seenByPersonId: string;
+    agency: CertificationAgency;
+    identifier: string;
+    sighting: CounterRentalCardSighting;
+  },
+): Promise<{ ok: true } | { ok: false; reason: CertificationReviewRefusal }> {
+  const common = {
+    shopId: input.shopId,
+    personId: input.personId,
+    agency: input.agency,
+    identifier: input.identifier,
+  };
+  if (input.sighting.card === "level") {
+    const card = await createCertification(db, { ...common, level: input.sighting.level });
+    if (!card) return { ok: false, reason: "duplicate_card" };
+    const reviewed = await reviewCertification(db, {
+      shopId: input.shopId,
+      certificationId: card.id,
+      status: "verified",
+      reviewedByPersonId: input.seenByPersonId,
+    });
+    return reviewed.ok ? { ok: true } : reviewed;
+  }
+  const card = await createSpecialtyCertification(db, { ...common, specialty: "drysuit" });
+  if (!card) return { ok: false, reason: "duplicate_card" };
+  const reviewed = await reviewSpecialtyCertification(db, {
+    shopId: input.shopId,
+    certificationId: card.id,
+    status: "verified",
+    reviewedByPersonId: input.seenByPersonId,
+  });
+  return reviewed.ok ? { ok: true } : reviewed;
+}
+
+/** A unit's label, read for this shop only — the words a refusal names. */
+export async function counterRentalUnitLabel(
+  db: AppDb,
+  shopId: string,
+  gearItemId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ label: gearItems.label })
+    .from(gearItems)
+    .where(and(eq(gearItems.id, gearItemId), eq(gearItems.shopId, shopId)))
+    .limit(1);
+  return row?.label ?? null;
+}
+
+/**
+ * Units these people hold on a counter rental whose window overlaps this
+ * shop-local window and that are not home yet, by person — for a departure's
+ * Gear tab, where a diver already carrying the shop's regulator should not be
+ * handed a second one. Informs, never gates: prep counts do not move.
+ */
+export async function counterRentalsHeldDuring(
+  db: AppDb,
+  shopId: string,
+  personIds: readonly string[],
+  window: { from: CalendarDate; until: CalendarDate },
+): Promise<Map<string, { label: string; until: CalendarDate }[]>> {
+  if (personIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      personId: gearReservations.personId,
+      label: gearItems.label,
+      until: gearReservations.reservedUntil,
+    })
+    .from(gearReservations)
+    .innerJoin(
+      gearItems,
+      and(eq(gearItems.id, gearReservations.gearItemId), eq(gearItems.shopId, shopId)),
+    )
+    .where(
+      and(
+        eq(gearReservations.shopId, shopId),
+        isNull(gearReservations.bookingId),
+        inArray(gearReservations.personId, [...personIds]),
+        isNull(gearReservations.returnedAt),
+        lte(gearReservations.reservedFrom, window.until),
+        gte(gearReservations.reservedUntil, window.from),
+      ),
+    )
+    .orderBy(asc(gearItems.label));
+  const byPerson = new Map<string, { label: string; until: CalendarDate }[]>();
+  for (const row of rows) {
+    if (!row.personId) continue;
+    const held = byPerson.get(row.personId) ?? [];
+    held.push({ label: row.label, until: row.until });
+    byPerson.set(row.personId, held);
+  }
+  return byPerson;
+}
+
+export type CounterRentalServiceVerdict = {
+  /** Kept back by its service record as of the window's last day. */
+  flagged: boolean;
+  lifeSupport: boolean;
+};
+
+/**
+ * **The service screen at the counter** — the one place a service clock
+ * gates (ADR 20260815-minimal-gear-register, amendment 2026-10-08). On a boat
+ * a crew checks a unit at the dock before anyone breathes from it; across the
+ * counter nobody does, and the unit is gone for days. So a unit is judged as
+ * the departure's proposals judge it (`gearServiceKeepsUnitBack`), with the
+ * clock read **as of the window's last day**: a regulator whose service lapses
+ * on day two of a three-day rental is overdue for the rental.
+ */
+export async function counterRentalServiceVerdicts(
+  db: AppDb,
+  shopId: string,
+  units: readonly { id: string; kind: GearItemKind }[],
+  lastDay: CalendarDate,
+): Promise<Map<string, CounterRentalServiceVerdict>> {
+  const [clocks, concerns] = await Promise.all([
+    latestServiceClocks(
+      db,
+      shopId,
+      units.map((unit) => unit.id),
+    ),
+    openServiceConcerns(db, shopId, units),
+  ]);
+  return new Map(
+    units.map((unit) => [
+      unit.id,
+      {
+        flagged: gearServiceKeepsUnitBack({
+          serviceState: gearServiceState(clocks.get(unit.id) ?? [], lastDay),
+          serviceConcern: concerns.has(unit.id),
+        }),
+        lifeSupport: isLifeSupportKind(unit.kind),
+      },
+    ]),
+  );
 }
 
 /** Thrown inside the transaction to roll it back with a worded refusal. */
@@ -97,6 +343,8 @@ export async function createCounterRental(
     reservedFrom: string;
     reservedUntil: string;
     todayLocal: CalendarDate;
+    /** Flagged soft goods the staffer confirmed lending anyway. */
+    confirmedFlaggedIds?: readonly string[];
   },
 ): Promise<CreateCounterRentalOutcome> {
   const reservedFrom = input.reservedFrom.trim();
@@ -113,7 +361,41 @@ export async function createCounterRental(
   if (unitIds.length === 0) return { ok: false, reason: "no_units" };
   if (unitIds.length > COUNTER_RENTAL_MAX_UNITS) return { ok: false, reason: "too_many_units" };
 
-  const labels = new Map<string, string>();
+  // The safety screens, before anything is locked or written. Both read
+  // records nobody edits in the seconds between (cards, service history); the
+  // exclusion constraint below is still the only judge of availability. The
+  // person is read first so another shop's person is "not found", never "not
+  // certified" (their cards are not this shop's to read).
+  if (!(await counterRentalPerson(db, input.shopId, input.personId))) {
+    return { ok: false, reason: "person_not_found" };
+  }
+  const kinds = await db
+    .select({ id: gearItems.id, kind: gearItems.kind })
+    .from(gearItems)
+    .where(
+      and(
+        eq(gearItems.shopId, input.shopId),
+        inArray(gearItems.id, unitIds),
+        isNull(gearItems.deletedAt),
+      ),
+    )
+    .orderBy(asc(gearItems.label));
+  if (kinds.length !== unitIds.length) return { ok: false, reason: "unit_not_found" };
+  const cardRefusal = counterRentalCardRefusal(
+    kinds.map((unit) => unit.kind),
+    await counterRentalCards(db, input.shopId, input.personId),
+  );
+  if (cardRefusal) return { ok: false, reason: cardRefusal };
+  const verdicts = await counterRentalServiceVerdicts(db, input.shopId, kinds, reservedUntil);
+  const confirmed = new Set(input.confirmedFlaggedIds ?? []);
+  for (const unit of kinds) {
+    const verdict = verdicts.get(unit.id);
+    if (!verdict?.flagged) continue;
+    if (verdict.lifeSupport) return { ok: false, reason: "unit_needs_service", unitId: unit.id };
+    if (!confirmed.has(unit.id))
+      return { ok: false, reason: "unit_needs_confirm", unitId: unit.id };
+  }
+
   let inserting: string | null = null;
   try {
     return await db.transaction(async (tx) => {
@@ -152,7 +434,6 @@ export async function createCounterRental(
       if (units.some((unit) => unit.status !== "in_service")) {
         throw new CounterRentalRefused({ ok: false, reason: "unit_out_of_service" });
       }
-      for (const unit of units) labels.set(unit.id, unit.label);
 
       // One statement per unit, so a refusal can say which unit lost. The
       // first 23P01 aborts the transaction, which is the all-or-nothing.
@@ -180,11 +461,7 @@ export async function createCounterRental(
   } catch (error) {
     if (error instanceof CounterRentalRefused) return error.outcome;
     if (violatesExclusionConstraint(error, "gear_reservations_no_overlap")) {
-      return {
-        ok: false,
-        reason: "unit_unavailable",
-        unitLabel: (inserting && labels.get(inserting)) ?? "",
-      };
+      return { ok: false, reason: "unit_unavailable", unitId: inserting ?? "" };
     }
     throw error;
   }
@@ -272,7 +549,14 @@ export async function checkOutCounterRental(
  */
 export async function returnCounterRental(
   db: AppDb,
-  input: { shopId: string; ticketId: string; outcome: GearReturnOutcome; note?: string },
+  input: {
+    shopId: string;
+    ticketId: string;
+    outcome: GearReturnOutcome;
+    note?: string;
+    /** Dives the person did on the rental, when they said; each unit did them all. */
+    dives?: number | null;
+  },
 ): Promise<GearReservationActionOutcome> {
   const note = input.note?.trim() || null;
   if (input.outcome === "service_concern" && !note) {
@@ -280,7 +564,12 @@ export async function returnCounterRental(
   }
   const returned = await db
     .update(gearReservations)
-    .set({ returnedAt: nowDate(), returnNote: note, returnOutcome: input.outcome })
+    .set({
+      returnedAt: nowDate(),
+      returnNote: note,
+      returnOutcome: input.outcome,
+      divesLogged: input.dives ?? null,
+    })
     .where(
       and(
         sameCounterRental(input.shopId, input.ticketId),
@@ -297,11 +586,24 @@ export async function returnCounterRental(
  * counter that the person did not come back for. Units already out stay: a
  * release would erase the only record of who has them, and the return is the
  * honest close (`releaseGearReservation`'s rule, for the set).
+ *
+ * **Not once it is invoiced.** A release deletes the rows, and the rows are
+ * the ticket the invoice links back to; letting go of a billed rental would
+ * leave an invoice for gear the record says never left. The invoice is voided
+ * first, on the order, by the people who may touch money.
  */
 export async function releaseCounterRental(
   db: AppDb,
   input: { shopId: string; ticketId: string },
-): Promise<GearReservationActionOutcome> {
+): Promise<GearReservationActionOutcome | { ok: false; reason: "invoiced" }> {
+  const [invoiced] = await db
+    .select({ id: gearReservations.id })
+    .from(gearReservations)
+    .where(
+      and(sameCounterRental(input.shopId, input.ticketId), isNotNull(gearReservations.orderId)),
+    )
+    .limit(1);
+  if (invoiced) return { ok: false, reason: "invoiced" };
   const released = await db
     .delete(gearReservations)
     .where(

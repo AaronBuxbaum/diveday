@@ -6,10 +6,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import {
-  ChoiceFieldset,
-  ChoicePill,
   ChoiceRow,
-  controlClass,
   DateField,
   Field,
   FieldActions,
@@ -19,27 +16,37 @@ import {
 import { canPersonManageOrders } from "@/db/authz";
 import { listDiverSummaries } from "@/db/divers";
 import { countGearItems, listAvailableGearUnits } from "@/db/gear";
-import { counterRentalPerson } from "@/db/gear-counter-rentals";
+import {
+  counterRentalCards,
+  counterRentalPerson,
+  counterRentalUnitLabel,
+} from "@/db/gear-counter-rentals";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { isMinorOnDate } from "@/lib/age";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
   checkCounterRentalWindow,
+  counterRentalCardRefusal,
+  counterRentalCardSummary,
+  counterRentalCoreKinds,
   counterRentalDays,
   counterRentalLineCents,
+  isLifeSupportKind,
 } from "@/lib/counter-rentals";
-import { GEAR_KIND_ORDER, type GearItemKind } from "@/lib/gear";
+import { GEAR_KIND_ORDER, type GearItemKind, gearServiceKeepsUnitBack } from "@/lib/gear";
 import { currencyFractionDigits, minorToMajor, toShopCurrency } from "@/lib/money";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { InvoiceAddressFields } from "../../../orders/_components/InvoiceAddressFields";
 import { createCounterRentalAction } from "../actions";
-import { PRICE_FIELD_PREFIX, UNIT_FIELD } from "../rental-form";
+import { CounterUnitPicker, type PickerUnit } from "./_components/CounterUnitPicker";
+import { RentalCardSeen } from "./_components/RentalCardSeen";
 import { RentalPersonStep } from "./_components/RentalPersonStep";
 
 export const instant = true;
@@ -50,7 +57,13 @@ export const metadata: Metadata = {
 };
 
 /** Where a refusal belongs: beside the person step, or beside the submit. */
-type NoticeDefinition = { key: StaffMessageKey; step: "who" | "rent" };
+type NoticeDefinition = {
+  key: StaffMessageKey;
+  step: "who" | "rent";
+  /** The same sentence naming the unit, when the refusal carries one (`?unit=`). */
+  named?: StaffMessageKey;
+  tone?: NoticeTone;
+};
 
 const NOTICES: Record<string, NoticeDefinition> = {
   invalid: { key: "counterRentals.new.notice.invalid", step: "rent" },
@@ -63,7 +76,27 @@ const NOTICES: Record<string, NoticeDefinition> = {
   "person-not-found": { key: "counterRentals.new.notice.personNotFound", step: "who" },
   "unit-not-found": { key: "counterRentals.new.notice.unitNotFound", step: "rent" },
   "unit-out-of-service": { key: "counterRentals.new.notice.unitOutOfService", step: "rent" },
-  "unit-unavailable": { key: "counterRentals.new.notice.unitUnavailableUnnamed", step: "rent" },
+  "unit-unavailable": {
+    key: "counterRentals.new.notice.unitUnavailableUnnamed",
+    named: "counterRentals.new.notice.unitUnavailable",
+    step: "rent",
+  },
+  "unit-needs-service": {
+    key: "counterRentals.new.notice.unitNeedsServiceUnnamed",
+    named: "counterRentals.new.notice.unitNeedsService",
+    step: "rent",
+  },
+  "unit-needs-confirm": {
+    key: "counterRentals.new.notice.unitNeedsConfirmUnnamed",
+    named: "counterRentals.new.notice.unitNeedsConfirm",
+    step: "rent",
+  },
+  "not-certified": { key: "counterRentals.new.notice.notCertified", step: "who" },
+  "no-drysuit-card": { key: "counterRentals.new.notice.noDrysuitCard", step: "who" },
+  "card-recorded": { key: "counterRentals.new.notice.cardRecorded", step: "who", tone: "success" },
+  "card-duplicate": { key: "counterRentals.new.notice.cardDuplicate", step: "who" },
+  "card-not-recorded": { key: "counterRentals.new.notice.cardNotRecorded", step: "who" },
+  "card-invalid": { key: "counterRentals.new.notice.cardInvalid", step: "who" },
   "not-authorized": { key: "counterRentals.new.notice.notAuthorized", step: "rent" },
   "payment-not-connected": { key: "counterRentals.new.notice.paymentNotConnected", step: "rent" },
   "needs-email": { key: "counterRentals.new.notice.needsEmail", step: "rent" },
@@ -111,16 +144,23 @@ export default async function RentOutPage({
   const until = search.until && isValidCalendarDate(search.until) ? search.until : from;
   const windowRefusal = checkCounterRentalWindow({ from, until, todayLocal });
 
-  const [person, fleetSize, matches] = await Promise.all([
+  const noticeUnitId = uuidParam(search.unit);
+  const [person, fleetSize, matches, cards, noticeUnit] = await Promise.all([
     personId ? counterRentalPerson(db, shop.id, personId) : null,
     countGearItems(db, shop.id),
     !personId && query
       ? listDiverSummaries(db, shop.id, { query, limit: 6, timeZone: shop.timezone })
       : null,
+    personId ? counterRentalCards(db, shop.id, personId) : null,
+    // The URL carries a unit id, never words: the label is this shop's own,
+    // looked up here, and an id that is not one falls back to the unnamed line.
+    noticeUnitId ? counterRentalUnitLabel(db, shop.id, noticeUnitId) : null,
   ]);
   const [units, canInvoice] = person
     ? await Promise.all([
-        windowRefusal ? [] : listAvailableGearUnits(db, shop.id, { from, until, todayLocal }),
+        windowRefusal
+          ? []
+          : listAvailableGearUnits(db, shop.id, { from, until, todayLocal, serviceAsOf: until }),
         (async () =>
           (await canPersonManageOrders(db, shop.id, session.user.personId)) &&
           canAcceptPayments(await getShopStripeAccount(db, shop.id)))(),
@@ -129,8 +169,8 @@ export default async function RentOutPage({
 
   const notice = noticeFromParam(search.notice, NOTICES);
   const noticeText = notice
-    ? search.notice === "unit-unavailable" && search.unit
-      ? t("counterRentals.new.notice.unitUnavailable", { label: search.unit })
+    ? notice.named && noticeUnit
+      ? t(notice.named, { label: noticeUnit })
       : t(notice.key)
     : undefined;
   const whoNotice = notice?.step === "who" || !person ? noticeText : undefined;
@@ -144,11 +184,54 @@ export default async function RentOutPage({
     const cents = counterRentalLineCents(shop.rentalPricing, kind, days);
     return cents === null ? "" : minorToMajor(cents, currency).toFixed(digits);
   };
+  const invoiceOffered = canInvoice && Boolean(person?.email);
+  const cardSummary = cards ? counterRentalCardSummary(cards) : null;
+  // Each unit judged as the action will judge it: the card rule for its kind,
+  // then its service record read on the window's last day. Blocked units are
+  // shown (so nobody wonders where the regulators went) but cannot be ticked;
+  // flagged soft goods sort last and ask for their own "lend anyway".
+  const pickerUnit = (unit: (typeof units)[number]): PickerUnit & { order: number } => {
+    const flagged = gearServiceKeepsUnitBack(unit);
+    const cardRefusal = cards ? counterRentalCardRefusal([unit.kind], cards) : null;
+    const blocked = cardRefusal
+      ? t(
+          cardRefusal === "no_drysuit_card"
+            ? "counterRentals.new.unitNeedsDrysuitCard"
+            : "counterRentals.new.unitNeedsCard",
+        )
+      : flagged && isLifeSupportKind(unit.kind)
+        ? t("counterRentals.new.unitNeedsService")
+        : null;
+    return {
+      id: unit.id,
+      kind: unit.kind,
+      label: unit.label,
+      size: unit.size,
+      care: [
+        unit.serviceState.state === "overdue" ? t("gear.prep.optionServiceOverdue") : null,
+        unit.serviceConcern ? t("gear.prep.optionServiceConcern") : null,
+        unit.serviceState.state === "due_soon" ? t("gear.prep.optionServiceDueSoon") : null,
+      ].filter((word): word is string => word !== null),
+      blocked,
+      confirmLabel:
+        flagged && !blocked ? t("counterRentals.new.lendAnyway", { label: unit.label }) : null,
+      price: priceOf(unit.kind),
+      priceAria: t("counterRentals.new.priceAria", { label: unit.label }),
+      order: blocked ? 2 : flagged ? 1 : 0,
+    };
+  };
   const byKind = GEAR_KIND_ORDER.map((kind) => ({
     kind,
-    units: units.filter((unit) => unit.kind === kind),
+    kindLabel: gearItemKindLabel(t, kind),
+    units: units
+      .filter((unit) => unit.kind === kind)
+      .map(pickerUnit)
+      .sort((a, b) => a.order - b.order),
   })).filter((group) => group.units.length > 0);
-  const invoiceOffered = canInvoice && Boolean(person?.email);
+  const setPrice =
+    shop.rentalPricing.setCents === null
+      ? null
+      : minorToMajor(shop.rentalPricing.setCents * days, currency).toFixed(digits);
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -169,6 +252,20 @@ export default async function RentOutPage({
           from={from}
           until={until}
           whoNotice={whoNotice}
+          whoTone={notice?.tone}
+          cards={
+            person && cardSummary ? (
+              <RentalCardSeen
+                t={t}
+                personId={person.id}
+                from={from}
+                until={until}
+                summary={cardSummary}
+                minor={Boolean(person.dateOfBirth && isMinorOnDate(person.dateOfBirth, from))}
+                drysuitOnOffer={units.some((unit) => unit.kind === "drysuit")}
+              />
+            ) : null
+          }
         />
 
         {person ? (
@@ -179,7 +276,7 @@ export default async function RentOutPage({
                 <DateField name="from" defaultValue={from} min={todayLocal} required />
               </Field>
               <Field label={t("counterRentals.new.untilLabel")}>
-                <DateField name="until" defaultValue={until} min={todayLocal} required />
+                <DateField name="until" defaultValue={until} min={from} required />
               </Field>
               <FieldActions>
                 <button type="submit" className={buttonClass({ variant: "secondary" })}>
@@ -224,72 +321,15 @@ export default async function RentOutPage({
               ) : byKind.length === 0 ? (
                 <p className="text-sm text-muted">{t("counterRentals.new.noUnits")}</p>
               ) : (
-                <ChoiceFieldset
+                <CounterUnitPicker
                   legend={t("counterRentals.new.unitsLegend")}
-                  bodyClassName="flex flex-col gap-5"
-                >
-                  {byKind.map((group) => (
-                    <div key={group.kind}>
-                      <p className="text-sm text-muted">{gearItemKindLabel(t, group.kind)}</p>
-                      <div className="mt-2 flex flex-col gap-2">
-                        {group.units.map((unit) => {
-                          const care = [
-                            unit.serviceState.state === "overdue"
-                              ? t("gear.prep.optionServiceOverdue")
-                              : null,
-                            unit.serviceConcern ? t("gear.prep.optionServiceConcern") : null,
-                            unit.serviceState.state === "due_soon"
-                              ? t("gear.prep.optionServiceDueSoon")
-                              : null,
-                          ].filter(Boolean);
-                          const words = (
-                            <>
-                              <span className="font-medium">{unit.label}</span>
-                              {unit.size ? (
-                                <span className="text-muted"> · {unit.size}</span>
-                              ) : null}
-                              {care.length > 0 ? (
-                                <span className="text-warning-strong"> · {care.join(" · ")}</span>
-                              ) : null}
-                            </>
-                          );
-                          return invoiceOffered ? (
-                            <ChoicePill
-                              key={unit.id}
-                              type="checkbox"
-                              name={UNIT_FIELD}
-                              value={unit.id}
-                              aside={
-                                <input
-                                  type="number"
-                                  name={`${PRICE_FIELD_PREFIX}${unit.id}`}
-                                  min={0}
-                                  step={step}
-                                  defaultValue={priceOf(unit.kind)}
-                                  aria-label={t("counterRentals.new.priceAria", {
-                                    label: unit.label,
-                                  })}
-                                  className={`${controlClass} w-28 shrink-0`}
-                                />
-                              }
-                            >
-                              {words}
-                            </ChoicePill>
-                          ) : (
-                            <ChoiceRow
-                              key={unit.id}
-                              type="checkbox"
-                              name={UNIT_FIELD}
-                              value={unit.id}
-                            >
-                              {words}
-                            </ChoiceRow>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </ChoiceFieldset>
+                  groups={byKind}
+                  withPrices={invoiceOffered}
+                  step={step}
+                  coreKinds={counterRentalCoreKinds(shop.rentalItems)}
+                  setPrice={setPrice}
+                  setLabel={t("counterRentals.new.setPrice", { count: days })}
+                />
               )}
             </SectionCard>
 

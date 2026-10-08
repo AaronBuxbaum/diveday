@@ -15,6 +15,7 @@ import { gearItemKindLabel, gearStatusLabel } from "@/i18n/gear-labels";
 import { diveRecencyText } from "@/i18n/readiness-labels";
 import { rentalItemLabel, statedSizesText } from "@/i18n/rental-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+import { formatCalendarDate } from "@/lib/calendar-date";
 import {
   type PrepGrouping,
   type PrepPiece,
@@ -1013,7 +1014,7 @@ export function PrepBody({
                   className: "mt-3 divide-y divide-border overflow-hidden print:overflow-visible",
                 })}
               >
-                {assignmentRows.map(({ diver, assigned, wanted, handedOver }) => (
+                {assignmentRows.map(({ diver, assigned, wanted, handedOver, counterHeld }) => (
                   <li
                     key={diver.bookingId}
                     className={`px-4 py-3 sm:px-5${assigned.length > 0 ? "" : " print:hidden"}`}
@@ -1053,6 +1054,25 @@ export function PrepBody({
                         </Link>
                       ) : null}
                     </div>
+                    {/* Already carrying the shop's kit off a counter rental:
+                        said, so nobody packs a second set. Counts stay put. */}
+                    {counterHeld.length > 0 ? (
+                      <p className="mt-1 text-sm text-warning-strong">
+                        {t("counterRentals.trip.held", {
+                          units: cachedListFormat(locale, {
+                            style: "long",
+                            type: "conjunction",
+                          }).format(counterHeld.map((held) => held.label)),
+                          date: formatCalendarDate(
+                            counterHeld
+                              .map((held) => held.until)
+                              .sort()
+                              .at(-1) ?? "",
+                            locale,
+                          ),
+                        })}
+                      </p>
+                    ) : null}
                     <dl className="mt-1.5 flex flex-col gap-2 text-sm">
                       {assigned.map((assignment) => (
                         <div key={assignment.reservationId} className={kitLineClass}>

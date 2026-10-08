@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "476c3129-fd7b-4fb7-bc7e-5d4ceccaf3b4",
+  "id": "f26c35ab-7fbc-431c-b389-bf57eb5b5abd",
   "prevIds": [
-    "a2b20d17-1be8-4fa9-a5c3-de88ebe8f12c"
+    "ba1f9bcf-674a-4895-841e-475878bb68cc"
   ],
   "ddl": [
     {
@@ -4700,6 +4700,19 @@
       "default": null,
       "generated": null,
       "identity": null,
+      "name": "agency_checked_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "certifications"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
       "name": "imported_at",
       "entityType": "columns",
       "schema": "public",
@@ -6248,19 +6261,6 @@
       "generated": null,
       "identity": null,
       "name": "rental_pricing",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "shops"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "rental_terms",
       "entityType": "columns",
       "schema": "public",
       "table": "shops"
@@ -10954,6 +10954,19 @@
       "generated": null,
       "identity": null,
       "name": "return_note",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "dives_logged",
       "entityType": "columns",
       "schema": "public",
       "table": "gear_reservations"
@@ -33749,6 +33762,13 @@
     {
       "value": "\"reserved_until\" >= \"reserved_from\"",
       "name": "gear_reservations_window",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "value": "\"dives_logged\" is null or (\"dives_logged\" >= 0 and \"dives_logged\" <= 200)",
+      "name": "gear_reservations_dives_logged",
       "entityType": "checks",
       "schema": "public",
       "table": "gear_reservations"

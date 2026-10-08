@@ -1,6 +1,14 @@
+import type { Certification, SpecialtyCertification } from "@/db/schema";
 import { type CalendarDate, calendarDaysBetween, isValidCalendarDate } from "./calendar-date";
+import type { CertificationLevel } from "./certification-levels";
 import type { GearItemKind } from "./gear";
-import type { RentableItemKind, RentalPricing } from "./rentals";
+import { certificationRank, holdsSpecialtyCard, validVerifiedCertification } from "./readiness";
+import {
+  CORE_RENTAL_KINDS,
+  offeredRentableItems,
+  type RentableItemKind,
+  type RentalPricing,
+} from "./rentals";
 
 /**
  * **A counter rental** — units from the register lent to a person who is not
@@ -102,4 +110,134 @@ export function counterRentalLineCents(
 ): number | null {
   const rate = counterRentalDayRateCents(pricing, kind);
   return rate === null ? null : rate * days;
+}
+
+// ---------------------------------------------------------------------------
+// Safety at the counter (dive-domain review of PR #2256)
+// ---------------------------------------------------------------------------
+
+/**
+ * **Life-support gear**: the kinds a person breathes from, floats on, or
+ * decides depth and time by. Lending one to somebody with no card is handing
+ * scuba to a non-diver, so these need a verified certification, the same
+ * evidence boarding asks for. Everything else (a wetsuit, fins, a torch, a
+ * camera, lead) is soft goods, lent to anyone: snorkelers and shore walkers
+ * rent them, and none of them gets anybody into water they could not already
+ * reach. Weights stay soft goods: lead does not take anyone under on its own.
+ */
+export const COUNTER_LIFE_SUPPORT_KINDS: ReadonlySet<GearItemKind> = new Set<GearItemKind>([
+  "regulator",
+  "bcd",
+  "tank",
+  "dive_computer",
+  "drysuit",
+  "dpv",
+  "o2_kit",
+  "nitrox_analyzer",
+]);
+
+export function isLifeSupportKind(kind: GearItemKind): boolean {
+  return COUNTER_LIFE_SUPPORT_KINDS.has(kind);
+}
+
+export type CounterRentalCardRefusal = "not_certified" | "no_drysuit_card";
+
+/**
+ * Whether this person may take these kinds across the counter, as a refusal
+ * code or null — read through the same predicates boarding reads
+ * (`validVerifiedCertification`, `holdsSpecialtyCard`), so a card that would
+ * not get them on a boat does not get them a regulator either. A pending card
+ * and a self-declaration are somebody's word, and clear nothing here.
+ *
+ * A drysuit also wants the drysuit specialty: air in the suit expands on the
+ * way up, and a diver who has never vented one rides it to the surface.
+ */
+export function counterRentalCardRefusal(
+  kinds: readonly GearItemKind[],
+  cards: {
+    certifications: readonly Certification[];
+    specialtyCertifications: readonly SpecialtyCertification[];
+  },
+): CounterRentalCardRefusal | null {
+  if (!kinds.some(isLifeSupportKind)) return null;
+  if (!cards.certifications.some(validVerifiedCertification)) return "not_certified";
+  if (kinds.includes("drysuit") && !holdsSpecialtyCard(cards.specialtyCertifications, "drysuit")) {
+    return "no_drysuit_card";
+  }
+  return null;
+}
+
+/**
+ * What the counter shows about a person's cards before anything is picked:
+ * the highest verified level (null when none clears), whether the drysuit
+ * specialty clears, and how many cards are on file that do not count yet —
+ * pending review or self-declared — so the staffer knows a card exists to
+ * look at rather than reading "none" as "never dived".
+ */
+export function counterRentalCardSummary(cards: {
+  certifications: readonly Certification[];
+  specialtyCertifications: readonly SpecialtyCertification[];
+}): { verifiedLevel: CertificationLevel | null; drysuit: boolean; unverified: number } {
+  const verified = cards.certifications.filter(validVerifiedCertification);
+  const verifiedLevel = verified.reduce<CertificationLevel | null>(
+    (best, card) =>
+      best === null || certificationRank(card.level) > certificationRank(best) ? card.level : best,
+    null,
+  );
+  return {
+    verifiedLevel,
+    drysuit: holdsSpecialtyCard(cards.specialtyCertifications, "drysuit"),
+    unverified: cards.certifications.length - verified.length,
+  };
+}
+
+/**
+ * The register kinds that make up the shop's core rental set, as the price
+ * list names it (`CORE_RENTAL_KINDS`, restricted to what the shop offers):
+ * each core price-list entry and the register kind that carries it. A mask
+ * carries no price of its own (fins carry the pair), so it is not a set piece.
+ */
+export function counterRentalCoreKinds(rentalItems: readonly string[]): GearItemKind[] {
+  const offered = new Set(offeredRentableItems(rentalItems).map((item) => item.kind));
+  const byListKind: Partial<Record<RentableItemKind, GearItemKind>> = {
+    bcd: "bcd",
+    regulator: "regulator",
+    wetsuit: "wetsuit",
+    mask_fins: "fins",
+    weights: "weights",
+    dive_computer: "dive_computer",
+  };
+  return CORE_RENTAL_KINDS.filter((kind) => offered.has(kind)).flatMap((kind) => {
+    const gearKind = byListKind[kind];
+    return gearKind ? [gearKind] : [];
+  });
+}
+
+/**
+ * **The set price, when the picked units are one full set.** A shop that
+ * prices its core kit as one cheaper bundle quotes a diver the set, and a
+ * person renting that kit at the counter is the same customer. One unit of
+ * each core kind exactly: two BCDs is two people's gear, and a set price on
+ * it would undercharge whoever wrote the bundle. Null when the shop has no set
+ * price or the picks are not one set, so the pieces price themselves.
+ */
+export function counterRentalSetCents(
+  pricing: RentalPricing,
+  coreKinds: readonly GearItemKind[],
+  pickedKinds: readonly GearItemKind[],
+  days: number,
+): number | null {
+  if (pricing.setCents === null) return null;
+  return isOneCoreSet(coreKinds, pickedKinds) ? pricing.setCents * days : null;
+}
+
+/** Exactly one unit of every core kind among the picks (and at least one core kind). */
+export function isOneCoreSet(
+  coreKinds: readonly GearItemKind[],
+  pickedKinds: readonly GearItemKind[],
+): boolean {
+  return (
+    coreKinds.length > 0 &&
+    coreKinds.every((core) => pickedKinds.filter((kind) => kind === core).length === 1)
+  );
 }

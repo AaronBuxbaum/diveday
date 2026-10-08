@@ -7,7 +7,7 @@ import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createGearItem, reserveGearUnit } from "./gear";
 import { createCounterRental } from "./gear-counter-rentals";
-import { gearReservations, people, personRoles, shops, trips } from "./schema";
+import { certifications, gearReservations, people, personRoles, shops, trips } from "./schema";
 
 /**
  * The counter-rental writer under genuine contention — the sibling of
@@ -48,6 +48,16 @@ async function counterShop(db: AppDb, people_: number) {
       .returning();
     if (!row) throw new Error("person insert returned no row");
     await db.insert(personRoles).values({ personId: row.id, role: "diver" });
+    // A BCD is life support: each walk-in carries a verified card, so the race
+    // is about the unit and never about the card rule.
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId: row.id,
+      agency: "padi",
+      level: "open_water",
+      identifier: `OW-${suffix}-${i}`,
+      status: "verified",
+    });
     personIds.push(row.id);
   }
   return { shopId: shop.id, gearItemId: item.item.id, personIds };
@@ -86,7 +96,7 @@ describePostgres("createCounterRental under real concurrency", () => {
     const outcomes = await Promise.all(contenders);
     expect(outcomes.filter((outcome) => outcome.ok)).toHaveLength(1);
     expect(outcomes.filter((outcome) => !outcome.ok)).toEqual([
-      { ok: false, reason: "unit_unavailable", unitLabel: "BCD #1" },
+      { ok: false, reason: "unit_unavailable", unitId: gearItemId },
     ]);
     expect(await openReservations(pg.db, gearItemId)).toBe(1);
   });

@@ -2053,6 +2053,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "returned_at",
       "return_outcome",
       "return_note",
+      "dives_logged",
       "created_at",
     ],
     rows: ({ personName, bookingPerson, gearItemLabel, gearReservationRows }) =>
@@ -2072,6 +2073,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
           row.returnedAt,
           row.returnOutcome,
           row.returnNote,
+          row.divesLogged,
           row.createdAt,
         ];
       }),
