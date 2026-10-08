@@ -9,9 +9,12 @@ type CertificationAgency = (typeof CERTIFICATION_AGENCIES)[number];
  * no agency offers one: a shop looks the diver up in the agency's own portal
  * and marks the card sighted. This registry is the shortcut to that portal and
  * nothing more. The staff UI renders each entry as a plain link that opens the
- * agency's page in a new tab; DiveDay never fetches, scrapes or posts to any of
- * these addresses, which is what keeps it inside H-10 (market audit
- * 2026-10-07, item 30).
+ * agency's page in a new tab; DiveDay's servers never fetch, scrape or post to
+ * any of these addresses, which is what keeps it inside H-10 (market audit
+ * 2026-10-07, item 30). Since H-105 the DiveDay browser extension may open the
+ * same page from the staffer's own browser and fill it in for them
+ * (`src/lib/agency-check.ts`, `extension/agencies.js`, which must name the same
+ * addresses).
  *
  * **Public pages, and one sign-in said out loud.** Every URL below answers
  * without a login except PADI's, and the link text says which kind each one

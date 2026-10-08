@@ -339,6 +339,13 @@
       "heading": "La tarjeta del mostrador",
       "description": "Imprímela y ponla en el mostrador. Quien llegue sin reserva la escanea, indica su nombre, certificación y tallas, y se le envía la exención, todo antes de llegar al frente de la cola."
     },
+    "certCheck": {
+      "heading": "Verificación de certificaciones",
+      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y marca la certificación como certificada cuando la agencia la muestra. Verifica SSI, NAUI, SDI, GUE y CMAS, en Chrome o Edge en un ordenador.",
+      "added": "Añadida a este navegador",
+      "notAdded": "Sin añadir",
+      "install": "Añadir a Chrome"
+    },
     "integrations": {
       "heading": "Integraciones del centro"
     },

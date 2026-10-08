@@ -63,6 +63,7 @@ export const SECTION_IDS = [
   "searchListing",
   "packing",
   "counterCard",
+  "certCheck",
   "dockCall",
   "units",
   "crewSchedule",
@@ -101,6 +102,7 @@ const SECTION_FRAGMENTS: Partial<Record<SectionId, string>> = {
   dateRequests: "date-requests",
   lastMinuteList: "last-minute-list",
   counterCard: "counter-card",
+  certCheck: "cert-check",
 };
 
 /** The `#fragment` that opens and scrolls to a hub section. */
@@ -263,6 +265,12 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.counterQr.heading",
     group: "bookings-waivers",
     target: { kind: "section", id: "counterCard" },
+  },
+  {
+    id: "certCheck",
+    labelKey: "settings.main.certCheck.heading",
+    group: "bookings-waivers",
+    target: { kind: "section", id: "certCheck" },
   },
   {
     id: "packing",
