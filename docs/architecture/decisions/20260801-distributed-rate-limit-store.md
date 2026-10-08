@@ -89,6 +89,10 @@ security audit re-confirming the gap.
   `VERCEL_ENV=production` and either is unset; and a production instance on the in-memory store logs
   `rate_limit.memory_store_in_production` (warn) on its first check. The fallback itself is
   unchanged and still fail-open.
+  *Update 2026-10-08:* the pair is read as `KV_REST_API_URL` and `KV_REST_API_TOKEN`, the names
+  Vercel's Upstash for Redis integration sets when a database is connected to the project, so
+  provisioning is connecting the integration and nothing is copied by hand. The
+  `UPSTASH_REDIS_REST_*` names above are the ones this ADR shipped with.
 - `checkRateLimit` is now `async`; any future call site must `await` it. A missed `await` would type-error
   (`Promise<RateLimitResult>` has no `.allowed`), not silently misbehave.
 - `src/lib/rate-limit.test.ts` covers the Lua script's behavior via a fake `fetch` that mirrors the

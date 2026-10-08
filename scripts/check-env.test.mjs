@@ -22,8 +22,8 @@ const checkEnv = (env, cwd = workspace()) =>
   });
 
 const UPSTASH = {
-  UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
-  UPSTASH_REDIS_REST_TOKEN: "token",
+  KV_REST_API_URL: "https://example.upstash.io",
+  KV_REST_API_TOKEN: "token",
 };
 
 afterEach(() => {
@@ -49,20 +49,20 @@ describe("check-env", () => {
     const run = checkEnv({ VERCEL_ENV: "production" });
 
     expect(run.status).toBe(1);
-    expect(run.stderr).toContain("UPSTASH_REDIS_REST_URL");
-    expect(run.stderr).toContain("UPSTASH_REDIS_REST_TOKEN");
+    expect(run.stderr).toContain("KV_REST_API_URL");
+    expect(run.stderr).toContain("KV_REST_API_TOKEN");
     expect(run.stderr).toContain("per-instance in-memory store");
   });
 
   it("fails production when only half the pair is set", () => {
     const run = checkEnv({
       VERCEL_ENV: "production",
-      UPSTASH_REDIS_REST_URL: UPSTASH.UPSTASH_REDIS_REST_URL,
-      UPSTASH_REDIS_REST_TOKEN: "  ",
+      KV_REST_API_URL: UPSTASH.KV_REST_API_URL,
+      KV_REST_API_TOKEN: "  ",
     });
 
     expect(run.status).toBe(1);
-    expect(run.stderr).toContain("missing UPSTASH_REDIS_REST_TOKEN");
+    expect(run.stderr).toContain("missing KV_REST_API_TOKEN");
   });
 
   it("passes production when both are set", () => {
