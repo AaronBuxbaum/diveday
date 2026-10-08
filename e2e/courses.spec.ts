@@ -7,8 +7,10 @@ import {
   daysFromNow,
   e2eNow,
   findTripOnBoard,
+  openRosterDetails,
   openThreadStep,
   openTripAbout,
+  openTripTab,
   publicTripUrl,
 } from "./helpers";
 
@@ -1164,4 +1166,72 @@ test("writes a FAQ pair through two boxes and shows it to a diver", async ({
   // The answer is behind its own disclosure, the way a diver meets it.
   await page.getByText("Do I need my own gear?").click();
   await expect(page.getByText("No — every rental is part of the fee.")).toBeVisible();
+});
+
+/**
+ * **Learning materials, from the editor to the student** (ADR
+ * 20261008-course-learning-materials). A shop names one, is refused an http
+ * link, saves an https one; a diver who books the course reads it on their
+ * thread; the instructor ticks it done on the session's roster, and the
+ * thread says so.
+ *
+ * `privateShop`, because it writes the course's own content.
+ */
+test("a course's learning materials reach the student's thread, and staff tick them done", async ({
+  privateShop,
+  page,
+  browser,
+  workerBaseURL,
+}) => {
+  test.setTimeout(90_000);
+  const slug = privateShop.slug;
+  await page.goto(`/shop/${slug}/courses/open-water-diver/edit`);
+  await page.getByRole("button", { name: "Add a material" }).click();
+  await page
+    .getByLabel(/^Material \d+$/)
+    .last()
+    .fill("Pool skills video");
+  await page.getByLabel("Link").last().fill("http://example.com/pool");
+  await page.getByRole("button", { name: "Save course page" }).click();
+  await expect(page.getByText("Each link has to start with https://.")).toBeVisible();
+
+  await page.getByLabel("Link").last().fill("https://example.com/pool");
+  await page.getByRole("button", { name: "Save course page" }).click();
+  await expect(page.getByRole("status")).toContainText("Course page saved");
+
+  // A diver, on their own browser profile, books the seeded three-day session.
+  const diverContext = await browser.newContext({ baseURL: workerBaseURL });
+  const diverPage = makeActivitySafe(await diverContext.newPage());
+  await diverPage.goto(`/s/${slug}/courses/open-water-diver`);
+  await diverPage.getByRole("link", { name: "Book this date" }).first().click();
+  await expect(diverPage.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  const diver = `Mira ${e2eNow().getTime()}`;
+  await diverPage.getByLabel("Name").fill(diver);
+  await diverPage.getByLabel("Email").fill(`mira-${e2eNow().getTime()}@example.com`);
+  await acceptAgeAttestation(diverPage);
+  await diverPage.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await expect(diverPage).toHaveURL(/\/ready\//);
+
+  await expect(diverPage.getByRole("heading", { name: "Before your first day" })).toBeVisible();
+  const material = diverPage.getByRole("link", { name: "Pool skills video" });
+  await expect(material).toHaveAttribute("href", "https://example.com/pool");
+  // The thread's URL is a bearer capability: a link out never carries it.
+  await expect(material).toHaveAttribute("rel", /noreferrer/);
+  await expect(diverPage.getByText("The shop has these marked done")).toHaveCount(0);
+
+  // The instructor ticks it on the session's own roster.
+  const trip = await findTripOnBoard(page, slug, /Open Water Diver — three-day course/);
+  await trip.click();
+  await openTripTab(page, "Trip");
+  const row = page.locator('#roster li[id^="booking-"]').filter({ hasText: diver });
+  await expect(row.getByText("Materials not done")).toBeVisible();
+  await openRosterDetails(row);
+  await row.getByRole("button", { name: "Mark materials done" }).click();
+  await expect(page.getByText("Learning materials updated.")).toBeVisible();
+  await expect(row.getByText("Materials not done")).toHaveCount(0);
+
+  await diverPage.reload();
+  await expect(diverPage.getByText("The shop has these marked done")).toBeVisible();
+  await expect(diverPage.getByRole("link", { name: "Pool skills video" })).toBeVisible();
+  await diverContext.close();
 });
