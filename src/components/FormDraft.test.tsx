@@ -85,6 +85,89 @@ describe("FormDraft", () => {
     );
   });
 
+  /**
+   * Every server action on a staff page refreshes its route (the session
+   * read re-sets the cookie cache, and Next treats any `cookies().set()` as a
+   * mutation), and the refreshed page hands this component the draft it just
+   * saved as a brand-new object. Re-applying it put the snapshot back over
+   * whatever was typed or picked after the save went out: the board's add
+   * panel saved departures without the boat the desk had chosen (issues
+   * #2197, #2223).
+   */
+  it("applies the draft once: a refreshed page handing it back never writes over later edits", async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderForm({ fields: { fullName: "Emmet" }, savedAtLabel: "6:02 AM" });
+    await user.clear(screen.getByLabelText("Name"));
+    await user.type(screen.getByLabelText("Name"), "Emmet O'Brien");
+    await user.selectOptions(screen.getByLabelText("Seats"), "2");
+    rerender(
+      <form aria-label="New diver">
+        <label>
+          Name
+          <input name="fullName" defaultValue="" />
+        </label>
+        <label>
+          Card number
+          <input name="cardNumber" defaultValue="" />
+        </label>
+        <label>
+          Seats
+          <select name="seats" defaultValue="1">
+            <option value="1">1</option>
+            <option value="2">2</option>
+          </select>
+        </label>
+        <FormDraft
+          form="new_diver"
+          draft={{ fields: { fullName: "Emmet", seats: "1" }, savedAtLabel: "6:03 AM" }}
+          actions={{ ...actions }}
+          copy={copy}
+        />
+        <button type="submit">Add</button>
+      </form>,
+    );
+    expect(screen.getByLabelText("Name")).toHaveValue("Emmet O'Brien");
+    expect(screen.getByLabelText("Seats")).toHaveValue("2");
+  });
+
+  it("a refresh while a save is pending does not cancel the save", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const { rerender } = render(
+        <form aria-label="New diver">
+          <label>
+            Name
+            <input name="fullName" defaultValue="" />
+          </label>
+          <FormDraft form="new_diver" draft={null} actions={actions} copy={copy} />
+        </form>,
+      );
+      const name = screen.getByLabelText("Name");
+      await act(async () => {
+        name.focus();
+        (name as HTMLInputElement).value = "Ada";
+        name.blur();
+      });
+      // The route refreshes before the debounce runs out, as it does after
+      // any other action on the page answers.
+      rerender(
+        <form aria-label="New diver">
+          <label>
+            Name
+            <input name="fullName" defaultValue="" />
+          </label>
+          <FormDraft form="new_diver" draft={null} actions={{ ...actions }} copy={copy} />
+        </form>,
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1_000);
+      });
+      expect(saveFormDraftAction).toHaveBeenCalledWith("new_diver", [["fullName", "Ada"]]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps a draft of what is typed on blur, without the never-list", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {

@@ -115,7 +115,8 @@
     "askForNitroxCard": "Ask for nitrox certification",
     "verifyNitroxCard": "Verify nitrox certification",
     "takePayment": "Take payment",
-    "checkReadiness": "Check readiness"
+    "checkReadiness": "Check readiness",
+    "getCourseFormsSigned": "Get forms signed"
   },
   "blockerGroup": {
     "setRequirements": "Set requirements",
@@ -136,7 +137,8 @@
     "askForNitroxCards": "Ask for nitrox certifications",
     "verifyNitroxCards": "Verify nitrox certifications",
     "takePayments": "Take payments",
-    "checkReadiness": "Check readiness"
+    "checkReadiness": "Check readiness",
+    "getCourseFormsSigned": "Get forms signed"
   },
   "pointingLabel": {
     "trip": "Open roster",
@@ -308,6 +310,7 @@
     "underMinimumAge": "{count, plural, one {Under this course’s minimum age.} other {# divers under this course’s minimum age.}}",
     "paymentDue": "{count, plural, one {Payment due.} other {# payments due.}}",
     "paymentRefunded": "{count, plural, one {Refunded, so payment is due again.} other {# divers refunded, so payment is due again.}}",
-    "readinessUnavailable": "{count, plural, one {Readiness couldn’t be checked.} other {Readiness couldn’t be checked for # divers.}}"
+    "readinessUnavailable": "{count, plural, one {Readiness couldn’t be checked.} other {Readiness couldn’t be checked for # divers.}}",
+    "courseFormUnsigned": "{count, plural, one {Course form not signed.} other {# course forms not signed.}}"
   }
 }

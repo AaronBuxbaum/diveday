@@ -1,6 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { type CarriedPreparation, carriedPreparation } from "@/lib/carried-preparation";
 import { nowDate } from "@/lib/clock";
+import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/courses";
 import { seatListPriceCents, withinCancellationWindow } from "@/lib/deposits";
 import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
@@ -13,6 +14,7 @@ import { hasSailed } from "@/lib/trips";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { offerableWelcomeCue, type WelcomeCue } from "@/lib/welcome-cue";
 import type { AppDb } from "./client";
+import { courseMaterialsDoneByPerson } from "./course-materials";
 import { hasActiveRefresherCourse } from "./courses";
 import { getHelpRequestForBooking, type HelpRequest } from "./help-requests";
 import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "./nitrox";
@@ -218,6 +220,19 @@ export type ReadyPageData = {
   welcomeOffer: WelcomeCue | null;
   /** Whether they have said yes. Their own answer, on their own link. */
   welcomeShared: boolean;
+  /**
+   * What this course asks a student to work through before day 1 (ADR
+   * 20261008-course-learning-materials), read through `readLearningMaterials`
+   * so only `https:` links reach the page. Empty on a fun dive.
+   */
+  learningMaterials: CourseLearningMaterial[];
+  /**
+   * Someone marked this student's materials done, on this departure or another
+   * of the same course (`courseMaterialsDoneByPerson`).
+   */
+  courseMaterialsDone: boolean;
+  /** The session's first day has begun: the list is reference now, not a to-do. */
+  courseStarted: boolean;
 };
 
 export async function getReadyPageData(
@@ -237,6 +252,7 @@ export async function getReadyPageData(
       participantType: bookings.participantType,
       lastDivedBand: bookings.lastDivedBand,
       welcomeSharedAt: bookings.welcomeSharedAt,
+      courseMaterialsDoneAt: bookings.courseMaterialsDoneAt,
       diveIntent: bookings.diveIntent,
       reEntryAsk: bookings.reEntryAsk,
       hotelPickupLocation: bookings.hotelPickupLocation,
@@ -401,6 +417,19 @@ export async function getReadyPageData(
       now,
     }),
     welcomeShared: row.welcomeSharedAt !== null,
+    learningMaterials: readLearningMaterials(trip.course?.learningMaterials),
+    courseMaterialsDone:
+      row.courseMaterialsDoneAt !== null ||
+      (trip.courseId !== null &&
+        (
+          await courseMaterialsDoneByPerson(db, {
+            shopId: row.shopId,
+            courseId: trip.courseId,
+            personIds: [row.personId],
+            around: trip.startsAt,
+          })
+        ).has(row.personId)),
+    courseStarted: trip.startsAt.getTime() <= now.getTime(),
   };
 }
 

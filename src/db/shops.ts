@@ -392,6 +392,20 @@ export async function setShopRentalPricing(
 }
 
 /**
+ * Replaces the shop's rental terms, printed on every rental ticket. The route
+ * reads the box through `parseRentalTerms` (src/lib/rental-terms.ts) first, so
+ * what arrives is trimmed text within the limit, or `null` to print none.
+ */
+export async function setShopRentalTerms(db: AppDb, shopId: string, rentalTerms: string | null) {
+  const [shop] = await db
+    .update(shops)
+    .set({ rentalTerms })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
  * Sets the front-desk address published on the shop's public pages. Empty
  * strings clear the field rather than publishing a blank contact, so a shop can
  * take itself back off the public page by emptying the box.

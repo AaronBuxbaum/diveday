@@ -37,6 +37,7 @@ vi.mock("@/components/ShopPageHeader", () => ({
 vi.mock("@/components/ui/FieldErrorFocus", () => ({ FieldErrorFocus: () => null }));
 vi.mock("./_components/DayByDayEditor", () => ({ DayByDayEditor: () => null }));
 vi.mock("./_components/FaqEditor", () => ({ FaqEditor: () => null }));
+vi.mock("./_components/LearningMaterialsEditor", () => ({ LearningMaterialsEditor: () => null }));
 vi.mock("./_components/UnsavedChangesGuard", () => ({
   UnsavedChangesGuard: ({ children }: { children: ReactNode }) => <>{children}</>,
   UnsavedChangesNote: () => null,
@@ -44,14 +45,23 @@ vi.mock("./_components/UnsavedChangesGuard", () => ({
 vi.mock("./actions", () => ({
   pullCourseTemplateUpdatesAction: vi.fn(),
   saveCourseContentAction: vi.fn(),
+  saveCourseFormRequirementsAction: vi.fn(),
 }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
+vi.mock("@/db/course-forms", () => ({
+  listCourseForms: vi.fn(async () => []),
+  listCourseFormRequirements: vi.fn(async () => []),
+  courseUpcomingEnrollment: vi.fn(async () => ({ students: 0, sessions: 0 })),
+}));
 vi.mock("@/db/courses", () => ({
   getCourseBySlug: vi.fn(),
   getCourseTemplateUpdate: vi.fn(),
   setCourseVisibility: vi.fn(),
 }));
-vi.mock("@/db/authz", () => ({ canPersonConfigureTrips: vi.fn() }));
+vi.mock("@/db/authz", () => ({
+  canPersonConfigureTrips: vi.fn(),
+  canPersonManageWaiverTemplates: vi.fn(async () => false),
+}));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
 vi.mock("@/lib/session", () => ({
   requireShopSurface: vi.fn(),

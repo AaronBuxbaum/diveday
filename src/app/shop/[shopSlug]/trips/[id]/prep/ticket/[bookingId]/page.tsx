@@ -16,6 +16,7 @@ import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { RentalTicketReceipt } from "../../../../../gear/_components/RentalTicketReceipt";
 
 export const instant = true;
 
@@ -33,12 +34,15 @@ export const metadata: Metadata = {
  * day, to bring exactly those back.
  *
  * **What it must not look like.** Not a waiver: one shop-wide waiver is an
- * invariant (CR-015) and a second signed-looking slip is the fastest way to
- * blur it, so there is no signature line and nothing to agree to. Not a
- * receipt: billing lives on orders, and printing a rental with no money on it
+ * invariant (CR-015), so nothing here is DiveDay's wording to agree to. Not a
+ * bill: billing lives on orders, and printing a rental with no money on it
  * beside one that has money on it teaches a staffer to look for a total here.
- * What is left is the only thing a slip is for — *what you have, and when it
- * is due back* — which is why the page is a list of unit tags and one date.
+ * What is left is what a slip is for — *what you have, and when it is due
+ * back* — a list of unit tags and one date, then the foot every rental ticket
+ * shares (`RentalTicketReceipt`): the shop's own rental terms when it has
+ * written any, and a "Received by" line the diver signs for the gear (Aaron,
+ * 2026-10-08; the ADR's amendment of that date). A receipt for gear, signed
+ * for the units, never a release.
  *
  * Read-only, no mutations, and ungated like the rest of the register (H-06,
  * amended on H-14's row 2026-08-20): handing gear over is day work.
@@ -147,6 +151,7 @@ export default async function RentalTicketPage({
           date: formatCalendarDate(dueBack, locale),
         })}
       </p>
+      <RentalTicketReceipt terms={shop.rentalTerms} t={t} />
       <p className="mt-8 border-t border-border pt-4 text-sm text-muted">{shop.name}</p>
     </div>
   );

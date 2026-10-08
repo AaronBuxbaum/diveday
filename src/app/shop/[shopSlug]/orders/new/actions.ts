@@ -10,10 +10,8 @@ import { getShopCurrency, getShopTaxEnabled } from "@/db/stripe-accounts";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { majorToMinor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import {
-  type InvoiceCustomerAddress,
-  isUsableInvoiceCustomerAddress,
-} from "@/lib/payments/invoicing";
+import { customerAddressFromForm } from "@/lib/payments/customer-address-form";
+import type { InvoiceCustomerAddress } from "@/lib/payments/invoicing";
 import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -35,18 +33,6 @@ const orderDescriptionSchema = z.string().trim().max(200);
 // Sourced from the pg enum, not a hand-typed literal list, so it can never
 // drift from what the database will actually accept.
 const lineItemKindSchema = z.enum(orderLineItemKind.enumValues);
-const customerAddressSchema = z.object({
-  line1: z.string().trim().max(200),
-  line2: z.string().trim().max(200),
-  city: z.string().trim().max(100),
-  state: z.string().trim().max(100),
-  postalCode: z.string().trim().max(30),
-  country: z
-    .string()
-    .trim()
-    .regex(/^[A-Za-z]{2}$/)
-    .transform((value) => value.toUpperCase()),
-});
 
 /**
  * Raise an invoice for a diver.
@@ -101,28 +87,16 @@ export async function createOrderAction(formData: FormData) {
   // shop setting for the invoice itself, so the two can't disagree.
   const currency = await getShopCurrency(db, session.user.shopId);
   const taxEnabled = await getShopTaxEnabled(db, session.user.shopId);
-  let customerAddress: InvoiceCustomerAddress | undefined;
-  if (taxEnabled) {
-    const parsedAddress = customerAddressSchema.safeParse({
-      line1: String(formData.get("customerAddressLine1") ?? ""),
-      line2: String(formData.get("customerAddressLine2") ?? ""),
-      city: String(formData.get("customerAddressCity") ?? ""),
-      state: String(formData.get("customerAddressRegion") ?? ""),
-      postalCode: String(formData.get("customerAddressPostalCode") ?? ""),
-      country: String(formData.get("customerAddressCountry") ?? ""),
-    });
-    // Parsed, but **not refused here**. `createOrder` runs the identical check
-    // as its first gate and answers `tax_location_required`, which `noticeUrl`
-    // normalises to the same notice this used to redirect with — so the second
-    // copy bought nothing and cost the one case that is not a plain refusal: a
-    // demo shop, which bills itself when no usable address is supplied
-    // (`demoShopBillingAddress`). Refusing up here meant that fallback could
-    // never be reached from the form it exists for.
-    customerAddress =
-      parsedAddress.success && isUsableInvoiceCustomerAddress(parsedAddress.data)
-        ? parsedAddress.data
-        : undefined;
-  }
+  // Parsed, but **not refused here**. `createOrder` runs the identical check
+  // as its first gate and answers `tax_location_required`, which `noticeUrl`
+  // normalises to the same notice this used to redirect with — so a second
+  // copy bought nothing and cost the one case that is not a plain refusal: a
+  // demo shop, which bills itself when no usable address is supplied
+  // (`demoShopBillingAddress`). Refusing up here meant that fallback could
+  // never be reached from the form it exists for.
+  const customerAddress: InvoiceCustomerAddress | undefined = taxEnabled
+    ? customerAddressFromForm(formData)
+    : undefined;
 
   const lineItems: NewOrderLineItem[] = [];
   for (let i = 0; i < LINE_ITEM_ROWS; i++) {

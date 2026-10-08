@@ -234,6 +234,7 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.waivers.item6",
       "marketing.capabilities.waivers.item7",
       "marketing.capabilities.waivers.item8",
+      "marketing.capabilities.waivers.item9",
     ],
   },
   {
@@ -327,6 +328,8 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.rentalGear.item12",
       "marketing.capabilities.rentalGear.item13",
       "marketing.capabilities.rentalGear.item14",
+      "marketing.capabilities.rentalGear.item15",
+      "marketing.capabilities.rentalGear.item16",
     ],
   },
   {

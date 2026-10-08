@@ -13,6 +13,7 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
+  bookOpenWaterSession,
   choosePartySize,
   counterPath,
   createTrip,
@@ -34,12 +35,15 @@ import {
   openTripAbout,
   openTripFromBoard,
   openTripTab,
+  requireCourseForm,
   STAFF_DAY_HEADING,
   saveDiveIntent,
+  scheduleCrewedOpenWaterSession,
   seededTripId,
   threadStatus,
   waiverLinkFromResult,
   waiverLinkFromToast,
+  writeCourseForm,
 } from "./helpers";
 import { E2E_FROZEN_CLOCK, ONBOARD_FORM_PATH } from "./servers";
 
@@ -3832,6 +3836,39 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **A student signing a course form** (ADR 20261008-course-forms).
+       *
+       * `/ready/[token]/forms` only exists for a booking on a course that asks
+       * for a form, so the capture walks the shop's own path to one: write a
+       * form, choose it for Open Water, schedule a crewed session, then book it
+       * signed out. The body is the shop's text exactly as stored, set in a
+       * pre-wrapped block, so its line breaks are the thing to watch.
+       */
+      test(`the course form signing page renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const formTitle = "Safe diving practices";
+        await writeCourseForm(
+          page,
+          formTitle,
+          "I will dive within the limits of my training and plan every dive with my buddy.\n\nI will tell the instructor before any session if anything about my health changes.",
+        );
+        await requireCourseForm(page, "open-water-diver", formTitle);
+        // 24 days out, clear of the seeded sessions whose crew would clash.
+        await scheduleCrewedOpenWaterSession(page, "Open Water Diver — forms", 24);
+        await page.context().clearCookies();
+        const readyPath = await bookOpenWaterSession(
+          page,
+          "Visual Regression Diver",
+          `visual-regression-forms-${scheme}@example.com`,
+        );
+        await page.goto(`${readyPath}/forms`);
+        await expect(page.getByRole("heading", { level: 1, name: formTitle })).toBeVisible();
+        await capture(page, "course-form-sign", scheme);
+      });
+
+      /**
        * **Today once a blocked diver is on the boat.**
        *
        * The diver's Needs you row takes the danger-toned "Aboard" kind and
@@ -7539,6 +7576,32 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "gear-unit", scheme);
       });
 
+      // Renting gear out at the counter (ADR 20260815-minimal-gear-register,
+      // amended 2026-10-08): the person chosen, today's window, and the units
+      // free for it grouped by kind. The demo shop has no payments connected,
+      // so no invoice section; the form a crew member sees.
+      test(`the rent-out form renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
+        await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
+        await page.getByRole("group", { name: "Units free for these days" }).waitFor();
+        await page.getByRole("checkbox", { name: /AL63-02/ }).waitFor();
+        await capture(page, "counter-rental-form", scheme);
+      });
+
+      // The ticket the person walks off with: who, the tags, the back-by
+      // date, and on screen the acts. Rented here rather than seeded so the
+      // capture is the ticket a counter lands on, notice and all.
+      test(`a counter rental's ticket renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
+        await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
+        await page.getByRole("checkbox", { name: /Mask #1/ }).check();
+        await page.getByRole("checkbox", { name: /Fins #1/ }).check();
+        await page.getByRole("button", { name: "Rent out", exact: true }).click();
+        await page.getByRole("status").filter({ hasText: "Rented out." }).waitFor();
+        await page.getByRole("button", { name: "Hand over" }).waitFor();
+        await capture(page, "counter-rental-ticket", scheme);
+      });
+
       // The way back to a deleted unit (ADR 20260820-every-delete-is-soft):
       // the Deleted chip in the filter band, and the list whose one act is
       // Restore. Photographed after deleting a unit rather than seeding one —
@@ -7616,6 +7679,26 @@ for (const scheme of ["light", "dark"] as const) {
         // The last row of the list, so the capture cannot land half-built.
         await page.getByRole("link", { name: "AL80-03" }).waitFor();
         await capture(page, "gear-register-service-due", scheme);
+      });
+
+      // **Who has the shop's gear** (plan `rental-tracking`, layer 2): the
+      // register's Rentals view, every open rental under the person holding
+      // it. Through the trouble seed with `?gearOut=1`, so one frame holds the
+      // three things the view says: a set gone overdue leading the page, one
+      // of its units dragged onto today and saying its own state beside its
+      // tag, and a set still reserved for the wreck trip below it.
+      test(`the register's rentals view renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        await request.post("/api/test/seed-trouble-states?gearOut=1");
+        await page.goto("/shop/blue-mantis/gear?view=rentals");
+        await page.getByRole("heading", { level: 1, name: "Gear" }).waitFor();
+        const rentals = page.getByRole("region", { name: "Rentals" });
+        // Both sets, so the capture cannot land on half a list.
+        await rentals.getByRole("link", { name: "BCD #2" }).waitFor();
+        await rentals.getByRole("link", { name: "BCD #5" }).waitFor();
+        await capture(page, "gear-register-rentals", scheme);
       });
 
       // A site's own briefing form, which is where the route a shop draws is
@@ -8178,6 +8261,23 @@ test.describe("print", () => {
     await page.goto(`${tripPath}/log`);
     await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
     await capturePrint(page, "departure-log");
+  });
+
+  // **A signed waiver on paper** (plan `rental-tracking`, layer 2): the
+  // shop's name where the screen's way back stood, whose release it is, the
+  // signed time with its zone, the seal, and the text the diver signed. Rowan
+  // Pike's, like the screen capture, because it has the most to say.
+  test("a signed waiver prints as a document", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/schedule/board");
+    await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
+    const row = page
+      .locator("li")
+      .filter({ has: page.getByText("Rowan Pike", { exact: true }) })
+      .filter({ visible: true });
+    await row.getByRole("link", { name: "View signed record" }).click();
+    await page.getByRole("heading", { level: 1, name: "Signed waiver" }).waitFor();
+    await page.getByRole("heading", { name: "What they signed" }).waitFor();
+    await capturePrint(page, "signed-waiver");
   });
 
   // **The shop's own paper** (ADR 20260908-one-hand, decision 6, lever X). The

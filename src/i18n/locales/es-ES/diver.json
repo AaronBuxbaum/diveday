@@ -545,6 +545,9 @@
     "jumpDates": "Fechas",
     "jumpQuestions": "Preguntas",
     "jumpContact": "Contacto",
+    "privateAvailable": "Curso privado disponible",
+    "privateSessionAvailable": "Sesión privada disponible",
+    "privateAsk": "Pregunta al centro",
     "nextDate": "Próxima fecha",
     "nextOpenDate": "Próxima fecha disponible",
     "moreDates": "Más fechas",
@@ -734,6 +737,8 @@
     "metaTitle": "Tu preparación para la salida — DiveDay",
     "namelessFallback": "buceador",
     "allSetHeading": "Lo tienes todo listo",
+    "materialsDone": "El centro ya los ha marcado como terminados",
+    "materialsHeadingStarted": "Materiales del curso",
     "openingPayment": "Abriendo el pago…",
     "cancelledHeading": "Esta reserva se canceló",
     "unavailableHeading": "Este enlace de preparación no está disponible",
@@ -797,7 +802,9 @@
       "waiverDone": "Firmada y registrada.",
       "certificationDone": "Verificada y registrada.",
       "paymentDone": "Pagado. Gracias.",
-      "certificationMultipleNeeded": "Esta inmersión necesita más de una certificación registrada. Comparte los datos de cada una y tu centro confirmará que estás listo."
+      "certificationMultipleNeeded": "Esta inmersión necesita más de una certificación registrada. Comparte los datos de cada una y tu centro confirmará que estás listo.",
+      "courseFormUnsigned": "Tu curso tiene formularios para que firmes.",
+      "courseFormGuardianMissing": "Tu madre, padre o tutor legal tiene que firmar contigo los formularios del curso."
     },
     "gearAndSetup": "Equipo y ajuste",
     "dockCallLine": "Procura estar en el muelle a las {time}, {dock} antes de zarpar.",
@@ -893,7 +900,9 @@
     "intentUnavailable": "No se pudo guardar. Inténtalo de nuevo o díselo a la tripulación el mismo día.",
     "reEntrySaved": "Gracias. La tripulación estará pendiente de ti.",
     "reEntryUnavailable": "No se pudo guardar. Inténtalo de nuevo o díselo a la tripulación el mismo día.",
-    "savingIntent": "Guardando…"
+    "savingIntent": "Guardando…",
+    "signCourseForms": "Firmar formularios del curso",
+    "savedCourseForms": "Formularios del curso firmados."
   },
   "thread": {
     "stepsDoneSuffix": "de {total, plural, one {# paso completado} other {# pasos completados}}",
@@ -2704,7 +2713,8 @@
         "item5": "Registros de exenciones a prueba de manipulación, con sello verificable",
         "item6": "La firma de la madre, el padre o el tutor en la exención de un buceador cuya fecha de nacimiento muestra que es menor de 18 años, con el embarque retenido hasta que llegue",
         "item7": "Una exención firmada en papel, registrada en el mostrador cuando el personal confirma que las respuestas médicas no requieren un médico",
-        "item8": "Cada exención sin enviar de una salida, enviada desde una sola fila de Hoy"
+        "item8": "Cada exención sin enviar de una salida, enviada desde una sola fila de Hoy",
+        "item9": "Una exención firmada impresa como documento: el texto firmado, quién la firmó, cuándo y su sello"
       },
       "certifications": {
         "item1": "Listo o Bloqueado para cada buceador en cada salida, con el motivo al lado",
@@ -2766,14 +2776,16 @@
         "item4": "Entregas y devoluciones con sello de hora, y una lista de lo que vuelve hoy",
         "item5": "Una devolución que pregunta cómo volvió la unidad, con una nota para lo que haya que revisar",
         "item6": "Plazos de mantenimiento (servicio, hidrostática, visual y limpieza de O2) por fecha de vencimiento, con un conteo de inmersiones opcional",
-        "item7": "Un comprobante de alquiler imprimible: qué lleva el buceador y cuándo lo devuelve",
+        "item7": "Una boleta de alquiler imprimible que el buceador firma al recibir el equipo: qué lleva, cuándo lo devuelve y tus propias condiciones de alquiler",
         "item8": "Devoluciones atrasadas y mantenimiento pendiente en la lista Pendiente de Hoy",
         "item9": "Una lista de preparación hecha con las tallas que te dieron, con tanques de aire y nitrox separados",
         "item10": "Una lista de empaque del centro reutilizada en cada salida",
         "item11": "Una lista de precios de alquiler: el equipo completo, cada pieza y el nitrox por inmersión",
         "item12": "Unidades, historial de mantenimiento y alquileres anteriores importados desde una hoja de cálculo",
-        "item13": "Órdenes de trabajo para el equipo de tus clientes: qué entró, repuestos y mano de obra, y una etiqueta de entrega",
-        "item14": "Un aviso de listo para recoger, la cuenta enviada por Stripe y un recordatorio de mantenimiento un mes antes de cada vencimiento"
+        "item13": "Una lista de Alquileres con todo lo que está fuera o reservado, por quién lo tiene: las unidades, las fechas y si está pagado",
+        "item14": "Alquileres en mostrador para quien no va en barco, con una factura cuando hay precio",
+        "item15": "Órdenes de trabajo para el equipo de tus clientes: qué entró, repuestos y mano de obra, y una etiqueta de entrega",
+        "item16": "Un aviso de listo para recoger, la cuenta enviada por Stripe y un recordatorio de mantenimiento un mes antes de cada vencimiento"
       },
       "schedule": {
         "item1": "El horario como constructor: añade, mueve, copia y quita en el sitio",
@@ -3972,7 +3984,8 @@
       "nitroxSelfDeclared": "Trae tu certificación de nitrox para que el centro pueda verla",
       "specialtyMissing": "Envía a tu centro los datos de tu certificación de especialidad",
       "nitroxMissing": "Envía a tu centro los datos de tu certificación de nitrox",
-      "paymentDue": "Salda tu saldo pendiente"
+      "paymentDue": "Salda tu saldo pendiente",
+      "courseFormUnsigned": "Firma los formularios del curso"
     },
     "replyKeyword": {
       "offer": "Responde C para cancelar tu plaza o M para pedir un cambio de fecha.",
@@ -4058,6 +4071,8 @@
     "tripReminder": {
       "weekSubject": "Sales esta semana — {tripTitle}",
       "weekBody": "Un recordatorio rápido de que {tripTitle} con {shopName} sale esta semana.",
+      "weekSubjectCourse": "Tu curso empieza esta semana: {tripTitle}",
+      "weekBodyCourse": "Un recordatorio rápido de que {tripTitle} con {shopName} empieza esta semana.",
       "dockNote": "Preséntate en el muelle {dock} antes.",
       "daySubject": "Sales mañana — {tripTitle}",
       "dayOpenerFirstTimer": "Mañana buceas con {shopName}. Abajo tienes todo lo que necesitas para el día.",
@@ -4065,6 +4080,13 @@
       "arrival": "Procura estar en el muelle a las {time}, {dock} antes de zarpar.",
       "hotelPickupArrival": "Tu recogida de la mañana está programada a las {time} en {location}.",
       "hotelNotSet": "tu hotel"
+    },
+    "courseMaterials": {
+      "heading": "Antes de tu primer día"
+    },
+    "courseDays": {
+      "heading": "Los días de tu curso",
+      "day": "Día {number}: {date}, {time}"
     },
     "tripRecap": {
       "subject": "Tu inmersión con {shopName} — {tripTitle}",
@@ -4203,10 +4225,14 @@
       "body": "{shopName}: {tripTitle} sale {when} ({date}, {time}). Preséntate en el muelle {minutes} min antes.",
       "contact": "¿Preguntas? Escríbenos al {phone}.",
       "medicalReviewNote": "Revisa si una respuesta médica necesita el visto bueno de un médico",
+      "courseBody": "{shopName}: {tripTitle} empieza {when} ({date}, {time}).",
+      "materials": "Antes de tu primer día: {names}.",
+      "materialsWithLink": "Antes de tu primer día: {names} ({url}).",
       "recap": "{shopName}: ¡gracias por bucear {tripTitle}! Tu resumen: {recapUrl}",
       "waiver": "{shopName}: firma tu exención de buceo antes de bucear — {url}",
       "waiverForTrip": "{shopName}: firma tu exención de buceo para {tripTitle} — {url}",
-      "stopLine": "Responde STOP para darte de baja."
+      "stopLine": "Responde STOP para darte de baja.",
+      "courseForms": "{shopName}: firma los formularios del curso {tripTitle} — {url}"
     },
     "whatsappTemplate": {
       "body": "¡Hola! Un aviso de '{{1}}': '{{2}}'",
@@ -4260,6 +4286,11 @@
       "ready": "{shopName}: ya puedes recoger tu equipo de la orden #{number} ({pieces}).",
       "readyNoPieces": "{shopName}: ya puedes recoger tu equipo de la orden #{number}.",
       "work": "Lo que hicimos: {work}"
+    },
+    "courseFormsLink": {
+      "subject": "Formularios del curso por firmar para {tripTitle}",
+      "body": "{shopName} pide a cada estudiante de {tripTitle} que firme los formularios del curso. Tu exención ya está firmada, así que solo faltan estos.",
+      "openLink": "Firmar los formularios del curso"
     }
   },
   "brand": {
@@ -4312,5 +4343,25 @@
       "rider": "Acompañante en el barco"
     },
     "priceLine": "{type} {price}"
+  },
+  "courseForms": {
+    "metaTitle": "Formularios del curso",
+    "progress": "Formulario {current} de {total}",
+    "agreementCheckbox": "He leído este formulario, lo entiendo y estoy de acuerdo con él.",
+    "guardianIntro": "{name} es menor de 18 años, así que su madre, padre o tutor legal también firma este formulario.",
+    "guardianAgreementCheckbox": "Soy la madre, el padre o el tutor legal de este estudiante. He leído este formulario, lo entiendo y lo acepto en su nombre.",
+    "signButton": "Firmar formulario",
+    "signatureNote": "Tu nombre escrito, tu conformidad y la hora de la firma se guardan con esta versión exacta del formulario.",
+    "errorAgreement": "Confirma que aceptas el formulario para continuar.",
+    "versionChanged": "El centro actualizó este formulario mientras lo tenías abierto. Lee la versión nueva abajo.",
+    "doneTitle": "Formularios del curso firmados",
+    "doneBody": "No queda nada por firmar para este curso.",
+    "backToPrep": "Volver a tu preparación",
+    "signing": "Firmando…",
+    "errorGuardian": "Una madre, un padre o un tutor legal también firma este formulario. Escribe su nombre, elige qué es del estudiante y marca su casilla.",
+    "errorUnavailable": "Este formulario ya no se puede firmar desde aquí. Pregunta al centro.",
+    "signedOne": "Firmado. El siguiente formulario está abajo.",
+    "linkDeadTitle": "Este enlace ya no funciona",
+    "linkDeadBody": "Pide a {shopName} que te envíe de nuevo los formularios del curso."
   }
 }

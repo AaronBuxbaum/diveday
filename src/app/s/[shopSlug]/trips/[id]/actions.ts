@@ -31,7 +31,7 @@ import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { BUDDY_COOKIE, buddyReferralFromCookie } from "@/lib/buddy-links";
-import { perDiverBookingPriceCents } from "@/lib/courses";
+import { perDiverBookingPriceCents, readLearningMaterials } from "@/lib/courses";
 import {
   declarationWithinPersonBudget,
   diveDeclarationInput,
@@ -505,6 +505,11 @@ export async function bookSpot(
           ? readinessEmailUrl(readinessCapability.token)
           : undefined,
         packingList: shopNow.packingList,
+        // A course session's learning materials, delivered with the seat
+        // (ADR 20261008-course-learning-materials).
+        learningMaterials: tripNow.course
+          ? readLearningMaterials(tripNow.course.learningMaterials)
+          : undefined,
       });
       if (delivery.status === "failed") {
         log("booking.confirmation_send_failed", "error", { bookingId: primaryBookingId });

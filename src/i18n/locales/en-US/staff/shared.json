@@ -222,7 +222,9 @@
       "underMinimumAge": "Under this course’s minimum age: {age} on the course date, and it requires {minimumAge}. Check the date of birth on file before boarding.",
       "paymentDue": "Payment is outstanding for this trip.",
       "paymentRefunded": "Payment was refunded; collect payment before boarding.",
-      "readinessUnavailable": "Readiness evidence is unavailable. Do not board this diver until it is checked."
+      "readinessUnavailable": "Readiness evidence is unavailable. Do not board this diver until it is checked.",
+      "courseFormUnsigned": "Course form not signed: {form}.",
+      "courseFormGuardianMissing": "{form} needs a parent or guardian’s signature."
     }
   },
   "shopNav": {
@@ -243,6 +245,7 @@
     "gear": "Register",
     "workOrders": "Work orders",
     "newWorkOrder": "New work order",
+    "rentOut": "Rent out",
     "courses": "Courses",
     "reviews": "Reviews",
     "requests": "Date requests",

@@ -1,6 +1,12 @@
 import { z } from "zod";
 import type { OrderLineItemKind } from "@/db/schema";
-import { MAX_FAQS, MAX_SCHEDULE_DAY_ITEMS, MAX_SCHEDULE_DAYS } from "./course-limits";
+import {
+  LEARNING_MATERIAL_LIMITS,
+  MAX_FAQS,
+  MAX_LEARNING_MATERIALS,
+  MAX_SCHEDULE_DAY_ITEMS,
+  MAX_SCHEDULE_DAYS,
+} from "./course-limits";
 import type { DepthUnit } from "./depth-units";
 import { cachedFormatter } from "./intl-cache";
 
@@ -69,7 +75,13 @@ export function formatScheduleDayTime(
   return day.timeNote?.trim() || undefined;
 }
 
-export { MAX_FAQS, MAX_SCHEDULE_DAY_ITEMS, MAX_SCHEDULE_DAYS } from "./course-limits";
+export {
+  LEARNING_MATERIAL_LIMITS,
+  MAX_FAQS,
+  MAX_LEARNING_MATERIALS,
+  MAX_SCHEDULE_DAY_ITEMS,
+  MAX_SCHEDULE_DAYS,
+} from "./course-limits";
 
 const faqInputSchema = z.object({
   question: z.string().max(200).optional().default(""),
@@ -152,6 +164,7 @@ export const COURSE_CONTENT_LIMITS = {
   excludes: 2_000,
   scheduleDaysJson: 20_000,
   faqsJson: 30_000,
+  learningMaterialsJson: 8_000,
 } as const;
 
 /**
@@ -312,10 +325,117 @@ export function resolveCourseContentDepths<
       question: resolveCourseDepths(faq.question, format),
       answer: resolveCourseDepths(faq.answer, format),
     })),
+    learningMaterials: content.learningMaterials.map((material) => ({
+      ...material,
+      name: resolveCourseDepths(material.name, format),
+      ...(material.note ? { note: resolveCourseDepths(material.note, format) } : {}),
+    })),
   } as T;
 }
 
 export type CourseFaq = { question: string; answer: string };
+
+/**
+ * **One thing a student works through before the first day** — the agency's
+ * eLearning, a manual, a video the shop recorded — in the shop's own words
+ * (ADR 20261008-course-learning-materials).
+ *
+ * DiveDay delivers it; it does not provision it. No agency exposes an API that
+ * enrolls a student (H-10), so `url` is a link the shop pasted — often its own
+ * affiliate link into the agency's store — and nothing here claims the student
+ * has been signed up anywhere. Optional keys are omitted rather than stored
+ * empty, the same shape `CourseScheduleDay` keeps.
+ */
+export type CourseLearningMaterial = {
+  name: string;
+  /** An `https:` link, always — it lands in an email and on a page a diver taps. */
+  url?: string;
+  /** One short line: "Finish before day 1", "Bring it to the pool". */
+  note?: string;
+};
+
+const learningMaterialInputSchema = z.object({
+  name: z.string().max(LEARNING_MATERIAL_LIMITS.name).optional().default(""),
+  url: z.string().max(LEARNING_MATERIAL_LIMITS.url).optional().default(""),
+  note: z.string().max(LEARNING_MATERIAL_LIMITS.note).optional().default(""),
+});
+
+/**
+ * Whether a typed link may be sent to a diver: an absolute `https:` URL with a
+ * host and no credentials, nothing else. `http:` is refused rather than
+ * upgraded — a link that silently changes is not the link the shop checked —
+ * and so is every other scheme (`javascript:`, `mailto:`, a bare path),
+ * because this string becomes an `href` in an email.
+ */
+export function isLearningMaterialLink(value: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    return false;
+  }
+  return (
+    parsed.protocol === "https:" &&
+    parsed.hostname.length > 0 &&
+    !parsed.username &&
+    !parsed.password
+  );
+}
+
+export type LearningMaterialsParse =
+  | { ok: true; materials: CourseLearningMaterial[] }
+  /** `invalid`: not the editor's shape, or a link or note with no name. `link`: a link that is not https. */
+  | { ok: false; reason: "invalid" | "link" };
+
+/**
+ * Normalizes the materials editor's serialized state into
+ * `CourseLearningMaterial[]`, under `sanitizeFaqs`' contract: a row added and
+ * never filled in is dropped, a row with a link or a note but no name refuses
+ * the save (the name is what a diver reads), and so does any link that is not
+ * `https:` — said apart, because that is the one refusal the writer cannot see
+ * from the boxes.
+ */
+export function sanitizeLearningMaterials(raw: unknown): LearningMaterialsParse {
+  const parsed = z.array(learningMaterialInputSchema).max(MAX_LEARNING_MATERIALS).safeParse(raw);
+  if (!parsed.success) return { ok: false, reason: "invalid" };
+
+  const materials: CourseLearningMaterial[] = [];
+  for (const entry of parsed.data) {
+    const name = entry.name.trim();
+    const url = entry.url.trim();
+    const note = entry.note.trim();
+    if (!name && !url && !note) continue;
+    if (!name) return { ok: false, reason: "invalid" };
+    if (url && !isLearningMaterialLink(url)) return { ok: false, reason: "link" };
+    materials.push({ name, ...(url ? { url } : {}), ...(note ? { note } : {}) });
+  }
+  return { ok: true, materials };
+}
+
+/**
+ * The stored column, read defensively: whatever a CSV import or a hand fix put
+ * in the jsonb, a reader gets only well-formed rows with sendable links. A row
+ * whose link is not `https:` keeps its name and loses the link, so a diver is
+ * still told the material exists and is never handed an unsafe `href`.
+ */
+export function readLearningMaterials(value: unknown): CourseLearningMaterial[] {
+  if (!Array.isArray(value)) return [];
+  const materials: CourseLearningMaterial[] = [];
+  for (const entry of value.slice(0, MAX_LEARNING_MATERIALS)) {
+    const parsed = learningMaterialInputSchema.safeParse(entry);
+    if (!parsed.success) continue;
+    const name = parsed.data.name.trim();
+    if (!name) continue;
+    const url = parsed.data.url.trim();
+    const note = parsed.data.note.trim();
+    materials.push({
+      name,
+      ...(url && isLearningMaterialLink(url) ? { url } : {}),
+      ...(note ? { note } : {}),
+    });
+  }
+  return materials;
+}
 
 /**
  * One gallery photo and the caption that belongs to *it*.
@@ -359,6 +479,13 @@ export type CourseContent = {
   excludes: string[];
   scheduleDays: CourseScheduleDay[];
   faqs: CourseFaq[];
+  /**
+   * What a student works through before the first day, delivered by the
+   * booking confirmation, the week-out reminder and the diver's `/ready` page.
+   * Shop content: a template seeds it once and never syncs it again, because
+   * the links are usually the shop's own (ADR 20261008-course-learning-materials).
+   */
+  learningMaterials: CourseLearningMaterial[];
   /** A no-certification-required taster session (Discover Scuba, Try Scuba, …). */
   isIntroCourse: boolean;
 };

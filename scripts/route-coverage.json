@@ -105,6 +105,7 @@
       "blowout.spec.ts",
       "booking.spec.ts",
       "certifications.spec.ts",
+      "course-forms.spec.ts",
       "courses.spec.ts",
       "dock-day-rhythm.spec.ts",
       "gear-fit-and-age.spec.ts",
@@ -132,6 +133,10 @@
     ],
     "a11y": ["a11y.spec.ts"]
   },
+  "/ready/[token]/forms": {
+    "e2e": ["course-forms.spec.ts"],
+    "visual": ["course-form-sign"]
+  },
   "/recap/[token]": {
     "e2e": ["a11y.spec.ts", "recap.spec.ts", "reviews.spec.ts"],
     "visual": ["recap"],
@@ -146,6 +151,7 @@
       "a11y.spec.ts",
       "boat-stage.spec.ts",
       "booking.spec.ts",
+      "course-forms.spec.ts",
       "courses.spec.ts",
       "courtesy-email-unsubscribe.spec.ts",
       "date-requests.spec.ts",
@@ -221,6 +227,7 @@
     "e2e": [
       "a11y.spec.ts",
       "booking.spec.ts",
+      "course-forms.spec.ts",
       "courses.spec.ts",
       "crew-languages.spec.ts",
       "dive-sites.spec.ts",
@@ -301,7 +308,7 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/courses/[slug]/edit": {
-    "e2e": ["courses.spec.ts", "search.spec.ts"],
+    "e2e": ["course-forms.spec.ts", "courses.spec.ts", "search.spec.ts"],
     "visual": ["course-edit"]
   },
   "/shop/[shopSlug]/dive-sites": {
@@ -340,8 +347,8 @@
     "visual": ["diver-merge-preview"]
   },
   "/shop/[shopSlug]/divers/[personId]/waivers/[recordId]": {
-    "e2e": ["waivers.spec.ts"],
-    "visual": ["diver-signed-waiver"]
+    "e2e": ["waiver-print.spec.ts", "waivers.spec.ts"],
+    "visual": ["diver-signed-waiver", "signed-waiver"]
   },
   "/shop/[shopSlug]/divers/[personId]": {
     "e2e": [
@@ -377,8 +384,13 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/gear": {
-    "e2e": ["gear.spec.ts"],
-    "visual": ["gear-register", "gear-register-deleted", "gear-register-trouble"],
+    "e2e": ["gear-rentals.spec.ts", "gear.spec.ts"],
+    "visual": [
+      "gear-register",
+      "gear-register-deleted",
+      "gear-register-rentals",
+      "gear-register-trouble"
+    ],
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/gear/[id]": {
@@ -400,6 +412,14 @@
   "/shop/[shopSlug]/gear/work-orders/[workOrderId]/tag": {
     "e2e": ["work-orders.spec.ts"],
     "visual": ["work-order-claim-tag"]
+  },
+  "/shop/[shopSlug]/gear/rentals/[ticketId]": {
+    "e2e": ["counter-rentals.spec.ts", "rental-terms.spec.ts"],
+    "visual": ["counter-rental-ticket"]
+  },
+  "/shop/[shopSlug]/gear/rentals/new": {
+    "e2e": ["counter-rentals.spec.ts"],
+    "visual": ["counter-rental-form"]
   },
   "/shop/[shopSlug]/inbox": {
     "e2e": ["inbox.spec.ts"],
@@ -465,6 +485,7 @@
       "blowout.spec.ts",
       "booking.spec.ts",
       "check-in.spec.ts",
+      "course-forms.spec.ts",
       "courses.spec.ts",
       "crew-clash.spec.ts",
       "depth-and-age-surfaces.spec.ts",
@@ -510,6 +531,7 @@
       "divemaster-ratio.spec.ts",
       "nitrox.spec.ts",
       "recap.spec.ts",
+      "rental-terms.spec.ts",
       "role-permissions.spec.ts",
       "settings-editor-pages.spec.ts",
       "settings-findability.spec.ts",
@@ -604,12 +626,14 @@
       "boat-loop.spec.ts",
       "certifications.spec.ts",
       "check-in.spec.ts",
+      "course-forms.spec.ts",
       "courses.spec.ts",
       "crew-clash.spec.ts",
       "day-spine.spec.ts",
       "depth-and-age-surfaces.spec.ts",
       "divemaster-ratio.spec.ts",
       "divers.spec.ts",
+      "elearning-check.spec.ts",
       "gear-fit-and-age.spec.ts",
       "guardian-co-signature.spec.ts",
       "import.spec.ts",
@@ -690,7 +714,7 @@
     ]
   },
   "/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]": {
-    "e2e": ["gear.spec.ts"],
+    "e2e": ["gear.spec.ts", "rental-terms.spec.ts"],
     "visual": ["rental-ticket"]
   },
   "/shop/[shopSlug]/trips/[id]/print": {
@@ -698,7 +722,12 @@
     "visual": ["trip-packet"]
   },
   "/shop/[shopSlug]/waivers": {
-    "e2e": ["role-permissions.spec.ts", "tenant-isolation.spec.ts", "waivers.spec.ts"],
+    "e2e": [
+      "course-forms.spec.ts",
+      "role-permissions.spec.ts",
+      "tenant-isolation.spec.ts",
+      "waivers.spec.ts"
+    ],
     "visual": ["staff-waivers", "staff-waivers-record", "waiver-materiality-choice"],
     "a11y": ["a11y.spec.ts"]
   },

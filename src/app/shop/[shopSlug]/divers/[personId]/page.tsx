@@ -40,7 +40,7 @@ import { DiverRecordFoot } from "./_components/DiverRecordFoot";
 import { DiverStatusLedger } from "./_components/DiverStatusLedger";
 import { DiverStory } from "./_components/DiverStory";
 import { DiverWorkOrdersGroup } from "./_components/DiverWorkOrdersGroup";
-import { GearAndSizes } from "./_components/GearAndSizes";
+import { GearAndSizesWithRentals } from "./_components/GearAndSizesWithRentals";
 import { NoticeBanner } from "./_components/NoticeBanner";
 import { RestoreDiver } from "./_components/RestoreDiver";
 import { WaiverGroup } from "./_components/WaiverGroup";
@@ -437,11 +437,11 @@ export default async function DiverDetailPage({
             t={t}
             status={noticeForForm(diverNotice, "reply")}
           />
-          <GearAndSizes
+          <GearAndSizesWithRentals
             diver={diver}
             shopSlug={shopSlug}
             personId={personId}
-            rentalItems={shop.rentalItems}
+            shop={shop}
             canOverride={canOverrideFit}
             locale={locale}
             t={t}

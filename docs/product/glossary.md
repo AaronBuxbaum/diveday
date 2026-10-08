@@ -88,6 +88,12 @@ new domain concept, define it here in the same PR.
   It stamps `agency_checked_at`, with those words as the review note, and names the staffer whose
   browser ran it. Anything else writes nothing and leaves the link. Level cards only, for SSI, NAUI,
   SDI, GUE and CMAS; an unsighted self-declaration still needs its sighting.
+- **eLearning check** — the same extension reading a course student's PADI eLearning on the PADI
+  Pros' Site, searched by the student's email in the staffer's signed-in browser (H-106, ADR
+  20261008-cert-check-extension). The server ticks **Materials done** only when one record names
+  the student and their email, this course and no higher one, and a finished status; anything else
+  writes nothing. A seat already ticked is left as it was. PADI only, and a best guess of PADI's
+  page until a staffer tries it (#2259).
 - **Claimed certification** — a card recorded as evidence but not yet verified: the stored status is
   `pending`. It is what a card entered by hand starts as (the shop-owner-facing word is "claimed").
   A claimed card never satisfies readiness or authorizes a nitrox fill until staff **Mark certified** or an **Agency check** certifies it.
@@ -1095,6 +1101,22 @@ new domain concept, define it here in the same PR.
   checks is `minimum_certification_level`, which the agency owns and no shop edit can reach. The
   course page labels the two apart for exactly this reason — a note reading "or a qualifying
   certification" next to an unlabelled gate is how a diver arrives believing they are eligible.
+- **Learning materials** — what a course asks a student to work through before day 1, usually the
+  agency's eLearning: an ordered list of names, each with an optional `https:` link and note, kept
+  on the course. DiveDay sends it with the booking confirmation, whether the student booked
+  themselves or a staffer seated them, repeats it on the 7-day reminder, and shows it on the
+  diver's thread. **Materials done** is a staffer's tick that the student finished them, stamped
+  with who and when. It belongs to the student's enrollment, not one departure: ticked on the pool
+  weekend, it counts on the open-water weekend of the same course. It is the shop's word, never
+  the agency's (the eLearning check ticks it only after reading PADI's page in the staffer's
+  browser), and it gates nothing: the 7-day reminder stops asking, and Certify shows a neutral
+  reminder to check the agency's record when it is missing
+  ([20261008-course-learning-materials](../architecture/decisions/20261008-course-learning-materials.md)).
+- **Private session / private course** — a course with a private price can also be run for one
+  diver or one group on a date of their own. The course page says so ("Private course available",
+  or "Private session available" for an intro like Discover Scuba) and points at the inquiry form.
+  It never prints the private price, because whether that price is per diver or per group is the
+  shop's to explain.
 - **Instruction fee / e-learning fee** — a course invoices as two lines on one bill, and the diver
   makes a single payment for their sum. Enrollment assumes the e-learning is included; a student
   who already completed it elsewhere has that line cleared before the invoice goes out, or
@@ -1487,6 +1509,22 @@ new domain concept, define it here in the same PR.
   product boundary, not legal advice: a shop whose own counsel wants staff on a release still has
   the paper/in-person path, and if that ever becomes the norm it is a human decision to record
   (H-01/H-03), not a query to widen.
+- **Course form** — a form a course asks each student to sign as well as the release, such as an
+  agency's course release or a safe-diving-practices statement. The words are the shop's own, written
+  beside the release and versioned on every real edit (DiveDay ships none, H-10). Each course
+  chooses its forms, in order, on its own page. Unlike the release, a course form is **signed per
+  booking**: a signature counts for the enrollment it was signed on, at the **current version** —
+  which, once a session has started, also means the version that was current when it started, so an
+  edit made mid-course asks the next session to sign — with a guardian's co-signature for a minor,
+  and never carries to the next course. A student signs on their prep link's forms page or on the
+  **forms-only link** staff send, which opens that page and nothing else; staff can also record a
+  paper copy from the Divers tab. An unsigned one is the `course_form_unsigned` blocker (a minor's
+  with no guardian, `course_form_guardian_missing`), so the student reads Blocked until it is
+  signed. One switch,
+  `COURSE_FORMS_BLOCK_BOARDING`, turns that into a warning instead, and buying a seat never waits on
+  it (ADR 20261008-course-forms). A course template names its agency's **standard forms** by title.
+  Creating or syncing the course sets them up empty, and a form with no text is asked of nobody
+  until the shop pastes the agency's wording in.
 - **Sign once** — a diver signs the release once, not every trip. A **completed** signature is held
   against the diver (not just the booking it was signed on) and satisfies the waiver gate on any of
   their bookings while it stays **current**: signed against the shop's current release version and
@@ -1991,9 +2029,36 @@ new domain concept, define it here in the same PR.
   them under one heading (**gear register groups**, next entry), which is the one place the word
   "overdue" is deliberately wider.
   Cancelling a booking releases its un-collected units; a checked-out one stays until it really
-  comes home. Assigning informs the prep page; it gates nothing at boarding. The direct-person
-  shape is modeled but deliberately has no staff form yet; booking-held rows remain prep-flow
-  shape.
+  comes home. Assigning informs the prep page; it gates nothing at boarding. Booking-held rows
+  are the prep-flow shape; person-held rows are a **counter rental** (next entry).
+- **Counter rental** — tagged units lent at the counter to a known person who is not on a boat:
+  the person-held **gear reservations** written together in one act, sharing one person and one
+  creation instant, with one inclusive window that starts no earlier than the shop's today and
+  runs at most 31 days. Staff open it from the register's "Rent out", the diver record's "Rent
+  gear" or ⌘K, and it lands on a printable **rental ticket** (who, the tags, the back-by date,
+  then the shop's **rental terms** and a "Received by" line; no money). The set is handed over,
+  brought home with one outcome, or released if never collected, like a booking's rental set. Money is an ordinary staff invoice
+  with one `rental` line per priced unit (or one set line when the picks are exactly the shop's
+  core set), linked to the rental by `gear_reservations.order_id`; the rental itself is never a
+  charge, and an invoiced rental cannot be released until the invoice is voided. **Life support**
+  (regulator, BCD, tank, dive computer, drysuit, DPV, O2 kit, nitrox analyzer) goes only to a
+  person with a verified certification, read by the predicate boarding reads, and a drysuit also
+  wants the verified drysuit card; a pending or self-declared card clears nothing, and the way
+  past is "Card seen", the staffer capturing and certifying the card they hold. Soft goods go to
+  anybody. **The service screen** refuses a life-support unit whose service clock is overdue as of
+  the window's last day or that has an open service concern, and lends a flagged soft-goods unit
+  only with its own "Lend anyway": the one place a **service clock** gates. Counter tanks are air
+  only; a nitrox fill is not modelled. The waiver is not re-checked at the counter, a known gap:
+  the one shop-wide waiver is signed per booking (CR-015) and a counter rental has no booking.
+  Trip-scoped reads (prep, manifests) never count one; a departure's Gear tab names the units a
+  booked diver holds on one over its window. ADR 20260815-minimal-gear-register, amendment
+  2026-10-08.
+- **Rental terms** — the shop's own plain-text conditions for rented gear (`shops.rental_terms`,
+  optional, set in Settings → Rental gear), printed on every rental ticket, the trip slip and the
+  counter ticket alike, above a "Received by" line with a printed name and a date. The signature
+  says the person took the units; it is a receipt for gear, never a liability release, and the one
+  shop-wide waiver stays the only waiver (CR-015). No terms set prints none, and DiveDay supplies
+  no default. ADR 20260815-minimal-gear-register, the second amendment of 2026-10-08.
 - **Gear proposal** — the unit the Gear tab offers for a piece a diver wants, so staff confirm
   instead of choose (`proposeRentalUnits`, `src/lib/gear-proposals.ts`). A proposal is never a
   reservation and never a fit check, and it gates nothing: nothing is held until a staffer taps
@@ -2033,14 +2098,24 @@ new domain concept, define it here in the same PR.
   **Service due** sits beside the three on the same chip row without being one of them: the
   fleet-wide list of units the bench owes work — pulled off the wall, or a clock overdue or running
   out inside the month — which asks what a unit *needs* rather than where it *is*, and is the one
-  reading no group absorbs.
+  reading no group absorbs. **Rentals** sits on the same chip row for the same reason: every open
+  reservation (not yet returned, the ones starting later included) under the person who holds it,
+  trip-held and counter-held in one list (`listGearRentals`, `src/db/gear-rentals.ts`). It asks
+  *who* has the fleet rather than where a unit is; a **rental** there is the units one holder took
+  under one booking or over the counter, worded with the phase vocabulary above and the booking's
+  own money word, and the list pages by holder so one diver's set never splits.
 - **Service clock** — a unit's care deadlines, derived from its append-only service events
   (`gear_service_events`): manufacturer `service`, a tank's independent `hydro_test` and
   `visual_inspection` clocks, the `o2_clean` renewal, and clockless condition `note`s. The newest
   event of a kind *is* that clock; the earliest deadline is the unit's state (ok / due soon /
   overdue), which **informs, never gates** — the dock decides whether an overdue unit dives, not
-  the software. A care event is not itself a work order; only a work order's **Work done record**
-  writes one, for a check that passed (ADR 20261008-gear-work-orders).
+  the software. The one exception is a **counter rental** of life support, which has no dock and
+  is refused on an overdue clock. A clock with a dive interval counts the unit's dives since its
+  service: each returned trip rental adds the departure's planned dives, and each returned
+  counter rental adds the dives the person said at the return (`dives_logged`, dated by the
+  window's first day), or nothing when nobody asked. Both are a floor. A care event is not itself
+  a work order; only a work order's **Work done record** writes one, for a check that passed
+  (ADR 20261008-gear-work-orders).
 - **Sizing** — BCDs and wetsuits are sized (XS–XXL and height/weight dependent), so a prep list
   groups by item *and* size; an unrecorded size is shown as a loose end, not silently dropped.
 - **Complete rental fit** — a fit is complete when *every piece the diver takes from the shop* has

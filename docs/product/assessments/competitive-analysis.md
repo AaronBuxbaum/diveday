@@ -129,7 +129,7 @@ H-12.
 | Online booking w/ real-time capacity | Universal | ✅ Best-in-class flow | Critical — done |
 | **Payment/deposit at booking** | Universal | ✅ Hosted Stripe Checkout at booking ([shipped 2026-07-21](../../architecture/decisions/20260721-checkout-at-booking.md)); deposit + cancellation-window mechanisms shipped opt-in ([ADR](../../architecture/decisions/20260721-deposit-cancellation-policy.md)); only the policy *values* remain H-07 | Critical — mechanism done; policy open |
 | Digital waivers + medical, auto-sent | Universal (often add-on) | ✅ Versioned, immutable, included | Critical — done; needs sending to be real |
-| Course/student management | Universal, agency-aware | ⚠️ Sessions + prerequisites; no rosters/progress/eLearning | Critical — partial |
+| Course/student management | Universal, agency-aware | ⚠️ Sessions + prerequisites; learning materials sent with the booking and a per-student "materials done" tick ([20261008-course-learning-materials](../../architecture/decisions/20261008-course-learning-materials.md)); no agency eLearning hooks (H-10) | Critical — partial |
 | Trip scheduling + manifest | Universal (as printouts) | ✅ Far beyond market | Critical — done, and a differentiator |
 | Customer records (certs, sizes, history) | Universal | ✅ Person-spine is stronger than market | Critical — done |
 | Rental equipment tracking | Universal | ✅ Gear register: units, reservations, service clocks (2026-08-20) | Critical — done |

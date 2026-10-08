@@ -139,6 +139,35 @@ const NOTICE_KEYS: Record<
   "new-waiver-sent": { form: "roster", tone: "success", key: "trips.notices.newWaiverSent" },
   "new-waiver-ready": { form: "roster", tone: "warning", key: "trips.notices.newWaiverReady" },
   "new-waiver-failed": { form: "roster", tone: "danger", key: "trips.notices.newWaiverFailed" },
+  // A course form recorded from paper on a student's row (ADR
+  // 20261008-course-forms), and its refusals — each says what to do next.
+  "course-form-recorded": {
+    form: "roster",
+    tone: "success",
+    key: "trips.notices.courseFormRecorded",
+  },
+  "course-form-guardian": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.courseFormGuardian",
+  },
+  "course-form-namesake": {
+    form: "roster",
+    tone: "warning",
+    key: "trips.notices.courseFormNamesake",
+  },
+  "course-form-unavailable": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.courseFormUnavailable",
+  },
+  "course-form-paper-copy": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.courseFormPaperCopy",
+  },
+  "course-form-date": { form: "roster", tone: "danger", key: "trips.notices.courseFormDate" },
+  "course-form-ended": { form: "roster", tone: "danger", key: "trips.notices.courseFormEnded" },
   "identity-medical-hold": {
     form: "roster",
     tone: "warning",
@@ -190,6 +219,14 @@ const NOTICE_KEYS: Record<
     form: "roster",
     tone: "danger",
     key: "trips.notices.nextStepNotACourse",
+  },
+  // A student's learning materials ticked or un-ticked (ADR
+  // 20261008-course-learning-materials), and the same LMS boundary as above.
+  "materials-saved": { form: "roster", tone: "success", key: "trips.notices.materialsSaved" },
+  "materials-not-a-course": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.materialsNotACourse",
   },
   "contact-saved": { form: "roster", tone: "success", key: "trips.notices.contactSaved" },
   "contact-incomplete": { form: "roster", tone: "warning", key: "trips.notices.contactIncomplete" },

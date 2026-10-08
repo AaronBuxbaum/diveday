@@ -151,6 +151,10 @@ export const DIVER_HISTORY_TABLES = [
   "dive_package_entitlements",
   "orders",
   "waiver_records",
+  // A signed course form, on the booking that moves with it (ADR
+  // 20261008-course-forms). No seal, so the plain repoint below carries it;
+  // its unique key is per booking, so the two sides cannot collide.
+  "course_form_records",
   "certifications",
   "specialty_certifications",
   "prior_visits",
@@ -246,6 +250,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "activity_events.actor_person_id": "who did it — attribution, not diver history",
   "activity_events.subject_person_id": "an event trail records who it happened to at the time",
   "bookings.course_next_step_by_person_id": "which instructor wrote the student their next step",
+  "bookings.course_materials_done_by_person_id": "which staffer marked the materials done",
   "buddy_pair_members.crew_person_id": "a crew member on a team, refused as a staff record",
   "booking_arrival_events.recorded_by_person_id": "who checked the diver in at the counter",
   "buddy_pair_members.paired_by_person_id": "who built the team",
@@ -318,6 +323,9 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "waiver_records.moved_by_person_id": "who refiled the release with its split seat",
   "waiver_records.moved_from_person_id": "where a refiled release sat before; inside its seal",
   "waiver_records.recorded_by_person_id": "who witnessed the signature",
+  "course_form_records.recorded_by_person_id": "who recorded the paper form",
+  "course_form_records.anonymized_by_person_id": "who erased the signer's names from the form",
+  "course_form_versions.created_by_person_id": "who wrote that version of the form",
 };
 
 /**
@@ -811,7 +819,9 @@ function sameRentalFit(a: DiverMergeRentalFit, b: DiverMergeRentalFit): boolean 
  */
 export const DIVER_MERGE_COUNT_GROUPS = {
   bookings: ["bookings"],
-  releases: ["waiver_records"],
+  // A signed course form is the same kind of paper as the release (ADR
+  // 20261008-course-forms), so the preview counts it with them.
+  releases: ["waiver_records", "course_form_records"],
   cards: ["certifications", "specialty_certifications", "nitrox_certifications"],
   orders: ["orders", "dive_package_entitlements", "imported_payment_history"],
   notes: ["internal_notes"],

@@ -1,15 +1,18 @@
 import type { ReactNode } from "react";
 import type { SameNameHeldSeat } from "@/db/bookings";
+import type { CourseMaterialsDone } from "@/db/course-materials";
 import type { listBookingNotes } from "@/db/operations";
 import { depthWarningText } from "@/i18n/depth-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
+import type { ElearningQuery } from "@/lib/elearning-check";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { isDiver } from "@/lib/participant-types";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { waiverState } from "@/lib/waivers";
+import type { ElearningCheckResult } from "../elearning-actions";
 import type { PaymentStatus, PaymentStatusControlCopy } from "./PaymentStatusControl";
 import { SHARED_FACT_MIN } from "./shared-facts";
 import type {
@@ -79,6 +82,17 @@ export type RosterTrip = {
    * rung, or a specialty, is one change of the select away.
    */
   certifyDefaultLevel?: CertificationLevel | null;
+  /**
+   * This departure teaches a course with learning materials on it, so each
+   * seat says whether a staffer has marked them done (ADR
+   * 20261008-course-learning-materials).
+   */
+  courseHasMaterials?: boolean;
+  /**
+   * The session has not yet ended, so a student with materials still to do
+   * wears the "Materials not done" capsule. After the last day it is history.
+   */
+  courseMaterialsOpen?: boolean;
   /** The Trip surface already leads with its masthead capacity read. */
   compact?: boolean;
   /** Keep the old standalone Guests heading for the compatibility route. */
@@ -100,6 +114,13 @@ export type RosterRows = {
   notesByBooking: Map<string, RosterPrivateNote[]>;
   /** What each student's next step already says, so an instructor edits rather than retypes. */
   courseNextStepByBooking?: Map<string, string>;
+  /** What the browser extension searches PADI's eLearning for, per seat (H-106). */
+  elearningQueryByBooking?: Map<string, ElearningQuery>;
+  /**
+   * Who finished the course's materials, by person, across every departure of
+   * the course (`courseMaterialsDoneByPerson`): the roster's "done" reads here.
+   */
+  courseMaterialsDoneByPerson?: ReadonlyMap<string, CourseMaterialsDone>;
   /** Per held seat, the other held seats a split may move with it (`sameNameHeldSeats`). */
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
   /**
@@ -157,6 +178,8 @@ export type RosterActions = {
    * roster — a fun dive has no completion to certify.
    */
   certifyDiverAction?: (formData: FormData) => void;
+  /** Record a course form signed on paper (ADR 20261008-course-forms). */
+  recordPaperCourseFormAction?: (formData: FormData) => void;
   /**
    * What this student does next, in the instructor's own words (issues #1196,
    * #1205) — present under exactly the same condition as `certifyDiverAction`,
@@ -164,6 +187,17 @@ export type RosterActions = {
    * offered one without the other would be a roster that half-taught.
    */
   saveCourseNextStepAction?: (formData: FormData) => void;
+  /**
+   * Tick a student's learning materials done, or take the tick back (ADR
+   * 20261008-course-learning-materials). Present only on a course session
+   * whose course carries materials.
+   */
+  setCourseMaterialsDoneAction?: (formData: FormData) => void;
+  /** Tick the materials from PADI's own eLearning page (H-106); beside the tick above. */
+  elearningCheckAction?: (
+    previous: ElearningCheckResult,
+    formData: FormData,
+  ) => Promise<ElearningCheckResult>;
   updatePickupAction?: (bookingId: string, formData: FormData) => void;
 };
 

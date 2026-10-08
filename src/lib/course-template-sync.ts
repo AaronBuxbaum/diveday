@@ -62,6 +62,14 @@ export type CourseTemplateSnapshot = {
   excludes: string[];
   scheduleDays: CourseContent["scheduleDays"];
   faqs: CourseContent["faqs"];
+  /**
+   * The titles of the agency forms this template version named (ADR
+   * 20261008-course-forms). Not a synced field — a form is the shop's own
+   * once set up — but the baseline a sync reads to tell a form new in this
+   * version from one the shop already had the chance to keep. Absent on a
+   * course read back from its row.
+   */
+  standardForms?: string[];
 };
 
 /** Structural shape accepted from the code-owned template module. */
@@ -72,6 +80,7 @@ export type CourseTemplateSource = {
   minimumCertificationLevel: CertificationLevel | null;
   certifiesLevel: CertificationLevel | null;
   content: CourseContent;
+  standardForms?: readonly { title: string }[];
 };
 
 /** Structural shape accepted from a database course row. */
@@ -123,6 +132,7 @@ const courseTemplateSnapshotSchema = z.object({
   excludes: z.array(z.string()),
   scheduleDays: z.array(scheduleDaySchema),
   faqs: z.array(z.object({ question: z.string(), answer: z.string() })),
+  standardForms: z.array(z.string()).optional(),
 });
 
 /** Convert the code-owned template into the baseline comparable to a course row. */
@@ -144,6 +154,9 @@ export function courseTemplateSnapshot(template: CourseTemplateSource): CourseTe
     excludes: template.content.excludes,
     scheduleDays: template.content.scheduleDays,
     faqs: template.content.faqs,
+    ...(template.standardForms
+      ? { standardForms: template.standardForms.map((form) => form.title) }
+      : {}),
   };
 }
 

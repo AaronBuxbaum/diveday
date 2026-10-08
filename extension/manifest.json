@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "DiveDay certification check",
   "short_name": "DiveDay check",
-  "version": "1.0.0",
-  "description": "Checks a diver's certification on the agency's own lookup page from DiveDay's diver record.",
+  "version": "1.1.0",
+  "description": "Checks a diver's certification on the agency's own lookup page, and a course student's PADI eLearning on the PADI Pros' Site, from DiveDay.",
   "minimum_chrome_version": "116",
   "background": {
     "service_worker": "background.js"
@@ -14,7 +14,8 @@
     "https://www.naui.org/*",
     "https://www.tdisdi.com/*",
     "https://www.gue.com/*",
-    "https://portal.cmas.org/*"
+    "https://portal.cmas.org/*",
+    "https://pros.padi.com/*"
   ],
   "content_scripts": [
     {

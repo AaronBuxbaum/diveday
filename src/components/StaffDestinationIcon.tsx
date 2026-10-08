@@ -309,6 +309,16 @@ const ICON_PATHS: Record<StaffDestinationId, ReactNode> = {
       <path d="M15.5 5.5h5" />
     </>
   ),
+  // Rent out: the same cylinder, handed across the counter — an arrow away.
+  rentOut: (
+    <>
+      <rect x="3" y="6" width="8" height="15" rx="3" />
+      <path d="M5.5 6V3.5h3V6" />
+      <path d="M3 11h8" />
+      <path d="M14 14h7" />
+      <path d="m18 11 3 3-3 3" />
+    </>
+  ),
   // Waivers: a signed page.
   waivers: (
     <>

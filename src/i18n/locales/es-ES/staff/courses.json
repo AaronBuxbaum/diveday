@@ -15,7 +15,8 @@
     "emptyAction": "Abrir el calendario",
     "pagination": {
       "total": "{count, plural, one {# curso} other {# cursos}}"
-    }
+    },
+    "formsAwaitingText": "Pega el texto de la agencia: {forms}"
   },
   "edit": {
     "depthMarkersHint": "<marker>'{depth18}'</marker> se imprime como “18 metros” o “60 pies”, en la unidad del buceador. También <marker>'{depth12}'</marker>, <marker>'{depth21}'</marker>, <marker>'{depth30}'</marker> y <marker>'{depth40}'</marker>; añade <marker>n</marker> para un número sin unidad en un rango. Borra la marca para escribir tú la profundidad.",
@@ -28,6 +29,8 @@
     "errorInvalid": "Eso no se guardó. Revisa los campos e inténtalo de nuevo.",
     "errorNotAuthorized": "Solo los propietarios, gerentes e instructores pueden ocultar o mostrar un curso.",
     "errorFaqIncomplete": "Cada pregunta necesita una respuesta, y cada respuesta una pregunta.",
+    "errorMaterialsIncomplete": "Cada material de estudio necesita un nombre.",
+    "errorMaterialsLink": "Cada enlace tiene que empezar por https://.",
     "errorImages": "Puedes mantener hasta ocho fotos en la galería. Elimina una antes de añadir más.",
     "errorUpload": "Esa foto no se subió. Prueba un JPG, PNG o WebP de menos de 5\u00a0MB.",
     "errorTooManyPhotos": "Añade hasta {max, plural, one {# foto nueva} other {# fotos nuevas}} de galería por guardado. Guarda este lote y añade más después.",
@@ -77,6 +80,8 @@
     "includedPlaceholder": "6 inmersiones en aguas abiertas\nEquipo de alquiler completo\nAlmuerzo ligero",
     "notIncludedLabel": "No incluido",
     "notIncludedPlaceholder": "Tasa del parque marino\nTraslados de hotel",
+    "materialsLegend": "Material de estudio",
+    "materialsDescription": "Cada alumno lo recibe con su reserva y otra vez una semana antes del día 1.",
     "dayByDayLegend": "Día a día",
     "faqLegend": "Preguntas de los buceadores",
     "savePage": "Guardar página del curso",
@@ -121,7 +126,23 @@
     "unsavedInSection": "Cambios sin guardar en {section}",
     "unsavedInSections": "Cambios sin guardar en {count, plural, one {# sección} other {# secciones}}",
     "sectionsLabel": "Secciones",
-    "draftRestored": "Cambios sin guardar, recuperados de tu última visita"
+    "draftRestored": "Cambios sin guardar, recuperados de tu última visita",
+    "forms": {
+      "legend": "Formularios",
+      "description": "Cada estudiante los firma en su página de preparación antes del curso. Hasta entonces aparece como Bloqueado.",
+      "none": "Aún no hay formularios del curso.",
+      "writeLink": "Escribir un formulario del curso",
+      "orderLabel": "Orden de {form}",
+      "save": "Guardar formularios",
+      "saved": "Guardado. Los estudiantes de este curso firman ahora estos formularios.",
+      "invalid": "No se guardó. Uno de esos formularios se eliminó; recarga y vuelve a elegir.",
+      "notAuthorized": "Solo el personal que configura salidas puede elegir los formularios de un curso.",
+      "pasteWording": "Pega el texto de la agencia",
+      "awaitingText": "Ningún estudiante lo firma hasta que tenga su texto.",
+      "addImpact": "Un formulario añadido ahora pide firmarlo a {students, plural, one {# estudiante} other {# estudiantes}} de {sessions, plural, one {# sesión próxima} other {# sesiones próximas}}.",
+      "removeLocked": "Solo el propietario o un gerente puede quitar un formulario de un curso.",
+      "removeNotAuthorized": "No se guardó. Solo el propietario o un gerente puede quitar un formulario de un curso."
+    }
   },
   "dayByDay": {
     "dayLabel": "Día {number}",
@@ -152,5 +173,17 @@
     "faqsMaxOne": "{max} pregunta es el máximo que admite una página de curso.",
     "faqsMaxOther": "{max} preguntas es el máximo que admite una página de curso.",
     "empty": "Aún no hay preguntas. Añade las que te hacen los buceadores en el mostrador."
+  },
+  "materials": {
+    "nameLabel": "Material n.º {number}",
+    "namePlaceholder": "eLearning de Open Water",
+    "linkLabel": "Enlace",
+    "linkHint": "Opcional. Empieza por https://. Si el precio incluye el eLearning, no enlaces la página de compra de la agencia: la agencia envía el acceso al alumno por correo.",
+    "noteLabel": "Nota",
+    "notePlaceholder": "Termínalo antes del día 1",
+    "remove": "Eliminar el material {number}",
+    "add": "Añadir un material",
+    "max": "Un curso admite hasta {max, plural, one {# material} other {# materiales}}.",
+    "empty": "Aún no hay nada. Añade el eLearning o la lectura que los alumnos terminan antes del día 1."
   }
 }

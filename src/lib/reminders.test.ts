@@ -71,6 +71,23 @@ describe("reminderEarnsItsSend", () => {
     expect(reminderEarnsItsSend("trip_reminder_7d", items("done", "done"))).toBe(false);
   });
 
+  it("sends the 7-day nudge to a ready student whose learning materials are not done", () => {
+    // ADR 20261008-course-learning-materials: the eLearning is a to-do of its own.
+    expect(
+      reminderEarnsItsSend("trip_reminder_7d", items("done", "done"), {
+        courseMaterialsDue: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("stops nagging once a staffer ticks the materials done", () => {
+    expect(
+      reminderEarnsItsSend("trip_reminder_7d", items("done", "done"), {
+        courseMaterialsDue: false,
+      }),
+    ).toBe(false);
+  });
+
   it("sends the 24-hour reminder to a fully ready diver anyway", () => {
     // Its utility is the dock call and the conditions, never the to-do list.
     expect(reminderEarnsItsSend("trip_reminder_24h", items("done", "done"))).toBe(true);

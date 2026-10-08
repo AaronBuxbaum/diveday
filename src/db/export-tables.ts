@@ -12,6 +12,10 @@ import {
   bookingPayments,
   buddyPairMembers,
   certifications,
+  courseFormRecords,
+  courseFormRequirements,
+  courseForms,
+  courseFormVersions,
   courseInquiries,
   courses,
   customerGearItems,
@@ -414,6 +418,32 @@ export const EXPORT_TABLES = {
     table: waiverRecords,
     order: [asc(waiverRecords.createdAt), asc(waiverRecords.id)],
     scope: { shopColumn: waiverRecords.shopId, personColumn: waiverRecords.personId },
+  },
+  // Course forms (ADR 20261008-course-forms): the shop's forms, every version
+  // of their words, which course asks for which, and each signed record.
+  courseForms: {
+    table: courseForms,
+    order: [asc(courseForms.createdAt), asc(courseForms.id)],
+    scope: { shopColumn: courseForms.shopId },
+  },
+  courseFormVersions: {
+    table: courseFormVersions,
+    order: [asc(courseFormVersions.formId), asc(courseFormVersions.version)],
+    scope: { shopColumn: courseFormVersions.shopId },
+  },
+  courseFormRequirements: {
+    table: courseFormRequirements,
+    order: [
+      asc(courseFormRequirements.courseId),
+      asc(courseFormRequirements.position),
+      asc(courseFormRequirements.id),
+    ],
+    scope: { shopColumn: courseFormRequirements.shopId },
+  },
+  courseFormRecords: {
+    table: courseFormRecords,
+    order: [asc(courseFormRecords.createdAt), asc(courseFormRecords.id)],
+    scope: { shopColumn: courseFormRecords.shopId, personColumn: courseFormRecords.personId },
   },
   rentalFitProfiles: {
     table: rentalFitProfiles,

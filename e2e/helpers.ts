@@ -168,7 +168,10 @@ export function threadStatus(page: Page): Locator {
  *
  * Scoped through `data-thread-step` and `page.locator`: `e2e/fixtures.ts`
  * filters every `getBy*` to visible nodes, which a closed disclosure's
- * contents are not.
+ * contents are not. The `<details>` itself is filtered to visible here for
+ * the same reason the fixture filters: a hidden copy of the thread (a
+ * preserved `<Activity>` tree, outside `#main-content`) carries the same
+ * `data-thread-step`, and strict mode refuses the pair (PR #2260's CI).
  */
 export async function openThreadStep(page: Page, step: string): Promise<Locator> {
   // Direct children, not descendants, in BOTH steps below. Slice 7c put per-card
@@ -176,7 +179,7 @@ export async function openThreadStep(page: Page, step: string): Promise<Locator>
   // the cards within it, and Playwright refuses the ambiguity. The certification
   // step is the one that proves it: its body holds "Add your certification" and
   // "Add your nitrox card", so a descendant `summary` search finds three.
-  const details = page.locator(`[data-thread-step="${step}"] > details`);
+  const details = page.locator(`[data-thread-step="${step}"] > details`).filter({ visible: true });
   await details.waitFor();
   if (await details.evaluate((element: HTMLDetailsElement) => element.open)) return details;
   await details.locator(":scope > summary").click();
@@ -197,7 +200,7 @@ export async function openThreadStep(page: Page, step: string): Promise<Locator>
  * opening one leaves the others as they were.
  */
 export async function openRecapDoor(page: Page, door: string): Promise<Locator> {
-  const details = page.locator(`[data-recap-door="${door}"] details`);
+  const details = page.locator(`[data-recap-door="${door}"] details`).filter({ visible: true });
   await details.waitFor();
   if (await details.evaluate((element: HTMLDetailsElement) => element.open)) return details;
   await details.locator("summary").click();
@@ -1003,4 +1006,86 @@ export async function openPaperWaiverForm(scope: Page | Locator) {
   const trigger = scope.getByRole("button", { name: "Mark signed on paper" });
   await expect(trigger).toHaveAttribute("data-hydrated", "true");
   await trigger.click();
+}
+
+/**
+ * Write a course form on the waivers page and wait for its save (ADR
+ * 20261008-course-forms). The new-form door is a native `<details>`, so its
+ * fields render once its summary is clicked, with no hydration to wait on.
+ */
+export async function writeCourseForm(page: Page, title: string, body: string): Promise<void> {
+  await page.goto("/shop/blue-mantis/waivers");
+  await page.locator("#course-form-new > summary").click();
+  await page.locator("#course-form-title-new").fill(title);
+  await page.locator("#course-form-body-new").fill(body);
+  await page.getByRole("button", { name: "Add form" }).click();
+  await expect(page.locator("#course-forms summary", { hasText: title })).toBeVisible();
+}
+
+/** Choose a written course form on a course's page and wait for the save. */
+export async function requireCourseForm(
+  page: Page,
+  courseSlug: string,
+  title: string,
+): Promise<void> {
+  await page.goto(`/shop/blue-mantis/courses/${courseSlug}/edit`);
+  const forms = page.locator("form", {
+    has: page.getByRole("button", { name: "Save forms" }),
+  });
+  await forms.getByRole("checkbox", { name: title, exact: true }).check();
+  await forms.getByRole("button", { name: "Save forms" }).click();
+  await expect(
+    page.getByText("Saved. Students on this course now sign these forms."),
+  ).toBeVisible();
+}
+
+/**
+ * Schedule a session of Open Water Diver with an instructor on its crew, so
+ * it takes bookings, and return the staff path of its Divers tab.
+ */
+export async function scheduleCrewedOpenWaterSession(
+  page: Page,
+  title: string,
+  daysOut: number,
+): Promise<string> {
+  await createTrip(page, {
+    course: "Open Water Diver",
+    title,
+    date: daysFromNow(daysOut),
+    departsAt: "08:00",
+    returnsAt: "17:00",
+  });
+  const tripPath = await tripPathByTitle(page, "blue-mantis", new RegExp(`^${title}$`));
+  await page.goto(tripPath);
+  await openTripAbout(page);
+  // The refusal line is server-rendered, so seeing it says the Details tab
+  // has painted; the picker is controlled, so a pick before hydration no-ops.
+  await expect(
+    page.getByText("cannot take bookings until one assigned crew member has the instructor role"),
+  ).toBeVisible();
+  await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
+  await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
+  return tripPath;
+}
+
+/**
+ * Book the last-listed Open Water session as a signed-out visitor and return
+ * the prep link's path. The last one is the session a spec just scheduled:
+ * sessions list soonest first, and a spec schedules past every seeded one.
+ */
+export async function bookOpenWaterSession(
+  page: Page,
+  name: string,
+  email: string,
+): Promise<string> {
+  await page.goto("/s/blue-mantis/courses/open-water-diver");
+  await page.getByRole("link", { name: "Book this date" }).last().click();
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name", { exact: true }).fill(name);
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await acceptAgeAttestation(page);
+  await page.getByRole("button", { name: /^Book/ }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+  return new URL(page.url()).pathname;
 }

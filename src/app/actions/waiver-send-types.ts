@@ -33,6 +33,12 @@ export function isWaiverSendChannel(value: unknown): value is WaiverSendChannel 
 export type WaiverFallbackLink = {
   name: string;
   token: string;
+  /**
+   * The link's own path when it is not the release's: a signed release with
+   * course forms still owed hands over `/ready/<token>/forms` (ADR
+   * 20261008-course-forms). Absent means `/waivers/<token>` — `waiverLinkPath`.
+   */
+  path?: string;
   /** Why staff must hand this over themselves — a missing address reads very
    * differently from a shop that has no email provider wired up at all, and
    * both read differently from a deployment with no `APP_HOST` to build the
@@ -180,4 +186,9 @@ export function waiverSendStateFromOutcome(outcome: HeldSendOutcome): WaiverSend
     errors: named(outcome.errors),
     emptySelection: false,
   };
+}
+
+/** The path a fallback link opens: its own when it carries one, the release's otherwise. */
+export function waiverLinkPath(link: Pick<WaiverFallbackLink, "token" | "path">): string {
+  return link.path ?? `/waivers/${link.token}`;
 }

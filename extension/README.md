@@ -1,6 +1,6 @@
 # DiveDay certification check (browser extension)
 
-Checks a diver's certification on the agency's own lookup page, from the staffer's own browser, when they press "Check with SSI" on the diver's record. Decision: H-105. Design: [ADR 20261008-cert-check-extension](../docs/architecture/decisions/20261008-cert-check-extension.md).
+Checks a diver's certification on the agency's own lookup page, from the staffer's own browser, when they press "Check with SSI" on the diver's record. It also checks a course student's PADI eLearning on the PADI Pros' Site when a staffer presses "Check eLearning with PADI" on a course roster. Decisions: H-105, H-106. Design: [ADR 20261008-cert-check-extension](../docs/architecture/decisions/20261008-cert-check-extension.md).
 
 The extension decides nothing. It fills in the agency's form, waits for the answer, and hands the page's text to DiveDay, where `src/lib/agency-check.ts` decides whether the card is certified.
 
@@ -8,7 +8,7 @@ The extension decides nothing. It fills in the agency's form, waits for the answ
 
 - `manifest.json`: Manifest V3. Host permissions are the agencies' lookup sites only; the content script runs only on DiveDay's staff pages, `https://dive.day/shop/*`.
 - `protocol.js`: the wire format. The app's copy is `src/lib/cert-check-extension.ts`.
-- `agencies.js`: the lookup page for each agency. They must match `src/lib/agency-verification.ts`.
+- `agencies.js`: the lookup page for each agency, which must match `src/lib/agency-verification.ts`, and the eLearning page for each agency it reads (`ELEARNING`, PADI only).
 - `fill.js`: finds each box by its name, label or placeholder, fills it, and submits.
 - `background.js`: opens the page in a background tab, runs `fill.js`, reads the answer, closes the tab.
 - `bridge.js`: on DiveDay's pages, sets the `data-diveday-cert-check` marker and carries messages.
@@ -23,6 +23,15 @@ The extension decides nothing. It fills in the agency's form, waits for the answ
 4. Open a diver's record with a pending level card from one of the five agencies. "Check with <agency>" is now a button.
 
 Settings, Bookings & waivers, "Certification checks", says whether this browser has it.
+
+## Test the PADI eLearning check
+
+The PADI page is a best guess (#2259). To test it for real:
+
+1. Load the extension as above and sign in to the PADI Pros' Site in the same browser.
+2. Open a PADI course session with learning materials, and a student whose eLearning you know is finished. Open their row's details and press "Check eLearning with PADI".
+3. If it answers "Couldn't read PADI's page", open `https://pros.padi.com/` yourself, find where a student's eLearning is searched, and correct `ELEARNING.padi` in `agencies.js` (the page address) and, if the search box is not found, `PATTERNS.email` in `fill.js`.
+4. If it reads the page but gets the answer wrong, copy the page's text into a new case in `src/lib/elearning-check.test.ts` and fix `judgeElearningPage`.
 
 ## Publish
 

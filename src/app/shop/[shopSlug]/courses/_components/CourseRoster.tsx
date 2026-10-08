@@ -58,6 +58,12 @@ export type CourseRosterRow = {
   meta: ReactNode;
   /** Set for a course the shop has taken off its public catalog. */
   hiddenLabel?: string;
+  /**
+   * Something the shop still has to do before the course runs as it should,
+   * in one line: today, the course forms still waiting for the agency's
+   * wording (ADR 20261008-course-forms).
+   */
+  attention?: string;
   /** Schedule — the caller's one quiet act, rendered per its permissions. */
   actions?: ReactNode;
 };
@@ -131,6 +137,9 @@ export function CourseRoster({
                       ) : null}
                     </p>
                     <p className="mt-0.5 text-sm text-muted">{course.meta}</p>
+                    {course.attention ? (
+                      <p className="mt-0.5 text-sm text-warning-strong">{course.attention}</p>
+                    ) : null}
                   </div>
                 </LedgerRow>
               ))}

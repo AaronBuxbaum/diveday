@@ -163,6 +163,7 @@ A status change is made in the file and here; `pnpm gates` reads the files, not 
 | [H-103](H-103-guardian-email-erasure.md) | Implemented | 2026-10-07 | Can a guardian have their own email erased without erasing the child? | Decided 2026-10-07 (Aaron Buxbaum, in the project thread): erase just the guardian's email; the release is re-sealed as v4 with the redaction inside the seal. |
 | [H-104](H-104-medical-holds-every-departure.md) | Implemented | 2026-10-07 | Does a physician referral hold a diver on a departure that does not require the waiver? | Decided 2026-10-06, confirmed 2026-10-07 (Aaron Buxbaum, in the project thread): medical blockers always apply, whatever the departure's waiver setting. |
 | [H-105](H-105-cert-check-extension.md) | Implemented | 2026-10-08 | May a browser extension check a card on the agency's page, and certify it on a match? | Decided 2026-10-08 (Aaron Buxbaum, in the project thread): the staffer's own browser may do the lookup, a match certifies without a second tap, PADI comes later. |
+| [H-106](H-106-padi-elearning-check.md) | Implemented | 2026-10-08 | May the extension read a student's PADI eLearning and mark their course materials done? | Decided 2026-10-08 (Aaron Buxbaum, in the project thread): build it on a best guess of PADI's page and test it later; a finished course ticks the materials, with Undo. |
 
 ## Human verification queue
 
@@ -458,3 +459,4 @@ ADR](../../architecture/decisions/20260718-vercel-neon-hosting.md).
 | 2026-10-07 | **H-102 implemented** (Aaron Buxbaum, in the project thread): a hood and gloves are two rental kinds with a free-text size each, on both fit forms and the packing list; closes #1816. | Product owner |
 | 2026-10-07 | **H-104 implemented** (Aaron Buxbaum, in the project thread): a physician referral or refusal holds the diver on every departure, including one that does not require the waiver; closes #2096. | Product owner |
 | 2026-10-08 | **H-105 implemented** (Aaron Buxbaum, in the project thread): the DiveDay browser extension checks a level card on SSI's, NAUI's, SDI's, GUE's or CMAS's own lookup page from the staffer's browser, and a match certifies it, with Undo. | Product owner |
+| 2026-10-08 | **H-106 implemented** (Aaron Buxbaum, in the project thread): the extension searches the PADI Pros' Site by a course student's email, and when PADI shows that course's eLearning finished the student's materials are ticked done, with Undo; untested against the real page (#2259). | Product owner |

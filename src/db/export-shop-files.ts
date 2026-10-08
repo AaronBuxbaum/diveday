@@ -123,6 +123,10 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "packing_list",
       "rental_items",
       "rental_pricing",
+      // The shop's own words on every rental ticket (ADR
+      // 20260815-minimal-gear-register, amended 2026-10-08): its text, so its
+      // backup carries it.
+      "rental_terms",
       // The shop's own emergency numbers. Exported because the bundle is
       // the backup: a shop restoring from one must come back with the
       // chamber's number on its manifests, not an empty card.
@@ -189,6 +193,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         JSON.stringify(shop.packingList),
         JSON.stringify(shop.rentalItems),
         JSON.stringify(shop.rentalPricing),
+        shop.rentalTerms,
         JSON.stringify(shop.emergencyReference),
         shop.seasonStartMonth,
         shop.seasonStartDay,
@@ -1104,6 +1109,10 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "course_next_step",
       "course_next_step_at",
       "course_next_step_by_person_id",
+      // The tick that this student finished the course's learning
+      // materials, and who ticked it (ADR 20261008-course-learning-materials).
+      "course_materials_done_at",
+      "course_materials_done_by_person_id",
       "hotel_pickup_location",
       "pickup_time",
       "payment_status",
@@ -1146,6 +1155,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
           row.courseNextStep,
           row.courseNextStepAt,
           row.courseNextStepByPersonId,
+          row.courseMaterialsDoneAt,
+          row.courseMaterialsDoneByPersonId,
           row.hotelPickupLocation,
           row.pickupTime,
           payment?.status ?? "unpaid",
@@ -1885,6 +1896,123 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     note: EXPORT_FILE_NOTES["waiver_records.csv"],
   },
   {
+    file: "course_forms.csv",
+    header: ["id", "title", "current_version", "deleted_at", "created_at"],
+    rows: ({ courseFormRows, courseFormVersionRows }) =>
+      courseFormRows.map((row) => {
+        const latest = courseFormVersionRows
+          .filter((version) => version.formId === row.id)
+          .reduce<(typeof courseFormVersionRows)[number] | undefined>(
+            (newest, version) => (!newest || version.version > newest.version ? version : newest),
+            undefined,
+          );
+        return [row.id, latest?.title, latest?.version, row.deletedAt, row.createdAt];
+      }),
+    note: EXPORT_FILE_NOTES["course_forms.csv"],
+  },
+  {
+    file: "course_form_versions.csv",
+    header: [
+      "id",
+      "form_id",
+      "version",
+      "title",
+      "created_by_person_id",
+      "created_by_name",
+      "created_at",
+      "body",
+    ],
+    rows: ({ personName, courseFormVersionRows }) =>
+      courseFormVersionRows.map((row) => [
+        row.id,
+        row.formId,
+        row.version,
+        row.title,
+        row.createdByPersonId,
+        row.createdByPersonId ? personName.get(row.createdByPersonId) : null,
+        row.createdAt,
+        row.body,
+      ]),
+    note: EXPORT_FILE_NOTES["course_form_versions.csv"],
+  },
+  {
+    file: "course_form_requirements.csv",
+    header: ["id", "course_id", "form_id", "position", "deleted_at", "created_at"],
+    rows: ({ courseFormRequirementRows }) =>
+      courseFormRequirementRows.map((row) => [
+        row.id,
+        row.courseId,
+        row.formId,
+        row.position,
+        row.deletedAt,
+        row.createdAt,
+      ]),
+    note: EXPORT_FILE_NOTES["course_form_requirements.csv"],
+  },
+  {
+    file: "course_form_records.csv",
+    header: [
+      "id",
+      "person_id",
+      "person_name",
+      "booking_id",
+      "form_id",
+      "form_version_id",
+      "form_title",
+      "form_version",
+      "course_title",
+      "trip_id",
+      "instructor_names",
+      "paper_signed_on",
+      "signed_name",
+      "signature_method",
+      "recorded_by_person_id",
+      "recorded_by_name",
+      "consented_at",
+      "signed_at",
+      "guardian_name",
+      "guardian_relationship",
+      "guardian_signature_method",
+      "guardian_consented_at",
+      "guardian_signed_at",
+      "anonymized_at",
+      "anonymized_by_person_id",
+      "created_at",
+      "form_body",
+    ],
+    rows: ({ personName, courseFormRecordRows }) =>
+      courseFormRecordRows.map((row) => [
+        row.id,
+        row.personId,
+        personName.get(row.personId),
+        row.bookingId,
+        row.formId,
+        row.formVersionId,
+        row.formTitle,
+        row.formVersion,
+        row.courseTitle,
+        row.tripId,
+        row.instructorNames,
+        row.paperSignedOn,
+        row.signedName,
+        row.signatureMethod,
+        row.recordedByPersonId,
+        row.recordedByPersonId ? personName.get(row.recordedByPersonId) : null,
+        row.consentedAt,
+        row.signedAt,
+        row.guardianName,
+        row.guardianRelationship,
+        row.guardianSignatureMethod,
+        row.guardianConsentedAt,
+        row.guardianSignedAt,
+        row.anonymizedAt,
+        row.anonymizedByPersonId,
+        row.createdAt,
+        row.formBody,
+      ]),
+    note: EXPORT_FILE_NOTES["course_form_records.csv"],
+  },
+  {
     file: "rental_fit.csv",
     header: [
       "person_id",
@@ -2048,6 +2176,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "returned_at",
       "return_outcome",
       "return_note",
+      "dives_logged",
       "created_at",
     ],
     rows: ({ personName, bookingPerson, gearItemLabel, gearReservationRows }) =>
@@ -2067,6 +2196,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
           row.returnedAt,
           row.returnOutcome,
           row.returnNote,
+          row.divesLogged,
           row.createdAt,
         ];
       }),
@@ -3067,6 +3197,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "excludes",
       "schedule_days",
       "faqs",
+      "learning_materials",
       "hero_image_url",
       "hero_image_alt",
       "gallery_photos",
@@ -3100,6 +3231,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         JSON.stringify(row.excludes),
         JSON.stringify(row.scheduleDays),
         JSON.stringify(row.faqs),
+        JSON.stringify(row.learningMaterials),
         row.heroImageUrl,
         row.heroImageAlt,
         JSON.stringify(row.galleryPhotos),
