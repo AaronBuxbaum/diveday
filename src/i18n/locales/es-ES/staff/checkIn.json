@@ -3,8 +3,8 @@
   "instrument": {
     "hereOf": "<figure>{here}</figure> de {expected} aquí",
     "toCome": "{count} por llegar",
-    "cantBoard": "{count, plural, one {# buceador todavía no puede embarcar} other {# buceadores todavía no pueden embarcar}}",
-    "notHere": "{count, plural, one {# buceador no vino} other {# buceadores no vinieron}}"
+    "cantBoard": "{count, plural, one {# persona todavía no puede embarcar} other {# personas todavía no pueden embarcar}}",
+    "notHere": "{count, plural, one {# persona no vino} other {# personas no vinieron}}"
   },
   "row": {
     "arrived": "Registrado"

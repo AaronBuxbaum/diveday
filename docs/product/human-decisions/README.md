@@ -162,6 +162,7 @@ A status change is made in the file and here; `pnpm gates` reads the files, not 
 | [H-102](H-102-hood-glove-sizes.md) | Implemented | 2026-10-07 | Does a hood and glove size belong in the rental fit, and is hood_gloves one kind? | Decided 2026-10-07 (Aaron Buxbaum, in the project thread): split it, and give each a size, free text on both fit forms. |
 | [H-103](H-103-guardian-email-erasure.md) | Implemented | 2026-10-07 | Can a guardian have their own email erased without erasing the child? | Decided 2026-10-07 (Aaron Buxbaum, in the project thread): erase just the guardian's email; the release is re-sealed as v4 with the redaction inside the seal. |
 | [H-104](H-104-medical-holds-every-departure.md) | Implemented | 2026-10-07 | Does a physician referral hold a diver on a departure that does not require the waiver? | Decided 2026-10-06, confirmed 2026-10-07 (Aaron Buxbaum, in the project thread): medical blockers always apply, whatever the departure's waiver setting. |
+| [H-105](H-105-cert-check-extension.md) | Implemented | 2026-10-08 | May a browser extension check a card on the agency's page, and certify it on a match? | Decided 2026-10-08 (Aaron Buxbaum, in the project thread): the staffer's own browser may do the lookup, a match certifies without a second tap, PADI comes later. |
 
 ## Human verification queue
 
@@ -456,3 +457,4 @@ ADR](../../architecture/decisions/20260718-vercel-neon-hosting.md).
 | 2026-10-07 | **H-103 implemented** (Aaron Buxbaum, in the project thread): an owner erases a co-signing guardian's email on its own from the child's record; the release is re-sealed as v4 with the redaction inside the seal; closes #1673. | Product owner |
 | 2026-10-07 | **H-102 implemented** (Aaron Buxbaum, in the project thread): a hood and gloves are two rental kinds with a free-text size each, on both fit forms and the packing list; closes #1816. | Product owner |
 | 2026-10-07 | **H-104 implemented** (Aaron Buxbaum, in the project thread): a physician referral or refusal holds the diver on every departure, including one that does not require the waiver; closes #2096. | Product owner |
+| 2026-10-08 | **H-105 implemented** (Aaron Buxbaum, in the project thread): the DiveDay browser extension checks a level card on SSI's, NAUI's, SDI's, GUE's or CMAS's own lookup page from the staffer's browser, and a match certifies it, with Undo. | Product owner |

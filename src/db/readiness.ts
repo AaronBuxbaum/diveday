@@ -588,6 +588,12 @@ export async function reviewCertification(
     reviewedByPersonId?: string;
     /** Required for, and only meaningful on, a still-unsighted self-declaration. */
     sighting?: LevelCardSighting;
+    /**
+     * The review is the agency's own lookup page naming this diver at this
+     * level (H-105), read by `judgeAgencyPage`. Stamps `agencyCheckedAt`; a
+     * still-unsighted self-declaration is never certified this way.
+     */
+    agencyChecked?: boolean;
   },
 ): Promise<
   { ok: true; certification: Certification } | { ok: false; reason: CertificationReviewRefusal }
@@ -624,7 +630,10 @@ export async function reviewCertification(
   if (!existing) return { ok: false, reason: "not_found" };
 
   const sighting = isUnsightedSelfDeclaration(existing) ? input.sighting : undefined;
-  if (isUnsightedSelfDeclaration(existing) && !sighting?.identifier.trim()) {
+  if (
+    isUnsightedSelfDeclaration(existing) &&
+    (input.agencyChecked || !sighting?.identifier.trim())
+  ) {
     // Also enforced by `certifications_identifier_present_unless_self_declared`
     // in the database, which would reject the update outright. This refusal
     // exists so the surface can say *what to do* instead of surfacing a
@@ -644,6 +653,7 @@ export async function reviewCertification(
         status: input.status,
         reviewNote: reviewNoteFor(input.reviewNote),
         reviewedAt: nowDate(),
+        agencyCheckedAt: input.agencyChecked ? nowDate() : null,
         ...(reviewedByPersonId ? { reviewedByPersonId } : undefined),
         // Only ever written on the sighting path: a normal review must not be
         // able to rewrite the agency, number or level already on a captured
@@ -718,6 +728,7 @@ export async function unreviewCertification(
       reviewNote: null,
       reviewedAt: null,
       reviewedByPersonId: null,
+      agencyCheckedAt: null,
     })
     .where(
       and(

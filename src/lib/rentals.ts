@@ -13,6 +13,8 @@
  * {@link NITROX_CATALOG_ITEM} and {@link shopOffersNitrox}.
  */
 
+import { type ParticipantType, rentsGear, rentsKind } from "./participant-types";
+
 export type RentableItemKind =
   | "bcd"
   | "regulator"
@@ -611,13 +613,22 @@ function recorded(value: string | null | undefined): boolean {
  * handed; passing the catalog scopes the question to gear the shop still has.
  * Omit it and every item counts.
  *
+ * `participantType` scopes it to the seat (`rentsKind`, ADR
+ * 20261007-participant-types): a snorkeler is asked only for the surface kit,
+ * and a rider, who rents nothing, is never missing a size. Omit it and the
+ * question is the diver's.
+ *
  * This is a *readiness-of-the-record* signal for staff, never a boarding gate:
  * nothing here refuses anyone a seat or a place on a manifest.
  */
 export function rentalFitCompleteness(
   fit: RentalFitSizes | null | undefined,
   offeredKinds?: readonly string[],
+  participantType?: ParticipantType | null,
 ): RentalFitCompleteness {
+  // Nothing to rent is nothing to size: a rider stays aboard, so neither "no
+  // fit on file" nor a dive size they once gave is a gap on this seat.
+  if (participantType !== undefined && !rentsGear(participantType)) return { state: "complete" };
   // A row that exists only to hold the diver's note is not an incomplete fit —
   // it is no fit at all, and reading it as incomplete would nag staff about
   // missing sizes for a diver who never asked to rent anything. `fitStatedAt`
@@ -626,7 +637,9 @@ export function rentalFitCompleteness(
   // from reading as "asked, and takes none of it".
   if (!fit || fit.fitStatedAt === null) return { state: "not_recorded" };
   const offered = offeredKinds ? new Set<string>(toRentableKinds(offeredKinds)) : null;
-  const offers = (kind: RentableItemKind) => offered === null || offered.has(kind);
+  const offers = (kind: RentableItemKind) =>
+    (offered === null || offered.has(kind)) &&
+    (participantType === undefined || rentsKind(participantType, kind));
   // One shoe size answers for both boots and fins, whichever column holds it.
   // `recorded`, not `??`: an in-memory fit can carry `""` where a stored row
   // would carry null, and `?? ` would take the empty string as an answer and
