@@ -360,6 +360,21 @@ export const waiverRecords = pgTable(
     guardianConsentedAt: timestamp("guardian_consented_at", { withTimezone: true }),
     guardianSignedAt: timestamp("guardian_signed_at", { withTimezone: true }),
     /**
+     * **The guardian's address was erased on their own request**, and by whom
+     * (H-103, issue #1673). The guardian is a third party with no record of
+     * their own, so `eraseGuardianEmail` (`src/db/guardian-erasure.ts`) nulls
+     * `guardian_email` alone and leaves the diver, the medical answers and
+     * the co-signature standing. `guardian_email` is inside the version 1
+     * seal, so a release whose seal verified is re-sealed as version 4 — every
+     * signed fact but the address, plus these two columns — and reads as
+     * redacted rather than as tampered. Null on every record nobody asked
+     * about.
+     */
+    guardianEmailErasedAt: timestamp("guardian_email_erased_at", { withTimezone: true }),
+    guardianEmailErasedByPersonId: uuid("guardian_email_erased_by_person_id").references(
+      () => people.id,
+    ),
+    /**
      * The guardian section as last saved with "Save and finish later" — the
      * sibling of `draft_signer_name`, so a parent who comes back to the link
      * finds their own fields as they left them. Unsubmitted state, never
@@ -460,6 +475,12 @@ export const waiverRecords = pgTable(
         ${table.medicalClearanceEvaluatedOn} is not null
         and (${table.medicalClearanceDocumentUrl} is not null
           or ${table.medicalClearancePhysicianName} is not null))`,
+    ),
+    // An erased address stays erased: no writer may put one back on a release
+    // the guardian asked to be taken off (H-103, issue #1673).
+    check(
+      "waiver_records_guardian_email_erased_stays_erased",
+      sql`${table.guardianEmailErasedAt} is null or ${table.guardianEmail} is null`,
     ),
     // A guardian's signature is one act with four facts: when they signed,
     // when they consented, by which provider, and who they are to the diver.

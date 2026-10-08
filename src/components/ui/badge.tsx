@@ -73,6 +73,7 @@ export function Badge({
   size = "md",
   tabularNums = false,
   toneMark = true,
+  wraps = false,
   className = "",
   children,
 }: {
@@ -91,6 +92,12 @@ export function Badge({
    * have not already said.
    */
   toneMark?: boolean;
+  /**
+   * Let the words wrap inside the pill. Off by default: a pill is one line
+   * (issue #2008). On only where the caller has decided a stadium beats a
+   * clipped word, as the 80px tiles of the still-to-board grid do (#1360).
+   */
+  wraps?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -107,7 +114,10 @@ export function Badge({
     // centres on it. A drawn mark a caller passes in centres itself the same
     // way (badge.test.tsx sweeps for one that does not).
     <span
-      className={`inline-flex items-baseline rounded-full font-medium ${
+      // `whitespace-nowrap`: a pill is one line, or it is a two-line stadium
+      // ("Someone unaccounted for" on the roll call, issue #2008). Where a pill
+      // can be wider than its column, the caller gives it a line of its own.
+      className={`inline-flex items-baseline rounded-full font-medium ${wraps ? "" : "whitespace-nowrap "}${
         mark ? "gap-1" : ""
       } ${sizeClass[size]} ${toneClass[tone]}${tabularNums ? " tabular-nums" : ""}${
         className ? ` ${className}` : ""

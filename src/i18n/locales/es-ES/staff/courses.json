@@ -103,6 +103,7 @@
         "agency": "Agencia",
         "description": "Descripción del curso",
         "minimumCertificationLevel": "Requisito de certificación",
+        "certifiesLevel": "Certificación que otorga",
         "minimumAge": "Edad mínima",
         "isIntroCourse": "Estado de bautismo de buceo",
         "summary": "Subtítulo",

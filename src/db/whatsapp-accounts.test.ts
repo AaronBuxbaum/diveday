@@ -3,9 +3,10 @@ import { sql } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { openSecret } from "@/lib/secret-box";
 import { seededShopContext } from "@/test/db";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { shops } from "./schema";
 import {
+  claimWhatsAppWaba,
   connectShopWhatsAppAccount,
   disconnectShopWhatsAppAccount,
   getShopWhatsAppAccount,
@@ -145,6 +146,27 @@ describe("connectShopWhatsAppAccount", () => {
     expect(await shopIdForWhatsAppWaba(db, "waba_shared")).toBe(shop.id);
   });
 
+  it("refuses a held WABA inside a transaction without breaking the transaction", async () => {
+    // The signup completes under `claimWhatsAppWaba`'s transaction (#1769). A
+    // 23505 there aborts the whole transaction unless the insert ran in a
+    // savepoint, and the refusal would surface as "current transaction is
+    // aborted" instead of the worded `waba_already_connected`.
+    const { db, shop } = await seededShopContext();
+    const sibling = await siblingShop(db, "sibling-shop-waba-tx");
+    await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_tx" }), { key });
+
+    const afterwards = await db.transaction(async (tx) => {
+      const result = await connectShopWhatsAppAccount(
+        tx,
+        connectInput(sibling.id, { wabaId: "waba_tx" }),
+        { key },
+      );
+      expect(result).toEqual({ status: "refused", reason: "waba_already_connected" });
+      return shopIdForWhatsAppWaba(tx, "waba_tx");
+    });
+    expect(afterwards).toBe(shop.id);
+  });
+
   it("lets two shops connect before a WABA is recorded, because nulls repeat", async () => {
     // `waba_id` stays nullable under the unique index on purpose. A shop whose
     // row predates a recorded WABA is legal, and Postgres lets nulls repeat — so
@@ -239,6 +261,85 @@ describe("shopIdForWhatsAppWaba", () => {
     });
 
     expect(await shopIdForWhatsAppWaba(db, "waba_shared")).toBeNull();
+  });
+});
+
+/**
+ * **One Connect per WABA at a time** (issue #1769, H-83). Registering a number
+ * at Meta mints a PIN, and a row refused after that leaves the number bound to
+ * a PIN nobody holds; recovery runs through Meta support. So the pre-check,
+ * the Meta calls and the insert all run under one lock on the WABA, and the
+ * second Connect waits for the first row and refuses without registering.
+ */
+describe("claimWhatsAppWaba", () => {
+  /** A stand-in for the Meta round trip: records the register, then stores the row. */
+  function signupWork(shopId: string, registered: string[]) {
+    return async (tx: DbExecutor) => {
+      registered.push(shopId);
+      // A tick, so the two callers genuinely interleave on an unlocked path.
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      return connectShopWhatsAppAccount(tx, connectInput(shopId, { wabaId: "waba_race" }), {
+        key,
+      });
+    };
+  }
+
+  it("lets one of two shops connecting the same WABA at once register, and refuses the other first", async () => {
+    const { db, shop } = await seededShopContext();
+    const sibling = await siblingShop(db, "sibling-shop-waba-race");
+    const registered: string[] = [];
+
+    const outcomes = await Promise.all(
+      [shop.id, sibling.id].map((shopId) =>
+        claimWhatsAppWaba(db, { shopId, wabaId: "waba_race" }, signupWork(shopId, registered)),
+      ),
+    );
+
+    // The assertion that fails without the lock: both callers pass an
+    // unlocked pre-check and both register a number at Meta.
+    expect(registered).toHaveLength(1);
+    expect(outcomes.filter((outcome) => outcome.status === "held_elsewhere")).toHaveLength(1);
+    const winner = outcomes.find((outcome) => outcome.status === "claimed");
+    expect(winner?.status === "claimed" && winner.value.status).toBe("connected");
+    expect(await shopIdForWhatsAppWaba(db, "waba_race")).toBe(registered[0]);
+  });
+
+  it("lets the shop that holds the WABA reconnect", async () => {
+    const { db, shop } = await seededShopContext();
+    const registered: string[] = [];
+    await claimWhatsAppWaba(
+      db,
+      { shopId: shop.id, wabaId: "waba_race" },
+      signupWork(shop.id, registered),
+    );
+    const again = await claimWhatsAppWaba(
+      db,
+      { shopId: shop.id, wabaId: "waba_race" },
+      signupWork(shop.id, registered),
+    );
+    expect(again.status).toBe("claimed");
+    expect(registered).toEqual([shop.id, shop.id]);
+  });
+
+  it("leaves no row and no lock behind when the work throws", async () => {
+    // A crashed request must not strand the WABA: the lock is the
+    // transaction's own, so it ends with it, and nothing was reserved.
+    const { db, shop } = await seededShopContext();
+    const sibling = await siblingShop(db, "sibling-shop-waba-crash");
+    await expect(
+      claimWhatsAppWaba(db, { shopId: shop.id, wabaId: "waba_race" }, async () => {
+        throw new Error("Meta went away");
+      }),
+    ).rejects.toThrow("Meta went away");
+    expect(await shopIdForWhatsAppWaba(db, "waba_race")).toBeNull();
+
+    const registered: string[] = [];
+    const next = await claimWhatsAppWaba(
+      db,
+      { shopId: sibling.id, wabaId: "waba_race" },
+      signupWork(sibling.id, registered),
+    );
+    expect(next.status).toBe("claimed");
   });
 });
 

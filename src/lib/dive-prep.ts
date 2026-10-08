@@ -40,9 +40,20 @@ export type RentalItemKind =
   | "dive_computer"
   | "gopro"
   | "drysuit"
-  | "hood_gloves"
+  | "hood"
+  | "gloves"
   | "torch"
   | "smb";
+
+/** The kinds a flagged diver's stated sizes are listed under (`statedSizeItems`). */
+export type StatedSizeKind =
+  | "bcd"
+  | "wetsuit"
+  | "boots"
+  | "mask_fins"
+  | "drysuit"
+  | "hood"
+  | "gloves";
 
 export type RentalFit = {
   rentsBcd: boolean;
@@ -53,13 +64,17 @@ export type RentalFit = {
   rentsDiveComputer: boolean;
   rentsGopro: boolean;
   rentsDrysuit: boolean;
-  rentsHoodGloves: boolean;
+  rentsHood: boolean;
+  rentsGloves: boolean;
   rentsTorch: boolean;
   rentsSmb: boolean;
   bcdSize: string | null;
   wetsuitSize: string | null;
   /** On the drysuit scale, never the wetsuit's (issue 1414, schema.ts). */
   drysuitSize: string | null;
+  /** Free text, like the drysuit's (H-102): a hood and gloves both by size and thickness. */
+  hoodSize: string | null;
+  gloveSize: string | null;
   bootSize: string | null;
   finSize: string | null;
   weightPreference: string | null;
@@ -197,6 +212,13 @@ export type PrepPiece = {
    */
   drysuitFinFit: boolean;
   /**
+   * The gloves of a diver in a drysuit (H-102, dive-domain review). A drysuit
+   * diver may wear wet gloves or dry gloves on a ring system, and those are
+   * different things off the rack, so the line asks rather than reading like
+   * any other pair to pull.
+   */
+  drysuitGloves: boolean;
+  /**
    * **The diver's fit asks for this piece and the shop's catalog no longer
    * offers it.** The piece stays on the list and says so.
    *
@@ -239,6 +261,8 @@ export type PrepLine = {
    * rows.
    */
   drysuitFinFit: boolean;
+  /** These divers are in drysuits and rent gloves: wet or dry is still to settle (`PrepPiece`). */
+  drysuitGloves: boolean;
   /**
    * This line's item is not in the shop's catalog any more (`PrepPiece`). A
    * property of the shop rather than of the diver, so it is the same answer
@@ -344,7 +368,7 @@ export type DivePrepChecklist = {
      * "bring a range in their band" means starting from scratch on a moving
      * dock. It is a starting point, not an allocation.
      */
-    statedSizes: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins" | "drysuit"; size: string }[];
+    statedSizes: { kind: StatedSizeKind; size: string }[];
     /**
      * Whole days since the flag was raised. A shortage is a fact about one
      * day, so an old flag is a prompt to re-ask the diver rather than a
@@ -375,7 +399,8 @@ const KIND_ORDER = [
   "mask_fins",
   "weights",
   "dive_computer",
-  "hood_gloves",
+  "hood",
+  "gloves",
   "torch",
   "smb",
   // **Last, below the dive-specific add-ons** (`dive-domain-expert`). The
@@ -396,13 +421,13 @@ const _everyKindHasAPackingPosition: Record<KindWithNoPackingPosition, never> = 
  * Kit that has no size to record, so a blank is expected rather than a gap.
  *
  * **Derived, not listed** (issue #1805). This was a hand-kept list of three,
- * and it had drifted: a hood, a torch and an SMB have no
- * `rental_fit_profiles` size column either — `src/lib/rentals.ts` says so at
- * `RENTABLE_ITEMS` and enforces it in `SIZED_RENTAL_KINDS` — so a diver
- * renting one read "Not recorded" on the packing line, naming a gap that
- * cannot be filled by anybody. The complement of the sized kinds is the
- * answer, and taking it from the same constant is what stops the two lists
- * disagreeing again.
+ * and it had drifted: a torch and an SMB have no `rental_fit_profiles` size
+ * column either — `src/lib/rentals.ts` says so at `RENTABLE_ITEMS` and
+ * enforces it in `SIZED_RENTAL_KINDS` — so a diver renting one read "Not
+ * recorded" on the packing line, naming a gap that cannot be filled by
+ * anybody. The complement of the sized kinds is the answer, and taking it from
+ * the same constant is what stops the two lists disagreeing again: when a hood
+ * and gloves gained a size each (H-102), they left this list by themselves.
  */
 const SIZED = new Set<string>(SIZED_RENTAL_KINDS);
 export const UNSIZED_ITEM_KINDS: readonly RentalItemKind[] = KIND_ORDER.filter(
@@ -431,6 +456,9 @@ export function prepLineKey(piece: Omit<PrepPiece, "kind">): string {
   // A stated shoe size means one pair over a bare foot and another over a
   // drysuit boot, so the same string is two rows rather than one of two.
   if (piece.drysuitFinFit) return `\u0000drysuit-fin:${stated}`;
+  // The same reason, one item over: a pair of L gloves over a wet hand and an
+  // L pair for a drysuit diver are two questions at the rack.
+  if (piece.drysuitGloves) return `\u0000drysuit-gloves:${stated}`;
   return stated;
 }
 
@@ -516,6 +544,7 @@ function rentedItems(fit: RentalFit, offered: CatalogScope = null): PrepPiece[] 
           fitAtCheckIn: true,
           drysuitWeightCheck: false,
           drysuitFinFit: false,
+          drysuitGloves: false,
           notOffered: !offers(kind),
         }
       : {
@@ -524,6 +553,7 @@ function rentedItems(fit: RentalFit, offered: CatalogScope = null): PrepPiece[] 
           fitAtCheckIn: false,
           drysuitWeightCheck: false,
           drysuitFinFit: false,
+          drysuitGloves: false,
           notOffered: !offers(kind),
         };
   /** A piece with no size at all; a flag never changes what to pack. */
@@ -533,6 +563,7 @@ function rentedItems(fit: RentalFit, offered: CatalogScope = null): PrepPiece[] 
     fitAtCheckIn: false,
     drysuitWeightCheck: false,
     drysuitFinFit: false,
+    drysuitGloves: false,
     notOffered: !offers(kind),
   });
   /**
@@ -568,6 +599,7 @@ function rentedItems(fit: RentalFit, offered: CatalogScope = null): PrepPiece[] 
         fitAtCheckIn: false,
         drysuitWeightCheck: true,
         drysuitFinFit: false,
+        drysuitGloves: false,
         notOffered: !offers("weights"),
       };
     }
@@ -577,6 +609,7 @@ function rentedItems(fit: RentalFit, offered: CatalogScope = null): PrepPiece[] 
       fitAtCheckIn: false,
       drysuitWeightCheck: false,
       drysuitFinFit: false,
+      drysuitGloves: false,
       notOffered: !offers("weights"),
     };
   };
@@ -632,8 +665,12 @@ function rentedItems(fit: RentalFit, offered: CatalogScope = null): PrepPiece[] 
   // shoe size either, which is what `maskFins` above marks rather than what
   // this line handles.
   if (fit.rentsDrysuit) items.push(sized("drysuit", fit.drysuitSize));
-  // The three add-ons that carry no size (see `RENTABLE_ITEMS`).
-  if (fit.rentsHoodGloves) items.push(unsized("hood_gloves"));
+  // Two kinds with a free-text size each (H-102, issue #1816).
+  if (fit.rentsHood) items.push(sized("hood", fit.hoodSize));
+  if (fit.rentsGloves) {
+    items.push({ ...sized("gloves", fit.gloveSize), drysuitGloves: inDrysuit && !flagged });
+  }
+  // The two add-ons that carry no size (see `RENTABLE_ITEMS`).
   if (fit.rentsTorch) items.push(unsized("torch"));
   if (fit.rentsSmb) items.push(unsized("smb"));
   // **Sorted, not pushed in order** (issue #1805, `dive-domain-expert`). The
@@ -656,10 +693,8 @@ function rentedItems(fit: RentalFit, offered: CatalogScope = null): PrepPiece[] 
  * sees everything else there. Empty when nothing sized was recorded, which is
  * its own useful signal: there is no starting point to work from.
  */
-function statedSizeItems(
-  fit: RentalFit,
-): { kind: "bcd" | "wetsuit" | "boots" | "mask_fins" | "drysuit"; size: string }[] {
-  const items: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins" | "drysuit"; size: string }[] = [];
+function statedSizeItems(fit: RentalFit): { kind: StatedSizeKind; size: string }[] {
+  const items: { kind: StatedSizeKind; size: string }[] = [];
   const bcdSize = size(fit.bcdSize);
   if (fit.rentsBcd && bcdSize) items.push({ kind: "bcd", size: bcdSize });
   if (fit.rentsWetsuit) {
@@ -672,6 +707,10 @@ function statedSizeItems(
   // piece, so the fitter needs the size the diver actually asked for (issue 1414).
   const drysuitSize = size(fit.drysuitSize);
   if (fit.rentsDrysuit && drysuitSize) items.push({ kind: "drysuit", size: drysuitSize });
+  const hoodSize = size(fit.hoodSize);
+  if (fit.rentsHood && hoodSize) items.push({ kind: "hood", size: hoodSize });
+  const gloveSize = size(fit.gloveSize);
+  if (fit.rentsGloves && gloveSize) items.push({ kind: "gloves", size: gloveSize });
   const finSize = size(fit.finSize);
   if (fit.rentsMaskFins && finSize) items.push({ kind: "mask_fins", size: finSize });
   return items;
@@ -818,6 +857,7 @@ export function buildDivePrepChecklist(input: {
         fitAtCheckIn: item.fitAtCheckIn,
         drysuitWeightCheck: item.drysuitWeightCheck,
         drysuitFinFit: item.drysuitFinFit,
+        drysuitGloves: item.drysuitGloves,
         notOffered: item.notOffered,
       });
     }
@@ -838,6 +878,7 @@ export function buildDivePrepChecklist(input: {
       // Same reason, same order: "fins that clear a drysuit boot" is a job,
       // "nobody wrote a shoe size down" is a gap.
       if (a.drysuitFinFit !== b.drysuitFinFit) return a.drysuitFinFit ? -1 : 1;
+      if (a.drysuitGloves !== b.drysuitGloves) return a.drysuitGloves ? -1 : 1;
       return 0;
     }
     if (b.size === null) return -1;
@@ -846,6 +887,7 @@ export function buildDivePrepChecklist(input: {
     // One stated size, two rows (see `prepLineKey`): the bare-foot pair first,
     // the drysuit pair under it, in that order on every render.
     if (a.drysuitFinFit !== b.drysuitFinFit) return a.drysuitFinFit ? 1 : -1;
+    if (a.drysuitGloves !== b.drysuitGloves) return a.drysuitGloves ? 1 : -1;
     return 0;
   });
   for (const line of lines) line.divers.sort((a, b) => a.localeCompare(b));
@@ -912,6 +954,8 @@ export type RentalFitLine =
          * than `false`, like `drysuitFinFit`.
          */
         drysuitWeightCheck?: true;
+        /** The gloves of a diver in a drysuit: wet or dry is still to settle. Absent rather than `false`. */
+        drysuitGloves?: true;
         /**
          * A piece the shop's catalog no longer offers. Kept rather than
          * filtered for the same reason `PrepPiece.notOffered` is kept: the
@@ -962,6 +1006,7 @@ export function rentalFitLine(
       size: item.size,
       ...(item.drysuitFinFit ? { drysuitFinFit: true as const } : {}),
       ...(item.drysuitWeightCheck ? { drysuitWeightCheck: true as const } : {}),
+      ...(item.drysuitGloves ? { drysuitGloves: true as const } : {}),
       ...(item.notOffered ? { notOffered: true as const } : {}),
     }));
   if (items.length === 0) return { state: "own_kit" };

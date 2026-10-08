@@ -1,12 +1,33 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  completeEmbeddedSignup,
+  type CompleteSignupInput,
+  confirmWabaAccess,
   courtesyTemplateDefinition,
+  exchangeSignupCode,
+  finishEmbeddedSignup,
+  GRAPH_REQUEST_TIMEOUT_MS,
   generateRegistrationPin,
+  type WhatsAppSignupConfig,
+  type WhatsAppSignupResult,
   whatsAppSignupConfigFromEnvironment,
 } from "./whatsapp-signup";
 
 const config = { appId: "app-1", appSecret: "app-secret", configId: "config-1" };
+
+/**
+ * The whole flow as the caller runs it, minus the lock it takes between the
+ * two halves (`src/db/whatsapp-signup.ts`): exchange, then steps 2–4.
+ */
+async function completeEmbeddedSignup(
+  signup: CompleteSignupInput,
+  signupConfig: WhatsAppSignupConfig,
+  fetchImpl: typeof fetch,
+): Promise<WhatsAppSignupResult> {
+  const exchanged = await exchangeSignupCode(signup.code, signupConfig, fetchImpl);
+  if (exchanged.status === "failed") return exchanged;
+  const { code: _code, ...rest } = signup;
+  return finishEmbeddedSignup({ ...rest, accessToken: exchanged.accessToken }, fetchImpl);
+}
 
 const input = {
   code: "AQD-signup-code",
@@ -250,6 +271,35 @@ describe("completeEmbeddedSignup", () => {
     });
   });
 
+  /**
+   * **Every Graph call is bounded** (issue #1769). Steps 2–4 run while a
+   * database transaction holds a pooled connection, so a call Meta never
+   * answers must not hold that connection forever.
+   */
+  it("sends every Graph call with a timeout signal", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    try {
+      const fetchImpl = fetchSequence();
+      await completeEmbeddedSignup(input, config, fetchImpl);
+      expect(fetchImpl).toHaveBeenCalledTimes(4);
+      for (const [, init] of fetchImpl.mock.calls) expect(init.signal).toBeInstanceOf(AbortSignal);
+      expect(timeout).toHaveBeenCalledTimes(4);
+      expect(timeout).toHaveBeenCalledWith(GRAPH_REQUEST_TIMEOUT_MS);
+    } finally {
+      timeout.mockRestore();
+    }
+  });
+
+  it("reports a Graph call that timed out as a timeout, without throwing", async () => {
+    const fetchImpl = fetchSequence();
+    fetchImpl.mockImplementationOnce(async () => json(200, { access_token: "EAAG-token" }));
+    fetchImpl.mockImplementationOnce(async () => {
+      throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+    });
+    const result = await completeEmbeddedSignup(input, config, fetchImpl);
+    expect(result).toMatchObject({ status: "failed", step: "register", errorCode: "timeout" });
+  });
+
   it("reports an exchange that returns no token", async () => {
     const fetchImpl = fetchSequence({ 0: json(200, { token_type: "bearer" }) });
     const result = await completeEmbeddedSignup(input, config, fetchImpl);
@@ -258,6 +308,45 @@ describe("completeEmbeddedSignup", () => {
       status: "failed",
       step: "exchange",
       errorCode: "invalid_response",
+    });
+  });
+});
+
+/**
+ * **The token has to reach the WABA it was posted with** (issue #1766). The
+ * WABA id is its own form field, so a valid code for one account must not let
+ * a caller ask about another account's DiveDay holder.
+ */
+describe("confirmWabaAccess", () => {
+  it("reads the WABA with the exchanged token, under the timeout", async () => {
+    const fetchImpl = vi.fn().mockImplementation(async () => json(200, { id: "waba-1" }));
+    expect(await confirmWabaAccess("waba-1", "EAAG-token", fetchImpl)).toEqual({
+      status: "visible",
+    });
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(String(url)).toContain("/waba-1?fields=id");
+    expect(init.headers.Authorization).toBe("Bearer EAAG-token");
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("refuses as an exchange failure when the token cannot see that WABA", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockImplementation(async () =>
+        json(400, { error: { message: "Unsupported get request", code: 100, error_subcode: 33 } }),
+      );
+    expect(await confirmWabaAccess("waba-other", "EAAG-token", fetchImpl)).toMatchObject({
+      status: "failed",
+      step: "exchange",
+    });
+  });
+
+  it("refuses when Meta answers for a different id", async () => {
+    const fetchImpl = vi.fn().mockImplementation(async () => json(200, { id: "waba-2" }));
+    expect(await confirmWabaAccess("waba-1", "EAAG-token", fetchImpl)).toMatchObject({
+      status: "failed",
+      step: "exchange",
+      errorCode: "waba_not_visible",
     });
   });
 });

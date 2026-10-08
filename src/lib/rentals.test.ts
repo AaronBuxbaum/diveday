@@ -20,6 +20,7 @@ import {
   SIZED_RENTAL_KINDS,
   shopOffersNitrox,
   sizedRentalKindOfGearKind,
+  sizeForRentalItem,
   toRentableKinds,
 } from "./rentals";
 
@@ -330,13 +331,44 @@ describe("rentalFitCompleteness", () => {
     rentsMaskFins: false,
     rentsWeights: false,
     rentsDrysuit: false,
+    rentsHood: false,
+    rentsGloves: false,
     bcdSize: null,
     wetsuitSize: null,
     drysuitSize: null,
+    hoodSize: null,
+    gloveSize: null,
     bootSize: null,
     finSize: null,
     weightPreference: null,
   };
+
+  it("asks a hood and gloves for their own sizes, each on its own (H-102)", () => {
+    // A warm-water diver takes gloves and no hood: only the gloves need a size.
+    expect(rentalFitCompleteness({ ...OWN_KIT, rentsGloves: true })).toEqual({
+      state: "incomplete",
+      missing: ["gloves"],
+    });
+    expect(
+      rentalFitCompleteness({ ...OWN_KIT, rentsHood: true, rentsGloves: true, gloveSize: "L" }),
+    ).toEqual({ state: "incomplete", missing: ["hood"] });
+    expect(
+      rentalFitCompleteness({
+        ...OWN_KIT,
+        rentsHood: true,
+        rentsGloves: true,
+        hoodSize: "M, 5 mm",
+        gloveSize: "L",
+      }),
+    ).toEqual({ state: "complete" });
+    // A shop that has stopped renting hoods is not nagged for a hood size.
+    expect(rentalFitCompleteness({ ...OWN_KIT, rentsHood: true }, ["bcd"])).toEqual({
+      state: "complete",
+    });
+    expect(sizeForRentalItem({ ...OWN_KIT, rentsHood: true, hoodSize: " M, 5 mm " }, "hood")).toBe(
+      "M, 5 mm",
+    );
+  });
 
   it("treats no fit on file as its own state, never as incomplete", () => {
     expect(rentalFitCompleteness(null)).toEqual({ state: "not_recorded" });
@@ -497,7 +529,8 @@ describe("offeredRentalFitFields / NOTHING_RENTED", () => {
       rentsDiveComputer: true,
       rentsGopro: true,
       rentsDrysuit: true,
-      rentsHoodGloves: true,
+      rentsHood: true,
+      rentsGloves: true,
       rentsTorch: true,
       rentsSmb: true,
     };
@@ -564,8 +597,6 @@ describe("sizedRentalKindOfGearKind", () => {
       "dive_computer",
       "gopro",
       "tank",
-      "hood",
-      "gloves",
       "torch",
       "dpv",
       "smb",
@@ -581,6 +612,13 @@ describe("sizedRentalKindOfGearKind", () => {
     // this module never loads the register (ADR 20260815-minimal-gear-register).
     expect(sizedRentalKindOfGearKind("")).toBeNull();
     expect(sizedRentalKindOfGearKind("hood_gloves")).toBeNull();
+  });
+
+  it("teaches a hood and gloves their own columns, now that each has a size (H-102)", () => {
+    expect(sizedRentalKindOfGearKind("hood")).toBe("hood");
+    expect(sizedRentalKindOfGearKind("gloves")).toBe("gloves");
+    expect(SIZED_RENTAL_FIT_COLUMN.hood).toBe("hoodSize");
+    expect(SIZED_RENTAL_FIT_COLUMN.gloves).toBe("gloveSize");
   });
 
   it("never answers with a kind the fit has no column for", () => {

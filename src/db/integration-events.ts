@@ -83,7 +83,11 @@ async function loadOrderIntegrationPayload(
     })
     .from(orderLineItems)
     .where(and(eq(orderLineItems.shopId, shopId), eq(orderLineItems.orderId, orderId)))
-    .orderBy(asc(orderLineItems.createdAt), asc(orderLineItems.id));
+    .orderBy(
+      asc(orderLineItems.createdAt),
+      asc(orderLineItems.description),
+      asc(orderLineItems.id),
+    );
 
   return {
     orderId: row.order.id,

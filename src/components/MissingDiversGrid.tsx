@@ -230,6 +230,7 @@ export function MissingDiversGrid({
                   tone="danger"
                   size="sm"
                   toneMark={false}
+                  wraps
                   className="mt-0.5 max-w-full text-center text-balance leading-tight font-semibold"
                 >
                   {copy.blockedLabel}

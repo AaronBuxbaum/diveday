@@ -221,6 +221,7 @@ export function TripRosterContent({
           canManageOrders,
           shopRentalItems,
           splitAsksDateOfBirth: guests.splitAsksDateOfBirth,
+          certifyDefaultLevel: guests.certifyDefaultLevel,
           compact,
           showSummaryHeading: !compact,
         }}
@@ -248,7 +249,7 @@ export function TripRosterContent({
           addNoteAction: actions.addInternalNoteAction,
           deleteNoteAction: actions.deleteInternalNoteAction,
           saveEmergencyContactAction: actions.saveRosterEmergencyContactAction,
-          certifyDiverAction: actions.certifyDiverAction,
+          certifyDiverAction: guests.certifies ? actions.certifyDiverAction : undefined,
           saveCourseNextStepAction: actions.saveCourseNextStepAction,
           updatePickupAction: actions.updateBookingPickupAction,
         }}

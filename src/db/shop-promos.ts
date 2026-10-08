@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gt, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { nowDate, nowMs } from "@/lib/clock";
 import {
   type PromotionProvider,
@@ -280,7 +280,12 @@ export async function listShopPromoCodes(
         .leftJoin(shopPromoRedemptions, eq(shopPromoRedemptions.promoCodeId, shopPromoCodes.id))
         .where(scope)
         .groupBy(shopPromoCodes.id)
-        .orderBy(promoLedgerGroupRank(now), desc(shopPromoCodes.createdAt), desc(shopPromoCodes.id))
+        .orderBy(
+          promoLedgerGroupRank(now),
+          desc(shopPromoCodes.createdAt),
+          asc(shopPromoCodes.code),
+          desc(shopPromoCodes.id),
+        )
         .limit(limit)
         .offset(offset),
   });

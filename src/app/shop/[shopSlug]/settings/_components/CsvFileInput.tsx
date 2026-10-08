@@ -26,18 +26,21 @@ import { buttonClass } from "@/components/ui/button";
 export function CsvFileInput({
   name,
   required,
+  multiple,
   copy,
 }: {
   name: string;
   required?: boolean;
+  /** More than one file in one pick — a bundle's files that are one thing to a shop. */
+  multiple?: boolean;
   /** A Client Component takes its words as props (src/i18n/staff-messages.ts). */
   copy: { choose: string; chooseAnother: string };
 }) {
   const [picked, setPicked] = useState<string | null>(null);
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    setPicked(file?.name ?? null);
+    const names = [...(event.target.files ?? [])].map((file) => file.name);
+    setPicked(names.length > 0 ? names.join(", ") : null);
   }
 
   return (
@@ -54,6 +57,7 @@ export function CsvFileInput({
           name={name}
           accept=".csv,text/csv"
           required={required}
+          multiple={multiple}
           onChange={handleChange}
           className="sr-only"
         />

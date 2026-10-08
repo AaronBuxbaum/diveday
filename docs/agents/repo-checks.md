@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 45 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 46 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -291,6 +291,14 @@ The `.set()` search, and the brace match that reads its literal, both end at the
 **The exemption's reason is required.** `diveday:allow-flat-revision:` with nothing after the colon is refused; `check-db-concurrency.mjs` already spell theirs the same way.
 
 The anchor is matched per line, so a `.update(\n  trips,\n)` split across three lines is not an anchor and the write goes uninspected. Biome keeps it on one line today. If that ever changes, this is the line to change with it.
+
+### time-id-order
+
+The time-id-order one (`scripts/check-time-id-order.mjs`) fails any `.orderBy(…)` whose last two keys are a column ending in `At` and then an `id`. Every `id` in this schema is a `defaultRandom()` uuid. In production the timestamp decides and the id never runs, because `created_at` comes from the clock and two rows are microseconds apart; under test the clock is frozen at the harness boundary, every row a run writes shares one instant, and the whole order is a uuid that differs in every seeded database. Three visual baselines re-ordered themselves that way on commits that touched neither the surface nor its query, each found by eye in a diff image (issue #1762, ruled H-81). The fix is a key a person could predict between the two, such as a name, a title or a code, with the id kept last for a total order.
+
+`src/db/export.ts` is exempt whole: a CSV's row order is not something a person reads as meaningful, stability within one database is all an export needs, and it holds most of the matches in the tree. Tests are skipped. An order nobody is shown (a revocation sweep, a nightly queue, a seed whose timestamps are unique by construction) says `diveday:allow-time-id-order: <why>` in a comment directly above the `.orderBy(` or inside its arguments, and the reason is required.
+
+A JavaScript comparator that ties on a timestamp has the same failure and no signature this rule can read, so it is left to review.
 
 The opposite mistake the issue names — bumping for something immaterial, which re-alerts every diver's phone for a typo fixed in a conditions note — is deliberately left un-guarded. It has no mechanical signature; guarding the cheap half of a rule beats guarding neither.
 

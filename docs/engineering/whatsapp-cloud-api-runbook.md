@@ -88,15 +88,19 @@ place to look.
 Signup failures name the step that failed (`signup_failed_exchange`, `_register`, `_subscribe`,
 `_template`) and log as `notification.whatsapp_signup_failed`:
 
-- **exchange** — the one-time code was already used or expired. Press Connect again.
-- **register** — only ever attempted for a number DiveDay has not registered before. The number is
-  probably still active in the consumer WhatsApp or WhatsApp Business *app* and has to be removed
+- **exchange** — the one-time code was already used or expired, or the token it returned cannot read
+  the WABA the form posted (the two are reported identically, so the refusal never says whether
+  another shop holds a WABA the caller cannot see). Press Connect again.
+- **register** — only ever attempted for a number DiveDay has not finished registering. The number
+  is probably still active in the consumer WhatsApp or WhatsApp Business *app* and has to be removed
   there first. A `133005` here means the number is bound to a **different two-step PIN** than the one
-  just generated — someone set one outside DiveDay — and it is reported rather than retried, because
+  DiveDay sent — someone set one outside DiveDay — and it is reported rather than retried, because
   repeated wrong guesses walk the number toward a Meta-side lockout (`133008`).
-- **subscribe** / **template** — connected but incomplete. Pressing Connect again is safe: a
-  reconnect skips registration entirely (the number is already registered, and Meta binds it to its
-  first PIN forever) and an existing template is treated as success rather than an error.
+- **subscribe** / **template**, or a **register** that timed out — the number may now be bound to
+  the PIN DiveDay sent, so the row is stored *parked*: the sealed PIN, an empty `template_name`, no
+  sender, and the settings page shows the shop as not connected. Pressing Connect again is safe: it
+  re-registers with the stored PIN rather than a new one, a finished row skips registration
+  entirely, and an existing template is treated as success rather than an error.
 
 ## Rotating `SECRET_ENCRYPTION_KEY`
 

@@ -48,15 +48,6 @@ type ActivityParamShapes = {
    */
   identity_confirmed: { actor: string; diver: string };
   /**
-   * …and **at the counter**, which is the same write and not the same evidence:
-   * the person is standing in front of the staffer who vouched for them, while
-   * the roster's version is somebody reading a list. A shop asking months later
-   * how a stranger's dives ended up under this name is asking exactly that, so
-   * the two doors do not share one sentence (`dive-domain-expert` review of
-   * issue #1696).
-   */
-  identity_confirmed_at_counter: { actor: string; diver: string };
-  /**
    * …or answered "not the same person": the seat became a new diver of its
    * own, named `diver` (`splitBookingIdentity`). On the departure.
    */
@@ -215,7 +206,6 @@ export const ACTIVITY_CODES = [
   "booking_no_show_boarded",
   "booking_no_show_missing_after_dive",
   "identity_confirmed",
-  "identity_confirmed_at_counter",
   "identity_split",
   "identity_split_off",
   "crew_assigned",

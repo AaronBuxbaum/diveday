@@ -14,6 +14,7 @@ import {
 import { listDiverMergeCandidates } from "@/db/diver-merge";
 import { getDiverProfile } from "@/db/divers";
 import { canPersonExportShopData } from "@/db/export";
+import { listGuardianEmails } from "@/db/guardian-erasure";
 import { personThread } from "@/db/inbound-messages";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -33,14 +34,11 @@ import { ConversationSection } from "./_components/ConversationSection";
 import { DiverDetailsGroup } from "./_components/DiverDetailsGroup";
 import { DiverHeader } from "./_components/DiverHeader";
 import { DiverNotesSection } from "./_components/DiverNotesSection";
+import { DiverRecordFoot } from "./_components/DiverRecordFoot";
 import { DiverStatusLedger } from "./_components/DiverStatusLedger";
 import { DiverStory } from "./_components/DiverStory";
-import { DownloadDiverExportButton } from "./_components/DownloadDiverExportButton";
-import { ErasePersonalData } from "./_components/ErasePersonalData";
 import { GearAndSizes } from "./_components/GearAndSizes";
-import { MergeDiver } from "./_components/MergeDiver";
 import { NoticeBanner } from "./_components/NoticeBanner";
-import { RemoveDiver } from "./_components/RemoveDiver";
 import { RestoreDiver } from "./_components/RestoreDiver";
 import { WaiverGroup } from "./_components/WaiverGroup";
 import { canRaiseInvoiceFor } from "./_lib/invoice-door";
@@ -219,13 +217,16 @@ export default async function DiverDetailPage({
   // Three reads that need the two gates above, so they could not ride the
   // `Promise.all` that produced them — concurrent with each other instead of
   // the serial pair they used to be.
-  const [mergeCandidates, status, { trips: scannedTrips }] = await Promise.all([
+  const [mergeCandidates, status, { trips: scannedTrips }, guardianEmails] = await Promise.all([
     canMerge && !removed ? listDiverMergeCandidates(db, shop.id, personId) : [],
     // The readiness of the departure this diver is next on, read through the
     // entry the Today queue and the manifest already use — never a second
     // detector (`_lib/status-load.ts`).
     diverStatusRows(db, shop.id, diver, now, { collectHasSomewhereToGo }),
     pagedUpcomingTripsWithCounts(db, shop.id, { limit: BOOK_ACTIVITY_TRIP_SCAN_LIMIT }),
+    // The co-signing guardians' addresses, for the owner's control that erases
+    // one on the guardian's request (H-103). Nobody else is shown them here.
+    canErase ? listGuardianEmails(db, shop.id, personId) : [],
   ]);
   const upcoming = scannedTrips.filter(
     (trip) =>
@@ -467,61 +468,20 @@ export default async function DiverDetailPage({
           now={now}
         />
       </div>
-      {/* **The quiet foot** — the things you do *to* a record rather than with
-          it. No rule of its own: the file's last hairline already closes the
-          record above it, and a second one 48px lower read as a stray line.
-          Nothing here is primary-weight, and reaching the two destructive ones
-          costs a scroll on purpose (ADR 20260802-diver-data-erasure). */}
-      <div className="mt-10 space-y-6">
-        {canMerge && !removed && mergeCandidates.length > 0 ? (
-          <MergeDiver
-            candidates={mergeCandidates}
-            shopSlug={shopSlug}
-            personId={personId}
-            t={t}
-            status={noticeForForm(diverNotice, "merge")}
-          />
-        ) : null}
-        <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
-          {canExport ? (
-            <DownloadDiverExportButton
-              href={`/shop/${shopSlug}/divers/${personId}/export`}
-              idleLabel={t("divers.export.downloadButton.idle")}
-              acknowledgedLabel={t("divers.export.downloadButton.acknowledged")}
-            />
-          ) : null}
-          {/* Nothing to delete twice: a removed diver gets the Restore panel at
-              the top of the record instead. */}
-          {canDelete && !removed ? (
-            <RemoveDiver
-              diver={diver}
-              shopSlug={shopSlug}
-              personId={personId}
-              t={t}
-              status={noticeForForm(diverNotice, "remove")}
-            />
-          ) : null}
-        </div>
-        {/* **Erasure is offered on a deleted record and nowhere else.** It is
-            the one control in the product with no undo, and it used to sit at
-            the foot of every diver's record — including the diver a staffer
-            opened to take a payment from. Deleting first is the step that makes
-            the erase a decision rather than a scroll: it is reversible, it is
-            the state an erasure request describes anyway, and it puts the
-            record's own "This diver is deleted" panel on screen above the
-            control. `erasePersonAction` enforces the same rule, because this
-            page's tab may be older than the record's state (ADR
-            20260802-diver-data-erasure). */}
-        {canErase && removed ? (
-          <ErasePersonalData
-            diver={diver}
-            shopSlug={shopSlug}
-            personId={personId}
-            locale={locale}
-            status={noticeForForm(diverNotice, "erase")}
-          />
-        ) : null}
-      </div>
+      <DiverRecordFoot
+        diver={diver}
+        shopSlug={shopSlug}
+        personId={personId}
+        locale={locale}
+        t={t}
+        notice={diverNotice}
+        removed={removed}
+        mergeCandidates={canMerge && !removed ? mergeCandidates : []}
+        guardianEmails={canErase ? guardianEmails : null}
+        canErase={canErase}
+        canExport={canExport}
+        canDelete={canDelete}
+      />
     </main>
   );
 }
