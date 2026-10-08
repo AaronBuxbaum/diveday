@@ -23,7 +23,9 @@ test("rental terms written in Settings print on the trip slip and the counter ti
   await openSettingsRow(page, "Rental terms");
   await page.getByLabel("Terms", { exact: true }).fill(`${TERMS}\n${SECOND_LINE}`);
   await page.getByRole("button", { name: "Save rental terms" }).click();
-  await expect(page).toHaveURL(/notice=rental-terms-saved/);
+  // The outcome beside the form is the wait. Not the URL: the hub's
+  // `FlashParams` strips `?notice=` as soon as it hydrates, so the redirect's
+  // query is only on screen for an instant, and CI missed it (PR #2269).
   await expect(page.getByRole("status").filter({ hasText: "Rental terms saved." })).toBeVisible();
 
   // Both tickets open from the register's Rentals view, one per kind of rental.

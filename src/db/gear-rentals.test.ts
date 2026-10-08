@@ -25,8 +25,14 @@ async function rentalShop() {
   return { db, shop };
 }
 
-async function unit(db: AppDb, shopId: string, label: string, size?: string) {
-  const outcome = await createGearItem(db, { shopId, kind: "bcd", label, size });
+async function unit(
+  db: AppDb,
+  shopId: string,
+  label: string,
+  size?: string,
+  kind: Parameters<typeof createGearItem>[1]["kind"] = "bcd",
+) {
+  const outcome = await createGearItem(db, { shopId, kind, label, size });
   if (!outcome.ok) throw new Error(`create refused: ${outcome.reason}`);
   return outcome.item;
 }
@@ -331,13 +337,15 @@ describe("listGearRentals, counter rentals", () => {
   it("keeps one person's two counter rentals apart, each with its own invoice's money word", async () => {
     const { db, shop } = await counterShop();
     const ana = await walkIn(db, shop.id, "Ana Walk-In");
-    const bcd = await unit(db, shop.id, "BCD #1");
-    const reg = await unit(db, shop.id, "Reg #1");
-    const fins = await unit(db, shop.id, "Fins #1");
+    // Soft goods: a walk-in with no verified card may rent them, where a BCD
+    // or a regulator would be refused at the counter (layer 1's card check).
+    const mask = await unit(db, shop.id, "Mask #1", undefined, "mask");
+    const suit = await unit(db, shop.id, "3mm #1", "M", "wetsuit");
+    const fins = await unit(db, shop.id, "Fins #1", undefined, "fins");
     const first = await createCounterRental(db, {
       shopId: shop.id,
       personId: ana.id,
-      gearItemIds: [bcd.id, reg.id],
+      gearItemIds: [mask.id, suit.id],
       reservedFrom: TODAY,
       reservedUntil: "2026-10-09",
       todayLocal: TODAY,
@@ -376,7 +384,7 @@ describe("listGearRentals, counter rentals", () => {
     expect(page.total).toBe(1);
     const rentals = page.rows[0]?.rentals ?? [];
     expect(rentals.map((rental) => rental.units.map((row) => row.label))).toEqual([
-      ["BCD #1", "Reg #1"],
+      ["3mm #1", "Mask #1"],
       ["Fins #1"],
     ]);
     expect(rentals.every((rental) => rental.bookingId === null)).toBe(true);

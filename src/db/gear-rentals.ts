@@ -107,6 +107,8 @@ export async function countGearRentalHolders(db: AppDb, shopId: string): Promise
       bookings,
       and(eq(bookings.id, gearReservations.bookingId), eq(bookings.shopId, shopId)),
     )
+    // No `deleted_at` filter on people, on purpose: a deleted person still holds
+    // the gear until it comes back, and the list must keep naming them.
     .innerJoin(
       people,
       and(
@@ -160,6 +162,8 @@ async function listOpenRentalUnits(db: AppDb, shopId: string): Promise<GearRenta
       bookings,
       and(eq(bookings.id, gearReservations.bookingId), eq(bookings.shopId, shopId)),
     )
+    // No `deleted_at` filter on people, on purpose: a deleted person still holds
+    // the gear until it comes back, and the list must keep naming them.
     .innerJoin(
       people,
       and(

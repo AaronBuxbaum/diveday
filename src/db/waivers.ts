@@ -218,8 +218,11 @@ export async function listWaiverIntegrityAudit(
         })
         .from(waiverRecords)
         .innerJoin(people, eq(people.id, waiverRecords.personId))
-        .leftJoin(bookings, eq(bookings.id, waiverRecords.bookingId))
-        .leftJoin(trips, eq(trips.id, bookings.tripId))
+        .leftJoin(
+          bookings,
+          and(eq(bookings.id, waiverRecords.bookingId), eq(bookings.shopId, waiverRecords.shopId)),
+        )
+        .leftJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, waiverRecords.shopId)))
         .where(scope)
         .orderBy(desc(waiverRecords.signedAt), asc(people.fullName), desc(waiverRecords.id))
         .limit(limit)
@@ -266,7 +269,7 @@ export async function getSignedWaiverRecordForShop(
       bookings,
       and(eq(bookings.id, waiverRecords.bookingId), eq(bookings.shopId, waiverRecords.shopId)),
     )
-    .leftJoin(trips, eq(trips.id, bookings.tripId))
+    .leftJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, waiverRecords.shopId)))
     .where(
       and(
         eq(waiverRecords.id, recordId),
@@ -319,7 +322,7 @@ export async function getSignedWaiverForDiver(
       bookings,
       and(eq(bookings.id, waiverRecords.bookingId), eq(bookings.shopId, waiverRecords.shopId)),
     )
-    .leftJoin(trips, eq(trips.id, bookings.tripId))
+    .leftJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, waiverRecords.shopId)))
     .where(
       and(
         eq(waiverRecords.id, input.recordId),
