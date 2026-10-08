@@ -1,6 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { type CarriedPreparation, carriedPreparation } from "@/lib/carried-preparation";
 import { nowDate } from "@/lib/clock";
+import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/courses";
 import { seatListPriceCents, withinCancellationWindow } from "@/lib/deposits";
 import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
@@ -218,6 +219,14 @@ export type ReadyPageData = {
   welcomeOffer: WelcomeCue | null;
   /** Whether they have said yes. Their own answer, on their own link. */
   welcomeShared: boolean;
+  /**
+   * What this course asks a student to work through before day 1 (ADR
+   * 20261008-course-learning-materials), read through `readLearningMaterials`
+   * so only `https:` links reach the page. Empty on a fun dive.
+   */
+  learningMaterials: CourseLearningMaterial[];
+  /** A staffer has marked this student's materials done. */
+  courseMaterialsDone: boolean;
 };
 
 export async function getReadyPageData(
@@ -237,6 +246,7 @@ export async function getReadyPageData(
       participantType: bookings.participantType,
       lastDivedBand: bookings.lastDivedBand,
       welcomeSharedAt: bookings.welcomeSharedAt,
+      courseMaterialsDoneAt: bookings.courseMaterialsDoneAt,
       diveIntent: bookings.diveIntent,
       reEntryAsk: bookings.reEntryAsk,
       hotelPickupLocation: bookings.hotelPickupLocation,
@@ -401,6 +411,8 @@ export async function getReadyPageData(
       now,
     }),
     welcomeShared: row.welcomeSharedAt !== null,
+    learningMaterials: readLearningMaterials(trip.course?.learningMaterials),
+    courseMaterialsDone: row.courseMaterialsDoneAt !== null,
   };
 }
 
