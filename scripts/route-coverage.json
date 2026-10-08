@@ -352,7 +352,8 @@
       "inbox.spec.ts",
       "nitrox.spec.ts",
       "orders-demo.spec.ts",
-      "waivers.spec.ts"
+      "waivers.spec.ts",
+      "work-orders.spec.ts"
     ],
     "visual": [
       "diver-medical-clearance-form",
@@ -363,6 +364,7 @@
       "diver-profile-not-certified",
       "diver-profile-paper-waiver",
       "diver-profile-payments",
+      "diver-record-bench",
       "diver-record-clear",
       "staff-diver-conversation"
     ]
@@ -380,6 +382,22 @@
   "/shop/[shopSlug]/gear/[id]": {
     "e2e": ["gear.spec.ts"],
     "visual": ["gear-unit", "gear-unit-deleted"]
+  },
+  "/shop/[shopSlug]/gear/work-orders": {
+    "e2e": ["work-orders.spec.ts"],
+    "visual": ["work-order-board"]
+  },
+  "/shop/[shopSlug]/gear/work-orders/new": {
+    "e2e": ["work-orders.spec.ts"],
+    "visual": ["work-order-new"]
+  },
+  "/shop/[shopSlug]/gear/work-orders/[workOrderId]": {
+    "e2e": ["work-orders.spec.ts"],
+    "visual": ["work-order-ticket"]
+  },
+  "/shop/[shopSlug]/gear/work-orders/[workOrderId]/tag": {
+    "e2e": ["work-orders.spec.ts"],
+    "visual": ["work-order-claim-tag"]
   },
   "/shop/[shopSlug]/inbox": {
     "e2e": ["inbox.spec.ts"],

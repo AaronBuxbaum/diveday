@@ -29,3 +29,4 @@ export * from "./reviews";
 export * from "./trips";
 export * from "./waivers";
 export * from "./weekly-digest";
+export * from "./work-orders";

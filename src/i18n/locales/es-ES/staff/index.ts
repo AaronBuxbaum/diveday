@@ -62,6 +62,7 @@ import tripSeries from "./tripSeries.json";
 import trips from "./trips.json";
 import waiversStaff from "./waiversStaff.json";
 import whatsapp from "./whatsapp.json";
+import workOrders from "./workOrders.json";
 
 const staff = {
   calendar,
@@ -105,6 +106,7 @@ const staff = {
   boats,
   lenses,
   participants,
+  workOrders,
 };
 
 export default staff;

@@ -111,6 +111,16 @@ export const EXPORT_FILE_NOTES = {
     "Each unit's care history, oldest first: manufacturer services, tank hydrostatic tests and visual inspections, O2-clean renewals, and dated condition notes, each with the deadline staff set for that clock. The newest event of a kind is that clock's current state. This is the shop's own maintenance record — proof of care for a unit, not a work order.",
   "gear_reservations.csv":
     "Which unit was assigned to a booking or directly to a counter-rental holder, and for what dates, with the handover and return stamps. A reservation is fulfillment, never money: the rental charge lives in order_line_items.csv and booking_checkout_bookings.csv. A row with an empty returned_at is a unit still out.",
+  "customer_gear_items.csv":
+    "A diver's own gear the shop has on file — kind, make and model, serial number, the staff note about it, and when it is next due for service. Never the shop's rental fleet, which is gear_items.csv, and never a rental fit: this is kit the diver owns and brings in for work. service_due_on is the one clock a customer piece runs; a finished work order fills it from the conventional interval and staff may edit it. A deleted piece is here too, carrying its deleted_at stamp.",
+  "work_orders.csv":
+    "Every service ticket, one row per drop-off: what the customer reported, the day the shop promised it, where the ticket got to, the technician it was handed to, the bench notes (staff-only words, never shown to a customer) and the work performed (the words the customer is told), with the received, ready and picked-up stamps. Exactly one of person_id and gear_item_id is set — a customer's ticket or a bench ticket on the shop's own unit. A ticket is not a charge: the total is parts and labor in work_order_lines.csv, and money taken lives in orders.csv. A deleted ticket is here too with who deleted it.",
+  "work_order_items.csv":
+    "Which of a customer's pieces each ticket covered — one row per piece per ticket. A ticket on the shop's own unit has no rows here; its unit is named on the ticket itself.",
+  "work_order_lines.csv":
+    "The parts fitted and the bench time on each ticket, in this shop's currency's minor unit. quantity_hundredths is a quantity times 100, so 150 is one and a half (hours, or units of a part), and the line's total is that times unit_amount_cents divided by 100. A zero amount is a real line at no charge — a warranty part. A deleted line keeps its deleted_at stamp and is not in the ticket's total.",
+  "work_order_events.csv":
+    "Each ticket's own history, oldest first (seq is the order things actually happened in): the row that opened it, every status move with where it came from and went to, and every hand-over to a technician, each with the staff member who did it. This is what 'who had it, and for how long' is read out of.",
   "pre_departure_checklist_items.csv":
     "The shop's own pre-departure safety line, in the shop's own reading order (sort_order) — DiveDay authors none of it. A deleted item is here too, carrying its deleted_at stamp; its history in pre_departure_check_events.csv stays readable regardless.",
   "pre_departure_check_events.csv":

@@ -1,7 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import type { MediaDeletionKind, PaymentOperationKind } from "@/db/schema";
+import type { MediaDeletionKind, PaymentOperationKind, WorkOrderLineKindValue } from "@/db/schema";
 import type { CertificationCardRowState } from "@/lib/certification-cards";
 import type { DepthUnit } from "@/lib/depth-units";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
@@ -26,6 +26,7 @@ import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
 import { SUIT_CHOICES } from "@/lib/rentals";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { ROLL_CALL_GAP_KINDS, type TodaySeason } from "@/lib/today";
+import { WORK_ORDER_STATUSES } from "@/lib/work-orders";
 import { buddyAlertText } from "./buddy-labels";
 import {
   CARD_STATUS_KEYS,
@@ -109,6 +110,7 @@ import {
 } from "./today-labels";
 import { depthText, seaStateText, temperatureText, windText } from "./unit-labels";
 import { type WaiverRowState, waiverRowStateText } from "./waiver-labels";
+import { workOrderLineKindLabel, workOrderStatusLabel } from "./work-order-labels";
 
 /**
  * **Every code-to-message-key map in this directory, rendered** (issue #1701).
@@ -243,6 +245,11 @@ const WAIVER_ROW_STATES = everyCodeOf<WaiverRowState>({
   medical_review: true,
   medical_not_cleared: true,
   failed: true,
+});
+
+const WORK_ORDER_LINE_KINDS = everyCodeOf<WorkOrderLineKindValue>({
+  part: true,
+  labor: true,
 });
 
 const ROLL_CALL_LABELS = everyCodeOf<RollCallLabel>({
@@ -866,6 +873,20 @@ const CASES: readonly LabelMapCase[] = [
     map: "WAIVER_STATUS_KEYS",
     rows: codeRows(WAIVER_ROW_STATES, (locale, state) =>
       waiverRowStateText(staffTranslator(locale), state),
+    ),
+  },
+  {
+    module: "work-order-labels.ts",
+    map: "STATUS_KEYS",
+    rows: codeRows(WORK_ORDER_STATUSES, (locale, status) =>
+      workOrderStatusLabel(staffTranslator(locale), status),
+    ),
+  },
+  {
+    module: "work-order-labels.ts",
+    map: "LINE_KIND_KEYS",
+    rows: codeRows(WORK_ORDER_LINE_KINDS, (locale, kind) =>
+      workOrderLineKindLabel(staffTranslator(locale), kind),
     ),
   },
 ];

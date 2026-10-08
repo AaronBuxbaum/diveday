@@ -44,8 +44,8 @@ import {
 import { E2E_FROZEN_CLOCK, ONBOARD_FORM_PATH } from "./servers";
 
 /**
- * Visual regression coverage. Two hundred and fifty-four key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 1,016 screenshots per run (see
+ * Visual regression coverage. Two hundred and sixty-one key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 1,044 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
  * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
@@ -4987,6 +4987,20 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The bench on a diver's own record** (ADR 20261008-gear-work-orders):
+       * the pieces of theirs the shop has on file, their tickets, and the door
+       * to a new one. Tom is the diver `seed-work-orders.ts` leaves with a
+       * ticket waiting on a part, so the group stands open as it does when
+       * there is work outstanding.
+       */
+      test(`a diver's own gear renders true to the design (${scheme})`, async ({ page }) => {
+        await openDiverProfile(page, "Tom Okafor", "Tom Okafor");
+        await page.getByRole("region", { name: "Their own gear" }).waitFor();
+        await openDiverFileGroup(page, "Their own gear");
+        await capture(page, "diver-record-bench", scheme);
+      });
+
+      /**
        * **The record with nothing outstanding** — the state the design is
        * really about, and the one a seeded demo never shows: every seeded
        * diver has a card, a signature or a balance waiting on somebody. The
@@ -7401,6 +7415,57 @@ for (const scheme of ["light", "dark"] as const) {
         // The last seeded tank's row — the ledger below the fold has settled.
         await page.getByRole("link", { name: "AL63-02" }).waitFor();
         await capture(page, "gear-register", scheme);
+      });
+
+      // The bench on an ordinary Monday (ADR 20261008-gear-work-orders): the
+      // Gear section's two tabs, the open statuses in counter order with
+      // their late and ready badges, and the collected tail under them.
+      test(`the work-order board renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/gear/work-orders");
+        await page.getByRole("heading", { level: 1, name: "Gear" }).waitFor();
+        // The last seeded group's row — the board below the fold has settled.
+        await page
+          .getByRole("link", { name: /Visual inspection due/ })
+          .first()
+          .waitFor();
+        await capture(page, "work-order-board", scheme);
+      });
+
+      // One ticket, whole: the status and technician acts, what came in, the
+      // pieces, the bench notes, the parts and labor with their running
+      // total, and the history. The seeded in-progress ticket is the one
+      // carrying all of them at once.
+      test(`a work order renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/gear/work-orders");
+        await page
+          .getByRole("link", { name: /Breathes wet below 20 m/ })
+          .first()
+          .click();
+        await page.getByRole("heading", { level: 2, name: "Parts and labor" }).waitFor();
+        await capture(page, "work-order-ticket", scheme);
+      });
+
+      // Opening a ticket, with the diver chosen: the pieces of theirs on file
+      // as the checklist of what came in, and the job block under it.
+      test(`the new work-order form renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/gear/work-orders/new?diverq=Diego+Alvarez");
+        await page.getByRole("link", { name: "Diego Alvarez" }).first().click();
+        await page.getByRole("heading", { level: 2, name: "The job" }).waitFor();
+        await capture(page, "work-order-new", scheme);
+      });
+
+      // The claim tag as it prints: what we have, what you told us, and when
+      // to come back — no total and nothing to sign (the rental slip's
+      // posture, ADR 20261008-gear-work-orders).
+      test(`a work order's claim tag renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/gear/work-orders");
+        await page
+          .getByRole("link", { name: /Breathes wet below 20 m/ })
+          .first()
+          .click();
+        await page.getByRole("link", { name: "Claim tag" }).click();
+        await page.getByRole("heading", { level: 2, name: "What we have" }).waitFor();
+        await capture(page, "work-order-claim-tag", scheme);
       });
 
       // One unit's record — chosen for the tank whose seeded visual

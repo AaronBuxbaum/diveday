@@ -278,6 +278,12 @@ const ERASURE_KEEPS: Record<string, string> = {
     "`subject_person_id` is a pointer by design and the name is joined at read, which resolves to the anonymized one after this runs",
   trip_help_requests:
     "that someone at a seat asked for help and when it was handled; a kind and a status, no words",
+  work_order_items:
+    "which of a diver's pieces one service ticket covered — two ids. Both ends are erased where they are stored: the piece's note and serial clear, the ticket's words are redacted",
+  work_order_lines:
+    "a part fitted or an hour at the bench, with what it cost — written about equipment, never about a person, and the shop's own record of what it charged",
+  work_order_events:
+    "a ticket's status trail: which status it moved to, when, and the staffer who moved it. No diver column and no free text",
   payment_operation_intents:
     'a Stripe object id and a status word. Every writer passes a status or a fixed sentence — `session.status`, `result.status`, "booking already has an active checkout attempt" — so `error_message` never carries provider prose about a person',
   processor_erasure_obligations:

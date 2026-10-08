@@ -68,6 +68,7 @@ import {
   tripScheduleDays,
   trips,
   userAccounts,
+  workOrderLines,
 } from "./schema";
 
 export async function loadShopExportBundleInput(
@@ -385,6 +386,18 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const gearReservationRows = await readShopScoped(tx, "gearReservations", shopId);
 
+  // The bench (ADR 20261008-gear-work-orders): a diver's own pieces, the
+  // tickets about them, and what each ticket cost.
+  const customerGearItemRows = await readShopScoped(tx, "customerGearItems", shopId);
+
+  const workOrderRows = await readShopScoped(tx, "workOrders", shopId);
+
+  const workOrderItemRows = await readShopScoped(tx, "workOrderItems", shopId);
+
+  const workOrderLineRows = await readShopScoped(tx, "workOrderLines", shopId);
+
+  const workOrderEventRows = await readShopScoped(tx, "workOrderEvents", shopId);
+
   const checklistItemRows = await readShopScoped(tx, "preDepartureChecklistItems", shopId);
   const checklistItemLabel = new Map(checklistItemRows.map((row) => [row.id, row.label]));
 
@@ -546,6 +559,11 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     gearItemLabel,
     gearServiceEventRows,
     gearReservationRows,
+    customerGearItemRows,
+    workOrderRows,
+    workOrderItemRows,
+    workOrderLineRows,
+    workOrderEventRows,
     checklistItemRows,
     checklistItemLabel,
     checklistEventRows,
@@ -861,6 +879,26 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     : [];
   const gearItemLabel = new Map(gearItemRows.map((row) => [row.id, row.label]));
 
+  // The diver's own gear on file and the service tickets about it, with each
+  // ticket's pieces and lines (ADR 20261008-gear-work-orders).
+  const customerGearItemRows = await readPersonScoped(tx, "customerGearItems", shopId, personId);
+
+  const workOrderRows = await readPersonScoped(tx, "workOrders", shopId, personId);
+
+  const diverWorkOrderIds = workOrderRows.map((row) => row.id);
+  const workOrderLineRows = diverWorkOrderIds.length
+    ? await tx
+        .select()
+        .from(workOrderLines)
+        .where(
+          and(
+            inArray(workOrderLines.workOrderId, diverWorkOrderIds),
+            eq(workOrderLines.shopId, shopId),
+          ),
+        )
+        .orderBy(asc(workOrderLines.createdAt), asc(workOrderLines.id))
+    : [];
+
   const priorVisitRows = await readPersonScoped(tx, "priorVisits", shopId, personId);
 
   const importedPaymentHistoryRows = await readPersonScoped(
@@ -929,6 +967,9 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     packageName,
     rentalFitRows,
     gearReservationRows,
+    customerGearItemRows,
+    workOrderRows,
+    workOrderLineRows,
     gearItemLabel,
     priorVisitRows,
     importedPaymentHistoryRows,
@@ -1058,6 +1099,11 @@ export async function loadShopExportCounts(
     "gear_items.csv": await countShopScoped(db, "gearItems", shopId),
     "gear_service_events.csv": await countShopScoped(db, "gearServiceEvents", shopId),
     "gear_reservations.csv": await countShopScoped(db, "gearReservations", shopId),
+    "customer_gear_items.csv": await countShopScoped(db, "customerGearItems", shopId),
+    "work_orders.csv": await countShopScoped(db, "workOrders", shopId),
+    "work_order_items.csv": await countShopScoped(db, "workOrderItems", shopId),
+    "work_order_lines.csv": await countShopScoped(db, "workOrderLines", shopId),
+    "work_order_events.csv": await countShopScoped(db, "workOrderEvents", shopId),
     "pre_departure_checklist_items.csv": await countShopScoped(
       db,
       "preDepartureChecklistItems",

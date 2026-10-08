@@ -1,6 +1,6 @@
 {
   "//": "Line counts of the page.tsx files still over 400 lines. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
-  "// absorbed": "UX audit layer 2 adds one line to the manifest page; carried over from this branch's own baseline",
+  "// absorbed": "The bench (ADR 20261008-gear-work-orders): the Gear section's tab strip on the register, and the diver record's own-gear file group. Both routes were already over the limit and are thinning jobs of their own.",
   "src/app/onboard/page.tsx": 479,
   "src/app/page.tsx": 592,
   "src/app/pricing/page.tsx": 504,
@@ -11,9 +11,9 @@
   "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx": 804,
   "src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx": 606,
   "src/app/shop/[shopSlug]/dive-sites/page.tsx": 631,
-  "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 487,
+  "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 507,
   "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 845,
-  "src/app/shop/[shopSlug]/gear/page.tsx": 499,
+  "src/app/shop/[shopSlug]/gear/page.tsx": 509,
   "src/app/shop/[shopSlug]/orders/[id]/page.tsx": 558,
   "src/app/shop/[shopSlug]/orders/new/page.tsx": 416,
   "src/app/shop/[shopSlug]/orders/page.tsx": 850,
@@ -28,6 +28,6 @@
   "src/app/shop/[shopSlug]/staffing/page.tsx": 626,
   "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
   "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1187,
-  "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1195,
+  "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1194,
   "src/app/waivers/[token]/page.tsx": 1489
 }

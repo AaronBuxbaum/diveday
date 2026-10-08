@@ -2030,7 +2030,8 @@ new domain concept, define it here in the same PR.
   `visual_inspection` clocks, the `o2_clean` renewal, and clockless condition `note`s. The newest
   event of a kind *is* that clock; the earliest deadline is the unit's state (ok / due soon /
   overdue), which **informs, never gates** — the dock decides whether an overdue unit dives, not
-  the software. Deliberately not a work order: no parts, no labor, no billing.
+  the software. A care event is not itself a work order; collecting a work order writes one
+  (ADR 20261008-gear-work-orders).
 - **Sizing** — BCDs and wetsuits are sized (XS–XXL and height/weight dependent), so a prep list
   groups by item *and* size; an unrecorded size is shown as a loose end, not silently dropped.
 - **Complete rental fit** — a fit is complete when *every piece the diver takes from the shop* has
@@ -2119,6 +2120,25 @@ new domain concept, define it here in the same PR.
   So neither an uncertified request nor an imported-but-unconfirmed card can become a nitrox tank.
   Clearing a request is always allowed. `setBookingNitrox` also refuses to turn a request *on* when
   the shop's catalog doesn't offer nitrox, so a shop that never enabled it can never end up with one.
+
+- **The bench** — the shop's service work, beside the register as the Gear section's second tab: a
+  board of open **work orders** grouped by status, and one page per ticket. A shop that only rents
+  never opens it; a shop that only repairs can use it with no fleet at all
+  ([20261008-gear-work-orders](../architecture/decisions/20261008-gear-work-orders.md)).
+- **Work order** — one open piece of bench work: what came in, whose it is, what the customer
+  reports, who is working it, what was done, and the parts and labor it comes to. It covers
+  **either** a customer's own gear **or** one of the shop's units, never both (the
+  `work_orders_one_subject` check). It moves between **received**, **in progress**, **waiting on
+  parts** and **ready for pickup** in any direction, and **picked up** is terminal: gear that comes
+  back is a new ticket. Collecting one writes the service clock the work implies — a
+  `gear_service_events` row for one of the shop's units, a next-service date on a customer's piece.
+  Every move appends to `work_order_events`, which is what answers "who said this was ready" a year
+  later. Parts and labor are **figures, not a charge**: money stays with orders and Stripe, and the
+  printed **claim tag** carries none of it.
+- **Customer gear** — a piece of equipment a *diver* owns, on the shop's record because the bench
+  has worked it or is about to (`customer_gear_items`): kind, make and model, serial number, and its
+  own next-service date. Not the shop's fleet (`gear_items`) and never rentable — the register, the
+  prep list and every manifest read ignore it.
 
 ## Records and evidence
 

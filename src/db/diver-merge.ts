@@ -156,6 +156,13 @@ export const DIVER_HISTORY_TABLES = [
   // unit on a removed diver's record: the survivor's prep page showed no gear
   // and the reservation still held the window.
   "gear_reservations",
+  // A diver's own gear on file, and the service tickets about it (ADR
+  // 20261008-gear-work-orders). Both name the diver directly, and both are
+  // the diver's — the shop is holding the regulator of whoever the survivor
+  // is. Leaving them behind would hide a ticket the shop is still working
+  // from the record the counter now opens.
+  "customer_gear_items",
+  "work_orders",
   "prior_gear_assignments",
   "nitrox_certifications",
   "trip_reviews",
@@ -247,6 +254,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "dive_sites.planning_note_by_person_id": "who wrote down what the site was like",
   "executed_dives.deleted_by_person_id": "who deleted the logged dive",
   "executed_dives.recorded_by_person_id": "who logged the dive",
+  "customer_gear_items.deleted_by_person_id": "who removed the piece from the record",
   "gear_items.deleted_by_person_id": "who retired the unit",
   "gear_service_events.recorded_by_person_id": "who serviced the unit",
   "internal_notes.created_by_person_id": "who wrote the note",
@@ -288,6 +296,10 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "trip_sightings.deleted_by_person_id": "who took the mis-tapped sighting back",
   "trip_sightings.recorded_by_person_id": "which crew member tapped the chip",
   "trip_stage_events.recorded_by_person_id": "who said where the boat was",
+  "work_order_events.actor_person_id": "who moved the ticket",
+  "work_order_events.technician_person_id": "which technician the ticket was handed to",
+  "work_orders.deleted_by_person_id": "who deleted the ticket",
+  "work_orders.technician_person_id": "which technician is working it — a staff assignment",
   "waiver_materiality_decisions.actor_person_id": "who judged the answer material",
   "waiver_records.anonymized_by_person_id": "provenance for an erasure on a signed release",
   "waiver_records.medical_clearance_declined_by_person_id": "who declined the clearance",
@@ -796,7 +808,13 @@ export const DIVER_MERGE_COUNT_GROUPS = {
   notes: ["internal_notes"],
   messages: ["inbound_messages", "staff_replies"],
   reviews: ["trip_reviews", "recap_pulses"],
-  gear: ["gear_reservations", "prior_gear_assignments", "rental_fit_profiles"],
+  gear: [
+    "gear_reservations",
+    "prior_gear_assignments",
+    "rental_fit_profiles",
+    "customer_gear_items",
+    "work_orders",
+  ],
   history: ["prior_visits"],
   lists: [
     "course_inquiries",

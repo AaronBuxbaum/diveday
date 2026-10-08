@@ -33,6 +33,7 @@ import {
   courses,
   crewAssignmentRequests,
   crewAvailabilityBlocks,
+  customerGearItems,
   divePackageEntitlements,
   diveSiteCreatures,
   diveSiteMoments,
@@ -105,6 +106,10 @@ import {
   waiverMaterialityDecisions,
   waiverRecords,
   waiverTemplates,
+  workOrderEvents,
+  workOrderItems,
+  workOrderLines,
+  workOrders,
 } from "./schema";
 import { seedBackup } from "./seed-backup";
 import { seedBookings } from "./seed-bookings";
@@ -151,6 +156,7 @@ import { seedTripStage } from "./seed-trip-stage";
 import { seedTrips } from "./seed-trips";
 import { seedWaiverEvidence } from "./seed-waiver-evidence";
 import { seedWaiverVersions } from "./seed-waiver-versions";
+import { seedWorkOrders } from "./seed-work-orders";
 
 /**
  * Demo data: one Key Largo shop with staff, customers, and a week of trips.
@@ -932,6 +938,13 @@ export async function seedDemoSchedule(
     tripRows,
     bookingRows,
   });
+  // The bench: tickets on customers' own gear and on one of those units, so
+  // after `seedGear` (ADR 20261008-gear-work-orders).
+  await seedWorkOrders(db, shopId, {
+    timezone: shopRow?.timezone ?? DEMO_SHOP_TIMEZONE,
+    customers,
+    technicianPersonId: instructor.id,
+  });
   // Leads off the public course pages. After the catalog and the divers, so the
   // one lead that links to an existing diver has somebody to link to.
   await seedCourseInquiries(db, shopId, { courseIdByTitle });
@@ -1196,6 +1209,15 @@ export async function resetDemoSchedule(
   await db.delete(crewAssignmentRequests).where(eq(crewAssignmentRequests.shopId, shopId));
   await db.delete(crewAvailabilityBlocks).where(eq(crewAvailabilityBlocks.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
+  // The bench, children first: lines, pieces and the status trail reference
+  // the ticket, and a ticket references a customer, a fleet unit, and the
+  // technician working it — so all of it clears before gear_items, bookings
+  // and the people purge (ADR 20261008-gear-work-orders).
+  await db.delete(workOrderLines).where(eq(workOrderLines.shopId, shopId));
+  await db.delete(workOrderItems).where(eq(workOrderItems.shopId, shopId));
+  await db.delete(workOrderEvents).where(eq(workOrderEvents.shopId, shopId));
+  await db.delete(workOrders).where(eq(workOrders.shopId, shopId));
+  await db.delete(customerGearItems).where(eq(customerGearItems.shopId, shopId));
   // The gear register, children first: reservations reference gear_items and
   // bookings, service events reference gear_items and people (their recording
   // staffer) — so all three clear before bookings and the people purge below.

@@ -126,6 +126,8 @@ export type StaffDestinationId =
   | "staffing"
   | "diveSites"
   | "gear"
+  | "workOrders"
+  | "newWorkOrder"
   | "courses"
   | "reviews"
   | "requests"
@@ -182,6 +184,8 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   staffing: "shared.shopNavLinks.staffing",
   diveSites: "shared.shopNavLinks.diveSites",
   gear: "shared.shopNavLinks.gear",
+  workOrders: "shared.shopNavLinks.workOrders",
+  newWorkOrder: "shared.shopNavLinks.newWorkOrder",
   courses: "shared.shopNavLinks.courses",
   reviews: "shared.shopNavLinks.reviews",
   requests: "shared.shopNavLinks.requests",
@@ -211,6 +215,9 @@ export const STAFF_DESTINATION_TITLE_KEYS: Partial<Record<StaffDestinationId, St
   // its lead tab answers to it, so typing "Money" still finds Orders.
   inbox: "shared.shopSections.inbox",
   orders: "shared.shopSections.money",
+  // The register's tab answers to "Register"; the section it leads is Gear,
+  // which is what a staffer types when they want the fleet.
+  gear: "shared.shopSections.gear",
   diveSites: "diveSites.list.title",
 };
 
@@ -274,9 +281,14 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   { id: "reports", suffix: "/reports", section: "money", inPalette: true, gate: "reports" },
   { id: "promoCodes", suffix: "/promos", section: "money", inPalette: true, gate: "reports" },
   { id: "courses", suffix: "/courses", section: "courses", inPalette: true },
-  // The rental fleet (ADR 20260815-minimal-gear-register). Ungated: gear is
-  // any-staff work (H-06).
+  // The rental fleet (ADR 20260815-minimal-gear-register) and the bench beside
+  // it (ADR 20261008-gear-work-orders). Ungated: gear is any-staff work
+  // (H-06), and a technician is staff.
   { id: "gear", suffix: "/gear", section: "gear", inPalette: true },
+  { id: "workOrders", suffix: "/gear/work-orders", section: "gear", inPalette: true },
+  // The act, declared here because the registry is the only place a
+  // destination may be declared — the same call `addBooking` makes.
+  { id: "newWorkOrder", suffix: "/gear/work-orders/new", section: "gear", inPalette: true },
   // What a shop sets up rather than works.
   { id: "diveSites", suffix: "/dive-sites", section: "settings", inPalette: true },
   { id: "waivers", suffix: "/waivers", section: "settings", inPalette: true, gate: "waivers" },
@@ -305,6 +317,7 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
  * because both read the week on screen.
  */
 export const STAFF_SECTION_TABS = {
+  gear: ["gear", "workOrders"],
   inbox: ["inbox", "requests", "reviews"],
   money: ["orders", "promoCodes", "reports"],
 } as const satisfies Partial<Record<StaffSection, readonly StaffDestinationId[]>>;

@@ -294,6 +294,21 @@ const ICON_PATHS: Record<StaffDestinationId, ReactNode> = {
       <path d="M8 11h8" />
     </>
   ),
+  // Work orders: a wrench on the bench.
+  workOrders: (
+    <>
+      <path d="M14.5 6.5a3.5 3.5 0 0 0 4.6 4.6l-8 8a2.1 2.1 0 1 1-3-3l8-8a3.5 3.5 0 0 0-1.6-1.6Z" />
+      <path d="M15.5 3.2a4.8 4.8 0 0 1 5.3 5.3" />
+    </>
+  ),
+  // The same wrench, with the plus every "new" door carries.
+  newWorkOrder: (
+    <>
+      <path d="M12.5 8.5a3.5 3.5 0 0 0 4.6 4.6l-6 6a2.1 2.1 0 1 1-3-3l6-6a3.5 3.5 0 0 0-1.6-1.6Z" />
+      <path d="M18 3v5" />
+      <path d="M15.5 5.5h5" />
+    </>
+  ),
   // Waivers: a signed page.
   waivers: (
     <>

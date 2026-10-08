@@ -267,6 +267,24 @@ const NOTICE_KEYS: DiverNoticeMap = {
     key: "divers.notices.medicalClearanceAnswerRecorded",
   },
 
+  // The bench (ADR 20261008-gear-work-orders): a piece of the diver's own gear
+  // recorded, corrected or deleted from this record. The words come from the
+  // work-order bundle rather than a second copy here, because the same
+  // sentences answer the same acts on the ticket's own page.
+  "piece-added": { form: "work-orders", tone: "success", key: "workOrders.notice.pieceAdded" },
+  "piece-saved": { form: "work-orders", tone: "success", key: "workOrders.notice.pieceSaved" },
+  "piece-deleted": { form: "work-orders", tone: "success", key: "workOrders.notice.pieceDeleted" },
+  "piece-restored": {
+    form: "work-orders",
+    tone: "success",
+    key: "workOrders.notice.pieceRestored",
+  },
+  "on-open-work-order": {
+    form: "work-orders",
+    tone: "warning",
+    key: "workOrders.notice.onOpenWorkOrder",
+  },
+
   // Rental fit.
   "profile-saved": { form: "fit", tone: "success", key: "divers.notices.profileSaved" },
   "fit-flagged": { form: "fit", tone: "success", key: "divers.notices.fitFlagged" },

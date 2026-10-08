@@ -1,0 +1,128 @@
+import { expect, signedInAsOwner, test } from "./fixtures";
+import { openDiverFileGroup } from "./helpers";
+
+/**
+ * The bench (ADR 20261008-gear-work-orders): opening a ticket on a diver's own
+ * gear, working it, pricing it, and handing it back.
+ *
+ * Every write lands on blue-mantis on purpose — the work-order tables are
+ * reset-owned (deleted and re-seeded by `/api/test/reset`, src/db/seed.ts), so
+ * nothing a test opens here leaks into the next spec.
+ */
+test.describe("staff", () => {
+  signedInAsOwner();
+
+  test("walks one ticket from the counter to collected", async ({ page }) => {
+    // The bench is the Gear section's second tab, and the register is the
+    // first: the two are one pillar.
+    await page.goto("/shop/blue-mantis/gear");
+    await page.getByRole("link", { name: "Work orders", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Gear" })).toBeVisible();
+
+    await page.getByRole("link", { name: "New work order" }).first().click();
+    // The diver comes from the same person search the rest of the staff
+    // surfaces use; `?diverq=` is the state that search leaves behind.
+    await page.goto("/shop/blue-mantis/gear/work-orders/new?diverq=Diego+Alvarez");
+    await page.getByRole("link", { name: "Diego Alvarez" }).first().click();
+
+    // Nothing of his is on file yet in this spec's run, so the piece he
+    // brought in is recorded first.
+    await page.locator("summary#add-piece").click();
+    await page.getByLabel("Kind").selectOption("regulator");
+    await page.getByLabel("Make & model").fill("Apeks XTX50");
+    await page.getByLabel("Serial number").fill("E2E-77001");
+    await page.getByRole("button", { name: "Add to the record" }).click();
+    await expect(page.getByText("On the record.")).toBeVisible();
+
+    await page.getByLabel(/Apeks XTX50/).check();
+    await page.getByLabel("What the customer reports").fill("Second stage free-flows below 20 m.");
+    await page.getByRole("button", { name: "Open the work order" }).click();
+
+    await expect(page.getByRole("heading", { level: 1, name: "Diego Alvarez" })).toBeVisible();
+    await expect(page.getByText("Work order opened.")).toBeVisible();
+    await expect(page.getByText("Received", { exact: true }).first()).toBeVisible();
+
+    // On the bench.
+    await page.locator("#work-order-status").selectOption("in_progress");
+    await page.getByRole("button", { name: "Save" }).first().click();
+    await expect(page.getByText("Status saved.")).toBeVisible();
+
+    // What it cost: one part and the labor on it, with the running total in
+    // the shop's own currency.
+    await page.getByLabel("Description").last().fill("Second-stage service kit");
+    await page.getByLabel("Price each").last().fill("42");
+    await page.getByRole("button", { name: "Add", exact: true }).click();
+    await expect(page.getByText("Line added.")).toBeVisible();
+    await expect(page.getByText("Total: $42.00")).toBeVisible();
+
+    // Ready for its owner, then collected — and collected is the end of it.
+    await page.locator("#work-order-status").selectOption("ready");
+    await page.getByRole("button", { name: "Save" }).first().click();
+    await expect(page.getByText("Ready for pickup").first()).toBeVisible();
+
+    await page.locator("#work-order-status").selectOption("picked_up");
+    await page.getByRole("button", { name: "Save" }).first().click();
+    await expect(page.getByText("Picked up").first()).toBeVisible();
+    // The history is what answers "who said this was ready" a year later.
+    await expect(page.getByText("Ready for pickup to Picked up")).toBeVisible();
+    // A collected ticket has nowhere left to move.
+    await expect(page.locator("#work-order-status")).toHaveCount(0);
+  });
+
+  test("prints a claim tag with no money on it", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/gear/work-orders");
+    await page
+      .getByRole("link", { name: /free-flows/ })
+      .first()
+      .click();
+    await page.getByRole("link", { name: "Claim tag" }).click();
+
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "What we have" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "What you told us" })).toBeVisible();
+    // Not a receipt and not a waiver: no total, nothing to sign.
+    await expect(page.getByText("Total:")).toHaveCount(0);
+  });
+
+  test("the diver's own record carries their gear and their tickets", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/gear/work-orders");
+    await page
+      .getByRole("link", { name: /Inflator sticks open/ })
+      .first()
+      .click();
+    // Wait for the ticket itself: a `textContent()` read straight off the
+    // click can still be the board's own heading.
+    await page.getByRole("heading", { level: 2, name: "Parts and labor" }).waitFor();
+    const owner = await page.getByRole("heading", { level: 1 }).textContent();
+    // Reached through the diver search, because the list is paged and the
+    // seeded owner of this ticket is not on its first page.
+    await page.goto(`/shop/blue-mantis/divers?q=${encodeURIComponent(owner ?? "")}`);
+    await page
+      .getByRole("link", { name: owner ?? "" })
+      .first()
+      .click();
+
+    // A file group like the others on the record, opened the way the rest of
+    // the diver specs open one.
+    await openDiverFileGroup(page, "Their own gear");
+    await expect(page.getByRole("link", { name: /Inflator sticks open/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: "New work order" })).toBeVisible();
+  });
+
+  test("deleting a ticket is soft, and the board offers it back", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/gear/work-orders");
+    await page
+      .getByRole("link", { name: /Visual inspection due/ })
+      .first()
+      .click();
+    await page.getByRole("button", { name: "Delete work order" }).click();
+
+    await expect(page.getByText("Work order deleted.")).toBeVisible();
+    await page.goto("/shop/blue-mantis/gear/work-orders?view=deleted");
+    await page
+      .getByRole("button", { name: /Restore/ })
+      .first()
+      .click();
+    await expect(page.getByText("Work order restored.")).toBeVisible();
+  });
+});

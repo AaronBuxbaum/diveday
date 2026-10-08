@@ -2,7 +2,15 @@ import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /** The file's groups that every record renders a door for (`page.tsx`). */
-const FILE_DOORS = ["details", "certifications", "waiver", "gear", "notes", "activity"] as const;
+const FILE_DOORS = [
+  "details",
+  "certifications",
+  "waiver",
+  "gear",
+  "work-orders",
+  "notes",
+  "activity",
+] as const;
 
 /**
  * Body-shaped skeleton for a diver's record (design principle 1). Without one,

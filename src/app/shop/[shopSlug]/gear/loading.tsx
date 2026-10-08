@@ -1,5 +1,6 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { LedgerRow } from "@/components/ui/ledger";
+import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
 /**
  * One stub per chip a working register shows — All, nine kinds and the
@@ -37,6 +38,7 @@ export default function GearLoading() {
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton eyebrow={false} description={false} actions />
+        <StaffSectionTabsSkeleton section="gear" />
         {/* The chip band, laid out as `FilterChips` lays it: one line that
             scrolls on a phone, wrapping only from `sm`, at the chips' 44px.
             No top margin of its own: the header skeleton's `mb-8` is the same

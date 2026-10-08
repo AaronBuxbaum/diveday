@@ -76,7 +76,6 @@ export function TripRosterContent({
   keepOpenBookingId,
   namesakeRefusedBookingId,
   participantTypeCertBookingId,
-  mayDiscount,
   mayWriteOffPayment,
   canManageOrders,
   compact = false,
@@ -106,7 +105,6 @@ export function TripRosterContent({
   namesakeRefusedBookingId?: string;
   /** The seat whose change into diving the card check just refused. */
   participantTypeCertBookingId?: string;
-  mayDiscount: boolean;
   mayWriteOffPayment: boolean;
   /** Whether this staffer may raise an invoice — see `RosterSection`. */
   canManageOrders: boolean;

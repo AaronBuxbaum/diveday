@@ -14,6 +14,7 @@ import {
   certifications,
   courseInquiries,
   courses,
+  customerGearItems,
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
@@ -58,6 +59,10 @@ import {
   waiverMaterialityDecisions,
   waiverRecords,
   waiverTemplates,
+  workOrderEvents,
+  workOrderItems,
+  workOrderLines,
+  workOrders,
 } from "./schema";
 
 /**
@@ -423,6 +428,35 @@ export const EXPORT_TABLES = {
       asc(gearReservations.id),
     ],
     scope: { shopColumn: gearReservations.shopId },
+  },
+  // The bench (ADR 20261008-gear-work-orders). A diver's own pieces and the
+  // tickets about them are theirs as well as the shop's, so both carry a
+  // `personColumn` and travel in a diver's own bundle; the lines, the
+  // piece-to-ticket joins and the status trail are read with their ticket.
+  customerGearItems: {
+    table: customerGearItems,
+    order: [asc(customerGearItems.createdAt), asc(customerGearItems.id)],
+    scope: { shopColumn: customerGearItems.shopId, personColumn: customerGearItems.personId },
+  },
+  workOrders: {
+    table: workOrders,
+    order: [asc(workOrders.receivedAt), asc(workOrders.id)],
+    scope: { shopColumn: workOrders.shopId, personColumn: workOrders.personId },
+  },
+  workOrderItems: {
+    table: workOrderItems,
+    order: [asc(workOrderItems.createdAt), asc(workOrderItems.id)],
+    scope: { shopColumn: workOrderItems.shopId },
+  },
+  workOrderLines: {
+    table: workOrderLines,
+    order: [asc(workOrderLines.createdAt), asc(workOrderLines.id)],
+    scope: { shopColumn: workOrderLines.shopId },
+  },
+  workOrderEvents: {
+    table: workOrderEvents,
+    order: [asc(workOrderEvents.seq)],
+    scope: { shopColumn: workOrderEvents.shopId },
   },
   preDepartureChecklistItems: {
     table: preDepartureChecklistItems,

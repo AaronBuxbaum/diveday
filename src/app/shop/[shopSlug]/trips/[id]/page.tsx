@@ -1181,7 +1181,6 @@ export default async function ManageTripPage({
               participantTypeCertBookingId={
                 notice === "participant-type-cert" && mayOverrideCertBlock ? bid : undefined
               }
-              mayDiscount={mayDiscount}
               mayWriteOffPayment={mayWriteOffPayment}
               canManageOrders={canManageOrders}
               compact

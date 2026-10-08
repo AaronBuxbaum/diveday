@@ -87,6 +87,7 @@ import {
   calendarFeeds,
   certifications,
   courseInquiries,
+  customerGearItems,
   formDrafts,
   gearReservations,
   importedPaymentHistory,
@@ -120,6 +121,7 @@ import {
   userAccounts,
   waiverDeliveries,
   waiverRecords,
+  workOrders,
 } from "./schema";
 
 export type AnonymizeDiverRefusal =
@@ -1467,6 +1469,45 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         ),
       );
   }
+
+  // --- the bench -----------------------------------------------------------
+  // Service work orders (ADR 20261008-gear-work-orders). The same call the
+  // gear register's return notes above make: what the shop did to a piece of
+  // equipment, when, and what it cost is the shop's own service record and
+  // stays; the **words written in this person's presence** go.
+  //
+  // `reported_problem` is the customer's own account of the fault and is
+  // `not null`, so it is redacted rather than cleared — a ticket with an empty
+  // problem would read as a ticket nobody wrote anything on, which is the
+  // reading `[redacted]` exists to prevent. Bench notes and what the customer
+  // was told are free prose a technician may well have put a name in, and both
+  // clear. `work_order_lines` is untouched on purpose: a part number and an
+  // hour at the bench are written about equipment, never about a person.
+  //
+  // The piece on file keeps its kind and model — that is what the service
+  // history is *of* — and loses the staffer's note about it and the serial
+  // number, which identifies this person's own property the way a plate
+  // identifies a car.
+  await tx
+    .update(customerGearItems)
+    .set({ note: null, serialNumber: null })
+    .where(
+      and(
+        eq(customerGearItems.shopId, shopId),
+        eq(customerGearItems.personId, personId),
+        or(isNotNull(customerGearItems.note), isNotNull(customerGearItems.serialNumber)),
+      ),
+    );
+  await tx
+    .update(workOrders)
+    .set({ reportedProblem: REDACTED_TEXT, technicianNotes: null, workPerformed: null })
+    .where(
+      and(
+        eq(workOrders.shopId, shopId),
+        eq(workOrders.personId, personId),
+        ne(workOrders.reportedProblem, REDACTED_TEXT),
+      ),
+    );
 
   // --- orders --------------------------------------------------------------
   // `stripe_customer_id` and `stripe_invoice_id` are NOT NULL pointers into the

@@ -553,6 +553,86 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
     note: "Rental gear reserved for this diver's own seats.",
   },
   {
+    file: "customer_gear_items.csv",
+    header: [
+      "id",
+      "kind",
+      "brand_model",
+      "serial_number",
+      "note",
+      "service_due_on",
+      "deleted_at",
+      "created_at",
+    ],
+    rows: ({ customerGearItemRows }) =>
+      customerGearItemRows.map((row) => [
+        row.id,
+        row.kind,
+        row.brandModel,
+        row.serialNumber,
+        row.note,
+        row.serviceDueOn,
+        row.deletedAt,
+        row.createdAt,
+      ]),
+    note: "This diver's own gear the shop has on file, and when each piece is next due for service.",
+  },
+  {
+    file: "work_orders.csv",
+    header: [
+      "id",
+      "status",
+      "reported_problem",
+      "promised_on",
+      "work_performed",
+      "received_at",
+      "ready_at",
+      "picked_up_at",
+      "deleted_at",
+    ],
+    rows: ({ workOrderRows }) =>
+      workOrderRows.map((row) => [
+        row.id,
+        row.status,
+        row.reportedProblem,
+        row.promisedOn,
+        row.workPerformed,
+        row.receivedAt,
+        row.readyAt,
+        row.pickedUpAt,
+        row.deletedAt,
+      ]),
+    // The bench notes are deliberately absent: they are the shop's internal
+    // shop talk about a repair, written for a technician and never shown to a
+    // customer, and a diver's own bundle is what the shop hands *them*.
+    note: "Service tickets for this diver's own gear, with what was reported and what was done.",
+  },
+  {
+    file: "work_order_lines.csv",
+    header: [
+      "id",
+      "work_order_id",
+      "kind",
+      "description",
+      "quantity_hundredths",
+      "unit_amount_cents",
+      "deleted_at",
+      "created_at",
+    ],
+    rows: ({ workOrderLineRows }) =>
+      workOrderLineRows.map((row) => [
+        row.id,
+        row.workOrderId,
+        row.kind,
+        row.description,
+        row.quantityHundredths,
+        row.unitAmountCents,
+        row.deletedAt,
+        row.createdAt,
+      ]),
+    note: "The parts and labor on this diver's own service tickets, in the shop's currency's minor unit.",
+  },
+  {
     file: "prior_visits.csv",
     header: [
       "id",
