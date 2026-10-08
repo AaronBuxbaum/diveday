@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "085cede2-ef27-4f78-ab46-a6836571e691",
+  "id": "c88f9aa5-5059-4c2e-bae7-59758c2b4447",
   "prevIds": [
     "ba1f9bcf-674a-4895-841e-475878bb68cc",
     "ecc9405c-b6e0-4de3-8d01-ffad9f51cd61"
@@ -20665,6 +20665,19 @@
       "table": "work_order_bills"
     },
     {
+      "type": "bigserial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "seq",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "work_order_bills"
+    },
+    {
       "type": "uuid",
       "typeSchema": null,
       "notNull": true,
@@ -28188,7 +28201,7 @@
           "opclass": null
         },
         {
-          "value": "created_at",
+          "value": "seq",
           "isExpression": false,
           "asc": true,
           "nullsFirst": false,

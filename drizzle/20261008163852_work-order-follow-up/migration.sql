@@ -35,7 +35,8 @@ CREATE TABLE "work_order_bills" (
 	"work_order_id" uuid NOT NULL,
 	"order_id" uuid NOT NULL,
 	"created_by_person_id" uuid,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"seq" bigserial
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX "customer_gear_notices_ready_once" ON "customer_gear_notices" ("work_order_event_id");--> statement-breakpoint
@@ -47,7 +48,7 @@ CREATE INDEX "customer_gear_notices_person_idx" ON "customer_gear_notices" ("per
 CREATE UNIQUE INDEX "customer_gear_reminder_settings_item_unique" ON "customer_gear_reminder_settings" ("customer_gear_item_id");--> statement-breakpoint
 CREATE INDEX "customer_gear_reminder_settings_shop_off_idx" ON "customer_gear_reminder_settings" ("shop_id") WHERE "reminders_off_at" is not null;--> statement-breakpoint
 CREATE UNIQUE INDEX "work_order_bills_order_unique" ON "work_order_bills" ("order_id");--> statement-breakpoint
-CREATE INDEX "work_order_bills_work_order_idx" ON "work_order_bills" ("work_order_id","created_at");--> statement-breakpoint
+CREATE INDEX "work_order_bills_work_order_idx" ON "work_order_bills" ("work_order_id","seq");--> statement-breakpoint
 CREATE INDEX "work_order_bills_shop_idx" ON "work_order_bills" ("shop_id");--> statement-breakpoint
 ALTER TABLE "customer_gear_notices" ADD CONSTRAINT "customer_gear_notices_shop_id_shops_id_fkey" FOREIGN KEY ("shop_id") REFERENCES "shops"("id");--> statement-breakpoint
 ALTER TABLE "customer_gear_notices" ADD CONSTRAINT "customer_gear_notices_person_id_people_id_fkey" FOREIGN KEY ("person_id") REFERENCES "people"("id");--> statement-breakpoint

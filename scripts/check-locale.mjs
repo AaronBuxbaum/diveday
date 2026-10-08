@@ -213,6 +213,7 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["diver.json marketing.privacy.processors.vercelTerm", "brand"],
   ["diver.json rental.itemLabels.gopro", "brand"],
   ["diver.json trip.rentalItems.gopro", "brand"],
+  ["diver.json notifications.gearPieces.gopro", "brand"],
   ["staff/inbox.json channel.whatsapp", "brand"],
   ["staff/integrations.json quickbooks.name", "brand"],
   ["staff/integrations.json shopify.name", "brand"],

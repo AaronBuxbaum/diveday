@@ -147,10 +147,12 @@ export const workOrderBills = pgTable(
       .references(() => orders.id),
     createdByPersonId: uuid("created_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Insertion order: which bill is the ticket's latest, even inside one second. */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [
     uniqueIndex("work_order_bills_order_unique").on(table.orderId),
-    index("work_order_bills_work_order_idx").on(table.workOrderId, table.createdAt),
+    index("work_order_bills_work_order_idx").on(table.workOrderId, table.seq),
     index("work_order_bills_shop_idx").on(table.shopId),
   ],
 );

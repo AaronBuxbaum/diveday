@@ -33,6 +33,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { notificationProviderForDb, sendNotification } from "./notifications";
 import { type CreateOrderOutcome, createOrder, type NewOrderLineItem, voidOrder } from "./orders";
+import { queryAll } from "./query-helpers";
 import {
   type CustomerGearNotice,
   type CustomerGearNoticeChannelValue,
@@ -305,7 +306,7 @@ export async function getWorkOrderBill(
     .from(workOrderBills)
     .innerJoin(orders, and(eq(orders.id, workOrderBills.orderId), eq(orders.shopId, shopId)))
     .where(and(eq(workOrderBills.shopId, shopId), eq(workOrderBills.workOrderId, workOrderId)))
-    .orderBy(desc(workOrderBills.createdAt), desc(workOrderBills.id))
+    .orderBy(desc(workOrderBills.seq))
     .limit(1);
   return row ?? null;
 }
@@ -502,9 +503,9 @@ export async function serviceReminderStates(
   shopId: string,
   customerGearItemIds: readonly string[],
 ): Promise<Map<string, ServiceReminderState>> {
-  const [off, last] = await Promise.all([
-    piecesWithRemindersOff(db, shopId, customerGearItemIds),
-    lastServiceReminders(db, shopId, customerGearItemIds),
+  const [off, last] = await queryAll(db, [
+    () => piecesWithRemindersOff(db, shopId, customerGearItemIds),
+    () => lastServiceReminders(db, shopId, customerGearItemIds),
   ]);
   return new Map(
     customerGearItemIds.map((id) => {
@@ -820,16 +821,17 @@ export async function billAndPickupFacts(
   db: DbExecutor,
   input: { shopId: string; workOrderId: string; personId: string; viewerPersonId: string },
 ): Promise<BillAndPickupFacts> {
-  const [readyNotice, bill, account, canBill, [customer]] = await Promise.all([
-    latestReadyNotice(db, input.shopId, input.workOrderId),
-    getWorkOrderBill(db, input.shopId, input.workOrderId),
-    getShopStripeAccount(db, input.shopId),
-    canPersonManageOrders(db, input.shopId, input.viewerPersonId),
-    db
-      .select({ email: people.email })
-      .from(people)
-      .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
-      .limit(1),
+  const [readyNotice, bill, account, canBill, [customer]] = await queryAll(db, [
+    () => latestReadyNotice(db, input.shopId, input.workOrderId),
+    () => getWorkOrderBill(db, input.shopId, input.workOrderId),
+    () => getShopStripeAccount(db, input.shopId),
+    () => canPersonManageOrders(db, input.shopId, input.viewerPersonId),
+    () =>
+      db
+        .select({ email: people.email })
+        .from(people)
+        .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+        .limit(1),
   ]);
   return {
     readyNotice,

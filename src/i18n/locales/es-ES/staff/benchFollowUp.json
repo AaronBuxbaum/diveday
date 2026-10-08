@@ -17,7 +17,7 @@
   },
   "bill": {
     "heading": "Factura",
-    "total": "Total: {amount}",
+    "total": "Importe total: {amount}",
     "atShop": "Se cobra en el mostrador.",
     "ownerOnly": "La factura la envía un propietario o gerente.",
     "needsEmail": "Agrega un correo a la ficha del cliente para enviarle la factura.",
