@@ -2704,7 +2704,8 @@
         "item5": "Registros de exenciones a prueba de manipulación, con sello verificable",
         "item6": "La firma de la madre, el padre o el tutor en la exención de un buceador cuya fecha de nacimiento muestra que es menor de 18 años, con el embarque retenido hasta que llegue",
         "item7": "Una exención firmada en papel, registrada en el mostrador cuando el personal confirma que las respuestas médicas no requieren un médico",
-        "item8": "Cada exención sin enviar de una salida, enviada desde una sola fila de Hoy"
+        "item8": "Cada exención sin enviar de una salida, enviada desde una sola fila de Hoy",
+        "item9": "Una exención firmada impresa como documento: el texto firmado, quién la firmó, cuándo y su sello"
       },
       "certifications": {
         "item1": "Listo o Bloqueado para cada buceador en cada salida, con el motivo al lado",
@@ -2771,7 +2772,8 @@
         "item9": "Una lista de preparación hecha con las tallas que te dieron, con tanques de aire y nitrox separados",
         "item10": "Una lista de empaque del centro reutilizada en cada salida",
         "item11": "Una lista de precios de alquiler: el equipo completo, cada pieza y el nitrox por inmersión",
-        "item12": "Unidades, historial de mantenimiento y alquileres anteriores importados desde una hoja de cálculo"
+        "item12": "Unidades, historial de mantenimiento y alquileres anteriores importados desde una hoja de cálculo",
+        "item13": "Una lista de Alquileres con todo lo que está fuera o reservado, por quién lo tiene: las unidades, las fechas y si la reserva está pagada"
       },
       "schedule": {
         "item1": "El horario como constructor: añade, mueve, copia y quita en el sitio",

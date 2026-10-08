@@ -2704,7 +2704,8 @@
         "item5": "Tamper-evident waiver records with a verifiable seal",
         "item6": "A parent or guardian’s signature on the release of a diver whose date of birth shows them under 18, with boarding held until it’s in",
         "item7": "A release signed on paper, recorded at the desk once staff confirm the medical answers need no physician",
-        "item8": "Every unsent waiver for a departure sent from one row on Today"
+        "item8": "Every unsent waiver for a departure sent from one row on Today",
+        "item9": "A signed waiver printed as a document: the text signed, who signed it, when, and its seal"
       },
       "certifications": {
         "item1": "Ready or Blocked for every diver on every departure, with the reason beside it",
@@ -2771,7 +2772,8 @@
         "item9": "A rental prep list built from the sizes divers gave you, tanks split air and nitrox",
         "item10": "A shop packing checklist reused on every trip",
         "item11": "A rental price list: the full set, each piece, and nitrox by the dive",
-        "item12": "Units, service history and past rentals imported from a spreadsheet"
+        "item12": "Units, service history and past rentals imported from a spreadsheet",
+        "item13": "A Rentals list of everything out or reserved, by who has it: the units, the dates, and whether the booking is paid"
       },
       "schedule": {
         "item1": "The schedule as a builder: add, move, copy, remove in place",
