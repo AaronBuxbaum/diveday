@@ -47,6 +47,7 @@ export function CourseHero({
   locale,
   t,
   facts = [],
+  inquiryHref = null,
 }: {
   course: Course;
   totalCents: number | null;
@@ -63,7 +64,16 @@ export function CourseHero({
    * one place a diver reads them.
    */
   facts?: Array<{ label: string; value: string }>;
+  /**
+   * Where "Ask the shop" goes when the course can also run privately: the
+   * page's own inquiry form. Null when the shop has no inbox to ask.
+   */
+  inquiryHref?: string | null;
 }) {
+  // A private session has its own price on the row (`private_price_cents`),
+  // but it is never stated here: whether it is per diver or per group is the
+  // shop's to explain, so the hero only says the option exists.
+  const privateAvailable = (course.privatePriceCents ?? 0) > 0;
   // Whole major units: a hero price reads as a headline, and the trailing
   // ".00" is noise. `minorToMajor` (not a literal 100) is what keeps a
   // ¥48,000 course from rendering as ¥480.
@@ -113,6 +123,19 @@ export function CourseHero({
               <span className="ml-2 text-sm font-normal text-muted">{t("common.perDiver")}</span>
             </p>
           )}
+          {privateAvailable ? (
+            <p className="text-sm text-muted">
+              {t("course.privateAvailable")}
+              {inquiryHref ? (
+                <>
+                  {" · "}
+                  <a href={inquiryHref} className="font-medium text-primary hover:underline">
+                    {t("course.privateAsk")}
+                  </a>
+                </>
+              ) : null}
+            </p>
+          ) : null}
         </div>
       </div>
       {facts.length > 0 ? (
