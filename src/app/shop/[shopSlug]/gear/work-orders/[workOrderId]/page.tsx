@@ -25,6 +25,7 @@ import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { WORK_ORDER_TEXT_LIMITS } from "@/lib/work-orders";
+import { BillAndPickupCard } from "../_components/BillAndPickupCard";
 import { WorkOrderHistoryCard } from "../_components/WorkOrderHistoryCard";
 import { WorkOrderLinesCard } from "../_components/WorkOrderLinesCard";
 import { WorkOrderStatusCard } from "../_components/WorkOrderStatusCard";
@@ -82,7 +83,7 @@ export default async function WorkOrderPage({
   const workOrderId = uuidParam(rawId);
   if (!workOrderId) notFound();
 
-  const { db, shop } = await requireShopSurface(shopSlug);
+  const { db, shop, session } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
@@ -282,6 +283,17 @@ export default async function WorkOrderPage({
           totalCents={detail.totalCents}
           readOnly={deleted}
           currency={currency}
+          locale={locale}
+          t={t}
+        />
+        <BillAndPickupCard
+          db={db}
+          shop={shop}
+          workOrder={workOrder}
+          lineCount={detail.lines.length}
+          totalCents={detail.totalCents}
+          viewerPersonId={session.user.personId}
+          notice={notice}
           locale={locale}
           t={t}
         />

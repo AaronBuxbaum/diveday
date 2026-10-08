@@ -5,6 +5,7 @@ import { ALERTING_LEVELS, CEILING_UNITS, COST_PROVIDERS } from "@/lib/cost-guard
 import { COURSE_INQUIRY_EXPERIENCE } from "@/lib/course-inquiry";
 import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
 import { SHOP_MILESTONES } from "@/lib/founder-metrics";
+import { GEAR_KIND_ORDER } from "@/lib/gear";
 import { REPLY_BODY_MAX_LENGTH } from "@/lib/inbox";
 import { DIVER_EMAIL_MAX } from "@/lib/person-fields";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
@@ -941,6 +942,69 @@ const weeklyDigestSchema = z.object({
   turnOffUrl: z.url().max(2_000),
 });
 
+/**
+ * One piece of a customer's own gear, named in a bench message: the kind as a
+ * code (the renderer picks the word in the recipient's language) and the make
+ * and model as the shop typed it.
+ */
+const customerGearPieceSchema = z.object({
+  kind: z.enum(GEAR_KIND_ORDER),
+  brandModel: z.string().trim().min(1).max(120).optional(),
+});
+
+export type CustomerGearPiece = z.infer<typeof customerGearPieceSchema>;
+
+/**
+ * **"Your gear is ready"** (ADR 20261008-work-order-follow-up): sent once when
+ * a customer's service ticket moves to ready, and again only when a staffer
+ * presses Resend. Transactional — the customer left their regulator with the
+ * shop and is waiting to hear — so it carries no unsubscribe link.
+ *
+ * `noticeId` is the `customer_gear_notices` row claimed before the send, which
+ * is what holds "once per move to ready"; the key below only keeps one call
+ * from doubling. Not queued for retry (`notificationIsQueueable`): the notice
+ * row records the outcome staff read on the ticket, and a queue that delivered
+ * it later would leave that row saying it failed beside a Resend button.
+ *
+ * `workPerformed` is the technician's words *for the customer*; the bench
+ * notes never reach this payload.
+ */
+const workOrderReadySchema = z.object({
+  kind: z.literal("work_order_ready"),
+  noticeId: z.uuid(),
+  workOrderId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  pieces: z.array(customerGearPieceSchema).max(20),
+  workPerformed: z.string().trim().min(1).max(4000).optional(),
+});
+
+/**
+ * **A customer piece coming due for service** (ADR
+ * 20261008-work-order-follow-up; owner decision 2026-10-08): about a month
+ * before the date, once per piece per clock per date, unless the piece's
+ * reminders are off. Courtesy mail rather than transactional — nobody asked
+ * for it this time — so it carries `unsubscribeUrl` (and with it the postal
+ * footer) and is never sent to a person who turned optional email off.
+ * Not queued, for the reason the ready message is not.
+ */
+const gearServiceDueSchema = z.object({
+  kind: z.literal("gear_service_due"),
+  noticeId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  piece: customerGearPieceSchema,
+  clock: z.enum(["service", "hydro_test", "visual_inspection", "o2_clean", "note"]),
+  dueOn: calendarDateSchema,
+  unsubscribeUrl: z.url().max(2_000),
+});
+
 export const notificationSenderSchema = z.object({
   replyTo: emailAddressSchema.optional(),
   /** One line, already in postal order (`shopAddressLines(...).join(", ")`). */
@@ -988,6 +1052,8 @@ export const notificationSchema = z
     courseInquirySchema,
     staffReplySchema,
     weeklyDigestSchema,
+    workOrderReadySchema,
+    gearServiceDueSchema,
   ])
   .and(z.object({ sender: notificationSenderSchema.optional() }));
 
@@ -1094,6 +1160,8 @@ export function notificationSubjectPhone(notification: Notification): string | n
 export function notificationIsQueueable(notification: Notification): boolean {
   switch (notification.kind) {
     case "guardian_release_copy":
+    case "work_order_ready":
+    case "gear_service_due":
       return false;
     default:
       return true;
@@ -1221,5 +1289,10 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // agree on what "this week's email" means.
     case "weekly_digest":
       return `weekly-digest/${notification.personId}/${notification.weekOf}`;
+    // One send per notice row; the row is claimed before the send.
+    case "work_order_ready":
+      return `work-order-ready/${notification.noticeId}`;
+    case "gear_service_due":
+      return `gear-service-due/${notification.noticeId}`;
   }
 }

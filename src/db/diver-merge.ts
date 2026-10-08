@@ -136,6 +136,11 @@ const SINGLETON_PER_PERSON_TABLES = ["rental_fit_profiles", "last_minute_list_en
 
 export const DIVER_HISTORY_TABLES = [
   "course_inquiries",
+  // What the bench told this diver about their own gear (ADR
+  // 20261008-work-order-follow-up). It follows the gear and the tickets to the
+  // survivor, or the survivor's ticket would read as never announced and the
+  // next pass would remind them a second time about a date already covered.
+  "customer_gear_notices",
   "bookings",
   "internal_notes",
   "trip_waitlist_entries",
@@ -296,6 +301,9 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "trip_sightings.deleted_by_person_id": "who took the mis-tapped sighting back",
   "trip_sightings.recorded_by_person_id": "which crew member tapped the chip",
   "trip_stage_events.recorded_by_person_id": "who said where the boat was",
+  "customer_gear_notices.sent_by_person_id": "who pressed Resend on a ready message",
+  "customer_gear_reminder_settings.changed_by_person_id": "who switched a piece's reminders",
+  "work_order_bills.created_by_person_id": "who sent the bill",
   "work_order_events.actor_person_id": "who moved the ticket",
   "work_order_events.technician_person_id": "which technician the ticket was handed to",
   "work_orders.deleted_by_person_id": "who deleted the ticket",
@@ -806,7 +814,7 @@ export const DIVER_MERGE_COUNT_GROUPS = {
   cards: ["certifications", "specialty_certifications", "nitrox_certifications"],
   orders: ["orders", "dive_package_entitlements", "imported_payment_history"],
   notes: ["internal_notes"],
-  messages: ["inbound_messages", "staff_replies"],
+  messages: ["inbound_messages", "staff_replies", "customer_gear_notices"],
   reviews: ["trip_reviews", "recap_pulses"],
   gear: [
     "gear_reservations",

@@ -225,6 +225,14 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const orderLineRows = await readShopScoped(tx, "orderLineItems", shopId);
 
+  const workOrderBillRows = await readShopScoped(tx, "workOrderBills", shopId);
+
+  const customerGearReminderSettingRows = await readShopScoped(
+    tx,
+    "customerGearReminderSettings",
+    shopId,
+  );
+
   // diveday:allow-deleted-trips: the bundle is the shop taking everything it
   // has, tombstones included — a departure they deleted is still a row they
   // own, and a backup that quietly drops rows is not a backup. The same
@@ -513,6 +521,8 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     lastMinutePromoRecipientRows,
     orderRows,
     orderLineRows,
+    workOrderBillRows,
+    customerGearReminderSettingRows,
     tripRows,
     tripTitle,
     tripStartsAt,
@@ -1114,6 +1124,12 @@ export async function loadShopExportCounts(
     "imported_payment_history.csv": await countShopScoped(db, "importedPaymentHistory", shopId),
     "orders.csv": await countShopScoped(db, "orders", shopId),
     "order_line_items.csv": await countShopScoped(db, "orderLineItems", shopId),
+    "work_order_bills.csv": await countShopScoped(db, "workOrderBills", shopId),
+    "customer_gear_reminder_settings.csv": await countShopScoped(
+      db,
+      "customerGearReminderSettings",
+      shopId,
+    ),
     "tips.csv": await countShopScoped(db, "tips", shopId),
     "dive_sites.csv": await countShopScoped(db, "diveSites", shopId),
     "dive_site_creatures.csv": await countShopScoped(db, "diveSiteCreatures", shopId),

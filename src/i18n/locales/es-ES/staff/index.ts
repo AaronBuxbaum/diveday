@@ -23,6 +23,7 @@
 
 import activity from "./activity.json";
 import backup from "./backup.json";
+import benchFollowUp from "./benchFollowUp.json";
 import billing from "./billing.json";
 import blowout from "./blowout.json";
 import boats from "./boats.json";
@@ -65,6 +66,7 @@ import whatsapp from "./whatsapp.json";
 import workOrders from "./workOrders.json";
 
 const staff = {
+  benchFollowUp,
   calendar,
   emailSettings,
   calls,

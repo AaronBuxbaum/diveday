@@ -32,6 +32,7 @@ import {
 } from "./email";
 import type { Notification } from "./kinds";
 import { weeklyDigestEmail } from "./weekly-digest-email";
+import { gearServiceDueEmail, workOrderReadyEmail } from "./work-order-emails";
 
 /**
  * Which email body each notification kind renders to, and the document chrome
@@ -117,5 +118,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "course_inquiry") return courseInquiryEmail(notification);
   if (notification.kind === "staff_reply") return staffReplyEmail(notification);
   if (notification.kind === "weekly_digest") return weeklyDigestEmail(notification);
+  if (notification.kind === "work_order_ready") return workOrderReadyEmail(notification);
+  if (notification.kind === "gear_service_due") return gearServiceDueEmail(notification);
   return passwordChangedEmail(notification);
 }

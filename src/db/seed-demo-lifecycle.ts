@@ -108,6 +108,7 @@ import {
   waiverMaterialityDecisions,
   waiverRecords,
   waiverTemplates,
+  workOrderBills,
   workOrderEvents,
   workOrderItems,
   workOrderLines,
@@ -167,7 +168,10 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(heldSends).where(eq(heldSends.shopId, shopId));
   await db.delete(formDrafts).where(eq(formDrafts.shopId, shopId));
 
-  // Order/checkout/booking dependents first.
+  // Order/checkout/booking dependents first. A ticket's bill names its order
+  // without a cascade (ADR 20261008-work-order-follow-up), so the link goes
+  // before the order it points at.
+  await db.delete(workOrderBills).where(eq(workOrderBills.shopId, shopId));
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
   await db.delete(paymentOperationIntents).where(eq(paymentOperationIntents.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));

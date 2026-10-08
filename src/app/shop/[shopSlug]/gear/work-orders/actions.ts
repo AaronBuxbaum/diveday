@@ -32,6 +32,7 @@ import {
   WORK_ORDER_TEXT_LIMITS,
   type WorkOrderStatus,
 } from "@/lib/work-orders";
+import { announceReady } from "./_lib/announce-ready";
 
 /**
  * Every write the bench makes (ADR 20261008-gear-work-orders).
@@ -207,6 +208,10 @@ export async function setWorkOrderStatusAction(formData: FormData) {
     todayLocal: calendarDateInTimezone(nowDate(), shop.timezone),
     actorPersonId: session.user.personId,
   });
+  // The customer hears it is ready, once per move (ADR 20261008-work-order-follow-up).
+  if (outcome.ok && outcome.workOrder.status === "ready") {
+    await announceReady(db, { shopId: session.user.shopId, workOrderId: outcome.workOrder.id });
+  }
   revalidateAndRedirect(landing, noticeUrl(landing, outcome.ok ? "moved" : outcome.reason));
 }
 

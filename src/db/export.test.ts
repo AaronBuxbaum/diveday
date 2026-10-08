@@ -85,6 +85,8 @@ const EXPECTED_FILES = [
   "notification_deliveries.csv",
   "orders.csv",
   "order_line_items.csv",
+  "work_order_bills.csv",
+  "customer_gear_reminder_settings.csv",
   "tips.csv",
   "dive_sites.csv",
   "dive_site_creatures.csv",
@@ -165,6 +167,8 @@ const EXPORTED_TABLES = [
   "imported_payment_history",
   "orders",
   "order_line_items",
+  "work_order_bills",
+  "customer_gear_reminder_settings",
   "tips",
   "dive_sites",
   "dive_site_creatures",
@@ -222,6 +226,11 @@ const EXCLUDED_TABLES = [
   // exactly the reason notification_delivery_attempts is.
   "waiver_deliveries",
   "notification_send_queue", // operational retry state, not shop records
+  // What the bench told a customer and how it went (ADR
+  // 20261008-work-order-follow-up): a kind, a channel and a delivery status,
+  // the same plumbing notification_delivery_attempts is. The ticket and the
+  // piece it was about export in their own files.
+  "customer_gear_notices",
   // Per-device Web Push credentials (ADR 20260804-manifest-web-push). Excluded
   // for two independent reasons: they are meaningless in another system — an
   // endpoint is issued by a browser vendor to one installed app on one device,
@@ -532,6 +541,8 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "stripe_customer_id",
   ],
   order_line_items: ["shop_id"],
+  work_order_bills: ["shop_id"],
+  customer_gear_reminder_settings: ["shop_id"],
   tips: [
     "shop_id",
     "stripe_account_id", // provider linkage, useless outside this Stripe account

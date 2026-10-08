@@ -138,6 +138,10 @@ export const EXPORT_FILE_NOTES = {
   "orders.csv":
     "Shop-issued orders with their Stripe invoice references — reconcilable against the shop's own Stripe account, which stays the shop's.",
   "order_line_items.csv": "The lines on each order (trip fees, courses, rentals, nitrox, retail).",
+  "work_order_bills.csv":
+    "Which order billed which service ticket, one row per bill. A ticket whose bill was voided can be billed again, so a ticket may have more than one row; the newest is its bill. The money itself is in orders.csv and order_line_items.csv.",
+  "customer_gear_reminder_settings.csv":
+    "A customer piece whose service reminders were switched. A filled reminders_off_at means the customer asked not to be reminded about that piece; an empty one means reminders were turned back on. A piece with no row here gets reminders.",
   "tips.csv":
     "Crew tips a diver started from their post-trip recap page, with their Stripe references — reconcilable against the shop's own Stripe account, which stays the shop's. Only status 'paid' is real revenue; pending and expired rows are unfinished attempts.",
   "dive_sites.csv":

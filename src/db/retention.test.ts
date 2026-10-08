@@ -436,6 +436,13 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "trip_last_minute_promo_recipients",
   "trip_blowouts",
   "trip_blowout_divers",
+  // What the bench told a customer and the orders it raised (ADR
+  // 20261008-work-order-follow-up). Read with the ticket or the piece they are
+  // about, which the shop keeps; a reminder row is also what stops a second
+  // reminder for the same due date, so a window would re-arm one.
+  "customer_gear_notices",
+  "customer_gear_reminder_settings",
+  "work_order_bills",
   "buddy_pair_members",
   "pre_departure_check_events",
   "gear_reservations",

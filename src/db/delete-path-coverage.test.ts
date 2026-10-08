@@ -228,6 +228,12 @@ const RESET_KEEPS: Record<string, string> = {
   trip_desk_events: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
   trip_schedule_days: "ON DELETE CASCADE from trips clears it",
+  // What the bench said to customers and the orders it raised (ADR
+  // 20261008-work-order-follow-up). All three hang off a ticket or a customer's
+  // piece by ON DELETE CASCADE, and the reset clears those before orders.
+  customer_gear_notices: "ON DELETE CASCADE from work orders and customer gear clears it",
+  customer_gear_reminder_settings: "ON DELETE CASCADE from customer gear clears it",
+  work_order_bills: "ON DELETE CASCADE from work orders clears it",
   shop_milestones:
     "DiveDay's own activation bookkeeping, written only for real shops (never a demo), so a schedule reset has none to clear",
 };
@@ -266,6 +272,8 @@ const CASCADE_KEEPS: Record<string, string> = {
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
   trip_schedule_days: "ON DELETE CASCADE from trips clears it",
   shop_milestones: "ON DELETE CASCADE from shops clears it",
+  customer_gear_notices: "ON DELETE CASCADE from work orders and customer gear clears it",
+  customer_gear_reminder_settings: "ON DELETE CASCADE from customer gear clears it",
 };
 
 describe("shop-scoped delete-path coverage", () => {

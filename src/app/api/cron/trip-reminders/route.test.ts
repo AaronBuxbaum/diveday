@@ -5,6 +5,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/db/reminders", () => ({ sendDueReminders: vi.fn() }));
+vi.mock("@/db/work-order-follow-up", () => ({ sendDueServiceReminders: vi.fn() }));
 vi.mock("@/db/held-sends", () => ({
   drainHeldSends: vi.fn(async () => ({ sent: 0, failed: 0 })),
 }));
@@ -15,6 +16,7 @@ vi.mock("@sentry/nextjs", () => ({
 
 const { getDb } = await import("@/db/client");
 const { sendDueReminders } = await import("@/db/reminders");
+const { sendDueServiceReminders } = await import("@/db/work-order-follow-up");
 const Sentry = await import("@sentry/nextjs");
 const { TRIP_REMINDER_CRON_CRONTAB } = await import("@/lib/reminders");
 const { GET } = await import("./route");
@@ -40,6 +42,15 @@ beforeEach(() => {
     held: 2,
     identityHeld: 0,
     settled: 1,
+    failed: 0,
+  });
+  vi.mocked(sendDueServiceReminders).mockReset().mockResolvedValue({
+    scanned: 1,
+    sent: 1,
+    held: 0,
+    skipped: 0,
+    optedOut: 0,
+    noContact: 0,
     failed: 0,
   });
   vi.mocked(Sentry.captureCheckIn).mockClear().mockReturnValue("check-in-id");
@@ -99,6 +110,29 @@ describe("GET /api/cron/trip-reminders", () => {
       checkInId: "check-in-id",
       monitorSlug: "diveday-trip-reminders",
       status: "ok",
+    });
+  });
+
+  it("sends service-due reminders on the same pass", async () => {
+    await GET(cronRequest(`Bearer ${secret}`));
+    expect(sendDueServiceReminders).toHaveBeenCalledWith(FAKE_DB);
+  });
+
+  it("keeps the trip reminders when the service-reminder scan throws, and says so", async () => {
+    const failure = new Error("reminder scan broke");
+    vi.mocked(sendDueServiceReminders).mockRejectedValue(failure);
+
+    const response = await GET(cronRequest(`Bearer ${secret}`));
+
+    expect(response.status).toBe(200);
+    expect(sendDueReminders).toHaveBeenCalled();
+    expect(Sentry.captureException).toHaveBeenCalledWith(failure, {
+      tags: { cron_scan: "service_reminders" },
+    });
+    expect(Sentry.captureCheckIn).toHaveBeenNthCalledWith(2, {
+      checkInId: "check-in-id",
+      monitorSlug: "diveday-trip-reminders",
+      status: "error",
     });
   });
 

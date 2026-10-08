@@ -4211,6 +4211,53 @@
       "exampleShopName": "Blue Mantis Divers",
       "exampleMessage": "Reef Runner zarpa el sábado a las 8:00. Presentaos en el muelle 30 minutos antes.",
       "testMessage": "Este es un mensaje de prueba de DiveDay. Tu conexión de WhatsApp funciona."
+    },
+    "gearPieces": {
+      "bcd": "chaleco",
+      "regulator": "regulador",
+      "wetsuit": "neopreno",
+      "boots": "botines",
+      "mask": "máscara",
+      "fins": "aletas",
+      "weights": "lastre",
+      "diveComputer": "computadora de buceo",
+      "gopro": "GoPro",
+      "tank": "tanque",
+      "drysuit": "traje seco",
+      "hood": "capucha",
+      "gloves": "guantes",
+      "torch": "linterna",
+      "dpv": "propulsor",
+      "smb": "boya de señalización",
+      "reel": "carrete",
+      "camera": "cámara",
+      "nitroxAnalyzer": "analizador de nitrox",
+      "o2Kit": "kit de oxígeno",
+      "other": "equipo",
+      "withModel": "{piece} ({model})"
+    },
+    "workOrderReady": {
+      "subject": "Tu equipo está listo para recoger",
+      "ready": "Ya puedes recoger tu equipo en {shopName}: {pieces}.",
+      "readyNoPieces": "Ya puedes recoger tu equipo en {shopName}.",
+      "workHeading": "Lo que hicimos:"
+    },
+    "gearServiceDue": {
+      "subject": "Recordatorio de mantenimiento de {shopName}",
+      "due": {
+        "service": "La revisión de tu equipo ({piece}) vence el {date}.",
+        "hydroTest": "La prueba hidrostática de tu equipo ({piece}) vence el {date}.",
+        "visualInspection": "La inspección visual de tu equipo ({piece}) vence el {date}.",
+        "o2Clean": "La limpieza para oxígeno de tu equipo ({piece}) vence el {date}.",
+        "note": "Toca revisar tu equipo ({piece}) antes del {date}."
+      },
+      "dropBy": "Pasa por {shopName} cuando quieras antes de esa fecha.",
+      "dropBySms": "Pasa cuando quieras antes de esa fecha."
+    },
+    "smsWorkOrder": {
+      "ready": "{shopName}: ya puedes recoger tu equipo ({pieces}).",
+      "readyNoPieces": "{shopName}: ya puedes recoger tu equipo.",
+      "work": "Lo que hicimos: {work}"
     }
   },
   "brand": {

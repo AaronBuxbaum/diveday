@@ -529,6 +529,19 @@ const NOTICE_KEYS: DiverNoticeMap = {
     tone: "danger",
     key: "divers.notices.notAuthorizedGuardianEmail",
   },
+  // A piece's service reminders switched (ADR 20261008-work-order-follow-up),
+  // answered beside the pieces in the bench's file group.
+  "reminders-off": {
+    form: "work-orders",
+    tone: "success",
+    key: "benchFollowUp.notice.remindersOff",
+  },
+  "reminders-on": { form: "work-orders", tone: "success", key: "benchFollowUp.notice.remindersOn" },
+  "reminders-not-found": {
+    form: "work-orders",
+    tone: "danger",
+    key: "workOrders.notice.notFound",
+  },
   // Erasure is offered on a deleted record only, and the action enforces it —
   // so this arrives on a record whose erase section is not rendered. `"page"`
   // is the only place it can be seen, and it happens to be directly above the

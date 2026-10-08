@@ -2524,6 +2524,40 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     note: EXPORT_FILE_NOTES["order_line_items.csv"],
   },
   {
+    file: "work_order_bills.csv",
+    header: ["id", "work_order_id", "order_id", "created_by_person_id", "created_at"],
+    rows: ({ workOrderBillRows }) =>
+      workOrderBillRows.map((row) => [
+        row.id,
+        row.workOrderId,
+        row.orderId,
+        row.createdByPersonId,
+        row.createdAt,
+      ]),
+    note: EXPORT_FILE_NOTES["work_order_bills.csv"],
+  },
+  {
+    file: "customer_gear_reminder_settings.csv",
+    header: [
+      "id",
+      "customer_gear_item_id",
+      "reminders_off_at",
+      "changed_by_person_id",
+      "created_at",
+      "updated_at",
+    ],
+    rows: ({ customerGearReminderSettingRows }) =>
+      customerGearReminderSettingRows.map((row) => [
+        row.id,
+        row.customerGearItemId,
+        row.remindersOffAt,
+        row.changedByPersonId,
+        row.createdAt,
+        row.updatedAt,
+      ]),
+    note: EXPORT_FILE_NOTES["customer_gear_reminder_settings.csv"],
+  },
+  {
     file: "tips.csv",
     header: [
       "id",

@@ -4211,6 +4211,53 @@
       "exampleShopName": "Blue Mantis Divers",
       "exampleMessage": "Reef Runner departs Saturday at 8:00 AM. Dock call 30 minutes early.",
       "testMessage": "This is a test message from DiveDay. Your WhatsApp connection is working."
+    },
+    "gearPieces": {
+      "bcd": "BCD",
+      "regulator": "regulator",
+      "wetsuit": "wetsuit",
+      "boots": "boots",
+      "mask": "mask",
+      "fins": "fins",
+      "weights": "weights",
+      "diveComputer": "dive computer",
+      "gopro": "GoPro",
+      "tank": "tank",
+      "drysuit": "drysuit",
+      "hood": "hood",
+      "gloves": "gloves",
+      "torch": "dive light",
+      "dpv": "scooter",
+      "smb": "surface marker buoy",
+      "reel": "reel",
+      "camera": "camera",
+      "nitroxAnalyzer": "nitrox analyzer",
+      "o2Kit": "oxygen kit",
+      "other": "gear",
+      "withModel": "{piece} ({model})"
+    },
+    "workOrderReady": {
+      "subject": "Your gear is ready to collect",
+      "ready": "Your gear is ready to collect from {shopName}: {pieces}.",
+      "readyNoPieces": "Your gear is ready to collect from {shopName}.",
+      "workHeading": "What we did:"
+    },
+    "gearServiceDue": {
+      "subject": "Service reminder from {shopName}",
+      "due": {
+        "service": "Service on your {piece} is due on {date}.",
+        "hydroTest": "The hydrostatic test on your {piece} is due on {date}.",
+        "visualInspection": "The visual inspection on your {piece} is due on {date}.",
+        "o2Clean": "The oxygen cleaning on your {piece} is due on {date}.",
+        "note": "A check on your {piece} is due on {date}."
+      },
+      "dropBy": "Drop by {shopName} any time before then.",
+      "dropBySms": "Drop by any time before then."
+    },
+    "smsWorkOrder": {
+      "ready": "{shopName}: your gear is ready to collect ({pieces}).",
+      "readyNoPieces": "{shopName}: your gear is ready to collect.",
+      "work": "What we did: {work}"
     }
   },
   "brand": {

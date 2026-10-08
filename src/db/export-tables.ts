@@ -15,6 +15,7 @@ import {
   courseInquiries,
   courses,
   customerGearItems,
+  customerGearReminderSettings,
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
@@ -59,6 +60,7 @@ import {
   waiverMaterialityDecisions,
   waiverRecords,
   waiverTemplates,
+  workOrderBills,
   workOrderEvents,
   workOrderItems,
   workOrderLines,
@@ -207,6 +209,19 @@ export const EXPORT_TABLES = {
     table: orderLineItems,
     order: [asc(orderLineItems.orderId), asc(orderLineItems.createdAt), asc(orderLineItems.id)],
     scope: { shopColumn: orderLineItems.shopId },
+  },
+  // Which order billed which service ticket, and a customer piece's reminder
+  // switch (ADR 20261008-work-order-follow-up). Shop-scoped only: neither
+  // names a person, and both are read beside the ticket and the piece.
+  workOrderBills: {
+    table: workOrderBills,
+    order: [asc(workOrderBills.createdAt), asc(workOrderBills.id)],
+    scope: { shopColumn: workOrderBills.shopId },
+  },
+  customerGearReminderSettings: {
+    table: customerGearReminderSettings,
+    order: [asc(customerGearReminderSettings.createdAt), asc(customerGearReminderSettings.id)],
+    scope: { shopColumn: customerGearReminderSettings.shopId },
   },
   tripChangeEvents: {
     table: tripChangeEvents,
