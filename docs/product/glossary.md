@@ -71,17 +71,26 @@ new domain concept, define it here in the same PR.
   path to it: a staffer looks a card number up with the issuing agency (in the agency's own portal,
   outside DiveDay) and clicks **Mark certified**; a card arrives already `verified` through the contact
   importer (see **Imported certification**); or this shop's own instructor certifies a diver directly
-  from a course session's own roster (see **Shop-issued certification**). There is no automated agency
-  integration for the first path. A card awaiting a check carries a link to its agency's lookup page
-  ("Check with SSI"): a convenience that saves finding the page, never evidence — the card becomes
-  certified only when a staffer marks it so — and some agencies (RAID, BSAC, the cave-diving bodies)
-  get none because they publish no lookup to link to, while PADI's sits behind the shop's member
+  from a course session's own roster (see **Shop-issued certification**); or an **Agency check** reads the
+  agency's own lookup page from the staffer's browser and certifies a level card when that page names
+  the diver at its level. DiveDay's servers never call an agency. A card awaiting a check carries a link
+  to its agency's lookup page ("Check with SSI"), which becomes the Agency check when the extension is
+  in the browser. Some agencies (RAID, BSAC, the cave-diving bodies) get no link because they publish no
+  lookup, while PADI's sits behind the shop's member
   sign-in and its link says so. Only a certified card at or above a trip's required level can
   satisfy readiness. (The staff surface says "certified"; the stored status value is `verified`, which
   is what readiness reads.)
+- **Agency check** — the DiveDay browser extension doing the "Check with SSI" lookup from the
+  staffer's own browser (H-105, ADR 20261008-cert-check-extension). The extension types the diver
+  into the agency's own lookup page and hands back the page's text; the server certifies the card
+  only when one record on that page names the diver, carries the birth date or card number the lookup
+  was typed with, and states the claimed level in the agency's own words, with nothing limiting it.
+  It stamps `agency_checked_at`, with those words as the review note, and names the staffer whose
+  browser ran it. Anything else writes nothing and leaves the link. Level cards only, for SSI, NAUI,
+  SDI, GUE and CMAS; an unsighted self-declaration still needs its sighting.
 - **Claimed certification** — a card recorded as evidence but not yet verified: the stored status is
   `pending`. It is what a card entered by hand starts as (the shop-owner-facing word is "claimed").
-  A claimed card never satisfies readiness or authorizes a nitrox fill until staff **Mark certified**.
+  A claimed card never satisfies readiness or authorizes a nitrox fill until staff **Mark certified** or an **Agency check** certifies it.
   (A card brought in by the contact importer is *not* claimed — see **Imported certification**.)
 - **Imported certification** — a card the contact importer brought in from a shop's prior system or
   spreadsheet. It lands `verified` (DiveDay assumes the shop's own system already checked it) but is
