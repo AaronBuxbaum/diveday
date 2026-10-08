@@ -506,6 +506,30 @@ describe("who the people are", () => {
     expect(screen.getByText("3 divers · 1 snorkeler")).toBeInTheDocument();
     expect(screen.queryByText(/rider/)).toBeNull();
   });
+
+  it("counts the blocked aboard as people, since a snorkeler or rider can be one", () => {
+    // Regression (visual triage, PR #2224): a mixed boat's Boat tab called a
+    // snorkeler and a rider among its blocked "divers".
+    renderPanel({
+      isDeparture: true,
+      checkpoint: "departure",
+      completeness: completeness({ reason: null, complete: true }),
+      summary: summary({
+        totalDivers: 7,
+        byType: { diver: 5, snorkeler: 1, rider: 1 },
+        ready: 3,
+        blocked: 4,
+        boarded: 5,
+        notBoarded: 0,
+        notBackAboard: 0,
+        awaiting: 2,
+      }),
+      blockedAtDock: { undecided: 2, aboard: 2 },
+      notBackAboardDivers: [],
+    });
+    expect(screen.getByText("2 blocked people aboard")).toBeInTheDocument();
+    expect(screen.queryByText(/blocked divers/)).toBeNull();
+  });
 });
 
 describe("the prose under the pinned card", () => {
@@ -590,7 +614,7 @@ describe("blocked divers at the head count", () => {
 
   it("says a blocked diver the crew marked aboard, apart from the undecided", () => {
     renderBlocked(true, { blocked: 3, undecided: 1, aboard: 2 });
-    expect(screen.getByText("2 blocked divers aboard")).toHaveClass("text-danger");
+    expect(screen.getByText("2 blocked people aboard")).toHaveClass("text-danger");
     expect(screen.getByText("1 blocked")).toBeInTheDocument();
   });
 

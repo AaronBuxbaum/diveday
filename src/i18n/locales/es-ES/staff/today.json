@@ -157,7 +157,7 @@
     "openCrewRollCallStale": "El recuento de tripulación de la inmersión {dive} nunca se cerró: {uncounted, plural, one {# de {total} tripulantes no tiene} other {# de {total} tripulantes no tienen}} resultado. Reconstrúyelo desde el manifiesto.",
     "departureCountOpen": "Recuento en el muelle sin terminar: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado.",
     "noRollCall": "Sin recuento registrado para {total, plural, one {# buceador} other {# buceadores}}.",
-    "missingFit": "{count, plural, one {A # buceador le faltan} other {A # buceadores les faltan}} tallas de alquiler.",
+    "missingFit": "{count, plural, one {A # persona le faltan} other {A # personas les faltan}} tallas de alquiler.",
     "missingFitNamed": "Le faltan tallas de alquiler.",
     "ungatedNitrox": "{count, plural, one {# buceador quiere} other {# buceadores quieren}} nitrox sin certificación verificada.",
     "ungatedNitroxNamed": "Quiere nitrox, sin certificación verificada.",
