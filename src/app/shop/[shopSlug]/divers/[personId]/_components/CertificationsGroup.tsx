@@ -8,6 +8,7 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
 import { InsetGroup } from "@/components/ui/ledger";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { agencyCheckQuery } from "@/lib/agency-check";
 import {
   type CertificationCardKind,
   certificationCardRowState,
@@ -20,6 +21,7 @@ import { formatShortDate } from "@/lib/format";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import {
   addCardAction,
+  agencyCheckAction,
   clearNoCertificationAction,
   deleteCertificationAction,
   deleteSpecialtyAction,
@@ -294,6 +296,7 @@ export function CertificationsGroup({
 
   const markCertified = markCertifiedCopy(t);
   const markCertify = markCertifiedAction.bind(null, shopSlug, personId);
+  const agencyCheck = agencyCheckAction.bind(null, shopSlug, personId);
   const deleteLevel = deleteCertificationAction.bind(null, shopSlug, personId);
   const deleteSpecialty = deleteSpecialtyAction.bind(null, shopSlug, personId);
   // The diver's own "I hold no card", still standing: set, never cleared by
@@ -394,16 +397,38 @@ export function CertificationsGroup({
                   ? t("divers.certifications.shopIssuedNoNumberLabel")
                   : card.identifier}
             {isShopIssuedCard(card) ? <> · {t("divers.certifications.shopIssuedLabel")}</> : null}
-            {awaiting || needsImportConfirm(card) ? (
-              <AgencyCheckLink agency={card.agency} t={t} />
-            ) : null}
+            {/* Rendered for a settled card too: a check that just certified
+                it keeps its Undo toast through the re-render (`AgencyCheck`). */}
+            <AgencyCheckLink
+              agency={card.agency}
+              t={t}
+              check={{
+                certificationId: card.id,
+                awaiting: awaiting || needsImportConfirm(card),
+                query: selfDeclared
+                  ? null
+                  : agencyCheckQuery({
+                      agency: card.agency,
+                      fullName: diver.person.fullName,
+                      dateOfBirth: diver.person.dateOfBirth,
+                      identifier: card.identifier,
+                    }),
+                action: agencyCheck,
+              }}
+            />
             {card.reviewNote ? <span className="block italic">{card.reviewNote}</span> : null}
             {card.reviewedAt && card.reviewedByName ? (
               <span className="block">
-                {t("divers.certifications.verifiedBy", {
-                  name: card.reviewedByName,
-                  date: formatShortDate(card.reviewedAt, locale, shop.timezone),
-                })}
+                {card.agencyCheckedAt && card.agency !== "other"
+                  ? t("divers.certifications.checkedWithAgencyBy", {
+                      agency: t(AGENCY_KEYS[card.agency]),
+                      name: card.reviewedByName,
+                      date: formatShortDate(card.reviewedAt, locale, shop.timezone),
+                    })
+                  : t("divers.certifications.verifiedBy", {
+                      name: card.reviewedByName,
+                      date: formatShortDate(card.reviewedAt, locale, shop.timezone),
+                    })}
               </span>
             ) : null}
           </>

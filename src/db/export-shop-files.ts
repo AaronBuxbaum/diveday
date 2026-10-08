@@ -450,6 +450,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "review_note",
       "reviewed_at",
       "reviewed_by_person_id",
+      // Set when the review was the agency's own page, read through the
+      // DiveDay browser extension (H-105); review_note then holds its words.
+      "agency_checked_at",
       // Provenance from the contact importer (ADR 20260724-import-verified-cards):
       // a non-null imported_at is the definitive "this card was migrated, not
       // carded on sight" marker, permanent even after a staff confirm.
@@ -489,6 +492,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.reviewNote,
         row.reviewedAt,
         row.reviewedByPersonId,
+        row.agencyCheckedAt,
         row.importedAt,
         row.importedFromLabel,
         row.selfDeclaredAt,
