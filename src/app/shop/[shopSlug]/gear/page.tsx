@@ -19,28 +19,29 @@ import {
   FieldGrid,
   FormStatus,
 } from "@/components/ui/form";
-import { LedgerRow } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import {
   countGearItemsByKind,
-  type DeletedGearItemRow,
   gearRegisterGroups,
   listDeletedGearItems,
   listGearServiceDueRows,
 } from "@/db/gear";
+import { countGearRentalHolders, listGearRentals } from "@/db/gear-rentals";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { formatShortDate } from "@/lib/format";
 import { GEAR_KIND_ORDER, type GearItemKind } from "@/lib/gear";
 import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { AddUnitDetails } from "./_components/AddUnitDetails";
 import { AddUnitLink } from "./_components/AddUnitLink";
+import { DeletedList } from "./_components/DeletedGearList";
 import { GearRegisterLedger, GearServiceDueList } from "./_components/GearRegisterLedger";
+import { GearRentalsList } from "./_components/GearRentalsList";
+import { RegisterHeaderActions } from "./_components/RegisterHeaderActions";
 import {
   checkOutGearReservationAction,
   createGearItemAction,
@@ -142,16 +143,24 @@ export default async function GearRegisterPage({
   // owes, fleet-wide and unpaged. Read on every request rather than only when
   // asked for, because its chip states the count (`listGearServiceDueRows`).
   const serviceView = search.view === "service";
-  const [groups, deletedPage, countsByKind, serviceDue] = await Promise.all([
-    gearRegisterGroups(db, shop.id, {
-      todayLocal,
-      kind,
-      page: deletedView || serviceView ? 1 : wantedPage,
-    }),
-    listDeletedGearItems(db, shop.id, { page: deletedView ? wantedPage : 1 }),
-    countGearItemsByKind(db, shop.id),
-    listGearServiceDueRows(db, shop.id, { todayLocal }),
-  ]);
+  // Every open rental by who holds it, trip and counter alike. Its chip states
+  // a count, so the count is read on every request; the list only when asked.
+  const rentalsView = search.view === "rentals";
+  const [groups, deletedPage, countsByKind, serviceDue, rentalHolders, rentalsPage] =
+    await Promise.all([
+      gearRegisterGroups(db, shop.id, {
+        todayLocal,
+        kind,
+        page: deletedView || serviceView || rentalsView ? 1 : wantedPage,
+      }),
+      listDeletedGearItems(db, shop.id, { page: deletedView ? wantedPage : 1 }),
+      countGearItemsByKind(db, shop.id),
+      listGearServiceDueRows(db, shop.id, { todayLocal }),
+      countGearRentalHolders(db, shop.id),
+      rentalsView
+        ? listGearRentals(db, shop.id, { todayLocal, page: wantedPage })
+        : Promise.resolve(null),
+    ]);
   const fleetTotal = [...countsByKind.values()].reduce((sum, value) => sum + value, 0);
   // A view with nothing in it is not a view: an empty Deleted list falls back
   // to the fleet rather than rendering a heading over nothing. A shop that has
@@ -163,6 +172,8 @@ export default async function GearRegisterPage({
   // heading over nothing — and its chip is not there to click in the first
   // place, so this only catches a hand-typed or stale URL.
   const showService = !showDeleted && serviceView && serviceDue.length > 0;
+  // The same rule once more: no open rentals, no view, and no chip to reach it.
+  const showRentals = !showDeleted && !showService && rentalsPage !== null && rentalsPage.total > 0;
   // The register's one coral moment (ADR 20260827-clearwater-surface-language,
   // decision 11): units on the register, nothing out, nothing overdue. Derived
   // from the groups themselves, so it can never disagree with them, and it
@@ -174,6 +185,7 @@ export default async function GearRegisterPage({
   const allHome =
     !showDeleted &&
     !showService &&
+    !showRentals &&
     kind === undefined &&
     fleetTotal > 0 &&
     groups.out.length === 0 &&
@@ -194,10 +206,12 @@ export default async function GearRegisterPage({
     page?: number;
     deleted?: boolean;
     service?: boolean;
+    rentals?: boolean;
   }) => {
     const query = new URLSearchParams();
     if (target.deleted) query.set("view", "deleted");
     if (target.service) query.set("view", "service");
+    if (target.rentals) query.set("view", "rentals");
     if (target.kind) query.set("kind", target.kind);
     if ((target.page ?? 1) > 1) query.set("page", String(target.page));
     const encoded = query.toString();
@@ -209,7 +223,7 @@ export default async function GearRegisterPage({
     chips.push({
       key: "all",
       href: gearHref({}),
-      active: !showDeleted && !showService && kind === undefined,
+      active: !showDeleted && !showService && !showRentals && kind === undefined,
       label: t("gear.fleet.filterAll", { count: fleetTotal }),
     });
     for (const option of GEAR_KIND_ORDER) {
@@ -218,7 +232,7 @@ export default async function GearRegisterPage({
       chips.push({
         key: option,
         href: gearHref({ kind: option }),
-        active: !showDeleted && !showService && kind === option,
+        active: !showDeleted && !showService && !showRentals && kind === option,
         label: t("gear.fleet.filterKind", { label: gearItemKindLabel(t, option), count }),
       });
     }
@@ -233,6 +247,16 @@ export default async function GearRegisterPage({
       href: gearHref({ service: true }),
       active: showService,
       label: t("gear.fleet.serviceDue.filter", { count: serviceDue.length }),
+    });
+  }
+  // Who has the shop's gear, until when, and whether it is paid — only while
+  // somebody does.
+  if (rentalHolders > 0) {
+    chips.push({
+      key: "rentals",
+      href: gearHref({ rentals: true }),
+      active: showRentals,
+      label: t("gearRentals.filter", { count: rentalHolders }),
     });
   }
   // The way back to a deleted unit, and the only one: it is off the fleet, off
@@ -251,13 +275,9 @@ export default async function GearRegisterPage({
       <FlashParams params={["notice", "undoId"]} />
       <ShopPageHeader
         title={t("gear.title")}
-        // The page's primary (UX audit 2026-10-07, item 31) opens the "Add a unit"
-        // band at the foot; the empty register keeps its door in the card below.
-        actions={
-          fleetTotal > 0 ? (
-            <AddUnitLink className={buttonClass()}>{t("gear.addUnit.title")}</AddUnitLink>
-          ) : undefined
-        }
+        // Rent out, then the page's primary "Add a unit"; the empty register
+        // keeps its one door in the card below.
+        actions={fleetTotal > 0 ? <RegisterHeaderActions shopSlug={shopSlug} t={t} /> : undefined}
       />
 
       {notice === "deleted" && search.undoId ? (
@@ -286,7 +306,9 @@ export default async function GearRegisterPage({
                 ? t("gear.deleted.title")
                 : showService
                   ? t("gear.fleet.serviceDue.title")
-                  : t("gear.fleet.ariaLabel")
+                  : showRentals
+                    ? t("gearRentals.title")
+                    : t("gear.fleet.ariaLabel")
             }
           >
             {chips.length > 0 ? (
@@ -310,6 +332,14 @@ export default async function GearRegisterPage({
                   words={staffPagerWords(t)}
                 />
               </>
+            ) : showRentals && rentalsPage ? (
+              <GearRentalsList
+                page={rentalsPage}
+                shopSlug={shopSlug}
+                t={t}
+                locale={locale}
+                pageHref={(target) => gearHref({ rentals: true, page: target })}
+              />
             ) : showService ? (
               <GearServiceDueList
                 rows={serviceDue}
@@ -436,64 +466,5 @@ export default async function GearRegisterPage({
         </AddUnitDetails>
       </div>
     </main>
-  );
-}
-
-/**
- * The units that have been deleted, newest first, each with the one act this
- * list exists for. The same ledger rows as the register above, with no group
- * heading over them: the active Deleted chip is what says which view this is,
- * and repeating the word underneath it would be the shared fact said twice
- * (ADR 20260827-the-shops-shelves).
- *
- * The row is a door to the unit's own record, which reads as a read-only
- * history while the unit is deleted (issue #614) — so "when was this last
- * serviced" no longer costs a restore-and-delete round trip.
- */
-function DeletedList({
-  rows,
-  shopSlug,
-  t,
-  locale,
-  timeZone,
-}: {
-  rows: DeletedGearItemRow[];
-  shopSlug: string;
-  t: StaffTranslator;
-  locale: string;
-  timeZone: string;
-}) {
-  return (
-    <ul className="mt-6">
-      {rows.map((row) => (
-        <LedgerRow
-          key={row.id}
-          href={`/shop/${shopSlug}/gear/${row.id}`}
-          linkLabel={row.label}
-          trailing={
-            <form action={restoreGearItemAction}>
-              <input type="hidden" name="gearItemId" value={row.id} />
-              <SubmitButton
-                ariaLabel={t("gear.deleted.restoreUnit", { label: row.label })}
-                pendingLabel={t("gear.deleted.restoring")}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("gear.deleted.restore")}
-              </SubmitButton>
-            </form>
-          }
-        >
-          <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="font-mono text-sm font-medium">{row.label}</span>
-            <span className="text-sm text-muted">
-              {[gearItemKindLabel(t, row.kind), row.size].filter(Boolean).join(" · ")}
-            </span>
-            <span className="text-sm text-muted">
-              {t("gear.deleted.on", { date: formatShortDate(row.deletedAt, locale, timeZone) })}
-            </span>
-          </div>
-        </LedgerRow>
-      ))}
-    </ul>
   );
 }

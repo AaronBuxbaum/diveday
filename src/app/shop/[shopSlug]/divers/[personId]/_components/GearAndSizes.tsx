@@ -1,12 +1,15 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
+import type { CounterRentalTicket } from "@/db/gear-counter-rentals";
 import { rentableItemLabel, rentalFitLineText, rentalItemLabel } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { suitChoiceLabel } from "@/i18n/suit-choice-labels";
+import { formatCalendarDate } from "@/lib/calendar-date";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
@@ -15,6 +18,7 @@ import {
   offeredSuitChoices,
   SUIT_KINDS,
 } from "@/lib/rentals";
+import { shopPath } from "@/lib/staff-notices";
 import { saveProfileAction, setNeedsStaffFitAction } from "../actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
@@ -58,6 +62,8 @@ export function GearAndSizes({
   locale,
   t,
   status,
+  counterRentals = [],
+  rentGearHref,
 }: {
   diver: DiverProfile;
   shopSlug: string;
@@ -69,6 +75,10 @@ export function GearAndSizes({
   t: StaffTranslator;
   /** This group's own outcome, beside the form that earned it. */
   status?: DiverNotice;
+  /** Units this person has from the counter now, one entry per ticket. */
+  counterRentals?: CounterRentalTicket[];
+  /** The rent-out form for this person, when the shop has a fleet to lend. */
+  rentGearHref?: string;
 }) {
   const profile = diver.rentalFit;
   const mayEdit = canOverride || !profile;
@@ -193,10 +203,32 @@ export function GearAndSizes({
       summary={gearSummary}
       // A standing can't-fill flag is open work — the crew has to fit this
       // diver by hand — so the group that carries it opens with the record.
-      open={Boolean(status) || flagged}
+      open={Boolean(status) || flagged || counterRentals.length > 0}
       stacked
     >
       <InsetGroup>
+        {/* What this person has from the counter right now (ADR
+            20260815-minimal-gear-register, amended 2026-10-08): units that
+            leave the building are the first thing a record should say. */}
+        {counterRentals.length > 0 ? (
+          <FactRow label={t("counterRentals.diver.rented")}>
+            <ul className="flex flex-col gap-1">
+              {counterRentals.map((rental) => (
+                <li key={rental.ticketId}>
+                  <Link
+                    href={shopPath(shopSlug, "gear", "rentals", rental.ticketId)}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {t("counterRentals.diver.rentalLine", {
+                      units: list.format(rental.units.map((unit) => unit.label)),
+                      date: formatCalendarDate(rental.reservedUntil, locale),
+                    })}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </FactRow>
+        ) : null}
         <FactRow label={t("divers.file.rentsFromUs")}>
           {line.state === "rents"
             ? list.format(line.items.map((item) => rentalItemLabel(t, item.kind)))
@@ -360,6 +392,16 @@ export function GearAndSizes({
               </FieldGrid>
             </details>
           )
+        ) : null}
+        {rentGearHref ? (
+          <div className="px-5 py-3 sm:px-6">
+            <Link
+              href={rentGearHref}
+              className={buttonClass({ variant: "link", size: "sm", flush: true })}
+            >
+              {t("counterRentals.diver.rentGear")}
+            </Link>
+          </div>
         ) : null}
       </InsetGroup>
     </DiverFileGroupDisclosure>

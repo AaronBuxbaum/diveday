@@ -262,6 +262,15 @@ export const shops = pgTable(
       .notNull()
       .default({ setCents: null, perItemCents: {}, nitroxCents: null }),
     /**
+     * **The shop's own rental terms**, printed on every rental ticket above the
+     * "Received by" line (Aaron, 2026-10-08; ADR 20260815-minimal-gear-register,
+     * amended 2026-10-08). Plain text in the shop's words — when gear is due,
+     * what a late or lost unit costs — and optional: null prints no terms.
+     * Never a liability release: the one shop-wide waiver stays the only thing
+     * a diver signs away anything on (CR-015).
+     */
+    rentalTerms: text("rental_terms"),
+    /**
      * **The numbers a crew reaches for during, not after** — the shop's own
      * chamber, dive-accident hotline, coastguard, vessel and shore contact, and
      * its emergency action plan (`src/lib/emergency-reference.ts`).

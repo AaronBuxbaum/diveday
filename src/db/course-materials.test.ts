@@ -1,8 +1,12 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { recordCourseMaterialsDone } from "./course-materials";
-import { bookings } from "./schema";
+import {
+  COURSE_MATERIALS_WINDOW_DAYS,
+  courseMaterialsDoneByPerson,
+  recordCourseMaterialsDone,
+} from "./course-materials";
+import { bookings, trips } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -132,5 +136,118 @@ describe("recordCourseMaterialsDone", () => {
       }),
     ).toEqual({ ok: false, reason: "not_found" });
     expect((await stored(db, studentBookingId))?.by).toBe(staffId);
+  });
+});
+
+describe("a course run as two departures", () => {
+  /**
+   * A pool weekend and an open-water weekend a month later are one
+   * enrollment: ticked on the first, the student is done on the second, and
+   * taking it back clears both (dive-domain-expert review of PR #2260).
+   */
+  async function twoDepartures() {
+    const base = await courseContext();
+    const { db, shop } = base;
+    const [session] = await db
+      .select({
+        courseId: trips.courseId,
+        startsAt: trips.startsAt,
+        endsAt: trips.endsAt,
+        personId: bookings.personId,
+      })
+      .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(eq(bookings.id, base.studentBookingId));
+    if (!session?.courseId) throw new Error("the seeded student sits on no course session");
+    const courseId = session.courseId;
+    const later = (date: Date, days: number) => new Date(date.getTime() + days * 86_400_000);
+    const [openWater] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Advanced Open Water Diver — open water",
+        courseId,
+        startsAt: later(session.startsAt, 30),
+        endsAt: later(session.endsAt, 30),
+        capacity: 6,
+      })
+      .returning();
+    if (!openWater) throw new Error("second departure insert failed");
+    const [seat] = await db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: openWater.id,
+        personId: session.personId,
+      })
+      .returning();
+    if (!seat) throw new Error("second seat insert failed");
+    const doneAround = (around: Date, shopId = shop.id) =>
+      courseMaterialsDoneByPerson(db, { shopId, courseId, personIds: [session.personId], around });
+    return {
+      ...base,
+      personId: session.personId,
+      openWater,
+      secondBookingId: seat.id,
+      doneAround,
+    };
+  }
+
+  it("reads a tick on the first departure as done on the second", async () => {
+    const { db, shop, staffId, studentBookingId, personId, openWater, doneAround } =
+      await twoDepartures();
+    const now = new Date("2026-10-08T15:00:00Z");
+    await recordCourseMaterialsDone(db, {
+      shopId: shop.id,
+      bookingId: studentBookingId,
+      staffPersonId: staffId,
+      done: true,
+      now,
+    });
+    expect((await doneAround(openWater.startsAt)).get(personId)).toMatchObject({
+      at: now,
+      byPersonId: staffId,
+    });
+    // Never under another shop's id.
+    expect((await doneAround(openWater.startsAt, OTHER_SHOP)).size).toBe(0);
+  });
+
+  it("keeps the first departure's stamp when the second is ticked later", async () => {
+    const { db, shop, staffId, studentBookingId, secondBookingId } = await twoDepartures();
+    const first = new Date("2026-10-06T09:00:00Z");
+    const base = { shopId: shop.id, staffPersonId: staffId, done: true };
+    await recordCourseMaterialsDone(db, { ...base, bookingId: studentBookingId, now: first });
+    await recordCourseMaterialsDone(db, {
+      ...base,
+      bookingId: secondBookingId,
+      now: new Date("2026-11-06T09:00:00Z"),
+    });
+    expect(await stored(db, secondBookingId)).toEqual({ at: null, by: null });
+    expect((await stored(db, studentBookingId))?.at).toEqual(first);
+  });
+
+  it("clears the tick on both departures when it is taken back on either", async () => {
+    const { db, shop, staffId, studentBookingId, secondBookingId, openWater, doneAround } =
+      await twoDepartures();
+    const base = { shopId: shop.id, staffPersonId: staffId };
+    await recordCourseMaterialsDone(db, { ...base, bookingId: studentBookingId, done: true });
+    await recordCourseMaterialsDone(db, { ...base, bookingId: secondBookingId, done: false });
+    expect(await stored(db, studentBookingId)).toEqual({ at: null, by: null });
+    expect((await doneAround(openWater.startsAt)).size).toBe(0);
+  });
+
+  it("does not count the same course taken again outside the window", async () => {
+    const { db, shop, staffId, secondBookingId, openWater, doneAround } = await twoDepartures();
+    await recordCourseMaterialsDone(db, {
+      shopId: shop.id,
+      bookingId: secondBookingId,
+      staffPersonId: staffId,
+      done: true,
+    });
+    const nextSeason = new Date(
+      openWater.startsAt.getTime() + (COURSE_MATERIALS_WINDOW_DAYS + 1) * 86_400_000,
+    );
+    expect((await doneAround(nextSeason)).size).toBe(0);
   });
 });

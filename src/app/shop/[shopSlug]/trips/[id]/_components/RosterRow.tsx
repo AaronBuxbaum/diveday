@@ -138,6 +138,7 @@ export function RosterRow({
     splitAsksDateOfBirth = false,
     certifyDefaultLevel = null,
     courseHasMaterials = false,
+    courseMaterialsOpen = false,
   } = trip;
   const {
     readinessByBooking,
@@ -147,6 +148,7 @@ export function RosterRow({
     notesByBooking,
     courseNextStepByBooking,
     elearningQueryByBooking,
+    courseMaterialsDoneByPerson,
     sameNameHeldSeats,
     keepOpenBookingId,
     namesakeRefusedBookingId,
@@ -172,7 +174,15 @@ export function RosterRow({
   // A course student whose learning materials nobody has marked done (ADR
   // 20261008-course-learning-materials). Bookkeeping, never a gate: it is a
   // quiet capsule on the name line and nothing in readiness reads it.
-  const materialsPending = courseHasMaterials && !booking.courseMaterialsDoneAt;
+  // "Done" is the person's, across every departure of the course
+  // (`courseMaterialsDoneByPerson`); this seat's own stamp is the fallback. The
+  // capsule stops once the session's last day has ended.
+  const materialsDone =
+    courseMaterialsDoneByPerson?.get(person.id) ??
+    (booking.courseMaterialsDoneAt
+      ? { at: booking.courseMaterialsDoneAt, byName: null as string | null }
+      : null);
+  const materialsPending = courseHasMaterials && courseMaterialsOpen && !materialsDone;
   const readiness = readinessByBooking.get(booking.id)?.readiness;
   const paymentStatus = readinessByBooking.get(booking.id)?.paymentStatus;
   const paymentSourceCode = paymentSourceLine(
@@ -832,11 +842,19 @@ export function RosterRow({
         nextStep={courseNextStepByBooking?.get(booking.id) ?? ""}
         setCourseMaterialsDoneAction={setCourseMaterialsDoneAction}
         materialsDoneLine={
-          booking.courseMaterialsDoneAt
-            ? t("trips.roster.materialsDoneLine", {
-                date: formatShortDate(booking.courseMaterialsDoneAt, locale, shopTimezone),
-              })
+          materialsDone
+            ? materialsDone.byName
+              ? t("trips.roster.materialsDoneLineBy", {
+                  date: formatShortDate(materialsDone.at, locale, shopTimezone),
+                  name: materialsDone.byName,
+                })
+              : t("trips.roster.materialsDoneLine", {
+                  date: formatShortDate(materialsDone.at, locale, shopTimezone),
+                })
             : null
+        }
+        certifyMaterialsNote={
+          courseHasMaterials && !materialsDone ? t("trips.roster.certifyMaterialsNote") : null
         }
       />
       {/* The materials tick, read off PADI's own eLearning page when the
@@ -845,7 +863,7 @@ export function RosterRow({
         <ElearningCheck
           query={elearningQueryByBooking?.get(booking.id) ?? null}
           bookingId={booking.id}
-          materialsDone={Boolean(booking.courseMaterialsDoneAt)}
+          materialsDone={Boolean(materialsDone)}
           action={elearningCheckAction}
           copy={elearningCheckCopy(t)}
         />
@@ -1301,6 +1319,7 @@ function SeatCourseControls({
   nextStep,
   setCourseMaterialsDoneAction,
   materialsDoneLine,
+  certifyMaterialsNote = null,
 }: {
   bookingId: string;
   personId: string;
@@ -1312,6 +1331,12 @@ function SeatCourseControls({
   setCourseMaterialsDoneAction?: (formData: FormData) => void;
   /** "Materials done · Oct 7" once ticked; null while they are not. */
   materialsDoneLine: string | null;
+  /**
+   * The neutral line beside Certify when the course has materials nobody has
+   * marked done. It informs and never blocks: the agency's own record is the
+   * evidence, and the instructor reads it there.
+   */
+  certifyMaterialsNote?: string | null;
 }) {
   return (
     <>
@@ -1366,6 +1391,9 @@ function SeatCourseControls({
           >
             <input type="hidden" name="bookingId" value={bookingId} />
             <input type="hidden" name="personId" value={personId} />
+            {certifyMaterialsNote ? (
+              <p className="text-sm text-muted">{certifyMaterialsNote}</p>
+            ) : null}
             <Field
               label={t("trips.roster.certifyLevel")}
               description={t("trips.roster.certifyLevelHint")}

@@ -161,7 +161,7 @@
     "nameLabel": "Material {number}",
     "namePlaceholder": "Open Water eLearning",
     "linkLabel": "Link",
-    "linkHint": "Optional. Starts with https://.",
+    "linkHint": "Optional. Starts with https://. If the fee includes the eLearning, leave the agency’s store off: the agency emails the student their access.",
     "noteLabel": "Note",
     "notePlaceholder": "Finish before day 1",
     "remove": "Remove material {number}",

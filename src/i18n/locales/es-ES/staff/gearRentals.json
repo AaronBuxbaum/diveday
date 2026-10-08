@@ -1,0 +1,9 @@
+{
+  "filter": "Alquileres ({count})",
+  "title": "Alquileres",
+  "counter": "Alquiler en mostrador",
+  "ticketFor": "Boleta de alquiler de {name}",
+  "pagination": {
+    "total": "{count, plural, one {# persona} other {# personas}}"
+  }
+}

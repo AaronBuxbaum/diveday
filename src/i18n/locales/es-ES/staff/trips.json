@@ -416,6 +416,8 @@
     "nextStepSaving": "Guardando…",
     "materialsPending": "Material sin terminar",
     "materialsDoneLine": "Material terminado · {date}",
+    "materialsDoneLineBy": "Material terminado · {date} · {name}",
+    "certifyMaterialsNote": "Los materiales no están marcados como terminados; revisa el registro de la agencia antes de certificar.",
     "materialsMarkDone": "Marcar material terminado",
     "materialsMarkNotDone": "Marcar sin terminar",
     "materialsSaving": "Guardando…",

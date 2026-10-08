@@ -1,7 +1,8 @@
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import type { ReadyPageData } from "@/db/ready";
 import type { DiverTranslator } from "@/i18n/messages";
-import { type CourseLearningMaterial, isLearningMaterialLink } from "@/lib/courses";
+import { isLearningMaterialLink } from "@/lib/courses";
 
 /**
  * What a course asks a student to work through before day 1, on the thread
@@ -12,24 +13,27 @@ import { type CourseLearningMaterial, isLearningMaterialLink } from "@/lib/cours
  * capability, and a referrer header would hand it to the agency's site.
  *
  * Once the shop has marked the materials done the list stays, under one
- * settled line, because a diver may still want the links back.
+ * settled line, because a diver may still want the links back. Once the
+ * session has begun, "Before your first day" would be wrong, so the heading
+ * becomes a plain "Course materials".
  */
 export function CourseMaterials({
-  materials,
-  done,
+  data,
   t,
 }: {
-  materials: CourseLearningMaterial[];
-  done: boolean;
+  data: Pick<ReadyPageData, "learningMaterials" | "courseMaterialsDone" | "courseStarted">;
   t: DiverTranslator;
 }) {
+  const materials = data.learningMaterials;
   if (materials.length === 0) return null;
   return (
     <section aria-labelledby="course-materials-heading">
       <h2 id="course-materials-heading" className={SECTION_TITLE_CLASS}>
-        {t("notifications.courseMaterials.heading")}
+        {data.courseStarted
+          ? t("ready.materialsHeadingStarted")
+          : t("notifications.courseMaterials.heading")}
       </h2>
-      {done ? (
+      {data.courseMaterialsDone ? (
         <p className="mt-2">
           <SettledCheck settled label={t("ready.materialsDone")} className="text-sm text-muted" />
         </p>

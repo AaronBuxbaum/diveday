@@ -1565,7 +1565,10 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     content: {
       ...blank,
       learningMaterials: [
-        { name: "PADI Divemaster eLearning", note: "Finish the knowledge development first" },
+        {
+          name: "PADI Divemaster eLearning",
+          note: "Start as soon as you enroll; finish before your exams.",
+        },
       ],
       summary: "The first professional rating, and the point where diving becomes work",
       overview:
@@ -1950,7 +1953,10 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     content: {
       ...blank,
       learningMaterials: [
-        { name: "SSI Open Water Diver digital learning", note: "Finish before day 1" },
+        {
+          name: "SSI Open Water Diver digital learning",
+          note: "Opens in the MySSI app once we add you; finish before day 1.",
+        },
       ],
       summary: "Earn your worldwide lifetime scuba certification to dive to {depth18}",
       overview:
@@ -2037,6 +2043,12 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     certifiesLevel: "advanced_open_water",
     content: {
       ...blank,
+      learningMaterials: [
+        {
+          name: "SSI Advanced Adventurer digital learning",
+          note: "Opens in the MySSI app once we add you; finish before day 1.",
+        },
+      ],
       summary:
         "Try 5 specialty dives, increase your depth limit to {depth30}, and sharpen your skills",
       overview:
@@ -2098,6 +2110,12 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     certifiesLevel: "rescue",
     content: {
       ...blank,
+      learningMaterials: [
+        {
+          name: "SSI Diver Stress & Rescue digital learning",
+          note: "Opens in the MySSI app once we add you; finish before day 1.",
+        },
+      ],
       summary: "Build confidence by learning to prevent problems and manage dive emergencies",
       overview:
         "Stress is a major contributor to diving accidents. The SSI Diver Stress & Rescue program provides you with the skills and knowledge required to recognize stress, prevent accidents, and respond effectively in emergency situations.\n\nYou will learn how to identify stress in yourself and other divers, manage panic, perform diver rescues from depth and at the surface, administer in-water rescue breaths, and coordinate emergency response procedures.\n\nMost divers find this course challenging, rewarding, and the single most confidence-building program in recreational diving.",
@@ -2534,6 +2552,12 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     certifiesLevel: null,
     content: {
       ...blank,
+      learningMaterials: [
+        {
+          name: "SSI Dive Guide digital learning",
+          note: "Opens in the MySSI app once we add you; finish before day 1.",
+        },
+      ],
       summary: "Step into professional diving: lead certified divers and conduct dive briefings",
       overview:
         "The SSI Dive Guide program is the foundation of the SSI Dive Professional pathway. You will learn to lead certified divers in various underwater environments and conditions.\n\nThrough practical application, dive briefings, site assessments, and in-water leadership training, you will develop the organizational and supervisory skills required of a professional dive guide.\n\nCombined with the Science of Diving specialty, the Dive Guide certification qualifies you as an SSI Divemaster.",
@@ -2748,6 +2772,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     certifiesLevel: "advanced_open_water",
     content: {
       ...blank,
+      learningMaterials: [
+        { name: "SDI Advanced Adventure Diver eLearning", note: "Finish before day 1" },
+      ],
       summary: "Five guided dives — deep and navigation, plus three you choose",
       overview:
         "Advanced Adventure Diver is SDI's next rung, and it is deliberately not a classroom course. You dive five times with an instructor, each one the first dive of a different specialty.\n\nTwo are fixed: a deep dive, and an underwater navigation dive. The other three are yours to pick — night, wreck, drift, boat, photography, whatever this coast is good for and you are curious about.\n\nEach counts toward the full specialty if you decide to finish it later. Most divers leave this course knowing which two they want.",
@@ -2810,6 +2837,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     certifiesLevel: "rescue",
     content: {
       ...blank,
+      learningMaterials: [{ name: "SDI Rescue Diver eLearning", note: "Finish before day 1" }],
       summary: "The course that changes how you watch everyone else on the boat",
       overview:
         "Every diver who has taken this one says the same thing: it is the course where you stop being a passenger.\n\nYou will learn to read stress before it becomes panic, to manage a tired diver on the surface, to bring up an unresponsive diver and give rescue breaths on the way to the boat, and to run the first ten minutes of an emergency while somebody else calls it in.\n\nIt is demanding and it is not a relaxing weekend. It is also the reason a crew is glad to have you aboard.",
@@ -2871,6 +2899,12 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     certifiesLevel: "divemaster",
     content: {
       ...blank,
+      learningMaterials: [
+        {
+          name: "SDI Divemaster eLearning",
+          note: "Start as soon as you enroll; finish before your exams.",
+        },
+      ],
       summary: "Turn diving into the job: guide, supervise, and run the boat's dive day",
       overview:
         "SDI Divemaster is where diving stops being a hobby and starts being work you get paid for. It is the longest course we run and the one with the most time in the water.\n\nYou will refine your own skills until they are demonstration-quality, learn to plan and supervise dives for people who are not as comfortable as you are, run briefings that people actually remember, and handle the parts of a dive day nobody sees — the boat, the paperwork, the diver who is quietly not okay.\n\nMuch of it happens alongside our real courses and charters, because there is no substitute for doing it with actual customers.",

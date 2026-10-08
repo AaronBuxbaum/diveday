@@ -339,8 +339,8 @@
     "visual": ["diver-merge-preview"]
   },
   "/shop/[shopSlug]/divers/[personId]/waivers/[recordId]": {
-    "e2e": ["waivers.spec.ts"],
-    "visual": ["diver-signed-waiver"]
+    "e2e": ["waiver-print.spec.ts", "waivers.spec.ts"],
+    "visual": ["diver-signed-waiver", "signed-waiver"]
   },
   "/shop/[shopSlug]/divers/[personId]": {
     "e2e": [
@@ -374,13 +374,26 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/gear": {
-    "e2e": ["gear.spec.ts"],
-    "visual": ["gear-register", "gear-register-deleted", "gear-register-trouble"],
+    "e2e": ["gear-rentals.spec.ts", "gear.spec.ts"],
+    "visual": [
+      "gear-register",
+      "gear-register-deleted",
+      "gear-register-rentals",
+      "gear-register-trouble"
+    ],
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/gear/[id]": {
     "e2e": ["gear.spec.ts"],
     "visual": ["gear-unit", "gear-unit-deleted"]
+  },
+  "/shop/[shopSlug]/gear/rentals/[ticketId]": {
+    "e2e": ["counter-rentals.spec.ts", "rental-terms.spec.ts"],
+    "visual": ["counter-rental-ticket"]
+  },
+  "/shop/[shopSlug]/gear/rentals/new": {
+    "e2e": ["counter-rentals.spec.ts"],
+    "visual": ["counter-rental-form"]
   },
   "/shop/[shopSlug]/inbox": {
     "e2e": ["inbox.spec.ts"],
@@ -491,6 +504,7 @@
       "divemaster-ratio.spec.ts",
       "nitrox.spec.ts",
       "recap.spec.ts",
+      "rental-terms.spec.ts",
       "role-permissions.spec.ts",
       "settings-editor-pages.spec.ts",
       "settings-findability.spec.ts",
@@ -672,7 +686,7 @@
     ]
   },
   "/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]": {
-    "e2e": ["gear.spec.ts"],
+    "e2e": ["gear.spec.ts", "rental-terms.spec.ts"],
     "visual": ["rental-ticket"]
   },
   "/shop/[shopSlug]/trips/[id]/print": {

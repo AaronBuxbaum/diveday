@@ -132,6 +132,21 @@ describe("CourseHero private course", () => {
     expect(screen.queryByRole("link", { name: "Ask the shop" })).not.toBeInTheDocument();
   });
 
+  it("calls a private intro a session, since a taster is not a course", () => {
+    render(
+      <CourseHero
+        course={course({ privatePriceCents: 30_000, isIntroCourse: true })}
+        totalCents={null}
+        currency="usd"
+        locale="en-US"
+        t={t}
+      />,
+    );
+
+    expect(screen.getByText("Private session available")).toBeInTheDocument();
+    expect(screen.queryByText("Private course available")).not.toBeInTheDocument();
+  });
+
   it("says nothing when the course has no private price", () => {
     render(
       <CourseHero course={course()} totalCents={48_000} currency="usd" locale="en-US" t={t} />,

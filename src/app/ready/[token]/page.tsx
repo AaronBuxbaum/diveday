@@ -1601,11 +1601,7 @@ export default async function DiverReadinessPage({
           <TripChangeLedger events={changeEvents} locale={locale} timeZone={detail.shop.timezone} />
           {/* A course's learning materials, the same list the confirmation
                   email carried (ADR 20261008-course-learning-materials). */}
-          <CourseMaterials
-            materials={data.learningMaterials}
-            done={data.courseMaterialsDone}
-            t={t}
-          />
+          <CourseMaterials data={data} t={t} />
           {/* The party's panel and its all-set line are one section: the line
                   is the panel's close, 12px under it, not a section of its own. */}
           {partySeats.length > 0 ? (

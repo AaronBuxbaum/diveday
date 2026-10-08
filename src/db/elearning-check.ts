@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { type ElearningQuery, elearningCheckQuery } from "@/lib/elearning-check";
 import type { AppDb } from "./client";
+import { courseMaterialsDoneByPerson } from "./course-materials";
 import { bookings, courses, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -9,9 +10,11 @@ import { liveTrip } from "./trips-live";
  * agency's eLearning page (H-106), and what it would search for: a live seat
  * (booked or checked in) on a live course session at this shop, held by a live
  * person, on a course from an agency whose eLearning the extension reads.
- * `materialsDone` says whether the seat's learning materials are already
- * ticked, and `materialsDoneBy` by whom, so a check never re-stamps a
- * colleague's tick and its Undo never takes one back.
+ * `materialsDone` says whether the student's learning materials are already
+ * ticked, and `materialsDoneBy` by whom, read the way the roster reads them
+ * (`courseMaterialsDoneByPerson`: the person's, across every departure of the
+ * course), so a check never re-stamps a colleague's tick and its Undo never
+ * takes one back.
  * Null for anything else, including another shop's booking.
  */
 export async function seatForElearningCheck(
@@ -28,8 +31,9 @@ export async function seatForElearningCheck(
       courseTitle: courses.title,
       fullName: people.fullName,
       email: people.email,
-      materialsDoneAt: bookings.courseMaterialsDoneAt,
-      materialsDoneBy: bookings.courseMaterialsDoneByPersonId,
+      personId: bookings.personId,
+      courseId: trips.courseId,
+      startsAt: trips.startsAt,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -52,10 +56,14 @@ export async function seatForElearningCheck(
     .limit(1);
   if (!row) return null;
   const query = elearningCheckQuery(row);
-  if (!query) return null;
-  return {
-    query,
-    materialsDone: row.materialsDoneAt !== null,
-    materialsDoneBy: row.materialsDoneBy,
-  };
+  if (!query || !row.courseId) return null;
+  const done = (
+    await courseMaterialsDoneByPerson(db, {
+      shopId: input.shopId,
+      courseId: row.courseId,
+      personIds: [row.personId],
+      around: row.startsAt,
+    })
+  ).get(row.personId);
+  return { query, materialsDone: Boolean(done), materialsDoneBy: done?.byPersonId ?? null };
 }

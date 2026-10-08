@@ -3,10 +3,10 @@ import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 
 /**
  * The editor's sections, counted: the `sections` list in `./page.tsx` names
- * eight. `src/app/editor-skeletons.test.tsx` reads that list and fails when the
+ * nine. `src/app/editor-skeletons.test.tsx` reads that list and fails when the
  * two disagree.
  */
-const COURSE_EDITOR_SECTIONS = 8;
+const COURSE_EDITOR_SECTIONS = 9;
 
 /**
  * Form-shaped skeleton for the course editor (design principle 1). Without

@@ -58,6 +58,7 @@ const deepDiver = {
   excludes: [],
   scheduleDays: [],
   faqs: [],
+  learningMaterials: [],
   isIntroCourse: false,
   priceCents: 32_500,
 };

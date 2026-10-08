@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import type { ReadyPageData } from "@/db/ready";
 import { diverTranslator } from "@/i18n/messages";
 import { CourseMaterials } from "./CourseMaterials";
 
@@ -11,22 +12,32 @@ import { CourseMaterials } from "./CourseMaterials";
  */
 const t = diverTranslator("en-US");
 
+type Data = Pick<ReadyPageData, "learningMaterials" | "courseMaterialsDone" | "courseStarted">;
+function data(over: Partial<Data>): Data {
+  return { learningMaterials: [], courseMaterialsDone: false, courseStarted: false, ...over };
+}
+
 afterEach(cleanup);
 
 describe("CourseMaterials", () => {
   it("renders nothing for a course with no materials", () => {
-    const { container } = render(<CourseMaterials materials={[]} done={false} t={t} />);
+    const { container } = render(<CourseMaterials data={data({})} t={t} />);
     expect(container).toBeEmptyDOMElement();
   });
 
   it("links each material without a referrer and keeps its note", () => {
     render(
       <CourseMaterials
-        materials={[
-          { name: "PADI Open Water eLearning", url: "https://www.padi.com/", note: "Before day 1" },
-          { name: "Logbook" },
-        ]}
-        done={false}
+        data={data({
+          learningMaterials: [
+            {
+              name: "PADI Open Water eLearning",
+              url: "https://www.padi.com/",
+              note: "Before day 1",
+            },
+            { name: "Logbook" },
+          ],
+        })}
         t={t}
       />,
     );
@@ -42,8 +53,7 @@ describe("CourseMaterials", () => {
   it("never renders a link that is not https", () => {
     render(
       <CourseMaterials
-        materials={[{ name: "Old manual", url: "javascript:alert(1)" }]}
-        done={false}
+        data={data({ learningMaterials: [{ name: "Old manual", url: "javascript:alert(1)" }] })}
         t={t}
       />,
     );
@@ -52,8 +62,24 @@ describe("CourseMaterials", () => {
   });
 
   it("keeps the list under a settled line once the shop marks it done", () => {
-    render(<CourseMaterials materials={[{ name: "Logbook" }]} done t={t} />);
+    render(
+      <CourseMaterials
+        data={data({ learningMaterials: [{ name: "Logbook" }], courseMaterialsDone: true })}
+        t={t}
+      />,
+    );
     expect(screen.getByText("The shop has these marked done")).toBeInTheDocument();
     expect(screen.getByText("Logbook")).toBeInTheDocument();
+  });
+
+  it("drops 'Before your first day' once the session has begun", () => {
+    render(
+      <CourseMaterials
+        data={data({ learningMaterials: [{ name: "Logbook" }], courseStarted: true })}
+        t={t}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Course materials" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Before your first day" })).toBeNull();
   });
 });

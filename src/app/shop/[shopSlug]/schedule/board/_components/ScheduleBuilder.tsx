@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import type { FormDraftProps } from "@/components/FormDraft";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -166,12 +166,17 @@ function MoveImpact({
   // form, and the two strings are the whole of what the answer turns on.
   const targetDate = target?.date ?? null;
   const targetTime = target?.startTime ?? null;
+  // The newest `loadPreflight`, read when asking rather than subscribed to:
+  // every server action on this page refreshes the route (the session read
+  // re-sets its cookie cache), which hands in a fresh function object, so a
+  // dependency on it re-asked after each answer and a panel left open polled
+  // the server without end (issues #2197, #2223).
+  const ask = useEffectEvent((id: string, to: { date: string; startTime: string } | null) =>
+    loadPreflight(id, to),
+  );
   useEffect(() => {
     let live = true;
-    loadPreflight(
-      tripId,
-      targetDate && targetTime ? { date: targetDate, startTime: targetTime } : null,
-    ).then(
+    ask(tripId, targetDate && targetTime ? { date: targetDate, startTime: targetTime } : null).then(
       (result) => {
         // `live` is what makes the re-read safe: a staff member picking three
         // dates in a row has three requests in flight, and without this the
@@ -186,7 +191,7 @@ function MoveImpact({
     return () => {
       live = false;
     };
-  }, [tripId, targetDate, targetTime, loadPreflight]);
+  }, [tripId, targetDate, targetTime]);
 
   if (!preflight) return null;
   // Two lists, split by severity — and split here rather than in

@@ -123,6 +123,10 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "packing_list",
       "rental_items",
       "rental_pricing",
+      // The shop's own words on every rental ticket (ADR
+      // 20260815-minimal-gear-register, amended 2026-10-08): its text, so its
+      // backup carries it.
+      "rental_terms",
       // The shop's own emergency numbers. Exported because the bundle is
       // the backup: a shop restoring from one must come back with the
       // chamber's number on its manifests, not an empty card.
@@ -189,6 +193,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         JSON.stringify(shop.packingList),
         JSON.stringify(shop.rentalItems),
         JSON.stringify(shop.rentalPricing),
+        shop.rentalTerms,
         JSON.stringify(shop.emergencyReference),
         shop.seasonStartMonth,
         shop.seasonStartDay,
@@ -2054,6 +2059,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "returned_at",
       "return_outcome",
       "return_note",
+      "dives_logged",
       "created_at",
     ],
     rows: ({ personName, bookingPerson, gearItemLabel, gearReservationRows }) =>
@@ -2073,6 +2079,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
           row.returnedAt,
           row.returnOutcome,
           row.returnNote,
+          row.divesLogged,
           row.createdAt,
         ];
       }),

@@ -80,6 +80,11 @@ function noticeMessages(
       tone: "danger",
       text: t("settings.main.notice.rentalPricesInvalid"),
     },
+    "rental-terms-saved": { tone: "success", text: t("settings.main.notice.rentalTermsSaved") },
+    "rental-terms-invalid": {
+      tone: "danger",
+      text: t("settings.main.notice.rentalTermsInvalid"),
+    },
     "contact-saved": { tone: "success", text: t("settings.main.notice.contactSaved") },
     "contact-confirmation-sent": {
       tone: "success",

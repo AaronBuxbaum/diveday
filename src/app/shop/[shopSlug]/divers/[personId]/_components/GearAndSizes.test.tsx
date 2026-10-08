@@ -59,6 +59,70 @@ function renderGear(rentalFit: RentalFit | null, rentalItems: string[] = []) {
 }
 
 describe("GearAndSizes", () => {
+  /** ADR 20260815-minimal-gear-register, amendment 2026-10-08. */
+  it("names each open counter rental with a link to its ticket, and offers Rent gear", () => {
+    render(
+      <GearAndSizes
+        diver={{ rentalFit: null } as unknown as DiverProfile}
+        shopSlug="blue-mantis"
+        personId="person-1"
+        rentalItems={[]}
+        canOverride
+        locale="en-US"
+        t={t}
+        counterRentals={[
+          {
+            ticketId: "ticket-1",
+            personId: "person-1",
+            personName: "Priya Sharma",
+            reservedFrom: "2026-07-18",
+            reservedUntil: "2026-07-20",
+            createdAt: new Date("2026-07-17T10:00:00.000Z"),
+            orderId: null,
+            units: [
+              {
+                reservationId: "ticket-1",
+                gearItemId: "unit-1",
+                kind: "mask",
+                label: "Mask #2",
+                size: null,
+                checkedOutAt: null,
+                returnedAt: null,
+                returnOutcome: null,
+              },
+              {
+                reservationId: "res-2",
+                gearItemId: "unit-2",
+                kind: "fins",
+                label: "Fins #2",
+                size: "M",
+                checkedOutAt: null,
+                returnedAt: null,
+                returnOutcome: null,
+              },
+            ],
+          },
+        ]}
+        rentGearHref="/shop/blue-mantis/gear/rentals/new?personId=person-1"
+      />,
+    );
+    // A rental out opens the group with the record: it is gear somebody has.
+    expect(screen.getByTestId("diver-file-group-gear")).toHaveAttribute("open");
+    expect(
+      screen.getByRole("link", { name: /^Mask #2, Fins #2 · back by Jul.20, 2026$/ }),
+    ).toHaveAttribute("href", "/shop/blue-mantis/gear/rentals/ticket-1");
+    expect(screen.getByRole("link", { name: "Rent gear" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/gear/rentals/new?personId=person-1",
+    );
+  });
+
+  it("offers no Rent gear door and no Rented row when there is nothing to say", () => {
+    renderGear(null);
+    expect(screen.queryByRole("link", { name: "Rent gear" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Rented")).not.toBeInTheDocument();
+  });
+
   it.each([
     ["no rental fit on file", null, [], "No fit on file, not asked yet"],
     ["own kit", makeRentalFit(), [], "Own kit"],
