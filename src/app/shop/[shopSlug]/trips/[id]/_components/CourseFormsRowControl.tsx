@@ -2,7 +2,7 @@ import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { ChoiceRow, controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
 import { guardianRelationshipText } from "@/i18n/guardian-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { RequiredCourseForm } from "@/lib/course-forms";
@@ -93,12 +93,7 @@ export function CourseFormsRowControl({
                 description={t("trips.roster.courseForms.signedOnHint")}
                 htmlFor={`paper-form-signed-on-${bookingId}`}
               >
-                <input
-                  id={`paper-form-signed-on-${bookingId}`}
-                  name="signedOn"
-                  type="date"
-                  className={controlClass}
-                />
+                <DateField id={`paper-form-signed-on-${bookingId}`} name="signedOn" />
               </Field>
               {requiresGuardian ? (
                 <>
