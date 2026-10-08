@@ -22,6 +22,7 @@ import {
   splitBookingIdentity,
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
+import { recordCourseMaterialsDone } from "@/db/course-materials";
 import { recordCourseNextStep } from "@/db/course-next-step";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { sendNotification } from "@/db/notifications";
@@ -1440,6 +1441,47 @@ export async function saveCourseNextStepAction(
           : outcome.reason === "not_a_course_session"
             ? "next-step-not-a-course"
             : "invalid",
+      { bid: bookingId },
+    ),
+  );
+}
+
+/**
+ * **A student's learning materials, ticked done or taken back** (ADR
+ * 20261008-course-learning-materials).
+ *
+ * Beside the next step and under the same gate: any live staffer of this shop
+ * may record it, as they may record a next step, because the person who hears
+ * "I finished the eLearning" is as often the desk as the instructor. Who did is
+ * stamped on the row. The refusals come from the writer — a departure with no
+ * course is `not_a_course_session`, and another shop's booking id is
+ * `not_found`, because the write is scoped by the session's shop.
+ */
+export async function setCourseMaterialsDoneAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = tripPath(shopSlug, tripId);
+  const s = (await requireShopSurface(shopSlug)).session;
+  const bookingId = String(formData.get("bookingId") ?? "");
+  if (!uuidParam(bookingId)) redirect(back);
+
+  const outcome = await recordCourseMaterialsDone(await getDb(), {
+    shopId: s.user.shopId,
+    bookingId,
+    staffPersonId: s.user.personId,
+    done: formData.get("done") === "true",
+  });
+  revalidateAndRedirect(
+    back,
+    noticeUrl(
+      back,
+      outcome.ok
+        ? "materials-saved"
+        : outcome.reason === "not_a_course_session"
+          ? "materials-not-a-course"
+          : "invalid",
       { bid: bookingId },
     ),
   );

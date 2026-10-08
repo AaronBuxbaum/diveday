@@ -79,6 +79,12 @@ export type RosterTrip = {
    * rung, or a specialty, is one change of the select away.
    */
   certifyDefaultLevel?: CertificationLevel | null;
+  /**
+   * This departure teaches a course with learning materials on it, so each
+   * seat says whether a staffer has marked them done (ADR
+   * 20261008-course-learning-materials).
+   */
+  courseHasMaterials?: boolean;
   /** The Trip surface already leads with its masthead capacity read. */
   compact?: boolean;
   /** Keep the old standalone Guests heading for the compatibility route. */
@@ -164,6 +170,12 @@ export type RosterActions = {
    * offered one without the other would be a roster that half-taught.
    */
   saveCourseNextStepAction?: (formData: FormData) => void;
+  /**
+   * Tick a student's learning materials done, or take the tick back (ADR
+   * 20261008-course-learning-materials). Present only on a course session
+   * whose course carries materials.
+   */
+  setCourseMaterialsDoneAction?: (formData: FormData) => void;
   updatePickupAction?: (bookingId: string, formData: FormData) => void;
 };
 

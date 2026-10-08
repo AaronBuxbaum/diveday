@@ -1,4 +1,4 @@
-import { courseCertifiesStudents } from "@/lib/courses";
+import { courseCertifiesStudents, readLearningMaterials } from "@/lib/courses";
 import { demandRecommendation } from "@/lib/demand";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
 import {
@@ -247,6 +247,12 @@ export async function getTripGuests(
     certifies: courseCertifiesStudents(trip.course ?? null),
     /** The rung this course issues (`courses.certifies_level`), where "Certify diver" opens. */
     certifyDefaultLevel: trip.course?.certifiesLevel ?? null,
+    /**
+     * The course carries learning materials, so each seat says whether a
+     * staffer has marked them done (ADR 20261008-course-learning-materials).
+     * The tick itself is on the booking row the roster already read.
+     */
+    courseHasMaterials: readLearningMaterials(trip.course?.learningMaterials).length > 0,
     // `orders/new` refuses without a payable account, so each seat's "Create
     // order" link points at connecting one instead of at a door that bounces.
     paymentsConnected: canAcceptPayments(stripeAccount),

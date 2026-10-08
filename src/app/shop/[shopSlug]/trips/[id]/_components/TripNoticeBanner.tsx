@@ -191,6 +191,14 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "trips.notices.nextStepNotACourse",
   },
+  // A student's learning materials ticked or un-ticked (ADR
+  // 20261008-course-learning-materials), and the same LMS boundary as above.
+  "materials-saved": { form: "roster", tone: "success", key: "trips.notices.materialsSaved" },
+  "materials-not-a-course": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.materialsNotACourse",
+  },
   "contact-saved": { form: "roster", tone: "success", key: "trips.notices.contactSaved" },
   "contact-incomplete": { form: "roster", tone: "warning", key: "trips.notices.contactIncomplete" },
   "diver-invalid": { form: "add-diver", tone: "danger", key: "trips.notices.diverInvalid" },

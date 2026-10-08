@@ -115,3 +115,66 @@ describe("RosterRow", () => {
     expect(container.querySelector("#booking-b-1 summary svg")).not.toBeNull();
   });
 });
+
+/**
+ * The learning-materials tick (ADR 20261008-course-learning-materials): a
+ * capsule on the name line while nobody has ticked it, and one form that
+ * posts the opposite of what is stored.
+ */
+describe("RosterRow learning materials", () => {
+  function courseContext(): RosterRowContext {
+    const base = contextFor("ready");
+    return {
+      ...base,
+      trip: { ...base.trip, courseHasMaterials: true },
+      actions: { ...base.actions, setCourseMaterialsDoneAction: noop },
+    };
+  }
+  const withTick = (at: Date | null) => ({
+    ...seat,
+    booking: { ...seat.booking, courseMaterialsDoneAt: at } as RosterEntry["booking"],
+  });
+  const doneField = (container: HTMLElement) =>
+    container.querySelector<HTMLInputElement>('#booking-b-1 input[name="done"]')?.value;
+
+  it("says who has not finished, and offers to mark it done", () => {
+    const { container } = render(
+      <ul>
+        <RosterRow entry={withTick(null)} settled={false} context={courseContext()} />
+      </ul>,
+    );
+    expect(screen.getAllByText("Materials not done").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Mark materials done" })).toBeInTheDocument();
+    expect(doneField(container)).toBe("true");
+    expect(
+      container.querySelector<HTMLInputElement>('#booking-b-1 input[name="bookingId"]')?.value,
+    ).toBe("b-1");
+  });
+
+  it("names the day it was ticked, and the same form takes it back", () => {
+    const { container } = render(
+      <ul>
+        <RosterRow
+          entry={withTick(new Date("2026-08-20T15:00:00Z"))}
+          settled={false}
+          context={courseContext()}
+        />
+      </ul>,
+    );
+    expect(screen.queryByText("Materials not done")).toBeNull();
+    expect(screen.getByText(/Materials done · Thu,\sAug\s20/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mark not done" })).toBeInTheDocument();
+    expect(doneField(container)).toBe("false");
+  });
+
+  it("draws nothing for a course with no materials", () => {
+    const base = contextFor("ready");
+    const { container } = render(
+      <ul>
+        <RosterRow entry={withTick(null)} settled={false} context={base} />
+      </ul>,
+    );
+    expect(screen.queryByText("Materials not done")).toBeNull();
+    expect(doneField(container)).toBeUndefined();
+  });
+});
