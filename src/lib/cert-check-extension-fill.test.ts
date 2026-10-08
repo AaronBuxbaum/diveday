@@ -13,13 +13,14 @@ async function loadExtensionScript(file: string): Promise<void> {
   await import(/* @vite-ignore */ new URL(`../../extension/${file}`, import.meta.url).href);
 }
 await loadExtensionScript("fill.js");
-const { fillAgencyForm } = (
+const { fillAgencyForm, excerptAround } = (
   globalThis as unknown as {
     DiveDayCertCheck: {
       fillAgencyForm: (
         query: unknown,
         spec: unknown,
       ) => { ok: true } | { ok: false; missing: string[] };
+      excerptAround: (text: string, email: string) => string;
     };
   }
 ).DiveDayCertCheck;
@@ -146,5 +147,72 @@ describe("fillAgencyForm", () => {
     submitted();
     expect(fillAgencyForm({ ...lena, cardNumber: null }, cmas)).toEqual({ ok: true });
     expect(value('[aria-label="Family Name"]')).toBe("Ortiz");
+  });
+
+  it("types the student's email into PADI's search, and only the email", () => {
+    document.body.innerHTML = `
+      <form><input type="email" aria-label="Student email"><button>Search</button></form>`;
+    const onSubmit = submitted();
+    expect(
+      fillAgencyForm(
+        { ...lena, email: "lena@example.com" },
+        { fields: ["email"], dateFormat: "YYYY-MM-DD" },
+      ),
+    ).toEqual({ ok: true });
+    expect(value("input")).toBe("lena@example.com");
+    expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
+  it("types a student's email into a search box only, never an invite or a newsletter box", () => {
+    document.body.innerHTML = `
+      <form><input type="email" aria-label="Email"><button>Invite student</button></form>
+      <form><input type="email" aria-label="Email"><button>Subscribe</button></form>`;
+    const onSubmit = submitted();
+    expect(
+      fillAgencyForm(
+        { ...lena, email: "lena@example.com" },
+        { fields: ["email"], dateFormat: "YYYY-MM-DD" },
+      ),
+    ).toEqual({ ok: false, missing: ["email"] });
+    expect(value('input[type="email"]')).toBe("");
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("never fills a sign-in page, so a diver's details never go into a sign-in form", () => {
+    document.body.innerHTML = `
+      <form>
+        <input type="email" aria-label="Email"><input type="password" aria-label="Password">
+        <button>Sign in</button>
+      </form>`;
+    const onSubmit = submitted();
+    expect(
+      fillAgencyForm(
+        { ...lena, email: "lena@example.com" },
+        { fields: ["email"], dateFormat: "YYYY-MM-DD" },
+      ),
+    ).toEqual({ ok: false, missing: ["signedIn"] });
+    expect(value('input[type="email"]')).toBe("");
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+});
+
+describe("excerptAround", () => {
+  it("hands back only the lines near the student's email", () => {
+    const page = [
+      ...Array.from({ length: 20 }, (_, index) => `Other ${index}\tother${index}@example.com`),
+      "Lena Ortiz\tLena@Example.com\tOpen Water Diver Online\tComplete",
+      ...Array.from({ length: 20 }, (_, index) => `Later ${index}\tlater${index}@example.com`),
+    ].join("\n");
+    const excerpt = excerptAround(page, "lena@example.com");
+    expect(excerpt).toContain("Lena Ortiz");
+    expect(excerpt).not.toContain("other0@example.com");
+    expect(excerpt).not.toContain("later19@example.com");
+  });
+
+  it("keeps the top of a page that never names the email, to say why", () => {
+    const page = ["Search results", "No results found", ...Array(100).fill("row")].join("\n");
+    const excerpt = excerptAround(page, "lena@example.com");
+    expect(excerpt).toContain("No results found");
+    expect(excerpt.split("\n")).toHaveLength(40);
   });
 });

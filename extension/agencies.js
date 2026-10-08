@@ -33,4 +33,17 @@ globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {
       either: true,
     },
   },
+  // Where a course student's eLearning progress is read, by agency. PADI shows
+  // it only to a professional signed in to the PADI Pros' Site, so this opens
+  // the page in the staffer's own browser, where they already are; DiveDay
+  // never holds that sign-in. The address and the search box are a best guess
+  // that has not been tried against the live site (issue #2259): a page that
+  // does not read as a result writes nothing.
+  ELEARNING: {
+    padi: {
+      url: "https://pros.padi.com/",
+      fields: ["email"],
+      dateFormat: "YYYY-MM-DD",
+    },
+  },
 });

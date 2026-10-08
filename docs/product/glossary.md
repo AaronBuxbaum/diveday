@@ -88,6 +88,12 @@ new domain concept, define it here in the same PR.
   It stamps `agency_checked_at`, with those words as the review note, and names the staffer whose
   browser ran it. Anything else writes nothing and leaves the link. Level cards only, for SSI, NAUI,
   SDI, GUE and CMAS; an unsighted self-declaration still needs its sighting.
+- **eLearning check** — the same extension reading a course student's PADI eLearning on the PADI
+  Pros' Site, searched by the student's email in the staffer's signed-in browser (H-106, ADR
+  20261008-cert-check-extension). The server ticks **Materials done** only when one record names
+  the student and their email, this course and no higher one, and a finished status; anything else
+  writes nothing. A seat already ticked is left as it was. PADI only, and a best guess of PADI's
+  page until a staffer tries it (#2259).
 - **Claimed certification** — a card recorded as evidence but not yet verified: the stored status is
   `pending`. It is what a card entered by hand starts as (the shop-owner-facing word is "claimed").
   A claimed card never satisfies readiness or authorizes a nitrox fill until staff **Mark certified** or an **Agency check** certifies it.
@@ -1099,8 +1105,9 @@ new domain concept, define it here in the same PR.
   agency's eLearning: an ordered list of names, each with an optional `https:` link and note, kept
   on the course. DiveDay sends it with the booking confirmation, repeats it on the 7-day reminder,
   and shows it on the diver's thread. **Materials done** is a staffer's per-seat tick that the
-  student finished them, stamped with who and when. It is the shop's word, never the agency's, and
-  it gates nothing: its one effect is that the 7-day reminder stops asking
+  student finished them, stamped with who and when. It is the shop's word, never the agency's (the
+  eLearning check ticks it only after reading PADI's page in the staffer's browser), and it gates
+  nothing: its one effect is that the 7-day reminder stops asking
   ([20261008-course-learning-materials](../architecture/decisions/20261008-course-learning-materials.md)).
 - **Instruction fee / e-learning fee** — a course invoices as two lines on one bill, and the diver
   makes a single payment for their sum. Enrollment assumes the e-learning is included; a student

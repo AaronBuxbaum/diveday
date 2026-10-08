@@ -21,6 +21,7 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { AddDiverSection } from "./AddDiverSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
+import type { RosterActions } from "./roster-model";
 import { TripInvitationGroup } from "./TripInvitationSection";
 import { TripNoticeBanner } from "./TripNoticeBanner";
 import { WaitlistGroup } from "./WaitlistSection";
@@ -45,6 +46,7 @@ export type TripRosterActions = {
   certifyDiverAction?: FormAction;
   saveCourseNextStepAction?: FormAction;
   setCourseMaterialsDoneAction?: FormAction;
+  elearningCheckAction?: RosterActions["elearningCheckAction"];
   addInternalNoteAction: FormAction;
   deleteInternalNoteAction: FormAction;
   saveRosterEmergencyContactAction: FormAction;
@@ -234,6 +236,7 @@ export function TripRosterContent({
           nitroxByBooking,
           notesByBooking,
           courseNextStepByBooking,
+          elearningQueryByBooking: guests.elearningQueryByBooking,
           sameNameHeldSeats: guests.sameNameHeldSeats,
           keepOpenBookingId,
           namesakeRefusedBookingId,
@@ -254,6 +257,9 @@ export function TripRosterContent({
           saveCourseNextStepAction: actions.saveCourseNextStepAction,
           setCourseMaterialsDoneAction: guests.courseHasMaterials
             ? actions.setCourseMaterialsDoneAction
+            : undefined,
+          elearningCheckAction: guests.courseHasMaterials
+            ? actions.elearningCheckAction
             : undefined,
           updatePickupAction: actions.updateBookingPickupAction,
         }}

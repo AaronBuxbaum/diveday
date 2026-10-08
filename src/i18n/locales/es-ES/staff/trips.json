@@ -419,6 +419,15 @@
     "materialsMarkDone": "Marcar material terminado",
     "materialsMarkNotDone": "Marcar sin terminar",
     "materialsSaving": "Guardando…",
+    "elearningCheck": {
+      "check": "Verificar eLearning con PADI",
+      "checking": "Verificando con PADI…",
+      "complete": "PADI muestra el eLearning terminado. Material marcado como terminado.",
+      "notComplete": "PADI todavía no muestra terminado el eLearning de este curso.",
+      "noRecord": "PADI no encontró eLearning con el correo de este alumno.",
+      "unreadable": "No se pudo leer la página de PADI. Inicia sesión en el PADI Pros’ Site y vuelve a verificar.",
+      "failed": "No se guardó. Inténtalo de nuevo."
+    },
     "certifyConfirm": "Confirmar certificación",
     "certifyDiver": "Certificar",
     "certifyLevel": "Nivel",

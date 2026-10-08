@@ -1,6 +1,7 @@
 import { courseCertifiesStudents, readLearningMaterials } from "@/lib/courses";
 import { demandRecommendation } from "@/lib/demand";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
+import { type ElearningQuery, elearningCheckQuery } from "@/lib/elearning-check";
 import {
   filterEligibleLastMinuteRecipients,
   lastMinuteEntryMatchesTripDate,
@@ -253,6 +254,11 @@ export async function getTripGuests(
      * The tick itself is on the booking row the roster already read.
      */
     courseHasMaterials: readLearningMaterials(trip.course?.learningMaterials).length > 0,
+    /**
+     * What the DiveDay browser extension would search the agency's eLearning
+     * page for, per seat, where it can (H-106): a PADI course with materials.
+     */
+    elearningQueryByBooking: elearningQueries(trip.course ?? null, roster),
     // `orders/new` refuses without a payable account, so each seat's "Create
     // order" link points at connecting one instead of at a door that bounces.
     paymentsConnected: canAcceptPayments(stripeAccount),
@@ -283,4 +289,25 @@ export async function getTripGuests(
       waiver: waiverByBooking,
     },
   };
+}
+
+function elearningQueries(
+  course: { agency: string; title: string; learningMaterials: unknown } | null,
+  roster: readonly {
+    booking: { id: string };
+    person: { fullName: string; email: string | null };
+  }[],
+): Map<string, ElearningQuery> {
+  const queries = new Map<string, ElearningQuery>();
+  if (!course || readLearningMaterials(course.learningMaterials).length === 0) return queries;
+  for (const { booking, person } of roster) {
+    const query = elearningCheckQuery({
+      agency: course.agency,
+      fullName: person.fullName,
+      email: person.email,
+      courseTitle: course.title,
+    });
+    if (query) queries.set(booking.id, query);
+  }
+  return queries;
 }

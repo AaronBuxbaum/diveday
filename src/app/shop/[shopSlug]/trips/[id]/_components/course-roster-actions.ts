@@ -3,6 +3,7 @@ import {
   saveCourseNextStepAction,
   setCourseMaterialsDoneAction,
 } from "../actions";
+import { elearningCheckAction } from "../elearning-actions";
 
 /**
  * A course session's three acts of teaching on the Divers tab, bound to this
@@ -20,5 +21,6 @@ export function courseRosterActions(isCourseSession: boolean, shopSlug: string, 
     certifyDiverAction: certifyDiverFromRosterAction.bind(null, shopSlug, tripId),
     saveCourseNextStepAction: saveCourseNextStepAction.bind(null, shopSlug, tripId),
     setCourseMaterialsDoneAction: setCourseMaterialsDoneAction.bind(null, shopSlug, tripId),
+    elearningCheckAction: elearningCheckAction.bind(null, shopSlug, tripId),
   };
 }

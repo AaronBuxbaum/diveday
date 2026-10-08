@@ -591,6 +591,7 @@
       "depth-and-age-surfaces.spec.ts",
       "divemaster-ratio.spec.ts",
       "divers.spec.ts",
+      "elearning-check.spec.ts",
       "gear-fit-and-age.spec.ts",
       "guardian-co-signature.spec.ts",
       "import.spec.ts",

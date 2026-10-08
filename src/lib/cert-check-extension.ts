@@ -21,8 +21,10 @@ export const EXTENSION_READY_EVENT = "diveday-cert-check-ready";
 export const PAGE_MESSAGE_SOURCE = "diveday-page";
 /** `source` on a message the extension sends back. */
 export const EXTENSION_MESSAGE_SOURCE = "diveday-cert-check";
-/** The one request there is: look this diver up with this agency. */
+/** Look this diver's card up with this agency. */
 export const CHECK_REQUEST_TYPE = "agency-check";
+/** Look a course student up on the agency's eLearning page (H-106). */
+export const ELEARNING_REQUEST_TYPE = "elearning-check";
 export const CHECK_RESULT_TYPE = "agency-check-result";
 /** Longer than a slow agency page, shorter than a staffer's patience. */
 export const CHECK_TIMEOUT_MS = 45_000;

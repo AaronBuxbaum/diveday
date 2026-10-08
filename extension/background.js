@@ -1,11 +1,20 @@
 // The extension's service worker: one job, run on request from a DiveDay page.
 // Open the agency's lookup page in a background tab, fill it in, wait for the
 // answer to settle, hand the page's text back, close the tab. It decides
-// nothing; the DiveDay server reads the text (src/lib/agency-check.ts).
+// nothing; the DiveDay server reads the text (src/lib/agency-check.ts for a
+// card, src/lib/elearning-check.ts for a course student's eLearning).
 importScripts("protocol.js", "agencies.js", "fill.js");
 
-const { AGENCIES, PAGE_TEXT_MAX_LENGTH, REQUEST_TYPE, fillAgencyForm, readAgencyPage } =
-  globalThis.DiveDayCertCheck;
+const {
+  AGENCIES,
+  ELEARNING,
+  PAGE_TEXT_MAX_LENGTH,
+  REQUEST_TYPE,
+  ELEARNING_REQUEST_TYPE,
+  fillAgencyForm,
+  readAgencyPage,
+  excerptAround,
+} = globalThis.DiveDayCertCheck;
 
 /** How long a lookup may take, end to end. The page gives up at 45 seconds. */
 const CHECK_DEADLINE_MS = 40_000;
@@ -43,8 +52,8 @@ async function run(tabId, func, args = []) {
 }
 
 /** The text a check found, or why there is none. */
-async function check(query) {
-  const spec = Object.hasOwn(AGENCIES, query.agency) ? AGENCIES[query.agency] : null;
+async function check(query, pages) {
+  const spec = Object.hasOwn(pages, query.agency) ? pages[query.agency] : null;
   if (!spec) return { ok: false, reason: "unsupported" };
   const deadline = Date.now() + CHECK_DEADLINE_MS;
   let tab;
@@ -93,6 +102,19 @@ async function check(query) {
   }
 }
 
+function validElearningQuery(query) {
+  if (!query || typeof query !== "object") return false;
+  const text = (value, max) => typeof value === "string" && value.length > 0 && value.length <= max;
+  return (
+    typeof query.agency === "string" &&
+    text(query.firstName, 100) &&
+    text(query.lastName, 100) &&
+    text(query.email, 254) &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(query.email) &&
+    text(query.courseTitle, 200)
+  );
+}
+
 function validQuery(query) {
   if (!query || typeof query !== "object") return false;
   const text = (value, max) => typeof value === "string" && value.length > 0 && value.length <= max;
@@ -120,6 +142,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const local = from.hostname === "localhost" || from.hostname === "127.0.0.1";
   const diveDay = from.protocol === "https:" && from.hostname === "dive.day";
   if ((!diveDay && !local) || !from.pathname.startsWith("/shop/")) return false;
+  if (message?.type === ELEARNING_REQUEST_TYPE && validElearningQuery(message.query)) {
+    // Only what the search needs goes into the agency's page.
+    const query = {
+      agency: message.query.agency,
+      firstName: message.query.firstName,
+      lastName: message.query.lastName,
+      email: message.query.email,
+    };
+    check(query, ELEARNING)
+      .then((reply) =>
+        reply.ok ? { ok: true, pageText: excerptAround(reply.pageText, query.email) } : reply,
+      )
+      .then(sendResponse);
+    return true;
+  }
   if (!message || message.type !== REQUEST_TYPE || !validQuery(message.query)) {
     sendResponse({ ok: false, reason: "unsupported" });
     return false;
@@ -131,6 +168,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     birthDate: message.query.birthDate,
     cardNumber: message.query.cardNumber,
   };
-  check(query).then(sendResponse);
+  check(query, AGENCIES).then(sendResponse);
   return true;
 });

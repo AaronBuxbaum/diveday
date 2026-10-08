@@ -51,6 +51,8 @@ import { paymentSourceLine } from "@/lib/payment-source";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { shopPath } from "@/lib/staff-notices";
 import { waiverState } from "@/lib/waivers";
+import { ElearningCheck } from "./ElearningCheck";
+import { elearningCheckCopy } from "./elearning-check-copy";
 import { PaymentStatusControl, type PaymentStatusControlCopy } from "./PaymentStatusControl";
 import {
   PAYMENT_STATUSES_ALL,
@@ -144,6 +146,7 @@ export function RosterRow({
     nitroxByBooking,
     notesByBooking,
     courseNextStepByBooking,
+    elearningQueryByBooking,
     sameNameHeldSeats,
     keepOpenBookingId,
     namesakeRefusedBookingId,
@@ -163,6 +166,7 @@ export function RosterRow({
     certifyDiverAction,
     saveCourseNextStepAction,
     setCourseMaterialsDoneAction,
+    elearningCheckAction,
     updatePickupAction,
   } = actions;
   // A course student whose learning materials nobody has marked done (ADR
@@ -835,6 +839,17 @@ export function RosterRow({
             : null
         }
       />
+      {/* The materials tick, read off PADI's own eLearning page when the
+          DiveDay browser extension is here (H-106). */}
+      {elearningCheckAction ? (
+        <ElearningCheck
+          query={elearningQueryByBooking?.get(booking.id) ?? null}
+          bookingId={booking.id}
+          materialsDone={Boolean(booking.courseMaterialsDoneAt)}
+          action={elearningCheckAction}
+          copy={elearningCheckCopy(t)}
+        />
+      ) : null}
 
       {/* The waiver, when there is one to send. The control's own face is
           the status and its label is the next action; a signed waiver has

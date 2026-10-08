@@ -9,6 +9,7 @@
     PAGE_SOURCE,
     EXTENSION_SOURCE,
     REQUEST_TYPE,
+    ELEARNING_REQUEST_TYPE,
     RESULT_TYPE,
   } = globalThis.DiveDayCertCheck;
 
@@ -18,7 +19,8 @@
   window.addEventListener("message", (event) => {
     if (event.source !== window || event.origin !== window.location.origin) return;
     const data = event.data;
-    if (!data || data.source !== PAGE_SOURCE || data.type !== REQUEST_TYPE) return;
+    if (!data || data.source !== PAGE_SOURCE) return;
+    if (data.type !== REQUEST_TYPE && data.type !== ELEARNING_REQUEST_TYPE) return;
     if (typeof data.requestId !== "string" || data.requestId.length > 100) return;
     const reply = (result) =>
       window.postMessage(
@@ -26,7 +28,7 @@
         window.location.origin,
       );
     chrome.runtime
-      .sendMessage({ type: REQUEST_TYPE, query: data.query })
+      .sendMessage({ type: data.type, query: data.query })
       .then((result) => reply(result && typeof result === "object" ? result : { ok: false }))
       .catch(() => reply({ ok: false, reason: "tab_failed" }));
   });

@@ -6,10 +6,12 @@ import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
+import type { ElearningQuery } from "@/lib/elearning-check";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { isDiver } from "@/lib/participant-types";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { waiverState } from "@/lib/waivers";
+import type { ElearningCheckResult } from "../elearning-actions";
 import type { PaymentStatus, PaymentStatusControlCopy } from "./PaymentStatusControl";
 import { SHARED_FACT_MIN } from "./shared-facts";
 import type {
@@ -106,6 +108,8 @@ export type RosterRows = {
   notesByBooking: Map<string, RosterPrivateNote[]>;
   /** What each student's next step already says, so an instructor edits rather than retypes. */
   courseNextStepByBooking?: Map<string, string>;
+  /** What the browser extension searches PADI's eLearning for, per seat (H-106). */
+  elearningQueryByBooking?: Map<string, ElearningQuery>;
   /** Per held seat, the other held seats a split may move with it (`sameNameHeldSeats`). */
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
   /**
@@ -176,6 +180,11 @@ export type RosterActions = {
    * whose course carries materials.
    */
   setCourseMaterialsDoneAction?: (formData: FormData) => void;
+  /** Tick the materials from PADI's own eLearning page (H-106); beside the tick above. */
+  elearningCheckAction?: (
+    previous: ElearningCheckResult,
+    formData: FormData,
+  ) => Promise<ElearningCheckResult>;
   updatePickupAction?: (bookingId: string, formData: FormData) => void;
 };
 
