@@ -217,9 +217,6 @@ export const STAFF_DESTINATION_TITLE_KEYS: Partial<Record<StaffDestinationId, St
   // its lead tab answers to it, so typing "Money" still finds Orders.
   inbox: "shared.shopSections.inbox",
   orders: "shared.shopSections.money",
-  // The register's tab answers to "Register"; the section it leads is Gear,
-  // which is what a staffer types when they want the fleet.
-  gear: "shared.shopSections.gear",
   diveSites: "diveSites.list.title",
 };
 
@@ -328,6 +325,15 @@ export const STAFF_SECTION_TABS = {
 } as const satisfies Partial<Record<StaffSection, readonly StaffDestinationId[]>>;
 
 export type TabbedStaffSection = keyof typeof STAFF_SECTION_TABS;
+
+/**
+ * A tab's word where it differs from the destination's label. Under Gear the
+ * fleet's tab says "Register" beside "Work orders", while the nav, the palette
+ * and every eyebrow that points back at the fleet keep calling it Gear.
+ */
+export const STAFF_SECTION_TAB_LABEL_KEYS: Partial<Record<StaffDestinationId, StaffMessageKey>> = {
+  gear: "shared.shopNavLinks.registerTab",
+};
 
 /**
  * The tabs this viewer sees for a section, in order. A tab gated away is
