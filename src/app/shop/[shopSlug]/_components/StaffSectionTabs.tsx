@@ -3,6 +3,7 @@ import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { type Role, staffDestinationGates } from "@/lib/authz";
 import {
   STAFF_DESTINATION_LABEL_KEYS,
+  STAFF_SECTION_TAB_LABEL_KEYS,
   STAFF_SECTION_TABS,
   type StaffDestinationId,
   staffDestinationHref,
@@ -37,7 +38,10 @@ export function StaffSectionTabs({
       tabs={staffSectionTabs(section, staffDestinationGates(roles)).map((destination) => ({
         id: destination.id,
         href: staffDestinationHref(root, destination),
-        label: t(STAFF_DESTINATION_LABEL_KEYS[destination.id]),
+        label: t(
+          STAFF_SECTION_TAB_LABEL_KEYS[destination.id] ??
+            STAFF_DESTINATION_LABEL_KEYS[destination.id],
+        ),
       }))}
     />
   );
