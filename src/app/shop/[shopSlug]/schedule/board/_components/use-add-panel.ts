@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { applyFormFields } from "@/components/apply-form-fields";
 import type { FormDraftProps } from "@/components/FormDraft";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -117,8 +117,20 @@ export function useAddPanel({
   const [tideLine, setTideLine] = useState<string | null>(null);
   /** The quick row's site select: always mounted, so the effect reaches the form through it. */
   const tideAnchor = useRef<HTMLSelectElement>(null);
+  // The two server reads here are props from a server render, and every
+  // server action on this page refreshes the route (the session read re-sets
+  // its cookie cache), which hands in fresh function objects. Read the newest
+  // one when asking rather than subscribing to it, or each answer's refresh
+  // re-asks and the panel polls its own server (issues #2197, #2223).
+  const canAskTide = loadTideWindow !== undefined;
+  const askTide = useEffectEvent((input: BuilderTideWindowInput) =>
+    loadTideWindow ? loadTideWindow(input) : Promise.resolve(null),
+  );
+  const askPattern = useEffectEvent((date: string) =>
+    loadPattern ? loadPattern(date) : Promise.resolve(null),
+  );
   useEffect(() => {
-    if (!loadTideWindow || !diveSiteId) {
+    if (!canAskTide || !diveSiteId) {
       setTideLine(null);
       return;
     }
@@ -132,7 +144,7 @@ export function useAddPanel({
       const fields = form ? new FormData(form) : null;
       latest += 1;
       const asked = latest;
-      void loadTideWindow({
+      void askTide({
         diveSiteId,
         date: startDate,
         startTime: String(fields?.get("startTime") ?? ""),
@@ -152,7 +164,7 @@ export function useAddPanel({
       live = false;
       form?.removeEventListener("change", ask);
     };
-  }, [loadTideWindow, diveSiteId, startDate]);
+  }, [canAskTide, diveSiteId, startDate]);
 
   /**
    * **The add panel already knows the weekday** (ADR 20260906-before-you-ask,
@@ -176,16 +188,17 @@ export function useAddPanel({
   /** The trip tag, controlled so "Start blank" can reset it. */
   const [lensId, setLensId] = useState("");
   const [crew, setCrew] = useState<BuilderPattern["crew"]>([]);
+  const canAskPattern = loadPattern !== undefined;
   useEffect(() => {
-    if (!plain || !loadPattern) return;
+    if (!plain || !canAskPattern) return;
     let live = true;
-    void loadPattern(dateIso).then((found) => {
+    void askPattern(dateIso).then((found) => {
       if (live && found) setPattern(found);
     });
     return () => {
       live = false;
     };
-  }, [plain, loadPattern, dateIso]);
+  }, [plain, canAskPattern, dateIso]);
   useEffect(() => {
     const element = patternAnchor.current?.closest("form");
     if (!pattern || patternApplied || !options || !element) return;
