@@ -68,6 +68,11 @@ export type StaffGapCode =
   // sent a divemaster to press "Ask for this one" on the one gap their being
   // aboard cannot close.
   | "over_intro_ratio"
+  // An entry-level session booked past its **per-instructor ceiling** (12
+  // students per instructor, whatever the assistants): an assistant buys no
+  // seat there either, so it is the instructor's phone call, like the intro
+  // cap (`remedy`, src/lib/course-ratios.ts; dive-domain review of #1677).
+  | "over_ratio_instructor"
   // A course session with nobody in the water: both `no_instructor` and the
   // zero-crew case at once (issue #1338). It is its own code rather than
   // either of them because the chip is the entire information budget of a
@@ -93,6 +98,7 @@ export const GAP_TONE: Record<StaffGapCode, "warning" | "neutral"> = {
   no_instructor: "warning",
   over_ratio: "warning",
   over_intro_ratio: "warning",
+  over_ratio_instructor: "warning",
   uncrewed_course: "warning",
   uncrewed_departure: "warning",
   crew_below_target: "neutral",
@@ -115,7 +121,13 @@ export const GAP_TONE: Record<StaffGapCode, "warning" | "neutral"> = {
 export function staffGapForCourseGap(gap: CourseCrewGap): StaffGapCode | null {
   if (gap.code === "none") return null;
   if (gap.code === "no_instructor") return "no_instructor";
-  return gap.ratio === "intro" ? "over_intro_ratio" : "over_ratio";
+  if (gap.ratio === "intro") return "over_intro_ratio";
+  return gap.remedy === "instructor" ? "over_ratio_instructor" : "over_ratio";
+}
+
+/** The gap codes only another instructor's seat closes. */
+function onlyAnInstructorCloses(code: StaffGapCode): boolean {
+  return code === "over_intro_ratio" || code === "over_ratio_instructor";
 }
 
 /** A shift, reduced to what a week cell has to draw. */
@@ -581,7 +593,7 @@ export function staffWeek(input: {
       viewerRefusal === "already_requested" ||
       viewerRefusal === "already_crewing";
     const viewerAskWontClose =
-      viewerInvolved && gap.gap === "over_intro_ratio" && !viewer?.holdsInstructorRole;
+      viewerInvolved && onlyAnInstructorCloses(gap.gap) && !viewer?.holdsInstructorRole;
     gapsByDay.set(first.date, [
       ...(gapsByDay.get(first.date) ?? []),
       {
@@ -597,7 +609,7 @@ export function staffWeek(input: {
           ...request,
           askWontClose:
             request.state === "pending" &&
-            gap.gap === "over_intro_ratio" &&
+            onlyAnInstructorCloses(gap.gap) &&
             request.inWaterRole !== "instructor",
         })),
         viewerMayRequest,

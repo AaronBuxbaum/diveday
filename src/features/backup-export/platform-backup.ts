@@ -93,11 +93,14 @@ export type PlatformBackupShop = { id: string; slug: string; locale: string };
  * list, and the shops it did reach are the same ones as last week.
  */
 export async function listShopsForPlatformBackup(db: DbExecutor): Promise<PlatformBackupShop[]> {
-  return db
-    .select({ id: shops.id, slug: shops.slug, locale: shops.defaultLocale })
-    .from(shops)
-    .where(eq(shops.isDemo, false))
-    .orderBy(asc(shops.createdAt), asc(shops.id));
+  return (
+    db
+      .select({ id: shops.id, slug: shops.slug, locale: shops.defaultLocale })
+      .from(shops)
+      .where(eq(shops.isDemo, false))
+      // diveday:allow-time-id-order: a backup pass's visiting order; no one is shown it.
+      .orderBy(asc(shops.createdAt), asc(shops.id))
+  );
 }
 
 /**

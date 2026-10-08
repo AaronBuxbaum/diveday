@@ -4,7 +4,15 @@ import { nowDate } from "@/lib/clock";
 import type { RatingCredential } from "@/lib/crew-roles";
 import type { DbExecutor } from "./client";
 import { isUniqueConstraintViolation } from "./query-helpers";
-import { people, personRoles, staffCredentials } from "./schema";
+import { people, personRoles, staffCredentialKind, staffCredentials } from "./schema";
+
+/**
+ * Every kind a staff credential can be filed as, read from the column itself
+ * so the save form's validation cannot fall a kind behind the picker that
+ * offers it (issue #1850: a hand-written list would have rendered "Assistant
+ * Instructor rating" and refused to save it).
+ */
+export const STAFF_CREDENTIAL_KINDS = staffCredentialKind.enumValues;
 
 /**
  * The shop's live staff credentials.

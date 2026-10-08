@@ -5,7 +5,7 @@ import { copyToClipboard } from "@/components/Copyable";
 import { buttonClass } from "@/components/ui/button";
 
 /**
- * The one review ask left after a strong on-page rating (task 57 — merges
+ * The one review ask left after an on-page rating (task 57 — merges
  * what used to be two stacked asks into one). Copies the diver's own words
  * to the clipboard (nothing to copy for a bare rating) and sends them on to
  * the shop's own review link, so pasting into Google/TripAdvisor takes one

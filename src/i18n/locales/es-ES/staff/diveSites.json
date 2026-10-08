@@ -277,11 +277,11 @@
     "saveSiteBriefing": "Guardar sitio de buceo"
   },
   "import": {
-    "description": "Vuelve a leer un dive_sites.csv de tu exportación de DiveDay en la biblioteca de este centro.",
+    "description": "Vuelve a leer un dive_sites.csv de tu exportación de DiveDay en la biblioteca de este centro. Elige también dive_site_creatures.csv para recuperar la guía de campo de cada sitio.",
     "help": "Esto lee la propia exportación de DiveDay, no el archivo de otro sistema, así que espera las columnas que escribió el paquete y rechaza una que no reconozca. Los sitios se emparejan primero por id y luego por nombre: importar en el centro del que salió el paquete reescribe los sitios que nombra, e importar en otro los crea. Un sitio eliminado cuando se hizo el paquete vuelve eliminado.",
-    "notRestored": "Dos cosas no vuelven. Las especies de la guía de campo viajan en dive_site_creatures.csv y se quedan tal cual. Y la confirmación de una estación de mareas solo se aplica a un sitio para el que este centro ya tiene esa estación; en cualquier otro caso el aviso de distancia vuelve a preguntar, que es para lo que está.",
-    "chooseFile": "Elegir archivo CSV",
-    "chooseDifferentFile": "Elegir otro archivo",
+    "notRestored": "Sin dive_site_creatures.csv, cada sitio conserva la guía de campo que tiene. Con él, cada sitio del archivo recupera la guía que llevaba la exportación, y una especie que DiveDay ya no incluye se queda fuera. La confirmación de una estación de mareas solo se aplica a un sitio para el que este centro ya tiene esa estación; en cualquier otro caso el aviso de distancia vuelve a preguntar, que es para lo que está.",
+    "chooseFile": "Elegir archivos CSV",
+    "chooseDifferentFile": "Elegir otros archivos",
     "submit": "Importar sitios de buceo",
     "pending": "Importando…"
   },
@@ -290,6 +290,9 @@
     "importUnknownColumns": "Ese archivo tiene una columna que DiveDay no reconoce, así que no se leyó nada. Importa el archivo que produjo tu exportación, sin columnas añadidas.",
     "importNoNameColumn": "Ese archivo no tiene columna de nombre, así que no hay con qué emparejar un sitio.",
     "importFileEmpty": "Ese archivo no tiene filas.",
+    "importWrongFiles": "Elige un dive_sites.csv y, como mucho, un dive_site_creatures.csv con él.",
+    "importCreaturesRefused": "dive_site_creatures.csv no es el archivo que escribió tu exportación, así que no se importó nada. Vuelve a elegirlo tal como lo produjo la exportación.",
+    "importedGuides": "Se recuperó la guía de campo de {guides, plural, one {# sitio} other {# sitios}} y {dropped, plural, =0 {no se dejó fuera ninguna fila de especies} one {se dejó fuera # fila de especies} other {se dejaron fuera # filas de especies}}.",
     "imported": "Se actualizaron {updated, plural, one {# sitio} other {# sitios}} y se crearon {created, plural, one {# nuevo} other {# nuevos}}. {deleted, plural, =0 {Ninguno volvió eliminado} one {# volvió eliminado} other {# volvieron eliminados}} y {skipped, plural, =0 {no se dejó ninguna fila} one {se dejó # fila} other {se dejaron # filas}} sin tocar.",
     "importFileTooLarge": "Ese archivo pesa más de 8\u00a0MB. Divídelo o vuelve a exportar desde este centro.",
     "importTooManyRows": "Ese archivo tiene más de 20.000 filas, más sitios de los que cabe una biblioteca.",

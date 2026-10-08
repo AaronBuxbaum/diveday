@@ -117,6 +117,7 @@
   "medicalClearedByPhysician": "Autorizado por un médico",
   "medicalWaiverSigned": "Exención médica firmada",
   "medicalEarlierRefusal": "Un médico no autorizó a esta persona el {date} (exención anterior)",
+  "medicalEarlierRefusalChip": "Rechazo médico previo",
   "medicalReferralUnresolved": "Firmada de nuevo tras una derivación médica sin autorización de un médico registrada ({date})",
   "resolveBlockersLink": "Resolver bloqueos en Buceadores →",
   "addNoteSummary": "Añadir una nota",

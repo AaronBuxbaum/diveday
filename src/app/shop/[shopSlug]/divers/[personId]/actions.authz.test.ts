@@ -2,7 +2,14 @@ import { and, eq, inArray, isNotNull, isNull, notInArray } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { recordInboundMessage } from "@/db/inbound-messages";
-import { people, personRoles, staffReplies, userAccounts } from "@/db/schema";
+import {
+  people,
+  personRoles,
+  staffReplies,
+  userAccounts,
+  waiverRecords,
+  waiverTemplates,
+} from "@/db/schema";
 import { STAFF_ROLES } from "@/lib/authz";
 import { seededShopContext } from "@/test/db";
 import {
@@ -50,6 +57,7 @@ const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
 const {
   deletePersonAction,
+  eraseGuardianEmailAction,
   erasePersonAction,
   mergeDiverAction,
   replyToDiverAction,
@@ -239,6 +247,113 @@ describe("erasing a diver's personal and medical data", () => {
     const after = await personRow(db, diver);
     expect(after.anonymizedAt).not.toBeNull();
     expect(after.fullName).not.toBe(before.fullName);
+  });
+});
+
+/**
+ * **A co-signing guardian's address, erased on its own** (H-103, issue #1673).
+ * Owner-only like the diver's erasure, typed back to confirm, and on a live
+ * record — the child stays a diver.
+ */
+describe("erasing a guardian's email from a diver's releases", () => {
+  async function coSigned(db: AppDb, shopId: string, personId: string) {
+    const [template] = await db
+      .select({ id: waiverTemplates.id })
+      .from(waiverTemplates)
+      .where(eq(waiverTemplates.shopId, shopId))
+      .limit(1);
+    if (!template) throw new Error("seeded shop has no waiver template");
+    const [record] = await db
+      .insert(waiverRecords)
+      .values({
+        shopId,
+        personId,
+        templateId: template.id,
+        templateTitle: "Release",
+        templateVersion: 1,
+        templateBody: "Body",
+        tokenHash: `guardian-erasure-${personId}`,
+        expiresAt: new Date("2026-12-31T00:00:00.000Z"),
+        status: "completed",
+        guardianName: "Jonas Fischer",
+        guardianRelationship: "parent",
+        guardianSignatureMethod: "typed_consent",
+        guardianConsentedAt: new Date("2026-07-18T12:00:00.000Z"),
+        guardianSignedAt: new Date("2026-07-18T12:00:00.000Z"),
+        guardianEmail: "jonas@example.com",
+      })
+      .returning({ id: waiverRecords.id });
+    if (!record) throw new Error("waiver insert failed");
+    return record.id;
+  }
+  async function guardianEmailOf(db: AppDb, id: string) {
+    const [row] = await db
+      .select({ email: waiverRecords.guardianEmail })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, id));
+    return row?.email;
+  }
+  const anchor = "form=guardian-email#guardian-email-heading";
+
+  it("refuses a manager, and the address is still on the release", async () => {
+    const { db, shop, diver } = await context();
+    const id = await coSigned(db, shop.id, diver);
+    signIn(shop, await makeManager(db, shop.id));
+    const formData = new FormData();
+    formData.set("email", "jonas@example.com");
+    formData.set("confirmEmail", "jonas@example.com");
+
+    const to = await redirectedTo(() => eraseGuardianEmailAction(shop.slug, diver, formData));
+
+    expect(to).toBe(
+      `/shop/${shop.slug}/divers/${diver}?notice=not-authorized-guardian-email&${anchor}`,
+    );
+    expect(await guardianEmailOf(db, id)).toBe("jonas@example.com");
+  });
+
+  it("refuses an owner whose typed address does not match", async () => {
+    const { db, shop, diver, owner } = await context();
+    const id = await coSigned(db, shop.id, diver);
+    signIn(shop, owner);
+    const formData = new FormData();
+    formData.set("email", "jonas@example.com");
+    formData.set("confirmEmail", "jonas@example.org");
+
+    const to = await redirectedTo(() => eraseGuardianEmailAction(shop.slug, diver, formData));
+
+    expect(to).toBe(`/shop/${shop.slug}/divers/${diver}?notice=guardian-email-mismatch&${anchor}`);
+    expect(await guardianEmailOf(db, id)).toBe("jonas@example.com");
+  });
+
+  it("refuses an address that is not on this diver's releases, typed back or not", async () => {
+    const { db, shop, diver, owner } = await context();
+    const id = await coSigned(db, shop.id, diver);
+    signIn(shop, owner);
+    const formData = new FormData();
+    formData.set("email", "someone@example.com");
+    formData.set("confirmEmail", "someone@example.com");
+
+    const to = await redirectedTo(() => eraseGuardianEmailAction(shop.slug, diver, formData));
+
+    expect(to).toBe(`/shop/${shop.slug}/divers/${diver}?notice=guardian-email-not-found&${anchor}`);
+    expect(await guardianEmailOf(db, id)).toBe("jonas@example.com");
+  });
+
+  it("lets an owner erase it from a live diver's release, and the diver stays", async () => {
+    const { db, shop, diver, owner } = await context();
+    const id = await coSigned(db, shop.id, diver);
+    signIn(shop, owner);
+    const formData = new FormData();
+    formData.set("email", "jonas@example.com");
+    formData.set("confirmEmail", " JONAS@example.com ");
+
+    const to = await redirectedTo(() => eraseGuardianEmailAction(shop.slug, diver, formData));
+
+    expect(to).toBe(`/shop/${shop.slug}/divers/${diver}?notice=guardian-email-erased&${anchor}`);
+    expect(await guardianEmailOf(db, id)).toBeNull();
+    const person = await personRow(db, diver);
+    expect(person.deletedAt).toBeNull();
+    expect(person.anonymizedAt).toBeNull();
   });
 });
 

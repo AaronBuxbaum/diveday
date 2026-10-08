@@ -47,6 +47,7 @@
     "add": "Add a credential",
     "kinds": {
       "instructor_rating": "Instructor rating",
+      "assistant_instructor_rating": "Assistant Instructor rating",
       "divemaster_rating": "Divemaster rating",
       "liability_insurance": "Liability insurance",
       "first_aid_cpr": "First aid / CPR",
@@ -70,7 +71,7 @@
     "personNotFound": "That person isn’t on this shop’s roster.",
     "requestApproved": "Approved, and they’re on the crew.",
     "requestApprovedNotAssigned": "Approved, but the assignment was refused. Crew that departure from its own page to see why.",
-    "requestApprovedRatioOpen": "Approved, and they’re on the crew. That intro session is still over its ratio: only an instructor adds seats.",
+    "requestApprovedRatioOpen": "Approved, and they’re on the crew. The session is still over its ratio: only an instructor adds seats.",
     "requestDeclined": "Declined.",
     "requestNotFound": "That’s already gone.",
     "requestSent": "Sent. The shop will see it on the week.",

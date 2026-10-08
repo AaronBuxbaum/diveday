@@ -4,6 +4,7 @@ import type { listBookingNotes } from "@/db/operations";
 import { depthWarningText } from "@/i18n/depth-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
+import type { CertificationLevel } from "@/lib/certification-levels";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { isDiver } from "@/lib/participant-types";
@@ -71,6 +72,13 @@ export type RosterTrip = {
   shopRentalItems?: readonly string[];
   /** This seat's departure is a course with a minimum age, so a split must take a date of birth. */
   splitAsksDateOfBirth?: boolean;
+  /**
+   * The rung this course issues (`courses.certifies_level`, issue #2059) —
+   * where the "Certify diver" select opens, so the instructor confirms rather
+   * than hunts. Still a choice per diver: a student who finished a different
+   * rung, or a specialty, is one change of the select away.
+   */
+  certifyDefaultLevel?: CertificationLevel | null;
   /** The Trip surface already leads with its masthead capacity read. */
   compact?: boolean;
   /** Keep the old standalone Guests heading for the compatibility route. */

@@ -371,7 +371,12 @@ export async function listOutstandingLastMinutePromos(
         .from(tripLastMinutePromos)
         .innerJoin(trips, eq(trips.id, tripLastMinutePromos.tripId))
         .where(and(scope, liveTrip()))
-        .orderBy(asc(tripLastMinutePromos.expiresAt), asc(tripLastMinutePromos.id))
+        .orderBy(
+          asc(tripLastMinutePromos.expiresAt),
+          asc(trips.startsAt),
+          asc(trips.title),
+          asc(tripLastMinutePromos.id),
+        )
         .limit(limit)
         .offset(offset),
   });

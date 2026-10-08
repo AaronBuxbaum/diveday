@@ -15,6 +15,7 @@ import { serializeManifests } from "@/lib/offline-manifests";
 import { isWaiverCode } from "@/lib/today";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { seededShopContext } from "@/test/db";
+import { checkInBooking, undoCheckInBooking } from "./check-in";
 import { subscribeManifestEvents } from "./manifest-events";
 import {
   departureRollCallForBooking,
@@ -195,6 +196,95 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     expect(await activityCodesFor(db, booking.booking.id)).toEqual(
       expect.arrayContaining(["booking_no_show", "booking_no_show_boarded"]),
     );
+  });
+
+  /**
+   * **The seat comes back as what it was, at the rail as at the desk** (issue
+   * #1838). `undoBookingNoShow` restores `checked_in` when the arrival trail
+   * still says the desk saw the diver; the crew's tap that takes the release
+   * back read nothing and restored `booked`, which put a diver the counter had
+   * already checked in back on its "still to come" list.
+   */
+  it("puts a diver the desk had checked in back as checked in when the crew board them", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.booking.id });
+    if (!issued.ok) throw new Error("expected waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: booking.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    const checkedIn = await checkInBooking(db, {
+      shopId: shop.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      now: reef.startsAt,
+    });
+    if (!checkedIn.ok) throw new Error(`check-in refused: ${checkedIn.reason}`);
+    await markBookingNoShow(db, {
+      shopId: shop.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      now: reef.startsAt,
+    });
+    expect(await statusOf(db, booking.booking.id)).toBe("no_show");
+
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    expect(await statusOf(db, booking.booking.id)).toBe("checked_in");
+  });
+
+  it("puts a diver the desk had cleared back as booked when the crew board them", async () => {
+    // The arrival trail's newest word is the one read: a check-in the desk
+    // then took back is no check-in, so the seat is `booked` again.
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.booking.id });
+    if (!issued.ok) throw new Error("expected waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: booking.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    const checkedIn = await checkInBooking(db, {
+      shopId: shop.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      now: reef.startsAt,
+    });
+    if (!checkedIn.ok) throw new Error(`check-in refused: ${checkedIn.reason}`);
+    const undone = await undoCheckInBooking(db, {
+      shopId: shop.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      now: reef.startsAt,
+    });
+    if (!undone.ok) throw new Error(`undo refused: ${undone.reason}`);
+    await markBookingNoShow(db, {
+      shopId: shop.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      now: reef.startsAt,
+    });
+
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    expect(await statusOf(db, booking.booking.id)).toBe("booked");
   });
 
   /**

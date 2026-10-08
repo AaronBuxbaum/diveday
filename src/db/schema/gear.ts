@@ -26,13 +26,15 @@ import { people, shops } from "./core";
  * confirmation can only ever name one of them.
  *
  * Deliberately not `gear_item_kind` below: that one is the *register's*
- * alphabet and carries `regulator`, `tank`, `hood` and a split `mask`/`fins`,
+ * alphabet and carries `regulator`, `tank` and a split `mask`/`fins`,
  * none of which has a size column on `rental_fit_profiles`. A confirmation
  * naming one of those could not be printed back to a diver against any size
  * the shop actually holds.
  *
  * `drysuit` was in that excluded company until issue 1414 gave it `drysuit_size`
  * below; it is a sized piece now, on a scale of its own, and belongs here.
+ * `hood` and `gloves` joined it when they became two kinds with a size each
+ * (H-102, issue #1816).
  */
 export const rentalFitItem = pgEnum("rental_fit_item", [
   "bcd",
@@ -41,6 +43,8 @@ export const rentalFitItem = pgEnum("rental_fit_item", [
   "mask_fins",
   "weights",
   "drysuit",
+  "hood",
+  "gloves",
 ]);
 
 /**
@@ -92,7 +96,20 @@ export const rentalFitProfiles = pgTable(
     rentsDiveComputer: boolean("rents_dive_computer").notNull().default(false),
     rentsGopro: boolean("rents_gopro").notNull().default(false),
     rentsDrysuit: boolean("rents_drysuit").notNull().default(false),
+    /**
+     * Two kinds, not one "hood & gloves" (H-102, issue #1816): a warm-water
+     * diver takes gloves and no hood, a quarry diver takes both in different
+     * thicknesses, and one checkbox with one size could say neither.
+     *
+     * `rents_hood_gloves`, the one kind they replace, has no reader or writer
+     * left and stays only for the deploy: the release still serving while
+     * this migration runs selects it, so it is the contract half of an
+     * expand/contract pair and is dropped by the next migration (H-49 waives
+     * the backfill, not the deploy window).
+     */
     rentsHoodGloves: boolean("rents_hood_gloves").notNull().default(false),
+    rentsHood: boolean("rents_hood").notNull().default(false),
+    rentsGloves: boolean("rents_gloves").notNull().default(false),
     rentsTorch: boolean("rents_torch").notNull().default(false),
     rentsSmb: boolean("rents_smb").notNull().default(false),
     bcdSize: text("bcd_size"),
@@ -118,6 +135,14 @@ export const rentalFitProfiles = pgTable(
      * carries a second fact with nothing on the list to notice its loss.
      */
     drysuitSize: text("drysuit_size"),
+    /**
+     * **Free text, like the drysuit's, on both fit forms** (H-102, issue
+     * #1816). A rental hood and rental gloves both rack by size *and*
+     * thickness ("M, 5 mm", "L, 3 mm"); a closed select would need two axes and somebody
+     * to own them, so the shop's own words reach the packing list verbatim.
+     */
+    hoodSize: text("hood_size"),
+    gloveSize: text("glove_size"),
     bootSize: text("boot_size"),
     finSize: text("fin_size"),
     weightPreference: text("weight_preference"),

@@ -30,7 +30,6 @@ import { getCourseBySlug, getCourseTemplateUpdate, setCourseVisibility } from "@
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { CourseTemplateField } from "@/lib/course-template-sync";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath } from "@/lib/public-routes";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
@@ -40,6 +39,7 @@ import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/stora
 import { ConflictGuardedForm } from "./_components/ConflictGuardedForm";
 import { DayByDayEditor } from "./_components/DayByDayEditor";
 import { FaqEditor } from "./_components/FaqEditor";
+import { courseTemplateFieldLabels } from "./_components/template-field-labels";
 import { UnsavedChangesGuard, UnsavedChangesNote } from "./_components/UnsavedChangesGuard";
 import { pullCourseTemplateUpdatesAction, saveCourseContentAction } from "./actions";
 
@@ -198,23 +198,7 @@ export default async function EditCoursePage({
   ];
   const [pitch, pricing, photos, glance, enroll, feeCovers, dayByDay, faq] = sections;
 
-  const templateFieldLabels: Record<CourseTemplateField, string> = {
-    title: t("courses.edit.templateUpdates.fields.title"),
-    agency: t("courses.edit.templateUpdates.fields.agency"),
-    description: t("courses.edit.templateUpdates.fields.description"),
-    minimumCertificationLevel: t("courses.edit.templateUpdates.fields.minimumCertificationLevel"),
-    minimumAge: t("courses.edit.templateUpdates.fields.minimumAge"),
-    isIntroCourse: t("courses.edit.templateUpdates.fields.isIntroCourse"),
-    summary: t("courses.edit.templateUpdates.fields.summary"),
-    overview: t("courses.edit.templateUpdates.fields.overview"),
-    durationText: t("courses.edit.templateUpdates.fields.durationText"),
-    groupSizeText: t("courses.edit.templateUpdates.fields.groupSizeText"),
-    prerequisiteNote: t("courses.edit.templateUpdates.fields.prerequisiteNote"),
-    includes: t("courses.edit.templateUpdates.fields.includes"),
-    excludes: t("courses.edit.templateUpdates.fields.excludes"),
-    scheduleDays: t("courses.edit.templateUpdates.fields.scheduleDays"),
-    faqs: t("courses.edit.templateUpdates.fields.faqs"),
-  };
+  const templateFieldLabels = courseTemplateFieldLabels(t);
 
   return (
     // Wider than the form alone needs, because the rail takes the first 220px

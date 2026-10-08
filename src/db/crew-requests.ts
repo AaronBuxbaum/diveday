@@ -262,21 +262,24 @@ async function shopRolesByPerson(
 }
 
 /**
- * Whether this departure is an **intro session still over its ratio** right
- * now — asked after an approval has already run through `changeTripCrew`, so
- * the answer describes the boat as it stands rather than predicting it.
+ * Whether this departure is **still over a ratio only an instructor closes**
+ * right now — asked after an approval has already run through
+ * `changeTripCrew`, so the answer describes the boat as it stands rather than
+ * predicting it.
  *
  * Issue #1339's second half: `INTRO_COURSE_RATIO` credits an assistant zero
  * students, so approving a divemaster onto an over-ratio DSD session moves
  * capacity by nothing and the plain "Approved, and they're on the crew" reads
- * as a gap closed. Measured rather than inferred from the requester's roles,
+ * as a gap closed. The entry-level cap past its per-instructor ceiling is the
+ * same case (dive-domain review of #1677): no number of assistants buys a
+ * seat there either, so the gap's own `remedy` answers, not its ratio kind. Measured rather than inferred from the requester's roles,
  * because the honest sentence is about the session, and a second instructor
  * approved in the same minute must not leave this saying the wrong thing.
  *
  * Composed from `courseCrewGap` (src/lib/course-ratios.ts) and Today's own crew
  * counter — never a second ratio detector.
  */
-export async function tripOverIntroRatio(
+export async function tripRatioGapNeedsInstructor(
   db: AppDb,
   shopId: string,
   tripId: string,
@@ -300,7 +303,7 @@ export async function tripOverIntroRatio(
     assistantCount: counts.assistantCount,
     booked: row.booked,
   });
-  return gap.code === "over_ratio" && gap.ratio === "intro";
+  return gap.code === "over_ratio" && gap.remedy === "instructor";
 }
 
 /**

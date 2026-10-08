@@ -440,7 +440,8 @@ const RENTAL_FIELD_KINDS: ReadonlyArray<readonly [string, RentableItemKind]> = [
   ["rentsDiveComputer", "dive_computer"],
   ["rentsGopro", "gopro"],
   ["rentsDrysuit", "drysuit"],
-  ["rentsHoodGloves", "hood_gloves"],
+  ["rentsHood", "hood"],
+  ["rentsGloves", "gloves"],
   ["rentsTorch", "torch"],
   ["rentsSmb", "smb"],
 ];

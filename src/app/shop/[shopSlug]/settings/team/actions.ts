@@ -22,6 +22,7 @@ import {
   createStaffCredential,
   deleteStaffCredential,
   reviewStaffCredential,
+  STAFF_CREDENTIAL_KINDS,
 } from "@/db/staff-credentials";
 import { revokeFeedsForFormerStaff } from "@/features/calendar-sync";
 import { toDiverLocale } from "@/i18n/settings";
@@ -443,15 +444,7 @@ export async function restoreStaffAction(formData: FormData) {
  */
 const credentialSchema = z.object({
   personId: z.string().uuid(),
-  kind: z.enum([
-    "instructor_rating",
-    "divemaster_rating",
-    "liability_insurance",
-    "first_aid_cpr",
-    "oxygen_provider",
-    "captains_licence",
-    "other",
-  ]),
+  kind: z.enum(STAFF_CREDENTIAL_KINDS),
   name: z.string().trim().min(1).max(160),
   issuingBody: z.string().trim().max(160),
   identifier: z.string().trim().max(120),
