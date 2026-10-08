@@ -492,6 +492,7 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
       booked: 4,
       capacity: 2,
       ratio: "intro",
+      remedy: "instructor",
     });
 
     // And the seats already sold are still refused a fifth — the booking gate
@@ -518,6 +519,7 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
       booked: 4,
       capacity: 2,
       ratio: "intro",
+      remedy: "instructor",
     });
   });
 

@@ -57,6 +57,7 @@
     "coSignedLabel": "Co-signed",
     "sealLabel": "Seal",
     "sealValid": "Sealed and unchanged",
+    "sealValidGuardianRedacted": "Sealed. The guardian’s email was erased {date}.",
     "replaced": "Replaced {date} by a newer waiver.",
     "medicalHeading": "Medical questionnaire",
     "medicalReview": "Waiting on a physician’s evaluation.",

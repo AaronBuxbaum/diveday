@@ -46,6 +46,25 @@ describe("Badge geometry", () => {
     },
   );
 
+  // A pill that wraps is a two-line stadium ("Someone unaccounted for" in the
+  // roll call, "Not sent" on the blow-out table at 390px, issue #2008). The
+  // caller gives it the room; the pill never breaks its own words.
+  it.each(TONES.flatMap((tone) => SIZES.map((size) => [tone, size] as const)))(
+    "%s at %s never wraps its words",
+    (tone, size) => {
+      expect(pill(tone, size).className.split(/\s+/)).toContain("whitespace-nowrap");
+    },
+  );
+
+  it("wraps its words only when the caller asks", () => {
+    render(
+      <Badge tone="danger" size="sm" wraps>
+        Blocked when saved
+      </Badge>,
+    );
+    expect(screen.getByText("Blocked when saved").className).not.toMatch(/\bwhitespace-nowrap\b/);
+  });
+
   it("draws the neutral edge as an inset ring, which takes no room", () => {
     const classes = pill("neutral", "md").className.split(/\s+/);
     expect(classes).toEqual(expect.arrayContaining(["ring-1", "ring-inset", "ring-border"]));

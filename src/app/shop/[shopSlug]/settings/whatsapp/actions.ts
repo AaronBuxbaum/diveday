@@ -4,14 +4,13 @@ import { canPersonManageMessagingSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import {
-  connectShopWhatsAppAccount,
   disconnectShopWhatsAppAccount,
   getShopWhatsAppAccount,
   markShopWhatsAppVerified,
-  shopIdForWhatsAppWaba,
   type WhatsAppConnectRefusal,
   whatsAppProviderForAccount,
 } from "@/db/whatsapp-accounts";
+import { completeWhatsAppSignup, type WhatsAppSignupOutcome } from "@/db/whatsapp-signup";
 import { diverTranslator } from "@/i18n/messages";
 import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
@@ -21,11 +20,7 @@ import {
   metaLanguageCode,
   whatsAppRecipient,
 } from "@/lib/notifications/whatsapp";
-import {
-  completeEmbeddedSignup,
-  generateRegistrationPin,
-  whatsAppSignupConfigFromEnvironment,
-} from "@/lib/notifications/whatsapp-signup";
+import { whatsAppSignupConfigFromEnvironment } from "@/lib/notifications/whatsapp-signup";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
@@ -58,6 +53,7 @@ export type Notice =
   | "signup-failed-register"
   | "signup-failed-subscribe"
   | "signup-failed-template"
+  | "signup-busy"
   | "disconnected"
   | "tested"
   | "test-failed"
@@ -103,7 +99,10 @@ async function settingsPath(): Promise<{ shopId: string; personId: string; path:
  * in its own snake_case domain spelling; `noticeUrl` normalises it to the kebab
  * the bundle key uses, so the refusal arrives worded rather than silent.
  */
-function done(path: string, notice: Notice | WhatsAppConnectRefusal): never {
+function done(
+  path: string,
+  notice: Notice | WhatsAppConnectRefusal | WhatsAppSignupOutcome,
+): never {
   revalidateAndRedirect(path, noticeUrl(path, notice));
 }
 
@@ -133,73 +132,32 @@ export async function completeWhatsAppSignupAction(formData: FormData): Promise<
   });
   if (!parsed.success) done(path, "invalid");
 
-  // Refused before Meta is touched, not only after the write. The WABA is the
-  // tenant key every inbound event is routed on, so one belonging to another
-  // DiveDay shop can never be stored here — and the unique index behind
-  // `connectShopWhatsAppAccount` is the authority on that. What this read buys
-  // is the *order*: registering a number mints a PIN, and registering one whose
-  // row is then refused would leave the number bound to a PIN nobody holds,
-  // which is exactly the lockout `registration_pin_sealed` exists to prevent.
-  //
-  // That order is also a cross-tenant existence oracle, written down here
-  // because it was priced rather than missed. Because the read sits above the
-  // code exchange, any shop's owner or manager can post a WABA id with ten junk
-  // characters for a `code` and tell `waba-already-connected` ("another DiveDay
-  // shop holds it") from `signup-failed-exchange` ("nobody does") without
-  // holding a Meta credential at all. A WABA id is a 15-digit opaque number, so
-  // it confirms a suspicion about a named business rather than enumerating
-  // customers, and the refusal's own words concede the same fact to anyone with
-  // a real code. Accepted for now; #1766 moves the read between step 1 and step
-  // 2 of `completeEmbeddedSignup`, which keeps the PIN property and makes the
-  // oracle cost a valid code. The check is also a check-then-act, so two
-  // simultaneous Connects can both register a number: #1769 (security review,
-  // 2026-09-12).
-  const wabaHolder = await shopIdForWhatsAppWaba(db, parsed.data.wabaId);
-  if (wabaHolder && wabaHolder !== shopId) done(path, "waba-already-connected");
-
   const shop = await getShopById(db, shopId);
   // The template is submitted in the shop's own diver-facing language, with its
   // words coming from the diver bundle — a diver is who eventually reads them.
   const templateLocale = toDiverLocale(shop?.defaultLocale);
-  const templateLanguage = metaLanguageCode(templateLocale);
   const diverT = diverTranslator(templateLocale);
 
-  // Register only a number DiveDay has not registered before. A stored row for
-  // this same phone number id means registration already succeeded once, and
-  // Meta binds a number to its first PIN — so re-registering with a fresh one
-  // fails with a PIN mismatch and walks the number toward a guess lockout. Null
-  // tells the signup flow to skip that step and leave the stored PIN alone.
-  const existing = await getShopWhatsAppAccount(db, shopId);
-  const alreadyRegistered = existing?.phoneNumberId === parsed.data.phoneNumberId;
-  const registrationPin = alreadyRegistered ? null : generateRegistrationPin();
-
-  const result = await completeEmbeddedSignup(
+  // Exchange first, then claim the shop and the WABA, then register: the one
+  // order in which a junk code learns nothing about other shops (#1766) and no
+  // Connect that will be refused ever mints a PIN (#1769). The order and the
+  // locks live in `completeWhatsAppSignup`; this action only words the outcome.
+  const outcome = await completeWhatsAppSignup(
+    db,
     {
+      shopId,
       ...parsed.data,
       templateName: DEFAULT_WHATSAPP_TEMPLATE_NAME,
-      templateLanguage,
+      templateLanguage: metaLanguageCode(templateLocale),
       templateCopy: {
         body: diverT("notifications.whatsappTemplate.body"),
         exampleShopName: diverT("notifications.whatsappTemplate.exampleShopName"),
         exampleMessage: diverT("notifications.whatsappTemplate.exampleMessage"),
       },
-      registrationPin,
     },
     config,
   );
-  if (result.status === "failed") done(path, `signup-failed-${result.step}` as Notice);
-
-  const stored = await connectShopWhatsAppAccount(db, {
-    shopId,
-    phoneNumberId: parsed.data.phoneNumberId,
-    wabaId: parsed.data.wabaId,
-    accessToken: result.accessToken,
-    templateName: DEFAULT_WHATSAPP_TEMPLATE_NAME,
-    templateLanguage,
-    registrationPin,
-  });
-  if (stored.status === "refused") done(path, stored.reason);
-  done(path, "connected");
+  done(path, outcome);
 }
 
 /**

@@ -12,6 +12,7 @@ import { SectionCard, TONE_PANEL_CLASS } from "@/components/ui/card";
 import { DangerDisclosure } from "@/components/ui/disclosure";
 import { FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
+import { planDiveSitePhotoRelease } from "@/db/dive-site-photos";
 import {
   deleteDiveSite,
   getDiveSite,
@@ -34,10 +35,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { staffTideWindowText } from "@/i18n/tide-labels";
 import { tideWindowsForDeparture } from "@/lib/departure-tides";
 import { parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
-import type {
-  DiveSiteTemplateField,
-  DiveSiteTemplateUpdateMode,
-} from "@/lib/dive-site-template-sync";
+import type { DiveSiteTemplateUpdateMode } from "@/lib/dive-site-template-sync";
 import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
 import { parseDockDayRhythm } from "@/lib/diver-planning";
 import { formatShortDate, formatTime } from "@/lib/format";
@@ -66,6 +64,8 @@ import { siteFormSections, siteFormUnsavedCopy } from "../_components/site-form-
 // page from `ShopChrome` rather than above it, so the route gets a static
 // shell and its own reads are the only ones the reader waits on. See ADR
 // 20260804-instant-navigation.
+import { TEMPLATE_FIELD_KEYS } from "./template-field-keys";
+
 export const instant = true;
 
 export const metadata: Metadata = { title: "Edit dive site — DiveDay" };
@@ -98,30 +98,6 @@ const NOTICE_KEYS: Record<string, StaffMessageKey> = {
 // keeps a briefing's twenty fields from being wiped by their own error banner.
 const ERROR_KEYS: Record<string, StaffMessageKey> = {
   invalid: "diveSites.edit.errorInvalid",
-};
-
-const TEMPLATE_FIELD_KEYS: Record<DiveSiteTemplateField, StaffMessageKey> = {
-  description: "diveSites.edit.templateUpdates.fields.description",
-  locationName: "diveSites.edit.templateUpdates.fields.locationName",
-  forecastLatitude: "diveSites.edit.templateUpdates.fields.coordinates",
-  forecastLongitude: "diveSites.edit.templateUpdates.fields.coordinates",
-  marineLife: "diveSites.edit.templateUpdates.fields.marineLife",
-  marineLifeDescription: "diveSites.edit.templateUpdates.fields.marineLifeDescription",
-  difficultyLevel: "diveSites.edit.templateUpdates.fields.difficultyLevel",
-  depthRange: "diveSites.edit.templateUpdates.fields.depthRange",
-  maxDepthMeters: "diveSites.edit.templateUpdates.fields.maxDepthMeters",
-  expectedBottomTimeMinutes: "diveSites.edit.templateUpdates.fields.expectedBottomTimeMinutes",
-  currentNote: "diveSites.edit.templateUpdates.fields.currentNote",
-  divePlan: "diveSites.edit.templateUpdates.fields.divePlan",
-  fitTone: "diveSites.edit.templateUpdates.fields.fitTone",
-  fitNote: "diveSites.edit.templateUpdates.fields.fitNote",
-  conservationNote: "diveSites.edit.templateUpdates.fields.conservationNote",
-  fieldGuideTipsHeading: "diveSites.edit.templateUpdates.fields.fieldGuideTipsHeading",
-  landmarks: "diveSites.edit.templateUpdates.fields.landmarks",
-  minimumCertificationLevel: "diveSites.edit.templateUpdates.fields.minimumCertificationLevel",
-  requiredSpecialties: "diveSites.edit.templateUpdates.fields.requiredSpecialties",
-  requiresNitrox: "diveSites.edit.templateUpdates.fields.requiresNitrox",
-  creatures: "diveSites.edit.templateUpdates.fields.creatures",
 };
 
 export default async function EditDiveSitePage({
@@ -297,6 +273,13 @@ export default async function EditDiveSitePage({
       planningNote: planningNoteWords,
       ...siteFields
     } = parsed.fields;
+    // Issue #2078: which superseded photos are this shop's, asked before the write.
+    const releasable = await planDiveSitePhotoRelease(
+      activeDb,
+      activeSession.user.shopId,
+      id,
+      supersededDiveSitePhotos(stored, photos.photos),
+    );
     const updated = await updateDiveSiteForForm(
       activeDb,
       activeSession.user.shopId,
@@ -349,8 +332,8 @@ export default async function EditDiveSitePage({
     if (!updated) notFound();
     // Only once the row is durably saved: a photo this save replaced or
     // removed is queued for provider deletion, never blocked on storage and
-    // owner-visible if it fails (CR-012).
-    for (const url of supersededDiveSitePhotos(stored, photos.photos)) {
+    // owner-visible if it fails (CR-012), and only once no other site shows it.
+    for (const url of await releasable()) {
       await queueAndAttemptMediaDeletion(activeDb, {
         shopId: activeSession.user.shopId,
         kind: "dive_site_photo",

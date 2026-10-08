@@ -60,12 +60,13 @@
   --primary: #0b6e8a;
   --primary-hover: #08566c;
   --primary-foreground: #ffffff;
-  /* Derived, not redeclared per skin: resolves against whichever --primary is
-     in scope (default/dark/boat-mode). */
+  /* Derived: resolves against the --primary declared on this element (light
+     and dark). `.boat-mode` is a descendant, so it declares its own (#1988). */
   --primary-sunken: color-mix(in srgb, var(--primary) 65%, black);
   /*
-   * Keyboard focus indicator: full-strength --primary, derived lazily so every
-   * skin gets its own ring. Worst case light is 4.93:1 on --surface-sunken.
+   * Keyboard focus indicator: full-strength --primary. Worst case light is
+   * 4.93:1 on --surface-sunken. Boat mode redeclares it, so its ring is Boat's
+   * navy by day and safety yellow at night.
    */
   --focus-ring: var(--primary);
 
@@ -607,9 +608,14 @@ body {
   --success-tint: #ddf2e4;
   --warning-tint: #fcebcb;
   --danger-tint: #fde1e3;
-  /* Redeclared here because `:root` resolved them from *its* status
-     colors. On both Boat palettes the status colour is already the strong
-     one. */
+  /* Every token `:root` derives is declared again here (#1988): a `var()` is
+     substituted on the element that declares it, and this block sits on a
+     descendant wrapper, so the `:root` copies arrive carrying the office
+     palette. The dark block below is the same element, so these follow it
+     too. On both Boat palettes the status color is already the strong one.
+     `boat-palette.test.ts` fails on a derived token missing here. */
+  --primary-sunken: color-mix(in srgb, var(--primary) 65%, black);
+  --focus-ring: var(--primary);
   --success-strong: var(--success);
   --warning-strong: var(--warning);
   --font-sans: var(--font-boat);
@@ -829,11 +835,12 @@ summary {
  * surface behind it that the rule above is measured against, so these are the
  * pairs WCAG 1.4.11's 3:1 applies to (light scheme, from the tokens): 4.87:1
  * on the settings rail's selected `bg-primary-tint`; 4.75:1 on
- * `bg-surface-sunken` (4.95:1 on boat mode's, under the offline manifest's
- * rows); 4.83:1 on the palette's active `bg-primary/10`; and on the roll
- * call's tone rows 4.09:1 at worst, a boarded row's `bg-success/20`. On the manifest the ring is `:root`'s `--primary`,
- * not boat mode's, because `.boat-mode` redeclares `--primary` on a
- * descendant, which a `var()` resolved on `:root` never sees (#1988).
+ * `bg-surface-sunken`; and 4.83:1 on the palette's active `bg-primary/10`.
+ * Inside Boat mode the ring is Boat's own `--primary` (`.boat-mode`
+ * redeclares `--focus-ring`, #1988): by day navy, 16.37:1 on its sunken
+ * ground under the offline manifest's rows and 11.98:1 at worst on a roll-call
+ * tone row (a boarded row's `bg-success/20`); at night safety yellow, 11.23:1
+ * on its surface and 7.03:1 on the same boarded row.
  *
  * A width or an offset written at a call site is a second spelling of the
  * ring, and `focus-ring.test.ts` refuses one under any focus variant.

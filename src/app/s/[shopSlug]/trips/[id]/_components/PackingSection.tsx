@@ -32,7 +32,8 @@ const RENTAL_ITEM_KEYS: Record<RentableItemKind, DiverMessageKey> = {
   dive_computer: "trip.rentalItems.diveComputer",
   gopro: "trip.rentalItems.gopro",
   drysuit: "trip.rentalItems.drysuit",
-  hood_gloves: "trip.rentalItems.hoodGloves",
+  hood: "trip.rentalItems.hood",
+  gloves: "trip.rentalItems.gloves",
   torch: "trip.rentalItems.torch",
   smb: "trip.rentalItems.smb",
 };

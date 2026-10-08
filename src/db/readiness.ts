@@ -15,6 +15,7 @@ import {
   unavailableReadiness,
   unreviewedCardState,
 } from "@/lib/readiness";
+import { isUuid } from "@/lib/uuid";
 import { effectiveWaiverForBooking, overriddenReferralAt, overriddenRefusal } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import {
@@ -375,7 +376,8 @@ export type NewShopIssuedCertification = {
    * Picked by the instructor at the moment of the tap, never derived from
    * `courses.minimumCertificationLevel` — that field is the course's
    * *prerequisite* ("what do you need to get in"), not its *outcome* ("what
-   * do you get for finishing"), and no column anywhere records the latter.
+   * do you get for finishing"). The outcome is `courses.certifies_level`
+   * (issue #2059), which only pre-selects the roster's choice; the tap decides.
    * Deriving one from the other would silently mint an Advanced Open Water
    * graduate an Open Water card (`minimumCertificationLevel` on an AOW
    * session), or fail outright on an entry-level course, whose prerequisite
@@ -424,6 +426,29 @@ export type NewShopIssuedCertification = {
  * check before either insert commits, since a numberless row has no unique
  * index to catch the duplicate the way every other write to this table does.
  */
+/**
+ * Whether a trip's course can certify anyone: `not_a_certifying_course` for a
+ * live course session whose course is an intro (a DSD, a Try Scuba, a
+ * refresher), which issues no card. Shop-scoped like every read here; a trip
+ * that is not a live course session of this shop answers `unknown` and is
+ * left to the writers' own refusals.
+ */
+export async function courseCertifiesOnTrip(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<"certifies" | "not_a_certifying_course" | "unknown"> {
+  if (!isUuid(tripId)) return "unknown";
+  const [row] = await db
+    .select({ isIntroCourse: courses.isIntroCourse })
+    .from(trips)
+    .innerJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, trips.shopId)))
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  if (!row) return "unknown";
+  return row.isIntroCourse ? "not_a_certifying_course" : "certifies";
+}
+
 export async function issueShopCertification(
   db: AppDb,
   input: NewShopIssuedCertification,
@@ -453,11 +478,12 @@ export async function issueShopCertification(
       .limit(1);
     if (!trip?.courseId) return null;
     const [course] = await tx
-      .select({ agency: courses.agency })
+      .select({ agency: courses.agency, isIntroCourse: courses.isIntroCourse })
       .from(courses)
       .where(and(eq(courses.id, trip.courseId), eq(courses.shopId, input.shopId)))
       .limit(1);
-    if (!course) return null;
+    // An intro session issues no card, whatever level the caller names.
+    if (!course || course.isIntroCourse) return null;
     const [booking] = await tx
       .select({ id: bookings.id })
       .from(bookings)

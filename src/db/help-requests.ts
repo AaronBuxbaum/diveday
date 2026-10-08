@@ -84,7 +84,12 @@ export async function listTodayHelpRequests(
         gt(trips.endsAt, now),
       ),
     )
-    .orderBy(asc(trips.startsAt), asc(tripHelpRequests.createdAt), asc(tripHelpRequests.id));
+    .orderBy(
+      asc(trips.startsAt),
+      asc(tripHelpRequests.createdAt),
+      asc(people.fullName),
+      asc(tripHelpRequests.id),
+    );
   return rows.map(({ request, personName, trip }) => ({
     ...request,
     // The query is explicitly restricted to `activeStatuses`; keep that

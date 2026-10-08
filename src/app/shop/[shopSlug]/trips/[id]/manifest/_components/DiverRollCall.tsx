@@ -522,25 +522,34 @@ export function DiverRollCall({
           // 20260827-the-departure-is-two-working-surfaces, decision 1). A row
           // at rest is a name and a mark; the expected state is quiet. This is
           // the priority when a diver is several things at once, loudest first
-          // — a split buddy team outranks a desk blocker outranks the crew's
-          // duty of care to a minor outranks an advisory outranks a birthday.
-          // Everything not chosen here still reaches the reader: it is in the
-          // panel one tap away, and unconditionally on paper.
-          // Which of the five the capsule ended up being, so the printed block
-          // below can say the *other* four without repeating this one. Paper
+          // — a split buddy team outranks a desk blocker outranks a physician's
+          // earlier "no" outranks the crew's duty of care to a minor outranks
+          // an advisory outranks a birthday. Everything not chosen here still
+          // reaches the reader: it is in the panel one tap away, and
+          // unconditionally on paper.
+          //
+          // **The earlier refusal** (H-98; dive-domain review of #2096): a
+          // clean new release cleared a diver a physician had refused. It
+          // boards them, so it is never a blocker, but the crew at the rail
+          // decides with it in view, which a sentence one tap away is not.
+          // Which of the six the capsule ended up being, so the printed block
+          // below can say the *other* five without repeating this one. Paper
           // carries every fact the screen tucks away; it does not carry the
           // same fact twice.
+          const earlierRefusal = Boolean(diver.medicalWaiver?.overriddenRefusal);
           const capsuleKind = diver.buddyAlert
             ? "buddy"
             : blockedAtDock
               ? "blocked"
-              : diver.minor && diver.age !== null && diver.age !== undefined
-                ? "minor"
-                : diver.depthAdvisory?.status === "exceeds"
-                  ? "depth"
-                  : diver.birthday
-                    ? "birthday"
-                    : null;
+              : earlierRefusal
+                ? "refusal"
+                : diver.minor && diver.age !== null && diver.age !== undefined
+                  ? "minor"
+                  : diver.depthAdvisory?.status === "exceeds"
+                    ? "depth"
+                    : diver.birthday
+                      ? "birthday"
+                      : null;
           const capsule =
             diver.buddyAlert && diver.buddyTeam ? (
               <Badge tone={diver.buddyAlert === "separated_after_dive" ? "danger" : "warning"}>
@@ -550,6 +559,8 @@ export function DiverRollCall({
               <Badge tone={readinessStatusTone(diverStatus)}>
                 {readinessStatusText(t, diverStatus)}
               </Badge>
+            ) : earlierRefusal ? (
+              <Badge tone="warning">{t("manifest.medicalEarlierRefusalChip")}</Badge>
             ) : diver.minor && diver.age !== null && diver.age !== undefined ? (
               <Badge tone="warning" tabularNums>
                 {t("manifest.minorAge", { age: diver.age })}
@@ -559,6 +570,15 @@ export function DiverRollCall({
             ) : diver.birthday ? (
               <Badge tone="primary">{birthdayCalloutText(t, diver.birthday)}</Badge>
             ) : null;
+          // **Snorkeler or rider, in words** (ADR 20261007-participant-types).
+          // Neutral and outside the one-capsule chain, like the not-here pill:
+          // it is not an exception to act on, it is who this body is.
+          const seatNote = staffSeatTypeNote(t, diver);
+          const typeBadge = seatNote ? (
+            <Badge tone="warning">{seatNote}</Badge>
+          ) : diver.participantType && diver.participantType !== "diver" ? (
+            <Badge tone="neutral">{staffParticipantTypeLabel(t, diver.participantType)}</Badge>
+          ) : null;
           // The one line under the name: **who said what, and when.** Roll call
           // is never optimistic and every result keeps its who-and-when, so the
           // moment a row is anything but "to call" it says so in words — which
@@ -627,7 +647,7 @@ export function DiverRollCall({
                     ) : null
                   }
                   closeLabel={t("manifest.closePersonDetails")}
-                  triggerClassName={ROW_DISCLOSURE_SUMMARY_CLASS}
+                  triggerClassName={`${ROW_DISCLOSURE_SUMMARY_CLASS} flex-wrap gap-y-2 sm:flex-nowrap print:flex-nowrap`}
                   mark={
                     rowState.notBackAboard ? (
                       <RollCallMark state="notBack" />
@@ -651,46 +671,11 @@ export function DiverRollCall({
                       <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
                         {String(index + 1).padStart(2, "0")}
                       </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex flex-wrap items-center gap-2">
-                          <span className={`${ITEM_TITLE_CLASS} group-hover/summary:underline`}>
-                            {diver.fullName}
-                          </span>
-                          {capsule}
-                          {/* **Snorkeler or rider, in words** (ADR
-                            20261007-participant-types). Neutral and outside
-                            the one-capsule chain, like the not-here pill: it
-                            is not an exception to act on, it is who this
-                            body is. Every row is called whatever its type. */}
-                          {staffSeatTypeNote(t, diver) ? (
-                            <Badge tone="warning">{staffSeatTypeNote(t, diver)}</Badge>
-                          ) : diver.participantType && diver.participantType !== "diver" ? (
-                            <Badge tone="neutral">
-                              {staffParticipantTypeLabel(t, diver.participantType)}
-                            </Badge>
-                          ) : null}
-                          {/* **The desk wrote this one off** (#1209). On the
-                            row and not in the sheet, unlike "Checked in":
-                            that one is routine and a tap away is fine, this
-                            is the reason a crew member should stop looking.
-                            A released seat and a diver still walking down
-                            the dock read identically without it, which is
-                            how a head count at the rail chases a name the
-                            counter settled forty minutes ago
-                            (`dive-domain-expert` review 20260911).
-
-                            Neutral, and outside the one-capsule priority
-                            chain — the same licence the welcome word takes
-                            below. It is not an exception the crew must act
-                            on; it is the absence of one, and colouring it
-                            would put a second loud thing on the row that
-                            most wants a quiet one. The row keeps its mark:
-                            nothing here refuses a boarding, and a diver who
-                            turns up after all is tapped aboard exactly as
-                            before. */}
-                          {diver.notHere ? (
-                            <Badge tone="neutral">{t("manifest.notHerePill")}</Badge>
-                          ) : null}
+                      <span
+                        className={`min-w-0 flex-1 ${capsule || typeBadge || diver.notHere ? "sm:flex-initial print:flex-initial" : ""}`}
+                      >
+                        <span className={`block ${ITEM_TITLE_CLASS} group-hover/summary:underline`}>
+                          {diver.fullName}
                         </span>
                         {/* **The welcome word** (issue #1182, delight report
                           D22; ADR 20260904-reef-all-the-way-down slice 16d):
@@ -716,6 +701,57 @@ export function DiverRollCall({
                           </span>
                         ) : null}
                       </span>
+                      {/* **The capsule's own line, the row's full width**
+                        (issue #2008). A Badge never wraps, and the longest
+                        capsule ("Someone unaccounted for", about 210px; es-ES
+                        about 222px) is wider than the name column a 390px
+                        phone leaves (186px), so beside the name it spilled
+                        over the caret toward the mark. Here it runs from the
+                        index's edge to the caret's (about 246px at 390), and
+                        it stays inside the name button: one tap target, the
+                        same reading order, the mark centred on the whole row.
+                        `order-last` puts it under the caret's line, which
+                        `PersonSheet` renders after this fragment.
+
+                        From `sm` up, and on paper, the name column is wide
+                        enough, so the capsule goes back beside the name's
+                        first line: a second line there only made every
+                        flagged row taller, and on paper it cost the packet
+                        pages (e2e/paper-day). */}
+                      {capsule || typeBadge || diver.notHere ? (
+                        <span
+                          className={`order-last flex basis-full flex-wrap items-center gap-2 sm:order-none sm:flex-1 sm:basis-auto print:order-none print:flex-1 print:basis-auto ${
+                            // Level with the name's line: the top of a
+                            // two-line column, the middle of a one-line one.
+                            diver.welcomeCue ? "sm:self-start print:self-start" : ""
+                          }`}
+                        >
+                          {capsule}
+                          {typeBadge}
+                          {/* **The desk wrote this one off** (#1209). On the
+                            row and not in the sheet, unlike "Checked in":
+                            that one is routine and a tap away is fine, this
+                            is the reason a crew member should stop looking.
+                            A released seat and a diver still walking down
+                            the dock read identically without it, which is
+                            how a head count at the rail chases a name the
+                            counter settled forty minutes ago
+                            (`dive-domain-expert` review 20260911).
+
+                            Neutral, and outside the one-capsule priority
+                            chain — the same licence the welcome word takes
+                            below. It is not an exception the crew must act
+                            on; it is the absence of one, and colouring it
+                            would put a second loud thing on the row that
+                            most wants a quiet one. The row keeps its mark:
+                            nothing here refuses a boarding, and a diver who
+                            turns up after all is tapped aboard exactly as
+                            before. */}
+                          {diver.notHere ? (
+                            <Badge tone="neutral">{t("manifest.notHerePill")}</Badge>
+                          ) : null}
+                        </span>
+                      ) : null}
                     </>
                   }
                 >
@@ -906,6 +942,9 @@ export function DiverRollCall({
                           ? t("manifest.minorAge", { age: diver.age })
                           : t("manifest.age", { age: diver.age })}
                       </Badge>
+                    ) : null}
+                    {earlierRefusal && capsuleKind !== "refusal" ? (
+                      <Badge tone="warning">{t("manifest.medicalEarlierRefusalChip")}</Badge>
                     ) : null}
                     {diver.birthday && capsuleKind !== "birthday" ? (
                       <Badge tone="primary">{birthdayCalloutText(t, diver.birthday)}</Badge>

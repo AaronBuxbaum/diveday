@@ -56,10 +56,12 @@ describe("needsDatabaseTimeout", () => {
     expect(needsDatabaseTimeout("/nowhere/at/all/ghost.test.ts")).toBe(false);
   });
 
-  it("stays well above the eight hydrations closeout.test.ts pays for", () => {
-    // Eight `seededShopContext()` calls at ~1.2s each on a contended runner is
-    // ~10s of setup before a single assertion runs. The ceiling has to leave
-    // room for the work *after* that, and still fail a genuinely hung test in
+  it("leaves room for several cold hydrations and still fails a hung test", () => {
+    // A `seededShopContext()` call costs ~1.2s on a contended runner, and a
+    // file-scoped context pays its one in `beforeAll` under the same ceiling.
+    // It is not the remedy for a file that outgrows it (issue #1820). The
+    // ceiling has to leave room for the work *after* setup, and still fail a
+    // genuinely hung test in
     // under a CI job's patience.
     expect(DB_TEST_TIMEOUT_MS).toBeGreaterThanOrEqual(45_000);
     expect(DB_TEST_TIMEOUT_MS).toBeLessThanOrEqual(90_000);
