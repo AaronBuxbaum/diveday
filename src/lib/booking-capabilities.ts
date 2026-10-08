@@ -42,6 +42,15 @@ export function readinessLinkPath(token: string): string {
   return `/ready/${token}`;
 }
 
+/**
+ * The course forms a student still owes, on the same `readiness` capability
+ * (ADR 20261008-course-forms): the forms belong to the enrollment the token
+ * already proves.
+ */
+export function courseFormsLinkPath(token: string): string {
+  return `${readinessLinkPath(token)}/forms`;
+}
+
 /** The absolute-path seat-claim link for an already-issued `claim` capability token. */
 export function claimLinkPath(token: string): string {
   return `/claim/${token}`;

@@ -10,11 +10,15 @@ import {
   courseSlug,
   courseTotalCents,
   formatScheduleDayTime,
+  isLearningMaterialLink,
   MAX_FAQS,
+  MAX_LEARNING_MATERIALS,
   parseLines,
+  readLearningMaterials,
   resolveCourseContentDepths,
   resolveCourseDepths,
   sanitizeFaqs,
+  sanitizeLearningMaterials,
   splitCourseImageUrls,
 } from "./courses";
 import { depthInUnit, feetToMeters, metersToFeet } from "./depth-units";
@@ -33,6 +37,7 @@ const blankContent: CourseContent = {
   excludes: [],
   scheduleDays: [],
   faqs: [],
+  learningMaterials: [],
   isIntroCourse: false,
 };
 
@@ -412,6 +417,7 @@ describe("course depth placeholders", () => {
       excludes: ["{depth18}"],
       scheduleDays: [{ title: "{depth18}", items: ["{depth18}"] }],
       faqs: [{ question: "{depth18}", answer: "{depth18}" }],
+      learningMaterials: [{ name: "{depth18}", note: "{depth18}" }],
       isIntroCourse: false,
     };
     const resolved = resolveCourseContentDepths(content, feet);
@@ -435,5 +441,104 @@ describe("courseCertifiesStudents", () => {
     // A DSD, a Try Scuba or a refresher issues no card.
     expect(courseCertifiesStudents({ isIntroCourse: true })).toBe(false);
     expect(courseCertifiesStudents(null)).toBe(false);
+  });
+});
+
+describe("learning materials (ADR 20261008-course-learning-materials)", () => {
+  describe("isLearningMaterialLink", () => {
+    it("accepts an absolute https link", () => {
+      expect(isLearningMaterialLink("https://www.padi.com/elearning")).toBe(true);
+    });
+
+    it.each([
+      ["http://www.padi.com/", "plain http"],
+      ["javascript:alert(1)", "a script"],
+      ["data:text/html,hi", "a data url"],
+      ["//www.padi.com/", "protocol-relative"],
+      ["www.padi.com", "no scheme"],
+      ["https://user:pass@padi.com/", "credentials"],
+      ["", "empty"],
+    ])("refuses %s (%s)", (value) => {
+      expect(isLearningMaterialLink(value)).toBe(false);
+    });
+  });
+
+  describe("sanitizeLearningMaterials", () => {
+    it("trims each row and omits empty optional keys", () => {
+      expect(
+        sanitizeLearningMaterials([
+          { name: "  eLearning ", url: " https://padi.com/ ", note: " Before day 1 " },
+          { name: "Logbook", url: "", note: "" },
+        ]),
+      ).toEqual({
+        ok: true,
+        materials: [
+          { name: "eLearning", url: "https://padi.com/", note: "Before day 1" },
+          { name: "Logbook" },
+        ],
+      });
+    });
+
+    it("drops a row added and never filled in", () => {
+      expect(sanitizeLearningMaterials([{ name: " ", url: "", note: "" }])).toEqual({
+        ok: true,
+        materials: [],
+      });
+    });
+
+    it("refuses a link or a note with no name", () => {
+      expect(sanitizeLearningMaterials([{ name: "", url: "https://padi.com/" }])).toEqual({
+        ok: false,
+        reason: "invalid",
+      });
+      expect(sanitizeLearningMaterials([{ name: "", note: "Bring it" }])).toEqual({
+        ok: false,
+        reason: "invalid",
+      });
+    });
+
+    it("refuses a link that is not https, said apart", () => {
+      expect(sanitizeLearningMaterials([{ name: "Manual", url: "http://padi.com/" }])).toEqual({
+        ok: false,
+        reason: "link",
+      });
+    });
+
+    it("refuses what is not the editor's shape, or too many rows", () => {
+      expect(sanitizeLearningMaterials("nope")).toEqual({ ok: false, reason: "invalid" });
+      expect(sanitizeLearningMaterials([{ name: 7 }])).toEqual({ ok: false, reason: "invalid" });
+      expect(
+        sanitizeLearningMaterials(
+          Array.from({ length: MAX_LEARNING_MATERIALS + 1 }, (_, i) => ({ name: `M${i}` })),
+        ),
+      ).toEqual({ ok: false, reason: "invalid" });
+      expect(sanitizeLearningMaterials([{ name: "x".repeat(121) }])).toEqual({
+        ok: false,
+        reason: "invalid",
+      });
+    });
+  });
+
+  describe("readLearningMaterials", () => {
+    it("reads nothing from a column that is not a list", () => {
+      expect(readLearningMaterials(null)).toEqual([]);
+      expect(readLearningMaterials({ name: "x" })).toEqual([]);
+    });
+
+    it("keeps a name whose stored link is unsafe, and drops the link", () => {
+      expect(
+        readLearningMaterials([{ name: "Manual", url: "javascript:alert(1)", note: "Read it" }]),
+      ).toEqual([{ name: "Manual", note: "Read it" }]);
+    });
+
+    it("skips nameless and malformed rows and caps the list", () => {
+      const stored = [
+        { name: "" },
+        { name: 4 },
+        ...Array.from({ length: MAX_LEARNING_MATERIALS }, (_, i) => ({ name: `M${i}` })),
+      ];
+      // The cap is on stored rows, so the two bad rows spend two places.
+      expect(readLearningMaterials(stored)).toHaveLength(MAX_LEARNING_MATERIALS - 2);
+    });
   });
 });

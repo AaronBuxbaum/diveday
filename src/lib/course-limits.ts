@@ -13,3 +13,10 @@ export const MAX_SCHEDULE_DAY_ITEMS = 20;
 
 /** Cap enforced both by `src/lib/courses.ts` and by `FaqEditor`'s "Add question" button. */
 export const MAX_FAQS = 20;
+
+/**
+ * Caps on a course's learning materials, enforced by `sanitizeLearningMaterials`
+ * and by `LearningMaterialsEditor`'s "Add material" button and box lengths.
+ */
+export const MAX_LEARNING_MATERIALS = 8;
+export const LEARNING_MATERIAL_LIMITS = { name: 120, url: 500, note: 200 } as const;

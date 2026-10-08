@@ -29,6 +29,10 @@ import {
   buddyTeamEvents,
   calendarFeeds,
   certifications,
+  courseFormRecords,
+  courseFormRequirements,
+  courseForms,
+  courseFormVersions,
   courseInquiries,
   courses,
   crewAssignmentRequests,
@@ -122,6 +126,7 @@ import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "./seed-clock";
 import { seedCounterBlockers } from "./seed-counter-blockers";
 import { seedCounterRental } from "./seed-counter-rental";
 import { seedCourseInquiries } from "./seed-course-inquiries";
+import { seedCourseMaterials } from "./seed-course-materials";
 import { seedDateRequests } from "./seed-date-requests";
 import { enforceMintedDemoCap } from "./seed-demo-lifecycle";
 import { seedDeskHandoff } from "./seed-desk-handoff";
@@ -185,6 +190,7 @@ import { seedWorkOrders } from "./seed-work-orders";
  * | `./seed-rental-fit.ts` | divers' saved sizes, so the gear locker has something to pull |
  * | `./seed-gear.ts` | the rental fleet on the wall — tagged units, service clocks, a few reserved for the wreck trip |
  * | `./seed-course-inquiries.ts` | course leads off the public pages, in all three `person_id` states |
+ * | `./seed-course-materials.ts` | the links behind two courses' learning materials, and one student marked done |
  * | `./seed-front-desk.ts` | the desk's own day: walk-ins, wait lists, inquiries, tips |
  * | `./seed-history.ts` | the trailing quarter that gives owner reporting something to report |
  * | `./seed-cert-gates.ts` | the boats a card can be refused on, one gate each, and the course carve-out |
@@ -1086,6 +1092,10 @@ export async function seedDemoSchedule(
   // Which partner's link sent a seat — beside the recency answers, and written
   // the same way: a column on bookings that already exist (issue #1285).
   await seedPartnerReferrals(db, shopId);
+  // The links a shop pastes into its course materials, and one student who
+  // has finished them — a column on courses and one on a booking that already
+  // exist, gating nothing (src/db/seed-course-materials.ts).
+  await seedCourseMaterials(db, shopId, { instructorId: instructor.id });
   // Adds-only and late, like the group above: a month of the crew's own
   // sighting log on the two reefs the demo sells, so the trip page's "Seen
   // here this month" beat has something to say. It writes `trip_sightings`
@@ -1237,6 +1247,14 @@ export async function resetDemoSchedule(
   // References people, so it clears before them like any other people-scoped row.
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
   await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));
+  // Course forms (ADR 20261008-course-forms), children first: a signed record
+  // references the booking, the person and the version; a requirement the
+  // course and the form; a version the form and its author. The demo seeds
+  // none, so a form a spec or a visitor wrote must not outlive the reset.
+  await db.delete(courseFormRecords).where(eq(courseFormRecords.shopId, shopId));
+  await db.delete(courseFormRequirements).where(eq(courseFormRequirements.shopId, shopId));
+  await db.delete(courseFormVersions).where(eq(courseFormVersions.shopId, shopId));
+  await db.delete(courseForms).where(eq(courseForms.shopId, shopId));
   // Per-channel delivery state hangs off the waiver record, so it goes first.
   await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));

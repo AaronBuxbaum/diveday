@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
+import { canPersonConfigureTrips, canPersonManageWaiverTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { listCourseFormRequirements, setCourseFormRequirements } from "@/db/course-forms";
 import {
   getCourseBySlug,
   pullCourseTemplateUpdates,
@@ -16,7 +18,9 @@ import {
   COURSE_CONTENT_LIMITS,
   courseDepthPlaceholderIssues,
   parseLines,
+  readLearningMaterials,
   sanitizeFaqs,
+  sanitizeLearningMaterials,
   sanitizeScheduleDays,
   splitCourseImageUrls,
 } from "@/lib/courses";
@@ -63,6 +67,11 @@ const contentSchemaFor = (currency: string) =>
     excludes: z.string().max(COURSE_CONTENT_LIMITS.excludes),
     scheduleDaysJson: z.string().max(COURSE_CONTENT_LIMITS.scheduleDaysJson),
     faqsJson: z.string().max(COURSE_CONTENT_LIMITS.faqsJson),
+    // Optional on the wire: a page rendered by the release before this
+    // section existed posts no field, and that is "no materials typed", never
+    // a refusal (AGENTS.md's expand/contract rule). Its absence keeps what the
+    // row already holds rather than clearing it — see below.
+    learningMaterialsJson: z.string().max(COURSE_CONTENT_LIMITS.learningMaterialsJson).optional(),
     price: moneyFor(currency),
     eLearningPrice: moneyFor(currency),
     privatePrice: moneyFor(currency),
@@ -166,6 +175,25 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   }
   if (faqs === null) redirect(`${base}?error=faq-incomplete&field=faqsJson`);
 
+  // What students work through before day 1 (ADR
+  // 20261008-course-learning-materials). A link that is not https is refused in
+  // its own words — the one refusal the writer cannot see from the boxes.
+  let learningMaterials = readLearningMaterials(course.learningMaterials);
+  if (value.learningMaterialsJson !== undefined) {
+    let materials: ReturnType<typeof sanitizeLearningMaterials>;
+    try {
+      materials = sanitizeLearningMaterials(JSON.parse(value.learningMaterialsJson));
+    } catch {
+      materials = { ok: false, reason: "invalid" };
+    }
+    if (!materials.ok) {
+      redirect(
+        `${base}?error=${materials.reason === "link" ? "materials-link" : "materials-incomplete"}&field=learningMaterialsJson`,
+      );
+    }
+    learningMaterials = materials.materials;
+  }
+
   // Depth markers, checked before anything is written.
   //
   // This is the one place shop-editable prose is also a small message format,
@@ -189,6 +217,11 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     ),
     ...scheduleDays.flatMap<[string, string]>((day) =>
       [day.title, ...day.items].map((text) => ["scheduleDaysJson", text] as [string, string]),
+    ),
+    ...learningMaterials.flatMap<[string, string]>((material) =>
+      [material.name, material.note ?? ""].map(
+        (text) => ["learningMaterialsJson", text] as [string, string],
+      ),
     ),
   ];
   const broken = depthChecked.find(([, text]) => courseDepthPlaceholderIssues(text).length > 0);
@@ -219,6 +252,7 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
       excludes: parseLines(value.excludes),
       scheduleDays,
       faqs,
+      learningMaterials,
     },
     { expectedVersion: Number.isNaN(expectedVersion) ? null : expectedVersion },
   );
@@ -299,4 +333,64 @@ export async function pullCourseTemplateUpdatesAction(
       parsedMode.data === "preserve-shop-edits" ? "template-updated" : "template-replaced",
     ),
   );
+}
+
+/**
+ * **The forms this course asks each student to sign** (ADR
+ * 20261008-course-forms). A list of this shop's live course forms, in the
+ * order the student meets them: each ticked box posts `formId`, and its
+ * `order-<id>` box says where it goes (blank or nonsense sorts last, ties keep
+ * the page's order).
+ *
+ * Who a course asks for a signature is the same call as who a departure asks
+ * for a cert, so the same gate: `canPersonConfigureTrips`, checked here where
+ * a POST that skipped the page still lands. A list naming a form that is not
+ * this shop's, or no longer live, is refused whole by
+ * `setCourseFormRequirements` rather than half-saved.
+ *
+ * **Adding is the trip gate; taking a form off is the release's.** A form a
+ * course stops asking for is a signature the shop stops collecting, which is
+ * the owner's or manager's call (`canPersonManageWaiverTemplates`, the gate on
+ * writing the forms themselves). An instructor may add a form, never drop one.
+ */
+export async function saveCourseFormRequirementsAction(slug: string, formData: FormData) {
+  const staff = await requireStaffSession();
+  const db = await getDb();
+  const base = shopPath(staff.user.shopSlug, "courses", slug, "edit");
+  const anchor = `${base}#forms`;
+  if (!(await canPersonConfigureTrips(db, staff.user.shopId, staff.user.personId))) {
+    redirect(noticeUrl(anchor, "forms-not-authorized"));
+  }
+  const course = await getCourseBySlug(db, staff.user.shopId, slug);
+  if (!course) redirect(noticeUrl(shopPath(staff.user.shopSlug, "courses"), "invalid"));
+
+  const ids = formData.getAll("formId").map(String);
+  if (!ids.every((id) => z.uuid().safeParse(id).success)) {
+    redirect(noticeUrl(anchor, "forms-invalid"));
+  }
+  const orderOf = (id: string) => {
+    const value = Number.parseInt(String(formData.get(`order-${id}`) ?? ""), 10);
+    return Number.isFinite(value) && value > 0 ? value : Number.POSITIVE_INFINITY;
+  };
+  const ordered = ids
+    .map((id, index) => ({ id, index, order: orderOf(id) }))
+    .sort((a, b) => a.order - b.order || a.index - b.index)
+    .map((entry) => entry.id);
+  if (!(await canPersonManageWaiverTemplates(db, staff.user.shopId, staff.user.personId))) {
+    const posted = new Set(ordered);
+    const current = await listCourseFormRequirements(db, staff.user.shopId, course.id);
+    if (current.some((formId) => !posted.has(formId))) {
+      redirect(noticeUrl(anchor, "forms-remove-not-authorized"));
+    }
+  }
+
+  const result = await setCourseFormRequirements(db, {
+    shopId: staff.user.shopId,
+    courseId: course.id,
+    formIds: ordered,
+  });
+  if (!result.ok) redirect(noticeUrl(anchor, "forms-invalid"));
+  // Every roster and prep page reading this course's readiness changes with it.
+  revalidatePath(shopPath(staff.user.shopSlug), "layout");
+  revalidateAndRedirect(base, noticeUrl(anchor, "forms-saved"));
 }

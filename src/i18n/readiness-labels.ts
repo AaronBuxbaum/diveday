@@ -405,6 +405,8 @@ const READINESS_BLOCKER_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   medical_review: "shared.readiness.blockers.medicalReview",
   medical_not_cleared: "shared.readiness.blockers.medicalNotCleared",
   guardian_signature_missing: "shared.readiness.blockers.guardianSignatureMissing",
+  course_form_unsigned: "shared.readiness.blockers.courseFormUnsigned",
+  course_form_guardian_missing: "shared.readiness.blockers.courseFormGuardianMissing",
   certification_missing: "shared.readiness.blockers.certificationMissing",
   certification_pending: "shared.readiness.blockers.certificationPending",
   certification_self_declared: "shared.readiness.blockers.certificationSelfDeclared",
@@ -431,6 +433,10 @@ const READINESS_BLOCKER_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
 export function readinessBlockerText(t: StaffTranslator, blocker: ReadinessBlocker): string {
   const key = READINESS_BLOCKER_KEYS[blocker.code];
   const params = blocker.params;
+  // The form's own title, as the shop wrote it: "which form" is the whole fix.
+  if (blocker.code === "course_form_unsigned" || blocker.code === "course_form_guardian_missing") {
+    return t(key, { form: params?.formTitle ?? "" });
+  }
   // Naming the card the diver does hold is what makes "not certified" a fact a
   // staffer can check against the plastic, rather than a verdict to take on trust.
   if (blocker.code === "certification_insufficient" && params?.requiredLevel && params.heldLevel) {

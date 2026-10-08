@@ -15,7 +15,8 @@
     "emptyAction": "Open the schedule",
     "pagination": {
       "total": "{count, plural, one {# course} other {# courses}}"
-    }
+    },
+    "formsAwaitingText": "Paste the agency’s wording: {forms}"
   },
   "edit": {
     "depthMarkersHint": "<marker>'{depth18}'</marker> prints as “18 meters” or “60 feet” in the diver’s unit. Also <marker>'{depth12}'</marker>, <marker>'{depth21}'</marker>, <marker>'{depth30}'</marker> and <marker>'{depth40}'</marker>; add <marker>n</marker> for a bare number in a range. Delete a marker to write the depth yourself.",
@@ -28,6 +29,8 @@
     "errorInvalid": "That didn’t save. Check the fields and try again.",
     "errorNotAuthorized": "Hiding or showing a course is limited to owners, managers, and instructors.",
     "errorFaqIncomplete": "Every question needs an answer, and every answer a question.",
+    "errorMaterialsIncomplete": "Every learning material needs a name.",
+    "errorMaterialsLink": "Each link has to start with https://.",
     "errorImages": "You can keep up to eight gallery photos. Remove one before adding more.",
     "errorUpload": "That photo didn’t upload. Try a JPG, PNG, or WebP under 5\u00a0MB.",
     "errorTooManyPhotos": "Add up to {max} new gallery photos per save. Save this batch, then add more.",
@@ -77,6 +80,8 @@
     "includedPlaceholder": "6 open water dives\nFull rental gear\nLight lunch",
     "notIncludedLabel": "Not included",
     "notIncludedPlaceholder": "Marine park fee\nHotel transfers",
+    "materialsLegend": "Learning materials",
+    "materialsDescription": "Sent to each student with their booking, and again a week before day 1.",
     "dayByDayLegend": "Day by day",
     "faqLegend": "Questions divers ask",
     "savePage": "Save course page",
@@ -121,7 +126,23 @@
     "unsavedInSection": "Unsaved changes in {section}",
     "unsavedInSections": "Unsaved changes in {count, plural, one {# section} other {# sections}}",
     "sectionsLabel": "Sections",
-    "draftRestored": "Unsaved changes, put back from your last visit"
+    "draftRestored": "Unsaved changes, put back from your last visit",
+    "forms": {
+      "legend": "Forms",
+      "description": "Each student signs these on their prep page before the course. Until they do, they show as Blocked.",
+      "none": "No course forms yet.",
+      "writeLink": "Write a course form",
+      "orderLabel": "Order of {form}",
+      "save": "Save forms",
+      "saved": "Saved. Students on this course now sign these forms.",
+      "invalid": "That didn’t save. One of those forms was deleted; reload and choose again.",
+      "notAuthorized": "Only staff who set up trips can choose a course’s forms.",
+      "pasteWording": "Paste the agency’s wording",
+      "awaitingText": "No student signs this until it has its text.",
+      "addImpact": "{students, plural, one {A form added now asks # student} other {A form added now asks # students}} on {sessions, plural, one {# upcoming session} other {# upcoming sessions}} to sign it.",
+      "removeLocked": "Only an owner or manager can take a form off a course.",
+      "removeNotAuthorized": "That didn’t save. Only an owner or manager can take a form off a course."
+    }
   },
   "dayByDay": {
     "dayLabel": "Day {number}",
@@ -152,5 +173,17 @@
     "faqsMaxOne": "{max} question is the most a course page holds.",
     "faqsMaxOther": "{max} questions is the most a course page holds.",
     "empty": "No questions yet. Add the ones divers ask you at the counter."
+  },
+  "materials": {
+    "nameLabel": "Material {number}",
+    "namePlaceholder": "Open Water eLearning",
+    "linkLabel": "Link",
+    "linkHint": "Optional. Starts with https://. If the fee includes the eLearning, leave the agency’s store off: the agency emails the student their access.",
+    "noteLabel": "Note",
+    "notePlaceholder": "Finish before day 1",
+    "remove": "Remove material {number}",
+    "add": "Add a material",
+    "max": "A course holds up to {max, plural, one {# material} other {# materials}}.",
+    "empty": "Nothing yet. Add the eLearning or reading students finish before day 1."
   }
 }

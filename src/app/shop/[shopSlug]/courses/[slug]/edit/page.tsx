@@ -7,7 +7,7 @@ import { EditorRail } from "@/components/editor/EditorRail";
 import { EditorSection, type EditorSectionRef } from "@/components/editor/EditorSection";
 import { FlashParams } from "@/components/FlashParams";
 import { ImageFileInput } from "@/components/ImageFileInput";
-import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovablePhoto";
+import { removablePhotoGridClass } from "@/components/RemovablePhoto";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -37,11 +37,22 @@ import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 import { ConflictGuardedForm } from "./_components/ConflictGuardedForm";
+import {
+  CourseFormsRequirement,
+  loadCourseFormsRequirement,
+} from "./_components/CourseFormsRequirement";
+import { CoursePhotoCell } from "./_components/CoursePhotoCell";
 import { DayByDayEditor } from "./_components/DayByDayEditor";
+import { courseEditNotices } from "./_components/edit-notices";
 import { FaqEditor } from "./_components/FaqEditor";
+import { LearningMaterialsSection } from "./_components/LearningMaterialsSection";
 import { courseTemplateFieldLabels } from "./_components/template-field-labels";
 import { UnsavedChangesGuard, UnsavedChangesNote } from "./_components/UnsavedChangesGuard";
-import { pullCourseTemplateUpdatesAction, saveCourseContentAction } from "./actions";
+import {
+  pullCourseTemplateUpdatesAction,
+  saveCourseContentAction,
+  saveCourseFormRequirementsAction,
+} from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -122,6 +133,15 @@ export default async function EditCoursePage({
   // whose only outcome is a refusal is a control that should not be drawn.
   const canSetVisibility = await canPersonConfigureTrips(db, shop.id, session.user.personId);
   const templateUpdate = await getCourseTemplateUpdate(db, session.user.shopId, course.id);
+  // The forms a course asks for are chosen by the same people who set its
+  // visibility, so the same answer draws the section (ADR 20261008-course-forms).
+  const formsPanel = canSetVisibility
+    ? await loadCourseFormsRequirement(
+        db,
+        { shopId: shop.id, courseId: course.id, personId: session.user.personId, notice },
+        t,
+      )
+    : null;
   const preserveTemplateAction = pullCourseTemplateUpdatesAction.bind(
     null,
     shopSlug,
@@ -135,36 +155,7 @@ export default async function EditCoursePage({
     "replace-template-copy",
   );
 
-  // No `shown`/`hidden` entry: the visibility form below the save bar neither
-  // redirects nor flashes a notice. The header's own line ("Live at …" /
-  // "Hidden from divers") and the button's own word both flip on the same
-  // render, so a banner repeating them would be a caption on a photograph of
-  // itself (the copy-restraint skill, deletion 1).
-  const messages: Record<string, string> = {
-    saved: t("courses.edit.noticeSaved"),
-    "template-updated": t("courses.edit.templateUpdates.updated"),
-    "template-replaced": t("courses.edit.templateUpdates.replaced"),
-  };
-  const errors: Record<string, string> = {
-    invalid: t("courses.edit.errorInvalid"),
-    // The one refusal this page's own controls can produce. It is reachable
-    // even with the visibility form unrendered, because the gate is the
-    // closure's and a stale tab still holds a posting form.
-    "not-authorized": t("courses.edit.errorNotAuthorized"),
-    // Specific, because "something was invalid" on an eight-section form is a
-    // scavenger hunt — and a half-filled pair is the one thing this editor
-    // refuses that the writer cannot see from the boxes.
-    "faq-incomplete": t("courses.edit.errorFaqIncomplete"),
-    images: t("courses.edit.errorImages"),
-    upload: t("courses.edit.errorUpload"),
-    "too-many-photos": t("courses.edit.errorTooManyPhotos", {
-      max: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
-    }),
-    // A half-edited depth marker. Refused at save rather than left to render
-    // its own braces to a diver — see saveCourseContentAction.
-    "depth-placeholder": t("courses.edit.errorDepthPlaceholder"),
-    "template-update-unavailable": t("courses.edit.templateUpdates.unavailable"),
-  };
+  const { messages, errors } = courseEditNotices(t);
   // `Object.hasOwn`, not `messages[notice]` / `errors[error]`: both params are
   // attacker-supplied, and a bare lookup walks the prototype —
   // `?notice=constructor` resolved to a *function*, which React then tried to
@@ -193,10 +184,17 @@ export default async function EditCoursePage({
     { id: "glance", label: t("courses.edit.glanceLegend") },
     { id: "enroll", label: t("courses.edit.enrollLegend") },
     { id: "fee-covers", label: t("courses.edit.feeCoversLegend") },
+    // `learningMaterialsJson`, like the day-by-day id: the save names it in
+    // `?field=` when the materials are refused, and `FieldErrorFocus` finds it.
+    { id: "learningMaterialsJson", label: t("courses.edit.materialsLegend") },
     { id: "scheduleDaysJson", label: t("courses.edit.dayByDayLegend") },
     { id: "faq", label: t("courses.edit.faqLegend") },
   ];
-  const [pitch, pricing, photos, glance, enroll, feeCovers, dayByDay, faq] = sections;
+  const [pitch, pricing, photos, glance, enroll, feeCovers, materials, dayByDay, faq] = sections;
+  // The forms section is its own `<form>` below the save form, so the rail
+  // names it but the unsaved-changes note (which reads the save form) does not.
+  const formsSection: EditorSectionRef = { id: "forms", label: t("courses.edit.forms.legend") };
+  const railSections = canSetVisibility ? [...sections, formsSection] : sections;
 
   const templateFieldLabels = courseTemplateFieldLabels(t);
 
@@ -311,7 +309,7 @@ export default async function EditCoursePage({
           nav a row of its own, and a sticky element with no travel never
           moves). ADR 20260827-the-shops-shelves, decision 2. */}
       <div className="mt-6 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">
-        <EditorRail navLabel={t("courses.edit.sectionsLabel")} sections={sections} />
+        <EditorRail navLabel={t("courses.edit.sectionsLabel")} sections={railSections} />
 
         {/* One grid cell holding the form and the page's rare act beneath it,
             so the rail keeps the first column to itself. */}
@@ -649,6 +647,13 @@ export default async function EditCoursePage({
                   </FieldGrid>
                 </EditorSection>
 
+                <LearningMaterialsSection
+                  section={materials}
+                  stored={course.learningMaterials}
+                  storageKey={`course-draft:${course.id}`}
+                  t={t}
+                />
+
                 <EditorSection id={dayByDay.id} label={dayByDay.label} as="fieldset">
                   <DayByDayEditor
                     initialDays={course.scheduleDays}
@@ -728,6 +733,16 @@ export default async function EditCoursePage({
             </ConflictGuardedForm>
           </UnsavedChangesGuard>
 
+          {formsPanel ? (
+            <CourseFormsRequirement
+              {...formsPanel}
+              {...formsSection}
+              action={saveCourseFormRequirementsAction.bind(null, slug)}
+              waiversPath={shopPath(shopSlug, "waivers")}
+              t={t}
+            />
+          ) : null}
+
           {/* Outside the save form, because a form cannot nest inside another —
             and below it, because this is the page's rare act and Save is its
             frequent one. `secondary`, not primary: the editor has exactly one
@@ -753,52 +768,5 @@ export default async function EditCoursePage({
         </div>
       </div>
     </main>
-  );
-}
-
-/**
- * One stored photo in the editor: the picture with its Remove tick, and the
- * box for its description straight under it. The cover photo and every
- * gallery photo are drawn by this, so the two never drift apart again.
- */
-function CoursePhotoCell({
-  url,
-  removeName,
-  removeValue,
-  removeLabel,
-  altId,
-  altName,
-  alt,
-  altLabel,
-  altPlaceholder,
-  children,
-}: {
-  url: string;
-  removeName: string;
-  removeValue?: string;
-  removeLabel: string;
-  altId: string;
-  altName: string;
-  alt: string;
-  altLabel: string;
-  altPlaceholder: string;
-  children?: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <RemovablePhoto url={url} name={removeName} value={removeValue} label={removeLabel} />
-      {children}
-      <Field label={altLabel} className="text-xs" htmlFor={altId}>
-        <input
-          id={altId}
-          name={altName}
-          type="text"
-          maxLength={200}
-          defaultValue={alt}
-          placeholder={altPlaceholder}
-          className={controlClass}
-        />
-      </Field>
-    </div>
   );
 }

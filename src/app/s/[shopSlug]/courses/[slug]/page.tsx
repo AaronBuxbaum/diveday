@@ -199,6 +199,7 @@ export default async function CoursePage({
         locale={locale}
         t={t}
         facts={facts}
+        inquiryHref={inquiryHref}
       />
       <CourseAdmission
         certificationRequired={certificationRequired}

@@ -359,6 +359,22 @@ export const bookings = pgTable(
     courseNextStep: text("course_next_step"),
     courseNextStepAt: timestamp("course_next_step_at", { withTimezone: true }),
     courseNextStepByPersonId: uuid("course_next_step_by_person_id").references(() => people.id),
+    /**
+     * **When a staffer marked this student's learning materials done, and who**
+     * (ADR 20261008-course-learning-materials). Ticked on the course session's
+     * roster; null is "not yet", which is what keeps the materials in the
+     * week-out reminder and on the student's `/ready` page as a to-do.
+     *
+     * A staff record of what a student said or showed, never agency evidence:
+     * no agency exposes an eLearning API (H-10), and nothing reads this as a
+     * gate — admission and readiness never look at it. Refused on a departure
+     * with no course (`recordCourseMaterialsDone`), the same LMS boundary as the
+     * next step above. Both columns move together.
+     */
+    courseMaterialsDoneAt: timestamp("course_materials_done_at", { withTimezone: true }),
+    courseMaterialsDoneByPersonId: uuid("course_materials_done_by_person_id").references(
+      () => people.id,
+    ),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -380,6 +396,11 @@ export const bookings = pgTable(
       "bookings_course_next_step_bounded",
       sql`${table.courseNextStep} is null
         or (length(btrim(${table.courseNextStep})) > 0 and length(${table.courseNextStep}) <= 280)`,
+    ),
+    // A tick nobody is recorded as having made is not one the roster may show.
+    check(
+      "bookings_course_materials_done_attributed",
+      sql`(${table.courseMaterialsDoneAt} is null) = (${table.courseMaterialsDoneByPersonId} is null)`,
     ),
     index("bookings_trip_idx").on(table.tripId),
     /** Backs the diver-record lookups (getDiverProfile, payment/booking history joins). */
@@ -658,6 +679,11 @@ export const bookingCapabilityPurpose = pgEnum("booking_capability_purpose", [
   // 3): ten minutes, minted by the diver's own thread and consumed by the
   // booking it leads to. The one purpose whose expiry is not the trip's.
   "handoff",
+  // A course's forms and nothing else (ADR 20261008-course-forms): what staff
+  // copy or send when the release is signed and the forms are not. It opens
+  // `/ready/<token>/forms` and is refused by every other `/ready` door, so a
+  // link handed over the counter cannot read or change the diver's trip prep.
+  "course_forms",
 ]);
 
 /**
@@ -667,7 +693,9 @@ export const bookingCapabilityPurpose = pgEnum("booking_capability_purpose", [
  * holding an earlier email's link and a later reminder's link at once, and
  * both should keep working until they individually expire or are revoked.
  * Only the hash is stored; the raw bearer token exists solely in the
- * response that issued it.
+ * response that issued it — except a live `course_forms` link, which is also
+ * kept sealed (`token_sealed`) so a second send hands back the link the diver
+ * already holds, the waiver link's rule (ADR 20260820-waiver-links-are-reused-not-reissued).
  */
 export const bookingCapabilities = pgTable(
   "booking_capabilities",
@@ -684,6 +712,12 @@ export const bookingCapabilities = pgTable(
     issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    /**
+     * The token sealed under `SECRET_ENCRYPTION_KEY`, for a live `course_forms`
+     * row only; null for every other purpose, and nulled when the row is
+     * revoked. `token_hash` is still what every lookup matches.
+     */
+    tokenSealed: text("token_sealed"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

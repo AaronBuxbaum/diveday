@@ -18,9 +18,11 @@ import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
+import { recordPaperCourseFormAction } from "../actions";
 import { AddDiverSection } from "./AddDiverSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
+import type { RosterActions } from "./roster-model";
 import { TripInvitationGroup } from "./TripInvitationSection";
 import { TripNoticeBanner } from "./TripNoticeBanner";
 import { WaitlistGroup } from "./WaitlistSection";
@@ -44,6 +46,8 @@ export type TripRosterActions = {
   sendNewWaiverAction?: FormAction;
   certifyDiverAction?: FormAction;
   saveCourseNextStepAction?: FormAction;
+  setCourseMaterialsDoneAction?: FormAction;
+  elearningCheckAction?: RosterActions["elearningCheckAction"];
   addInternalNoteAction: FormAction;
   deleteInternalNoteAction: FormAction;
   saveRosterEmergencyContactAction: FormAction;
@@ -219,6 +223,8 @@ export function TripRosterContent({
           shopRentalItems,
           splitAsksDateOfBirth: guests.splitAsksDateOfBirth,
           certifyDefaultLevel: guests.certifyDefaultLevel,
+          courseHasMaterials: guests.courseHasMaterials,
+          courseMaterialsOpen: guests.courseMaterialsOpen,
           compact,
           showSummaryHeading: !compact,
         }}
@@ -230,6 +236,8 @@ export function TripRosterContent({
           nitroxByBooking,
           notesByBooking,
           courseNextStepByBooking,
+          elearningQueryByBooking: guests.elearningQueryByBooking,
+          courseMaterialsDoneByPerson: guests.courseMaterialsDoneByPerson,
           sameNameHeldSeats: guests.sameNameHeldSeats,
           keepOpenBookingId,
           namesakeRefusedBookingId,
@@ -248,6 +256,15 @@ export function TripRosterContent({
           saveEmergencyContactAction: actions.saveRosterEmergencyContactAction,
           certifyDiverAction: guests.certifies ? actions.certifyDiverAction : undefined,
           saveCourseNextStepAction: actions.saveCourseNextStepAction,
+          setCourseMaterialsDoneAction: guests.courseHasMaterials
+            ? actions.setCourseMaterialsDoneAction
+            : undefined,
+          elearningCheckAction: guests.courseHasMaterials
+            ? actions.elearningCheckAction
+            : undefined,
+          // A course form signed on paper (ADR 20261008-course-forms). Bound
+          // here rather than on the page: only a seat that owes a form draws it.
+          recordPaperCourseFormAction: recordPaperCourseFormAction.bind(null, shopSlug, trip.id),
           updatePickupAction: actions.updateBookingPickupAction,
         }}
         slots={{

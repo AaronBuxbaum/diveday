@@ -236,6 +236,8 @@ const CERTIFICATION_FIX: Record<
     medical_review: null,
     medical_not_cleared: null,
     guardian_signature_missing: null,
+    course_form_unsigned: null,
+    course_form_guardian_missing: null,
     under_minimum_age: null,
     payment_due: null,
     payment_refunded: null,

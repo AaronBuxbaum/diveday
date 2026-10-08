@@ -13,6 +13,7 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
+  bookOpenWaterSession,
   choosePartySize,
   counterPath,
   createTrip,
@@ -34,12 +35,15 @@ import {
   openTripAbout,
   openTripFromBoard,
   openTripTab,
+  requireCourseForm,
   STAFF_DAY_HEADING,
   saveDiveIntent,
+  scheduleCrewedOpenWaterSession,
   seededTripId,
   threadStatus,
   waiverLinkFromResult,
   waiverLinkFromToast,
+  writeCourseForm,
 } from "./helpers";
 import { E2E_FROZEN_CLOCK, ONBOARD_FORM_PATH } from "./servers";
 
@@ -3829,6 +3833,39 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "identity-menu-open", scheme);
         await page.keyboard.press("Escape");
         await expect(trigger).toHaveAttribute("aria-expanded", "false");
+      });
+
+      /**
+       * **A student signing a course form** (ADR 20261008-course-forms).
+       *
+       * `/ready/[token]/forms` only exists for a booking on a course that asks
+       * for a form, so the capture walks the shop's own path to one: write a
+       * form, choose it for Open Water, schedule a crewed session, then book it
+       * signed out. The body is the shop's text exactly as stored, set in a
+       * pre-wrapped block, so its line breaks are the thing to watch.
+       */
+      test(`the course form signing page renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const formTitle = "Safe diving practices";
+        await writeCourseForm(
+          page,
+          formTitle,
+          "I will dive within the limits of my training and plan every dive with my buddy.\n\nI will tell the instructor before any session if anything about my health changes.",
+        );
+        await requireCourseForm(page, "open-water-diver", formTitle);
+        // 24 days out, clear of the seeded sessions whose crew would clash.
+        await scheduleCrewedOpenWaterSession(page, "Open Water Diver — forms", 24);
+        await page.context().clearCookies();
+        const readyPath = await bookOpenWaterSession(
+          page,
+          "Visual Regression Diver",
+          `visual-regression-forms-${scheme}@example.com`,
+        );
+        await page.goto(`${readyPath}/forms`);
+        await expect(page.getByRole("heading", { level: 1, name: formTitle })).toBeVisible();
+        await capture(page, "course-form-sign", scheme);
       });
 
       /**

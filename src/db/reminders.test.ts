@@ -1,10 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_DOCK_DAY_RHYTHM } from "@/lib/diver-planning";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
 import { fakeEmail, fakeSms, fakeCourtesy as fakeWhatsApp } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
+import { recordCourseMaterialsDone } from "./course-materials";
 import {
   createCertification,
   deleteCertification,
@@ -12,10 +13,18 @@ import {
   reviewCertification,
 } from "./readiness";
 import { sendDueReminders } from "./reminders";
-import { bookings, notificationDeliveries, people, shops, waiverRecords } from "./schema";
+import {
+  bookings,
+  courses,
+  notificationDeliveries,
+  people,
+  shops,
+  trips,
+  waiverRecords,
+} from "./schema";
 import { setShopDockDayRhythm } from "./shops";
 import { recordSmsKeyword } from "./sms-opt-outs";
-import { upcomingTripsWithCounts, updateTripConditions } from "./trips";
+import { listStaff, upcomingTripsWithCounts, updateTripConditions } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 // The seeded shop already has bookings on several future trips, so
@@ -672,5 +681,96 @@ describe("sendDueReminders and the reminder rhythm", () => {
     expect(await rowsFor(ctx.db, ctx.bookingId)).toHaveLength(0);
     expect(summary.settled).toBe(controlSummary.settled + 1);
     expect(summary.failed).toBe(controlSummary.failed);
+  });
+
+  describe("course learning materials (ADR 20261008-course-learning-materials)", () => {
+    /** The reef departure, turned into a session of a course with one material. */
+    async function asCourseSession(ctx: Awaited<ReturnType<typeof reminderContext>>) {
+      const [course] = await ctx.db
+        .update(courses)
+        .set({
+          learningMaterials: [{ name: "Open Water eLearning", url: "https://www.padi.com/" }],
+        })
+        .where(and(eq(courses.shopId, ctx.shop.id), eq(courses.title, "Open Water Diver")))
+        .returning({ id: courses.id });
+      if (!course) throw new Error("the seeded shop has no Open Water course");
+      await ctx.db.update(trips).set({ courseId: course.id }).where(eq(trips.id, ctx.reef.id));
+    }
+
+    it("still nudges a ready student whose materials are not done, and lists them", async () => {
+      const ctx = await reminderContext();
+      await asCourseSession(ctx);
+      await makeReady(ctx);
+      const email = fakeEmail();
+
+      await pass(ctx.db, ctx.inWeekBucket, email);
+
+      const [sent] = emailsFor(email, ctx.bookingId);
+      expect(sent?.kind).toBe("trip_reminder_7d");
+      expect(sent && "learningMaterials" in sent ? sent.learningMaterials : null).toEqual([
+        { name: "Open Water eLearning", url: "https://www.padi.com/" },
+      ]);
+    });
+
+    it("stops nudging once a staffer ticks the materials done", async () => {
+      const ctx = await reminderContext();
+      await asCourseSession(ctx);
+      await makeReady(ctx);
+      const [staff] = await listStaff(ctx.db, ctx.shop.id);
+      if (!staff) throw new Error("the seeded shop has no staff");
+      const ticked = await recordCourseMaterialsDone(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.bookingId,
+        staffPersonId: staff.person.id,
+        done: true,
+      });
+      expect(ticked).toEqual({ ok: true });
+      const email = fakeEmail();
+
+      await pass(ctx.db, ctx.inWeekBucket, email);
+
+      expect(emailsFor(email, ctx.bookingId)).toHaveLength(0);
+    });
+
+    it("tells the email it is a course session, so the week lead names no dock", async () => {
+      const ctx = await reminderContext();
+      await asCourseSession(ctx);
+      const email = fakeEmail();
+
+      await pass(ctx.db, ctx.inWeekBucket, email);
+
+      const [sent] = emailsFor(email, ctx.bookingId);
+      expect(sent && "courseSession" in sent ? sent.courseSession : null).toBe(true);
+    });
+
+    it("texts a phone-only student the materials in their own clause, with the first link", async () => {
+      // The review's finding: "Still to sort before you board:" is the boat's
+      // list. The eLearning is not on it, and a phone-only student has no
+      // email to click through, so the text carries the material's own link.
+      const ctx = await reminderContext();
+      await asCourseSession(ctx);
+      await ctx.db
+        .update(people)
+        .set({ email: null, phone: PHONE })
+        .where(eq(people.id, ctx.personId));
+      const sms = fakeSms();
+
+      await sendDueReminders(ctx.db, {
+        now: ctx.inWeekBucket,
+        emailProvider: fakeEmail().provider,
+        smsProvider: sms.provider,
+        appOrigin: null,
+      });
+
+      const [text] = sms.sent.filter((m) => m.to === PHONE);
+      expect(text?.body).toContain(
+        "Before your first day: Open Water eLearning (https://www.padi.com/).",
+      );
+      const todo = text?.body.split("Still to sort before you board:")[1] ?? "";
+      expect(todo.split("Before your first day:")[0]).not.toContain("Open Water eLearning");
+      expect(text?.body).not.toContain("/ready/");
+      // A course starts; it does not sail, and names no dock.
+      expect(text?.body).not.toContain("dock");
+    });
   });
 });

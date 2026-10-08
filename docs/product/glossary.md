@@ -88,6 +88,12 @@ new domain concept, define it here in the same PR.
   It stamps `agency_checked_at`, with those words as the review note, and names the staffer whose
   browser ran it. Anything else writes nothing and leaves the link. Level cards only, for SSI, NAUI,
   SDI, GUE and CMAS; an unsighted self-declaration still needs its sighting.
+- **eLearning check** — the same extension reading a course student's PADI eLearning on the PADI
+  Pros' Site, searched by the student's email in the staffer's signed-in browser (H-106, ADR
+  20261008-cert-check-extension). The server ticks **Materials done** only when one record names
+  the student and their email, this course and no higher one, and a finished status; anything else
+  writes nothing. A seat already ticked is left as it was. PADI only, and a best guess of PADI's
+  page until a staffer tries it (#2259).
 - **Claimed certification** — a card recorded as evidence but not yet verified: the stored status is
   `pending`. It is what a card entered by hand starts as (the shop-owner-facing word is "claimed").
   A claimed card never satisfies readiness or authorizes a nitrox fill until staff **Mark certified** or an **Agency check** certifies it.
@@ -1095,6 +1101,22 @@ new domain concept, define it here in the same PR.
   checks is `minimum_certification_level`, which the agency owns and no shop edit can reach. The
   course page labels the two apart for exactly this reason — a note reading "or a qualifying
   certification" next to an unlabelled gate is how a diver arrives believing they are eligible.
+- **Learning materials** — what a course asks a student to work through before day 1, usually the
+  agency's eLearning: an ordered list of names, each with an optional `https:` link and note, kept
+  on the course. DiveDay sends it with the booking confirmation, whether the student booked
+  themselves or a staffer seated them, repeats it on the 7-day reminder, and shows it on the
+  diver's thread. **Materials done** is a staffer's tick that the student finished them, stamped
+  with who and when. It belongs to the student's enrollment, not one departure: ticked on the pool
+  weekend, it counts on the open-water weekend of the same course. It is the shop's word, never
+  the agency's (the eLearning check ticks it only after reading PADI's page in the staffer's
+  browser), and it gates nothing: the 7-day reminder stops asking, and Certify shows a neutral
+  reminder to check the agency's record when it is missing
+  ([20261008-course-learning-materials](../architecture/decisions/20261008-course-learning-materials.md)).
+- **Private session / private course** — a course with a private price can also be run for one
+  diver or one group on a date of their own. The course page says so ("Private course available",
+  or "Private session available" for an intro like Discover Scuba) and points at the inquiry form.
+  It never prints the private price, because whether that price is per diver or per group is the
+  shop's to explain.
 - **Instruction fee / e-learning fee** — a course invoices as two lines on one bill, and the diver
   makes a single payment for their sum. Enrollment assumes the e-learning is included; a student
   who already completed it elsewhere has that line cleared before the invoice goes out, or
@@ -1487,6 +1509,22 @@ new domain concept, define it here in the same PR.
   product boundary, not legal advice: a shop whose own counsel wants staff on a release still has
   the paper/in-person path, and if that ever becomes the norm it is a human decision to record
   (H-01/H-03), not a query to widen.
+- **Course form** — a form a course asks each student to sign as well as the release, such as an
+  agency's course release or a safe-diving-practices statement. The words are the shop's own, written
+  beside the release and versioned on every real edit (DiveDay ships none, H-10). Each course
+  chooses its forms, in order, on its own page. Unlike the release, a course form is **signed per
+  booking**: a signature counts for the enrollment it was signed on, at the **current version** —
+  which, once a session has started, also means the version that was current when it started, so an
+  edit made mid-course asks the next session to sign — with a guardian's co-signature for a minor,
+  and never carries to the next course. A student signs on their prep link's forms page or on the
+  **forms-only link** staff send, which opens that page and nothing else; staff can also record a
+  paper copy from the Divers tab. An unsigned one is the `course_form_unsigned` blocker (a minor's
+  with no guardian, `course_form_guardian_missing`), so the student reads Blocked until it is
+  signed. One switch,
+  `COURSE_FORMS_BLOCK_BOARDING`, turns that into a warning instead, and buying a seat never waits on
+  it (ADR 20261008-course-forms). A course template names its agency's **standard forms** by title.
+  Creating or syncing the course sets them up empty, and a form with no text is asked of nobody
+  until the shop pastes the agency's wording in.
 - **Sign once** — a diver signs the release once, not every trip. A **completed** signature is held
   against the diver (not just the booking it was signed on) and satisfies the waiver gate on any of
   their bookings while it stays **current**: signed against the shop's current release version and

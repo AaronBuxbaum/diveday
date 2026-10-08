@@ -58,6 +58,7 @@ import { DESK_NOTICES } from "./_arrivals/notices";
 import { ConditionsSection } from "./_components/ConditionsSection";
 import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
+import { courseRosterActions } from "./_components/course-roster-actions";
 import { DepartureLogLink } from "./_components/DepartureLogLink";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { DetailsSection } from "./_components/DetailsSection";
@@ -85,7 +86,6 @@ import {
   cancelOffCadenceSeriesAction,
   cancelSeriesAction,
   cancelTripAction,
-  certifyDiverFromRosterAction,
   clearConditionsAction,
   confirmDiverIdentityAction,
   createDirectTripInvitationAction,
@@ -98,7 +98,6 @@ import {
   removeBookingAction,
   restoreInternalNoteAction,
   saveConditionsAction,
-  saveCourseNextStepAction,
   saveDetails,
   saveRequirementsAction,
   saveRosterEmergencyContactAction,
@@ -629,14 +628,7 @@ export default async function ManageTripPage({
     sendNewWaiverAction: mayRetireRefusal
       ? sendNewWaiverAction.bind(null, shopSlug, tripId)
       : undefined,
-    certifyDiverAction: trip.course
-      ? certifyDiverFromRosterAction.bind(null, shopSlug, tripId)
-      : undefined,
-    // The two course acts travel together: a roster that could certify a
-    // student but not tell them what comes next is half a session's record.
-    saveCourseNextStepAction: trip.course
-      ? saveCourseNextStepAction.bind(null, shopSlug, tripId)
-      : undefined,
+    ...courseRosterActions(Boolean(trip.course), shopSlug, tripId),
     addInternalNoteAction: addInternalNoteAction.bind(null, shopSlug, tripId),
     deleteInternalNoteAction: deleteInternalNoteAction.bind(null, shopSlug, tripId),
     saveRosterEmergencyContactAction: saveRosterEmergencyContactAction.bind(null, shopSlug, tripId),

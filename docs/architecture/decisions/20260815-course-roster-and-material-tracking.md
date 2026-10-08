@@ -1,6 +1,6 @@
 # 20260815-course-roster-and-material-tracking — Add a per-enrollment roster row for material/e-learning status, staff-recorded only
 
-- **Status:** Proposed
+- **Status:** Superseded by [20261008-course-learning-materials](20261008-course-learning-materials.md)
 - **Date:** 2026-08-15
 
 **Proposed, deliberately.** A product-owner decision, not an engineering one — it adds a new staff

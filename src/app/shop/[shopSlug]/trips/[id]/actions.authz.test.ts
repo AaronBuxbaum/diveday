@@ -591,6 +591,10 @@ describe("who may run each action on the trip page", () => {
     // its trail on the departure and on the matched diver's record.
     "splitDiverIdentityAction",
     "markWaiverInPersonAction",
+    // A course form signed on paper: the release's paper path, on the same
+    // terms (ADR 20261008-course-forms). The record names the staffer who
+    // took it, and `recordPaperCourseForm` refuses anyone not active staff.
+    "recordPaperCourseFormAction",
     "saveRosterEmergencyContactAction",
     // **Who is running the boat is the crew's own answer.** H-14's record
     // already said so — "day-of crew assignment (manifest accuracy)" is named
@@ -609,6 +613,10 @@ describe("who may run each action on the trip page", () => {
     // beside a name on that session's own roster, and what it records is a
     // sentence rather than a credential.
     "saveCourseNextStepAction",
+    // The learning-materials tick (ADR 20261008-course-learning-materials),
+    // open on the same terms as the next step beside it: it appears only on a
+    // course session's own roster, and it is bookkeeping that gates nothing.
+    "setCourseMaterialsDoneAction",
     "updateBookingPickupAction",
   ];
 

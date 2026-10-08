@@ -378,6 +378,11 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const waiverRows = await readShopScoped(tx, "waiverRecords", shopId);
 
+  const courseFormRows = await readShopScoped(tx, "courseForms", shopId);
+  const courseFormVersionRows = await readShopScoped(tx, "courseFormVersions", shopId);
+  const courseFormRequirementRows = await readShopScoped(tx, "courseFormRequirements", shopId);
+  const courseFormRecordRows = await readShopScoped(tx, "courseFormRecords", shopId);
+
   const rentalFitRows = await readShopScoped(tx, "rentalFitProfiles", shopId);
 
   const gearItemRows = await readShopScoped(tx, "gearItems", shopId);
@@ -557,6 +562,10 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     templateRows,
     waiverMaterialityRows,
     waiverRows,
+    courseFormRows,
+    courseFormVersionRows,
+    courseFormRequirementRows,
+    courseFormRecordRows,
     rentalFitRows,
     gearItemRows,
     gearItemLabel,
@@ -926,6 +935,8 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
 
   const waiverRows = await readPersonScoped(tx, "waiverRecords", shopId, personId);
 
+  const courseFormRecordRows = await readPersonScoped(tx, "courseFormRecords", shopId, personId);
+
   const inquiryRows = await readPersonScoped(tx, "courseInquiries", shopId, personId);
   const inquiryCourseIds = [
     ...new Set(inquiryRows.flatMap((row) => (row.courseId ? [row.courseId] : []))),
@@ -991,6 +1002,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     priorVisitRows,
     importedPaymentHistoryRows,
     waiverRows,
+    courseFormRecordRows,
     inquiryRows,
     courseTitle,
     shop,
@@ -1112,6 +1124,10 @@ export async function loadShopExportCounts(
       shopId,
     ),
     "waiver_records.csv": await countShopScoped(db, "waiverRecords", shopId),
+    "course_forms.csv": await countShopScoped(db, "courseForms", shopId),
+    "course_form_versions.csv": await countShopScoped(db, "courseFormVersions", shopId),
+    "course_form_requirements.csv": await countShopScoped(db, "courseFormRequirements", shopId),
+    "course_form_records.csv": await countShopScoped(db, "courseFormRecords", shopId),
     "rental_fit.csv": await countShopScoped(db, "rentalFitProfiles", shopId),
     "gear_items.csv": await countShopScoped(db, "gearItems", shopId),
     "gear_service_events.csv": await countShopScoped(db, "gearServiceEvents", shopId),
