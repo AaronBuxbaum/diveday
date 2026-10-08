@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "DiveDay certification check",
+  "short_name": "DiveDay check",
+  "version": "1.0.0",
+  "description": "Checks a diver's certification on the agency's own lookup page from DiveDay's diver record.",
+  "minimum_chrome_version": "116",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["scripting"],
+  "host_permissions": [
+    "https://my.divessi.com/*",
+    "https://www.naui.org/*",
+    "https://www.tdisdi.com/*",
+    "https://www.gue.com/*",
+    "https://portal.cmas.org/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://dive.day/*", "http://localhost/*", "http://127.0.0.1/*"],
+      "js": ["protocol.js", "bridge.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

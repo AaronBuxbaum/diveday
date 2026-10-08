@@ -2,11 +2,13 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { Field, FieldActions, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
+import { EXTENSION_STORE_URL } from "@/lib/cert-check-extension";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicShopRegisterPath } from "@/lib/public-routes";
 import { shopPath } from "@/lib/staff-notices";
 import { savePackingAction } from "../../actions";
 import { CounterQrCard } from "../../CounterQrCard";
+import { CertCheckExtensionStatus } from "../CertCheckExtensionStatus";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
 import { BOOKINGS_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
 
@@ -46,6 +48,33 @@ export function BookingsGroup({
           printHref={shopPath(shopSlug, "print", "counter-card")}
           printLabel={t("print.sheet.door")}
         />
+
+        {/* The DiveDay browser extension (H-105): whether this browser has
+            it, and where to get it once it is listed. Nothing to save, so the
+            open row is a sentence and, at most, a link. */}
+        <SettingsRow
+          heading={t("settings.main.certCheck.heading")}
+          value={
+            <CertCheckExtensionStatus
+              added={t("settings.main.certCheck.added")}
+              notAdded={t("settings.main.certCheck.notAdded")}
+            />
+          }
+          description={t("settings.main.certCheck.description")}
+          sectionId="certCheck"
+          activeSection={activeSection}
+        >
+          {EXTENSION_STORE_URL ? (
+            <a
+              href={EXTENSION_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${buttonClass({ variant: "secondary" })} mt-4`}
+            >
+              {t("settings.main.certCheck.install")}
+            </a>
+          ) : null}
+        </SettingsRow>
 
         <SettingsRow
           heading={t("settings.main.packing.heading")}

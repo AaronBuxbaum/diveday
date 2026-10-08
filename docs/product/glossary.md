@@ -78,7 +78,14 @@ new domain concept, define it here in the same PR.
   get none because they publish no lookup to link to, while PADI's sits behind the shop's member
   sign-in and its link says so. Only a certified card at or above a trip's required level can
   satisfy readiness. (The staff surface says "certified"; the stored status value is `verified`, which
-  is what readiness reads.)
+  is what readiness reads.) With the DiveDay browser extension, that link becomes an **Agency check**.
+- **Agency check** — the DiveDay browser extension doing the "Check with SSI" lookup from the
+  staffer's own browser (H-105, ADR 20261008-cert-check-extension). The extension types the diver
+  into the agency's own lookup page and hands back the page's text; the server certifies the card
+  only when that text names the diver beside the claimed level in the agency's own words, and stamps
+  `agency_checked_at` with those words as the review note. Anything else writes nothing and leaves the
+  link. Level cards only, for SSI, NAUI, SDI/TDI, GUE and CMAS; an unsighted self-declaration still
+  needs its sighting. DiveDay's servers never call an agency.
 - **Claimed certification** — a card recorded as evidence but not yet verified: the stored status is
   `pending`. It is what a card entered by hand starts as (the shop-owner-facing word is "claimed").
   A claimed card never satisfies readiness or authorizes a nitrox fill until staff **Mark certified**.

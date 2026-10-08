@@ -12,6 +12,7 @@ import type { DiverProfile, Shop } from "./shared";
 // stubbed rather than booted — the same call `WaiverGroup.test.tsx` makes.
 vi.mock("../actions", () => ({
   addCardAction: vi.fn(),
+  agencyCheckAction: vi.fn(),
   clearNoCertificationAction: vi.fn(),
   deleteCertificationAction: vi.fn(),
   deleteSpecialtyAction: vi.fn(),
@@ -472,5 +473,85 @@ describe("the agency check link", () => {
       "https://portal.cmas.org/certifications",
     );
     expect(screen.queryByRole("link", { name: /Check with/ })).toBeNull();
+  });
+});
+
+/**
+ * **With the DiveDay extension in this browser** (H-105), the same words become
+ * a button that checks the card on the agency's page. The extension is found by
+ * the marker its content script sets; without it, everything above holds.
+ */
+describe("the agency check, with the extension", () => {
+  function pending(agency: string, extra: Record<string, unknown> = {}) {
+    return {
+      id: `c-${agency}`,
+      agency,
+      level: "open_water",
+      status: "pending",
+      identifier: "AB12345",
+      selfDeclaredAt: null,
+      ...extra,
+    };
+  }
+
+  function withExtension(run: () => void) {
+    document.documentElement.setAttribute("data-diveday-cert-check", "1.0.0");
+    try {
+      run();
+    } finally {
+      document.documentElement.removeAttribute("data-diveday-cert-check");
+    }
+  }
+
+  it("turns the link into a button that checks the card", () => {
+    withExtension(() => {
+      renderGroup(
+        diver({ certifications: [pending("ssi")] } as unknown as Partial<DiverProfile>),
+      );
+      expect(screen.getByRole("button", { name: "Check with SSI" })).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: "Check with SSI" })).toBeNull();
+    });
+  });
+
+  it("keeps the link where the record lacks what the agency's form asks for", () => {
+    withExtension(() => {
+      // NAUI searches by birth date, and this diver has none on file.
+      renderGroup(
+        diver({ certifications: [pending("naui")] } as unknown as Partial<DiverProfile>),
+      );
+      expect(screen.getByRole("link", { name: "Check with NAUI" })).toBeInTheDocument();
+    });
+  });
+
+  it("keeps the link for PADI's member sign-in and for a diver's unsighted claim", () => {
+    withExtension(() => {
+      renderGroup(
+        diver({
+          certifications: [
+            pending("padi"),
+            pending("ssi", { selfDeclaredAt: new Date("2026-10-01T00:00:00Z") }),
+          ],
+        } as unknown as Partial<DiverProfile>),
+      );
+      expect(screen.queryByRole("button", { name: /Check with/ })).toBeNull();
+    });
+  });
+
+  it("names the agency on a card a check certified", () => {
+    renderGroup(
+      diver({
+        certifications: [
+          pending("ssi", {
+            status: "verified",
+            reviewNote: "Priya Sharma · Open Water Diver",
+            reviewedAt: new Date("2026-10-08T15:00:00Z"),
+            reviewedByName: "Rae Owner",
+            agencyCheckedAt: new Date("2026-10-08T15:00:00Z"),
+          }),
+        ],
+      } as unknown as Partial<DiverProfile>),
+    );
+    expect(screen.getByText(/^Checked with SSI by Rae Owner on Thu,\sOct\s8\.$/)).toBeInTheDocument();
+    expect(screen.getByText("Priya Sharma · Open Water Diver")).toBeInTheDocument();
   });
 });
