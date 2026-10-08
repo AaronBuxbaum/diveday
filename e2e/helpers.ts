@@ -1032,7 +1032,7 @@ export async function requireCourseForm(
   const forms = page.locator("form", {
     has: page.getByRole("button", { name: "Save forms" }),
   });
-  await forms.getByRole("checkbox", { name: title }).check();
+  await forms.getByRole("checkbox", { name: title, exact: true }).check();
   await forms.getByRole("button", { name: "Save forms" }).click();
   await expect(
     page.getByText("Saved. Students on this course now sign these forms."),
