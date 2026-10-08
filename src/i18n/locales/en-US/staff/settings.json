@@ -328,6 +328,13 @@
       "heading": "The counter card",
       "description": "Print this and put it on the desk. A walk-in scans it, fills in their name, certification and sizes, and their release goes out, all before they reach the front of the queue."
     },
+    "certCheck": {
+      "heading": "Certification checks",
+      "description": "With the DiveDay browser extension, “Check with SSI” on a diver’s record looks the diver up on the agency’s page and marks the certification certified when the agency shows it. It checks SSI, NAUI, SDI, GUE and CMAS, in Chrome or Edge on a computer.",
+      "added": "Added to this browser",
+      "notAdded": "Not added",
+      "install": "Add to Chrome"
+    },
     "integrations": {
       "heading": "Shop integrations"
     },

@@ -176,7 +176,9 @@ export async function getTripOverview(
   const pulse = {
     blocked: pulseReadiness.filter((row) => rosterRowIsBlocked(row.readiness)).length,
     prepGaps: pulsePrepDivers.filter(
-      (diver) => rentalFitCompleteness(diver.fit, shop.rentalItems).state !== "complete",
+      (diver) =>
+        rentalFitCompleteness(diver.fit, shop.rentalItems, diver.participantType).state !==
+        "complete",
     ).length,
     boarded: pulseBoardedByTrip.get(tripId)?.size ?? 0,
     openOrders: pulseOpenOrders,

@@ -64,6 +64,14 @@
     "checkWithAgency": "Check with {agency}",
     "checkWithAgencyMemberSignIn": "Check with {agency} (member sign-in)",
     "searchAgencyPortal": "Search the {agency} portal",
+    "checkedWithAgencyBy": "Checked with {agency} by {name} on {date}.",
+    "agencyCheck": {
+      "checking": "Checking with {agency}…",
+      "matched": "{agency} shows this certification. Marked certified.",
+      "levelUnconfirmed": "{agency} found this diver, but not at this level.",
+      "noRecord": "{agency} has no match for this name.",
+      "unreadable": "Couldn’t read {agency}’s page."
+    },
     "sightCard": "Verify certification record",
     "sightCardHint": "The diver told us this level. Enter the agency and number from the certification record you verified.",
     "sightNitroxCardHint": "The diver told us they’re nitrox certified. RAID and GUE cover enriched air in the level credential (RAID Open Water 20 or Advanced 35, GUE Fundamentals or Rec 1), so record that one. Every other agency issues a separate enriched-air credential, and a level credential from them is not nitrox evidence.",

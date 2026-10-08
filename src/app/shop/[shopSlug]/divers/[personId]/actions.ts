@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { paperGuardianFrom, paperWaiverRefused } from "@/app/actions/paper-waiver-fields";
+import { certificationForAgencyCheck, isAgencyCheckedCard } from "@/db/agency-check";
 import { anonymizeDiver } from "@/db/anonymize";
 import {
   canPersonDeleteDiver,
@@ -58,6 +59,7 @@ import {
   recordMedicalEvaluation,
 } from "@/db/waivers";
 import { isPlausibleDateOfBirth } from "@/lib/age";
+import { judgeAgencyPage, PAGE_TEXT_MAX_LENGTH } from "@/lib/agency-check";
 import { canOverrideGearRequest, isStaff } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { isPlausibleCardNumber } from "@/lib/card-number";
@@ -950,6 +952,92 @@ export async function markCertifiedAction(
         ? undefined
         : { certificationId, cardType: cardType.data },
   };
+}
+
+/**
+ * What a check with the agency did, for the control that asked. A value, not a
+ * redirect, for the same reason as {@link MarkCertifiedResult}.
+ */
+export type AgencyCheckResult =
+  | null
+  | {
+      ok: true;
+      /** The agency's page named this diver at this level, and the card is certified. */
+      verdict: "match";
+      undo?: { certificationId: string };
+    }
+  | { ok: true; verdict: "undone" }
+  | {
+      ok: true;
+      /** The diver is on the page, this level is not: the staffer reads it. */
+      verdict: "level_unconfirmed";
+      evidence: string;
+    }
+  | { ok: true; verdict: "no_record" | "unreadable" }
+  | { ok: false; reason: "invalid" | "not-undoable" };
+
+/**
+ * **Certify a card from the agency's own page** (H-105).
+ *
+ * The DiveDay browser extension, in the staffer's own browser, typed this
+ * diver into the agency's lookup page and handed back the page's text. The
+ * verdict is decided here, from the card and diver as the database holds them
+ * (`certificationForAgencyCheck`), never from anything the browser claims, and
+ * `judgeAgencyPage` is narrow: only the diver's name beside the claimed
+ * level's own wording certifies. Anything else returns a verdict and writes
+ * nothing. A match certifies through the ordinary review, stamped
+ * `agencyCheckedAt` with the agency's matching words as the note, and is
+ * undone the way a one-tap review is.
+ */
+export async function agencyCheckAction(
+  shopSlug: string,
+  personId: string,
+  _previous: AgencyCheckResult,
+  formData: FormData,
+): Promise<AgencyCheckResult> {
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const certificationId = cardIdFromForm(formData);
+  if (!certificationId) return { ok: false, reason: "invalid" };
+  const shopId = staff.user.shopId;
+
+  if (formData.get("intent") === "undo") {
+    // Only the review a check made, on this diver: never a sighting or a
+    // one-tap review, which have their own Undo.
+    if (!(await isAgencyCheckedCard(db, { shopId, personId, certificationId }))) {
+      return { ok: false, reason: "not-undoable" };
+    }
+    const undone = await unreviewCertification(db, { shopId, certificationId });
+    revalidatePath(base);
+    return undone.ok ? { ok: true, verdict: "undone" } : { ok: false, reason: "not-undoable" };
+  }
+
+  const pageText = formData.get("pageText");
+  if (typeof pageText !== "string") return { ok: false, reason: "invalid" };
+  const card = await certificationForAgencyCheck(db, { shopId, personId, certificationId });
+  if (!card) return { ok: false, reason: "invalid" };
+  const judged = judgeAgencyPage({
+    ...card.query,
+    level: card.level,
+    pageText: pageText.slice(0, PAGE_TEXT_MAX_LENGTH),
+  });
+  if (judged.verdict === "level_unconfirmed") {
+    return { ok: true, verdict: "level_unconfirmed", evidence: judged.evidence };
+  }
+  if (judged.verdict !== "match") return { ok: true, verdict: judged.verdict };
+
+  const outcome = await reviewCertification(db, {
+    shopId,
+    certificationId,
+    status: "verified",
+    reviewedByPersonId: staff.user.personId,
+    reviewNote: judged.evidence,
+    agencyChecked: true,
+  });
+  revalidatePath(base);
+  if (!outcome.ok) return { ok: false, reason: "invalid" };
+  return { ok: true, verdict: "match", undo: { certificationId } };
 }
 
 export async function saveProfileAction(shopSlug: string, personId: string, formData: FormData) {

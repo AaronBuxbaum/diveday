@@ -157,7 +157,7 @@
     "openCrewRollCallStale": "Dive {dive} crew count never closed: {uncounted, plural, one {# of {total} crew has} other {# of {total} crew have}} no result. Reconstruct it from the manifest.",
     "departureCountOpen": "Dock count unfinished: {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result.",
     "noRollCall": "No roll call recorded for {total, plural, one {# diver} other {# divers}}.",
-    "missingFit": "{count, plural, one {# diver} other {# divers}} missing rental sizes.",
+    "missingFit": "{count, plural, one {# person} other {# people}} missing rental sizes.",
     "missingFitNamed": "Missing rental sizes.",
     "ungatedNitrox": "{count, plural, one {# diver wants} other {# divers want}} nitrox with no verified card.",
     "ungatedNitroxNamed": "Wants nitrox, no verified card.",
