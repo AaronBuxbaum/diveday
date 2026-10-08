@@ -1521,6 +1521,7 @@ export async function listTripsReadiness(
           .select({
             id: trips.id,
             startsAt: trips.startsAt,
+            courseId: trips.courseId,
             minimumAge: courses.minimumAge,
             priceCents: trips.priceCents,
             snorkelerPriceCents: trips.snorkelerPriceCents,
@@ -1559,9 +1560,11 @@ export async function listTripsReadiness(
   const personIds = waiverRows.map((row) => row.person.id);
   // The forms each course session asks its students to sign, and every
   // signature on these seats (ADR 20261008-course-forms). Sequential, not in
-  // `queryAll` above: the second read is skipped when no trip here is a
-  // course session that asks for any.
-  const courseFormsByTrip = await requiredCourseFormsForTrips(db, shopId, tripIds, now);
+  // `queryAll` above: both reads are skipped when no trip here is a course
+  // session, so a fun-dive render pays nothing for forms
+  // (`staff-render-cost.test.ts`).
+  const courseTripIds = courseRows.filter((c) => c.courseId !== null).map((c) => c.id);
+  const courseFormsByTrip = await requiredCourseFormsForTrips(db, shopId, courseTripIds, now);
   const courseFormSignatures =
     courseFormsByTrip.size === 0
       ? []
