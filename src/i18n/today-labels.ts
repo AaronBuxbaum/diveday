@@ -52,6 +52,8 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   gear_overdue: "today.actionKind.gearOverdue",
   gear_due_back: "today.actionKind.gearDueBack",
   gear_service_due: "today.actionKind.gearServiceDue",
+  work_order_late: "today.actionKind.workOrderLate",
+  work_order_uncollected: "today.actionKind.workOrderUncollected",
   staff_credential_due: "today.actionKind.staffCredentialDue",
   units_unconfirmed: "today.actionKind.unitsUnconfirmed",
   say_hello: "today.actionKind.sayHello",
@@ -900,6 +902,29 @@ export function openGearRegisterActionText(t: StaffTranslator): string {
 
 export function openGearUnitActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openGearUnit");
+}
+
+/** A bench ticket still being worked after the day the shop promised it. */
+export function workOrderLateDetailText(
+  t: StaffTranslator,
+  input: { promisedOn: string; statusLabel: string },
+): string {
+  return t("benchFollowUp.today.pastPromise", {
+    date: input.promisedOn,
+    status: input.statusLabel,
+  });
+}
+
+/** A bench ticket ready for a week or more that nobody has collected. */
+export function workOrderUncollectedDetailText(
+  t: StaffTranslator,
+  input: { readyOn: string },
+): string {
+  return t("benchFollowUp.today.uncollected", { date: input.readyOn });
+}
+
+export function openWorkOrderActionText(t: StaffTranslator): string {
+  return t("benchFollowUp.today.openTicket");
 }
 
 /** Where a row about one diver points when its own control is not the answer. */

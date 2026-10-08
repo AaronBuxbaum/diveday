@@ -489,6 +489,34 @@ export async function lastServiceReminders(
   return out;
 }
 
+/** What the reminder pass knows about one of a diver's pieces. */
+export type ServiceReminderState = {
+  off: boolean;
+  /** When the last service reminder for this piece actually went, if one did. */
+  lastSentAt: Date | null;
+};
+
+/** The diver record's read: each piece's switch and its last reminder sent. */
+export async function serviceReminderStates(
+  db: DbExecutor,
+  shopId: string,
+  customerGearItemIds: readonly string[],
+): Promise<Map<string, ServiceReminderState>> {
+  const [off, last] = await Promise.all([
+    piecesWithRemindersOff(db, shopId, customerGearItemIds),
+    lastServiceReminders(db, shopId, customerGearItemIds),
+  ]);
+  return new Map(
+    customerGearItemIds.map((id) => {
+      const reminder = last.get(id);
+      return [
+        id,
+        { off: off.has(id), lastSentAt: reminder?.status === "sent" ? reminder.at : null },
+      ];
+    }),
+  );
+}
+
 export type ServiceReminderRunSummary = {
   /** Live customer pieces with a due date inside the window, before any rule. */
   scanned: number;

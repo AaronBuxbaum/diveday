@@ -19,6 +19,7 @@ import { personThread } from "@/db/inbound-messages";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
+import { serviceReminderStates } from "@/db/work-order-follow-up";
 import { listCustomerGearItems, listWorkOrdersForPerson } from "@/db/work-orders";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -29,6 +30,7 @@ import { bookingIsAhead, splitDiverStatus } from "@/lib/diver-status";
 import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { customerGearDueDates } from "@/lib/work-order-follow-up";
 import { ActivitySection } from "./_components/ActivitySection";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationsGroup } from "./_components/CertificationsGroup";
@@ -212,6 +214,13 @@ export default async function DiverDetailPage({
       todayLocal: calendarDateInTimezone(nowDate(), shop.timezone),
     }),
   ]);
+  // Only a piece with a due date has a reminder to switch off (ADR
+  // 20261008-work-order-follow-up).
+  const pieceReminders = await serviceReminderStates(
+    db,
+    shop.id,
+    ownPieces.filter((piece) => customerGearDueDates(piece).length > 0).map((piece) => piece.id),
+  );
   // `orders/new` refuses outright without a payable account, so the story's
   // foot simply omits "New invoice" rather than offering a link that bounces.
   // Connecting payments is a Settings errand and left this page with the ADR.
@@ -453,6 +462,8 @@ export default async function DiverDetailPage({
             pieces={ownPieces}
             orders={diverWorkOrders}
             locale={locale}
+            timezone={shop.timezone}
+            reminders={pieceReminders}
             t={t}
             status={noticeForForm(diverNotice, "work-orders")}
           />

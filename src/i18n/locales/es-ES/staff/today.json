@@ -86,6 +86,8 @@
     "gearOverdue": "Equipo atrasado",
     "gearDueBack": "Devolución hoy",
     "gearServiceDue": "Mantenimiento",
+    "workOrderLate": "Reparación atrasada",
+    "workOrderUncollected": "Reparación sin recoger",
     "staffCredentialDue": "Credencial",
     "unitsUnconfirmed": "Configuración",
     "helpRequest": "Solicitud de ayuda",

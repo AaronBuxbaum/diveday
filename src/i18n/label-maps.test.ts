@@ -39,6 +39,7 @@ import {
   planChangeText,
 } from "./closeout-labels";
 import { compassText } from "./compass-labels";
+import { customerGearDueText, customerGearPieceText } from "./customer-gear-labels";
 import {
   DIVER_DIVE_INTENT_KEYS,
   DIVER_RE_ENTRY_KEYS,
@@ -483,6 +484,24 @@ const CASES: readonly LabelMapCase[] = [
     map: "STAFF_DIVE_INTENT_KEYS",
     rows: codeRows(DIVE_INTENTS, (locale, intent) =>
       staffDiveIntentLine(staffTranslator(locale), [{ intent, count: 2 }], locale),
+    ),
+  },
+  {
+    module: "customer-gear-labels.ts",
+    map: "PIECE_KEYS",
+    rows: codeRows(GEAR_ITEM_KINDS, (locale, kind) =>
+      customerGearPieceText(diverTranslator(locale), { kind }),
+    ),
+  },
+  {
+    module: "customer-gear-labels.ts",
+    map: "DUE_KEYS",
+    rows: codeRows(GEAR_SERVICE_KINDS, (locale, clock) =>
+      customerGearDueText(diverTranslator(locale), {
+        clock,
+        piece: "regulator",
+        date: "2026-08-01",
+      }),
     ),
   },
   {
@@ -956,6 +975,7 @@ const SAME_IN_BOTH_LOCALES = new Map<string, string>([
   // The gear register's brand and initialism, and the prep list's own copy of
   // the first — one word, resolved through two maps.
   ["KIND_SOURCES.gopro", "brand name"],
+  ["PIECE_KEYS.gopro", "brand name"],
   ["KIND_SOURCES.dpv", "initialism, used untranslated"],
   ["RENTAL_ITEM_LABEL_KEYS.gopro", "brand name"],
   // The diver bundle's copy of the same ladder the staff bundle allowlists

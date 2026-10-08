@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { InsetGroup, LedgerRow } from "@/components/ui/ledger";
 import type { CustomerGearItem } from "@/db/schema";
+import type { ServiceReminderState } from "@/db/work-order-follow-up";
 import type { DiverWorkOrderRow } from "@/db/work-orders";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -14,6 +15,7 @@ import { isOpenWorkOrderStatus } from "@/lib/work-orders";
 import { deleteCustomerGearItemAction } from "../../../gear/work-orders/actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
+import { ServiceReminderToggle } from "./ServiceReminderToggle";
 
 /**
  * **The diver's own gear, and what the bench is doing with it** (ADR
@@ -35,6 +37,8 @@ export function WorkOrdersGroup({
   pieces,
   orders,
   locale,
+  timezone,
+  reminders,
   t,
   status,
 }: {
@@ -43,6 +47,9 @@ export function WorkOrdersGroup({
   pieces: CustomerGearItem[];
   orders: DiverWorkOrderRow[];
   locale: string;
+  timezone: string;
+  /** Each piece with a due date the reminder pass reads, and its switch. */
+  reminders: Map<string, ServiceReminderState>;
   t: StaffTranslator;
   /** This group's own outcome, beside the acts that earned it. */
   status?: DiverNotice;
@@ -108,6 +115,17 @@ export function WorkOrdersGroup({
                     .filter(Boolean)
                     .join(" · ")}
                 </span>
+                {reminders.has(piece.id) ? (
+                  <ServiceReminderToggle
+                    customerGearItemId={piece.id}
+                    personId={personId}
+                    pieceLabel={gearItemKindLabel(t, piece.kind)}
+                    state={reminders.get(piece.id) ?? { off: false, lastSentAt: null }}
+                    locale={locale}
+                    timezone={timezone}
+                    t={t}
+                  />
+                ) : null}
               </span>
             </LedgerRow>
           ))

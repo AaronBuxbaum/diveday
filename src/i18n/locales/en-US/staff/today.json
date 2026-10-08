@@ -86,6 +86,8 @@
     "gearOverdue": "Gear overdue",
     "gearDueBack": "Gear due back",
     "gearServiceDue": "Gear service",
+    "workOrderLate": "Late repair",
+    "workOrderUncollected": "Repair not collected",
     "staffCredentialDue": "Credential",
     "unitsUnconfirmed": "Setup",
     "helpRequest": "Help request",

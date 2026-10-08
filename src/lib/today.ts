@@ -96,6 +96,8 @@ export type TodayActionKind =
   | "gear_overdue"
   | "gear_due_back"
   | "gear_service_due"
+  | "work_order_late"
+  | "work_order_uncollected"
   | "staff_credential_due"
   | "units_unconfirmed"
   | "say_hello"
@@ -236,22 +238,28 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   gear_overdue: 29,
   gear_due_back: 30,
   gear_service_due: 31,
-  staff_credential_due: 32,
+  // The bench's two rows (ADR 20261008-work-order-follow-up). Below the
+  // register's own chase list: a customer's regulator a day past its promise
+  // is a phone call to make, not a unit missing from the racks, and a ticket
+  // ready for a week is the gentlest chase of all.
+  work_order_late: 32,
+  work_order_uncollected: 33,
+  staff_credential_due: 34,
   // Bottom of the queue, and rightly: this is a question nobody has answered
   // rather than anything that has gone wrong. It is here at all because the
   // first-run checklist that asked it stops rendering at the shop's first
   // departure — step 4 of that same checklist — so a shop that scheduled a
   // trip before opening the Units row would never be asked again, and currency
   // decides what a diver's card is charged in (issue #835).
-  units_unconfirmed: 33,
+  units_unconfirmed: 35,
   // Below even that, and rightly: nothing has gone wrong and nothing is owed.
   // It is a courtesy the desk can pay if the morning allows, so it never
   // outranks a thing somebody has to do (issue #1182).
-  say_hello: 34,
+  say_hello: 36,
   // Lower still, because it is a question about *yesterday's* boat rather than
   // anything today wants: a unit came home in a size the fit does not record,
   // and the shop may keep it or leave it (issue #1174, D14).
-  rental_fit_confirm: 35,
+  rental_fit_confirm: 37,
 };
 
 /**
@@ -479,6 +487,26 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
     "captain",
     "crew",
   ],
+  // Whoever is at the bench or the counter: the same audience as the gear
+  // register's rows, since the same people take the gear in and hand it back.
+  work_order_late: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
+  work_order_uncollected: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
   staff_credential_due: ["owner", "manager"],
   units_unconfirmed: ["owner", "manager"],
   // Every staff role: the person who says hello is whoever is at the dock when
@@ -595,6 +623,10 @@ export const ACTION_KIND_META = {
   gear_overdue: { tone: "warning" },
   gear_due_back: { tone: "neutral" },
   gear_service_due: { tone: "neutral" },
+  // Warning: the shop gave its word on a day and the day has gone. Ready and
+  // not collected is the customer's errand, not the shop's failure.
+  work_order_late: { tone: "warning" },
+  work_order_uncollected: { tone: "neutral" },
   staff_credential_due: { tone: "warning" },
   // Neutral, not warning: the shop is trading on a derived default that is
   // probably right. It wants confirming, not alarming about.

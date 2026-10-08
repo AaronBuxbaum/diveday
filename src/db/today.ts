@@ -36,6 +36,7 @@ import {
   openStaffingActionText,
   openTripActionText,
   openUnitsActionText,
+  openWorkOrderActionText,
   overRatioDetailText,
   overRatioIntroDetailText,
   ratingLapsedDetailText,
@@ -53,8 +54,11 @@ import {
   unitsUnconfirmedDetailText,
   unitsUnconfirmedSubjectText,
   waitlistSeatDetailText,
+  workOrderLateDetailText,
+  workOrderUncollectedDetailText,
 } from "@/i18n/today-labels";
 import { sayHelloSentences } from "@/i18n/welcome-cue-labels";
+import { workOrderStatusLabel } from "@/i18n/work-order-labels";
 import type { Role } from "@/lib/authz";
 import {
   calendarDateInTimezone,
@@ -164,6 +168,7 @@ import { latestTripStagesByTrip } from "./trip-stages";
 import { type CrewClash, countShopTrips, crewClashesByTrip, listStaff } from "./trips";
 import { liveTrip } from "./trips-live";
 import { sharedWelcomeSeatsByTrip } from "./welcome-cues";
+import { listWorkOrdersNeedingAttention } from "./work-order-follow-up";
 
 /**
  * Today's boat: the trip id staff would check in for right now, or null on a
@@ -2855,6 +2860,35 @@ export async function getTodayWork(
       actionLabel: openGearUnitActionText(t),
       href: `/shop/${shopSlug}/gear/${row.gearItemId}`,
       dueAt,
+    });
+  }
+  // The bench (ADR 20261008-work-order-follow-up): a ticket still being
+  // worked after the day the shop promised it, and one ready for a week that
+  // nobody has collected. A different question from the register's service
+  // clocks above — those are the shop's own units coming due, these are
+  // promises made at the counter — so a unit on the bench can carry both.
+  for (const row of await listWorkOrdersNeedingAttention(db, shopId, {
+    todayLocal,
+    timezone: timeZone,
+  })) {
+    const late = row.reason === "past_promise";
+    actions.push({
+      id: `work-order-${late ? "late" : "uncollected"}:${row.workOrderId}`,
+      kind: late ? "work_order_late" : "work_order_uncollected",
+      // Both dates are already behind the shop: today's counter work, never
+      // "imminent" — that band means boats and people.
+      urgency: late ? "now" : "later",
+      subject: row.subject,
+      context: null,
+      detail: late
+        ? workOrderLateDetailText(t, {
+            promisedOn: formatCalendarDate(row.since, locale),
+            statusLabel: workOrderStatusLabel(t, row.status),
+          })
+        : workOrderUncollectedDetailText(t, { readyOn: formatCalendarDate(row.since, locale) }),
+      actionLabel: openWorkOrderActionText(t),
+      href: `/shop/${shopSlug}/gear/work-orders/${row.workOrderId}`,
+      dueAt: localMidnight(row.since, late ? 1 : 0),
     });
   }
   // **What the day taught the shop about a diver's size** (issue #1174, D14).
