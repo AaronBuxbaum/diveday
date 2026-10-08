@@ -1991,9 +1991,30 @@ new domain concept, define it here in the same PR.
   them under one heading (**gear register groups**, next entry), which is the one place the word
   "overdue" is deliberately wider.
   Cancelling a booking releases its un-collected units; a checked-out one stays until it really
-  comes home. Assigning informs the prep page; it gates nothing at boarding. The direct-person
-  shape is modeled but deliberately has no staff form yet; booking-held rows remain prep-flow
-  shape.
+  comes home. Assigning informs the prep page; it gates nothing at boarding. Booking-held rows
+  are the prep-flow shape; person-held rows are a **counter rental** (next entry).
+- **Counter rental** — tagged units lent at the counter to a known person who is not on a boat:
+  the person-held **gear reservations** written together in one act, sharing one person and one
+  creation instant, with one inclusive window that starts no earlier than the shop's today and
+  runs at most 31 days. Staff open it from the register's "Rent out", the diver record's "Rent
+  gear" or ⌘K, and it lands on a printable **rental ticket** (who, the tags, the back-by date; no
+  signature line and no money). The set is handed over, brought home with one outcome, or
+  released if never collected, like a booking's rental set. Money is an ordinary staff invoice
+  with one `rental` line per priced unit (or one set line when the picks are exactly the shop's
+  core set), linked to the rental by `gear_reservations.order_id`; the rental itself is never a
+  charge, and an invoiced rental cannot be released until the invoice is voided. **Life support**
+  (regulator, BCD, tank, dive computer, drysuit, DPV, O2 kit, nitrox analyzer) goes only to a
+  person with a verified certification, read by the predicate boarding reads, and a drysuit also
+  wants the verified drysuit card; a pending or self-declared card clears nothing, and the way
+  past is "Card seen", the staffer capturing and certifying the card they hold. Soft goods go to
+  anybody. **The service screen** refuses a life-support unit whose service clock is overdue as of
+  the window's last day or that has an open service concern, and lends a flagged soft-goods unit
+  only with its own "Lend anyway": the one place a **service clock** gates. Counter tanks are air
+  only; a nitrox fill is not modelled. The waiver is not re-checked at the counter, a known gap:
+  the one shop-wide waiver is signed per booking (CR-015) and a counter rental has no booking.
+  Trip-scoped reads (prep, manifests) never count one; a departure's Gear tab names the units a
+  booked diver holds on one over its window. ADR 20260815-minimal-gear-register, amendment
+  2026-10-08.
 - **Gear proposal** — the unit the Gear tab offers for a piece a diver wants, so staff confirm
   instead of choose (`proposeRentalUnits`, `src/lib/gear-proposals.ts`). A proposal is never a
   reservation and never a fit check, and it gates nothing: nothing is held until a staffer taps
@@ -2039,7 +2060,12 @@ new domain concept, define it here in the same PR.
   `visual_inspection` clocks, the `o2_clean` renewal, and clockless condition `note`s. The newest
   event of a kind *is* that clock; the earliest deadline is the unit's state (ok / due soon /
   overdue), which **informs, never gates** — the dock decides whether an overdue unit dives, not
-  the software. Deliberately not a work order: no parts, no labor, no billing.
+  the software. The one exception is a **counter rental** of life support, which has no dock and
+  is refused on an overdue clock. A clock with a dive interval counts the unit's dives since its
+  service: each returned trip rental adds the departure's planned dives, and each returned
+  counter rental adds the dives the person said at the return (`dives_logged`, dated by the
+  window's first day), or nothing when nobody asked. Both are a floor. Deliberately not a work
+  order: no parts, no labor, no billing.
 - **Sizing** — BCDs and wetsuits are sized (XS–XXL and height/weight dependent), so a prep list
   groups by item *and* size; an unrecorded size is shown as a loose end, not silently dropped.
 - **Complete rental fit** — a fit is complete when *every piece the diver takes from the shop* has

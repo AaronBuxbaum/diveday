@@ -26,6 +26,7 @@ import {
   openServiceConcerns,
   type TripGearAssignment,
 } from "./gear";
+import { counterRentalsHeldDuring } from "./gear-counter-rentals";
 import { listTripPrepDivers } from "./rental-fit";
 import { getTripCrewAssignments, listStaff } from "./trips-crew";
 import { getTripWithBooked } from "./trips-record";
@@ -75,6 +76,12 @@ export type TripPrep = {
     wanted: GearAssignmentNeed[];
     /** Every unit on this row has left the counter — the whole set is out. */
     handedOver: boolean;
+    /**
+     * Units this diver holds on a counter rental over this departure's
+     * window: said on the row so nobody packs them a second regulator.
+     * Informs only; none of the counts above move for it.
+     */
+    counterHeld: { label: string; until: string }[];
   }[];
   /**
    * The unit offered for each wanted piece the register can answer on its
@@ -148,7 +155,7 @@ export async function getTripPrep(
   // (`listAvailableGearUnits`), so a unit labeled in the picker stays labeled
   // once it is assigned (second dive-domain review of the proposals).
   const heldUnits = [...assignmentsByBooking.values()].flat();
-  const [serviceClocks, concerns] = await Promise.all([
+  const [serviceClocks, concerns, counterHeld] = await Promise.all([
     latestServiceClocks(
       db,
       shop.id,
@@ -158,6 +165,12 @@ export async function getTripPrep(
       db,
       shop.id,
       heldUnits.map((assignment) => ({ id: assignment.gearItemId, kind: assignment.kind })),
+    ),
+    counterRentalsHeldDuring(
+      db,
+      shop.id,
+      divers.map((diver) => diver.personId),
+      gearWindow,
     ),
   ]);
 
@@ -219,6 +232,7 @@ export async function getTripPrep(
         wanted,
         handedOver:
           assigned.length > 0 && assigned.every((assignment) => assignment.checkedOutAt !== null),
+        counterHeld: counterHeld.get(diver.personId) ?? [],
       };
     })
     .filter((row) => row.assigned.length > 0 || row.wanted.length > 0);
