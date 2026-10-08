@@ -45,6 +45,7 @@
   },
   "record": {
     "title": "Signed waiver",
+    "diverLabel": "Diver",
     "signedLabel": "Signed",
     "signedAsLabel": "Signed as",
     "howLabel": "How",

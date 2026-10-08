@@ -271,6 +271,10 @@
   "ticket": {
     "eyebrow": "Alquiler",
     "unitsHeading": "Lo que llevas",
-    "dueBack": "Devolver antes del {date}."
+    "dueBack": "Devolver antes del {date}.",
+    "termsHeading": "Condiciones de alquiler",
+    "receivedBy": "Recibido por",
+    "printedName": "Nombre en mayúsculas",
+    "date": "Fecha"
   }
 }

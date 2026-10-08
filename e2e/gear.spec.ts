@@ -372,16 +372,20 @@ test.describe("staff", () => {
     await expect(page.getByRole("heading", { name: diverName, level: 1 })).toBeVisible();
     await expect(page.getByRole("heading", { name: "What you have" })).toBeVisible();
     await expect(page.getByText(firstTag, { exact: true })).toBeVisible();
-    // No money and nothing to sign: the two things this slip must never
-    // become (ADR 20260815-minimal-gear-register, CR-015). Scoped to the slip
-    // itself — the staff shell around it carries its own forms on every route,
-    // and they are not what this is about.
+    // A receipt for gear: the diver signs that they took these units, on a
+    // "Received by" line with a printed name and a date (Aaron, 2026-10-08;
+    // the ADR's amendment of that date). Still never a waiver and never a bill
+    // (ADR 20260815-minimal-gear-register, CR-015). Scoped to the slip itself
+    // — the staff shell around it carries its own forms on every route, and
+    // they are not what this is about.
     const slip = page.locator("#rental-ticket");
-    // The container first: every assertion below is an absence, and an absence
-    // inside a selector that matches nothing passes for the wrong reason.
-    await expect(slip).toBeVisible();
+    await expect(slip.getByText("Received by", { exact: true })).toBeVisible();
+    await expect(slip.getByText("Printed name", { exact: true })).toBeVisible();
+    await expect(slip.getByText("Date", { exact: true })).toBeVisible();
+    // The blue-mantis seed writes no rental terms, so the slip prints none.
+    await expect(slip.getByRole("heading", { name: "Rental terms" })).toHaveCount(0);
     await expect(slip.getByText("$")).toHaveCount(0);
-    await expect(slip.getByText(/signature|sign here|i agree|total|deposit/i)).toHaveCount(0);
+    await expect(slip.getByText(/i agree|waive|liabilit|total|deposit/i)).toHaveCount(0);
     await expect(slip.locator("form")).toHaveCount(0);
   });
 

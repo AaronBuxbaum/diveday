@@ -1997,9 +1997,9 @@ new domain concept, define it here in the same PR.
   the person-held **gear reservations** written together in one act, sharing one person and one
   creation instant, with one inclusive window that starts no earlier than the shop's today and
   runs at most 31 days. Staff open it from the register's "Rent out", the diver record's "Rent
-  gear" or ⌘K, and it lands on a printable **rental ticket** (who, the tags, the back-by date; no
-  signature line and no money). The set is handed over, brought home with one outcome, or
-  released if never collected, like a booking's rental set. Money is an ordinary staff invoice
+  gear" or ⌘K, and it lands on a printable **rental ticket** (who, the tags, the back-by date,
+  then the shop's **rental terms** and a "Received by" line; no money). The set is handed over,
+  brought home with one outcome, or released if never collected, like a booking's rental set. Money is an ordinary staff invoice
   with one `rental` line per priced unit (or one set line when the picks are exactly the shop's
   core set), linked to the rental by `gear_reservations.order_id`; the rental itself is never a
   charge, and an invoiced rental cannot be released until the invoice is voided. **Life support**
@@ -2015,6 +2015,12 @@ new domain concept, define it here in the same PR.
   Trip-scoped reads (prep, manifests) never count one; a departure's Gear tab names the units a
   booked diver holds on one over its window. ADR 20260815-minimal-gear-register, amendment
   2026-10-08.
+- **Rental terms** — the shop's own plain-text conditions for rented gear (`shops.rental_terms`,
+  optional, set in Settings → Rental gear), printed on every rental ticket, the trip slip and the
+  counter ticket alike, above a "Received by" line with a printed name and a date. The signature
+  says the person took the units; it is a receipt for gear, never a liability release, and the one
+  shop-wide waiver stays the only waiver (CR-015). No terms set prints none, and DiveDay supplies
+  no default. ADR 20260815-minimal-gear-register, the second amendment of 2026-10-08.
 - **Gear proposal** — the unit the Gear tab offers for a piece a diver wants, so staff confirm
   instead of choose (`proposeRentalUnits`, `src/lib/gear-proposals.ts`). A proposal is never a
   reservation and never a fit check, and it gates nothing: nothing is held until a staffer taps
@@ -2054,7 +2060,12 @@ new domain concept, define it here in the same PR.
   **Service due** sits beside the three on the same chip row without being one of them: the
   fleet-wide list of units the bench owes work — pulled off the wall, or a clock overdue or running
   out inside the month — which asks what a unit *needs* rather than where it *is*, and is the one
-  reading no group absorbs.
+  reading no group absorbs. **Rentals** sits on the same chip row for the same reason: every open
+  reservation (not yet returned, the ones starting later included) under the person who holds it,
+  trip-held and counter-held in one list (`listGearRentals`, `src/db/gear-rentals.ts`). It asks
+  *who* has the fleet rather than where a unit is; a **rental** there is the units one holder took
+  under one booking or over the counter, worded with the phase vocabulary above and the booking's
+  own money word, and the list pages by holder so one diver's set never splits.
 - **Service clock** — a unit's care deadlines, derived from its append-only service events
   (`gear_service_events`): manufacturer `service`, a tank's independent `hydro_test` and
   `visual_inspection` clocks, the `o2_clean` renewal, and clockless condition `note`s. The newest

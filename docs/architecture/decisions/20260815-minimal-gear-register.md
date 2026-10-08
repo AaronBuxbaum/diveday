@@ -417,3 +417,25 @@ the counter nobody does, and the unit is gone for days.
   counter to read. A person renting gear who has never booked a boat may have signed nothing.
   Closing it needs a waiver that belongs to the person rather than the booking, which CR-015
   does not have yet.
+
+## Amendment 2026-10-08 (second) — rental tickets carry the shop's terms and a "Received by" line
+
+Aaron decided (2026-10-08) that rental tickets print the shop's rental terms and a "Received by"
+signature line. This reverses one absence the 2026-08-20 amendment gave the trip slip and the
+first 2026-10-08 amendment gave the counter ticket; the reason for that absence is kept by how the
+line is built.
+
+- **One column: `shops.rental_terms`**, nullable plain text, at most 1,500 characters
+  (`src/lib/rental-terms.ts`). It is the shop's own words, set in Settings beside the rental
+  prices; an empty box stores `null` and prints nothing, and DiveDay supplies no default text. The
+  shop export carries it in `shop.csv`.
+- **Both tickets end the same way** (`RentalTicketReceipt`): the trip slip at
+  `/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]` and the counter ticket at
+  `/shop/[shopSlug]/gear/rentals/[ticketId]` print the terms when set, then three lines to write
+  on: "Received by", a printed name, and a date.
+- **It is a receipt for gear, never a waiver.** The signature says the person took these units.
+  Nothing on the ticket is DiveDay's wording to agree to; the only conditions are the ones the shop
+  wrote. **The one-waiver rule (CR-015) is unchanged**: the signed shop-wide release is still the
+  only liability page, and the ticket is not a second one.
+- **Still no money on a ticket.** Billing lives on the order; the counter ticket links it on screen
+  and hides the link in print.

@@ -13,7 +13,7 @@
   "src/app/shop/[shopSlug]/dive-sites/page.tsx": 631,
   "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 487,
   "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 845,
-  "src/app/shop/[shopSlug]/gear/page.tsx": 496,
+  "src/app/shop/[shopSlug]/gear/page.tsx": 470,
   "src/app/shop/[shopSlug]/orders/[id]/page.tsx": 541,
   "src/app/shop/[shopSlug]/orders/page.tsx": 850,
   "src/app/shop/[shopSlug]/page.tsx": 1052,

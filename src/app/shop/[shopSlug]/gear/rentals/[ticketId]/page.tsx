@@ -22,6 +22,7 @@ import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { GearReturnPane } from "../../../trips/[id]/prep/_components/GearReturnPane";
+import { RentalTicketReceipt } from "../../_components/RentalTicketReceipt";
 import {
   checkOutCounterRentalAction,
   releaseCounterRentalAction,
@@ -60,10 +61,12 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
  * screen with the acts that move them, and on paper as the slip the person
  * walks off with.
  *
- * The paper keeps the trip slip's deliberate absences: no signature line,
- * because the one shop-wide waiver is the only signed page (CR-015), and no
- * money, because billing lives on the order. The screen links that order, and
- * the link is hidden in print with every act.
+ * The paper ends as the trip slip does (`RentalTicketReceipt`): the shop's
+ * own rental terms when it has written any, and a "Received by" line the
+ * person signs for the units (Aaron, 2026-10-08). A receipt for gear, never a
+ * release — the one shop-wide waiver stays the only liability page (CR-015) —
+ * and no money, because billing lives on the order. The screen links that
+ * order, and the link is hidden in print with every act.
  *
  * Ungated beyond staff, like the rest of the register (H-06): handing gear
  * over is day work. Tenancy is the session's shop; another shop's id, or a
@@ -221,6 +224,7 @@ export default async function CounterRentalTicketPage({
         <p className="mt-6 text-lg">
           {t("gear.ticket.dueBack", { date: formatCalendarDate(ticket.reservedUntil, locale) })}
         </p>
+        <RentalTicketReceipt terms={shop.rentalTerms} t={t} />
         {/* Who to call when it breaks, or when it will be late — the slip is
             the one page the person carries away. */}
         <p className="mt-8 border-t border-border pt-4 text-sm text-muted">

@@ -7519,6 +7519,26 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "gear-register-service-due", scheme);
       });
 
+      // **Who has the shop's gear** (plan `rental-tracking`, layer 2): the
+      // register's Rentals view, every open rental under the person holding
+      // it. Through the trouble seed with `?gearOut=1`, so one frame holds the
+      // three things the view says: a set gone overdue leading the page, one
+      // of its units dragged onto today and saying its own state beside its
+      // tag, and a set still reserved for the wreck trip below it.
+      test(`the register's rentals view renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        await request.post("/api/test/seed-trouble-states?gearOut=1");
+        await page.goto("/shop/blue-mantis/gear?view=rentals");
+        await page.getByRole("heading", { level: 1, name: "Gear" }).waitFor();
+        const rentals = page.getByRole("region", { name: "Rentals" });
+        // Both sets, so the capture cannot land on half a list.
+        await rentals.getByRole("link", { name: "BCD #2" }).waitFor();
+        await rentals.getByRole("link", { name: "BCD #5" }).waitFor();
+        await capture(page, "gear-register-rentals", scheme);
+      });
+
       // A site's own briefing form, which is where the route a shop draws is
       // drawn. Captured on a seeded site that already has one, so the frame
       // holds the map, the curve, and its start/finish dots rather than the
@@ -8079,6 +8099,23 @@ test.describe("print", () => {
     await page.goto(`${tripPath}/log`);
     await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
     await capturePrint(page, "departure-log");
+  });
+
+  // **A signed waiver on paper** (plan `rental-tracking`, layer 2): the
+  // shop's name where the screen's way back stood, whose release it is, the
+  // signed time with its zone, the seal, and the text the diver signed. Rowan
+  // Pike's, like the screen capture, because it has the most to say.
+  test("a signed waiver prints as a document", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/schedule/board");
+    await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
+    const row = page
+      .locator("li")
+      .filter({ has: page.getByText("Rowan Pike", { exact: true }) })
+      .filter({ visible: true });
+    await row.getByRole("link", { name: "View signed record" }).click();
+    await page.getByRole("heading", { level: 1, name: "Signed waiver" }).waitFor();
+    await page.getByRole("heading", { name: "What they signed" }).waitFor();
+    await capturePrint(page, "signed-waiver");
   });
 
   // **The shop's own paper** (ADR 20260908-one-hand, decision 6, lever X). The
