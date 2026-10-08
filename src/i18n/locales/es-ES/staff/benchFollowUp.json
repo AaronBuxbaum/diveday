@@ -5,6 +5,7 @@
   "ready": {
     "heading": "Aviso de recogida",
     "pending": "Se envía al cliente cuando el trabajo está listo.",
+    "notSent": "Todavía no se ha enviado.",
     "sentEmail": "Enviado por correo el {date}",
     "sentSms": "Enviado por SMS el {date}",
     "sentWhatsapp": "Enviado por WhatsApp el {date}",

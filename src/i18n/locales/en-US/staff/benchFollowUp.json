@@ -5,6 +5,7 @@
   "ready": {
     "heading": "Ready message",
     "pending": "Goes to the customer when this ticket is ready.",
+    "notSent": "Not sent yet.",
     "sentEmail": "Emailed {date}",
     "sentSms": "Texted {date}",
     "sentWhatsapp": "Sent on WhatsApp {date}",

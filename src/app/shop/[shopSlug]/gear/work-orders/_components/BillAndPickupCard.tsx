@@ -150,7 +150,11 @@ export async function BillAndPickupCard({
           <p
             className={`mt-1 text-sm ${ready?.tone === "warning" ? "text-warning-strong" : "text-muted"}`}
           >
-            {ready ? ready.text : t("benchFollowUp.ready.pending")}
+            {ready
+              ? ready.text
+              : isReady
+                ? t("benchFollowUp.ready.notSent")
+                : t("benchFollowUp.ready.pending")}
           </p>
           {isReady ? (
             <form action={resendReadyNoticeAction} className="mt-3">
