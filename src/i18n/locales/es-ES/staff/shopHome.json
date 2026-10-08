@@ -115,9 +115,9 @@
   },
   "spine": {
     "summaryBoats": "{count, plural, one {# salida hoy.} other {# salidas hoy.}}",
-    "summaryBoatsBlocked": "{count, plural, one {# salida hoy} other {# salidas hoy}}, {blocked, plural, one {# buceador bloqueado.} other {# buceadores bloqueados.}}",
-    "summaryBoatsBlockedTomorrow": "{count, plural, one {# salida hoy} other {# salidas hoy}}, {tomorrow, plural, one {# buceador bloqueado para mañana.} other {# buceadores bloqueados para mañana.}}",
-    "summaryBoatsBlockedAboardAndTomorrow": "{count, plural, one {# salida hoy} other {# salidas hoy}}, {blocked, plural, one {# buceador bloqueado a bordo} other {# buceadores bloqueados a bordo}} y {tomorrow, plural, one {# para mañana.} other {# para mañana.}}",
+    "summaryBoatsBlocked": "{count, plural, one {# salida hoy} other {# salidas hoy}}, {blocked, plural, one {# persona bloqueada.} other {# personas bloqueadas.}}",
+    "summaryBoatsBlockedTomorrow": "{count, plural, one {# salida hoy} other {# salidas hoy}}, {tomorrow, plural, one {# persona bloqueada para mañana.} other {# personas bloqueadas para mañana.}}",
+    "summaryBoatsBlockedAboardAndTomorrow": "{count, plural, one {# salida hoy} other {# salidas hoy}}, {blocked, plural, one {# persona bloqueada a bordo} other {# personas bloqueadas a bordo}} y {tomorrow, plural, one {# para mañana.} other {# para mañana.}}",
     "summaryNext": "{count, plural, =0 {Nada te espera antes de que la de las {time} zarpe.} one {# cosa te espera antes de que la de las {time} zarpe.} other {# cosas te esperan antes de que la de las {time} zarpe.}}",
     "summaryAfter": "{count, plural, =0 {No hay nada pendiente para ti.} one {Todavía te espera # cosa.} other {Todavía te esperan # cosas.}}",
     "quietSentence": "Hoy no sale ninguna salida y no hay nada pendiente para ti.",

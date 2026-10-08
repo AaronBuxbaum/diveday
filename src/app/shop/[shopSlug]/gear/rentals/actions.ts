@@ -1,0 +1,272 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { canPersonManageOrders } from "@/db/authz";
+import { getDb } from "@/db/client";
+import { createDiver } from "@/db/divers";
+import {
+  checkOutCounterRental,
+  counterRentalPerson,
+  createCounterRental,
+  getCounterRentalTicket,
+  linkCounterRentalOrder,
+  releaseCounterRental,
+  returnCounterRental,
+} from "@/db/gear-counter-rentals";
+import { createOrder, type NewOrderLineItem } from "@/db/orders";
+import { getShopById } from "@/db/shops";
+import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
+import { counterRentalDays } from "@/lib/counter-rentals";
+import { GEAR_RETURN_OUTCOMES } from "@/lib/gear";
+import { majorToMinor } from "@/lib/money";
+import { revalidateAndRedirect } from "@/lib/navigation";
+import { customerAddressFromForm } from "@/lib/payments/customer-address-form";
+import {
+  blankableDiverEmailSchema,
+  blankableDiverNameSchema,
+  diverPhoneSchema,
+} from "@/lib/person-fields";
+import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
+import { requireStaffSession } from "@/lib/session";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { counterRentalFormPath, PRICE_FIELD_PREFIX, UNIT_FIELD } from "./rental-form";
+
+/**
+ * The counter-rental writes (ADR 20260815-minimal-gear-register, amended
+ * 2026-10-08). Gear is any-staff work (H-06), so renting a unit out is open to
+ * every staff member; sending the invoice beside it is billing, which stays
+ * owner/manager work behind the same gates as the new-order form (H-14,
+ * money step-up, a connected Stripe account) — re-checked here, not trusted
+ * from what the form rendered.
+ */
+
+const dateSchema = z.string().trim().max(10);
+// Same bounds the new-order action holds a typed price to (CR-016).
+const priceSchema = z.coerce.number().nonnegative().max(100_000);
+
+const rentalSchema = z.object({
+  personId: z.uuid(),
+  from: dateSchema,
+  until: dateSchema,
+  units: z.array(z.uuid()).max(40),
+});
+
+/**
+ * Lend the picked units, then — when asked and allowed — send the invoice for
+ * them through the ordinary staff order path.
+ *
+ * **The rental is written first, and the invoice only after it stood.** The
+ * other order bills for a unit the exclusion constraint may yet refuse, and
+ * an invoice cannot be unsent. Everything about the invoice that can be
+ * checked before the rental is (role, step-up, payments, an email to send it
+ * to, the prices), so the one partial outcome left is Stripe itself failing,
+ * which leaves the rental standing and says so.
+ */
+export async function createCounterRentalAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const db = await getDb();
+  const slug = session.user.shopSlug;
+  const parsed = rentalSchema.safeParse({
+    personId: String(formData.get("personId") ?? ""),
+    from: String(formData.get("from") ?? ""),
+    until: String(formData.get("until") ?? ""),
+    units: formData.getAll(UNIT_FIELD).map(String),
+  });
+  const blankForm = shopPath(slug, "gear", "rentals", "new");
+  if (!parsed.success) redirect(noticeUrl(blankForm, "invalid"));
+  const { personId, from, until, units } = parsed.data;
+  const form = counterRentalFormPath(slug, { personId, from, until });
+
+  const shop = await getShopById(db, session.user.shopId);
+  if (!shop) redirect(noticeUrl(blankForm, "invalid"));
+  const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
+
+  const wantsInvoice = formData.get("invoice") === "on";
+  let lineCents = new Map<string, number>();
+  if (wantsInvoice) {
+    if (!(await canPersonManageOrders(db, shop.id, session.user.personId))) {
+      redirect(noticeUrl(form, "not-authorized"));
+    }
+    if (!(await hasRequiredStepUp(db, session, "money"))) {
+      redirect(stepUpChallengeUrl(slug, "money", form));
+    }
+    if (!canAcceptPayments(await getShopStripeAccount(db, shop.id))) {
+      redirect(noticeUrl(form, "payment-not-connected"));
+    }
+    const person = await counterRentalPerson(db, shop.id, personId);
+    if (person && !person.email) redirect(noticeUrl(form, "needs-email"));
+    lineCents = new Map();
+    for (const unitId of units) {
+      const raw = String(formData.get(`${PRICE_FIELD_PREFIX}${unitId}`) ?? "").trim();
+      if (!raw) continue;
+      const price = priceSchema.safeParse(raw);
+      if (!price.success) redirect(noticeUrl(form, "invalid"));
+      lineCents.set(unitId, majorToMinor(price.data, shop.currency));
+    }
+  }
+
+  const outcome = await createCounterRental(db, {
+    shopId: shop.id,
+    personId,
+    gearItemIds: units,
+    reservedFrom: from,
+    reservedUntil: until,
+    todayLocal,
+  });
+  if (!outcome.ok) {
+    redirect(
+      noticeUrl(
+        form,
+        outcome.reason,
+        outcome.reason === "unit_unavailable" && outcome.unitLabel
+          ? { unit: outcome.unitLabel }
+          : undefined,
+      ),
+    );
+  }
+
+  const ticket = shopPath(slug, "gear", "rentals", outcome.ticketId);
+  const gear = shopPath(slug, "gear");
+  const billed = [...lineCents.values()].some((cents) => cents > 0);
+  if (!wantsInvoice || !billed) revalidateAndRedirect(gear, noticeUrl(ticket, "rented"));
+
+  // The invoice's words come from the staffer's bundle, as on the new-order
+  // form, and are frozen onto the invoice by `createOrder`. One line per unit
+  // with a price above zero: a unit lent free is not a line on a bill.
+  const rental = await getCounterRentalTicket(db, shop.id, outcome.ticketId);
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const days = counterRentalDays(from, until);
+  const lineItems: NewOrderLineItem[] = (rental?.units ?? []).flatMap((unit) => {
+    const cents = lineCents.get(unit.gearItemId) ?? 0;
+    if (cents <= 0) return [];
+    return [
+      {
+        kind: "rental",
+        description: t("counterRentals.invoiceLine", { label: unit.label, days }),
+        quantity: 1,
+        unitAmountCents: cents,
+      },
+    ];
+  });
+  const order = await createOrder(db, {
+    shopId: shop.id,
+    personId,
+    createdByPersonId: session.user.personId,
+    customerAddress: shop.taxEnabled ? customerAddressFromForm(formData) : undefined,
+    lineItems,
+  });
+  if (!order.ok) revalidateAndRedirect(gear, noticeUrl(ticket, "rented-not-invoiced"));
+
+  await linkCounterRentalOrder(db, {
+    shopId: shop.id,
+    reservationIds: outcome.reservationIds,
+    orderId: order.order.id,
+  });
+  // `createOrder` queued an `order.created` event for the shop's integrations;
+  // drain it after the response, as the new-order form does.
+  dispatchIntegrationsAfterResponse();
+  revalidateAndRedirect(gear, noticeUrl(ticket, "rented-invoiced"));
+}
+
+const personSchema = z
+  .object({
+    fullName: blankableDiverNameSchema,
+    email: blankableDiverEmailSchema,
+    phone: diverPhoneSchema,
+  })
+  .refine(({ fullName, email, phone }) => Boolean(fullName || email || phone));
+
+/**
+ * Put a new person on file from the rent-out form and carry on renting to
+ * them. `createDiver` is the roster's own create — "enter once, reuse
+ * everywhere" — and refuses an email somebody already has, which sends the
+ * staffer back to the search rather than splitting one person in two.
+ */
+export async function addCounterRentalPersonAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const db = await getDb();
+  const slug = session.user.shopSlug;
+  const blankForm = shopPath(slug, "gear", "rentals", "new");
+  const parsed = personSchema.safeParse({
+    fullName: String(formData.get("fullName") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    phone: String(formData.get("phone") ?? ""),
+  });
+  if (!parsed.success) redirect(noticeUrl(blankForm, "invalid"));
+  const person = await createDiver(db, { shopId: session.user.shopId, ...parsed.data });
+  if (!person) redirect(noticeUrl(blankForm, "duplicate"));
+  revalidateAndRedirect(
+    shopPath(slug, "divers"),
+    counterRentalFormPath(slug, { personId: person.id }),
+  );
+}
+
+const ticketSchema = z.object({ ticketId: z.uuid() });
+const returnSchema = ticketSchema.extend({
+  outcome: z.enum(GEAR_RETURN_OUTCOMES),
+  note: z.string().trim().max(400).optional(),
+});
+
+function ticketLanding(slug: string, parsed: { success: boolean; data?: { ticketId: string } }) {
+  if (!parsed.success || !parsed.data) {
+    const gear = shopPath(slug, "gear");
+    revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
+  }
+  return shopPath(slug, "gear", "rentals", parsed.data.ticketId);
+}
+
+/** Hand the whole rental across — every unit still on the wall. */
+export async function checkOutCounterRentalAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const parsed = ticketSchema.safeParse(Object.fromEntries(formData));
+  const ticket = ticketLanding(session.user.shopSlug, parsed);
+  const outcome = await checkOutCounterRental(await getDb(), {
+    shopId: session.user.shopId,
+    ticketId: parsed.data?.ticketId ?? "",
+  });
+  revalidateAndRedirect(
+    shopPath(session.user.shopSlug, "gear"),
+    noticeUrl(ticket, outcome.ok ? "handed-over" : outcome.reason),
+  );
+}
+
+/** Bring the whole rental home, the outcome asked once. */
+export async function returnCounterRentalAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const parsed = returnSchema.safeParse(Object.fromEntries(formData));
+  const ticket = ticketLanding(session.user.shopSlug, parsed);
+  if (!parsed.data) return;
+  const outcome = await returnCounterRental(await getDb(), {
+    shopId: session.user.shopId,
+    ticketId: parsed.data.ticketId,
+    outcome: parsed.data.outcome,
+    note: parsed.data.note,
+  });
+  revalidateAndRedirect(
+    shopPath(session.user.shopSlug, "gear"),
+    noticeUrl(ticket, outcome.ok ? "returned" : outcome.reason),
+  );
+}
+
+/** Let go of what the person never came back for. */
+export async function releaseCounterRentalAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const parsed = ticketSchema.safeParse(Object.fromEntries(formData));
+  const ticket = ticketLanding(session.user.shopSlug, parsed);
+  const db = await getDb();
+  const outcome = await releaseCounterRental(db, {
+    shopId: session.user.shopId,
+    ticketId: parsed.data?.ticketId ?? "",
+  });
+  const gear = shopPath(session.user.shopSlug, "gear");
+  if (!outcome.ok) revalidateAndRedirect(gear, noticeUrl(ticket, outcome.reason));
+  // Every unit released leaves no ticket to land on; the register says it.
+  const left = await getCounterRentalTicket(db, session.user.shopId, parsed.data?.ticketId ?? "");
+  revalidateAndRedirect(gear, noticeUrl(left ? ticket : gear, "released"));
+}

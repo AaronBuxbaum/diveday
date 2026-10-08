@@ -89,8 +89,8 @@ describe("HeadCount with blocked divers", () => {
     const { container } = render(
       <HeadCount aboard={8} out={8} blocked={2} blockedAboard={1} t={t} />,
     );
-    expect(screen.getByText("1 blocked diver aboard")).toHaveClass("text-danger", "font-bold");
-    expect(container.textContent).toBe("8of 8 divers aboard1 blocked diver aboard2 blocked");
+    expect(screen.getByText("1 blocked person aboard")).toHaveClass("text-danger", "font-bold");
+    expect(container.textContent).toBe("8of 8 divers aboard1 blocked person aboard2 blocked");
   });
 
   it("adds nothing when nobody is blocked", () => {

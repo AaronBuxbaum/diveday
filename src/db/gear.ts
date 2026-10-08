@@ -83,6 +83,16 @@ function optional(value: string | undefined) {
  */
 const liveGearItem = () => isNull(gearItems.deletedAt);
 
+/**
+ * Who holds a reservation, as one person id for either holder shape (the
+ * `gear_reservations_one_holder` check): the booking's diver for a seat, the
+ * row's own `person_id` for a counter rental. A reader that answers "what's
+ * out, who has it" joins `people` on this, with `bookings` left-joined, so a
+ * counter rental is never invisible. Trip-scoped reads stay booking-only.
+ */
+const reservationHolder = () =>
+  sql<string>`coalesce(${bookings.personId}, ${gearReservations.personId})`;
+
 // ---------------------------------------------------------------------------
 // Items
 // ---------------------------------------------------------------------------
@@ -1112,7 +1122,12 @@ async function reservationStamps(
 /** What the register row says about where a unit is. */
 export type GearRowReservation = {
   reservationId: string;
-  bookingId: string;
+  /**
+   * The seat this unit rides on, or null for a **counter rental** — a unit
+   * lent to a person who is not on a boat (`src/db/gear-counter-rentals.ts`).
+   * The holder's name reads the same either way.
+   */
+  bookingId: string | null;
   reservedFrom: CalendarDate;
   reservedUntil: CalendarDate;
   checkedOutAt: Date | null;
@@ -1393,8 +1408,7 @@ async function listOpenReservations(
     .select({
       gearItemId: gearReservations.gearItemId,
       reservationId: gearReservations.id,
-      // This reader is intentionally booking-only; the inner join is the shape guard, and `bookings.id` keeps that fact non-null in the type.
-      bookingId: bookings.id,
+      bookingId: gearReservations.bookingId,
       reservedFrom: gearReservations.reservedFrom,
       reservedUntil: gearReservations.reservedUntil,
       checkedOutAt: gearReservations.checkedOutAt,
@@ -1408,11 +1422,13 @@ async function listOpenReservations(
       tripEndsAt: trips.endsAt,
     })
     .from(gearReservations)
-    .innerJoin(bookings, eq(bookings.id, gearReservations.bookingId))
+    // Both holder shapes: a seat names its diver through the booking, and a
+    // counter rental names its person directly (`reservationHolder`).
+    .leftJoin(bookings, eq(bookings.id, gearReservations.bookingId))
     // The shop condition on the joined person is defense-in-depth: today the
     // reservation writer proves all three rows share a shop, and this keeps a
     // future mismatched row from ever rendering another tenant's name here.
-    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
+    .innerJoin(people, and(eq(people.id, reservationHolder()), eq(people.shopId, shopId)))
     .leftJoin(trips, eq(trips.id, bookings.tripId))
     .where(
       and(
@@ -1581,8 +1597,7 @@ async function listItemReservationHistory(
   const rows = await db
     .select({
       reservationId: gearReservations.id,
-      // A unit's historical booking row, not a future counter-rental reader.
-      bookingId: bookings.id,
+      bookingId: gearReservations.bookingId,
       reservedFrom: gearReservations.reservedFrom,
       reservedUntil: gearReservations.reservedUntil,
       checkedOutAt: gearReservations.checkedOutAt,
@@ -1594,11 +1609,11 @@ async function listItemReservationHistory(
       tripEndsAt: trips.endsAt,
     })
     .from(gearReservations)
-    .innerJoin(bookings, eq(bookings.id, gearReservations.bookingId))
+    .leftJoin(bookings, eq(bookings.id, gearReservations.bookingId))
     // The shop condition on the joined person is defense-in-depth: today the
     // reservation writer proves all three rows share a shop, and this keeps a
     // future mismatched row from ever rendering another tenant's name here.
-    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
+    .innerJoin(people, and(eq(people.id, reservationHolder()), eq(people.shopId, shopId)))
     .leftJoin(trips, eq(trips.id, bookings.tripId))
     .where(and(eq(gearReservations.shopId, shopId), eq(gearReservations.gearItemId, gearItemId)))
     .orderBy(desc(gearReservations.reservedFrom), desc(gearReservations.createdAt))
@@ -2078,11 +2093,13 @@ async function listReturnRows(
       })
       .from(gearReservations)
       .innerJoin(gearItems, eq(gearItems.id, gearReservations.gearItemId))
-      .innerJoin(bookings, eq(bookings.id, gearReservations.bookingId))
+      // Counter rentals too: a unit lent across the counter is due back and
+      // goes overdue exactly like one that rode a boat.
+      .leftJoin(bookings, eq(bookings.id, gearReservations.bookingId))
       // The shop condition on the joined person is defense-in-depth: today the
       // reservation writer proves all three rows share a shop, and this keeps a
       // future mismatched row from ever rendering another tenant's name here.
-      .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
+      .innerJoin(people, and(eq(people.id, reservationHolder()), eq(people.shopId, shopId)))
       .leftJoin(trips, eq(trips.id, bookings.tripId))
       .where(
         and(

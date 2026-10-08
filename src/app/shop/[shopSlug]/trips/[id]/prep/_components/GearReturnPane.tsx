@@ -31,15 +31,17 @@ import { controlClass, Field } from "@/components/ui/form";
  * "this needs a technician" into "somebody was mildly annoyed". The concern is
  * a flag on the reservation that a technician promotes deliberately, and it
  * shows on the unit's own page where they are already looking.
+ *
+ * **The set is whatever the action's hidden fields name** — a booking on a
+ * departure here, a counter rental's ticket on `/gear/rentals` — so one pane
+ * asks the one question wherever a set comes home.
  */
 export function GearReturnPane({
-  tripId,
-  bookingId,
+  fields,
   action,
   labels,
 }: {
-  tripId: string;
-  bookingId: string;
+  fields: Record<string, string>;
   action: (formData: FormData) => Promise<void>;
   labels: {
     allGood: string;
@@ -53,8 +55,9 @@ export function GearReturnPane({
 
   return (
     <form action={action} className="mt-2 flex flex-col gap-2 print:hidden">
-      <input type="hidden" name="tripId" value={tripId} />
-      <input type="hidden" name="bookingId" value={bookingId} />
+      {Object.entries(fields).map(([name, value]) => (
+        <input key={name} type="hidden" name={name} value={value} />
+      ))}
       <div className="flex flex-wrap items-center gap-2">
         {/* `formNoValidate` on both fast answers, and it is load-bearing:
             arming the concern puts a `required` note in the same form, and

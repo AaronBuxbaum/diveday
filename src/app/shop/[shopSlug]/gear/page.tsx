@@ -41,6 +41,7 @@ import { AddUnitLink } from "./_components/AddUnitLink";
 import { DeletedList } from "./_components/DeletedGearList";
 import { GearRegisterLedger, GearServiceDueList } from "./_components/GearRegisterLedger";
 import { GearRentalsList } from "./_components/GearRentalsList";
+import { RegisterHeaderActions } from "./_components/RegisterHeaderActions";
 import {
   checkOutGearReservationAction,
   createGearItemAction,
@@ -274,13 +275,9 @@ export default async function GearRegisterPage({
       <FlashParams params={["notice", "undoId"]} />
       <ShopPageHeader
         title={t("gear.title")}
-        // The page's primary (UX audit 2026-10-07, item 31) opens the "Add a unit"
-        // band at the foot; the empty register keeps its door in the card below.
-        actions={
-          fleetTotal > 0 ? (
-            <AddUnitLink className={buttonClass()}>{t("gear.addUnit.title")}</AddUnitLink>
-          ) : undefined
-        }
+        // Rent out, then the page's primary "Add a unit"; the empty register
+        // keeps its one door in the card below.
+        actions={fleetTotal > 0 ? <RegisterHeaderActions shopSlug={shopSlug} t={t} /> : undefined}
       />
 
       {notice === "deleted" && search.undoId ? (

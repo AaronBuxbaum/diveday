@@ -3992,7 +3992,7 @@ for (const scheme of ["light", "dark"] as const) {
       // 20260827-clearwater-surface-language, decision 11) — so the shipped
       // capture showed the instrument painting all-clear over three divers
       // readiness will not clear. What it holds now is the honest reading: a
-      // red band on the meter, "3 divers can't board yet", and those three
+      // red band on the meter, "3 people can't board yet", and those three
       // still in "Still to clear" with their badges and their reasons. The
       // coral moment itself is pinned by `CounterInstrument.test.tsx`, which
       // can put a genuinely clear boat in front of it.
@@ -7412,6 +7412,32 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("link", { name: "AL80-03" }).click();
         await page.getByRole("heading", { level: 1, name: "AL80-03" }).waitFor();
         await capture(page, "gear-unit", scheme);
+      });
+
+      // Renting gear out at the counter (ADR 20260815-minimal-gear-register,
+      // amended 2026-10-08): the person chosen, today's window, and the units
+      // free for it grouped by kind. The demo shop has no payments connected,
+      // so no invoice section; the form a crew member sees.
+      test(`the rent-out form renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
+        await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
+        await page.getByRole("group", { name: "Units free for these days" }).waitFor();
+        await page.getByRole("checkbox", { name: /AL63-02/ }).waitFor();
+        await capture(page, "counter-rental-form", scheme);
+      });
+
+      // The ticket the person walks off with: who, the tags, the back-by
+      // date, and on screen the acts. Rented here rather than seeded so the
+      // capture is the ticket a counter lands on, notice and all.
+      test(`a counter rental's ticket renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
+        await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
+        await page.getByRole("checkbox", { name: /Mask #1/ }).check();
+        await page.getByRole("checkbox", { name: /Fins #1/ }).check();
+        await page.getByRole("button", { name: "Rent out", exact: true }).click();
+        await page.getByRole("status").filter({ hasText: "Rented out." }).waitFor();
+        await page.getByRole("button", { name: "Hand over" }).waitFor();
+        await capture(page, "counter-rental-ticket", scheme);
       });
 
       // The way back to a deleted unit (ADR 20260820-every-delete-is-soft):

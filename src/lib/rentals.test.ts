@@ -375,6 +375,22 @@ describe("rentalFitCompleteness", () => {
     expect(rentalFitCompleteness(undefined)).toEqual({ state: "not_recorded" });
   });
 
+  it("asks a snorkeler for the surface kit only, and a rider for nothing", () => {
+    // Regression (PR #2224 follow-up): the trip pulse and Today counted a rider
+    // with no fit, and a snorkeler with no BCD size, as missing rental sizes.
+    const scuba = { ...OWN_KIT, rentsBcd: true, rentsWeights: true, finSize: "M" };
+    expect(rentalFitCompleteness(scuba, undefined, "snorkeler")).toEqual({ state: "complete" });
+    expect(rentalFitCompleteness({ ...scuba, rentsWetsuit: true }, undefined, "snorkeler")).toEqual(
+      { state: "incomplete", missing: ["wetsuit"] },
+    );
+    expect(rentalFitCompleteness(scuba, undefined, "diver")).toEqual({
+      state: "incomplete",
+      missing: ["bcd", "weights"],
+    });
+    expect(rentalFitCompleteness(null, undefined, "rider")).toEqual({ state: "complete" });
+    expect(rentalFitCompleteness(scuba, undefined, "rider")).toEqual({ state: "complete" });
+  });
+
   it("counts a diver who rents nothing as complete — own kit is an answer", () => {
     expect(rentalFitCompleteness(OWN_KIT)).toEqual({ state: "complete" });
   });

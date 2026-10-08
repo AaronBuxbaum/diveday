@@ -126,6 +126,7 @@ export type StaffDestinationId =
   | "staffing"
   | "diveSites"
   | "gear"
+  | "rentOut"
   | "courses"
   | "reviews"
   | "requests"
@@ -182,6 +183,7 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   staffing: "shared.shopNavLinks.staffing",
   diveSites: "shared.shopNavLinks.diveSites",
   gear: "shared.shopNavLinks.gear",
+  rentOut: "shared.shopNavLinks.rentOut",
   courses: "shared.shopNavLinks.courses",
   reviews: "shared.shopNavLinks.reviews",
   requests: "shared.shopNavLinks.requests",
@@ -277,6 +279,9 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // The rental fleet (ADR 20260815-minimal-gear-register). Ungated: gear is
   // any-staff work (H-06).
   { id: "gear", suffix: "/gear", section: "gear", inPalette: true },
+  // The counter-rental door: an act, like "Add a booking" (ADR
+  // 20260815-minimal-gear-register, amended 2026-10-08). Any staff, as gear is.
+  { id: "rentOut", suffix: "/gear/rentals/new", section: "gear", inPalette: true },
   // What a shop sets up rather than works.
   { id: "diveSites", suffix: "/dive-sites", section: "settings", inPalette: true },
   { id: "waivers", suffix: "/waivers", section: "settings", inPalette: true, gate: "waivers" },

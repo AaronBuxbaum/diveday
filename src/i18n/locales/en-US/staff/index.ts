@@ -31,6 +31,7 @@ import calendar from "./calendar.json";
 import calls from "./calls.json";
 import checkIn from "./checkIn.json";
 import closeout from "./closeout.json";
+import counterRentals from "./counterRentals.json";
 import courses from "./courses.json";
 import divers from "./divers.json";
 import diveSites from "./diveSites.json";
@@ -74,6 +75,7 @@ const staff = {
   gearRentals,
   divers,
   courses,
+  counterRentals,
   diveSites,
   orders,
   orderLine,

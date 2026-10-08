@@ -1982,9 +1982,18 @@ new domain concept, define it here in the same PR.
   them under one heading (**gear register groups**, next entry), which is the one place the word
   "overdue" is deliberately wider.
   Cancelling a booking releases its un-collected units; a checked-out one stays until it really
-  comes home. Assigning informs the prep page; it gates nothing at boarding. The direct-person
-  shape is modeled but deliberately has no staff form yet; booking-held rows remain prep-flow
-  shape.
+  comes home. Assigning informs the prep page; it gates nothing at boarding. Booking-held rows
+  are the prep-flow shape; person-held rows are a **counter rental** (next entry).
+- **Counter rental** — tagged units lent at the counter to a known person who is not on a boat:
+  the person-held **gear reservations** written together in one act, sharing one person and one
+  creation instant, with one inclusive window that starts no earlier than the shop's today and
+  runs at most 31 days. Staff open it from the register's "Rent out", the diver record's "Rent
+  gear" or ⌘K, and it lands on a printable **rental ticket** (who, the tags, the back-by date; no
+  signature line and no money). The set is handed over, brought home with one outcome, or
+  released if never collected, like a booking's rental set. Money is an ordinary staff invoice
+  with one `rental` line per priced unit, linked to the rental by `gear_reservations.order_id`;
+  the rental itself is never a charge. Trip-scoped reads (prep, manifests) never see one. ADR
+  20260815-minimal-gear-register, amendment 2026-10-08.
 - **Gear proposal** — the unit the Gear tab offers for a piece a diver wants, so staff confirm
   instead of choose (`proposeRentalUnits`, `src/lib/gear-proposals.ts`). A proposal is never a
   reservation and never a fit check, and it gates nothing: nothing is held until a staffer taps

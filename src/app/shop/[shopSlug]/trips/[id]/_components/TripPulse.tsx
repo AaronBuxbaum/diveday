@@ -4,7 +4,7 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SUB_TITLE_CLASS } from "@/components/ui/typography";
 
 export type TripPulseFact = {
-  /** The whole sentence — "1 diver can’t board yet" — never a bare count. */
+  /** The whole sentence — "1 person can’t board yet" — never a bare count. */
   text: string;
   /**
    * Where the fix lives: the filtered roster, the prep list, the crew panel,
