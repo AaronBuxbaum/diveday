@@ -29,6 +29,7 @@ import {
   tripReviews,
   trips,
   waiverRecords,
+  workOrders,
 } from "@/db/schema";
 import { seatDiver } from "@/db/seat-diver";
 import { getShopBySlug } from "@/db/shops";
@@ -338,6 +339,13 @@ export async function POST(request: Request) {
   // register's Overdue group would have paid for it.
   if (new URL(request.url).searchParams.get("gearOut") === "1") {
     await putOneUnitOutToday(db, shop.id, now, shop.timezone);
+  }
+
+  // Opt-in: a late ticket and an uncollected one are two rows on Today (ADR
+  // 20261008-work-order-follow-up), and every other Today capture would have
+  // paid for them.
+  if (new URL(request.url).searchParams.get("bench") === "1") {
+    await putTheBenchBehind(db, shop.id, now, shop.timezone);
   }
 
   // Opt-in, and the widest-reaching of the lot: taking the crew off a
@@ -931,6 +939,31 @@ async function unsignTheSeededMinorsRelease(
       ),
     );
   return { bookingId: seat.id, tripId: seat.tripId };
+}
+
+/**
+ * **The bench running behind** (ADR 20261008-work-order-follow-up): the
+ * seeded in-progress ticket's promised day moved to two days ago, and the
+ * ticket waiting on a part moved to ready nine days ago, so Today carries one
+ * late row and one uncollected row. Dragged rather than seeded: a demo bench
+ * that is always behind is a worse demo.
+ */
+async function putTheBenchBehind(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  now: Date,
+  timezone: string,
+) {
+  await db
+    .update(workOrders)
+    .set({
+      promisedOn: calendarDateInTimezone(new Date(now.getTime() - 2 * 24 * HOUR_MS), timezone),
+    })
+    .where(and(eq(workOrders.shopId, shopId), eq(workOrders.status, "in_progress")));
+  await db
+    .update(workOrders)
+    .set({ status: "ready", readyAt: new Date(now.getTime() - 9 * 24 * HOUR_MS) })
+    .where(and(eq(workOrders.shopId, shopId), eq(workOrders.status, "waiting_on_parts")));
 }
 
 /**

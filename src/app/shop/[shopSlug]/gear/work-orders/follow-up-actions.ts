@@ -55,7 +55,9 @@ export async function resendReadyNoticeAction(formData: FormData) {
       ? "ready-sent"
       : outcome.status === "no_contact"
         ? "ready-no-contact"
-        : "ready-failed";
+        : outcome.status === "not_configured"
+          ? "ready-not-configured"
+          : "ready-failed";
   revalidateAndRedirect(landing, noticeUrl(landing, code));
 }
 

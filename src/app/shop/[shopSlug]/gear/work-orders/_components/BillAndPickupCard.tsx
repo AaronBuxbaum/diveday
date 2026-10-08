@@ -24,6 +24,11 @@ const NOTICES: Record<string, CardNotice> = {
     tone: "warning",
     key: "benchFollowUp.notice.readyNoContact",
   },
+  "ready-not-configured": {
+    form: "ready",
+    tone: "warning",
+    key: "benchFollowUp.notice.readyNotConfigured",
+  },
   "ready-failed": { form: "ready", tone: "danger", key: "benchFollowUp.notice.readyFailed" },
   "ready-not-ready": { form: "ready", tone: "warning", key: "benchFollowUp.notice.readyNotReady" },
   "bill-sent": { form: "bill", tone: "success", key: "benchFollowUp.notice.billSent" },

@@ -31,6 +31,7 @@
   "notice": {
     "readySent": "Aviso de recogida enviado.",
     "readyNoContact": "No hay correo ni teléfono en la ficha, así que no se envió nada.",
+    "readyNotConfigured": "Este centro no tiene los mensajes configurados, así que no se envió nada.",
     "readyFailed": "El aviso de recogida no se pudo enviar.",
     "readyNotReady": "El trabajo no está listo, así que no se envió nada.",
     "billSent": "Factura enviada.",
@@ -54,7 +55,7 @@
     "saving": "Guardando…"
   },
   "today": {
-    "pastPromise": "Prometido para el {date}, sigue en “{status}”.",
+    "pastPromise": "Prometida para el {date}, todavía no está lista.",
     "uncollected": "Listo desde el {date} y sin recoger.",
     "openTicket": "Ver orden"
   }

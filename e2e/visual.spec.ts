@@ -7468,6 +7468,40 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "work-order-claim-tag", scheme);
       });
 
+      // What the customer hears and what they owe (ADR
+      // 20261008-work-order-follow-up), on a shop that can take money: the
+      // ready message still to come and the bill's own button. The calm
+      // ticket capture above shows the unconnected shape ("collected at the
+      // counter"); this is the other one.
+      test(`a work order's bill renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        await request.post("/api/test/seed-stripe-account");
+        await page.goto("/shop/blue-mantis/gear/work-orders");
+        await page
+          .getByRole("link", { name: /Inflator sticks open/ })
+          .first()
+          .click();
+        await page.getByRole("button", { name: "Send the bill" }).waitFor();
+        await capture(page, "work-order-bill", scheme);
+      });
+
+      // The bench running behind, on Today: a ticket past its promised day and
+      // one ready for a week that nobody has collected, through the opt-in
+      // `?bench=1` trouble state (never seeded into blue-mantis).
+      test(`Today asks about the bench (${scheme})`, async ({ page, request }) => {
+        await request.post("/api/test/seed-trouble-states?bench=1");
+        await page.goto("/shop/blue-mantis");
+        await page.getByRole("listitem").filter({ hasText: "not ready yet." }).first().waitFor();
+        await page
+          .getByRole("listitem")
+          .filter({ hasText: "and not collected." })
+          .first()
+          .waitFor();
+        await capture(page, "today-bench", scheme);
+      });
+
       // One unit's record — chosen for the tank whose seeded visual
       // inspection lands inside the due-soon window, so the clock grammar
       // (amber state line + per-clock list) is in frame alongside the

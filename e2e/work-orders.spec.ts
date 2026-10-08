@@ -109,6 +109,51 @@ test.describe("staff", () => {
     await expect(page.getByRole("link", { name: "New work order" })).toBeVisible();
   });
 
+  /**
+   * **What the customer hears, and what they owe** (ADR
+   * 20261008-work-order-follow-up). Moving a ticket to ready records the
+   * ready message on the ticket; this fleet has no mail provider, so the
+   * record says so rather than claiming it went. The bill is the order path:
+   * with no Stripe account the ticket only says where it is paid, and with the
+   * test double's account it goes as far as Stripe, which this fleet cannot
+   * reach (the boundary e2e/invoicing.spec.ts documents).
+   */
+  test("the ready message is recorded and the bill goes through an order", async ({
+    page,
+    request,
+  }) => {
+    await page.goto("/shop/blue-mantis/gear/work-orders");
+    await page
+      .getByRole("link", { name: /Inflator sticks open/ })
+      .first()
+      .click();
+    await page.getByRole("heading", { level: 2, name: "Parts and labor" }).waitFor();
+    const card = page.getByRole("region", { name: "Bill and pickup" });
+    await expect(card.getByText("Goes to the customer when this ticket is ready.")).toBeVisible();
+    // Unconnected: the total and where it is paid, and no button.
+    await expect(card.getByText("Collected at the counter.")).toBeVisible();
+    await expect(card.getByRole("button", { name: "Send the bill" })).toHaveCount(0);
+
+    await page.locator("#work-order-status").selectOption("ready");
+    await page.getByRole("button", { name: "Save" }).first().click();
+    await expect(card.getByText("Not sent: messages aren’t set up")).toBeVisible();
+    await expect(card.getByText("Goes to the customer when this ticket is ready.")).toHaveCount(0);
+    await card.getByRole("button", { name: "Resend" }).click();
+    await expect(
+      card.getByText("Messages aren’t set up for this shop, so nothing went."),
+    ).toBeVisible();
+
+    // The test double: connected and charges-enabled, without calling Stripe.
+    await request.post("/api/test/seed-stripe-account");
+    await page.reload();
+    await card.getByRole("button", { name: "Send the bill" }).click();
+    await expect(
+      card.getByText("Stripe couldn’t create that bill. Try again in a moment."),
+    ).toBeVisible();
+    // Nothing was linked, so the ticket still offers the bill.
+    await expect(card.getByRole("button", { name: "Send the bill" })).toBeVisible();
+  });
+
   test("deleting a ticket is soft, and the board offers it back", async ({ page }) => {
     await page.goto("/shop/blue-mantis/gear/work-orders");
     await page

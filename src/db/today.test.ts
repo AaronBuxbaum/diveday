@@ -3059,7 +3059,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         href: `/shop/${shop.slug}/gear/work-orders/${late.workOrder.id}`,
         actionLabel: "Open ticket",
       });
-      expect(lateRow?.detail).toMatch(/^Promised .+, still Received\.$/);
+      expect(lateRow?.detail).toMatch(/^Promised .+, not ready yet\.$/);
       // Ready today: the customer has a week before anybody chases them.
       expect(work.actions.some((action) => action.kind === "work_order_uncollected")).toBe(false);
 

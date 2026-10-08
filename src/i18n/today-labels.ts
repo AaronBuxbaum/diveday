@@ -905,14 +905,8 @@ export function openGearUnitActionText(t: StaffTranslator): string {
 }
 
 /** A bench ticket still being worked after the day the shop promised it. */
-export function workOrderLateDetailText(
-  t: StaffTranslator,
-  input: { promisedOn: string; statusLabel: string },
-): string {
-  return t("benchFollowUp.today.pastPromise", {
-    date: input.promisedOn,
-    status: input.statusLabel,
-  });
+export function workOrderLateDetailText(t: StaffTranslator, input: { promisedOn: string }): string {
+  return t("benchFollowUp.today.pastPromise", { date: input.promisedOn });
 }
 
 /** A bench ticket ready for a week or more that nobody has collected. */

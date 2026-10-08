@@ -670,6 +670,21 @@ describe("what Today asks about the bench", () => {
     if (!late.ok) throw new Error("ticket refused");
     const bcd = await piece(db, shop.id, maya.id, { kind: "bcd" });
     const ready = await readyTicket(db, shop.id, maya.id, bcd.id);
+    // The shop's own unit, done a week ago: nobody is coming to collect it.
+    const unit = await createGearItem(db, { shopId: shop.id, kind: "regulator", label: "Reg #8" });
+    if (!unit.ok) throw new Error("unit insert failed");
+    const fleet = await createWorkOrder(db, {
+      shopId: shop.id,
+      gearItemId: unit.item.id,
+      reportedProblem: "Annual service",
+    });
+    if (!fleet.ok) throw new Error("ticket refused");
+    await setWorkOrderStatus(db, {
+      shopId: shop.id,
+      workOrderId: fleet.workOrder.id,
+      status: "ready",
+      todayLocal: TODAY,
+    });
 
     const now = await listWorkOrdersNeedingAttention(db, shop.id, {
       todayLocal: TODAY,

@@ -58,7 +58,6 @@ import {
   workOrderUncollectedDetailText,
 } from "@/i18n/today-labels";
 import { sayHelloSentences } from "@/i18n/welcome-cue-labels";
-import { workOrderStatusLabel } from "@/i18n/work-order-labels";
 import type { Role } from "@/lib/authz";
 import {
   calendarDateInTimezone,
@@ -2881,10 +2880,7 @@ export async function getTodayWork(
       subject: row.subject,
       context: null,
       detail: late
-        ? workOrderLateDetailText(t, {
-            promisedOn: formatCalendarDate(row.since, locale),
-            statusLabel: workOrderStatusLabel(t, row.status),
-          })
+        ? workOrderLateDetailText(t, { promisedOn: formatCalendarDate(row.since, locale) })
         : workOrderUncollectedDetailText(t, { readyOn: formatCalendarDate(row.since, locale) }),
       actionLabel: openWorkOrderActionText(t),
       href: `/shop/${shopSlug}/gear/work-orders/${row.workOrderId}`,

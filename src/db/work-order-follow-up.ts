@@ -756,6 +756,7 @@ export async function listWorkOrdersNeedingAttention(
       status: workOrders.status,
       promisedOn: workOrders.promisedOn,
       readyAt: workOrders.readyAt,
+      personId: workOrders.personId,
       personName: people.fullName,
       unitLabel: gearItems.label,
     })
@@ -786,7 +787,11 @@ export async function listWorkOrdersNeedingAttention(
       continue;
     }
     const readyOn = row.readyAt ? calendarDateInTimezone(row.readyAt, input.timezone) : null;
-    if (workOrderIsUncollected({ status: row.status, readyOn, todayLocal: input.todayLocal })) {
+    // Only a customer collects: a shop unit that is done goes back on the wall.
+    if (
+      row.personId &&
+      workOrderIsUncollected({ status: row.status, readyOn, todayLocal: input.todayLocal })
+    ) {
       out.push({
         workOrderId: row.id,
         reason: "uncollected",

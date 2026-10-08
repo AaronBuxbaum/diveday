@@ -31,6 +31,7 @@
   "notice": {
     "readySent": "Ready message sent.",
     "readyNoContact": "No email or phone on file, so no message went.",
+    "readyNotConfigured": "Messages aren’t set up for this shop, so nothing went.",
     "readyFailed": "The ready message didn’t go through.",
     "readyNotReady": "The ticket isn’t ready, so nothing was sent.",
     "billSent": "Bill sent.",
@@ -54,7 +55,7 @@
     "saving": "Saving…"
   },
   "today": {
-    "pastPromise": "Promised {date}, still {status}.",
+    "pastPromise": "Promised {date}, not ready yet.",
     "uncollected": "Ready since {date} and not collected.",
     "openTicket": "Open ticket"
   }

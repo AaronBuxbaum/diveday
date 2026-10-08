@@ -276,6 +276,7 @@
       "today",
       "today-all-home",
       "today-arrival-lookup",
+      "today-bench",
       "identity-menu-open",
       "nav-more",
       "today-empty",
@@ -394,7 +395,7 @@
   },
   "/shop/[shopSlug]/gear/work-orders/[workOrderId]": {
     "e2e": ["work-orders.spec.ts"],
-    "visual": ["work-order-ticket"]
+    "visual": ["work-order-ticket", "work-order-bill"]
   },
   "/shop/[shopSlug]/gear/work-orders/[workOrderId]/tag": {
     "e2e": ["work-orders.spec.ts"],
