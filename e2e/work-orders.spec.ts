@@ -166,6 +166,29 @@ test.describe("staff", () => {
     ).toBeVisible();
   });
 
+  // A ticket that is ready with no message on record — set straight in the
+  // database by the `?bench=1` trouble state, the way a status written outside
+  // the move would leave it. This is the card's own third reading of the ready
+  // line, and the page loading at all with it is the point: a screenshot of
+  // this state once showed the error boundary instead of the ticket.
+  test("a ready ticket with no message on record loads with its bill card", async ({
+    page,
+    request,
+  }) => {
+    await request.post("/api/test/seed-trouble-states?bench=1");
+    await request.post("/api/test/seed-stripe-account");
+    await page.goto("/shop/blue-mantis/gear/work-orders");
+    await page
+      .getByRole("link", { name: /Inflator sticks open/ })
+      .first()
+      .click();
+    const card = page.getByRole("region", { name: "Bill and pickup" });
+    await expect(card.getByText("Not sent yet.")).toBeVisible();
+    await expect(card.getByRole("button", { name: "Send ready message" })).toBeVisible();
+    await expect(card.getByText("Total: $89.00")).toBeVisible();
+    await expect(card.getByRole("button", { name: "Send the bill" })).toBeVisible();
+  });
+
   test("the bill goes through an order, and only once the shop can take money", async ({
     page,
     request,
