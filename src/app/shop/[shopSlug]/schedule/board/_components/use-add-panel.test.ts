@@ -82,6 +82,22 @@ describe("useAddPanel", () => {
     expect(courseLoad).not.toHaveBeenCalled();
   });
 
+  // Every server action on the board refreshes the route, which hands in a new
+  // `loadPattern`; re-asking on each one had the panel polling its own server.
+  it("asks for the pattern once, however often the page hands in a fresh reader", async () => {
+    const first = vi.fn(async () => null);
+    const { rerender } = renderHook((input: Input) => useAddPanel(input), {
+      initialProps: { ...base, loadPattern: first },
+    });
+    await waitFor(() => expect(first).toHaveBeenCalledTimes(1));
+    const second = vi.fn(async () => null);
+    rerender({ ...base, loadPattern: second });
+    rerender({ ...base, loadPattern: vi.fn(async () => null) });
+    await act(async () => {});
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).not.toHaveBeenCalled();
+  });
+
   it("asks nothing about the tide until a site is chosen", () => {
     const loadTideWindow = vi.fn(async () => "High tide 9:12 AM");
     const { result } = renderHook(() => useAddPanel({ ...base, loadTideWindow }));

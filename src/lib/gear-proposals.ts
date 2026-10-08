@@ -1,4 +1,4 @@
-import { groupUnitsForSize } from "./gear";
+import { gearServiceKeepsUnitBack, groupUnitsForSize } from "./gear";
 import { sizedRentalKindOfGearKind } from "./rentals";
 
 /**
@@ -100,8 +100,7 @@ export function proposeRentalUnits<U extends ProposalUnit>(
         candidates = groupUnitsForSize(free, null).rest.filter((unit) => !unit.size?.trim());
       }
       const usable = candidates.filter(
-        (unit) =>
-          !taken.has(unit.id) && unit.serviceState.state !== "overdue" && !unit.serviceConcern,
+        (unit) => !taken.has(unit.id) && !gearServiceKeepsUnitBack(unit),
       );
       const pick =
         usable.find((unit) => unit.serviceState.state !== "due_soon") ?? usable[0] ?? null;

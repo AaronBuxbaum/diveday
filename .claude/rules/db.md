@@ -25,8 +25,9 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
   deleted one leaves a skip row, and narrowing a cadence cancels nothing
   (ADR 20260810-open-ended-recurring-trips).
 - **Gear**: opt-in by presence; double booking is refused by the `gear_reservations_no_overlap`
-  exclusion constraint (catch 23P01), never a pre-check; service clocks inform, never gate
-  (ADR 20260815-minimal-gear-register).
+  exclusion constraint (catch 23P01), never a pre-check; service clocks inform, never gate,
+  except a counter rental of life support (ADR 20260815-minimal-gear-register, amendment
+  2026-10-08).
 - **Buddy teams**: `src/db/buddy-pairs.ts`; every act appends to `buddy_team_events`; informs,
   never gates (ADR 20260804-buddy-teams).
 - **Templates are copied, then the shop's**: `src/content/dive-site-templates.ts`,

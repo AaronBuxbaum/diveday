@@ -1,0 +1,93 @@
+{
+  "rentOut": "Alquilar",
+  "new": {
+    "title": "Alquilar",
+    "whoHeading": "Quién",
+    "change": "Cambiar",
+    "pick": "Elegir",
+    "pickAria": "Alquilar a {name}",
+    "addPerson": "Añadir",
+    "whenHeading": "Cuándo",
+    "fromLabel": "Desde",
+    "untilLabel": "Devolver antes del",
+    "showUnits": "Ver qué está libre",
+    "unitsLegend": "Unidades libres para estos días",
+    "noUnits": "No hay nada en la pared libre para estos días.",
+    "noFleet": "El registro está vacío. Añade una unidad primero.",
+    "days": "{count, plural, one {# día} other {# días}}",
+    "priceAria": "Precio de {label}",
+    "invoiceLegend": "Factura",
+    "sendInvoice": "Enviar una factura",
+    "noEmail": "No hay correo registrado, así que no hay factura. Cobra en el mostrador.",
+    "submit": "Alquilar",
+    "submitting": "Alquilando…",
+    "notice": {
+      "invalid": "No se guardó. Revisa el formulario y vuelve a intentarlo.",
+      "invalidWindow": "La fecha de devolución tiene que ser igual o posterior a la de inicio.",
+      "startsInPast": "Un alquiler no puede empezar antes de hoy.",
+      "windowTooLong": "Un alquiler puede durar 31 días como máximo.",
+      "noUnits": "Elige al menos una unidad.",
+      "tooManyUnits": "Son más de 20 unidades. Divídelo en dos alquileres.",
+      "personNotFound": "Esa persona ya no está registrada.",
+      "unitNotFound": "Una de esas unidades ya no está en el registro.",
+      "unitOutOfService": "Una de esas unidades está fuera de la pared por mantenimiento.",
+      "unitUnavailable": "{label} ya está reservado para esos días. Elige otro.",
+      "unitUnavailableUnnamed": "Una de esas unidades ya está reservada para esos días.",
+      "notAuthorized": "Solo un propietario o un gerente puede enviar una factura.",
+      "paymentNotConnected": "Los pagos no están conectados, así que no se puede enviar una factura.",
+      "needsEmail": "Una factura necesita un correo registrado.",
+      "duplicate": "Ya hay una persona registrada con ese correo. Búscala arriba.",
+      "unitNeedsService": "{label} necesita mantenimiento antes de salir para estos días.",
+      "unitNeedsServiceUnnamed": "Una de esas unidades necesita mantenimiento antes de salir para estos días.",
+      "unitNeedsConfirm": "{label} tiene un aviso de mantenimiento. Marca la casilla de debajo para prestarlo de todos modos.",
+      "unitNeedsConfirmUnnamed": "Una de esas unidades tiene un aviso de mantenimiento. Marca la casilla de debajo para prestarla de todos modos.",
+      "notCertified": "El soporte vital necesita una tarjeta verificada. Registra la tarjeta que has visto, o alquila solo equipo ligero.",
+      "noDrysuitCard": "Un traje seco necesita la tarjeta de traje seco verificada.",
+      "cardRecorded": "Tarjeta registrada como vista por ti.",
+      "cardDuplicate": "Esa tarjeta ya está registrada. Confírmala en la ficha del buceador.",
+      "cardNotRecorded": "La tarjeta no se guardó. Vuelve a intentarlo desde la ficha del buceador.",
+      "cardInvalid": "Revisa el número de la tarjeta y vuelve a intentarlo."
+    },
+    "unitNeedsCard": "Necesita una tarjeta verificada",
+    "unitNeedsDrysuitCard": "Necesita la tarjeta de traje seco",
+    "unitNeedsService": "Necesita mantenimiento antes",
+    "lendAnyway": "Prestar {label} de todos modos",
+    "setPrice": "Precio del equipo completo, {count, plural, one {# día} other {# días}}",
+    "cards": {
+      "verified": "Tarjeta verificada: {level}",
+      "none": "Sin tarjeta verificada, así que nada de soporte vital: reguladores, chalecos, botellas, ordenadores y trajes secos se quedan en la pared.",
+      "drysuit": "Tarjeta de traje seco verificada",
+      "unverified": "{count, plural, one {# tarjeta registrada} other {# tarjetas registradas}}, sin verificar",
+      "minor": "Menor de edad",
+      "seen": "Tarjeta vista",
+      "record": "Registrar tarjeta",
+      "recording": "Registrando…"
+    }
+  },
+  "invoiceLine": "Alquiler de {label}, {days, plural, one {# día} other {# días}}",
+  "ticket": {
+    "order": "Factura",
+    "notice": {
+      "rented": "Alquilado.",
+      "rentedInvoiced": "Alquilado. Factura enviada.",
+      "rentedNotInvoiced": "Alquilado, pero la factura no se envió. Créala desde Pedidos.",
+      "handedOver": "Entregado.",
+      "returned": "De vuelta en la pared.",
+      "released": "Liberado.",
+      "notFound": "No queda nada en este alquiler a lo que hacerle eso.",
+      "concernNeedsWords": "Un problema de mantenimiento necesita una línea que diga qué pasó, para que un técnico pueda actuar.",
+      "returnedFlagged": "De vuelta, y marcado para el taller.",
+      "invoiced": "Este alquiler está en una factura. Anula la factura primero y luego libéralo."
+    },
+    "divesLabel": "Inmersiones en este alquiler"
+  },
+  "diver": {
+    "rented": "Alquilado",
+    "rentGear": "Alquilar equipo",
+    "rentalLine": "{units} · devolver antes del {date}"
+  },
+  "setLine": "Alquiler del equipo completo, {days, plural, one {# día} other {# días}}",
+  "trip": {
+    "held": "Tiene {units} en un alquiler de mostrador hasta el {date}"
+  }
+}

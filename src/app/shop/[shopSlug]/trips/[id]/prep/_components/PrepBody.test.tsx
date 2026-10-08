@@ -286,6 +286,7 @@ function everyPanelPrep(): TripPrep {
         ] as never,
         wanted: [],
         handedOver: false,
+        counterHeld: [],
       },
     ],
     proposals: new Map(),
@@ -384,12 +385,14 @@ describe("proposed units on the Gear tab", () => {
           assigned: [] as never,
           wanted: [{ kind: "bcd", size: "L" }],
           handedOver: false,
+          counterHeld: [],
         },
         {
           diver: { bookingId: "b2", fullName: "Theo Lindqvist" } as never,
           assigned: [] as never,
           wanted: [{ kind: "bcd", size: "XL" }],
           handedOver: false,
+          counterHeld: [],
         },
       ],
       proposals: new Map([["b1:bcd", proposed]]),
@@ -490,6 +493,7 @@ describe("an assigned unit that needs care", () => {
           ] as never,
           wanted: [],
           handedOver: false,
+          counterHeld: [],
         },
       ],
     } satisfies TripPrep;
@@ -841,5 +845,40 @@ describe("the packing list's geometry", () => {
     const head = hotel.closest("thead") as HTMLElement;
     expect(head.querySelectorAll("tr")).toHaveLength(1);
     expect(hotel.parentElement?.parentElement).toBe(head);
+  });
+});
+
+/**
+ * **A diver already carrying the shop's kit off a counter rental** (dive-domain
+ * review of PR #2256, item 4): their row says so, with the latest back-by date.
+ */
+describe("a diver holding a counter rental over the departure", () => {
+  it("names the units and the latest back-by date on the diver's row", () => {
+    const base = everyPanelPrep();
+    const [first, ...rest] = base.assignmentRows;
+    if (!first) throw new Error("a row expected");
+    const { container } = renderPrep({
+      ...base,
+      assignmentRows: [
+        {
+          ...first,
+          counterHeld: [
+            { label: "Reg #3", until: "2026-09-27" },
+            { label: "Computer #2", until: "2026-09-28" },
+          ],
+        },
+        ...rest,
+      ],
+    });
+    expect(
+      within(container).getByText(
+        /^Has Reg #3 and Computer #2 on a counter rental until Sep\s28,\s2026$/,
+      ),
+    ).toBeTruthy();
+  });
+
+  it("says nothing on a row with no counter rental", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    expect(within(container).queryByText(/on a counter rental/)).toBeNull();
   });
 });

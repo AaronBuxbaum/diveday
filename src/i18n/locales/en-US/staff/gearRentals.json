@@ -1,0 +1,9 @@
+{
+  "filter": "Rentals ({count})",
+  "title": "Rentals",
+  "counter": "Counter rental",
+  "ticketFor": "Rental ticket for {name}",
+  "pagination": {
+    "total": "{count, plural, one {# person} other {# people}}"
+  }
+}

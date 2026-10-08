@@ -45,6 +45,7 @@
   },
   "record": {
     "title": "Exención firmada",
+    "diverLabel": "Buceador",
     "signedLabel": "Firmada",
     "signedAsLabel": "Firmada como",
     "howLabel": "Cómo",

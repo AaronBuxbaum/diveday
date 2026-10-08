@@ -14,6 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { bookings } from "./bookings";
 import { people, shops } from "./core";
+import { orders } from "./payments";
 
 /**
  * Rental fit profiles and the gear register: items, service events,
@@ -508,6 +509,15 @@ export const gearReservations = pgTable(
     /** Set only for a bookingless counter rental; see the holder-shape check below. */
     personId: uuid("person_id").references(() => people.id),
     bookingId: uuid("booking_id").references(() => bookings.id, { onDelete: "cascade" }),
+    /**
+     * The invoice a **counter rental** was billed on, when it was billed at
+     * all (`src/db/gear-counter-rentals.ts`). A link, never money: the price,
+     * the tax and whether it was paid stay on `orders`, and a rental with no
+     * order is an ordinary one (paid in cash, free, or a shop with no Stripe).
+     * Null on every booking-held row — a trip rental is billed on the booking's
+     * own order lines (ADR 20260815-minimal-gear-register, amended 2026-10-08).
+     */
+    orderId: uuid("order_id").references(() => orders.id),
     /** Inclusive shop-local calendar dates — a rental window, not an instant. */
     reservedFrom: date("reserved_from").notNull(),
     reservedUntil: date("reserved_until").notNull(),
@@ -533,14 +543,27 @@ export const gearReservations = pgTable(
      * nothing at all until #1186 — the detail was there and invisible.
      */
     returnNote: text("return_note"),
+    /**
+     * Dives the person did on a **counter rental**, told at the return; null
+     * when nobody said. A booking-held reservation leaves it null, because its
+     * dives are the departure's planned dives. Summed into a unit's dive clock
+     * (`completedDivesByUnit`), so gear lent across the counter wears its
+     * clock like gear that rode a boat.
+     */
+    divesLogged: integer("dives_logged"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("gear_reservations_item_idx").on(table.gearItemId),
     index("gear_reservations_booking_idx").on(table.bookingId),
     index("gear_reservations_person_idx").on(table.personId),
+    index("gear_reservations_order_idx").on(table.orderId),
     index("gear_reservations_shop_until_idx").on(table.shopId, table.reservedUntil),
     check("gear_reservations_window", sql`${table.reservedUntil} >= ${table.reservedFrom}`),
+    check(
+      "gear_reservations_dives_logged",
+      sql`${table.divesLogged} is null or (${table.divesLogged} >= 0 and ${table.divesLogged} <= 200)`,
+    ),
     check(
       "gear_reservations_one_holder",
       sql`(${table.bookingId} is not null and ${table.personId} is null) or (${table.bookingId} is null and ${table.personId} is not null)`,
