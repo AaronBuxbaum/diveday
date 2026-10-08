@@ -7584,7 +7584,16 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
         await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
         await page.getByRole("group", { name: "Units free for these days" }).waitFor();
-        await page.getByRole("checkbox", { name: /AL63-02/ }).waitFor();
+        // Two picks, so the "going out" list is in frame under the menus.
+        for (const [kind, label] of [
+          ["Mask", "Mask #1"],
+          ["Fins", "Fins #1"],
+        ] as const) {
+          const menu = page.getByRole("combobox", { name: kind, exact: true });
+          const value = await menu.locator("option", { hasText: label }).getAttribute("value");
+          await menu.selectOption(value ?? "");
+        }
+        await page.getByRole("button", { name: "Remove Fins #1" }).waitFor();
         await capture(page, "counter-rental-form", scheme);
       });
 
@@ -7594,8 +7603,15 @@ for (const scheme of ["light", "dark"] as const) {
       test(`a counter rental's ticket renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
         await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
-        await page.getByRole("checkbox", { name: /Mask #1/ }).check();
-        await page.getByRole("checkbox", { name: /Fins #1/ }).check();
+        for (const [kind, label] of [
+          ["Mask", "Mask #1"],
+          ["Fins", "Fins #1"],
+        ] as const) {
+          const menu = page.getByRole("combobox", { name: kind, exact: true });
+          const value = await menu.locator("option", { hasText: label }).getAttribute("value");
+          await menu.selectOption(value ?? "");
+        }
+        await page.getByRole("button", { name: "Remove Fins #1" }).waitFor();
         await page.getByRole("button", { name: "Rent out", exact: true }).click();
         await page.getByRole("status").filter({ hasText: "Rented out." }).waitFor();
         await page.getByRole("button", { name: "Hand over" }).waitFor();

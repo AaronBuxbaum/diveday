@@ -25,13 +25,26 @@ async function startRentalForCustomer(page: Page) {
   return new URL(page.url()).searchParams.get("personId") ?? "";
 }
 
+/**
+ * Puts one unit on the "going out" list: picked from its kind's menu by the
+ * words it starts with, since an option's text also carries its size.
+ */
+async function pickUnit(page: Page, kind: string, label: string) {
+  const menu = page.getByRole("combobox", { name: kind, exact: true });
+  const value = await menu.locator("option", { hasText: label }).getAttribute("value");
+  await menu.selectOption(value ?? "");
+  await expect(
+    page.getByRole("list", { name: "Going out" }).getByText(label, { exact: true }),
+  ).toBeVisible();
+}
+
 test.describe("staff", () => {
   signedInAsOwner();
 
   test("rents units out at the counter, hands them over, and takes them back", async ({ page }) => {
     await startRentalForCustomer(page);
-    await page.getByRole("checkbox", { name: /Mask #2/ }).check();
-    await page.getByRole("checkbox", { name: /Fins #2/ }).check();
+    await pickUnit(page, "Mask", "Mask #2");
+    await pickUnit(page, "Fins", "Fins #2");
     await page.getByRole("button", { name: "Rent out", exact: true }).click();
 
     // The ticket: who, what, and the one date that matters.
@@ -63,6 +76,22 @@ test.describe("staff", () => {
     await expect(page.getByRole("button", { name: "Hand over" })).toHaveCount(0);
   });
 
+  test("reads the free units again as the dates change, with no button", async ({ page }) => {
+    await startRentalForCustomer(page);
+    await expect(page.getByText("1 day", { exact: true })).toBeVisible();
+    const backBy = page.getByLabel("Back by");
+    const from = await page.getByLabel("From").inputValue();
+    const [year, month, day] = from.split("-").map(Number);
+    const next = new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, (day ?? 1) + 2));
+    await backBy.fill(next.toISOString().slice(0, 10));
+    await expect(page).toHaveURL(/until=/);
+    await expect(page.getByText("3 days", { exact: true })).toBeVisible();
+    // Remove takes a pick back off the list.
+    await pickUnit(page, "Mask", "Mask #2");
+    await page.getByRole("button", { name: "Remove Mask #2" }).click();
+    await expect(page.getByRole("list", { name: "Going out" })).toHaveCount(0);
+  });
+
   test("refuses a rental with no units beside the submit, keeping who and when", async ({
     page,
   }) => {
@@ -74,7 +103,7 @@ test.describe("staff", () => {
 
   test("releases a rental nobody came back for", async ({ page }) => {
     await startRentalForCustomer(page);
-    await page.getByRole("checkbox", { name: /Mask #3/ }).check();
+    await pickUnit(page, "Mask", "Mask #3");
     await page.getByRole("button", { name: "Rent out", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: "Rented out." })).toBeVisible();
     await page.getByRole("button", { name: "Release" }).click();
@@ -85,7 +114,7 @@ test.describe("staff", () => {
 
   test("the diver record shows a counter rental and opens its ticket", async ({ page }) => {
     const personId = await startRentalForCustomer(page);
-    await page.getByRole("checkbox", { name: /Fins #3/ }).check();
+    await pickUnit(page, "Fins", "Fins #3");
     await page.getByRole("button", { name: "Rent out", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: "Rented out." })).toBeVisible();
     const ticket = page.url().split("?")[0];
