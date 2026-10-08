@@ -1086,6 +1086,13 @@ new domain concept, define it here in the same PR.
   checks is `minimum_certification_level`, which the agency owns and no shop edit can reach. The
   course page labels the two apart for exactly this reason — a note reading "or a qualifying
   certification" next to an unlabelled gate is how a diver arrives believing they are eligible.
+- **Learning materials** — what a course asks a student to work through before day 1, usually the
+  agency's eLearning: an ordered list of names, each with an optional `https:` link and note, kept
+  on the course. DiveDay sends it with the booking confirmation, repeats it on the 7-day reminder,
+  and shows it on the diver's thread. **Materials done** is a staffer's per-seat tick that the
+  student finished them, stamped with who and when. It is the shop's word, never the agency's, and
+  it gates nothing: its one effect is that the 7-day reminder stops asking
+  ([20261008-course-learning-materials](../architecture/decisions/20261008-course-learning-materials.md)).
 - **Instruction fee / e-learning fee** — a course invoices as two lines on one bill, and the diver
   makes a single payment for their sum. Enrollment assumes the e-learning is included; a student
   who already completed it elsewhere has that line cleared before the invoice goes out, or

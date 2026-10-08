@@ -107,6 +107,11 @@ const blank: CourseContent = {
   excludes: [],
   scheduleDays: [],
   faqs: [],
+  // Names and notes only, never a link: the link a student should follow is
+  // the shop's own (often an affiliate link into the agency's store), and a
+  // DiveDay-picked URL would send the shop's students somewhere it never chose
+  // (ADR 20261008-course-learning-materials).
+  learningMaterials: [],
   isIntroCourse: false,
 };
 
@@ -199,6 +204,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     certifiesLevel: "open_water",
     content: {
       ...blank,
+      learningMaterials: [{ name: "PADI Open Water Diver eLearning", note: "Finish before day 1" }],
       summary: "Become a certified PADI Open Water Diver",
       overview:
         "The Open Water Diver certification is the one that opens the door: qualified to dive to {depth18} with a buddy, anywhere in the world, without an instructor — in conditions as good as or better than those you trained in.\n\nThe course is three parts. Knowledge development covers pressure, air, and planning — most students do this online before arriving. Confined water is where the skills become muscle memory, in shallow water with somewhere to stand. Four open-water dives put it together on the reef.\n\nNo prior experience is required. You do need to be comfortable in water: the course includes a 200-meter/yard swim (or 300 with mask, fins, and snorkel) and a 10-minute float, neither of them timed.",
@@ -311,6 +317,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     certifiesLevel: "advanced_open_water",
     content: {
       ...blank,
+      learningMaterials: [
+        { name: "PADI Advanced Open Water Diver eLearning", note: "Finish before day 1" },
+      ],
       summary: "Five dives that take you deeper, further, and more confidently",
       overview:
         "Advanced Open Water Diver is not a repeat of Open Water with harder skills — it is five dives, each a first taste of a different specialty, done under instructor supervision.\n\nTwo are required: a deep dive, which extends your limit to {depth30}, or {depth21} for divers aged 12–14, and an underwater navigation dive. You choose the other three from what the site and the season offer — night, wreck, drift, buoyancy, naturalist, and others.\n\nThere is no final exam. There is a short knowledge review before each dive, and the dives themselves count as training dives.",
@@ -391,6 +400,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     certifiesLevel: "rescue",
     content: {
       ...blank,
+      learningMaterials: [{ name: "PADI Rescue Diver eLearning", note: "Finish before day 1" }],
       summary: "Learn to spot trouble early — and to handle it when you cannot",
       overview:
         "Most divers describe Rescue as the hardest course they have enjoyed. The focus shifts outward: from your own diving to the divers around you, and to the problems that are still small enough to solve.\n\nYou will practice self-rescue, recognizing and managing stress in another diver, in-water rescue and tows, surfacing an unresponsive diver, and giving rescue breaths while bringing them in. The course finishes with two scenarios that put it together under pressure.\n\nEmergency First Response (CPR and first aid) training within the past 24 months is required. We run it alongside the course if you need it.",
@@ -545,6 +555,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     certifiesLevel: null,
     content: {
       ...blank,
+      learningMaterials: [
+        { name: "PADI Enriched Air Diver eLearning", note: "Finish before the course day" },
+      ],
       summary: "More bottom time on repetitive dives, and the planning that makes it safe",
       overview:
         "Nitrox is ordinary air with more oxygen and less nitrogen. Less nitrogen means slower nitrogen loading, which usually means longer no-decompression limits — the difference shows up most on the second and third dives of a day.\n\nThe trade is a new limit to respect. Oxygen becomes the thing you can get too much of, so every dive has a maximum operating depth set by the mix. The course teaches you to analyze your own cylinder, log the result, set your computer to the mix you actually have, and work out the depth you must not pass.\n\nThe certification covers recreational blends from 22% to 40% oxygen. There are no required training dives — this is a knowledge and practical-skills course — though we usually run two dives with it so you use the procedures for real.",
@@ -1551,6 +1564,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     certifiesLevel: "divemaster",
     content: {
       ...blank,
+      learningMaterials: [
+        { name: "PADI Divemaster eLearning", note: "Finish the knowledge development first" },
+      ],
       summary: "The first professional rating, and the point where diving becomes work",
       overview:
         "Divemaster is where you stop being a customer. You learn to supervise certified divers, assist an instructor with students, lead dives, brief a boat, and take responsibility for people who are not looking after themselves as well as you are.\n\nThe program is longer and less scheduled than a specialty course. It runs across knowledge development, waterskills and stamina exercises, a rescue assessment, practical application workshops, and internship days working real dives with real customers. Expect weeks, not days, and expect to be on the boat before the customers arrive.\n\nYou need 40 logged dives to begin and 60 to certify, so the program is also where a chunk of your logbook fills in. The stamina exercises are scored rather than pass-or-fail, which surprises people less than the amount of paperwork does.",
@@ -1933,6 +1949,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     certifiesLevel: "open_water",
     content: {
       ...blank,
+      learningMaterials: [
+        { name: "SSI Open Water Diver digital learning", note: "Finish before day 1" },
+      ],
       summary: "Earn your worldwide lifetime scuba certification to dive to {depth18}",
       overview:
         "The SSI Open Water Diver program is your gateway to exploring the ocean worldwide. Through digital learning, pool training, and open water dives, you will gain the knowledge and skills necessary to dive safely to {depth18} with a certified buddy.\n\nSSI's training methodology focuses on comfort through repetition. You will master equipment assembly, mask clearing, regulator recovery, buoyancy control, and emergency procedures in confined water before completing four open water training dives.\n\nUpon graduation, your digital certification is recognized internationally with no expiration.",
@@ -2651,6 +2670,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     certifiesLevel: "open_water",
     content: {
       ...blank,
+      learningMaterials: [
+        { name: "SDI Open Water Scuba Diver eLearning", note: "Finish before day 1" },
+      ],
       summary: "Certify to dive with a buddy, worldwide, to {depth18}",
       overview:
         "SDI Open Water Scuba Diver is the certification that lets you rent gear, book a boat, and dive with a buddy anywhere in the world.\n\nWhat sets it apart from the other agencies' entry-level courses is the computer. SDI teaches dive planning on a personal dive computer from the start rather than on printed tables, because that is what you will actually use on every dive afterwards. You still learn how decompression works — you just learn it on the device that will be on your wrist.\n\nYou will cover the academics, practice the skills in confined water until they are dull, and then make four open-water dives on the reef with your instructor.",

@@ -234,6 +234,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "activity_events.actor_person_id": "who did it — attribution, not diver history",
   "activity_events.subject_person_id": "an event trail records who it happened to at the time",
   "bookings.course_next_step_by_person_id": "which instructor wrote the student their next step",
+  "bookings.course_materials_done_by_person_id": "which staffer marked the materials done",
   "buddy_pair_members.crew_person_id": "a crew member on a team, refused as a staff record",
   "booking_arrival_events.recorded_by_person_id": "who checked the diver in at the counter",
   "buddy_pair_members.paired_by_person_id": "who built the team",

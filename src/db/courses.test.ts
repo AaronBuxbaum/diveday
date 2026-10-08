@@ -977,6 +977,7 @@ const emptyContent = {
   excludes: [],
   scheduleDays: [],
   faqs: [],
+  learningMaterials: [],
   isIntroCourse: false,
 };
 

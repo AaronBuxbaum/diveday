@@ -115,6 +115,7 @@ import { seedCertGates } from "./seed-cert-gates";
 import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "./seed-clock";
 import { seedCounterBlockers } from "./seed-counter-blockers";
 import { seedCourseInquiries } from "./seed-course-inquiries";
+import { seedCourseMaterials } from "./seed-course-materials";
 import { seedDateRequests } from "./seed-date-requests";
 import { enforceMintedDemoCap } from "./seed-demo-lifecycle";
 import { seedDeskHandoff } from "./seed-desk-handoff";
@@ -177,6 +178,7 @@ import { seedWaiverVersions } from "./seed-waiver-versions";
  * | `./seed-rental-fit.ts` | divers' saved sizes, so the gear locker has something to pull |
  * | `./seed-gear.ts` | the rental fleet on the wall — tagged units, service clocks, a few reserved for the wreck trip |
  * | `./seed-course-inquiries.ts` | course leads off the public pages, in all three `person_id` states |
+ * | `./seed-course-materials.ts` | the links behind two courses' learning materials, and one student marked done |
  * | `./seed-front-desk.ts` | the desk's own day: walk-ins, wait lists, inquiries, tips |
  * | `./seed-history.ts` | the trailing quarter that gives owner reporting something to report |
  * | `./seed-cert-gates.ts` | the boats a card can be refused on, one gate each, and the course carve-out |
@@ -1067,6 +1069,10 @@ export async function seedDemoSchedule(
   // Which partner's link sent a seat — beside the recency answers, and written
   // the same way: a column on bookings that already exist (issue #1285).
   await seedPartnerReferrals(db, shopId);
+  // The links a shop pastes into its course materials, and one student who
+  // has finished them — a column on courses and one on a booking that already
+  // exist, gating nothing (src/db/seed-course-materials.ts).
+  await seedCourseMaterials(db, shopId, { instructorId: instructor.id });
   // Adds-only and late, like the group above: a month of the crew's own
   // sighting log on the two reefs the demo sells, so the trip page's "Seen
   // here this month" beat has something to say. It writes `trip_sightings`

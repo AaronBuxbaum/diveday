@@ -359,6 +359,22 @@ export const bookings = pgTable(
     courseNextStep: text("course_next_step"),
     courseNextStepAt: timestamp("course_next_step_at", { withTimezone: true }),
     courseNextStepByPersonId: uuid("course_next_step_by_person_id").references(() => people.id),
+    /**
+     * **When a staffer marked this student's learning materials done, and who**
+     * (ADR 20261008-course-learning-materials). Ticked on the course session's
+     * roster; null is "not yet", which is what keeps the materials in the
+     * week-out reminder and on the student's `/ready` page as a to-do.
+     *
+     * A staff record of what a student said or showed, never agency evidence:
+     * no agency exposes an eLearning API (H-10), and nothing reads this as a
+     * gate — admission and readiness never look at it. Refused on a departure
+     * with no course (`recordCourseMaterialsDone`), the same LMS boundary as the
+     * next step above. Both columns move together.
+     */
+    courseMaterialsDoneAt: timestamp("course_materials_done_at", { withTimezone: true }),
+    courseMaterialsDoneByPersonId: uuid("course_materials_done_by_person_id").references(
+      () => people.id,
+    ),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -380,6 +396,11 @@ export const bookings = pgTable(
       "bookings_course_next_step_bounded",
       sql`${table.courseNextStep} is null
         or (length(btrim(${table.courseNextStep})) > 0 and length(${table.courseNextStep}) <= 280)`,
+    ),
+    // A tick nobody is recorded as having made is not one the roster may show.
+    check(
+      "bookings_course_materials_done_attributed",
+      sql`(${table.courseMaterialsDoneAt} is null) = (${table.courseMaterialsDoneByPersonId} is null)`,
     ),
     index("bookings_trip_idx").on(table.tripId),
     /** Backs the diver-record lookups (getDiverProfile, payment/booking history joins). */
