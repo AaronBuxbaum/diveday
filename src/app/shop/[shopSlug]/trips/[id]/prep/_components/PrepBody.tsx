@@ -1118,8 +1118,7 @@ export function PrepBody({
                           of it. */}
                       {assigned.some((assignment) => assignment.checkedOutAt !== null) ? (
                         <GearReturnPane
-                          tripId={tripId}
-                          bookingId={diver.bookingId}
+                          fields={{ tripId, bookingId: diver.bookingId }}
                           action={returnTripGearSetAction}
                           labels={{
                             allGood: t("gear.prep.returnAllGood"),

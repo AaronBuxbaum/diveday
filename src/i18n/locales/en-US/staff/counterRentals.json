@@ -1,0 +1,61 @@
+{
+  "rentOut": "Rent out",
+  "new": {
+    "title": "Rent out",
+    "whoHeading": "Who",
+    "change": "Change",
+    "pick": "Choose",
+    "pickAria": "Rent to {name}",
+    "addPerson": "Add",
+    "whenHeading": "When",
+    "fromLabel": "From",
+    "untilLabel": "Back by",
+    "showUnits": "Show what’s free",
+    "unitsLegend": "Units free for these days",
+    "noUnits": "Nothing on the wall is free for these days.",
+    "noFleet": "The register is empty. Add a unit first.",
+    "days": "{count, plural, one {# day} other {# days}}",
+    "priceAria": "Price for {label}",
+    "invoiceLegend": "Invoice",
+    "sendInvoice": "Send an invoice",
+    "noEmail": "No email on file, so no invoice. Take payment at the counter.",
+    "submit": "Rent out",
+    "submitting": "Renting out…",
+    "notice": {
+      "invalid": "That didn’t save. Check the form and try again.",
+      "invalidWindow": "The return date has to be on or after the start date.",
+      "startsInPast": "A rental can’t start before today.",
+      "windowTooLong": "A rental can run 31 days at most.",
+      "noUnits": "Pick at least one unit.",
+      "tooManyUnits": "That’s more than 20 units. Split it into two rentals.",
+      "personNotFound": "That person isn’t on file anymore.",
+      "unitNotFound": "One of those units isn’t on the register anymore.",
+      "unitOutOfService": "One of those units is off the wall for service.",
+      "unitUnavailable": "{label} is already spoken for on those days. Pick another.",
+      "unitUnavailableUnnamed": "One of those units is already spoken for on those days.",
+      "notAuthorized": "Only an owner or manager can send an invoice.",
+      "paymentNotConnected": "Payments aren’t connected, so no invoice can go.",
+      "needsEmail": "An invoice needs an email on file.",
+      "duplicate": "A person with that email is already on file. Find them above."
+    }
+  },
+  "invoiceLine": "{label} rental, {days, plural, one {# day} other {# days}}",
+  "ticket": {
+    "order": "Invoice",
+    "notice": {
+      "rented": "Rented out.",
+      "rentedInvoiced": "Rented out. Invoice sent.",
+      "rentedNotInvoiced": "Rented out, but the invoice didn’t go. Raise it from Orders.",
+      "handedOver": "Handed over.",
+      "returned": "Back on the wall.",
+      "released": "Released.",
+      "notFound": "Nothing on this rental is left to do that to.",
+      "concernNeedsWords": "A service concern needs a line saying what happened, so a technician can act on it."
+    }
+  },
+  "diver": {
+    "rented": "Rented",
+    "rentGear": "Rent gear",
+    "rentalLine": "{units} · back by {date}"
+  }
+}

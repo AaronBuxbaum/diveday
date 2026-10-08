@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { PrintButton } from "@/components/PrintButton";
@@ -20,7 +19,7 @@ import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { formatMoneyCents, formatShortDate } from "@/lib/format";
+import { formatMoneyCents } from "@/lib/format";
 import { currencySymbol, majorToMinor, minorToMajor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
@@ -28,6 +27,7 @@ import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { OrderMeta } from "./_components/OrderMeta";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -306,32 +306,15 @@ export default async function OrderDetailPage({
         // A diver who paid at the counter and asks for something on paper.
         actions={<PrintButton label={t("print.sheet.door")} quiet />}
         meta={
-          // When it was raised, and by whom. Both were missing entirely: the
-          // orders index shows a date column, and losing it on the way into the
-          // one order you opened is exactly the detail a refund argument turns
-          // on. `created_by_person_id` was already stored — nothing new is kept.
-          //
-          // The diver's record rides here rather than in `actions`, as a
-          // `link`-weight control: an order has two parents — the Orders index
-          // staff arrive from, and the person whose money it is — and the
-          // eyebrow can only spend one. Two secondary buttons in the header
-          // said the second one at the same weight as the first and left the
-          // page's real act, Refund, competing with navigation.
-          <p className="text-sm text-muted">
-            {t("orders.detail.raisedOn", {
-              date: formatShortDate(order.order.createdAt, locale, timezone),
-            })}
-            {order.createdBy
-              ? ` · ${t("orders.detail.createdBy", { name: order.createdBy.fullName })}`
-              : ""}
-            {" · "}
-            <Link
-              href={shopPath(shopSlug, "divers", order.person.id)}
-              className="font-medium text-primary hover:underline"
-            >
-              {t("orders.detail.diverRecord")}
-            </Link>
-          </p>
+          <OrderMeta
+            order={order.order}
+            personId={order.person.id}
+            createdByName={order.createdBy?.fullName ?? null}
+            shopSlug={shopSlug}
+            locale={locale}
+            timezone={timezone}
+            t={t}
+          />
         }
       />
 

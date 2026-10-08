@@ -381,6 +381,14 @@
     "e2e": ["gear.spec.ts"],
     "visual": ["gear-unit", "gear-unit-deleted"]
   },
+  "/shop/[shopSlug]/gear/rentals/[ticketId]": {
+    "e2e": ["counter-rentals.spec.ts"],
+    "visual": ["counter-rental-ticket"]
+  },
+  "/shop/[shopSlug]/gear/rentals/new": {
+    "e2e": ["counter-rentals.spec.ts"],
+    "visual": ["counter-rental-form"]
+  },
   "/shop/[shopSlug]/inbox": {
     "e2e": ["inbox.spec.ts"],
     "visual": ["staff-inbox"]

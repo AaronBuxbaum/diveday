@@ -338,3 +338,35 @@ person holder when one exists.
 The first-call script continues to ask how often counter rentals occur. That
 frequency decides whether the deliberately deferred staff flow is worth opening;
 it does not reopen the data-model decision.
+
+## Amendment 2026-10-08 — counter rentals get their writer and their screens
+
+The product owner asked for the deferred flow (2026-10-08): renting units at the counter to
+somebody who is not on a boat, end to end. The 2026-08-25 holder shape is unchanged; this
+amendment records what was built on it and the calls the build made.
+
+- **The writer** is `createCounterRental` in `src/db/gear-counter-rentals.ts`. It takes the same
+  per-unit advisory lock as `reserveGearUnit`, refuses a unit that is deleted or not in service,
+  and leaves the double booking to `gear_reservations_no_overlap` (23P01, naming the unit that
+  lost). A rental may not start before the shop's today and runs 31 days at most
+  (`src/lib/counter-rentals.ts`); 20 units is the most one rental lends.
+- **A counter rental is the person-held rows written in one transaction**: same shop, same
+  `person_id`, same `created_at` (the transaction's `now()`). No grouping table: the ticket's id
+  is any of its reservation ids, and the set acts (hand over, return with one outcome, release
+  what was never collected) mirror the trip set's.
+- **Money goes through `createOrder`, as promised.** One `rental` line per unit with a price
+  above zero, prefilled from `shops.rental_pricing` times the days and editable; a zero total,
+  or "Send an invoice" left off, raises no order. Sending it is owner/manager work behind the
+  money step-up and a connected Stripe account, like the new-order form; renting itself stays
+  any-staff (H-06). The rental is written first and the invoice only after it stands, so the
+  one partial outcome is Stripe failing, which leaves the rental and says so.
+- **One column was added: `gear_reservations.order_id`**, nullable, a link and never money.
+  Nothing else can say which invoice billed a rental, and the order page needs its way back to
+  the ticket. It is written only by `linkCounterRentalOrder`, which refuses a booking-held row
+  and an order for a different person.
+- **The ticket** (`/shop/[shopSlug]/gear/rentals/[ticketId]`) prints like the trip slip, with
+  the slip's absences: no signature line, no money. On screen it links the order.
+- **Reads that see counter rentals**: the register's groups, a unit's record, Today's due-back
+  and overdue rows and the service concerns all join the holder as
+  `coalesce(bookings.person_id, gear_reservations.person_id)`. Trip-scoped reads (prep,
+  manifests, a departure's assignments) stay booking-only by construction.

@@ -7414,6 +7414,32 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "gear-unit", scheme);
       });
 
+      // Renting gear out at the counter (ADR 20260815-minimal-gear-register,
+      // amended 2026-10-08): the person chosen, today's window, and the units
+      // free for it grouped by kind. The demo shop has no payments connected,
+      // so no invoice section; the form a crew member sees.
+      test(`the rent-out form renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
+        await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
+        await page.getByRole("group", { name: "Units free for these days" }).waitFor();
+        await page.getByRole("checkbox", { name: /AL63-02/ }).waitFor();
+        await capture(page, "counter-rental-form", scheme);
+      });
+
+      // The ticket the person walks off with: who, the tags, the back-by
+      // date, and on screen the acts. Rented here rather than seeded so the
+      // capture is the ticket a counter lands on, notice and all.
+      test(`a counter rental's ticket renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
+        await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
+        await page.getByRole("checkbox", { name: /Mask #1/ }).check();
+        await page.getByRole("checkbox", { name: /Fins #1/ }).check();
+        await page.getByRole("button", { name: "Rent out", exact: true }).click();
+        await page.getByRole("status").filter({ hasText: "Rented out." }).waitFor();
+        await page.getByRole("button", { name: "Hand over" }).waitFor();
+        await capture(page, "counter-rental-ticket", scheme);
+      });
+
       // The way back to a deleted unit (ADR 20260820-every-delete-is-soft):
       // the Deleted chip in the filter band, and the list whose one act is
       // Restore. Photographed after deleting a unit rather than seeding one —
