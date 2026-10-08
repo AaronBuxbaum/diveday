@@ -161,6 +161,13 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "trips.notices.courseFormUnavailable",
   },
+  "course-form-paper-copy": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.courseFormPaperCopy",
+  },
+  "course-form-date": { form: "roster", tone: "danger", key: "trips.notices.courseFormDate" },
+  "course-form-ended": { form: "roster", tone: "danger", key: "trips.notices.courseFormEnded" },
   "identity-medical-hold": {
     form: "roster",
     tone: "warning",

@@ -406,6 +406,7 @@ const READINESS_BLOCKER_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   medical_not_cleared: "shared.readiness.blockers.medicalNotCleared",
   guardian_signature_missing: "shared.readiness.blockers.guardianSignatureMissing",
   course_form_unsigned: "shared.readiness.blockers.courseFormUnsigned",
+  course_form_guardian_missing: "shared.readiness.blockers.courseFormGuardianMissing",
   certification_missing: "shared.readiness.blockers.certificationMissing",
   certification_pending: "shared.readiness.blockers.certificationPending",
   certification_self_declared: "shared.readiness.blockers.certificationSelfDeclared",
@@ -433,7 +434,7 @@ export function readinessBlockerText(t: StaffTranslator, blocker: ReadinessBlock
   const key = READINESS_BLOCKER_KEYS[blocker.code];
   const params = blocker.params;
   // The form's own title, as the shop wrote it: "which form" is the whole fix.
-  if (blocker.code === "course_form_unsigned") {
+  if (blocker.code === "course_form_unsigned" || blocker.code === "course_form_guardian_missing") {
     return t(key, { form: params?.formTitle ?? "" });
   }
   // Naming the card the diver does hold is what makes "not certified" a fact a

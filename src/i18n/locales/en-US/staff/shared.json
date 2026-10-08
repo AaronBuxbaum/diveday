@@ -223,7 +223,8 @@
       "paymentDue": "Payment is outstanding for this trip.",
       "paymentRefunded": "Payment was refunded; collect payment before boarding.",
       "readinessUnavailable": "Readiness evidence is unavailable. Do not board this diver until it is checked.",
-      "courseFormUnsigned": "Course form not signed: {form}."
+      "courseFormUnsigned": "Course form not signed: {form}.",
+      "courseFormGuardianMissing": "{form} needs a parent or guardian’s signature."
     }
   },
   "shopNav": {

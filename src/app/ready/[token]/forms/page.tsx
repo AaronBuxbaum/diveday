@@ -9,9 +9,9 @@ import { SectionCard } from "@/components/ui/card";
 import { ChoiceRow, controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { StatusInView } from "@/components/ui/StatusInView";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { verifyBookingCapability } from "@/db/booking-capabilities";
+import { staleBookingCapabilityForToken } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
-import { getCourseFormsForBooking } from "@/db/course-forms";
+import { getCourseFormsForBooking, verifyCourseFormsLink } from "@/db/course-forms";
 import { getShopById } from "@/db/shops";
 import { diverGuardianRelationshipOptions } from "@/i18n/guardian-labels";
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
@@ -43,11 +43,13 @@ const ERRORS: Record<string, DiverMessageKey> = {
  * **The course's forms, signed one at a time on the diver's own link** (ADR
  * 20261008-course-forms).
  *
- * The readiness link is the capability: it proves the bearer holds this one
- * enrollment, and a course form is owed per enrollment. Anything the link
- * cannot vouch for — dead, revoked, a cancelled seat — goes back to `/ready`,
- * which already says each of those honestly. A seat held for staff to confirm
- * who it is draws no form, as `/ready` draws none.
+ * Two links open it, each proving the bearer holds this one enrollment: the
+ * diver's readiness link, and the forms-only link staff hand over when the
+ * release is signed and the forms are not (`course_forms`, which opens this
+ * page and no other). A readiness link the page cannot vouch for — dead,
+ * revoked, a cancelled seat — goes back to `/ready`, which already says each of
+ * those honestly; a dead forms-only link says so here, since `/ready` is not
+ * its page. A seat held for staff to confirm who it is draws no form.
  *
  * One form per screen, in the course's order, its full words above the
  * signature — the release's own shape (`/waivers/[token]`): a typed name that
@@ -66,8 +68,20 @@ export default async function CourseFormsPage({
   const { error, signed } = await searchParams;
   const prep = `/ready/${token}`;
   const db = await getDb();
-  const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
-  if (!capability) redirect(prep);
+  const capability = await verifyCourseFormsLink(db, token);
+  if (!capability) {
+    const dead = await staleBookingCapabilityForToken(db, { token, purpose: "course_forms" });
+    const deadShop = dead ? await getShopById(db, dead.shopId) : null;
+    if (!deadShop) redirect(prep);
+    const t = diverTranslator(await requestLocale(deadShop.defaultLocale));
+    return (
+      <ThreadShell shopName={deadShop.name} title={t("courseForms.linkDeadTitle")}>
+        <p className="mt-4 text-base text-muted">
+          {t("courseForms.linkDeadBody", { shopName: deadShop.name })}
+        </p>
+      </ThreadShell>
+    );
+  }
   const [shop, forms] = await Promise.all([
     getShopById(db, capability.shopId),
     getCourseFormsForBooking(db, capability.shopId, capability.bookingId),
@@ -76,14 +90,18 @@ export default async function CourseFormsPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
   const { enrollment, required, outstanding } = forms;
+  // A forms-only link cannot open the prep page, so it is never offered one.
+  const offerPrep = !capability.formsOnly;
 
   if (outstanding.length === 0) {
     return (
       <ThreadShell shopName={shop.name} title={t("courseForms.doneTitle")}>
         <p className="mt-4 text-base text-muted">{t("courseForms.doneBody")}</p>
-        <Link href={prep} className={`${buttonClass()} mt-6`}>
-          {t("courseForms.backToPrep")}
-        </Link>
+        {offerPrep ? (
+          <Link href={prep} className={`${buttonClass()} mt-6`}>
+            {t("courseForms.backToPrep")}
+          </Link>
+        ) : null}
       </ThreadShell>
     );
   }
@@ -91,10 +109,11 @@ export default async function CourseFormsPage({
   const [form] = outstanding;
   if (!form) redirect(prep);
   const current = required.length - outstanding.length + 1;
-  const guardianRequired = guardianSignatureRequired(
-    enrollment.dateOfBirth,
-    signingDate(nowDate(), enrollment.timezone),
-  );
+  // A minor today, or a form the student already signed alone as a minor:
+  // either way the guardian's half is what this page collects.
+  const guardianRequired =
+    form.gap === "guardian_missing" ||
+    guardianSignatureRequired(enrollment.dateOfBirth, signingDate(nowDate(), enrollment.timezone));
   const errorKey = error && Object.hasOwn(ERRORS, error) ? ERRORS[error] : undefined;
 
   const signBlock = (
@@ -220,11 +239,13 @@ export default async function CourseFormsPage({
           </SectionCard>
         ) : null}
       </form>
-      <p className="mt-8 text-center text-sm">
-        <Link href={prep} className="font-medium text-primary hover:underline">
-          {t("courseForms.backToPrep")}
-        </Link>
-      </p>
+      {offerPrep ? (
+        <p className="mt-8 text-center text-sm">
+          <Link href={prep} className="font-medium text-primary hover:underline">
+            {t("courseForms.backToPrep")}
+          </Link>
+        </p>
+      ) : null}
     </ThreadShell>
   );
 }

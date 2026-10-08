@@ -138,7 +138,10 @@
       "invalid": "No se guardó. Uno de esos formularios se eliminó; recarga y vuelve a elegir.",
       "notAuthorized": "Solo el personal que configura salidas puede elegir los formularios de un curso.",
       "pasteWording": "Pega el texto de la agencia",
-      "awaitingText": "Ningún estudiante lo firma hasta que tenga su texto."
+      "awaitingText": "Ningún estudiante lo firma hasta que tenga su texto.",
+      "addImpact": "Un formulario añadido ahora pide firmarlo a {students, plural, one {# estudiante} other {# estudiantes}} de {sessions, plural, one {# sesión próxima} other {# sesiones próximas}}.",
+      "removeLocked": "Solo el propietario o un gerente puede quitar un formulario de un curso.",
+      "removeNotAuthorized": "No se guardó. Solo el propietario o un gerente puede quitar un formulario de un curso."
     }
   },
   "dayByDay": {

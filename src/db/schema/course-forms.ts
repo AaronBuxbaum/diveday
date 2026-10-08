@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  date,
   index,
   integer,
   pgTable,
@@ -12,6 +13,7 @@ import {
 import { bookings } from "./bookings";
 import { people, shops } from "./core";
 import { courses } from "./courses";
+import { trips } from "./trips";
 
 /**
  * **Course forms** (ADR 20261008-course-forms): the documents a course asks
@@ -115,8 +117,10 @@ export const courseFormRequirements = pgTable(
  * and the shop's own release is the document that carries forward (ADR
  * 20261008-course-forms). Immutable once written — the title, version and body
  * are snapshots, so a later edit to the form never alters what was signed.
- * The only update any writer makes is erasure (`src/db/anonymize.ts`), which
- * strips the names and keeps the fact.
+ * Two writers update a record, and neither touches what the student signed:
+ * erasure (`src/db/anonymize.ts`), which strips the names and keeps the fact,
+ * and a guardian completing a minor's signature that has none (the guardian
+ * columns, filled once where they are null, never overwritten).
  *
  * `signature_method` is the same vocabulary as `waiver_records`
  * (`src/lib/signatures.ts`): `typed_consent` when the student signed on their
@@ -148,7 +152,24 @@ export const courseFormRecords = pgTable(
       .references(() => courseFormVersions.id),
     formTitle: text("form_title").notNull(),
     formVersion: integer("form_version").notNull(),
+    /** The words signed, with `{shopName}`, `{courseTitle}` and `{instructorNames}` filled in. */
     formBody: text("form_body").notNull(),
+    /**
+     * The course, the session and its instructors as they stood at signing —
+     * what the form's placeholders were filled with, kept beside the words so
+     * a renamed course or a changed crew never rewrites what was agreed to.
+     */
+    courseTitle: text("course_title").notNull(),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    instructorNames: text("instructor_names").notNull(),
+    /**
+     * The date written on a paper copy, when the staffer recording it gave one.
+     * Whether the student was a minor is measured on this day rather than the
+     * day it was recorded. Null on every online signature.
+     */
+    paperSignedOn: date("paper_signed_on"),
     /** Null only after erasure (`anonymized_at`), which keeps the fact and drops the name. */
     signedName: text("signed_name"),
     signatureMethod: text("signature_method").notNull(),

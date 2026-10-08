@@ -7,7 +7,9 @@ import { StatusInView } from "@/components/ui/StatusInView";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import type { AppDb } from "@/db/client";
 import {
+  type CourseFormImpact,
   type CourseFormSummary,
+  courseUpcomingEnrollment,
   listCourseFormRequirements,
   listCourseForms,
 } from "@/db/course-forms";
@@ -25,12 +27,19 @@ export async function loadCourseFormsRequirement(
   input: { shopId: string; courseId: string; personId: string; notice: string | undefined },
   t: StaffTranslator,
 ) {
-  const [forms, required, canWriteForms] = await Promise.all([
+  const [forms, required, canWriteForms, addImpact] = await Promise.all([
     listCourseForms(db, input.shopId),
     listCourseFormRequirements(db, input.shopId, input.courseId),
     canPersonManageWaiverTemplates(db, input.shopId, input.personId),
+    courseUpcomingEnrollment(db, input.shopId, input.courseId),
   ]);
-  return { forms, required, canWriteForms, notice: courseFormsNotice(input.notice, t) };
+  return {
+    forms,
+    required,
+    canWriteForms,
+    addImpact,
+    notice: courseFormsNotice(input.notice, t),
+  };
 }
 
 /**
@@ -47,6 +56,9 @@ function courseFormsNotice(
   if (notice === "forms-not-authorized") {
     return { tone: "danger", text: t("courses.edit.forms.notAuthorized") };
   }
+  if (notice === "forms-remove-not-authorized") {
+    return { tone: "danger", text: t("courses.edit.forms.removeNotAuthorized") };
+  }
   return undefined;
 }
 
@@ -61,7 +73,10 @@ function courseFormsNotice(
  * the release's page, so this only chooses, and links there to write one.
  *
  * Ticked forms are listed first in the order students meet them; the number
- * box beside each is that order.
+ * box beside each is that order. A reader who may not take a form off (not an
+ * owner or manager) sees the course's forms ticked and fixed, still posted,
+ * so their save can add and reorder but never drop one. Beside the button,
+ * who a form added now would ask to sign, before the tap.
  */
 export function CourseFormsRequirement({
   id,
@@ -72,6 +87,7 @@ export function CourseFormsRequirement({
   action,
   waiversPath,
   canWriteForms,
+  addImpact,
   t,
 }: {
   id: string;
@@ -85,6 +101,8 @@ export function CourseFormsRequirement({
   waiversPath: string;
   /** Whether the reader may write forms (owner or manager), so the link goes somewhere. */
   canWriteForms: boolean;
+  /** Every live seat on a session of this course that has not started. */
+  addImpact: CourseFormImpact;
   t: StaffTranslator;
 }) {
   const position = new Map(required.map((formId, index) => [formId, index]));
@@ -109,15 +127,24 @@ export function CourseFormsRequirement({
               const at = position.get(form.id);
               return (
                 <li key={form.id} className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <ChoiceRow
-                      type="checkbox"
-                      name="formId"
-                      value={form.id}
-                      defaultChecked={at !== undefined}
-                    >
-                      {form.title}
-                    </ChoiceRow>
+                  <div className="min-w-0 flex-1">
+                    {at !== undefined && !canWriteForms ? (
+                      <>
+                        <input type="hidden" name="formId" value={form.id} />
+                        <ChoiceRow type="checkbox" checked disabled readOnly>
+                          {form.title}
+                        </ChoiceRow>
+                      </>
+                    ) : (
+                      <ChoiceRow
+                        type="checkbox"
+                        name="formId"
+                        value={form.id}
+                        defaultChecked={at !== undefined}
+                      >
+                        {form.title}
+                      </ChoiceRow>
+                    )}
                     {/* A form made from the course's template starts with no
                         text, and asks nobody anything until it has some. */}
                     {courseFormAwaitingText(form.body) ? (
@@ -137,15 +164,18 @@ export function CourseFormsRequirement({
                       </p>
                     ) : null}
                   </div>
-                  <input
-                    type="number"
-                    name={`order-${form.id}`}
-                    min={1}
-                    max={forms.length}
-                    defaultValue={at === undefined ? "" : at + 1}
-                    aria-label={t("courses.edit.forms.orderLabel", { form: form.title })}
-                    className={`${controlClass} w-20 shrink-0`}
-                  />
+                  {/* Sized by its wrapper: `controlClass` is full width. */}
+                  <div className="w-20 shrink-0">
+                    <input
+                      type="number"
+                      name={`order-${form.id}`}
+                      min={1}
+                      max={forms.length}
+                      defaultValue={at === undefined ? "" : at + 1}
+                      aria-label={t("courses.edit.forms.orderLabel", { form: form.title })}
+                      className={controlClass}
+                    />
+                  </div>
                 </li>
               );
             })}
@@ -159,6 +189,17 @@ export function CourseFormsRequirement({
             >
               {t("courses.edit.forms.writeLink")}
             </Link>
+          </p>
+        ) : null}
+        {!canWriteForms && required.length > 0 ? (
+          <p className="text-sm text-muted">{t("courses.edit.forms.removeLocked")}</p>
+        ) : null}
+        {forms.length > required.length && addImpact.students > 0 ? (
+          <p className="text-sm text-muted" data-course-form-add-impact>
+            {t("courses.edit.forms.addImpact", {
+              students: addImpact.students,
+              sessions: addImpact.sessions,
+            })}
           </p>
         ) : null}
         {forms.length === 0 ? null : (

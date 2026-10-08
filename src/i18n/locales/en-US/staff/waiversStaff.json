@@ -96,6 +96,8 @@
       "notFound": "That form is no longer here."
     },
     "needsText": "Needs your text",
-    "needsTextDescription": "Paste the agency’s wording for this form. No student is asked to sign it until it has its text."
+    "needsTextDescription": "Paste the agency’s wording for this form. No student is asked to sign it until it has its text.",
+    "resignImpact": "{students, plural, one {Saving a change asks # student} other {Saving a change asks # students}} on {sessions, plural, one {# upcoming session} other {# upcoming sessions}} to sign again.",
+    "placeholdersHint": "Write '{shopName}', '{courseTitle}' or '{instructorNames}' where the form leaves a blank for them; each is filled in when a student signs."
   }
 }

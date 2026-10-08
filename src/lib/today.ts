@@ -869,6 +869,7 @@ export const BLOCKER_ACTIONS: Record<
   guardian_signature_missing: { kind: "waiver", target: "trip" },
   // The roster is where a paper copy is recorded and the link is sent.
   course_form_unsigned: { kind: "waiver", target: "trip" },
+  course_form_guardian_missing: { kind: "waiver", target: "trip" },
   certification_missing: { kind: "certification", target: "diver" },
   certification_pending: { kind: "certification", target: "diver" },
   certification_self_declared: { kind: "certification", target: "diver" },

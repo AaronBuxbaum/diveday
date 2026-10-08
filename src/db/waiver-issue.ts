@@ -5,7 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { type CourtesyProviders, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import { smsProviderFromEnvironment, smsRecipient } from "@/lib/notifications/sms";
-import { issueBookingCapability } from "./booking-capabilities";
+import { issueCourseFormsCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { getCourseFormsForBooking } from "./course-forms";
 import { sendAndRecordNotification, sendNotification } from "./notifications";
@@ -206,8 +206,8 @@ export type WaiverDeliveryOptions = {
 
 /**
  * **The release is signed; the course's forms are not** (ADR
- * 20261008-course-forms). Mint a readiness link for this enrollment and hand
- * over its forms page on the asked-for channel, by the same rules as the
+ * 20261008-course-forms). Get this enrollment's forms-only link and hand
+ * it over on the asked-for channel, by the same rules as the
  * release's own link: best-effort, and anything not `sent` comes back for the
  * staffer to pass on. Null when no form is owed, the seat is held for staff to
  * confirm who it is, or the booking cannot carry a link — the caller then
@@ -226,10 +226,12 @@ async function deliverCourseFormsLink(
   const shopId = ctx.shop.id;
   const forms = await getCourseFormsForBooking(db, shopId, bookingId);
   if (!forms || forms.outstanding.length === 0 || forms.enrollment.identityHeld) return null;
-  const issued = await issueBookingCapability(db, {
+  // A forms-only link, and the live one when the diver already holds it:
+  // never the readiness link, which would also open the diver's whole trip
+  // prep to whoever the URL is handed to (security review).
+  const issued = await issueCourseFormsCapability(db, {
     shopId,
     bookingId,
-    purpose: "readiness",
     now: options.now,
   });
   if (!issued) return null;

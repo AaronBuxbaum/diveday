@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "a054654e-31ad-44b8-acab-09f38fb6c852",
+  "id": "908fb26a-8d64-4bd1-947e-3c0fbae2bb15",
   "prevIds": [
     "6a8ba681-7c78-49d4-84b8-a36275f408ef",
     "ba1f9bcf-674a-4895-841e-475878bb68cc"
@@ -106,7 +106,8 @@
         "readiness",
         "confirm",
         "claim",
-        "handoff"
+        "handoff",
+        "course_forms"
       ],
       "name": "booking_capability_purpose",
       "entityType": "enums",
@@ -3478,6 +3479,19 @@
       "generated": null,
       "identity": null,
       "name": "revoked_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "booking_capabilities"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "token_sealed",
       "entityType": "columns",
       "schema": "public",
       "table": "booking_capabilities"
@@ -6923,6 +6937,58 @@
       "generated": null,
       "identity": null,
       "name": "form_body",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "course_form_records"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "course_title",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "course_form_records"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "trip_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "course_form_records"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "instructor_names",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "course_form_records"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "paper_signed_on",
       "entityType": "columns",
       "schema": "public",
       "table": "course_form_records"
@@ -29258,6 +29324,23 @@
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "name": "course_form_records_Ynzi8aSsVWKW_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "course_form_records"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "trip_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "trips",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "course_form_records_trip_id_trips_id_fkey",
       "entityType": "fks",
       "schema": "public",
       "table": "course_form_records"

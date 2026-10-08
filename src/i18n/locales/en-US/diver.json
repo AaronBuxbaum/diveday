@@ -803,7 +803,8 @@
       "certificationDone": "Verified and on file.",
       "paymentDone": "Paid up. Thank you.",
       "certificationMultipleNeeded": "This dive needs more than one certification on file. Share the details for each one it calls for, and your shop will confirm you’re set.",
-      "courseFormUnsigned": "Your course has forms for you to sign."
+      "courseFormUnsigned": "Your course has forms for you to sign.",
+      "courseFormGuardianMissing": "A parent or legal guardian has to sign your course forms with you."
     },
     "gearAndSetup": "Gear and setup",
     "dockCallLine": "Aim to be at the dock by {time}, {dock} before we sail.",
@@ -4236,7 +4237,7 @@
     },
     "courseFormsLink": {
       "subject": "Course forms to sign for {tripTitle}",
-      "body": "{shopName} asks every student on {tripTitle} to sign the course forms before it starts. Your release is already signed, so these are all that’s left.",
+      "body": "{shopName} asks every student on {tripTitle} to sign the course forms. Your release is already signed, so these are all that’s left.",
       "openLink": "Sign your course forms"
     }
   },
@@ -4307,6 +4308,8 @@
     "signing": "Signing…",
     "errorGuardian": "A parent or legal guardian signs this form too. Type their name, choose who they are to the student, and tick their box.",
     "errorUnavailable": "This form can’t be signed from here any more. Ask the shop.",
-    "signedOne": "Signed. The next form is below."
+    "signedOne": "Signed. The next form is below.",
+    "linkDeadTitle": "This link no longer works",
+    "linkDeadBody": "Ask {shopName} to send your course forms again."
   }
 }

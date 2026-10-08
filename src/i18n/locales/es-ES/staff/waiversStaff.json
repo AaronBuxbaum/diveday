@@ -96,6 +96,8 @@
       "notFound": "Ese formulario ya no está aquí."
     },
     "needsText": "Falta tu texto",
-    "needsTextDescription": "Pega el texto de la agencia para este formulario. No se pide a ningún estudiante que lo firme hasta que tenga su texto."
+    "needsTextDescription": "Pega el texto de la agencia para este formulario. No se pide a ningún estudiante que lo firme hasta que tenga su texto.",
+    "resignImpact": "Guardar un cambio pide volver a firmar a {students, plural, one {# estudiante} other {# estudiantes}} de {sessions, plural, one {# sesión próxima} other {# sesiones próximas}}.",
+    "placeholdersHint": "Escribe '{shopName}', '{courseTitle}' o '{instructorNames}' donde el formulario deja un hueco para ellos; cada uno se rellena cuando un estudiante firma."
   }
 }

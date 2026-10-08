@@ -104,9 +104,19 @@ export type StandardCourseForm = {
 
 /**
  * PADI's own list of course paperwork: the PADI Instructor Manual 2021
- * (product 79173), General Standards and Procedures, "Forms". Every PADI
- * course signs the general release and the safe-practices statement unless a
- * course has forms of its own; the EU release is product 10175.
+ * (product 79173), General Standards and Procedures, "Forms". It names the
+ * general-training release and the safe-practices statement for the entry
+ * course, and the continuing-education administrative document for the
+ * diving courses after it; the EU release is product 10175.
+ *
+ * **Templates that list no forms, deliberately**, until the manual's own
+ * sections are read for each (issue #2264): Discover Scuba Diving and
+ * ReActivate (`scuba-refresher`) are not certification courses and use
+ * paperwork of their own; Divemaster is professional-level training with its
+ * own application and statements; and the two courses with no dive in them,
+ * Emergency Oxygen Provider and Equipment Specialist, are not ones the
+ * continuing-education document's in-water release was written for. A shop
+ * adds whatever its own paperwork is from the course's editor.
  */
 const PADI_INSTRUCTOR_MANUAL_2021 =
   "https://pro-cms.padi.com/sites/default/files/documents/training-hub/79173_Instructor_Manual_2021_EN.pdf";
@@ -126,8 +136,9 @@ const PADI_ENTRY_FORMS: readonly StandardCourseForm[] = [
 
 /**
  * PADI's one document for continuing education (Advanced, Rescue and the
- * specialties): the release, the safe-practices statement and the medical
- * form bundled. DiveDay's release flow already asks the medical questions.
+ * diving specialties): the release and the safe-practices statement in one.
+ * It does **not** include the medical form — that is the Diver Medical
+ * Questionnaire, which the shop's own release flow already asks every diver.
  */
 const PADI_CONTINUING_EDUCATION_FORMS: readonly StandardCourseForm[] = [
   {
@@ -1868,7 +1879,6 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 1,
     title: "Equipment Specialist",
     agency: "padi",
-    standardForms: PADI_CONTINUING_EDUCATION_FORMS,
     description: "Understand how your dive gear works and how to maintain and care for it.",
     minimumCertificationLevel: "open_water",
     certifiesLevel: null,

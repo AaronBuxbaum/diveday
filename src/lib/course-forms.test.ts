@@ -4,7 +4,9 @@ import {
   COURSE_FORMS_BLOCK_BOARDING,
   type CourseFormSignature,
   courseFormAwaitingText,
+  courseFormGaps,
   courseFormTextChanged,
+  fillCourseFormText,
   outstandingCourseForms,
   type RequiredCourseForm,
 } from "./course-forms";
@@ -110,6 +112,67 @@ describe("outstandingCourseForms — which forms an enrollment still owes", () =
   it("reads an unknown date of birth as an adult (H-08's fail-open)", () => {
     expect(owed([signed()], { dateOfBirth: null, timezone: "UTC" } as never)).toEqual([]);
   });
+
+  it("clears a form signed at the version a started session began with", () => {
+    // The shop edited the form mid-course; the student signed the words in
+    // force on the first morning, and that still counts for this session.
+    const midCourse = { ...release, alsoAccepted: ["release-v1"] };
+    expect(owed([signed({ formVersionId: "release-v1" })], adult, [midCourse])).toEqual([]);
+  });
+
+  it("measures a paper copy's age on the date written on it, not the day it was recorded", () => {
+    const turning = { dateOfBirth: "2008-10-08", timezone: "UTC" };
+    // Recorded today, the student is eighteen; on the paper's date they were not.
+    expect(owed([signed({ paperSignedOn: "2026-10-01" })], turning)).toEqual(["form-release"]);
+    expect(owed([signed({ paperSignedOn: "2026-10-08" })], turning)).toEqual([]);
+  });
+});
+
+describe("courseFormGaps — what an owed form is missing", () => {
+  const gaps = (signatures: CourseFormSignature[], signer = adult) =>
+    courseFormGaps({
+      shopId: SHOP,
+      bookingId: BOOKING,
+      personId: PERSON,
+      required: [release],
+      signatures,
+      signer,
+    }).map(({ gap }) => gap);
+
+  it("is unsigned when the student has not signed", () => {
+    expect(gaps([])).toEqual(["unsigned"]);
+  });
+
+  it("is the guardian's half when a minor signed alone", () => {
+    expect(gaps([signed()], minor)).toEqual(["guardian_missing"]);
+  });
+
+  it("is unsigned, not the guardian's, when only another enrollment's signature exists", () => {
+    expect(gaps([signed({ bookingId: OTHER_BOOKING })], minor)).toEqual(["unsigned"]);
+  });
+});
+
+describe("fillCourseFormText — a form's blanks, filled at signing", () => {
+  const context = {
+    shopName: "Blue Mantis",
+    courseTitle: "Open Water Diver",
+    instructorNames: "Ana Ruiz, Ben Ode",
+  };
+
+  it("fills each placeholder, every time it appears", () => {
+    expect(
+      fillCourseFormText(
+        "I, the student, release {shopName} and {instructorNames} for {courseTitle}. {shopName}.",
+        context,
+      ),
+    ).toBe(
+      "I, the student, release Blue Mantis and Ana Ruiz, Ben Ode for Open Water Diver. Blue Mantis.",
+    );
+  });
+
+  it("leaves any other brace exactly as the shop typed it", () => {
+    expect(fillCourseFormText("{shopname} {depth18} {}", context)).toBe("{shopname} {depth18} {}");
+  });
 });
 
 describe("courseFormAwaitingText", () => {
@@ -162,6 +225,7 @@ describe("calculateReadiness — course forms", () => {
     personId: PERSON,
     required,
     signatures,
+    timezone: "America/New_York",
   });
 
   it("is the shipped default: an unsigned form blocks boarding", () => {
@@ -199,7 +263,7 @@ describe("calculateReadiness — course forms", () => {
     expect(result.blockers.map((blocker) => blocker.code)).toEqual(["course_form_unsigned"]);
   });
 
-  it("stays blocked on a minor's form with no guardian beside it", () => {
+  it("stays blocked on a minor's form with no guardian beside it, naming the guardian as the fix", () => {
     const result = calculateReadiness({
       ...base,
       // The release itself is co-signed, so the only blocker is the form's.
@@ -207,7 +271,28 @@ describe("calculateReadiness — course forms", () => {
       dateOfBirth: minor.dateOfBirth,
       courseForms: courseForms([signed()], [release]),
     });
-    expect(result.blockers.map((blocker) => blocker.code)).toEqual(["course_form_unsigned"]);
+    expect(result.status).toBe("blocked");
+    expect(result.blockers).toEqual([
+      { code: "course_form_guardian_missing", params: { formTitle: "Liability release" } },
+    ]);
+  });
+
+  it("measures a minor in the shop's own zone, never UTC", () => {
+    // Signed at 01:00 UTC on the eighteenth birthday: still the day before in
+    // New York, so the guardian is owed there and would not be in UTC.
+    const turning = "2008-10-08";
+    const result = calculateReadiness({
+      ...base,
+      waiver: { ...waiver, guardianSignedAt: now } as WaiverRecord,
+      dateOfBirth: turning,
+      courseForms: courseForms(
+        [signed({ signedAt: new Date("2026-10-08T01:00:00.000Z") })],
+        [release],
+      ),
+    });
+    expect(result.blockers.map((blocker) => blocker.code)).toEqual([
+      "course_form_guardian_missing",
+    ]);
   });
 
   it("asks for forms even on a departure whose waiver is switched off", () => {

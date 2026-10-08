@@ -17,6 +17,7 @@ import {
   getCourseFormsForBooking,
   type SignCourseFormOutcome,
   signCourseForm,
+  verifyCourseFormsLink,
 } from "@/db/course-forms";
 import { saveHelpRequest } from "@/db/help-requests";
 import { createNitroxCertification, setBookingNitrox } from "@/db/nitrox";
@@ -869,25 +870,34 @@ const COURSE_FORM_ERROR: Record<Exclude<SignCourseFormOutcome, { ok: true }>["re
 };
 
 /**
- * **Sign one course form from the readiness link** (ADR
- * 20261008-course-forms). The link proves the bearer holds this enrollment
- * (`contextFor`, rate-limited before it verifies), and `signCourseForm` checks
- * everything else against the booking itself: the typed name is the student's,
- * the version is the one the course asks for now, a minor's form carries a
- * guardian. Back to the forms page while any are owed, then to the prep page.
+ * **Sign one course form from the diver's link** (ADR 20261008-course-forms).
+ * Either link that opens the forms page may sign on it — the readiness link
+ * or the forms-only one (`verifyCourseFormsLink`), rate-limited before it
+ * verifies, like every action here — and nothing else in this file accepts the
+ * forms-only one. `signCourseForm` checks everything else against the booking
+ * itself: a held seat, the typed name is the student's, the version is one the
+ * course asks for, a minor's form carries a guardian. Back to the forms page
+ * while any are owed, then to the prep page when the link can open it.
  */
 export async function signCourseFormFromReady(token: string, formData: FormData) {
   const forms = `${base(token)}/forms`;
-  const ctx = await contextFor(token);
-  if (!ctx.ok) redirect(ctx.reason === "rate_limited" ? `${forms}?error=rate` : base(token));
-  refuseWhileHeld(token, ctx.data);
+  const ip = await clientIp();
+  if (
+    !(await checkRateLimit(rateLimitKey("readiness-token", ip), RATE_LIMITS.capabilityAction))
+      .allowed
+  ) {
+    redirect(`${forms}?error=rate`);
+  }
+  const db = await getDb();
+  const link = await verifyCourseFormsLink(db, token);
+  if (!link) redirect(forms);
   const parsed = courseFormSignSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${forms}?error=agreement`);
   const guardianPosted =
     parsed.data.guardianName !== undefined || parsed.data.guardianRelationship !== undefined;
-  const signed = await signCourseForm(ctx.db, {
-    shopId: ctx.data.shop.id,
-    bookingId: ctx.bookingId,
+  const signed = await signCourseForm(db, {
+    shopId: link.shopId,
+    bookingId: link.bookingId,
     formVersionId: parsed.data.formVersionId,
     signerName: parsed.data.signerName,
     agreed: parsed.data.acknowledged === "on",
@@ -900,7 +910,9 @@ export async function signCourseFormFromReady(token: string, formData: FormData)
       : undefined,
   });
   if (!signed.ok) redirect(`${forms}?error=${COURSE_FORM_ERROR[signed.reason]}`);
-  const left = await getCourseFormsForBooking(ctx.db, ctx.data.shop.id, ctx.bookingId);
+  const left = await getCourseFormsForBooking(db, link.shopId, link.bookingId);
   if (left && left.outstanding.length > 0) revalidateAndRedirect(forms, `${forms}?signed=1`);
+  // A forms-only link has no prep page to return to; its forms page says done.
+  if (link.formsOnly) revalidateAndRedirect(forms, forms);
   revalidateAndRedirect(base(token), `${base(token)}?saved=course-forms`);
 }

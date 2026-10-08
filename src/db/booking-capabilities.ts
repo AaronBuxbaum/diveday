@@ -5,10 +5,11 @@ import {
   hashCapabilityToken,
 } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
-import type { DbExecutor } from "./client";
+import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
+import type { AppDb, DbExecutor } from "./client";
 import { bookingCapabilities, bookings, trips } from "./schema";
 
-export type CapabilityPurpose = "readiness" | "confirm" | "claim" | "handoff";
+export type CapabilityPurpose = "readiness" | "confirm" | "claim" | "handoff" | "course_forms";
 
 export type IssuedCapability = { token: string; expiresAt: Date };
 
@@ -58,6 +59,11 @@ export async function issueBookingCapability(
     purpose: CapabilityPurpose;
     now?: Date;
     /**
+     * Keep an openable copy of the token (`token_sealed`), so a later send can
+     * hand the same link back — `issueCourseFormsCapability` only.
+     */
+    sealingKey?: SecretKey | null;
+    /**
      * A shorter life than the trip's, for a purpose that is about the next
      * ten minutes rather than the departure — the booking handoff. Never
      * longer: the trip-anchored expiry stays the ceiling.
@@ -90,10 +96,78 @@ export async function issueBookingCapability(
     bookingId: input.bookingId,
     purpose: input.purpose,
     tokenHash: hashCapabilityToken(token),
+    tokenSealed: input.sealingKey ? sealSecret(token, input.sealingKey) : null,
     issuedAt: now,
     expiresAt,
   });
   return { token, expiresAt };
+}
+
+/**
+ * **The course-forms link for one enrollment: the live one when there is one**
+ * (ADR 20261008-course-forms). A staffer who emails the forms and then copies
+ * the link hands over one URL, not two — the waiver link's rule (ADR
+ * 20260820-waiver-links-are-reused-not-reissued), and for its reason: every
+ * send minting another live credential is a pile of working links for one
+ * booking. A `course_forms` token opens the forms page and nothing else.
+ *
+ * The live row's token is read back from its sealed copy. With no sealing key
+ * there is no readable copy, and this mints as `issueBookingCapability` always
+ * has, under the same per-purpose cap. Decided under a lock on the booking row,
+ * so two sends at once cannot both mint.
+ */
+export async function issueCourseFormsCapability(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; now?: Date },
+): Promise<(IssuedCapability & { reused: boolean }) | null> {
+  const now = input.now ?? nowDate();
+  const keyResult = secretKeyFromEnvironment();
+  const sealingKey = keyResult.status === "ok" ? keyResult.key : null;
+  return db.transaction(async (tx) => {
+    const [booking] = await tx
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          ne(bookings.status, "cancelled"),
+        ),
+      )
+      .for("update");
+    if (!booking) return null;
+    if (sealingKey) {
+      const [live] = await tx
+        .select({
+          tokenSealed: bookingCapabilities.tokenSealed,
+          expiresAt: bookingCapabilities.expiresAt,
+        })
+        .from(bookingCapabilities)
+        .where(
+          and(
+            eq(bookingCapabilities.shopId, input.shopId),
+            eq(bookingCapabilities.bookingId, booking.id),
+            eq(bookingCapabilities.purpose, "course_forms"),
+            isNull(bookingCapabilities.revokedAt),
+            gt(bookingCapabilities.expiresAt, now),
+            isNotNull(bookingCapabilities.tokenSealed),
+          ),
+        )
+        // diveday:allow-time-id-order: picks the newest live link to hand back; no list renders it.
+        .orderBy(desc(bookingCapabilities.issuedAt), desc(bookingCapabilities.id))
+        .limit(1);
+      const token = live?.tokenSealed ? openSecret(live.tokenSealed, sealingKey) : null;
+      if (live && token) return { token, expiresAt: live.expiresAt, reused: true };
+    }
+    const issued = await issueBookingCapability(tx, {
+      shopId: input.shopId,
+      bookingId: booking.id,
+      purpose: "course_forms",
+      now,
+      sealingKey,
+    });
+    return issued ? { ...issued, reused: false } : null;
+  });
 }
 
 /**
@@ -137,7 +211,7 @@ async function retireOldestLiveCapabilities(
   if (doomed.length === 0) return;
   await db
     .update(bookingCapabilities)
-    .set({ revokedAt: now })
+    .set({ revokedAt: now, tokenSealed: null })
     .where(inArray(bookingCapabilities.id, doomed));
 }
 
@@ -421,6 +495,7 @@ export async function revokeBookingCapabilities(
   if (input.purpose) conditions.push(eq(bookingCapabilities.purpose, input.purpose));
   await db
     .update(bookingCapabilities)
-    .set({ revokedAt: now })
+    // A revoked link is dead, so its openable copy has no reason to exist.
+    .set({ revokedAt: now, tokenSealed: null })
     .where(and(...conditions));
 }

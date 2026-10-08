@@ -1,10 +1,15 @@
-import { and, asc, desc, eq, inArray, isNull, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
+import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
+  type CourseFormContext,
+  type CourseFormGap,
   type CourseFormSignature,
   courseFormAwaitingText,
+  courseFormGaps,
   courseFormTextChanged,
+  fillCourseFormText,
   normalizeCourseFormText,
   outstandingCourseForms,
   type RequiredCourseForm,
@@ -23,6 +28,7 @@ import {
 } from "@/lib/signatures";
 import { hasReturned } from "@/lib/trips";
 import { loadActiveStaffRoles } from "./authz";
+import { verifyBookingCapability } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import {
   bookings,
@@ -32,7 +38,9 @@ import {
   courseFormVersions,
   courses,
   people,
+  personRoles,
   shops,
+  tripAssignments,
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -313,8 +321,14 @@ export async function setCourseFormRequirements(
  * and an empty body — DiveDay ships the agency's titles, never its words
  * (H-10) — and each listed form the course does not already ask for is added
  * to the end of its list. A form the shop already has, matched by title, is
- * reused as it stands, text and all. Nothing is ever removed or reordered: a
- * template sync adds what is missing and leaves the shop's choices alone.
+ * reused as it stands, text and all. Nothing is ever removed or reordered.
+ *
+ * **A sync never undoes the shop's no.** A form this course once asked for
+ * and the shop took off its list (a soft-deleted requirement) stays off. And
+ * `offeredBefore` — the titles the course's previous template version named
+ * (`sourceTemplateSnapshot.standardForms`) — are skipped outright: the shop
+ * already had each of those, so one missing now is one the shop removed or
+ * deleted. Only a form new in this template version is set up.
  *
  * An empty form is asked of nobody (`courseFormAwaitingText`), so attaching
  * one changes no student's readiness until the shop pastes its text in.
@@ -325,10 +339,17 @@ export async function setCourseFormRequirements(
  */
 export async function attachStandardCourseForms(
   db: DbExecutor,
-  input: { shopId: string; courseId: string; titles: readonly string[] },
+  input: {
+    shopId: string;
+    courseId: string;
+    titles: readonly string[];
+    offeredBefore?: readonly string[];
+  },
 ): Promise<{ created: number; attached: number }> {
+  const titleKey = (title: string) => normalizeCourseFormText(title).toLocaleLowerCase("en-US");
+  const offeredBefore = new Set((input.offeredBefore ?? []).map(titleKey));
   const titles = [...new Set(input.titles.map(normalizeCourseFormText))].filter(
-    (title) => title !== "",
+    (title) => title !== "" && !offeredBefore.has(titleKey(title)),
   );
   if (titles.length === 0) return { created: 0, attached: 0 };
   const [shop] = await db
@@ -342,7 +363,6 @@ export async function attachStandardCourseForms(
     .where(and(eq(courses.id, input.courseId), eq(courses.shopId, input.shopId)));
   if (!shop || !course) return { created: 0, attached: 0 };
 
-  const titleKey = (title: string) => normalizeCourseFormText(title).toLocaleLowerCase("en-US");
   const formByTitle = new Map(
     (await listCourseForms(db, input.shopId)).map((form) => [titleKey(form.title), form.id]),
   );
@@ -360,6 +380,21 @@ export async function attachStandardCourseForms(
       ),
     );
   const required = new Set(current.map((row) => row.formId));
+  // Every form this course ever listed and the shop took off: the shop's no.
+  const declined = new Set(
+    (
+      await db
+        .select({ formId: courseFormRequirements.formId })
+        .from(courseFormRequirements)
+        .where(
+          and(
+            eq(courseFormRequirements.shopId, input.shopId),
+            eq(courseFormRequirements.courseId, course.id),
+            isNotNull(courseFormRequirements.deletedAt),
+          ),
+        )
+    ).map((row) => row.formId),
+  );
   let position = current.reduce((max, row) => Math.max(max, row.position + 1), 0);
   let created = 0;
   let attached = 0;
@@ -383,7 +418,7 @@ export async function attachStandardCourseForms(
       formByTitle.set(titleKey(title), formId);
       created += 1;
     }
-    if (required.has(formId)) continue;
+    if (required.has(formId) || declined.has(formId)) continue;
     await db
       .insert(courseFormRequirements)
       .values({ shopId: input.shopId, courseId: course.id, formId, position });
@@ -446,25 +481,37 @@ export async function courseFormsAwaitingTextByCourse(
 }
 
 /**
- * The forms each trip's course requires, at their current version, keyed by
- * trip. A trip with no course, or a course that asks for none, is absent. A
- * form still waiting for the shop's text is asked of nobody, so it is absent
- * too — which is what keeps it from being signed, sent, owed or blocking.
+ * The forms each trip's course requires, keyed by trip. A trip with no course,
+ * or a course that asks for none, is absent. A form still waiting for the
+ * shop's text is asked of nobody, so it is absent too — which is what keeps it
+ * from being signed, sent, owed or blocking.
+ *
+ * **A session that has started keeps the forms it started with** (ADR
+ * 20261008-course-forms). Once `startsAt` has passed, a form added to the
+ * course afterwards is not asked of that session, and a signature on the
+ * version that was current when it started still counts (`alsoAccepted`) —
+ * an edit made on day two of a three-day course asks the next session to
+ * sign, never the students already in the water. A session that has not
+ * started asks for the current list at the current version.
  */
 export async function requiredCourseFormsForTrips(
   db: DbExecutor,
   shopId: string,
   tripIds: readonly string[],
+  now: Date = nowDate(),
 ): Promise<Map<string, RequiredCourseForm[]>> {
   const result = new Map<string, RequiredCourseForm[]>();
   if (tripIds.length === 0) return result;
   const rows = await db
     .select({
       tripId: trips.id,
+      startsAt: trips.startsAt,
       formId: courseForms.id,
       position: courseFormRequirements.position,
+      requiredSince: courseFormRequirements.createdAt,
       versionId: courseFormVersions.id,
       version: courseFormVersions.version,
+      versionCreatedAt: courseFormVersions.createdAt,
       title: courseFormVersions.title,
       body: courseFormVersions.body,
     })
@@ -485,24 +532,43 @@ export async function requiredCourseFormsForTrips(
       ),
     )
     .orderBy(asc(courseFormRequirements.position), desc(courseFormVersions.version));
-  const seen = new Set<string>();
+  // Every version of each (trip, form), newest first.
+  const versionsByKey = new Map<string, typeof rows>();
   for (const row of rows) {
     const key = `${row.tripId}:${row.formId}`;
-    // The first row per (trip, form) is the highest version: the current text.
-    if (seen.has(key)) continue;
-    seen.add(key);
-    if (courseFormAwaitingText(row.body)) continue;
-    const list = result.get(row.tripId) ?? [];
+    const list = versionsByKey.get(key) ?? [];
+    list.push(row);
+    versionsByKey.set(key, list);
+  }
+  for (const versions of versionsByKey.values()) {
+    const [current] = versions;
+    if (!current) continue;
+    const started = current.startsAt <= now;
+    let asked = courseFormAwaitingText(current.body) ? null : current;
+    const alsoAccepted: string[] = [];
+    if (started) {
+      // Added after the session began: the session never agreed to ask it.
+      if (current.requiredSince > current.startsAt) continue;
+      const atStart = versions.find((row) => row.versionCreatedAt <= current.startsAt);
+      // No words yet when the session began: nothing was asked then either.
+      if (!atStart || courseFormAwaitingText(atStart.body)) continue;
+      if (!asked) asked = atStart;
+      if (atStart.versionId !== asked.versionId) alsoAccepted.push(atStart.versionId);
+    }
+    if (!asked) continue;
+    const list = result.get(current.tripId) ?? [];
     list.push({
       shopId,
-      formId: row.formId,
-      versionId: row.versionId,
-      version: row.version,
-      title: row.title,
-      position: row.position,
+      formId: asked.formId,
+      versionId: asked.versionId,
+      version: asked.version,
+      title: asked.title,
+      position: current.position,
+      ...(alsoAccepted.length > 0 ? { alsoAccepted } : {}),
     });
-    result.set(row.tripId, list);
+    result.set(current.tripId, list);
   }
+  for (const list of result.values()) list.sort((a, b) => a.position - b.position);
   return result;
 }
 
@@ -521,6 +587,7 @@ export async function courseFormSignaturesForBookings(
       formVersionId: courseFormRecords.formVersionId,
       signedAt: courseFormRecords.signedAt,
       guardianSignedAt: courseFormRecords.guardianSignedAt,
+      paperSignedOn: courseFormRecords.paperSignedOn,
     })
     .from(courseFormRecords)
     .where(
@@ -529,6 +596,26 @@ export async function courseFormSignaturesForBookings(
         inArray(courseFormRecords.bookingId, [...bookingIds]),
       ),
     );
+}
+
+/**
+ * **Who may open a booking's forms page**: a `course_forms` link, which opens
+ * that page and nothing else, or the diver's own `readiness` link, which
+ * already opens everything about the booking. `formsOnly` says which, so the
+ * page never offers a way back to a prep page the link cannot open. Null for
+ * anything else — unknown, expired, revoked, another purpose.
+ */
+export async function verifyCourseFormsLink(
+  db: DbExecutor,
+  token: string,
+): Promise<{ shopId: string; bookingId: string; formsOnly: boolean } | null> {
+  const formsOnly = await verifyBookingCapability(db, { token, purpose: "course_forms" });
+  if (formsOnly)
+    return { shopId: formsOnly.shopId, bookingId: formsOnly.bookingId, formsOnly: true };
+  const readiness = await verifyBookingCapability(db, { token, purpose: "readiness" });
+  if (readiness)
+    return { shopId: readiness.shopId, bookingId: readiness.bookingId, formsOnly: false };
+  return null;
 }
 
 /** One booking's enrollment, as the signing page and the writers need it. */
@@ -543,7 +630,46 @@ type Enrollment = {
   startsAt: Date;
   endsAt: Date;
   timezone: string;
+  /** What a form's placeholders are filled with (`fillCourseFormText`). */
+  context: CourseFormContext;
 };
+
+/**
+ * The session's instructors, by name, for a form's `{instructorNames}`: the
+ * crew rostered as this trip's instructor, or — where the roster names no
+ * role — the rostered crew who hold the shop's instructor role. Alphabetical,
+ * joined for reading; empty when nobody is rostered yet.
+ */
+async function sessionInstructorNames(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<string> {
+  const rows = await db
+    .select({ name: people.fullName, tripRole: tripAssignments.tripRole, role: personRoles.role })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .innerJoin(people, eq(people.id, tripAssignments.personId))
+    .leftJoin(
+      personRoles,
+      and(eq(personRoles.personId, people.id), eq(personRoles.role, "instructor")),
+    )
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(tripAssignments.tripId, tripId),
+        eq(people.shopId, shopId),
+        liveTrip(),
+      ),
+    )
+    .orderBy(asc(people.fullName));
+  const names = rows
+    .filter((row) =>
+      row.tripRole === null ? row.role === "instructor" : row.tripRole === "instructor",
+    )
+    .map((row) => row.name);
+  return [...new Set(names)].join(", ");
+}
 
 async function enrollmentFor(
   db: DbExecutor,
@@ -562,11 +688,14 @@ async function enrollmentFor(
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
       timezone: shops.timezone,
+      shopName: shops.name,
+      courseTitle: courses.title,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
+    .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, shopId)))
     .where(
       and(
         eq(bookings.id, bookingId),
@@ -591,11 +720,20 @@ async function enrollmentFor(
     startsAt: row.startsAt,
     endsAt: row.endsAt,
     timezone: row.timezone,
+    context: {
+      shopName: row.shopName,
+      courseTitle: row.courseTitle ?? row.tripTitle,
+      instructorNames: await sessionInstructorNames(db, shopId, row.tripId),
+    },
   };
 }
 
-/** A form as the student reads it: the current words, ready to sign. */
-export type CourseFormToSign = RequiredCourseForm & { body: string };
+/**
+ * A form as the student reads it: the words, with this enrollment's
+ * placeholders filled, and what is missing — `guardian_missing` when the
+ * student already signed and only a parent's signature is owed.
+ */
+export type CourseFormToSign = RequiredCourseForm & { body: string; gap: CourseFormGap };
 
 export type CourseFormsForBooking = {
   enrollment: Enrollment;
@@ -614,15 +752,17 @@ export async function getCourseFormsForBooking(
   db: DbExecutor,
   shopId: string,
   bookingId: string,
+  now: Date = nowDate(),
 ): Promise<CourseFormsForBooking | null> {
   const enrollment = await enrollmentFor(db, shopId, bookingId);
   if (!enrollment) return null;
   const required =
-    (await requiredCourseFormsForTrips(db, shopId, [enrollment.tripId])).get(enrollment.tripId) ??
-    [];
+    (await requiredCourseFormsForTrips(db, shopId, [enrollment.tripId], now)).get(
+      enrollment.tripId,
+    ) ?? [];
   if (required.length === 0) return { enrollment, required, outstanding: [] };
   const signatures = await courseFormSignaturesForBookings(db, shopId, [bookingId]);
-  const owed = outstandingCourseForms({
+  const owed = courseFormGaps({
     shopId,
     bookingId,
     personId: enrollment.personId,
@@ -639,7 +779,7 @@ export async function getCourseFormsForBooking(
         eq(courseFormVersions.shopId, shopId),
         inArray(
           courseFormVersions.id,
-          owed.map((form) => form.versionId),
+          owed.map(({ form }) => form.versionId),
         ),
       ),
     );
@@ -647,7 +787,11 @@ export async function getCourseFormsForBooking(
   return {
     enrollment,
     required,
-    outstanding: owed.map((form) => ({ ...form, body: bodyById.get(form.versionId) ?? "" })),
+    outstanding: owed.map(({ form, gap }) => ({
+      ...form,
+      gap,
+      body: fillCourseFormText(bodyById.get(form.versionId) ?? "", enrollment.context),
+    })),
   };
 }
 
@@ -681,15 +825,43 @@ function requiredVersion(
 }
 
 /**
+ * Whether this form, signed now, needs a guardian beside the student: the
+ * student is a minor today, or the student already signed it as a minor and
+ * only the guardian's half is owed — a date of birth that reached the shop
+ * after the signature, or a student who has since turned eighteen. Either
+ * way the guardian is asked for; never the student's signature twice.
+ */
+async function guardianOwedFor(
+  db: DbExecutor,
+  shopId: string,
+  enrollment: Enrollment,
+  form: RequiredCourseForm,
+  signedOn: CalendarDate,
+): Promise<boolean> {
+  if (guardianSignatureRequired(enrollment.dateOfBirth, signedOn)) return true;
+  const signatures = await courseFormSignaturesForBookings(db, shopId, [enrollment.bookingId]);
+  return courseFormGaps({
+    shopId,
+    bookingId: enrollment.bookingId,
+    personId: enrollment.personId,
+    required: [form],
+    signatures,
+    signer: { dateOfBirth: enrollment.dateOfBirth, timezone: enrollment.timezone },
+  }).some(({ gap }) => gap === "guardian_missing");
+}
+
+/**
  * **A student signs one form on their own link.** The caller has already
- * proven the bearer owns `bookingId` (a verified `readiness` capability).
+ * proven the bearer owns `bookingId` (a verified `readiness` or `course_forms`
+ * capability).
  *
  * The typed name must be the student's own, as the release's is
  * (`completeWaiver`); a minor's form takes a guardian's signature beside it
  * under the release's own rules, including the refusal of a co-signer typed
  * under the student's own name. A version that is no longer current is
  * refused rather than signed, so nobody puts their name to words the course
- * no longer asks for. Idempotent per enrollment and version.
+ * no longer asks for. Idempotent per enrollment and version — except that a
+ * signature a minor gave alone takes the guardian's half once, when it comes.
  */
 export async function signCourseForm(
   db: AppDb,
@@ -716,7 +888,7 @@ export async function signCourseForm(
       return { ok: false, reason: "unavailable" };
     }
     const required =
-      (await requiredCourseFormsForTrips(tx, input.shopId, [enrollment.tripId])).get(
+      (await requiredCourseFormsForTrips(tx, input.shopId, [enrollment.tripId], now)).get(
         enrollment.tripId,
       ) ?? [];
     const form = requiredVersion(required, input.formVersionId);
@@ -724,14 +896,16 @@ export async function signCourseForm(
     if (!personNamesMatch(evidence.signerName, enrollment.fullName)) {
       return { ok: false, reason: "name_mismatch" };
     }
-    let guardian: {
-      name: string;
-      relationship: GuardianRelationship;
-      method: string;
-      consentedAt: Date;
-      signedAt: Date;
-    } | null = null;
-    if (guardianSignatureRequired(enrollment.dateOfBirth, signingDate(now, enrollment.timezone))) {
+    let guardian: GuardianEvidence | null = null;
+    if (
+      await guardianOwedFor(
+        tx,
+        input.shopId,
+        enrollment,
+        form,
+        signingDate(now, enrollment.timezone),
+      )
+    ) {
       if (!input.guardian) return { ok: false, reason: "guardian_required" };
       const co = localTypedConsentProvider.capture({
         signerName: input.guardian.name,
@@ -765,10 +939,19 @@ export async function signCourseForm(
       recordedByPersonId: null,
       consentedAt: evidence.consentedAt,
       signedAt: evidence.signedAt,
+      paperSignedOn: null,
       guardian,
     });
   });
 }
+
+type GuardianEvidence = {
+  name: string;
+  relationship: GuardianRelationship;
+  method: string;
+  consentedAt: Date;
+  signedAt: Date;
+};
 
 async function insertRecord(
   tx: DbExecutor,
@@ -781,13 +964,8 @@ async function insertRecord(
     recordedByPersonId: string | null;
     consentedAt: Date;
     signedAt: Date;
-    guardian: {
-      name: string;
-      relationship: GuardianRelationship;
-      method: string;
-      consentedAt: Date;
-      signedAt: Date;
-    } | null;
+    paperSignedOn: CalendarDate | null;
+    guardian: GuardianEvidence | null;
   },
 ): Promise<SignCourseFormOutcome> {
   const [version] = await tx
@@ -801,6 +979,15 @@ async function insertRecord(
     )
     .limit(1);
   if (!version) return { ok: false, reason: "version_changed" };
+  const guardianColumns = input.guardian
+    ? {
+        guardianName: input.guardian.name,
+        guardianRelationship: input.guardian.relationship,
+        guardianSignatureMethod: input.guardian.method,
+        guardianConsentedAt: input.guardian.consentedAt,
+        guardianSignedAt: input.guardian.signedAt,
+      }
+    : {};
   const [record] = await tx
     .insert(courseFormRecords)
     .values({
@@ -811,21 +998,19 @@ async function insertRecord(
       formVersionId: version.id,
       formTitle: version.title,
       formVersion: version.version,
-      formBody: version.body,
+      // The words exactly as the student read them, placeholders filled, and
+      // what they were filled with beside them.
+      formBody: fillCourseFormText(version.body, input.enrollment.context),
+      courseTitle: input.enrollment.context.courseTitle,
+      tripId: input.enrollment.tripId,
+      instructorNames: input.enrollment.context.instructorNames,
+      paperSignedOn: input.paperSignedOn,
       signedName: input.signedName,
       signatureMethod: input.method,
       recordedByPersonId: input.recordedByPersonId,
       consentedAt: input.consentedAt,
       signedAt: input.signedAt,
-      ...(input.guardian
-        ? {
-            guardianName: input.guardian.name,
-            guardianRelationship: input.guardian.relationship,
-            guardianSignatureMethod: input.guardian.method,
-            guardianConsentedAt: input.guardian.consentedAt,
-            guardianSignedAt: input.guardian.signedAt,
-          }
-        : {}),
+      ...guardianColumns,
     })
     .onConflictDoNothing({
       target: [courseFormRecords.bookingId, courseFormRecords.formVersionId],
@@ -833,7 +1018,7 @@ async function insertRecord(
     .returning({ id: courseFormRecords.id });
   if (record) return { ok: true, recordId: record.id, alreadySigned: false };
   const [standing] = await tx
-    .select({ id: courseFormRecords.id })
+    .select({ id: courseFormRecords.id, guardianSignedAt: courseFormRecords.guardianSignedAt })
     .from(courseFormRecords)
     .where(
       and(
@@ -844,12 +1029,35 @@ async function insertRecord(
     )
     .limit(1);
   if (!standing) throw new Error("course form record conflict without a standing row");
+  // **The guardian's half, once.** A minor who signed before the shop knew
+  // their date of birth signed alone; the record stands, and the guardian who
+  // signs now completes it. Written only into a record with no guardian, so
+  // a signature already on file is never overwritten.
+  if (input.guardian && standing.guardianSignedAt === null) {
+    await tx
+      .update(courseFormRecords)
+      .set(guardianColumns)
+      .where(
+        and(eq(courseFormRecords.id, standing.id), isNull(courseFormRecords.guardianSignedAt)),
+      );
+  }
   return { ok: true, recordId: standing.id, alreadySigned: true };
 }
 
 export type PaperCourseFormOutcome =
   | SignCourseFormOutcome
-  | { ok: false; reason: "staff_not_found" | "guardian_name_matches_diver" };
+  | {
+      ok: false;
+      reason:
+        | "staff_not_found"
+        | "guardian_name_matches_diver"
+        /** The staffer did not confirm they hold the signed paper copy. */
+        | "paper_copy_unconfirmed"
+        /** The date on the paper is not a real day, or is after today. */
+        | "invalid_date"
+        /** The session is over: a form recorded now could not have counted for it. */
+        | "session_ended";
+    };
 
 /**
  * **A staffer records a form the student signed on paper**, the same shape as
@@ -859,6 +1067,12 @@ export type PaperCourseFormOutcome =
  * the release's namesake rule applies unchanged — a co-signer whose name
  * reads as the student's is refused unless the staffer ticks that they watched
  * two people sign.
+ *
+ * The staffer confirms they hold the signed copy, and may give the date
+ * written on it; the student's age is measured on that day. Refused, as the
+ * student's own link refuses, on a seat held for staff to confirm who it is
+ * and once the session is over — a paper copy is evidence for the session it
+ * was signed for.
  */
 export async function recordPaperCourseForm(
   db: AppDb,
@@ -867,18 +1081,33 @@ export async function recordPaperCourseForm(
     bookingId: string;
     formId: string;
     recordedByPersonId: string;
+    paperCopyConfirmed: boolean;
+    /** The date written on the paper, `YYYY-MM-DD`, when the staffer gave one. */
+    signedOn?: string;
     guardian?: { name: string; relationship: string; namesakeAttested?: boolean };
     now?: Date;
   },
 ): Promise<PaperCourseFormOutcome> {
   const now = input.now ?? nowDate();
+  if (!input.paperCopyConfirmed) return { ok: false, reason: "paper_copy_unconfirmed" };
   return db.transaction(async (tx): Promise<PaperCourseFormOutcome> => {
     const roles = await loadActiveStaffRoles(tx, input.shopId, input.recordedByPersonId);
     if (!roles || !isStaff(roles)) return { ok: false, reason: "staff_not_found" };
     const enrollment = await enrollmentFor(tx, input.shopId, input.bookingId);
-    if (!enrollment) return { ok: false, reason: "unavailable" };
+    // A held seat is not yet known to be this student's (#2082): a paper copy
+    // recorded against it could be somebody else's signature.
+    if (!enrollment || enrollment.identityHeld) return { ok: false, reason: "unavailable" };
+    if (hasReturned(enrollment.endsAt, now)) return { ok: false, reason: "session_ended" };
+    const today = signingDate(now, enrollment.timezone);
+    let paperSignedOn: CalendarDate | null = null;
+    if (input.signedOn !== undefined && input.signedOn !== "") {
+      if (!isValidCalendarDate(input.signedOn) || input.signedOn > today) {
+        return { ok: false, reason: "invalid_date" };
+      }
+      paperSignedOn = input.signedOn;
+    }
     const required =
-      (await requiredCourseFormsForTrips(tx, input.shopId, [enrollment.tripId])).get(
+      (await requiredCourseFormsForTrips(tx, input.shopId, [enrollment.tripId], now)).get(
         enrollment.tripId,
       ) ?? [];
     const form = required.find((candidate) => candidate.formId === input.formId);
@@ -889,14 +1118,8 @@ export async function recordPaperCourseForm(
       signedAt: now,
     });
     if (!evidence) return { ok: false, reason: "invalid_signature" };
-    let guardian: {
-      name: string;
-      relationship: GuardianRelationship;
-      method: string;
-      consentedAt: Date;
-      signedAt: Date;
-    } | null = null;
-    if (guardianSignatureRequired(enrollment.dateOfBirth, signingDate(now, enrollment.timezone))) {
+    let guardian: GuardianEvidence | null = null;
+    if (await guardianOwedFor(tx, input.shopId, enrollment, form, paperSignedOn ?? today)) {
       if (!input.guardian) return { ok: false, reason: "guardian_required" };
       let co = inPersonAttestationProvider.capture({
         signerName: input.guardian.name,
@@ -934,6 +1157,7 @@ export async function recordPaperCourseForm(
       recordedByPersonId: input.recordedByPersonId,
       consentedAt: evidence.consentedAt,
       signedAt: evidence.signedAt,
+      paperSignedOn,
       guardian,
     });
   });
@@ -949,9 +1173,10 @@ export async function owedCourseFormsByBooking(
   db: DbExecutor,
   shopId: string,
   tripIds: readonly string[],
+  now: Date = nowDate(),
 ): Promise<Map<string, RequiredCourseForm[]>> {
   const result = new Map<string, RequiredCourseForm[]>();
-  const requiredByTrip = await requiredCourseFormsForTrips(db, shopId, tripIds);
+  const requiredByTrip = await requiredCourseFormsForTrips(db, shopId, tripIds, now);
   if (requiredByTrip.size === 0) return result;
   const seats = await db
     .select({
@@ -988,4 +1213,102 @@ export async function owedCourseFormsByBooking(
     if (owed.length > 0) result.set(seat.bookingId, owed);
   }
   return result;
+}
+
+/** How many students, on how many sessions, a change to forms reaches. */
+export type CourseFormImpact = { students: number; sessions: number };
+
+/**
+ * **Who a new version of each form asks to sign again**, by form id — what the
+ * form's editor says beside its Save, as the release's editor does before a
+ * material change. A student who signed the current version on a session that
+ * has not started: a session already under way keeps the version it started
+ * with (`requiredCourseFormsForTrips`), and a student who has not signed yet
+ * was going to sign anyway. A form that reaches nobody is absent.
+ */
+export async function courseFormResignImpact(
+  db: DbExecutor,
+  shopId: string,
+  now: Date = nowDate(),
+): Promise<Map<string, CourseFormImpact>> {
+  const result = new Map<string, CourseFormImpact>();
+  const current = await listCourseForms(db, shopId);
+  if (current.length === 0) return result;
+  const rows = await db
+    .selectDistinct({
+      formId: courseFormRecords.formId,
+      bookingId: bookings.id,
+      tripId: trips.id,
+    })
+    .from(courseFormRecords)
+    .innerJoin(bookings, eq(bookings.id, courseFormRecords.bookingId))
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(
+      courseFormRequirements,
+      and(
+        eq(courseFormRequirements.courseId, trips.courseId),
+        eq(courseFormRequirements.formId, courseFormRecords.formId),
+      ),
+    )
+    .where(
+      and(
+        eq(courseFormRecords.shopId, shopId),
+        inArray(
+          courseFormRecords.formVersionId,
+          current.map((form) => form.versionId),
+        ),
+        eq(bookings.shopId, shopId),
+        ne(bookings.status, "cancelled"),
+        eq(trips.shopId, shopId),
+        ne(trips.status, "cancelled"),
+        liveTrip(),
+        gt(trips.startsAt, now),
+        eq(courseFormRequirements.shopId, shopId),
+        isNull(courseFormRequirements.deletedAt),
+      ),
+    );
+  const seen = new Map<string, { bookings: Set<string>; trips: Set<string> }>();
+  for (const row of rows) {
+    const entry = seen.get(row.formId) ?? { bookings: new Set(), trips: new Set() };
+    entry.bookings.add(row.bookingId);
+    entry.trips.add(row.tripId);
+    seen.set(row.formId, entry);
+  }
+  for (const [formId, entry] of seen) {
+    result.set(formId, { students: entry.bookings.size, sessions: entry.trips.size });
+  }
+  return result;
+}
+
+/**
+ * **Who a form added to this course asks to sign**: every live seat on a
+ * session of it that has not started. A session under way keeps the forms it
+ * started with, so it is not counted. The course's form picker says this
+ * beside its Save.
+ */
+export async function courseUpcomingEnrollment(
+  db: DbExecutor,
+  shopId: string,
+  courseId: string,
+  now: Date = nowDate(),
+): Promise<CourseFormImpact> {
+  const rows = await db
+    .select({ bookingId: bookings.id, tripId: trips.id })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        ne(bookings.status, "cancelled"),
+        eq(trips.shopId, shopId),
+        eq(trips.courseId, courseId),
+        ne(trips.status, "cancelled"),
+        liveTrip(),
+        gt(trips.startsAt, now),
+      ),
+    );
+  return {
+    students: new Set(rows.map((row) => row.bookingId)).size,
+    sessions: new Set(rows.map((row) => row.tripId)).size,
+  };
 }

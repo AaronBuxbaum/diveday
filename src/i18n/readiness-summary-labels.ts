@@ -31,6 +31,7 @@ export const CHECKLIST_DETAIL_KEYS: Record<ChecklistDetailCode, DiverMessageKey>
   // the family, and a sentence that hid why would leave them unable to fix it.
   guardian_signature_missing: "ready.checklistDetail.guardianSignatureMissing",
   course_form_unsigned: "ready.checklistDetail.courseFormUnsigned",
+  course_form_guardian_missing: "ready.checklistDetail.courseFormGuardianMissing",
   certification_missing: "ready.checklistDetail.certificationMissing",
   certification_pending: "ready.checklistDetail.certificationPending",
   certification_self_declared: "ready.checklistDetail.certificationSelfDeclared",

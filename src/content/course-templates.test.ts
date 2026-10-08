@@ -28,9 +28,13 @@ describe("standard course forms", () => {
     expect(products("open-water-diver")).toEqual(["10072", "10060"]);
     expect(products("advanced-open-water-diver")).toEqual(["10038"]);
     expect(products("rescue-diver")).toEqual(["10038"]);
-    // No list where the manual names none DiveDay could read.
+    // No list where the manual names none DiveDay could read (issue #2264),
+    // and none for a course with no dive in it: the two of those agree.
     expect(products("discover-scuba-diving")).toEqual([]);
+    expect(products("scuba-refresher")).toEqual([]);
     expect(products("divemaster")).toEqual([]);
+    expect(products("emergency-oxygen-provider")).toEqual([]);
+    expect(products("equipment-specialist")).toEqual([]);
   });
 });
 

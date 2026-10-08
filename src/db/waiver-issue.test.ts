@@ -5,7 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { WAIVER_LINK_TTL_MS } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
-import { verifyBookingCapability } from "./booking-capabilities";
+import { revokeBookingCapabilities, verifyBookingCapability } from "./booking-capabilities";
 import { cancelBooking, createBooking } from "./bookings";
 import {
   createCourseForm,
@@ -15,7 +15,14 @@ import {
 } from "./course-forms";
 import { applyProviderEmailEvent } from "./notifications";
 import type { MedicalAnswers } from "./schema";
-import { bookings, notificationDeliveries, people, trips, waiverRecords } from "./schema";
+import {
+  bookingCapabilities,
+  bookings,
+  notificationDeliveries,
+  people,
+  trips,
+  waiverRecords,
+} from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import {
   emailFreshWaiverLink,
@@ -424,10 +431,61 @@ describe("issueAndDeliverWaiver", () => {
       expect(result).toMatchObject({ ok: true, bookingId, delivery: "link_only" });
       if (!result.ok) throw new Error("unreachable");
       expect(result.path).toBe(`/ready/${result.token}/forms`);
-      // The token is a readiness link for this very booking, and nothing wider.
+      // A forms-only link for this very booking: it is not a readiness link,
+      // so whoever it is handed to cannot open the diver's trip prep with it.
+      expect(
+        await verifyBookingCapability(db, { token: result.token, purpose: "course_forms" }),
+      ).toMatchObject({ bookingId, shopId: shop.id });
       expect(
         await verifyBookingCapability(db, { token: result.token, purpose: "readiness" }),
-      ).toMatchObject({ bookingId, shopId: shop.id });
+      ).toBeNull();
+    });
+
+    it("hands back the same forms link on a second send while it is live", async () => {
+      vi.stubEnv("APP_HOST", "https://diveday.test");
+      vi.stubEnv("SECRET_ENCRYPTION_KEY", Buffer.alloc(32, 7).toString("base64"));
+      const { db, shop, bookingId } = await courseSeat();
+
+      const first = await issueAndDeliverWaiver(db, shop.id, bookingId, { channel: "link" });
+      const second = await issueAndDeliverWaiver(db, shop.id, bookingId, { channel: "link" });
+
+      if (!first.ok || !second.ok) throw new Error("expected two forms links");
+      expect(second.token).toBe(first.token);
+      const live = await db
+        .select({ id: bookingCapabilities.id })
+        .from(bookingCapabilities)
+        .where(
+          and(
+            eq(bookingCapabilities.bookingId, bookingId),
+            eq(bookingCapabilities.purpose, "course_forms"),
+            isNull(bookingCapabilities.revokedAt),
+          ),
+        );
+      expect(live).toHaveLength(1);
+    });
+
+    it("mints a fresh forms link once the live one is revoked, and keeps no copy of the dead one", async () => {
+      vi.stubEnv("APP_HOST", "https://diveday.test");
+      vi.stubEnv("SECRET_ENCRYPTION_KEY", Buffer.alloc(32, 7).toString("base64"));
+      const { db, shop, bookingId } = await courseSeat();
+      const first = await issueAndDeliverWaiver(db, shop.id, bookingId, { channel: "link" });
+      await revokeBookingCapabilities(db, { shopId: shop.id, bookingId, purpose: "course_forms" });
+
+      const second = await issueAndDeliverWaiver(db, shop.id, bookingId, { channel: "link" });
+
+      if (!first.ok || !second.ok) throw new Error("expected two forms links");
+      expect(second.token).not.toBe(first.token);
+      const dead = await db
+        .select({ tokenSealed: bookingCapabilities.tokenSealed })
+        .from(bookingCapabilities)
+        .where(
+          and(
+            eq(bookingCapabilities.bookingId, bookingId),
+            eq(bookingCapabilities.purpose, "course_forms"),
+            isNotNull(bookingCapabilities.revokedAt),
+          ),
+        );
+      expect(dead).toEqual([{ tokenSealed: null }]);
     });
 
     it("emails the forms link with its own words, never 'your link expired'", async () => {

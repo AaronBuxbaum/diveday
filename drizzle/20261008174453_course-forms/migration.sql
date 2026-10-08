@@ -1,3 +1,4 @@
+ALTER TYPE "booking_capability_purpose" ADD VALUE 'course_forms';--> statement-breakpoint
 CREATE TABLE "course_form_records" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"shop_id" uuid NOT NULL,
@@ -8,6 +9,10 @@ CREATE TABLE "course_form_records" (
 	"form_title" text NOT NULL,
 	"form_version" integer NOT NULL,
 	"form_body" text NOT NULL,
+	"course_title" text NOT NULL,
+	"trip_id" uuid NOT NULL,
+	"instructor_names" text NOT NULL,
+	"paper_signed_on" date,
 	"signed_name" text,
 	"signature_method" text NOT NULL,
 	"recorded_by_person_id" uuid,
@@ -57,6 +62,7 @@ CREATE TABLE "course_forms" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "booking_capabilities" ADD COLUMN "token_sealed" text;--> statement-breakpoint
 CREATE UNIQUE INDEX "course_form_records_booking_version_unique" ON "course_form_records" ("booking_id","form_version_id");--> statement-breakpoint
 CREATE INDEX "course_form_records_shop_booking_idx" ON "course_form_records" ("shop_id","booking_id");--> statement-breakpoint
 CREATE INDEX "course_form_records_shop_person_idx" ON "course_form_records" ("shop_id","person_id");--> statement-breakpoint
@@ -70,6 +76,7 @@ ALTER TABLE "course_form_records" ADD CONSTRAINT "course_form_records_booking_id
 ALTER TABLE "course_form_records" ADD CONSTRAINT "course_form_records_person_id_people_id_fkey" FOREIGN KEY ("person_id") REFERENCES "people"("id");--> statement-breakpoint
 ALTER TABLE "course_form_records" ADD CONSTRAINT "course_form_records_form_id_course_forms_id_fkey" FOREIGN KEY ("form_id") REFERENCES "course_forms"("id");--> statement-breakpoint
 ALTER TABLE "course_form_records" ADD CONSTRAINT "course_form_records_Ynzi8aSsVWKW_fkey" FOREIGN KEY ("form_version_id") REFERENCES "course_form_versions"("id");--> statement-breakpoint
+ALTER TABLE "course_form_records" ADD CONSTRAINT "course_form_records_trip_id_trips_id_fkey" FOREIGN KEY ("trip_id") REFERENCES "trips"("id");--> statement-breakpoint
 ALTER TABLE "course_form_records" ADD CONSTRAINT "course_form_records_recorded_by_person_id_people_id_fkey" FOREIGN KEY ("recorded_by_person_id") REFERENCES "people"("id");--> statement-breakpoint
 ALTER TABLE "course_form_records" ADD CONSTRAINT "course_form_records_anonymized_by_person_id_people_id_fkey" FOREIGN KEY ("anonymized_by_person_id") REFERENCES "people"("id");--> statement-breakpoint
 ALTER TABLE "course_form_requirements" ADD CONSTRAINT "course_form_requirements_shop_id_shops_id_fkey" FOREIGN KEY ("shop_id") REFERENCES "shops"("id");--> statement-breakpoint

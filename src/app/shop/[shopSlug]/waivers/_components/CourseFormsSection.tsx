@@ -8,7 +8,7 @@ import { controlClass, Field, FieldGrid, FormStatus, textareaClassFor } from "@/
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel } from "@/components/ui/ledger";
 import { StatusInView } from "@/components/ui/StatusInView";
-import type { CourseFormSummary } from "@/db/course-forms";
+import type { CourseFormImpact, CourseFormSummary } from "@/db/course-forms";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
   COURSE_FORM_BODY_MAX,
@@ -38,12 +38,15 @@ export type CourseFormNotice = { form: string; tone: NoticeTone; text: string };
  */
 export function CourseFormsSection({
   forms,
+  resign,
   notice,
   locale,
   timezone,
   t,
 }: {
   forms: readonly CourseFormSummary[];
+  /** Who a new version of each form asks to sign again, said before the Save. */
+  resign: ReadonlyMap<string, CourseFormImpact>;
   notice: CourseFormNotice | undefined;
   locale: string;
   timezone: string;
@@ -106,6 +109,7 @@ export function CourseFormsSection({
                     )}
                     t={t}
                   />
+                  <ResignImpact impact={resign.get(form.id)} t={t} />
                   <div className="flex flex-wrap items-center gap-3">
                     <SubmitButton
                       pendingLabel={t("waiversStaff.courseForms.saving")}
@@ -161,6 +165,23 @@ export function CourseFormsSection({
   );
 }
 
+/**
+ * What saving new words costs, before the tap: the students on sessions not
+ * yet started who signed this version and will be asked again. Nothing when
+ * nobody would be.
+ */
+function ResignImpact({ impact, t }: { impact: CourseFormImpact | undefined; t: StaffTranslator }) {
+  if (!impact || impact.students === 0) return null;
+  return (
+    <p className="text-sm text-warning-strong" data-course-form-resign-impact>
+      {t("waiversStaff.courseForms.resignImpact", {
+        students: impact.students,
+        sessions: impact.sessions,
+      })}
+    </p>
+  );
+}
+
 function CourseFormFields({
   idPrefix,
   title,
@@ -192,7 +213,9 @@ function CourseFormFields({
       </Field>
       <Field
         label={t("waiversStaff.courseForms.bodyLabel")}
-        description={bodyDescription}
+        description={[bodyDescription, t("waiversStaff.courseForms.placeholdersHint")]
+          .filter(Boolean)
+          .join(" ")}
         htmlFor={`course-form-body-${idPrefix}`}
       >
         <textarea

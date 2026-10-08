@@ -137,7 +137,10 @@
     "courseFormRecorded": "Paper course form recorded.",
     "courseFormGuardian": "That didn’t record. A student under 18 needs the parent or guardian who co-signed: their name and who they are to the student.",
     "courseFormNamesake": "The guardian’s name reads as the student’s own. If you watched two people sign, tick that box and record it again.",
-    "courseFormUnavailable": "That form can’t be recorded for this seat any more. Reload to see what is still owed."
+    "courseFormUnavailable": "That form can’t be recorded for this seat any more. Reload to see what is still owed.",
+    "courseFormPaperCopy": "That didn’t record. Tick that you have the signed paper copy.",
+    "courseFormDate": "That didn’t record. The date on the paper can’t be after today.",
+    "courseFormEnded": "This session is over, so a paper form can’t be recorded for it."
   },
   "pulse": {
     "seats": "{booked} of {capacity} booked · {open, plural, one {# seat open} other {# seats open}}",
@@ -535,7 +538,10 @@
       "guardianChoose": "Choose one",
       "guardianNamesake": "I watched the student and the guardian each sign, though their names read alike",
       "record": "Record form",
-      "recording": "Recording…"
+      "recording": "Recording…",
+      "signedOn": "Date on the paper",
+      "signedOnHint": "Leave empty if it was signed today.",
+      "paperCopy": "I have the signed paper copy"
     }
   },
   "offlineManifestManager": {

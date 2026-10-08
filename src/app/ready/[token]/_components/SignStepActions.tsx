@@ -43,7 +43,8 @@ export function SignStepActions({
         code === "guardian_signature_missing",
     );
   const formsOwed = (item?.actionable ?? []).some(
-    (blocker) => blocker.code === "course_form_unsigned",
+    (blocker) =>
+      blocker.code === "course_form_unsigned" || blocker.code === "course_form_guardian_missing",
   );
   if (!waiverCode && !formsOwed) return null;
   return (

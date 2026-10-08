@@ -1561,7 +1561,7 @@ export async function listTripsReadiness(
   // signature on these seats (ADR 20261008-course-forms). Sequential, not in
   // `queryAll` above: the second read is skipped when no trip here is a
   // course session that asks for any.
-  const courseFormsByTrip = await requiredCourseFormsForTrips(db, shopId, tripIds);
+  const courseFormsByTrip = await requiredCourseFormsForTrips(db, shopId, tripIds, now);
   const courseFormSignatures =
     courseFormsByTrip.size === 0
       ? []
@@ -1660,6 +1660,7 @@ export async function listTripsReadiness(
           personId: row.person.id,
           required: requiredCourseForms,
           signatures: courseFormSignatures,
+          timezone,
         }
       : undefined;
 

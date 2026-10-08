@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
-import { canPersonConfigureTrips } from "@/db/authz";
+import { canPersonConfigureTrips, canPersonManageWaiverTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { setCourseFormRequirements } from "@/db/course-forms";
+import { listCourseFormRequirements, setCourseFormRequirements } from "@/db/course-forms";
 import {
   getCourseBySlug,
   pullCourseTemplateUpdates,
@@ -347,6 +347,11 @@ export async function pullCourseTemplateUpdatesAction(
  * a POST that skipped the page still lands. A list naming a form that is not
  * this shop's, or no longer live, is refused whole by
  * `setCourseFormRequirements` rather than half-saved.
+ *
+ * **Adding is the trip gate; taking a form off is the release's.** A form a
+ * course stops asking for is a signature the shop stops collecting, which is
+ * the owner's or manager's call (`canPersonManageWaiverTemplates`, the gate on
+ * writing the forms themselves). An instructor may add a form, never drop one.
  */
 export async function saveCourseFormRequirementsAction(slug: string, formData: FormData) {
   const staff = await requireStaffSession();
@@ -371,6 +376,13 @@ export async function saveCourseFormRequirementsAction(slug: string, formData: F
     .map((id, index) => ({ id, index, order: orderOf(id) }))
     .sort((a, b) => a.order - b.order || a.index - b.index)
     .map((entry) => entry.id);
+  if (!(await canPersonManageWaiverTemplates(db, staff.user.shopId, staff.user.personId))) {
+    const posted = new Set(ordered);
+    const current = await listCourseFormRequirements(db, staff.user.shopId, course.id);
+    if (current.some((formId) => !posted.has(formId))) {
+      redirect(noticeUrl(anchor, "forms-remove-not-authorized"));
+    }
+  }
 
   const result = await setCourseFormRequirements(db, {
     shopId: staff.user.shopId,

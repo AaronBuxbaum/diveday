@@ -19,14 +19,20 @@ vi.mock("@/lib/navigation", () => ({
   }),
 }));
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
-vi.mock("@/db/authz", () => ({ canPersonConfigureTrips: vi.fn(async () => true) }));
-vi.mock("@/db/course-forms", () => ({ setCourseFormRequirements: vi.fn() }));
+vi.mock("@/db/authz", () => ({
+  canPersonConfigureTrips: vi.fn(async () => true),
+  canPersonManageWaiverTemplates: vi.fn(async () => true),
+}));
+vi.mock("@/db/course-forms", () => ({
+  listCourseFormRequirements: vi.fn(async () => []),
+  setCourseFormRequirements: vi.fn(),
+}));
 
 const { revalidatePath } = await import("next/cache");
 const { getCourseBySlug, pullCourseTemplateUpdates } = await import("@/db/courses");
 const { requireStaffSession } = await import("@/lib/session");
-const { canPersonConfigureTrips } = await import("@/db/authz");
-const { setCourseFormRequirements } = await import("@/db/course-forms");
+const { canPersonConfigureTrips, canPersonManageWaiverTemplates } = await import("@/db/authz");
+const { listCourseFormRequirements, setCourseFormRequirements } = await import("@/db/course-forms");
 const { pullCourseTemplateUpdatesAction, saveCourseFormRequirementsAction } = await import(
   "./actions"
 );
@@ -145,6 +151,29 @@ describe("saveCourseFormRequirementsAction", () => {
       "/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-invalid#forms",
     );
     expect(setCourseFormRequirements).not.toHaveBeenCalled();
+  });
+
+  it("lets an instructor add a form, but never take one off: that is an owner's or manager's call", async () => {
+    vi.mocked(setCourseFormRequirements).mockResolvedValue({ ok: true });
+    vi.mocked(canPersonManageWaiverTemplates).mockResolvedValue(false);
+    vi.mocked(listCourseFormRequirements).mockResolvedValue([FORM_A]);
+
+    // Adding B beside A saves.
+    expect(
+      await posted([
+        ["formId", FORM_A],
+        ["formId", FORM_B],
+      ]),
+    ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-saved#forms");
+    vi.mocked(setCourseFormRequirements).mockClear();
+
+    // Dropping A — even while adding B — is refused, and writes nothing.
+    expect(await posted([["formId", FORM_B]])).toBe(
+      "/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-remove-not-authorized#forms",
+    );
+    expect(setCourseFormRequirements).not.toHaveBeenCalled();
+    vi.mocked(canPersonManageWaiverTemplates).mockResolvedValue(true);
+    vi.mocked(listCourseFormRequirements).mockResolvedValue([]);
   });
 
   it("says so when the list names a form that is not this shop's", async () => {

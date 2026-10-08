@@ -31,6 +31,7 @@ vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
 vi.mock("@/db/course-forms", () => ({
   listCourseForms: vi.fn(async () => []),
   listCourseFormRequirements: vi.fn(async () => []),
+  courseUpcomingEnrollment: vi.fn(async () => ({ students: 0, sessions: 0 })),
 }));
 // The page asks live roles whether to draw the visibility toggle; this suite is
 // about the template panel and the editor rail, so the answer is stubbed rather

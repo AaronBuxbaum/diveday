@@ -803,7 +803,8 @@
       "certificationDone": "Verificada y registrada.",
       "paymentDone": "Pagado. Gracias.",
       "certificationMultipleNeeded": "Esta inmersión necesita más de una certificación registrada. Comparte los datos de cada una y tu centro confirmará que estás listo.",
-      "courseFormUnsigned": "Tu curso tiene formularios para que firmes."
+      "courseFormUnsigned": "Tu curso tiene formularios para que firmes.",
+      "courseFormGuardianMissing": "Tu madre, padre o tutor legal tiene que firmar contigo los formularios del curso."
     },
     "gearAndSetup": "Equipo y ajuste",
     "dockCallLine": "Procura estar en el muelle a las {time}, {dock} antes de zarpar.",
@@ -4236,7 +4237,7 @@
     },
     "courseFormsLink": {
       "subject": "Formularios del curso por firmar para {tripTitle}",
-      "body": "{shopName} pide a cada estudiante de {tripTitle} que firme los formularios del curso antes de empezar. Tu exención ya está firmada, así que solo faltan estos.",
+      "body": "{shopName} pide a cada estudiante de {tripTitle} que firme los formularios del curso. Tu exención ya está firmada, así que solo faltan estos.",
       "openLink": "Firmar los formularios del curso"
     }
   },
@@ -4307,6 +4308,8 @@
     "signing": "Firmando…",
     "errorGuardian": "Una madre, un padre o un tutor legal también firma este formulario. Escribe su nombre, elige qué es del estudiante y marca su casilla.",
     "errorUnavailable": "Este formulario ya no se puede firmar desde aquí. Pregunta al centro.",
-    "signedOne": "Firmado. El siguiente formulario está abajo."
+    "signedOne": "Firmado. El siguiente formulario está abajo.",
+    "linkDeadTitle": "Este enlace ya no funciona",
+    "linkDeadBody": "Pide a {shopName} que te envíe de nuevo los formularios del curso."
   }
 }

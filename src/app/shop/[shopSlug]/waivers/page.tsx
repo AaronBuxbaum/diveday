@@ -11,7 +11,7 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { Field, FieldGrid, FormStatus, textareaClassFor } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/ledger";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
-import { listCourseForms } from "@/db/course-forms";
+import { courseFormResignImpact, listCourseForms } from "@/db/course-forms";
 import {
   getCurrentWaiverTemplate,
   getSignedWaiverRecordForShop,
@@ -117,7 +117,7 @@ export default async function WaiversPage({
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const [current, atRisk, highlighted, auditPage, courseForms] = await Promise.all([
+  const [current, atRisk, highlighted, auditPage, courseForms, resign] = await Promise.all([
     getCurrentWaiverTemplate(db, shop.id),
     // What publishing a new version would cost, in signatures. Read on every
     // render so the choice below can state it *before* the tap — the count in
@@ -129,6 +129,7 @@ export default async function WaiversPage({
     // into range so a bookmarked page past the end lands on the last real one.
     listWaiverIntegrityAudit(db, shop.id, { page: Number.parseInt(page ?? "", 10) }),
     listCourseForms(db, shop.id),
+    courseFormResignImpact(db, shop.id),
   ]);
   const courseFormNotice = courseFormNoticeFor(notice, formParam, t);
 
@@ -324,6 +325,7 @@ export default async function WaiversPage({
 
       <CourseFormsSection
         forms={courseForms}
+        resign={resign}
         notice={courseFormNotice}
         locale={locale}
         timezone={shop.timezone}

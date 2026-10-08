@@ -51,6 +51,7 @@ vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
 vi.mock("@/db/course-forms", () => ({
   listCourseForms: vi.fn(async () => []),
   listCourseFormRequirements: vi.fn(async () => []),
+  courseUpcomingEnrollment: vi.fn(async () => ({ students: 0, sessions: 0 })),
 }));
 vi.mock("@/db/courses", () => ({
   getCourseBySlug: vi.fn(),

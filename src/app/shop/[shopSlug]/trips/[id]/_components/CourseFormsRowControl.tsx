@@ -88,6 +88,18 @@ export function CourseFormsRowControl({
                   ))}
                 </select>
               </Field>
+              <Field
+                label={t("trips.roster.courseForms.signedOn")}
+                description={t("trips.roster.courseForms.signedOnHint")}
+                htmlFor={`paper-form-signed-on-${bookingId}`}
+              >
+                <input
+                  id={`paper-form-signed-on-${bookingId}`}
+                  name="signedOn"
+                  type="date"
+                  className={controlClass}
+                />
+              </Field>
               {requiresGuardian ? (
                 <>
                   <Field
@@ -133,6 +145,9 @@ export function CourseFormsRowControl({
                 {t("trips.roster.courseForms.guardianNamesake")}
               </ChoiceRow>
             ) : null}
+            <ChoiceRow type="checkbox" name="paperCopy" value="on" required className="text-sm">
+              {t("trips.roster.courseForms.paperCopy")}
+            </ChoiceRow>
             <div>
               <SubmitButton
                 pendingLabel={t("trips.roster.courseForms.recording")}

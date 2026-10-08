@@ -13,7 +13,7 @@ import { nowDate } from "./clock";
 import {
   COURSE_FORMS_BLOCK_BOARDING,
   type CourseFormSignature,
-  outstandingCourseForms,
+  courseFormGaps,
   type RequiredCourseForm,
 } from "./course-forms";
 import { guardianSignatureMissing } from "./guardian";
@@ -198,6 +198,12 @@ export type ReadinessBlockerCode =
    * 20261008-course-forms). Raised only while `COURSE_FORMS_BLOCK_BOARDING`.
    */
   | "course_form_unsigned"
+  /**
+   * The student signed a course form while a minor and no parent or guardian
+   * signed beside them — often a date of birth that reached the shop after the
+   * signature. The fix is the guardian's signature, not the student's again.
+   */
+  | "course_form_guardian_missing"
   | "certification_missing"
   | "certification_pending"
   | "certification_self_declared"
@@ -259,6 +265,7 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   // Paperwork the student signs, in the same family as the release: the sign
   // step on the diver's own page is where both are answered.
   course_form_unsigned: "waiver",
+  course_form_guardian_missing: "waiver",
   certification_missing: "certification",
   certification_pending: "certification",
   certification_self_declared: "certification",
@@ -340,6 +347,7 @@ const ABOARD_KIND: Record<ReadinessBlockerCode, AboardBlockerKind> = {
   // A form the course asked for and nobody signed: nothing on file, and
   // nobody aboard can sign it for them.
   course_form_unsigned: "unknown",
+  course_form_guardian_missing: "unknown",
   identity_unconfirmed: "unknown",
   readiness_unavailable: "unknown",
   requirements_not_configured: "unknown",
@@ -491,6 +499,11 @@ export type ReadinessInput = {
     personId: string;
     required: readonly RequiredCourseForm[];
     signatures: readonly CourseFormSignature[];
+    /**
+     * The shop's zone, required: whether a student was a minor is measured on
+     * the day they signed, and a guessed zone moves that day near midnight.
+     */
+    timezone: string;
   };
   now?: Date;
 };
@@ -872,11 +885,14 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // lists a form has said, on its own, that every student signs it. Behind one
   // switch until the owner rules on block-or-warn (ADR 20261008-course-forms).
   if (COURSE_FORMS_BLOCK_BOARDING && input.courseForms) {
-    for (const form of outstandingCourseForms({
+    for (const { form, gap } of courseFormGaps({
       ...input.courseForms,
-      signer: { dateOfBirth: input.dateOfBirth, timezone: input.timezone ?? "UTC" },
+      signer: { dateOfBirth: input.dateOfBirth, timezone: input.courseForms.timezone },
     })) {
-      blockers.push({ code: "course_form_unsigned", params: { formTitle: form.title } });
+      blockers.push({
+        code: gap === "guardian_missing" ? "course_form_guardian_missing" : "course_form_unsigned",
+        params: { formTitle: form.title },
+      });
     }
   }
 

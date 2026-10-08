@@ -19,8 +19,8 @@ Constraints that shaped this decision:
   `src/lib/readiness.ts`). A student may always buy a place on a course before signing its forms.
 - Forms are personal records. Export, erasure and merge have to treat them the way they treat
   signed releases (H-02).
-- Whether an unsigned form should *block* a student or only *warn* is the owner's call, and it was
-  not settled when this shipped.
+- Whether an unsigned form should *block* a student or only *warn* is the owner's call. The owner
+  chose block.
 
 ## Decision
 
@@ -32,45 +32,86 @@ Constraints that shaped this decision:
 - `course_form_requirements` lists the forms a course asks for, in order. It is soft-deleted and
   replaced as a set from the course editor.
 - `course_form_records` holds one signature, **for one booking**. It snapshots the title, version
-  number and body the student saw, the typed name, the signing method (`electronic` or `paper`,
-  recorded by a staffer) and the guardian's name, relationship and timestamps.
+  number and body the student saw, the course title, the session (`trip_id`) and its instructors'
+  names, the typed name, and the guardian's name, relationship and timestamps. The signing method
+  is the release's vocabulary (`src/lib/signatures.ts`): `typed_consent` when the student signed on
+  their own link, `in_person_attested` when a staffer recorded a paper copy (and then
+  `recorded_by_person_id` names who), and `in_person_attested_namesake` when the staffer attested a
+  guardian whose name reads as the student's. A paper copy may carry the date written on it
+  (`paper_signed_on`).
+
+**Placeholders are filled at signing.** A form's text may say `{shopName}`, `{courseTitle}` and
+`{instructorNames}` where an agency form leaves a blank. `fillCourseFormText` fills them from the
+enrollment (the instructors are the session's rostered crew in the instructor role) on the page the
+student reads and in the record's `form_body`, beside the values themselves, so renaming a course
+or changing a crew never rewrites what was agreed to. Any other brace is left as typed.
 
 **A form is satisfied per enrollment.** A record counts only if it is for the same shop, the same
-booking, the same person and the *current* version, plus a guardian co-signature when the student
-was a minor on the day they signed (ADR 20260907-guardian-co-signature, measured in the shop's
-zone). `signatureSatisfies` in `src/lib/course-forms.ts` checks all of this and fails closed.
-Signing a form on one course never carries over to the next course, so a new version asks every
-student who has not boarded yet to sign again.
+booking, the same person and a version the session asks for, plus a guardian co-signature when the
+student was a minor on the day they signed (ADR 20260907-guardian-co-signature, measured in the
+shop's zone, or on the paper's own date when staff gave one). `signatureSatisfies` in
+`src/lib/course-forms.ts` checks all of this and fails closed. Signing a form on one course never
+carries over to the next course.
 
-**Requirements are read live from the course**, not frozen onto a session the way its admission
-rules are. Choosing a form on Open Water asks every booked student on every upcoming session.
-That is the point of the act. Removing a form releases them.
+A minor's signature without a guardian is its own blocker, `course_form_guardian_missing`, because
+the fix is the guardian's signature rather than the student's. When it comes, the guardian columns
+of the standing record are filled once and never overwritten. This is the case of a date of birth
+that reached the shop after the student signed.
+
+**Requirements are read live until a session starts, then held.** Before `starts_at`, a session
+asks for the course's current list at each form's current version: choosing a form on Open Water
+asks every student on every upcoming session, and removing one releases them. Once a session has
+started, `requiredCourseFormsForTrips` holds it to what it started with. A form added to the course
+afterwards is not asked of it. A signature on the version that was current when it began still
+counts (`alsoAccepted`), so an edit made on day two of a three-day course asks the next session to
+sign, never the students already in the water. A student who has not signed yet signs the current
+words. Once a session has ended, nothing more is signed or recorded for it.
 
 **Where each step happens:**
 
 - **Authoring** is on the waivers page, beside the release (`CourseFormsSection`). It is owner or
-  manager work, gated like the release (`canPersonManageWaiverTemplates`).
-- **Choosing** happens on each course's editor (`CourseFormsRequirement`, gated by
-  `canPersonConfigureTrips`).
-- **Signing** happens on `/ready/[token]/forms`, a sub-page of the booking's readiness capability.
-  The readiness link already proves the enrollment. Minting a second token kind would add a
-  capability without adding any proof. The page refuses a held seat (identity unconfirmed) the way
-  the rest of `/ready` does, and its actions go through the same rate limit.
+  manager work, gated like the release (`canPersonManageWaiverTemplates`). Before a save, each
+  form says how many students on how many sessions not yet started a new version would ask to sign
+  again (`courseFormResignImpact`), as the release's editor does before a material change.
+- **Choosing** happens on each course's editor (`CourseFormsRequirement`). Adding and reordering
+  are gated by `canPersonConfigureTrips`. **Taking a form off** is a signature the shop stops
+  collecting, so it needs `canPersonManageWaiverTemplates`: an instructor may add a form, never
+  drop one. The editor says beforehand how many students on how many upcoming sessions a form
+  added now would ask (`courseUpcomingEnrollment`).
+- **Signing** happens on `/ready/[token]/forms`. Two capabilities open it. The diver's own
+  readiness link already proves the enrollment. The **forms-only link** (`course_forms`) is what
+  staff copy or send when the release is signed and the forms are not. It opens this page and signs
+  there (`verifyCourseFormsLink`), and every other `/ready` door refuses it, so a link handed over
+  the counter cannot read or change the diver's trip prep. A live one is **reused, not reissued**
+  (the waiver link's rule, ADR 20260820-waiver-links-are-reused-not-reissued): the row keeps a copy
+  of the token sealed under `SECRET_ENCRYPTION_KEY` (`booking_capabilities.token_sealed`, this
+  purpose only, nulled on revocation), and a second send hands back the same URL. The page refuses
+  a held seat (identity unconfirmed) the way the rest of `/ready` does, and its action goes through
+  the same rate limit.
 - **Delivery** reuses the release's send. When the release is already signed but forms are owed,
-  `issueAndDeliverWaiver` sends the forms link instead of reporting "already signed" (email
+  `issueAndDeliverWaiver` sends the forms-only link instead of reporting "already signed" (email
   `readiness_link` with purpose `course_forms`, SMS, or a copy link).
-- **On paper**: a staffer records a paper copy from the trip's Divers tab, with the guardian's
-  name for a minor.
+- **On paper**: a staffer records a paper copy from the trip's Divers tab. They tick that they hold
+  the signed copy and may give the date written on it; a minor's form names the guardian. A held
+  seat is refused (the paper could be somebody else's signature), as is a session that has ended.
 
 **The agency's standard forms are set up by title, empty.** Each course template can name the
 forms its agency expects (`standardForms` in `src/content/course-templates.ts`), with the agency,
 the product number and the URL where the agency names them. The PADI Instructor Manual 2021
 (product 79173) gives Open Water the general release (10072) and the Standard Safe Diving
-Practices Statement of Understanding (10060), and gives Advanced, Rescue and the specialties the
-Continuing Education Administrative Document (10038). Creating a course from its template (the
-catalog seed) or syncing a template update (`pullCourseTemplateUpdates`) runs
-`attachStandardCourseForms`. That creates each listed form the shop has no live form for, matched
-by title, and adds each to the end of the course's list. It never removes or reorders a form.
+Practices Statement of Understanding (10060), and gives Advanced, Rescue and the diving
+specialties the Continuing Education Administrative Document (10038), which does not include the
+medical questionnaire. Discover Scuba Diving, ReActivate, Divemaster, Emergency Oxygen Provider
+and Equipment Specialist list none until the manual's own sections are read for each (issue
+#2264). Creating a course from its template (the catalog seed) runs `attachStandardCourseForms`.
+That creates each listed form the shop has no live form for, matched by title, and adds each to the
+end of the course's list. It never removes or reorders a form.
+
+**A template sync never undoes the shop's no.** The template snapshot a course keeps
+(`source_template_snapshot.standardForms`) records which forms that version named. A sync that keeps
+the shop's edits (`pullCourseTemplateUpdates`, `preserve-shop-edits`) sets up only the forms new in
+the incoming version. In either mode, a form the course once listed and the shop took off (a
+soft-deleted requirement) stays off.
 
 DiveDay ships **no wording**. The owner allowed shipping the agencies' text verbatim from an
 official copy, but no complete verbatim copy could be obtained: the fetch tool returns at most
@@ -82,10 +123,11 @@ course list say "Paste the agency's wording". Pasting the text in is a normal sa
 that names the staffer who saved it, and from that moment it is asked like any other form.
 
 **Gating is one switch.** `COURSE_FORMS_BLOCK_BOARDING` in `src/lib/course-forms.ts` is `true`.
-An unsigned required form then adds the `course_form_unsigned` blocker and the student reads as
-Blocked, using the words in `src/i18n/readiness-labels.ts`. With the switch at `false`, the form
-is still owed and still named on the roster as a warning line, but no student turns Blocked.
-`trip-admission.ts` never reads the switch.
+An unsigned required form then adds the `course_form_unsigned` blocker (or
+`course_form_guardian_missing`) and the student reads as Blocked, using the words in
+`src/i18n/readiness-labels.ts`. With the switch at `false`, the form is still owed and still named
+on the roster as a warning line, but no student turns Blocked. `trip-admission.ts` never reads the
+switch.
 
 **Parity with releases:**
 
@@ -99,12 +141,15 @@ is still owed and still named on the roster as a warning line, but no student tu
 - **More releases per shop**, one `waiver_templates` row per form. Rejected because the release is
   signed once per diver and held across trips ("Sign once"), while a course form belongs to one
   enrollment. Mixing the two would make every release query ask which kind it is reading.
-- **Its own token kind** (`/forms/[token]`). Rejected because the readiness capability already
-  proves the booking, and a second bearer URL would be one more capability to rate-limit, log
-  carefully and revoke, with nothing gained.
-- **Freezing the requirement onto each session** the way admission rules are. Rejected for now.
-  A shop that adds a form wants it asked of the students already booked, and a removed form should
-  stop blocking them. If a shop needs a session pinned, that can be a later decision.
+- **Handing over the readiness link** for the forms, as the first version did. Rejected in review:
+  the link staff copy at the counter, or send to a parent, would also open the diver's whole trip
+  prep (fit, contacts, payment, cancellation) to whoever it reached. The forms-only purpose costs
+  one enum value and keeps that door shut.
+- **Reading requirements live through a session.** Rejected in review: an edit made mid-course
+  turned students already in the water to Blocked on the morning of their last dive. A session now
+  keeps the forms and versions it started with.
+- **Freezing the requirement onto each session at booking**, the way admission rules are. Rejected:
+  a shop that adds a form before a session starts wants it asked of the students already booked.
 - **Gating at booking time.** Rejected because admission may never refuse someone readiness would
   clear, and a form is signed after a student has a seat.
 
@@ -112,9 +157,12 @@ is still owed and still named on the roster as a warning line, but no student tu
 
 - A training shop's paperwork lives in the same place as the morning's other blockers. The roster
   says who owes which form, and the prep link takes the student straight to it.
-- Editing a form's text sends every not-yet-boarded student back to sign. There is no "non-material
-  edit" choice yet; the release has one (issue #790) and forms could take the same one later.
+- Editing a form's text sends every student on a session not yet started back to sign, and the
+  editor says how many before the save. There is no "non-material edit" choice yet; the release has
+  one (issue #790) and forms could take the same one later.
 - Form records carry no integrity seal yet. The release's records do. Both are follow-ups, filed as
   issues, not gaps in this decision.
 - When the switch is at warn-only, the prep page offers forms only through the sign step's blocker.
   The direct link that the send delivers still works.
+- Training dives that ride a regular charter, and handing one device round a family to sign, are
+  not modelled here; both are filed as a follow-up.

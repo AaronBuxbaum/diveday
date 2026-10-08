@@ -1855,6 +1855,9 @@ const PAPER_COURSE_FORM_NOTICE: Record<
   guardian_required: "course-form-guardian",
   guardian_invalid: "course-form-guardian",
   guardian_name_matches_diver: "course-form-namesake",
+  paper_copy_unconfirmed: "course-form-paper-copy",
+  invalid_date: "course-form-date",
+  session_ended: "course-form-ended",
 };
 
 /**
@@ -1862,7 +1865,8 @@ const PAPER_COURSE_FORM_NOTICE: Record<
  * 20261008-course-forms), from their row on this departure. Any staffer, as a
  * paper release is: the record names who recorded it, and
  * `recordPaperCourseForm` re-reads their live roles and the enrollment before
- * it writes. A minor's form names the guardian who co-signed it; a guardian
+ * it writes. The staffer ticks that they hold the signed copy and may give the
+ * date written on it. A minor's form names the guardian who co-signed it; a guardian
  * typed under the student's own name is refused unless the staffer ticks that
  * they watched two people sign.
  */
@@ -1892,6 +1896,8 @@ export async function recordPaperCourseFormAction(
     bookingId,
     formId,
     recordedByPersonId: s.user.personId,
+    paperCopyConfirmed: formData.get("paperCopy") === "on",
+    signedOn: String(formData.get("signedOn") ?? "").trim() || undefined,
     guardian:
       guardianName || guardianRelationship
         ? {

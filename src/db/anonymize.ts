@@ -1022,7 +1022,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
 
     await tx
       .update(bookingCapabilities)
-      .set({ revokedAt: now, expiresAt: now })
+      .set({ revokedAt: now, expiresAt: now, tokenSealed: null })
       .where(
         and(
           inArray(bookingCapabilities.bookingId, bookingIds),

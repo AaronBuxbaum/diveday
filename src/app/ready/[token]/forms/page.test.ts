@@ -1,7 +1,11 @@
 import { and, eq, gt, isNotNull, ne } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { issueBookingCapability } from "@/db/booking-capabilities";
+import {
+  issueBookingCapability,
+  revokeBookingCapabilities,
+  verifyBookingCapability,
+} from "@/db/booking-capabilities";
 import {
   createCourseForm,
   getCourseFormsForBooking,
@@ -52,7 +56,7 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { default: CourseFormsPage } = await import("./page");
-const { signCourseFormFromReady } = await import("../actions");
+const { saveNoteFromReady, signCourseFormFromReady } = await import("../actions");
 
 afterEach(() => vi.clearAllMocks());
 
@@ -350,7 +354,7 @@ describe("signing a course form from the link", () => {
     );
   });
 
-  it("sends a dead link back to the prep page without signing", async () => {
+  it("sends a dead link back to its forms page, which explains it, without signing", async () => {
     const ctx = await enrolled();
     const [form] = await owed(ctx);
     expect(
@@ -359,7 +363,83 @@ describe("signing a course form from the link", () => {
         signerName: ctx.seat.fullName,
         acknowledged: "on",
       }),
-    ).toBe("/ready/dead-token");
+    ).toBe("/ready/dead-token/forms");
     expect(await owed(ctx)).toHaveLength(1);
+  });
+});
+
+/**
+ * **The forms-only link staff hand over** (`course_forms`): it opens the forms
+ * page and signs there, and every other door on `/ready` treats it as a link
+ * that does not work (security review).
+ */
+describe("the forms-only link", () => {
+  async function formsOnly(ctx: Awaited<ReturnType<typeof enrolled>>) {
+    const issued = await issueBookingCapability(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.seat.bookingId,
+      purpose: "course_forms",
+    });
+    if (!issued) throw new Error("no forms link");
+    return issued.token;
+  }
+
+  it("opens the forms page with no way to the prep page it cannot open", async () => {
+    const ctx = await enrolled();
+    const token = await formsOnly(ctx);
+    const html = await rendered(token);
+    expect(html).toContain("Course form 1");
+    expect(html).not.toContain("Back to your trip prep");
+    expect(html).not.toContain(`href="/ready/${token}"`);
+  });
+
+  it("signs, and lands back on its own forms page, which says it is done", async () => {
+    const ctx = await enrolled();
+    const token = await formsOnly(ctx);
+    const [form] = await owed(ctx);
+    expect(
+      await signed(token, {
+        formVersionId: form?.versionId ?? "",
+        signerName: ctx.seat.fullName,
+        acknowledged: "on",
+      }),
+    ).toBe(`/ready/${token}/forms`);
+    expect(await owed(ctx)).toEqual([]);
+    const html = await rendered(token);
+    expect(html).toContain("Nothing left to sign for this course.");
+    expect(html).not.toContain("Back to your trip prep");
+  });
+
+  it("reaches no other door on the readiness link", async () => {
+    const ctx = await enrolled();
+    const token = await formsOnly(ctx);
+    expect(await verifyBookingCapability(ctx.db, { token, purpose: "readiness" })).toBeNull();
+    // An action that writes to the diver's record bounces it, before any
+    // write, as a link that does not work.
+    const formData = new FormData();
+    formData.set("note", "Written with a forms-only link");
+    let to = "";
+    try {
+      await saveNoteFromReady(token, formData);
+    } catch (error) {
+      to = error instanceof Error ? error.message : "";
+    }
+    expect(to).toBe(`REDIRECT:/ready/${token}`);
+  });
+
+  it("says a revoked forms-only link no longer works, and names the shop to ask", async () => {
+    const ctx = await enrolled();
+    const token = await formsOnly(ctx);
+    await revokeBookingCapabilities(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.seat.bookingId,
+      purpose: "course_forms",
+    });
+    const html = await rendered(token);
+    expect(html).toContain("This link no longer works");
+    expect(html).toContain(
+      `Ask ${ctx.shop.name.replace("'", "&#x27;")} to send your course forms again.`,
+    );
+    expect(html).not.toContain("Course form 1");
   });
 });

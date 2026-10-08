@@ -36,11 +36,19 @@ export const COURSE_FORM_BODY_MAX = 12_000;
 export type RequiredCourseForm = {
   shopId: string;
   formId: string;
-  /** The current version's id: the only version a signature can satisfy. */
+  /** The current version's id: the one a student signs now. */
   versionId: string;
   version: number;
   title: string;
   position: number;
+  /**
+   * Older versions that still count for this session: the one that was
+   * current when a session that has started began. A student who signed the
+   * words in force on the first morning has agreed to the course they are
+   * taking; an edit made mid-course asks the next session, not this one, to
+   * sign again. Absent before a session starts, when only `versionId` counts.
+   */
+  alsoAccepted?: readonly string[];
 };
 
 /** What a signature has to say about itself for this module to weigh it. */
@@ -51,6 +59,11 @@ export type CourseFormSignature = {
   formVersionId: string;
   signedAt: Date;
   guardianSignedAt: Date | null;
+  /**
+   * The date written on a paper copy, when staff gave one: the day the
+   * student's age is measured on, in place of the day it was recorded.
+   */
+  paperSignedOn?: string | null;
 };
 
 /**
@@ -59,8 +72,9 @@ export type CourseFormSignature = {
  * - the same shop — a record another shop holds is not this shop's evidence;
  * - the same booking and the same person — a form is signed per enrollment, by
  *   the student on it, never carried from another course or another diver;
- * - the current version — a student who signed different words has not agreed
- *   to these;
+ * - the current version, or the one current when a started session began
+ *   (`alsoAccepted`) — a student who signed different words has not agreed to
+ *   these;
  * - a guardian's co-signature when the student was a minor on the day they
  *   signed (ADR 20260907-guardian-co-signature), measured in the shop's zone.
  */
@@ -73,12 +87,53 @@ export function signatureSatisfies(
   if (form.shopId !== enrollment.shopId) return false;
   if (signature.bookingId !== enrollment.bookingId) return false;
   if (signature.personId !== enrollment.personId) return false;
-  if (signature.formVersionId !== form.versionId) return false;
-  const minorWhenSigned = guardianSignatureRequired(
-    enrollment.signer.dateOfBirth,
-    signingDate(signature.signedAt, enrollment.signer.timezone),
+  if (!signatureNamesForm(signature, form)) return false;
+  return !guardianStillOwed(signature, enrollment.signer);
+}
+
+function signatureNamesForm(signature: CourseFormSignature, form: RequiredCourseForm): boolean {
+  return (
+    signature.formVersionId === form.versionId ||
+    (form.alsoAccepted ?? []).includes(signature.formVersionId)
   );
-  return !minorWhenSigned || signature.guardianSignedAt !== null;
+}
+
+/** A minor on the day they signed, with no guardian's signature beside theirs. */
+function guardianStillOwed(signature: CourseFormSignature, signer: GuardianSigner): boolean {
+  const signedOn = signature.paperSignedOn ?? signingDate(signature.signedAt, signer.timezone);
+  const minorWhenSigned = guardianSignatureRequired(signer.dateOfBirth, signedOn);
+  return minorWhenSigned && signature.guardianSignedAt === null;
+}
+
+/** Why a form is still owed: nobody signed it, or only the student did. */
+export type CourseFormGap = "unsigned" | "guardian_missing";
+
+/**
+ * **What each owed form is missing**, in the course's order. `guardian_missing`
+ * is a form the student signed while a minor with no guardian beside them —
+ * often because their date of birth reached the shop after they signed. It is
+ * still owed, and it is told apart because the fix is a parent's signature,
+ * not the student's.
+ */
+export function courseFormGaps(input: {
+  shopId: string;
+  bookingId: string;
+  personId: string;
+  required: readonly RequiredCourseForm[];
+  signatures: readonly CourseFormSignature[];
+  signer: GuardianSigner;
+}): { form: RequiredCourseForm; gap: CourseFormGap }[] {
+  return outstandingCourseForms(input).map((form) => {
+    const studentSigned = input.signatures.some(
+      (signature) =>
+        signature.shopId === input.shopId &&
+        signature.bookingId === input.bookingId &&
+        signature.personId === input.personId &&
+        form.shopId === input.shopId &&
+        signatureNamesForm(signature, form),
+    );
+    return { form, gap: studentSigned ? "guardian_missing" : "unsigned" };
+  });
 }
 
 /**
@@ -99,6 +154,30 @@ export function outstandingCourseForms(input: {
     .filter(
       (form) => !input.signatures.some((signature) => signatureSatisfies(signature, form, input)),
     );
+}
+
+/** What a form's placeholders are filled with when a student signs it. */
+export type CourseFormContext = {
+  shopName: string;
+  courseTitle: string;
+  /** The session's instructors, already joined for reading ("Ana Ruiz, Ben Ode"). */
+  instructorNames: string;
+};
+
+/**
+ * **A form's words as this student signs them**: `{shopName}`,
+ * `{courseTitle}` and `{instructorNames}` replaced by this enrollment's
+ * values. An agency release names the shop and the instructor in its own
+ * blanks; filling them here means one form serves every session, and the
+ * filled words are what the record keeps. Any other brace is left exactly as
+ * the shop typed it.
+ */
+export function fillCourseFormText(body: string, context: CourseFormContext): string {
+  return body.replace(/\{(shopName|courseTitle|instructorNames)\}/g, (_, key: string) => {
+    if (key === "shopName") return context.shopName;
+    if (key === "courseTitle") return context.courseTitle;
+    return context.instructorNames;
+  });
 }
 
 /**

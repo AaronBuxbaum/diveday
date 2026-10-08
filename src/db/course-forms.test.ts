@@ -1,13 +1,20 @@
 import { and, eq, gt, isNotNull, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { courseTemplateSnapshot, getCourseTemplate } from "@/content/course-templates";
+import {
+  calendarDateInTimezone,
+  shiftCalendarDate,
+  shiftCalendarDateMonths,
+} from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
 import {
   attachStandardCourseForms,
+  courseFormResignImpact,
   courseFormsAwaitingTextByCourse,
+  courseUpcomingEnrollment,
   createCourseForm,
   deleteCourseForm,
   getCourseFormsForBooking,
@@ -23,7 +30,17 @@ import { getCourseBySlug, pullCourseTemplateUpdates } from "./courses";
 import { getDiverMergePreview, mergeDiverRecords } from "./diver-merge";
 import { loadDiverExportBundleInput, loadShopExportBundleInput } from "./export";
 import { getBookingReadiness } from "./readiness";
-import { bookings, courseFormRecords, courses, people, personRoles, shops, trips } from "./schema";
+import {
+  bookings,
+  courseFormRecords,
+  courseFormRequirements,
+  courseFormVersions,
+  courses,
+  people,
+  personRoles,
+  shops,
+  trips,
+} from "./schema";
 import { listStaff } from "./trips";
 
 const BODY =
@@ -145,6 +162,7 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
         bookingId: ctx.seat.bookingId,
         formId: form.id,
         recordedByPersonId: ctx.staff.id,
+        paperCopyConfirmed: true,
       }),
     ).toMatchObject({ ok: false });
 
@@ -207,30 +225,84 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
     );
   });
 
-  it("sets the forms up again when a template sync runs, adding what the shop took off", async () => {
+  /** Seeded Open Water, with an older template baseline so a sync has something to pull. */
+  async function openWaterBehindItsTemplate(baselineForms: string[] | undefined) {
     const { db, shop } = await seededShopContext();
     const openWater = await getCourseBySlug(db, shop.id, "open-water-diver");
     const template = getCourseTemplate("open-water-diver");
     if (!openWater || !template) throw new Error("seeded Open Water missing");
-    await setCourseFormRequirements(db, { shopId: shop.id, courseId: openWater.id, formIds: [] });
-    // An older template baseline, so there is an update to pull.
+    const { standardForms: _latest, ...rest } = courseTemplateSnapshot(template);
     await db
       .update(courses)
       .set({
         sourceTemplateVersion: 1,
-        sourceTemplateSnapshot: { ...courseTemplateSnapshot(template), summary: "Older words" },
+        sourceTemplateSnapshot: {
+          ...rest,
+          summary: "Older words",
+          ...(baselineForms ? { standardForms: baselineForms } : {}),
+        },
       })
       .where(eq(courses.id, openWater.id));
+    return { db, shop, openWater, template };
+  }
+
+  it("never puts back a form the shop took off, when a sync keeps the shop's edits", async () => {
+    const titles = (getCourseTemplate("open-water-diver")?.standardForms ?? []).map((f) => f.title);
+    const { db, shop, openWater } = await openWaterBehindItsTemplate(titles);
+    await setCourseFormRequirements(db, { shopId: shop.id, courseId: openWater.id, formIds: [] });
+
     const pulled = await pullCourseTemplateUpdates(
       db,
       shop.id,
       openWater.id,
       "preserve-shop-edits",
     );
+
     expect(pulled.status).toBe("updated");
-    expect(await listCourseFormRequirements(db, shop.id, openWater.id)).toHaveLength(
-      template.standardForms?.length ?? 0,
+    expect(await listCourseFormRequirements(db, shop.id, openWater.id)).toEqual([]);
+  });
+
+  it("adds only a form new in this template version, and not one the shop already declined", async () => {
+    const [first, second] = (getCourseTemplate("open-water-diver")?.standardForms ?? []).map(
+      (form) => form.title,
     );
+    if (!first || !second) throw new Error("Open Water names two forms");
+    // The previous version named only the first form; this one adds the second.
+    const { db, shop, openWater } = await openWaterBehindItsTemplate([first]);
+    const before = await listCourseFormRequirements(db, shop.id, openWater.id);
+    const forms = await listCourseForms(db, shop.id);
+    const firstId = forms.find((form) => form.title === first)?.id;
+    const secondId = forms.find((form) => form.title === second)?.id;
+    // The shop keeps the first and took the second off before the sync.
+    await setCourseFormRequirements(db, {
+      shopId: shop.id,
+      courseId: openWater.id,
+      formIds: before.filter((id) => id !== secondId),
+    });
+
+    await pullCourseTemplateUpdates(db, shop.id, openWater.id, "preserve-shop-edits");
+
+    // New in this version, but taken off by the shop: its soft-deleted row is the shop's no.
+    expect(await listCourseFormRequirements(db, shop.id, openWater.id)).toEqual([firstId]);
+  });
+
+  it("adds a form new in this template version that the course never had", async () => {
+    const [first, second] = (getCourseTemplate("open-water-diver")?.standardForms ?? []).map(
+      (form) => form.title,
+    );
+    if (!first || !second) throw new Error("Open Water names two forms");
+    const { db, shop, openWater } = await openWaterBehindItsTemplate([first]);
+    // A course that never listed the second form at all: delete the seeded form,
+    // which takes its requirement row with it, then forget that row ever was.
+    const secondId = (await listCourseForms(db, shop.id)).find((form) => form.title === second)?.id;
+    if (!secondId) throw new Error("seeded second form missing");
+    await db.delete(courseFormRequirements).where(eq(courseFormRequirements.formId, secondId));
+
+    await pullCourseTemplateUpdates(db, shop.id, openWater.id, "preserve-shop-edits");
+
+    const required = await listCourseFormRequirements(db, shop.id, openWater.id);
+    expect(required).toHaveLength(2);
+    expect(required).toContain(secondId);
   });
 });
 
@@ -519,6 +591,7 @@ describe("course forms — signing and readiness (in-memory PGlite)", () => {
         bookingId: ctx.seat.bookingId,
         formId: form.id,
         recordedByPersonId: ctx.seat.personId,
+        paperCopyConfirmed: true,
       }),
     ).toEqual({ ok: false, reason: "staff_not_found" });
 
@@ -527,6 +600,7 @@ describe("course forms — signing and readiness (in-memory PGlite)", () => {
       bookingId: ctx.seat.bookingId,
       formId: form.id,
       recordedByPersonId: ctx.staff.id,
+      paperCopyConfirmed: true,
     });
     expect(outcome).toMatchObject({ ok: true, alreadySigned: false });
     const [record] = await ctx.db
@@ -554,6 +628,7 @@ describe("course forms — signing and readiness (in-memory PGlite)", () => {
         bookingId: ctx.seat.bookingId,
         formId: form.id,
         recordedByPersonId: ctx.staff.id,
+        paperCopyConfirmed: true,
       }),
     ).toEqual({ ok: false, reason: "staff_not_found" });
   });
@@ -663,3 +738,357 @@ describe("course forms — export, erasure and merge parity (in-memory PGlite)",
     );
   });
 });
+
+/** Re-time the seat's session, relative to the real clock the readers use. */
+async function retime(
+  ctx: Awaited<ReturnType<typeof courseContext>>,
+  startDays: number,
+  endDays: number,
+) {
+  const day = 24 * 60 * 60 * 1000;
+  await ctx.db
+    .update(trips)
+    // diveday:allow-flat-revision: a test re-times its own session in a per-test database no calendar has seen.
+    .set({
+      startsAt: new Date(ctx.now.getTime() + startDays * day),
+      endsAt: new Date(ctx.now.getTime() + endDays * day),
+    })
+    .where(eq(trips.id, ctx.seat.tripId));
+}
+
+/** Backdate a form's requirement and its first version to before the session began. */
+async function requiredSinceBefore(
+  ctx: Awaited<ReturnType<typeof courseContext>>,
+  formId: string,
+  days: number,
+) {
+  const at = new Date(ctx.now.getTime() - days * 24 * 60 * 60 * 1000);
+  await ctx.db
+    .update(courseFormRequirements)
+    .set({ createdAt: at })
+    .where(eq(courseFormRequirements.formId, formId));
+  await ctx.db
+    .update(courseFormVersions)
+    .set({ createdAt: at })
+    .where(eq(courseFormVersions.formId, formId));
+}
+
+/**
+ * **A session that has started keeps the forms it started with** (ADR
+ * 20261008-course-forms). Adversarial: the shop edits a form on day two of a
+ * three-day course, adds a form mid-course, and tries to record paper after
+ * the course is over.
+ */
+describe("course forms — mid-course edits (in-memory PGlite)", () => {
+  it("keeps a signature on the version in force when a multi-day session began", async () => {
+    const ctx = await courseContext();
+    const form = await requireOneForm(ctx);
+    await requiredSinceBefore(ctx, form.id, 3);
+    // Day two of three: began yesterday, ends tomorrow.
+    await retime(ctx, -1, 1);
+    expect(
+      await signCourseForm(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.seat.bookingId,
+        formVersionId: form.versionId,
+        signerName: ctx.seat.fullName,
+        agreed: true,
+      }),
+    ).toMatchObject({ ok: true });
+    // The shop edits the form now, mid-course.
+    await saveCourseFormVersion(ctx.db, {
+      shopId: ctx.shop.id,
+      formId: form.id,
+      title: form.title,
+      body: `${BODY} Edited on day two.`,
+      actorPersonId: ctx.staff.id,
+    });
+
+    const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.seat.bookingId);
+    expect(readiness?.blockers.map((blocker) => blocker.code)).not.toContain(
+      "course_form_unsigned",
+    );
+    expect(
+      (await getCourseFormsForBooking(ctx.db, ctx.shop.id, ctx.seat.bookingId))?.outstanding,
+    ).toEqual([]);
+    // Other students on the session have not signed; this one is clear.
+    expect(
+      (await owedCourseFormsByBooking(ctx.db, ctx.shop.id, [ctx.seat.tripId])).has(
+        ctx.seat.bookingId,
+      ),
+    ).toBe(false);
+  });
+
+  it("still asks an unsigned student on a started session, who signs the current words", async () => {
+    const ctx = await courseContext();
+    const form = await requireOneForm(ctx);
+    await requiredSinceBefore(ctx, form.id, 3);
+    await retime(ctx, -1, 1);
+    await saveCourseFormVersion(ctx.db, {
+      shopId: ctx.shop.id,
+      formId: form.id,
+      title: form.title,
+      body: `${BODY} Edited on day two.`,
+      actorPersonId: ctx.staff.id,
+    });
+    const forms = await getCourseFormsForBooking(ctx.db, ctx.shop.id, ctx.seat.bookingId);
+    const [owed] = forms?.outstanding ?? [];
+    expect(owed).toMatchObject({ formId: form.id, version: 2, alsoAccepted: [form.versionId] });
+    const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.seat.bookingId);
+    expect(readiness?.blockers.map((blocker) => blocker.code)).toContain("course_form_unsigned");
+  });
+
+  it("does not ask a started session for a form added to the course after it began", async () => {
+    const ctx = await courseContext();
+    await retime(ctx, -1, 1);
+    // Added now, a day after the session began.
+    await requireOneForm(ctx);
+
+    expect(
+      (await getCourseFormsForBooking(ctx.db, ctx.shop.id, ctx.seat.bookingId))?.required,
+    ).toEqual([]);
+    const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.seat.bookingId);
+    expect(readiness?.blockers.map((blocker) => blocker.code)).not.toContain(
+      "course_form_unsigned",
+    );
+  });
+
+  it("refuses a paper record, and the student's own signature, once the session has ended", async () => {
+    const ctx = await courseContext();
+    const form = await requireOneForm(ctx);
+    await requiredSinceBefore(ctx, form.id, 5);
+    await retime(ctx, -3, -2);
+
+    expect(
+      await recordPaperCourseForm(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.seat.bookingId,
+        formId: form.id,
+        recordedByPersonId: ctx.staff.id,
+        paperCopyConfirmed: true,
+      }),
+    ).toEqual({ ok: false, reason: "session_ended" });
+    expect(
+      await signCourseForm(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.seat.bookingId,
+        formVersionId: form.versionId,
+        signerName: ctx.seat.fullName,
+        agreed: true,
+      }),
+    ).toEqual({ ok: false, reason: "unavailable" });
+    expect(await ctx.db.select().from(courseFormRecords)).toEqual([]);
+  });
+
+  it("says before a save who a new version would ask again, and who an added form would ask", async () => {
+    const ctx = await courseContext();
+    const form = await requireOneForm(ctx);
+    expect((await courseFormResignImpact(ctx.db, ctx.shop.id)).get(form.id)).toBeUndefined();
+    await signCourseForm(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.seat.bookingId,
+      formVersionId: form.versionId,
+      signerName: ctx.seat.fullName,
+      agreed: true,
+    });
+    expect((await courseFormResignImpact(ctx.db, ctx.shop.id)).get(form.id)).toEqual({
+      students: 1,
+      sessions: 1,
+    });
+    const enrolled = await courseUpcomingEnrollment(ctx.db, ctx.shop.id, ctx.seat.courseId);
+    expect(enrolled.students).toBeGreaterThanOrEqual(1);
+    expect(enrolled.sessions).toBeGreaterThanOrEqual(1);
+    // Once the session is under way, a new version asks it nothing.
+    await retime(ctx, -1, 1);
+    expect((await courseFormResignImpact(ctx.db, ctx.shop.id)).get(form.id)).toBeUndefined();
+  });
+});
+
+describe("course forms — a minor's guardian, and a paper copy's own rules (in-memory PGlite)", () => {
+  it("lets a guardian complete a form a minor signed before their date of birth was on file", async () => {
+    const ctx = await courseContext();
+    const form = await requireOneForm(ctx);
+    await ctx.db.update(people).set({ dateOfBirth: null }).where(eq(people.id, ctx.seat.personId));
+    const student = {
+      shopId: ctx.shop.id,
+      bookingId: ctx.seat.bookingId,
+      formVersionId: form.versionId,
+      signerName: ctx.seat.fullName,
+      agreed: true,
+    };
+    const first = await signCourseForm(ctx.db, student);
+    expect(first).toMatchObject({ ok: true, alreadySigned: false });
+    // The date of birth arrives after the signature: a minor, signed alone.
+    await ctx.db
+      .update(people)
+      .set({ dateOfBirth: "2013-03-03" })
+      .where(eq(people.id, ctx.seat.personId));
+
+    const blocked = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.seat.bookingId);
+    expect(blocked?.blockers).toContainEqual({
+      code: "course_form_guardian_missing",
+      params: { formTitle: "Course liability release" },
+    });
+    const owed = await getCourseFormsForBooking(ctx.db, ctx.shop.id, ctx.seat.bookingId);
+    expect(owed?.outstanding.map((row) => row.gap)).toEqual(["guardian_missing"]);
+    expect(await signCourseForm(ctx.db, student)).toEqual({
+      ok: false,
+      reason: "guardian_required",
+    });
+
+    const completed = await signCourseForm(ctx.db, {
+      ...student,
+      guardian: { name: "Rosa Guardian", relationship: "parent", agreed: true },
+    });
+    expect(completed).toEqual({
+      ok: true,
+      recordId: first.ok ? first.recordId : "",
+      alreadySigned: true,
+    });
+    const cleared = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.seat.bookingId);
+    expect(cleared?.blockers.map((blocker) => blocker.code)).not.toContain(
+      "course_form_guardian_missing",
+    );
+
+    // Filled once: a second guardian never overwrites the first.
+    await signCourseForm(ctx.db, {
+      ...student,
+      guardian: { name: "Someone Later", relationship: "parent", agreed: true },
+    });
+    const [record] = await ctx.db
+      .select()
+      .from(courseFormRecords)
+      .where(eq(courseFormRecords.bookingId, ctx.seat.bookingId));
+    expect(record).toMatchObject({ signedName: ctx.seat.fullName, guardianName: "Rosa Guardian" });
+  });
+
+  it("refuses a paper record on a held seat, without the paper-copy tick, or dated after today", async () => {
+    const ctx = await courseContext();
+    const form = await requireOneForm(ctx);
+    const paper = {
+      shopId: ctx.shop.id,
+      bookingId: ctx.seat.bookingId,
+      formId: form.id,
+      recordedByPersonId: ctx.staff.id,
+      paperCopyConfirmed: true,
+    };
+    expect(await recordPaperCourseForm(ctx.db, { ...paper, paperCopyConfirmed: false })).toEqual({
+      ok: false,
+      reason: "paper_copy_unconfirmed",
+    });
+    const today = calendarToday(ctx.shop.timezone);
+    expect(
+      await recordPaperCourseForm(ctx.db, { ...paper, signedOn: shiftCalendarDate(today, 1) }),
+    ).toEqual({ ok: false, reason: "invalid_date" });
+    expect(await recordPaperCourseForm(ctx.db, { ...paper, signedOn: "2026-02-30" })).toEqual({
+      ok: false,
+      reason: "invalid_date",
+    });
+    await ctx.db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: ctx.now })
+      .where(eq(bookings.id, ctx.seat.bookingId));
+    expect(await recordPaperCourseForm(ctx.db, paper)).toEqual({
+      ok: false,
+      reason: "unavailable",
+    });
+    expect(await ctx.db.select().from(courseFormRecords)).toEqual([]);
+  });
+
+  it("measures a paper copy's signer on the date written on it", async () => {
+    const ctx = await courseContext();
+    const form = await requireOneForm(ctx);
+    const today = calendarToday(ctx.shop.timezone);
+    // Eighteen two days ago; the paper is dated five days ago, when they were not.
+    const birthday = shiftCalendarDateMonths(shiftCalendarDate(today, -2), -18 * 12);
+    await ctx.db
+      .update(people)
+      .set({ dateOfBirth: birthday })
+      .where(eq(people.id, ctx.seat.personId));
+    const paper = {
+      shopId: ctx.shop.id,
+      bookingId: ctx.seat.bookingId,
+      formId: form.id,
+      recordedByPersonId: ctx.staff.id,
+      paperCopyConfirmed: true,
+      signedOn: shiftCalendarDate(today, -5),
+    };
+    expect(await recordPaperCourseForm(ctx.db, paper)).toEqual({
+      ok: false,
+      reason: "guardian_required",
+    });
+    expect(
+      await recordPaperCourseForm(ctx.db, {
+        ...paper,
+        guardian: { name: "Rosa Guardian", relationship: "parent" },
+      }),
+    ).toMatchObject({ ok: true });
+    const [record] = await ctx.db
+      .select()
+      .from(courseFormRecords)
+      .where(eq(courseFormRecords.bookingId, ctx.seat.bookingId));
+    expect(record?.paperSignedOn).toBe(paper.signedOn);
+    const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.seat.bookingId);
+    expect(readiness?.blockers.map((blocker) => blocker.code)).not.toContain(
+      "course_form_guardian_missing",
+    );
+  });
+});
+
+describe("course forms — placeholders, filled at signing (in-memory PGlite)", () => {
+  it("fills the shop, course and instructors into the words, and keeps what they were", async () => {
+    const ctx = await courseContext();
+    const created = await createCourseForm(ctx.db, {
+      shopId: ctx.shop.id,
+      title: "Agency release",
+      body: `I release {shopName} and {instructorNames} for {courseTitle}. ${BODY}`,
+      actorPersonId: ctx.staff.id,
+    });
+    await setCourseFormRequirements(ctx.db, {
+      shopId: ctx.shop.id,
+      courseId: ctx.seat.courseId,
+      formIds: [created.id],
+    });
+    const [course] = await ctx.db
+      .select({ title: courses.title })
+      .from(courses)
+      .where(eq(courses.id, ctx.seat.courseId));
+    const forms = await getCourseFormsForBooking(ctx.db, ctx.shop.id, ctx.seat.bookingId);
+    const [owed] = forms?.outstanding ?? [];
+    expect(owed?.body).toContain(`I release ${ctx.shop.name} and `);
+    expect(owed?.body).toContain(`for ${course?.title}.`);
+    expect(owed?.body).not.toContain("{");
+
+    await signCourseForm(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.seat.bookingId,
+      formVersionId: owed?.versionId ?? "",
+      signerName: ctx.seat.fullName,
+      agreed: true,
+    });
+    const [record] = await ctx.db
+      .select()
+      .from(courseFormRecords)
+      .where(eq(courseFormRecords.bookingId, ctx.seat.bookingId));
+    expect(record).toMatchObject({
+      formBody: owed?.body,
+      courseTitle: course?.title,
+      tripId: ctx.seat.tripId,
+      instructorNames: forms?.enrollment.context.instructorNames,
+    });
+    // A later rename never rewrites what was agreed to.
+    await ctx.db
+      .update(courses)
+      .set({ title: "Renamed course" })
+      .where(eq(courses.id, ctx.seat.courseId));
+    const [kept] = await ctx.db
+      .select({ courseTitle: courseFormRecords.courseTitle })
+      .from(courseFormRecords)
+      .where(eq(courseFormRecords.bookingId, ctx.seat.bookingId));
+    expect(kept?.courseTitle).toBe(course?.title);
+  });
+});
+
+function calendarToday(timezone: string) {
+  return calendarDateInTimezone(nowDate(), timezone);
+}
