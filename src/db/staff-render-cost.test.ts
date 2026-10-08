@@ -163,5 +163,7 @@ const GATE_CEILING = 4;
 // past the horizon (`countBlockedDiversNextBoatDay` → `blockedAboardOnBoatsOut`,
 // UX audit 2026-10-07 item 1): two statements over the boats still out.
 const CHROME_CEILING = 19;
-const TODAY_CEILING = 60;
+// 60 → 61: the bench's two Today rows, late and uncollected work orders, are
+// one statement (`listWorkOrdersNeedingAttention`, ADR 20261008-work-order-follow-up).
+const TODAY_CEILING = 61;
 const TRIP_CEILING = 49;
