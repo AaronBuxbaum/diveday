@@ -178,6 +178,8 @@ export type RosterActions = {
    * roster — a fun dive has no completion to certify.
    */
   certifyDiverAction?: (formData: FormData) => void;
+  /** Record a course form signed on paper (ADR 20261008-course-forms). */
+  recordPaperCourseFormAction?: (formData: FormData) => void;
   /**
    * What this student does next, in the instructor's own words (issues #1196,
    * #1205) — present under exactly the same condition as `certifyDiverAction`,

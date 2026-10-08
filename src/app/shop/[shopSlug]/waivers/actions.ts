@@ -4,7 +4,13 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { createCourseForm, deleteCourseForm, saveCourseFormVersion } from "@/db/course-forms";
 import { saveWaiverTemplate, standingWaiverExposure } from "@/db/waivers";
+import {
+  COURSE_FORM_BODY_MAX,
+  COURSE_FORM_BODY_MIN,
+  COURSE_FORM_TITLE_MAX,
+} from "@/lib/course-forms";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -83,5 +89,96 @@ export async function saveWaiverAction(formData: FormData) {
     atRisk.divers > 0 && isMaterial
       ? noticeUrl(waivers, "waiver-resigning", { count: atRisk.divers })
       : noticeUrl(waivers, "saved"),
+  );
+}
+
+const courseFormSchema = z.object({
+  formId: z.uuid().optional(),
+  title: z.string().trim().min(2).max(COURSE_FORM_TITLE_MAX),
+  body: z.string().trim().min(COURSE_FORM_BODY_MIN).max(COURSE_FORM_BODY_MAX),
+});
+
+/**
+ * Write a course form (ADR 20261008-course-forms): a new one when no `formId`
+ * is posted, a new version of an existing one otherwise. Owner or manager,
+ * like the release — a course form is the shop's legal instrument too — and
+ * re-checked here, where a POST that skipped the page still lands.
+ *
+ * The outcome comes back beside the form it was about (`?form=`), on the
+ * form's own anchor, rather than at the top of a page that leads with the
+ * signature log.
+ */
+export async function saveCourseFormAction(formData: FormData) {
+  const staff = await requireStaffSession();
+  const db = await getDb();
+  if (!(await canPersonManageWaiverTemplates(db, staff.user.shopId, staff.user.personId))) {
+    redirect(noticeUrl(shopPath(staff.user.shopSlug), "waivers-not-authorized"));
+  }
+  const waivers = shopPath(staff.user.shopSlug, "waivers");
+  const postedId = String(formData.get("formId") ?? "");
+  const anchorFor = (id: string) => `${waivers}#course-form-${id}`;
+  const parsed = courseFormSchema.safeParse({
+    formId: postedId || undefined,
+    title: formData.get("title") ?? "",
+    body: formData.get("body") ?? "",
+  });
+  if (!parsed.success) {
+    // A malformed id is no form at all: the refusal lands on the new-form box.
+    const target = z.uuid().safeParse(postedId).success ? postedId : "new";
+    redirect(noticeUrl(anchorFor(target), "course-form-invalid", { form: target }));
+  }
+  const formId = parsed.data.formId;
+  if (!formId) {
+    const created = await createCourseForm(db, {
+      shopId: staff.user.shopId,
+      title: parsed.data.title,
+      body: parsed.data.body,
+      actorPersonId: staff.user.personId,
+    });
+    revalidateAndRedirect(
+      waivers,
+      noticeUrl(anchorFor(created.id), "course-form-saved", { form: created.id }),
+    );
+    return;
+  }
+  const saved = await saveCourseFormVersion(db, {
+    shopId: staff.user.shopId,
+    formId,
+    title: parsed.data.title,
+    body: parsed.data.body,
+    actorPersonId: staff.user.personId,
+  });
+  const code = !saved.ok
+    ? "course-form-not-found"
+    : saved.versioned
+      ? "course-form-saved"
+      : "course-form-unchanged";
+  revalidateAndRedirect(waivers, noticeUrl(anchorFor(formId), code, { form: formId }));
+}
+
+/**
+ * Delete a course form (soft). Every course that asked for it stops asking;
+ * the records students already signed stay on file with the words they signed.
+ */
+export async function deleteCourseFormAction(formData: FormData) {
+  const staff = await requireStaffSession();
+  const db = await getDb();
+  if (!(await canPersonManageWaiverTemplates(db, staff.user.shopId, staff.user.personId))) {
+    redirect(noticeUrl(shopPath(staff.user.shopSlug), "waivers-not-authorized"));
+  }
+  const waivers = shopPath(staff.user.shopSlug, "waivers");
+  const formId = z.uuid().safeParse(formData.get("formId"));
+  const deleted = formId.success
+    ? await deleteCourseForm(db, { shopId: staff.user.shopId, formId: formId.data })
+    : false;
+  revalidateAndRedirect(
+    waivers,
+    noticeUrl(
+      `${waivers}#course-forms`,
+      deleted ? "course-form-deleted" : "course-form-not-found",
+      {
+        form: "list",
+      },
+    ),
   );
 }

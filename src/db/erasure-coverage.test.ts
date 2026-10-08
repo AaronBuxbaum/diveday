@@ -64,7 +64,7 @@ import {
  * fixes that: this file tried one, and it missed both a bare `person_id` with
  * no foreign key and anything holding a person under a column named something
  * else. So `OUTSIDE_CLOSURE_REASONS` below is the **whole** complement — every
- * one of the 24 tables outside the closure carries a written reason, and a new
+ * one of the 30 tables outside the closure carries a written reason, and a new
  * table lands in one list or the other on the day it is added. What is left
  * outside is judgement, not coverage: this guard makes someone answer for every
  * table, and a `security-reviewer` pass is what checks the answer.
@@ -308,6 +308,8 @@ const ERASURE_KEEPS: Record<string, string> = {
   shop_promo_codes: "a discount the shop published, its window and its ceiling",
   trip_last_minute_promos:
     "that a shop offered a deal on a departure and to how many people. The addresses it reached are on the recipient rows, which the erasure redacts",
+  course_form_versions:
+    "the wording of a course form as the shop saved it, and the staffer who saved it. The signed copy is `course_form_records`, which the erasure redacts",
   waiver_materiality_decisions:
     "an owner's ruling on whether a template change was material — a decision about the shop’s text, not about any signer",
 
@@ -384,6 +386,8 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   courses: "the shop’s course catalog, copied from a template and then its own",
   waiver_templates:
     "the text a shop asks people to sign, versioned. The *signatures* are `waiver_records`, which the erasure strips and re-seals",
+  course_forms: "the course forms a shop asks students to sign, by title and agency code",
+  course_form_requirements: "which course asks for which form, and from when",
   trip_lenses: "the shop’s own word for a kind of day",
   trip_series:
     "the cadence a repeating departure is generated from. Its instances are ordinary `trips` rows",
@@ -459,7 +463,7 @@ const WRITTEN_VIA_HELPER: Record<string, string> = {
  * all ours) and never a `uuid` or an integer (both minted here).
  *
  * **Why a net and not the whole complement.** `OUTSIDE_CLOSURE_REASONS` above
- * can name every table outside the closure because there are 25 of them and a
+ * can name every table outside the closure because there are 30 of them and a
  * reviewer can read the list. The same move over columns is 1,438 sentences,
  * almost all of them "a timestamp", and a list nobody reads guards nothing. So
  * the limit is stated rather than implied: a handle under a name carrying none

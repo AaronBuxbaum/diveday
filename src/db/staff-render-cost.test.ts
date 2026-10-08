@@ -162,6 +162,10 @@ const GATE_CEILING = 4;
 // 17 → 19: the Today badge also counts divers blocked aboard a boat still out
 // past the horizon (`countBlockedDiversNextBoatDay` → `blockedAboardOnBoatsOut`,
 // UX audit 2026-10-07 item 1): two statements over the boats still out.
-const CHROME_CEILING = 19;
-const TODAY_CEILING = 60;
+// 19 → 20 and 60 → 61: readiness reads the forms its course sessions ask for
+// (`requiredCourseFormsForTrips`, ADR 20261008-course-forms). The seeded shop
+// has course sessions in the horizon, so the read runs; a horizon of fun dives
+// skips it, and the signatures read is skipped while no course asks for a form.
+const CHROME_CEILING = 20;
+const TODAY_CEILING = 61;
 const TRIP_CEILING = 49;

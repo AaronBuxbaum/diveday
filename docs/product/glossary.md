@@ -1509,6 +1509,22 @@ new domain concept, define it here in the same PR.
   product boundary, not legal advice: a shop whose own counsel wants staff on a release still has
   the paper/in-person path, and if that ever becomes the norm it is a human decision to record
   (H-01/H-03), not a query to widen.
+- **Course form** — a form a course asks each student to sign as well as the release, such as an
+  agency's course release or a safe-diving-practices statement. The words are the shop's own, written
+  beside the release and versioned on every real edit (DiveDay ships none, H-10). Each course
+  chooses its forms, in order, on its own page. Unlike the release, a course form is **signed per
+  booking**: a signature counts for the enrollment it was signed on, at the **current version** —
+  which, once a session has started, also means the version that was current when it started, so an
+  edit made mid-course asks the next session to sign — with a guardian's co-signature for a minor,
+  and never carries to the next course. A student signs on their prep link's forms page or on the
+  **forms-only link** staff send, which opens that page and nothing else; staff can also record a
+  paper copy from the Divers tab. An unsigned one is the `course_form_unsigned` blocker (a minor's
+  with no guardian, `course_form_guardian_missing`), so the student reads Blocked until it is
+  signed. One switch,
+  `COURSE_FORMS_BLOCK_BOARDING`, turns that into a warning instead, and buying a seat never waits on
+  it (ADR 20261008-course-forms). A course template names its agency's **standard forms** by title.
+  Creating or syncing the course sets them up empty, and a form with no text is asked of nobody
+  until the shop pastes the agency's wording in.
 - **Sign once** — a diver signs the release once, not every trip. A **completed** signature is held
   against the diver (not just the booking it was signed on) and satisfies the waiver gate on any of
   their bookings while it stays **current**: signed against the shop's current release version and

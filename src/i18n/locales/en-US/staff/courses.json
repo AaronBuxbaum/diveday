@@ -15,7 +15,8 @@
     "emptyAction": "Open the schedule",
     "pagination": {
       "total": "{count, plural, one {# course} other {# courses}}"
-    }
+    },
+    "formsAwaitingText": "Paste the agency’s wording: {forms}"
   },
   "edit": {
     "depthMarkersHint": "<marker>'{depth18}'</marker> prints as “18 meters” or “60 feet” in the diver’s unit. Also <marker>'{depth12}'</marker>, <marker>'{depth21}'</marker>, <marker>'{depth30}'</marker> and <marker>'{depth40}'</marker>; add <marker>n</marker> for a bare number in a range. Delete a marker to write the depth yourself.",
@@ -125,7 +126,23 @@
     "unsavedInSection": "Unsaved changes in {section}",
     "unsavedInSections": "Unsaved changes in {count, plural, one {# section} other {# sections}}",
     "sectionsLabel": "Sections",
-    "draftRestored": "Unsaved changes, put back from your last visit"
+    "draftRestored": "Unsaved changes, put back from your last visit",
+    "forms": {
+      "legend": "Forms",
+      "description": "Each student signs these on their prep page before the course. Until they do, they show as Blocked.",
+      "none": "No course forms yet.",
+      "writeLink": "Write a course form",
+      "orderLabel": "Order of {form}",
+      "save": "Save forms",
+      "saved": "Saved. Students on this course now sign these forms.",
+      "invalid": "That didn’t save. One of those forms was deleted; reload and choose again.",
+      "notAuthorized": "Only staff who set up trips can choose a course’s forms.",
+      "pasteWording": "Paste the agency’s wording",
+      "awaitingText": "No student signs this until it has its text.",
+      "addImpact": "{students, plural, one {A form added now asks # student} other {A form added now asks # students}} on {sessions, plural, one {# upcoming session} other {# upcoming sessions}} to sign it.",
+      "removeLocked": "Only an owner or manager can take a form off a course.",
+      "removeNotAuthorized": "That didn’t save. Only an owner or manager can take a form off a course."
+    }
   },
   "dayByDay": {
     "dayLabel": "Day {number}",

@@ -130,6 +130,40 @@ describe("elearningCheckAction", () => {
     expect((await tick(db, bookingId))?.at).toEqual(earlier);
   });
 
+  it("counts a colleague's tick on another departure of the same course as done", async () => {
+    const { db, shop, tripId, bookingId } = await context();
+    const [session] = await db.select().from(trips).where(eq(trips.id, tripId));
+    const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    if (!session || !seat) throw new Error("the course seat is missing");
+    const [other] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(ne(people.id, seat.personId))
+      .limit(1);
+    const { id: _trip, ...sessionFields } = session;
+    const [poolWeekend] = await db
+      .insert(trips)
+      .values({
+        ...sessionFields,
+        startsAt: new Date(session.startsAt.getTime() - 14 * 86_400_000),
+        endsAt: new Date(session.endsAt.getTime() - 14 * 86_400_000),
+      })
+      .returning({ id: trips.id });
+    const { id: _seat, ...seatFields } = seat;
+    const earlier = new Date("2026-10-01T09:00:00Z");
+    await db.insert(bookings).values({
+      ...seatFields,
+      tripId: poolWeekend?.id ?? "",
+      courseMaterialsDoneAt: earlier,
+      courseMaterialsDoneByPersonId: other?.id ?? null,
+    });
+
+    const result = await elearningCheckAction(shop.slug, tripId, null, check(bookingId, PAGE));
+
+    expect(result).toEqual({ ok: true, verdict: "already_done" });
+    expect((await tick(db, bookingId))?.at).toBeNull();
+  });
+
   it("leaves a colleague's tick made since the check alone on Undo", async () => {
     const { db, shop, staffId, tripId, bookingId } = await context();
     await elearningCheckAction(shop.slug, tripId, null, check(bookingId, PAGE));

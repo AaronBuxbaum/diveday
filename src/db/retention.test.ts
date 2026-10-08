@@ -450,6 +450,14 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "waiver_records",
   "waiver_materiality_decisions",
   "waiver_deliveries",
+  // Course forms (ADR 20261008-course-forms): the same signed evidence as the
+  // release, on the same footing. The forms, their versions and a course's
+  // list of them are the shop's own configuration; a signed record is erased
+  // by the erasure path (`src/db/anonymize.ts`), never aged out.
+  "course_forms",
+  "course_form_versions",
+  "course_form_requirements",
+  "course_form_records",
   // Seats and money: the shop's own books. `booking_payment_events` is the one
   // trail among these and it has a window (7 years); the rows here are the
   // seats, orders and tips that trail is about.

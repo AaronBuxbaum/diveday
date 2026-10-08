@@ -802,7 +802,9 @@
       "waiverDone": "Signed and on file.",
       "certificationDone": "Verified and on file.",
       "paymentDone": "Paid up. Thank you.",
-      "certificationMultipleNeeded": "This dive needs more than one certification on file. Share the details for each one it calls for, and your shop will confirm you’re set."
+      "certificationMultipleNeeded": "This dive needs more than one certification on file. Share the details for each one it calls for, and your shop will confirm you’re set.",
+      "courseFormUnsigned": "Your course has forms for you to sign.",
+      "courseFormGuardianMissing": "A parent or legal guardian has to sign your course forms with you."
     },
     "gearAndSetup": "Gear and setup",
     "dockCallLine": "Aim to be at the dock by {time}, {dock} before we sail.",
@@ -898,7 +900,9 @@
     "intentUnavailable": "That did not save. Try again, or tell the crew on the day.",
     "reEntrySaved": "Thanks. The crew will look out for you.",
     "reEntryUnavailable": "That did not save. Try again, or tell the crew on the day.",
-    "savingIntent": "Saving…"
+    "savingIntent": "Saving…",
+    "signCourseForms": "Sign course forms",
+    "savedCourseForms": "Course forms signed."
   },
   "thread": {
     "stepsDoneSuffix": "of {total} done",
@@ -3978,7 +3982,8 @@
       "nitroxSelfDeclared": "Bring your nitrox card so the shop can check it",
       "specialtyMissing": "Send your shop your specialty certification details",
       "nitroxMissing": "Send your shop your nitrox certification details",
-      "paymentDue": "Settle your balance"
+      "paymentDue": "Settle your balance",
+      "courseFormUnsigned": "Sign your course forms"
     },
     "replyKeyword": {
       "offer": "Reply C to cancel your seat, or M to ask about moving it.",
@@ -4224,13 +4229,19 @@
       "recap": "{shopName}: thanks for diving {tripTitle}! Your recap: {recapUrl}",
       "waiver": "{shopName}: please sign your dive release before you dive — {url}",
       "waiverForTrip": "{shopName}: please sign your dive release for {tripTitle} — {url}",
-      "stopLine": "Reply STOP to opt out."
+      "stopLine": "Reply STOP to opt out.",
+      "courseForms": "{shopName}: please sign your course forms for {tripTitle} — {url}"
     },
     "whatsappTemplate": {
       "body": "Hi! An update from '{{1}}': '{{2}}'",
       "exampleShopName": "Blue Mantis Divers",
       "exampleMessage": "Reef Runner departs Saturday at 8:00 AM. Dock call 30 minutes early.",
       "testMessage": "This is a test message from DiveDay. Your WhatsApp connection is working."
+    },
+    "courseFormsLink": {
+      "subject": "Course forms to sign for {tripTitle}",
+      "body": "{shopName} asks every student on {tripTitle} to sign the course forms. Your release is already signed, so these are all that’s left.",
+      "openLink": "Sign your course forms"
     }
   },
   "brand": {
@@ -4283,5 +4294,25 @@
       "rider": "Riding along"
     },
     "priceLine": "{type} {price}"
+  },
+  "courseForms": {
+    "metaTitle": "Course forms",
+    "progress": "Form {current} of {total}",
+    "agreementCheckbox": "I have read this form, understand it, and agree to it.",
+    "guardianIntro": "{name} is under 18, so a parent or legal guardian signs this form too.",
+    "guardianAgreementCheckbox": "I am this student’s parent or legal guardian. I have read this form, understand it, and agree to it on their behalf.",
+    "signButton": "Sign form",
+    "signatureNote": "Your typed name, agreement, and signing time are saved with this exact version of the form.",
+    "errorAgreement": "Confirm you agree to the form to continue.",
+    "versionChanged": "The shop updated this form while you had it open. Read the new version below.",
+    "doneTitle": "Course forms signed",
+    "doneBody": "Nothing left to sign for this course.",
+    "backToPrep": "Back to your trip prep",
+    "signing": "Signing…",
+    "errorGuardian": "A parent or legal guardian signs this form too. Type their name, choose who they are to the student, and tick their box.",
+    "errorUnavailable": "This form can’t be signed from here any more. Ask the shop.",
+    "signedOne": "Signed. The next form is below.",
+    "linkDeadTitle": "This link no longer works",
+    "linkDeadBody": "Ask {shopName} to send your course forms again."
   }
 }

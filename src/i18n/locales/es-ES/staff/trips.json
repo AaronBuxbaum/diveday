@@ -133,7 +133,14 @@
     "undo": "Deshacer",
     "undoing": "Deshaciendo…",
     "priceRequiredByGate": "Esta salida exige pago, así que necesita un precio. Sin él no se le pide dinero a nadie y todas las reservas quedan bloqueadas.",
-    "requirementsNeedPrice": "Añade un precio antes de exigir el pago. Sin él no se le pide dinero a nadie y todas las reservas quedan bloqueadas."
+    "requirementsNeedPrice": "Añade un precio antes de exigir el pago. Sin él no se le pide dinero a nadie y todas las reservas quedan bloqueadas.",
+    "courseFormRecorded": "Formulario del curso en papel registrado.",
+    "courseFormGuardian": "No se registró. Un estudiante menor de 18 necesita a la madre, el padre o el tutor que firmó con él: su nombre y qué es del estudiante.",
+    "courseFormNamesake": "El nombre del tutor coincide con el del estudiante. Si viste firmar a dos personas, marca esa casilla y regístralo de nuevo.",
+    "courseFormUnavailable": "Ese formulario ya no se puede registrar para esta plaza. Recarga para ver lo que falta.",
+    "courseFormPaperCopy": "No se registró. Marca que tienes la copia firmada en papel.",
+    "courseFormDate": "No se registró. La fecha del papel no puede ser posterior a hoy.",
+    "courseFormEnded": "Esta sesión ya terminó, así que no se puede registrar un formulario en papel."
   },
   "pulse": {
     "seats": "{booked} de {capacity} reservados · {open, plural, one {# plaza libre} other {# plazas libres}}",
@@ -529,7 +536,22 @@
     "noteCount": "{count, plural, one {# nota} other {# notas}}",
     "emergencyContactAddFull": "Añadir contacto de emergencia",
     "reasonWaiverNotSigned": "Exención sin firmar todavía",
-    "reasonUnpaid": "Sin pagar todavía"
+    "reasonUnpaid": "Sin pagar todavía",
+    "courseForms": {
+      "owed": "{count, plural, one {Formulario del curso pendiente: {forms}} other {Formularios del curso pendientes: {forms}}}",
+      "send": "Enviar formularios del curso",
+      "recordPaper": "Firmado en papel",
+      "formLabel": "Formulario",
+      "guardianName": "Tutor que firmó",
+      "guardianRelationship": "Relación con el estudiante",
+      "guardianChoose": "Elige una",
+      "guardianNamesake": "Vi firmar al estudiante y al tutor por separado, aunque sus nombres se parezcan",
+      "record": "Registrar formulario",
+      "recording": "Registrando…",
+      "signedOn": "Fecha del papel",
+      "signedOnHint": "Déjala vacía si se firmó hoy.",
+      "paperCopy": "Tengo la copia firmada en papel"
+    }
   },
   "offlineManifestManager": {
     "checkingDevice": "Verificando este dispositivo…",

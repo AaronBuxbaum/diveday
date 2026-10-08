@@ -31,14 +31,16 @@ function read(relativePath: string) {
 }
 
 /**
- * The four bearer pages the thread is made of (ADR 20260827-the-divers-thread,
- * decision 1).
+ * The bearer pages the thread is made of (ADR 20260827-the-divers-thread,
+ * decision 1), plus the course-forms door the readiness link opens onto
+ * (ADR 20261008-course-forms).
  */
 const THREAD_PAGES = [
   "app/ready/[token]/page.tsx",
   "app/waivers/[token]/page.tsx",
   "app/recap/[token]/page.tsx",
   "app/claim/[token]/page.tsx",
+  "app/ready/[token]/forms/page.tsx",
 ] as const;
 
 const THREAD_LOADING = THREAD_PAGES.map((page) => page.replace("page.tsx", "loading.tsx"));

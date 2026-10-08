@@ -73,5 +73,32 @@
     "answerYes": "Yes",
     "answerNo": "No",
     "releaseHeading": "What they signed"
+  },
+  "courseForms": {
+    "heading": "Course forms",
+    "intro": "Forms a course asks each student to sign as well as the release. Choose which ones on each course’s page.",
+    "versionLine": "Version {version} · {date}",
+    "editDescription": "Saving a change makes a new version. Students who signed an earlier one sign again.",
+    "saving": "Saving…",
+    "save": "Save",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this form",
+    "deleting": "Deleting…",
+    "newForm": "New course form",
+    "create": "Add form",
+    "titleLabel": "Title",
+    "bodyLabel": "Text students sign",
+    "bodyPlaceholder": "Paste the form’s full text here.",
+    "notice": {
+      "saved": "Saved.",
+      "unchanged": "No change, so no new version.",
+      "invalid": "That didn’t save. Give the form a title and at least a few sentences of text.",
+      "deleted": "Form deleted. Courses no longer ask for it; signed copies stay on file.",
+      "notFound": "That form is no longer here."
+    },
+    "needsText": "Needs your text",
+    "needsTextDescription": "Paste the agency’s wording for this form. No student is asked to sign it until it has its text.",
+    "resignImpact": "{students, plural, one {Saving a change asks # student} other {Saving a change asks # students}} on {sessions, plural, one {# upcoming session} other {# upcoming sessions}} to sign again.",
+    "placeholdersHint": "Write '{shopName}', '{courseTitle}' or '{instructorNames}' where the form leaves a blank for them; each is filled in when a student signs."
   }
 }

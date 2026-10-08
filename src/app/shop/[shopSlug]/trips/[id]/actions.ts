@@ -22,6 +22,7 @@ import {
   splitBookingIdentity,
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
+import { type PaperCourseFormOutcome, recordPaperCourseForm } from "@/db/course-forms";
 import { recordCourseMaterialsDone } from "@/db/course-materials";
 import { recordCourseNextStep } from "@/db/course-next-step";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
@@ -39,7 +40,7 @@ import {
 } from "@/db/readiness";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
 import type { PaymentStatus } from "@/db/schema";
-import { diveSpecialty, people } from "@/db/schema";
+import { bookings, diveSpecialty, people } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { getShopCurrency } from "@/db/stripe-accounts";
 import {
@@ -1839,4 +1840,74 @@ export async function updateBookingPickupAction(
   revalidatePath(shopPath(shopSlug, "trips", tripId, "prep"));
   revalidatePath(shopPath(shopSlug, "trips", tripId, "manifest"));
   revalidateAndRedirect(back, noticeUrl(back, "pickup-saved", { bid: bookingId }));
+}
+
+/** Each paper-form outcome, as the roster's notice code. */
+const PAPER_COURSE_FORM_NOTICE: Record<
+  Extract<PaperCourseFormOutcome, { ok: false }>["reason"],
+  string
+> = {
+  unavailable: "course-form-unavailable",
+  version_changed: "course-form-unavailable",
+  invalid_signature: "course-form-unavailable",
+  name_mismatch: "course-form-unavailable",
+  staff_not_found: "not-authorized",
+  guardian_required: "course-form-guardian",
+  guardian_invalid: "course-form-guardian",
+  guardian_name_matches_diver: "course-form-namesake",
+  paper_copy_unconfirmed: "course-form-paper-copy",
+  invalid_date: "course-form-date",
+  session_ended: "course-form-ended",
+};
+
+/**
+ * **Record a course form the student signed on paper** (ADR
+ * 20261008-course-forms), from their row on this departure. Any staffer, as a
+ * paper release is: the record names who recorded it, and
+ * `recordPaperCourseForm` re-reads their live roles and the enrollment before
+ * it writes. The staffer ticks that they hold the signed copy and may give the
+ * date written on it. A minor's form names the guardian who co-signed it; a guardian
+ * typed under the student's own name is refused unless the staffer ticks that
+ * they watched two people sign.
+ */
+export async function recordPaperCourseFormAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = tripPath(shopSlug, tripId);
+  const s = (await requireShopSurface(shopSlug)).session;
+  const bookingId = uuidParam(String(formData.get("bookingId") ?? ""));
+  const formId = uuidParam(String(formData.get("formId") ?? ""));
+  if (!bookingId || !formId) redirect(noticeUrl(back, "course-form-unavailable"));
+  const dbi = await getDb();
+  const [seat] = await dbi
+    .select({ tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, s.user.shopId)))
+    .limit(1);
+  // The row posts its own booking; one from another departure is not this
+  // roster's to record against.
+  if (seat?.tripId !== tripId) redirect(noticeUrl(back, "course-form-unavailable"));
+  const guardianName = String(formData.get("guardianName") ?? "").trim();
+  const guardianRelationship = String(formData.get("guardianRelationship") ?? "").trim();
+  const recorded = await recordPaperCourseForm(dbi, {
+    shopId: s.user.shopId,
+    bookingId,
+    formId,
+    recordedByPersonId: s.user.personId,
+    paperCopyConfirmed: formData.get("paperCopy") === "on",
+    signedOn: String(formData.get("signedOn") ?? "").trim() || undefined,
+    guardian:
+      guardianName || guardianRelationship
+        ? {
+            name: guardianName,
+            relationship: guardianRelationship,
+            namesakeAttested: formData.get("guardianNamesake") === "on",
+          }
+        : undefined,
+  });
+  const code = recorded.ok ? "course-form-recorded" : PAPER_COURSE_FORM_NOTICE[recorded.reason];
+  revalidatePath(shopPath(shopSlug, "trips", tripId, "manifest"));
+  revalidateAndRedirect(back, noticeUrl(back, code, { bid: bookingId }));
 }
