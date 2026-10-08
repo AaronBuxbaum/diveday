@@ -27,6 +27,7 @@ const authModule = (await import("@/lib/auth")) as unknown as {
 };
 const auth = authModule.auth;
 const NewOrderPage = (await import("./page")).default;
+const { InvoiceAddressFields } = await import("../_components/InvoiceAddressFields");
 
 const SHOP_SLUG = "blue-mantis";
 
@@ -75,6 +76,21 @@ function renderWith(searchParams: Record<string, string> = {}) {
   });
 }
 
+/**
+ * The page with its billing-location fieldset drawn. That fieldset is its own
+ * component (`InvoiceAddressFields`, shared with the counter-rental form), and
+ * the element walk does not call components, so the test calls it.
+ */
+async function renderWithAddress(searchParams: Record<string, string> = {}) {
+  const tree = await renderWith(searchParams);
+  return [
+    tree,
+    findElements<Parameters<typeof InvoiceAddressFields>[0]>(tree, InvoiceAddressFields).map(
+      (element) => InvoiceAddressFields(element.props),
+    ),
+  ];
+}
+
 /*
  * `?bookingId=` and `?personId=` arrive from links other pages build — a diver
  * record, a roster row — and a link is exactly the thing that gets truncated in
@@ -106,14 +122,14 @@ describe("the tax location form", () => {
     // assert the opposite of its own name.
     const { db, shop } = await shopThatCanBill();
     await setShopTaxEnabled(db, shop.id, false);
-    expect(inputNamesIn(await renderWith())).not.toContain("customerAddressLine1");
+    expect(inputNamesIn(await renderWithAddress())).not.toContain("customerAddressLine1");
   });
 
   it("shows billing location fields when tax is enabled", async () => {
     const { db, shop } = await shopThatCanBill();
     await setShopTaxEnabled(db, shop.id, true);
 
-    const names = inputNamesIn(await renderWith());
+    const names = inputNamesIn(await renderWithAddress());
     expect(names).toEqual(
       expect.arrayContaining([
         "customerAddressLine1",
@@ -136,7 +152,7 @@ describe("the tax location form", () => {
 
     // The bordered fieldset's legend: the one that cuts a notch.
     const bordered = findElements<{ className?: string; children?: unknown }>(
-      await renderWith(),
+      await renderWithAddress(),
       "fieldset",
     ).filter((fieldset) => /\bborder\b/.test(fieldset.props.className ?? ""));
     const legends = bordered.flatMap((fieldset) =>

@@ -128,6 +128,7 @@ export type StaffDestinationId =
   | "gear"
   | "workOrders"
   | "newWorkOrder"
+  | "rentOut"
   | "courses"
   | "reviews"
   | "requests"
@@ -186,6 +187,7 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   gear: "shared.shopNavLinks.gear",
   workOrders: "shared.shopNavLinks.workOrders",
   newWorkOrder: "shared.shopNavLinks.newWorkOrder",
+  rentOut: "shared.shopNavLinks.rentOut",
   courses: "shared.shopNavLinks.courses",
   reviews: "shared.shopNavLinks.reviews",
   requests: "shared.shopNavLinks.requests",
@@ -289,6 +291,9 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // The act, declared here because the registry is the only place a
   // destination may be declared — the same call `addBooking` makes.
   { id: "newWorkOrder", suffix: "/gear/work-orders/new", section: "gear", inPalette: true },
+  // The counter-rental door: an act, like "Add a booking" (ADR
+  // 20260815-minimal-gear-register, amended 2026-10-08). Any staff, as gear is.
+  { id: "rentOut", suffix: "/gear/rentals/new", section: "gear", inPalette: true },
   // What a shop sets up rather than works.
   { id: "diveSites", suffix: "/dive-sites", section: "settings", inPalette: true },
   { id: "waivers", suffix: "/waivers", section: "settings", inPalette: true, gate: "waivers" },

@@ -120,6 +120,7 @@ import { seedCatalog } from "./seed-catalog";
 import { seedCertGates } from "./seed-cert-gates";
 import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "./seed-clock";
 import { seedCounterBlockers } from "./seed-counter-blockers";
+import { seedCounterRental } from "./seed-counter-rental";
 import { seedCourseInquiries } from "./seed-course-inquiries";
 import { seedDateRequests } from "./seed-date-requests";
 import { enforceMintedDemoCap } from "./seed-demo-lifecycle";
@@ -945,6 +946,10 @@ export async function seedDemoSchedule(
     timezone: shopRow?.timezone ?? DEMO_SHOP_TIMEZONE,
     customers,
     technicianPersonId: instructor.id,
+  });
+  await seedCounterRental(db, shopId, {
+    timezone: shopRow?.timezone ?? DEMO_SHOP_TIMEZONE,
+    divers: customers,
   });
   // Leads off the public course pages. After the catalog and the divers, so the
   // one lead that links to an existing diver has somebody to link to.

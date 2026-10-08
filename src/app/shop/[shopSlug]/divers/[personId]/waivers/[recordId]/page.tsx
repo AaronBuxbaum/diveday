@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { PrintButton } from "@/components/PrintButton";
+import { EYEBROW_CLASS, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { canPersonReadMedicalAnswers, canPersonReadMedicalClearanceDocument } from "@/db/authz";
@@ -76,7 +77,10 @@ export default async function SignedWaiverPage({
       : waiver.integrity === "unsealed"
         ? t("waiversStaff.signatures.integrityUnsealed")
         : t("waiversStaff.signatures.integrityInvalid");
-  const facts: { label: string; value: React.ReactNode }[] = [
+  // `printOnly`: a fact the screen already says elsewhere — the diver's name is
+  // the eyebrow there, a link back to their record, and paper drops links.
+  const facts: { label: string; value: React.ReactNode; printOnly?: boolean }[] = [
+    { label: t("waiversStaff.record.diverLabel"), value: waiver.personName, printOnly: true },
     ...(waiver.signedAt
       ? [{ label: t("waiversStaff.record.signedLabel"), value: when(waiver.signedAt) }]
       : []),
@@ -174,10 +178,15 @@ export default async function SignedWaiverPage({
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      {/* **On paper, the shop's name is the eyebrow.** On screen the eyebrow is
+          the way back to the diver's record, which `EyebrowBackLink` keeps off
+          paper; a printed release has to say whose release it is. */}
+      <p className={`hidden ${EYEBROW_CLASS} print:block`}>{shop.name}</p>
       <ShopPageHeader
         eyebrow={waiver.personName}
         eyebrowHref={`${shopPath(shopSlug, "divers", waiver.personId)}#waiver`}
         title={t("waiversStaff.record.title")}
+        actions={<PrintButton label={t("shared.printButton.label")} />}
       />
       {waiver.supersededAt ? (
         <p className="mt-4 text-sm text-muted">
@@ -190,7 +199,10 @@ export default async function SignedWaiverPage({
         <SectionCard>
           <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[10rem_1fr]">
             {facts.map((fact) => (
-              <div key={fact.label} className="contents">
+              <div
+                key={fact.label}
+                className={fact.printOnly ? "hidden print:contents" : "contents"}
+              >
                 <dt className="text-muted">{fact.label}</dt>
                 <dd className="-mt-2 font-medium [overflow-wrap:anywhere] sm:mt-0">{fact.value}</dd>
               </div>
@@ -215,7 +227,14 @@ export default async function SignedWaiverPage({
                   // An attachment: a new tab keeps this page where it is.
                   target="_blank"
                   rel="noreferrer"
-                  className={buttonClass({ variant: "link", size: "sm", flush: true })}
+                  // A door, never a fact: the document behind it is not on
+                  // this paper, and its words would read as one.
+                  className={buttonClass({
+                    variant: "link",
+                    size: "sm",
+                    flush: true,
+                    className: "print:hidden",
+                  })}
                 >
                   {t("divers.waiver.openClearanceDocument")}
                 </a>

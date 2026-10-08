@@ -110,15 +110,16 @@ more.
 assumptions are inferred from published rate cards and nothing else. A shop that says "everyone dives,
 always" is a finding too — it demotes the whole subsystem.)*
 
-**Renting to somebody who is not on a boat.** DiveDay can model a counter rental to a known person,
-but deliberately has no staff flow for recording one yet.
+**Renting to somebody who is not on a boat.** DiveDay records a counter rental to a known person
+("Rent out" on the gear register): the units, the back-by date, a printed ticket, and an optional
+invoice.
 
 - Do you rent gear to people who aren't diving with you that day? How often — every day, or a few
   times a season?
 - Who tracks when it comes back?
 
-*(The holder model is accepted; these answers decide whether the deferred counter flow earns build
-time. "A few times a season" may keep it parked; "every day in summer" should un-park it.)*
+*(The flow shipped 2026-10-08. These answers say how much more it should grow: "a few times a
+season" means it is done; "every day in summer" points at a list of what is out and who has it.)*
 
 **How gear service is actually tracked.** DiveDay can count a unit's dives from the reservations it
 already holds — but only as well as the shop keeps them.

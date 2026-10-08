@@ -35,6 +35,7 @@ import {
   setShopProfile,
   setShopRentalItems,
   setShopRentalPricing,
+  setShopRentalTerms,
   setShopReviewUrl,
   setShopSearchListing,
   setShopSeasonStart,
@@ -78,6 +79,7 @@ import { publicAppUrl } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { parseRentalTerms } from "@/lib/rental-terms";
 import {
   RENTABLE_ITEMS,
   type RentalPricing,
@@ -528,6 +530,30 @@ export async function saveRentalPricingAction(formData: FormData) {
   revalidateAndRedirect(
     settings,
     noticeUrl(settings, "rental-prices-saved", { saved: "rentalPricing" }),
+  );
+}
+
+/**
+ * The shop's own rental terms, printed on every rental ticket above the
+ * "Received by" line (ADR 20260815-minimal-gear-register, amended 2026-10-08).
+ * It sits in the Rental gear group, which only a payments-settings reader
+ * sees, so it asks the same two gates the rental prices do. An empty box
+ * prints none.
+ */
+export async function saveRentalTermsAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+  await paymentSettingsBlock(session);
+  const parsed = parseRentalTerms(formData.get("rentalTerms"));
+  if (!parsed.ok) {
+    redirect(noticeUrl(settings, "rental-terms-invalid", { saved: "rentalTerms" }));
+  }
+  const db = await getDb();
+  await setShopRentalTerms(db, session.user.shopId, parsed.terms);
+  revalidateAndRedirect(
+    settings,
+    noticeUrl(settings, "rental-terms-saved", { saved: "rentalTerms" }),
   );
 }
 

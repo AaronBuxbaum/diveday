@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { fill } from "@/i18n/fill";
@@ -52,26 +52,45 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
   const submitted = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /**
+   * **The draft that was on file when the form opened, applied once.** Every
+   * server action on a staff page refreshes the route (the session read
+   * re-sets its cookie cache, and Next treats any cookie write as a
+   * mutation), so this component is handed the draft again — as a new object,
+   * and once it has saved one, as that snapshot — after every answer the page
+   * gets. Applying on each of those put the snapshot back over whatever was
+   * typed or picked since it went out (issues #2197, #2223). What is on file
+   * later is what is already in the form.
+   */
+  const [openingDraft] = useState(draft);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once, on mount — the whole point of this effect (see above).
+  useEffect(() => {
+    const element = anchor.current?.closest("form");
+    if (element && openingDraft && applyFormFields(element, openingDraft.fields)) setApplied(true);
+  }, []);
+
+  // The newest actions, read when the save runs rather than subscribed to:
+  // a refreshed page hands in new function objects, and re-binding the
+  // listeners on each one cleared the pending debounce before it could fire.
+  const save = useEffectEvent((element: HTMLFormElement) => {
+    if (submitted.current) return;
+    const fields = draftableFields(
+      [...new FormData(element).entries()].filter(
+        (entry): entry is [string, string] => typeof entry[1] === "string",
+      ),
+    );
+    void actions.save(form, Object.entries(fields));
+  });
+
   useEffect(() => {
     const element = anchor.current?.closest("form");
     if (!element) return;
-    if (draft && applyFormFields(element, draft.fields)) setApplied(true);
-
-    const save = () => {
-      if (submitted.current) return;
-      const fields = draftableFields(
-        [...new FormData(element).entries()].filter(
-          (entry): entry is [string, string] => typeof entry[1] === "string",
-        ),
-      );
-      void actions.save(form, Object.entries(fields));
-    };
     const onFocusOut = () => {
       if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(save, SAVE_DEBOUNCE_MS);
+      timer.current = setTimeout(() => save(element), SAVE_DEBOUNCE_MS);
     };
     const onHidden = () => {
-      if (document.visibilityState === "hidden") save();
+      if (document.visibilityState === "hidden") save(element);
     };
     const onSubmit = () => {
       submitted.current = true;
@@ -86,7 +105,7 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
       document.removeEventListener("visibilitychange", onHidden);
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [form, draft, actions]);
+  }, []);
 
   async function startOver() {
     const element = anchor.current?.closest("form");
@@ -99,12 +118,12 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
 
   return (
     <span ref={anchor} className="contents">
-      {applied && draft ? (
+      {applied && openingDraft ? (
         <p
           role="status"
           className={`flex flex-wrap items-center gap-x-3 gap-y-1 ${INSET_NOTE_BOX} bg-surface-sunken`}
         >
-          <span>{fill(copy.pickedUp, { time: draft.savedAtLabel })}</span>
+          <span>{fill(copy.pickedUp, { time: openingDraft.savedAtLabel })}</span>
           <button
             type="button"
             onClick={startOver}

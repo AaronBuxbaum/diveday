@@ -31,12 +31,14 @@ import calendar from "./calendar.json";
 import calls from "./calls.json";
 import checkIn from "./checkIn.json";
 import closeout from "./closeout.json";
+import counterRentals from "./counterRentals.json";
 import courses from "./courses.json";
 import divers from "./divers.json";
 import diveSites from "./diveSites.json";
 import emailSettings from "./emailSettings.json";
 import feed from "./feed.json";
 import gear from "./gear.json";
+import gearRentals from "./gearRentals.json";
 import inbox from "./inbox.json";
 import incidentExport from "./incidentExport.json";
 import integrations from "./integrations.json";
@@ -71,8 +73,10 @@ const staff = {
   staffing,
   feed,
   gear,
+  gearRentals,
   divers,
   courses,
+  counterRentals,
   diveSites,
   orders,
   orderLine,
