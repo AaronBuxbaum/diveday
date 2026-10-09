@@ -66,6 +66,7 @@ import { tripPageJsonLd } from "@/lib/structured-data";
 import { hasSailed, isFull, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { worthALook } from "@/lib/worth-a-look";
+import { BookingFinePrint } from "./_components/BookingFinePrint";
 import {
   BookSpotSection,
   CancelledTripNotice,
@@ -82,7 +83,6 @@ import { TripAlternatives } from "./_components/TripAlternatives";
 import { dayCoverPhoto, TripDayPlan } from "./_components/TripDayPlan";
 import { TripHeader } from "./_components/TripHeader";
 import { pitchHasDoor, pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
-import { TripTerms } from "./_components/TripTerms";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
 import { offerHandoff } from "./actions";
 
@@ -820,7 +820,7 @@ export default async function TripDetailPage({
                   alternatives={alternatives}
                   offerLastMinuteList={shop.lastMinuteListEnabled}
                   requirement={requirementSentence}
-                  terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
+                  terms={<BookingFinePrint shop={shop} trip={trip} locale={locale} />}
                 />
               ) : (
                 <BookSpotSection
@@ -844,7 +844,7 @@ export default async function TripDetailPage({
                   eLearningFeeCents={eLearningFeeCents}
                   {...checkoutSeatTerms(trip, trip.course)}
                   balanceDueAt={trip.startsAt}
-                  terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
+                  terms={<BookingFinePrint shop={shop} trip={trip} locale={locale} />}
                   knownDiver={knownDiverPanel}
                   requirement={requirementSentence}
                   offerHandoff={offerHandoff.bind(null, tripRef)}

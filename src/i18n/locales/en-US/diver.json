@@ -129,6 +129,7 @@
     "privateCharter": "Private charter",
     "depositLine": "{deposit} deposit at booking · {balance} balance at the dock",
     "freeCancellationUntil": "Free cancellation until {when}",
+    "sharedDemoNote": "This is the shared demo: anyone trying it can see what you type here.",
     "theDay": "The day",
     "lookFor": "Look for",
     "momentsHeading": "Moments from divers",
