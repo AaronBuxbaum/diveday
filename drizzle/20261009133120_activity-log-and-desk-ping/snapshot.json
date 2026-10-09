@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "82ef0c10-1474-40df-8d69-b157f7f48b55",
+  "id": "45df234f-db46-4381-a126-af80fbfaaaec",
   "prevIds": [
-    "d69ac778-bdfd-46cf-aae3-f74ab86cf9fa"
+    "40e56585-6deb-4746-bf15-ff4b3448015a"
   ],
   "ddl": [
     {
@@ -710,7 +710,8 @@
       "values": [
         "cancel",
         "move",
-        "confirm"
+        "confirm",
+        "late"
       ],
       "name": "inbound_keyword_intent",
       "entityType": "enums",
@@ -3991,6 +3992,19 @@
       "generated": null,
       "identity": null,
       "name": "status",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "bookings"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "running_late_at",
       "entityType": "columns",
       "schema": "public",
       "table": "bookings"
