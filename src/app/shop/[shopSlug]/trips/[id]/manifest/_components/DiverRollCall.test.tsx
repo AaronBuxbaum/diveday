@@ -1124,6 +1124,18 @@ describe("a diver with no earlier boarding, after a dive", () => {
     expect(screen.getByRole("dialog")).toHaveTextContent(t("manifest.resolveBlockersLink"));
   });
 
+  it("puts no paperwork word on a diver recorded not back aboard", () => {
+    renderList({
+      divers: [diver({ readiness: blocked, boardedEarlier: false, rollCall: notBackAt() })],
+    });
+    // Paper still carries the readiness word (the print-only block); the
+    // screen's capsule is the alarm alone.
+    const onScreen = screen
+      .queryAllByText("Blocked")
+      .filter((element) => !element.closest(".hidden.print\\:block"));
+    expect(onScreen).toHaveLength(0);
+  });
+
   it("stays quiet for a diver counted aboard earlier", () => {
     const { container } = renderList({
       divers: [diver({ readiness: blocked, boardedEarlier: true })],
