@@ -802,7 +802,7 @@ export async function setTripStatus(
       ? await db
           .select({ status: trips.status })
           .from(trips)
-          .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+          .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
           .limit(1)
       : [];
   const [trip] = await db

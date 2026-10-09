@@ -137,7 +137,7 @@ async function draftCrewNews(
       and(eq(tripAssignments.tripId, trips.id), eq(tripAssignments.personId, input.personId)),
     )
     .where(and(liveTrip(), eq(trips.shopId, input.shop.id), inArray(trips.id, [...newsTripIds])))
-    .orderBy(asc(trips.startsAt), asc(trips.id));
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
   // A departure is told while it is still ahead, and — unless the news is that
   // it was called off — still running.
   const tellable = tripRows.filter(
@@ -438,7 +438,11 @@ export async function recordCrewCalledOff(
     .from(tripAssignments)
     .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
     .where(
-      and(eq(trips.shopId, input.shopId), inArray(tripAssignments.tripId, [...input.tripIds])),
+      and(
+        liveTrip(),
+        eq(trips.shopId, input.shopId),
+        inArray(tripAssignments.tripId, [...input.tripIds]),
+      ),
     );
   await recordCrewNotices(
     tx,

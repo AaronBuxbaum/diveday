@@ -176,7 +176,7 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
         // column renders unqualified and would bind inside the subquery.
         .select({ started: rollCallStartedOn(trip.id) })
         .from(trips)
-        .where(eq(trips.id, trip.id));
+        .where(and(eq(trips.id, trip.id), liveTrip()));
       if (
         departureUnderway(
           { startsAt: trip.startsAt, rollCallStarted: Boolean(started?.started) },
