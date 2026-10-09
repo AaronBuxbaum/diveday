@@ -63,6 +63,7 @@ export default async function BoatsSettingsPage({
     capacity?: string;
     limit?: string;
     count?: string;
+    dates?: string;
   }>;
 }) {
   const { shopSlug } = await params;
@@ -86,7 +87,7 @@ export default async function BoatsSettingsPage({
   }
   const banner = noticeFromParam(notice, boatNoticeMessages(t));
   // H-107's refusal is a field error on the row it is about, not a banner.
-  const certificateError = boatCertificateError(t, query);
+  const certificateError = boatCertificateError(t, query, locale);
   const errorFor = (boat: string) =>
     certificateError?.boat === boat
       ? { id: `${boatRowId(boat)}-error`, text: certificateError.text }
@@ -95,7 +96,7 @@ export default async function BoatsSettingsPage({
 
   return (
     <main className={settingsPaneClass()}>
-      <FlashParams params={["notice", "boat", "capacity", "limit", "count"]} />
+      <FlashParams params={["notice", "boat", "capacity", "limit", "count", "dates"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}

@@ -729,13 +729,15 @@ new domain concept, define it here in the same PR.
   checkpoint, and its writers cannot reach `roll_call_events`: an arrival is never promoted to
   aboard by the queue
   ([ADR 20260907-the-counter-survives-offline](../architecture/decisions/20260907-the-counter-survives-offline.md)).
-- **Running late** — a diver's own statement, before the boat leaves, that they are on the way and
-  behind (J3). Said by tapping "Running late" on their `/ready` link or by replying `LATE` to a
-  shop's WhatsApp, email or the night-before text, and stored as one instant,
-  `bookings.running_late_at` (`src/db/running-late.ts`). Open only on a booked seat not yet checked
-  in, inside the twelve hours before a scheduled departure and never after it
-  (`canSayRunningLate`); the first statement stands. A party organizer's tap covers the party's
-  seats, and a text covers every seat on that boat under the same number. The arrivals list (Today's arrival lookup and
+- **Running late** — a diver's own statement, before the boat sails, that they are on the way and
+  behind (J3). Said by tapping "Running late" on their `/ready` link or by replying `LATE` (`TARDE`
+  in Spanish) to a shop's WhatsApp, email or the **night-before brief**'s text, and stored as one
+  instant, `bookings.running_late_at` (`src/db/running-late.ts`). Open only on a booked seat not yet
+  checked in, from when the night-before brief goes out (24 hours ahead) until the boat has sailed
+  (`hasSailed`: the scheduled time plus the departure buffer), on a scheduled departure
+  (`canSayRunningLate`); the first statement stands. Only a boat day's brief teaches the word
+  (`trips.dive_mode`). A party organizer's statement — a tap or a reply — covers the party's seats
+  (`partyLeadBookingId`), and a text covers every seat on that boat under the same number. The arrivals list (Today's arrival lookup and
   the Divers tab once arrivals open) says "Running late, said 7:42" in the shop's zone on that row
   until the diver checks in, which clears it. **It gates nothing** and it is not a **no-show**: the
   diver still has to arrive, and a diver who said it and never came is still the desk's call.
@@ -1187,9 +1189,14 @@ new domain concept, define it here in the same PR.
   bookings. **No seat above it is sold** (H-107): a boat whose seats on sale pass it is refused at
   save with a field error, so is a certificate lowered under the seats an upcoming departure on the
   hull still sells, and a departure may not sell more seats than its boat's certificate
-  (`boatSeatsRefusal`, `tripDetailsPatch`). Capacity and the certificate count the same people,
-  everyone aboard but the crew. A boat saved over it before H-107 keeps sailing, its fleet row says
-  so in danger ink, and its next save must fix it (`src/lib/boat-safety.ts`).
+  (`boatSeatsRefusal`, `tripDetailsPatch`). **The booking transaction is the ceiling that holds
+  whatever the forms missed**: it sells at most the lower of the departure's `capacity` and the
+  certificate, read under the trip-row lock (`sellableCapacity`), as do an undo, a no-show undo and
+  the wait list's "go and book it"; a copy and a series roll start the new departure at the
+  certificate, and "apply to the rest of the series" skips a date on a hull certified for fewer.
+  The field reads **passengers only, not crew**, the same people capacity counts: everyone aboard
+  but the crew. A boat saved over it before H-107 keeps sailing, its fleet row says so in danger
+  ink, and its next save must fix it (`src/lib/boat-safety.ts`).
 - **Boat papers** — a boat's three dated documents: when its next safety inspection is due, and
   when its registration and hull insurance expire (`boats.inspection_due_on`,
   `registration_expires_on`, `insurance_expires_on`). Typed over in Settings, Boats when renewed,

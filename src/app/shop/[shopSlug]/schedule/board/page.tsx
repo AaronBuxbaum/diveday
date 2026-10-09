@@ -70,7 +70,7 @@ import {
   moveDepartureAction,
   removeDepartureAction,
 } from "./actions";
-import { BUILDER_NOTICE_KEYS } from "./builder-notices";
+import { BUILDER_NOTICE_KEYS, builderNoticeMessage } from "./builder-notices";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -103,10 +103,10 @@ export default async function ScheduleBoardPage({
   params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{
     after?: string;
-    /** The stack of every earlier page's cursor, oldest first — see
-     * src/lib/schedule-pagination.ts. */
+    /** Every earlier page's cursor, oldest first (src/lib/schedule-pagination.ts). */
     back?: string;
     builder?: string;
+    count?: string; // the number a builder notice names (`builderNoticeMessage`)
     /** The departure just created, named so the notice can say which. */
     created?: string;
     /** Gear assignments a move had to release — see `moveTrip`. */
@@ -135,7 +135,7 @@ export default async function ScheduleBoardPage({
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { builder, created, gear, series, add, date, course, requests, site, week } =
+  const { builder, count, created, gear, series, add, date, course, requests, site, week } =
     await searchParams;
   const requestIds = [
     ...new Set(
@@ -309,7 +309,7 @@ export default async function ScheduleBoardPage({
             ? seriesCount > 1
               ? st("schedule.notices.addedSeries", { title: created, count: seriesCount })
               : st("schedule.notices.addedNamed", { title: created })
-            : st(builderNoticeEntry.key),
+            : builderNoticeMessage(st, builderNoticeEntry.key, count),
       }
     : undefined;
   const builderCopy: BuilderCopy = {

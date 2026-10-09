@@ -788,7 +788,7 @@
     "lateLead": "¿Vas de camino pero con retraso?",
     "lateButton": "Llego tarde",
     "lateSending": "Avisando al centro…",
-    "lateSaid": "Avisaste al centro de que llegas tarde a las {time}.",
+    "lateSaid": "A las {time} avisaste al centro de que llegas tarde.",
     "lateUnavailable": "El aviso no llegó al centro. Si sigues de camino, llámalos.",
     "cancelConfirm": "¿Cancelar tu plaza en {trip}? Esto no se puede deshacer.",
     "cancelConfirmButton": "Sí, cancelar mi plaza",
@@ -4038,9 +4038,9 @@
       "nothingToCancel": "No encontramos ninguna plaza que cancelar. {shopName} se ocupa de esto.",
       "ambiguous": "Tienes más de una salida reservada. {shopName} se ocupa de esto para dar de baja la correcta.",
       "moveHandoff": "{shopName} te escribe sobre el cambio de tu plaza.",
-      "lateOffer": "¿Llegas tarde? Responde LATE.",
+      "lateOffer": "¿Llegas tarde? Responde TARDE.",
       "lateNoted": "Gracias. {shopName} ya sabe que llegas tarde.",
-      "lateNothing": "No encontramos ninguna salida en las próximas horas a la que avisar. {shopName} se ocupa de esto."
+      "lateNothing": "No encontramos ninguna salida tuya en el próximo día, así que no se marcó nada. Tu mensaje le llega a {shopName}."
     },
     "common": {
       "greeting": "Hola, {firstName}:",

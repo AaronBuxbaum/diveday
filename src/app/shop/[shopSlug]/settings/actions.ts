@@ -12,7 +12,7 @@ import {
   type BoatPapersInput,
   createBoat,
   deleteBoat,
-  upcomingDepartureCapacities,
+  upcomingBoatDepartures,
   updateBoat,
 } from "@/db/boats";
 import { getDb } from "@/db/client";
@@ -1374,6 +1374,7 @@ function certificateRefusal(page: string, boat: string, refusal: BoatSeatsRefusa
           boat,
           count: refusal.departures,
           limit: refusal.limit,
+          dates: refusal.firstDates.join(","),
         }),
   );
 }
@@ -1430,8 +1431,12 @@ export async function updateBoatAction(formData: FormData) {
     boatSeatsRefusal({
       capacity,
       ...papers,
-      upcomingDepartureCapacities: papers.certifiedPassengers
-        ? await upcomingDepartureCapacities(db, session.user.shopId, boatId)
+      upcomingDepartures: papers.certifiedPassengers
+        ? await upcomingBoatDepartures(db, {
+            shopId: session.user.shopId,
+            boatId,
+            timeZone: (await getShopById(db, session.user.shopId))?.timezone ?? "UTC",
+          })
         : [],
     }),
   );

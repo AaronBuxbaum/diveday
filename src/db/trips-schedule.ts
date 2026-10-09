@@ -1,4 +1,5 @@
 import { and, asc, count, eq, isNull, sql } from "drizzle-orm";
+import { seatsWithinCertificate } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
 import { tripReservationWindow } from "@/lib/gear";
 import { shiftInstantByWallTimeDelta, utcToWallTime, wallTimeDeltaMs } from "@/lib/zoned";
@@ -18,6 +19,7 @@ import {
 } from "./schema";
 import { insertTripInstance, resolveCourse, validateBoat } from "./trips-create";
 import { liveTrip } from "./trips-live";
+import { boatCertifiedPassengers } from "./trips-queries";
 import { recordSeriesSkip } from "./trips-series";
 
 /**
@@ -340,6 +342,18 @@ export async function duplicateTrip(
       .orderBy(asc(tripScheduleDays.dayNumber));
     const { ok, course } = await resolveCourse(tx, shopId, source.courseId ?? undefined);
     if (!ok) return null;
+    // Re-checked rather than trusted, even though it is being copied from a
+    // row this shop already owns: a bad id written before `validateBoat`
+    // existed would otherwise propagate on every copy, which is how one
+    // cross-tenant row becomes a season of them.
+    const boatId = (await validateBoat(tx, shopId, source.boatId)) ? source.boatId : null;
+    // **A copy starts inside the certificate** (H-107). The source may predate
+    // the refusal, or sit on a hull whose certificate was recorded since; the
+    // copy takes the lower number rather than carrying the old one forward.
+    const seats = seatsWithinCertificate(
+      { capacity: source.capacity, diverCapacity: source.diverCapacity },
+      await boatCertifiedPassengers(tx, shopId, boatId),
+    );
 
     return insertTripInstance(tx, {
       shopId,
@@ -349,7 +363,7 @@ export async function duplicateTrip(
       description: source.description ?? undefined,
       startsAt,
       endsAt: shift(source.endsAt),
-      capacity: source.capacity,
+      capacity: seats.capacity,
       plannedDives: source.plannedDives,
       priceCents: source.priceCents,
       depositCents: source.depositCents,
@@ -357,7 +371,7 @@ export async function duplicateTrip(
       // bookings yet, so no limit can fall below the divers aboard.
       snorkelerPriceCents: source.snorkelerPriceCents,
       riderPriceCents: source.riderPriceCents,
-      diverCapacity: source.diverCapacity,
+      diverCapacity: seats.diverCapacity,
       cancellationWindowHours: source.cancellationWindowHours,
       isPrivate: source.isPrivate,
       // Copied like every other stated fact about the departure. A shop that
@@ -372,11 +386,8 @@ export async function duplicateTrip(
       // travelling — `deleteTripLens` says in as many words that a past day
       // still says which kind of day it was.
       lensId: source.lensId,
-      // Re-checked rather than trusted, even though it is being copied from a
-      // row this shop already owns: a bad id written before `validateBoat`
-      // existed would otherwise propagate on every copy, which is how one
-      // cross-tenant row becomes a season of them.
-      boatId: (await validateBoat(tx, shopId, source.boatId)) ? source.boatId : null,
+      // Re-checked above (`validateBoat`).
+      boatId,
       drafts: dives.map((dive) => ({
         diveNumber: dive.diveNumber,
         title: dive.title,

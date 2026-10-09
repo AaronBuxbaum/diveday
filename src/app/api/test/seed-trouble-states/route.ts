@@ -569,7 +569,7 @@ async function letTheReefBoatsKitLapse(
 }
 
 /**
- * Priya Sharma, booked on a departure inside the next twelve hours, says she
+ * Priya Sharma, booked on a departure inside the next day, says she
  * is running late twelve minutes before the frozen clock — through the one
  * writer every real door uses, so the window rule holds here too.
  */

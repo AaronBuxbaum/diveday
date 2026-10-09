@@ -1,4 +1,5 @@
-import { and, count, eq, gt, isNull, ne } from "drizzle-orm";
+import { and, asc, count, eq, gt, isNull, ne } from "drizzle-orm";
+import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
 import { boats, trips } from "./schema";
@@ -96,19 +97,18 @@ export async function countBoatDepartures(
 }
 
 /**
- * The seats each upcoming departure on this hull sells — live, scheduled and
- * not yet started — for the certificate check a boat save runs (H-107,
+ * The seats and start of each upcoming departure on this hull, soonest first, dated in the shop’s zone —
+ * live, scheduled and not yet started — for the certificate check a boat save runs (H-107,
  * `boatSeatsRefusal`). A departure that has started is history the
  * certificate can no longer change.
  */
-export async function upcomingDepartureCapacities(
+export async function upcomingBoatDepartures(
   db: AppDb,
-  shopId: string,
-  boatId: string,
-  now: Date = nowDate(),
-): Promise<number[]> {
+  input: { shopId: string; boatId: string; timeZone: string; now?: Date },
+): Promise<{ capacity: number; on: CalendarDate }[]> {
+  const { shopId, boatId, timeZone, now = nowDate() } = input;
   const rows = await db
-    .select({ capacity: trips.capacity })
+    .select({ capacity: trips.capacity, startsAt: trips.startsAt })
     .from(trips)
     .where(
       and(
@@ -118,8 +118,12 @@ export async function upcomingDepartureCapacities(
         liveTrip(),
         gt(trips.startsAt, now),
       ),
-    );
-  return rows.map((row) => row.capacity);
+    )
+    .orderBy(asc(trips.startsAt));
+  return rows.map((row) => ({
+    capacity: row.capacity,
+    on: calendarDateInTimezone(row.startsAt, timeZone),
+  }));
 }
 
 export async function createBoat(

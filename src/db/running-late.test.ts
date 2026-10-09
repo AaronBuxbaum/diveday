@@ -80,18 +80,25 @@ describe("markBookingRunningLate", () => {
     expect(await lateAt(bookingId)).toEqual(now);
   });
 
-  it("refuses before the window, at departure, and after", async () => {
+  it("refuses before the day-before window and once the boat has sailed", async () => {
     const { db, shop, trip, bookingId } = await context();
     for (const now of [
-      new Date(trip.startsAt.getTime() - 13 * HOUR_MS),
-      trip.startsAt,
-      new Date(trip.startsAt.getTime() + 10 * MINUTE_MS),
+      new Date(trip.startsAt.getTime() - 25 * HOUR_MS),
+      new Date(trip.startsAt.getTime() + 61 * MINUTE_MS),
     ]) {
       expect(await markBookingRunningLate(db, { shopId: shop.id, bookingId, now })).toEqual({
         status: "closed",
       });
     }
     expect(await lateAt(bookingId)).toBeNull();
+  });
+
+  it("takes it ten minutes past the scheduled time, while the boat is still at the dock", async () => {
+    const { db, shop, trip, bookingId } = await context();
+    const now = new Date(trip.startsAt.getTime() + 10 * MINUTE_MS);
+    expect(await markBookingRunningLate(db, { shopId: shop.id, bookingId, now })).toMatchObject({
+      status: "marked",
+    });
   });
 
   it("refuses a seat that has already checked in, and a called-off departure", async () => {
@@ -205,6 +212,33 @@ describe("one statement for the people travelling together", () => {
     await db.update(bookings).set({ runningLateAt: null }).where(eq(bookings.id, member.bookingId));
     await markBookingRunningLate(db, { shopId: shop.id, bookingId: member.bookingId, now });
     expect(await lateAt(lead.bookingId)).toBeNull();
+  });
+
+  it("covers the organizer's party from a LATE reply too, as the link does", async () => {
+    const { db, shop, trip, now } = await context();
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Cleo Organizer",
+        email: "cleo.organizer@example.com",
+      },
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Dev Member",
+        email: "dev.member@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error(`party failed: ${party.reason}`);
+    const [lead, member] = party.bookings;
+    if (!lead || !member) throw new Error("party seats missing");
+    expect(
+      await markPersonRunningLate(db, { shopId: shop.id, personId: lead.personId, now }),
+    ).toMatchObject({ status: "marked", bookingId: lead.bookingId });
+    expect(await lateAt(member.bookingId)).toEqual(now);
   });
 
   it("covers every seat on that boat held under the texting number, and nothing else", async () => {

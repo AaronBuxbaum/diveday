@@ -164,6 +164,11 @@ function reminderSmsBody(
     materials?: CourseLearningMaterial[];
     /** A course session: it starts rather than sails, and names no dock. */
     courseSession?: boolean;
+    /**
+     * The departure's dive mode (`trips.dive_mode`). Only a boat leaves
+     * without anyone, so only a boat's day-before text teaches LATE.
+     */
+    diveMode?: "boat" | "shore" | "pool";
   },
 ): string {
   const when =
@@ -214,12 +219,14 @@ function reminderSmsBody(
         time,
         minutes: input.dockCallMinutes,
       });
-  // **The day-before text teaches LATE** (J3): both of the channels a text can
+  // **The night-before brief's text teaches LATE** (J3): both of the channels a text can
   // leave on hear it — WhatsApp through the reply keywords, platform SMS
   // through `/api/webhooks/sms` — and the morning of a boat is the one time a
-  // diver needs it. Never on a course session, which has no boat to hold.
+  // diver needs it. Only on a boat (`dive_mode`), whatever else it is: a
+  // shore or pool day has no departure to hold, and a course session at sea
+  // does.
   const late =
-    input.lead === "day" && !input.courseSession
+    input.lead === "day" && input.diveMode === "boat"
       ? ` ${t("notifications.replyKeyword.lateOffer")}`
       : "";
   // Last, and only on a channel that can hear the answer.
@@ -575,6 +582,7 @@ export async function sendDueReminders(
         replyKeywords,
         materials: materialsDue,
         courseSession: Boolean(trip.courseId),
+        diveMode: trip.diveMode,
       });
     const smsBody = reminderText(false);
     // The same reminder, plus the reply line, for the one text channel that

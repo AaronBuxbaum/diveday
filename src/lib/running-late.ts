@@ -1,7 +1,8 @@
 import { HOUR_MS } from "./clock";
+import { hasSailed } from "./trips";
 
 /**
- * **"Running late"** (J3): a diver telling the shop, before the boat leaves,
+ * **"Running late"** (J3): a diver telling the shop, before the boat sails,
  * that they are on their way but behind. Two doors write it — the button on
  * `/ready/[token]` and a `LATE` reply to a shop message — and one place reads
  * it: the arrivals list (Today's arrival lookup and the trip's Divers tab),
@@ -14,23 +15,23 @@ import { HOUR_MS } from "./clock";
  */
 
 /**
- * How long before a departure the statement can be made. Twelve hours covers
- * a dawn boat from the evening before and keeps the button off next week's
+ * How long before a departure the statement can be made: from when the
+ * night-before brief goes out (`trip_reminder_24h`, src/lib/reminders.ts),
+ * whose text teaches LATE. It keeps the button off next week's
  * trip, where "running late" means nothing yet.
  */
-export const RUNNING_LATE_LEAD_MS = 12 * HOUR_MS;
+export const RUNNING_LATE_LEAD_MS = 24 * HOUR_MS;
 
 /**
  * Whether this seat can say "running late" now: a plain `booked` seat (not
  * yet checked in, not released, not cancelled) on a scheduled departure that
- * has not left and leaves within {@link RUNNING_LATE_LEAD_MS}.
+ * leaves within {@link RUNNING_LATE_LEAD_MS} and **has not sailed**.
  *
- * **Before departure, strictly.** Once the boat's scheduled time has passed
- * the diver is not late for it any more — they have missed it, and that is a
- * conversation with the shop rather than a flag on a list. No one-hour
- * late-departure buffer here, unlike `hasSailed`: that buffer protects seats
- * from being sold or released under a boat still at the dock, which is a
- * different question.
+ * **Open past the scheduled time, until the boat has sailed** (`hasSailed`,
+ * the scheduled time plus the departure buffer). A boat booked for 8:00 is
+ * routinely still at the dock at 8:10, and 8:05 is exactly when a diver
+ * stuck in traffic needs to say so; once the buffer has run the boat is
+ * treated as gone everywhere else, and the statement closes with it.
  */
 export function canSayRunningLate(input: {
   bookingStatus: string;
@@ -40,7 +41,7 @@ export function canSayRunningLate(input: {
 }): boolean {
   if (input.bookingStatus !== "booked" || input.tripStatus !== "scheduled") return false;
   const untilDeparture = input.startsAt.getTime() - input.now.getTime();
-  return untilDeparture > 0 && untilDeparture <= RUNNING_LATE_LEAD_MS;
+  return untilDeparture <= RUNNING_LATE_LEAD_MS && !hasSailed(input.startsAt, input.now);
 }
 
 /**

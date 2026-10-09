@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { HOUR_MS, MINUTE_MS } from "./clock";
+import { TRIP_REMINDER_CADENCES } from "./reminders";
 import { canSayRunningLate, RUNNING_LATE_LEAD_MS, runningLateShown } from "./running-late";
+import { DEPARTURE_BUFFER_MS } from "./trips";
 
 const startsAt = new Date("2026-10-09T12:00:00Z");
 const at = (msBefore: number) => new Date(startsAt.getTime() - msBefore);
@@ -24,9 +26,17 @@ describe("canSayRunningLate", () => {
     expect(canSayRunningLate(seat({ now: at(3 * 24 * HOUR_MS) }))).toBe(false);
   });
 
-  it("is closed at and after the departure time, with no late-departure buffer", () => {
-    expect(canSayRunningLate(seat({ now: startsAt }))).toBe(false);
-    expect(canSayRunningLate(seat({ now: at(-10 * MINUTE_MS) }))).toBe(false);
+  it("opens when the day-before reminder that teaches LATE goes out", () => {
+    const dayBefore = TRIP_REMINDER_CADENCES.find((c) => c.kind === "trip_reminder_24h");
+    expect(RUNNING_LATE_LEAD_MS).toBe((dayBefore?.hoursBefore ?? 0) * HOUR_MS);
+  });
+
+  it("stays open past the scheduled time until the boat has sailed", () => {
+    expect(canSayRunningLate(seat({ now: startsAt }))).toBe(true);
+    expect(canSayRunningLate(seat({ now: at(-10 * MINUTE_MS) }))).toBe(true);
+    expect(canSayRunningLate(seat({ now: at(-(DEPARTURE_BUFFER_MS - 1)) }))).toBe(true);
+    expect(canSayRunningLate(seat({ now: at(-DEPARTURE_BUFFER_MS) }))).toBe(false);
+    expect(canSayRunningLate(seat({ now: at(-3 * HOUR_MS) }))).toBe(false);
   });
 
   it("is closed for a seat that has arrived, been released or cancelled", () => {
