@@ -19,6 +19,14 @@ import { DAY_MS } from "./clock";
 export const SETUP_LINK_PARAM = "setup";
 
 /**
+ * The HttpOnly cookie a bounce from the form carries the token back in, so it
+ * never rides a `Location:` header (ADR 20261009-single-use-setup-links).
+ * Scoped to `/onboard` and short-lived: it only has to outlast one correction.
+ */
+export const SETUP_LINK_COOKIE = "diveday_setup_link";
+export const SETUP_LINK_COOKIE_MAX_AGE_S = 60 * 60;
+
+/**
  * Two weeks: long enough for a set-up call to be booked and held, short
  * enough that a link sitting in an inbox does not stay a way in.
  */

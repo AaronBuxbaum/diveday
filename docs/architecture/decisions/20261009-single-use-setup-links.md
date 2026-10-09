@@ -34,8 +34,14 @@ not alert him (`/api/demo/quiet?setup=<key>`).
   shop, and a refusal later in the transaction (slug taken, email taken) rolls the spend back with
   everything else.
 - **Judged by shape before the database.** A posted value that is not 43 base64url characters is
-  refused before a database handle is taken and is never echoed into a `Location:` header. A
-  well-shaped value is echoed on a bounce and judged again by the page.
+  refused before a database handle is taken.
+- **A bounce never puts the token, or the address, in a URL.** A refusal sends the form back with
+  the token in an HttpOnly, `SameSite=Strict` cookie scoped to `/onboard` for an hour
+  (`SETUP_LINK_COOKIE`), and the page reads the link from there when the URL has none
+  (`setupLinkDoor`). The owner's email is not echoed either; the form refills it from the request.
+  The cookie is cleared when the shop is created.
+- **Which shop a link opened is kept.** `spent_by_shop_id` is set in the same transaction, and set
+  to null if that shop is later deleted; the spend stands.
 - **The page tells nobody which way a link failed.** Unknown, spent, expired and mistyped all draw
   one closed door, "This setup link no longer works", with the set-up form's door. With no link at
   all, the page is the closed door it was.
@@ -62,6 +68,13 @@ not alert him (`/api/demo/quiet?setup=<key>`).
   standing credential this replaces; there is no legacy to carry (H-49).
 
 ## Consequences
+
+- **The link itself is still a GET.** The first visit carries the token in the query string, so it
+  can land in the deployment's request log, a proxy log and the browser's history before the form
+  is posted. Mitigated, not removed: the token expires in two weeks, opens one shop, is spent with
+  it, and is redacted from DiveDay's own telemetry (`capability-urls.ts`); the page sends no
+  referrer. Moving it to a POST-only door would mean a page with nothing to read before a button,
+  which a forwarded link cannot be.
 
 - Every set-up request mints a link, including spam the honeypot and rate limits missed. Each
   exists only as a hash and in the founder's inbox, and a spam requester never receives it unless

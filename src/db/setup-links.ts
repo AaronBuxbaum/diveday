@@ -86,3 +86,18 @@ export async function spendSetupLink(
     .returning({ id: shopSetupLinks.id });
   return spent.length === 1;
 }
+
+/**
+ * Record which shop a spent link opened, in the transaction that spent it and
+ * created the shop.
+ */
+export async function recordSetupLinkShop(
+  db: DbExecutor,
+  token: string,
+  shopId: string,
+): Promise<void> {
+  await db
+    .update(shopSetupLinks)
+    .set({ spentByShopId: shopId })
+    .where(eq(shopSetupLinks.tokenHash, hashAccountToken(token)));
+}

@@ -156,6 +156,17 @@ afterEach(() => {
 });
 
 describe("onboardAction instrumentation", () => {
+  it("records which shop the link opened, in the same transaction", async () => {
+    const db = await useDb();
+    expect(await signUp()).toBe("/shop/reef-runners");
+    const { shopSetupLinks, shops: shopTable } = await import("@/db/schema");
+    const { eq } = await import("drizzle-orm");
+    const [shop] = await db.select().from(shopTable).where(eq(shopTable.slug, "reef-runners"));
+    const [link] = await db.select().from(shopSetupLinks);
+    expect(link?.spentAt).not.toBeNull();
+    expect(link?.spentByShopId).toBe(shop?.id);
+  });
+
   it("alerts the founder once, on one sign-up", async () => {
     await useDb();
     expect(await signUp()).toBe("/shop/reef-runners");
@@ -212,7 +223,8 @@ describe("onboardAction instrumentation", () => {
     const landing = await signUp(
       onboardForm({ shopSlug: "reef-runners-two", ownerEmail: "second@reefrunners.example" }),
     );
-    expect(landing).toContain(`/onboard?setup=${setupToken}`);
+    expect(landing).toContain("/onboard?error=setup_link_closed");
+    expect(landing).not.toContain(setupToken);
     expect(landing).not.toContain("/shop/");
     expect(sendNotification).not.toHaveBeenCalled();
     const { shops } = await import("@/db/schema");

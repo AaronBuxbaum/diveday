@@ -144,8 +144,6 @@ const UNSCOPED_REASONS: Record<string, string> = {
     "the platform's delivery ledger, pruned by retention; it carries no payload",
   setup_requests:
     "a shop asking DiveDay to be set up, before any shop exists — the platform's lead list, not a tenant's (ADR 20261007-setup-request-form)",
-  shop_setup_links:
-    "a set-up request's single-use link, minted before any shop exists and holding no shop id; it cascades with its request (ADR 20261009-single-use-setup-links)",
   demo_entries:
     "a count of demo entries by funnel tag, deliberately unkeyed from the minted shop so the reaper does not erase the count; pruned by retention",
   sms_opt_outs:
@@ -199,6 +197,8 @@ const RESET_KEEPS: Record<string, string> = {
   // and no visitor path that writes one.
   notification_rate_limit_state: "provider coordination state, not shop records",
   stripe_webhook_events: "provider delivery ledger, pruned by retention, not by a reset",
+  shop_setup_links:
+    "the platform's record of which set-up request opened the shop; a demo is never opened by one, and a reset keeps the shop",
   shop_whatsapp_accounts: "shop settings, outside the resettable schedule",
   shop_subscriptions:
     "what the shop pays DiveDay, set by a person or Stripe's webhook — never by a demo visitor, so nothing for a reset to restore",
@@ -280,6 +280,8 @@ const CASCADE_KEEPS: Record<string, string> = {
   shop_milestones: "ON DELETE CASCADE from shops clears it",
   customer_gear_notices: "ON DELETE CASCADE from work orders and customer gear clears it",
   customer_gear_reminder_settings: "ON DELETE CASCADE from customer gear clears it",
+  shop_setup_links:
+    "ON DELETE SET NULL from shops clears its spent_by_shop_id; the row is the set-up request's, and goes with it",
 };
 
 describe("shop-scoped delete-path coverage", () => {

@@ -3,8 +3,8 @@ import { hashAccountToken } from "@/lib/account-tokens";
 import { SETUP_LINK_TTL_MS, setupLinkPath } from "@/lib/setup-links";
 import { unseededTestDb } from "@/test/db";
 import { deleteSetupRequestsByEmail, recordSetupRequest } from "./funnel";
-import { shopSetupLinks } from "./schema";
-import { issueSetupLink, openSetupLink, spendSetupLink } from "./setup-links";
+import { shopSetupLinks, shops } from "./schema";
+import { issueSetupLink, openSetupLink, recordSetupLinkShop, spendSetupLink } from "./setup-links";
 
 const NOW = new Date("2026-10-09T12:00:00Z");
 
@@ -105,5 +105,25 @@ describe("a setup link (ADR 20261009-single-use-setup-links)", () => {
     await deleteSetupRequestsByEmail(db, "ana@reefline.example");
     expect(await db.select().from(shopSetupLinks)).toEqual([]);
     expect(await openSetupLink(db, link.token, NOW)).toBeNull();
+  });
+
+  it("names the shop it opened, and forgets it when that shop is deleted", async () => {
+    const db = await unseededTestDb();
+    const { link } = await requestedLink(db);
+    const [shop] = await db
+      .insert(shops)
+      .values({ name: "Reef Line Divers", slug: "reef-line-divers", timezone: "America/New_York" })
+      .returning({ id: shops.id });
+    if (!shop) throw new Error("expected a shop");
+    expect(await spendSetupLink(db, link.token, NOW)).toBe(true);
+    await recordSetupLinkShop(db, link.token, shop.id);
+    const [row] = await db.select().from(shopSetupLinks);
+    expect(row?.spentByShopId).toBe(shop.id);
+
+    const { eq } = await import("drizzle-orm");
+    await db.delete(shops).where(eq(shops.id, shop.id));
+    const [after] = await db.select().from(shopSetupLinks);
+    expect(after?.spentByShopId).toBeNull();
+    expect(after?.spentAt).not.toBeNull();
   });
 });

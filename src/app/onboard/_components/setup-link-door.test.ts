@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("next/headers", async () => (await import("@/test/next-headers")).nextHeadersStub());
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
@@ -10,8 +11,13 @@ const { recordSetupRequest } = await import("@/db/funnel");
 const { issueSetupLink, spendSetupLink } = await import("@/db/setup-links");
 const { unseededTestDb } = await import("@/test/db");
 const { setupLinkDoor } = await import("./setup-link-door");
+const { cookies } = await import("next/headers");
+const { SETUP_LINK_COOKIE } = await import("@/lib/setup-links");
 
-afterEach(() => vi.mocked(getDb).mockReset());
+afterEach(async () => {
+  vi.mocked(getDb).mockReset();
+  (await cookies()).delete(SETUP_LINK_COOKIE);
+});
 
 async function mintedLink() {
   const db = await unseededTestDb();
@@ -58,5 +64,17 @@ describe("setupLinkDoor", () => {
     }
     await spendSetupLink(db, token);
     expect(await setupLinkDoor(token)).toEqual({ door: "spent" });
+  });
+
+  it("reads the link a bounce carried back in its cookie, when the URL has none", async () => {
+    const { token } = await mintedLink();
+    (await cookies()).set(SETUP_LINK_COOKIE, token);
+    expect(await setupLinkDoor(undefined)).toMatchObject({ door: "open", token });
+  });
+
+  it("judges a cookie's link like any other: a stale one is the same closed door", async () => {
+    await mintedLink();
+    (await cookies()).set(SETUP_LINK_COOKIE, "A".repeat(43));
+    expect(await setupLinkDoor(undefined)).toEqual({ door: "spent" });
   });
 });

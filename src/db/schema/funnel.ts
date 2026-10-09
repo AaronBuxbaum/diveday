@@ -90,11 +90,17 @@ export const shopSetupLinks = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     /** Set in the transaction that created the shop. A spent link opens nothing. */
     spentAt: timestamp("spent_at", { withTimezone: true }),
+    /**
+     * The shop it opened, set in the same transaction: which request became
+     * which shop. Cleared if that shop is deleted; the spend stands.
+     */
+    spentByShopId: uuid("spent_by_shop_id").references(() => shops.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("shop_setup_links_token_hash_unique").on(table.tokenHash),
     index("shop_setup_links_request_idx").on(table.setupRequestId),
+    index("shop_setup_links_spent_by_shop_idx").on(table.spentByShopId),
   ],
 );
 

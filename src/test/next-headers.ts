@@ -11,10 +11,25 @@
  * test files, in six of which it will be forgotten.
  */
 
-/** The one method anything under test calls on `cookies()`. */
+/**
+ * What anything under test calls on `cookies()`: `get`, and the `set` and
+ * `delete` a Server Action makes, which write through to `values` so the next
+ * `cookies()` in the same test reads them back. `options` keeps the last
+ * attributes each `set` was given, for a test about those.
+ */
 export function cookieJar(values: Record<string, string> = {}) {
+  const options: Record<string, Record<string, unknown>> = {};
   return {
     get: (name: string) => (name in values ? { name, value: values[name] } : undefined),
+    set: (name: string, value: string, attributes: Record<string, unknown> = {}) => {
+      values[name] = value;
+      options[name] = attributes;
+    },
+    delete: (name: string) => {
+      delete values[name];
+      delete options[name];
+    },
+    options,
   };
 }
 
@@ -25,8 +40,10 @@ export function cookieJar(values: Record<string, string> = {}) {
 export function nextHeadersStub(
   init: { headers?: HeadersInit; cookies?: Record<string, string> } = {},
 ) {
+  // One jar per stub, so what an action sets, the next read in the test sees.
+  const jar = cookieJar(init.cookies);
   return {
     headers: async () => new Headers(init.headers),
-    cookies: async () => cookieJar(init.cookies),
+    cookies: async () => jar,
   };
 }

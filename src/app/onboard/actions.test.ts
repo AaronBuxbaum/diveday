@@ -57,6 +57,9 @@ const { issueSetupLink } = await import("@/db/setup-links");
 const { createFirstDay } = await import("@/db/first-day");
 const { onboardAction } = await import("./actions");
 const { unseededTestDb } = await import("@/test/db");
+const { cookies } = await import("next/headers");
+const { SETUP_LINK_COOKIE } = await import("@/lib/setup-links");
+type cookieJar = typeof import("@/test/next-headers").cookieJar;
 const { people, shops, userAccounts } = await import("@/db/schema");
 const { eq } = await import("drizzle-orm");
 
@@ -140,11 +143,29 @@ describe("onboardAction without a setup link", () => {
     expect(await redirectTarget(form)).toBe("/onboard");
   });
 
-  it("carries a token back on a bounce, so the page can judge it again", async () => {
+  /**
+   * A token in a `Location:` header is a token in every request log, proxy
+   * log and history entry the bounce passes through, and an address is
+   * personal data in the same places. So the bounce carries neither: the
+   * token rides an HttpOnly cookie scoped to `/onboard`, and the page reads it
+   * from there (security review of ADR 20261009-single-use-setup-links).
+   */
+  it("carries a token back on a bounce in a cookie, never in the URL", async () => {
     const target = await redirectTarget(onboardForm("owner@demo.invalid"));
     const params = new URLSearchParams(target.split("?")[1]);
-    expect(params.get("setup")).toBe(SHAPED_TOKEN);
     expect(params.get("error")).toBe("email_reserved");
+    expect(target).not.toContain(SHAPED_TOKEN);
+    expect(params.has("setup")).toBe(false);
+    expect(params.has("ownerEmail")).toBe(false);
+    expect(params.get("ownerName")).toBe("Marisol Vega");
+
+    const jar = (await cookies()) as unknown as ReturnType<cookieJar>;
+    expect(jar.get(SETUP_LINK_COOKIE)?.value).toBe(SHAPED_TOKEN);
+    expect(jar.options[SETUP_LINK_COOKIE]).toMatchObject({
+      httpOnly: true,
+      sameSite: "strict",
+      path: "/onboard",
+    });
   });
 
   it("creates nothing for a well-shaped token that was never minted", async () => {
