@@ -467,7 +467,7 @@ describe("after the dive", () => {
     // that waits while somebody on the boat is not back aboard (issue #2123).
     expect(countOf("shop={shopContact}")).toBe(2);
     expect(SOURCE).toContain('t("recap.noShowHeading")');
-    expect(SOURCE).toContain('t("recap.waitingHeading")');
+    expect(SOURCE).toContain("<RecapWaitingCard shop={shopContact} t={t} />");
     // And never the pair of sentences it replaced — "This readiness link isn't
     // available" over "This booking didn't sail" — both false for this reader.
     expect(SOURCE).not.toContain('t("recap.didNotDiveBody")');

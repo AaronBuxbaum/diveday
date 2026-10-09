@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
+import { RecapWaitingCard } from "@/components/RecapWaitingCard";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getRecapPageData, getRecapPageState, type RecapSite } from "@/db/recap";
@@ -171,19 +172,7 @@ export default async function DiveRecapPage({
       );
     }
 
-    if (state.kind === "waiting") {
-      // Somebody on this boat is "not back aboard" (issue #2123). Whoever holds
-      // this link may be family, so the card says only that the recap is not
-      // ready, and the same link works once the crew correct the word.
-      return (
-        <ExpiredLinkCard
-          title={deadT("recap.waitingHeading")}
-          text={deadT("recap.waitingBody")}
-          shop={state.shop}
-          t={deadT}
-        />
-      );
-    }
+    if (state.kind === "waiting") return <RecapWaitingCard shop={state.shop} t={deadT} />;
 
     // **The booking tier** (ADR 20260827-first-light, decision 3): a diver is
     // holding a phone and the link does not work, and their one question is

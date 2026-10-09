@@ -32,6 +32,7 @@ import { EarnedMoment } from "@/components/EarnedMoment";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { FlashParams } from "@/components/FlashParams";
 import { PartyClaimPanel } from "@/components/PartyClaimPanel";
+import { RecapWaitingCard } from "@/components/RecapWaitingCard";
 import { RememberBooker } from "@/components/RememberBooker";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -990,32 +991,15 @@ export default async function DiverReadinessPage({
       ? "boarded"
       : departure;
   if (isAfterTheDive({ endsAt: detail.trip.endsAt, boarded })) {
-    // Read as a page state, so `/ready` and `/recap` rank the same answers the
-    // same way: a cancelled seat or a no-show first, then a recap that waits.
     const recapState = await getRecapPageState(db, bookingId);
-    if (recapState.kind === "waiting") {
-      // Somebody on this boat is "not back aboard" (issue #2123): the recap
-      // waits, and this page says the same as `/recap` — never the no-show
-      // card below, which would tell a family the diver never sailed.
-      return (
-        <ExpiredLinkCard
-          title={t("recap.waitingHeading")}
-          text={t("recap.waitingBody")}
-          shop={shopContact}
-          t={t}
-        />
-      );
-    }
+    if (recapState.kind === "waiting") return <RecapWaitingCard shop={shopContact} t={t} />;
     const recap = recapState.kind === "recap" ? recapState.data : null;
     if (!recap) {
       /**
        * **A no-show, said plainly and with somebody to ask.**
        *
-       * Both cancellations — the booking's and the departure's — are answered
-       * above, so `getRecapPageData`'s uniform null means
-       * `bookings.status = 'no_show'` here (or a cancellation that landed in
-       * the microseconds between the two reads, which this notice's contact
-       * line covers either way).
+       * Both cancellations and a recap waiting on a missing diver (#2123) are
+       * answered above, so no recap here means `bookings.status = 'no_show'`.
        *
        * It used to render "This readiness link isn't available" over "This
        * booking didn't sail" — two sentences, both false for this reader: the
