@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import { DiveDayIcon, StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { MENU_PANEL } from "@/components/ui/menu";
@@ -65,6 +65,30 @@ function rowAriaCurrent(
   return isStaffDestinationPage(pathname, root, item.destination) ? "page" : "true";
 }
 
+const subscribeToNothing = () => () => {};
+
+/**
+ * **A key that changes once, the moment hydration is over** (issue #2252).
+ *
+ * The lit row is the one thing in the nav that depends on the URL, and the
+ * nav hydrates in a Suspense boundary of its own. A staffer who taps a link
+ * the moment Today paints (the arrival lookup is built for exactly that) can
+ * commit the next page before that boundary hydrates; it then hydrates against
+ * the new pathname, and React never patches an attribute a hydrating render
+ * disagrees with. The server's lit row stayed lit over the wrong page for good.
+ *
+ * Keying the nav's rows by this value rebuilds them from the client's own
+ * render once hydration ends, so the lit row is always the one the pathname
+ * says: `"server"` on the server and while hydrating, `"client"` after.
+ */
+function useNavRenderKey(): "server" | "client" {
+  return useSyncExternalStore(
+    subscribeToNothing,
+    () => "client",
+    () => "server",
+  );
+}
+
 function BlockedBadge({ count, label }: { count: number; label: string }) {
   return (
     <Badge
@@ -93,6 +117,7 @@ const sidebarRowClass = `flex min-h-11 items-center gap-3 ${SEGMENT_CORNER} px-3
  */
 export function ShopSidebar({ root, gates, items, blocked, copy }: NavProps) {
   const pathname = usePathname() ?? "";
+  const renderKey = useNavRenderKey();
   const current = currentStaffSection(pathname, root, gates);
   const main = items.filter((item) => item.section !== "settings");
   const foot = items.filter((item) => item.section === "settings");
@@ -120,6 +145,7 @@ export function ShopSidebar({ root, gates, items, blocked, copy }: NavProps) {
   };
   return (
     <nav
+      key={renderKey}
       aria-label={copy.navAriaLabel}
       className="flex h-full flex-col justify-between gap-4 px-3 py-4"
     >
@@ -142,6 +168,7 @@ const tabClass =
  */
 export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
   const pathname = usePathname() ?? "";
+  const renderKey = useNavRenderKey();
   const current = currentStaffSection(pathname, root, gates);
   const tabs = items.filter((item) =>
     (STAFF_PHONE_TABS as readonly StaffSection[]).includes(item.section),
@@ -157,7 +184,7 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
       data-staff-chrome="true"
       className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden"
     >
-      <ul className="mx-auto flex h-(--tabbar-h) max-w-xl items-stretch">
+      <ul key={renderKey} className="mx-auto flex h-(--tabbar-h) max-w-xl items-stretch">
         {tabs.map((item) => {
           const active = item.section === current;
           return (

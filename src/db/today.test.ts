@@ -55,6 +55,9 @@ import {
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 import { addCustomerGearItem, createWorkOrder, setWorkOrderStatus } from "./work-orders";
 
+/** A setup reservation: a hand pick whose staffer already said "Assign anyway". */
+const SETUP_PICK = { proposed: false, assignAnyway: true } as const;
+
 const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
 
 /**
@@ -3009,6 +3012,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         bookingId: booking.id,
         reservedFrom: shiftCalendarDate(today, -4),
         reservedUntil: shiftCalendarDate(today, -2),
+        screen: SETUP_PICK,
       });
       if (!reserved.ok) throw new Error("reserve refused");
 
@@ -3037,7 +3041,8 @@ describe("unclosed roll call (DOM-H3)", () => {
       const today = calendarDateInTimezone(nowDate(), shop.timezone);
       const booking = await anySeededBooking(db, shop.id);
       const reserve = async (label: string, until: string) => {
-        const item = await createGearItem(db, { shopId: shop.id, kind: "bcd", label });
+        // Tanks: a diver may hold several, where a second BCD is refused.
+        const item = await createGearItem(db, { shopId: shop.id, kind: "tank", label });
         if (!item.ok) throw new Error("item refused");
         const reserved = await reserveGearUnit(db, {
           shopId: shop.id,
@@ -3045,6 +3050,7 @@ describe("unclosed roll call (DOM-H3)", () => {
           bookingId: booking.id,
           reservedFrom: shiftCalendarDate(today, -6),
           reservedUntil: until,
+          screen: SETUP_PICK,
         });
         if (!reserved.ok) throw new Error("reserve refused");
       };
@@ -3078,6 +3084,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         bookingId: booking.id,
         reservedFrom: today,
         reservedUntil: today,
+        screen: SETUP_PICK,
       });
       if (!reserved.ok) throw new Error("reserve refused");
 

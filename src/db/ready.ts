@@ -109,6 +109,13 @@ export type ReadyPageData = {
    */
   identityHeld: boolean;
   /**
+   * The name the page greets: the person's own, or while the seat is held the
+   * name it was booked under ("" when none was typed, so the page greets
+   * nobody by name). The matched person's name would tell the booker whose
+   * record their email reached (issue #2125).
+   */
+  greetingName: string;
+  /**
    * When this seat was booked. Read for one question and one only: whether the
    * shop was already holding this diver's stated fit *before* the booking
    * existed, which is what makes the "Anything changed?" step a question about
@@ -261,6 +268,7 @@ export async function getReadyPageData(
       bookingCreatedAt: bookings.createdAt,
       carriedFactsConfirmedAt: bookings.carriedFactsConfirmedAt,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      identityBookedAs: bookings.identityBookedAs,
       slug: shops.slug,
       defaultLocale: shops.defaultLocale,
       currency: shops.currency,
@@ -388,6 +396,7 @@ export async function getReadyPageData(
       ? { name: null, phone: null }
       : { name: row.emergencyContactName, phone: row.emergencyContactPhone },
     identityHeld,
+    greetingName: identityHeld ? row.identityBookedAs?.trim() || "" : detail.person.fullName,
     bookingCreatedAt: row.bookingCreatedAt,
     carriedFactsConfirmedAt: row.carriedFactsConfirmedAt,
     fitConfirmation: identityHeld ? null : fitConfirmation,

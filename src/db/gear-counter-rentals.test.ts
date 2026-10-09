@@ -47,6 +47,9 @@ import {
 } from "./schema";
 import { createTrip } from "./trips-create";
 
+/** A setup reservation: a hand pick whose staffer already said "Assign anyway". */
+const SETUP_PICK = { proposed: false, assignAnyway: true } as const;
+
 const TODAY = "2026-10-08";
 
 /**
@@ -211,6 +214,7 @@ describe("createCounterRental", () => {
           bookingId: booking.bookingId,
           reservedFrom: "2026-10-09",
           reservedUntil: "2026-10-09",
+          screen: SETUP_PICK,
         })
       ).ok,
     ).toBe(true);
@@ -246,6 +250,7 @@ describe("createCounterRental", () => {
         bookingId: booking.bookingId,
         reservedFrom: "2026-10-09",
         reservedUntil: "2026-10-09",
+        screen: SETUP_PICK,
       }),
     ).toEqual({ ok: false, reason: "unit_unavailable" });
   });

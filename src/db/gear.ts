@@ -31,6 +31,8 @@ import {
   type GearServiceClock,
   type GearServiceKind,
   type GearServiceState,
+  gearKindIsLifeSupport,
+  gearKindIsOnePerDiver,
   gearRegisterGroup,
   gearServiceIsDue,
   gearServiceState,
@@ -435,7 +437,7 @@ export async function recordGearService(
  * superseded deadline.
  */
 export async function latestServiceClocks(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   gearItemIds?: readonly string[],
 ): Promise<Map<string, GearServiceClock[]>> {
@@ -517,7 +519,7 @@ export async function latestServiceClocks(
  * guess at "probably two a day" would run the clock fast.
  */
 async function completedDivesByUnit(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   gearItemIds: readonly string[],
 ): Promise<Map<string, { tripDate: CalendarDate; plannedDives: number }[]>> {
@@ -613,8 +615,24 @@ export type ReserveGearUnitOutcome =
         | "booking_not_found"
         | "invalid_window"
         | "unit_out_of_service"
-        | "unit_unavailable";
+        | "unit_unavailable"
+        /** The booking already holds an open unit of a one-per-diver kind. */
+        | "already_holds_kind"
+        /** The seat is held: nobody's gear until the desk confirms who it is. */
+        | "identity_held"
+        /** Proposed: the unit has a lapsed service clock or an open concern. */
+        | "needs_care"
+        /** Hand-picked life support that needs care, not yet "Assign anyway". */
+        | "needs_care_confirm";
     };
+
+/**
+ * How the pick was made, for the screen asked **inside** the reservation's
+ * transaction (issue #2215). `proposed`: the row's proposal rather than a unit
+ * a person chose. `assignAnyway`: the person was told a hand-picked
+ * life-support unit needs care and assigned it all the same.
+ */
+export type GearPickScreen = { proposed: boolean; assignAnyway?: boolean };
 
 /**
  * Assign one unit to one booking for an inclusive date window. The
@@ -627,6 +645,21 @@ export type ReserveGearUnitOutcome =
  * derives the window from the trip, so a stale tab pairing one trip's dates
  * with another trip's booking must read as no booking at all rather than a
  * reservation on the wrong days (security review, 2026-08-20).
+ *
+ * `screen` is the Gear tab's pick screen, held under a lock until the write
+ * (issue #2215). The booking row is locked `for update`, so two picks for one
+ * diver serialize on it, and under that lock the write is refused when:
+ * - the seat is held (`identity_held`): its gear is the matched person's
+ *   until the desk confirms who it is;
+ * - the booking already holds an open unit of a kind a diver takes one of
+ *   (`already_holds_kind`; `gearKindIsOnePerDiver`, so a second tank is fine);
+ * - the unit has a lapsed service clock or an open concern, read on the
+ *   window's last day: a proposed pick is refused (`needs_care`), a hand pick
+ *   of life support asks first (`needs_care_confirm`) unless `assignAnyway`.
+ * Two tablets assigning BCD #3 and BCD #4 to one diver at the same instant get
+ * one reservation and one refusal. The screen never asks whether the unit is
+ * free: the exclusion constraint stays the register's only answer to that
+ * (ADR 20260815-minimal-gear-register).
  */
 export async function reserveGearUnit(
   db: AppDb,
@@ -637,6 +670,7 @@ export async function reserveGearUnit(
     reservedFrom: string;
     reservedUntil: string;
     tripId?: string;
+    screen: GearPickScreen;
   },
 ): Promise<ReserveGearUnitOutcome> {
   const reservedFrom = input.reservedFrom.trim();
@@ -651,21 +685,10 @@ export async function reserveGearUnit(
 
   try {
     return await db.transaction(async (tx) => {
-      // Serialize same-unit writers before anything else. Two concurrent
-      // inserts both add their tuple and then each waits on the *other's*
-      // uncommitted tuple to decide the EXCLUDE check — Postgres breaks that
-      // cycle by killing one with a deadlock (40P01) instead of the worded
-      // refusal (seen on CI's real-Postgres job, 2026-08-20). Behind this
-      // transaction-scoped advisory lock the second writer waits until the
-      // first commits, so the constraint only ever judges committed rows and
-      // the loser reads back 23P01 → unit_unavailable, as designed. A
-      // hashtext collision between two units merely serializes unrelated
-      // reservations for a moment — never a wrong outcome.
-      await tx.execute(
-        sql`select pg_advisory_xact_lock(hashtext('gear_reservations'), hashtext(${input.gearItemId}))`,
-      );
+      // The unit is read shop-scoped first, so the lock below is only ever
+      // taken on a unit this shop owns (security review of issue #2215).
       const [item] = await tx
-        .select({ id: gearItems.id, status: gearItems.status })
+        .select({ id: gearItems.id, kind: gearItems.kind, status: gearItems.status })
         .from(gearItems)
         .where(
           and(
@@ -679,11 +702,30 @@ export async function reserveGearUnit(
       if (item.status !== "in_service")
         return { ok: false, reason: "unit_out_of_service" } as const;
 
+      // Serialize same-unit writers before the write. Two concurrent
+      // inserts both add their tuple and then each waits on the *other's*
+      // uncommitted tuple to decide the EXCLUDE check — Postgres breaks that
+      // cycle by killing one with a deadlock (40P01) instead of the worded
+      // refusal (seen on CI's real-Postgres job, 2026-08-20). Behind this
+      // transaction-scoped advisory lock the second writer waits until the
+      // first commits, so the constraint only ever judges committed rows and
+      // the loser reads back 23P01 → unit_unavailable, as designed. A
+      // hashtext collision between two units merely serializes unrelated
+      // reservations for a moment — never a wrong outcome.
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext('gear_reservations'), hashtext(${item.id}))`,
+      );
+
       // A cancelled booking holds nothing: its seat is gone, and a unit
       // reserved against it hangs on the wall as "spoken for" for a diver who
       // is not coming (dive-domain review of the Gear tab's proposals).
       const [booking] = await tx
-        .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
+        .select({
+          id: bookings.id,
+          tripId: bookings.tripId,
+          personId: bookings.personId,
+          identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+        })
         .from(bookings)
         .where(
           and(
@@ -693,8 +735,21 @@ export async function reserveGearUnit(
             input.tripId ? eq(bookings.tripId, input.tripId) : undefined,
           ),
         )
-        .limit(1);
+        .limit(1)
+        // The lock two picks for one diver meet at: the second waits here
+        // until the first commits, then reads its reservation below.
+        .for("update");
       if (!booking) return { ok: false, reason: "booking_not_found" } as const;
+      if (booking.identityUnconfirmedAt) return { ok: false, reason: "identity_held" } as const;
+
+      const refusal = await screenPickUnderLock(tx, {
+        shopId: input.shopId,
+        bookingId: booking.id,
+        unit: { id: item.id, kind: item.kind },
+        careDay: reservedUntil,
+        screen: input.screen,
+      });
+      if (refusal) return { ok: false, reason: refusal } as const;
 
       const [reservation] = await tx
         .insert(gearReservations)
@@ -727,6 +782,57 @@ export async function reserveGearUnit(
     }
     throw error;
   }
+}
+
+/**
+ * The pick screen's questions, asked under the booking's row lock
+ * (`reserveGearUnit`): does this booking already hold an open unit of a
+ * one-per-diver kind, and does the unit need care on `careDay`, the window's
+ * last day. Null keeps the pick.
+ */
+async function screenPickUnderLock(
+  tx: DbExecutor,
+  input: {
+    shopId: string;
+    bookingId: string;
+    unit: { id: string; kind: GearItemKind };
+    careDay: CalendarDate;
+    screen: GearPickScreen;
+  },
+): Promise<"already_holds_kind" | "needs_care" | "needs_care_confirm" | null> {
+  if (gearKindIsOnePerDiver(input.unit.kind)) {
+    const [held] = await tx
+      .select({ id: gearReservations.id })
+      .from(gearReservations)
+      .innerJoin(
+        gearItems,
+        and(eq(gearItems.id, gearReservations.gearItemId), eq(gearItems.shopId, input.shopId)),
+      )
+      .where(
+        and(
+          eq(gearReservations.shopId, input.shopId),
+          eq(gearReservations.bookingId, input.bookingId),
+          isNull(gearReservations.returnedAt),
+          eq(gearItems.kind, input.unit.kind),
+          liveGearItem(),
+        ),
+      )
+      .limit(1);
+    if (held) return "already_holds_kind";
+  }
+  const asks = input.screen.proposed
+    ? "needs_care"
+    : gearKindIsLifeSupport(input.unit.kind) && !input.screen.assignAnyway
+      ? "needs_care_confirm"
+      : null;
+  if (!asks) return null;
+
+  // One after the other: a transaction is one connection.
+  const clocks = await latestServiceClocks(tx, input.shopId, [input.unit.id]);
+  const concerns = await openServiceConcerns(tx, input.shopId, [input.unit]);
+  const lapsed =
+    gearServiceState(clocks.get(input.unit.id) ?? [], input.careDay).state === "overdue";
+  return lapsed || concerns.has(input.unit.id) ? asks : null;
 }
 
 export type GearReservationActionOutcome =
@@ -1675,7 +1781,7 @@ export type AvailableGearUnit = {
  * would wipe the concern the return before it raised (dive-domain review).
  */
 export async function openServiceConcerns(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   units: readonly { id: string; kind: GearItemKind }[],
 ): Promise<Set<string>> {

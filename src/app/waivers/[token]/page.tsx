@@ -18,7 +18,7 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocale } from "@/db/people";
-import type { MedicalAnswers, Shop } from "@/db/schema";
+import type { MedicalAnswers } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
 import { sendGuardianReleaseCopy } from "@/db/waiver-guardian-copy";
@@ -59,11 +59,10 @@ import {
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
-import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";
-import { emailFreshWaiverLinkAction } from "./actions";
 import { MedicalQuestionnaireFields } from "./MedicalQuestionnaireFields";
 import { QuestionnaireProgress } from "./QuestionnaireProgress";
+import { ExpiredLink, HeldWaiverCard } from "./WaiverDoorCards";
 import { WaiverPacing } from "./WaiverPacing";
 import {
   WAIVER_RAIL_TOTAL,
@@ -457,6 +456,7 @@ export default async function WaiverPage({
   if (state.state === "expired") {
     return <ExpiredLink token={token} shop={shop} t={t} sent={sent} />;
   }
+  if (state.state === "held") return <HeldWaiverCard shop={shop} t={t} />;
 
   if (state.state === "completed") {
     // A diver revisiting their own still-live link after a physician cleared
@@ -582,11 +582,6 @@ export default async function WaiverPage({
   const emergencyContact = recordBookingId
     ? await getEmergencyContactForBearer(db, recordBookingId)
     : await getEmergencyContactForPerson(db, record.shopId, record.personId);
-  // A held seat (#2082): the link may not be the matched diver's, so the page
-  // neither shows nor asks for anything that lives on that record. Staff take
-  // the contact at the counter once they confirm who it is.
-  const identityHeld =
-    emergencyContact !== null && "held" in emergencyContact && emergencyContact.held;
   // The name this release has to be signed under (`completeWaiver` refuses
   // anything else). Shown as the field's hint so the rule is guidance before
   // it is ever a refusal — and it discloses nothing this booking-scoped
@@ -684,24 +679,26 @@ export default async function WaiverPage({
       redirect(refusedSubmitPath(token, invalidField));
     }
     const db = await getDb();
-    // A form the diver themselves just submitted through their own bearer
-    // link — first-hand evidence of the language they read (docs ADR
-    // 20260731-per-person-notification-locale). Captured on submit and not on
-    // the page render above, because a chat app unfurling this URL for a link
-    // preview also GETs the page, and that bot's `Accept-Language` is nobody's.
-    if (!identityHeld) {
-      await recordDiverOwnLocale(db, {
-        shopId: record.shopId,
-        personId: record.personId,
-        locale: await requestFirstHandLocale(),
-      });
-    }
     const savedDraft = await saveWaiverDraft(db, token, {
       signerName: parsed.data.signerName,
       acknowledged: parsed.data.acknowledged === "on",
       medicalAnswers: answers,
       guardian: guardianDraftFrom(formData, guardianRequired),
     });
+    // A form the diver themselves just submitted through their own bearer
+    // link — first-hand evidence of the language they read (docs ADR
+    // 20260731-per-person-notification-locale). Captured on submit and not on
+    // the page render above, because a chat app unfurling this URL for a link
+    // preview also GETs the page, and that bot's `Accept-Language` is nobody's.
+    // Only once the writer took the draft: a refused link (held, expired)
+    // writes nothing onto the person.
+    if (savedDraft) {
+      await recordDiverOwnLocale(db, {
+        shopId: record.shopId,
+        personId: record.personId,
+        locale: await requestFirstHandLocale(),
+      });
+    }
     // Persist the contact now too, so "save and finish later" keeps it — as a
     // pair or not at all. Both blank still keeps what's on file; one box filled
     // and the other cleared is refused below rather than spliced onto the
@@ -792,16 +789,6 @@ export default async function WaiverPage({
       }
       redirect(refusedSubmitPath(token, invalidField));
     }
-    // Same first-hand signal as the draft save above (docs ADR
-    // 20260731-per-person-notification-locale) — signing is the strongest
-    // version of it, since the diver read and agreed to the whole page.
-    if (!identityHeld) {
-      await recordDiverOwnLocale(await getDb(), {
-        shopId: record.shopId,
-        personId: record.personId,
-        locale: await requestFirstHandLocale(),
-      });
-    }
     const outcome = await completeWaiver(await getDb(), token, {
       signerName: parsed.data.signerName,
       agreed: true,
@@ -878,6 +865,14 @@ export default async function WaiverPage({
       }
       redirect(`/waivers/${token}?error=unavailable`);
     }
+    // Same first-hand signal as the draft save above (docs ADR
+    // 20260731-per-person-notification-locale) — signing is the strongest
+    // version of it, since the diver read and agreed to the whole page.
+    await recordDiverOwnLocale(await getDb(), {
+      shopId: record.shopId,
+      personId: record.personId,
+      locale: await requestFirstHandLocale(),
+    });
     await trackEvent({ name: "waiver_signed" });
     // **The guardian's copy** (issue #1453). Deferred past the response for the
     // same reason every other courtesy send is: the family is watching for
@@ -1127,75 +1122,73 @@ export default async function WaiverPage({
           {/* No card here: the heading, helper line, and the two fields carry
               the section by themselves (principle 10 — type and space before
               boxes). The one card left in the form is the signature block. */}
-          {identityHeld ? null : (
-            <section>
-              <SectionHeading>{t("waiver.emergencyContact")}</SectionHeading>
-              {/* Editable whether or not something is on file. It used to go
+          <section>
+            <SectionHeading>{t("waiver.emergencyContact")}</SectionHeading>
+            {/* Editable whether or not something is on file. It used to go
                 read-only the moment a contact existed, on the reasoning that a
                 correction was staff work — but this is the one screen a diver
                 fills in the week before a trip, and the person they'd name has
                 often changed since they booked. `saveBookingEmergencyContact`
                 never lets a blank overwrite a stored value, so re-showing the
                 fields can only ever improve what the crew has. */}
-              {emergencyContact?.name && emergencyContact?.phone ? (
-                <p className="mt-2 text-sm text-muted">
-                  {/* The number is set whole: it broke after "+1-305-555-" at 390
+            {emergencyContact?.name && emergencyContact?.phone ? (
+              <p className="mt-2 text-sm text-muted">
+                {/* The number is set whole: it broke after "+1-305-555-" at 390
                     (K-257). A `nowrap` span, never non-breaking hyphens, so a
                     number copied off the page still dials; the bundle glues the
                     dot before it to both sides. */}
-                  {t.rich("waiver.emergencyOnFile", {
-                    name: emergencyContact.name,
-                    phone: emergencyContact.phone,
-                    nowrap: (chunks) => <span className="whitespace-nowrap">{chunks}</span>,
-                  })}{" "}
-                  {t("waiver.emergencyContactChangeHint")}
-                </p>
-              ) : (
-                <p className="mt-2 text-sm text-muted">{t("waiver.emergencyContactDescription")}</p>
-              )}
-              {/* A half-filled pair is refused on the empty box, in the same
+                {t.rich("waiver.emergencyOnFile", {
+                  name: emergencyContact.name,
+                  phone: emergencyContact.phone,
+                  nowrap: (chunks) => <span className="whitespace-nowrap">{chunks}</span>,
+                })}{" "}
+                {t("waiver.emergencyContactChangeHint")}
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-muted">{t("waiver.emergencyContactDescription")}</p>
+            )}
+            {/* A half-filled pair is refused on the empty box, in the same
                 shape as every other refusal on this page: the words under the
                 control the reader was just sent to, not a banner at the top. */}
-              <FieldGrid columns={2} className="mt-4">
-                <Field
-                  label={t("waiver.contactName")}
-                  error={
-                    namedFieldError?.anchor === "emergencyContactName"
-                      ? t(namedFieldError.textKey)
-                      : undefined
-                  }
-                >
-                  <input
-                    id="emergencyContactName"
-                    name="emergencyContactName"
-                    autoComplete="name"
-                    maxLength={120}
-                    defaultValue={emergencyContact?.name ?? ""}
-                    className={controlClass}
-                  />
-                </Field>
-                <Field
-                  label={t("waiver.contactPhone")}
-                  error={
-                    namedFieldError?.anchor === "emergencyContactPhone"
-                      ? t(namedFieldError.textKey)
-                      : undefined
-                  }
-                >
-                  <input
-                    id="emergencyContactPhone"
-                    name="emergencyContactPhone"
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    maxLength={40}
-                    defaultValue={emergencyContact?.phone ?? ""}
-                    className={controlClass}
-                  />
-                </Field>
-              </FieldGrid>
-            </section>
-          )}
+            <FieldGrid columns={2} className="mt-4">
+              <Field
+                label={t("waiver.contactName")}
+                error={
+                  namedFieldError?.anchor === "emergencyContactName"
+                    ? t(namedFieldError.textKey)
+                    : undefined
+                }
+              >
+                <input
+                  id="emergencyContactName"
+                  name="emergencyContactName"
+                  autoComplete="name"
+                  maxLength={120}
+                  defaultValue={emergencyContact?.name ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+              <Field
+                label={t("waiver.contactPhone")}
+                error={
+                  namedFieldError?.anchor === "emergencyContactPhone"
+                    ? t(namedFieldError.textKey)
+                    : undefined
+                }
+              >
+                <input
+                  id="emergencyContactPhone"
+                  name="emergencyContactPhone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  maxLength={40}
+                  defaultValue={emergencyContact?.phone ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+            </FieldGrid>
+          </section>
 
           {/* The signature block is the one card in the form — the formal act at
               the end of a paper release gets the same visual weight here. The
@@ -1407,83 +1400,5 @@ export default async function WaiverPage({
           : t("common.needHelpPlain", { shop: shopName })}
       </p>
     </ThreadShell>
-  );
-}
-
-/**
- * What the rescue send actually did, as one-word codes on the URL — the
- * action never puts a sentence (or an address, or a token) in the query
- * string, so this page picks the words in the reader's own language, the same
- * pattern `/ready`'s notices use.
- */
-const RESCUE_NOTICES: Record<
-  string,
-  { tone: "success" | "danger" | "neutral"; key: DiverMessageKey }
-> = {
-  ok: { tone: "success", key: "waiver.freshLinkSent" },
-  signed: { tone: "success", key: "waiver.freshLinkAlreadySigned" },
-  // A newer link for this booking is still signable, so nothing was reissued —
-  // reissuing would have killed it and taken the diver's saved answers with it.
-  // Point them at their inbox without naming the address, same as every other
-  // notice on this card.
-  live: { tone: "success", key: "waiver.freshLinkCurrentLive" },
-  none: { tone: "neutral", key: "waiver.freshLinkNoEmail" },
-  unavailable: { tone: "danger", key: "waiver.freshLinkUnavailable" },
-  failed: { tone: "danger", key: "waiver.freshLinkFailed" },
-  rate: { tone: "danger", key: "waiver.rateLimited" },
-};
-
-/**
- * A waiver link that can no longer be signed, with the way out on it. The
- * diver mails themselves a fresh link instead of chasing the shop for one —
- * and because a waiver URL *is* its capability, the replacement is only ever
- * sent to the address already on the booking. The address is never shown or
- * confirmed back here (anyone holding the stale URL is reading this page, so
- * even a masked "n…@…" would be a disclosure), and the new token never
- * reaches this page at all. The shop's own contact details stay underneath as
- * the fallback for the outcomes mail can't fix.
- */
-function ExpiredLink({
-  token,
-  shop,
-  t,
-  sent,
-}: {
-  token: string;
-  shop: Pick<Shop, "name" | "contactEmail" | "contactPhone">;
-  t: DiverTranslator;
-  sent?: string;
-}) {
-  // `Object.hasOwn`, not `RESCUE_NOTICES[sent]` — `sent` is attacker-supplied
-  // and a bare lookup walks the prototype (src/lib/staff-notices.ts).
-  const notice = noticeFromParam(sent, RESCUE_NOTICES);
-  return (
-    <ExpiredLinkCard
-      title={t("waiver.expiredHeading")}
-      text={t("waiver.expiredBody")}
-      shop={shop}
-      t={t}
-    >
-      <FlashParams params={["sent"]} />
-      {/* The fourth of the four banner treatments this page had grown, and the
-          last one to converge (ADR 20260827-the-divers-thread, decision 5): the
-          rescue outcome speaks the same notice grammar as the refusal, the
-          saved draft and the English-only note, rather than a private tone map
-          of its own. */}
-      {notice ? (
-        <ShopNotice tone={notice.tone} role={noticeRole(notice.tone)}>
-          {t(notice.key)}
-        </ShopNotice>
-      ) : null}
-      {/* A signature already on file is the one outcome with nothing left to
-          send — offering the button again would only invite a pointless email. */}
-      {sent === "signed" ? null : (
-        <form action={emailFreshWaiverLinkAction.bind(null, token)}>
-          <SubmitButton pendingLabel={t("waiver.sendingFreshLink")} className={buttonClass()}>
-            {t("waiver.emailFreshLink")}
-          </SubmitButton>
-        </form>
-      )}
-    </ExpiredLinkCard>
   );
 }

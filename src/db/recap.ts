@@ -410,6 +410,21 @@ export async function isRecapOpen(
 }
 
 /**
+ * The departure roll call for one booking, corrected for a late boarding: a
+ * dock `not_boarded` stands only while no after-dive `boarded` says the diver
+ * joined the boat later. The /ready page asks this the same way the recap does.
+ */
+export async function departureAfterLateBoarding<T extends string | null>(
+  db: DbExecutor,
+  departure: T,
+  candidate: { booking: { id: string }; shop: { id: string }; trip: { id: string } },
+): Promise<T | "boarded"> {
+  if (departure !== "not_boarded") return departure;
+  const leftAtTheDock = await bookingsLeftAtTheDock(db, [candidate]);
+  return leftAtTheDock.has(candidate.booking.id) ? departure : "boarded";
+}
+
+/**
  * **The bookings the crew left at the dock**, out of a set of candidates: the
  * standing departure result is `not_boarded` and no after-dive `boarded` says
  * the diver sailed after all (a diver who joined the boat at the second site).

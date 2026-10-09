@@ -1,13 +1,16 @@
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, asc, eq, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { PrepDiver } from "@/lib/dive-prep";
+import { seatName } from "@/lib/held-seat";
 import {
   NOTHING_RENTED,
   offeredRentalFitFields,
   RENTABLE_ITEMS,
+  type RentableItemKind,
   type RentalFitField,
   SIZED_RENTAL_FIT_COLUMN,
   type SizedRentalKind,
+  toRentableKinds,
 } from "@/lib/rentals";
 import type { AppDb } from "./client";
 import { verifiedNitroxPersonIds } from "./nitrox";
@@ -550,6 +553,13 @@ export async function getRentalFit(db: AppDb, shopId: string, personId: string) 
  * Everything the prep checklist needs for one departure, in one read: the
  * active roster, each diver's fit, and — separately from the booking's own
  * request flag — whether their nitrox card is verified right now.
+ *
+ * **A held seat packs nothing of the matched diver's** (issue #2144, glossary
+ * "Held seat"). The record attached to it may be somebody else's, so its row
+ * carries the name it was booked under, no fit, and no verified nitrox card,
+ * with `identityHeld` set so the page can say the sizes wait for the desk. A
+ * held seat that asked for nitrox then reads as needing a card check, which is
+ * the honest state.
  */
 export async function listTripPrepDivers(
   db: AppDb,
@@ -581,28 +591,102 @@ export async function listTripPrepDivers(
     .orderBy(asc(people.fullName));
 
   const certified = await verifiedNitroxPersonIds(db, shopId);
-  return rows.map((row) => ({
-    bookingId: row.booking.id,
-    personId: row.person.id,
-    fullName: row.person.fullName,
-    fit: row.fit,
-    wantsNitrox: row.booking.wantsNitrox,
-    hasVerifiedNitroxCard: certified.has(row.person.id),
-    lastDivedBand: row.booking.lastDivedBand,
-    hotelPickupLocation: row.booking.hotelPickupLocation,
-    pickupTime: row.booking.pickupTime,
-    participantType: row.booking.participantType,
-  }));
+  return rows.map((row) => {
+    const identityHeld = row.booking.identityUnconfirmedAt !== null;
+    return {
+      bookingId: row.booking.id,
+      personId: row.person.id,
+      fullName: seatName(row.person.fullName, row.booking),
+      fit: identityHeld ? null : row.fit,
+      wantsNitrox: row.booking.wantsNitrox,
+      hasVerifiedNitroxCard: !identityHeld && certified.has(row.person.id),
+      identityHeld,
+      // A confirmed seat's fit already carries what it rents; only a held
+      // seat, whose fit is never written, needs the booking's own list.
+      paidRentalKinds: identityHeld ? paidKinds(row.booking.paidRentalKinds) : [],
+      lastDivedBand: row.booking.lastDivedBand,
+      hotelPickupLocation: row.booking.hotelPickupLocation,
+      pickupTime: row.booking.pickupTime,
+      participantType: row.booking.participantType,
+    };
+  });
+}
+
+/** The stored list narrowed to rentable kinds: never nitrox, never a stranger. */
+function paidKinds(values: readonly string[]): RentableItemKind[] {
+  return toRentableKinds(values).filter((kind): kind is RentableItemKind => kind !== "nitrox");
+}
+
+/**
+ * Keep the rental pieces a checkout charged for on the booking itself
+ * (`bookings.paid_rental_kinds`). A held seat writes nothing to the matched
+ * person's fit, so this is the only record of what it paid for; prep reads it
+ * as unsized "fit at check-in" lines (dive-domain review of issue #2144).
+ * Tenant-scoped: false when the booking is not this shop's.
+ */
+export async function recordPaidRentalKinds(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; kinds: readonly string[] },
+): Promise<boolean> {
+  const written = await db
+    .update(bookings)
+    .set({ paidRentalKinds: paidKinds(input.kinds) })
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+    .returning({ id: bookings.id });
+  return written.length > 0;
+}
+
+/**
+ * "Same person" at the desk, with the paid gear carried over: the booking's
+ * paid pieces become the confirmed diver's fit, by the checkout's own rule
+ * (every piece is the selection; sizes untouched). Refuses a seat still held,
+ * so nothing reaches a record whose owner is unproven. False when nothing was
+ * written.
+ */
+export async function applyPaidRentalKindsToFit(
+  db: AppDb,
+  input: { shopId: string; bookingId: string },
+): Promise<boolean> {
+  const [booking] = await db
+    .select({ personId: bookings.personId, paidRentalKinds: bookings.paidRentalKinds })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
+        isNull(bookings.identityUnconfirmedAt),
+      ),
+    )
+    .limit(1);
+  if (!booking) return false;
+  const paid = new Set<string>(paidKinds(booking.paidRentalKinds));
+  if (paid.size === 0) return false;
+  const rents = Object.fromEntries(
+    RENTABLE_ITEMS.map((item) => [item.field, paid.has(item.kind)]),
+  ) as Record<RentalFitField, boolean>;
+  const profile = await saveRentalFit(db, {
+    shopId: input.shopId,
+    personId: booking.personId,
+    ...rents,
+  });
+  return profile !== null;
 }
 
 /**
  * Fits for one trip's active roster, keyed by booking. Joined from bookings so
  * a caller that already has the roster does not have to wait for it first —
  * this reads in parallel with everything else a manifest needs.
+ *
+ * A held seat maps to null: the fit on the matched record is somebody's, not
+ * provably the seat's (issue #2144).
  */
 export async function rentalFitByBooking(db: AppDb, shopId: string, tripId: string) {
   const rows = await db
-    .select({ bookingId: bookings.id, fit: rentalFitProfiles })
+    .select({
+      bookingId: bookings.id,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      fit: rentalFitProfiles,
+    })
     .from(bookings)
     .leftJoin(
       rentalFitProfiles,
@@ -618,5 +702,7 @@ export async function rentalFitByBooking(db: AppDb, shopId: string, tripId: stri
         ne(bookings.status, "cancelled"),
       ),
     );
-  return new Map(rows.map((row) => [row.bookingId, row.fit]));
+  return new Map(
+    rows.map((row) => [row.bookingId, row.identityUnconfirmedAt === null ? row.fit : null]),
+  );
 }

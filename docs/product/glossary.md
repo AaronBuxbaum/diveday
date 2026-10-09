@@ -2522,7 +2522,13 @@ new domain concept, define it here in the same PR.
   the departure log show the seat's own state (its name as booked, readiness, payment, roll-call
   marks) and withhold the matched person's particulars (contact, emergency contact, age, sizes,
   nitrox, medical answers), saying only that other holds may apply (`withholdHeldSeatParticulars`,
-  `src/lib/held-seat.ts`; issue #1690). It ends one of two ways, both on the roster: **Confirm
+  `src/lib/held-seat.ts`; issue #1690). The Gear tab packs nothing of the matched diver's for it
+  either: its booked-as name, no sizes and no verified nitrox card until the desk confirms who it
+  is (`listTripPrepDivers`, issue #2144). Its bearer links name nobody: `/ready` greets the name
+  it was booked under and remembers nothing on the device, no release link is issued or signed
+  until the desk confirms or splits it (`issueWaiverRequest` and `completeWaiver` refuse
+  `identity_unconfirmed`), and confirming or splitting sends the release then (issue #2125). It
+  ends one of two ways, both on the roster: **Confirm
   identity** or **Split off a held seat**. Crew never settle it at the rail.
 - **Confirm identity** — the staff tap that clears `bookings.identity_unconfirmed_at`, and the
   most consequential one in the product: it says *this person is the diver this seat was attached

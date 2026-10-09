@@ -1,4 +1,4 @@
-import { CALLING_CODES, toE164 } from "./phone";
+import { homeNumberingArea, toE164 } from "./phone";
 
 /**
  * **The shop's QR door: a diver puts themselves on file before any booking
@@ -81,7 +81,12 @@ export function hasContactPath(input: { email?: string; phone?: string }): boole
  * Why an anonymous registrant's release will not go out by text, or null when
  * it may.
  */
-export type AnonymousTextRefusal = "demo_shop" | "unreadable_number" | "foreign_number";
+export type AnonymousTextRefusal =
+  | "demo_shop"
+  | "unreadable_number"
+  | "foreign_number"
+  /** A `+1` number outside the shop's own NANP country, or in none (issue #2151). */
+  | "foreign_area_code";
 
 /**
  * **The one number the counter QR will text, or why not** (issue #2092,
@@ -93,6 +98,11 @@ export type AnonymousTextRefusal = "demo_shop" | "unreadable_number" | "foreign_
  * path texts only a number in the shop's **own** country (its calling code),
  * read the way the row stores it (`toE164`), and never from a demo shop. A
  * refused number is still stored; the shop can send the release itself.
+ *
+ * For a `+1` shop the calling code is not enough: it is shared by the US,
+ * Canada and the Caribbean, where premium routes live. So the area code must
+ * be one of the shop's own country's (`homeNumberingArea`, issue #2151).
+ * Staff-initiated texts are not gated here: a person chose that recipient.
  */
 export function anonymousTextRecipient(
   phone: string | null | undefined,
@@ -103,7 +113,8 @@ export function anonymousTextRecipient(
   if (shop.isDemo) return { refused: "demo_shop" };
   const e164 = toE164(phone, shop.addressCountry);
   if (!e164) return { refused: "unreadable_number" };
-  const home = CALLING_CODES[(shop.addressCountry ?? "").toUpperCase()];
-  if (!home || !e164.startsWith(`+${home}`)) return { refused: "foreign_number" };
+  const area = homeNumberingArea(e164, shop.addressCountry);
+  if (area === "foreign_code") return { refused: "foreign_number" };
+  if (area === "foreign_area_code") return { refused: "foreign_area_code" };
   return { recipient: e164 };
 }
