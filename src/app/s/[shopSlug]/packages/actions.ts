@@ -32,10 +32,13 @@ const purchaseSchema = z.object({
 /**
  * A diver buys one dive package from the shop's public pages.
  *
- * `shopSlug` is bound from the page's own URL, never read from the form. The
- * package is looked up again here and again inside `createDiverPackageOrder`,
- * and its price is the row's: nothing the visitor posts can change what is
- * billed. A raised invoice sends the diver straight to Stripe's hosted page;
+ * `shopSlug` is bound on the page, but a bound argument travels with the
+ * request like any other, so a caller can name any shop: that is fine, because
+ * every shop's packages page is public and the shop is only ever the one the
+ * slug resolves to. What a caller cannot steer is the package or its price.
+ * The package is looked up again here and again inside
+ * `createDiverPackageOrder`, and its price is the row's, so nothing the visitor
+ * posts can change what is billed. A raised invoice sends the diver straight to Stripe's hosted page;
  * Stripe's `invoice.paid` webhook then grants the dives through the same
  * `grantPackageEntitlementsForPaidOrder` a staff-raised invoice uses.
  */
@@ -69,20 +72,22 @@ async function purchase(shopSlug: string, formData: FormData): Promise<{ error: 
   });
   if (!parsed.success) return { error: t("packages.error.invalid") };
   const email = parsed.data.email.trim().toLowerCase();
+
+  const db = await getDb();
+  const shop = await getShopBySlug(db, shopSlug);
+  if (!shop) return { error: t("packages.error.notOnSale") };
+  // Per shop and email: a global bucket would let tapping Buy at one shop
+  // spend a diver's tries at every other.
   if (
     !(
       await checkRateLimit(
-        rateLimitKey("package-purchase-email", email),
+        rateLimitKey("package-purchase-email", shop.id, email),
         RATE_LIMITS.packagePurchaseByEmail,
       )
     ).allowed
   ) {
     return { error: t("common.rateLimited") };
   }
-
-  const db = await getDb();
-  const shop = await getShopBySlug(db, shopSlug);
-  if (!shop) return { error: t("packages.error.notOnSale") };
   const pkg = (await listPackagesOnSale(db, shop.id)).find(
     (row) => row.id === parsed.data.packageId,
   );
