@@ -20,7 +20,7 @@ import { onTheWaterByRollCall } from "./manifests";
 import { activityEvents, bookings, courses, people, trips } from "./schema";
 import { getTripWaitlist, pagedUpcomingTripsWithCounts } from "./trips";
 import { liveTrip } from "./trips-live";
-import { heldSeatCounts } from "./trips-queries";
+import { heldSeatCounts, sellableCapacity } from "./trips-queries";
 
 /**
  * **The first writer of `bookings.status = "no_show"`** (issue #1209).
@@ -267,6 +267,8 @@ export async function undoBookingNoShow(
     const [trip] = await tx
       .select({
         id: trips.id,
+        shopId: trips.shopId,
+        boatId: trips.boatId,
         capacity: trips.capacity,
         diverCapacity: trips.diverCapacity,
         status: trips.status,
@@ -317,7 +319,9 @@ export async function undoBookingNoShow(
       });
       return { ok: false, reason };
     };
-    const full = seatRefusal(seat.participantType, trip, held);
+    // The boat's certificate caps the seats under the same lock (H-107).
+    const capacity = await sellableCapacity(tx, trip);
+    const full = seatRefusal(seat.participantType, { ...trip, capacity }, held);
     if (full) return await refuse(full);
 
     if (trip.courseId) {

@@ -56,8 +56,12 @@
   "requestPlanCrewSuggestionOther": "Bring {divemasters} divemasters for your {ratio}:1 target.",
   "descriptionLabel": "One line about the boat, for your public page (optional)",
   "certifiedPassengersLabel": "Passenger limit on the boat’s certificate",
+  "certifiedPassengersHint": "Passengers only, not crew.",
   "inspectionDueLabel": "Next safety inspection due",
   "registrationExpiresLabel": "Registration expires",
   "insuranceExpiresLabel": "Insurance expires",
-  "seatsAboveCertificate": "{capacity, plural, one {# seat on sale} other {# seats on sale}}; the certificate allows {limit}."
+  "seatsAboveCertificate": "{capacity, plural, one {# seat on sale} other {# seats on sale}}; the certificate allows {limit}. Lower the seats to save this boat.",
+  "seatsAboveCertificateError": "The certificate allows {limit, plural, one {# passenger} other {# passengers}}, so this boat can’t sell {capacity}. Lower the seats, or correct the certificate.",
+  "departuresAboveCertificateError": "{count, plural, one {# upcoming departure on this boat sells more seats than the certificate’s {limit}. Lower its capacity first.} other {# upcoming departures on this boat sell more seats than the certificate’s {limit}. Lower their capacity first.}}",
+  "departuresAboveCertificateDatedError": "{count, plural, one {The departure on {dates} sells more seats than the certificate’s {limit}. Lower its capacity first.} other {# upcoming departures on this boat sell more seats than the certificate’s {limit}, including {dates}. Lower their capacity first.}}"
 }

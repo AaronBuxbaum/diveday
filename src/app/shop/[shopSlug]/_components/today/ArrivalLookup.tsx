@@ -4,7 +4,7 @@ import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import type { CheckInQueueRow } from "@/db/check-in";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatWeekdayTime } from "@/lib/format";
+import { formatTime, formatWeekdayTime } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
 import { counterRowId } from "../../trips/[id]/_arrivals/focus";
 import { ArrivalSearch } from "./ArrivalSearch";
@@ -79,6 +79,13 @@ export function ArrivalLookup({
                     <p className="text-sm text-muted tabular-nums">
                       {formatWeekdayTime(row.startsAt, locale, timeZone)} · {row.tripTitle}
                     </p>
+                    {row.runningLateAt ? (
+                      <p className="text-sm font-medium text-warning-strong tabular-nums">
+                        {t("checkIn.row.runningLate", {
+                          time: formatTime(row.runningLateAt, locale, timeZone),
+                        })}
+                      </p>
+                    ) : null}
                   </div>
                 </LedgerRow>
               ))}

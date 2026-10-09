@@ -3,7 +3,7 @@
  * One line on a shop's own website: <script async src="https://<diveday>/embed.js"></script>
  * Then any number of these, each a widget from Settings → Website embed:
  *
- *   <div data-diveday="calendar|grid|departure|courses" data-shop="<slug>"
+ *   <div data-diveday="calendar|grid|departure|courses|reviews" data-shop="<slug>"
  *        data-look="site|light" data-lang="auto|en-US|es-ES"
  *        [data-show="<trip id> on departure, <course slug> on courses"]></div>
  *   <a href="…" data-diveday="button|lightbox" data-shop="<slug>" data-look="site|light">Book a dive</a>
@@ -216,7 +216,13 @@
     const kind = el.getAttribute("data-diveday");
     if (kind === "button") styleButton(el);
     else if (kind === "lightbox") lightbox(el);
-    else if (kind === "calendar" || kind === "grid" || kind === "departure" || kind === "courses")
+    else if (
+      kind === "calendar" ||
+      kind === "grid" ||
+      kind === "departure" ||
+      kind === "courses" ||
+      kind === "reviews"
+    )
       frame(el, kind);
   }
   function mountAll() {

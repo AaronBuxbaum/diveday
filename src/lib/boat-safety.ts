@@ -3,16 +3,21 @@
  * the paper half of N-10): what a departure's pre-departure check says about
  * the hull it sails on.
  *
- * Three kinds of fact, all informing and none gating — the dock decides, not
- * the software, the same posture as the gear register's service clocks
- * (ADR 20260815-minimal-gear-register) and the pre-departure checklist (ADR
- * 20260824-pre-departure-safety-check):
+ * Three kinds of fact. The papers and the kit inform and never gate — the dock
+ * decides, not the software, the same posture as the gear register's service
+ * clocks (ADR 20260815-minimal-gear-register) and the pre-departure checklist
+ * (ADR 20260824-pre-departure-safety-check). The certificate is the exception
+ * since H-107:
  *
  * - **Too many people for the certificate.** A passenger vessel's certificate
  *   (in the US, the Coast Guard's Certificate of Inspection) names a passenger
- *   limit; when the people aboard pass it, the manifest says so. The one
- *   capacity *block* stays where it was (`tripDetailsPatch`: a departure may
- *   not sell more seats than the boat's own `capacity`).
+ *   limit. **No seat above it is sold** (H-107, reversing "informs, never
+ *   gates" for this one fact): a boat whose seats on sale pass it is refused
+ *   at save (`boatSeatsRefusal`), and so is a departure whose own capacity
+ *   does (`tripDetailsPatch`). Capacity and the certificate count the same
+ *   people — everyone aboard who is not crew — so they compare directly. When
+ *   the people aboard pass it anyway (a hull saved before H-107), the
+ *   manifest still says so.
  * - **The boat's papers**: next safety inspection, registration and insurance.
  * - **The safety kit aboard**: O2 kit, AED, first-aid kit and flares are gear
  *   register units (`gear_items`, opt-in by presence) that may be assigned to
@@ -258,6 +263,100 @@ export function passengersAboveCertificate(
   certifiedPassengers: number | null,
 ): boolean {
   return certifiedPassengers !== null && passengers > certifiedPassengers;
+}
+
+/**
+ * **Why a boat's numbers may not be saved** (H-107), or null when they may.
+ *
+ * - `seats_above_certificate`: the seats on sale (`capacity`) pass the
+ *   certificate's passenger limit. One code for both directions — raising the
+ *   seats, or lowering the certificate under them — because the fix is the
+ *   same pair of boxes either way.
+ * - `departures_above_certificate`: the hull is fine, but upcoming
+ *   departures on it still sell more seats than the certificate allows. A
+ *   departure's seats are its own number (`trips.capacity`), and lowering the
+ *   certificate under one would leave a sale nobody refused.
+ *
+ * A boat with no certificate recorded is never refused. **A row already over
+ * the limit keeps working** — it sails, its manifest says so, its fleet row
+ * says so in danger ink — but its next save must fix it, because this runs on
+ * every save of the row.
+ */
+export type BoatSeatsRefusal =
+  | { code: "seats_above_certificate"; capacity: number; limit: number }
+  | {
+      code: "departures_above_certificate";
+      departures: number;
+      limit: number;
+      /** The first few of them, soonest first, so the refusal can name them. */
+      firstDates: string[];
+    };
+
+/** How many over-limit departures the refusal names by date. */
+export const NAMED_DEPARTURES = 3;
+
+export function boatSeatsRefusal(input: {
+  capacity: number;
+  certifiedPassengers: number | null;
+  /**
+   * The hull's upcoming, live, scheduled departures, soonest first: each
+   * one's seats and its shop-local date.
+   */
+  upcomingDepartures?: readonly { capacity: number; on: string }[];
+}): BoatSeatsRefusal | null {
+  const limit = input.certifiedPassengers;
+  if (limit === null) return null;
+  if (passengersAboveCertificate(input.capacity, limit)) {
+    return { code: "seats_above_certificate", capacity: input.capacity, limit };
+  }
+  const over = (input.upcomingDepartures ?? []).filter((departure) =>
+    passengersAboveCertificate(departure.capacity, limit),
+  );
+  return over.length > 0
+    ? {
+        code: "departures_above_certificate",
+        departures: over.length,
+        limit,
+        firstDates: over.slice(0, NAMED_DEPARTURES).map((departure) => departure.on),
+      }
+    : null;
+}
+
+/**
+ * **The seats a departure may actually sell** (H-107): its own `capacity`,
+ * never more than its boat's certificate allows. Both count everyone aboard
+ * but crew, so they compare directly.
+ *
+ * This is the point-of-sale ceiling. The forms refuse a capacity above the
+ * certificate, but a departure can still carry one — written before H-107,
+ * copied, rolled from a series, reinstated, or moved onto a smaller hull — and
+ * the booking transaction reads this under the trip-row lock so none of those
+ * paths can sell seat certificate + 1. No boat, or no certificate recorded,
+ * means the capacity alone binds.
+ */
+export function sellableSeats(
+  capacity: number,
+  certifiedPassengers: number | null | undefined,
+): number {
+  return certifiedPassengers == null ? capacity : Math.min(capacity, certifiedPassengers);
+}
+
+/**
+ * A new departure's seats, lowered to its boat's certificate (H-107) — for the
+ * paths that write a departure from another one rather than from a form: a
+ * copy, and the nightly series roll. The source may predate H-107, or its
+ * template may be cancelled or past and never re-saved; the new row starts
+ * inside the limit instead of carrying the old number forward. A divers-only
+ * limit comes down with it, so it never passes the boat's.
+ */
+export function seatsWithinCertificate(
+  seats: { capacity: number; diverCapacity: number | null },
+  certifiedPassengers: number | null | undefined,
+): { capacity: number; diverCapacity: number | null } {
+  const capacity = sellableSeats(seats.capacity, certifiedPassengers);
+  const diverCapacity =
+    seats.diverCapacity === null ? null : Math.min(seats.diverCapacity, capacity);
+  return { capacity, diverCapacity };
 }
 
 /**

@@ -9,6 +9,7 @@ import { listActiveCourses } from "@/db/courses";
 import { getDiveSite, listDiveSites } from "@/db/dive-sites";
 import { discardFormDraft } from "@/db/form-drafts";
 import { getMovePreflight } from "@/db/move-preflight";
+import { recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
 import { createTripRequestInvitations } from "@/db/trip-invitations";
 import { getTripLens, listTripLenses } from "@/db/trip-lenses";
@@ -429,6 +430,12 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   // be one of *this* shop's live words.
   if (lensId && !(await getTripLens(db, shop.id, lensId))) return await invalid();
 
+  // The hull the panel just assigned. Its own prefill puts this number in
+  // the box, but the box is editable afterwards and the server has to be the
+  // one that says no — to the hull's seats and to its certificate (H-107).
+  const assignedBoat = boatId
+    ? ((await listBoats(await getDb(), shop.id)).find((boat) => boat.id === boatId) ?? null)
+    : null;
   const details = tripDetailsPatch(
     {
       date,
@@ -443,13 +450,8 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       diveMode,
       boatId,
       capacity,
-      // The hull the panel just assigned. Its own prefill puts this number in
-      // the box, but the box is editable afterwards and the server has to be
-      // the one that says no.
-      boatCapacity: boatId
-        ? ((await listBoats(await getDb(), shop.id)).find((boat) => boat.id === boatId)?.capacity ??
-          null)
-        : null,
+      boatCapacity: assignedBoat?.capacity ?? null,
+      boatCertifiedPassengers: assignedBoat?.certifiedPassengers ?? null,
     },
     shop,
   );
@@ -464,6 +466,14 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       // its refusals through `BUILDER_NOTICE_KEYS`. `count` rides alongside so
       // the banner can name the hull's number rather than say "too many".
       redirect(`${back}?builder=capacity-above-boat&count=${details.boatCapacity}`);
+    }
+    if (details.reason === "capacity_above_certificate") {
+      await trackEvent({
+        name: "schedule_builder_action",
+        action: "add",
+        outcome: "capacity_above_certificate",
+      });
+      redirect(`${back}?builder=capacity-above-certificate&count=${details.limit}`);
     }
     if (details.reason === "end_before_start") {
       await trackEvent({
@@ -534,6 +544,13 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
         });
       }
     }
+    // One line for the series, on its first instance, rather than one per
+    // week it repeats (D5).
+    await recordShopActivity(db, {
+      shopId: shop.id,
+      actorPersonId: session.user.personId,
+      write: { code: "series_added", tripId: firstTrip.id },
+    });
     await createTripRequestInvitations(db, {
       shopId: shop.id,
       tripId: firstTrip.id,
@@ -553,6 +570,11 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     scheduleDays,
   });
   if (!created) return await invalid();
+  await recordShopActivity(db, {
+    shopId: shop.id,
+    actorPersonId: session.user.personId,
+    write: { code: "departure_added", tripId: created.id },
+  });
   if (crewPersonIds.length > 0) {
     await setTripCrew(db, shop.id, created.id, crewPersonIds, {
       actorPersonId: session.user.personId,
@@ -627,6 +649,9 @@ async function addPatternDeparture(
       boatId,
       capacity: also.capacity ?? fallback.capacity,
       boatCapacity: boatId ? (boats?.find((boat) => boat.id === boatId)?.capacity ?? null) : null,
+      boatCertifiedPassengers: boatId
+        ? (boats?.find((boat) => boat.id === boatId)?.certifiedPassengers ?? null)
+        : null,
     },
     shop,
   );
@@ -651,6 +676,11 @@ async function addPatternDeparture(
     scheduleDays: details.patch.scheduleDays,
   });
   if (!created) return false;
+  await recordShopActivity(db, {
+    shopId: shop.id,
+    actorPersonId: input.actorPersonId,
+    write: { code: "departure_added", tripId: created.id },
+  });
   const crew = also.crewPersonIds.length > 0 ? also.crewPersonIds : fallback.crewPersonIds;
   if (crew.length > 0) {
     await setTripCrew(db, shop.id, created.id, crew, { actorPersonId: input.actorPersonId });
@@ -749,7 +779,7 @@ const moveSchema = z.object({
 
 export async function moveDepartureAction(shopSlug: string, formData: FormData) {
   const back = boardPath(shopSlug);
-  const { db, shop } = await requireBoardAuthor(shopSlug);
+  const { session, db, shop } = await requireBoardAuthor(shopSlug);
   const parsed = moveSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     await trackEvent({ name: "schedule_builder_action", action: "move", outcome: "invalid" });
@@ -772,6 +802,11 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
     redirect(`${back}?builder=${outcome.reason.replace(/_/g, "-")}`);
   }
   await trackEvent({ name: "schedule_builder_action", action: "move", outcome: "ok" });
+  await recordShopActivity(db, {
+    shopId: shop.id,
+    actorPersonId: session.user.personId,
+    write: { code: "departure_moved", tripId: parsed.data.tripId },
+  });
   // A move that had to let go of gear says so on the way back. Silence here is
   // a unit somebody still thinks is packed for this departure.
   revalidateAndRedirect(
@@ -790,7 +825,7 @@ const duplicateSchema = z.object({
 
 export async function duplicateDepartureAction(shopSlug: string, formData: FormData) {
   const back = boardPath(shopSlug);
-  const { db, shop } = await requireBoardAuthor(shopSlug);
+  const { session, db, shop } = await requireBoardAuthor(shopSlug);
   const parsed = duplicateSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "invalid" });
@@ -813,12 +848,17 @@ export async function duplicateDepartureAction(shopSlug: string, formData: FormD
     redirect(`${back}?builder=invalid`);
   }
   await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "ok" });
+  await recordShopActivity(db, {
+    shopId: shop.id,
+    actorPersonId: session.user.personId,
+    write: { code: "departure_copied", tripId: copy.id },
+  });
   revalidateAndRedirect(back, `${back}?builder=copied`);
 }
 
 export async function removeDepartureAction(shopSlug: string, formData: FormData) {
   const back = boardPath(shopSlug);
-  const { db, shop } = await requireBoardAuthor(shopSlug);
+  const { session, db, shop } = await requireBoardAuthor(shopSlug);
   const tripId = z.uuid().safeParse(formData.get("tripId"));
   if (!tripId.success) {
     await trackEvent({ name: "schedule_builder_action", action: "remove", outcome: "invalid" });
@@ -835,5 +875,10 @@ export async function removeDepartureAction(shopSlug: string, formData: FormData
     redirect(`${back}?builder=${outcome.reason.replace(/_/g, "-")}`);
   }
   await trackEvent({ name: "schedule_builder_action", action: "remove", outcome: "ok" });
+  await recordShopActivity(db, {
+    shopId: shop.id,
+    actorPersonId: session.user.personId,
+    write: { code: "departure_deleted", tripId: tripId.data },
+  });
   revalidateAndRedirect(back, `${back}?builder=removed`);
 }

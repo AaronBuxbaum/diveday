@@ -106,6 +106,8 @@ function noticeMessages(
     "address-invalid": { tone: "danger", text: t("settings.main.notice.addressInvalid") },
     "review-url-saved": { tone: "success", text: t("settings.main.notice.reviewUrlSaved") },
     "review-url-invalid": { tone: "danger", text: t("settings.main.notice.reviewUrlInvalid") },
+    "desk-hours-saved": { tone: "success", text: t("settings.main.notice.deskHoursSaved") },
+    "desk-hours-invalid": { tone: "danger", text: t("settings.main.notice.deskHoursInvalid") },
     "search-listing-on": { tone: "success", text: t("settings.main.notice.searchListingOn") },
     "search-listing-off": { tone: "success", text: t("settings.main.notice.searchListingOff") },
     connected: { tone: "success", text: t("settings.main.notice.connected") },

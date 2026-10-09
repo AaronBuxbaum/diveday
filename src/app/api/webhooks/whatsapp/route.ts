@@ -1,4 +1,5 @@
 import { getDb } from "@/db/client";
+import { pingDeskAfterHoursSafely } from "@/db/desk-pings";
 import { recordInboundMessage } from "@/db/inbound-messages";
 import { applyProviderEmailEvent } from "@/db/notifications";
 import { handleInboundReplyKeyword } from "@/db/reply-keywords";
@@ -110,6 +111,9 @@ export async function POST(request: Request) {
       if (outcome !== "not_a_keyword") {
         log("whatsapp_webhook.reply_keyword", "info", { shopId, outcome });
       }
+      // The desk's after-hours ping (src/db/desk-pings.ts): only for a message
+      // actually filed, and never able to fail this webhook.
+      await pingDeskAfterHoursSafely(db, { shopId, receivedAt: message.receivedAt });
     }
   }
 

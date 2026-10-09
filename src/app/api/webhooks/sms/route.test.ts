@@ -6,6 +6,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 vi.mock("@/db/notifications", () => ({ applyProviderEmailEvent: vi.fn() }));
 vi.mock("@/db/sms-opt-outs", () => ({ recordSmsKeyword: vi.fn() }));
+vi.mock("@/db/running-late", () => ({ markPhoneRunningLate: vi.fn() }));
 vi.mock("@/lib/notifications/sns", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/notifications/sns")>();
   return { ...actual, verifySnsMessage: vi.fn(), confirmSnsSubscription: vi.fn() };
@@ -14,6 +15,7 @@ vi.mock("@/lib/notifications/sns", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { applyProviderEmailEvent } = await import("@/db/notifications");
 const { recordSmsKeyword } = await import("@/db/sms-opt-outs");
+const { markPhoneRunningLate } = await import("@/db/running-late");
 const { verifySnsMessage } = await import("@/lib/notifications/sns");
 const { POST } = await import("./route");
 
@@ -51,6 +53,7 @@ beforeEach(() => {
   vi.mocked(getDb).mockResolvedValue(FAKE_DB as never);
   vi.mocked(applyProviderEmailEvent).mockReset().mockResolvedValue("applied");
   vi.mocked(recordSmsKeyword).mockReset();
+  vi.mocked(markPhoneRunningLate).mockReset().mockResolvedValue({ status: "closed" });
   vi.mocked(verifySnsMessage).mockReset();
 });
 
@@ -79,6 +82,19 @@ describe("sms webhook route — replies to the texting number", () => {
     });
   });
 
+  it("marks the number's next departure when it replies LATE, at the signed time (J3)", async () => {
+    verified(inbound("Late"));
+    const response = await POST(webhookRequest());
+    expect(response.status).toBe(200);
+    expect(markPhoneRunningLate).toHaveBeenCalledWith(FAKE_DB, {
+      phone: "+13055550134",
+      now: new Date("2026-10-07T00:00:00.000Z"),
+    });
+    // Never the stop list, and never a delivery receipt.
+    expect(recordSmsKeyword).not.toHaveBeenCalled();
+    expect(applyProviderEmailEvent).not.toHaveBeenCalled();
+  });
+
   it("acknowledges HELP and any other reply without changing anything", async () => {
     for (const body of ["HELP", "See you at the dock"]) {
       verified(inbound(body));
@@ -86,6 +102,7 @@ describe("sms webhook route — replies to the texting number", () => {
       expect(response.status).toBe(200);
     }
     expect(recordSmsKeyword).not.toHaveBeenCalled();
+    expect(markPhoneRunningLate).not.toHaveBeenCalled();
     expect(applyProviderEmailEvent).not.toHaveBeenCalled();
   });
 

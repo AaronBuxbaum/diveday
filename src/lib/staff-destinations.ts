@@ -140,7 +140,8 @@ export type StaffDestinationId =
   | "settings"
   | "team"
   | "calendarFeed"
-  | "emailSettings";
+  | "emailSettings"
+  | "activity";
 
 /**
  * The word each destination goes by, resolved from the staff bundle by
@@ -200,6 +201,7 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   team: "shared.shopNavLinks.team",
   calendarFeed: "shared.shopNavLinks.calendarFeed",
   emailSettings: "shared.shopNavLinks.emailSettings",
+  activity: "shared.shopNavLinks.activity",
 };
 
 /**
@@ -302,6 +304,17 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // The staffer's own email (the Monday email, `src/lib/weekly-digest.ts`).
   // Ungated for the calendar feed's reason: any staffer may ask for it.
   { id: "emailSettings", suffix: "/settings/email", section: "settings", inPalette: true },
+  // The shop's activity log (D5): who refunded, who wrote a seat past a
+  // missing card, who changed a departure. Owner/manager reading, the
+  // settings gate's own set (`canViewShopActivity`); filed under Settings'
+  // Data group, and found by name in the search.
+  {
+    id: "activity",
+    suffix: "/settings/activity",
+    section: "settings",
+    inPalette: true,
+    gate: "settings",
+  },
   // Last: Settings is where a shop goes when nothing else was the answer.
   // `/settings/*` sub-pages light it by prefix; Team and the calendar feed win
   // their own paths by being the longer match.

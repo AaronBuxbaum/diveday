@@ -1,5 +1,6 @@
 import { getDb } from "@/db/client";
 import { applyProviderEmailEvent } from "@/db/notifications";
+import { markPhoneRunningLate } from "@/db/running-late";
 import { recordSmsKeyword } from "@/db/sms-opt-outs";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
@@ -14,8 +15,9 @@ import {
 /**
  * SMS delivery receipts (docs ADR 20260802-sms-delivery-receipts), and the
  * STOP and START replies to DiveDay's texting number, which AWS End User
- * Messaging forwards to the same topic (ADR 20261007-sms-stop-and-help). HELP
- * arrives too and is ignored: AWS has already answered it from the number.
+ * Messaging forwards to the same topic (ADR 20261007-sms-stop-and-help), and
+ * a `LATE` reply (J3), which marks the diver's next departure. HELP arrives
+ * too and is ignored: AWS has already answered it from the number.
  *
  * Structurally identical to `/api/webhooks/ses` — same SNS envelope, same
  * verification, same subscription handshake — because it deliberately arrives
@@ -49,6 +51,17 @@ export async function POST(request: Request) {
   }
 
   const reply = parseSmsReply(message.Message);
+  if (reply.kind === "late") {
+    // The signed envelope's own time, as for STOP: "said 7:42" is when the
+    // diver sent it, not when a retried delivery reached us.
+    const outcome = await markPhoneRunningLate(await getDb(), {
+      phone: reply.phone,
+      now: new Date(message.Timestamp),
+    });
+    // The number and the booking stay out of the log line.
+    log("sms_webhook.reply_applied", "info", { kind: reply.kind, outcome: outcome.status });
+    return new Response(null, { status: 200 });
+  }
   if (reply.kind !== "ignored") {
     // The signed envelope's own time, not ours: a retried delivery must not
     // read as newer than a reply the diver sent after it.

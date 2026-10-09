@@ -16,7 +16,7 @@ const ORIGIN = "https://diveday.example";
  * decision 2). Change a name and a shop's site silently goes blank.
  */
 describe("the embed grammar", () => {
-  it("names eight kinds", () => {
+  it("names nine kinds", () => {
     expect([...EMBED_KINDS]).toEqual([
       "button",
       "lightbox",
@@ -24,6 +24,7 @@ describe("the embed grammar", () => {
       "grid",
       "departure",
       "courses",
+      "reviews",
       "qr",
       "partner",
     ]);
@@ -122,12 +123,23 @@ describe("the embed grammar", () => {
     expect(url.searchParams.get("show")).toBe("open-water");
   });
 
+  it("frames the reviews widget by its own path", () => {
+    expect(
+      embedSnippet(ORIGIN, "blue-mantis", "reviews", DEFAULT_EMBED_OPTIONS, { button: "Book" }),
+    ).toContain(
+      '<div data-diveday="reviews" data-shop="blue-mantis" data-look="site" data-lang="auto"></div>',
+    );
+    expect(embedFrameUrl(ORIGIN, "blue-mantis", "reviews")).toBe(
+      "https://diveday.example/s/blue-mantis/embed/reviews",
+    );
+  });
+
   it("leaves the whole-board widgets whole, whatever show is set to", () => {
     // The grid and the calendar *are* the board. A `show` on either would be a
     // narrowing nobody chose — the generator does not offer it, and the
     // grammar refuses it rather than trusting that.
     const options = { look: "site" as const, lang: "auto", show: "open-water" };
-    for (const kind of ["grid", "calendar"] as const) {
+    for (const kind of ["grid", "calendar", "reviews"] as const) {
       expect(
         new URL(embedFrameUrl(ORIGIN, "blue-mantis", kind, options)).searchParams.has("show"),
       ).toBe(false);

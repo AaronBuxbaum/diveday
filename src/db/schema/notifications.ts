@@ -416,7 +416,13 @@ export const inboundChannel = pgEnum("inbound_channel", ["email", "sms", "whatsa
  * what it meant. Null — the overwhelming majority — is a message a person
  * wrote in sentences, and nothing about it was interpreted.
  */
-export const inboundKeywordIntent = pgEnum("inbound_keyword_intent", ["cancel", "move", "confirm"]);
+export const inboundKeywordIntent = pgEnum("inbound_keyword_intent", [
+  "cancel",
+  "move",
+  "confirm",
+  /** `LATE` (J3): the diver told the shop they are running late. */
+  "late",
+]);
 
 /**
  * A message a diver sent *to* the shop — a reply to a booking confirmation, a

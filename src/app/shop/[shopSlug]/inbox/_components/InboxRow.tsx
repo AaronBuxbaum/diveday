@@ -25,10 +25,11 @@ const CHANNEL_KEYS: Record<InboundChannel, StaffMessageKey> = {
  * messages the inbound path recognised, and absent from every message a person
  * wrote in their own words.
  */
-const KEYWORD_KEYS: Record<"cancel" | "move" | "confirm", StaffMessageKey> = {
+const KEYWORD_KEYS: Record<"cancel" | "move" | "confirm" | "late", StaffMessageKey> = {
   cancel: "inbox.keyword.cancel",
   move: "inbox.keyword.move",
   confirm: "inbox.keyword.confirm",
+  late: "inbox.keyword.late",
 };
 
 /** A row of the "⋯" list: a list of acts, so no tick gutter. */

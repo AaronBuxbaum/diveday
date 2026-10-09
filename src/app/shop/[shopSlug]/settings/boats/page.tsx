@@ -8,7 +8,6 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import {
   controlClass,
-  DateField,
   Field,
   FieldActions,
   FieldGrid,
@@ -16,15 +15,9 @@ import {
 } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { canPersonManageShopSettings } from "@/db/authz";
-import { type Boat, countBoatDepartures, listBoats } from "@/db/boats";
-import { boatSafetyNoticeText } from "@/i18n/boat-safety-labels";
+import { countBoatDepartures, listBoats } from "@/db/boats";
 import { requestLocale } from "@/i18n/request";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import {
-  boatPaperNotices,
-  boatSafetyNoticeIsUrgent,
-  passengersAboveCertificate,
-} from "@/lib/boat-safety";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { requireShopSurface } from "@/lib/session";
@@ -33,6 +26,8 @@ import { AddPanel } from "../_components/AddPanel";
 import { settingsPaneClass } from "../_components/settings-pane";
 import { createBoatAction, deleteBoatAction, updateBoatAction } from "../actions";
 import { boatNoticeMessages } from "../sub-page-notices";
+import { BoatPaperFacts, BoatPaperFields } from "./_components/BoatPaperFields";
+import { boatCertificateError, boatRowId } from "./certificate-error";
 
 // See the sibling settings sub-pages (ADR 20260804-instant-navigation).
 export const instant = true;
@@ -62,10 +57,18 @@ export default async function BoatsSettingsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{
+    notice?: string;
+    boat?: string;
+    capacity?: string;
+    limit?: string;
+    count?: string;
+    dates?: string;
+  }>;
 }) {
   const { shopSlug } = await params;
-  const { notice } = await searchParams;
+  const query = await searchParams;
+  const { notice } = query;
   const { db, session, shop } = await requireShopSurface(shopSlug, {
     allow: canPersonManageShopSettings,
     refusal: { notice: "settings-not-authorized" },
@@ -83,11 +86,17 @@ export default async function BoatsSettingsPage({
     boatDepartures.set(boat.id, await countBoatDepartures(db, session.user.shopId, boat.id));
   }
   const banner = noticeFromParam(notice, boatNoticeMessages(t));
+  // H-107's refusal is a field error on the row it is about, not a banner.
+  const certificateError = boatCertificateError(t, query, locale);
+  const errorFor = (boat: string) =>
+    certificateError?.boat === boat
+      ? { id: `${boatRowId(boat)}-error`, text: certificateError.text }
+      : null;
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
 
   return (
     <main className={settingsPaneClass()}>
-      <FlashParams params={["notice"]} />
+      <FlashParams params={["notice", "boat", "capacity", "limit", "count", "dates"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}
@@ -101,57 +110,76 @@ export default async function BoatsSettingsPage({
             <p className="text-sm text-muted italic">{t("boats.noBoats")}</p>
           ) : (
             <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
-              {shopBoats.map((boat) => (
-                <div
-                  key={boat.id}
-                  className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 bg-surface"
-                >
-                  <form
-                    action={updateBoatAction}
-                    className="flex flex-1 flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-3 w-full"
+              {shopBoats.map((boat) => {
+                const error = errorFor(boat.id);
+                return (
+                  <div
+                    key={boat.id}
+                    id={boatRowId(boat.id)}
+                    className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 bg-surface scroll-mt-24"
                   >
-                    <input type="hidden" name="boatId" value={boat.id} />
-                    <div className="flex-1 w-full">
-                      <input
-                        name="name"
-                        type="text"
-                        required
-                        defaultValue={boat.name}
-                        placeholder={t("boats.nameLabel")}
-                        aria-label={t("boats.nameLabel")}
-                        className={controlClass}
-                      />
-                    </div>
-                    <div className="w-full sm:w-32 flex items-center gap-2">
-                      <input
-                        name="capacity"
-                        type="number"
-                        required
-                        min={1}
-                        defaultValue={boat.capacity}
-                        placeholder={t("boats.capacityLabel")}
-                        aria-label={t("boats.capacityLabel")}
-                        className={`${controlClass} tabular-nums`}
-                      />
-                    </div>
-                    {/* A textarea, because the value is a sentence of up to
+                    <form
+                      action={updateBoatAction}
+                      className="flex flex-1 flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-3 w-full"
+                    >
+                      <input type="hidden" name="boatId" value={boat.id} />
+                      <div className="flex-1 w-full">
+                        <input
+                          name="name"
+                          type="text"
+                          required
+                          defaultValue={boat.name}
+                          placeholder={t("boats.nameLabel")}
+                          aria-label={t("boats.nameLabel")}
+                          className={controlClass}
+                        />
+                      </div>
+                      <div className="w-full sm:w-32 flex items-center gap-2">
+                        <input
+                          name="capacity"
+                          type="number"
+                          required
+                          min={1}
+                          defaultValue={boat.capacity}
+                          placeholder={t("boats.capacityLabel")}
+                          aria-label={t("boats.capacityLabel")}
+                          aria-invalid={error ? true : undefined}
+                          aria-describedby={error?.id}
+                          className={`${controlClass} tabular-nums`}
+                        />
+                      </div>
+                      {/* A textarea, because the value is a sentence of up to
                         200 characters: a one-line box cut the seed's 72 at
                         its padding edge, mid-word (K-446). It grows with its
                         text and never shows fewer than two lines. */}
-                    <div className="w-full sm:basis-full">
-                      <textarea
-                        name="description"
-                        rows={2}
-                        maxLength={200}
-                        defaultValue={boat.description ?? ""}
-                        placeholder={t("boats.descriptionLabel")}
-                        aria-label={t("boats.descriptionLabel")}
-                        className={textareaClassFor(2)}
+                      <div className="w-full sm:basis-full">
+                        <textarea
+                          name="description"
+                          rows={2}
+                          maxLength={200}
+                          defaultValue={boat.description ?? ""}
+                          placeholder={t("boats.descriptionLabel")}
+                          aria-label={t("boats.descriptionLabel")}
+                          className={textareaClassFor(2)}
+                        />
+                      </div>
+                      <BoatPaperFields
+                        boat={boat}
+                        t={t}
+                        invalid={Boolean(error)}
+                        describedBy={error?.id}
                       />
-                    </div>
-                    <BoatPaperFields boat={boat} t={t} />
-                    <BoatPaperFacts boat={boat} t={t} todayLocal={todayLocal} />
-                    {/* **Save and Delete on one line**, in the update form's
+                      {error ? (
+                        <p
+                          id={error.id}
+                          role="alert"
+                          className="w-full text-sm font-medium text-danger sm:basis-full"
+                        >
+                          {error.text}
+                        </p>
+                      ) : null}
+                      <BoatPaperFacts boat={boat} t={t} todayLocal={todayLocal} />
+                      {/* **Save and Delete on one line**, in the update form's
                         own action row rather than a form of their own apart.
                         The confirm posts to the delete through `formAction`,
                         taking the row's hidden `boatId` with it; Save comes
@@ -161,15 +189,15 @@ export default async function BoatsSettingsPage({
                         a line of its own. Delete is `flush` (below), so the
                         row's gap hands back the 12px it gave up beside Save:
                         `gap-x-5`, the words 20px from Save's box as before. */}
-                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 w-full sm:w-auto justify-end">
-                      <SubmitButton
-                        pendingLabel={t("boats.submitting")}
-                        className={buttonClass({ variant: "secondary", size: "sm" })}
-                        formAction={updateBoatAction}
-                      >
-                        {t("boats.submit")}
-                      </SubmitButton>
-                      {/* **The confirm says what the delete touches.** A hull
+                      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 w-full sm:w-auto justify-end">
+                        <SubmitButton
+                          pendingLabel={t("boats.submitting")}
+                          className={buttonClass({ variant: "secondary", size: "sm" })}
+                          formAction={updateBoatAction}
+                        >
+                          {t("boats.submit")}
+                        </SubmitButton>
+                        {/* **The confirm says what the delete touches.** A hull
                           that has carried departures is history an insurer
                           asks about — the count is the fact a shop cannot get
                           from this row, and it is why this is a blocking
@@ -178,47 +206,48 @@ export default async function BoatsSettingsPage({
                           is destroyed either way; the word is still "Delete"
                           and the shop is never told about a column (ADR
                           20260820-every-delete-is-soft). */}
-                      {boatDepartures.get(boat.id) ? (
-                        <InlineConfirm
-                          formAction={deleteBoatAction}
-                          triggerLabel={t("boats.deleteBoat")}
-                          message={t("boats.deleteBoatDepartures", {
-                            count: boatDepartures.get(boat.id) ?? 0,
-                          })}
-                          cancelLabel={t("boats.deleteBoatCancel")}
-                          confirmLabel={t("boats.deleteBoatConfirm")}
-                          pendingLabel={t("boats.deleteBoatPending")}
-                          // `flush` puts "Delete boat" on the row's edge where
-                          // it ends the row (a phone); the row's `p-3` in an
-                          // `overflow-hidden` list is a pixel short of an outset
-                          // ring past the flush fill, so it is inside. The armed
-                          // block's confirm is not on that edge.
-                          triggerClassName={buttonClass({
-                            variant: "danger-ghost",
-                            size: "sm",
-                            flush: true,
-                            className: "focus-visible:focus-ring-inset",
-                          })}
-                          confirmClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
-                        />
-                      ) : (
-                        <InlineConfirm
-                          formAction={deleteBoatAction}
-                          triggerLabel={t("boats.deleteBoat")}
-                          confirmLabel={t("boats.deleteBoatConfirm")}
-                          pendingLabel={t("boats.deleteBoatPending")}
-                          triggerClassName={buttonClass({
-                            variant: "danger-ghost",
-                            size: "sm",
-                            flush: true,
-                            className: "focus-visible:focus-ring-inset",
-                          })}
-                        />
-                      )}
-                    </div>
-                  </form>
-                </div>
-              ))}
+                        {boatDepartures.get(boat.id) ? (
+                          <InlineConfirm
+                            formAction={deleteBoatAction}
+                            triggerLabel={t("boats.deleteBoat")}
+                            message={t("boats.deleteBoatDepartures", {
+                              count: boatDepartures.get(boat.id) ?? 0,
+                            })}
+                            cancelLabel={t("boats.deleteBoatCancel")}
+                            confirmLabel={t("boats.deleteBoatConfirm")}
+                            pendingLabel={t("boats.deleteBoatPending")}
+                            // `flush` puts "Delete boat" on the row's edge where
+                            // it ends the row (a phone); the row's `p-3` in an
+                            // `overflow-hidden` list is a pixel short of an outset
+                            // ring past the flush fill, so it is inside. The armed
+                            // block's confirm is not on that edge.
+                            triggerClassName={buttonClass({
+                              variant: "danger-ghost",
+                              size: "sm",
+                              flush: true,
+                              className: "focus-visible:focus-ring-inset",
+                            })}
+                            confirmClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                          />
+                        ) : (
+                          <InlineConfirm
+                            formAction={deleteBoatAction}
+                            triggerLabel={t("boats.deleteBoat")}
+                            confirmLabel={t("boats.deleteBoatConfirm")}
+                            pendingLabel={t("boats.deleteBoatPending")}
+                            triggerClassName={buttonClass({
+                              variant: "danger-ghost",
+                              size: "sm",
+                              flush: true,
+                              className: "focus-visible:focus-ring-inset",
+                            })}
+                          />
+                        )}
+                      </div>
+                    </form>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -229,11 +258,17 @@ export default async function BoatsSettingsPage({
               Captions; a row above keeps its placeholders because its values say what each box
               holds. */}
           <AddPanel title={t("boats.createTitle")}>
-            <FieldGrid as="form" columns={2} action={createBoatAction}>
+            <FieldGrid
+              as="form"
+              columns={2}
+              action={createBoatAction}
+              id={boatRowId("new")}
+              className="scroll-mt-24"
+            >
               <Field label={t("boats.nameLabel")}>
                 <input name="name" type="text" required className={controlClass} />
               </Field>
-              <Field label={t("boats.capacityLabel")}>
+              <Field label={t("boats.capacityLabel")} error={errorFor("new")?.text}>
                 <input
                   name="capacity"
                   type="number"
@@ -250,7 +285,7 @@ export default async function BoatsSettingsPage({
                   className={textareaClassFor(2)}
                 />
               </Field>
-              <BoatPaperFields t={t} className="sm:col-span-2" />
+              <BoatPaperFields t={t} className="sm:col-span-2" invalid={Boolean(errorFor("new"))} />
               <FieldActions>
                 <SubmitButton
                   pendingLabel={t("boats.submitting")}
@@ -264,89 +299,5 @@ export default async function BoatsSettingsPage({
         </div>
       </SectionCard>
     </main>
-  );
-}
-
-/**
- * **The certificate and the three paper dates** (roadmap N-10), under the
- * boat's own line. Captioned, because a date box with only a placeholder says
- * nothing once it holds a date. All four optional: an empty box is a boat the
- * shop has not dated, and nothing reads it as expired.
- */
-function BoatPaperFields({
-  boat,
-  t,
-  className = "",
-}: {
-  boat?: Boat;
-  t: StaffTranslator;
-  className?: string;
-}) {
-  return (
-    <div
-      className={`grid w-full grid-cols-1 gap-3 sm:basis-full sm:grid-cols-2 ${className}`.trim()}
-    >
-      <Field label={t("boats.certifiedPassengersLabel")}>
-        <input
-          name="certifiedPassengers"
-          type="number"
-          min={1}
-          max={999}
-          inputMode="numeric"
-          defaultValue={boat?.certifiedPassengers ?? ""}
-          className={`${controlClass} tabular-nums`}
-        />
-      </Field>
-      <Field label={t("boats.inspectionDueLabel")}>
-        <DateField name="inspectionDueOn" defaultValue={boat?.inspectionDueOn ?? ""} />
-      </Field>
-      <Field label={t("boats.registrationExpiresLabel")}>
-        <DateField name="registrationExpiresOn" defaultValue={boat?.registrationExpiresOn ?? ""} />
-      </Field>
-      <Field label={t("boats.insuranceExpiresLabel")}>
-        <DateField name="insuranceExpiresOn" defaultValue={boat?.insuranceExpiresOn ?? ""} />
-      </Field>
-    </div>
-  );
-}
-
-/**
- * What the row's own numbers say, in the pre-departure check's words: seats on
- * sale past the certificate, and a paper inside its last 30 days or past them.
- * Informs; the save still goes through. Nothing renders for a boat in order.
- */
-function BoatPaperFacts({
-  boat,
-  t,
-  todayLocal,
-}: {
-  boat: Boat;
-  t: StaffTranslator;
-  todayLocal: string;
-}) {
-  const papers = boatPaperNotices(boat, todayLocal);
-  const overSold = passengersAboveCertificate(boat.capacity, boat.certifiedPassengers);
-  if (papers.length === 0 && !overSold) return null;
-  return (
-    <ul className="w-full space-y-1 text-sm sm:basis-full">
-      {overSold ? (
-        <li className="font-medium text-warning-strong">
-          {t("boats.seatsAboveCertificate", {
-            capacity: boat.capacity,
-            limit: boat.certifiedPassengers ?? 0,
-          })}
-        </li>
-      ) : null}
-      {papers.map((notice) => (
-        <li
-          key={notice.code === "paper" ? notice.paper : notice.code}
-          className={
-            boatSafetyNoticeIsUrgent(notice) ? "font-medium text-warning-strong" : "text-muted"
-          }
-        >
-          {boatSafetyNoticeText(t, notice)}
-        </li>
-      ))}
-    </ul>
   );
 }

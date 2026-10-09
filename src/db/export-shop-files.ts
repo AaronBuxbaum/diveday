@@ -138,6 +138,11 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // from a year the shop never named.
       "season_start_month",
       "season_start_day",
+      // When somebody is at the desk, a window the shop chose (the
+      // after-hours ping, `src/lib/desk-hours.ts`). Exported for the reason
+      // the season is: a restore must not quietly move the shop's hours.
+      "desk_opens_minute",
+      "desk_closes_minute",
       // Whether the shop asked to stay out of search engines
       // (ADR 20260813-search-listing-is-a-choice). Exported because the
       // bundle is also the *backup*: a shop that opted out and later
@@ -197,6 +202,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         JSON.stringify(shop.emergencyReference),
         shop.seasonStartMonth,
         shop.seasonStartDay,
+        shop.deskOpensMinute,
+        shop.deskClosesMinute,
         shop.searchListingOptOutAt,
         shop.tagline,
         shop.description,
@@ -1123,6 +1130,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // seat, and a shop that moved its data would otherwise ask the
       // whole board the question over again.
       "carried_facts_confirmed_at",
+      // The diver saying they were running late (J3): a statement they
+      // made on this seat, in the same class as the two above.
+      "running_late_at",
       // The instructor's own words to this student, and who wrote them
       // (issues #1196, #1205). The student read it on their recap; a
       // shop moving its data takes the sentence with it.
@@ -1172,6 +1182,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
           buddyReferralByBooking.get(row.id),
           row.welcomeSharedAt,
           row.carriedFactsConfirmedAt,
+          row.runningLateAt,
           row.courseNextStep,
           row.courseNextStepAt,
           row.courseNextStepByPersonId,

@@ -453,6 +453,44 @@ describe("sendDueReminders locale (docs ADR 20260731-per-person-notification-loc
     expect(emailsFor(email, bookingId)[0]).toMatchObject({ locale: "en-US" });
   });
 
+  it("teaches LATE on the night-before text, and only there (J3)", async () => {
+    const { db, reef, personId, inWeekBucket } = await reminderContext();
+    await db.update(people).set({ email: null, phone: PHONE }).where(eq(people.id, personId));
+    const week = fakeSms();
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: fakeEmail().provider,
+      smsProvider: week.provider,
+      appOrigin: null,
+    });
+    expect(week.sent.find((m) => m.to === PHONE)?.body).not.toContain("Reply LATE");
+
+    const day = fakeSms();
+    await sendDueReminders(db, {
+      now: new Date(reef.startsAt.getTime() - 6 * 60 * 60 * 1000),
+      emailProvider: fakeEmail().provider,
+      smsProvider: day.provider,
+      appOrigin: null,
+    });
+    expect(day.sent.find((m) => m.to === PHONE)?.body).toContain("Running late? Reply LATE.");
+  });
+
+  it("teaches LATE only when the day is a boat, by dive mode (J3)", async () => {
+    const { db, reef, personId } = await reminderContext();
+    await db.update(people).set({ email: null, phone: PHONE }).where(eq(people.id, personId));
+    await db.update(trips).set({ diveMode: "shore" }).where(eq(trips.id, reef.id));
+    const day = fakeSms();
+    await sendDueReminders(db, {
+      now: new Date(reef.startsAt.getTime() - 6 * 60 * 60 * 1000),
+      emailProvider: fakeEmail().provider,
+      smsProvider: day.provider,
+      appOrigin: null,
+    });
+    const body = day.sent.find((m) => m.to === PHONE)?.body;
+    expect(body).toBeDefined();
+    expect(body).not.toContain("Reply LATE");
+  });
+
   it("keeps both channels in one language — the SMS never diverges from the email", async () => {
     const { db, shop, personId, inWeekBucket } = await reminderContext();
     await db.update(shops).set({ defaultLocale: "en-US" }).where(eq(shops.id, shop.id));

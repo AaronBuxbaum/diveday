@@ -29,6 +29,8 @@
       "addressInvalid": "No se pudo guardar esa dirección. Busca otra vez y elige tu centro en la lista.",
       "reviewUrlSaved": "Enlace de reseñas guardado.",
       "reviewUrlInvalid": "Introduce un enlace https:// completo, o vacía el campo para dejar de pedir reseñas.",
+      "deskHoursSaved": "Horario de atención guardado.",
+      "deskHoursInvalid": "Elige una hora de apertura anterior a la de cierre.",
       "searchListingOn": "Tus páginas públicas aparecen en los buscadores.",
       "searchListingOff": "Tus páginas públicas están ocultas para los buscadores. Lo que ya esté indexado puede tardar unas semanas en desaparecer.",
       "connected": "Cuenta de Stripe conectada.",
@@ -175,6 +177,15 @@
       "label": "Enlace de reseñas",
       "hint": "(opcional)",
       "submit": "Guardar enlace de reseñas",
+      "submitting": "Guardando…"
+    },
+    "deskHours": {
+      "heading": "Horario de atención",
+      "value": "De {opens} a {closes}",
+      "description": "Cuándo hay alguien en el mostrador, todos los días en la zona horaria de tu centro. Quien lo pida recibe un aviso de los mensajes de buceadores que lleguen fuera de este horario.",
+      "opens": "Abre",
+      "closes": "Cierra",
+      "submit": "Guardar horario de atención",
       "submitting": "Guardando…"
     },
     "shopPhotos": {
@@ -995,6 +1006,10 @@
       "courses": {
         "name": "Cursos",
         "hint": "La lista de cursos"
+      },
+      "reviews": {
+        "name": "Opiniones",
+        "hint": "Lo que dicen los buceadores, de tus opiniones publicadas"
       },
       "qr": {
         "name": "Código QR",

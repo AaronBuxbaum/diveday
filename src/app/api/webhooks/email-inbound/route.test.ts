@@ -13,6 +13,8 @@ vi.mock("@/db/inbound-messages", () => ({
 // run: what this file owes is that the handoff happens for a message the route
 // actually filed, and not for one it did not (ADR 20260909-reply-keywords).
 vi.mock("@/db/reply-keywords", () => ({ handleInboundReplyKeyword: vi.fn() }));
+// The after-hours desk ping, likewise: its rule is `src/db/desk-pings.test.ts`.
+vi.mock("@/db/desk-pings", () => ({ pingDeskAfterHoursSafely: vi.fn() }));
 vi.mock("@/lib/notifications/inbound-mail-store", () => ({
   inboundMailStoreFromEnvironment: vi.fn(),
 }));
@@ -24,6 +26,7 @@ vi.mock("@/lib/notifications/sns", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { recordInboundMessage, shopIdForInboundEmailToken } = await import("@/db/inbound-messages");
 const { handleInboundReplyKeyword } = await import("@/db/reply-keywords");
+const { pingDeskAfterHoursSafely } = await import("@/db/desk-pings");
 const { inboundMailStoreFromEnvironment } = await import("@/lib/notifications/inbound-mail-store");
 const sns = await import("@/lib/notifications/sns");
 const { verifySnsMessage, confirmSnsSubscription } = sns;
@@ -103,6 +106,7 @@ beforeEach(() => {
     .mockResolvedValue({ status: "recorded", id: "im1", personId: "p1" });
   vi.mocked(shopIdForInboundEmailToken).mockReset().mockResolvedValue(SHOP_ID);
   vi.mocked(handleInboundReplyKeyword).mockReset().mockResolvedValue("not_a_keyword");
+  vi.mocked(pingDeskAfterHoursSafely).mockReset();
   read.mockReset().mockResolvedValue({ status: "ok", message: RAW_MESSAGE });
   vi.mocked(inboundMailStoreFromEnvironment)
     .mockReset()
@@ -189,6 +193,11 @@ describe("email-inbound webhook — filing a reply", () => {
       shopId: SHOP_ID,
       inboundMessageId: "im1",
     });
+    // And tells the desk, if it is closed, by the message's own time.
+    expect(pingDeskAfterHoursSafely).toHaveBeenCalledWith(FAKE_DB, {
+      shopId: SHOP_ID,
+      receivedAt: new Date("2026-07-21T12:59:58.000Z"),
+    });
   });
 
   /**
@@ -203,6 +212,7 @@ describe("email-inbound webhook — filing a reply", () => {
     expect((await POST(webhookRequest("{}"))).status).toBe(200);
     expect(recordInboundMessage).toHaveBeenCalled();
     expect(handleInboundReplyKeyword).not.toHaveBeenCalled();
+    expect(pingDeskAfterHoursSafely).not.toHaveBeenCalled();
   });
 
   /**
@@ -239,6 +249,8 @@ describe("email-inbound webhook — filing a reply", () => {
         senderAuthenticated: false,
       }),
     );
+    // A spoofed burst to the reply-to address must not page the owner.
+    expect(pingDeskAfterHoursSafely).not.toHaveBeenCalled();
   });
 
   /**

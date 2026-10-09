@@ -4,7 +4,14 @@ import { describe, expect, it, vi } from "vitest";
 import { createBooking } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
-import { bookings, certifications, courses, tripRequirements, trips } from "@/db/schema";
+import {
+  activityEvents,
+  bookings,
+  certifications,
+  courses,
+  tripRequirements,
+  trips,
+} from "@/db/schema";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { seededShopContext } from "@/test/db";
 import {
@@ -494,6 +501,10 @@ describe("removing a paid diver from the manifest", () => {
       shopId: shop.id,
       bookingId,
     });
+    // And the activity log names who sent the money back (D5).
+    expect(await activityLines(db, bookingId, "seat_refunded")).toEqual([
+      expect.objectContaining({ actorPersonId: owner, bookingId }),
+    ]);
   });
 });
 
@@ -864,5 +875,39 @@ describe("money on the trip page", () => {
       markPaymentAction(shop.slug, tripId, form("refunded")),
     );
     expect(refunded).toContain("notice=not-authorized");
+    // A refused write-off leaves no line claiming one happened.
+    expect(await activityLines(db, booking.id, "payment_waived")).toEqual([]);
+    expect(await activityLines(db, booking.id, "payment_marked_refunded")).toEqual([]);
+  });
+
+  it("names the owner who wrote a seat off in the activity log", async () => {
+    const { db, shop, tripId, owner } = await context();
+    const [booking] = await db.select().from(bookings).where(eq(bookings.tripId, tripId)).limit(1);
+    if (!booking) throw new Error("seeded trip has no bookings");
+    signIn(shop, owner);
+
+    await redirectedTo(() =>
+      markPaymentAction(shop.slug, tripId, paymentForm(booking.id, "waived")),
+    );
+    await redirectedTo(() =>
+      markPaymentAction(shop.slug, tripId, paymentForm(booking.id, "refunded")),
+    );
+    // Counter cash is not a decision about money, and writes no line.
+    await redirectedTo(() => markPaymentAction(shop.slug, tripId, paymentForm(booking.id, "paid")));
+
+    expect(await activityLines(db, booking.id, "payment_waived")).toEqual([
+      expect.objectContaining({ actorPersonId: owner }),
+    ]);
+    expect(await activityLines(db, booking.id, "payment_marked_refunded")).toEqual([
+      expect.objectContaining({ actorPersonId: owner }),
+    ]);
   });
 });
+
+/** The activity lines one seat carries under one code. */
+async function activityLines(db: AppDb, bookingId: string, code: string) {
+  return db
+    .select()
+    .from(activityEvents)
+    .where(and(eq(activityEvents.bookingId, bookingId), eq(activityEvents.code, code)));
+}

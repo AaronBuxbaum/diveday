@@ -5,7 +5,7 @@ import { partnerReferralSlug } from "./referrals";
 /**
  * The embed catalogue's grammar (Harbor — ADR 20260901-diveday-reimagined,
  * decision 2): what a shop pastes, and what the loader on its site turns that
- * into. Eight things a shop can put on its own website, chosen in Settings →
+ * into. Nine things a shop can put on its own website, chosen in Settings →
  * Website embed:
  *
  * - **button** — a link to the storefront, in the shop's colour;
@@ -14,6 +14,7 @@ import { partnerReferralSlug } from "./referrals";
  * - **grid** — trips and courses as cards;
  * - **departure** — one departure as a card, for a blog post;
  * - **courses** — the course list;
+ * - **reviews** — what divers said, quoted from the shop's published reviews;
  * - **qr** — a QR code for the counter and the boat, pointing at the storefront;
  * - **partner** — a referral link a hotel or resort can hand out.
  *

@@ -22,7 +22,9 @@
     "hasRoster": "Divers have booked this departure, so it can’t be deleted. Cancel it from its own page.",
     "addedNamed": "“{title}” is on the board.",
     "addedSeries": "“{title}” is on the board: {count, plural, one {# trip} other {# trips}} scheduled.",
-    "capacityAboveBoat": "That capacity is above what the assigned boat holds."
+    "capacityAboveBoat": "That capacity is above what the assigned boat holds.",
+    "capacityAboveCertificate": "That capacity is above the passenger limit on the boat’s certificate.",
+    "capacityAboveCertificateCount": "{count, plural, one {The boat’s certificate allows # passenger. Pick a capacity no higher.} other {The boat’s certificate allows # passengers. Pick a capacity no higher.}}"
   },
   "builder": {
     "ariaLabel": "Schedule builder",

@@ -69,7 +69,7 @@ import {
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { getShopCurrency } from "./stripe-accounts";
 import { liveTrip } from "./trips-live";
-import { heldSeatCounts } from "./trips-queries";
+import { heldSeatCounts, sellableCapacity } from "./trips-queries";
 
 /**
  * A booking names its diver one of two ways: a walk-in supplies a name (and,
@@ -901,9 +901,19 @@ async function createBookingRecord(
   // a snorkeler and a rider are bodies like anyone else — and divers alone
   // count against `diver_capacity`. Never a pre-check: the counts are read
   // here, inside the transaction that inserts.
+  //
+  // **The boat's limit is the certificate's when that is lower** (H-107):
+  // `sellableCapacity` caps `trips.capacity` at the boat's certified passenger
+  // number, read here under the same lock. The forms refuse an over-limit
+  // capacity, but a copied, rolled, reinstated or pre-H-107 departure can
+  // still carry one, and this is the one gate all of them reach.
   const held = await heldSeatCounts(tx, trip.shopId, trip.id);
   const booked = held.aboard;
-  const seatFull = seatRefusal(participantType, trip, held);
+  const seatFull = seatRefusal(
+    participantType,
+    { ...trip, capacity: await sellableCapacity(tx, trip) },
+    held,
+  );
   if (seatFull) {
     return { ok: false, reason: seatFull };
   }
@@ -1038,6 +1048,8 @@ async function createBookingRecord(
         // returns (`createBookingParty`).
         partyLeadBookingId: null,
         claimedAt: null,
+        // "Running late" (J3) was said about the seat's earlier life.
+        runningLateAt: null,
         // Same reasoning as the two lines above: a reactivated row is a *new*
         // booking, so it carries this booking's referral — including null,
         // which un-credits a partner who did not send this visit rather than
@@ -1385,9 +1397,14 @@ export async function restoreBooking(
     // Both limits, exactly as a new seat is measured: the boat against every
     // held seat, the divers-only limit against divers (ADR
     // 20261007-participant-types).
+    // The boat's certificate caps it under the same lock (H-107).
     const held = await heldSeatCounts(tx, trip.shopId, trip.id);
     const booked = held.aboard;
-    const full = seatRefusal(booking.participantType, trip, held);
+    const full = seatRefusal(
+      booking.participantType,
+      { ...trip, capacity: await sellableCapacity(tx, trip) },
+      held,
+    );
     if (full) return full;
 
     if (trip.courseId) {

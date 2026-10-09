@@ -49,6 +49,9 @@ export const READY_NOTICES: Record<
   // are deliberately never distinguished to a diver (a booking-state oracle is
   // still a leak); the shop's number is on the card below.
   "error-cancel": { tone: "danger", key: "ready.cancelUnavailable" },
+  // "Running late" tapped on a seat that is no longer open (J3): checked in,
+  // or the boat's time has passed since the page loaded.
+  "error-late": { tone: "danger", key: "ready.lateUnavailable" },
   // "Anything changed?" answered — the returning diver's one question (ADR
   // 20260904-reef-all-the-way-down, D15). Its own notice because the answer
   // leaves nothing on screen that says it landed: the step simply settles, and

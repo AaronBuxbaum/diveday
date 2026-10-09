@@ -19,7 +19,9 @@ test.describe("the Monday email, on a shop of the test's own", () => {
     test.setTimeout(60_000);
     await page.goto(emailSettingsFor(privateShop.slug));
     await expect(page.getByRole("heading", { level: 1, name: "Email" })).toBeVisible();
-    const main = page.getByRole("main");
+    // The page holds a second toggle (the after-hours ping), so this one is
+    // read inside its own card.
+    const main = page.getByRole("region", { name: "Monday email" });
     await expect(main.getByText("On", { exact: true })).toBeVisible();
 
     await main.getByRole("button", { name: "Turn off" }).click();
@@ -57,7 +59,7 @@ test.describe("the Monday email for a staffer who is not an owner", () => {
 
   test("reaches their own Email settings with the email off by default", async ({ page }) => {
     await page.goto(emailSettingsFor("blue-mantis"));
-    const main = page.getByRole("main");
+    const main = page.getByRole("region", { name: "Monday email" });
     await expect(main.getByRole("heading", { name: "Monday email" })).toBeVisible();
     await expect(main.getByText("Off", { exact: true })).toBeVisible();
     await expect(main.getByRole("button", { name: "Turn on" })).toBeVisible();

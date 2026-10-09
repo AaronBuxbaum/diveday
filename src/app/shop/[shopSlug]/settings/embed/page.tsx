@@ -137,6 +137,7 @@ export default async function EmbedSettingsPage({
       <EmbedGenerator
         origin={origin}
         shopSlug={shop.slug}
+        kinds={EMBED_KINDS.filter((kind) => kind !== "reviews" || shop.reviewsEnabled)}
         trips={tripChoices}
         courses={courseChoices}
         locales={DIVER_LOCALES}

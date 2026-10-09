@@ -785,6 +785,11 @@
     "paymentCancelled": "Pago cancelado. Tu plaza sigue reservada.",
     "codeUsedUp": "Ese código ya se ha agotado. Tu plaza sigue reservada y puedes pagar el precio completo abajo.",
     "cancelSpot": "Cancelar mi plaza",
+    "lateLead": "¿Vas de camino pero con retraso?",
+    "lateButton": "Llego tarde",
+    "lateSending": "Avisando al centro…",
+    "lateSaid": "A las {time} avisaste al centro de que llegas tarde.",
+    "lateUnavailable": "El aviso no llegó al centro. Si sigues de camino, llámalos.",
     "cancelConfirm": "¿Cancelar tu plaza en {trip}? Esto no se puede deshacer.",
     "cancelConfirmButton": "Sí, cancelar mi plaza",
     "neverMind": "Mejor no",
@@ -4032,7 +4037,10 @@
       "codeMismatch": "Ese código no coincide, así que no ha cambiado nada. {shopName} se ocupa de esto.",
       "nothingToCancel": "No encontramos ninguna plaza que cancelar. {shopName} se ocupa de esto.",
       "ambiguous": "Tienes más de una salida reservada. {shopName} se ocupa de esto para dar de baja la correcta.",
-      "moveHandoff": "{shopName} te escribe sobre el cambio de tu plaza."
+      "moveHandoff": "{shopName} te escribe sobre el cambio de tu plaza.",
+      "lateOffer": "¿Llegas tarde? Responde TARDE.",
+      "lateNoted": "Gracias. {shopName} ya sabe que llegas tarde.",
+      "lateNothing": "No encontramos ninguna salida tuya en el próximo día, así que no se marcó nada. Tu mensaje le llega a {shopName}."
     },
     "common": {
       "greeting": "Hola, {firstName}:",
@@ -4359,6 +4367,12 @@
         "crew": "tripulante"
       },
       "open": "Abrir la salida"
+    },
+    "deskAfterHours": {
+      "subject": "{shopName}: {count, plural, one {# buceador escribió} other {# buceadores escribieron}} fuera de horario",
+      "body": "{count, plural, one {# buceador escribió} other {# buceadores escribieron}} fuera de horario.",
+      "open": "Abrir Mensajes",
+      "turnOff": "Desactívalos en tus ajustes de correo"
     },
     "smsWorkOrder": {
       "ready": "{shopName}: ya puedes recoger tu equipo de la orden #{number} ({pieces}).",

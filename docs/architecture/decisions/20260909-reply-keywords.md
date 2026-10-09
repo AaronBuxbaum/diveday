@@ -149,3 +149,13 @@ that: it moves money, frees a place on a boat, and nobody looks at it before it 
 - Two-way SMS is still `waiting-on-external` (20260907 decision 7). The day it lands, the keyword
   path needs only the channel to start writing `sms` rows — the parse, the code and the copy are
   channel-agnostic already.
+
+## Amendment 2026-10-09 — LATE (J3)
+
+A third intent, `late`, answers to `LATE` and its Spanish words (no single letter: an `L` sent by
+accident should not tell a crew anything). It needs no confirmation code, because it releases
+nothing and gates nothing: the attributed address marks the diver's soonest open seat as
+**running late** (`markPersonRunningLate`, `src/db/running-late.ts`), with the party's seats when
+it is an organizer's, and the answer says the shop can see it. A `LATE` with nothing inside the
+window (from the night-before brief until the boat has sailed) is answered and left on the
+worklist. The night-before brief's text teaches it on a boat day, as `TARDE` in Spanish.

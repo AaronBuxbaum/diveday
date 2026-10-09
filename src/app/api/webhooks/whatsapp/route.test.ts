@@ -11,12 +11,14 @@ vi.mock("@/db/inbound-messages", () => ({ recordInboundMessage: vi.fn() }));
 // keyword path has its own tests, and what this file owes is the handoff (ADR
 // 20260909-reply-keywords).
 vi.mock("@/db/reply-keywords", () => ({ handleInboundReplyKeyword: vi.fn() }));
+vi.mock("@/db/desk-pings", () => ({ pingDeskAfterHoursSafely: vi.fn() }));
 vi.mock("@/db/whatsapp-accounts", () => ({ shopIdForWhatsAppWaba: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { applyProviderEmailEvent } = await import("@/db/notifications");
 const { recordInboundMessage } = await import("@/db/inbound-messages");
 const { handleInboundReplyKeyword } = await import("@/db/reply-keywords");
+const { pingDeskAfterHoursSafely } = await import("@/db/desk-pings");
 const { shopIdForWhatsAppWaba } = await import("@/db/whatsapp-accounts");
 const { POST } = await import("./route");
 
@@ -52,6 +54,7 @@ beforeEach(() => {
     .mockResolvedValue({ status: "recorded", id: "m1", personId: "p1" });
   vi.mocked(shopIdForWhatsAppWaba).mockReset().mockResolvedValue(SHOP_ID);
   vi.mocked(handleInboundReplyKeyword).mockReset().mockResolvedValue("not_a_keyword");
+  vi.mocked(pingDeskAfterHoursSafely).mockReset();
 });
 
 describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbox)", () => {
@@ -78,6 +81,10 @@ describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbo
       mediaCount: 0,
       receivedAt: new Date(1785672000 * 1000),
       providerMessageId: "wamid.in1",
+    });
+    expect(pingDeskAfterHoursSafely).toHaveBeenCalledWith(FAKE_DB, {
+      shopId: SHOP_ID,
+      receivedAt: new Date(1785672000 * 1000),
     });
     expect(applyProviderEmailEvent).not.toHaveBeenCalled();
   });
@@ -119,9 +126,12 @@ describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbo
     });
 
     vi.mocked(handleInboundReplyKeyword).mockClear();
+    vi.mocked(pingDeskAfterHoursSafely).mockClear();
     vi.mocked(recordInboundMessage).mockResolvedValue({ status: "duplicate" });
     expect((await POST(webhookRequest(payload))).status).toBe(200);
     expect(handleInboundReplyKeyword).not.toHaveBeenCalled();
+    // Nor does a redelivery ping the desk a second time.
+    expect(pingDeskAfterHoursSafely).not.toHaveBeenCalled();
   });
 
   it("is unavailable rather than open when no app secret is configured", async () => {

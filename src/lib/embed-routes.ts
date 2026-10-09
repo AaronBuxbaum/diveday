@@ -13,16 +13,16 @@ const EMBEDDABLE_TRIP_PAGE = /^\/s\/[a-z0-9-]+\/trips\/[^/]+\/?$/;
 /**
  * The widget views of the embed catalogue (Harbor — ADR
  * 20260901-diveday-reimagined, decision 2): `/s/<slug>/embed/grid`,
- * `/embed/departure`, `/embed/courses`. Each exists only to be framed, so it
+ * `/embed/departure`, `/embed/courses`, `/embed/reviews`. Each exists only to be framed, so it
  * is an embed request by path alone — no `?embed=1` to forget or to smuggle.
  * The calendar is the schedule page in its `?embed=1` mode, as before. It
  * renders from `embed/schedule` (see `embedRenderPath`), which is deliberately
  * not on this list: a widget is framable by path alone, and that segment is
  * framable only in the shape the proxy's rewrite gives it, with `?embed=1`.
  */
-export const EMBED_WIDGETS = ["grid", "departure", "courses"] as const;
+export const EMBED_WIDGETS = ["grid", "departure", "courses", "reviews"] as const;
 export type EmbedWidget = (typeof EMBED_WIDGETS)[number];
-const EMBEDDABLE_WIDGET = /^\/s\/[a-z0-9-]+\/embed\/(grid|departure|courses)\/?$/;
+const EMBEDDABLE_WIDGET = /^\/s\/[a-z0-9-]+\/embed\/(grid|departure|courses|reviews)\/?$/;
 
 export function isEmbedWidgetRoute(pathname: string): boolean {
   return EMBEDDABLE_WIDGET.test(pathname);

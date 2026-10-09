@@ -18,6 +18,7 @@ import { selfCancelBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { getInboundMessage } from "./inbound-messages";
 import { refundBookingOnCancellation } from "./refunds";
+import { markPersonRunningLate } from "./running-late";
 import { bookings, inboundMessages, notificationDeliveries, people, shops, trips } from "./schema";
 import { sendStaffReply } from "./staff-reply";
 import { liveTrip } from "./trips-live";
@@ -74,6 +75,10 @@ export type ReplyKeywordOutcome =
   | "rate_limited"
   /** `M`: the shop will pick it up, and the message stays on the worklist. */
   | "handed_off"
+  /** `LATE`: the soonest open seat now says "Running late" on the arrivals list. */
+  | "running_late"
+  /** `LATE` from a diver with no seat it could be about. Left for a person. */
+  | "nothing_late"
   /** `C`: the departure was named and a code sent. Nothing has changed yet. */
   | "awaiting_confirmation"
   /** `C` from a diver with no seat this could mean. */
@@ -245,7 +250,7 @@ async function stampIntent(
   db: AppDb,
   shopId: string,
   messageId: string,
-  intent: "cancel" | "move" | "confirm",
+  intent: "cancel" | "move" | "confirm" | "late",
 ): Promise<void> {
   await db
     .update(inboundMessages)
@@ -349,6 +354,17 @@ export async function handleInboundReplyKeyword(
     time: formatTimeRangeTz(booking.startsAt, booking.endsAt, locale, shop.timezone),
   });
 
+  if (parsed.kind === "intent" && parsed.intent === "late") {
+    return await handleLate(db, {
+      shopId: input.shopId,
+      personId: message.personId,
+      messageId: message.id,
+      now,
+      answer,
+      t,
+      shopName: shop.name,
+    });
+  }
   if (parsed.kind === "intent") {
     return parsed.intent === "move"
       ? await handleMove(db, input.shopId, message.id, answer, t, shop.name)
@@ -445,6 +461,40 @@ async function handleMove(
   // Answered stays false on purpose: a person still has to do this.
   await answer(t("notifications.replyKeyword.moveHandoff", { shopName }), false);
   return "handed_off";
+}
+
+/**
+ * `LATE` (J3): the soonest seat this diver could be late for says so on the
+ * arrivals list. No confirmation code, unlike `C`: it releases nothing and
+ * gates nothing, so the attributed address is enough. Answered (and so off
+ * the worklist) when it landed; left open when there was nothing it could be
+ * about, because that diver may need a person.
+ */
+async function handleLate(
+  db: AppDb,
+  input: {
+    shopId: string;
+    personId: string;
+    messageId: string;
+    now: Date;
+    answer: (body: string, marksAnswered: boolean) => Promise<void>;
+    t: ReturnType<typeof diverTranslator>;
+    shopName: string;
+  },
+): Promise<ReplyKeywordOutcome> {
+  const { shopId, messageId, answer, t, shopName } = input;
+  await stampIntent(db, shopId, messageId, "late");
+  const marked = await markPersonRunningLate(db, {
+    shopId,
+    personId: input.personId,
+    now: input.now,
+  });
+  if (marked.status === "closed") {
+    await answer(t("notifications.replyKeyword.lateNothing", { shopName }), false);
+    return "nothing_late";
+  }
+  await answer(t("notifications.replyKeyword.lateNoted", { shopName }), true);
+  return "running_late";
 }
 
 async function handleCancelRequest(

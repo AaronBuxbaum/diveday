@@ -10,6 +10,7 @@ import { recordNotificationDelivery } from "@/db/notifications";
 import { STALE_AFTER_MS } from "@/db/payment-operations";
 import { recordProcessorErasureObligations } from "@/db/processor-erasure";
 import { getShopReviewAggregate, setReviewPublished } from "@/db/reviews";
+import { markBookingRunningLate } from "@/db/running-late";
 import {
   boats,
   bookingPayments,
@@ -430,6 +431,14 @@ export async function POST(request: Request) {
       ? await carrySomebodyWhoIsNotDiving(db, shop.id, actor.id, now)
       : null;
 
+  // Opt-in: a diver on today's board who said they are running late (J3), so
+  // the arrival lookup and the Divers tab have the line to photograph. Opt-in
+  // because the demo's own arrivals list must stay a plain one.
+  const runningLate =
+    new URL(request.url).searchParams.get("runningLate") === "1"
+      ? await sayPriyaIsRunningLate(db, shop.id, now)
+      : null;
+
   // Opt-in: a boat with lapsing safety kit, no O2 kit aboard and too many
   // people for its certificate is a danger panel on that departure's Boat tab
   // and a row on Today — exactly the standing warning the demo must not carry. The
@@ -442,6 +451,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     ...(boatSafety ? { boatSafety } : {}),
+    ...(runningLate ? { runningLate } : {}),
     ...(blockedMinor ? { blockedMinor } : {}),
     ...(crewClash ? { crewClash } : {}),
     ...(crewClashSailed ? { crewClashSailed } : {}),
@@ -556,6 +566,42 @@ async function letTheReefBoatsKitLapse(
   const shelved = { kind: "o2_kit", tag: "O2 (shop)" } as const;
   await createGearItem(db, { shopId, kind: shelved.kind, label: shelved.tag });
   return { tripId: reef.id, boatName: boat.name };
+}
+
+/**
+ * Priya Sharma, booked on a departure inside the next day, says she
+ * is running late twelve minutes before the frozen clock — through the one
+ * writer every real door uses, so the window rule holds here too.
+ */
+async function sayPriyaIsRunningLate(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  now: Date,
+): Promise<{ tripId: string; bookingId: string } | null> {
+  const [seat] = await db
+    .select({ bookingId: bookings.id, tripId: trips.id })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(people.fullName, "Priya Sharma"),
+        eq(bookings.status, "booked"),
+        eq(trips.status, "scheduled"),
+        isNull(trips.deletedAt),
+        gte(trips.startsAt, now),
+      ),
+    )
+    .orderBy(trips.startsAt)
+    .limit(1);
+  if (!seat) return null;
+  const said = await markBookingRunningLate(db, {
+    shopId,
+    bookingId: seat.bookingId,
+    now: new Date(now.getTime() - 12 * 60 * 1000),
+  });
+  return said.status === "closed" ? null : seat;
 }
 
 async function carrySomebodyWhoIsNotDiving(

@@ -78,7 +78,7 @@ describe("each settings group renders as its own component", () => {
     expect(rendered[2]?.rows).toEqual(["divingOptions", "emergency", "dockCall"]);
     expect(rendered[4]?.rows).toEqual(["rentals", "rentalPricing", "rentalTerms"]);
     expect(rendered[5]?.rows).toEqual(["tax", "passThrough", "tips", "stripe"]);
-    expect(rendered[6]?.rows).toEqual(["reviews", "reviewLink"]);
+    expect(rendered[6]?.rows).toEqual(["reviews", "reviewLink", "deskHours"]);
     expect(rendered[7]?.rows).toEqual([
       "profile",
       "shopPhotos",
@@ -98,7 +98,12 @@ describe("each settings group renders as its own component", () => {
     expect(shape(money).rows).toEqual([]);
 
     const data = await DataGroup({ view, db, personId, canExport: false, canImport: false });
-    expect(hrefsIn(data)).toEqual([`/shop/${view.shopSlug}/settings/integrations`]);
+    // The activity log needs no gate of its own here: the hub is already
+    // owner and manager reading, the log's own set, and the page re-checks.
+    expect(hrefsIn(data)).toEqual([
+      `/shop/${view.shopSlug}/settings/activity`,
+      `/shop/${view.shopSlug}/settings/integrations`,
+    ]);
 
     const messages = MessagesGroup({ view, canManageMessaging: false });
     expect(hrefsIn(messages)).not.toContain(`/shop/${view.shopSlug}/settings/whatsapp`);

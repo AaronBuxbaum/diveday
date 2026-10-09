@@ -329,6 +329,17 @@ export const shops = pgTable(
     seasonStartMonth: integer("season_start_month").notNull().default(1),
     seasonStartDay: integer("season_start_day").notNull().default(1),
     /**
+     * **When somebody is at the desk**, as minutes after shop-local midnight:
+     * opens inclusive, closes exclusive, the same window every day. A diver
+     * message that lands outside it pings the staff who asked to hear
+     * (`src/lib/desk-hours.ts`, `src/db/desk-pings.ts`). 08:00–18:00 until the
+     * shop says otherwise; a desk that never closes has no "after hours", so
+     * the staff who want no pings turn their own off rather than the shop
+     * pretending to keep 24-hour hours.
+     */
+    deskOpensMinute: integer("desk_opens_minute").notNull().default(480),
+    deskClosesMinute: integer("desk_closes_minute").notNull().default(1080),
+    /**
      * When the shop last saved its units — the signal behind the setup
      * checklist's "check your currency and depth unit" step. Onboarding now
      * *derives* both from the timezone (`src/lib/curated-defaults.ts`), and a
@@ -393,6 +404,13 @@ export const shops = pgTable(
   (table) => [
     uniqueIndex("shops_inbound_email_token_unique").on(table.inboundEmailToken),
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
+    // The same window `parseDeskHours` accepts (`src/lib/desk-hours.ts`): a
+    // day's minutes, opening before closing.
+    check(
+      "shops_desk_hours_in_day",
+      sql`${table.deskOpensMinute} >= 0 and ${table.deskClosesMinute} <= 1440
+        and ${table.deskOpensMinute} < ${table.deskClosesMinute}`,
+    ),
     // The same days `parseSeasonStart` accepts (`src/lib/season.ts`). A
     // constraint looser than the action it backs lets any other caller
     // persist a date the counting would have to guess about.
@@ -997,6 +1015,21 @@ export const userAccounts = pgTable(
      * from "turned it on" and "turned it off".
      */
     weeklyDigest: boolean("weekly_digest"),
+    /**
+     * This person's own answer to the after-hours desk ping
+     * (`src/lib/desk-hours.ts`). Null until they give one, and null means their
+     * role's default: on for an owner or a manager, off for everyone else
+     * (`afterHoursPingWanted`), stored as the answer for the reason
+     * `weekly_digest` is.
+     */
+    afterHoursPing: boolean("after_hours_ping"),
+    /**
+     * When the last after-hours ping went to this person: the batching clock.
+     * A ping is claimed by moving this forward only when it is older than
+     * `AFTER_HOURS_PING_INTERVAL_MS`, so two messages landing together send
+     * one email, and a quiet night sends at most one per interval.
+     */
+    afterHoursPingedAt: timestamp("after_hours_pinged_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /**
      * better-auth's core `user` model requires an `updatedAt`; nothing in

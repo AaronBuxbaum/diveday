@@ -60,6 +60,7 @@ export const SECTION_IDS = [
   "shopPhotos",
   "address",
   "reviewLink",
+  "deskHours",
   "searchListing",
   "packing",
   "counterCard",
@@ -92,6 +93,7 @@ export type SectionId = (typeof SECTION_IDS)[number];
  */
 const SECTION_FRAGMENTS: Partial<Record<SectionId, string>> = {
   reviewLink: "review-link",
+  deskHours: "desk-hours",
   searchListing: "search-listing",
   divingOptions: "diving-options",
   crewSchedule: "crew-schedule",
@@ -341,6 +343,12 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "section", id: "reviewLink" },
   },
   {
+    id: "deskHours",
+    labelKey: "settings.main.deskHours.heading",
+    group: "messages",
+    target: { kind: "section", id: "deskHours" },
+  },
+  {
     id: "whatsapp",
     labelKey: "settings.main.whatsapp.heading",
     group: "messages",
@@ -382,6 +390,12 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.embed.heading",
     group: "website",
     target: { kind: "route", path: "/settings/embed" },
+  },
+  {
+    id: "activity",
+    labelKey: "activity.log.title",
+    group: "data",
+    target: { kind: "route", path: "/settings/activity" },
   },
   {
     id: "integrations",

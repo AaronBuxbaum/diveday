@@ -1,5 +1,6 @@
 import { escapeHtml } from "@/lib/html";
 import { crewScheduleChangeEmail } from "./crew-emails";
+import { deskAfterHoursEmail } from "./desk-emails";
 import {
   bookingCancelledEmail,
   bookingConfirmationEmail,
@@ -124,5 +125,6 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "work_order_ready") return workOrderReadyEmail(notification);
   if (notification.kind === "gear_service_due") return gearServiceDueEmail(notification);
   if (notification.kind === "crew_schedule_change") return crewScheduleChangeEmail(notification);
+  if (notification.kind === "desk_after_hours") return deskAfterHoursEmail(notification);
   return passwordChangedEmail(notification);
 }

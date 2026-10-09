@@ -85,6 +85,7 @@ describe("EmbedSettingsPage", () => {
       const [generator] = findElements<{
         origin: string;
         shopSlug: string;
+        kinds: readonly string[];
         trips: { id: string; label: string }[];
         copy: { kinds: Record<string, string>; code: string };
       }>(element, EmbedGenerator);
@@ -93,8 +94,10 @@ describe("EmbedSettingsPage", () => {
       expect(generator?.props.shopSlug).toBe(shop.slug);
       // The seeded shop has departures to pin a widget to.
       expect(generator?.props.trips.length).toBeGreaterThan(0);
-      // Eight kinds, each with a name (ADR 20260901-diveday-reimagined, 13d).
-      expect(Object.keys(generator?.props.copy.kinds ?? {})).toHaveLength(8);
+      // Nine kinds, each with a name (ADR 20260901-diveday-reimagined, 13d),
+      // and the demo shop has reviews on, so the reviews widget is offered.
+      expect(Object.keys(generator?.props.copy.kinds ?? {})).toHaveLength(9);
+      expect(generator?.props.kinds).toContain("reviews");
       expect(generator?.props.copy.code).toBe("Embed code");
     } finally {
       process.env.APP_HOST = previousAppHost;

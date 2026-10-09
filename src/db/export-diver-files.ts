@@ -168,6 +168,8 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
       "re_entry_ask",
       "last_dived_band",
       "claimed_at",
+      // "Running late" (J3): a statement the diver made, so it is theirs.
+      "running_late_at",
       "payment_status",
       "payment_amount_cents",
       "payment_currency",
@@ -190,6 +192,7 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
           row.reEntryAsk,
           row.lastDivedBand,
           row.claimedAt,
+          row.runningLateAt,
           payment?.status ?? "unpaid",
           payment?.amountCents,
           payment?.currency,

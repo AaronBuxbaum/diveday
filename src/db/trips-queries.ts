@@ -15,6 +15,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { sellableSeats } from "@/lib/boat-safety";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
@@ -30,6 +31,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { decodeCursor, encodeCursor } from "./cursor";
 import { offsetPage } from "./paging";
 import {
+  boats,
   bookings,
   courses,
   diveSites,
@@ -332,8 +334,10 @@ export const bookedDiversCount = () =>
  * reading the two counts separately would let a concurrent write land between
  * them on a reader that is not holding the trip-row lock. Every seat-granting
  * caller holds it (`createBookingRecord`, `restoreBooking`,
- * `setBookingParticipantType`, `undoBookingNoShow`, `setTripParticipantTerms`), which is what makes the
- * answer a gate rather than advice.
+ * `setBookingParticipantType`, `undoBookingNoShow`, `setTripParticipantTerms`),
+ * which is what makes the answer a gate rather than advice. The ones that add
+ * someone aboard (`createBookingRecord`, `restoreBooking`, `undoBookingNoShow`,
+ * `joinTripWaitlist`) measure the boat against `sellableCapacity`.
  */
 export async function heldSeatCounts(
   tx: DbExecutor,
@@ -350,6 +354,36 @@ export async function heldSeatCounts(
     .from(bookings)
     .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, tripId), seatHeld));
   return { aboard: row?.aboard ?? 0, divers: row?.divers ?? 0 };
+}
+
+/**
+ * **The capacity a seat-granting gate measures against** (H-107): the
+ * departure's own seats, capped at its boat's certificate passenger limit
+ * (`sellableSeats`). Read by the caller inside the transaction that holds the
+ * trip-row lock, beside `heldSeatCounts`, and handed to `seatRefusal` in place
+ * of `trip.capacity`. A deleted boat's certificate still binds: the hull is the
+ * same hull.
+ */
+export async function sellableCapacity(
+  tx: DbExecutor,
+  trip: { shopId: string; boatId: string | null; capacity: number },
+): Promise<number> {
+  return sellableSeats(trip.capacity, await boatCertifiedPassengers(tx, trip.shopId, trip.boatId));
+}
+
+/** The boat's certificate passenger limit, or null when there is no boat or none recorded. */
+export async function boatCertifiedPassengers(
+  tx: DbExecutor,
+  shopId: string,
+  boatId: string | null,
+): Promise<number | null> {
+  if (!boatId) return null;
+  const [boat] = await tx
+    .select({ certifiedPassengers: boats.certifiedPassengers })
+    .from(boats)
+    .where(and(eq(boats.id, boatId), eq(boats.shopId, shopId)))
+    .limit(1);
+  return boat?.certifiedPassengers ?? null;
 }
 
 /**

@@ -20,6 +20,26 @@ test.describe("the widget views", () => {
     await expect(first).toHaveAttribute("target", "_top");
   });
 
+  /**
+   * **The reviews widget** (K3): the shop's published, moderated reviews on its
+   * own website — the archive's rules, framed. Signed the way the archive signs
+   * and leaving the frame for the archive itself.
+   */
+  test("the reviews widget quotes the shop's published reviews and opens the archive", async ({
+    page,
+  }) => {
+    const response = await page.goto("/s/blue-mantis/embed/reviews");
+    expect(response?.status()).toBe(200);
+    expect(response?.headers()["x-frame-options"]).toBeUndefined();
+    await expect(page.getByRole("region", { name: "What divers say" })).toBeVisible();
+    await expect(page.getByText(/\d+ reviews?$/).first()).toBeVisible();
+    const all = page.getByRole("link", { name: "All reviews" });
+    await expect(all).toHaveAttribute("target", "_top");
+    await expect(all).toHaveAttribute("href", /\/s\/blue-mantis\/reviews$/);
+    await expect(page.getByRole("navigation", { name: "Public shop" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Powered by DiveDay" })).toBeVisible();
+  });
+
   test("an unknown widget is a plain 404", async ({ page }) => {
     const response = await page.goto("/s/blue-mantis/embed/nope");
     expect(response?.status()).toBe(404);

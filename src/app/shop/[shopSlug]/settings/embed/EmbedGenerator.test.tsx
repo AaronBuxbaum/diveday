@@ -54,11 +54,12 @@ const copy: EmbedGeneratorCopy = {
   copyFailed: "Failed",
 };
 
-function renderGenerator() {
+function renderGenerator(props: { kinds?: readonly (typeof EMBED_KINDS)[number][] } = {}) {
   return render(
     <EmbedGenerator
       origin="https://diveday.example"
       shopSlug="blue-mantis"
+      {...props}
       trips={[{ id: "t1", label: "Thu 27 Aug · 7:00 AM — Two-Tank Reef" }]}
       courses={[{ id: "open-water", label: "Open Water Diver" }]}
       locales={["en-US", "es-ES"]}
@@ -82,6 +83,28 @@ describe("EmbedGenerator", () => {
     expect((screen.getByLabelText("Embed code") as HTMLTextAreaElement).value).toContain(
       'data-diveday="calendar"',
     );
+  });
+
+  /**
+   * **The reviews widget** (K3): the shop's published reviews, framed by path
+   * like the other widgets, with nothing to narrow — so no "What it shows".
+   */
+  it("frames the reviews widget, with nothing to choose but its look and language", async () => {
+    const user = userEvent.setup();
+    renderGenerator();
+    await user.click(screen.getByRole("radio", { name: /kind reviews/ }));
+    expect(screen.queryByLabelText("What it shows")).toBeNull();
+    const snippet = screen.getByLabelText("Embed code") as HTMLTextAreaElement;
+    expect(snippet.value).toContain('<div data-diveday="reviews" data-shop="blue-mantis"');
+    expect(screen.getByTitle("Preview").getAttribute("src")).toContain(
+      "/s/blue-mantis/embed/reviews",
+    );
+  });
+
+  it("offers only the kinds the page hands it", () => {
+    renderGenerator({ kinds: EMBED_KINDS.filter((kind) => kind !== "reviews") });
+    expect(screen.queryByRole("radio", { name: /kind reviews/ })).toBeNull();
+    expect(screen.getAllByRole("radio", { name: /kind / })).toHaveLength(EMBED_KINDS.length - 1);
   });
 
   /**

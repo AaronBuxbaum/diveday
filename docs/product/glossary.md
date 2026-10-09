@@ -729,6 +729,18 @@ new domain concept, define it here in the same PR.
   checkpoint, and its writers cannot reach `roll_call_events`: an arrival is never promoted to
   aboard by the queue
   ([ADR 20260907-the-counter-survives-offline](../architecture/decisions/20260907-the-counter-survives-offline.md)).
+- **Running late** — a diver's own statement, before the boat sails, that they are on the way and
+  behind (J3). Said by tapping "Running late" on their `/ready` link or by replying `LATE` (`TARDE`
+  in Spanish) to a shop's WhatsApp, email or the **night-before brief**'s text, and stored as one
+  instant, `bookings.running_late_at` (`src/db/running-late.ts`). Open only on a booked seat not yet
+  checked in, from when the night-before brief goes out (24 hours ahead) until the boat has sailed
+  (`hasSailed`: the scheduled time plus the departure buffer), on a scheduled departure
+  (`canSayRunningLate`); the first statement stands. Only a boat day's brief teaches the word
+  (`trips.dive_mode`). A party organizer's statement — a tap or a reply — covers the party's seats
+  (`partyLeadBookingId`), and a text covers every seat on that boat under the same number. The arrivals list (Today's arrival lookup and
+  the Divers tab once arrivals open) says "Running late, said 7:42" in the shop's zone on that row
+  until the diver checks in, which clears it. **It gates nothing** and it is not a **no-show**: the
+  diver still has to arrive, and a diver who said it and never came is still the desk's call.
 - **No-show** — one staffer's recorded statement that a booked diver did not come. The status is
   `bookings.status = "no_show"`, written only by `markBookingNoShow` (`src/db/no-show.ts`), behind
   the Divers tab's "Not here" disclosure (inside the arrivals window, on any row the gate allows, blocked or not) and its confirm tap. **It is not the three things it is most easily mistaken
@@ -1174,9 +1186,17 @@ new domain concept, define it here in the same PR.
   officer counts against. When the people booked on a departure pass it, the departure's **Boat**
   tab says so in danger ink above the **pre-departure checklist**; once the crew have recorded more
   people aboard than it allows, the line counts them ("13 passengers aboard") instead of the
-  bookings. The fleet row says so when the seats on sale already do. It **informs, never gates**;
-  the one capacity block stays the departure's seats against the boat's `capacity`
-  (`src/lib/boat-safety.ts`).
+  bookings. **No seat above it is sold** (H-107): a boat whose seats on sale pass it is refused at
+  save with a field error, so is a certificate lowered under the seats an upcoming departure on the
+  hull still sells, and a departure may not sell more seats than its boat's certificate
+  (`boatSeatsRefusal`, `tripDetailsPatch`). **The booking transaction is the ceiling that holds
+  whatever the forms missed**: it sells at most the lower of the departure's `capacity` and the
+  certificate, read under the trip-row lock (`sellableCapacity`), as do an undo, a no-show undo and
+  the wait list's "go and book it"; a copy and a series roll start the new departure at the
+  certificate, and "apply to the rest of the series" skips a date on a hull certified for fewer.
+  The field reads **passengers only, not crew**, the same people capacity counts: everyone aboard
+  but the crew. A boat saved over it before H-107 keeps sailing, its fleet row says so in danger
+  ink, and its next save must fix it (`src/lib/boat-safety.ts`).
 - **Boat papers** — a boat's three dated documents: when its next safety inspection is due, and
   when its registration and hull insurance expire (`boats.inspection_due_on`,
   `registration_expires_on`, `insurance_expires_on`). Typed over in Settings, Boats when renewed,
@@ -1753,6 +1773,7 @@ new domain concept, define it here in the same PR.
 - **First-timer track** — the night-before brief in a softer, what-happens-on-the-boat voice for a
   diver with no prior non-cancelled booking on a departed trip with the shop. Same data, extra
   reassurance; the signal is derived at send time, not stored.
+- **Desk hours** and the **after-hours ping** — when somebody is at the shop's desk: one window every day in the shop's own zone (`shops.desk_opens_minute`, `shops.desk_closes_minute`, 08:00–18:00 until the shop changes it under Settings → Messages). A diver message filed by the inbound email or WhatsApp webhook while the desk is closed sends a `desk_after_hours` email to each staffer who wants it: on by default for an owner or a manager, off for everyone else, and each staffer's own answer (`user_accounts.after_hours_ping`) wins, from their Email settings. At most one per person per half hour (`user_accounts.after_hours_pinged_at`, claimed by one conditional update), naming how many divers (distinct senders) wrote in since the desk closed and are still unanswered, with a link to the Inbox. Never the sender, the subject or a word of the message. Staff operational mail under H-09: no unsubscribe, no postal footer, not queued for retry, and never from a demo shop. Rule in `src/lib/desk-hours.ts`, reads and the send in `src/db/desk-pings.ts`.
 - **Monday email** (weekly digest) — the owner's service email about their own shop's week, sent once per person per shop-local week on Monday between 08:00 and 20:00 shop time (`/api/cron/weekly-digest`, hourly). Sections, each a count and a link into the staff app, appear only when they have something to say: last week's bookings made and seats filled against capacity (Reports' own query), this week's departures and seat fill and the divers still owing a waiver (the shared readiness horizon), reviews received and waiting on moderation, date requests still waiting, and Today rows that are past due. A week with none of these sends nothing. Last week's figures and Today's money and platform chores go only to someone Reports' gate admits (`canViewShopReports`, read from live roles); anyone else who opts in gets the rest. On by default for an owner, off for everyone else, and each staffer's own answer (`user_accounts.weekly_digest`) wins; it is turned off from the staffer's Email settings or the email's own one-click link. Transactional under H-09 (staff, about their own operation), so it carries no commercial postal footer. Demo shops never send; any staffer can preview this week's at `/shop/<slug>/settings/email/preview`. Logic in `src/lib/weekly-digest.ts`, reads and the send claim (`weekly_digest_sends`) in `src/db/weekly-digest.ts`.
 - **Post-trip recap** — the per-diver-per-trip reading of the day, delivered once per booking as the
   `trip_recap` kind no earlier than four hours after the departure ends. It rides the same
@@ -1956,6 +1977,15 @@ new domain concept, define it here in the same PR.
 - **Activity event** — an append-only staff-facing sentence describing who did operational work and
   what happened (for example, “Maya added a private note about Dana”), with the time it happened.
   Activity uses shop language, never table names or record identifiers.
+- **Activity log** — the shop-wide, owner-facing reading of who did what, to what, and when
+  (D5): every activity event, every review publish or hide, and every meeting-point or conditions
+  change a staffer made, newest first, filtered by person, kind (seats, departures, money, cards
+  and identity, records, reviews) and date. It is a read model over those append-only trails
+  (`src/db/shop-activity.ts`), not a trail of its own, and keeps nothing they do not: a line leaves
+  the log when its row is pruned, and an erased diver's lines read `[redacted]` there as they do
+  everywhere. Refunds, write-offs and the schedule builder's acts (add, repeat, move, copy, delete)
+  record their actor for it. Owners and managers only (`canViewShopActivity`); reached from
+  Settings' Data group at `/settings/activity`.
 
 - **Rental set** — typically: **BCD** (jacket, sized), **regulator** ("reg", with octopus and
   SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, a **dive

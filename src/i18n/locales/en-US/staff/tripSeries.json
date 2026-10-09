@@ -32,7 +32,7 @@
   },
   "notices": {
     "seriesApplied": "Those details now apply to every upcoming date in this series.",
-    "seriesAppliedPartial": "Applied to the upcoming dates. A few already had more divers than the new capacity, or a roll call past the new dive count, so those were left as they were.",
+    "seriesAppliedPartial": "Applied to the upcoming dates. A few already had more divers than the new capacity, sail on a boat certified for fewer, or have a roll call past the new dive count, so those were left as they were.",
     "seriesCancelled": "Canceled every upcoming date in this series. Reinstate any single date from its own trip page.",
     "seriesRepeating": "This trip repeats again. The next few months of it are back on the board.",
     "seriesCadenceSaved": "Saved. The board matches the new days from here on.",

@@ -17,6 +17,7 @@ import type { HeldSendPayload } from "@/lib/held-sends";
 import { bookings } from "./bookings";
 import { people, shops } from "./core";
 import { diveSites } from "./dive-sites";
+import { orders } from "./payments";
 import { trips } from "./trips";
 
 /**
@@ -92,6 +93,14 @@ export const activityEvents = pgTable(
      */
     subjectPersonId: uuid("subject_person_id").references(() => people.id),
     /**
+     * The order a line is about, for the one kind of act that touches neither
+     * a departure nor a seat: a refund of a staff order (`order_refunded`).
+     * It is what lets the shop's activity log link the line to the order it
+     * names (`src/db/shop-activity.ts`). An id, never an amount or a name: the
+     * order row holds those, and an erasure scrubs them there.
+     */
+    orderId: uuid("order_id").references(() => orders.id, { onDelete: "set null" }),
+    /**
      * **What happened**, as a code from `src/lib/activity.ts` — never a
      * sentence.
      *
@@ -143,6 +152,9 @@ export const activityEvents = pgTable(
       table.subjectPersonId,
       table.occurredAt,
     ),
+    // The shop-wide activity log (`pagedShopActivity`): one shop's lines,
+    // newest first, with `seq` breaking the frozen-clock ties.
+    index("activity_events_shop_occurred_idx").on(table.shopId, table.occurredAt, table.seq),
     check("activity_events_code_not_blank", sql`length(trim(${table.code})) > 0`),
   ],
 );

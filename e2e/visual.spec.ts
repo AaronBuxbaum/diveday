@@ -2455,7 +2455,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * The embed catalogue's three framed widgets (ADR
+       * The embed catalogue's framed widgets (ADR
        * 20260901-diveday-reimagined, slice 13d): what a shop's own website
        * shows once the loader has mounted them. Photographed at their own
        * routes, which are embeds by path — no chrome, the credit line, and
@@ -2483,6 +2483,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/s/blue-mantis/embed/courses");
         await page.getByRole("link", { name: "Enroll" }).first().waitFor();
         await capture(page, "embed-courses", scheme);
+      });
+
+      // The reviews widget (K3): the demo shop's published reviews, quoted
+      // under its rating, with the archive one tap away.
+      test(`the embed reviews widget renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis/embed/reviews");
+        await page.getByRole("link", { name: "All reviews" }).waitFor();
+        await capture(page, "embed-reviews", scheme);
       });
 
       /**
@@ -3809,6 +3817,22 @@ for (const scheme of ["light", "dark"] as const) {
           .first()
           .waitFor();
         await capture(page, "today-arrival-lookup", scheme);
+      });
+
+      // **"Running late, said 9:18"** (J3): the lookup row of a diver who told
+      // the shop, through the opt-in trouble state rather than the demo.
+      test(`a running-late diver in the arrival lookup renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?runningLate=1");
+        expect((await seeded.json()) as { runningLate?: unknown }).toHaveProperty("runningLate");
+        await page.goto("/shop/blue-mantis?q=Priya%20Sharma");
+        await page
+          .getByText(/^Running late, said /)
+          .first()
+          .waitFor();
+        await capture(page, "today-arrival-lookup-running-late", scheme);
       });
 
       /**
@@ -6504,6 +6528,17 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-export", scheme);
       });
 
+      // The shop's activity log (D5): who did what, to what, when, across the
+      // whole team, with its four filters above the first page of lines.
+      test(`the activity log renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/activity");
+        await page.getByRole("heading", { level: 1, name: "Activity" }).waitFor();
+        // The lines, not just the heading: a capture on the heading alone banks
+        // the skeleton's list.
+        await page.getByTestId("shop-activity").getByRole("listitem").first().waitFor();
+        await capture(page, "settings-activity", scheme);
+      });
+
       // The import surface: the honesty table stating what does and doesn't
       // come across, before any file is chosen.
       test(`the data-import page renders true to the design (${scheme})`, async ({ page }) => {
@@ -6652,10 +6687,13 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       // The staffer's own Email settings: the Monday email's row, on for the
-      // owner by default, with its preview door.
+      // owner by default, with its preview door, and the after-hours ping's.
       test(`the email settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/email");
-        await page.getByRole("button", { name: "Turn off" }).waitFor();
+        await page
+          .getByRole("region", { name: "After-hours messages" })
+          .getByRole("button", { name: "Turn off" })
+          .waitFor();
         await capture(page, "settings-email", scheme);
       });
 

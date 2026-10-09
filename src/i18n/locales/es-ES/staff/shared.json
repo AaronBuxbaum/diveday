@@ -258,7 +258,8 @@
     "settings": "Ajustes",
     "team": "Equipo",
     "calendarFeed": "Suscripción al calendario",
-    "emailSettings": "Ajustes de correo"
+    "emailSettings": "Ajustes de correo",
+    "activity": "Actividad"
   },
   "shopSections": {
     "navAriaLabel": "Principal",

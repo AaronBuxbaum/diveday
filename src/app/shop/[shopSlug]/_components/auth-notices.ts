@@ -24,4 +24,5 @@ export const AUTH_NOTICES: Record<string, StaffMessageKey> = {
   "integrations-not-authorized": "shopHome.notice.integrationsNotAuthorized",
   "billing-not-authorized": "shopHome.notice.billingNotAuthorized",
   "day-blowout-not-authorized": "shopHome.notice.dayBlowoutNotAuthorized",
+  "activity-not-authorized": "shopHome.notice.activityNotAuthorized",
 };

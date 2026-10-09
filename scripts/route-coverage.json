@@ -198,7 +198,7 @@
   },
   "/s/[shopSlug]/embed/[widget]": {
     "e2e": ["embed-catalogue.spec.ts"],
-    "visual": ["embed-courses", "embed-departure", "embed-grid"]
+    "visual": ["embed-courses", "embed-departure", "embed-grid", "embed-reviews"]
   },
   "/s/[shopSlug]/embed/schedule": {
     "e2e": [
@@ -287,6 +287,7 @@
       "today",
       "today-all-home",
       "today-arrival-lookup",
+      "today-arrival-lookup-running-late",
       "today-bench",
       "identity-menu-open",
       "nav-more",
@@ -537,6 +538,7 @@
       "calendar-sync.spec.ts",
       "currency.spec.ts",
       "depth-and-age-surfaces.spec.ts",
+      "desk-ping.spec.ts",
       "divemaster-ratio.spec.ts",
       "nitrox.spec.ts",
       "recap.spec.ts",
@@ -577,7 +579,7 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings/email": {
-    "e2e": ["weekly-digest.spec.ts"],
+    "e2e": ["desk-ping.spec.ts", "weekly-digest.spec.ts"],
     "visual": ["settings-email"],
     "a11y": []
   },
@@ -594,6 +596,11 @@
   "/shop/[shopSlug]/settings/import": {
     "e2e": ["dive-sites.spec.ts", "gear.spec.ts", "import.spec.ts"],
     "visual": ["settings-dive-site-import", "settings-gear-import", "settings-import"],
+    "a11y": ["a11y.spec.ts"]
+  },
+  "/shop/[shopSlug]/settings/activity": {
+    "e2e": ["shop-activity.spec.ts"],
+    "visual": ["settings-activity"],
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings/integrations": {

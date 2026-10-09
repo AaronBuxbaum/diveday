@@ -77,6 +77,13 @@ export type TripDetailsFields = {
    * every case where there is no vessel number to be over.
    */
   boatCapacity?: number | null;
+  /**
+   * The assigned hull's certificate passenger limit (H-107), or null where
+   * none is recorded. A departure may sell no more seats than this, the same
+   * as the hull's own capacity — and separately from it, because a hull saved
+   * before H-107 can still carry seats above its certificate.
+   */
+  boatCertifiedPassengers?: number | null;
 };
 
 export type TripDetailsShop = {
@@ -96,6 +103,7 @@ export type TripDetailsRefusal =
   | "invalid"
   | "end_before_start"
   | "capacity_above_boat"
+  | "capacity_above_certificate"
   | "price_required_by_gate";
 
 export type TripDetailsPatch = {
@@ -118,6 +126,8 @@ export type TripDetailsResult =
   // Carries the hull's number so the notice can say "Reef Runner holds 6"
   // rather than a bare "that didn't work".
   | { ok: false; reason: "capacity_above_boat"; boatCapacity: number }
+  // H-107: the certificate's number, so the notice can say it.
+  | { ok: false; reason: "capacity_above_certificate"; limit: number }
   // Clearing the price off a departure that demands payment. See
   // `paymentGateIsUnclearable` — the gate would then be one nobody can clear.
   | { ok: false; reason: "price_required_by_gate" };
@@ -164,6 +174,20 @@ export function tripDetailsPatch(
     fields.capacity > fields.boatCapacity
   ) {
     return { ok: false, reason: "capacity_above_boat", boatCapacity: fields.boatCapacity };
+  }
+  // **The certificate is a ceiling too** (H-107). Checked after the hull's own
+  // number, which is the one a shop chose; this one a boarding officer counts
+  // against. Same posture: refused, never clamped.
+  if (
+    fields.capacity !== undefined &&
+    fields.boatCertifiedPassengers != null &&
+    fields.capacity > fields.boatCertifiedPassengers
+  ) {
+    return {
+      ok: false,
+      reason: "capacity_above_certificate",
+      limit: fields.boatCertifiedPassengers,
+    };
   }
 
   const meetingDays = tripMeetingDays({ start: startWall, end: endWall }, fields.dayCount);

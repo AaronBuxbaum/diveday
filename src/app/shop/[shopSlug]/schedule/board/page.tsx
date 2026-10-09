@@ -15,7 +15,7 @@ import { openAfterDiveRollCalls } from "@/db/today";
 import { tripCrewByTrip, upcomingScheduleRange, weekBoard } from "@/db/trips";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
-import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { maxConcurrentTrips, overlappingBoatIds } from "@/lib/boats";
 import { calendarDateInTimezone, calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -70,6 +70,7 @@ import {
   moveDepartureAction,
   removeDepartureAction,
 } from "./actions";
+import { BUILDER_NOTICE_KEYS, builderNoticeMessage } from "./builder-notices";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -84,33 +85,6 @@ export const metadata: Metadata = {
   title: "Schedule — DiveDay",
   // Staff-only operations surface, never a public document.
   robots: { index: false, follow: false },
-};
-
-/**
- * What the board says after a builder action, keyed by the `outcome.reason`
- * code the mutation returns (see `moveTrip`/`duplicateTrip`/`deleteTrip` in
- * src/db/trips.ts). Every outcome gets a sentence — including the refusals,
- * which are the interesting ones: a departure that won't move or won't delete
- * is protecting a roster or a head count, and the staff member needs to know
- * which, not just that nothing happened. The message itself is a lookup into
- * the staff bundle, never English baked into this map (docs `i18n-copy` skill).
- */
-const BUILDER_NOTICE_KEYS: Record<
-  string,
-  { tone: "success" | "danger" | "warning"; key: StaffMessageKey }
-> = {
-  added: { tone: "success", key: "schedule.notices.added" },
-  moved: { tone: "success", key: "schedule.notices.moved" },
-  copied: { tone: "success", key: "schedule.notices.copied" },
-  removed: { tone: "success", key: "schedule.notices.removed" },
-  invalid: { tone: "danger", key: "schedule.notices.invalid" },
-  "end-before-start": { tone: "danger", key: "schedule.notices.endBeforeStart" },
-  "not-authorized": { tone: "danger", key: "schedule.notices.notAuthorized" },
-  "not-found": { tone: "danger", key: "schedule.notices.notFound" },
-  "not-scheduled": { tone: "warning", key: "schedule.notices.notScheduled" },
-  "already-sailed": { tone: "warning", key: "schedule.notices.alreadySailed" },
-  "has-roster": { tone: "warning", key: "schedule.notices.hasRoster" },
-  "capacity-above-boat": { tone: "danger", key: "schedule.notices.capacityAboveBoat" },
 };
 
 /**
@@ -129,10 +103,10 @@ export default async function ScheduleBoardPage({
   params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{
     after?: string;
-    /** The stack of every earlier page's cursor, oldest first — see
-     * src/lib/schedule-pagination.ts. */
+    /** Every earlier page's cursor, oldest first (src/lib/schedule-pagination.ts). */
     back?: string;
     builder?: string;
+    count?: string; // the number a builder notice names (`builderNoticeMessage`)
     /** The departure just created, named so the notice can say which. */
     created?: string;
     /** Gear assignments a move had to release — see `moveTrip`. */
@@ -161,7 +135,7 @@ export default async function ScheduleBoardPage({
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { builder, created, gear, series, add, date, course, requests, site, week } =
+  const { builder, count, created, gear, series, add, date, course, requests, site, week } =
     await searchParams;
   const requestIds = [
     ...new Set(
@@ -335,7 +309,7 @@ export default async function ScheduleBoardPage({
             ? seriesCount > 1
               ? st("schedule.notices.addedSeries", { title: created, count: seriesCount })
               : st("schedule.notices.addedNamed", { title: created })
-            : st(builderNoticeEntry.key),
+            : builderNoticeMessage(st, builderNoticeEntry.key, count),
       }
     : undefined;
   const builderCopy: BuilderCopy = {

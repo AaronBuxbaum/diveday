@@ -9,5 +9,9 @@
     "turnOff": "Turn off",
     "saving": "Saving…",
     "preview": "Preview this week’s email"
+  },
+  "afterHours": {
+    "heading": "After-hours messages",
+    "description": "An email when divers write in outside desk hours, {opens} to {closes} {zone}. One every half hour at most."
   }
 }

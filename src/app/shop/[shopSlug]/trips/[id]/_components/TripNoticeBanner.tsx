@@ -455,6 +455,14 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.capacityAboveBoat",
     countKey: "trips.notices.capacityAboveBoatCount",
   },
+  // H-107: the hull's certificate is a ceiling too, and this form shows
+  // neither number, so the refusal names the limit.
+  "capacity-above-certificate": {
+    form: "details",
+    tone: "danger",
+    key: "trips.notices.capacityAboveCertificate",
+    countKey: "trips.notices.capacityAboveCertificateCount",
+  },
   // Both doors onto the same trap: a departure that demands payment and has no
   // price asks nobody for money and blocks every diver who books it, forever
   // (issue #692). Danger, not warning — the save was refused, so the staffer

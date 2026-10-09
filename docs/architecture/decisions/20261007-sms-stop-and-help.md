@@ -33,3 +33,12 @@ SMS goes through AWS SNS from DiveDay's own account (ADR 20260802-sns-sms-adapte
 - A diver who replied STOP gets no booking text from any shop until they reply START. Email is unaffected.
 - The phone number, its keywords and its two-way setting are hand-set and per region; a region move repeats them (`docs/engineering/region-migration.md`).
 - Revisit if a shop needs its own number, or if volume outgrows toll-free throughput; either moves to per-shop 10DLC registration behind the same `SmsProvider` seam, and the STOP list would then be keyed by sending number as well.
+
+## Amendment 2026-10-09 — LATE (J3)
+
+One word beyond the carriers' is read from the forwarded replies: `LATE` (`TARDE` in Spanish),
+which the night-before brief's text teaches on a boat day. It marks the soonest open seat held under exactly that E.164 number, in whichever
+shop, as **running late** (`markPhoneRunningLate`, `src/db/running-late.ts`), at the time SNS
+signed. Nothing is answered over SMS and nothing about the booking reaches the sender, so the
+number stays one-way for conversation (20260907-two-way-inbox, decision 7); the statement gates
+nothing, which is why a carrier-vouched number is enough to make it.

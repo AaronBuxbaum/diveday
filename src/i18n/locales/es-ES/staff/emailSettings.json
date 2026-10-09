@@ -9,5 +9,9 @@
     "turnOff": "Desactivar",
     "saving": "Guardando…",
     "preview": "Ver el correo de esta semana"
+  },
+  "afterHours": {
+    "heading": "Mensajes fuera de horario",
+    "description": "Un correo cuando los buceadores escriben fuera del horario de atención, de {opens} a {closes} {zone}. Como mucho, uno cada media hora."
   }
 }

@@ -296,7 +296,11 @@ describe("anonymizeDiver — the welcome consent (issue #1182)", () => {
     if (!booking) throw new Error("expected a seeded booking");
     await db
       .update(bookings)
-      .set({ welcomeSharedAt: new Date("2026-07-20T12:00:00Z") })
+      .set({
+        welcomeSharedAt: new Date("2026-07-20T12:00:00Z"),
+        // "Running late" (J3) is the diver's own statement too.
+        runningLateAt: new Date("2026-07-20T12:30:00Z"),
+      })
       .where(eq(bookings.id, booking.id));
 
     const erased = await anonymizeDiver(db, {
@@ -307,10 +311,11 @@ describe("anonymizeDiver — the welcome consent (issue #1182)", () => {
     expect(erased.ok).toBe(true);
 
     const [after] = await db
-      .select({ welcomeSharedAt: bookings.welcomeSharedAt })
+      .select({ welcomeSharedAt: bookings.welcomeSharedAt, runningLateAt: bookings.runningLateAt })
       .from(bookings)
       .where(eq(bookings.id, booking.id));
     expect(after?.welcomeSharedAt).toBeNull();
+    expect(after?.runningLateAt).toBeNull();
   });
 
   /**
