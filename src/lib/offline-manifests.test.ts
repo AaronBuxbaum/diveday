@@ -990,6 +990,34 @@ describe("offline manifest policy", () => {
     expect(payload.manifests[0]?.divers[0]?.email).toBeNull();
   });
 
+  it("carries the boat's papers and safety kit as worded lines, and nothing for a boat with none", () => {
+    const shop = {
+      slug: "blue-mantis",
+      name: "Blue Mantis",
+      timezone: "America/New_York",
+      emergencyReference: EMPTY_EMERGENCY_REFERENCE,
+    };
+    const section = {
+      heading: "Mantis I: papers and safety kit",
+      lines: [
+        { text: "No emergency oxygen aboard", tone: "danger" as const },
+        { text: "Flares: expired 3 days ago", tone: "warning" as const },
+      ],
+    };
+    const saved = serializeManifests(
+      [baseManifest()],
+      shop,
+      (blocker) => blocker.code,
+      [],
+      section,
+    );
+    // Words, not codes: the dock reads it with no server to word it.
+    expect(saved.boatSafety).toEqual(section);
+    expect(
+      serializeManifests([baseManifest()], shop, (blocker) => blocker.code, [], null),
+    ).not.toHaveProperty("boatSafety");
+  });
+
   /** One ready diver on a two-dive departure — the shape these serialization cases vary. */
   function baseManifest(): TripManifest {
     return {

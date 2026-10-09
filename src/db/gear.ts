@@ -17,7 +17,7 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
-import { isSafetyKitKind } from "@/lib/boat-safety";
+import { isSafetyKitKind, SAFETY_KIT_KINDS } from "@/lib/boat-safety";
 import {
   type CalendarDate,
   calendarDateInTimezone,
@@ -2312,6 +2312,7 @@ export type GearServiceDueRow = {
 /**
  * Working units whose most urgent clock is overdue or runs out within
  * `withinDays`. A deleted unit keeps its history and stops asking for care.
+ * Safety kit is left out: Today's boat rows speak for it.
  */
 export async function listGearServiceDue(
   db: AppDb,
@@ -2322,7 +2323,17 @@ export async function listGearServiceDue(
   const items = await db
     .select({ id: gearItems.id, kind: gearItems.kind, label: gearItems.label })
     .from(gearItems)
-    .where(and(eq(gearItems.shopId, shopId), liveGearItem()))
+    .where(
+      and(
+        eq(gearItems.shopId, shopId),
+        liveGearItem(),
+        // The boat's own emergency kit is Today's boat rows' to say
+        // (`todayBoatSafety`, src/db/boat-safety.ts): on a departure sailing
+        // today, or as the owner's errand once it lapses. A bench-clock row
+        // too would put one dead AED on Today twice.
+        notInArray(gearItems.kind, [...SAFETY_KIT_KINDS]),
+      ),
+    )
     .orderBy(asc(gearItems.kind), asc(gearItems.label));
   if (items.length === 0) return [];
 

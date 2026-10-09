@@ -2891,6 +2891,34 @@ describe("OfflineManifestView — one column, one text edge", () => {
     return row;
   }
 
+  // Dive-domain review 2026-10-09: the dock copy with no signal says what the
+  // live Boat tab says about the hull's papers and kit, in the same ink.
+  it("shows the boat's papers and safety kit as saved, and nothing for a copy without them", async () => {
+    const saved = richEnvelope("trip-1");
+    await renderTrip({
+      ...saved,
+      snapshot: {
+        ...saved.snapshot,
+        boatSafety: {
+          heading: "Mantis I: papers and safety kit",
+          lines: [
+            { text: "No emergency oxygen aboard", tone: "danger" },
+            { text: "AED: pads expire in 12 days", tone: "neutral" },
+          ],
+        },
+      },
+    });
+    const region = screen.getByRole("region", { name: "Mantis I: papers and safety kit" });
+    expect(within(region).getByText("No emergency oxygen aboard").className).toContain(
+      "text-danger-strong",
+    );
+    expect(within(region).getByText("AED: pads expire in 12 days")).toBeInTheDocument();
+    cleanup();
+
+    await renderTrip(richEnvelope("trip-1"));
+    expect(screen.queryByRole("region", { name: /papers and safety kit/ })).toBeNull();
+  });
+
   // K-183: a `p-3` notice put its text 8px left of the `p-4 sm:p-5` panels
   // below it in the same column (4px at 390).
   it("starts every toned notice's text on the panels' own inset", async () => {

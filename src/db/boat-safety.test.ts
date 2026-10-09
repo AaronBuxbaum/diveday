@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { departureBoatSafety, listExpiredBoatSafety } from "./boat-safety";
+import { departureBoatSafety, departureBoatSafetyFor, todayBoatSafety } from "./boat-safety";
 import { createBoat, deleteBoat, getBoatById, updateBoat } from "./boats";
 import type { AppDb } from "./client";
 import {
@@ -10,7 +10,7 @@ import {
   setGearItemStatus,
   updateGearItem,
 } from "./gear";
-import { shops } from "./schema";
+import { shops, trips } from "./schema";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -181,6 +181,8 @@ describe("aboard a boat", () => {
   });
 });
 
+const BOOKED = (booked: number) => ({ booked, boarded: 0 });
+
 describe("departureBoatSafety", () => {
   it("speaks for this hull's kit and papers, and nobody else's", async () => {
     const { db, shop } = ctx;
@@ -223,12 +225,12 @@ describe("departureBoatSafety", () => {
 
     const safety = await departureBoatSafety(db, shop.id, {
       boatId: boat.id,
-      passengersAboard: 13,
-      todayLocal: TODAY,
+      passengers: BOOKED(13),
+      onDate: TODAY,
     });
     expect(safety?.boatName).toBe("Check Hull");
     expect(safety?.notices).toEqual([
-      { code: "over_certificate", aboard: 13, limit: 12 },
+      { code: "over_certificate", passengers: 13, limit: 12, counted: false },
       expect.objectContaining({ code: "kit_clock", label: "Flares check", expired: true, days: 3 }),
       expect.objectContaining({
         code: "kit_clock",
@@ -240,18 +242,68 @@ describe("departureBoatSafety", () => {
     ]);
   });
 
-  it("names kit pulled to the bench", async () => {
+  it("says the O2 kit is missing when it was pulled, deleted or moved to the other hull", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Bare Hull", 14);
+    const other = await createBoat(db, shop.id, "Other Bare Hull", 14);
+    const o2 = await kit(db, shop.id, { kind: "o2_kit", label: "O2 bare", aboardBoatId: boat.id });
+    const read = async () =>
+      (
+        await departureBoatSafety(db, shop.id, {
+          boatId: boat.id,
+          passengers: BOOKED(2),
+          onDate: TODAY,
+        })
+      )?.notices.filter((notice) => notice.code === "kit_missing");
+
+    expect(await read()).toEqual([]);
+
+    // Flagged for service: the register cannot say it is still aboard.
+    await setGearItemStatus(db, { shopId: shop.id, gearItemId: o2.id, status: "needs_service" });
+    expect(await read()).toEqual([{ code: "kit_missing", kind: "o2_kit" }]);
+    await setGearItemStatus(db, { shopId: shop.id, gearItemId: o2.id, status: "in_service" });
+
+    // Moved to the other hull.
+    await updateGearItem(db, {
+      shopId: shop.id,
+      gearItemId: o2.id,
+      kind: "o2_kit",
+      label: "O2 bare",
+      aboardBoatId: other.id,
+    });
+    expect(await read()).toEqual([{ code: "kit_missing", kind: "o2_kit" }]);
+
+    // Deleted, with another O2 kit still on the shelf: the shop keeps one, so
+    // this hull is still short.
+    await kit(db, shop.id, { kind: "o2_kit", label: "O2 shelf" });
+    await deleteGearItem(db, { shopId: shop.id, gearItemId: o2.id, todayLocal: TODAY });
+    expect(await read()).toEqual([{ code: "kit_missing", kind: "o2_kit" }]);
+  });
+
+  it("asks for no AED from a shop that has never registered one", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Plain Hull", 14);
+    const safety = await departureBoatSafety(db, shop.id, {
+      boatId: boat.id,
+      passengers: BOOKED(2),
+      onDate: TODAY,
+    });
+    expect(safety?.notices.some((notice) => notice.code === "kit_missing")).toBe(false);
+  });
+
+  it("names kit flagged for service", async () => {
     const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Bench Hull", 14);
     const o2 = await kit(db, shop.id, { kind: "o2_kit", label: "O2 bench", aboardBoatId: boat.id });
     await setGearItemStatus(db, { shopId: shop.id, gearItemId: o2.id, status: "needs_service" });
     const safety = await departureBoatSafety(db, shop.id, {
       boatId: boat.id,
-      passengersAboard: 2,
-      todayLocal: TODAY,
+      passengers: BOOKED(2),
+      onDate: TODAY,
     });
     expect(safety?.notices).toEqual([
-      { code: "kit_off_service", gearItemId: o2.id, label: "O2 bench" },
+      { code: "kit_missing", kind: "o2_kit" },
+      { code: "kit_off_service", gearItemId: o2.id, label: "O2 bench", kind: "o2_kit" },
     ]);
   });
 
@@ -260,8 +312,8 @@ describe("departureBoatSafety", () => {
     expect(
       await departureBoatSafety(db, shop.id, {
         boatId: null,
-        passengersAboard: 4,
-        todayLocal: TODAY,
+        passengers: BOOKED(4),
+        onDate: TODAY,
       }),
     ).toBeNull();
     const other = await otherShop(db);
@@ -272,39 +324,86 @@ describe("departureBoatSafety", () => {
     expect(
       await departureBoatSafety(db, shop.id, {
         boatId: theirs.id,
-        passengersAboard: 4,
-        todayLocal: TODAY,
+        passengers: BOOKED(4),
+        onDate: TODAY,
       }),
     ).toBeNull();
   });
 });
 
-describe("listExpiredBoatSafety", () => {
-  it("lists what has run out, aboard or ashore, and not what is merely due", async () => {
+describe("todayBoatSafety", () => {
+  it("raises a departure's missing and lapsing life-safety kit, and leaves the rest as errands", async () => {
     const { db, shop } = ctx;
-    const boat = await createBoat(db, shop.id, "Expired Hull", 14, null, {
+    const sailing = await createBoat(db, shop.id, "Sailing Hull", 14, null, {
       ...PAPERS_CLEAR,
       registrationExpiresOn: "2026-10-01",
-      inspectionDueOn: "2026-10-20",
+      inspectionDueOn: "2026-12-20",
     });
-    const shelf = await kit(db, shop.id, { kind: "first_aid_kit", label: "First aid shelf" });
-    await clock(db, shop.id, shelf.id, "expiry", "2026-10-08");
-    const soon = await kit(db, shop.id, { kind: "aed", label: "AED soon", aboardBoatId: boat.id });
-    await clock(db, shop.id, soon.id, "aed_pads", "2026-10-21");
+    const moored = await createBoat(db, shop.id, "Moored Hull", 14);
+    const flares = await kit(db, shop.id, {
+      kind: "flares",
+      label: "Flares sailing",
+      aboardBoatId: sailing.id,
+    });
+    await clock(db, shop.id, flares.id, "expiry", "2026-10-06");
+    // A first-aid kit aboard is the owner's errand, not the departure's row.
+    const firstAid = await kit(db, shop.id, {
+      kind: "first_aid_kit",
+      label: "First aid sailing",
+      aboardBoatId: sailing.id,
+    });
+    await clock(db, shop.id, firstAid.id, "expiry", "2026-10-08");
+    // The AED is on the boat that is not sailing today: the sailing one lacks it.
+    const aed = await kit(db, shop.id, {
+      kind: "aed",
+      label: "AED moored",
+      aboardBoatId: moored.id,
+    });
+    await clock(db, shop.id, aed.id, "aed_pads", "2026-10-01");
 
-    const rows = await listExpiredBoatSafety(db, shop.id, TODAY);
-    expect(rows).toContainEqual({
+    const { departures, errands } = await todayBoatSafety(db, shop.id, {
+      todayLocal: TODAY,
+      departures: [{ tripId: "trip-today", boatId: sailing.id }],
+    });
+    expect(departures).toEqual([
+      {
+        tripId: "trip-today",
+        boatId: sailing.id,
+        boatName: "Sailing Hull",
+        notices: [
+          { code: "kit_missing", kind: "aed" },
+          expect.objectContaining({ code: "kit_clock", label: "Flares sailing", expired: true }),
+        ],
+      },
+    ]);
+    // The papers: a lapsed registration escalates, and the inspection 72 days
+    // out is inside its 90-day window.
+    expect(errands).toContainEqual({
       subject: "boat",
-      boatId: boat.id,
-      name: "Expired Hull",
+      boatId: sailing.id,
+      name: "Sailing Hull",
+      expired: true,
       notices: [
-        { code: "paper", paper: "registration", dueOn: "2026-10-01", expired: true, days: 8 },
+        expect.objectContaining({ paper: "registration", expired: true }),
+        expect.objectContaining({ paper: "inspection", expired: false, days: 72 }),
       ],
     });
-    expect(rows).toContainEqual(
-      expect.objectContaining({ subject: "kit", gearItemId: shelf.id, label: "First aid shelf" }),
+    const kitErrands = errands.flatMap((row) => (row.subject === "kit" ? [row.label] : []));
+    // The flares are on the departure row; the first-aid kit and the AED on
+    // the boat staying home are the owner's.
+    expect(kitErrands.sort()).toEqual(["AED moored", "First aid sailing"]);
+  });
+
+  it("raises a paper that is only due as an errand that has not lapsed", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Due Hull", 14, null, {
+      ...PAPERS_CLEAR,
+      insuranceExpiresOn: "2026-11-30",
+    });
+    const { errands } = await todayBoatSafety(db, shop.id, { todayLocal: TODAY, departures: [] });
+    expect(errands).toContainEqual(
+      expect.objectContaining({ subject: "boat", boatId: boat.id, expired: false }),
     );
-    expect(rows.some((row) => row.subject === "kit" && row.gearItemId === soon.id)).toBe(false);
   });
 
   it("forgets a boat the shop deleted", async () => {
@@ -314,7 +413,58 @@ describe("listExpiredBoatSafety", () => {
       insuranceExpiresOn: "2026-09-01",
     });
     await deleteBoat(db, shop.id, boat.id);
-    const rows = await listExpiredBoatSafety(db, shop.id, TODAY);
-    expect(rows.some((row) => row.subject === "boat" && row.boatId === boat.id)).toBe(false);
+    const { departures, errands } = await todayBoatSafety(db, shop.id, {
+      todayLocal: TODAY,
+      departures: [{ tripId: "trip-sold", boatId: boat.id }],
+    });
+    expect(departures).toEqual([]);
+    expect(errands.some((row) => row.subject === "boat" && row.boatId === boat.id)).toBe(false);
+  });
+});
+
+describe("departureBoatSafetyFor", () => {
+  const ZONE = "America/New_York";
+  const NOW = new Date("2026-10-09T13:30:00Z");
+
+  async function departure(db: AppDb, shopId: string, boatId: string, startsAt: string) {
+    const [trip] = await db
+      .insert(trips)
+      .values({
+        shopId,
+        boatId,
+        title: `Hull check ${startsAt}`,
+        startsAt: new Date(startsAt),
+        endsAt: new Date(new Date(startsAt).getTime() + 4 * 3_600_000),
+        capacity: 10,
+      })
+      .returning();
+    if (!trip) throw new Error("trip insert failed");
+    return trip;
+  }
+
+  it("judges next week's boat by next week's date, and says nothing for one that has sailed", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Dated Hull", 14);
+    const aed = await kit(db, shop.id, { kind: "aed", label: "AED dated", aboardBoatId: boat.id });
+    // In date today, lapsed by the 20th.
+    await clock(db, shop.id, aed.id, "aed_pads", "2026-10-15");
+    const read = async (startsAt: string) => {
+      const trip = await departure(db, shop.id, boat.id, startsAt);
+      return departureBoatSafetyFor(db, shop.id, {
+        tripId: trip.id,
+        startsAt: trip.startsAt,
+        timeZone: ZONE,
+        now: NOW,
+        passengers: { booked: 2, boarded: 0 },
+      });
+    };
+
+    expect((await read("2026-10-09T18:00:00Z"))?.notices).toEqual([
+      expect.objectContaining({ code: "kit_clock", expired: false, days: 6 }),
+    ]);
+    expect((await read("2026-10-20T12:00:00Z"))?.notices).toEqual([
+      expect.objectContaining({ code: "kit_clock", expired: true, days: 5 }),
+    ]);
+    expect(await read("2026-10-08T12:00:00Z")).toBeNull();
   });
 });

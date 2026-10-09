@@ -22,6 +22,7 @@ import {
   missingContactNamedDetailText,
   missingFitDetailText,
   missingFitNamedDetailText,
+  openBoatCheckActionText,
   openBoatsActionText,
   openCrewActionText,
   openDataSettingsActionText,
@@ -64,7 +65,6 @@ import {
 } from "@/i18n/today-labels";
 import { sayHelloSentences } from "@/i18n/welcome-cue-labels";
 import type { Role } from "@/lib/authz";
-import { isSafetyKitKind } from "@/lib/boat-safety";
 import {
   calendarDateInTimezone,
   calendarDateToUtcMidnight,
@@ -132,7 +132,7 @@ import {
   type NextBoatDayBlocked,
   sharedInHorizonReadiness,
 } from "./blockers";
-import { listExpiredBoatSafety } from "./boat-safety";
+import { todayBoatSafety } from "./boat-safety";
 import type { AppDb } from "./client";
 import { diveIntentTallyForTrips } from "./dive-intent";
 import {
@@ -2924,9 +2924,6 @@ export async function getTodayWork(
   }
   for (const row of gearServiceDueRows) {
     if (row.state.state !== "overdue" && row.state.state !== "due_soon") continue;
-    // Expired safety kit is the owner row below, which names every clock that
-    // ran out; a second row for the same unit would be the same fact twice.
-    if (row.state.state === "overdue" && isSafetyKitKind(row.kind)) continue;
     const dueAt = localMidnight(row.state.nextDueOn);
     actions.push({
       id: `gear-service:${row.gearItemId}`,
@@ -2946,19 +2943,51 @@ export async function getTodayWork(
       dueAt,
     });
   }
-  // **What the boat should carry, or hold, and no longer does** (roadmap N-08,
-  // N-10): an expired paper on a live boat, and an expired clock on any live
-  // safety-kit unit. One row per boat and per unit; the sentences are the
-  // pre-departure check's own, so the owner and the crew read the same words.
-  // Self-gating like the register: a shop that never dated anything has none.
-  for (const row of await listExpiredBoatSafety(db, shopId, todayLocal)) {
+  // **The boat and its emergency kit** (roadmap N-08, N-10; dive-domain review
+  // 2026-10-09). Two kinds of row from one read:
+  //
+  // - On each departure sailing today, the life-safety kit: no O2 kit or AED
+  //   aboard, or oxygen, AED or flares run out or about to. Danger, every
+  //   role, under that departure's header and pointing at its Boat tab — the
+  //   crew loading the boat are who can fix it before it leaves. It gates
+  //   nothing: roll call and boarding go on.
+  // - The owner's errands: a paper inside its window (escalating once it
+  //   lapses), and kit that ran out ashore or on a boat not sailing today.
+  //
+  // The sentences are the pre-departure check's own, so the owner, the crew
+  // and the manifest read the same words. Self-gating like the register.
+  const boatSafety = await todayBoatSafety(db, shopId, {
+    todayLocal,
+    departures: todayTrips.flatMap((trip) =>
+      trip.boatId ? [{ tripId: trip.id, boatId: trip.boatId }] : [],
+    ),
+  });
+  const todayTripsById = new Map(todayTrips.map((trip) => [trip.id, trip]));
+  for (const row of boatSafety.departures) {
+    const trip = todayTripsById.get(row.tripId);
+    if (!trip) continue;
+    const when = at(trip.startsAt, timeZone, locale);
+    actions.push({
+      id: `boat-safety-kit:${row.tripId}`,
+      kind: "boat_safety_kit",
+      urgency: urgencyFor(trip.startsAt, now),
+      subject: row.boatName,
+      context: when,
+      departure: { tripId: trip.id, label: `${trip.title} · ${when}` },
+      detail: row.notices.map((notice) => boatSafetyNoticeText(t, notice)).join(" · "),
+      actionLabel: openBoatCheckActionText(t),
+      href: `/shop/${shopSlug}/trips/${trip.id}/manifest`,
+      dueAt: trip.startsAt,
+    });
+  }
+  for (const row of boatSafety.errands) {
     const detail = row.notices.map((notice) => boatSafetyNoticeText(t, notice)).join(" · ");
     actions.push(
       row.subject === "boat"
         ? {
             id: `boat-safety:boat:${row.boatId}`,
-            kind: "boat_safety_expired",
-            urgency: "now",
+            kind: row.expired ? "boat_safety_expired" : "boat_papers_due",
+            urgency: row.expired ? "now" : "later",
             subject: row.name,
             context: null,
             detail,

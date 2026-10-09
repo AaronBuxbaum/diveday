@@ -38,7 +38,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   // 1. Settings, Boats: the certificate and a lapsed insurance date.
   await page.goto(`${shop}/settings/boats`);
   const row = boatRow(page, BOAT);
-  await row.getByLabel("Coast Guard passenger limit").fill("10");
+  await row.getByLabel("Passenger limit on the boat’s certificate").fill("10");
   await row.getByLabel("Insurance expires").fill(daysFromNow(-3));
   await row.getByRole("button", { name: "Save boat" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Boat updated." })).toBeVisible();
@@ -70,27 +70,38 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   await page.getByRole("button", { name: "Log it" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Logged." })).toBeVisible();
 
-  // 3. Today's reef departure on that boat says all of it, above the boat check.
-  await page.goto(`${await tripPathByTitle(page, privateShop.slug, REEF)}/manifest`);
-  const aboard = page.getByRole("region", { name: `Aboard ${BOAT}` });
-  await expect(aboard).toBeVisible();
+  // 3. Today's reef departure on that boat says all of it, above the boat
+  //    check — and on the printed sheet too.
+  const reefManifest = `${await tripPathByTitle(page, privateShop.slug, REEF)}/manifest`;
+  await page.goto(reefManifest);
+  const section = page.getByRole("region", { name: `${BOAT}: papers and safety kit` });
+  await expect(section).toBeVisible();
   await expect(
-    aboard.getByText(/people booked aboard; the Coast Guard certificate allows 10\./),
+    section.getByText(/people booked; the boat’s certificate allows 10\./),
   ).toBeVisible();
-  await expect(aboard.getByText("Insurance expired 3 days ago")).toBeVisible();
-  await expect(aboard.getByText("AED e2e: pads expire in 12 days")).toBeVisible();
+  await expect(section.getByText("Insurance expired 3 days ago")).toBeVisible();
+  await expect(section.getByText("AED e2e: pads expire in 12 days")).toBeVisible();
+  await page.emulateMedia({ media: "print" });
+  await expect(section.getByText("AED e2e: pads expire in 12 days")).toBeVisible();
+  await page.emulateMedia({ media: "screen" });
 
-  // 4. What has already run out is the owner's row on the shop home; what is
-  //    merely due is not.
+  // 4. On the shop home: the lapsed insurance is the owner's errand, and the
+  //    pads coming due on a boat sailing today are a row on that departure,
+  //    pointing at its Boat tab.
   await page.goto(shop);
   await expect(page.getByText("Insurance expired 3 days ago").first()).toBeVisible();
-  await expect(page.getByText("AED e2e: pads expire in 12 days")).toHaveCount(0);
+  await expect(page.getByText("AED e2e: pads expire in 12 days").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open boat check" }).first()).toHaveAttribute(
+    "href",
+    reefManifest,
+  );
 
-  // 5. The other hull says nothing: the kit and the papers are this boat's,
-  //    and a departure on a boat with nothing to say draws no panel at all.
+  // 5. The other hull speaks for itself: the shop keeps an AED now, Mantis II
+  //    has none aboard, and none of Mantis I's papers or kit are its lines.
   await page.goto(`${await tripPathByTitle(page, privateShop.slug, WRECK)}/manifest`);
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /^Aboard / })).toHaveCount(0);
+  const other = page.getByRole("region", { name: "Mantis II: papers and safety kit" });
+  await expect(other.getByText("No AED aboard")).toBeVisible();
+  await expect(other.getByText(/Insurance|AED e2e/)).toHaveCount(0);
 });
 
 /**
@@ -101,16 +112,20 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
 test.describe("a seeded lapse on the demo's reef boat", () => {
   signedInAsOwner();
 
-  test("names the expired flares and the AED pads coming due", async ({ page, request }) => {
+  test("names the missing oxygen, the expired flares and the AED pads coming due", async ({
+    page,
+    request,
+  }) => {
     const seeded = await request.post("/api/test/seed-trouble-states?boatSafety=1");
     expect(seeded.ok()).toBe(true);
     const { boatSafety } = (await seeded.json()) as { boatSafety?: { tripId: string } };
     if (!boatSafety) throw new Error("seed-trouble-states found no reef departure on a boat");
 
     await page.goto(`/shop/blue-mantis/trips/${boatSafety.tripId}/manifest`);
-    const aboard = page.getByRole("region", { name: `Aboard ${BOAT}` });
-    await expect(aboard.getByText("Flares (Mantis): expired 3 days ago")).toBeVisible();
-    await expect(aboard.getByText("AED (Mantis): pads expire in 12 days")).toBeVisible();
-    await expect(aboard.getByText(/the Coast Guard certificate allows/)).toBeVisible();
+    const section = page.getByRole("region", { name: `${BOAT}: papers and safety kit` });
+    await expect(section.getByText("No emergency oxygen aboard")).toBeVisible();
+    await expect(section.getByText("Flares (Mantis): expired 3 days ago")).toBeVisible();
+    await expect(section.getByText("AED (Mantis): pads expire in 12 days")).toBeVisible();
+    await expect(section.getByText(/the boat’s certificate allows/)).toBeVisible();
   });
 });
