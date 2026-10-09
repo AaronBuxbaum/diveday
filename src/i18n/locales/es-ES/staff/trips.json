@@ -183,6 +183,7 @@
     "cancelHint": "La quita del calendario público y notifica a los buceadores con reserva.",
     "cancelConfirm": "Sí, cancelar esta salida",
     "weatherBlowout": "Cancelación por mal tiempo…",
+    "dayBlowout": "Cancelar el día entero por mal tiempo…",
     "viewBlowout": "Ver la cascada de la cancelación"
   },
   "details": {

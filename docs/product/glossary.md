@@ -5,14 +5,18 @@ new domain concept, define it here in the same PR.
 
 - **Blow-out** — the captain's call that weather or sea state makes a departure un-runnable: the
   trip is cancelled by the shop, not the diver. Distinct from a **conditions hold** (below), which
-  is reversible and keeps bookings live. In DiveDay a blow-out is called once per departure and
-  triggers the cancellation cascade: every booked diver gets one message with the cancellation,
-  their money story, and rebooking options filtered to departures they qualify for, and staff work
-  the cascade record until nobody is left unresolved (ADR
-  [20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md)). A blow-out
+  is reversible and keeps bookings live. In DiveDay a blow-out is called per departure, or for
+  several departures of one day at once (the day weather call, ADR
+  [20261009-day-weather-call](../architecture/decisions/20261009-day-weather-call.md), which never
+  offers a diver a departure the same call cancels), and triggers the cancellation cascade: every
+  booked diver gets one message with the cancellation, their money story, and rebooking options
+  filtered to departures they qualify for, and staff work the cascade record until nobody is left
+  unresolved (ADR [20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md)). A blow-out
   refunds each seat's card capture by itself as of 2026-08-13 (ADR
   [20260813-shop-cancellation-refunds-itself](../architecture/decisions/20260813-shop-cancellation-refunds-itself.md));
   a counter payment, a disconnected account, or a Stripe refusal still leaves the refund to staff.
+  A departure **underway** (past its start time, or with anybody recorded at roll call) cannot be
+  blown out, and the day call is for owners, managers and captains only.
   **It cancels the *trip* and leaves every booking active**, and every reader downstream has to expect that
   shape: `bookings.status` says nothing about a blow-out, so a surface asking "was this seat
   cancelled" gets `false` for all twelve people who drove to the dock and were sent home. The
@@ -817,6 +821,14 @@ new domain concept, define it here in the same PR.
   has sailed, since nothing on a hull that has left is left to move; the side still on the dock
   keeps the warning until it sails or its boat changes, because its divers are the ones with no
   boat.
+- **Crew news** — what a crew member is told when their boats change: put on a departure, taken off
+  one, given a different role on one, the departure called off, or an answer to their own request.
+  Recorded as `crew_notices` rows by the crew write path, never for the staffer who made the change,
+  then netted per departure and sent as one email per person. A call-off, or a change on a departure
+  leaving within a day, goes at once. Anything else waits until their crew has been still for two
+  minutes, on the hourly pass. On then off before it settles is no news, and every row is settled
+  with an outcome, never in silence (ADR
+  [20261009-crew-hear-about-their-boats](../architecture/decisions/20261009-crew-hear-about-their-boats.md)).
 - **Crew clash** — one person on two departures whose windows **overlap**. It is a time overlap and
   never a shared day: a divemaster on the 08:00 and the 14:00 is how a shop runs a Saturday, and
   `setTripCrew`/`changeTripCrew` allow it deliberately while refusing the overlap outright. The
@@ -2418,6 +2430,9 @@ new domain concept, define it here in the same PR.
   owns (ADR
   [20260826-stripe-tax-is-opt-in-and-provider-owned](../architecture/decisions/20260826-stripe-tax-is-opt-in-and-provider-owned.md)),
   and from a **deposit**, which is the shop's money held early.
+- **Dashboard refund** — a refund somebody made outside DiveDay, usually in the shop's own Stripe dashboard. The `charge.refunded` webhook records it on the order or checkout it reverses, reconciled to Stripe's cumulative `amount_refunded`, so a refund DiveDay made itself is never counted twice. Its trail code is `stripe_dashboard_refund`. A party checkout's dashboard refund names no seat, so no seat's payment is changed; it waits on the stuck-operations queue for a human, and no automatic refund runs against that checkout's seats until then. ADR [20261009-stripe-reversals-reach-diveday](../architecture/decisions/20261009-stripe-reversals-reach-diveday.md).
+- **Card dispute** — a diver's bank taking a charge back, or asking about it first (an inquiry). One `payment_disputes` row per Stripe dispute against one of the shop's orders or checkouts, kept current by the `charge.dispute.*` webhooks. While it is undecided the owner sees a Today row with the amount and the day Stripe stops taking evidence. It informs and never moves money. Same ADR.
+- **Cancellation notice** — the email a diver gets when one booking is canceled, by themselves from their trip-prep link or by staff from the roster (`booking_cancelled`). It names the trip and says what happened to the money in one sentence: the amount Stripe reversed, that the shop's free-cancellation window had closed, or that the shop will be in touch. A diver who never paid reads nothing about money. Not sent for a blow-out or a minimum-head-count cancellation, which carry their own message, nor to a seat with no address, nor when staff remove a seat that was not `booked` (checked in, no-show) (`src/db/booking-cancelled-notice.ts`).
 - **Subscription (DiveDay billing)** — what a *shop* pays *DiveDay*: one monthly price, billed by Stripe Billing on DiveDay's own Stripe account, never through the shop's connected account (that is the shop's money from divers). One row per shop in `shop_subscriptions`, written by the billing webhook; Settings > Billing is the owner's alone. ADR [20261007-subscription-billing](../architecture/decisions/20261007-subscription-billing.md).
 - **Billing standing** — the one word a shop's subscription reads as: *trialing*, *free term*, *active*, *past due*, *canceled* or *trial ended*. Derived, never stored, by `billingStanding` in `src/lib/billing/standing.ts` from the trial window, the free term and Stripe's own status. *In good standing* means trialing, free term or active; nothing gates on it.
 - **Free term** — free months DiveDay grants a shop by hand (the founding offer), set with `pnpm billing:free-term <shop-slug> <last-free-day>`. The date is the last free day, inclusive, in the shop's zone. Adding a card during the trial or a free term charges nothing until the free time ends.

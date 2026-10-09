@@ -1,5 +1,7 @@
 import { escapeHtml } from "@/lib/html";
+import { crewScheduleChangeEmail } from "./crew-emails";
 import {
+  bookingCancelledEmail,
   bookingConfirmationEmail,
   bookingHandoffEmail,
   checkoutRecoveryEmail,
@@ -97,6 +99,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "trip_conditions_hold") return tripConditionsHoldEmail(notification);
   if (notification.kind === "trip_blowout") return tripBlowoutEmail(notification);
   if (notification.kind === "trip_minimum_not_met") return tripMinimumNotMetEmail(notification);
+  if (notification.kind === "booking_cancelled") return bookingCancelledEmail(notification);
   if (notification.kind === "waiver_request") return waiverRequestEmail(notification);
   if (notification.kind === "guardian_release_copy") return guardianReleaseCopyEmail(notification);
   if (notification.kind === "readiness_link") return readinessLinkEmail(notification);
@@ -120,5 +123,6 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "weekly_digest") return weeklyDigestEmail(notification);
   if (notification.kind === "work_order_ready") return workOrderReadyEmail(notification);
   if (notification.kind === "gear_service_due") return gearServiceDueEmail(notification);
+  if (notification.kind === "crew_schedule_change") return crewScheduleChangeEmail(notification);
   return passwordChangedEmail(notification);
 }

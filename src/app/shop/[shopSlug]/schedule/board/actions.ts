@@ -528,7 +528,11 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     const firstTrip = series.trips[0];
     if (!firstTrip) return await invalid();
     for (const trip of series.trips) {
-      if (crewPersonIds.length > 0) await setTripCrew(db, shop.id, trip.id, crewPersonIds);
+      if (crewPersonIds.length > 0) {
+        await setTripCrew(db, shop.id, trip.id, crewPersonIds, {
+          actorPersonId: session.user.personId,
+        });
+      }
     }
     await createTripRequestInvitations(db, {
       shopId: shop.id,
@@ -549,7 +553,11 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     scheduleDays,
   });
   if (!created) return await invalid();
-  if (crewPersonIds.length > 0) await setTripCrew(db, shop.id, created.id, crewPersonIds);
+  if (crewPersonIds.length > 0) {
+    await setTripCrew(db, shop.id, created.id, crewPersonIds, {
+      actorPersonId: session.user.personId,
+    });
+  }
   await createTripRequestInvitations(db, {
     shopId: shop.id,
     tripId: created.id,
@@ -571,6 +579,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
           date,
           fallback: { title, endTime, capacity, plannedDives, crewPersonIds },
           boats: boatId ? await listBoats(db, shop.id) : null,
+          actorPersonId: session.user.personId,
         })
       : false;
   await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
@@ -599,6 +608,8 @@ async function addPatternDeparture(
       crewPersonIds: string[];
     };
     boats: Awaited<ReturnType<typeof listBoats>> | null;
+    /** The staffer adding it, who is not told about their own crew choice. */
+    actorPersonId: string;
   },
 ): Promise<boolean> {
   const { also, date, fallback } = input;
@@ -641,7 +652,9 @@ async function addPatternDeparture(
   });
   if (!created) return false;
   const crew = also.crewPersonIds.length > 0 ? also.crewPersonIds : fallback.crewPersonIds;
-  if (crew.length > 0) await setTripCrew(db, shop.id, created.id, crew);
+  if (crew.length > 0) {
+    await setTripCrew(db, shop.id, created.id, crew, { actorPersonId: input.actorPersonId });
+  }
   return true;
 }
 

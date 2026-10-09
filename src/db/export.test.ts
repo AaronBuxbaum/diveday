@@ -210,6 +210,12 @@ const FOLDED_TABLES = [
  * its export fate fails the coverage test below.
  */
 const EXCLUDED_TABLES = [
+  // Card disputes (ADR 20261009-stripe-reversals-reach-diveday). Stripe's own
+  // record, mirrored here only so an owner sees an open one on Today and on
+  // the order; every field is Stripe's, kept current from Stripe's events, and
+  // the shop's Stripe dashboard is where a dispute is answered and exported.
+  // The money it concerns is already on orders.csv and booking_checkouts.csv.
+  "payment_disputes",
   // Historical assignments are source evidence attached to the gear-history
   // import, not a live reservation or booking record. They remain in the
   // shop database and are intentionally not part of the current full-shop
@@ -292,6 +298,7 @@ const EXCLUDED_TABLES = [
   "calendar_feeds", // bearer credentials for a staff calendar subscription, never exported
   "last_minute_list_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
+  "crew_notices", // crew news waiting to be told, and the stamp of when it was — delivery plumbing; the crew list itself is exported as trip_assignments
   "weekly_digest_sends", // the Monday email's send claims and opt-out link hashes — delivery plumbing and bearer credentials, never exported
   "shop_contact_email_confirmation_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   // The shop's own Meta access token (sealed) plus the provider linkage around
@@ -503,6 +510,9 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // An ephemeral Stripe Checkout link that stopped resolving when the session
     // expired — same reasoning as tips.checkout_url.
     "checkout_url",
+    // Provider linkage for matching a later refund or dispute event, useless
+    // outside this Stripe account — same reasoning as stripe_account_id.
+    "stripe_payment_intent_id",
   ],
   // The join row's surrogate id says nothing beyond (checkout_id, booking_id),
   // which are both exported — same reasoning as buddy_pair_members.id.
@@ -555,6 +565,9 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "shop_id",
     "stripe_account_id", // provider linkage, useless outside this Stripe account
     "stripe_customer_id",
+    // Matches a later refund or dispute event to this order; provider
+    // linkage like the two above (ADR 20261009-stripe-reversals-reach-diveday).
+    "stripe_payment_intent_id",
   ],
   order_line_items: ["shop_id"],
   work_order_bills: ["shop_id"],
@@ -564,6 +577,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "stripe_account_id", // provider linkage, useless outside this Stripe account
     "stripe_customer_id", // provider linkage, same as stripe_account_id above
     "checkout_url", // an ephemeral Stripe Checkout link, same reasoning as booking_checkouts
+    "stripe_payment_intent_id", // provider linkage, same reasoning as booking_checkouts
   ],
   dive_sites: [
     "shop_id",

@@ -81,6 +81,7 @@
     "stuckPaymentOperation": "Stripe",
     "failedPhotoDeletion": "Limpieza",
     "owedRefund": "Reembolso pendiente",
+    "paymentDispute": "Disputa de tarjeta",
     "reviewsPending": "Reseñas",
     "unansweredMessages": "Mensajes",
     "gearOverdue": "Equipo atrasado",
@@ -192,6 +193,7 @@
     "resendWaiverLink": "Reenviar enlace de exención",
     "resendConfirmation": "Reenviar confirmación",
     "openOrders": "Revisar en Pedidos",
+    "openOrder": "Abrir pedido",
     "openDataSettings": "Revisar en Ajustes",
     "openReviews": "Ver reseñas",
     "openInbox": "Ver mensajes",
@@ -236,7 +238,10 @@
     "owedRefundDetailNoAmount": "Pendiente de {tripTitle} del {when}. Devuelve lo que pagó y luego marca la plaza como reembolsada.",
     "owedRefundGroupSubject": "{count, plural, one {# reembolso pendiente} other {# reembolsos pendientes}}",
     "owedRefundGroupDetail": "{amount} de {tripTitle} del {when}: {names}. Devuélvelo y luego marca cada plaza como reembolsada.",
-    "owedRefundGroupDetailNoAmount": "{tripTitle} del {when}: {names}. Devuélvelo y luego marca cada plaza como reembolsada."
+    "owedRefundGroupDetailNoAmount": "{tripTitle} del {when}: {names}. Devuélvelo y luego marca cada plaza como reembolsada.",
+    "disputeSubject": "Disputa de tarjeta",
+    "disputeDetail": "{amount} en disputa. Envía tus pruebas a Stripe antes del {due}.",
+    "disputeDetailNoDeadline": "{amount} en disputa. Respóndela en Stripe."
   },
   "reviewsPending": {
     "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión"

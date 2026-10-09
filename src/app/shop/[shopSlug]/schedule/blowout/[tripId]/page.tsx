@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
@@ -9,11 +10,13 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
+import { canPersonCallDayBlowout } from "@/db/authz";
 import { type BlowoutDiverState, getTripBlowout } from "@/db/blowouts";
 import type { PaymentStatus } from "@/db/schema";
 import { getTripRoster, getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -89,11 +92,12 @@ export default async function BlowoutPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const { db, shop } = await requireShopSurface(shopSlug);
-  const [locale, trip, blowout] = await Promise.all([
+  const { db, shop, session } = await requireShopSurface(shopSlug);
+  const [locale, trip, blowout, canCallDay] = await Promise.all([
     requestLocale(shop.defaultLocale),
     getTripWithBooked(db, shop.id, tripId),
     getTripBlowout(db, shop.id, tripId),
+    canPersonCallDayBlowout(db, shop.id, session.user.personId),
   ]);
   if (!trip) notFound();
   const t = staffTranslator(locale);
@@ -146,6 +150,23 @@ export default async function BlowoutPage({
         <SectionCard as="div" padding="lg" className="max-w-2xl">
           <p className="text-sm">{t("blowout.confirm.lead", { tripTitle: trip.title })}</p>
           <p className="mt-3 text-sm text-muted">{t("blowout.confirm.moneyNote")}</p>
+          {departed || !canCallDay ? null : (
+            // The whole morning is usually what the weather closes (ADR
+            // 20261009-day-weather-call); calling the boats one at a time
+            // offered each boat's divers the next one about to be called.
+            <Link
+              href={shopPath(
+                shopSlug,
+                "schedule",
+                "blowout",
+                "day",
+                calendarDateInTimezone(trip.startsAt, shop.timezone),
+              )}
+              className={`mt-3 ${buttonClass({ variant: "link", size: "sm", flush: true })}`}
+            >
+              {t("blowout.day.instead")}
+            </Link>
+          )}
           {roster.length === 0 ? (
             // Nested inside the confirm card, so no icon, fill or shadow.
             <EmptyState

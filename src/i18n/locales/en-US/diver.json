@@ -4028,6 +4028,15 @@
       "moneyRefundOwed": "You’re owed a full refund, and {shopName} will be in touch to get it back to you.",
       "findAnother": "See what else is running"
     },
+    "bookingCancelled": {
+      "subject": "Booking canceled: {tripTitle}",
+      "bodyByDiver": "Your booking for {tripTitle} on {date} is canceled, and your seat is released.",
+      "bodyByShop": "{shopName} has canceled your booking for {tripTitle} on {date}, and your seat is released.",
+      "moneyRefunded": "{amount} is on its way back to the card you paid with, and can take a few days to land.",
+      "moneyForfeit": "It was canceled after {shopName}’s free-cancellation window closed, so under their policy nothing is refunded.",
+      "moneyFollowUp": "{shopName} will be in touch about what you paid.",
+      "findAnother": "See what else is running"
+    },
     "tripBlowout": {
       "subject": "Trip canceled — {tripTitle}",
       "body": "{shopName} has had to cancel {tripTitle} on {date} because of the weather. Your seat is released, and there’s nothing you need to do.",
@@ -4287,6 +4296,33 @@
       },
       "dropBy": "Drop by {shopName} any time before then.",
       "dropBySms": "Drop by any time before then."
+    },
+    "crewSchedule": {
+      "subjectAssigned": "{shopName}: You’re crewing {tripTitle}, {when}",
+      "subjectRemoved": "{shopName}: You’re off {tripTitle}, {when}",
+      "subjectApproved": "{shopName}: Request approved for {tripTitle}, {when}",
+      "subjectDeclined": "{shopName}: Request declined for {tripTitle}, {when}",
+      "subjectRefused": "{shopName}: You couldn’t be added to {tripTitle}, {when}",
+      "subjectRoleChanged": "{shopName}: New role on {tripTitle}, {when}",
+      "subjectCalledOff": "{shopName}: {tripTitle}, {when}, is called off",
+      "subjectMany": "Your boats at {shopName} changed",
+      "intro": "Your boats at {shopName} changed:",
+      "assigned": "You’re crewing {tripTitle}, {when}.",
+      "removed": "You’re no longer crewing {tripTitle}, {when}.",
+      "approved": "Your request to crew {tripTitle}, {when}, was approved. You’re on the crew.",
+      "declined": "Your request to crew {tripTitle}, {when}, was declined.",
+      "refused": "Your request to crew {tripTitle}, {when}, was approved, but you couldn’t be added to the crew.",
+      "roleChanged": "Your role on {tripTitle}, {when}, is now {role}.",
+      "roleChangedNoRole": "Your role on {tripTitle}, {when}, changed.",
+      "calledOff": "{tripTitle}, {when}, was called off. You’re not needed for it.",
+      "asRole": "You’re on as {role}.",
+      "roles": {
+        "instructor": "instructor",
+        "divemaster": "divemaster",
+        "captain": "captain",
+        "crew": "crew"
+      },
+      "open": "Open the departure"
     },
     "smsWorkOrder": {
       "ready": "{shopName}: your gear on ticket #{number} is ready to collect ({pieces}).",

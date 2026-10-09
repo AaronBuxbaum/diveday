@@ -10,6 +10,7 @@ import type {
 } from "@/lib/crew-requests";
 import { inWaterCrewRole } from "@/lib/crew-roles";
 import type { AppDb, DbExecutor } from "./client";
+import { recordCrewNotices } from "./crew-notices";
 import {
   bookings,
   courses,
@@ -465,6 +466,21 @@ export async function decideCrewAssignmentRequest(
         decidedByPersonId: input.decidedByPersonId,
       })
       .where(eq(crewAssignmentRequests.id, request.id));
+    // The asker hears the answer (ADR 20261009-crew-hear-about-their-boats).
+    // An approval's own assignment, made next by the caller, nets into it.
+    await recordCrewNotices(
+      tx,
+      [
+        {
+          shopId: input.shopId,
+          tripId: request.tripId,
+          personId: request.personId,
+          change: input.decision === "approved" ? "request_approved" : "request_declined",
+          actorPersonId: input.decidedByPersonId,
+        },
+      ],
+      now,
+    );
     return {
       ok: true as const,
       id: request.id,

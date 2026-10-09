@@ -3,6 +3,7 @@ import { messagesFor } from "@/i18n/messages";
 import { DIVER_LOCALES, type DiverLocale } from "@/i18n/settings";
 import {
   ALL_ROLES,
+  canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
   canExportIncidentRecord,
@@ -89,6 +90,27 @@ describe("accountable-role gates (export/import/reports)", () => {
       });
     });
   }
+});
+
+describe("canCallDayBlowout (owner/manager/captain)", () => {
+  it("admits owner, manager, and captain — the people who call the weather for a whole day", () => {
+    for (const role of ["owner", "manager", "captain"] as const) {
+      expect(canCallDayBlowout([role])).toBe(true);
+    }
+  });
+
+  it("refuses everybody else, though they may still call one departure", () => {
+    for (const role of [
+      "instructor",
+      "assistant_instructor",
+      "divemaster",
+      "crew",
+      "diver",
+    ] as const) {
+      expect(canCallDayBlowout([role])).toBe(false);
+    }
+    expect(canCallDayBlowout(undefined)).toBe(false);
+  });
 });
 
 describe("canConfigureTrips (H-14 — owner/manager/instructor)", () => {

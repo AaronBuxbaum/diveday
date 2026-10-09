@@ -47,6 +47,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   stuck_payment_operation: "today.actionKind.stuckPaymentOperation",
   failed_photo_deletion: "today.actionKind.failedPhotoDeletion",
   owed_refund: "today.actionKind.owedRefund",
+  payment_dispute: "today.actionKind.paymentDispute",
   reviews_pending: "today.actionKind.reviewsPending",
   unanswered_messages: "today.actionKind.unansweredMessages",
   gear_overdue: "today.actionKind.gearOverdue",
@@ -737,6 +738,30 @@ export function openUnitsActionText(t: StaffTranslator): string {
 
 export function openOrdersActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openOrders");
+}
+
+export function openOrderActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.openOrder");
+}
+
+/**
+ * A card dispute's row (ADR 20261009-stripe-reversals-reach-diveday). The
+ * subject is the diver; this line is what the owner has to act on — how much,
+ * and the day Stripe stops taking evidence. A dispute with no deadline (an
+ * inquiry Stripe is still handling) says only where to answer it.
+ */
+export function paymentDisputeDetailText(
+  t: StaffTranslator,
+  input: { amount: string; due: string | null },
+): string {
+  return input.due === null
+    ? t("today.opsAlert.disputeDetailNoDeadline", { amount: input.amount })
+    : t("today.opsAlert.disputeDetail", { amount: input.amount, due: input.due });
+}
+
+/** A dispute's subject when no diver can be named for it. */
+export function paymentDisputeSubjectText(t: StaffTranslator): string {
+  return t("today.opsAlert.disputeSubject");
 }
 
 /**

@@ -349,6 +349,16 @@ export function canConfigureTrips(roles: readonly Role[] | undefined): boolean {
 }
 
 /**
+ * **The day's weather call** (ADR 20261009-day-weather-call): cancelling every
+ * boat of a morning or a day in one act is the go/no-go of whoever runs the
+ * operation — owner, manager, or captain (owner's decision, 2026-10-09). The
+ * single-departure blow-out stays open to all staff.
+ */
+export function canCallDayBlowout(roles: readonly Role[] | undefined): boolean {
+  return (roles ?? []).some((role) => role === "owner" || role === "manager" || role === "captain");
+}
+
+/**
  * **Seat someone in the water past a missing card**: "Change anyway" when a
  * snorkeler or rider is changed to a diver and the booking-time card check
  * would refuse them (ADR 20261007-participant-types). It is the certification

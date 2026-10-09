@@ -55,6 +55,7 @@ import { acceptsNewDivers, isFull } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { buildArrivalDesk } from "./_arrivals/arrival-desk";
 import { DESK_NOTICES } from "./_arrivals/notices";
+import { BlowoutDoors } from "./_components/BlowoutDoors";
 import { ConditionsSection } from "./_components/ConditionsSection";
 import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
@@ -1083,16 +1084,14 @@ export default async function ManageTripPage({
                         locale={locale}
                       />
                     ) : null}
-                    {/* The blow-out carries no caption here because the page it
-                    opens is one: "This cancels {trip} and sends every booked
-                    diver one message…" is its first line, and it is the confirm
-                    (ADR 20260804-blowout-cascade). */}
-                    <Link
-                      href={shopPath(shopSlug, "schedule", "blowout", tripId)}
-                      className={buttonClass({ variant: "danger-ghost", size: "sm", flush: true })}
-                    >
-                      {t("trips.detail.weatherBlowout")}
-                    </Link>
+                    <BlowoutDoors
+                      shop={shop}
+                      personId={session.user.personId}
+                      tripId={tripId}
+                      startsAt={trip.startsAt}
+                      tripLabel={t("trips.detail.weatherBlowout")}
+                      dayLabel={t("trips.detail.dayBlowout")}
+                    />
                     <form action={cancelTripAction.bind(null, shopSlug, tripId)} className="w-full">
                       <InlineConfirm
                         triggerLabel={t("trips.about.cancel")}

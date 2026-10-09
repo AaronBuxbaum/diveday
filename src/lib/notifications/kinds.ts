@@ -9,6 +9,7 @@ import {
   MAX_LEARNING_MATERIALS,
   MAX_SCHEDULE_DAYS,
 } from "@/lib/courses";
+import { CREW_NOTICE_CHANGES, CREW_TRIP_ROLES } from "@/lib/crew-notices";
 import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
 import { SHOP_MILESTONES } from "@/lib/founder-metrics";
 import { GEAR_KIND_ORDER } from "@/lib/gear";
@@ -558,6 +559,53 @@ const tripBlowoutSchema = z.object({
   scheduleUrl: z.url().max(2_000),
 });
 
+/**
+ * **"Your booking is canceled."** One seat, canceled by the diver from their
+ * trip-prep link or by the shop from the roster, and what happened to the
+ * money, so the diver never has to ask whether a refund is coming.
+ *
+ * Not the blow-out and not the minimum-head-count sweep: those cancel the
+ * whole departure and carry their own message. Keyed on the booking, since a
+ * booking is canceled once.
+ *
+ * The money is a code plus, for a refund, the amount actually reversed —
+ * never a figure the template has to work out.
+ *
+ * - `refunded` — Stripe reversed `amountCents` to the diver's card.
+ * - `forfeit` — the shop's cancellation window had closed; nothing comes back.
+ * - `shop_will_follow_up` — money was captured and DiveDay could not settle
+ *   it here (no window on the trip, a counter payment, a refund that failed or
+ *   is still in flight, a crew member without refund permission).
+ * - `none` — nothing was captured, so the message says nothing about money.
+ */
+const bookingCancelledSchema = z.object({
+  kind: z.literal("booking_cancelled"),
+  bookingId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  cancelledBy: z.enum(["diver", "shop"]),
+  /** When it was canceled; keys the send, so a seat rebooked and canceled again is told again. */
+  cancelledAt: z.date(),
+  money: z.discriminatedUnion("story", [
+    z.object({ story: z.literal("none") }),
+    z.object({ story: z.literal("forfeit") }),
+    z.object({ story: z.literal("shop_will_follow_up") }),
+    z.object({
+      story: z.literal("refunded"),
+      amountCents: z.number().int().min(1).max(100_000_000),
+      currency: z.string().trim().length(3),
+    }),
+  ]),
+  /** Back to the shop's own schedule, to find another day. */
+  scheduleUrl: z.url().max(2_000),
+});
+
 // Account-lifecycle mail (20260725-account-lifecycle-emails): no bookingId,
 // so these are structurally excluded from TrackedNotification
 // (src/db/notifications.ts) exactly like waitlist_invite already is —
@@ -1045,6 +1093,39 @@ const gearServiceDueSchema = z.object({
   unsubscribeUrl: z.url().max(2_000),
 });
 
+/**
+ * **A crew member's boats changed** (ADR 20261009-crew-hear-about-their-boats):
+ * put on a departure, taken off one, or an answer to their own ask — netted
+ * and batched by `src/lib/crew-notices.ts`, so a copied week is one message.
+ *
+ * Staff mail, in the staffer's own locale. No `bookingId`, so no delivery row
+ * and no `notification_kind` value. `noticeId` is the newest `crew_notices`
+ * row the message settles. Not queued (`notificationIsQueueable`): a day-late
+ * retry could tell somebody they are on a boat they have since come off.
+ */
+const crewScheduleChangeSchema = z.object({
+  kind: z.literal("crew_schedule_change"),
+  noticeId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  timezone: z.string().trim().min(1).max(100),
+  changes: z
+    .array(
+      z.object({
+        change: z.enum(CREW_NOTICE_CHANGES),
+        role: z.enum(CREW_TRIP_ROLES).nullable().optional(),
+        tripTitle: z.string().trim().min(1).max(200),
+        startsAt: z.date(),
+        tripUrl: z.url().max(2_000),
+      }),
+    )
+    .min(1)
+    .max(50),
+});
+
 export const notificationSenderSchema = z.object({
   replyTo: emailAddressSchema.optional(),
   /** One line, already in postal order (`shopAddressLines(...).join(", ")`). */
@@ -1076,6 +1157,7 @@ export const notificationSchema = z
     tripConditionsHoldSchema,
     tripMinimumNotMetSchema,
     tripBlowoutSchema,
+    bookingCancelledSchema,
     welcomeSchema,
     emailVerificationSchema,
     contactEmailConfirmationSchema,
@@ -1094,6 +1176,7 @@ export const notificationSchema = z
     weeklyDigestSchema,
     workOrderReadySchema,
     gearServiceDueSchema,
+    crewScheduleChangeSchema,
   ])
   .and(z.object({ sender: notificationSenderSchema.optional() }));
 
@@ -1202,6 +1285,7 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "guardian_release_copy":
     case "work_order_ready":
     case "gear_service_due":
+    case "crew_schedule_change":
       return false;
     default:
       return true;
@@ -1270,6 +1354,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // converges on the same send (docs ADR 20260804-blowout-cascade).
     case "trip_blowout":
       return `trip-blowout/${notification.blowoutDiverId}`;
+    // One per cancellation: a seat reinstated and canceled again is news again.
+    case "booking_cancelled":
+      return `booking-cancelled/${notification.bookingId}/${notification.cancelledAt.toISOString()}`;
     // One welcome ever, per account.
     case "welcome":
       return `welcome/${notification.userAccountId}`;
@@ -1336,5 +1423,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
       return `work-order-ready/${notification.noticeId}`;
     case "gear_service_due":
       return `gear-service-due/${notification.noticeId}`;
+    // One send per settled batch, named by its newest notice row.
+    case "crew_schedule_change":
+      return `crew-schedule-change/${notification.noticeId}`;
   }
 }

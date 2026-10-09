@@ -172,5 +172,8 @@ const CHROME_CEILING = 20;
 // 62 → 63: a diver first counted aboard at a later checkpoint is on the boat
 // too (issue #2142), so the queue reads who was boarded at any checkpoint
 // (`listBoardedAtAnyCheckpointByTrip`), one statement over the queue's trips.
-const TODAY_CEILING = 63;
+// 63 → 64: an undecided chargeback is a Today row for the owner
+// (`listOpenPaymentDisputes`, ADR 20261009-stripe-reversals-reach-diveday),
+// one statement read beside the stuck operations.
+const TODAY_CEILING = 64;
 const TRIP_CEILING = 49;

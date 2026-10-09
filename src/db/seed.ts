@@ -64,6 +64,7 @@ import {
   notificationSendQueue,
   orderLineItems,
   orders,
+  paymentDisputes,
   paymentOperationIntents,
   people,
   personCourtesyEmailUnsubscribeTokens,
@@ -1302,6 +1303,9 @@ export async function resetDemoSchedule(
   // bookings, orders, and booking_checkouts — so both go before booking_checkouts.
   await db.delete(bookingCheckoutBookings).where(eq(bookingCheckoutBookings.shopId, shopId));
   await db.delete(paymentOperationIntents).where(eq(paymentOperationIntents.shopId, shopId));
+  // A card dispute references the order or checkout it is about (ADR
+  // 20261009-stripe-reversals-reach-diveday), so it goes before both.
+  await db.delete(paymentDisputes).where(eq(paymentDisputes.shopId, shopId));
   // A redemption points at the checkout that spent the code, so it goes first
   // (docs ADR 20260729-shop-promo-codes). The codes themselves are shop config
   // and survive a schedule reset.

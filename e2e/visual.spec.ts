@@ -4926,6 +4926,26 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "blowout-confirm", scheme);
       });
 
+      // The day's weather call (ADR 20261009-day-weather-call), reached from
+      // the single-trip confirm: every departure of the reef charter's day,
+      // none selected, with who is booked on and crewing each; then its review,
+      // every departure selected. Read-only until the review's button.
+      test(`the day's weather call renders true to the design (${scheme})`, async ({ page }) => {
+        const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
+        await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
+        await page.getByRole("link", { name: /Call several departures at once/ }).click();
+        await page
+          .getByRole("heading", { level: 1, name: "Call a blow-out for the day?" })
+          .waitFor();
+        await page.getByRole("button", { name: "Review the call" }).waitFor();
+        await capture(page, "blowout-day", scheme);
+        await page.getByRole("link", { name: "All departures" }).click();
+        await page.waitForURL(/pick=all/);
+        await page.getByRole("button", { name: "Review the call" }).click();
+        await page.getByRole("heading", { level: 1, name: "Cancel these departures?" }).waitFor();
+        await capture(page, "blowout-day-review", scheme);
+      });
+
       // The cascade record — the surface a blow-out morning is worked from.
       // Calling the blow-out inside the test is safe (per-test reset) and
       // deterministic: the frozen clock pins calledAt, and with no email

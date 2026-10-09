@@ -12,6 +12,7 @@ import {
   accountTokens,
   activityEvents,
   bookingPaymentEvents,
+  crewNotices,
   demoEntries,
   formDrafts,
   inboundMessages,
@@ -301,6 +302,20 @@ export async function pruneExpiredRecords(
           .where(lt(weeklyDigestSends.createdAt, cutoff("weekly_digest_sends")))
           .limit(PRUNE_BATCH_LIMIT),
       (ids) => db.delete(weeklyDigestSends).where(inArray(weeklyDigestSends.id, ids)),
+    ),
+  );
+
+  // Crew news, spent the hour it settles (ADR 20261009-crew-hear-about-their-boats).
+  outcomes.push(
+    await pruneBatch(
+      "crew_notices",
+      () =>
+        db
+          .select({ id: crewNotices.id })
+          .from(crewNotices)
+          .where(lt(crewNotices.createdAt, cutoff("crew_notices")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(crewNotices).where(inArray(crewNotices.id, ids)),
     ),
   );
 

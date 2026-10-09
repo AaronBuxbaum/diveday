@@ -58,6 +58,7 @@ import {
   notificationSendQueue,
   orderLineItems,
   orders,
+  paymentDisputes,
   paymentOperationIntents,
   people,
   personCourtesyEmailUnsubscribeTokens,
@@ -179,6 +180,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(workOrderBills).where(eq(workOrderBills.shopId, shopId));
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
   await db.delete(paymentOperationIntents).where(eq(paymentOperationIntents.shopId, shopId));
+  // A dispute references the order or checkout it is about, so it goes first.
+  await db.delete(paymentDisputes).where(eq(paymentDisputes.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
   await db.delete(bookingCheckoutBookings).where(eq(bookingCheckoutBookings.shopId, shopId));
   // Redemptions reference checkouts; the codes themselves are referenced *by*

@@ -210,6 +210,13 @@ const routes: SeedRoute[] = [
     },
   },
   {
+    slug: "crew-notices",
+    // Body first past the guard. Read-only, but what it reads is a staffer's
+    // pending crew news — their name, their address and the boats they were
+    // put on — so it answers only where every other test route does.
+    expectPastTheGuard: expectInvalidBody,
+  },
+  {
     slug: "depart-trip",
     // Body first past the guard. It names one trip and slides its departure
     // into the past, so a route answering on a misconfigured deployment would
