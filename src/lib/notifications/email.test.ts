@@ -1086,6 +1086,20 @@ describe("setupRequestAlertEmail (ADR 20261007-setup-request-form)", () => {
     );
   });
 
+  it("carries the setup link with what it opens and who to send it to, when there is one", () => {
+    const url = "https://dive.day/onboard?setup=AbC_123";
+    const email = setupRequestAlertEmail({
+      ...request,
+      setupUrl: url,
+      setupUrlExpiresAt: new Date("2026-10-23T12:00:00Z"),
+    });
+    expect(email.text).toContain(`Setup link: ${url}`);
+    expect(email.text).toContain("for one shop, once, until 2026-10-23 (UTC)");
+    expect(email.text).toContain("Send it only to someone you have spoken to.");
+    expect(email.html).toContain(`href="${url}"`);
+    expect(setupRequestAlertEmail(request).text).not.toContain("Setup link");
+  });
+
   it("escapes everything the requester typed", () => {
     const email = setupRequestAlertEmail(request);
     expect(email.html).toContain("Reef &lt;Line&gt; Divers");

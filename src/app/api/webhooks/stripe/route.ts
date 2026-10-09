@@ -16,7 +16,11 @@ import {
 } from "@/db/orders";
 import { recordStripeDispute } from "@/db/payment-disputes";
 import { recordStripeChargeRefund } from "@/db/refunds";
-import { disconnectShopStripeAccount, setShopStripeAccountStatus } from "@/db/stripe-accounts";
+import {
+  disconnectShopStripeAccount,
+  setShopStripeAccountStatus,
+  stripeAccountHolder,
+} from "@/db/stripe-accounts";
 import { recordTipPaymentIntent } from "@/db/stripe-payment-targets";
 import {
   markTipExpiredBySessionId,
@@ -33,6 +37,7 @@ import { nowDate } from "@/lib/clock";
 import { type LogContext, log } from "@/lib/log";
 import { invoicePaymentIntentId } from "@/lib/payments/invoicing";
 import { paymentSourceLookupFromEnvironment } from "@/lib/payments/payment-sources";
+import { demoStripeAccount, platformKeyIsLive } from "@/lib/payments/stripe-keys";
 import { verifyStripeWebhook } from "@/lib/payments/webhook";
 
 const invoiceObjectSchema = z.object({
@@ -304,6 +309,27 @@ export async function POST(request: Request) {
   const sourceLookup = paymentSourceLookupFromEnvironment(process.env, fetch, {
     livemode: expectedLivemode,
   });
+
+  // On a deployment that takes real money, the only test-mode traffic with
+  // any business here is the canonical demo's: its checkout runs on the
+  // test-mode key (ADR 20261009-demo-test-mode-payments). A test event about
+  // any other account, about none, or about the demo's account while anyone
+  // but the canonical demo holds it, changes nothing, so a test-mode secret
+  // configured for the demo cannot move a real shop's order. "Takes real
+  // money" is any sign of it, not the key's prefix alone: a live webhook
+  // secret configured, a live platform key, or Vercel's production
+  // environment. A deployment that is test mode throughout is unaffected.
+  if (verifiedWith === "test" && takesRealMoney()) {
+    const demoAccountId = demoStripeAccount()?.accountId;
+    const holder =
+      demoAccountId && claimAccountId === demoAccountId
+        ? await stripeAccountHolder(db, demoAccountId)
+        : null;
+    if (!holder?.isCanonicalDemo) {
+      logOutcome("test_event_outside_demo", { verifiedWith });
+      return new Response(null, { status: 200 });
+    }
+  }
 
   // Claim this event id before doing anything else: a redelivered event
   // (Stripe's webhooks are at-least-once) is a no-op past this point,
@@ -691,4 +717,13 @@ export async function POST(request: Request) {
   }
 
   return new Response(null, { status: 200 });
+}
+
+/** Whether this deployment moves real money: any one sign is enough. */
+function takesRealMoney(): boolean {
+  return (
+    Boolean(process.env.STRIPE_WEBHOOK_SECRET?.trim()) ||
+    platformKeyIsLive() ||
+    process.env.VERCEL_ENV === "production"
+  );
 }

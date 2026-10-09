@@ -129,6 +129,7 @@
     "privateCharter": "Private charter",
     "depositLine": "{deposit} deposit at booking · {balance} balance at the dock",
     "freeCancellationUntil": "Free cancellation until {when}",
+    "sharedDemoNote": "This is the shared demo: anyone trying it can see what you type here.",
     "theDay": "The day",
     "lookFor": "Look for",
     "momentsHeading": "Moments from divers",
@@ -342,6 +343,7 @@
     "promoHint": "(if you have one)",
     "passThroughFee": "{name}: {price} per diver (third-party charge)",
     "stripeHint": "You’ll finish paying on a secure Stripe page.",
+    "stripeTestModeHint": "This is the demo, so Stripe is in test mode. Pay with the card 4242 4242 4242 4242, any future date and any CVC. Nothing is charged.",
     "ageAttestation": "I confirm every diver on this booking meets the minimum age of {age}.",
     "cancelledHeading": "This trip was canceled",
     "cancelledBody": "for another date, or get in touch with the shop.",
@@ -2042,6 +2044,10 @@
         "title": "We set up every shop by hand",
         "body": "Tell us about your shop and we’ll open it with you."
       },
+      "spentLink": {
+        "title": "This setup link no longer works",
+        "body": "A setup link opens one shop and lasts two weeks. Ask us for a new one."
+      },
       "shopSectionTitle": "Your shop",
       "shopNameLabel": "Shop name",
       "shopNamePlaceholder": "e.g. Green Lagoon Divers",
@@ -2669,7 +2675,8 @@
       "gettingReady": "Getting your shop ready…",
       "tryDemo": "Try the live demo",
       "getSetUp": "Get set up",
-      "demoNote": "The demo opens a working sample shop in one click. No sign-up and no card."
+      "demoNote": "The demo opens a working sample shop in one click. No sign-up and no card.",
+      "setUpNote": "A person reads every request and sets your shop up with you."
     },
     "price": {
       "name": "Founding shop",

@@ -1,5 +1,7 @@
 import { z } from "zod";
+import { stripeKeySourceFromEnvironment } from "@/db/stripe-accounts";
 import { ERASURE_FAILURE_DETAIL } from "./erasure-failure";
+import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 
 /**
  * Customer deletion on a shop's connected Stripe account — the processor half
@@ -49,8 +51,6 @@ export interface CustomerProvider {
 type Fetch = typeof fetch;
 type PaymentEnvironment = Readonly<Record<string, string | undefined>>;
 
-const configSchema = z.object({ secretKey: z.string().trim().min(1) });
-
 /**
  * Stripe's deleted-object envelope. `deleted` is **required and must be true**:
  * this result is written into a compliance ledger as an attestation that the
@@ -87,7 +87,7 @@ async function failureFrom(response: Response): Promise<{ status: "failed"; erro
 }
 
 export function stripeCustomerProvider(
-  config: { secretKey: string },
+  config: StripeKeySource,
   fetchImpl: Fetch,
 ): CustomerProvider {
   return {
@@ -98,7 +98,7 @@ export function stripeCustomerProvider(
           {
             method: "DELETE",
             headers: {
-              Authorization: `Bearer ${config.secretKey}`,
+              Authorization: `Bearer ${await secretKeyForCall(config, stripeAccountId)}`,
               "Stripe-Account": stripeAccountId,
               "Idempotency-Key": idempotencyKey,
             },
@@ -138,6 +138,8 @@ export function customerProviderFromEnvironment(
   env: PaymentEnvironment = process.env,
   fetchImpl: Fetch = fetch,
 ): CustomerProvider {
-  const config = configSchema.safeParse({ secretKey: env.STRIPE_SECRET_KEY });
-  return config.success ? stripeCustomerProvider(config.data, fetchImpl) : disabledCustomerProvider;
+  // Per connected account: the demo's is called only with the test-mode key
+  // (src/lib/payments/stripe-keys.ts, ADR 20261009-demo-test-mode-payments).
+  const keys = stripeKeySourceFromEnvironment({ env });
+  return keys ? stripeCustomerProvider(keys, fetchImpl) : disabledCustomerProvider;
 }

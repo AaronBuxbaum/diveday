@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { stripeKeySourceFromEnvironment } from "@/db/stripe-accounts";
+import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
@@ -147,8 +149,6 @@ export interface CheckoutProvider {
 type Fetch = typeof fetch;
 type PaymentEnvironment = Readonly<Record<string, string | undefined>>;
 
-const configSchema = z.object({ secretKey: z.string().trim().min(1) });
-
 const sessionResponseSchema = z.object({
   id: z.string().min(1),
   status: z.string(),
@@ -209,7 +209,7 @@ function headersFor(secretKey: string, stripeAccountId: string): Record<string, 
 }
 
 export function stripeCheckoutProvider(
-  config: { secretKey: string },
+  config: StripeKeySource,
   fetchImpl: Fetch,
 ): CheckoutProvider {
   return {
@@ -246,7 +246,10 @@ export function stripeCheckoutProvider(
         const response = await fetchImpl("https://api.stripe.com/v1/checkout/sessions", {
           method: "POST",
           headers: {
-            ...headersFor(config.secretKey, request.stripeAccountId),
+            ...headersFor(
+              await secretKeyForCall(config, request.stripeAccountId),
+              request.stripeAccountId,
+            ),
             "Idempotency-Key": request.idempotencyKey,
           },
           body: form.toString(),
@@ -265,7 +268,7 @@ export function stripeCheckoutProvider(
       try {
         const response = await fetchImpl(
           `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(stripeSessionId)}`,
-          { headers: headersFor(config.secretKey, stripeAccountId) },
+          { headers: headersFor(await secretKeyForCall(config, stripeAccountId), stripeAccountId) },
         );
         if (!response.ok) return { status: "failed" };
         const body = sessionResponseSchema.safeParse(await response.json());
@@ -286,7 +289,7 @@ export function stripeCheckoutProvider(
           `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(
             stripeSessionId,
           )}?expand[]=payment_intent`,
-          { headers: headersFor(config.secretKey, stripeAccountId) },
+          { headers: headersFor(await secretKeyForCall(config, stripeAccountId), stripeAccountId) },
         );
         if (!sessionResponse.ok) return { status: "failed" };
         const body = sessionResponseSchema.safeParse(await sessionResponse.json());
@@ -306,7 +309,7 @@ export function stripeCheckoutProvider(
         const response = await fetchImpl("https://api.stripe.com/v1/refunds", {
           method: "POST",
           headers: {
-            ...headersFor(config.secretKey, stripeAccountId),
+            ...headersFor(await secretKeyForCall(config, stripeAccountId), stripeAccountId),
             "Idempotency-Key": idempotencyKey,
           },
           body: form.toString(),
@@ -340,6 +343,8 @@ export function checkoutProviderFromEnvironment(
   env: PaymentEnvironment = process.env,
   fetchImpl: Fetch = fetch,
 ): CheckoutProvider {
-  const config = configSchema.safeParse({ secretKey: env.STRIPE_SECRET_KEY });
-  return config.success ? stripeCheckoutProvider(config.data, fetchImpl) : disabledCheckoutProvider;
+  // Per connected account: the demo's is called only with the test-mode key
+  // (src/lib/payments/stripe-keys.ts, ADR 20261009-demo-test-mode-payments).
+  const keys = stripeKeySourceFromEnvironment({ env });
+  return keys ? stripeCheckoutProvider(keys, fetchImpl) : disabledCheckoutProvider;
 }

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { stripeKeySourceFromEnvironment } from "@/db/stripe-accounts";
+import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
@@ -92,8 +94,6 @@ export interface PromotionProvider {
 type Fetch = typeof fetch;
 type PaymentEnvironment = Readonly<Record<string, string | undefined>>;
 
-const configSchema = z.object({ secretKey: z.string().trim().min(1) });
-
 const couponResponseSchema = z.object({ id: z.string().min(1) });
 const promotionCodeResponseSchema = z.object({ id: z.string().min(1) });
 
@@ -106,7 +106,7 @@ function headersFor(secretKey: string, stripeAccountId: string): Record<string, 
 }
 
 export function stripePromotionProvider(
-  config: { secretKey: string },
+  config: StripeKeySource,
   fetchImpl: Fetch,
 ): PromotionProvider {
   /**
@@ -133,7 +133,10 @@ export function stripePromotionProvider(
       const couponResponse = await fetchImpl("https://api.stripe.com/v1/coupons", {
         method: "POST",
         headers: {
-          ...headersFor(config.secretKey, request.stripeAccountId),
+          ...headersFor(
+            await secretKeyForCall(config, request.stripeAccountId),
+            request.stripeAccountId,
+          ),
           "Idempotency-Key": `${request.idempotencyKey}:coupon`,
         },
         body: couponForm.toString(),
@@ -152,7 +155,10 @@ export function stripePromotionProvider(
       const promoResponse = await fetchImpl("https://api.stripe.com/v1/promotion_codes", {
         method: "POST",
         headers: {
-          ...headersFor(config.secretKey, request.stripeAccountId),
+          ...headersFor(
+            await secretKeyForCall(config, request.stripeAccountId),
+            request.stripeAccountId,
+          ),
           "Idempotency-Key": `${request.idempotencyKey}:promotion_code`,
         },
         body: promoForm.toString(),
@@ -194,7 +200,10 @@ export function stripePromotionProvider(
         const response = await fetchImpl("https://api.stripe.com/v1/coupons", {
           method: "POST",
           headers: {
-            ...headersFor(config.secretKey, request.stripeAccountId),
+            ...headersFor(
+              await secretKeyForCall(config, request.stripeAccountId),
+              request.stripeAccountId,
+            ),
             "Idempotency-Key": `${request.idempotencyKey}:session-discount`,
           },
           body: form.toString(),
@@ -228,8 +237,8 @@ export function promotionProviderFromEnvironment(
   env: PaymentEnvironment = process.env,
   fetchImpl: Fetch = fetch,
 ): PromotionProvider {
-  const config = configSchema.safeParse({ secretKey: env.STRIPE_SECRET_KEY });
-  return config.success
-    ? stripePromotionProvider(config.data, fetchImpl)
-    : disabledPromotionProvider;
+  // Per connected account: the demo's is called only with the test-mode key
+  // (src/lib/payments/stripe-keys.ts, ADR 20261009-demo-test-mode-payments).
+  const keys = stripeKeySourceFromEnvironment({ env });
+  return keys ? stripePromotionProvider(keys, fetchImpl) : disabledPromotionProvider;
 }

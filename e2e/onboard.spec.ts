@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures";
-import { E2E_APP_HOST, ONBOARD_FORM_PATH } from "./servers";
+import { E2E_APP_HOST } from "./servers";
+import { mintOnboardFormPath } from "./setup-link";
 
 /** The origin the fleet advertises, as the shop-link hint prints it: no scheme. */
 const STOREFRONT_HOST = new URL(E2E_APP_HOST).host;
@@ -11,7 +12,7 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   page,
 }) => {
   const unique = `first-run-${Date.now()}`;
-  await page.goto(ONBOARD_FORM_PATH);
+  await page.goto(await mintOnboardFormPath(page));
   await page.locator('input[name="shopName"]').filter({ visible: true }).fill("First Run E2E");
   await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
   // The one decision sign-up asks an owner to make is what their web address
@@ -108,7 +109,7 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
 // the old list, and check the shop is really keeping time there.
 test("a shop outside the curated dive regions can pick its own timezone", async ({ page }) => {
   const unique = `raja-ampat-${Date.now()}`;
-  await page.goto(ONBOARD_FORM_PATH);
+  await page.goto(await mintOnboardFormPath(page));
 
   // Both tiers are on offer: the pinned dive-region shortcuts, and every other
   // zone the runtime knows.
@@ -162,7 +163,7 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
 }) => {
   test.setTimeout(30_000);
   const unique = `empty-doors-${Date.now()}`;
-  await page.goto(ONBOARD_FORM_PATH);
+  await page.goto(await mintOnboardFormPath(page));
   await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Empty Doors E2E");
   await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
   await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Nour Haddad");
@@ -217,7 +218,7 @@ test.describe("a shop signing up from the Caribbean", () => {
   test.use({ timezoneId: "America/Cancun" });
 
   test("finds its own zone already picked, and can still change it", async ({ page }) => {
-    await page.goto(ONBOARD_FORM_PATH);
+    await page.goto(await mintOnboardFormPath(page));
     const timezone = page.locator('select[name="timezone"]').filter({ visible: true });
     await expect(timezone).toHaveValue("America/Cancun");
 
@@ -237,7 +238,7 @@ test.describe("a shop signing up from the Caribbean", () => {
   test("is started on pesos, and asked to check before it prices anything", async ({ page }) => {
     test.setTimeout(60_000);
     const unique = "cozumel-units";
-    await page.goto(ONBOARD_FORM_PATH);
+    await page.goto(await mintOnboardFormPath(page));
     await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Cozumel Divers");
     await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
     await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Rosa Mendez");
@@ -264,4 +265,39 @@ test.describe("a shop signing up from the Caribbean", () => {
     await page.goto(`/shop/${unique}/settings`);
     await expect(page.getByText(/Meters \(m\).*MXN/)).toBeVisible();
   });
+});
+
+/**
+ * **A setup link opens one shop** (ADR 20261009-single-use-setup-links). The
+ * founder's mail carries one link per request; once it has made a shop it is
+ * spent, so a forwarded or leaked copy opens a page that says so and offers
+ * the set-up form, never a second sign-up.
+ */
+test("a setup link opens the form once, and says it no longer works after", async ({ page }) => {
+  const unique = `one-shop-${Date.now()}`;
+  const link = await mintOnboardFormPath(page);
+  await page.goto(link);
+  await page.locator('input[name="shopName"]').filter({ visible: true }).fill("One Shop E2E");
+  await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
+  await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Ines Costa");
+  await page
+    .locator('input[name="ownerEmail"]')
+    .filter({ visible: true })
+    .fill(`${unique}@example.com`);
+  await page
+    .locator('input[name="ownerPassword"]')
+    .filter({ visible: true })
+    .fill("trial-pass-123");
+  await page.getByRole("button", { name: "Create shop & start trial" }).click();
+  await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
+
+  await page.goto(link);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "This setup link no longer works",
+  );
+  await expect(page.locator('input[name="ownerPassword"]')).toHaveCount(0);
+  await expect(page.getByRole("main").getByRole("link", { name: "Get set up" })).toHaveAttribute(
+    "href",
+    "/get-set-up?from=onboard-closed",
+  );
 });

@@ -15,7 +15,6 @@ import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i
 import { requestLocale } from "@/i18n/request";
 import { MAX_FIRST_DAY_NAME, parseFirstDayFields } from "@/lib/first-day";
 import { APP_ORIGIN, publicAppUrl } from "@/lib/notifications";
-import { isOnboardSetupKey, ONBOARD_SETUP_PARAM } from "@/lib/onboard-setup-key";
 import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
@@ -29,6 +28,7 @@ import {
 } from "@/lib/timezones";
 import { ClosedDoor } from "./_components/ClosedDoor";
 import { OnboardDemoDoor } from "./_components/OnboardDemoDoor";
+import { SetupLinkField, setupLinkDoor } from "./_components/setup-link-door";
 import { onboardAction } from "./actions";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -199,14 +199,15 @@ const CURATED_TIMEZONE_KEYS: Record<CuratedTimeZone, DiverMessageKey> = {
 /**
  * Not a page anyone is sent to any more: every shop is set up by hand (ADR
  * 20260925-shops-are-set-up-by-hand), so it is out of the sitemap and out of
- * the index. Without the setup key it says where to write; with it, it is the
- * form the owner fills in for a shop they have spoken to.
+ * the index. Without a setup link it says where to ask; with a link that is
+ * still open, it is the form, filled in by the founder or by the shop the link
+ * was forwarded to (ADR 20261009-single-use-setup-links).
  */
 export const metadata: Metadata = {
   title: "Get set up — DiveDay",
   description: "Every DiveDay shop is set up by hand. Write to us to get yours.",
   robots: { index: false, follow: true },
-  // The setup key rides this page's URL, and the default policy sends the full
+  // The setup link's token rides this page's URL, and the default policy sends the full
   // URL as the referrer on every same-origin navigation away from it — where
   // analytics would read it off `document.referrer`. Nothing about this page
   // is worth telling the next one.
@@ -225,22 +226,21 @@ export default async function OnboardPage({
     ownerEmail?: string;
     boat?: string;
     departure?: string;
-    /** The setup key ({@link ONBOARD_SETUP_PARAM}); without it there is no form. */
-    setup?: string;
+    /** The setup link's token; without an open one there is no form (`setupLinkDoor`). */
+    setup?: string | string[];
   }>;
 }) {
   const { error, shopName, shopSlug, timezone, ownerName, ownerEmail, boat, departure, setup } =
     await searchParams;
   const t = diverTranslator(await requestLocale());
 
-  // **Shut without the key** (ADR 20260925-shops-are-set-up-by-hand). A
-  // visitor who arrives from an old link or a search result is told where to
-  // write, and nothing about the form exists on the page for them.
-  if (!isOnboardSetupKey(setup)) return <ClosedDoor t={t} />;
+  // **Shut without an open link** (ADR 20261009-single-use-setup-links).
+  const opened = await setupLinkDoor(setup);
+  if (opened.door !== "open") return <ClosedDoor t={t} spentLink={opened.door === "spent"} />;
 
   // A hand-edited parameter loses itself and nothing else.
   const firstDay = parseFirstDayFields({ boat, departure });
-  const shopNameValue = shopName ?? "";
+  const shopNameValue = shopName ?? opened.link.shopName;
 
   // The refusal lands on the box that earned it, not in a banner above the
   // whole form (docs/design/forms-and-controls.md); only a code about the
@@ -281,7 +281,7 @@ export default async function OnboardPage({
       >
         {errorField && errorField !== "form" ? <FieldErrorFocus key={error} /> : null}
         <form action={onboardAction} className="flex flex-col gap-5">
-          <input type="hidden" name={ONBOARD_SETUP_PARAM} value={setup} />
+          <SetupLinkField token={opened.token} />
           <section className="flex flex-col gap-4">
             <GroupLabel as="h2">{t("account.onboard.shopSectionTitle")}</GroupLabel>
             <FieldGrid columns={2}>
@@ -412,7 +412,7 @@ export default async function OnboardPage({
                   type="text"
                   required
                   autoComplete="name"
-                  defaultValue={ownerName ?? ""}
+                  defaultValue={ownerName ?? opened.link.contactName}
                   placeholder={t("account.onboard.fullNamePlaceholder")}
                   className={controlClass}
                 />
@@ -425,7 +425,7 @@ export default async function OnboardPage({
                   type="email"
                   required
                   autoComplete="email"
-                  defaultValue={ownerEmail ?? ""}
+                  defaultValue={ownerEmail ?? opened.link.email}
                   placeholder={t("account.onboard.emailPlaceholder")}
                   className={controlClass}
                 />

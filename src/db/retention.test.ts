@@ -412,6 +412,11 @@ const OUTSIDE_RETENTION: readonly string[] = [
   // A shop asking to be set up: a person's contact details, kept until they
   // ask for them gone like every other lead (ADR 20261007-setup-request-form).
   "setup_requests",
+  // The request's single-use setup link (ADR 20261009-single-use-setup-links):
+  // a hash, an expiry and a spent instant, one per request, deleted with it.
+  // Its own clock is the expiry, which closes it; there is nothing left in it
+  // to age out.
+  "shop_setup_links",
   "internal_notes",
   "staff_credentials",
   "staff_shifts",

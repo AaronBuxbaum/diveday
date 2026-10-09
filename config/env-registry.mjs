@@ -188,22 +188,24 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
-      "The key that opens /onboard (ADR 20260925-shops-are-set-up-by-hand). Every",
-      "shop is set up by hand: /onboard?setup=<this value> shows the sign-up form",
-      "and its action accepts a submission only when the posted key matches. Any",
-      "long random string (openssl rand -base64 32); change it to revoke a link",
-      "already sent. Keys shorter than 24 characters, and the dev and e2e keys",
-      "written in this repository, are ignored.",
+      "The founder's demo-quiet key (ADR 20260805-demo-try-alerts, amendment",
+      "2026-10-09). Opening /api/demo/quiet?key=<this value> once in a browser",
+      "marks it as the founder's, so a demo he opens from it sends no alert. It",
+      "opens nothing else: shops are created through single-use setup links (ADR",
+      "20261009-single-use-setup-links), never a standing key. Any long random",
+      "string (openssl rand -base64 32); change it to unmark every browser. Keys",
+      "shorter than 24 characters, and the dev key written in this repository,",
+      "are ignored.",
     ],
     keys: [
       {
-        key: "ONBOARD_SETUP_KEY",
+        key: "DEMO_QUIET_KEY",
         from: "manual",
         // Vercel only: a dev run has its own fallback, and the production key
         // has no business in every workstation's generated .env.local.
         targets: VERCEL,
         absent:
-          "production creates no shops at all -- /onboard only offers the onboarding mailbox. A dev run falls back to a fixed non-production key",
+          "no browser can be marked, so every demo try alerts the founder. A dev run falls back to a fixed non-production key",
       },
     ],
   },
@@ -288,6 +290,42 @@ export const ENV_GROUPS = [
         targets: LOCAL_AND_VERCEL,
         absent:
           'orders work but paid/void status only updates via the manual "Refresh status" action',
+      },
+    ],
+  },
+  {
+    doc: [
+      "The canonical demo shop's Stripe test-mode connection (ADR",
+      "20261009-demo-test-mode-payments). STRIPE_DEMO_ACCOUNT_ID is an acct_ id",
+      "connected to the platform in test mode; STRIPE_DEMO_SECRET_KEY is the",
+      "platform's test-mode key (sk_test_ or rk_test_ only, anything else is",
+      "refused). With both set, the demo's public trip pages take a card at",
+      "booking through the normal checkout, and every call about that account uses",
+      "the test key, never STRIPE_SECRET_KEY. STRIPE_TEST_WEBHOOK_SECRET signs a",
+      "test-mode endpoint at /api/webhooks/stripe listening to connected accounts;",
+      "on a live platform its events are acted on only for the demo's account.",
+      "Keep them in 1Password; they reach Vercel from .env.manual.",
+    ],
+    keys: [
+      {
+        key: "STRIPE_DEMO_ACCOUNT_ID",
+        from: "manual",
+        targets: VERCEL,
+        absent: "the demo books without payment, as a shop with no Stripe account does",
+      },
+      {
+        key: "STRIPE_DEMO_SECRET_KEY",
+        from: "manual",
+        targets: VERCEL,
+        absent:
+          "the demo is not connected; a demo account id set without it gets no key at all, never the live one",
+      },
+      {
+        key: "STRIPE_TEST_WEBHOOK_SECRET",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent:
+          "test-mode checkouts (the demo's, or a test-mode deployment's) are not confirmed by webhook",
       },
     ],
   },

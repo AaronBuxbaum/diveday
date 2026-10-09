@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-05
+- **Amended by:** [20261009-single-use-setup-links](20261009-single-use-setup-links.md) — the quiet-browser proof is its own `DEMO_QUIET_KEY` at `?key=`, not the retired onboard setup key
 
 ## Context
 
@@ -130,3 +131,7 @@ The logic is `src/lib/quiet-demo-device.ts`; the route is `src/app/api/demo/quie
 
 Rejected: matching a signed-in account against a configured email, because the demo replaces the
 session it would read, and an IP allowlist, because a phone on a boat changes address hourly.
+
+**Amended 2026-10-09** ([20261009-single-use-setup-links](20261009-single-use-setup-links.md)): the
+onboard setup key is gone, so the proof is now its own `DEMO_QUIET_KEY`, opened as
+`/api/demo/quiet?key=<key>`. Same cookie, same HMAC, same rotation; the key opens nothing else.

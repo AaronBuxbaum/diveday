@@ -1,7 +1,7 @@
 import { FEATURE_PAGE_SLUGS, featurePagePath } from "../src/lib/feature-pages";
 import { capabilityGroup, earlyAccessPrice, productCapabilityIndex } from "../src/lib/marketing";
 import { expect, test } from "./fixtures";
-import { ONBOARD_FORM_PATH } from "./servers";
+import { mintOnboardFormPath } from "./setup-link";
 
 /**
  * Every public "Get set up" door: the set-up request form, carrying the tag of
@@ -12,6 +12,19 @@ import { ONBOARD_FORM_PATH } from "./servers";
 const SET_UP_HREF = /^\/get-set-up\?from=[a-z0-9-]+$/;
 /** The same door as a CSS selector, for counting them in a band. */
 const SET_UP_DOOR = 'a[href^="/get-set-up?from="]';
+
+// What happens after "Get set up" is said once, at the close where a reader
+// commits, and it promises a person, never a response time (issue #2097;
+// docs/product/marketing.md, the claims policy).
+test("the close says who reads a set-up request, once per page", async ({ page }) => {
+  const note = "A person reads every request and sets your shop up with you.";
+  for (const path of ["/", "/pricing", "/about", "/product/online-booking"]) {
+    await page.goto(path);
+    const main = page.getByRole("main");
+    await expect(main.getByText(note, { exact: true }), path).toHaveCount(1);
+    await expect(main.getByText(note, { exact: true }), path).toBeVisible();
+  }
+});
 
 test("the homepage hero offers one demo door, and states the price at it", async ({ page }) => {
   await page.goto("/");
@@ -597,8 +610,11 @@ test("a visitor who wants a shop is sent to a person, not a sign-up form", async
   await expect(demoDoor).toBeVisible();
   await expect(demoDoor).not.toHaveClass(/bg-primary/);
   await expect(mainForms.locator('input[name="source"]')).toHaveValue("onboard-demo");
-  // A wrong key is no key.
+  // A link that opens nothing says so, and offers the same door.
   await page.goto("/onboard?setup=not-the-key-not-the-key-not-the-key");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "This setup link no longer works",
+  );
   await expect(page.locator('input[name="ownerPassword"]')).toHaveCount(0);
   // And the demo door opens the demo, not the homepage.
   await page.getByRole("main").getByRole("button", { name: "Try the live demo" }).click();
@@ -606,7 +622,7 @@ test("a visitor who wants a shop is sent to a person, not a sign-up form", async
 });
 
 test("the setup link opens the form, which answers the hesitation it creates", async ({ page }) => {
-  await page.goto(ONBOARD_FORM_PATH);
+  await page.goto(await mintOnboardFormPath(page));
   // The setup link is the owner's own, so the sign-up form carries no funnel
   // tag: the tag a page's "Get set up" door carries now reaches the set-up
   // request form instead (ADR 20261007-setup-request-form; asserted in the

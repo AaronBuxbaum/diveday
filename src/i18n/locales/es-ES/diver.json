@@ -129,6 +129,7 @@
     "privateCharter": "Chárter privado",
     "depositLine": "{deposit} de señal al reservar · {balance} restante en el muelle",
     "freeCancellationUntil": "Cancelación gratuita hasta el {when}",
+    "sharedDemoNote": "Esta es la demo compartida: cualquiera que la pruebe puede ver lo que escribes aquí.",
     "theDay": "El día",
     "lookFor": "Busca",
     "momentsHeading": "Momentos de buceadores",
@@ -342,6 +343,7 @@
     "promoHint": "(si tienes uno)",
     "passThroughFee": "{name}: {price} por buceador (cargo de terceros)",
     "stripeHint": "Terminarás de pagar en una página segura de Stripe.",
+    "stripeTestModeHint": "Esto es la demo, así que Stripe está en modo de prueba. Paga con la tarjeta 4242 4242 4242 4242, cualquier fecha futura y cualquier CVC. No se cobra nada.",
     "ageAttestation": "Confirmo que todos los buceadores de esta reserva cumplen la edad mínima de {age}.",
     "cancelledHeading": "Esta salida se canceló",
     "cancelledBody": "para otra fecha, o ponte en contacto con el centro.",
@@ -2042,6 +2044,10 @@
         "title": "Abrimos cada centro a mano",
         "body": "Cuéntanos de tu centro y lo abrimos contigo."
       },
+      "spentLink": {
+        "title": "Este enlace de configuración ya no sirve",
+        "body": "Un enlace de configuración abre un centro y dura dos semanas, así que pídenos uno nuevo."
+      },
       "shopSectionTitle": "Tu centro",
       "shopNameLabel": "Nombre del centro",
       "shopNamePlaceholder": "p. ej. Green Lagoon Divers",
@@ -2669,7 +2675,8 @@
       "gettingReady": "Preparando tu centro…",
       "tryDemo": "Probar la demo en vivo",
       "getSetUp": "Pide tu centro",
-      "demoNote": "La demo abre un centro de muestra en funcionamiento con un clic. Sin registro y sin tarjeta."
+      "demoNote": "La demo abre un centro de muestra en funcionamiento con un clic. Sin registro y sin tarjeta.",
+      "setUpNote": "Una persona lee cada solicitud y prepara tu centro contigo."
     },
     "price": {
       "name": "Centro fundador",

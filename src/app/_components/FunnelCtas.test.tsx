@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // reference, not the session and database behind it.
 vi.mock("@/app/actions/demo", () => ({ enterDemoAction: vi.fn() }));
 
-const { FunnelCtas } = await import("./FunnelCtas");
+const { FunnelCtas, isClosingSource } = await import("./FunnelCtas");
 
 afterEach(cleanup);
 
@@ -108,5 +108,38 @@ describe("where the demo opens", () => {
     const { container } = render(<FunnelCtas locale="en-US" source="pricing" />);
     expect(hidden(container, "role")).toBeUndefined();
     expect(hidden(container, "landing")).toBeUndefined();
+  });
+});
+
+/** Who reads a set-up request is said at a page's close, and only there (#2097). */
+describe("the note under a closing pair", () => {
+  const NOTE = "A person reads every request and sets your shop up with you.";
+
+  it("stands under every closing pair", () => {
+    for (const source of [
+      "home-closing",
+      "pricing-close",
+      "about-closing",
+      "feature-online-booking-close",
+    ] as const) {
+      render(<FunnelCtas locale="en-US" source={source} />);
+      expect(screen.getByText(NOTE)).toBeInTheDocument();
+      cleanup();
+    }
+  });
+
+  it("is absent from every other pair", () => {
+    for (const source of [
+      "home-hero",
+      "pricing",
+      "about-rules",
+      "feature-online-booking",
+      "product",
+    ] as const) {
+      expect(isClosingSource(source)).toBe(false);
+      render(<FunnelCtas locale="en-US" source={source} />);
+      expect(screen.queryByText(NOTE)).toBeNull();
+      cleanup();
+    }
   });
 });

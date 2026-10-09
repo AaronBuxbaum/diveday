@@ -165,6 +165,7 @@ import { seedTrips } from "./seed-trips";
 import { seedWaiverEvidence } from "./seed-waiver-evidence";
 import { seedWaiverVersions } from "./seed-waiver-versions";
 import { seedWorkOrders } from "./seed-work-orders";
+import { syncDemoStripeAccount } from "./stripe-accounts";
 
 /**
  * Demo data: one Key Largo shop with staff, customers, and a week of trips.
@@ -543,6 +544,9 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
     staff.map((person) => person.id),
   );
   await seedDemoSchedule(db, shop.id, opts);
+  // Pay-at-booking in Stripe test mode, when configured (ADR
+  // 20261009-demo-test-mode-payments); nothing otherwise.
+  await syncDemoStripeAccount(db, shop.id);
 
   // Stable half, like staff and their shifts: a backup destination is a
   // settings row a demo visitor cannot break, so it lives outside the
@@ -1559,6 +1563,11 @@ export async function resetDemoSchedule(
     .set({ reviewUrl: null, depthUnit: "meters", temperatureUnit: "celsius" })
     .where(eq(shops.id, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
+  // ...and puts back the one connection the canonical demo is configured with:
+  // its Stripe test-mode account, when the deployment names one (ADR
+  // 20261009-demo-test-mode-payments). Anything a spec connected is gone
+  // either way; a minted demo is skipped.
+  await syncDemoStripeAccount(db, shopId);
 
   // The waiver is the same class of fixture. Editing the release text saves a
   // *new version* rather than mutating the signed one, so a spec that edits it

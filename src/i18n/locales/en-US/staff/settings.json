@@ -36,6 +36,7 @@
       "notConfigured": "Online payments aren’t switched on for this DiveDay setup yet.",
       "disconnected": "Stripe account disconnected.",
       "refreshed": "Payment status refreshed from Stripe.",
+      "demoStripe": "The demo stays connected to Stripe in test mode.",
       "notAuthorized": "The rental catalog, rental prices, and Stripe connection are payment settings, limited to owners and managers.",
       "timezoneSaved": "Timezone saved.",
       "seasonSaved": "Season start saved.",

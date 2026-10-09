@@ -20,7 +20,7 @@ import {
   signOut,
   threadStatus,
 } from "./helpers";
-import { ONBOARD_FORM_PATH } from "./servers";
+import { mintOnboardFormPath } from "./setup-link";
 
 signedInAsOwner();
 
@@ -852,9 +852,9 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
       { path: "/", heading: /\S/ },
       { path: "/sign-in", heading: /\S/ },
       { path: "/onboard", heading: /\S/ },
-      // The same route with the setup key is the form itself; without it,
-      // the closed door above.
-      { path: ONBOARD_FORM_PATH, heading: /\S/ },
+      // The same route with an open setup link is the form itself; without
+      // one, the closed door above.
+      { path: await mintOnboardFormPath(page), heading: /\S/ },
       // Where every "Get set up" door lands, and the `EntryDone` it ends on.
       { path: "/get-set-up", heading: /\S/ },
       { path: "/get-set-up/sent", heading: /\S/ },
