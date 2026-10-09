@@ -18,7 +18,7 @@ import { listOwedShopCancellationRefunds } from "@/db/refunds";
 import { orderStatus } from "@/db/schema";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getShopTripTitle } from "@/db/trips";
-import { ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
+import { ORDER_STATUS_KEYS } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import {
@@ -35,6 +35,7 @@ import { isManagedStorageUrl } from "@/lib/storage/blob-host";
 import { uuidParam } from "@/lib/uuid";
 import { wallTimeToUtc } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
+import { orderLedgerRow } from "./_components/ledger-row";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
 import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
@@ -423,34 +424,7 @@ export default async function OrdersIndexPage({
           .map((entry) => formatMoneyCents(entry.cents, entry.currency, locale))
           .join(" · "),
       }),
-      rows: group.orders.map((row) => {
-        const amount = formatMoneyCents(row.order.totalCents, row.order.currency, locale);
-        return {
-          id: row.order.id,
-          href: `/shop/${shopSlug}/orders/${row.order.id}`,
-          // The diver and the amount, and deliberately not the date: the day
-          // heading above already carries it, in the accessibility tree as
-          // well as on screen (`OrdersLedger.test.tsx`).
-          linkLabel: t("orders.index.ledger.rowLabel", { name: row.person.fullName, amount }),
-          diver: row.person.fullName,
-          // The departure, or the order's own description.
-          detail: (row.trip?.title ?? row.order.description) || null,
-          // Paid is the expected state and renders as nothing at all; only the
-          // exceptional statuses earn a badge (principle 9). That is this
-          // page's call, made here — `ORDER_STATUS_TONES` still knows paid is
-          // `success`, because the two surfaces that do show it need that.
-          status:
-            row.order.status === "paid"
-              ? null
-              : {
-                  word: ORDER_STATUS_KEYS[row.order.status]
-                    ? t(ORDER_STATUS_KEYS[row.order.status])
-                    : row.order.status,
-                  tone: ORDER_STATUS_TONES[row.order.status] ?? "neutral",
-                },
-          amount,
-        };
-      }),
+      rows: group.orders.map((row) => orderLedgerRow(row, { t, locale, shopSlug })),
     };
   });
 

@@ -45,6 +45,10 @@
       "other": "Otro"
     }
   },
+  "collection": {
+    "cash": "Efectivo",
+    "card_machine": "Terminal de pago"
+  },
   "detail": {
     "fallbackDescription": "Pedido",
     "diverRecord": "Ficha del buceador",
@@ -82,6 +86,10 @@
     "disputeOpenNoDeadline": "El banco del titular de la tarjeta disputa {amount}. Respóndela en Stripe.",
     "refundAmountLabel": "Reembolsar ({currency})",
     "refunding": "Reembolsando…",
+    "paidAtCounter": {
+      "cash": "Pagado en efectivo el {date}",
+      "card_machine": "Pagado con terminal de pago el {date}"
+    },
     "notice": {
       "refreshed": "Estado actualizado desde Stripe.",
       "refreshFailed": "No se pudo contactar con Stripe para actualizar este pedido.",
@@ -94,6 +102,7 @@
       "refundInProgress": "Ya hay un reembolso de este pedido en curso. Espera un momento y actualiza la página. No lo envíes de nuevo.",
       "refundNeedsReconciliation": "Stripe ya envió un reembolso de este pedido que no llegamos a registrar. Compruébalo en tu panel de Stripe antes de enviar más. Este pedido está en la lista de pagos atascados.",
       "notAuthorized": "Los reembolsos están limitados a propietarios y gerentes. Pide a uno de ellos que lo tramite.",
+      "voidNotAuthorized": "Anular pedidos está limitado a propietarios y gerentes.",
       "demoDisabled": "Este es un pedido de demostración, así que no se puede modificar.",
       "fallback": "Algo cambió en este pedido. Los detalles de abajo están al día."
     }

@@ -1,4 +1,4 @@
-import type { OrderStatus } from "@/db/schema";
+import type { OrderCollection, OrderStatus } from "@/db/schema";
 import type { StaffMessageKey } from "./staff-messages";
 
 /**
@@ -74,3 +74,21 @@ export const ORDER_STATUS_TONES = {
   partly_refunded: "warning",
   refunded: "warning",
 } as const satisfies Record<OrderStatus, string>;
+
+type CounterCollection = Exclude<OrderCollection, "stripe_invoice">;
+
+/**
+ * How money taken at the counter was taken (ADR 20261009-counter-payments):
+ * the quiet word the Orders ledger sets beside the amount, and the line the
+ * order page leads with. A Stripe invoice has neither; it is the ordinary case
+ * and says nothing.
+ */
+export const ORDER_COLLECTION_KEYS: Record<CounterCollection, StaffMessageKey> = {
+  cash: "orders.collection.cash",
+  card_machine: "orders.collection.card_machine",
+};
+
+export const ORDER_PAID_AT_COUNTER_KEYS: Record<CounterCollection, StaffMessageKey> = {
+  cash: "orders.detail.paidAtCounter.cash",
+  card_machine: "orders.detail.paidAtCounter.card_machine",
+};
