@@ -1,3 +1,4 @@
+ALTER TYPE "notification_kind" ADD VALUE 'booking_cancelled';--> statement-breakpoint
 ALTER TYPE "payment_event_operation" ADD VALUE 'stripe_dashboard_refund';--> statement-breakpoint
 CREATE TABLE "payment_disputes" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),

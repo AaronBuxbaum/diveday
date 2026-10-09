@@ -12,6 +12,7 @@ import {
   canPersonRetireMedicalRefusal,
 } from "@/db/authz";
 import { getBoatById } from "@/db/boats";
+import { sendBookingCancelledNotice } from "@/db/booking-cancelled-notice";
 import {
   bookingDiverName,
   cancelBooking,
@@ -1066,6 +1067,12 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   // that isn't allowed to.
   if (!(await canPersonRefund(dbi, s.user.shopId, s.user.personId))) {
     const owed = await bookingRefundMayBeOwed(dbi, s.user.shopId, bookingId);
+    await sendBookingCancelledNotice(dbi, {
+      shopId: s.user.shopId,
+      bookingId,
+      cancelledBy: "shop",
+      refund: { status: "not_attempted" },
+    });
     const notice = owed ? "booking-removed-refund-owner" : "booking-removed";
     revalidateAndRedirect(back, noticeUrl(back, notice, { bid: bookingId }));
   }
@@ -1080,6 +1087,12 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   if (refund.status !== "no_policy" && refund.status !== "unpaid") {
     await trackEvent({ name: "refund_issued", auto: true, status: refund.status });
   }
+  await sendBookingCancelledNotice(dbi, {
+    shopId: s.user.shopId,
+    bookingId,
+    cancelledBy: "shop",
+    refund,
+  });
   revalidateAndRedirect(back, noticeUrl(back, refundNotice(refund), { bid: bookingId }));
 }
 

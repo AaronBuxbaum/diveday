@@ -4022,6 +4022,15 @@
       "moneyRefundOwed": "Te corresponde el reembolso completo, y {shopName} se pondrá en contacto contigo para devolvértelo.",
       "findAnother": "Ver qué más hay programado"
     },
+    "bookingCancelled": {
+      "subject": "Reserva cancelada: {tripTitle}",
+      "bodyByDiver": "Tu reserva para {tripTitle} el {date} está cancelada y tu plaza queda liberada.",
+      "bodyByShop": "{shopName} ha cancelado tu reserva para {tripTitle} el {date} y tu plaza queda liberada.",
+      "moneyRefunded": "{amount} va de vuelta a la tarjeta con la que pagaste y puede tardar unos días en llegar.",
+      "moneyForfeit": "Se canceló después de que cerrara el plazo de cancelación gratuita de {shopName}, así que según su política no se reembolsa nada.",
+      "moneyFollowUp": "{shopName} se pondrá en contacto contigo sobre lo que pagaste.",
+      "findAnother": "Ver qué más hay programado"
+    },
     "tripBlowout": {
       "subject": "Salida cancelada — {tripTitle}",
       "body": "{shopName} ha tenido que cancelar {tripTitle} del {date} por el mal tiempo. Tu plaza queda liberada y no necesitas hacer nada.",

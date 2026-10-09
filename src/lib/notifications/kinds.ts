@@ -558,6 +558,51 @@ const tripBlowoutSchema = z.object({
   scheduleUrl: z.url().max(2_000),
 });
 
+/**
+ * **"Your booking is canceled."** One seat, canceled by the diver from their
+ * trip-prep link or by the shop from the roster, and what happened to the
+ * money, so the diver never has to ask whether a refund is coming.
+ *
+ * Not the blow-out and not the minimum-head-count sweep: those cancel the
+ * whole departure and carry their own message. Keyed on the booking, since a
+ * booking is canceled once.
+ *
+ * The money is a code plus, for a refund, the amount actually reversed —
+ * never a figure the template has to work out.
+ *
+ * - `refunded` — Stripe reversed `amountCents` to the diver's card.
+ * - `forfeit` — the shop's cancellation window had closed; nothing comes back.
+ * - `shop_will_follow_up` — money was captured and DiveDay could not settle
+ *   it here (no window on the trip, a counter payment, a refund that failed or
+ *   is still in flight, a crew member without refund permission).
+ * - `none` — nothing was captured, so the message says nothing about money.
+ */
+const bookingCancelledSchema = z.object({
+  kind: z.literal("booking_cancelled"),
+  bookingId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  cancelledBy: z.enum(["diver", "shop"]),
+  money: z.discriminatedUnion("story", [
+    z.object({ story: z.literal("none") }),
+    z.object({ story: z.literal("forfeit") }),
+    z.object({ story: z.literal("shop_will_follow_up") }),
+    z.object({
+      story: z.literal("refunded"),
+      amountCents: z.number().int().min(1).max(100_000_000),
+      currency: z.string().trim().length(3),
+    }),
+  ]),
+  /** Back to the shop's own schedule, to find another day. */
+  scheduleUrl: z.url().max(2_000),
+});
+
 // Account-lifecycle mail (20260725-account-lifecycle-emails): no bookingId,
 // so these are structurally excluded from TrackedNotification
 // (src/db/notifications.ts) exactly like waitlist_invite already is —
@@ -1076,6 +1121,7 @@ export const notificationSchema = z
     tripConditionsHoldSchema,
     tripMinimumNotMetSchema,
     tripBlowoutSchema,
+    bookingCancelledSchema,
     welcomeSchema,
     emailVerificationSchema,
     contactEmailConfirmationSchema,
@@ -1270,6 +1316,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // converges on the same send (docs ADR 20260804-blowout-cascade).
     case "trip_blowout":
       return `trip-blowout/${notification.blowoutDiverId}`;
+    // One per booking, ever: a booking is canceled once.
+    case "booking_cancelled":
+      return `booking-cancelled/${notification.bookingId}`;
     // One welcome ever, per account.
     case "welcome":
       return `welcome/${notification.userAccountId}`;

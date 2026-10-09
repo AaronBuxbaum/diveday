@@ -138,6 +138,10 @@ export const notificationKind = pgEnum("notification_kind", [
   // (src/lib/minimum-seats.ts). Tracked per booking like every other trip
   // message, so a shop can see who was told.
   "trip_minimum_not_met",
+  // One seat canceled, by the diver or the shop, with what happened to the
+  // money (src/db/booking-cancelled-notice.ts). Tracked per booking so the
+  // shop can see the diver was told.
+  "booking_cancelled",
 ]);
 
 export const notificationDeliveryStatus = pgEnum("notification_delivery_status", [

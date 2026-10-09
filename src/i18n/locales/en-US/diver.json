@@ -4022,6 +4022,15 @@
       "moneyRefundOwed": "You’re owed a full refund, and {shopName} will be in touch to get it back to you.",
       "findAnother": "See what else is running"
     },
+    "bookingCancelled": {
+      "subject": "Booking canceled: {tripTitle}",
+      "bodyByDiver": "Your booking for {tripTitle} on {date} is canceled, and your seat is released.",
+      "bodyByShop": "{shopName} has canceled your booking for {tripTitle} on {date}, and your seat is released.",
+      "moneyRefunded": "{amount} is on its way back to the card you paid with, and can take a few days to land.",
+      "moneyForfeit": "It was canceled after {shopName}’s free-cancellation window closed, so under their policy nothing is refunded.",
+      "moneyFollowUp": "{shopName} will be in touch about what you paid.",
+      "findAnother": "See what else is running"
+    },
     "tripBlowout": {
       "subject": "Trip canceled — {tripTitle}",
       "body": "{shopName} has had to cancel {tripTitle} on {date} because of the weather. Your seat is released, and there’s nothing you need to do.",

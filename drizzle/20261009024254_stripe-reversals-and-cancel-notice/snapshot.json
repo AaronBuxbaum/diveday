@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "7844c58a-726d-49c0-975d-ecbc7f98c139",
+  "id": "dbc8d37c-e560-4209-a9af-aaf5a82bedda",
   "prevIds": [
     "cb636c51-43be-4d9f-a1f5-8bf66663db5c"
   ],
@@ -703,7 +703,8 @@
         "trip_reminder_24h",
         "trip_recap",
         "trip_blowout",
-        "trip_minimum_not_met"
+        "trip_minimum_not_met",
+        "booking_cancelled"
       ],
       "name": "notification_kind",
       "entityType": "enums",

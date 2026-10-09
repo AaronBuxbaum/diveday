@@ -2,6 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import {
+  type CancellationRefundSeen,
+  sendBookingCancelledNotice,
+} from "@/db/booking-cancelled-notice";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import {
   confirmCarriedFacts,
@@ -536,8 +540,9 @@ export async function cancelMyBookingAction(token: string) {
   // only shows the unavailable notice. Staff can still see and fix a missed
   // refund from the booking's payment record; the diver just needs the
   // confirmation either way.
+  let refund: CancellationRefundSeen = { status: "not_attempted" };
   try {
-    const refund = await refundBookingOnCancellation(ctx.db, {
+    refund = await refundBookingOnCancellation(ctx.db, {
       shopId: ctx.data.shop.id,
       bookingId: ctx.bookingId,
     });
@@ -550,6 +555,14 @@ export async function cancelMyBookingAction(token: string) {
       errorCode: error instanceof Error ? error.name : "unknown_error",
     });
   }
+  // The written record of what just happened, with the money in it: the page
+  // below says it once, and this is what the diver still has tomorrow.
+  await sendBookingCancelledNotice(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    cancelledBy: "diver",
+    refund,
+  });
   redirect(`${base(token)}?cancelled=1`);
 }
 
