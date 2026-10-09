@@ -1452,3 +1452,37 @@ describe("assembleDaySpine and a boat that is out but no station", () => {
     expect(spine.week.jobs).toBe(1);
   });
 });
+
+describe("the boat's emergency kit on Today (dive-domain review 2026-10-09)", () => {
+  const kit = action({
+    id: "boat-safety-kit:t1",
+    kind: "boat_safety_kit",
+    departure: { tripId: "t1", label: "Reef · 8:00 AM" },
+    urgency: "now",
+  });
+
+  it("is danger, and every role on the boat sees it", () => {
+    expect(ACTION_KIND_META.boat_safety_kit.tone).toBe("danger");
+    for (const role of ["crew", "captain", "divemaster", "assistant_instructor"] as const) {
+      expect(filterActionsForRoles([kit], [role]).visibleActions).toEqual([kit]);
+    }
+  });
+
+  it("ranks above unanswered messages and reviews waiting", () => {
+    const sorted = sortStationRows([
+      action({ id: "reviews", kind: "reviews_pending", urgency: "now" }),
+      action({ id: "messages", kind: "unanswered_messages", urgency: "now" }),
+      kit,
+    ]);
+    expect(sorted.map((row) => row.id)[0]).toBe("boat-safety-kit:t1");
+  });
+
+  it("keeps the papers the owner's errand, quiet while due and a warning once lapsed", () => {
+    const due = action({ id: "papers", kind: "boat_papers_due", urgency: "later" });
+    const lapsed = action({ id: "lapsed", kind: "boat_safety_expired" });
+    expect(ACTION_KIND_META.boat_papers_due.tone).toBe("neutral");
+    expect(ACTION_KIND_META.boat_safety_expired.tone).toBe("warning");
+    expect(filterActionsForRoles([due, lapsed], ["crew"]).visibleActions).toEqual([]);
+    expect(filterActionsForRoles([due, lapsed], ["manager"]).visibleActions).toHaveLength(2);
+  });
+});

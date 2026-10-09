@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { MediaDeletionKind, PaymentOperationKind, WorkOrderLineKindValue } from "@/db/schema";
-import { BOAT_PAPERS } from "@/lib/boat-safety";
+import { BOAT_PAPERS, MUST_CARRY_KIT_KINDS } from "@/lib/boat-safety";
 import type { CertificationCardRowState } from "@/lib/certification-cards";
 import type { DepthUnit } from "@/lib/depth-units";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
@@ -407,6 +407,7 @@ const CASES: readonly LabelMapCase[] = [
             code: "kit_clock",
             gearItemId: "unit",
             label: "AED",
+            kind: "aed",
             clock,
             dueOn: "2026-10-21",
             expired,
@@ -431,6 +432,13 @@ const CASES: readonly LabelMapCase[] = [
           }),
         )
         .join(" / "),
+    ),
+  },
+  {
+    module: "boat-safety-labels.ts",
+    map: "MISSING_KEYS",
+    rows: codeRows(MUST_CARRY_KIT_KINDS, (locale, kind) =>
+      boatSafetyNoticeText(staffTranslator(locale), { code: "kit_missing", kind }),
     ),
   },
   {

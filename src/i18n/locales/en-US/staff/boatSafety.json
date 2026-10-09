@@ -1,10 +1,17 @@
 {
-  "heading": "Aboard {boatName}",
-  "overCertificate": "{aboard, plural, one {# person booked aboard} other {# people booked aboard}}; the Coast Guard certificate allows {limit}.",
+  "heading": "{boatName}: papers and safety kit",
+  "overCertificate": {
+    "booked": "{passengers, plural, one {# person} other {# people}} booked; the boat’s certificate allows {limit}.",
+    "aboard": "{passengers, plural, one {# passenger} other {# passengers}} aboard; the boat’s certificate allows {limit}."
+  },
+  "missing": {
+    "o2Kit": "No emergency oxygen aboard",
+    "aed": "No AED aboard"
+  },
   "paper": {
     "inspection": {
-      "due": "Coast Guard inspection due {days, plural, =0 {today} one {in # day} other {in # days}}",
-      "expired": "Coast Guard inspection overdue by {days, plural, one {# day} other {# days}}"
+      "due": "Next safety inspection due {days, plural, =0 {today} one {in # day} other {in # days}}",
+      "expired": "Safety inspection overdue by {days, plural, one {# day} other {# days}}"
     },
     "registration": {
       "due": "Registration expires {days, plural, =0 {today} one {in # day} other {in # days}}",
@@ -44,6 +51,6 @@
       "due": "{label}: O2 clean due {days, plural, =0 {today} one {in # day} other {in # days}}",
       "expired": "{label}: O2 clean overdue by {days, plural, one {# day} other {# days}}"
     },
-    "offService": "{label}: off the boat for service"
+    "offService": "{label}: flagged for service. Check before sailing."
   }
 }

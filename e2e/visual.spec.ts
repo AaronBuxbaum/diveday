@@ -5692,7 +5692,8 @@ for (const scheme of ["light", "dark"] as const) {
       /**
        * **What the boat carries, and what it holds** (roadmap N-08, N-10): the
        * reef boat with one passenger past its certificate, its insurance three
-       * weeks out, flares expired and AED pads twelve days from expiry —
+       * weeks out, flares expired, AED pads twelve days from expiry and the
+       * shop's O2 kit left ashore —
        * through the opt-in `?boatSafety=1` trouble state, never seeded into
        * blue-mantis. The panel above the boat check is the one surface that
        * says all of it.
@@ -5706,7 +5707,9 @@ for (const scheme of ["light", "dark"] as const) {
         const { boatSafety } = (await seeded.json()) as { boatSafety?: { tripId: string } };
         if (!boatSafety) throw new Error("seed-trouble-states found no reef departure on a boat");
         await page.goto(`/shop/blue-mantis/trips/${boatSafety.tripId}/manifest`);
-        await page.getByRole("heading", { level: 2, name: "Aboard Mantis I" }).waitFor();
+        await page
+          .getByRole("heading", { level: 2, name: "Mantis I: papers and safety kit" })
+          .waitFor();
         await offlineCopySaved(page);
         await capture(page, "manifest-boat-safety", scheme);
       });

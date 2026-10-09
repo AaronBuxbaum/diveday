@@ -1,4 +1,10 @@
-import type { BoatPaper, BoatSafetyNotice } from "@/lib/boat-safety";
+import {
+  type BoatPaper,
+  type BoatSafetyNotice,
+  type BoatSafetySection,
+  boatSafetyNoticeTone,
+  type MustCarryKitKind,
+} from "@/lib/boat-safety";
 import type { GearServiceKind } from "@/lib/gear";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
@@ -44,11 +50,29 @@ const PAPER_KEYS: Record<BoatPaper, { due: StaffMessageKey; expired: StaffMessag
   },
 };
 
+const MISSING_KEYS: Record<MustCarryKitKind, StaffMessageKey> = {
+  o2_kit: "boatSafety.missing.o2Kit",
+  aed: "boatSafety.missing.aed",
+};
+
+/** The section's heading: the hull, and what the lines are about. */
+export function boatSafetyHeadingText(t: StaffTranslator, boatName: string): string {
+  return t("boatSafety.heading", { boatName });
+}
+
 /** One notice, as one sentence. */
 export function boatSafetyNoticeText(t: StaffTranslator, notice: BoatSafetyNotice): string {
   switch (notice.code) {
     case "over_certificate":
-      return t("boatSafety.overCertificate", { aboard: notice.aboard, limit: notice.limit });
+      return t(
+        notice.counted ? "boatSafety.overCertificate.aboard" : "boatSafety.overCertificate.booked",
+        {
+          passengers: notice.passengers,
+          limit: notice.limit,
+        },
+      );
+    case "kit_missing":
+      return t(MISSING_KEYS[notice.kind]);
     case "paper": {
       const keys = PAPER_KEYS[notice.paper];
       return t(notice.expired ? keys.expired : keys.due, { days: notice.days });
@@ -63,4 +87,23 @@ export function boatSafetyNoticeText(t: StaffTranslator, notice: BoatSafetyNotic
     case "kit_off_service":
       return t("boatSafety.kit.offService", { label: notice.label });
   }
+}
+
+/**
+ * The whole section, worded: the heading and one toned line per notice, or
+ * null when the boat has nothing to say. The live manifest renders it and the
+ * offline copy carries it as is.
+ */
+export function boatSafetySection(
+  t: StaffTranslator,
+  safety: { boatName: string; notices: readonly BoatSafetyNotice[] } | null,
+): BoatSafetySection | null {
+  if (!safety || safety.notices.length === 0) return null;
+  return {
+    heading: boatSafetyHeadingText(t, safety.boatName),
+    lines: safety.notices.map((notice) => ({
+      text: boatSafetyNoticeText(t, notice),
+      tone: boatSafetyNoticeTone(notice),
+    })),
+  };
 }

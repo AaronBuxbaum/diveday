@@ -1,6 +1,7 @@
 import { MINUTE_MS } from "@/lib/clock";
 // Dependency-free, like `./roll-call` below — see the note there.
 import { type ArrivalStatus, latestArrival } from "./arrival";
+import type { BoatSafetySection } from "./boat-safety";
 import type { CalendarDate } from "./calendar-date";
 import { nowDate } from "./clock";
 import type { EmergencyReference } from "./emergency-reference";
@@ -149,6 +150,16 @@ export type OfflineManifestPayload = {
       };
     }>;
   };
+  /**
+   * **The boat's papers and safety kit, worded** (roadmap N-08; dive-domain
+   * review 2026-10-09): the same heading and toned lines the live Boat tab
+   * shows above the boat check, as of the save. Words rather than codes
+   * because this copy is read with no signal and no server to word them, in
+   * the language the crew saved it in. Optional and additive like `checklist`:
+   * a copy saved before it, or a boat with nothing to say, carries none and
+   * renders no section.
+   */
+  boatSafety?: BoatSafetySection;
   manifests: Array<
     Omit<TripManifest, "trip" | "divers" | "crew" | "completeness"> & {
       trip: Omit<TripManifest["trip"], "startsAt" | "endsAt"> & {
@@ -839,9 +850,12 @@ export function serializeManifests(
     label: string;
     check?: { occurredAt: Date; recordedByName: string; note: string | null };
   }> = [],
+  /** The worded boat section (`boatSafetySection`), or null for a boat with nothing to say. */
+  boatSafety: BoatSafetySection | null = null,
 ): OfflineManifestPayload {
   return {
     shop,
+    ...(boatSafety ? { boatSafety } : {}),
     checklist: {
       items: checklist.map((item) => ({
         id: item.id,
