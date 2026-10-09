@@ -20,22 +20,32 @@ async function startRentalForCustomer(page: Page) {
   await page.getByRole("button", { name: "Find a returning diver" }).click();
   await page.getByRole("link", { name: `Rent to ${CUSTOMER}` }).click();
   // The window defaults to today; the free units for it are listed at once.
-  await expect(page.getByRole("group", { name: "Units free for these days" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Kind of gear" })).toBeVisible();
   // The person chosen rides the URL from here on.
   return new URL(page.url()).searchParams.get("personId") ?? "";
 }
 
 /**
- * Puts one unit on the "going out" list: picked from its kind's menu by the
- * words it starts with, since an option's text also carries its size.
+ * Puts one unit on the "going out" list: its kind's chip, then its tile, whose
+ * name starts with the tag (a size and service words may follow it).
  */
 async function pickUnit(page: Page, kind: string, label: string) {
-  const menu = page.getByRole("combobox", { name: kind, exact: true });
-  const value = await menu.locator("option", { hasText: label }).getAttribute("value");
-  await menu.selectOption(value ?? "");
+  await page
+    .getByRole("group", { name: "Kind of gear" })
+    .getByRole("button", { name: new RegExp(`^${kind}\\b`) })
+    .click();
+  const tile = page.getByRole("button", { name: new RegExp(`^${label}(\\b|$)`) });
+  await tile.click();
+  // The tile answers where the finger is, and the bill below lists the pick.
+  await expect(tile).toHaveAttribute("aria-pressed", "true");
   await expect(
     page.getByRole("list", { name: "Going out" }).getByText(label, { exact: true }),
   ).toBeVisible();
+}
+
+/** Answers "How they pay", which every rental with picks asks. */
+async function payBy(page: Page, choice: "Cash" | "Card machine" | "No charge") {
+  await page.getByRole("radio", { name: new RegExp(`^${choice}`) }).check();
 }
 
 test.describe("staff", () => {
@@ -45,10 +55,21 @@ test.describe("staff", () => {
     await startRentalForCustomer(page);
     await pickUnit(page, "Mask", "Mask #2");
     await pickUnit(page, "Fins", "Fins #2");
+    // The shop's own prices, a running total, and the bar at the foot that
+    // says how many and how much the whole time (Aaron, 2026-10-09).
+    await expect(page.getByText("2 items", { exact: true })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Going out" })).toContainText("$16.00");
+    await payBy(page, "Cash");
     await page.getByRole("button", { name: "Rent out", exact: true }).click();
 
-    // The ticket: who, what, and the one date that matters.
-    await expect(page.getByRole("status").filter({ hasText: "Rented out." })).toBeVisible();
+    // The ticket: who, what, the one date that matters, and what was paid.
+    await expect(
+      page.getByRole("status").filter({ hasText: "Rented out. Payment recorded." }),
+    ).toBeVisible();
+    const payment = page.getByRole("region", { name: "Payment" });
+    await expect(payment).toContainText("Paid");
+    await expect(payment).toContainText("Cash");
+    await expect(payment).toContainText("$16.00");
     await expect(page.getByRole("heading", { level: 1, name: CUSTOMER })).toBeVisible();
     const units = page.getByRole("list").filter({ hasText: "Mask #2" });
     await expect(units).toContainText("Fins #2");
@@ -90,20 +111,22 @@ test.describe("staff", () => {
     await pickUnit(page, "Mask", "Mask #2");
     await page.getByRole("button", { name: "Remove Mask #2" }).click();
     await expect(page.getByRole("list", { name: "Going out" })).toHaveCount(0);
+    await expect(page.getByText("Tap the gear that’s going out.")).toBeVisible();
   });
 
-  test("refuses a rental with no units beside the submit, keeping who and when", async ({
-    page,
-  }) => {
+  test("offers no Rent out until something is picked, keeping who and when", async ({ page }) => {
     await startRentalForCustomer(page);
-    await page.getByRole("button", { name: "Rent out", exact: true }).click();
-    await expect(page.getByText("Pick at least one unit.")).toBeVisible();
+    await expect(page.getByText("0 items", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Rent out", exact: true })).toBeDisabled();
     await expect(page.getByText(CUSTOMER).first()).toBeVisible();
+    await pickUnit(page, "Mask", "Mask #2");
+    await expect(page.getByRole("button", { name: "Rent out", exact: true })).toBeEnabled();
   });
 
   test("releases a rental nobody came back for", async ({ page }) => {
     await startRentalForCustomer(page);
     await pickUnit(page, "Mask", "Mask #3");
+    await payBy(page, "No charge");
     await page.getByRole("button", { name: "Rent out", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: "Rented out." })).toBeVisible();
     await page.getByRole("button", { name: "Release" }).click();
@@ -115,6 +138,7 @@ test.describe("staff", () => {
   test("the diver record shows a counter rental and opens its ticket", async ({ page }) => {
     const personId = await startRentalForCustomer(page);
     await pickUnit(page, "Fins", "Fins #3");
+    await payBy(page, "No charge");
     await page.getByRole("button", { name: "Rent out", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: "Rented out." })).toBeVisible();
     const ticket = page.url().split("?")[0];

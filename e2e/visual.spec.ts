@@ -7598,23 +7598,26 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       // Renting gear out at the counter (ADR 20260815-minimal-gear-register,
-      // amended 2026-10-08): the person chosen, today's window, and the units
-      // free for it grouped by kind. The demo shop has no payments connected,
-      // so no invoice section; the form a crew member sees.
+      // amended 2026-10-08; redrawn 2026-10-09): the person chosen, today's
+      // window, the free units of one kind as tiles, the bill with its total,
+      // and how they pay.
       test(`the rent-out form renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
         await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
-        await page.getByRole("group", { name: "Units free for these days" }).waitFor();
-        // Two picks, so the "going out" list is in frame under the menus.
+        await page.getByRole("group", { name: "Kind of gear" }).waitFor();
+        // Two picks and a payment, so the bill, its total and the bar are in frame.
         for (const [kind, label] of [
-          ["Mask", "Mask #1"],
-          ["Fins", "Fins #1"],
+          ["Mask", /^Mask #1\b/],
+          ["Fins", /^Fins #1\b/],
         ] as const) {
-          const menu = page.getByRole("combobox", { name: kind, exact: true });
-          const value = await menu.locator("option", { hasText: label }).getAttribute("value");
-          await menu.selectOption(value ?? "");
+          await page
+            .getByRole("group", { name: "Kind of gear" })
+            .getByRole("button", { name: new RegExp(`^${kind}\\b`) })
+            .click();
+          await page.getByRole("button", { name: label }).click();
         }
         await page.getByRole("button", { name: "Remove Fins #1" }).waitFor();
+        await page.getByRole("radio", { name: /^Cash/ }).check();
         await capture(page, "counter-rental-form", scheme);
       });
 
@@ -7625,16 +7628,19 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
         await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
         for (const [kind, label] of [
-          ["Mask", "Mask #1"],
-          ["Fins", "Fins #1"],
+          ["Mask", /^Mask #1\b/],
+          ["Fins", /^Fins #1\b/],
         ] as const) {
-          const menu = page.getByRole("combobox", { name: kind, exact: true });
-          const value = await menu.locator("option", { hasText: label }).getAttribute("value");
-          await menu.selectOption(value ?? "");
+          await page
+            .getByRole("group", { name: "Kind of gear" })
+            .getByRole("button", { name: new RegExp(`^${kind}\\b`) })
+            .click();
+          await page.getByRole("button", { name: label }).click();
         }
         await page.getByRole("button", { name: "Remove Fins #1" }).waitFor();
+        await page.getByRole("radio", { name: /^Cash/ }).check();
         await page.getByRole("button", { name: "Rent out", exact: true }).click();
-        await page.getByRole("status").filter({ hasText: "Rented out." }).waitFor();
+        await page.getByRole("status").filter({ hasText: "Payment recorded." }).waitFor();
         await page.getByRole("button", { name: "Hand over" }).waitFor();
         await capture(page, "counter-rental-ticket", scheme);
       });
