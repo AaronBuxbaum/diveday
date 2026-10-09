@@ -1,11 +1,12 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
+import { notificationIdempotencyKey } from "@/lib/notifications/kinds";
 import { seededShopContext } from "@/test/db";
 import { cancellationMoney, sendBookingCancelledNotice } from "./booking-cancelled-notice";
 import { cancelBooking, createBooking } from "./bookings";
 import { setBookingPayment } from "./payments";
-import { notificationDeliveries, people } from "./schema";
+import { bookings, notificationDeliveries, people } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 const ORIGIN = "https://diveday.example";
@@ -31,7 +32,8 @@ async function canceledBooking(email: string | null = "nora@example.com") {
     ...(email ? { email } : {}),
   });
   if (!booking.ok) throw new Error(`booking failed: ${booking.reason}`);
-  await cancelBooking(db, shop.id, booking.bookingId);
+  const cancelled = await cancelBooking(db, shop.id, booking.bookingId);
+  expect(cancelled?.previousStatus).toBe("booked");
   return { db, shop, trip, bookingId: booking.bookingId };
 }
 
@@ -66,6 +68,7 @@ describe("sendBookingCancelledNotice", () => {
         shopId: shop.id,
         bookingId,
         cancelledBy: "diver",
+        from: "booked",
         refund: { status: "refunded", amountCents: 9_000 },
       },
       { provider: capturingProvider(seen), origin: ORIGIN },
@@ -95,7 +98,13 @@ describe("sendBookingCancelledNotice", () => {
 
     await sendBookingCancelledNotice(
       db,
-      { shopId: shop.id, bookingId, cancelledBy: "shop", refund: { status: "unpaid" } },
+      {
+        shopId: shop.id,
+        bookingId,
+        cancelledBy: "shop",
+        from: "booked",
+        refund: { status: "unpaid" },
+      },
       { provider: capturingProvider(seen), origin: ORIGIN },
     );
 
@@ -108,7 +117,13 @@ describe("sendBookingCancelledNotice", () => {
 
     const outcome = await sendBookingCancelledNotice(
       db,
-      { shopId: shop.id, bookingId, cancelledBy: "shop", refund: { status: "unpaid" } },
+      {
+        shopId: shop.id,
+        bookingId,
+        cancelledBy: "shop",
+        from: "booked",
+        refund: { status: "unpaid" },
+      },
       { provider: capturingProvider(seen), origin: ORIGIN },
     );
 
@@ -137,6 +152,7 @@ describe("sendBookingCancelledNotice", () => {
         shopId: shop.id,
         bookingId: booking.bookingId,
         cancelledBy: "shop",
+        from: "booked",
         refund: { status: "unpaid" },
       },
       { provider: capturingProvider(seen), origin: ORIGIN },
@@ -156,6 +172,7 @@ describe("sendBookingCancelledNotice", () => {
         shopId: "00000000-0000-4000-8000-000000000000",
         bookingId,
         cancelledBy: "shop",
+        from: "booked",
         refund: { status: "unpaid" },
       },
       { provider: capturingProvider(seen), origin: ORIGIN },
@@ -165,13 +182,78 @@ describe("sendBookingCancelledNotice", () => {
     expect(seen).toHaveLength(0);
   });
 
+  it("never mails a seat that was not booked: a checked-in or no-show row taken off the roster", async () => {
+    const { db, shop } = await seededShopContext();
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("demo trip missing");
+    const booking = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      fullName: "Already Aboard",
+      email: "aboard@example.com",
+    });
+    if (!booking.ok) throw new Error(booking.reason);
+    await db
+      .update(bookings)
+      .set({ status: "checked_in" })
+      .where(eq(bookings.id, booking.bookingId));
+    const cancelled = await cancelBooking(db, shop.id, booking.bookingId);
+    expect(cancelled?.previousStatus).toBe("checked_in");
+    const seen: Notification[] = [];
+
+    const outcome = await sendBookingCancelledNotice(
+      db,
+      {
+        shopId: shop.id,
+        bookingId: booking.bookingId,
+        cancelledBy: "shop",
+        from: "checked_in",
+        refund: { status: "unpaid" },
+      },
+      { provider: capturingProvider(seen), origin: ORIGIN },
+    );
+
+    expect(outcome).toBe("not_sent");
+    expect(seen).toHaveLength(0);
+  });
+
+  it("keys each cancellation apart, so a seat booked again and canceled again is told again", async () => {
+    const { db, shop, bookingId } = await canceledBooking();
+    const seen: Notification[] = [];
+    const send = (now: Date) =>
+      sendBookingCancelledNotice(
+        db,
+        {
+          shopId: shop.id,
+          bookingId,
+          cancelledBy: "shop",
+          from: "booked",
+          refund: { status: "unpaid" },
+        },
+        { provider: capturingProvider(seen), origin: ORIGIN, now },
+      );
+    await send(new Date("2026-10-01T10:00:00Z"));
+    await send(new Date("2026-10-03T09:00:00Z"));
+    const [first, second] = seen;
+    if (!first || !second) throw new Error("two sends expected");
+    expect(notificationIdempotencyKey(first)).toMatch(/^booking-cancelled\//);
+    expect(notificationIdempotencyKey(first)).not.toBe(notificationIdempotencyKey(second));
+  });
+
   it("records the send as not configured when there is no public origin", async () => {
     const { db, shop, bookingId } = await canceledBooking();
     const seen: Notification[] = [];
 
     const outcome = await sendBookingCancelledNotice(
       db,
-      { shopId: shop.id, bookingId, cancelledBy: "diver", refund: { status: "unpaid" } },
+      {
+        shopId: shop.id,
+        bookingId,
+        cancelledBy: "diver",
+        from: "booked",
+        refund: { status: "unpaid" },
+      },
       { provider: capturingProvider(seen), origin: null },
     );
 

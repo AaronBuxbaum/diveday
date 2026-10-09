@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { type NotificationProvider, publicAppUrl } from "@/lib/notifications";
 import { type Notification, recipientLocale } from "@/lib/notifications/kinds";
@@ -8,6 +9,7 @@ import type { AppDb } from "./client";
 import { recordNotificationDelivery, sendAndRecordNotification } from "./notifications";
 import { getBookingPayment } from "./payments";
 import type { CancellationRefundOutcome } from "./refunds";
+import type { Booking } from "./schema";
 import { bookings, people, shops, trips } from "./schema";
 
 type CancellationMoney = Extract<Notification, { kind: "booking_cancelled" }>["money"];
@@ -92,10 +94,22 @@ type BookingCancelledNoticeInput = {
   shopId: string;
   bookingId: string;
   cancelledBy: "diver" | "shop";
+  /**
+   * The seat's status just before the cancel (`cancelBooking`'s
+   * `previousStatus`). Only `booked` is a diver who expected to come: a
+   * checked-in or no-show row taken off the roster, or one already canceled,
+   * is roster tidying the diver is not told about.
+   */
+  from: Booking["status"];
   refund: CancellationRefundSeen;
 };
 
-type BookingCancelledNoticeOptions = { provider?: NotificationProvider; origin?: string | null };
+type BookingCancelledNoticeOptions = {
+  provider?: NotificationProvider;
+  origin?: string | null;
+  /** The moment of the cancel; injectable for tests, defaults to now. */
+  now?: Date;
+};
 
 async function sendNotice(
   db: AppDb,
@@ -112,6 +126,7 @@ async function sendNotice(
     .limit(1);
   // Only a booking that is canceled now: a call that raced a reinstatement
   // must not tell the diver their seat is gone.
+  if (input.from !== "booked") return "not_sent";
   if (!row) return "not_sent";
   if (row.booking.status !== "cancelled") return "not_sent";
   if (!row.person.email) return "no_address";
@@ -142,6 +157,7 @@ async function sendNotice(
       startsAt: row.trip.startsAt,
       timezone: row.shop.timezone,
       cancelledBy: input.cancelledBy,
+      cancelledAt: options.now ?? nowDate(),
       money: cancellationMoney(input.refund, payment ?? null),
       scheduleUrl: new URL(publicSchedulePath(row.shop.slug), `${origin}/`).toString(),
     },

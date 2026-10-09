@@ -589,6 +589,8 @@ const bookingCancelledSchema = z.object({
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   cancelledBy: z.enum(["diver", "shop"]),
+  /** When it was canceled; keys the send, so a seat rebooked and canceled again is told again. */
+  cancelledAt: z.date(),
   money: z.discriminatedUnion("story", [
     z.object({ story: z.literal("none") }),
     z.object({ story: z.literal("forfeit") }),
@@ -1316,9 +1318,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // converges on the same send (docs ADR 20260804-blowout-cascade).
     case "trip_blowout":
       return `trip-blowout/${notification.blowoutDiverId}`;
-    // One per booking, ever: a booking is canceled once.
+    // One per cancellation: a seat reinstated and canceled again is news again.
     case "booking_cancelled":
-      return `booking-cancelled/${notification.bookingId}`;
+      return `booking-cancelled/${notification.bookingId}/${notification.cancelledAt.toISOString()}`;
     // One welcome ever, per account.
     case "welcome":
       return `welcome/${notification.userAccountId}`;

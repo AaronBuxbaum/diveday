@@ -1043,7 +1043,8 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
-  await cancelBooking(dbi, s.user.shopId, bookingId);
+  const cancelled = await cancelBooking(dbi, s.user.shopId, bookingId);
+  const from = cancelled?.previousStatus ?? "cancelled";
   await trackEvent({ name: "booking_cancelled", source: "staff" });
   // Same activity line an add writes (addBookingAction), for the same reason:
   // the trip's log, read from the Trip surface, is the record of who touched
@@ -1071,6 +1072,7 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
       shopId: s.user.shopId,
       bookingId,
       cancelledBy: "shop",
+      from,
       refund: { status: "not_attempted" },
     });
     const notice = owed ? "booking-removed-refund-owner" : "booking-removed";
@@ -1091,6 +1093,7 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
     shopId: s.user.shopId,
     bookingId,
     cancelledBy: "shop",
+    from,
     refund,
   });
   revalidateAndRedirect(back, noticeUrl(back, refundNotice(refund), { bid: bookingId }));

@@ -561,6 +561,8 @@ export async function cancelMyBookingAction(token: string) {
     shopId: ctx.data.shop.id,
     bookingId: ctx.bookingId,
     cancelledBy: "diver",
+    // `selfCancelBooking` only ever cancels a booked seat.
+    from: "booked",
     refund,
   });
   redirect(`${base(token)}?cancelled=1`);

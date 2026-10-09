@@ -1786,12 +1786,21 @@ export async function cancelBooking(db: AppDb, shopId: string, bookingId: string
 
 async function cancelBookingRow(db: AppDb, shopId: string, bookingId: string) {
   return db.transaction(async (tx) => {
-    const [booking] = await tx
+    // What the seat was before this, read under the row's lock: only a seat
+    // that was `booked` becomes a diver's "your booking is canceled" email, and
+    // a roster removal of a checked-in or no-show row is not one.
+    const [prior] = await tx
+      .select({ status: bookings.status })
+      .from(bookings)
+      .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+      .for("update");
+    const [updated] = await tx
       .update(bookings)
       .set({ status: "cancelled" })
       .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
       .returning();
-    if (!booking) return null;
+    if (!updated || !prior) return null;
+    const booking = { ...updated, previousStatus: prior.status };
     // Belt-and-suspenders: verifyBookingCapability already fails closed on a
     // cancelled booking, but revoking outright keeps the capability table's
     // own audit trail honest and stops relying solely on that join. Both
