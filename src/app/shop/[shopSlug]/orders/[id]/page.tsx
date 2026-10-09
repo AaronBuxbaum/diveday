@@ -323,7 +323,7 @@ export default async function OrderDetailPage({
         // never sees the button that would have answered it.
         <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
       ) : null}
-      <OrderDisputeBanner shop={shop} orderId={order.order.id} locale={locale} />
+      <OrderDisputeBanner shop={shop} orderId={id} session={session} locale={locale} />
       {/* `padding="lg"`: the receipt is a card someone works *inside* —
           Refresh, Void and Refund all live in it. No `title`; the page header
           above already names the order, and the status badge is the heading
