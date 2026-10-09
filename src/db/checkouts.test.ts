@@ -17,7 +17,7 @@ import {
 } from "./checkouts";
 import { joinLastMinuteList } from "./last-minute-list";
 import { getBookingPayment, setBookingPayment } from "./payments";
-import { bookingCheckoutBookings, bookingCheckouts, trips } from "./schema";
+import { bookingCheckoutBookings, bookingCheckouts, bookings, trips } from "./schema";
 import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency, setShopPassThroughFee, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
@@ -2497,5 +2497,151 @@ describe("a fixed-amount promotion", () => {
     await expect(
       db.insert(shopPromoCodes).values({ shopId: shop.id, code: "NEITHER", scope: "all" }),
     ).rejects.toThrow();
+  });
+});
+
+/**
+ * Layer-7 security review. With a pass-through fee, the discount reaches Stripe
+ * as a one-off coupon that counts against no `max_redemptions`, so a capped
+ * code would be unlimited on exactly the trips that carry a park fee. The cap
+ * is held locally on that path instead.
+ */
+describe("a capped discount on the pass-through path", () => {
+  async function party(
+    db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+    shopId: string,
+    tripId: string,
+    name: string,
+  ) {
+    const made = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId,
+        tripId,
+        fullName: name,
+        email: `${name.toLowerCase().replace(/\s+/g, ".")}@example.com`,
+      },
+    ]);
+    if (!made.ok) throw new Error(`party booking failed: ${made.reason}`);
+    return made.bookings.map((b) => b.bookingId);
+  }
+
+  it("refuses the checkout one past a shop code's cap", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await setShopPassThroughFee(db, shop.id, { name: "Park fee", amountCents: 1_500 });
+    const created = await createShopPromoCode(
+      db,
+      { shopId: shop.id, code: "ONCE", discountPercent: 20, scope: "all", maxRedemptions: 1 },
+      fakePromotions(),
+    );
+    if (!created.ok) throw new Error(`promo creation failed: ${created.reason}`);
+    const withCode = (ids: string[]) => ({
+      ...startInput(shop.id, reef.id, ids),
+      promotionCode: created.promo.stripePromotionCodeId ?? undefined,
+      shopPromo: {
+        id: created.promo.id,
+        code: created.promo.code,
+        discountPercent: created.promo.discountPercent,
+      },
+    });
+
+    const first = await startBookingCheckout(db, withCode(bookingIds), fakeCheckout());
+    if (!first.ok) throw new Error(`first checkout refused: ${first.reason}`);
+    await markCheckoutPaidBySessionId(db, first.checkout.stripeSessionId);
+
+    const later = await party(db, shop.id, reef.id, "Cap Plusone");
+    expect(await startBookingCheckout(db, withCode(later), fakeCheckout())).toEqual({
+      ok: false,
+      reason: "checkout_unavailable",
+    });
+    // The refused attempt leaves the seat free to pay another way.
+    const [seat] = await db
+      .select({ claim: bookings.pendingCheckoutIntentId })
+      .from(bookings)
+      .where(eq(bookings.id, later[0] ?? ""));
+    expect(seat?.claim).toBeNull();
+  });
+
+  it("holds the last use for a session still open, not only for a paid one", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await setShopPassThroughFee(db, shop.id, { name: "Park fee", amountCents: 1_500 });
+    const created = await createShopPromoCode(
+      db,
+      { shopId: shop.id, code: "ONEOPEN", discountPercent: 20, scope: "all", maxRedemptions: 1 },
+      fakePromotions(),
+    );
+    if (!created.ok) throw new Error(`promo creation failed: ${created.reason}`);
+    const withCode = (ids: string[]) => ({
+      ...startInput(shop.id, reef.id, ids),
+      promotionCode: created.promo.stripePromotionCodeId ?? undefined,
+      shopPromo: {
+        id: created.promo.id,
+        code: created.promo.code,
+        discountPercent: created.promo.discountPercent,
+      },
+    });
+    const first = await startBookingCheckout(db, withCode(bookingIds), fakeCheckout());
+    expect(first.ok).toBe(true);
+    const later = await party(db, shop.id, reef.id, "Open Holder");
+    const second = await startBookingCheckout(db, withCode(later), fakeCheckout());
+    expect(second.ok).toBe(false);
+  });
+
+  it("leaves a capped code Stripe's to count when there is no fee", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const created = await createShopPromoCode(
+      db,
+      { shopId: shop.id, code: "NOFEE", discountPercent: 20, scope: "all", maxRedemptions: 1 },
+      fakePromotions(),
+    );
+    if (!created.ok) throw new Error(`promo creation failed: ${created.reason}`);
+    const withCode = (ids: string[]) => ({
+      ...startInput(shop.id, reef.id, ids),
+      promotionCode: created.promo.stripePromotionCodeId ?? undefined,
+      shopPromo: {
+        id: created.promo.id,
+        code: created.promo.code,
+        discountPercent: created.promo.discountPercent,
+      },
+    });
+    const seen = recordingCheckout();
+    const first = await startBookingCheckout(db, withCode(bookingIds), seen.provider);
+    if (!first.ok) throw new Error("first checkout refused");
+    await markCheckoutPaidBySessionId(db, first.checkout.stripeSessionId);
+    // No fee: the code itself goes to Stripe, whose `max_redemptions` decides.
+    const later = await party(db, shop.id, reef.id, "Stripe Decides");
+    const second = await startBookingCheckout(db, withCode(later), seen.provider);
+    expect(second.ok).toBe(true);
+    expect(seen.requests[1]?.promotionCode).toBe(created.promo.stripePromotionCodeId);
+  });
+
+  it("refuses a trip deal's checkout once the seats open when it went out are taken", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await setShopPassThroughFee(db, shop.id, { name: "Park fee", amountCents: 1_500 });
+    const counted = (await upcomingTripsWithCounts(db, shop.id, new Date(0))).find(
+      (t) => t.id === reef.id,
+    );
+    if (!counted) throw new Error("reef missing");
+    // One open seat when the deal goes out, so Stripe's cap is one.
+    await db
+      .update(trips)
+      .set({ capacity: counted.booked + 1 })
+      .where(eq(trips.id, reef.id));
+    const deal = await sentTripDeal(db, shop.id, reef.id, 25);
+    const withDeal = (ids: string[]) => ({
+      ...startInput(shop.id, reef.id, ids),
+      promotionCode: deal.stripePromotionCodeId ?? undefined,
+      tripPromo: { id: deal.id, code: deal.code, discountPercent: deal.discountPercent },
+    });
+
+    const first = await startBookingCheckout(db, withDeal(bookingIds), fakeCheckout());
+    if (!first.ok) throw new Error(`first checkout refused: ${first.reason}`);
+    await markCheckoutPaidBySessionId(db, first.checkout.stripeSessionId);
+
+    const later = await party(db, shop.id, reef.id, "Deal Plusone");
+    expect(await startBookingCheckout(db, withDeal(later), fakeCheckout())).toEqual({
+      ok: false,
+      reason: "checkout_unavailable",
+    });
   });
 });

@@ -108,3 +108,13 @@ takes a booking below zero: `discountOffCents` in `src/lib/promo-codes.ts` caps 
 discountable lines, and a pass-through fee stays whole. `booking_checkouts.applied_discount_cents`
 snapshots what was taken, beside the existing percent snapshot, so the recorded payments and a
 later refund agree with what Stripe charged.
+
+**The cap where Stripe cannot see it.** On a trip with a pass-through fee the discount reaches
+Stripe as a one-off session coupon (issue #1019), which no `max_redemptions` counts. On that path
+the checkout holds the cap itself, after it claims the party's seats: `discountCapReached` in
+`src/db/promo-caps.ts` counts a shop code's redemptions plus its checkouts still open, and refuses
+the attempt as Stripe refuses an exhausted code. A trip deal's cap, the seats open when it went out,
+is not stored on its row, so it is read back as the trip's capacity less the seats held before the
+deal and still held; that is never tighter than Stripe's own cap. Two attempts starting in the same
+instant can still both take the last use, because the open checkout is written only after Stripe
+answers.
