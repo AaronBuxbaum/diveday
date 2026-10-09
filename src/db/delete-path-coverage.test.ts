@@ -144,6 +144,8 @@ const UNSCOPED_REASONS: Record<string, string> = {
     "the platform's delivery ledger, pruned by retention; it carries no payload",
   setup_requests:
     "a shop asking DiveDay to be set up, before any shop exists — the platform's lead list, not a tenant's (ADR 20261007-setup-request-form)",
+  shop_setup_links:
+    "a set-up request's single-use link, minted before any shop exists and holding no shop id; it cascades with its request (ADR 20261009-single-use-setup-links)",
   demo_entries:
     "a count of demo entries by funnel tag, deliberately unkeyed from the minted shop so the reaper does not erase the count; pruned by retention",
   sms_opt_outs:

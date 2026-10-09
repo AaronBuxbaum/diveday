@@ -7,7 +7,7 @@ import { MarketingFooterFallback } from "@/components/MarketingFooter";
  * page reads its `searchParams` and the negotiated locale.
  *
  * **It draws the door the route renders by default** (K-290): without the
- * setup key the page is `ClosedDoor` — the marketing header, then an eyebrow,
+ * setup link the page is `ClosedDoor` — the marketing header, then an eyebrow,
  * a title that wraps to two lines on a phone, a panel holding one two-line
  * sentence and the mail button, two footer sentences (the first wraps), and
  * the marketing footer. It drew the six-field trial form, with no chrome,

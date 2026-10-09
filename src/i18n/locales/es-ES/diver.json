@@ -2036,6 +2036,10 @@
         "title": "Abrimos cada centro a mano",
         "body": "Cuéntanos de tu centro y lo abrimos contigo."
       },
+      "spentLink": {
+        "title": "Este enlace de configuración ya no sirve",
+        "body": "Un enlace de configuración abre un centro y dura dos semanas. Pídenos uno nuevo."
+      },
       "shopSectionTitle": "Tu centro",
       "shopNameLabel": "Nombre del centro",
       "shopNamePlaceholder": "p. ej. Green Lagoon Divers",

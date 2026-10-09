@@ -2036,6 +2036,10 @@
         "title": "We set up every shop by hand",
         "body": "Tell us about your shop and we’ll open it with you."
       },
+      "spentLink": {
+        "title": "This setup link no longer works",
+        "body": "A setup link opens one shop and lasts two weeks. Ask us for a new one."
+      },
       "shopSectionTitle": "Your shop",
       "shopNameLabel": "Shop name",
       "shopNamePlaceholder": "e.g. Green Lagoon Divers",

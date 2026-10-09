@@ -188,22 +188,24 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
-      "The key that opens /onboard (ADR 20260925-shops-are-set-up-by-hand). Every",
-      "shop is set up by hand: /onboard?setup=<this value> shows the sign-up form",
-      "and its action accepts a submission only when the posted key matches. Any",
-      "long random string (openssl rand -base64 32); change it to revoke a link",
-      "already sent. Keys shorter than 24 characters, and the dev and e2e keys",
-      "written in this repository, are ignored.",
+      "The founder's demo-quiet key (ADR 20260805-demo-try-alerts, amendment",
+      "2026-10-09). Opening /api/demo/quiet?key=<this value> once in a browser",
+      "marks it as the founder's, so a demo he opens from it sends no alert. It",
+      "opens nothing else: shops are created through single-use setup links (ADR",
+      "20261009-single-use-setup-links), never a standing key. Any long random",
+      "string (openssl rand -base64 32); change it to unmark every browser. Keys",
+      "shorter than 24 characters, and the dev key written in this repository,",
+      "are ignored.",
     ],
     keys: [
       {
-        key: "ONBOARD_SETUP_KEY",
+        key: "DEMO_QUIET_KEY",
         from: "manual",
         // Vercel only: a dev run has its own fallback, and the production key
         // has no business in every workstation's generated .env.local.
         targets: VERCEL,
         absent:
-          "production creates no shops at all -- /onboard only offers the onboarding mailbox. A dev run falls back to a fixed non-production key",
+          "no browser can be marked, so every demo try alerts the founder. A dev run falls back to a fixed non-production key",
       },
     ],
   },

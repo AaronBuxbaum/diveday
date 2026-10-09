@@ -130,7 +130,7 @@ offered in is a property of the funnel, not of any one page.
 
 **Since 2026-09-25 the second door is a request, not a sign-up** ([ADR 20260925-shops-are-set-up-by-hand](../architecture/decisions/20260925-shops-are-set-up-by-hand.md)). Every shop is set up
 by hand, so "Get set up" opens the set-up request form at `/get-set-up?from=<tag>` (since 2026-10-07, [ADR 20261007-setup-request-form](../architecture/decisions/20261007-setup-request-form.md); before that it was a mail), and
-`/onboard` without the owner's setup key is one sentence and a door to that same form. Where this section
+`/onboard` without an open single-use setup link ([ADR 20261009-single-use-setup-links](../architecture/decisions/20261009-single-use-setup-links.md)) is one sentence and a door to that same form. Where this section
 says "trial" below, read it as that door.
 
 - **The demo leads, everywhere, at every depth.** It is the primary; the trial follows as

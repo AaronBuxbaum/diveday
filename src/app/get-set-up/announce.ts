@@ -1,15 +1,21 @@
 import { getDb } from "@/db/client";
 import { markSetupRequestNotified } from "@/db/funnel";
 import type { SetupRequest } from "@/db/schema";
+import { issueSetupLink } from "@/db/setup-links";
 import { trackEvent } from "@/lib/analytics";
 import { eventSource } from "@/lib/funnel";
-import { notify } from "@/lib/notifications";
+import { notify, publicAppUrl } from "@/lib/notifications";
 import { ONBOARDING_EMAIL } from "@/lib/platform-mail";
+import { setupLinkPath } from "@/lib/setup-links";
 import { SETUP_CURRENT_SYSTEMS, type SetupCurrentSystem } from "@/lib/setup-requests";
 
 /**
  * What happens after a set-up request is stored: the `setup_requested` event,
- * and the mail to the onboarding inbox (ADR 20261007-setup-request-form).
+ * and the mail to the onboarding inbox (ADR 20261007-setup-request-form),
+ * carrying the request's single-use setup link (ADR
+ * 20261009-single-use-setup-links). The founder is the only reader of that
+ * inbox, which is what makes minting here a founder-only act: a requester
+ * never sees the link unless the founder sends it.
  *
  * **No `"use server"` here, and there must never be one** — the same reason
  * `src/app/actions/demo-instrumentation.ts` sits beside its action: every
@@ -32,6 +38,8 @@ export async function announceSetupRequest(request: SetupRequest): Promise<void>
     console.error("announceSetupRequest: setup_requested event failed", error);
   }
 
+  const link = await mintSetupLink(request);
+
   try {
     const delivery = await notify({
       kind: "setup_request_alert",
@@ -46,12 +54,42 @@ export async function announceSetupRequest(request: SetupRequest): Promise<void>
       contactPhone: request.phone ?? undefined,
       source: request.source,
       requestLocale: request.locale,
+      ...(link ? { setupUrl: link.url, setupUrlExpiresAt: link.expiresAt } : {}),
       // Reply goes straight to the shop that asked.
       sender: { replyTo: request.email },
     });
     if (delivery.status === "sent") await markSetupRequestNotified(await getDb(), request.id);
+    // A workstation has no mail to read, so the link is printed for the
+    // developer instead. Never on a deployment: there the mail is the only
+    // place the token exists outside its hash.
+    else if (link && process.env.NODE_ENV !== "production" && !process.env.DATABASE_URL) {
+      console.info(`announceSetupRequest: setup link for ${request.shopName}: ${link.url}`);
+    }
   } catch (error) {
     console.error("announceSetupRequest: onboarding mail failed", error);
+  }
+}
+
+/**
+ * The request's setup link, or null when there is no public origin to build it
+ * on or the mint failed. The mail goes either way: a request the founder can
+ * read without a link is still a request, and the founder can mint another
+ * by filling the set-up form in for the shop.
+ */
+async function mintSetupLink(
+  request: SetupRequest,
+): Promise<{ url: string; expiresAt: Date } | null> {
+  const origin = publicAppUrl();
+  if (!origin) return null;
+  try {
+    const issued = await issueSetupLink(await getDb(), { setupRequestId: request.id });
+    return {
+      url: new URL(setupLinkPath(issued.token), `${origin}/`).toString(),
+      expiresAt: issued.expiresAt,
+    };
+  } catch (error) {
+    console.error("announceSetupRequest: setup link failed", error);
+    return null;
   }
 }
 

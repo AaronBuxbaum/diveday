@@ -1136,6 +1136,8 @@ type SetupRequestAlertEmailInput = {
   contactPhone?: string;
   source: string;
   requestLocale: string;
+  setupUrl?: string;
+  setupUrlExpiresAt?: Date;
 };
 
 /** What the shop runs on today, in the founder's words. */
@@ -1166,10 +1168,30 @@ export function setupRequestAlertEmail(input: SetupRequestAlertEmailInput): Noti
     ["Language", input.requestLocale],
     ["From", input.source],
   ];
+  // The link opens the sign-up form for one shop, once (ADR
+  // 20261009-single-use-setup-links). Said in the mail because Reply-To is the
+  // requester: a quoted reply hands the link to whoever typed that address,
+  // which nothing has verified.
+  const link = input.setupUrl
+    ? {
+        text: `Setup link: ${input.setupUrl}`,
+        note: `It opens the sign-up form for one shop, once${
+          input.setupUrlExpiresAt
+            ? `, until ${input.setupUrlExpiresAt.toISOString().slice(0, 10)} (UTC)`
+            : ""
+        }. Send it only to someone you have spoken to.`,
+      }
+    : null;
   return {
     subject: `Set-up request: ${input.shopName} (${input.region})`,
-    text: `${lines.map(([label, value]) => `${label}: ${value}`).join("\n")}\n`,
-    html: `<p>${lines.map(([label, value]) => `${label}: <strong>${escapeHtml(value)}</strong>`).join("<br>")}</p>`,
+    text: `${lines.map(([label, value]) => `${label}: ${value}`).join("\n")}\n${
+      link ? `\n${link.text}\n${link.note}\n` : ""
+    }`,
+    html: `<p>${lines.map(([label, value]) => `${label}: <strong>${escapeHtml(value)}</strong>`).join("<br>")}</p>${
+      link
+        ? `<p><a href="${escapeHtml(input.setupUrl ?? "")}">Open the setup form</a><br>${escapeHtml(link.note)}</p>`
+        : ""
+    }`,
   };
 }
 

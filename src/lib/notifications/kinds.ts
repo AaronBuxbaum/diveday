@@ -747,6 +747,13 @@ const setupRequestAlertSchema = z.object({
   source: z.string().trim().min(1).max(60),
   /** The language the reader filled the form in. */
   requestLocale: z.string().trim().min(2).max(10),
+  /**
+   * The single-use link that opens `/onboard` for this request's shop (ADR
+   * 20261009-single-use-setup-links), and when it stops working. Absent when
+   * no link could be minted or the deployment has no public origin.
+   */
+  setupUrl: z.url().max(2_000).optional(),
+  setupUrlExpiresAt: z.coerce.date().optional(),
 });
 
 const sourceCountSchema = z.object({

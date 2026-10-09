@@ -10,6 +10,7 @@ import { getDb } from "@/db/client";
 import { createFirstDay } from "@/db/first-day";
 import { sendNotification } from "@/db/notifications";
 import { people, personRoles, shops, userAccounts, waiverTemplates } from "@/db/schema";
+import { spendSetupLink } from "@/db/setup-links";
 import { toDiverLocale } from "@/i18n/settings";
 import { verifyAccountLinkPath } from "@/lib/account-tokens";
 import { getAuth } from "@/lib/auth";
@@ -19,26 +20,29 @@ import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { parseFirstDayFields } from "@/lib/first-day";
 import { log } from "@/lib/log";
 import { publicAppUrl } from "@/lib/notifications";
-import { isOnboardSetupKey, ONBOARD_SETUP_PARAM } from "@/lib/onboard-setup-key";
 import { onboardSchema } from "@/lib/onboarding";
 import { hashPassword } from "@/lib/password-hashing";
 import { alertRecipient } from "@/lib/platform-mail";
 import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
+import { isSetupLinkTokenShape, SETUP_LINK_PARAM } from "@/lib/setup-links";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 
 export async function onboardAction(formData: FormData) {
   // Non-secret fields only — never the password — echoed back so a bounce to
   // `?error=` doesn't wipe a form a shop owner just spent a minute filling in.
   const PRESERVED_FIELDS = ["shopName", "shopSlug", "timezone", "ownerName", "ownerEmail"] as const;
-  // **The door is shut unless the setup key came with the form** (ADR
-  // 20260925-shops-are-set-up-by-hand). Checked here as well as on the page,
-  // because an action is callable by anyone holding its id whether or not they
-  // were ever shown the form. Judged once, up front, so the bounce below can
-  // tell whether it is allowed to carry the key back: it echoes the key only
-  // after it has matched, and never an unverified value.
-  const setupKey = formData.get(ONBOARD_SETUP_PARAM);
-  const keyAccepted = isOnboardSetupKey(setupKey);
+  // **The door is shut unless an open setup link came with the form** (ADR
+  // 20261009-single-use-setup-links). The page hides the form without one, but
+  // an action is callable by anyone holding its id whether or not they were
+  // ever shown the form, so the link is spent here, in the transaction that
+  // creates the shop, and nowhere else. Up front only its *shape* is judged:
+  // that decides whether a bounce may carry it back, and a value that is not
+  // 43 base64url characters never reaches a `Location:` header or the
+  // database. The page re-reads whatever comes back and shows the form only
+  // for a link that is still open.
+  const setupToken = formData.get(SETUP_LINK_PARAM);
+  const tokenShaped = isSetupLinkTokenShape(setupToken);
   // The form's two optional first-day fields, judged by the one module that
   // judges them: a bounded name and an `HH:MM`. Junk in either loses that
   // field and nothing else.
@@ -56,9 +60,9 @@ export async function onboardAction(formData: FormData) {
   // Annotated so TypeScript treats the call as never-returning (control-flow
   // analysis only honours that on an explicitly typed const).
   const backToForm: (message: string) => never = (message) => {
-    // Without the key there is no form to go back to, and nothing to echo.
-    if (!keyAccepted || typeof setupKey !== "string") redirect("/onboard");
-    const params = new URLSearchParams({ [ONBOARD_SETUP_PARAM]: setupKey, error: message });
+    // Without a link there is no form to go back to, and nothing to echo.
+    if (!tokenShaped) redirect("/onboard");
+    const params = new URLSearchParams({ [SETUP_LINK_PARAM]: String(setupToken), error: message });
     for (const field of PRESERVED_FIELDS) {
       const value = formData.get(field);
       if (typeof value === "string" && value) params.set(field, value);
@@ -77,10 +81,10 @@ export async function onboardAction(formData: FormData) {
     backToForm(RATE_LIMIT_MESSAGE);
   }
 
-  // After the rate limit, so a submission without the key still spends one of
-  // the five an hour. (The page itself answers a guess unmetered; a random key
-  // of 24+ characters is what makes that moot, not this.)
-  if (!keyAccepted) redirect("/onboard");
+  // After the rate limit, so a submission without a link still spends one of
+  // the five an hour. (The page itself answers a guess unmetered; 32 random
+  // bytes are what make that moot, not this.)
+  if (!tokenShaped) redirect("/onboard");
 
   const rawData = Object.fromEntries(formData.entries());
   const parsed = onboardSchema.safeParse(rawData);
@@ -114,6 +118,16 @@ export async function onboardAction(formData: FormData) {
 
   try {
     await db.transaction(async (tx) => {
+      // Spend the link first: the conditional update is the claim, so of two
+      // submissions racing on one link exactly one gets past here, and any
+      // refusal below rolls the spend back with everything else, leaving the
+      // link open for the corrected form.
+      if (!(await spendSetupLink(tx, setupToken))) {
+        onboardingError = "setup_link_closed";
+        tx.rollback();
+        return;
+      }
+
       // Check if slug is taken
       const [existingShop] = await tx.select().from(shops).where(eq(shops.slug, shopSlug)).limit(1);
 

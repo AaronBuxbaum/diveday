@@ -1,7 +1,7 @@
 import { FEATURE_PAGE_SLUGS, featurePagePath } from "../src/lib/feature-pages";
 import { capabilityGroup, earlyAccessPrice, productCapabilityIndex } from "../src/lib/marketing";
 import { expect, test } from "./fixtures";
-import { ONBOARD_FORM_PATH } from "./servers";
+import { mintOnboardFormPath } from "./setup-link";
 
 /**
  * Every public "Get set up" door: the set-up request form, carrying the tag of
@@ -610,8 +610,11 @@ test("a visitor who wants a shop is sent to a person, not a sign-up form", async
   await expect(demoDoor).toBeVisible();
   await expect(demoDoor).not.toHaveClass(/bg-primary/);
   await expect(mainForms.locator('input[name="source"]')).toHaveValue("onboard-demo");
-  // A wrong key is no key.
+  // A link that opens nothing says so, and offers the same door.
   await page.goto("/onboard?setup=not-the-key-not-the-key-not-the-key");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "This setup link no longer works",
+  );
   await expect(page.locator('input[name="ownerPassword"]')).toHaveCount(0);
   // And the demo door opens the demo, not the homepage.
   await page.getByRole("main").getByRole("button", { name: "Try the live demo" }).click();
@@ -619,7 +622,7 @@ test("a visitor who wants a shop is sent to a person, not a sign-up form", async
 });
 
 test("the setup link opens the form, which answers the hesitation it creates", async ({ page }) => {
-  await page.goto(ONBOARD_FORM_PATH);
+  await page.goto(await mintOnboardFormPath(page));
   // The setup link is the owner's own, so the sign-up form carries no funnel
   // tag: the tag a page's "Get set up" door carries now reaches the set-up
   // request form instead (ADR 20261007-setup-request-form; asserted in the

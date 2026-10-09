@@ -6,6 +6,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { SHOP_MILESTONES } from "@/lib/founder-metrics";
@@ -60,6 +61,42 @@ export const setupRequests = pgTable(
 );
 
 export type SetupRequest = typeof setupRequests.$inferSelect;
+
+/**
+ * **A link that opens `/onboard` for one shop, once** (ADR
+ * 20261009-single-use-setup-links, replacing the standing `ONBOARD_SETUP_KEY`).
+ *
+ * Minted for each set-up request and sent to the founder in that request's
+ * onboarding mail, so the founder can fill the form in or forward the link to
+ * the shop. Hashed at rest like `account_tokens`: the raw token exists only in
+ * that mail and the URL it opens. It expires (`SETUP_LINK_TTL_MS`) and is spent
+ * in the same transaction that creates the shop, so a forwarded or leaked copy
+ * opens nothing after the first shop.
+ *
+ * Platform-level like the request it hangs off: no `shop_id`, because the shop
+ * does not exist when the link is minted, and the link does not need to
+ * remember which shop it made. Deleted with its request, which is how a
+ * requester's erasure reaches it.
+ */
+export const shopSetupLinks = pgTable(
+  "shop_setup_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tokenHash: text("token_hash").notNull(),
+    /** The request it was minted for; its answers prefill the form. */
+    setupRequestId: uuid("setup_request_id")
+      .notNull()
+      .references(() => setupRequests.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    /** Set in the transaction that created the shop. A spent link opens nothing. */
+    spentAt: timestamp("spent_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("shop_setup_links_token_hash_unique").on(table.tokenHash),
+    index("shop_setup_links_request_idx").on(table.setupRequestId),
+  ],
+);
 
 /**
  * **One entry into the live demo**, recorded beside the `demo_entered`

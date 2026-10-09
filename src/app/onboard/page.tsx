@@ -11,17 +11,19 @@ import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, DateField, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/ledger";
+import { getDb } from "@/db/client";
+import { openSetupLink } from "@/db/setup-links";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { MAX_FIRST_DAY_NAME, parseFirstDayFields } from "@/lib/first-day";
 import { APP_ORIGIN, publicAppUrl } from "@/lib/notifications";
-import { isOnboardSetupKey, ONBOARD_SETUP_PARAM } from "@/lib/onboard-setup-key";
 import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
   type OnboardErrorCode,
   suggestShopSlug,
 } from "@/lib/onboarding";
+import { SETUP_LINK_PARAM } from "@/lib/setup-links";
 import {
   type CuratedTimeZone,
   type CuratedTimezoneGroupKey,
@@ -199,14 +201,15 @@ const CURATED_TIMEZONE_KEYS: Record<CuratedTimeZone, DiverMessageKey> = {
 /**
  * Not a page anyone is sent to any more: every shop is set up by hand (ADR
  * 20260925-shops-are-set-up-by-hand), so it is out of the sitemap and out of
- * the index. Without the setup key it says where to write; with it, it is the
- * form the owner fills in for a shop they have spoken to.
+ * the index. Without a setup link it says where to ask; with a link that is
+ * still open, it is the form, filled in by the founder or by the shop the link
+ * was forwarded to (ADR 20261009-single-use-setup-links).
  */
 export const metadata: Metadata = {
   title: "Get set up — DiveDay",
   description: "Every DiveDay shop is set up by hand. Write to us to get yours.",
   robots: { index: false, follow: true },
-  // The setup key rides this page's URL, and the default policy sends the full
+  // The setup link's token rides this page's URL, and the default policy sends the full
   // URL as the referrer on every same-origin navigation away from it — where
   // analytics would read it off `document.referrer`. Nothing about this page
   // is worth telling the next one.
@@ -225,22 +228,27 @@ export default async function OnboardPage({
     ownerEmail?: string;
     boat?: string;
     departure?: string;
-    /** The setup key ({@link ONBOARD_SETUP_PARAM}); without it there is no form. */
-    setup?: string;
+    /** The setup link's token ({@link SETUP_LINK_PARAM}); without an open one there is no form. */
+    setup?: string | string[];
   }>;
 }) {
   const { error, shopName, shopSlug, timezone, ownerName, ownerEmail, boat, departure, setup } =
     await searchParams;
   const t = diverTranslator(await requestLocale());
 
-  // **Shut without the key** (ADR 20260925-shops-are-set-up-by-hand). A
-  // visitor who arrives from an old link or a search result is told where to
-  // write, and nothing about the form exists on the page for them.
-  if (!isOnboardSetupKey(setup)) return <ClosedDoor t={t} />;
+  // **Shut without an open link** (ADR 20261009-single-use-setup-links). A
+  // visitor who arrives from a search result is told where to ask; one holding
+  // a link that is spent, expired or mistyped is told it no longer works. The
+  // three are one answer: the page never says which.
+  if (setup === undefined) return <ClosedDoor t={t} />;
+  const link = await openSetupLink(await getDb(), setup);
+  if (!link || typeof setup !== "string") return <ClosedDoor t={t} spentLink />;
 
   // A hand-edited parameter loses itself and nothing else.
   const firstDay = parseFirstDayFields({ boat, departure });
-  const shopNameValue = shopName ?? "";
+  // The request's own answers fill the form the first time it opens; a bounce
+  // back carries what was typed since, which wins.
+  const shopNameValue = shopName ?? link.shopName;
 
   // The refusal lands on the box that earned it, not in a banner above the
   // whole form (docs/design/forms-and-controls.md); only a code about the
@@ -281,7 +289,7 @@ export default async function OnboardPage({
       >
         {errorField && errorField !== "form" ? <FieldErrorFocus key={error} /> : null}
         <form action={onboardAction} className="flex flex-col gap-5">
-          <input type="hidden" name={ONBOARD_SETUP_PARAM} value={setup} />
+          <input type="hidden" name={SETUP_LINK_PARAM} value={setup} />
           <section className="flex flex-col gap-4">
             <GroupLabel as="h2">{t("account.onboard.shopSectionTitle")}</GroupLabel>
             <FieldGrid columns={2}>
@@ -412,7 +420,7 @@ export default async function OnboardPage({
                   type="text"
                   required
                   autoComplete="name"
-                  defaultValue={ownerName ?? ""}
+                  defaultValue={ownerName ?? link.contactName}
                   placeholder={t("account.onboard.fullNamePlaceholder")}
                   className={controlClass}
                 />
@@ -425,7 +433,7 @@ export default async function OnboardPage({
                   type="email"
                   required
                   autoComplete="email"
-                  defaultValue={ownerEmail ?? ""}
+                  defaultValue={ownerEmail ?? link.email}
                   placeholder={t("account.onboard.emailPlaceholder")}
                   className={controlClass}
                 />

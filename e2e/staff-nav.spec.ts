@@ -1,5 +1,5 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { ONBOARD_FORM_PATH } from "./servers";
+import { mintOnboardFormPath } from "./setup-link";
 
 /**
  * **The nav is the shop's sections, by name, always on screen** — ADR
@@ -421,7 +421,7 @@ test.describe("a long shop name on a phone", () => {
 
   test("keeps the header one row, however long the shop calls itself", async ({ page }) => {
     const unique = `long-name-${Date.now()}`;
-    await page.goto(ONBOARD_FORM_PATH);
+    await page.goto(await mintOnboardFormPath(page));
     await page
       .locator('input[name="shopName"]')
       .filter({ visible: true })

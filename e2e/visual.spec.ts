@@ -45,7 +45,8 @@ import {
   waiverLinkFromToast,
   writeCourseForm,
 } from "./helpers";
-import { E2E_FROZEN_CLOCK, ONBOARD_FORM_PATH } from "./servers";
+import { E2E_FROZEN_CLOCK } from "./servers";
+import { mintOnboardFormPath } from "./setup-link";
 
 /**
  * Visual regression coverage. Two hundred and sixty-one key surfaces × light/dark, each
@@ -2197,7 +2198,7 @@ for (const scheme of ["light", "dark"] as const) {
       // the one trial sentence (ADR 20260827-first-light, decision 1). Only
       // behind the setup key (ADR 20260925-shops-are-set-up-by-hand).
       test(`the onboarding form renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto(ONBOARD_FORM_PATH);
+        await page.goto(await mintOnboardFormPath(page));
         // This route owns a loading.tsx, and `goto` resolves on the document
         // load event while the body is still streaming — a bare capture here
         // once shot the skeleton and published it as the baseline
@@ -3559,7 +3560,7 @@ for (const scheme of ["light", "dark"] as const) {
         // (light/dark) is unique enough since this test runs once per scheme
         // and the suite has no retries (playwright.config.ts).
         const unique = `today-empty-${scheme}`;
-        await page.goto(ONBOARD_FORM_PATH);
+        await page.goto(await mintOnboardFormPath(page));
         await page
           .locator('input[name="shopName"]')
           .filter({ visible: true })
@@ -3661,7 +3662,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the first bookable moment renders true to the design (${scheme})`, async ({ page }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const unique = `bookable-${scheme}`;
-        await page.goto(ONBOARD_FORM_PATH);
+        await page.goto(await mintOnboardFormPath(page));
         await page
           .locator('input[name="shopName"]')
           .filter({ visible: true })

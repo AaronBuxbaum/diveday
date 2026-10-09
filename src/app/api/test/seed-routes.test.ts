@@ -111,6 +111,16 @@ const routes: SeedRoute[] = [
     },
   },
   {
+    slug: "seed-setup-link",
+    // No body: the first thing past the guard is the database, so reaching it
+    // is the signal. This one mints a link that creates a shop, so a route
+    // that answered on a misconfigured deployment would be a sign-up door.
+    swallowThrow: true,
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
     slug: "seed-trouble-states",
     // Same shape as seed-stripe-account: no body, so reaching the database is
     // what proves the guard let it through. This one writes a stuck payment

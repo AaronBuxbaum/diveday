@@ -52,17 +52,24 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 
 const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
-const { DEV_ONBOARD_SETUP_KEY } = await import("@/lib/onboard-setup-key");
+const { recordSetupRequest } = await import("@/db/funnel");
+const { issueSetupLink } = await import("@/db/setup-links");
 const { createFirstDay } = await import("@/db/first-day");
 const { onboardAction } = await import("./actions");
 const { unseededTestDb } = await import("@/test/db");
 const { people, shops, userAccounts } = await import("@/db/schema");
 const { eq } = await import("drizzle-orm");
 
-function onboardForm(ownerEmail: string): FormData {
+/**
+ * Shaped like a minted token (43 base64url characters), so the action judges
+ * it as a link and gets as far as the refusal each case is about. Minted in no
+ * database: a case that reaches one is refused there.
+ */
+const SHAPED_TOKEN = "A".repeat(43);
+
+function onboardForm(ownerEmail: string, setupToken = SHAPED_TOKEN): FormData {
   const form = new FormData();
-  // The fixed key a non-production run accepts; the suite runs under `test`.
-  form.set("setup", DEV_ONBOARD_SETUP_KEY);
+  form.set("setup", setupToken);
   form.set("shopName", "Reef Runners");
   form.set("shopSlug", "reef-runners");
   form.set("timezone", "America/New_York");
@@ -94,12 +101,13 @@ beforeEach(() => {
 });
 
 /**
- * **No key, no shop** (ADR 20260925-shops-are-set-up-by-hand). The page hides
- * the form without the key, but the action is callable on its own, so it is the
- * action that has to refuse — before a database handle is taken, and without
- * echoing anything the caller sent back into a `Location:` header.
+ * **No link, no shop** (ADR 20261009-single-use-setup-links). The page hides
+ * the form without an open link, but the action is callable on its own, so it
+ * is the action that has to refuse. A value that is not shaped like a token is
+ * refused before a database handle is taken, and nothing the caller sent that
+ * is not a token's 43 base64url characters is echoed into a `Location:` header.
  */
-describe("onboardAction without the setup key", () => {
+describe("onboardAction without a setup link", () => {
   async function redirectTarget(form: FormData): Promise<string> {
     try {
       await onboardAction(form);
@@ -112,10 +120,11 @@ describe("onboardAction without the setup key", () => {
   }
 
   it.each([
-    ["no key at all", null],
-    ["an empty key", ""],
-    ["a wrong key", "not-the-key-not-the-key-not-the-key"],
-    ["a prefix of the key", DEV_ONBOARD_SETUP_KEY.slice(0, -1)],
+    ["no link at all", null],
+    ["an empty value", ""],
+    ["the retired standing key", "diveday-dev-setup-key-not-for-production"],
+    ["a token one character short", SHAPED_TOKEN.slice(0, -1)],
+    ["a token with a header break in it", `${SHAPED_TOKEN.slice(0, -2)}\r\n`],
   ])("sends %s back to the closed door without touching the database", async (_, key) => {
     const form = onboardForm("owner@no-key.example");
     if (key === null) form.delete("setup");
@@ -124,18 +133,27 @@ describe("onboardAction without the setup key", () => {
     expect(getDb).not.toHaveBeenCalled();
   });
 
-  it("does not echo an unverified key when the rate limit bounces the request", async () => {
+  it("does not echo a value that is not a token when the rate limit bounces the request", async () => {
     vi.mocked(checkRateLimit).mockResolvedValueOnce({ allowed: false } as never);
     const form = onboardForm("owner@no-key.example");
     form.set("setup", "attacker-chosen-value");
     expect(await redirectTarget(form)).toBe("/onboard");
   });
 
-  it("carries the verified key back on a bounce, so the form is still there", async () => {
+  it("carries a token back on a bounce, so the page can judge it again", async () => {
     const target = await redirectTarget(onboardForm("owner@demo.invalid"));
     const params = new URLSearchParams(target.split("?")[1]);
-    expect(params.get("setup")).toBe(DEV_ONBOARD_SETUP_KEY);
+    expect(params.get("setup")).toBe(SHAPED_TOKEN);
     expect(params.get("error")).toBe("email_reserved");
+  });
+
+  it("creates nothing for a well-shaped token that was never minted", async () => {
+    const db = await unseededTestDb();
+    vi.mocked(getDb).mockResolvedValue(db);
+    const target = await redirectTarget(onboardForm("owner@unminted.example"));
+    expect(new URLSearchParams(target.split("?")[1]).get("error")).toBe("setup_link_closed");
+    expect(await db.select().from(shops)).toEqual([]);
+    expect(await db.select().from(userAccounts)).toEqual([]);
   });
 });
 
@@ -185,8 +203,20 @@ describe("onboardAction when the first departure cannot be written", () => {
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(createFirstDay).mockRejectedValue(new Error("the boat register said no"));
     hoisted.signInDiveDayCredentials.mockResolvedValue({});
+    const request = await recordSetupRequest(db, {
+      shopName: "Reef Runners",
+      region: "Key Largo",
+      runsBoat: true,
+      currentSystem: "paper",
+      contactName: "Marisol Vega",
+      email: "owner@first-day-fails.example",
+      phone: null,
+      source: "pricing",
+      locale: "en-US",
+    });
+    const { token } = await issueSetupLink(db, { setupRequestId: request.id });
 
-    const form = onboardForm("owner@first-day-fails.example");
+    const form = onboardForm("owner@first-day-fails.example", token);
     form.set("shopSlug", "first-day-fails");
     form.set("boat", "Reef Runner");
     form.set("departure", "07:30");
