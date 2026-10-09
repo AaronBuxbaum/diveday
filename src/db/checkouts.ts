@@ -27,6 +27,7 @@ import {
   startPaymentOperation,
 } from "./payment-operations";
 import { setBookingPaymentIfNotFinal } from "./payments";
+import { discountCapReached } from "./promo-caps";
 import type { BookingCheckout } from "./schema";
 import {
   bookingCheckoutBookings,
@@ -402,8 +403,30 @@ export async function startBookingCheckout(
   //
   // Only in this combination. With no fee, or no promotion, the shop's own
   // percent promotion code goes to Stripe exactly as before.
+  const guardsPassThrough = passThroughCents > 0 && discountableCents > 0;
+  // The one-off coupon counts against no cap at Stripe, so on this path the
+  // code's cap is held here, inside this attempt's claim, and an exhausted
+  // code is refused as Stripe refuses one handed to it directly (layer-7
+  // security review).
+  if (
+    appliedPromo &&
+    guardsPassThrough &&
+    (await discountCapReached(db, {
+      shopId: input.shopId,
+      source: appliedPromo.source,
+      promoId: appliedPromo.id,
+      now: nowDate(),
+    }))
+  ) {
+    await resolvePaymentOperation(db, intent.id, {
+      status: "failed",
+      errorMessage: "promotion redemption cap reached",
+    });
+    await releaseBookingCheckoutClaim(db, input.bookingIds, intent.id);
+    return { ok: false, reason: "checkout_unavailable" };
+  }
   const passThroughDiscountGuard =
-    appliedPromo && passThroughCents > 0 && discountableCents > 0
+    appliedPromo && guardsPassThrough
       ? await promotions.createSessionDiscount({
           stripeAccountId,
           amountOffCents: discountOffCents(discountableCents, appliedPromo.promoDiscount),

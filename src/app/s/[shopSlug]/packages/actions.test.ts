@@ -30,7 +30,7 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 });
 
 const { buyPackageAction } = await import("./actions");
-const { checkRateLimit } = await import("@/lib/rate-limit");
+const { checkRateLimit, rateLimitKey } = await import("@/lib/rate-limit");
 const { createDivePackage } = await import("@/db/dive-packages");
 const { getDb } = await import("@/db/client");
 
@@ -125,6 +125,21 @@ describe("buyPackageAction", () => {
     );
     expect(state.error).toMatch(/wait a few minutes/);
     expect(hoisted.createDiverPackageOrder).not.toHaveBeenCalled();
+  });
+
+  it("counts an email's tries per shop, so one shop's visitors cannot lock it out of another", async () => {
+    // Layer-7 security review: the per-email bucket was global, so tapping Buy
+    // at one shop spent a diver's tries at every shop.
+    const { shop, pkg } = await shopWithPackage();
+    hoisted.createDiverPackageOrder.mockResolvedValue({ ok: false, reason: "stripe_failed" });
+    await buyPackageAction(
+      shop.slug,
+      {},
+      purchaseForm({ packageId: pkg.id, name: "Ola", email: "ola@example.com" }),
+    );
+    const keys = vi.mocked(checkRateLimit).mock.calls.map(([key]) => key);
+    expect(keys).toContain(rateLimitKey("package-purchase-email", shop.id, "ola@example.com"));
+    expect(keys).not.toContain(rateLimitKey("package-purchase-email", "ola@example.com"));
   });
 
   it("never redirects anywhere but an https page", async () => {

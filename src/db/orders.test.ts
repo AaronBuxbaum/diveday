@@ -32,14 +32,16 @@ import {
   maxLineItemUnitAmountCents,
   openOrdersForBookings,
   pagedOrdersByDay,
+  recordOrderPaymentIntent,
   refreshOrderStatus,
   refundOrder,
   resendOrderInvoice,
   voidOrder,
 } from "./orders";
+import { recordStripeDispute } from "./payment-disputes";
 import { startPaymentOperation } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
-import { bookings, orders, paymentOperationIntents, people, shops } from "./schema";
+import { bookings, orders, paymentOperationIntents, people, personRoles, shops } from "./schema";
 import { setShopCurrency, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
@@ -2341,6 +2343,77 @@ describe("a diver buying a package online", () => {
     expect(await countSpendableDives(db, shop.id, result.order.personId)).toBe(10);
   });
 
+  async function paidPackage() {
+    const ctx = await packageShop();
+    const result = await createDiverPackageOrder(
+      ctx.db,
+      {
+        shopId: ctx.shop.id,
+        packageId: ctx.pkg.id,
+        fullName: "Rhea Reversed",
+        email: "rhea.reversed@example.com",
+        lineDescription: "Ten-dive card",
+      },
+      fakeInvoicing(),
+    );
+    if (!result.ok || !result.order.stripeInvoiceId) throw new Error("not created");
+    await markOrderPaidByInvoiceId(ctx.db, result.order.stripeInvoiceId, result.order.totalCents);
+    return { ...ctx, order: result.order, personId: result.order.personId };
+  }
+
+  it("takes back the unspent dives when the whole package is refunded", async () => {
+    // Regression (layer-7 security review): the money went back and the dives stayed.
+    const { db, shop, order, personId } = await paidPackage();
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(10);
+    const outcome = await refundOrder(db, shop.id, order.id, fakeInvoicing());
+    expect(outcome.status).toBe("refunded");
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(0);
+  });
+
+  it("leaves the dives with the diver after a partial refund — the desk decides", async () => {
+    const { db, shop, order, personId } = await paidPackage();
+    const outcome = await refundOrder(db, shop.id, order.id, fakeInvoicing(), {
+      amountCents: 5_000,
+    });
+    expect(outcome.status).toBe("refunded");
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(10);
+  });
+
+  it("takes back the unspent dives when the card dispute is lost, and only then", async () => {
+    const { db, shop, order, personId } = await paidPackage();
+    if (!order.stripeInvoiceId) throw new Error("no invoice");
+    await recordOrderPaymentIntent(db, {
+      stripeInvoiceId: order.stripeInvoiceId,
+      paymentIntentId: "pi_package",
+    });
+    const disputeEvent = (status: string, eventType: string, at: string) => ({
+      stripeAccountId: order.stripeAccountId,
+      eventType,
+      occurredAt: new Date(at),
+      dispute: {
+        id: "dp_package",
+        paymentIntentId: "pi_package",
+        amountCents: order.totalCents,
+        currency: order.currency,
+        reason: "fraudulent",
+        status,
+        evidenceDueBy: null,
+        createdAt: new Date("2026-10-01T00:00:00.000Z"),
+      },
+    });
+    await recordStripeDispute(
+      db,
+      disputeEvent("needs_response", "charge.dispute.created", "2026-10-01T00:00:00.000Z"),
+    );
+    // An open dispute may still be won; the diver keeps diving meanwhile.
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(10);
+    await recordStripeDispute(
+      db,
+      disputeEvent("lost", "charge.dispute.closed", "2026-10-05T00:00:00.000Z"),
+    );
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(0);
+  });
+
   it("refuses a package the shop stopped selling, one that has lapsed, or another shop's", async () => {
     const { db, shop, pkg } = await packageShop();
     const input = {
@@ -2411,13 +2484,7 @@ describe("a diver buying a package online", () => {
     expect(person).toBeUndefined();
   });
 
-  it("never shows a stranger the name the shop has on file for an email they typed", async () => {
-    const { db, shop, pkg } = await packageShop();
-    const [existing] = await db
-      .insert(people)
-      .values({ shopId: shop.id, fullName: "Private Person", email: "known@example.com" })
-      .returning();
-    if (!existing) throw new Error("person not inserted");
+  function recordingInvoicing() {
     const requests: CreateInvoiceRequest[] = [];
     const invoicing = fakeInvoicing({
       async createInvoice(request) {
@@ -2425,6 +2492,19 @@ describe("a diver buying a package online", () => {
         return fakeInvoicing().createInvoice(request);
       },
     });
+    return { requests, invoicing };
+  }
+
+  it("never attaches to the record at a typed email when the name does not match", async () => {
+    // Regression (layer-7 security review): anyone could type anyone's email and
+    // have the order, and the dives it grants, land on that diver's record.
+    const { db, shop, pkg } = await packageShop();
+    const [existing] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Private Person", email: "known@example.com" })
+      .returning();
+    if (!existing) throw new Error("person not inserted");
+    const { requests, invoicing } = recordingInvoicing();
     const result = await createDiverPackageOrder(
       db,
       {
@@ -2436,10 +2516,124 @@ describe("a diver buying a package online", () => {
       },
       invoicing,
     );
-    if (!result.ok) throw new Error(`refused: ${result.reason}`);
+    if (!result.ok || !result.order.stripeInvoiceId) throw new Error("refused");
+    // Stripe bills what was typed; nothing the shop has on file is shown.
     expect(requests[0]?.customerName).toBe("Someone Else");
-    // Paying grants the dives to the diver at that address; that is the gift
-    // case, and the dives are theirs to spend.
+    expect(requests[0]?.customerEmail).toBe("known@example.com");
+    // A fresh record under the typed name, for the desk to merge if it is one person.
+    expect(result.order.personId).not.toBe(existing.id);
+    const [fresh] = await db
+      .select({ fullName: people.fullName, email: people.email })
+      .from(people)
+      .where(eq(people.id, result.order.personId));
+    expect(fresh).toEqual({ fullName: "Someone Else", email: null });
+    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
+    expect(await countSpendableDives(db, shop.id, existing.id)).toBe(0);
+    expect(await countSpendableDives(db, shop.id, result.order.personId)).toBe(10);
+  });
+
+  it("never attaches to a staff member's record, even under their own name", async () => {
+    const { db, shop, pkg } = await packageShop();
+    const ownerId = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    const [owner] = await db
+      .select({ fullName: people.fullName })
+      .from(people)
+      .where(eq(people.id, ownerId));
+    if (!owner) throw new Error("owner missing");
+    const result = await createDiverPackageOrder(
+      db,
+      {
+        shopId: shop.id,
+        packageId: pkg.id,
+        fullName: owner.fullName,
+        email: SEEDED_OWNER_EMAIL,
+        lineDescription: "Ten-dive card",
+      },
+      fakeInvoicing(),
+    );
+    if (!result.ok) throw new Error(`refused: ${result.reason}`);
+    expect(result.order.personId).not.toBe(ownerId);
+    expect(result.order.createdByPersonId).not.toBe(ownerId);
+  });
+
+  it("attaches to the diver on file when the typed name matches theirs", async () => {
+    const { db, shop, pkg } = await packageShop();
+    const [existing] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Rory Regular", email: "rory@example.com" })
+      .returning();
+    if (!existing) throw new Error("person not inserted");
+    await db.insert(personRoles).values({ personId: existing.id, role: "diver" });
+    const result = await createDiverPackageOrder(
+      db,
+      {
+        shopId: shop.id,
+        packageId: pkg.id,
+        fullName: "rory regular",
+        email: "Rory@example.com",
+        lineDescription: "Ten-dive card",
+      },
+      fakeInvoicing(),
+    );
+    if (!result.ok) throw new Error(`refused: ${result.reason}`);
     expect(result.order.personId).toBe(existing.id);
+  });
+
+  it("reads back as bought online, never as raised by the diver", async () => {
+    const { db, shop, pkg } = await packageShop();
+    const invoicing = fakeInvoicing();
+    const result = await createDiverPackageOrder(
+      db,
+      {
+        shopId: shop.id,
+        packageId: pkg.id,
+        fullName: "Odette Online",
+        email: "odette@example.com",
+        lineDescription: "Ten-dive card",
+      },
+      invoicing,
+    );
+    if (!result.ok) throw new Error(`refused: ${result.reason}`);
+    expect((await getOrder(db, shop.id, result.order.id))?.boughtOnline).toBe(true);
+
+    const staff = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    const raised = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: result.order.personId,
+        createdByPersonId: staff,
+        lineItems: [{ kind: "other", description: "Logbook", quantity: 1, unitAmountCents: 1_500 }],
+      },
+      invoicing,
+    );
+    if (!raised.ok) throw new Error(`staff order refused: ${raised.reason}`);
+    expect((await getOrder(db, shop.id, raised.order.id))?.boughtOnline).toBe(false);
+  });
+
+  it("keeps no details when the shop charges tax and has nowhere to work it out from", async () => {
+    // Regression (layer-7 security review): a refused attempt left a person row.
+    const { db, shop, pkg } = await packageShop();
+    await setShopTaxEnabled(db, shop.id, true);
+    await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
+    const { requests, invoicing } = recordingInvoicing();
+    const result = await createDiverPackageOrder(
+      db,
+      {
+        shopId: shop.id,
+        packageId: pkg.id,
+        fullName: "Tia Taxless",
+        email: "tia.taxless@example.com",
+        lineDescription: "Ten-dive card",
+      },
+      invoicing,
+    );
+    expect(result).toEqual({ ok: false, reason: "tax_location_required" });
+    expect(requests).toHaveLength(0);
+    const [person] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.email, "tia.taxless@example.com"));
+    expect(person).toBeUndefined();
   });
 });
