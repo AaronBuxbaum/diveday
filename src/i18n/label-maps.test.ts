@@ -25,9 +25,15 @@ import {
 } from "@/lib/readiness";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
 import { SUIT_CHOICES } from "@/lib/rentals";
+import {
+  type ReviewModerationLineCode,
+  SHOP_ACTIVITY_KINDS,
+  type TripChangeLineCode,
+} from "@/lib/shop-activity";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { ROLL_CALL_GAP_KINDS, type TodaySeason } from "@/lib/today";
 import { WORK_ORDER_OUTCOMES, WORK_ORDER_STATUSES } from "@/lib/work-orders";
+import { SHOP_ACTIVITY_KIND_KEYS, shopActivityLineText } from "./activity-labels";
 import { boatSafetyNoticeText } from "./boat-safety-labels";
 import { buddyAlertText } from "./buddy-labels";
 import {
@@ -340,6 +346,16 @@ const RENTAL_ITEM_KINDS = everyCodeOf<RentalItemKind>({
   smb: true,
 });
 
+const REVIEW_MODERATION_LINES = everyCodeOf<ReviewModerationLineCode>({
+  published: true,
+  hidden: true,
+});
+
+const TRIP_CHANGE_LINES = everyCodeOf<TripChangeLineCode>({
+  meeting_point: true,
+  conditions: true,
+});
+
 const DEPTH_UNITS = everyCodeOf<DepthUnit>({ meters: true, feet: true });
 
 const TEMPERATURE_UNITS = everyCodeOf<TemperatureUnit>({ celsius: true, fahrenheit: true });
@@ -400,6 +416,37 @@ const BLOCKER_PARAMS: Partial<Record<ReadinessBlockerCode, ReadinessBlockerParam
 const NEXT_DIVE_FACTS = { site: "Blue Hole", course: "Advanced Open Water", lens: "drift" };
 
 const CASES: readonly LabelMapCase[] = [
+  {
+    module: "activity-labels.ts",
+    map: "REVIEW_LINE_KEYS",
+    rows: codeRows(REVIEW_MODERATION_LINES, (locale, code) =>
+      shopActivityLineText(staffTranslator(locale), {
+        source: "review",
+        code,
+        params: null,
+        actorName: "Dana",
+      }),
+    ),
+  },
+  {
+    module: "activity-labels.ts",
+    map: "TRIP_CHANGE_LINE_KEYS",
+    rows: codeRows(TRIP_CHANGE_LINES, (locale, code) =>
+      shopActivityLineText(staffTranslator(locale), {
+        source: "trip_change",
+        code,
+        params: null,
+        actorName: "Dana",
+      }),
+    ),
+  },
+  {
+    module: "activity-labels.ts",
+    map: "SHOP_ACTIVITY_KIND_KEYS",
+    rows: codeRows(SHOP_ACTIVITY_KINDS, (locale, kind) =>
+      staffTranslator(locale)(SHOP_ACTIVITY_KIND_KEYS[kind]),
+    ),
+  },
   {
     module: "boat-safety-labels.ts",
     map: "KIT_KEYS",
