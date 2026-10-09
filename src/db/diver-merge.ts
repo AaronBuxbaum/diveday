@@ -214,6 +214,10 @@ export const STAFF_HISTORY_TABLES = [
   // a staff login is ever sent one, so a record holding one is a staff record
   // and the merge is refused, like the calendar feed above.
   "weekly_digest_sends",
+  // Crew news waiting to be told (ADR 20261009-crew-hear-about-their-boats).
+  // Only somebody on a crew is ever its subject, so either side of a merge
+  // holding one is a staff record and the merge is refused.
+  "crew_notices",
 ] as const;
 export const STAFF_PERSON_ONLY_TABLES = ["trip_assignments", "user_accounts"] as const;
 
@@ -259,6 +263,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "certifications.issued_by_person_id": "who entered the card",
   "certifications.reviewed_by_person_id": "who confirmed the card",
   "crew_assignment_requests.decided_by_person_id": "who answered the ask",
+  "crew_notices.actor_person_id": "who made the crew change",
   "crew_availability_blocks.created_by_person_id": "who blocked the days",
   "dive_packages.created_by_person_id": "who wrote the package",
   "dive_sites.planning_note_by_person_id": "who wrote down what the site was like",

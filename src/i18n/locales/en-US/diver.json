@@ -4282,6 +4282,19 @@
       "dropBy": "Drop by {shopName} any time before then.",
       "dropBySms": "Drop by any time before then."
     },
+    "crewSchedule": {
+      "subjectAssigned": "You’re crewing {tripTitle}, {when}",
+      "subjectRemoved": "You’re off {tripTitle}, {when}",
+      "subjectApproved": "Request approved: {tripTitle}, {when}",
+      "subjectDeclined": "Request declined: {tripTitle}, {when}",
+      "subjectMany": "Your boats at {shopName} changed",
+      "intro": "Your boats at {shopName} changed:",
+      "assigned": "You’re crewing {tripTitle}, {when}.",
+      "removed": "You’re no longer crewing {tripTitle}, {when}.",
+      "approved": "Your request to crew {tripTitle}, {when}, was approved. You’re on the crew.",
+      "declined": "Your request to crew {tripTitle}, {when}, was declined.",
+      "open": "Open the departure"
+    },
     "smsWorkOrder": {
       "ready": "{shopName}: your gear on ticket #{number} is ready to collect ({pieces}).",
       "readyNoPieces": "{shopName}: your gear on ticket #{number} is ready to collect.",

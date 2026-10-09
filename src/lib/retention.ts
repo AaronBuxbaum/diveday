@@ -116,7 +116,8 @@ export type RetainedTable =
   | "demo_entries"
   | "inbound_messages"
   | "staff_replies"
-  | "weekly_digest_sends";
+  | "weekly_digest_sends"
+  | "crew_notices";
 
 /**
  * The append-only trails this mechanism deliberately leaves unbounded, as a
@@ -287,6 +288,14 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * delivery trail keeps, and every newer email carries a live one of its own.
    */
   weekly_digest_sends: 400,
+  /**
+   * 30 days, measured on `created_at`. A row is crew news waiting for the
+   * hourly pass (ADR 20261009-crew-hear-about-their-boats), and it is spent
+   * the hour it settles: the crew list itself is `trip_assignments`, and what
+   * was sent is the delivery trail's to remember. A month is room to ask
+   * "did the pass tell Ana?" and nothing more.
+   */
+  crew_notices: 30,
 };
 
 /**

@@ -817,6 +817,12 @@ new domain concept, define it here in the same PR.
   has sailed, since nothing on a hull that has left is left to move; the side still on the dock
   keeps the warning until it sails or its boat changes, because its divers are the ones with no
   boat.
+- **Crew news** — what a crew member is told when their boats change: put on a departure, taken off
+  one, or an answer to their own request. Recorded as `crew_notices` rows by the crew write path,
+  never for the staffer who made the change, then netted per departure and sent as one email per
+  person once their crew has been still for two minutes, on the hourly pass. On then off before it
+  settles is no news (ADR
+  [20261009-crew-hear-about-their-boats](../architecture/decisions/20261009-crew-hear-about-their-boats.md)).
 - **Crew clash** — one person on two departures whose windows **overlap**. It is a time overlap and
   never a shared day: a divemaster on the 08:00 and the 14:00 is how a shop runs a Saturday, and
   `setTripCrew`/`changeTripCrew` allow it deliberately while refusing the overlap outright. The

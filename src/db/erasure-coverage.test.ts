@@ -299,6 +299,8 @@ const ERASURE_KEEPS: Record<string, string> = {
     "whether a piece's service reminders are off — a timestamp on a piece whose note and serial the erasure clears",
   work_order_bills:
     "which order billed which ticket — two ids. The order keeps its own erasure answer, and the ticket's words are redacted",
+  crew_notices:
+    "that a crew member was put on, taken off, or answered about a departure — a change code, two ids and two dates. Only crew are its subject, and the erasure refuses anyone holding a staff role",
   weekly_digest_sends:
     "that a staff member's Monday email went out for a week — a date, a delivery status and a token hash. Only staff receive it, and the erasure refuses anyone holding a staff role",
 

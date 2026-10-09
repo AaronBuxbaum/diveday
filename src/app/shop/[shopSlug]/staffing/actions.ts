@@ -272,10 +272,13 @@ export async function decideCrewRequestAction(week: string, formData: FormData) 
     revalidateAndRedirect(path, noticeUrl(path, "request-declined", at));
     return;
   }
-  const assigned = await changeTripCrew(db, session.user.shopId, outcome.tripId, {
-    operation: "assign",
-    personId: outcome.personId,
-  });
+  const assigned = await changeTripCrew(
+    db,
+    session.user.shopId,
+    outcome.tripId,
+    { operation: "assign", personId: outcome.personId },
+    { actorPersonId: session.user.personId },
+  );
   if (!assigned) {
     revalidateAndRedirect(path, noticeUrl(path, "request-approved-not-assigned", at));
     return;

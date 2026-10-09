@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { CREW_NOTICE_CRON_CRONTAB } from "./crew-notices";
 import {
   DAILY_TICK_CRONTAB,
   DAILY_TICK_INTERVAL_MS,
@@ -43,6 +44,11 @@ describe("the daily tick", () => {
   it("matches the deployed hourly schedule for /api/cron/weekly-digest", () => {
     const digest = vercelCrons().find((cron) => cron.path === "/api/cron/weekly-digest");
     expect(digest?.schedule).toBe(WEEKLY_DIGEST_CRON_CRONTAB);
+  });
+
+  it("matches the deployed hourly schedule for /api/cron/crew-notices", () => {
+    const pass = vercelCrons().find((cron) => cron.path === "/api/cron/crew-notices");
+    expect(pass?.schedule).toBe(CREW_NOTICE_CRON_CRONTAB);
   });
 
   it("matches the deployed hourly schedule for /api/cron/minimum-seats", () => {
@@ -113,6 +119,11 @@ describe("the daily tick", () => {
       // drains the queue; every pass after a shop's first on its Monday stops
       // at the per-person, per-week claim.
       "/api/cron/weekly-digest",
+      // Crew news (ADR 20261009-crew-hear-about-their-boats) is the sixth: a
+      // crew member taken off tomorrow's boat cannot hear it a day later. It
+      // calls only `sendDueCrewNotices`, which sends fresh mail of a kind that
+      // is never queued, and it shares `:00` with the others.
+      "/api/cron/crew-notices",
     ]);
     const subDaily = vercelCrons().filter((cron) => {
       const [minute, hour] = cron.schedule.split(" ");

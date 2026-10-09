@@ -225,6 +225,9 @@ const RESET_KEEPS: Record<string, string> = {
   // The Monday email's claims. Nothing seeds one and a demo shop never sends
   // one; a purged person's rows go by ON DELETE CASCADE from people.
   weekly_digest_sends: "ON DELETE CASCADE from people clears a purged person's claims",
+  // Crew news waiting to be told (ADR 20261009-crew-hear-about-their-boats):
+  // it hangs off a departure, so the reset's trip delete clears it.
+  crew_notices: "ON DELETE CASCADE from trips clears it",
   trip_desk_events: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
   trip_schedule_days: "ON DELETE CASCADE from trips clears it",
@@ -268,6 +271,7 @@ const CASCADE_KEEPS: Record<string, string> = {
   push_subscriptions: "ON DELETE CASCADE from trips clears it",
   integration_sync_records: "ON DELETE CASCADE from shops clears it",
   weekly_digest_sends: "ON DELETE CASCADE from shops and people clears it",
+  crew_notices: "ON DELETE CASCADE from shops, people and trips clears it",
   trip_desk_events: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
   trip_schedule_days: "ON DELETE CASCADE from trips clears it",

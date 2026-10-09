@@ -7,6 +7,7 @@ import { countInWaterCrew, type TripCrewRole } from "@/lib/crew-roles";
 import { reviewManifestChange } from "@/lib/manifest-change-review";
 import { hasReturned } from "@/lib/trips";
 import type { AppDb, DbExecutor } from "./client";
+import { recordCrewNotices } from "./crew-notices";
 import { listCrewAvailabilityBlocks } from "./crew-requests";
 import { publishManifestEvent } from "./manifest-events";
 import {
@@ -573,6 +574,7 @@ export async function setTripCrew(
   shopId: string,
   tripId: string,
   personIds: readonly TripCrewMemberInput[],
+  options: CrewChangeOptions = {},
 ): Promise<boolean> {
   const staff = await listStaff(db, shopId);
   const requested = personIds.filter((entry) =>
@@ -690,6 +692,23 @@ export async function setTripCrew(
     // edit that says nothing about roles preserves them instead of blanking
     // them.
     await tx.delete(tripAssignments).where(eq(tripAssignments.tripId, tripId));
+    // The crew hear about it: everyone who came on, everyone who came off —
+    // never the people who stayed, and never the staffer who did it.
+    await recordCrewNotices(
+      tx,
+      [
+        ...valid
+          .filter((personId) => !existingRoles.has(personId))
+          .map((personId) => ({ personId, change: "assigned" as const })),
+        ...dropped.map((personId) => ({ personId, change: "removed" as const })),
+      ].map((notice) => ({
+        ...notice,
+        shopId,
+        tripId,
+        actorPersonId: options.actorPersonId ?? null,
+      })),
+      options.now,
+    );
     if (requested.length > 0) {
       await tx.insert(tripAssignments).values(
         requested.map((entry) => ({
@@ -709,6 +728,13 @@ export async function setTripCrew(
   if (changed) await publishManifestEvent(db, shopId, tripId);
   return changed;
 }
+
+/**
+ * Who is making a crew change, so the crew hear about it and the staffer who
+ * made it does not (ADR 20261009-crew-hear-about-their-boats). Every staff
+ * surface passes its session's person; omitted, nobody is excluded.
+ */
+export type CrewChangeOptions = { actorPersonId?: string | null; now?: Date };
 
 export type TripCrewChange = {
   personId: string;
@@ -774,6 +800,7 @@ export async function changeTripCrewOutcome(
   shopId: string,
   tripId: string,
   change: TripCrewChange,
+  options: CrewChangeOptions = {},
 ): Promise<TripCrewOutcome> {
   return db.transaction(async (tx): Promise<TripCrewOutcome> => {
     const [eligible] = await tx
@@ -907,6 +934,29 @@ export async function changeTripCrewOutcome(
       // vocabulary as the standing clash this panel now reports (`crewClashes`
       // above): one person, two hulls, these same hours.
       if (conflict.length > 0) return { ok: false, refusal: "crew_clash" };
+      const [already] = await tx
+        .select({ personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .where(
+          and(eq(tripAssignments.tripId, tripId), eq(tripAssignments.personId, change.personId)),
+        )
+        .limit(1);
+      // A role change on somebody already aboard is not news to them.
+      if (!already) {
+        await recordCrewNotices(
+          tx,
+          [
+            {
+              shopId,
+              tripId,
+              personId: change.personId,
+              change: "assigned",
+              actorPersonId: options.actorPersonId ?? null,
+            },
+          ],
+          options.now,
+        );
+      }
       const insert = tx
         .insert(tripAssignments)
         .values({ tripId, personId: change.personId, tripRole: change.tripRole ?? null });
@@ -923,11 +973,27 @@ export async function changeTripCrewOutcome(
             set: { tripRole: change.tripRole },
           }));
     } else {
-      await tx
+      const removed = await tx
         .delete(tripAssignments)
         .where(
           and(eq(tripAssignments.tripId, tripId), eq(tripAssignments.personId, change.personId)),
+        )
+        .returning({ personId: tripAssignments.personId });
+      if (removed.length > 0) {
+        await recordCrewNotices(
+          tx,
+          [
+            {
+              shopId,
+              tripId,
+              personId: change.personId,
+              change: "removed",
+              actorPersonId: options.actorPersonId ?? null,
+            },
+          ],
+          options.now,
         );
+      }
     }
     return { ok: true };
   });
@@ -948,8 +1014,9 @@ export async function changeTripCrew(
   shopId: string,
   tripId: string,
   change: TripCrewChange,
+  options: CrewChangeOptions = {},
 ): Promise<boolean> {
-  return (await changeTripCrewOutcome(db, shopId, tripId, change)).ok;
+  return (await changeTripCrewOutcome(db, shopId, tripId, change, options)).ok;
 }
 
 /** The crew assigned to each of these trips, in one query, grouped by trip. */
