@@ -2663,7 +2663,8 @@
       "gettingReady": "Getting your shop ready…",
       "tryDemo": "Try the live demo",
       "getSetUp": "Get set up",
-      "demoNote": "The demo opens a working sample shop in one click. No sign-up and no card."
+      "demoNote": "The demo opens a working sample shop in one click. No sign-up and no card.",
+      "setUpNote": "A person reads every request and sets your shop up with you."
     },
     "price": {
       "name": "Founding shop",

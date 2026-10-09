@@ -516,6 +516,12 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   terms in medium put the heavier ink on the easier ask. `/` is not this case and does not change:
   the regular-weight line under its medium demo note is a *price line*, context beside terms rather
   than terms of its own.
+- **What "Get set up" leads to is said once per page, at the close** (issue #2097, approved by the
+  product owner 2026-10-09). `marketing.common.setUpNote`, "A person reads every request and sets
+  your shop up with you.", stands under the closing pair of `/`, `/pricing`, `/about` and every
+  feature page, the band where a reader commits. It names a person and nothing else: no response
+  time, no "free", no count of anything. Any change to its wording is a service claim and needs the
+  same sign-off. `e2e/marketing.spec.ts` asserts it once in each of those pages' `<main>`.
 - **One primary CTA per screen.** The demo leads everywhere through the shared `FunnelCtas`
   pair (the 2026-08-22 two-doors decision above — this bullet said "the trial on `/pricing`"
   until 2026-08-27, a leftover from before that decision); `/pricing`'s trial door is simply

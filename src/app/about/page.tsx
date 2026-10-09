@@ -350,6 +350,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
             {t("marketing.about.closingDescription")}
           </p>
           <FunnelCtas locale={locale} source="about-closing" className="mt-8 justify-center" />
+          <p className="mt-3 text-sm font-medium text-balance text-muted">{t("marketing.common.setUpNote")}</p>
         </div>
       </section>
     </main>

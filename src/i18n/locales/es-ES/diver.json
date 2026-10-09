@@ -2663,7 +2663,8 @@
       "gettingReady": "Preparando tu centro…",
       "tryDemo": "Probar la demo en vivo",
       "getSetUp": "Pide tu centro",
-      "demoNote": "La demo abre un centro de muestra en funcionamiento con un clic. Sin registro y sin tarjeta."
+      "demoNote": "La demo abre un centro de muestra en funcionamiento con un clic. Sin registro y sin tarjeta.",
+      "setUpNote": "Una persona lee cada solicitud y prepara tu centro contigo."
     },
     "price": {
       "name": "Centro fundador",

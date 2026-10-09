@@ -13,6 +13,19 @@ const SET_UP_HREF = /^\/get-set-up\?from=[a-z0-9-]+$/;
 /** The same door as a CSS selector, for counting them in a band. */
 const SET_UP_DOOR = 'a[href^="/get-set-up?from="]';
 
+// What happens after "Get set up" is said once, at the close where a reader
+// commits, and it promises a person, never a response time (issue #2097;
+// docs/product/marketing.md, the claims policy).
+test("the close says who reads a set-up request, once per page", async ({ page }) => {
+  const note = "A person reads every request and sets your shop up with you.";
+  for (const path of ["/", "/pricing", "/about", "/product/online-booking"]) {
+    await page.goto(path);
+    const main = page.getByRole("main");
+    await expect(main.getByText(note, { exact: true }), path).toHaveCount(1);
+    await expect(main.getByText(note, { exact: true }), path).toBeVisible();
+  }
+});
+
 test("the homepage hero offers one demo door, and states the price at it", async ({ page }) => {
   await page.goto("/");
 
