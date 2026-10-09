@@ -5,14 +5,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import {
-  ChoiceRow,
-  DateField,
-  Field,
-  FieldActions,
-  FieldGrid,
-  FormStatus,
-} from "@/components/ui/form";
+import { ChoiceRow, FormStatus } from "@/components/ui/form";
 import { canPersonManageOrders } from "@/db/authz";
 import { listDiverSummaries } from "@/db/divers";
 import { countGearItems, listAvailableGearUnits } from "@/db/gear";
@@ -48,6 +41,7 @@ import { createCounterRentalAction } from "../actions";
 import { CounterUnitPicker, type PickerUnit } from "./_components/CounterUnitPicker";
 import { RentalCardSeen } from "./_components/RentalCardSeen";
 import { RentalPersonStep } from "./_components/RentalPersonStep";
+import { RentalWindowFields } from "./_components/RentalWindowFields";
 
 export const instant = true;
 
@@ -107,8 +101,9 @@ const NOTICES: Record<string, NoticeDefinition> = {
  * boat (ADR 20260815-minimal-gear-register, amended 2026-10-08).
  *
  * Three steps on one page, each a plain form whose answer rides in the URL:
- * who (find them, or put them on file), when (the window, shop-local dates),
- * then which units are free for the whole of it and what to charge. A refusal
+ * who (find them, or put them on file), when (the window, shop-local dates,
+ * read again as they change), then which units are free for the whole of it
+ * and what to charge. A refusal
  * lands back on the same URL with its `?notice=`, so nothing already chosen
  * is lost. The list of free units is advisory — the exclusion constraint
  * decides at submit, and the refusal names the unit that lost.
@@ -270,19 +265,15 @@ export default async function RentOutPage({
 
         {person ? (
           <SectionCard title={t("counterRentals.new.whenHeading")}>
-            <FieldGrid as="form" method="get" columns={2}>
-              <input type="hidden" name="personId" value={person.id} />
-              <Field label={t("counterRentals.new.fromLabel")}>
-                <DateField name="from" defaultValue={from} min={todayLocal} required />
-              </Field>
-              <Field label={t("counterRentals.new.untilLabel")}>
-                <DateField name="until" defaultValue={until} min={from} required />
-              </Field>
-              <FieldActions>
-                <button type="submit" className={buttonClass({ variant: "secondary" })}>
-                  {t("counterRentals.new.showUnits")}
-                </button>
-                {windowRefusal ? (
+            <RentalWindowFields
+              personId={person.id}
+              from={from}
+              until={until}
+              todayLocal={todayLocal}
+              fromLabel={t("counterRentals.new.fromLabel")}
+              untilLabel={t("counterRentals.new.untilLabel")}
+              status={
+                windowRefusal ? (
                   <FormStatus tone="danger">
                     {t(
                       windowRefusal === "starts_in_past"
@@ -293,12 +284,12 @@ export default async function RentOutPage({
                     )}
                   </FormStatus>
                 ) : (
-                  <span className="text-sm text-muted">
+                  <span className="text-muted">
                     {t("counterRentals.new.days", { count: days })}
                   </span>
-                )}
-              </FieldActions>
-            </FieldGrid>
+                )
+              }
+            />
           </SectionCard>
         ) : null}
 
@@ -307,7 +298,7 @@ export default async function RentOutPage({
             <input type="hidden" name="personId" value={person.id} />
             <input type="hidden" name="from" value={from} />
             <input type="hidden" name="until" value={until} />
-            <SectionCard>
+            <SectionCard title={t("counterRentals.new.unitsLegend")}>
               {fleetSize === 0 ? (
                 <p className="text-sm text-muted">
                   {t("counterRentals.new.noFleet")}{" "}
@@ -329,6 +320,14 @@ export default async function RentOutPage({
                   coreKinds={counterRentalCoreKinds(shop.rentalItems)}
                   setPrice={setPrice}
                   setLabel={t("counterRentals.new.setPrice", { count: days })}
+                  choose={t("counterRentals.new.pick")}
+                  pickedHeading={t("counterRentals.new.pickedHeading")}
+                  removeAria={Object.fromEntries(
+                    units.map((unit) => [
+                      unit.id,
+                      t("counterRentals.new.removeAria", { label: unit.label }),
+                    ]),
+                  )}
                 />
               )}
             </SectionCard>
