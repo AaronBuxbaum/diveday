@@ -504,8 +504,7 @@ export async function listAfterDiveRollCallByTrip(
  * Each booking's **standing result at each after-dive checkpoint** of the trips
  * asked about: newest event per booking and checkpoint wins, a newest `cleared`
  * drops that checkpoint out, and a cancelled booking is nobody. The one diver
- * query behind `listAfterDiveRollCallByTrip` and `tripsMissingSomebodyAfterDive`,
- * so the two cannot disagree about what a standing result is.
+ * query behind `listAfterDiveRollCallByTrip`.
  */
 async function standingAfterDiveResults(db: DbExecutor, shopId: string, tripIds: string[]) {
   if (tripIds.length === 0) return [];
@@ -546,73 +545,6 @@ async function standingAfterDiveResults(db: DbExecutor, shopId: string, tripIds:
     standing.push({ tripId: row.tripId, bookingId: row.bookingId, status: row.status });
   }
   return standing;
-}
-
-/**
- * **The departures with an open "not back aboard"**, out of the trips asked
- * about: somebody — a diver or a crew member on the trip's roster — whose
- * standing result at an after-dive checkpoint is `not_boarded`. That is the
- * condition Today raises its `missing_diver` and `missing_crew` rows on
- * (`listRollCallGaps`, src/db/today.ts), read here for a caller that has to
- * stay quiet while it stands (issue #2123: the post-trip recap).
- *
- * **Any after-dive checkpoint, not only the newest.** A diver marked "not back
- * aboard" after dive one and counted aboard after dive two still leaves dive
- * one's word standing, and Today still raises the row about it until a crew
- * member corrects that checkpoint. A caller that waits on this waits exactly as
- * long as the alarm is up. Carry-forward never reaches here: `implied` results
- * are never stored, so every `not_boarded` read is a tap somebody made.
- *
- * Two grouped queries for the trips asked about (divers, then crew), never one
- * per booking.
- */
-export async function tripsMissingSomebodyAfterDive(
-  db: DbExecutor,
-  shopId: string,
-  tripIds: string[],
-): Promise<Set<string>> {
-  const missing = new Set<string>();
-  if (tripIds.length === 0) return missing;
-  for (const row of await standingAfterDiveResults(db, shopId, tripIds)) {
-    if (row.status === "not_boarded") missing.add(row.tripId);
-  }
-  const crewRows = await db
-    .select({
-      tripId: rollCallCrewEvents.tripId,
-      personId: rollCallCrewEvents.personId,
-      checkpoint: rollCallCrewEvents.checkpoint,
-      status: rollCallCrewEvents.status,
-    })
-    .from(rollCallCrewEvents)
-    // Somebody taken off the roster keeps their event rows and must not answer
-    // for a crew list they are no longer on — the guard `listRollCallGaps` uses.
-    .innerJoin(
-      tripAssignments,
-      and(
-        eq(tripAssignments.tripId, rollCallCrewEvents.tripId),
-        eq(tripAssignments.personId, rollCallCrewEvents.personId),
-      ),
-    )
-    .where(
-      and(
-        eq(rollCallCrewEvents.shopId, shopId),
-        inArray(rollCallCrewEvents.tripId, tripIds),
-        ne(rollCallCrewEvents.checkpoint, "departure"),
-      ),
-    )
-    .orderBy(
-      desc(rollCallCrewEvents.occurredAt),
-      desc(rollCallCrewEvents.createdAt),
-      desc(rollCallCrewEvents.seq),
-    );
-  const seen = new Set<string>();
-  for (const row of crewRows) {
-    const key = `${row.tripId}\u0000${row.personId}\u0000${row.checkpoint}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    if (row.status === "not_boarded") missing.add(row.tripId);
-  }
-  return missing;
 }
 
 /**

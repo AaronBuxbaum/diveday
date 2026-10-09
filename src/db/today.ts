@@ -542,7 +542,9 @@ export async function listRollCallGaps(
   db: AppDb,
   shopId: string,
   now: Date = nowDate(),
+  onlyTripIds?: readonly string[],
 ): Promise<OpenRollCall[]> {
+  if (onlyTripIds?.length === 0) return [];
   const sailed = await db
     .select({
       id: trips.id,
@@ -563,6 +565,7 @@ export async function listRollCallGaps(
         // Underway or home; a boat that has not left the dock has no count due.
         lte(trips.startsAt, now),
         gte(trips.endsAt, new Date(now.getTime() - ROLL_CALL_RESIDUE_MS)),
+        ...(onlyTripIds ? [inArray(trips.id, [...onlyTripIds])] : []),
       ),
     )
     .orderBy(desc(trips.endsAt));
@@ -835,6 +838,28 @@ export async function listRollCallGaps(
     }
   }
   return gaps;
+}
+
+/**
+ * **The departures Today is raising a missing-diver or missing-crew row on**,
+ * out of the trips asked about — `listRollCallGaps` itself, narrowed to those
+ * trips, so a caller that must stay quiet while somebody may be in the water
+ * (issue #2123: the post-trip recap) reads the alarm rather than a second
+ * opinion of it. Same checkpoints (the trip's planned dives), same window
+ * (sailed, and home no longer than `ROLL_CALL_RESIDUE_MS`), same roster rules.
+ */
+export async function tripsWithSomebodyMissing(
+  db: AppDb,
+  shopId: string,
+  tripIds: readonly string[],
+  now: Date = nowDate(),
+): Promise<Set<string>> {
+  const gaps = await listRollCallGaps(db, shopId, now, tripIds);
+  return new Set(
+    gaps
+      .filter((gap) => gap.reason === "missing_diver" || gap.reason === "missing_crew")
+      .map((gap) => gap.tripId),
+  );
 }
 
 /**

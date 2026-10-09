@@ -33,11 +33,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { listSiteFieldGuides } from "./dive-sites";
 import { listExecutedDives, peopleWhoDivedBefore } from "./executed-dives";
-import {
-  listAfterDiveRollCallByTrip,
-  listDepartureRollCallByTrip,
-  tripsMissingSomebodyAfterDive,
-} from "./manifests";
+import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import {
   notificationProviderForDb,
   recordNotificationDelivery,
@@ -59,6 +55,7 @@ import {
 import { stopListedSmsProvider } from "./sms-opt-outs";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getLatestTipForBooking, refreshTipFromStripe } from "./tips";
+import { tripsWithSomebodyMissing } from "./today";
 import { listTripSightings } from "./trip-sightings";
 import { getTripWithBooked, listTripDives } from "./trips";
 import { tripCrewByTrip } from "./trips-crew";
@@ -326,8 +323,9 @@ export async function getRecapPageState(
   db: AppDb,
   bookingId: string,
   checkoutProvider?: CheckoutProvider,
+  now: Date = nowDate(),
 ): Promise<RecapPageState> {
-  const closed = await recapClosedReason(db, bookingId);
+  const closed = await recapClosedReason(db, bookingId, now);
   if (closed === null) {
     const data = await loadRecapPageData(db, bookingId, checkoutProvider);
     if (data) return { kind: "recap", data };
@@ -374,8 +372,9 @@ export async function getRecapPageState(
 export type RecapClosedReason = "unknown" | "dead" | "departure-cancelled" | "waiting";
 
 export async function recapClosedReason(
-  db: DbExecutor,
+  db: AppDb,
   bookingId: string,
+  now: Date = nowDate(),
 ): Promise<RecapClosedReason | null> {
   const [row] = await db
     .select({
@@ -397,13 +396,17 @@ export async function recapClosedReason(
   if (row.identityUnconfirmedAt) return "dead";
   const one = [{ booking: { id: bookingId }, shop: { id: row.shopId }, trip: { id: row.tripId } }];
   if ((await bookingsLeftAtTheDock(db, one)).has(bookingId)) return "dead";
-  if ((await bookingsWaitingOnAMissingPerson(db, one)).has(bookingId)) return "waiting";
+  if ((await bookingsWaitingOnAMissingPerson(db, one, now)).has(bookingId)) return "waiting";
   return null;
 }
 
 /** {@link recapClosedReason} as the yes/no a recap writer needs. */
-export async function isRecapOpen(db: DbExecutor, bookingId: string): Promise<boolean> {
-  return (await recapClosedReason(db, bookingId)) === null;
+export async function isRecapOpen(
+  db: AppDb,
+  bookingId: string,
+  now: Date = nowDate(),
+): Promise<boolean> {
+  return (await recapClosedReason(db, bookingId, now)) === null;
 }
 
 /**
@@ -471,7 +474,7 @@ export async function bookingsLeftAtTheDock(
  * real incident, the email lands in an inbox a family may be reading. So while
  * any diver or rostered crew member on a departure has an after-dive
  * `not_boarded` standing — the condition Today raises its missing-diver and
- * missing-crew rows on (`tripsMissingSomebodyAfterDive`, src/db/manifests.ts)
+ * missing-crew rows on (`tripsWithSomebodyMissing`, src/db/today.ts)
  * — **every** recap on that departure waits: the email, a staff send, and the
  * page. That covers the diver themselves, whose last word is the not-back one,
  * and the boatmates, whose "welcome back" would be the same email to a group
@@ -482,12 +485,13 @@ export async function bookingsLeftAtTheDock(
  * as before: the cron sends it within its lookback, and the link works again.
  */
 export async function bookingsWaitingOnAMissingPerson(
-  db: DbExecutor,
+  db: AppDb,
   candidates: readonly {
     booking: { id: string };
     shop: { id: string };
     trip: { id: string };
   }[],
+  now: Date = nowDate(),
 ): Promise<Set<string>> {
   const tripIdsByShop = new Map<string, Set<string>>();
   for (const { shop, trip } of candidates) {
@@ -498,7 +502,7 @@ export async function bookingsWaitingOnAMissingPerson(
   const alarmed = new Set<string>();
   // One shop at a time: the reader is tenant-scoped.
   for (const [shopId, tripIds] of tripIdsByShop) {
-    for (const tripId of await tripsMissingSomebodyAfterDive(db, shopId, [...tripIds])) {
+    for (const tripId of await tripsWithSomebodyMissing(db, shopId, [...tripIds], now)) {
       alarmed.add(tripId);
     }
   }
@@ -538,8 +542,9 @@ export async function getRecapPageData(
   db: AppDb,
   bookingId: string,
   checkoutProvider?: CheckoutProvider,
+  now: Date = nowDate(),
 ): Promise<RecapPageData | null> {
-  if ((await recapClosedReason(db, bookingId)) !== null) return null;
+  if ((await recapClosedReason(db, bookingId, now)) !== null) return null;
   return loadRecapPageData(db, bookingId, checkoutProvider);
 }
 
@@ -1402,7 +1407,7 @@ async function sendRecaps(
   const ashore = await bookingsLeftAtTheDock(db, candidates);
   // And nobody on a boat with somebody "not back aboard" is told "welcome
   // back" (issue #2123). Not recorded as skipped: the recap is still owed.
-  const waiting = await bookingsWaitingOnAMissingPerson(db, candidates);
+  const waiting = await bookingsWaitingOnAMissingPerson(db, candidates, now);
   const rows = candidates.filter(
     (row) => !ashore.has(row.booking.id) && !waiting.has(row.booking.id),
   );

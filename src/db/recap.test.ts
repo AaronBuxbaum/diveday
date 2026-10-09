@@ -782,12 +782,12 @@ describe("a departure with somebody not back aboard", () => {
   });
 
   it("holds the recap page for everybody on the departure, saying only that it is not ready", async () => {
-    const { db, shop, missing, boatmate, record } = await missingContext();
+    const { db, shop, missing, boatmate, record, afterTrip } = await missingContext();
     await record(missing, "not_boarded", "after_dive_2");
 
     for (const bookingId of [missing, boatmate]) {
-      expect(await getRecapPageData(db, bookingId)).toBeNull();
-      const state = await getRecapPageState(db, bookingId);
+      expect(await getRecapPageData(db, bookingId, undefined, afterTrip)).toBeNull();
+      const state = await getRecapPageState(db, bookingId, undefined, afterTrip);
       expect(state.kind).toBe("waiting");
       if (state.kind !== "waiting") throw new Error("unreachable");
       expect(state.shop.slug).toBe(shop.slug);
@@ -801,15 +801,15 @@ describe("a departure with somebody not back aboard", () => {
         (gap) => gap.tripId === reef.id && gap.reason === "missing_diver",
       );
     expect(await missingRow()).toBe(false);
-    expect(await getRecapPageData(db, missing)).not.toBeNull();
+    expect(await getRecapPageData(db, missing, undefined, afterTrip)).not.toBeNull();
 
     await record(missing, "not_boarded", "after_dive_2");
     expect(await missingRow()).toBe(true);
-    expect(await getRecapPageData(db, missing)).toBeNull();
+    expect(await getRecapPageData(db, missing, undefined, afterTrip)).toBeNull();
 
     await record(missing, "boarded", "after_dive_2");
     expect(await missingRow()).toBe(false);
-    expect(await getRecapPageData(db, missing)).not.toBeNull();
+    expect(await getRecapPageData(db, missing, undefined, afterTrip)).not.toBeNull();
   });
 
   it("sends the recap once the same diver is counted back aboard", async () => {
@@ -822,7 +822,7 @@ describe("a departure with somebody not back aboard", () => {
     await sendDueRecaps(db, sendOptions(afterTrip, email));
     expect(recapsTo(email, missing)).toHaveLength(1);
     expect(recapsTo(email, boatmate)).toHaveLength(1);
-    expect((await getRecapPageState(db, missing)).kind).toBe("recap");
+    expect((await getRecapPageState(db, missing, undefined, afterTrip)).kind).toBe("recap");
   });
 
   it("sends the recap once the not-back word is undone", async () => {
@@ -843,7 +843,7 @@ describe("a departure with somebody not back aboard", () => {
     const email = fakeEmail();
     await sendDueRecaps(db, sendOptions(afterTrip, email));
     expect(recapsTo(email, missing)).toHaveLength(0);
-    expect(await getRecapPageData(db, missing)).toBeNull();
+    expect(await getRecapPageData(db, missing, undefined, afterTrip)).toBeNull();
   });
 
   it("ignores the word on a booking cancelled since", async () => {
@@ -863,8 +863,8 @@ describe("a departure with somebody not back aboard", () => {
       .onConflictDoNothing();
     await recordCrew(staffId, "boarded", "departure");
     await recordCrew(staffId, "not_boarded", "after_dive_1");
-    expect(await getRecapPageData(db, missing)).toBeNull();
-    expect(await getRecapPageData(db, boatmate)).toBeNull();
+    expect(await getRecapPageData(db, missing, undefined, afterTrip)).toBeNull();
+    expect(await getRecapPageData(db, boatmate, undefined, afterTrip)).toBeNull();
 
     await recordCrew(staffId, "boarded", "after_dive_1");
     const email = fakeEmail();
@@ -883,12 +883,12 @@ describe("a departure with somebody not back aboard", () => {
       .update(bookings)
       .set({ identityUnconfirmedAt: afterTrip })
       .where(eq(bookings.id, boatmate));
-    expect((await getRecapPageState(db, boatmate)).kind).toBe("dead");
-    expect(await isRecapOpen(db, boatmate)).toBe(false);
+    expect((await getRecapPageState(db, boatmate, undefined, afterTrip)).kind).toBe("dead");
+    expect(await isRecapOpen(db, boatmate, afterTrip)).toBe(false);
   });
 
   it("still answers a diver left at the dock on that departure as dead, not waiting", async () => {
-    const { db, shop, reef, missing, record } = await missingContext();
+    const { db, shop, reef, missing, record, afterTrip } = await missingContext();
     await record(missing, "not_boarded", "after_dive_2");
     const party = await createBookingParty(db, [
       {
@@ -903,17 +903,32 @@ describe("a departure with somebody not back aboard", () => {
     const ashore = party.bookings[0]?.bookingId;
     if (!ashore) throw new Error("party booking missing");
     await record(ashore, "not_boarded", "departure");
-    expect((await getRecapPageState(db, ashore)).kind).toBe("dead");
-    expect((await getRecapPageState(db, missing)).kind).toBe("waiting");
+    expect((await getRecapPageState(db, ashore, undefined, afterTrip)).kind).toBe("dead");
+    expect((await getRecapPageState(db, missing, undefined, afterTrip)).kind).toBe("waiting");
   });
 
   it("is open for the same seat once nobody is missing", async () => {
-    const { db, boatmate } = await missingContext();
-    expect(await isRecapOpen(db, boatmate)).toBe(true);
+    const { db, boatmate, afterTrip } = await missingContext();
+    expect(await isRecapOpen(db, boatmate, afterTrip)).toBe(true);
+  });
+
+  // Domain review of #2123: the hold and Today's alarm are one reading, so a
+  // departure whose plan shrinks below the checkpoint the word was spoken at
+  // stops raising the row — and stops holding the recap — together.
+  it("stops waiting with Today's row when the planned dive count shrinks", async () => {
+    const { db, shop, reef, missing, record, afterTrip } = await missingContext();
+    await record(missing, "not_boarded", "after_dive_2");
+    expect(await getRecapPageData(db, missing, undefined, afterTrip)).toBeNull();
+    await db.update(trips).set({ plannedDives: 1 }).where(eq(trips.id, reef.id));
+    const missingRow = (await listRollCallGaps(db, shop.id, afterTrip)).some(
+      (gap) => gap.tripId === reef.id && gap.reason === "missing_diver",
+    );
+    expect(missingRow).toBe(false);
+    expect(await isRecapOpen(db, missing, afterTrip)).toBe(true);
   });
 
   it("ignores a crew word about somebody no longer on the roster", async () => {
-    const { db, shop, reef, boatmate, recordCrew } = await missingContext();
+    const { db, shop, reef, boatmate, recordCrew, afterTrip } = await missingContext();
     const [outsider] = await db
       .select({ id: people.id })
       .from(people)
@@ -926,7 +941,7 @@ describe("a departure with somebody not back aboard", () => {
       .where(and(eq(tripAssignments.tripId, reef.id), eq(tripAssignments.personId, outsider.id)));
     if (rostered.length > 0) return;
     await recordCrew(outsider.id, "not_boarded", "after_dive_1");
-    expect(await getRecapPageData(db, boatmate)).not.toBeNull();
+    expect(await getRecapPageData(db, boatmate, undefined, afterTrip)).not.toBeNull();
   });
 });
 
