@@ -20,6 +20,7 @@ import {
   getRecapPageData,
   getRecapPageState,
   hasSentTripRecap,
+  isRecapOpen,
   listCrewRecapPhotosForTrip,
   listRecapPhotosForTrip,
   MAX_RECAP_CAPTION_LENGTH,
@@ -869,6 +870,46 @@ describe("a departure with somebody not back aboard", () => {
     const email = fakeEmail();
     await sendDueRecaps(db, sendOptions(afterTrip, email));
     expect(recapsTo(email, boatmate)).toHaveLength(1);
+  });
+
+  // Security review of #2123: "your recap isn't ready yet" is a promise that
+  // correcting somebody else's roll call keeps. For a seat whose own recap is
+  // dead it would be a lie, and it would tell a held seat's bearer the boat had
+  // somebody missing.
+  it("still answers a held seat on that departure as dead, not waiting", async () => {
+    const { db, missing, boatmate, record, afterTrip } = await missingContext();
+    await record(missing, "not_boarded", "after_dive_2");
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: afterTrip })
+      .where(eq(bookings.id, boatmate));
+    expect((await getRecapPageState(db, boatmate)).kind).toBe("dead");
+    expect(await isRecapOpen(db, boatmate)).toBe(false);
+  });
+
+  it("still answers a diver left at the dock on that departure as dead, not waiting", async () => {
+    const { db, shop, reef, missing, record } = await missingContext();
+    await record(missing, "not_boarded", "after_dive_2");
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: reef.id,
+        fullName: "Del Dockside",
+        email: "recap-dockside@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+    const ashore = party.bookings[0]?.bookingId;
+    if (!ashore) throw new Error("party booking missing");
+    await record(ashore, "not_boarded", "departure");
+    expect((await getRecapPageState(db, ashore)).kind).toBe("dead");
+    expect((await getRecapPageState(db, missing)).kind).toBe("waiting");
+  });
+
+  it("is open for the same seat once nobody is missing", async () => {
+    const { db, boatmate } = await missingContext();
+    expect(await isRecapOpen(db, boatmate)).toBe(true);
   });
 
   it("ignores a crew word about somebody no longer on the roster", async () => {

@@ -998,8 +998,8 @@ export default async function DiverReadinessPage({
       /**
        * **A no-show, said plainly and with somebody to ask.**
        *
-       * Both cancellations and a recap waiting on a missing diver (#2123) are
-       * answered above, so no recap here means `bookings.status = 'no_show'`.
+       * Cancellations and a wait (#2123) are answered above; what is left is a
+       * dead seat (`recapClosedReason`): a no-show, left at the dock, or held.
        *
        * It used to render "This readiness link isn't available" over "This
        * booking didn't sail" — two sentences, both false for this reader: the
