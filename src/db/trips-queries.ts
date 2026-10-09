@@ -333,9 +333,11 @@ export const bookedDiversCount = () =>
  * at the counter is free under both limits at once. One query, one snapshot:
  * reading the two counts separately would let a concurrent write land between
  * them on a reader that is not holding the trip-row lock. Every seat-granting
- * caller holds it, and measures the boat against `sellableCapacity` (`createBookingRecord`, `restoreBooking`,
- * `setBookingParticipantType`, `undoBookingNoShow`, `setTripParticipantTerms`), which is what makes the
- * answer a gate rather than advice.
+ * caller holds it (`createBookingRecord`, `restoreBooking`,
+ * `setBookingParticipantType`, `undoBookingNoShow`, `setTripParticipantTerms`),
+ * which is what makes the answer a gate rather than advice. The ones that add
+ * someone aboard (`createBookingRecord`, `restoreBooking`, `undoBookingNoShow`,
+ * `joinTripWaitlist`) measure the boat against `sellableCapacity`.
  */
 export async function heldSeatCounts(
   tx: DbExecutor,
