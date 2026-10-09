@@ -32,9 +32,10 @@ import { BaseSequencer, type TestSpecification } from "vitest/node";
  * its estimate scaled into milliseconds by the ratio the recorded files show.
  * The file is committed, so every shard still reads the identical input and
  * computes the identical partition. CI uploads each shard's measurements as a
- * `unit-durations-<n>` artifact (src/test/duration-reporter.ts), and
- * `node scripts/merge-test-durations.mjs <files…>` folds them back into the
- * committed file; refresh it whenever the spread creeps back up.
+ * `unit-durations-<n>` artifact and prints them as one log line
+ * (src/test/duration-reporter.ts), and
+ * `node scripts/merge-test-durations.mjs <files…>` folds either form back into
+ * the committed file; refresh it whenever the spread creeps back up.
  *
  * `sort` (the order within a shard) is inherited: Vitest still runs the
  * previously slowest files first when it has a cache, and this file's weights

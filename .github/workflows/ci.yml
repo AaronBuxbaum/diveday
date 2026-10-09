@@ -80,6 +80,13 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup
       - run: pnpm check:repo
+      # The `guards` Vitest project — the src tests that read the repository's
+      # own files and assert on their text — runs here, once per run, and
+      # nowhere else: `unit-tests` excludes it (`--project '!guards'`), and
+      # `unit-tests-docs` too. It needs no database and no PGlite template, and
+      # this job runs on every pull request, docs-only included, so a guard over
+      # a document still answers to a docs-only change.
+      - run: pnpm exec vitest run --project guards --reporter=dot
 
   lint:
     name: Lint
@@ -150,12 +157,19 @@ jobs:
       # and drops everything after that `--` as unparsed — every shard then
       # silently runs the full suite instead of its 1/4 slice.
       #
-      # The second reporter prints nothing: it records each file's wall time
-      # into the artifact below, which is what `scripts/test-durations.json`
-      # (the sequencer's input, src/test/shard-sequencer.ts) is refreshed from —
-      # download every `unit-durations-<n>` of one green run and pass them all
-      # to `node scripts/merge-test-durations.mjs`.
-      - run: pnpm exec vitest run --reporter=dot --reporter=./src/test/duration-reporter.ts --shard=${{ matrix.shard }}/4
+      # The second reporter records each file's wall time into the artifact
+      # below and prints the same map as one `diveday-test-durations:` log
+      # line. That is what `scripts/test-durations.json` (the sequencer's
+      # input, src/test/shard-sequencer.ts) is refreshed from: pass every
+      # shard of one green run — the four artifacts, or the four job logs where
+      # the artifact download is out of reach — to
+      # `node scripts/merge-test-durations.mjs`.
+      #
+      # `--project '!guards'`: the source-text guards (src/test/projects.ts)
+      # run once, in `repo-safeguards`, instead of a quarter of them in each
+      # shard. They are bounded by reading the repository, not by test count,
+      # so dealing them four ways bought nothing and cost each shard the walk.
+      - run: pnpm exec vitest run --project '!guards' --reporter=dot --reporter=./src/test/duration-reporter.ts --shard=${{ matrix.shard }}/4
         env:
           DIVEDAY_TEST_DURATIONS_OUT: test-durations/shard-${{ matrix.shard }}.json
       - uses: actions/upload-artifact@v7
@@ -203,7 +217,7 @@ jobs:
             exit 1
           fi
           echo "${#files[@]} unit files quote a document path"
-          pnpm exec vitest run --reporter=dot "${files[@]}"
+          pnpm exec vitest run --project '!guards' --reporter=dot "${files[@]}"
 
   build:
     name: Build

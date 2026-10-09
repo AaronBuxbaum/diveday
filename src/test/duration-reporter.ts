@@ -9,7 +9,15 @@ import type { ModuleDiagnostic, Reporter, TestModule } from "vitest/node";
  * Off unless `DIVEDAY_TEST_DURATIONS_OUT` names a file; CI's unit shards set it
  * and upload the result. Added *beside* the run's real reporter
  * (`--reporter=dot --reporter=./src/test/duration-reporter.ts`), never instead
- * of it, and it prints nothing.
+ * of it.
+ *
+ * When it is on it also prints the same map as **one log line**, after
+ * {@link DURATIONS_LOG_MARKER}. The artifact alone was not enough: downloading
+ * one follows a redirect to GitHub's blob storage, which a cloud agent session's
+ * egress policy refuses, so the committed durations file sat unrefreshable
+ * (issue #2227). A job's log text is readable where the artifact is not (the
+ * GitHub MCP server's `get_job_logs`), and `scripts/merge-test-durations.mjs`
+ * reads either form.
  *
  * A file's weight is its whole wall cost in its fork — environment setup,
  * harness preparation, import and collection, setup files, then every test and
@@ -18,6 +26,17 @@ import type { ModuleDiagnostic, Reporter, TestModule } from "vitest/node";
  * small files.
  */
 export const DURATIONS_OUT_ENV = "DIVEDAY_TEST_DURATIONS_OUT";
+
+/**
+ * Prefixes the log line. `scripts/merge-test-durations.mjs` matches the same
+ * string (`duration-reporter.test.ts` pins that the two agree).
+ */
+export const DURATIONS_LOG_MARKER = "diveday-test-durations:";
+
+/** The one line a shard's log carries: the marker, then the compact map. */
+export function durationsLogLine(durations: Record<string, number>): string {
+  return `${DURATIONS_LOG_MARKER} ${JSON.stringify(durations)}`;
+}
 
 /** The parts of a file's diagnostic that add up to its wall cost. */
 export type CostParts = Pick<
@@ -65,5 +84,6 @@ export default class DurationReporter implements Reporter {
     );
     mkdirSync(path.dirname(path.resolve(out)), { recursive: true });
     writeFileSync(out, `${JSON.stringify(durations, null, 2)}\n`);
+    console.log(durationsLogLine(durations));
   }
 }
