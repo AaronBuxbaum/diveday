@@ -33,7 +33,11 @@ import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { listSiteFieldGuides } from "./dive-sites";
 import { listExecutedDives, peopleWhoDivedBefore } from "./executed-dives";
-import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
+import {
+  listAfterDiveRollCallByTrip,
+  listDepartureRollCallByTrip,
+  tripsMissingSomebodyAfterDive,
+} from "./manifests";
 import {
   notificationProviderForDb,
   recordNotificationDelivery,
@@ -287,6 +291,12 @@ export type RecapPageState =
   | { kind: "departure-cancelled"; shop: DeadRecapShop }
   /** Dead, but ours: the booking tier — name the shop, offer its hand. */
   | { kind: "dead"; shop: DeadRecapShop }
+  /**
+   * Somebody on this departure is "not back aboard" and nothing has retracted
+   * it (`bookingsWaitingOnAMissingPerson`). Says only that the recap is not
+   * ready: never why, and never anything about anybody else on the boat.
+   */
+  | { kind: "waiting"; shop: DeadRecapShop }
   /** The token parsed and resolved no booking at all: name nobody. */
   | { kind: "unknown" };
 
@@ -351,6 +361,11 @@ export async function getRecapPageState(
   // (`security-reviewer`, on issue #1119).
   if (bookingStatus === "cancelled" || bookingStatus === "no_show") return { kind: "dead", shop };
   if (tripStatus === "cancelled") return { kind: "departure-cancelled", shop };
+  // Held while somebody on the boat is "not back aboard" (issue #2123): it
+  // comes back on this same link once the crew correct the word.
+  if (tripStatus === "scheduled" && (await recapWaitsForBooking(db, bookingId))) {
+    return { kind: "waiting", shop };
+  }
   // An active booking on a live departure that `getRecapPageData` still nulled
   // — a diver the crew left at the dock (`bookingsLeftAtTheDock`). The booking
   // tier is the honest answer: it is the no-show's own sentence, and it says
@@ -411,6 +426,66 @@ export async function bookingsLeftAtTheDock(
     }
   }
   return ashore;
+}
+
+/**
+ * **The bookings whose recap waits because somebody on their departure is "not
+ * back aboard"** (issue #2123), out of a set of candidates.
+ *
+ * A diver counted back after dive one and then marked "not back aboard" after
+ * dive two still read as sailed, so four hours after the boat was due home the
+ * cron emailed them "welcome back, here's your dive log". If that word is a
+ * real incident, the email lands in an inbox a family may be reading. So while
+ * any diver or rostered crew member on a departure has an after-dive
+ * `not_boarded` standing — the condition Today raises its missing-diver and
+ * missing-crew rows on (`tripsMissingSomebodyAfterDive`, src/db/manifests.ts)
+ * — **every** recap on that departure waits: the email, a staff send, and the
+ * page. That covers the diver themselves, whose last word is the not-back one,
+ * and the boatmates, whose "welcome back" would be the same email to a group
+ * chat. The manifest's alarm is read, never changed: failing toward "missing"
+ * is the safe direction there, and the recap simply follows it.
+ *
+ * Nothing is recorded as skipped. Once the word is corrected the recap is owed
+ * as before: the cron sends it within its lookback, and the link works again.
+ */
+export async function bookingsWaitingOnAMissingPerson(
+  db: DbExecutor,
+  candidates: readonly {
+    booking: { id: string };
+    shop: { id: string };
+    trip: { id: string };
+  }[],
+): Promise<Set<string>> {
+  const tripIdsByShop = new Map<string, Set<string>>();
+  for (const { shop, trip } of candidates) {
+    const tripIds = tripIdsByShop.get(shop.id) ?? new Set<string>();
+    tripIds.add(trip.id);
+    tripIdsByShop.set(shop.id, tripIds);
+  }
+  const alarmed = new Set<string>();
+  // One shop at a time: the reader is tenant-scoped.
+  for (const [shopId, tripIds] of tripIdsByShop) {
+    for (const tripId of await tripsMissingSomebodyAfterDive(db, shopId, [...tripIds])) {
+      alarmed.add(tripId);
+    }
+  }
+  return new Set(
+    candidates.filter(({ trip }) => alarmed.has(trip.id)).map(({ booking }) => booking.id),
+  );
+}
+
+/** One booking's answer to {@link bookingsWaitingOnAMissingPerson}. */
+async function recapWaitsForBooking(db: DbExecutor, bookingId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ shopId: bookings.shopId, tripId: bookings.tripId })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+  if (!row) return false;
+  const waiting = await bookingsWaitingOnAMissingPerson(db, [
+    { booking: { id: bookingId }, shop: { id: row.shopId }, trip: { id: row.tripId } },
+  ]);
+  return waiting.has(bookingId);
 }
 
 /**
@@ -496,10 +571,12 @@ export async function getRecapPageData(
   // shape of a blow-out, not an inconsistency to tolerate.
   if (trip.status !== "scheduled") return null;
   // The crew left this diver at the dock: the same answer the email gets.
-  const ashore = await bookingsLeftAtTheDock(db, [
-    { booking: { id: bookingId }, shop: { id: row.shopId }, trip: { id: row.tripId } },
-  ]);
+  const one = [{ booking: { id: bookingId }, shop: { id: row.shopId }, trip: { id: row.tripId } }];
+  const ashore = await bookingsLeftAtTheDock(db, one);
   if (ashore.has(bookingId)) return null;
+  // Somebody on this boat is "not back aboard": the same wait the email keeps
+  // (issue #2123).
+  if ((await bookingsWaitingOnAMissingPerson(db, one)).has(bookingId)) return null;
 
   const [
     dives,
@@ -1318,7 +1395,12 @@ async function sendRecaps(
   // no-show never did — but nobody marks a no-show for someone who turned up,
   // so the roll call is the only place that fact is written (issue #2105).
   const ashore = await bookingsLeftAtTheDock(db, candidates);
-  const rows = candidates.filter((row) => !ashore.has(row.booking.id));
+  // And nobody on a boat with somebody "not back aboard" is told "welcome
+  // back" (issue #2123). Not recorded as skipped: the recap is still owed.
+  const waiting = await bookingsWaitingOnAMissingPerson(db, candidates);
+  const rows = candidates.filter(
+    (row) => !ashore.has(row.booking.id) && !waiting.has(row.booking.id),
+  );
   const summary: RecapRunSummary = {
     scanned: rows.length,
     sent: 0,

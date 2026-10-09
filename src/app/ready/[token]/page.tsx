@@ -55,7 +55,7 @@ import { getDb } from "@/db/client";
 import { departureRollCallForBooking } from "@/db/manifests";
 import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
-import { bookingsLeftAtTheDock, getRecapPageData } from "@/db/recap";
+import { bookingsLeftAtTheDock, getRecapPageState } from "@/db/recap";
 import { certificationAgency, certificationLevel, type DiveSpecialty } from "@/db/schema";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopById, getShopBySlug } from "@/db/shops";
@@ -990,7 +990,23 @@ export default async function DiverReadinessPage({
       ? "boarded"
       : departure;
   if (isAfterTheDive({ endsAt: detail.trip.endsAt, boarded })) {
-    const recap = await getRecapPageData(db, bookingId);
+    // Read as a page state, so `/ready` and `/recap` rank the same answers the
+    // same way: a cancelled seat or a no-show first, then a recap that waits.
+    const recapState = await getRecapPageState(db, bookingId);
+    if (recapState.kind === "waiting") {
+      // Somebody on this boat is "not back aboard" (issue #2123): the recap
+      // waits, and this page says the same as `/recap` — never the no-show
+      // card below, which would tell a family the diver never sailed.
+      return (
+        <ExpiredLinkCard
+          title={t("recap.waitingHeading")}
+          text={t("recap.waitingBody")}
+          shop={shopContact}
+          t={t}
+        />
+      );
+    }
+    const recap = recapState.kind === "recap" ? recapState.data : null;
     if (!recap) {
       /**
        * **A no-show, said plainly and with somebody to ask.**
