@@ -71,7 +71,9 @@ test.describe("the day's weather call", () => {
     await expect(morningBox).toBeChecked();
     // …and any selection is still the staffer's: just this spec's two boats,
     // leaving alone whatever else the shared demo day holds.
-    for (const box of await page.getByRole("checkbox").all()) await box.uncheck();
+    const boxes = page.getByRole("checkbox");
+    await expect(boxes).not.toHaveCount(0);
+    for (const box of await boxes.all()) await box.uncheck();
     await morningBox.check();
     await afternoonBox.check();
     await page.getByRole("button", { name: "Call the blow-out" }).click();
