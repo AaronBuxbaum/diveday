@@ -79,6 +79,12 @@ shop:
   person and leaves the entitlement on the buyer.
 - **Does a diver hold dives before paying the invoice?** No. Entitlements are granted only when the
   order reaches `paid`, including when a later Stripe webhook settles an initially open invoice.
+- **Does a refund or a chargeback take the dives back?** A full refund and a lost card dispute both
+  take back the dives not yet spent; a partial refund leaves them, and the desk decides what it
+  meant. Nothing is deleted: an entitlement is spendable only while its order is `paid` or
+  `partly_refunded` and no dispute on it was lost (`packageOrderStillBacks` in
+  `src/db/dive-packages.ts`), and Reports' "dives owed" asks the same question. Dives already spent
+  stay spent.
 
 **Nothing above changes the core decision** — entitlements rather than a balance, consumption
 through `setBookingPayment`, a link undone rather than an amount credited. Both reviewers said so

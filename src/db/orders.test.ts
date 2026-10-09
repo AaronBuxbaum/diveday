@@ -32,11 +32,13 @@ import {
   maxLineItemUnitAmountCents,
   openOrdersForBookings,
   pagedOrdersByDay,
+  recordOrderPaymentIntent,
   refreshOrderStatus,
   refundOrder,
   resendOrderInvoice,
   voidOrder,
 } from "./orders";
+import { recordStripeDispute } from "./payment-disputes";
 import { startPaymentOperation } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { bookings, orders, paymentOperationIntents, people, shops } from "./schema";
@@ -2339,6 +2341,77 @@ describe("a diver buying a package online", () => {
     expect(await countSpendableDives(db, shop.id, result.order.personId)).toBe(0);
     await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
     expect(await countSpendableDives(db, shop.id, result.order.personId)).toBe(10);
+  });
+
+  async function paidPackage() {
+    const ctx = await packageShop();
+    const result = await createDiverPackageOrder(
+      ctx.db,
+      {
+        shopId: ctx.shop.id,
+        packageId: ctx.pkg.id,
+        fullName: "Rhea Reversed",
+        email: "rhea.reversed@example.com",
+        lineDescription: "Ten-dive card",
+      },
+      fakeInvoicing(),
+    );
+    if (!result.ok || !result.order.stripeInvoiceId) throw new Error("not created");
+    await markOrderPaidByInvoiceId(ctx.db, result.order.stripeInvoiceId, result.order.totalCents);
+    return { ...ctx, order: result.order, personId: result.order.personId };
+  }
+
+  it("takes back the unspent dives when the whole package is refunded", async () => {
+    // Regression (layer-7 security review): the money went back and the dives stayed.
+    const { db, shop, order, personId } = await paidPackage();
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(10);
+    const outcome = await refundOrder(db, shop.id, order.id, fakeInvoicing());
+    expect(outcome.status).toBe("refunded");
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(0);
+  });
+
+  it("leaves the dives with the diver after a partial refund — the desk decides", async () => {
+    const { db, shop, order, personId } = await paidPackage();
+    const outcome = await refundOrder(db, shop.id, order.id, fakeInvoicing(), {
+      amountCents: 5_000,
+    });
+    expect(outcome.status).toBe("refunded");
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(10);
+  });
+
+  it("takes back the unspent dives when the card dispute is lost, and only then", async () => {
+    const { db, shop, order, personId } = await paidPackage();
+    if (!order.stripeInvoiceId) throw new Error("no invoice");
+    await recordOrderPaymentIntent(db, {
+      stripeInvoiceId: order.stripeInvoiceId,
+      paymentIntentId: "pi_package",
+    });
+    const disputeEvent = (status: string, eventType: string, at: string) => ({
+      stripeAccountId: order.stripeAccountId,
+      eventType,
+      occurredAt: new Date(at),
+      dispute: {
+        id: "dp_package",
+        paymentIntentId: "pi_package",
+        amountCents: order.totalCents,
+        currency: order.currency,
+        reason: "fraudulent",
+        status,
+        evidenceDueBy: null,
+        createdAt: new Date("2026-10-01T00:00:00.000Z"),
+      },
+    });
+    await recordStripeDispute(
+      db,
+      disputeEvent("needs_response", "charge.dispute.created", "2026-10-01T00:00:00.000Z"),
+    );
+    // An open dispute may still be won; the diver keeps diving meanwhile.
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(10);
+    await recordStripeDispute(
+      db,
+      disputeEvent("lost", "charge.dispute.closed", "2026-10-05T00:00:00.000Z"),
+    );
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(0);
   });
 
   it("refuses a package the shop stopped selling, one that has lapsed, or another shop's", async () => {

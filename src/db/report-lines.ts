@@ -10,6 +10,7 @@ import {
   revenueLineForOrderItem,
 } from "@/lib/report-lines";
 import type { DbExecutor } from "./client";
+import { packageOrderStillBacks } from "./dive-packages";
 import { queryAll } from "./query-helpers";
 import {
   bookingCheckoutBookings,
@@ -190,7 +191,9 @@ async function packageDivesOwedAt(
     .where(
       and(
         eq(divePackageEntitlements.shopId, shopId),
-        inArray(orders.status, [...KEPT_ORDER_STATUSES]),
+        // What a diver can still spend is what the shop still owes: the same
+        // rule, so a refunded or lost-dispute package is owed by neither.
+        packageOrderStillBacks(),
         lt(divePackageEntitlements.createdAt, asOf),
         or(
           isNull(divePackageEntitlements.consumedAt),

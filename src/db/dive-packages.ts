@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   type DivePackageDefinition,
@@ -9,7 +9,13 @@ import {
   spendableCount,
 } from "@/lib/dive-packages";
 import type { AppDb, DbExecutor } from "./client";
-import { divePackageEntitlements, divePackages, orderLineItems, orders } from "./schema";
+import {
+  divePackageEntitlements,
+  divePackages,
+  orderLineItems,
+  orders,
+  paymentDisputes,
+} from "./schema";
 
 /**
  * Reading and writing the shop's prepaid packages
@@ -121,7 +127,36 @@ export async function grantPackageEntitlements(
     .returning();
 }
 
-/** Every dive this diver holds that has not been spent, with its package's scope. */
+/**
+ * The order statuses under which a package's unspent dives still stand: the
+ * money is held, or part of it is. A full refund (`refunded`) takes the unspent
+ * dives back with it; a partial one leaves them, because a goodwill refund is
+ * not a cancellation and the desk decides which it was. Reports' "dives owed"
+ * reads the same list, so the liability and what a diver can spend agree.
+ */
+export const BACKED_PACKAGE_ORDER_STATUSES = ["paid", "partly_refunded"] as const;
+
+/**
+ * Whether the order an entitlement was bought on still backs it: paid or
+ * partly refunded, and no card dispute on it lost. A lost dispute is money
+ * Stripe took back without touching the order's status (ADR
+ * 20261009-stripe-reversals-reach-diveday), so it is asked of the dispute rows;
+ * an open one is not enough, since the shop may yet win it. Needs `orders`
+ * joined on the entitlement's `order_id`.
+ */
+export function packageOrderStillBacks(): SQL {
+  return and(
+    inArray(orders.status, [...BACKED_PACKAGE_ORDER_STATUSES]),
+    sql`not exists (select 1 from ${paymentDisputes} where ${paymentDisputes.orderId} = ${orders.id} and ${paymentDisputes.shopId} = ${orders.shopId} and ${paymentDisputes.status} = 'lost')`,
+  ) as SQL;
+}
+
+/**
+ * Every dive this diver holds that has not been spent, with its package's
+ * scope — only while the order it was bought on still backs it
+ * ({@link packageOrderStillBacks}). Nothing is deleted on a refund: the rows
+ * stay as the record of what was sold, and simply stop being spendable.
+ */
 export async function listSpendableEntitlements(
   db: DbExecutor,
   shopId: string,
@@ -143,11 +178,19 @@ export async function listSpendableEntitlements(
         eq(divePackages.shopId, divePackageEntitlements.shopId),
       ),
     )
+    .innerJoin(
+      orders,
+      and(
+        eq(orders.id, divePackageEntitlements.orderId),
+        eq(orders.shopId, divePackageEntitlements.shopId),
+      ),
+    )
     .where(
       and(
         eq(divePackageEntitlements.shopId, shopId),
         eq(divePackageEntitlements.personId, personId),
         isNull(divePackageEntitlements.consumedAt),
+        packageOrderStillBacks(),
       ),
     )
     .orderBy(
