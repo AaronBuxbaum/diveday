@@ -1560,9 +1560,9 @@ new domain concept, define it here in the same PR.
   **keeps outranking every older signature** (`isStandingRefusal` in `src/lib/waivers.ts`), so the
   seat stays blocked as not cleared until the new release is signed. **A clean new release clears
   the diver without a second physician, and says so** (H-98, Aaron 2026-10-07): it boards them,
-  and the roster, the manifest and the diver record warn that a physician did not clear this
-  diver, with a link to the refused record on the roster and the diver record
-  (`overriddenRefusal`). Any staffer may record a paper waiver after a refusal (Aaron, 2026-10-07).
+  and the roster, the manifest (its offline dock copy too, by date only: issue #2163) and the
+  diver record warn that a physician did not clear this diver, with a link to the refused record
+  on the roster and the diver record (`overriddenRefusal`). Any staffer may record a paper waiver after a refusal (Aaron, 2026-10-07).
   The warning ends only when a physician has since cleared a release
   that flagged every question the refused one did, ordered by when each physician answered.
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on

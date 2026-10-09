@@ -1113,6 +1113,96 @@ describe("offline manifest policy", () => {
     });
   });
 
+  /**
+   * **The two medical warnings the live roll call shows, and nothing else of
+   * the medical mark** (issue #2163). A crew at the rail with no signal saw
+   * neither "re-signed after a referral with no physician clearance" nor "a
+   * physician did not clear this diver (earlier waiver)". The copy carries the
+   * two dates, never the refused record's id, the release's source or date,
+   * the guardian, or any answer.
+   */
+  describe("medical warnings", () => {
+    const shop = {
+      slug: "blue-mantis",
+      name: "Blue Mantis",
+      timezone: "America/New_York",
+      emergencyReference: EMPTY_EMERGENCY_REFERENCE,
+    };
+    const mark = (
+      overrides: Partial<NonNullable<TripManifest["divers"][number]["medicalWaiver"]>>,
+    ): NonNullable<TripManifest["divers"][number]["medicalWaiver"]> => ({
+      at: new Date("2026-07-01T15:00:00.000Z"),
+      source: "digital",
+      overriddenReferralAt: null,
+      overriddenRefusal: null,
+      clearance: { recordId: "clearance-record-secret", documentOnFile: true },
+      guardian: null,
+      ...overrides,
+    });
+    const save = (medicalWaiver: TripManifest["divers"][number]["medicalWaiver"], held = false) => {
+      const base = baseManifest();
+      const diver = {
+        ...base.divers[0],
+        medicalWaiver,
+        ...(held ? { identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" } } : {}),
+      } as TripManifest["divers"][number];
+      return serializeManifests([{ ...base, divers: [diver] }], shop, (blocker) => blocker.code);
+    };
+
+    it("carries both warnings as dates, and nothing else of the mark", () => {
+      const payload = save(
+        mark({
+          overriddenReferralAt: new Date("2026-06-10T14:00:00.000Z"),
+          overriddenRefusal: {
+            recordId: "refused-record-secret",
+            at: new Date("2026-05-02T13:00:00.000Z"),
+          },
+        }),
+      );
+      expect(payload.manifests[0]?.divers[0]?.medicalWarnings).toEqual({
+        earlierRefusalAt: "2026-05-02T13:00:00.000Z",
+        referralUnresolvedAt: "2026-06-10T14:00:00.000Z",
+      });
+      const json = JSON.stringify(payload);
+      expect(json).not.toContain("refused-record-secret");
+      expect(json).not.toContain("clearance-record-secret");
+      expect(json).not.toContain("medicalWaiver");
+      // The release's own date is not a warning, so it does not ride.
+      expect(json).not.toContain("2026-07-01T15:00:00.000Z");
+    });
+
+    it("carries each warning on its own", () => {
+      expect(
+        save(mark({ overriddenReferralAt: new Date("2026-06-10T14:00:00.000Z") })).manifests[0]
+          ?.divers[0]?.medicalWarnings,
+      ).toEqual({ referralUnresolvedAt: "2026-06-10T14:00:00.000Z" });
+      expect(
+        save(
+          mark({
+            overriddenRefusal: { recordId: "r", at: new Date("2026-05-02T13:00:00.000Z") },
+          }),
+        ).manifests[0]?.divers[0]?.medicalWarnings,
+      ).toEqual({ earlierRefusalAt: "2026-05-02T13:00:00.000Z" });
+    });
+
+    it("writes no medical field at all for a diver with no warning", () => {
+      for (const medicalWaiver of [mark({}), null, undefined]) {
+        const diver = save(medicalWaiver).manifests[0]?.divers[0] as Record<string, unknown>;
+        expect(diver).not.toHaveProperty("medicalWarnings");
+      }
+    });
+
+    it("never writes a held seat's warnings, which belong to a person nobody confirmed", () => {
+      const payload = save(
+        mark({
+          overriddenRefusal: { recordId: "r", at: new Date("2026-05-02T13:00:00.000Z") },
+        }),
+        true,
+      );
+      expect(payload.manifests[0]?.divers[0]).not.toHaveProperty("medicalWarnings");
+    });
+  });
+
   it("carries the counter's write-off to the dock, so a released seat is not a late diver", () => {
     // #1209. The dock copy is the only copy at the rail, and without this
     // field a name the counter settled at 07:20 reads on it exactly like a

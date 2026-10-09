@@ -346,6 +346,39 @@ export type OfflineManifestPayload = {
            * looked like before the counter could say it.
            */
           notHere?: boolean;
+          /**
+           * **The two medical warnings the live roll call shows** (issue
+           * #2163), as dates and nothing else: when a physician refused an
+           * earlier release this one stands over (`overriddenRefusal`, H-98),
+           * and when a referral this release replaced rather than answered
+           * was made (`overriddenReferralAt`, issue #1282). The words are the
+           * live manifest's own (`manifest.medicalEarlierRefusal`,
+           * `manifest.medicalReferralUnresolved`), resolved by the viewer.
+           *
+           * **This is medical information on a crew phone, so it is the least
+           * that carries the warning.** Never the refused record's id, never
+           * the release's own source or date, the guardian or the clearance
+           * record, and never an answer: the whole medical mark stays a staff
+           * screen fact. It rides inside the same encrypted, expiring record
+           * as the emergency contact (`offline-manifest-store.ts`), and a held
+           * seat never carries it (`withholdHeldSeatParticulars` clears the
+           * mark first). Absent when there is no warning, so an ordinary diver
+           * writes no medical field at all.
+           *
+           * It rides because the crew at the rail decides with it in view: a
+           * diver a physician once refused, boarded on a later self-declared
+           * release, is the person a divemaster should ask one more question
+           * of before the giant stride — and the dock copy is what they hold.
+           *
+           * Optional and additive (no `OFFLINE_MANIFEST_RECORD_VERSION` bump;
+           * a bump purges every roll call a captain has queued and not
+           * synced). A copy saved before it has none and shows no warning,
+           * which is how every copy read before this change.
+           */
+          medicalWarnings?: {
+            earlierRefusalAt?: string;
+            referralUnresolvedAt?: string;
+          };
           /** Dropped at save time; the dock does not need it (kept for shape parity). */
           email: null;
           /**
@@ -878,6 +911,9 @@ export function serializeManifests(
         bookedAs: diver.bookedAs,
         checkedIn: diver.checkedIn,
         notHere: diver.notHere,
+        // Dates only, and absent when there is nothing to warn about: see the
+        // allow-list type above.
+        ...offlineMedicalWarnings(diver.medicalWaiver),
         // Names only, never a teammate's booking or person id — the dock copy
         // displays teams and must stay unable to compute divergence from a
         // snapshot.
@@ -907,6 +943,27 @@ export function serializeManifests(
     })),
   };
 }
+
+/**
+ * The dock copy's medical warnings for one diver (issue #2163): the two dates
+ * the live roll call warns on, read off the medical mark, and nothing else of
+ * it. An empty object when there is neither, so the spread writes no field.
+ */
+function offlineMedicalWarnings(mark: TripManifest["divers"][number]["medicalWaiver"]): {
+  medicalWarnings?: NonNullable<OfflineDiverRow["medicalWarnings"]>;
+} {
+  const earlierRefusalAt = mark?.overriddenRefusal?.at.toISOString();
+  const referralUnresolvedAt = mark?.overriddenReferralAt?.toISOString();
+  if (!earlierRefusalAt && !referralUnresolvedAt) return {};
+  return {
+    medicalWarnings: {
+      ...(earlierRefusalAt ? { earlierRefusalAt } : {}),
+      ...(referralUnresolvedAt ? { referralUnresolvedAt } : {}),
+    },
+  };
+}
+
+type OfflineDiverRow = OfflineManifestPayload["manifests"][number]["divers"][number];
 
 export function offlineManifestExpiresAt(savedAt: Date, tripEndsAt: Date): Date {
   return new Date(

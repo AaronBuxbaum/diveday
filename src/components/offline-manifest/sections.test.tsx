@@ -137,6 +137,46 @@ describe("the offline manifest's sections", () => {
     expect(container.querySelector("#offline-roll-call-b-marcus")).not.toBeNull();
   });
 
+  it("shows the live roll call's two medical warnings, in its words", () => {
+    // Issue #2163: a crew at the rail with no signal saw neither warning.
+    const copy = savedCopy();
+    const [first, second] = copy.snapshot.manifests[0]?.divers ?? [];
+    if (!first || !second) throw new Error("fixture divers missing");
+    first.medicalWarnings = {
+      earlierRefusalAt: "2026-05-02T16:00:00.000Z",
+      referralUnresolvedAt: "2026-06-10T16:00:00.000Z",
+    };
+    const trip = offlineTripView(copy, "departure");
+    if (!trip) throw new Error("the fixture carries a manifest");
+    const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+    const warned = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
+    expect(warned).toContain("Doctor said no before");
+    expect(warned).toContain("Contact, gear & medical");
+    expect(warned).toMatch(
+      /A physician did not clear this diver on Sat,\sMay\s2 \(earlier waiver\)/,
+    );
+    expect(warned).toMatch(
+      /Re-signed after a referral with no physician clearance on file \(Wed,\sJun\s10\)/,
+    );
+    const plain = container.querySelector("#offline-roll-call-b-marcus")?.textContent ?? "";
+    expect(plain).not.toContain("physician");
+    expect(plain).not.toContain("medical");
+  });
+
+  it("never shows a held seat's medical warnings", () => {
+    const copy = savedCopy();
+    const [first] = copy.snapshot.manifests[0]?.divers ?? [];
+    if (!first) throw new Error("fixture diver missing");
+    first.identityWithheld = true;
+    first.medicalWarnings = { earlierRefusalAt: "2026-05-02T16:00:00.000Z" };
+    const trip = offlineTripView(copy, "departure");
+    if (!trip) throw new Error("the fixture carries a manifest");
+    const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+    const row = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
+    expect(row).not.toContain("physician");
+    expect(row).not.toContain("Doctor said no before");
+  });
+
   it("draws the crew half under its own heading", () => {
     const { container } = render(<OfflineCrewRollCall view={view()} controls={controls()} />);
     expect(container.querySelector("#offline-crew-heading")).not.toBeNull();
