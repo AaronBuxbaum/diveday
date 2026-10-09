@@ -10,7 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, FormStatus } from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
-import { canPersonRefund } from "@/db/authz";
+import { canPersonManageOrders, canPersonRefund } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/orders";
 import type { OrderStatus } from "@/db/schema";
@@ -27,6 +27,8 @@ import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { PaidAtCounterLine, VoidCounterOrderForm } from "./_components/CounterPayment";
+import { DisabledDemoButton } from "./_components/DisabledDemoButton";
 import { OrderDisputeBanner, OrderMeta } from "./_components/OrderMeta";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -216,6 +218,7 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "refresh-failed": { tone: "danger", key: "orders.detail.notice.refreshFailed" },
   voided: { tone: "success", key: "orders.detail.notice.voided" },
   "void-failed": { tone: "danger", key: "orders.detail.notice.voidFailed" },
+  "void-not-authorized": { tone: "danger", key: "orders.detail.notice.voidNotAuthorized" },
   refunded: { tone: "success", key: "orders.detail.notice.refunded" },
   "partly-refunded": { tone: "success", key: "orders.detail.notice.partlyRefunded" },
   "refund-invalid-amount": { tone: "danger", key: "orders.detail.notice.refundInvalidAmount" },
@@ -228,32 +231,6 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "not-authorized": { tone: "danger", key: "orders.detail.notice.notAuthorized" },
   "demo-disabled": { tone: "neutral", key: "orders.detail.notice.demoDisabled" },
 };
-
-/** A greyed-out stand-in for a Stripe action a demo shop can't perform. */
-function DisabledDemoButton({
-  label,
-  hint,
-  variant,
-}: {
-  label: string;
-  hint: string;
-  variant: "secondary" | "danger";
-}) {
-  return (
-    <button
-      type="button"
-      disabled
-      aria-disabled="true"
-      title={hint}
-      className={buttonClass({
-        variant,
-        className: "cursor-not-allowed opacity-50",
-      })}
-    >
-      {label}
-    </button>
-  );
-}
 
 export default async function OrderDetailPage({
   params,
@@ -279,6 +256,15 @@ export default async function OrderDetailPage({
   // Refunds are owner/manager only (H-14, ADR 20260724-role-authorization);
   // hide the control from other staff. refundAction re-checks regardless.
   const canRefund = await canPersonRefund(db, shop.id, session.user.personId);
+  // Money taken at the counter, in cash or on the shop's own card machine (ADR
+  // 20261009-counter-payments). It has no Stripe invoice, so none of the
+  // Stripe controls below apply; an owner or manager can void it instead.
+  const counterCollection =
+    order.order.collection === "stripe_invoice" ? null : order.order.collection;
+  const canVoidCounter =
+    counterCollection !== null &&
+    order.order.status === "paid" &&
+    (await canPersonManageOrders(db, shop.id, session.user.personId));
   // What is left to give back, as a number a person types. Read off the order
   // rather than its total, so a second partial refund offers the remainder
   // instead of re-offering the whole charge (issue #699).
@@ -288,6 +274,7 @@ export default async function OrderDetailPage({
   // three deep (same reason `PublicShopChrome`'s address node is hoisted).
   const canOfferRefund =
     canRefund &&
+    counterCollection === null &&
     (order.order.status === "paid" || order.order.status === "partly_refunded") &&
     order.order.amountPaidCents > 0;
   const locale = await requestLocale(shop.defaultLocale);
@@ -342,6 +329,16 @@ export default async function OrderDetailPage({
             {formatMoneyCents(order.order.totalCents, order.order.currency, locale)}
           </span>
         </div>
+
+        {counterCollection && order.order.paidAt ? (
+          <PaidAtCounterLine
+            collection={counterCollection}
+            paidAt={order.order.paidAt}
+            locale={locale}
+            timezone={timezone}
+            t={t}
+          />
+        ) : null}
 
         {/* **What came back, and what is still here.** A `Partly refunded`
             badge above a total is not a fact a shop can act on: it says money
@@ -405,7 +402,7 @@ export default async function OrderDetailPage({
           </dl>
         ) : null}
 
-        {order.order.hostedInvoiceUrl ? (
+        {counterCollection === null && order.order.hostedInvoiceUrl ? (
           <p className="mt-4 text-sm print:hidden">
             <a
               href={order.order.hostedInvoiceUrl}
@@ -422,7 +419,8 @@ export default async function OrderDetailPage({
         {/* Off the paper: a printed order is the diver's copy of what they
             paid, and Refresh, Void and Refund are the shop's taps. */}
         <div className="mt-6 flex flex-wrap items-center gap-3 print:hidden">
-          {order.order.status === "open" ? (
+          {canVoidCounter ? <VoidCounterOrderForm orderId={order.order.id} t={t} /> : null}
+          {order.order.status === "open" && counterCollection === null ? (
             demo ? (
               <>
                 <DisabledDemoButton

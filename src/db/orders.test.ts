@@ -32,10 +32,12 @@ import {
   maxLineItemUnitAmountCents,
   openOrdersForBookings,
   pagedOrdersByDay,
+  recordCounterOrder,
   recordOrderPaymentIntent,
   refreshOrderStatus,
   refundOrder,
   resendOrderInvoice,
+  voidCounterOrder,
   voidOrder,
 } from "./orders";
 import { recordStripeDispute } from "./payment-disputes";
@@ -44,6 +46,8 @@ import { getBookingPayment, setBookingPayment } from "./payments";
 import {
   bookings,
   divePackages,
+  integrationEvents,
+  orderLineItems,
   orders,
   paymentOperationIntents,
   people,
@@ -142,6 +146,12 @@ async function connectedShop(
     payoutsEnabled: true,
     detailsSubmitted: true,
   });
+}
+
+/** The Stripe invoice id of an order a test created through Stripe; never a counter order. */
+function invoiceIdOf(order: { stripeInvoiceId: string | null }): string {
+  if (!order.stripeInvoiceId) throw new Error("expected a Stripe-invoiced order");
+  return order.stripeInvoiceId;
 }
 
 describe("orders", () => {
@@ -318,7 +328,7 @@ describe("orders", () => {
 
     const paid = await markOrderPaidByInvoiceId(
       db,
-      result.order.stripeInvoiceId,
+      invoiceIdOf(result.order),
       result.order.totalCents,
       undefined,
       null,
@@ -531,7 +541,7 @@ describe("orders", () => {
       fakeInvoicing(),
     );
     if (!result.ok) throw new Error("expected ok");
-    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
+    await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), result.order.totalCents);
 
     await setShopCurrency(db, shop.id, "jpy");
     const settled = await getOrder(db, shop.id, result.order.id);
@@ -651,7 +661,7 @@ describe("orders", () => {
     );
     if (!result.ok) throw new Error("expected order creation to succeed");
 
-    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
+    await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), result.order.totalCents);
     const refunded = await refundOrder(db, shop.id, result.order.id, fakeInvoicing());
     if (refunded.status !== "refunded")
       throw new Error(`expected a refund, got ${refunded.status}`);
@@ -659,7 +669,7 @@ describe("orders", () => {
     expect(refunded.order.refundedAt).not.toBeNull();
     expect(await getBookingPayment(db, shop.id, entry.booking.id)).toMatchObject({
       status: "refunded",
-      providerRef: result.order.stripeInvoiceId,
+      providerRef: invoiceIdOf(result.order),
     });
     expect(await refundOrder(db, shop.id, result.order.id, fakeInvoicing())).toEqual({
       status: "not_paid",
@@ -703,7 +713,7 @@ describe("orders", () => {
     if (!result.ok) throw new Error("expected order creation to succeed");
     expect(result.order.passThroughCents).toBe(2_000);
 
-    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 20_000);
+    await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), 20_000);
     const refunded = await refundOrder(db, shop.id, result.order.id, fakeInvoicing(), {
       amountCents: 5_000,
     });
@@ -744,7 +754,7 @@ describe("orders", () => {
       fakeInvoicing(),
     );
     if (!result.ok) throw new Error("expected order creation to succeed");
-    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 20_000);
+    await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), 20_000);
 
     const refunded = await refundOrder(db, shop.id, result.order.id, fakeInvoicing());
     if (refunded.status !== "refunded")
@@ -780,7 +790,7 @@ describe("orders", () => {
       invoicing,
     );
     if (!result.ok) throw new Error("expected order creation to succeed");
-    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
+    await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), result.order.totalCents);
 
     expect((await refundOrder(db, shop.id, result.order.id, invoicing)).status).toBe("refunded");
     expect(refundInvoiceCalls).toBe(1);
@@ -848,7 +858,7 @@ describe("orders", () => {
     );
     if (!result.ok) throw new Error("expected order creation to succeed");
     orderId = result.order.id;
-    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
+    await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), result.order.totalCents);
 
     const first = await refundOrder(db, shop.id, orderId, invoicing);
 
@@ -898,7 +908,7 @@ describe("orders", () => {
       invoicing,
     );
     if (!result.ok) throw new Error("expected order creation to succeed");
-    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
+    await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), result.order.totalCents);
 
     // A process that died mid-refund: its intent is still `started` and will
     // never resolve itself.
@@ -961,7 +971,7 @@ describe("orders", () => {
       invoicing,
     );
     if (!result.ok) throw new Error("expected order creation to succeed");
-    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
+    await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), result.order.totalCents);
 
     expect(await refundOrder(db, crypto.randomUUID(), result.order.id, invoicing)).toEqual({
       status: "not_found",
@@ -990,7 +1000,7 @@ describe("orders", () => {
     );
     if (!result.ok) throw new Error("expected order creation to succeed");
 
-    const paid = await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000);
+    const paid = await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), 22_000);
     expect(paid?.status).toBe("paid");
     expect(paid?.paidAt).not.toBeNull();
 
@@ -998,7 +1008,7 @@ describe("orders", () => {
     expect(payment).toMatchObject({
       status: "paid",
       provider: "stripe",
-      providerRef: result.order.stripeInvoiceId,
+      providerRef: invoiceIdOf(result.order),
     });
 
     // An unknown invoice id is a no-op, never an error.
@@ -1030,11 +1040,11 @@ describe("orders", () => {
         fakeInvoicing(),
       );
       if (!result.ok) throw new Error("expected order creation to succeed");
-      await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000);
+      await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), 22_000);
 
       // A replayed or out-of-order invoice.voided event must not flip an
       // already-paid order back to void.
-      const voided = await markOrderVoidedByInvoiceId(db, result.order.stripeInvoiceId);
+      const voided = await markOrderVoidedByInvoiceId(db, invoiceIdOf(result.order));
       expect(voided?.status).toBe("paid");
       const [row] = await db.select().from(orders).where(eq(orders.id, result.order.id));
       expect(row?.status).toBe("paid");
@@ -1081,13 +1091,13 @@ describe("orders", () => {
         }),
       );
       if (!result.ok) throw new Error("expected order creation to succeed");
-      await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000);
+      await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), 22_000);
       const refunded = await refundOrder(db, shop.id, result.order.id, fakeInvoicing());
       expect(refunded?.status).toBe("refunded");
 
       // A delayed/duplicate delivery of the original "paid" event arrives
       // after the refund already went through.
-      const replayed = await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000);
+      const replayed = await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), 22_000);
       expect(replayed?.status).toBe("refunded");
       const [row] = await db.select().from(orders).where(eq(orders.id, result.order.id));
       expect(row?.status).toBe("refunded");
@@ -1114,10 +1124,10 @@ describe("orders", () => {
         fakeInvoicing(),
       );
       if (!result.ok) throw new Error("expected order creation to succeed");
-      const first = await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000);
+      const first = await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), 22_000);
       expect(first?.status).toBe("paid");
 
-      const replayed = await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000);
+      const replayed = await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), 22_000);
       expect(replayed?.status).toBe("paid");
       expect(replayed?.paidAt?.getTime()).toBe(first?.paidAt?.getTime());
       expect(await getBookingPayment(db, shop.id, entry.booking.id)).toMatchObject({
@@ -1150,18 +1160,17 @@ describe("orders", () => {
       if (!result.ok) throw new Error("expected order creation to succeed");
 
       expect(
-        await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000, "acct_evil"),
+        await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), 22_000, "acct_evil"),
       ).toBeNull();
       expect(
-        await markOrderVoidedByInvoiceId(db, result.order.stripeInvoiceId, "acct_evil"),
+        await markOrderVoidedByInvoiceId(db, invoiceIdOf(result.order), "acct_evil"),
       ).toBeNull();
       const [row] = await db.select().from(orders).where(eq(orders.id, result.order.id));
       expect(row?.status).toBe("open");
 
       // The real account still works.
       expect(
-        (await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000, "acct_123"))
-          ?.status,
+        (await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), 22_000, "acct_123"))?.status,
       ).toBe("paid");
     });
   });
@@ -1241,7 +1250,7 @@ describe("orders", () => {
       fakeInvoicing(),
     );
     if (!result.ok) throw new Error("expected order creation to succeed");
-    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000);
+    await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), 22_000);
 
     await setBookingPayment(db, {
       shopId: shop.id,
@@ -1254,7 +1263,7 @@ describe("orders", () => {
     });
 
     // A delayed/duplicate delivery of the same "paid" event arrives late.
-    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000);
+    await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), 22_000);
 
     expect(await getBookingPayment(db, shop.id, entry.booking.id)).toMatchObject({
       status: "refunded",
@@ -1536,7 +1545,7 @@ describe("orders", () => {
       );
       if (!paid.ok) throw new Error("expected the second order to be created");
       expect(await countOpenTripOrders(db, shop.id, reef.id)).toBe(2);
-      await markOrderPaidByInvoiceId(db, paid.order.stripeInvoiceId, paid.order.totalCents);
+      await markOrderPaidByInvoiceId(db, invoiceIdOf(paid.order), paid.order.totalCents);
       expect(await countOpenTripOrders(db, shop.id, reef.id)).toBe(1);
 
       // A shop-wide invoice (a gear sale, a course deposit taken off any
@@ -1649,7 +1658,7 @@ describe("openOrdersForBookings", () => {
 
   it("stops surfacing a booking's order once it is paid — no longer 'open'", async () => {
     const { db, shop, entry, order } = await invoicedOrderContext();
-    await markOrderPaidByInvoiceId(db, order.stripeInvoiceId, order.totalCents);
+    await markOrderPaidByInvoiceId(db, invoiceIdOf(order), order.totalCents);
     expect(await openOrdersForBookings(db, shop.id, [entry.booking.id])).toEqual(new Map());
   });
 
@@ -1692,7 +1701,7 @@ describe("resendOrderInvoice", () => {
 
   it("refuses to resend an invoice that already closed (paid, voided, or refunded)", async () => {
     const { db, shop, order } = await invoicedOrderContext();
-    await markOrderPaidByInvoiceId(db, order.stripeInvoiceId, order.totalCents);
+    await markOrderPaidByInvoiceId(db, invoiceIdOf(order), order.totalCents);
     expect(await resendOrderInvoice(db, shop.id, order.id, fakeInvoicing())).toEqual({
       status: "not_open",
     });
@@ -1757,7 +1766,7 @@ describe("orders — a partial refund", () => {
       invoicing,
     );
     if (!result.ok) throw new Error("expected order creation to succeed");
-    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
+    await markOrderPaidByInvoiceId(db, invoiceIdOf(result.order), result.order.totalCents);
     return { db, shop, entry, order: result.order };
   }
 
@@ -2281,6 +2290,235 @@ describe("an order and the booking's partner slug", () => {
   });
 });
 
+/**
+ * Money taken at the counter, in cash or on the shop's own card machine (ADR
+ * 20261009-counter-payments): written already paid, with no Stripe ids, and
+ * refused by every Stripe operation.
+ */
+describe("counter orders", () => {
+  /** A Stripe fake whose every call fails the test: a counter order never reaches Stripe. */
+  function unreachableInvoicing(): InvoicingProvider {
+    const fail = (): never => {
+      throw new Error("a counter order must never reach Stripe");
+    };
+    return {
+      createInvoice: fail,
+      voidInvoice: fail,
+      refundInvoice: fail,
+      retrieveInvoice: fail,
+      resendInvoice: fail,
+    };
+  }
+
+  async function recorded(collection: "cash" | "card_machine" = "cash") {
+    const ctx = await orderContext();
+    const captain = await seededStaffPersonId(ctx.db, ctx.shop.id, SEEDED_CAPTAIN_EMAIL);
+    const result = await recordCounterOrder(ctx.db, {
+      shopId: ctx.shop.id,
+      personId: ctx.entry.person.id,
+      createdByPersonId: captain,
+      collection,
+      lineItems: [
+        { kind: "rental", description: "BCD, two days", quantity: 2, unitAmountCents: 1_500 },
+        { kind: "rental", description: "Regulator", quantity: 1, unitAmountCents: 2_000 },
+      ],
+    });
+    if (!result.ok) throw new Error("expected the counter order to be recorded");
+    return { ...ctx, captain, order: result.order };
+  }
+
+  it("writes a paid order summing its lines, with no Stripe ids, recorded by any staff member", async () => {
+    // A captain, not an owner: taking cash at the counter is day work (H-06).
+    const { db, shop, order } = await recorded("card_machine");
+    expect(order).toMatchObject({
+      shopId: shop.id,
+      status: "paid",
+      collection: "card_machine",
+      totalCents: 5_000,
+      amountPaidCents: 5_000,
+      taxCents: 0,
+      bookingId: null,
+      stripeAccountId: null,
+      stripeCustomerId: null,
+      stripeInvoiceId: null,
+      currency: "usd",
+    });
+    expect(order.paidAt).toBeInstanceOf(Date);
+    expect(order.finalizedAt).toBeInstanceOf(Date);
+
+    const lines = await db
+      .select()
+      .from(orderLineItems)
+      .where(eq(orderLineItems.orderId, order.id));
+    expect(lines.map((line) => line.quantity * line.unitAmountCents).sort()).toEqual([
+      2_000, 3_000,
+    ]);
+
+    const events = await db
+      .select()
+      .from(integrationEvents)
+      .where(and(eq(integrationEvents.shopId, shop.id), eq(integrationEvents.entityId, order.id)));
+    expect(events.map((event) => [event.eventType, event.idempotencyKey])).toEqual([
+      ["order.paid", `order:${order.id}:paid`],
+    ]);
+  });
+
+  it("refuses a payer from another shop, a non-staff recorder, and lines createOrder would refuse", async () => {
+    const { db, shop, entry, staff } = await orderContext();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-counter-shop", timezone: "UTC" })
+      .returning();
+    if (!otherShop) throw new Error("shop insert failed");
+    const [stranger] = await db
+      .insert(people)
+      .values({ shopId: otherShop.id, fullName: "Someone Else" })
+      .returning();
+    if (!stranger) throw new Error("person insert failed");
+    const valid = [
+      { kind: "rental" as const, description: "Fins", quantity: 1, unitAmountCents: 800 },
+    ];
+    const base = {
+      shopId: shop.id,
+      personId: entry.person.id,
+      createdByPersonId: staff,
+      collection: "cash" as const,
+      lineItems: valid,
+    };
+    const invalid = { ok: false, reason: "invalid" };
+
+    expect(await recordCounterOrder(db, { ...base, personId: stranger.id })).toEqual(invalid);
+    // A diver is a person at the shop, not a member of its staff.
+    expect(await recordCounterOrder(db, { ...base, createdByPersonId: entry.person.id })).toEqual(
+      invalid,
+    );
+    expect(await recordCounterOrder(db, { ...base, lineItems: [] })).toEqual(invalid);
+    expect(
+      await recordCounterOrder(db, { ...base, lineItems: [{ ...valid[0], quantity: 0 }] }),
+    ).toEqual(invalid);
+    expect(
+      await recordCounterOrder(db, { ...base, lineItems: [{ ...valid[0], unitAmountCents: -1 }] }),
+    ).toEqual(invalid);
+    expect(
+      await recordCounterOrder(db, {
+        ...base,
+        lineItems: [{ ...valid[0], unitAmountCents: maxLineItemUnitAmountCents("usd") + 1 }],
+      }),
+    ).toEqual(invalid);
+    expect(
+      await recordCounterOrder(db, {
+        ...base,
+        // A hand-posted value outside the two counter methods.
+        collection: "stripe_invoice" as unknown as "cash",
+      }),
+    ).toEqual(invalid);
+    // Only rental lines, and never a package's credits under the any-staff gate.
+    expect(
+      await recordCounterOrder(db, { ...base, lineItems: [{ ...valid[0], kind: "dive_package" }] }),
+    ).toEqual(invalid);
+    expect(
+      await recordCounterOrder(db, {
+        ...base,
+        lineItems: [{ ...valid[0], packageId: "00000000-0000-4000-8000-000000000000" }],
+      }),
+    ).toEqual(invalid);
+
+    const written = await db.select().from(orders).where(eq(orders.collection, "cash"));
+    expect(written).toEqual([]);
+  });
+
+  it("is refused by every Stripe operation without reaching Stripe", async () => {
+    const { db, shop, order } = await recorded();
+    const invoicing = unreachableInvoicing();
+
+    expect(await refundOrder(db, shop.id, order.id, invoicing)).toEqual({
+      status: "not_invoiced",
+    });
+    // Refused before a refund attempt is recorded, so nothing is left to reconcile.
+    const intents = await db
+      .select()
+      .from(paymentOperationIntents)
+      .where(eq(paymentOperationIntents.orderId, order.id));
+    expect(intents).toEqual([]);
+    expect(await resendOrderInvoice(db, shop.id, order.id, invoicing)).toEqual({
+      status: "not_open",
+    });
+    expect(await refreshOrderStatus(db, shop.id, order.id, invoicing)).toBeNull();
+    expect(await voidOrder(db, shop.id, order.id, invoicing)).toBeNull();
+
+    const [row] = await db.select().from(orders).where(eq(orders.id, order.id));
+    expect(row).toMatchObject({ status: "paid", amountPaidCents: 5_000 });
+  });
+
+  it("is held to its Stripe ids by the database: none on a counter order, all three on an invoice", async () => {
+    const { db, order } = await recorded();
+    await expect(
+      db.update(orders).set({ stripeInvoiceId: "in_forged" }).where(eq(orders.id, order.id)),
+    ).rejects.toThrow();
+    await expect(
+      db.update(orders).set({ collection: "stripe_invoice" }).where(eq(orders.id, order.id)),
+    ).rejects.toThrow();
+  });
+
+  it("voids for an owner or manager only, zeroing the paid amount", async () => {
+    const { db, shop, staff, captain, order } = await recorded();
+
+    expect(
+      await voidCounterOrder(db, { shopId: shop.id, orderId: order.id, actorPersonId: captain }),
+    ).toEqual({ ok: false, reason: "not_authorized" });
+
+    const voided = await voidCounterOrder(db, {
+      shopId: shop.id,
+      orderId: order.id,
+      actorPersonId: staff,
+    });
+    if (!voided.ok) throw new Error("expected the void to succeed");
+    expect(voided.order).toMatchObject({ status: "void", amountPaidCents: 0, totalCents: 5_000 });
+    expect(voided.order.voidedAt).toBeInstanceOf(Date);
+
+    // Once void, it is not voided again.
+    expect(
+      await voidCounterOrder(db, { shopId: shop.id, orderId: order.id, actorPersonId: staff }),
+    ).toEqual({ ok: false, reason: "not_voidable" });
+    // Another shop's id finds nothing.
+    expect(
+      await voidCounterOrder(db, {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        orderId: order.id,
+        actorPersonId: staff,
+      }),
+    ).toEqual({ ok: false, reason: "not_authorized" });
+  });
+
+  it("will not void a Stripe-invoiced order locally", async () => {
+    const { db, shop, entry, staff } = await orderContext();
+    await connectedShop(db, shop.id);
+    const created = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: staff,
+        bookingId: entry.booking.id,
+        lineItems,
+      },
+      fakeInvoicing(),
+    );
+    if (!created.ok) throw new Error("expected order creation to succeed");
+    await markOrderPaidByInvoiceId(db, invoiceIdOf(created.order), created.order.totalCents);
+
+    expect(
+      await voidCounterOrder(db, {
+        shopId: shop.id,
+        orderId: created.order.id,
+        actorPersonId: staff,
+      }),
+    ).toEqual({ ok: false, reason: "not_voidable" });
+    const [row] = await db.select().from(orders).where(eq(orders.id, created.order.id));
+    expect(row?.status).toBe("paid");
+  });
+});
+
 describe("a diver buying a package online", () => {
   async function packageShop() {
     const { db, shop } = await seededShopContext();
@@ -2390,13 +2628,14 @@ describe("a diver buying a package online", () => {
 
   it("takes back the unspent dives when the card dispute is lost, and only then", async () => {
     const { db, shop, order, personId } = await paidPackage();
-    if (!order.stripeInvoiceId) throw new Error("no invoice");
+    if (!order.stripeInvoiceId || !order.stripeAccountId) throw new Error("no invoice");
+    const stripeAccountId = order.stripeAccountId;
     await recordOrderPaymentIntent(db, {
       stripeInvoiceId: order.stripeInvoiceId,
       paymentIntentId: "pi_package",
     });
     const disputeEvent = (status: string, eventType: string, at: string) => ({
-      stripeAccountId: order.stripeAccountId,
+      stripeAccountId,
       eventType,
       occurredAt: new Date(at),
       dispute: {

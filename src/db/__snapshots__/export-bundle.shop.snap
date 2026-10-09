@@ -60,7 +60,7 @@ imported_payment_history.csv 2 rows 0822811603094a89 [id,person_id,person_name,o
 internal_notes.csv 3 rows bdd9eff6262c7b59 [id,person_id,person_name,booking_id,body,created_by_person_id,created_by_name,created_at]
 activity_events.csv 50 rows 38301984c821fb54 [id,seq,trip_id,trip_title,booking_id,actor_person_id,actor_name,subject_person_id,subject_name,code,params,occurred_at]
 notification_deliveries.csv 10 rows 810de9f3408a46f1 [id,booking_id,person_id,person_name,kind,status,provider_message_id,provider_status,provider_status_at,provider_detail,send_http_status,send_error_code,send_error,attempted_at,created_at]
-orders.csv 337 rows 57fdceb854dbf74f [id,person_id,person_name,booking_id,created_by_person_id,created_by_name,source,status,currency,total_cents,pass_through_cents,tax_cents,amount_paid_cents,refunded_cents,description,stripe_invoice_id,hosted_invoice_url,invoice_pdf_url,finalized_at,paid_at,voided_at,refunded_at,created_at]
+orders.csv 337 rows 497d57b9f485df9d [id,person_id,person_name,booking_id,created_by_person_id,created_by_name,source,status,collection,currency,total_cents,pass_through_cents,tax_cents,amount_paid_cents,refunded_cents,description,stripe_invoice_id,hosted_invoice_url,invoice_pdf_url,finalized_at,paid_at,voided_at,refunded_at,created_at]
 order_line_items.csv 341 rows 0cf661bae8625ca5 [order_id,kind,description,quantity,unit_amount_cents,created_at]
 work_order_bills.csv 0 rows 48614bb3da1286e4 [id,work_order_id,order_id,created_by_person_id,created_at]
 customer_gear_reminder_settings.csv 0 rows ac01efb17a4f0e71 [id,customer_gear_item_id,reminders_off_at,changed_by_person_id,created_at,updated_at]

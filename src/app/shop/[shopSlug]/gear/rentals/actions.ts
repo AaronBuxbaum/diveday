@@ -15,7 +15,7 @@ import {
   releaseCounterRental,
   returnCounterRental,
 } from "@/db/gear-counter-rentals";
-import { createOrder, type NewOrderLineItem } from "@/db/orders";
+import { createOrder, type NewOrderLineItem, recordCounterOrder } from "@/db/orders";
 import { certificationAgency, certificationLevel } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -41,7 +41,9 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import {
   CONFIRM_FIELD_PREFIX,
   counterRentalFormPath,
+  PAYMENT_FIELD,
   PRICE_FIELD_PREFIX,
+  RENTAL_PAYMENTS,
   SET_PRICE_FIELD,
   UNIT_FIELD,
 } from "./rental-form";
@@ -67,8 +69,9 @@ const rentalSchema = z.object({
 });
 
 /**
- * Lend the picked units, then — when asked and allowed — send the invoice for
- * them through the ordinary staff order path.
+ * Lend the picked units, then charge for them the way the staffer chose:
+ * record cash or a card-machine payment as a paid order, send an invoice
+ * through the ordinary staff order path, or charge nothing.
  *
  * **The rental is written first, and the invoice only after it stood.** The
  * other order bills for a unit the exclusion constraint may yet refuse, and
@@ -96,9 +99,9 @@ export async function createCounterRentalAction(formData: FormData) {
   if (!shop) redirect(noticeUrl(blankForm, "invalid"));
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
 
-  const wantsInvoice = formData.get("invoice") === "on";
-  let lineCents = new Map<string, number>();
-  let setCents: number | null = null;
+  const payment = RENTAL_PAYMENTS.find((value) => value === formData.get(PAYMENT_FIELD));
+  if (!payment) redirect(noticeUrl(form, "needs-payment"));
+  const wantsInvoice = payment === "invoice";
   if (wantsInvoice) {
     if (!(await canPersonManageOrders(db, shop.id, session.user.personId))) {
       redirect(noticeUrl(form, "not-authorized"));
@@ -111,7 +114,12 @@ export async function createCounterRentalAction(formData: FormData) {
     }
     const person = await counterRentalPerson(db, shop.id, personId);
     if (person && !person.email) redirect(noticeUrl(form, "needs-email"));
-    lineCents = new Map();
+  }
+  // The prices are read for every payment that charges: an invoice bills them,
+  // and cash or a card machine records them as paid. "No charge" reads none.
+  const lineCents = new Map<string, number>();
+  let setCents: number | null = null;
+  if (payment !== "none") {
     for (const unitId of units) {
       const raw = String(formData.get(`${PRICE_FIELD_PREFIX}${unitId}`) ?? "").trim();
       if (!raw) continue;
@@ -151,7 +159,7 @@ export async function createCounterRentalAction(formData: FormData) {
   const ticket = shopPath(slug, "gear", "rentals", outcome.ticketId);
   const gear = shopPath(slug, "gear");
   const billed = [...lineCents.values(), setCents ?? 0].some((cents) => cents > 0);
-  if (!wantsInvoice || !billed) revalidateAndRedirect(gear, noticeUrl(ticket, "rented"));
+  if (payment === "none" || !billed) revalidateAndRedirect(gear, noticeUrl(ticket, "rented"));
 
   // The invoice's words come from the staffer's bundle, as on the new-order
   // form, and are frozen onto the invoice by `createOrder`. One line per unit
@@ -200,6 +208,28 @@ export async function createCounterRentalAction(formData: FormData) {
     }),
   ];
   if (lineItems.length === 0) revalidateAndRedirect(gear, noticeUrl(ticket, "rented"));
+
+  // **Cash or the shop's own card machine**: the money already changed hands
+  // at the counter, so the order is written paid, with no Stripe call and no
+  // owner/manager gate (taking cash is day work, like the rental itself).
+  if (payment === "cash" || payment === "card_machine") {
+    const recorded = await recordCounterOrder(db, {
+      shopId: shop.id,
+      personId,
+      createdByPersonId: session.user.personId,
+      collection: payment,
+      lineItems,
+    });
+    if (!recorded.ok) revalidateAndRedirect(gear, noticeUrl(ticket, "rented-not-recorded"));
+    await linkCounterRentalOrder(db, {
+      shopId: shop.id,
+      reservationIds: outcome.reservationIds,
+      orderId: recorded.order.id,
+    });
+    dispatchIntegrationsAfterResponse();
+    revalidateAndRedirect(gear, noticeUrl(ticket, "rented-paid"));
+  }
+
   const order = await createOrder(db, {
     shopId: shop.id,
     personId,

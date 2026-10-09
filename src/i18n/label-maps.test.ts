@@ -69,7 +69,11 @@ import {
   RECAP_PULSE_CATEGORY_KEYS,
   STAFF_PULSE_CATEGORY_KEYS,
 } from "./next-dive-labels";
-import { ORDER_STATUS_KEYS } from "./order-labels";
+import {
+  ORDER_COLLECTION_KEYS,
+  ORDER_PAID_AT_COUNTER_KEYS,
+  ORDER_STATUS_KEYS,
+} from "./order-labels";
 import {
   DIVER_PARTICIPANT_CHOICE_KEYS,
   DIVER_PARTICIPANT_CHOICE_UNPRICED_KEYS,
@@ -672,6 +676,20 @@ const CASES: readonly LabelMapCase[] = [
     map: "ORDER_STATUS_KEYS",
     rows: codeRows(keysOf(ORDER_STATUS_KEYS), (locale, status) =>
       staffTranslator(locale)(ORDER_STATUS_KEYS[status]),
+    ),
+  },
+  {
+    module: "order-labels.ts",
+    map: "ORDER_COLLECTION_KEYS",
+    rows: codeRows(keysOf(ORDER_COLLECTION_KEYS), (locale, collection) =>
+      staffTranslator(locale)(ORDER_COLLECTION_KEYS[collection]),
+    ),
+  },
+  {
+    module: "order-labels.ts",
+    map: "ORDER_PAID_AT_COUNTER_KEYS",
+    rows: codeRows(keysOf(ORDER_PAID_AT_COUNTER_KEYS), (locale, collection) =>
+      staffTranslator(locale)(ORDER_PAID_AT_COUNTER_KEYS[collection], { date: "Fri, Oct 9" }),
     ),
   },
   {

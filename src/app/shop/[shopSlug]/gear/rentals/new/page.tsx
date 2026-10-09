@@ -2,10 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { ChoiceRow, FormStatus } from "@/components/ui/form";
+import { FormStatus } from "@/components/ui/form";
 import { canPersonManageOrders } from "@/db/authz";
 import { listDiverSummaries } from "@/db/divers";
 import { countGearItems, listAvailableGearUnits } from "@/db/gear";
@@ -17,7 +16,7 @@ import {
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { isMinorOnDate } from "@/lib/age";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -34,66 +33,25 @@ import { GEAR_KIND_ORDER, type GearItemKind, gearServiceKeepsUnitBack } from "@/
 import { currencyFractionDigits, minorToMajor, toShopCurrency } from "@/lib/money";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { InvoiceAddressFields } from "../../../orders/_components/InvoiceAddressFields";
 import { createCounterRentalAction } from "../actions";
-import { CounterUnitPicker, type PickerUnit } from "./_components/CounterUnitPicker";
+import {
+  CounterRentalCart,
+  type PaymentChoice,
+  type PickerUnit,
+} from "./_components/CounterRentalCart";
 import { RentalCardSeen } from "./_components/RentalCardSeen";
 import { RentalPersonStep } from "./_components/RentalPersonStep";
 import { RentalWindowFields } from "./_components/RentalWindowFields";
+import { RENT_OUT_NOTICES as NOTICES } from "./notices";
 
 export const instant = true;
 
 export const metadata: Metadata = {
   title: "Rent out — DiveDay",
   robots: { index: false, follow: false },
-};
-
-/** Where a refusal belongs: beside the person step, or beside the submit. */
-type NoticeDefinition = {
-  key: StaffMessageKey;
-  step: "who" | "rent";
-  /** The same sentence naming the unit, when the refusal carries one (`?unit=`). */
-  named?: StaffMessageKey;
-  tone?: NoticeTone;
-};
-
-const NOTICES: Record<string, NoticeDefinition> = {
-  invalid: { key: "counterRentals.new.notice.invalid", step: "rent" },
-  duplicate: { key: "counterRentals.new.notice.duplicate", step: "who" },
-  "invalid-window": { key: "counterRentals.new.notice.invalidWindow", step: "rent" },
-  "starts-in-past": { key: "counterRentals.new.notice.startsInPast", step: "rent" },
-  "window-too-long": { key: "counterRentals.new.notice.windowTooLong", step: "rent" },
-  "no-units": { key: "counterRentals.new.notice.noUnits", step: "rent" },
-  "too-many-units": { key: "counterRentals.new.notice.tooManyUnits", step: "rent" },
-  "person-not-found": { key: "counterRentals.new.notice.personNotFound", step: "who" },
-  "unit-not-found": { key: "counterRentals.new.notice.unitNotFound", step: "rent" },
-  "unit-out-of-service": { key: "counterRentals.new.notice.unitOutOfService", step: "rent" },
-  "unit-unavailable": {
-    key: "counterRentals.new.notice.unitUnavailableUnnamed",
-    named: "counterRentals.new.notice.unitUnavailable",
-    step: "rent",
-  },
-  "unit-needs-service": {
-    key: "counterRentals.new.notice.unitNeedsServiceUnnamed",
-    named: "counterRentals.new.notice.unitNeedsService",
-    step: "rent",
-  },
-  "unit-needs-confirm": {
-    key: "counterRentals.new.notice.unitNeedsConfirmUnnamed",
-    named: "counterRentals.new.notice.unitNeedsConfirm",
-    step: "rent",
-  },
-  "not-certified": { key: "counterRentals.new.notice.notCertified", step: "who" },
-  "no-drysuit-card": { key: "counterRentals.new.notice.noDrysuitCard", step: "who" },
-  "card-recorded": { key: "counterRentals.new.notice.cardRecorded", step: "who", tone: "success" },
-  "card-duplicate": { key: "counterRentals.new.notice.cardDuplicate", step: "who" },
-  "card-not-recorded": { key: "counterRentals.new.notice.cardNotRecorded", step: "who" },
-  "card-invalid": { key: "counterRentals.new.notice.cardInvalid", step: "who" },
-  "not-authorized": { key: "counterRentals.new.notice.notAuthorized", step: "rent" },
-  "payment-not-connected": { key: "counterRentals.new.notice.paymentNotConnected", step: "rent" },
-  "needs-email": { key: "counterRentals.new.notice.needsEmail", step: "rent" },
 };
 
 /**
@@ -151,16 +109,16 @@ export default async function RentOutPage({
     // looked up here, and an id that is not one falls back to the unnamed line.
     noticeUnitId ? counterRentalUnitLabel(db, shop.id, noticeUnitId) : null,
   ]);
-  const [units, canInvoice] = person
+  const [units, canManageOrders, paymentsReady] = person
     ? await Promise.all([
         windowRefusal
           ? []
           : listAvailableGearUnits(db, shop.id, { from, until, todayLocal, serviceAsOf: until }),
-        (async () =>
-          (await canPersonManageOrders(db, shop.id, session.user.personId)) &&
-          canAcceptPayments(await getShopStripeAccount(db, shop.id)))(),
+        canPersonManageOrders(db, shop.id, session.user.personId),
+        (async () => canAcceptPayments(await getShopStripeAccount(db, shop.id)))(),
       ])
-    : [[], false];
+    : [[], false, false];
+  const canInvoice = canManageOrders && paymentsReady;
 
   const notice = noticeFromParam(search.notice, NOTICES);
   const noticeText = notice
@@ -180,6 +138,43 @@ export default async function RentOutPage({
     return cents === null ? "" : minorToMajor(cents, currency).toFixed(digits);
   };
   const invoiceOffered = canInvoice && Boolean(person?.email);
+  const payments: PaymentChoice[] = [
+    {
+      value: "cash",
+      label: t("counterRentals.new.pay.cash"),
+      hint: t("counterRentals.new.pay.recorded"),
+    },
+    {
+      value: "card_machine",
+      label: t("counterRentals.new.pay.cardMachine"),
+      hint: t("counterRentals.new.pay.recorded"),
+    },
+    ...(invoiceOffered
+      ? [
+          {
+            value: "invoice" as const,
+            label: t("counterRentals.new.pay.invoice"),
+            hint: t("counterRentals.new.pay.invoiceHint"),
+          },
+        ]
+      : []),
+    { value: "none", label: t("counterRentals.new.pay.none") },
+  ];
+  // Why an invoice is not on offer, said only to someone who could send one.
+  const paymentNote =
+    canInvoice && person && !person.email ? (
+      t("counterRentals.new.pay.noEmail", { name: person.fullName })
+    ) : canManageOrders && !paymentsReady ? (
+      <>
+        {t("counterRentals.new.pay.connect")}{" "}
+        <Link
+          href={`${shopPath(shopSlug, "settings")}#stripe`}
+          className={buttonClass({ variant: "link", size: "sm", flush: true })}
+        >
+          {t("counterRentals.new.pay.connectLink")}
+        </Link>
+      </>
+    ) : null;
   const cardSummary = cards ? counterRentalCardSummary(cards) : null;
   // Each unit judged as the action will judge it: the card rule for its kind,
   // then its service record read on the window's last day. Blocked units are
@@ -212,6 +207,7 @@ export default async function RentOutPage({
         flagged && !blocked ? t("counterRentals.new.lendAnyway", { label: unit.label }) : null,
       price: priceOf(unit.kind),
       priceAria: t("counterRentals.new.priceAria", { label: unit.label }),
+      removeAria: t("counterRentals.new.removeAria", { label: unit.label }),
       order: blocked ? 2 : flagged ? 1 : 0,
     };
   };
@@ -294,77 +290,64 @@ export default async function RentOutPage({
         ) : null}
 
         {person && !windowRefusal ? (
-          <form action={createCounterRentalAction} className="flex flex-col gap-6">
+          <form action={createCounterRentalAction} className="space-y-10">
             <input type="hidden" name="personId" value={person.id} />
             <input type="hidden" name="from" value={from} />
             <input type="hidden" name="until" value={until} />
-            <SectionCard title={t("counterRentals.new.unitsLegend")}>
-              {fleetSize === 0 ? (
-                <p className="text-sm text-muted">
-                  {t("counterRentals.new.noFleet")}{" "}
-                  <Link
-                    href={shopPath(shopSlug, "gear")}
-                    className={buttonClass({ variant: "link", size: "sm", flush: true })}
-                  >
-                    {t(STAFF_DESTINATION_LABEL_KEYS.gear)}
-                  </Link>
-                </p>
-              ) : byKind.length === 0 ? (
-                <p className="text-sm text-muted">{t("counterRentals.new.noUnits")}</p>
-              ) : (
-                <CounterUnitPicker
-                  legend={t("counterRentals.new.unitsLegend")}
-                  groups={byKind}
-                  withPrices={invoiceOffered}
-                  step={step}
-                  coreKinds={counterRentalCoreKinds(shop.rentalItems)}
-                  setPrice={setPrice}
-                  setLabel={t("counterRentals.new.setPrice", { count: days })}
-                  choose={t("counterRentals.new.pick")}
-                  pickedHeading={t("counterRentals.new.pickedHeading")}
-                  removeAria={Object.fromEntries(
-                    units.map((unit) => [
-                      unit.id,
-                      t("counterRentals.new.removeAria", { label: unit.label }),
-                    ]),
-                  )}
-                />
-              )}
-            </SectionCard>
-
-            {canInvoice && byKind.length > 0 ? (
-              <SectionCard title={t("counterRentals.new.invoiceLegend")}>
-                {invoiceOffered ? (
-                  <div className="flex flex-col gap-4">
-                    <ChoiceRow type="checkbox" name="invoice" defaultChecked>
-                      {t("counterRentals.new.sendInvoice")}
-                    </ChoiceRow>
-                    {shop.taxEnabled ? (
-                      <InvoiceAddressFields
-                        t={t}
-                        demoAddress={shop.isDemo ? shop : null}
-                        className="rounded-lg border border-border p-4"
-                      />
-                    ) : null}
-                  </div>
+            {fleetSize === 0 || byKind.length === 0 ? (
+              <SectionCard title={t("counterRentals.new.gearHeading")}>
+                {fleetSize === 0 ? (
+                  <p className="text-sm text-muted">
+                    {t("counterRentals.new.noFleet")}{" "}
+                    <Link
+                      href={shopPath(shopSlug, "gear")}
+                      className={buttonClass({ variant: "link", size: "sm", flush: true })}
+                    >
+                      {t(STAFF_DESTINATION_LABEL_KEYS.gear)}
+                    </Link>
+                  </p>
                 ) : (
-                  <p className="text-sm text-muted">{t("counterRentals.new.noEmail")}</p>
+                  <p className="text-sm text-muted">{t("counterRentals.new.noUnits")}</p>
                 )}
-              </SectionCard>
-            ) : null}
-
-            {byKind.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-3">
-                <SubmitButton
-                  pendingLabel={t("counterRentals.new.submitting")}
-                  className={buttonClass()}
-                >
-                  {t("counterRentals.new.submit")}
-                </SubmitButton>
                 <FormStatus tone="danger">{rentNotice}</FormStatus>
-              </div>
+              </SectionCard>
             ) : (
-              <FormStatus tone="danger">{rentNotice}</FormStatus>
+              <CounterRentalCart
+                groups={byKind}
+                coreKinds={counterRentalCoreKinds(shop.rentalItems)}
+                setPrice={setPrice}
+                currency={currency}
+                locale={locale}
+                step={step}
+                payments={payments}
+                paymentNote={paymentNote}
+                invoiceExtras={
+                  shop.taxEnabled ? (
+                    <InvoiceAddressFields
+                      t={t}
+                      demoAddress={shop.isDemo ? shop : null}
+                      className="rounded-lg border border-border p-4"
+                    />
+                  ) : null
+                }
+                notice={<FormStatus tone="danger">{rentNotice}</FormStatus>}
+                words={{
+                  gearHeading: t("counterRentals.new.gearHeading"),
+                  kindsAria: t("counterRentals.new.kindsAria"),
+                  billHeading: t("counterRentals.new.pickedHeading"),
+                  billEmpty: t("counterRentals.new.billEmpty"),
+                  inSet: t("counterRentals.new.inSet"),
+                  setLabel: t("counterRentals.new.setPrice", { count: days }),
+                  total: t("counterRentals.new.total"),
+                  payHeading: t("counterRentals.new.pay.heading"),
+                  items: {
+                    one: t("counterRentals.new.itemsOne"),
+                    other: t("counterRentals.new.itemsOther"),
+                  },
+                  submit: t("counterRentals.new.submit"),
+                  submitting: t("counterRentals.new.submitting"),
+                }}
+              />
             )}
           </form>
         ) : null}

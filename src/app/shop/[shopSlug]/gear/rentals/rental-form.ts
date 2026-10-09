@@ -37,3 +37,13 @@ export function counterRentalFormPath(
   const path = shopPath(shopSlug, "gear", "rentals", "new");
   return query ? `${path}?${query}` : path;
 }
+
+/** The payment choice posts under this name, one of `RENTAL_PAYMENTS`. */
+export const PAYMENT_FIELD = "payment";
+
+/**
+ * How a counter rental is paid: recorded as paid in cash or on the shop's own
+ * card machine, sent as a Stripe invoice by email, or not charged at all.
+ */
+export const RENTAL_PAYMENTS = ["cash", "card_machine", "invoice", "none"] as const;
+export type RentalPayment = (typeof RENTAL_PAYMENTS)[number];

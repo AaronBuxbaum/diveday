@@ -12,12 +12,15 @@ describe("the counter-rental ticket", () => {
   /**
    * Aaron, 2026-10-08 (ADR 20260815-minimal-gear-register, amended that day):
    * the ticket ends with the shop's own terms and a "Received by" line, the
-   * same foot as the trip slip — a receipt for gear, never a release (CR-015),
-   * and still no money, because billing lives on the order it links to.
+   * same foot as the trip slip — a receipt for gear, never a release (CR-015).
+   * Since 2026-10-09 it also says what was charged, and that money is read
+   * from the order the rental is linked to, never computed on the page.
    */
-  it("ends with the shared terms and received-by foot, and carries no money", () => {
+  it("ends with the shared terms and received-by foot, and reads money only from the order", () => {
     const code = SOURCE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
     expect(code).toContain("<RentalTicketReceipt terms={shop.rentalTerms} t={t} />");
+    expect(code).toContain("getOrder(db, shop.id, ticket.orderId)");
+    expect(code).toContain("<RentalTicketPayment");
     expect(code).not.toMatch(/formatMoney|Cents\b|amount/i);
   });
 

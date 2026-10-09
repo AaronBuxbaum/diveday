@@ -8,18 +8,33 @@
     "pickAria": "Alquilar a {name}",
     "addPerson": "Añadir",
     "whenHeading": "Cuándo",
+    "gearHeading": "Equipo",
+    "kindsAria": "Tipo de equipo",
     "fromLabel": "Desde",
     "untilLabel": "Devolver antes del",
-    "unitsLegend": "Unidades libres para estos días",
     "pickedHeading": "Se lleva",
+    "billEmpty": "Toca el equipo que sale.",
+    "inSet": "Incluido",
+    "total": "Total a cobrar",
+    "itemsOne": "# artículo",
+    "itemsOther": "# artículos",
     "removeAria": "Quitar {label}",
     "noUnits": "No hay nada en la pared libre para estos días.",
     "noFleet": "El registro está vacío. Añade una unidad primero.",
     "days": "{count, plural, one {# día} other {# días}}",
     "priceAria": "Precio de {label}",
-    "invoiceLegend": "Factura",
-    "sendInvoice": "Enviar una factura",
-    "noEmail": "No hay correo registrado, así que no hay factura. Cobra en el mostrador.",
+    "pay": {
+      "heading": "Cómo paga",
+      "cash": "Efectivo",
+      "cardMachine": "Terminal de pago",
+      "recorded": "Se registra como pagado",
+      "invoice": "Enviar factura por email",
+      "invoiceHint": "Paga en línea con tarjeta",
+      "none": "Sin cargo",
+      "noEmail": "{name} no tiene email registrado, así que no hay opción de factura.",
+      "connect": "Para enviar facturas, conecta los pagos.",
+      "connectLink": "Ajustes"
+    },
     "submit": "Alquilar",
     "submitting": "Alquilando…",
     "notice": {
@@ -47,7 +62,8 @@
       "cardRecorded": "Tarjeta registrada como vista por ti.",
       "cardDuplicate": "Esa tarjeta ya está registrada. Confírmala en la ficha del buceador.",
       "cardNotRecorded": "La tarjeta no se guardó. Vuelve a intentarlo desde la ficha del buceador.",
-      "cardInvalid": "Revisa el número de la tarjeta y vuelve a intentarlo."
+      "cardInvalid": "Revisa el número de la tarjeta y vuelve a intentarlo.",
+      "needsPayment": "Elige cómo paga."
     },
     "unitNeedsCard": "Necesita una tarjeta verificada",
     "unitNeedsDrysuitCard": "Necesita la tarjeta de traje seco",
@@ -67,7 +83,7 @@
   },
   "invoiceLine": "Alquiler de {label}, {days, plural, one {# día} other {# días}}",
   "ticket": {
-    "order": "Factura",
+    "order": "Pedido",
     "notice": {
       "rented": "Alquilado.",
       "rentedInvoiced": "Alquilado. Factura enviada.",
@@ -78,9 +94,21 @@
       "notFound": "No queda nada en este alquiler a lo que hacerle eso.",
       "concernNeedsWords": "Un problema de mantenimiento necesita una línea que diga qué pasó, para que un técnico pueda actuar.",
       "returnedFlagged": "De vuelta, y marcado para el taller.",
-      "invoiced": "Este alquiler está en una factura. Anula la factura primero y luego libéralo."
+      "invoiced": "Este alquiler tiene un pago. Anúlalo primero en Pedidos y luego libéralo.",
+      "rentedPaid": "Alquilado. Pago registrado.",
+      "rentedNotRecorded": "Alquilado, pero el pago no se guardó. Libera el alquiler y vuelve a alquilarlo."
     },
-    "divesLabel": "Inmersiones en este alquiler"
+    "divesLabel": "Inmersiones en este alquiler",
+    "payment": {
+      "heading": "Pago",
+      "cash": "Efectivo",
+      "cardMachine": "Terminal de pago",
+      "invoice": "Factura",
+      "tax": "Impuestos",
+      "total": "Importe total",
+      "scan": "Escanea para pagar con tarjeta",
+      "open": "Abrir página de pago"
+    }
   },
   "diver": {
     "rented": "Alquilado",

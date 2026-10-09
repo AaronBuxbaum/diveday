@@ -153,4 +153,20 @@ describe("a row is a diver, what they bought, and an amount", () => {
     const [row] = screen.getAllByRole("listitem");
     expect(row?.textContent).toBe("Bjorn Aasen$139.75");
   });
+
+  it("says how counter money was taken as a word, never a pill, and says nothing for an invoice", () => {
+    render(
+      <OrdersLedger
+        days={[
+          day({
+            rows: [orderRow(), orderRow({ id: "order-2", detail: null, method: "Cash" })],
+          }),
+        ]}
+      />,
+    );
+    const [invoiced, counter] = screen.getAllByRole("listitem");
+    expect(counter?.textContent).toBe("Bjorn AasenCash$139.75");
+    expect(invoiced?.textContent).not.toContain("Cash");
+    expect(screen.queryByText("Paid")).toBeNull();
+  });
 });

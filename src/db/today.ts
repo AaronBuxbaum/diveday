@@ -8,6 +8,7 @@ import {
   crewClashSailedDetailText,
   failedPhotoDeletionDetailText,
   gearDueBackDetailText,
+  gearDueBackSubjectText,
   gearNeverPickedUpDetailText,
   gearOverdueDetailText,
   gearServiceDueDetailText,
@@ -35,6 +36,7 @@ import {
   openOrderActionText,
   openOrdersActionText,
   openPrepListActionText,
+  openRentalsActionText,
   openReviewsActionText,
   openRollCallActionText,
   openStaffingActionText,
@@ -2904,21 +2906,29 @@ export async function getTodayWork(
       dueAt: localMidnight(first.reservedUntil, 1),
     });
   }
-  for (const rows of groupByPerson(dueBackGear)) {
-    const first = rows[0];
-    if (!first) continue;
+  // **One row for every return due today** (Aaron, 2026-10-09): a return is
+  // not a chase, so the people bringing gear back share a line, and the unit
+  // tags stay on the Rentals list the row opens. Overdue gear keeps a row per
+  // person above, because each of those is its own phone call.
+  const dueBackPeople = groupByPerson(dueBackGear).flatMap((rows) => rows.slice(0, 1));
+  const [firstDueBack] = dueBackPeople;
+  if (firstDueBack) {
     // Due by the end of the shop's own day: "now" all day, sharpening to
     // "imminent" as the evening runs out.
-    const dueAt = localMidnight(first.reservedUntil, 1);
+    const dueAt = localMidnight(firstDueBack.reservedUntil, 1);
     actions.push({
-      id: `gear-due-back:${first.personId}`,
+      id: "gear-due-back",
       kind: "gear_due_back",
       urgency: urgencyFor(dueAt, now),
-      subject: first.personName,
-      context: tripTitlesContext(rows, locale),
-      detail: gearDueBackDetailText(t, locale, { unitLabels: rows.map((row) => row.label) }),
-      actionLabel: openGearRegisterActionText(t),
-      href: `/shop/${shopSlug}/gear`,
+      subject: gearDueBackSubjectText(
+        t,
+        locale,
+        dueBackPeople.map((row) => row.personName),
+      ),
+      context: null,
+      detail: gearDueBackDetailText(t),
+      actionLabel: openRentalsActionText(t),
+      href: `/shop/${shopSlug}/gear?view=rentals`,
       dueAt,
     });
   }

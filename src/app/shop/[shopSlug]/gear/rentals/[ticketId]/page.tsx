@@ -11,6 +11,7 @@ import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { getCounterRentalTicket } from "@/db/gear-counter-rentals";
+import { getOrder } from "@/db/orders";
 import { gearItemKindLabel, gearPhaseLabel, gearReturnOutcomeLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -28,6 +29,7 @@ import {
   releaseCounterRentalAction,
   returnCounterRentalAction,
 } from "../actions";
+import { RentalTicketPayment } from "./_components/RentalTicketPayment";
 
 export const instant = true;
 
@@ -39,6 +41,11 @@ export const metadata: Metadata = {
 const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   rented: { tone: "success", key: "counterRentals.ticket.notice.rented" },
   "rented-invoiced": { tone: "success", key: "counterRentals.ticket.notice.rentedInvoiced" },
+  "rented-paid": { tone: "success", key: "counterRentals.ticket.notice.rentedPaid" },
+  "rented-not-recorded": {
+    tone: "warning",
+    key: "counterRentals.ticket.notice.rentedNotRecorded",
+  },
   "rented-not-invoiced": {
     tone: "warning",
     key: "counterRentals.ticket.notice.rentedNotInvoiced",
@@ -64,9 +71,10 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
  * The paper ends as the trip slip does (`RentalTicketReceipt`): the shop's
  * own rental terms when it has written any, and a "Received by" line the
  * person signs for the units (Aaron, 2026-10-08). A receipt for gear, never a
- * release — the one shop-wide waiver stays the only liability page (CR-015) —
- * and no money, because billing lives on the order. The screen links that
- * order, and the link is hidden in print with every act.
+ * release — the one shop-wide waiver stays the only liability page (CR-015).
+ * What was charged is read from the order the rental is linked to, on screen
+ * and on paper: the lines, the total, and whether it is paid, with a code to
+ * pay an open invoice by card on the spot (Aaron, 2026-10-09).
  *
  * Ungated beyond staff, like the rest of the register (H-06): handing gear
  * over is day work. Tenancy is the session's shop; another shop's id, or a
@@ -91,6 +99,7 @@ export default async function CounterRentalTicketPage({
   const t = staffTranslator(locale);
   const ticket = await getCounterRentalTicket(db, shop.id, ticketId);
   if (!ticket) notFound();
+  const billing = ticket.orderId ? await getOrder(db, shop.id, ticket.orderId) : null;
 
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
   const banner = noticeFromParam(notice, NOTICES);
@@ -219,6 +228,15 @@ export default async function CounterRentalTicketPage({
               </GearReturnPane>
             ) : null}
           </section>
+        ) : null}
+
+        {billing ? (
+          <RentalTicketPayment
+            order={billing.order}
+            lineItems={billing.lineItems}
+            locale={locale}
+            t={t}
+          />
         ) : null}
 
         <p className="mt-6 text-lg">

@@ -24,6 +24,7 @@ import {
   bookings,
   diveSites,
   importedPaymentHistory,
+  orders,
   type PaymentStatus,
   people,
   personRoles,
@@ -534,6 +535,37 @@ describe("getMonthlyReport", () => {
     const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
     expect(report.trips.find((t) => t.title === "Paid boat")).toMatchObject({ activeBookings: 1 });
     expect(report.trips.some((t) => t.title === "Cancelled-seat boat")).toBe(true);
+  });
+
+  it("counts an order paid at the counter in the month it was paid, and drops it once void", async () => {
+    // A counter rental belongs to no booking, so no departure names it: it is
+    // anchored to `paid_at` (ADR 20261009-counter-payments).
+    const { db, shop } = await seededShopContext();
+    const diver = await makePerson(db, shop.id, "Counter Cora");
+    const before = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+    const counterOrder = (paidAt: Date, amountPaidCents: number, status: "paid" | "void") => ({
+      shopId: shop.id,
+      personId: diver,
+      createdByPersonId: diver,
+      status,
+      collection: "cash" as const,
+      currency: "usd",
+      totalCents: 4_500,
+      amountPaidCents,
+      paidAt,
+      finalizedAt: paidAt,
+    });
+    await db
+      .insert(orders)
+      .values([
+        counterOrder(new Date("2026-06-12T15:00:00Z"), 4_500, "paid"),
+        counterOrder(new Date("2026-06-13T15:00:00Z"), 0, "void"),
+        counterOrder(new Date("2026-07-02T15:00:00Z"), 4_500, "paid"),
+      ]);
+
+    const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+    expect(report.revenueCents - before.revenueCents).toBe(4_500);
+    expect(report.taxCents).toBe(before.taxCents);
   });
 
   it("is scoped to the shop and reports zeroes for a month with no trips", async () => {

@@ -45,6 +45,10 @@
       "other": "Other"
     }
   },
+  "collection": {
+    "cash": "Cash",
+    "card_machine": "Card machine"
+  },
   "detail": {
     "fallbackDescription": "Order",
     "diverRecord": "Diver record",
@@ -83,6 +87,10 @@
     "disputeOpenNoDeadline": "The cardholder’s bank is disputing {amount}. Answer it in Stripe.",
     "refundAmountLabel": "Refund ({currency})",
     "refunding": "Refunding…",
+    "paidAtCounter": {
+      "cash": "Paid in cash {date}",
+      "card_machine": "Paid by card machine {date}"
+    },
     "notice": {
       "refreshed": "Status refreshed from Stripe.",
       "refreshFailed": "Couldn’t reach Stripe to refresh this order.",
@@ -95,6 +103,7 @@
       "refundInProgress": "A refund for this order is already going through. Give it a moment, then refresh. Don’t send it again.",
       "refundNeedsReconciliation": "Stripe already sent a refund for this order that we never finished recording. Check it against your Stripe dashboard before sending any more. This order is on the stuck payments list.",
       "notAuthorized": "Refunds are limited to owners and managers. Ask one of them to issue this refund.",
+      "voidNotAuthorized": "Voiding is limited to owners and managers.",
       "demoDisabled": "This is a demo order, so it can’t be changed.",
       "fallback": "Something changed on this order. The details below are current."
     }
