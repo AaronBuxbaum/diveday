@@ -179,5 +179,8 @@ certificate lowered under the seats an upcoming departure on the hull still sell
 certificate beside its existing refusal above the hull's `capacity`. Capacity and the certificate
 count the same people, everyone aboard but the crew. A row already over the limit keeps sailing,
 its manifest line and its danger-toned fleet row stand, and its next save must fix it. The booking
-transaction still reads only the departure's own `capacity`, and nothing here touches admission,
-readiness or the roll call.
+transaction is the ceiling that holds regardless: it sells at most the lower of the departure's
+`capacity` and the hull's certificate, read under the trip-row lock (`sellableCapacity`), and so do
+`restoreBooking`, `undoBookingNoShow` and the wait list's full/not-full answer. A copy and a series
+roll start the new departure at the certificate; "apply to the rest of the series" skips a date on
+a hull certified for fewer. Nothing here touches admission, readiness or the roll call.

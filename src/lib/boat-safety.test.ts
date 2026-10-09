@@ -17,6 +17,8 @@ import {
   passengersAboveCertificate,
   type SafetyKitUnit,
   safetyKitNotices,
+  seatsWithinCertificate,
+  sellableSeats,
 } from "./boat-safety";
 import type { GearItemKind } from "./gear";
 
@@ -466,14 +468,29 @@ describe("boatSeatsRefusal (H-107)", () => {
       boatSeatsRefusal({
         capacity: 10,
         certifiedPassengers: 10,
-        upcomingDepartureCapacities: [10, 12, 14, 8],
+        upcomingDepartures: [
+          { capacity: 10, on: "2026-10-10" },
+          { capacity: 12, on: "2026-10-11" },
+          { capacity: 14, on: "2026-10-12" },
+          { capacity: 8, on: "2026-10-13" },
+          { capacity: 11, on: "2026-10-14" },
+          { capacity: 11, on: "2026-10-15" },
+        ],
       }),
-    ).toEqual({ code: "departures_above_certificate", departures: 2, limit: 10 });
+    ).toEqual({
+      code: "departures_above_certificate",
+      departures: 4,
+      limit: 10,
+      firstDates: ["2026-10-11", "2026-10-12", "2026-10-14"],
+    });
     expect(
       boatSeatsRefusal({
         capacity: 10,
         certifiedPassengers: 10,
-        upcomingDepartureCapacities: [10, 8],
+        upcomingDepartures: [
+          { capacity: 10, on: "2026-10-10" },
+          { capacity: 8, on: "2026-10-11" },
+        ],
       }),
     ).toBeNull();
   });
@@ -483,8 +500,33 @@ describe("boatSeatsRefusal (H-107)", () => {
       boatSeatsRefusal({
         capacity: 14,
         certifiedPassengers: 10,
-        upcomingDepartureCapacities: [14],
+        upcomingDepartures: [{ capacity: 14, on: "2026-10-10" }],
       }),
     ).toMatchObject({ code: "seats_above_certificate" });
+  });
+});
+
+describe("sellableSeats / seatsWithinCertificate (H-107's point-of-sale ceiling)", () => {
+  it("caps a departure's seats at the certificate, and leaves them alone without one", () => {
+    expect(sellableSeats(14, 10)).toBe(10);
+    expect(sellableSeats(8, 10)).toBe(8);
+    expect(sellableSeats(10, 10)).toBe(10);
+    expect(sellableSeats(14, null)).toBe(14);
+    expect(sellableSeats(14, undefined)).toBe(14);
+  });
+
+  it("brings a divers-only limit down with the seats, never above them", () => {
+    expect(seatsWithinCertificate({ capacity: 14, diverCapacity: 12 }, 10)).toEqual({
+      capacity: 10,
+      diverCapacity: 10,
+    });
+    expect(seatsWithinCertificate({ capacity: 14, diverCapacity: 6 }, 10)).toEqual({
+      capacity: 10,
+      diverCapacity: 6,
+    });
+    expect(seatsWithinCertificate({ capacity: 14, diverCapacity: null }, null)).toEqual({
+      capacity: 14,
+      diverCapacity: null,
+    });
   });
 });

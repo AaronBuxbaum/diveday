@@ -284,23 +284,79 @@ export function passengersAboveCertificate(
  */
 export type BoatSeatsRefusal =
   | { code: "seats_above_certificate"; capacity: number; limit: number }
-  | { code: "departures_above_certificate"; departures: number; limit: number };
+  | {
+      code: "departures_above_certificate";
+      departures: number;
+      limit: number;
+      /** The first few of them, soonest first, so the refusal can name them. */
+      firstDates: string[];
+    };
+
+/** How many over-limit departures the refusal names by date. */
+export const NAMED_DEPARTURES = 3;
 
 export function boatSeatsRefusal(input: {
   capacity: number;
   certifiedPassengers: number | null;
-  /** The capacities of the hull's upcoming, live, scheduled departures. */
-  upcomingDepartureCapacities?: readonly number[];
+  /**
+   * The hull's upcoming, live, scheduled departures, soonest first: each
+   * one's seats and its shop-local date.
+   */
+  upcomingDepartures?: readonly { capacity: number; on: string }[];
 }): BoatSeatsRefusal | null {
   const limit = input.certifiedPassengers;
   if (limit === null) return null;
   if (passengersAboveCertificate(input.capacity, limit)) {
     return { code: "seats_above_certificate", capacity: input.capacity, limit };
   }
-  const departures = (input.upcomingDepartureCapacities ?? []).filter((seats) =>
-    passengersAboveCertificate(seats, limit),
-  ).length;
-  return departures > 0 ? { code: "departures_above_certificate", departures, limit } : null;
+  const over = (input.upcomingDepartures ?? []).filter((departure) =>
+    passengersAboveCertificate(departure.capacity, limit),
+  );
+  return over.length > 0
+    ? {
+        code: "departures_above_certificate",
+        departures: over.length,
+        limit,
+        firstDates: over.slice(0, NAMED_DEPARTURES).map((departure) => departure.on),
+      }
+    : null;
+}
+
+/**
+ * **The seats a departure may actually sell** (H-107): its own `capacity`,
+ * never more than its boat's certificate allows. Both count everyone aboard
+ * but crew, so they compare directly.
+ *
+ * This is the point-of-sale ceiling. The forms refuse a capacity above the
+ * certificate, but a departure can still carry one — written before H-107,
+ * copied, rolled from a series, reinstated, or moved onto a smaller hull — and
+ * the booking transaction reads this under the trip-row lock so none of those
+ * paths can sell seat certificate + 1. No boat, or no certificate recorded,
+ * means the capacity alone binds.
+ */
+export function sellableSeats(
+  capacity: number,
+  certifiedPassengers: number | null | undefined,
+): number {
+  return certifiedPassengers == null ? capacity : Math.min(capacity, certifiedPassengers);
+}
+
+/**
+ * A new departure's seats, lowered to its boat's certificate (H-107) — for the
+ * paths that write a departure from another one rather than from a form: a
+ * copy, and the nightly series roll. The source may predate H-107, or its
+ * template may be cancelled or past and never re-saved; the new row starts
+ * inside the limit instead of carrying the old number forward. A divers-only
+ * limit comes down with it, so it never passes the boat's.
+ */
+export function seatsWithinCertificate(
+  seats: { capacity: number; diverCapacity: number | null },
+  certifiedPassengers: number | null | undefined,
+): { capacity: number; diverCapacity: number | null } {
+  const capacity = sellableSeats(seats.capacity, certifiedPassengers);
+  const diverCapacity =
+    seats.diverCapacity === null ? null : Math.min(seats.diverCapacity, capacity);
+  return { capacity, diverCapacity };
 }
 
 /**

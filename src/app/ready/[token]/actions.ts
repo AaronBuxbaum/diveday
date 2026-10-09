@@ -503,20 +503,10 @@ export async function payFromReady(token: string) {
 }
 
 /**
- * Cancel the diver's own booking. Rate-limited harder than the rest of this
- * file — this is irreversible and, when paid, moves money. Cancellation and
- * refund stay the two independent steps the staff path uses (docs H-07): the
- * seat is freed by `selfCancelBooking` first, and a refund failure afterward
- * never re-opens it or blocks the cancellation the diver already sees.
- *
- * The move a diver cannot make here is a *move* — rescheduling is the shop's
- * (ADR 20260821-the-diver-may-release-their-own-seat).
- */
-/**
  * **"Running late"** (J3): the diver tells the shop from their own link. Not
  * refused on a held seat — it says nothing about the diver record, only that
  * whoever holds this seat is on the way. The write re-checks the window, so a
- * stale page tapped after check-in or after the boat left changes nothing.
+ * stale page tapped after check-in or after the boat sailed changes nothing.
  */
 export async function sayRunningLateAction(token: string) {
   const ctx = await contextFor(token);
@@ -533,6 +523,16 @@ export async function sayRunningLateAction(token: string) {
   revalidateAndRedirect(base(token));
 }
 
+/**
+ * Cancel the diver's own booking. Rate-limited harder than the rest of this
+ * file — this is irreversible and, when paid, moves money. Cancellation and
+ * refund stay the two independent steps the staff path uses (docs H-07): the
+ * seat is freed by `selfCancelBooking` first, and a refund failure afterward
+ * never re-opens it or blocks the cancellation the diver already sees.
+ *
+ * The move a diver cannot make here is a *move* — rescheduling is the shop's
+ * (ADR 20260821-the-diver-may-release-their-own-seat).
+ */
 export async function cancelMyBookingAction(token: string) {
   const ip = await clientIp();
   if (

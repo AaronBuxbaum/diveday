@@ -11,7 +11,7 @@ import { findOrCreatePerson } from "./people";
 import { bookings, people, shops, trips, tripWaitlistEntries } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { liveTrip } from "./trips-live";
-import { heldSeatCounts } from "./trips-queries";
+import { heldSeatCounts, sellableCapacity } from "./trips-queries";
 
 /**
  * Stamp a wait-list entry as invited, so the roster shows "Invited 2h ago" and
@@ -177,7 +177,11 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
     // A wait list is for a diver's seat, so "available" means a diver could
     // book one: a boat with room aboard but every diver's seat taken is still
     // full for this person (ADR 20261007-participant-types).
-    if (seatRefusal("diver", trip, await heldSeatCounts(tx, req.shopId, trip.id)) === null) {
+    // Measured against the certificate-capped seats, as the booking door is
+    // (H-107): an over-limit departure is full at its certificate.
+    const capacity = await sellableCapacity(tx, trip);
+    const held = await heldSeatCounts(tx, req.shopId, trip.id);
+    if (seatRefusal("diver", { ...trip, capacity }, held) === null) {
       return { ok: false, reason: "trip_available" };
     }
 

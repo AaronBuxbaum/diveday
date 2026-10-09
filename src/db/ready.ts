@@ -210,8 +210,8 @@ export type ReadyPageData = {
   canCancelBooking: boolean;
   /**
    * **"Running late"** (J3). `open` is `canSayRunningLate` for this seat now —
-   * booked, not checked in, inside the twelve hours before a scheduled
-   * departure that has not left — and `saidAt` is when the diver already said
+   * booked, not checked in, from the night-before brief until a scheduled
+   * departure has sailed — and `saidAt` is when the diver already said
    * so, on a seat still to arrive. The page draws the button while it is
    * open and nothing has been said, and the said line while it is open after.
    */

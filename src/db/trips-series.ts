@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, gt, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { passengersAboveCertificate, seatsWithinCertificate } from "@/lib/boat-safety";
 import {
   type CalendarDate,
   calendarDateInTimezone,
@@ -23,6 +24,7 @@ import { flushUrgentCrewNotices, recordCrewCalledOff } from "./crew-notices";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { queryAll } from "./query-helpers";
 import {
+  boats,
   bookings,
   rollCallEvents,
   shops,
@@ -43,6 +45,7 @@ import {
   validateDiveSites,
 } from "./trips-create";
 import { liveTrip } from "./trips-live";
+import { boatCertifiedPassengers } from "./trips-queries";
 
 /**
  * Recurring series: a `trip_series` row plus one fully-formed, independent trip
@@ -211,6 +214,14 @@ async function materializeWindow(
     template.trip.courseId ?? undefined,
   );
   if (!ok) return null;
+  // **Every rolled departure starts inside the certificate** (H-107). The
+  // template is whatever row the series last pointed at — it can be cancelled
+  // or past and never re-saved since the hull's certificate was recorded — so
+  // its capacity is lowered to the boat's limit here rather than copied blind.
+  const seats = seatsWithinCertificate(
+    { capacity: template.trip.capacity, diverCapacity: template.trip.diverCapacity },
+    await boatCertifiedPassengers(tx, series.shopId, template.trip.boatId),
+  );
 
   // `queryAll`, not `Promise.all`: the nightly roll materializes inside a
   // transaction, which is one pinned client. See `queryAll` in `src/db/query-helpers.ts`.
@@ -260,14 +271,14 @@ async function materializeWindow(
         description: template.trip.description ?? undefined,
         startsAt: first.startsAt,
         endsAt: last.endsAt,
-        capacity: template.trip.capacity,
+        capacity: seats.capacity,
         plannedDives: template.trip.plannedDives,
         priceCents: template.trip.priceCents,
         depositCents: template.trip.depositCents,
         // Every Saturday sells the same snorkel and ride-along seats.
         snorkelerPriceCents: template.trip.snorkelerPriceCents,
         riderPriceCents: template.trip.riderPriceCents,
-        diverCapacity: template.trip.diverCapacity,
+        diverCapacity: seats.diverCapacity,
         cancellationWindowHours: template.trip.cancellationWindowHours,
         isPrivate: template.trip.isPrivate,
         // The case this matters most for: a standing weekly self-guided charter
@@ -978,8 +989,9 @@ export type SeriesDetailApplyResult = { updated: number; skipped: number };
  * dive plan onto every future still-scheduled sibling; the per-instance date,
  * time, conditions, crew, roster, and status are deliberately left alone. A
  * sibling already carrying more divers than the new capacity is skipped rather
- * than stranding a booking, and the count is reported so staff can follow up.
- * Returns null when the source trip is not part of this series in this shop.
+ * than stranding a booking, and so is one sailing on a boat whose certificate
+ * is below the new capacity (H-107); the count is reported so staff can follow
+ * up. Returns null when the source trip is not part of this series in this shop.
  */
 export async function applyDetailsToFutureSeries(
   db: AppDb,
@@ -1016,8 +1028,14 @@ export async function applyDetailsToFutureSeries(
     }));
 
     const siblings = await tx
-      .select({ id: trips.id, diveSiteId: trips.diveSiteId, booked: count(bookings.id) })
+      .select({
+        id: trips.id,
+        diveSiteId: trips.diveSiteId,
+        certifiedPassengers: boats.certifiedPassengers,
+        booked: count(bookings.id),
+      })
       .from(trips)
+      .leftJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, trips.shopId)))
       .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
       .where(
         and(
@@ -1029,7 +1047,7 @@ export async function applyDetailsToFutureSeries(
           ne(trips.id, sourceTripId),
         ),
       )
-      .groupBy(trips.id);
+      .groupBy(trips.id, boats.id);
 
     // Same operational-history invariant updateTrip enforces for a single
     // trip (CR-006) — a bulk apply must not silently orphan a sibling's
@@ -1085,6 +1103,13 @@ export async function applyDetailsToFutureSeries(
     let skipped = 0;
     for (const sibling of siblings) {
       if (source.capacity < sibling.booked) {
+        skipped += 1;
+        continue;
+      }
+      // A later date can sail on another hull (H-107): the source's seats are
+      // not pushed onto a boat whose certificate is lower. Skipped like a
+      // sibling already fuller than the new number, and counted the same way.
+      if (passengersAboveCertificate(source.capacity, sibling.certifiedPassengers)) {
         skipped += 1;
         continue;
       }

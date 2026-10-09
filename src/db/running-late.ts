@@ -1,5 +1,6 @@
 import { and, asc, eq, gt, isNull, lte, ne } from "drizzle-orm";
 import { canSayRunningLate, RUNNING_LATE_LEAD_MS } from "@/lib/running-late";
+import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import type { AppDb } from "./client";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -12,7 +13,7 @@ import { liveTrip } from "./trips-live";
  *
  * - **Only an open seat.** `canSayRunningLate` (src/lib/running-late.ts):
  *   booked, not checked in, on a scheduled departure that leaves within the
- *   next twelve hours and has not left. Re-checked in the `where` clause, so a
+ *   next day and has not sailed (`hasSailed`). Re-checked in the `where` clause, so a
  *   check-in landing between the read and the write wins.
  * - **The first statement stands.** A second tap, or a provider redelivering
  *   the same reply, changes nothing: "said 7:42" stays the moment the diver
@@ -101,19 +102,34 @@ export async function markBookingRunningLate(
   db: AppDb,
   input: { shopId: string; bookingId: string; now: Date },
 ): Promise<RunningLateOutcome> {
-  const own = await stamp(db, input.shopId, input.bookingId, input.now);
+  return stampWithParty(db, input.shopId, input.bookingId, input.now);
+}
+
+/**
+ * One seat, then — when it is a party organizer's — the party's other seats
+ * (`partyLeadBookingId`). Every door that names a seat goes through here, so
+ * the `/ready` tap, a WhatsApp or email `LATE` and a texted `LATE` cover the
+ * same family the same way.
+ */
+async function stampWithParty(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  now: Date,
+): Promise<RunningLateOutcome> {
+  const own = await stamp(db, shopId, bookingId, now);
   if (own.status !== "marked") return own;
   const party = await db
     .select({ id: bookings.id })
     .from(bookings)
     .where(
       and(
-        eq(bookings.shopId, input.shopId),
-        eq(bookings.partyLeadBookingId, input.bookingId),
+        eq(bookings.shopId, shopId),
+        eq(bookings.partyLeadBookingId, bookingId),
         eq(bookings.status, "booked"),
       ),
     );
-  for (const seat of party) await stamp(db, input.shopId, seat.id, input.now);
+  for (const seat of party) await stamp(db, shopId, seat.id, now);
   return own;
 }
 
@@ -126,7 +142,8 @@ function openSeatsWhere(now: Date) {
     eq(bookings.status, "booked"),
     eq(trips.status, "scheduled"),
     liveTrip(),
-    gt(trips.startsAt, now),
+    // Not yet sailed: `hasSailed` is the scheduled time plus the buffer.
+    gt(trips.startsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
     lte(trips.startsAt, new Date(now.getTime() + RUNNING_LATE_LEAD_MS)),
   );
 }
@@ -136,7 +153,8 @@ function openSeatsWhere(now: Date) {
  * email). **The soonest open seat**, never an ambiguity refusal like `C`'s:
  * cancelling the wrong seat loses one, while "running late" on the morning's
  * first boat is what a diver typing it on the way to the dock means, and it
- * only ever adds a line to a list.
+ * only ever adds a line to a list. An organizer's reply covers the party they
+ * booked, as the `/ready` tap does.
  */
 export async function markPersonRunningLate(
   db: AppDb,
@@ -157,7 +175,7 @@ export async function markPersonRunningLate(
     .orderBy(asc(trips.startsAt))
     .limit(1);
   if (!next) return { status: "closed" };
-  return stamp(db, input.shopId, next.bookingId, input.now);
+  return stampWithParty(db, input.shopId, next.bookingId, input.now);
 }
 
 /**
@@ -192,7 +210,7 @@ export async function markPhoneRunningLate(
     .orderBy(asc(trips.startsAt))
     .limit(1);
   if (!next) return { status: "closed" };
-  const outcome = await stamp(db, next.shopId, next.bookingId, input.now);
+  const outcome = await stampWithParty(db, next.shopId, next.bookingId, input.now);
   // **Every seat on that boat under the same number**: a parent who booked
   // the family with one phone texts once for all of them. Same shop, same
   // departure, same exact digits — never a second boat.

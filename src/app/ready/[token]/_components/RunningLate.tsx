@@ -8,8 +8,8 @@ import { sayRunningLateAction } from "../actions";
 /**
  * **"Running late"** (J3): one tap that puts "Running late, said 7:42" on the
  * shop's arrivals list instead of a blank. Drawn only while the seat can say
- * it (`ReadyPageData.runningLate.open`: booked, not checked in, inside the
- * twelve hours before the boat leaves). Once said, the line says when, in the
+ * it (`ReadyPageData.runningLate.open`: booked, not checked in, from the
+ * night-before brief until the boat has sailed). Once said, the line says when, in the
  * shop's zone, which is the clock the crew reads it against. No confirm: it
  * releases nothing and gates nothing. First under the spine, because on the
  * morning it is open it is the one thing on the page with a clock on it.

@@ -36,8 +36,8 @@ SMS goes through AWS SNS from DiveDay's own account (ADR 20260802-sns-sms-adapte
 
 ## Amendment 2026-10-09 — LATE (J3)
 
-One word beyond the carriers' is read from the forwarded replies: `LATE`, which the night-before
-text teaches. It marks the soonest open seat held under exactly that E.164 number, in whichever
+One word beyond the carriers' is read from the forwarded replies: `LATE` (`TARDE` in Spanish),
+which the night-before brief's text teaches on a boat day. It marks the soonest open seat held under exactly that E.164 number, in whichever
 shop, as **running late** (`markPhoneRunningLate`, `src/db/running-late.ts`), at the time SNS
 signed. Nothing is answered over SMS and nothing about the booking reaches the sender, so the
 number stays one-way for conversation (20260907-two-way-inbox, decision 7); the statement gates

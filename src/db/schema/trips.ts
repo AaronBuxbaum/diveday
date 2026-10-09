@@ -176,9 +176,10 @@ export const boats = pgTable(
      * **A ceiling on what is sold** (H-107): a boat save is refused when
      * `capacity` passes it, or when it is lowered under the seats an upcoming
      * departure on this hull still sells, and a departure may not sell more
-     * seats than it (`boatSeatsRefusal`, `tripDetailsPatch`). Both numbers
+     * seats than it (`boatSeatsRefusal`, `tripDetailsPatch`), and the booking
+     * transaction never sells past it (`sellableCapacity`). Both numbers
      * count everyone aboard but the crew. A row saved over it before H-107
-     * keeps working until its next save; the fleet row says so in danger ink,
+     * keeps its row until its next save; the fleet row says so in danger ink,
      * and the manifest still says when the people booked aboard pass it
      * (`boatSafetyNotices`, `src/lib/boat-safety.ts`). Not a check constraint,
      * for exactly that reason: those rows must keep sailing.

@@ -1,4 +1,4 @@
-import type { StaffMessageKey } from "@/i18n/staff-messages";
+import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 
 /**
  * What the board says after a builder action, keyed by the `outcome.reason`
@@ -31,3 +31,22 @@ export const BUILDER_NOTICE_KEYS: Record<
     key: "schedule.notices.capacityAboveCertificate",
   },
 };
+
+/**
+ * The sentence for a builder notice. The certificate refusal names the limit
+ * when the redirect carried it (`?count=`, H-107), so the staffer knows the
+ * number to type; a URL without one, or with something else there, gets the
+ * plain sentence.
+ */
+export function builderNoticeMessage(
+  st: StaffTranslator,
+  key: StaffMessageKey,
+  count: string | undefined,
+): string {
+  if (key === "schedule.notices.capacityAboveCertificate" && count && /^\d{1,4}$/.test(count)) {
+    return st("schedule.notices.capacityAboveCertificateCount", {
+      count: Number.parseInt(count, 10),
+    });
+  }
+  return st(key);
+}

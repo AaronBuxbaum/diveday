@@ -23,7 +23,8 @@
     "addedNamed": "“{title}” ya está en el calendario.",
     "addedSeries": "“{title}” ya está en el calendario: {count, plural, one {# salida programada} other {# salidas programadas}}.",
     "capacityAboveBoat": "Esa capacidad supera lo que admite el barco asignado.",
-    "capacityAboveCertificate": "Esa capacidad supera el límite de pasajeros del certificado del barco."
+    "capacityAboveCertificate": "Esa capacidad supera el límite de pasajeros del certificado del barco.",
+    "capacityAboveCertificateCount": "{count, plural, one {El certificado del barco permite # pasajero. Elige una capacidad que no lo supere.} other {El certificado del barco permite # pasajeros. Elige una capacidad que no lo supere.}}"
   },
   "builder": {
     "ariaLabel": "Constructor del calendario",

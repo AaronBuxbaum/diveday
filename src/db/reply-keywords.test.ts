@@ -548,7 +548,9 @@ describe("handleInboundReplyKeyword — LATE (J3)", () => {
   });
 
   it("changes nothing when no departure is close enough to be late for", async () => {
-    const { db, shop, bookingId, now } = await context();
+    const { db, shop, trip, bookingId } = await context();
+    // Before the night-before brief: the window opens 24 hours ahead.
+    const now = new Date(trip.startsAt.getTime() - 25 * 60 * 60 * 1000);
     const provider = acceptingProvider();
     const messageId = await inbound(db, shop.id, "late", { receivedAt: now });
 

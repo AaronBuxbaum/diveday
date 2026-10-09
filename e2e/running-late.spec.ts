@@ -41,7 +41,7 @@ test("a diver taps Running late on their link, and the desk sees when they said 
 
   await page.getByRole("button", { name: "Running late" }).click();
   // The block's own line is the confirmation, in the shop's zone.
-  await expect(page.getByText(/^You told the shop you’re running late at \d/)).toBeVisible();
+  await expect(page.getByText(/^At \d.* you told the shop you’re running late\./)).toBeVisible();
   await expect(page.getByRole("button", { name: "Running late" })).toHaveCount(0);
 
   await signInAsOwner(page);
@@ -74,7 +74,7 @@ test("a LATE reply marks the seat, and the inbox says what the word meant", asyn
 
   // The diver's own link now says it was said, rather than offering it again.
   await page.reload();
-  await expect(page.getByText(/^You told the shop you’re running late at \d/)).toBeVisible();
+  await expect(page.getByText(/^At \d.* you told the shop you’re running late\./)).toBeVisible();
 
   await signInAsOwner(page);
   await page.goto(`/shop/blue-mantis?q=${encodeURIComponent(name)}`);

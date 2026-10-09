@@ -32,7 +32,10 @@ export function BoatPaperFields({
     <div
       className={`grid w-full grid-cols-1 gap-3 sm:basis-full sm:grid-cols-2 ${className}`.trim()}
     >
-      <Field label={t("boats.certifiedPassengersLabel")}>
+      <Field
+        label={t("boats.certifiedPassengersLabel")}
+        description={t("boats.certifiedPassengersHint")}
+      >
         <input
           name="certifiedPassengers"
           type="number"

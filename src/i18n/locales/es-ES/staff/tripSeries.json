@@ -32,7 +32,7 @@
   },
   "notices": {
     "seriesApplied": "Esos detalles ahora se aplican a todas las próximas fechas de esta serie.",
-    "seriesAppliedPartial": "Aplicado a las próximas fechas. Algunas ya tenían más buceadores que la nueva capacidad, o un recuento más allá del nuevo número de inmersiones, así que se dejaron como estaban.",
+    "seriesAppliedPartial": "Aplicado a las próximas fechas. Algunas ya tenían más buceadores que la nueva capacidad, salen en un barco certificado para menos, o tienen un recuento más allá del nuevo número de inmersiones, así que se dejaron como estaban.",
     "seriesCancelled": "Se canceló cada próxima fecha de esta serie. Reactiva cualquier fecha concreta desde su propia página de salida.",
     "seriesRepeating": "Esta salida vuelve a repetirse. Los próximos meses ya están de nuevo en el calendario.",
     "seriesCadenceSaved": "Guardado. El calendario sigue los nuevos días a partir de ahora.",

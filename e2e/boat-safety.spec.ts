@@ -57,7 +57,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   await boatRow(page, BOAT).getByLabel("Passenger limit on the boat’s certificate").fill("12");
   await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
   await expect(boatRow(page, BOAT).getByRole("alert")).toHaveText(
-    /upcoming departures? on this boat sells? more seats than the certificate’s 12\./,
+    /sells? more seats than the certificate’s 12[.,]/,
   );
 
   //    The certificate the boat really carries, and a lapsed insurance date.
