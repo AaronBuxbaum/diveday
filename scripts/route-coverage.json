@@ -394,7 +394,7 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/gear/[id]": {
-    "e2e": ["gear.spec.ts"],
+    "e2e": ["boat-safety.spec.ts", "gear.spec.ts"],
     "visual": ["gear-unit", "gear-unit-deleted"]
   },
   "/shop/[shopSlug]/gear/work-orders": {
@@ -558,7 +558,7 @@
     "a11y": []
   },
   "/shop/[shopSlug]/settings/boats": {
-    "e2e": ["settings-editor-pages.spec.ts"],
+    "e2e": ["boat-safety.spec.ts", "settings-editor-pages.spec.ts"],
     "visual": ["settings-boats"],
     "a11y": []
   },
@@ -686,6 +686,7 @@
     "e2e": [
       "a11y.spec.ts",
       "boat-loop.spec.ts",
+      "boat-safety.spec.ts",
       "boat-stage.spec.ts",
       "buddy-pairs.spec.ts",
       "depth-and-age-surfaces.spec.ts",
@@ -696,6 +697,7 @@
     ],
     "visual": [
       "manifest",
+      "manifest-boat-safety",
       "manifest-buddy-divergence",
       "manifest-buddy-teams-panel",
       "manifest-not-back-aboard",

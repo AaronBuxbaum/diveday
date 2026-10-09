@@ -18,7 +18,6 @@ import {
   FormStatus,
   textareaClassFor,
 } from "@/components/ui/form";
-import { listBoats } from "@/db/boats";
 import { type GearItemDetail, getGearItemDetail } from "@/db/gear";
 import {
   gearItemKindLabel,
@@ -30,7 +29,6 @@ import {
 } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { isSafetyKitKind } from "@/lib/boat-safety";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
@@ -48,15 +46,14 @@ import { uuidParam } from "@/lib/uuid";
 // The register's restore, not a second one: one act, one code path, and a tag
 // collision on the way back answers on the page that holds the fleet it hit.
 import { restoreGearItemAction } from "../actions";
+import { AboardBoatField, aboardText, gearUnitHull } from "./_components/AboardBoatField";
 import { GearItemNotes } from "./_components/GearItemNotes";
-import { PullForServiceButton } from "./_components/PullForServiceButton";
+import { StatusCard } from "./_components/StatusCard";
 import {
   checkOutGearReservationFromUnitAction,
-  deleteGearItemAction,
   recordGearServiceAction,
   releaseGearReservationAction,
   returnGearReservationFromUnitAction,
-  setGearItemStatusAction,
   updateGearItemAction,
 } from "./actions";
 
@@ -123,11 +120,9 @@ export default async function GearUnitPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(id)) notFound();
-  const [detail, fleet] = await Promise.all([
-    getGearItemDetail(db, shop.id, id),
-    shop.hasBoatDiving ? listBoats(db, shop.id) : Promise.resolve([]),
-  ]);
+  const detail = await getGearItemDetail(db, shop.id, id);
   if (!detail) notFound();
+  const hull = await gearUnitHull(db, shop, detail.item);
 
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -176,15 +171,10 @@ export default async function GearUnitPage({
       }
     : null;
 
-  // **Safety kit lives aboard a boat** (roadmap N-08): the hull is part of
-  // what the unit *is* to a crew ("the AED on Mantis I"), so it joins the
-  // masthead's identity line, and the details form offers it only for the
-  // safety-kit kinds of a shop that runs boats.
-  const offersBoat = isSafetyKitKind(item.kind) && fleet.length > 0;
-  const aboard = fleet.find((boat) => boat.id === item.aboardBoatId) ?? null;
+  // Safety kit names its hull ("the AED on Mantis I"): part of what it *is*.
   const identity = [
     gearItemKindLabel(t, item.kind),
-    aboard ? t("gear.unit.aboard", { boatName: aboard.name }) : null,
+    aboardText(hull, t),
     item.size,
     item.brandModel,
     item.serialNumber,
@@ -489,22 +479,7 @@ export default async function GearUnitPage({
                 <Field label={t("gear.form.purchasedOn")} hint={t("gear.form.optionalHint")}>
                   <DateField name="purchasedOn" defaultValue={item.purchasedOn ?? ""} />
                 </Field>
-                {offersBoat ? (
-                  <Field label={t("gear.form.aboard")}>
-                    <select
-                      name="aboardBoatId"
-                      className={controlClass}
-                      defaultValue={aboard?.id ?? ""}
-                    >
-                      <option value="">{t("gear.form.ashore")}</option>
-                      {fleet.map((boat) => (
-                        <option key={boat.id} value={boat.id}>
-                          {boat.name}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                ) : null}
+                <AboardBoatField hull={hull} t={t} />
                 <FieldActions>
                   <SubmitButton
                     pendingLabel={t("gear.unit.details.saving")}
@@ -798,80 +773,6 @@ function RestoreCard({
             {t("gear.unit.deleted.restore")}
           </SubmitButton>
         </form>
-      </div>
-    </SectionCard>
-  );
-}
-
-/**
- * The two ways a unit leaves the wall: off to the bench, or off the register
- * altogether. `held` is the reservation the delete would strand — present only
- * when the shop has just tried it and been refused, and worded from the page's
- * own read so the holder's name never rides in the URL.
- */
-function StatusCard({
-  item,
-  held,
-  t,
-}: {
-  item: GearItemDetail["item"];
-  held: { name: string; until: string } | null;
-  t: StaffTranslator;
-}) {
-  return (
-    <SectionCard
-      padding="lg"
-      title={t("gear.unit.status.title")}
-      description={
-        item.status === "needs_service" && item.serviceNote ? item.serviceNote : undefined
-      }
-    >
-      {/* **Not a column.** A `flex-col` stretched both controls to the card's
-          full width, which made "Delete unit" the widest, heaviest-looking
-          thing on the record — a unit's resting state is one act wide. The
-          delete sits beneath it at link weight, in danger ink, where it is
-          still one tap and no longer the section's loudest control. */}
-      <div>
-        {item.status === "in_service" ? (
-          <PullForServiceButton
-            gearItemId={item.id}
-            action={setGearItemStatusAction}
-            copy={{
-              trigger: t("gear.unit.status.pull"),
-              noteLabel: t("gear.unit.status.pullNote"),
-              noteHint: t("gear.form.optionalHint"),
-              notePlaceholder: t("gear.unit.status.pullNotePlaceholder"),
-              cancel: t("gear.unit.status.pullCancel"),
-              pending: t("gear.unit.status.pulling"),
-            }}
-          />
-        ) : (
-          <form action={setGearItemStatusAction}>
-            <input type="hidden" name="gearItemId" value={item.id} />
-            <input type="hidden" name="status" value="in_service" />
-            <SubmitButton
-              pendingLabel={t("gear.unit.status.reinstating")}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("gear.unit.status.reinstate")}
-            </SubmitButton>
-          </form>
-        )}
-
-        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4">
-          <form action={deleteGearItemAction}>
-            <input type="hidden" name="gearItemId" value={item.id} />
-            <SubmitButton
-              pendingLabel={t("gear.unit.status.deleting")}
-              className={buttonClass({ variant: "danger-ghost", size: "sm", flush: true })}
-            >
-              {t("gear.unit.status.delete")}
-            </SubmitButton>
-          </form>
-          <FormStatus>
-            {held ? t("gear.unit.status.deleteHeld", { name: held.name, until: held.until }) : null}
-          </FormStatus>
-        </div>
       </div>
     </SectionCard>
   );

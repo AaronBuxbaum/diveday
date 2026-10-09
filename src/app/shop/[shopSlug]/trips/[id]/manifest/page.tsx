@@ -12,7 +12,6 @@ import { PushOptIn, type PushOptInCopy } from "@/components/PushOptIn";
 import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { departureBoatId, departureBoatSafety } from "@/db/boat-safety";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
 import { listDeskEventsSince } from "@/db/desk-events";
 import { diveIntentTallyForTrip } from "@/db/dive-intent";
@@ -25,7 +24,6 @@ import type { ExecutedDive } from "@/db/schema";
 import { listShopPickedSpecies, listTripSightings } from "@/db/trip-sightings";
 import { latestTripStage } from "@/db/trip-stages";
 import { listTripDives } from "@/db/trips";
-import { boatSafetyNoticeText } from "@/i18n/boat-safety-labels";
 import { catchUpSentences } from "@/i18n/desk-event-labels";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
@@ -35,8 +33,6 @@ import { diverTranslator } from "@/i18n/messages";
 import { staffSoulsOnBoardLine } from "@/i18n/participant-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { boatSafetyNoticeIsUrgent } from "@/lib/boat-safety";
-import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
 import { groupCatchUp } from "@/lib/desk-events";
@@ -52,7 +48,6 @@ import {
   rollCallCheckpoints,
   rollCallRowState,
   splitBuddyTeamIds,
-  type TripManifest,
 } from "@/lib/manifests";
 import { webPushPublicKey } from "@/lib/notifications/web-push";
 import { serializeManifests } from "@/lib/offline-manifests";
@@ -67,20 +62,20 @@ import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { TripTabs } from "../_components/TripTabs";
 import { tripTabsCopy } from "../_components/trip-tabs-copy";
-import { BoatSafetyNotices } from "./_components/BoatSafetyNotices";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CrewRollCall } from "./_components/CrewRollCall";
+import { DepartureBoatSafety } from "./_components/DepartureBoatSafety";
 import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
 import { type ExecutedDiveLabels, ExecutedDiveLog } from "./_components/ExecutedDiveLog";
 import { ManifestMoreMenu } from "./_components/ManifestMoreMenu";
-import type { PersonTrailEntry } from "./_components/PersonSheet";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
 import {
   PrintedKitBlanks,
   PrintedMissingProcedure,
   printedBoatProcedureCopy,
 } from "./_components/PrintedBoatProcedure";
+import { personTrailIndex } from "./_components/person-trail";
 import { SeenGroup } from "./_components/SeenGroup";
 import { StageStrip } from "./_components/StageStrip";
 import { SummaryPanel } from "./_components/SummaryPanel";
@@ -218,63 +213,6 @@ function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): ExecutedD
   };
 }
 
-function personTrailLabel(
-  t: StaffTranslator,
-  checkpoint: RollCallCheckpoint,
-  state: PersonTrailEntry["state"],
-): string {
-  if (checkpoint === "departure") {
-    return state === "aboard"
-      ? t("manifest.personTrailBoardedAtDock")
-      : t("manifest.personTrailNotBoardedAtDock");
-  }
-  const dive = Number(checkpoint.slice("after_dive_".length));
-  return state === "aboard"
-    ? t("manifest.personTrailBackAfterDive", { dive })
-    : t("manifest.personTrailNotBackAfterDive", { dive });
-}
-
-/**
- * The person sheet's Today section is a small audit trail, not a second
- * current-state calculation. It reads the same latest record each checkpoint
- * already uses and omits carried-forward rows, so an ashore-at-the-dock result
- * appears once instead of being repeated after every dive.
- */
-function personTrailIndex(
-  manifests: readonly TripManifest[],
-  locale: string,
-  timezone: string,
-  t: StaffTranslator,
-): ReadonlyMap<string, readonly PersonTrailEntry[]> {
-  const index = new Map<string, PersonTrailEntry[]>();
-  const add = (
-    id: string,
-    checkpoint: RollCallCheckpoint,
-    rollCall: TripManifest["divers"][number]["rollCall"],
-  ) => {
-    if (!rollCall || rollCall.implied) return;
-    const state: PersonTrailEntry["state"] =
-      rollCall.state === "boarded" ? "aboard" : checkpoint === "departure" ? "ashore" : "notBack";
-    const entries = index.get(id) ?? [];
-    entries.push({
-      label: personTrailLabel(t, checkpoint, state),
-      detail: t("manifest.personTrailDetail", {
-        time: formatTime(rollCall.occurredAt, locale, timezone),
-        name: rollCall.recordedByName,
-      }),
-      state,
-      note: rollCall.note,
-    });
-    index.set(id, entries);
-  };
-
-  for (const snapshot of manifests) {
-    for (const diver of snapshot.divers) add(diver.bookingId, snapshot.checkpoint, diver.rollCall);
-    for (const member of snapshot.crew) add(member.id, snapshot.checkpoint, member.rollCall);
-  }
-  return index;
-}
-
 export default async function TripManifestPage({
   params,
   searchParams,
@@ -399,16 +337,6 @@ export default async function TripManifestPage({
   );
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
-
-  // **The boat itself** (roadmap N-08, N-10): everyone on the departure list
-  // against the hull's certificate, its papers, and the safety kit assigned
-  // aboard it. Counted off the departure checkpoint whichever one is open —
-  // the certificate is about who is booked to sail, not who is back yet.
-  const boatSafety = await departureBoatSafety(db, shop.id, {
-    boatId: await departureBoatId(db, shop.id, tripId),
-    passengersAboard: departureManifest.summary.totalDivers,
-    todayLocal: calendarDateInTimezone(nowDate(), shop.timezone),
-  });
 
   const plannedDiveCount = departureManifest.trip.plannedDives;
   const checkpoints = rollCallCheckpoints(plannedDiveCount);
@@ -866,16 +794,14 @@ export default async function TripManifestPage({
             the boat-check items are a "one tap away" concern). It used to stand
             fully expanded *above* the checkpoint switch, five full-width buttons
             between the masthead and the head count at every checkpoint. */}
-        {boatSafety ? (
-          <BoatSafetyNotices
-            idPrefix={idPrefix}
-            heading={t("boatSafety.heading", { boatName: boatSafety.boatName })}
-            lines={boatSafety.notices.map((notice) => ({
-              text: boatSafetyNoticeText(t, notice),
-              urgent: boatSafetyNoticeIsUrgent(notice),
-            }))}
-          />
-        ) : null}
+        <DepartureBoatSafety
+          db={db}
+          shop={shop}
+          tripId={tripId}
+          passengersAboard={departureManifest.summary.totalDivers}
+          idPrefix={idPrefix}
+          t={t}
+        />
         <PreDepartureCheckList
           idPrefix={idPrefix}
           action={boundPreDepartureCheckAction}

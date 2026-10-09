@@ -44,6 +44,6 @@
       "due": "{label}: la limpieza de O2 vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
       "expired": "{label}: la limpieza de O2 venció {days, plural, one {hace # día} other {hace # días}}"
     },
-    "offService": "{label}: retirado del barco para servicio"
+    "offService": "{label}: fuera del barco, en mantenimiento"
   }
 }

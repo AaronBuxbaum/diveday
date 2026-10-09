@@ -5690,6 +5690,28 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **What the boat carries, and what it holds** (roadmap N-08, N-10): the
+       * reef boat with one passenger past its certificate, its insurance three
+       * weeks out, flares expired and AED pads twelve days from expiry —
+       * through the opt-in `?boatSafety=1` trouble state, never seeded into
+       * blue-mantis. The panel above the boat check is the one surface that
+       * says all of it.
+       */
+      test(`a manifest names the boat's lapsing kit and papers (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?boatSafety=1");
+        expect(seeded.ok()).toBe(true);
+        const { boatSafety } = (await seeded.json()) as { boatSafety?: { tripId: string } };
+        if (!boatSafety) throw new Error("seed-trouble-states found no reef departure on a boat");
+        await page.goto(`/shop/blue-mantis/trips/${boatSafety.tripId}/manifest`);
+        await page.getByRole("heading", { level: 2, name: "Aboard Mantis I" }).waitFor();
+        await offlineCopySaved(page);
+        await capture(page, "manifest-boat-safety", scheme);
+      });
+
+      /**
        * **The same manifest with one seat released** (#1209,
        * `dive-domain-expert` review 20260911).
        *

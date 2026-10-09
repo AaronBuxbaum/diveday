@@ -169,5 +169,10 @@ const GATE_CEILING = 4;
 const CHROME_CEILING = 20;
 // 61 → 62: the bench's two Today rows, late and uncollected work orders, are
 // one statement (`listWorkOrdersNeedingAttention`, ADR 20261008-work-order-follow-up).
-const TODAY_CEILING = 62;
+// 62 → 65: one statement arrived with the layers this branch is stacked on
+// (measured at 63 without the read below); two are the owner row for expired
+// boat papers and safety kit (`listExpiredBoatSafety`, roadmap N-08): the
+// fleet's paper dates and the safety-kit units. Their clocks are a third read,
+// skipped while the register holds no safety kit, as the seeded shop's does not.
+const TODAY_CEILING = 65;
 const TRIP_CEILING = 49;
