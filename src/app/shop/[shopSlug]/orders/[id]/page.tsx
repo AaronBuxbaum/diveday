@@ -310,6 +310,7 @@ export default async function OrderDetailPage({
             order={order.order}
             personId={order.person.id}
             createdByName={order.createdBy?.fullName ?? null}
+            boughtOnline={order.boughtOnline}
             shopSlug={shopSlug}
             locale={locale}
             timezone={timezone}

@@ -31,6 +31,7 @@ export async function OrderMeta({
   order,
   personId,
   createdByName,
+  boughtOnline,
   shopSlug,
   locale,
   timezone,
@@ -39,6 +40,8 @@ export async function OrderMeta({
   order: { id: string; shopId: string; createdAt: Date };
   personId: string;
   createdByName: string | null;
+  /** The diver bought it on the shop's public pages; nobody on the staff raised it. */
+  boughtOnline: boolean;
   shopSlug: string;
   locale: string;
   timezone: string;
@@ -49,7 +52,11 @@ export async function OrderMeta({
   return (
     <p className="text-sm text-muted">
       {t("orders.detail.raisedOn", { date: formatShortDate(order.createdAt, locale, timezone) })}
-      {createdByName ? ` · ${t("orders.detail.createdBy", { name: createdByName })}` : ""}
+      {boughtOnline
+        ? ` · ${t("orders.detail.boughtOnline")}`
+        : createdByName
+          ? ` · ${t("orders.detail.createdBy", { name: createdByName })}`
+          : ""}
       {" · "}
       <Link href={shopPath(shopSlug, "divers", personId)} className={linkClass}>
         {t("orders.detail.diverRecord")}

@@ -13,6 +13,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { isStaff } from "@/lib/authz";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { packageOnSale } from "@/lib/dive-packages";
@@ -55,6 +56,7 @@ import {
   orders,
   paymentOperationIntents,
   people,
+  personRoles,
   trips,
 } from "./schema";
 import {
@@ -194,7 +196,39 @@ type IssueOrderOptions = {
    * the name the shop has on file for them.
    */
   customerName?: string;
+  /**
+   * The address to put on the Stripe customer, when the order's person holds
+   * none: a public purchase recorded on a fresh person because the typed email
+   * belongs to someone it may not be attached to (`createDiverPackageOrder`).
+   */
+  customerEmail?: string;
 };
+
+/**
+ * Where the invoice's tax is worked out from, or null when the shop charges tax
+ * and there is nowhere honest to work it out from. A demo shop with no usable
+ * address bills itself; a real one is refused, because guessing a customer's
+ * location computes the wrong jurisdiction's tax and presents it as fact
+ * (`demoShopBillingAddress`).
+ *
+ * Keyed on *usable*, not on merely present: the staff form posts all six
+ * fields on every submit, so an untouched tax fieldset arrives as an object
+ * full of empty strings rather than as `undefined`. A presence check would see
+ * that object, skip the fallback, and refuse the demo's own invoice — which is
+ * exactly what it did.
+ */
+async function invoiceTaxBasis(
+  db: DbExecutor,
+  shopId: string,
+  supplied: InvoiceCustomerAddress | undefined,
+): Promise<{ taxEnabled: boolean; customerAddress: InvoiceCustomerAddress | undefined } | null> {
+  const taxEnabled = await getShopTaxEnabled(db, shopId);
+  const usable = isUsableInvoiceCustomerAddress(supplied) ? supplied : undefined;
+  const customerAddress =
+    usable ?? (taxEnabled ? ((await demoShopBillingAddress(db, shopId)) ?? undefined) : undefined);
+  if (taxEnabled && !isUsableInvoiceCustomerAddress(customerAddress)) return null;
+  return { taxEnabled, customerAddress };
+}
 
 /**
  * Everything `createOrder` does after its authorization gate. Private on
@@ -220,25 +254,9 @@ async function issueOrder(
   // can never disagree — and snapshotted onto the order, which is evidence of
   // what was billed and must survive a later change to the shop setting.
   const currency = await getShopCurrency(db, input.shopId);
-  const taxEnabled = await getShopTaxEnabled(db, input.shopId);
-  // A demo shop with no usable address bills itself; a real one is still
-  // refused, because guessing a customer's location computes the wrong
-  // jurisdiction's tax and presents it as fact (`demoShopBillingAddress`).
-  //
-  // Keyed on *usable*, not on merely present: the staff form posts all six
-  // fields on every submit, so an untouched tax fieldset arrives here as an
-  // object full of empty strings rather than as `undefined`. A presence check
-  // would see that object, skip the fallback, and refuse the demo's own
-  // invoice — which is exactly what it did.
-  const supplied = isUsableInvoiceCustomerAddress(input.customerAddress)
-    ? input.customerAddress
-    : undefined;
-  const customerAddress =
-    supplied ??
-    (taxEnabled ? ((await demoShopBillingAddress(db, input.shopId)) ?? undefined) : undefined);
-  if (taxEnabled && !isUsableInvoiceCustomerAddress(customerAddress)) {
-    return { ok: false, reason: "tax_location_required" };
-  }
+  const taxBasis = await invoiceTaxBasis(db, input.shopId, input.customerAddress);
+  if (!taxBasis) return { ok: false, reason: "tax_location_required" };
+  const { taxEnabled, customerAddress } = taxBasis;
   const maxUnitAmountCents = maxLineItemUnitAmountCents(currency);
   if (!input.lineItems.every((item) => lineItemIsValid(item, maxUnitAmountCents))) {
     return { ok: false, reason: "invalid" };
@@ -253,7 +271,8 @@ async function issueOrder(
     .from(people)
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1);
-  if (!customer?.email) return { ok: false, reason: "invalid" };
+  const customerEmail = customer?.email ?? options.customerEmail;
+  if (!customer || !customerEmail) return { ok: false, reason: "invalid" };
 
   if (input.bookingId) {
     // Bound to the invoiced person, not just the shop: when Stripe later
@@ -286,7 +305,7 @@ async function issueOrder(
 
   const result = await invoicing.createInvoice({
     stripeAccountId,
-    customerEmail: customer.email,
+    customerEmail,
     customerName: options.customerName ?? customer.fullName,
     currency,
     taxEnabled,
@@ -409,6 +428,48 @@ export type DiverPackageOrderOutcome =
     };
 
 /**
+ * Who a public package purchase is recorded against.
+ *
+ * Anyone can type any email into a public form, so the address alone never
+ * attaches the order to the person who holds it. It attaches only when the
+ * typed name matches the one on file and that person is a plain diver. A staff
+ * member's record, or a name that does not match, gets a fresh diver record
+ * under the typed name instead, holding no email (the shop already has a
+ * record at that address), and the desk merges the two if they are one
+ * person. Stripe still bills the typed address and name.
+ */
+async function publicBuyer(
+  db: AppDb,
+  input: { shopId: string; fullName: string; email: string },
+): Promise<{ personId: string; attached: boolean }> {
+  const found = await findOrCreatePerson(db, {
+    shopId: input.shopId,
+    fullName: input.fullName,
+    email: input.email,
+  });
+  if (found.created) return { personId: found.person.id, attached: true };
+  if (found.nameMatches) {
+    const roles = await db
+      .select({ role: personRoles.role })
+      .from(personRoles)
+      .where(eq(personRoles.personId, found.person.id));
+    if (!isStaff(roles.map((row) => row.role))) {
+      return { personId: found.person.id, attached: true };
+    }
+  }
+  const personId = await db.transaction(async (tx) => {
+    const [fresh] = await tx
+      .insert(people)
+      .values({ shopId: input.shopId, fullName: input.fullName, email: null })
+      .returning({ id: people.id });
+    if (!fresh) throw new Error("publicBuyer: insert returned no row");
+    await tx.insert(personRoles).values({ personId: fresh.id, role: "diver" });
+    return fresh.id;
+  });
+  return { personId, attached: false };
+}
+
+/**
  * A diver buying one dive package for themselves from the shop's public pages
  * (no staff session). The invoice is raised on the shop's connected account
  * exactly as a staff-raised one is, so `invoice.paid` reaches the same
@@ -456,17 +517,20 @@ export async function createDiverPackageOrder(
     return { ok: false, reason: "not_connected" };
   }
 
-  const { person } = await findOrCreatePerson(db, {
-    shopId: input.shopId,
-    fullName: input.fullName,
-    email: input.email,
-  });
+  // Before a person row exists too: a refusal must leave nothing behind.
+  if (!(await invoiceTaxBasis(db, input.shopId, undefined))) {
+    return { ok: false, reason: "tax_location_required" };
+  }
+
+  const buyer = await publicBuyer(db, input);
   const outcome = await issueOrder(
     db,
     {
       shopId: input.shopId,
-      personId: person.id,
-      createdByPersonId: person.id,
+      personId: buyer.personId,
+      // Nobody on the staff raised it. The diver stands as its own creator,
+      // which the order page reads back as "bought online" (`getOrder`).
+      createdByPersonId: buyer.personId,
       lineItems: [
         {
           kind: "dive_package",
@@ -478,7 +542,12 @@ export async function createDiverPackageOrder(
       ],
     },
     invoicing,
-    { sendEmail: false, daysUntilDue: 1, customerName: input.fullName },
+    {
+      sendEmail: false,
+      daysUntilDue: 1,
+      customerName: input.fullName,
+      ...(buyer.attached ? {} : { customerEmail: input.email }),
+    },
   );
   if (outcome.ok) return outcome;
   return {
@@ -1013,7 +1082,19 @@ export async function getOrder(db: DbExecutor, shopId: string, orderId: string) 
     .from(people)
     .where(and(eq(people.id, row.order.createdByPersonId), eq(people.shopId, shopId)))
     .limit(1);
-  return { ...row, lineItems, createdBy: createdBy ?? null };
+  // A diver who bought on the shop's public pages stands as their own order's
+  // creator; "by <their name>" would read as a staffer having raised it. Every
+  // staff-raised order passed `canPersonManageOrders`, so a creator who is the
+  // customer and holds no staff role is the public purchase.
+  const creatorRoles =
+    row.order.createdByPersonId === row.order.personId
+      ? await db
+          .select({ role: personRoles.role })
+          .from(personRoles)
+          .where(eq(personRoles.personId, row.order.createdByPersonId))
+      : null;
+  const boughtOnline = creatorRoles !== null && !isStaff(creatorRoles.map((r) => r.role));
+  return { ...row, lineItems, createdBy: createdBy ?? null, boughtOnline };
 }
 
 /**
