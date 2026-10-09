@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { stripeKeySourceFromEnvironment } from "@/db/stripe-accounts";
+import { stripeKeySourceFromEnvironment } from "@/db/stripe-key-source";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 

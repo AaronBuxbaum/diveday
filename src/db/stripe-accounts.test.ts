@@ -12,10 +12,10 @@ import {
   setShopStripeAccountStatus,
   stripeAccountHolder,
   stripeCurrencyMismatch,
-  stripeKeySourceFromEnvironment,
   syncDemoStripeAccount,
   upsertShopStripeAccount,
 } from "./stripe-accounts";
+import { stripeKeySourceFromEnvironment } from "./stripe-key-source";
 
 async function shopContext() {
   return seededShopContext();

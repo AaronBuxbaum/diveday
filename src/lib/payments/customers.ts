@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { stripeKeySourceFromEnvironment } from "@/db/stripe-accounts";
+import { stripeKeySourceFromEnvironment } from "@/db/stripe-key-source";
 import { ERASURE_FAILURE_DETAIL } from "./erasure-failure";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 
