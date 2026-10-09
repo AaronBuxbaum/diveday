@@ -400,6 +400,65 @@ export async function listDepartureRollCallByTrip(
 }
 
 /**
+ * **Who the crew have counted onto the boat at any checkpoint**, by trip: the
+ * bookings whose standing result at the departure checkpoint *or* at any
+ * after-dive checkpoint is `boarded` (issue #2142).
+ *
+ * A diver picked up at the second site, or who rode out on a chase boat, is
+ * first recorded `boarded` at `after_dive_1`; their dock result is empty or
+ * `not_boarded`. Read from the dock alone, they were never aboard, and Today
+ * dropped the "Aboard" row of a diver on a medical hold while they were in the
+ * water. This is the one answer to "is this person on the boat" for that row.
+ *
+ * - **Newest event per checkpoint wins**, and a newest `cleared` drops that
+ *   checkpoint out — the same supersession every roll-call reader here applies.
+ * - **Only `boarded` counts.** An after-dive `not_boarded` is the missing-diver
+ *   row's word, never "aboard"; a dock `not_boarded` is "never left".
+ * - **A cancelled booking is nobody**, the guard the departure reader carries.
+ *
+ * One grouped query for the departures asked about, never one per booking.
+ */
+export async function listBoardedAtAnyCheckpointByTrip(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Map<string, Set<string>>> {
+  const byTrip = new Map<string, Set<string>>();
+  if (tripIds.length === 0) return byTrip;
+  const rows = await db
+    .select({
+      tripId: rollCallEvents.tripId,
+      bookingId: rollCallEvents.bookingId,
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
+    })
+    .from(rollCallEvents)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
+    )
+    .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, [...tripIds])))
+    .orderBy(
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
+    );
+  // Newest first, so the first row per booking and checkpoint is that
+  // checkpoint's standing result.
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const key = `${row.bookingId}\u0000${row.checkpoint}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (row.status !== "boarded") continue;
+    const aboard = byTrip.get(row.tripId) ?? new Set<string>();
+    aboard.add(row.bookingId);
+    byTrip.set(row.tripId, aboard);
+  }
+  return byTrip;
+}
+
+/**
  * **Every seat the crew have spoken for at an after-dive checkpoint**, by trip.
  *
  * The departure reader above is pinned to the dock on purpose, and its docblock
