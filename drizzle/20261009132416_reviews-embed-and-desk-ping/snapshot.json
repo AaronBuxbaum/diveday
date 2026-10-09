@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "17647433-023c-44de-97cb-28504c6ddaf1",
+  "id": "82ef0c10-1474-40df-8d69-b157f7f48b55",
   "prevIds": [
-    "f6e5bd88-9744-4fa2-96c9-f44dda4b3b0e"
+    "d69ac778-bdfd-46cf-aae3-f74ab86cf9fa"
   ],
   "ddl": [
     {
@@ -2678,6 +2678,19 @@
       "generated": null,
       "identity": null,
       "name": "subject_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "activity_events"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "order_id",
       "entityType": "columns",
       "schema": "public",
       "table": "activity_events"
@@ -23337,6 +23350,41 @@
           "opclass": null
         },
         {
+          "value": "occurred_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "seq",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "activity_events_shop_occurred_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "activity_events"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
           "value": "person_id",
           "isExpression": false,
           "asc": true,
@@ -31180,6 +31228,23 @@
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "name": "activity_events_subject_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "activity_events"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "order_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "orders",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "name": "activity_events_order_id_orders_id_fkey",
       "entityType": "fks",
       "schema": "public",
       "table": "activity_events"
