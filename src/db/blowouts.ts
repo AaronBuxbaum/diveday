@@ -11,6 +11,8 @@ import {
   lte,
   ne,
   notInArray,
+  type SQL,
+  type SQLWrapper,
   sql,
 } from "drizzle-orm";
 import {
@@ -19,6 +21,7 @@ import {
   qualifyingAlternatives,
 } from "@/lib/blowout";
 import { nowDate } from "@/lib/clock";
+import { departureUnderway } from "@/lib/day-blowout";
 import { log } from "@/lib/log";
 import {
   type Notification,
@@ -28,9 +31,9 @@ import {
 } from "@/lib/notifications";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
-import { hasSailed } from "@/lib/trips";
 import { releasePackageCoverageForBooking } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
+import { flushUrgentCrewNotices } from "./crew-notices";
 import { publishManifestEvent } from "./manifest-events";
 import { sendAndRecordNotification } from "./notifications";
 import { paymentsByBooking } from "./payments";
@@ -43,8 +46,11 @@ import {
   certifications,
   nitroxCertifications,
   people,
+  rollCallCrewEvents,
+  rollCallEvents,
   shops,
   specialtyCertifications,
+  tripAssignments,
   tripBlowoutDivers,
   tripBlowouts,
   trips,
@@ -95,7 +101,15 @@ export type CallBlowoutOutcome =
       failed: number;
       noEmail: number;
     }
-  | { ok: false; reason: "not_found" | "trip_departed" };
+  | {
+      ok: false;
+      /**
+       * `trip_departed`: underway — past its start time or boarding begun
+       * (`departureUnderway`). `failed`: a day call's setup for this departure
+       * threw; it was not cancelled (`callDayBlowout`).
+       */
+      reason: "not_found" | "trip_departed" | "failed";
+    };
 
 export type CallBlowoutInput = {
   shopId: string;
@@ -115,7 +129,17 @@ export async function callTripBlowout(
   const now = input.now ?? nowDate();
   const setup = await setUpTripBlowout(db, input, now);
   if (!setup.ok) return setup;
-  return finishTripBlowout(db, input, setup, now);
+  const outcome = await finishTripBlowout(db, input, setup, now);
+  // Its crew hear it is off now (ADR 20261009-crew-hear-about-their-boats).
+  await flushUrgentCrewNotices(db, { shopId: input.shopId, tripIds: [input.tripId], now });
+  return outcome;
+}
+
+/** Whether anybody, diver or crew, has a roll-call or boarding event on this trip. */
+function rollCallStartedOn(tripId: SQLWrapper | string): SQL<boolean> {
+  return sql<boolean>`(exists (select 1 from ${rollCallEvents} where ${rollCallEvents.tripId} = ${tripId}) or exists (select 1 from ${rollCallCrewEvents} where ${rollCallCrewEvents.tripId} = ${tripId}))`.mapWith(
+    Boolean,
+  );
 }
 
 type BlowoutSetup = Extract<Awaited<ReturnType<typeof setUpTripBlowout>>, { ok: true }>;
@@ -140,15 +164,33 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
       .where(and(eq(tripBlowouts.tripId, input.tripId), eq(tripBlowouts.shopId, input.shopId)))
       .limit(1);
 
-    // A departed trip has nothing to cancel — the boat sailed or didn't. But
-    // an *existing* cascade may still be resumed after departure time: the
-    // messages are about a cancellation that already happened.
-    if (!existing && hasSailed(trip.startsAt, now)) {
-      return { ok: false as const, reason: "trip_departed" as const };
+    // **A boat that may be on the water is never called off** (dive-domain
+    // review, 2026-10-09): from its start time, or from the first boarding or
+    // roll-call event, it is underway (`departureUnderway`) — cancelling it then
+    // would hand roll call a cancelled trip with people aboard. An *existing*
+    // cascade may still be resumed afterwards: its messages are about a
+    // cancellation that already happened.
+    if (!existing) {
+      const [started] = await tx
+        // The id as a value, not the column: in a single-table select the
+        // column renders unqualified and would bind inside the subquery.
+        .select({ started: rollCallStartedOn(trip.id) })
+        .from(trips)
+        .where(eq(trips.id, trip.id));
+      if (
+        departureUnderway(
+          { startsAt: trip.startsAt, rollCallStarted: Boolean(started?.started) },
+          now,
+        )
+      ) {
+        return { ok: false as const, reason: "trip_departed" as const };
+      }
     }
 
     if (trip.status === "scheduled") {
-      await setTripStatus(tx, input.shopId, input.tripId, "cancelled");
+      await setTripStatus(tx, input.shopId, input.tripId, "cancelled", now, {
+        actorPersonId: input.calledByPersonId,
+      });
     }
 
     let blowoutId = existing?.id;
@@ -255,8 +297,14 @@ export type DayBlowoutResult = { tripId: string; outcome: CallBlowoutOutcome };
  * can never behave differently from five calls in a row. What it adds is the
  * order: **every departure is set up (canceled) before any message is
  * written**, so no diver on the 08:00 boat is offered the 10:30 one that the
- * same call is about to cancel. A departure that cannot be called (already
- * gone, not this shop's) is answered for and the others go ahead.
+ * same call is about to cancel. A departure that cannot be called (underway,
+ * not this shop's) is answered for and the others go ahead.
+ *
+ * **Nothing set up is ever stranded** (security review M1): each departure's
+ * setup and each one's send run in their own `try`, so one that throws is
+ * answered `failed` and every departure that *was* canceled still has its
+ * refunds and messages worked. A send that throws part-way leaves its rows
+ * `pending`/`failed` for the cascade's own resume, which the day page shows.
  */
 export async function callDayBlowout(
   db: AppDb,
@@ -264,20 +312,58 @@ export async function callDayBlowout(
 ): Promise<DayBlowoutResult[]> {
   const now = input.now ?? nowDate();
   const tripIds = [...new Set(input.tripIds)];
-  const setups: { tripId: string; setup: Awaited<ReturnType<typeof setUpTripBlowout>> }[] = [];
+  const setups: { tripId: string; setup: Awaited<ReturnType<typeof setUpTripBlowout>> | null }[] =
+    [];
   for (const tripId of tripIds) {
-    setups.push({ tripId, setup: await setUpTripBlowout(db, { ...input, tripId }, now) });
+    try {
+      setups.push({ tripId, setup: await setUpTripBlowout(db, { ...input, tripId }, now) });
+    } catch (error) {
+      log("blowout.day_setup_failed", "error", {
+        tripId,
+        errorCode: error instanceof Error ? error.name : "unknown_error",
+      });
+      setups.push({ tripId, setup: null });
+    }
   }
-  const called = setups.flatMap((row) => (row.setup.ok ? [row.tripId] : []));
+  const called = setups.flatMap((row) => (row.setup?.ok ? [row.tripId] : []));
   const results: DayBlowoutResult[] = [];
   for (const { tripId, setup } of setups) {
-    results.push({
-      tripId,
-      outcome: setup.ok
-        ? await finishTripBlowout(db, { ...input, tripId }, setup, now, called)
-        : setup,
-    });
+    if (!setup) {
+      results.push({ tripId, outcome: { ok: false, reason: "failed" } });
+      continue;
+    }
+    if (!setup.ok) {
+      results.push({ tripId, outcome: setup });
+      continue;
+    }
+    try {
+      results.push({
+        tripId,
+        outcome: await finishTripBlowout(db, { ...input, tripId }, setup, now, called),
+      });
+    } catch (error) {
+      // Canceled and recorded; its unsent rows are the cascade's to resume.
+      log("blowout.day_finish_failed", "error", {
+        tripId,
+        errorCode: error instanceof Error ? error.name : "unknown_error",
+      });
+      results.push({
+        tripId,
+        outcome: {
+          ok: true,
+          blowoutId: setup.blowoutId,
+          resumed: setup.resumed,
+          total: 0,
+          sent: 0,
+          queued: 0,
+          failed: 0,
+          noEmail: 0,
+        },
+      });
+    }
   }
+  // The crews of every boat called off hear it now, in one message each.
+  await flushUrgentCrewNotices(db, { shopId: input.shopId, tripIds: called, now });
   return results;
 }
 
@@ -291,6 +377,12 @@ export type DayBlowoutDepartureRow = {
   /** Seats held by anybody (divers, snorkelers, riders), canceled ones excluded. */
   booked: number;
   calledOff: boolean;
+  /** Anybody has a boarding or roll-call event on it: it is underway. */
+  rollCallStarted: boolean;
+  /** A called departure's diver messages still pending, sending or failed: resume it. */
+  unsent: number;
+  /** Who is crewing it, by name. */
+  crew: string[];
 };
 
 /** Every live departure leaving inside `[from, to)`, with who is on it. */
@@ -311,9 +403,21 @@ export async function listDayBlowoutDepartures(
         sql<boolean>`exists (select 1 from ${tripBlowouts} where ${tripBlowouts.tripId} = ${trips.id} and ${tripBlowouts.shopId} = ${shopId})`.mapWith(
           Boolean,
         ),
+      rollCallStarted: rollCallStartedOn(trips.id),
+      unsent:
+        sql<number>`(select count(*) from ${tripBlowoutDivers} inner join ${tripBlowouts} on ${tripBlowouts.id} = ${tripBlowoutDivers.blowoutId} where ${tripBlowouts.tripId} = ${trips.id} and ${tripBlowouts.shopId} = ${shopId} and ${tripBlowoutDivers.messageStatus} in ('pending', 'sending', 'failed'))`.mapWith(
+          Number,
+        ),
     })
     .from(trips)
-    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .leftJoin(
+      bookings,
+      and(
+        eq(bookings.tripId, trips.id),
+        eq(bookings.shopId, shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
     .where(
       and(
         liveTrip(),
@@ -324,7 +428,25 @@ export async function listDayBlowoutDepartures(
     )
     .groupBy(trips.id)
     .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
-  return rows;
+  if (rows.length === 0) return [];
+  const crewRows = await db
+    .select({ tripId: tripAssignments.tripId, fullName: people.fullName })
+    .from(tripAssignments)
+    .innerJoin(people, eq(people.id, tripAssignments.personId))
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        inArray(
+          tripAssignments.tripId,
+          rows.map((row) => row.id),
+        ),
+      ),
+    )
+    .orderBy(asc(people.fullName), asc(people.id));
+  return rows.map((row) => ({
+    ...row,
+    crew: crewRows.filter((crew) => crew.tripId === row.id).map((crew) => crew.fullName),
+  }));
 }
 
 /** One diver's cert evidence at this shop — the same rows the booking gate reads. */

@@ -1,5 +1,4 @@
-import { hasSailed } from "./trips";
-import { utcToWallTime } from "./zoned";
+import { addCalendarDays, utcToWallTime, wallTimeToUtc } from "./zoned";
 
 /**
  * **One weather call for a whole morning or day** (ADR
@@ -16,10 +15,14 @@ import { utcToWallTime } from "./zoned";
  * Framework-free and clock-free: the caller passes `now` and the shop's zone.
  */
 
-/** A departure leaving before this local hour is a "morning" one. */
+/** A departure leaving before this local hour is a "before noon" one. */
 export const MORNING_ENDS_HOUR = 12;
 
-/** The presets the day page offers; a staffer can still tick any selection. */
+/**
+ * The presets the day page offers; a staffer can still select any departures.
+ * The page opens with **none** selected (dive-domain review, 2026-10-09): a
+ * call that cancels boats is chosen, never accepted by default.
+ */
 export const DAY_BLOWOUT_PICKS = ["all", "morning"] as const;
 export type DayBlowoutPick = (typeof DAY_BLOWOUT_PICKS)[number];
 
@@ -34,16 +37,32 @@ export type DayBlowoutDeparture = {
   status: "scheduled" | "cancelled";
   /** A blow-out was already called on it; its record is the place to work it. */
   calledOff: boolean;
+  /** Anybody — diver or crew — has a roll-call or boarding event on it. */
+  rollCallStarted: boolean;
 };
 
-/** Why a departure of the day cannot be ticked, or null when it can. */
-export type DayBlowoutBlock = "called" | "cancelled" | "departed";
+/**
+ * **A boat that may be on the water is never called off** (dive-domain review,
+ * 2026-10-09). Underway from its start time — not the late-arrival hour the
+ * booking side allows (`hasSailed`) — or from the first boarding or roll-call
+ * event, whichever comes first. Cancelling a departure with people aboard
+ * would hand roll call a cancelled trip; the blow-out refuses it server-side
+ * too (`setUpTripBlowout`).
+ */
+export function departureUnderway(
+  departure: { startsAt: Date; rollCallStarted: boolean },
+  now: Date,
+): boolean {
+  return departure.rollCallStarted || now.getTime() >= departure.startsAt.getTime();
+}
+
+/** Why a departure of the day cannot be selected, or null when it can. */
+export type DayBlowoutBlock = "called" | "cancelled" | "underway";
 
 export function dayBlowoutBlock(departure: DayBlowoutDeparture, now: Date): DayBlowoutBlock | null {
   if (departure.calledOff) return "called";
   if (departure.status !== "scheduled") return "cancelled";
-  // The same test the single-trip call refuses on (`callTripBlowout`).
-  if (hasSailed(departure.startsAt, now)) return "departed";
+  if (departureUnderway(departure, now)) return "underway";
   return null;
 }
 
@@ -51,14 +70,47 @@ export function isMorningDeparture(startsAt: Date, timeZone: string): boolean {
   return utcToWallTime(startsAt, timeZone).hour < MORNING_ENDS_HOUR;
 }
 
-/** The departures a preset ticks: every callable one, or the callable mornings. */
+/** The departures a preset selects: none, every callable one, or the callable ones before noon. */
 export function dayBlowoutPicked(
   departures: readonly DayBlowoutDeparture[],
-  pick: DayBlowoutPick,
+  pick: DayBlowoutPick | null,
   input: { now: Date; timeZone: string },
 ): string[] {
+  if (pick === null) return [];
   return departures
     .filter((departure) => dayBlowoutBlock(departure, input.now) === null)
     .filter((departure) => pick === "all" || isMorningDeparture(departure.startsAt, input.timeZone))
     .map((departure) => departure.id);
+}
+
+/**
+ * The instants a shop's calendar day covers, `[from, to)`, in its own zone —
+ * the one window both the day page lists and the action re-filters submitted
+ * departures to, so a crafted id from another day is never called.
+ */
+export function dayBlowoutBounds(date: string, timeZone: string): { from: Date; to: Date } {
+  const [year, month, day] = date.split("-").map(Number);
+  const midnight = { year, month, day, hour: 0, minute: 0 };
+  return {
+    from: wallTimeToUtc(midnight, timeZone),
+    to: wallTimeToUtc(addCalendarDays(midnight, 1), timeZone),
+  };
+}
+
+/**
+ * Which submitted departures a day call may call: those of this day that can
+ * still be called, in the day's order. Everything else submitted — another
+ * day's, underway, already called, unknown — is counted as skipped, never
+ * silently dropped.
+ */
+export function dayBlowoutCallable(
+  departures: readonly (DayBlowoutDeparture & { id: string })[],
+  submitted: readonly string[],
+  now: Date,
+): { callable: string[]; skipped: number } {
+  const asked = new Set(submitted);
+  const callable = departures
+    .filter((departure) => asked.has(departure.id) && dayBlowoutBlock(departure, now) === null)
+    .map((departure) => departure.id);
+  return { callable, skipped: asked.size - callable.length };
 }

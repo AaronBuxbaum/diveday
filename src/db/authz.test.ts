@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";
 import { fileScopedShopContext } from "@/test/db";
 import {
+  canPersonCallDayBlowout,
   canPersonConfigureTrips,
   canPersonDeleteDiver,
   canPersonExportIncidentRecord,
@@ -203,6 +204,23 @@ describe("H-06 gear-request override", () => {
     const { db, shop } = ctx;
     const disabled = await makeStaff(db, shop.id, ["divemaster"], { status: "disabled" });
     expect(await canPersonOverrideGearRequest(db, shop.id, disabled)).toBe(false);
+  });
+});
+
+describe("the day's weather call", () => {
+  it("admits owner, manager, and captain; refuses instructor, divemaster, and crew", async () => {
+    const { db, shop } = ctx;
+    for (const [roles, allowed] of [
+      [["owner"], true],
+      [["manager"], true],
+      [["captain"], true],
+      [["instructor"], false],
+      [["divemaster"], false],
+      [["crew"], false],
+    ] as const) {
+      const person = await makeStaff(db, shop.id, [...roles]);
+      expect(await canPersonCallDayBlowout(db, shop.id, person)).toBe(allowed);
+    }
   });
 });
 

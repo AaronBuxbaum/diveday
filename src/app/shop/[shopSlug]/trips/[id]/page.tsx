@@ -1085,10 +1085,10 @@ export default async function ManageTripPage({
                       />
                     ) : null}
                     <BlowoutDoors
-                      shopSlug={shopSlug}
+                      shop={shop}
+                      personId={session.user.personId}
                       tripId={tripId}
                       startsAt={trip.startsAt}
-                      timeZone={shop.timezone}
                       tripLabel={t("trips.detail.weatherBlowout")}
                       dayLabel={t("trips.detail.dayBlowout")}
                     />
