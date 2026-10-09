@@ -7,10 +7,12 @@ import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
 import {
+  applyPaidRentalKindsToFit,
   confirmRentalFitSize,
   fitConfirmationForDiver,
   getRentalFit,
   listTripPrepDivers,
+  recordPaidRentalKinds,
   rentalFitByBooking,
   saveRentalFit,
   saveRentalFitNote,
@@ -834,6 +836,86 @@ describe("listTripPrepDivers", () => {
     const fits = await rentalFitByBooking(db, shopId, tripId);
     expect(fits.get(held.bookingId)).toBeNull();
     expect(fits.get(confirmed.bookingId)).toMatchObject({ bcdSize: "M" });
+  });
+});
+
+describe("paid rental kinds on a held seat (dive-domain review of issue #2144)", () => {
+  it("keeps what the checkout charged for on the booking and lists it for a held seat only", async () => {
+    // The fit is the matched person's and is never written from a held seat's
+    // checkout, so the booking itself is the only place the paid gear lives.
+    const { db, shopId, tripId } = await context();
+    const held = await heldSeatOnFittedNitroxDiver(db, shopId, tripId, "Helen Marsh", "Tom Marsh");
+    const confirmed = await heldSeatOnFittedNitroxDiver(db, shopId, tripId, "Ruth Ames", null);
+    for (const seat of [held, confirmed]) {
+      await recordPaidRentalKinds(db, {
+        shopId,
+        bookingId: seat.bookingId,
+        kinds: ["wetsuit", "nitrox", "bogus", "regulator", "wetsuit"],
+      });
+    }
+
+    const [stored] = await db
+      .select({ kinds: bookings.paidRentalKinds })
+      .from(bookings)
+      .where(eq(bookings.id, held.bookingId));
+    expect(stored?.kinds).toEqual(["wetsuit", "regulator"]);
+
+    const rows = await listTripPrepDivers(db, shopId, tripId);
+    expect(rows.find((r) => r.bookingId === held.bookingId)?.paidRentalKinds).toEqual([
+      "wetsuit",
+      "regulator",
+    ]);
+    // A confirmed seat's fit already carries it; the list would double the rack.
+    expect(rows.find((r) => r.bookingId === confirmed.bookingId)?.paidRentalKinds).toEqual([]);
+  });
+
+  it("never writes another shop's booking", async () => {
+    const { db, shopId, tripId } = await context();
+    const seat = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+    const written = await recordPaidRentalKinds(db, {
+      shopId: "00000000-0000-4000-8000-000000000000",
+      bookingId: seat.bookingId,
+      kinds: ["bcd"],
+    });
+    expect(written).toBe(false);
+    const [stored] = await db
+      .select({ kinds: bookings.paidRentalKinds })
+      .from(bookings)
+      .where(eq(bookings.id, seat.bookingId));
+    expect(stored?.kinds).toEqual([]);
+  });
+
+  it("applies the paid pieces to the fit once the desk has confirmed who it is", async () => {
+    const { db, shopId, tripId } = await context();
+    const held = await heldSeatOnFittedNitroxDiver(db, shopId, tripId, "Helen Marsh", "Tom Marsh");
+    await recordPaidRentalKinds(db, {
+      shopId,
+      bookingId: held.bookingId,
+      kinds: ["regulator", "dive_computer"],
+    });
+
+    // Still held: the fit is somebody's whose identity is unproven.
+    expect(await applyPaidRentalKindsToFit(db, { shopId, bookingId: held.bookingId })).toBe(
+      false,
+    );
+    expect(await getRentalFit(db, shopId, held.personId)).toMatchObject({
+      rentsBcd: true,
+      rentsRegulator: false,
+    });
+
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: null, identityBookedAs: null, identityMatchedBy: null })
+      .where(eq(bookings.id, held.bookingId));
+    expect(await applyPaidRentalKindsToFit(db, { shopId, bookingId: held.bookingId })).toBe(true);
+    // The checkout's own rule: every piece is the selection, sizes untouched.
+    expect(await getRentalFit(db, shopId, held.personId)).toMatchObject({
+      rentsBcd: false,
+      rentsRegulator: true,
+      rentsDiveComputer: true,
+      rentsWetsuit: false,
+      bcdSize: "M",
+    });
   });
 });
 

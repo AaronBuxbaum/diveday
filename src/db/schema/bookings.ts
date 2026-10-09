@@ -5,6 +5,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -144,6 +145,16 @@ export const bookings = pgTable(
      * booking to air rather than silently trusting this flag.
      */
     wantsNitrox: boolean("wants_nitrox").notNull().default(false),
+    /**
+     * The rental kinds ticked and paid for at checkout, kept on the booking
+     * itself. Every seat writes it; it matters for a **held seat**
+     * (`identity_unconfirmed_at`), which writes nothing to the matched
+     * person's fit, so without this the paid gear would vanish from the rack.
+     * Prep lists a held seat's kinds as unsized "fit at check-in" lines, and
+     * "Same person" offers to copy them into the fit. Never nitrox (that is
+     * `wants_nitrox`).
+     */
+    paidRentalKinds: jsonb("paid_rental_kinds").$type<string[]>().notNull().default([]),
     /**
      * **Diver, snorkeler or rider** (ADR 20261007-participant-types). Every
      * type holds a seat against `trips.capacity` and is counted at every

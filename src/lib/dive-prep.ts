@@ -133,6 +133,13 @@ export type PrepDiver = {
    */
   identityHeld?: boolean;
   /**
+   * The rental pieces this seat paid for at checkout
+   * (`bookings.paid_rental_kinds`). Read only for a held seat: its sizes are
+   * the matched record's, but what it paid for is its own, so the pieces go on
+   * the rack unsized, fitted at check-in (dive-domain review of issue #2144).
+   */
+  paidRentalKinds?: readonly RentalItemKind[];
+  /**
    * How long since this diver was last in the water, as they answered it on
    * `/ready`. Null for a booking taken before the question existed, or a diver
    * who skipped it — which is silence, not an answer, and renders nothing.
@@ -316,7 +323,11 @@ export type NitroxBlocker = {
   bookingId: string;
   personId: string;
   fullName: string;
-  reason: "no_verified_card";
+  /**
+   * `identity_held`: a held seat, whose card (if any) may be somebody else's;
+   * the desk confirms who it is first, from the roster row.
+   */
+  reason: "no_verified_card" | "identity_held";
 };
 
 export type DivePrepChecklist = {
@@ -505,6 +516,27 @@ function catalogScope(offeredKinds: readonly string[] | undefined): CatalogScope
 function offersKind(offered: CatalogScope, kind: RentalItemKind): boolean {
   if (offered === null) return true;
   return offered.has(kind === "boots" ? "wetsuit" : kind);
+}
+
+/**
+ * A held seat's paid pieces: no size, fitted at check-in, in the rack's order,
+ * with boots riding along a suit as they do for every fit (`rentedItems`).
+ */
+function paidPiecesAtCheckIn(
+  kinds: readonly RentalItemKind[],
+  offered: CatalogScope,
+): PrepPiece[] {
+  const paid = new Set<RentalItemKind>(kinds);
+  if (paid.has("wetsuit")) paid.add("boots");
+  return KIND_ORDER.filter((kind) => paid.has(kind)).map((kind) => ({
+    kind,
+    size: null,
+    fitAtCheckIn: true,
+    drysuitWeightCheck: false,
+    drysuitFinFit: false,
+    drysuitGloves: false,
+    notOffered: !offersKind(offered, kind),
+  }));
 }
 
 /**
@@ -780,6 +812,26 @@ export function buildDivePrepChecklist(input: {
   const diversNeedingStaffFit: DivePrepChecklist["diversNeedingStaffFit"] = [];
   const heldSeats: DivePrepChecklist["heldSeats"] = [];
   let nitroxDivers = 0;
+  const addPiece = (item: PrepPiece, fullName: string) => {
+    const key = `${item.kind}:${prepLineKey(item)}`;
+    const line = grouped.get(key);
+    if (line) {
+      line.count += 1;
+      line.divers.push(fullName);
+      return;
+    }
+    grouped.set(key, {
+      kind: item.kind,
+      size: item.size,
+      count: 1,
+      divers: [fullName],
+      fitAtCheckIn: item.fitAtCheckIn,
+      drysuitWeightCheck: item.drysuitWeightCheck,
+      drysuitFinFit: item.drysuitFinFit,
+      drysuitGloves: item.drysuitGloves,
+      notOffered: item.notOffered,
+    });
+  };
 
   // Gear and tanks are for the people who get in the water. A rider takes
   // nothing from the rack; a snorkeler takes surface kit and no cylinder.
@@ -800,26 +852,31 @@ export function buildDivePrepChecklist(input: {
         bookingId: diver.bookingId,
         personId: diver.personId,
         fullName: diver.fullName,
-        reason: "no_verified_card",
+        reason: diver.identityHeld ? "identity_held" : "no_verified_card",
       });
     }
 
     // The seat's row says its sizes wait for the desk, and nobody is sent to
-    // fill a fit on a record that may be somebody else's.
+    // fill a fit on a record that may be somebody else's. What it paid for at
+    // checkout is its own, so those pieces go on the rack unsized.
     if (diver.identityHeld) {
       heldSeats.push({
         bookingId: diver.bookingId,
         personId: diver.personId,
         fullName: diver.fullName,
       });
+      const items = paidPiecesAtCheckIn(diver.paidRentalKinds ?? [], offered).filter((item) =>
+        rentsKind(diver.participantType, item.kind),
+      );
       diverLines.push({
         bookingId: diver.bookingId,
         personId: diver.personId,
         fullName: diver.fullName,
-        items: [],
+        items,
         state: "identity_held",
         lastDivedBand: isDiver(diver.participantType) ? diver.lastDivedBand : null,
       });
+      for (const item of items) addPiece(item, diver.fullName);
       continue;
     }
 
@@ -884,26 +941,7 @@ export function buildDivePrepChecklist(input: {
       state: items.length > 0 ? "rents" : "own_kit",
       lastDivedBand: isDiver(diver.participantType) ? diver.lastDivedBand : null,
     });
-    for (const item of items) {
-      const key = `${item.kind}:${prepLineKey(item)}`;
-      const line = grouped.get(key);
-      if (line) {
-        line.count += 1;
-        line.divers.push(diver.fullName);
-        continue;
-      }
-      grouped.set(key, {
-        kind: item.kind,
-        size: item.size,
-        count: 1,
-        divers: [diver.fullName],
-        fitAtCheckIn: item.fitAtCheckIn,
-        drysuitWeightCheck: item.drysuitWeightCheck,
-        drysuitFinFit: item.drysuitFinFit,
-        drysuitGloves: item.drysuitGloves,
-        notOffered: item.notOffered,
-      });
-    }
+    for (const item of items) addPiece(item, diver.fullName);
   }
 
   const lines = [...grouped.values()].sort((a, b) => {

@@ -44,7 +44,10 @@ vi.mock("@/db/people", () => ({ recordDiverOwnLocaleForBooking: vi.fn() }));
 vi.mock("@/db/notifications", () => ({ sendAndRecordNotification: vi.fn() }));
 vi.mock("@/db/waiver-issue", () => ({ issueWaiverOnJoin: vi.fn() }));
 vi.mock("@/db/nitrox", () => ({ setBookingNitrox: vi.fn() }));
-vi.mock("@/db/rental-fit", () => ({ saveRentalFit: vi.fn(async () => ({})) }));
+vi.mock("@/db/rental-fit", () => ({
+  saveRentalFit: vi.fn(async () => ({})),
+  recordPaidRentalKinds: vi.fn(async () => true),
+}));
 vi.mock("@/db/stripe-accounts", () => ({
   getShopStripeAccount: vi.fn(async () => ({})),
   canAcceptPayments: vi.fn(() => true),
@@ -67,7 +70,7 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 const { getShopBySlug } = await import("@/db/shops");
 const { getTripWithBooked } = await import("@/db/trips");
 const { createBookingParty } = await import("@/db/bookings");
-const { saveRentalFit } = await import("@/db/rental-fit");
+const { recordPaidRentalKinds, saveRentalFit } = await import("@/db/rental-fit");
 const { bookSpot } = await import("./actions");
 
 const SHOP_ID = "8a1f0c2e-1111-4222-8333-444444444444";
@@ -125,6 +128,17 @@ describe("gear ticked at checkout", () => {
   it("leaves a held seat's matched diver's fit alone, dives_dry and all", async () => {
     await book(true);
     expect(saveRentalFit).not.toHaveBeenCalled();
+  });
+
+  it("keeps a held seat's paid gear on its booking, so the rack still carries it", async () => {
+    // The fit is not written, so without this the wetsuit the diver paid for
+    // would be on no packing list at all (dive-domain review of issue #2144).
+    await book(true);
+    expect(recordPaidRentalKinds).toHaveBeenCalledWith(expect.anything(), {
+      shopId: SHOP_ID,
+      bookingId: "booking-1",
+      kinds: ["wetsuit"],
+    });
   });
 
   it("records the fit of a diver the booking is sure of", async () => {

@@ -1,4 +1,4 @@
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, asc, eq, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { PrepDiver } from "@/lib/dive-prep";
 import { seatName } from "@/lib/held-seat";
@@ -7,8 +7,10 @@ import {
   offeredRentalFitFields,
   RENTABLE_ITEMS,
   type RentalFitField,
+  type RentableItemKind,
   SIZED_RENTAL_FIT_COLUMN,
   type SizedRentalKind,
+  toRentableKinds,
 } from "@/lib/rentals";
 import type { AppDb } from "./client";
 import { verifiedNitroxPersonIds } from "./nitrox";
@@ -599,12 +601,75 @@ export async function listTripPrepDivers(
       wantsNitrox: row.booking.wantsNitrox,
       hasVerifiedNitroxCard: !identityHeld && certified.has(row.person.id),
       identityHeld,
+      // A confirmed seat's fit already carries what it rents; only a held
+      // seat, whose fit is never written, needs the booking's own list.
+      paidRentalKinds: identityHeld ? paidKinds(row.booking.paidRentalKinds) : [],
       lastDivedBand: row.booking.lastDivedBand,
       hotelPickupLocation: row.booking.hotelPickupLocation,
       pickupTime: row.booking.pickupTime,
       participantType: row.booking.participantType,
     };
   });
+}
+
+/** The stored list narrowed to rentable kinds: never nitrox, never a stranger. */
+function paidKinds(values: readonly string[]): RentableItemKind[] {
+  return toRentableKinds(values).filter((kind): kind is RentableItemKind => kind !== "nitrox");
+}
+
+/**
+ * Keep the rental pieces a checkout charged for on the booking itself
+ * (`bookings.paid_rental_kinds`). A held seat writes nothing to the matched
+ * person's fit, so this is the only record of what it paid for; prep reads it
+ * as unsized "fit at check-in" lines (dive-domain review of issue #2144).
+ * Tenant-scoped: false when the booking is not this shop's.
+ */
+export async function recordPaidRentalKinds(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; kinds: readonly string[] },
+): Promise<boolean> {
+  const written = await db
+    .update(bookings)
+    .set({ paidRentalKinds: paidKinds(input.kinds) })
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+    .returning({ id: bookings.id });
+  return written.length > 0;
+}
+
+/**
+ * "Same person" at the desk, with the paid gear carried over: the booking's
+ * paid pieces become the confirmed diver's fit, by the checkout's own rule
+ * (every piece is the selection; sizes untouched). Refuses a seat still held,
+ * so nothing reaches a record whose owner is unproven. False when nothing was
+ * written.
+ */
+export async function applyPaidRentalKindsToFit(
+  db: AppDb,
+  input: { shopId: string; bookingId: string },
+): Promise<boolean> {
+  const [booking] = await db
+    .select({ personId: bookings.personId, paidRentalKinds: bookings.paidRentalKinds })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
+        isNull(bookings.identityUnconfirmedAt),
+      ),
+    )
+    .limit(1);
+  if (!booking) return false;
+  const paid = new Set<string>(paidKinds(booking.paidRentalKinds));
+  if (paid.size === 0) return false;
+  const rents = Object.fromEntries(
+    RENTABLE_ITEMS.map((item) => [item.field, paid.has(item.kind)]),
+  ) as Record<RentalFitField, boolean>;
+  const profile = await saveRentalFit(db, {
+    shopId: input.shopId,
+    personId: booking.personId,
+    ...rents,
+  });
+  return profile !== null;
 }
 
 /**
