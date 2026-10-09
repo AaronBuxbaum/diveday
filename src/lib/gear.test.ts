@@ -10,6 +10,8 @@ import {
   type GearRegisterGroupName,
   type GearServiceKind,
   gearAssignmentNeeds,
+  gearKindIsLifeSupport,
+  gearKindIsOnePerDiver,
   gearKindRank,
   gearRegisterGroup,
   gearServiceIsDue,
@@ -698,5 +700,31 @@ describe("serviceConcernClearingKinds", () => {
         offered.every((offeredKind) => offeredKind === "note"),
       );
     }
+  });
+});
+
+/**
+ * **One per diver, and which units keep a diver breathing** (dive-domain
+ * review of issue #2215). A diver wears one BCD, one wetsuit, one pair of
+ * fins; a diver doing two tanks takes two tanks, so the one-per-kind screen
+ * covers only what the rental fit sizes. A hand-picked life-support unit with
+ * a lapsed clock or an open concern asks "Assign anyway" first.
+ */
+describe("gear kinds a diver takes one of", () => {
+  it("covers every register kind the rental fit reaches, and nothing else", () => {
+    for (const kind of ["bcd", "regulator", "wetsuit", "mask", "fins", "dive_computer"] as const) {
+      expect(gearKindIsOnePerDiver(kind)).toBe(true);
+    }
+    for (const kind of ["tank", "nitrox_analyzer", "o2_kit", "dpv", "other"] as const) {
+      expect(gearKindIsOnePerDiver(kind)).toBe(false);
+    }
+  });
+
+  it("names the BCD, regulator and computer as life support, and not a wetsuit", () => {
+    expect(gearKindIsLifeSupport("bcd")).toBe(true);
+    expect(gearKindIsLifeSupport("regulator")).toBe(true);
+    expect(gearKindIsLifeSupport("dive_computer")).toBe(true);
+    expect(gearKindIsLifeSupport("wetsuit")).toBe(false);
+    expect(gearKindIsLifeSupport("tank")).toBe(false);
   });
 });

@@ -1338,6 +1338,37 @@ describe("the one-line row", () => {
     });
     expect(screen.queryByText("Waiver not signed yet")).toBeNull();
   });
+
+  it("offers to carry the gear a held seat paid for to the fit, ticked", () => {
+    // The checkout kept it on the booking (dive-domain review of issue #2144);
+    // "Same person" is where it can reach the fit, and the staffer may decline.
+    const held = entry("w", "Wen Ito", { identityBookedAs: "Wen I." });
+    Object.assign(held.booking, {
+      identityUnconfirmedAt: new Date("2026-10-01T12:00:00Z"),
+      paidRentalKinds: ["regulator", "wetsuit", "nitrox"],
+    });
+    const { container } = renderRoster({
+      roster: [held],
+      readiness: new Map([["w", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+    });
+    const box = container.querySelector<HTMLInputElement>('input[name="applyPaidGear"]');
+    expect(box?.checked).toBe(true);
+    expect(box?.closest("label")?.textContent).toBe(
+      "Add what they paid for to their fit: Regulator and Wetsuit",
+    );
+  });
+
+  it("asks nothing about gear on a held seat that paid for none", () => {
+    const held = entry("w", "Wen Ito", { identityBookedAs: "Wen I." });
+    Object.assign(held.booking, { identityUnconfirmedAt: new Date("2026-10-01T12:00:00Z") });
+    const { container } = renderRoster({
+      roster: [held],
+      readiness: new Map([["w", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+    });
+    expect(container.querySelector('input[name="applyPaidGear"]')).toBeNull();
+  });
 });
 
 /**

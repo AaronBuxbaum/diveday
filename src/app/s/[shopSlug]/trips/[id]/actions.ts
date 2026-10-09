@@ -16,7 +16,7 @@ import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
-import { saveRentalFit } from "@/db/rental-fit";
+import { recordPaidRentalKinds, saveRentalFit } from "@/db/rental-fit";
 import { getRedeemableShopPromo } from "@/db/shop-promos";
 import { getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -579,8 +579,15 @@ export async function bookSpot(
           // fit is theirs. A rented wetsuit ticked here would clear their
           // `dives_dry`, and with it the drysuit weight check on every later
           // trip (`security-reviewer`, layer 2). The paid gear still stands on
-          // the order, and the nitrox request below is this booking's own.
-          // `/ready` still writes the fit for a held seat: issue #2137.
+          // the order, and on the booking itself (`paid_rental_kinds`), where
+          // prep racks it unsized and "Same person" can carry it to the fit;
+          // the nitrox request below is this booking's own too. `/ready`
+          // refuses a held seat's fit for the same reason.
+          await recordPaidRentalKinds(dbi, {
+            shopId: shopNow.id,
+            bookingId,
+            kinds: selection.rentedKinds,
+          });
           if (!identityUnconfirmed) {
             await saveRentalFit(dbi, {
               shopId: shopNow.id,

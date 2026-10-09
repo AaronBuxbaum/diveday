@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
+import { RecapWaitingCard } from "@/components/RecapWaitingCard";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getRecapPageData, getRecapPageState, type RecapSite } from "@/db/recap";
@@ -170,6 +171,8 @@ export default async function DiveRecapPage({
         </ExpiredLinkCard>
       );
     }
+
+    if (state.kind === "waiting") return <RecapWaitingCard shop={state.shop} t={deadT} />;
 
     // **The booking tier** (ADR 20260827-first-light, decision 3): a diver is
     // holding a phone and the link does not work, and their one question is

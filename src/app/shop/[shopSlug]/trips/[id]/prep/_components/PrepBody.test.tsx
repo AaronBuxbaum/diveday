@@ -882,3 +882,77 @@ describe("a diver holding a counter rental over the departure", () => {
     expect(within(container).queryByText(/on a counter rental/)).toBeNull();
   });
 });
+
+describe("a held seat on the Gear tab (issue #2144)", () => {
+  function heldPrep(): TripPrep {
+    const prep = prepFor();
+    prep.checklist = buildDivePrepChecklist({
+      divers: [
+        {
+          bookingId: "held",
+          personId: "p9",
+          fullName: "Tom Marsh",
+          fit: null,
+          wantsNitrox: true,
+          hasVerifiedNitroxCard: false,
+          identityHeld: true,
+          lastDivedBand: null,
+        },
+        diver(4, "Ana Costa", {
+          fit: { rentsBcd: true, bcdSize: "M", fitStatedAt: new Date() } as never,
+        }),
+      ],
+      plannedDives: 2,
+    });
+    return prep;
+  }
+
+  it("says the sizes wait for the desk, by item and by diver, and never asks for a fit", () => {
+    const byItem = renderPrep(heldPrep()).container;
+    expect(within(byItem).getByText(t("tripPrep.heldSeatsHeading"))).toBeTruthy();
+    expect(within(byItem).getAllByText("Tom Marsh").length).toBeGreaterThan(0);
+    expect(within(byItem).queryByText(t("tripPrep.missingSizesHeading"))).toBeNull();
+    // Nitrox asked for on a seat whose card is not provably theirs: a card check.
+    expect(within(byItem).getByText(t("tripPrep.nitroxBlockedHeading"))).toBeTruthy();
+    cleanup();
+
+    const byDiver = renderPrep(heldPrep(), { grouping: "diver" }).container;
+    expect(within(byDiver).getAllByText(t("tripPrep.heldSeatSizesWait")).length).toBeGreaterThan(0);
+  });
+  it("sends the nitrox question to the roster row, never to the matched diver's record", () => {
+    // The card on the matched record may be somebody else's; the first job is
+    // the identity question on the seat's own row (dive-domain review).
+    const { container } = renderPrep(heldPrep());
+    const link = within(container).getByRole("link", {
+      name: new RegExp(t("tripPrep.nitroxConfirmIdentityFirst")),
+    });
+    expect(link.getAttribute("href")).toMatch(/\/trips\/[^/#]+#booking-held$/);
+    expect(container.querySelector('a[href*="/divers/p9"]')).toBeNull();
+  });
+
+  it("says what a held seat paid for", () => {
+    const prep = heldPrep();
+    prep.checklist = buildDivePrepChecklist({
+      divers: [
+        {
+          bookingId: "held",
+          personId: "p9",
+          fullName: "Tom Marsh",
+          fit: null,
+          wantsNitrox: false,
+          hasVerifiedNitroxCard: false,
+          identityHeld: true,
+          paidRentalKinds: ["regulator", "wetsuit"],
+          lastDivedBand: null,
+        },
+      ],
+      plannedDives: 2,
+    });
+    const { container } = renderPrep(prep);
+    expect(
+      within(container).getByText(
+        t("tripPrep.heldSeatPaidFor", { name: "Tom Marsh", pieces: "Regulator and Wetsuit" }),
+      ),
+    ).toBeTruthy();
+  });
+});

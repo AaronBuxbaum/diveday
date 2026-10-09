@@ -54,6 +54,7 @@ const assignSchema = z.object({
   bookingId: z.uuid(),
   gearItemId: z.uuid(),
   proposed: z.boolean().optional(),
+  assignAnyway: z.boolean().optional(),
 });
 
 /**
@@ -90,11 +91,14 @@ export type AssignGearUnitResult =
   | {
       ok: false;
       /**
-       * `not_wanted`: the diver already holds one of that kind, or never asked
-       * for it. `needs_care`: a proposed unit gained a lapsed clock or an open
+       * `not_wanted`: the diver never asked for that kind.
+       * `already_holds_kind`: the diver already holds one of that kind.
+       * `identity_held`: the seat is held until the desk confirms who it is.
+       * `needs_care_confirm`: a hand-picked life-support unit needs care; the
+       * row offers "Assign anyway". `needs_care`: a proposed unit gained a lapsed clock or an open
        * service concern since the page loaded.
        */
-      reason: GearRefusalOf<ReserveGearUnitOutcome> | "invalid" | "not_wanted" | "needs_care";
+      reason: GearRefusalOf<ReserveGearUnitOutcome> | "invalid" | "not_wanted";
     };
 
 /**
@@ -123,13 +127,15 @@ export type AssignGearUnitResult =
  * chose from the picker. A proposed pick is also re-read for care, and one
  * whose unit has since gained a lapsed clock or an open service concern is
  * refused (`needs_care`). A hand pick may still knowingly choose a labeled
- * unit: the dock decides (H-06).
+ * unit, the dock decides (H-06), but a life-support unit asks first
+ * (`needs_care_confirm`) and goes through only with `assignAnyway`.
  */
 export async function assignGearUnit(input: {
   tripId: string;
   bookingId: string;
   gearItemId: string;
   proposed?: boolean;
+  assignAnyway?: boolean;
 }): Promise<AssignGearUnitResult> {
   const session = await requireStaffSession();
   const parsed = assignSchema.safeParse(input);
@@ -151,10 +157,15 @@ export async function assignGearUnit(input: {
   const screened = await screenGearPicks(db, shop, parsed.data.tripId, [pick], {
     proposed: parsed.data.proposed === true,
   });
+  if (screened.held > 0) return { ok: false, reason: "identity_held" };
   if (screened.needsCare > 0) return { ok: false, reason: "needs_care" };
+  if (screened.alreadyHeld > 0) return { ok: false, reason: "already_holds_kind" };
   if (screened.kept.length === 0) return { ok: false, reason: "not_wanted" };
 
   const window = tripReservationWindow(trip, shop.timezone);
+  // The screen again, under the booking's row lock and in the write's own
+  // transaction: a second tablet that passed the screen above at the same
+  // instant is refused here rather than handed a second unit (issue #2215).
   const outcome = await reserveGearUnit(db, {
     shopId: shop.id,
     gearItemId: parsed.data.gearItemId,
@@ -162,6 +173,10 @@ export async function assignGearUnit(input: {
     tripId: parsed.data.tripId,
     reservedFrom: window.from,
     reservedUntil: window.until,
+    screen: {
+      proposed: parsed.data.proposed === true,
+      assignAnyway: parsed.data.assignAnyway === true,
+    },
   });
   if (!outcome.ok) return { ok: false, reason: outcome.reason };
   // The rest of the page holds counts and a "still to assign" list that this

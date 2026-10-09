@@ -1266,6 +1266,28 @@ describe("createBooking identity safeguard (H-13)", () => {
   });
 
   describe("splitBookingIdentity (not the same person)", () => {
+    /**
+     * A release on a held seat. `issueWaiverRequest` refuses a held seat now
+     * (issue #2125), so the fixture lifts the hold for the issue and puts it
+     * back: the split still has to handle a seat that carries one.
+     */
+    async function releaseBehindHold(db: AppDb, input: { shopId: string; bookingId: string }) {
+      const [seat] = await db
+        .select({ at: bookings.identityUnconfirmedAt })
+        .from(bookings)
+        .where(eq(bookings.id, input.bookingId));
+      await db
+        .update(bookings)
+        .set({ identityUnconfirmedAt: null })
+        .where(eq(bookings.id, input.bookingId));
+      const issued = await issueWaiverRequest(db, input);
+      await db
+        .update(bookings)
+        .set({ identityUnconfirmedAt: seat?.at ?? null })
+        .where(eq(bookings.id, input.bookingId));
+      return issued;
+    }
+
     async function sharedInboxSeat(db: AppDb, shopId: string, openId: string) {
       const night = await nightTrip(db, shopId);
       const first = await bookVisitor(db, shopId, openId);
@@ -1388,7 +1410,7 @@ describe("createBooking identity safeguard (H-13)", () => {
         purpose: "readiness",
       });
       if (!ready) throw new Error("readiness capability setup failed");
-      const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: shared.bookingId });
+      const issued = await releaseBehindHold(db, { shopId: shop.id, bookingId: shared.bookingId });
       expect(issued.ok).toBe(true);
 
       const result = await splitBookingIdentity(db, {
@@ -1424,7 +1446,7 @@ describe("createBooking identity safeguard (H-13)", () => {
       const { db, shop, open } = await seededContext();
       const { shared } = await sharedInboxSeat(db, shop.id, open.id);
       const staffer = await counterStaffer(db, shop.id);
-      await issueWaiverRequest(db, { shopId: shop.id, bookingId: shared.bookingId });
+      await releaseBehindHold(db, { shopId: shop.id, bookingId: shared.bookingId });
       const [release] = await db
         .select({ id: waiverRecords.id })
         .from(waiverRecords)
@@ -1456,7 +1478,7 @@ describe("createBooking identity safeguard (H-13)", () => {
       const { db, shop, open } = await seededContext();
       const { shared } = await sharedInboxSeat(db, shop.id, open.id);
       const staffer = await counterStaffer(db, shop.id);
-      await issueWaiverRequest(db, { shopId: shop.id, bookingId: shared.bookingId });
+      await releaseBehindHold(db, { shopId: shop.id, bookingId: shared.bookingId });
       await db
         .update(waiverRecords)
         .set({
@@ -1487,7 +1509,7 @@ describe("createBooking identity safeguard (H-13)", () => {
       const { db, shop, open } = await seededContext();
       const { nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
       const staffer = await counterStaffer(db, shop.id);
-      await issueWaiverRequest(db, { shopId: shop.id, bookingId: shared.bookingId });
+      await releaseBehindHold(db, { shopId: shop.id, bookingId: shared.bookingId });
       const [release] = await db
         .select()
         .from(waiverRecords)
@@ -1542,7 +1564,7 @@ describe("createBooking identity safeguard (H-13)", () => {
       const { db, shop, open } = await seededContext();
       const { nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
       const staffer = await counterStaffer(db, shop.id);
-      await issueWaiverRequest(db, { shopId: shop.id, bookingId: shared.bookingId });
+      await releaseBehindHold(db, { shopId: shop.id, bookingId: shared.bookingId });
       await db
         .update(waiverRecords)
         .set({ draftSignerName: "Ben Q", draftAcknowledged: true })
@@ -1840,6 +1862,8 @@ describe("createBooking identity safeguard (H-13)", () => {
         });
         if (!result.ok) throw new Error(`split refused: ${result.reason}`);
         expect(result.seats).toBe(2);
+        // Both are owed a release now; the action sends each (security review).
+        expect(result.seatIds).toEqual([shared.bookingId, seat.bookingId]);
         const moved = await db
           .select({ personId: bookings.personId, held: bookings.identityUnconfirmedAt })
           .from(bookings)
@@ -1880,7 +1904,7 @@ describe("createBooking identity safeguard (H-13)", () => {
         const { db, shop, open } = await seededContext();
         const { nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
         const { seat } = await secondHeldSeat(db, shop.id, "Ben Quinn");
-        await issueWaiverRequest(db, { shopId: shop.id, bookingId: seat.bookingId });
+        await releaseBehindHold(db, { shopId: shop.id, bookingId: seat.bookingId });
         await db
           .update(waiverRecords)
           .set({ status: "medical_review" })
@@ -1999,7 +2023,7 @@ describe("createBooking identity safeguard (H-13)", () => {
         const { db, shop, open } = await seededContext();
         const { shared } = await sharedInboxSeat(db, shop.id, open.id);
         const staffer = await counterStaffer(db, shop.id);
-        await issueWaiverRequest(db, { shopId: shop.id, bookingId: shared.bookingId });
+        await releaseBehindHold(db, { shopId: shop.id, bookingId: shared.bookingId });
         await db
           .update(waiverRecords)
           .set({

@@ -4,6 +4,7 @@ import {
   crewClashDetailText,
   crewClashSailedDetailText,
   daySpineSummaryText,
+  rollCallGapDetailText,
 } from "./today-labels";
 
 /**
@@ -140,5 +141,29 @@ describe("a crew clash, said once per other departure", () => {
     expect(crewClashDetailText(t, "en-US", [first, first])).toBe(
       "Keiko Tanaka is also rostered on Dawn Two-Tank at these hours.",
     );
+  });
+});
+
+/**
+ * **The missing-person row says the recaps are held** (domain review of
+ * #2123). The recap waits while the word stands, and the staffer who sees the
+ * row is the one who has to know that is why no "welcome back" went out.
+ */
+describe("a missing-person row", () => {
+  const gap = { diveNumber: 2, uncounted: 1, total: 6, underway: false };
+  it.each([
+    ["missing_diver", false],
+    ["missing_diver", true],
+    ["missing_crew", false],
+    ["missing_crew", true],
+  ] as const)("%s (stale: %s) says the recaps are held", (reason, stale) => {
+    for (const locale of ["en-US", "es-ES"] as const) {
+      const text = rollCallGapDetailText(staffTranslator(locale), { ...gap, reason, stale });
+      expect(text).toContain(
+        locale === "en-US"
+          ? "Recaps are held until the roll call is corrected."
+          : "Los resúmenes quedan retenidos hasta que se corrija el pase de lista.",
+      );
+    }
   });
 });

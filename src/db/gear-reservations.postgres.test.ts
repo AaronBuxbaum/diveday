@@ -8,6 +8,9 @@ import type { AppDb } from "./client";
 import { createGearItem, reserveGearUnit } from "./gear";
 import { gearReservations, shops, trips } from "./schema";
 
+/** A setup reservation: a hand pick whose staffer already said "Assign anyway". */
+const SETUP_PICK = { proposed: false, assignAnyway: true } as const;
+
 /**
  * The gear double-booking guard, under genuine contention.
  *
@@ -106,6 +109,7 @@ describePostgres("reserveGearUnit under real concurrency", () => {
         bookingId,
         reservedFrom: "2026-09-01",
         reservedUntil: "2026-09-02",
+        screen: SETUP_PICK,
       }),
     );
 
@@ -142,6 +146,7 @@ describePostgres("reserveGearUnit under real concurrency", () => {
         gearItemId,
         bookingId,
         ...windows[index],
+        screen: SETUP_PICK,
       }),
     );
 
@@ -154,5 +159,53 @@ describePostgres("reserveGearUnit under real concurrency", () => {
       outcomes.filter((outcome) => !outcome.ok && outcome.reason === "unit_unavailable"),
     ).toHaveLength(4);
     expect(await openReservations(pg.db, gearItemId)).toBe(1);
+  });
+
+  it("gives one diver one unit of a kind when two tablets assign two different BCDs at once", async () => {
+    // Issue #2215: the constraint above refuses the same unit twice, but two
+    // *different* BCDs for one diver are both free. The screen inside
+    // `reserveGearUnit` locks the booking row, so the second pick waits for
+    // the first to commit and then sees it.
+    const pg = await postgresTestDb();
+    const { shopId, gearItemId, bookingIds } = await unitWithRivals(pg.db, 1);
+    const second = await createGearItem(pg.db, {
+      shopId,
+      kind: "bcd",
+      label: "BCD #2",
+      size: "M",
+    });
+    if (!second.ok) throw new Error(`gear item refused: ${second.reason}`);
+    const [bookingId] = bookingIds;
+    if (!bookingId) throw new Error("no booking");
+
+    // The gate holds the booking row, which both contenders' screens park on.
+    const gate = await holdRowLock(
+      pg,
+      sql`select id from bookings where id = ${bookingId} for update`,
+    );
+    const contenders = [gearItemId, second.item.id].map((unitId) =>
+      reserveGearUnit(pg.connect(), {
+        shopId,
+        gearItemId: unitId,
+        bookingId,
+        reservedFrom: "2026-09-01",
+        reservedUntil: "2026-09-02",
+        screen: { proposed: false },
+      }),
+    );
+
+    await waitForLockWaiters(pg.db, contenders.length);
+    await gate.release();
+
+    const outcomes = await Promise.all(contenders);
+    expect(outcomes.filter((outcome) => outcome.ok)).toHaveLength(1);
+    expect(outcomes.filter((outcome) => !outcome.ok)).toEqual([
+      { ok: false, reason: "already_holds_kind" },
+    ]);
+    const [row] = await pg.db
+      .select({ held: count(gearReservations.id) })
+      .from(gearReservations)
+      .where(and(eq(gearReservations.bookingId, bookingId), isNull(gearReservations.returnedAt)));
+    expect(row?.held).toBe(1);
   });
 });

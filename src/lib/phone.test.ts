@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isE164, toE164 } from "./phone";
+import { CALLING_CODES, homeNumberingArea, isE164, NANP_AREA_CODES, toE164 } from "./phone";
 
 /**
  * `toE164` decides what a diver's number looks like in the row, and therefore
@@ -95,5 +95,35 @@ describe("isE164", () => {
     "+0123456789",
   ])("refuses %j", (value) => {
     expect(isE164(value)).toBe(false);
+  });
+});
+
+describe("NANP_AREA_CODES (issue #2151)", () => {
+  it("gives every +1 country a list of its own, and no code to two countries", () => {
+    const nanp = Object.entries(CALLING_CODES)
+      .filter(([, code]) => code === "1")
+      .map(([country]) => country);
+    const seen = new Map<string, string>();
+    for (const country of nanp) {
+      const codes = NANP_AREA_CODES[country];
+      expect(codes?.size, country).toBeGreaterThan(0);
+      for (const code of codes ?? []) {
+        expect(seen.get(code), `${code} in ${country}`).toBeUndefined();
+        seen.set(code, country);
+      }
+    }
+  });
+
+  it("lists no premium, toll-free or personal code as a place", () => {
+    for (const code of ["900", "976", "800", "833", "844", "855", "866", "877", "888", "500"]) {
+      for (const codes of Object.values(NANP_AREA_CODES)) expect(codes.has(code)).toBe(false);
+    }
+  });
+
+  it("reads home, another calling code, and another +1 country apart", () => {
+    expect(homeNumberingArea("+13055550110", "US")).toBe("home");
+    expect(homeNumberingArea("+18765550110", "US")).toBe("foreign_area_code");
+    expect(homeNumberingArea("+447700900123", "US")).toBe("foreign_code");
+    expect(homeNumberingArea("+34612345678", "ES")).toBe("home");
   });
 });

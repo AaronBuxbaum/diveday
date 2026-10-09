@@ -8,6 +8,7 @@ type Assign = (input: {
   tripId: string;
   bookingId: string;
   gearItemId: string;
+  assignAnyway?: boolean;
 }) => Promise<AssignGearUnitResult>;
 
 afterEach(cleanup);
@@ -20,6 +21,8 @@ const COPY = {
     unit_out_of_service: "That unit is off the wall for service.",
   },
   refusalFallback: "That pick didn’t take. Try another unit.",
+  needsCareConfirm: "That unit’s service is overdue or flagged.",
+  assignAnyway: "Assign anyway",
 };
 
 const GROUPS = [
@@ -146,5 +149,41 @@ describe("RentalUnitPicker", () => {
     fireEvent.change(select, { target: { value: "unit-2" } });
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
     expect(select.value).toBe("unit-2");
+  });
+});
+
+/**
+ * **Life support with a lapsed clock asks, in so many words** (dive-domain
+ * review of issue #2215). A hand-picked BCD, regulator or computer that needs
+ * care is not assigned on the pick alone: the row says why and offers
+ * "Assign anyway", and only that tap reserves it.
+ */
+describe("RentalUnitPicker, a life-support unit that needs care", () => {
+  it("asks before assigning, and assigns only on Assign anyway", async () => {
+    const assign = vi.fn(async (input: Parameters<Assign>[0]) =>
+      input.assignAnyway
+        ? ({ ok: true } as const)
+        : ({ ok: false, reason: "needs_care_confirm" } as const),
+    );
+    const select = renderPicker(assign);
+    fireEvent.change(select, { target: { value: "unit-2" } });
+
+    const confirm = await screen.findByRole("button", { name: "Assign anyway" });
+    expect(screen.getByRole("alert").textContent).toBe(
+      "That unit’s service is overdue or flagged.",
+    );
+    expect(select.value).toBe("");
+
+    fireEvent.click(confirm);
+    await waitFor(() =>
+      expect(assign).toHaveBeenLastCalledWith({
+        tripId: "trip-1",
+        bookingId: "booking-1",
+        gearItemId: "unit-2",
+        assignAnyway: true,
+      }),
+    );
+    await waitFor(() => expect(select.value).toBe("unit-2"));
+    expect(screen.queryByRole("button", { name: "Assign anyway" })).toBeNull();
   });
 });

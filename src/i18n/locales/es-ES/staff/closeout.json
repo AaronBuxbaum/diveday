@@ -2,6 +2,7 @@
   "notice": {
     "recapSent": "Se enviaron los resúmenes que aún estaban pendientes.",
     "recapAttention": "Algunos resúmenes requieren atención. Abre la salida a la que pertenecen.",
+    "recapHeld": "Los resúmenes quedan retenidos hasta que se corrija el pase de lista.",
     "recapNotReady": "Los resúmenes no se pueden enviar hasta cuatro horas después del final de la salida.",
     "recapLocked": "Este resumen ya se envió. Ya no se pueden cambiar la nota ni las fotos.",
     "crewPhotoAdded": "Foto del equipo añadida a esta salida.",

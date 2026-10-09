@@ -9,6 +9,9 @@ import { createGearItem, reserveGearUnit } from "./gear";
 import { createCounterRental } from "./gear-counter-rentals";
 import { certifications, gearReservations, people, personRoles, shops, trips } from "./schema";
 
+/** A setup reservation: a hand pick whose staffer already said "Assign anyway". */
+const SETUP_PICK = { proposed: false, assignAnyway: true } as const;
+
 /**
  * The counter-rental writer under genuine contention — the sibling of
  * `gear-reservations.postgres.test.ts`, with the same starting gate: a
@@ -142,6 +145,7 @@ describePostgres("createCounterRental under real concurrency", () => {
       bookingId: booking.bookingId,
       reservedFrom: UNTIL,
       reservedUntil: UNTIL,
+      screen: SETUP_PICK,
     });
     await waitForLockWaiters(pg.db, 2);
     await gate.release();

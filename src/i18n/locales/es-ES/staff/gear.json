@@ -237,6 +237,7 @@
     "kindWithSize": "{kindLabel} · {size}",
     "noneFree": "No hay {kindLabel} libre para estas fechas.",
     "assigning": "Asignando…",
+    "assignAnyway": "Asignar de todos modos",
     "ticketDoor": "Boleta de alquiler",
     "notice": {
       "handedOver": "Entregado.",
@@ -246,7 +247,9 @@
       "alreadyCheckedOut": "Esa unidad ya salió del mostrador. Márcala como devuelta desde el registro.",
       "assignFailed": "Esa elección no se aplicó: prueba con otra unidad.",
       "notWanted": "Este buceador ya no necesita uno de esos.",
-      "unitNeedsCare": "Esa unidad ahora necesita mantenimiento. Elige otra."
+      "alreadyHoldsKind": "Ya tiene asignado: {kindLabel}. Devuélvelo antes de cambiarlo.",
+      "identityHeld": "Primero confirma quién es.",
+      "unitNeedsCare": "Esa unidad tiene el mantenimiento vencido o marcado."
     },
     "optionServiceOverdue": "mantenimiento vencido",
     "optionServiceDueSoon": "mantenimiento por vencer",

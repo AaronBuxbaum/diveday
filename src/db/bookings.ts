@@ -2286,6 +2286,8 @@ export type SplitBookingIdentityResult =
       tripId: string;
       /** How many held seats moved onto the new record, this one included. */
       seats: number;
+      /** The bookings that moved, this one first: each is owed its own release. */
+      seatIds: string[];
     }
   | {
       ok: false;
@@ -2775,5 +2777,11 @@ export async function splitBookingIdentity(
     actorPersonId: input.actorPersonId,
     code: "identity_split_off",
   });
-  return { ok: true, personId: split.personId, tripId: split.tripId, seats: split.seats.length };
+  return {
+    ok: true,
+    personId: split.personId,
+    tripId: split.tripId,
+    seats: split.seats.length,
+    seatIds: split.seats.map((seat) => seat.bookingId),
+  };
 }

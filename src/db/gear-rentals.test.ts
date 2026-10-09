@@ -8,6 +8,9 @@ import { countGearRentalHolders, listGearRentals } from "./gear-rentals";
 import { bookingPayments, gearReservations, orders, people, shops } from "./schema";
 import { createTrip } from "./trips-create";
 
+/** A setup reservation: a hand pick whose staffer already said "Assign anyway". */
+const SETUP_PICK = { proposed: false, assignAnyway: true } as const;
+
 const TODAY = "2026-10-08";
 
 /**
@@ -75,6 +78,7 @@ async function reserve(
     bookingId: input.bookingId,
     reservedFrom: input.from,
     reservedUntil: input.until,
+    screen: SETUP_PICK,
   });
   if (!outcome.ok) throw new Error(`reserve refused: ${outcome.reason}`);
   return outcome.reservation;
