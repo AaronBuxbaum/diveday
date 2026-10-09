@@ -1,6 +1,6 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { nowDate } from "@/lib/clock";
 import { deskTimeOn, deskTimeValue } from "@/lib/desk-hours";
@@ -90,21 +90,19 @@ export function MessagesGroup({
           <SectionNotice banner={banner} section="deskHours" active={activeSection} />
           <FieldGrid as="form" action={saveDeskHoursAction} columns={2} className="mt-4">
             <Field label={t("settings.main.deskHours.opens")}>
-              <input
+              <DateField
                 name="deskOpens"
                 type="time"
                 required
                 defaultValue={deskTimeValue(shop.deskOpensMinute)}
-                className={controlClass}
               />
             </Field>
             <Field label={t("settings.main.deskHours.closes")}>
-              <input
+              <DateField
                 name="deskCloses"
                 type="time"
                 required
                 defaultValue={deskTimeValue(shop.deskClosesMinute)}
-                className={controlClass}
               />
             </Field>
             <FieldActions>
