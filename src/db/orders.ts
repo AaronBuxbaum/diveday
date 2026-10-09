@@ -467,20 +467,20 @@ export type DiverPackageOrderOutcome =
 async function publicBuyer(
   db: AppDb,
   input: { shopId: string; fullName: string; email: string },
-): Promise<{ personId: string; attached: boolean; created: boolean }> {
+): Promise<{ personId: string; attached: boolean }> {
   const found = await findOrCreatePerson(db, {
     shopId: input.shopId,
     fullName: input.fullName,
     email: input.email,
   });
-  if (found.created) return { personId: found.person.id, attached: true, created: true };
+  if (found.created) return { personId: found.person.id, attached: true };
   if (found.nameMatches) {
     const roles = await db
       .select({ role: personRoles.role })
       .from(personRoles)
       .where(eq(personRoles.personId, found.person.id));
     if (!isStaff(roles.map((row) => row.role))) {
-      return { personId: found.person.id, attached: true, created: false };
+      return { personId: found.person.id, attached: true };
     }
   }
   const personId = await db.transaction(async (tx) => {
@@ -492,22 +492,31 @@ async function publicBuyer(
     await tx.insert(personRoles).values({ personId: fresh.id, role: "diver" });
     return fresh.id;
   });
-  return { personId, attached: false, created: true };
+  return { personId, attached: false };
 }
 
 /**
- * Take back a person row this request created, after the order it was for was
- * refused: a public form that fails must leave nothing behind. Best effort and
- * narrow — only a row nothing references yet. A concurrent request that has
- * since attached something to the same new record (an order, a booking) holds
- * a foreign key, the delete fails, and the row stays, which is the right
- * outcome for a record somebody is now using.
+ * Take back the emailless record `publicBuyer` made for this request, after
+ * the order it was for was refused: a public form that fails must leave
+ * nothing behind. Only that record — no email lookup can reach it, so no other
+ * request can have matched it. A fresh record *with* the typed email stays:
+ * a second click may already have found it and be raising its own order
+ * against it, and a stray diver row, bounded by the rate limit, is the cheaper
+ * mistake. Best effort: a row something already references keeps its foreign
+ * key, the delete fails, and the row stays.
  */
-async function discardUnusedBuyer(db: AppDb, personId: string): Promise<void> {
+async function discardUnusedBuyer(db: AppDb, shopId: string, personId: string): Promise<void> {
   try {
     await db.transaction(async (tx) => {
+      const [own] = await tx
+        .select({ id: people.id })
+        .from(people)
+        .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.email)));
+      if (!own) return;
       await tx.delete(personRoles).where(eq(personRoles.personId, personId));
-      await tx.delete(people).where(eq(people.id, personId));
+      await tx
+        .delete(people)
+        .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.email)));
     });
   } catch (error) {
     log("orders.public_buyer_kept", "warn", {
@@ -600,9 +609,9 @@ export async function createDiverPackageOrder(
     },
   );
   if (outcome.ok) return outcome;
-  // Stripe refused, or something after it did: the person this request
-  // created was only ever for this order.
-  if (buyer.created) await discardUnusedBuyer(db, buyer.personId);
+  // Stripe refused, or something after it did: the emailless record this
+  // request made was only ever for this order.
+  if (!buyer.attached) await discardUnusedBuyer(db, input.shopId, buyer.personId);
   return {
     ok: false,
     reason: outcome.reason === "not_authorized" ? "invalid" : outcome.reason,

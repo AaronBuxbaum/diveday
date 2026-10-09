@@ -2620,8 +2620,9 @@ describe("a diver buying a package online", () => {
     expect((await getOrder(db, shop.id, raised.order.id))?.boughtOnline).toBe(false);
   });
 
-  it("takes back the record it made when Stripe refuses the invoice", async () => {
-    // Layer-7 re-review: a refusal after the buyer was resolved left a person row.
+  it("keeps a new record that carries the typed email when Stripe refuses the invoice", async () => {
+    // Layer-7 final review: a second click may already have matched that
+    // record by email and be raising its own order against it.
     const { db, shop, pkg } = await packageShop();
     const result = await createDiverPackageOrder(
       db,
@@ -2643,7 +2644,43 @@ describe("a diver buying a package online", () => {
       .select({ id: people.id })
       .from(people)
       .where(eq(people.email, "sid.stripefail@example.com"));
-    expect(person).toBeUndefined();
+    expect(person).toBeDefined();
+  });
+
+  it("takes back the emailless record it made when Stripe refuses the invoice", async () => {
+    // Layer-7 re-review: a refusal after the buyer was resolved left a person
+    // row. The emailless one no lookup can reach is this request's alone.
+    const { db, shop, pkg } = await packageShop();
+    await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Owner Of Address", email: "taken@example.com" });
+    const before = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.shopId, shop.id));
+    const result = await createDiverPackageOrder(
+      db,
+      {
+        shopId: shop.id,
+        packageId: pkg.id,
+        fullName: "Not The Owner",
+        email: "taken@example.com",
+        lineDescription: "Ten-dive card",
+      },
+      fakeInvoicing({
+        async createInvoice(): Promise<CreateInvoiceResult> {
+          return { status: "failed" };
+        },
+      }),
+    );
+    expect(result).toEqual({ ok: false, reason: "stripe_failed" });
+    const after = await db.select({ id: people.id }).from(people).where(eq(people.shopId, shop.id));
+    expect(after).toHaveLength(before.length);
+    const [stray] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Not The Owner")));
+    expect(stray).toBeUndefined();
   });
 
   it("leaves a diver already on file alone when Stripe refuses their invoice", async () => {

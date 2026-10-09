@@ -411,12 +411,17 @@ export async function startBookingCheckout(
   // Only in this combination. With no fee, or no promotion, the shop's own
   // percent promotion code goes to Stripe exactly as before.
   const guardsPassThrough = passThroughCents > 0 && discountableCents > 0;
-  // The one-off coupon counts against no cap at Stripe, so on this path the
-  // code's cap is held here: one use reserved under the code's own lock before
-  // Stripe is called, and an exhausted code refused with a reason the diver can
-  // act on (layer-7 security review).
+  // The local ledger is the authority on a capped discount's uses, on every
+  // path. The one-off coupon below counts against no cap at Stripe, so uses
+  // spent through it are invisible to Stripe's `max_redemptions`; if only the
+  // fee path asked the ledger, a code exhausted there would get its whole cap
+  // again from Stripe the day the fee came off (and through the coupon-failure
+  // fallback, which hands Stripe the real code). So every attempt that applies
+  // a discount reserves one use under the code's own lock before Stripe is
+  // called, and an exhausted code is refused with a reason the diver can act
+  // on (layer-7 security review).
   let cappedSessionExpiresAt: Date | undefined;
-  if (appliedPromo && guardsPassThrough) {
+  if (appliedPromo) {
     // A diver's own earlier, unpaid page for any of these seats would
     // otherwise hold a use against their retry; the seats are claimed for this
     // attempt now, so no other attempt is using that page's figure either.
@@ -429,13 +434,19 @@ export async function startBookingCheckout(
       intentId: intent.id,
       now,
     });
-    if (reservation === "used_up") {
+    if (reservation === "used_up" || reservation === "not_reserved") {
       await resolvePaymentOperation(db, intent.id, {
         status: "failed",
-        errorMessage: "promotion redemption cap reached",
+        errorMessage:
+          reservation === "used_up"
+            ? "promotion redemption cap reached"
+            : "promotion reservation not held",
       });
       await releaseBookingCheckoutClaim(db, input.bookingIds, intent.id);
-      return { ok: false, reason: "promo_used_up" };
+      return {
+        ok: false,
+        reason: reservation === "used_up" ? "promo_used_up" : "checkout_unavailable",
+      };
     }
     // An abandoned page holds a capped code's use until it expires, so it
     // expires in minutes rather than Stripe's default day.

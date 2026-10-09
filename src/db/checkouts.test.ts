@@ -2587,11 +2587,15 @@ describe("a capped discount on the pass-through path", () => {
     expect(second.ok).toBe(false);
   });
 
-  it("leaves a capped code Stripe's to count when there is no fee", async () => {
+  it("still refuses a code used up on the fee path after the fee comes off", async () => {
+    // Layer-7 final review: uses spent through the one-off coupon are invisible
+    // to Stripe's `max_redemptions`, so with the fee gone Stripe would grant
+    // the whole cap again. The local ledger decides on every path.
     const { db, shop, reef, bookingIds } = await checkoutContext();
+    await setShopPassThroughFee(db, shop.id, { name: "Park fee", amountCents: 1_500 });
     const created = await createShopPromoCode(
       db,
-      { shopId: shop.id, code: "NOFEE", discountPercent: 20, scope: "all", maxRedemptions: 1 },
+      { shopId: shop.id, code: "FIRSTONE", discountPercent: 20, scope: "all", maxRedemptions: 1 },
       fakePromotions(),
     );
     if (!created.ok) throw new Error(`promo creation failed: ${created.reason}`);
@@ -2605,14 +2609,51 @@ describe("a capped discount on the pass-through path", () => {
       },
     });
     const seen = recordingCheckout();
-    const first = await startBookingCheckout(db, withCode(bookingIds), seen.provider);
-    if (!first.ok) throw new Error("first checkout refused");
+    const first = await startBookingCheckout(
+      db,
+      withCode(bookingIds),
+      seen.provider,
+      fakePromotions(),
+    );
+    if (!first.ok) throw new Error(`first checkout refused: ${first.reason}`);
+    // Spent through the one-off coupon: Stripe's own count of the code stays at zero.
+    expect(seen.requests[0]?.promotionCouponId).toBeDefined();
     await markCheckoutPaidBySessionId(db, first.checkout.stripeSessionId);
-    // No fee: the code itself goes to Stripe, whose `max_redemptions` decides.
-    const later = await party(db, shop.id, reef.id, "Stripe Decides");
-    const second = await startBookingCheckout(db, withCode(later), seen.provider);
-    expect(second.ok).toBe(true);
-    expect(seen.requests[1]?.promotionCode).toBe(created.promo.stripePromotionCodeId);
+
+    await setShopPassThroughFee(db, shop.id, null);
+    const later = await party(db, shop.id, reef.id, "After The Fee");
+    expect(await startBookingCheckout(db, withCode(later), seen.provider)).toEqual({
+      ok: false,
+      reason: "promo_used_up",
+    });
+    expect(seen.requests).toHaveLength(1);
+  });
+
+  it("still hands Stripe the code itself when there is no fee, while uses remain", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const created = await createShopPromoCode(
+      db,
+      { shopId: shop.id, code: "NOFEE", discountPercent: 20, scope: "all", maxRedemptions: 2 },
+      fakePromotions(),
+    );
+    if (!created.ok) throw new Error(`promo creation failed: ${created.reason}`);
+    const seen = recordingCheckout();
+    const outcome = await startBookingCheckout(
+      db,
+      {
+        ...startInput(shop.id, reef.id, bookingIds),
+        promotionCode: created.promo.stripePromotionCodeId ?? undefined,
+        shopPromo: {
+          id: created.promo.id,
+          code: created.promo.code,
+          discountPercent: created.promo.discountPercent,
+        },
+      },
+      seen.provider,
+    );
+    expect(outcome.ok).toBe(true);
+    expect(seen.requests[0]?.promotionCode).toBe(created.promo.stripePromotionCodeId);
+    expect(seen.requests[0]?.promotionCouponId).toBeUndefined();
   });
 
   it("refuses a trip deal's checkout once the seats open when it went out are taken", async () => {

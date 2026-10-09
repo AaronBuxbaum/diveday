@@ -151,7 +151,11 @@ export async function discountCapReached(
   return (await discountUses(db, input, input.now, input.exceptIntentId)) >= cap;
 }
 
-export type DiscountReservation = "uncapped" | "reserved" | "used_up";
+/**
+ * `not_reserved`: the attempt's intent was no longer this shop's `started`
+ * row to tag, so nothing was held for it and it must not go on to Stripe.
+ */
+export type DiscountReservation = "uncapped" | "reserved" | "used_up" | "not_reserved";
 
 /**
  * **Take one use of a capped discount for this checkout attempt, before Stripe
@@ -170,17 +174,28 @@ export async function reserveDiscountUse(
   input: DiscountRef & { intentId: string; now: Date },
 ): Promise<DiscountReservation> {
   return db.transaction(async (tx) => {
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${input.promoId}::text))`);
+    // Namespaced, like the gear register's lock (src/db/gear.ts), so a hash
+    // collision with another feature's key can never serialize the two.
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext('promo_cap'), hashtext(${input.promoId}::text))`,
+    );
     if (await discountCapReached(tx, { ...input, exceptIntentId: input.intentId })) {
       return "used_up";
     }
     if ((await discountCap(tx, input)) === null) return "uncapped";
-    await tx
+    const tagged = await tx
       .update(paymentOperationIntents)
       .set(
         input.source === "shop" ? { promoCodeId: input.promoId } : { tripPromoId: input.promoId },
       )
-      .where(eq(paymentOperationIntents.id, input.intentId));
-    return "reserved";
+      .where(
+        and(
+          eq(paymentOperationIntents.id, input.intentId),
+          eq(paymentOperationIntents.shopId, input.shopId),
+          eq(paymentOperationIntents.status, "started"),
+        ),
+      )
+      .returning({ id: paymentOperationIntents.id });
+    return tagged.length > 0 ? "reserved" : "not_reserved";
   });
 }
