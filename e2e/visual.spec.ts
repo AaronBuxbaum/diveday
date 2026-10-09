@@ -2455,7 +2455,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * The embed catalogue's three framed widgets (ADR
+       * The embed catalogue's framed widgets (ADR
        * 20260901-diveday-reimagined, slice 13d): what a shop's own website
        * shows once the loader has mounted them. Photographed at their own
        * routes, which are embeds by path — no chrome, the credit line, and
@@ -2483,6 +2483,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/s/blue-mantis/embed/courses");
         await page.getByRole("link", { name: "Enroll" }).first().waitFor();
         await capture(page, "embed-courses", scheme);
+      });
+
+      // The reviews widget (K3): the demo shop's published reviews, quoted
+      // under its rating, with the archive one tap away.
+      test(`the embed reviews widget renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis/embed/reviews");
+        await page.getByRole("link", { name: "All reviews" }).waitFor();
+        await capture(page, "embed-reviews", scheme);
       });
 
       /**
@@ -6652,10 +6660,13 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       // The staffer's own Email settings: the Monday email's row, on for the
-      // owner by default, with its preview door.
+      // owner by default, with its preview door, and the after-hours ping's.
       test(`the email settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/email");
-        await page.getByRole("button", { name: "Turn off" }).waitFor();
+        await page
+          .getByRole("region", { name: "After-hours messages" })
+          .getByRole("button", { name: "Turn off" })
+          .waitFor();
         await capture(page, "settings-email", scheme);
       });
 

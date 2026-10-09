@@ -78,7 +78,7 @@ describe("each settings group renders as its own component", () => {
     expect(rendered[2]?.rows).toEqual(["divingOptions", "emergency", "dockCall"]);
     expect(rendered[4]?.rows).toEqual(["rentals", "rentalPricing", "rentalTerms"]);
     expect(rendered[5]?.rows).toEqual(["tax", "passThrough", "tips", "stripe"]);
-    expect(rendered[6]?.rows).toEqual(["reviews", "reviewLink"]);
+    expect(rendered[6]?.rows).toEqual(["reviews", "reviewLink", "deskHours"]);
     expect(rendered[7]?.rows).toEqual([
       "profile",
       "shopPhotos",

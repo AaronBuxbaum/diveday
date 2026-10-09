@@ -138,6 +138,11 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // from a year the shop never named.
       "season_start_month",
       "season_start_day",
+      // When somebody is at the desk, a window the shop chose (the
+      // after-hours ping, `src/lib/desk-hours.ts`). Exported for the reason
+      // the season is: a restore must not quietly move the shop's hours.
+      "desk_opens_minute",
+      "desk_closes_minute",
       // Whether the shop asked to stay out of search engines
       // (ADR 20260813-search-listing-is-a-choice). Exported because the
       // bundle is also the *backup*: a shop that opted out and later
@@ -197,6 +202,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         JSON.stringify(shop.emergencyReference),
         shop.seasonStartMonth,
         shop.seasonStartDay,
+        shop.deskOpensMinute,
+        shop.deskClosesMinute,
         shop.searchListingOptOutAt,
         shop.tagline,
         shop.description,

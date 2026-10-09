@@ -90,6 +90,18 @@ describe("the loader", () => {
     expect(grid.searchParams.has("show")).toBe(false);
   });
 
+  it("frames the reviews widget by its own path, and never narrows it", () => {
+    host(`
+      <div data-diveday="reviews" data-shop="blue-mantis" data-look="light" data-lang="auto" data-show="t1"></div>
+    `);
+    const reviews = new URL(
+      document.querySelector<HTMLIFrameElement>('iframe[data-diveday-frame="reviews"]')?.src ?? "",
+    );
+    expect(reviews.pathname).toBe("/s/blue-mantis/embed/reviews");
+    expect(reviews.searchParams.has("show")).toBe(false);
+    expect(reviews.searchParams.get("credit")).toBe("host");
+  });
+
   it("darkens a pale host color until white reads on the button", () => {
     // Amber: 1.9:1 on white as it stands. The settings copy promises the
     // button darkens itself, and this is the rule that keeps that promise —

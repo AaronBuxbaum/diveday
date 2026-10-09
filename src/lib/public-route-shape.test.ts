@@ -84,6 +84,11 @@ describe("publicRouteShape", () => {
       kind: "shop",
       shopSlug: SHOP,
     });
+    // The reviews widget folds to the shop, like the archive it quotes from.
+    expect(publicRouteShape(`/s/${SHOP}/embed/reviews`)).toEqual({
+      kind: "shop",
+      shopSlug: SHOP,
+    });
     expect(publicRouteShape(`/s/${SHOP}/embed/nope`)).toEqual({
       kind: "malformed",
       shopSlug: SHOP,

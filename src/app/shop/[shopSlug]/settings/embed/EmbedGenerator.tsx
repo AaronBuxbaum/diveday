@@ -54,7 +54,7 @@ export type EmbedGeneratorCopy = {
   copyFailed: string;
 };
 
-const FRAMED = new Set<EmbedKind>(["calendar", "grid", "departure", "courses"]);
+const FRAMED = new Set<EmbedKind>(["calendar", "grid", "departure", "courses", "reviews"]);
 
 /**
  * **The embed generator** (Harbor — ADR 20260901-diveday-reimagined, decision
@@ -70,6 +70,7 @@ const FRAMED = new Set<EmbedKind>(["calendar", "grid", "departure", "courses"]);
 export function EmbedGenerator({
   origin,
   shopSlug,
+  kinds = EMBED_KINDS,
   trips,
   courses,
   locales,
@@ -78,6 +79,12 @@ export function EmbedGenerator({
 }: {
   origin: string;
   shopSlug: string;
+  /**
+   * The kinds this shop can use. Every kind but one is always on offer; the
+   * reviews widget is offered only while the shop has reviews switched on, as
+   * it would frame nothing otherwise (ADR 20261005-optional-shop-features).
+   */
+  kinds?: readonly EmbedKind[];
   trips: readonly { id: string; label: string }[];
   /** The shop's active courses, by slug, for the courses widget (issue #1284). */
   courses: readonly { id: string; label: string }[];
@@ -129,7 +136,7 @@ export function EmbedGenerator({
     ? embedFrameUrl(
         origin,
         shopSlug,
-        kind as "calendar" | "grid" | "departure" | "courses",
+        kind as "calendar" | "grid" | "departure" | "courses" | "reviews",
         { ...DEFAULT_EMBED_OPTIONS, lang, show: show || null, look },
         look === "site" ? previewHost : {},
       )
@@ -173,7 +180,7 @@ export function EmbedGenerator({
                   {copy.what}
                 </legend>
                 <div className="grid grid-cols-2 gap-2">
-                  {EMBED_KINDS.map((k) => (
+                  {kinds.map((k) => (
                     <label
                       key={k}
                       className={`${tile(kind === k)} cursor-pointer has-[:focus-visible]:focus-ring`}

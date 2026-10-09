@@ -123,7 +123,7 @@ describe("isUnknownEmbedWidgetRoute", () => {
   });
 
   it("leaves every real widget, and every other path, alone", () => {
-    for (const widget of ["grid", "departure", "courses"]) {
+    for (const widget of ["grid", "departure", "courses", "reviews"]) {
       const path = `/s/blue-mantis/embed/${widget}`;
       expect(isUnknownEmbedWidgetRoute(path), path).toBe(false);
       expect(isEmbedWidgetRoute(path), path).toBe(true);

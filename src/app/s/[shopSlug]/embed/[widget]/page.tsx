@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmbedCredit } from "@/components/EmbedCredit";
+import { ReviewLedger } from "@/components/ShopReviews";
+import { StarRating } from "@/components/StarRating";
 import { buttonClass } from "@/components/ui/button";
 import { listBoats } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
+import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { getTripWithBooked, pagedUpcomingTripsWithCounts } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
@@ -15,9 +18,15 @@ import { nowDate } from "@/lib/clock";
 import { resolveCourseContentDepths } from "@/lib/courses";
 import { isEmbedWidget } from "@/lib/embed-routes";
 import { formatDayParts, formatMoneyScanned, formatTimeRange } from "@/lib/format";
+import { cachedFormatter } from "@/lib/intl-cache";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
-import { publicCoursePath, publicSchedulePath, publicTripPath } from "@/lib/public-routes";
+import {
+  publicCoursePath,
+  publicReviewsPath,
+  publicSchedulePath,
+  publicTripPath,
+} from "@/lib/public-routes";
 import { capacityLabel } from "@/lib/trips";
 import { EmbedHeightReporter } from "./_components/EmbedHeightReporter";
 
@@ -25,8 +34,11 @@ import { EmbedHeightReporter } from "./_components/EmbedHeightReporter";
 // route (ADR 20260804-instant-navigation).
 export const instant = true;
 
+/** How many diver quotes the reviews widget carries before it hands over to the archive. */
+const WIDGET_QUOTES = 3;
+
 /**
- * Three thin views of the shop's own content, each a fragment of a page a
+ * Four thin views of the shop's own content, each a fragment of a page a
  * search engine already has: never indexed as pages of their own.
  */
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -34,8 +46,8 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 /**
  * **The embed catalogue's framed widgets** (Harbor — ADR
  * 20260901-diveday-reimagined, decision 2): `grid` (trips and courses as
- * cards), `departure` (one departure as a card, for a blog post) and `courses`
- * (the list). Each exists only to be framed by `public/embed.js` on a shop's
+ * cards), `departure` (one departure as a card, for a blog post), `courses`
+ * (the list) and `reviews` (what divers said, from the published archive). Each exists only to be framed by `public/embed.js` on a shop's
  * own website — the proxy marks the path an embed request, so the layout drops
  * its chrome and admits framing — and each wears whatever the host page or the
  * shop set, through the same `BrandStyle` the storefront reads. Every card's
@@ -93,7 +105,64 @@ export default async function EmbedWidgetPage({
   };
 
   let body: React.ReactNode;
-  if (widget === "departure") {
+  if (widget === "reviews") {
+    // **The archive's rules, framed.** Only what the public archive already
+    // shows: published, moderated reviews with words, signed "Marta R."
+    // (`reviewerDisplayName`), and nothing at all from a shop that switched
+    // reviews off (ADR 20261005-optional-shop-features).
+    const [aggregate, reviews] = shop.reviewsEnabled
+      ? await Promise.all([
+          getShopReviewAggregate(db, shop.id),
+          listPublishedShopReviews(db, shop.id),
+        ])
+      : [null, []];
+    // **Quiet below the shelf's own threshold.** The storefront's shelf renders
+    // nothing until a rating is published, because an empty "no reviews yet"
+    // panel reads as a warning; on someone else's page it would read worse.
+    // The frame then reports a height of nothing, and the loader folds it.
+    if (!aggregate || aggregate.average === null || aggregate.count === 0) {
+      return (
+        <main className="w-full">
+          <EmbedHeightReporter />
+        </main>
+      );
+    }
+    const average = aggregate.average;
+    body = (
+      <section aria-label={t("reviews.sectionTitle")}>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+            <StarRating
+              rating={Math.round(average)}
+              label={t("reviews.ratingOption", { rating: Math.round(average) })}
+              tone="accent"
+              className="text-base"
+            />
+            <span className="text-base font-semibold text-foreground tabular-nums">
+              {cachedFormatter("num", Intl.NumberFormat, locale, {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1,
+              }).format(average)}
+            </span>
+            <span className="tabular-nums">{t("reviews.count", { count: aggregate.count })}</span>
+          </p>
+          <Link
+            href={`${origin}${publicReviewsPath(shopSlug)}`}
+            target="_top"
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {t("reviews.allTitle")}
+          </Link>
+        </div>
+        <ReviewLedger
+          reviews={reviews.slice(0, WIDGET_QUOTES)}
+          locale={locale}
+          timezone={tz}
+          t={t}
+        />
+      </section>
+    );
+  } else if (widget === "departure") {
     const trip = showId ? await getTripWithBooked(db, shop.id, showId) : null;
     if (!trip || trip.isPrivate) notFound();
     body = (

@@ -10,6 +10,7 @@ import {
 } from "@/db/authz";
 import { type BoatPapersInput, createBoat, deleteBoat, updateBoat } from "@/db/boats";
 import { getDb } from "@/db/client";
+import { setShopDeskHours } from "@/db/desk-pings";
 import { createDivePackage, deleteDivePackage } from "@/db/dive-packages";
 import { shopSearchAnchor } from "@/db/dive-sites";
 import { queueAndAttemptMediaDeletion, retryMediaDeletion } from "@/db/media-deletions";
@@ -59,6 +60,7 @@ import {
 import { isBrandDisplayFontCode, parseBrandBadges, parseBrandColor } from "@/lib/brand";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
+import { parseDeskHours } from "@/lib/desk-hours";
 import { validateDivePackage } from "@/lib/dive-packages";
 import {
   DEFAULT_DIVERS_PER_DIVEMASTER,
@@ -897,6 +899,20 @@ export async function saveReviewUrlAction(formData: FormData) {
   if (!parsed.success) redirect(noticeUrl(settings, "review-url-invalid", { saved: "reviewLink" }));
   await setShopReviewUrl(await getDb(), session.user.shopId, parsed.data.reviewUrl);
   revalidateAndRedirect(settings, noticeUrl(settings, "review-url-saved", { saved: "reviewLink" }));
+}
+
+/**
+ * When somebody is at the desk: one window every day, in the shop's own zone.
+ * A diver message outside it pings the staff who asked (`src/lib/desk-hours.ts`).
+ */
+export async function saveDeskHoursAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+  const hours = parseDeskHours(formData.get("deskOpens"), formData.get("deskCloses"));
+  if (!hours) redirect(noticeUrl(settings, "desk-hours-invalid", { saved: "deskHours" }));
+  await setShopDeskHours(await getDb(), session.user.shopId, hours);
+  revalidateAndRedirect(settings, noticeUrl(settings, "desk-hours-saved", { saved: "deskHours" }));
 }
 
 /**

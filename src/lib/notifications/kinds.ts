@@ -1136,6 +1136,35 @@ const crewScheduleChangeSchema = z.object({
     .max(50),
 });
 
+/**
+ * **The desk is pinged when divers write in after hours** (D4, Aaron
+ * 2026-10-09; `src/lib/desk-hours.ts`). Staff operational mail to a staffer who
+ * asked for it (or whose role defaults to it), so no unsubscribe and no postal
+ * footer: `settingsUrl` is the way out, the same footing as the Monday email.
+ *
+ * **A count and two links, never the messages.** No sender, no subject, no
+ * body: the mail lands in a personal inbox that may sit on a shared phone, and
+ * everything a diver wrote stays behind the Inbox's own sign-in.
+ *
+ * `pingedAt` is the claim on `user_accounts.after_hours_pinged_at` that let
+ * this send. Not queued (`notificationIsQueueable`): a ping that arrived an
+ * hour late would only repeat what the next one says.
+ */
+const deskAfterHoursSchema = z.object({
+  kind: z.literal("desk_after_hours"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  /** How many divers wrote in since the desk closed and are still waiting. */
+  waiting: z.number().int().min(1).max(10_000),
+  inboxUrl: z.url().max(2_000),
+  settingsUrl: z.url().max(2_000),
+  pingedAt: z.date(),
+});
+
 export const notificationSenderSchema = z.object({
   replyTo: emailAddressSchema.optional(),
   /** One line, already in postal order (`shopAddressLines(...).join(", ")`). */
@@ -1187,6 +1216,7 @@ export const notificationSchema = z
     workOrderReadySchema,
     gearServiceDueSchema,
     crewScheduleChangeSchema,
+    deskAfterHoursSchema,
   ])
   .and(z.object({ sender: notificationSenderSchema.optional() }));
 
@@ -1296,6 +1326,7 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "work_order_ready":
     case "gear_service_due":
     case "crew_schedule_change":
+    case "desk_after_hours":
       return false;
     default:
       return true;
@@ -1436,5 +1467,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per settled batch, named by its newest notice row.
     case "crew_schedule_change":
       return `crew-schedule-change/${notification.noticeId}`;
+    // One send per claim of the person's batching clock.
+    case "desk_after_hours":
+      return `desk-after-hours/${notification.personId}/${notification.pingedAt.toISOString()}`;
   }
 }

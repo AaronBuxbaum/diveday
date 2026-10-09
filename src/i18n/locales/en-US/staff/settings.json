@@ -29,6 +29,8 @@
       "addressInvalid": "That address couldn’t be saved. Search again and pick your shop from the list.",
       "reviewUrlSaved": "Review link saved.",
       "reviewUrlInvalid": "Enter a full https:// link, or empty the box to stop asking for reviews.",
+      "deskHoursSaved": "Desk hours saved.",
+      "deskHoursInvalid": "Pick an opening time before the closing time.",
       "searchListingOn": "Your public pages are listed in search engines.",
       "searchListingOff": "Your public pages are hidden from search engines. Anything already indexed can take a few weeks to drop out.",
       "connected": "Stripe account connected.",
@@ -175,6 +177,15 @@
       "label": "Review link",
       "hint": "(optional)",
       "submit": "Save review link",
+      "submitting": "Saving…"
+    },
+    "deskHours": {
+      "heading": "Desk hours",
+      "value": "{opens} to {closes}",
+      "description": "When somebody is at the desk, every day in your shop’s time zone. Staff who ask hear about diver messages that arrive outside these hours.",
+      "opens": "Opens",
+      "closes": "Closes",
+      "submit": "Save desk hours",
       "submitting": "Saving…"
     },
     "shopPhotos": {
@@ -995,6 +1006,10 @@
       "courses": {
         "name": "Courses",
         "hint": "The course list"
+      },
+      "reviews": {
+        "name": "Reviews",
+        "hint": "What divers said, from your published reviews"
       },
       "qr": {
         "name": "QR code",

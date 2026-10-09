@@ -4360,6 +4360,12 @@
       },
       "open": "Abrir la salida"
     },
+    "deskAfterHours": {
+      "subject": "{shopName}: {count, plural, one {# buceador escribió} other {# buceadores escribieron}} fuera de horario",
+      "body": "{count, plural, one {# buceador escribió} other {# buceadores escribieron}} fuera de horario.",
+      "open": "Abrir Mensajes",
+      "turnOff": "Desactívalos en tus ajustes de correo"
+    },
     "smsWorkOrder": {
       "ready": "{shopName}: ya puedes recoger tu equipo de la orden #{number} ({pieces}).",
       "readyNoPieces": "{shopName}: ya puedes recoger tu equipo de la orden #{number}.",

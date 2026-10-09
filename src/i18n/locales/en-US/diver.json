@@ -4360,6 +4360,12 @@
       },
       "open": "Open the departure"
     },
+    "deskAfterHours": {
+      "subject": "{shopName}: {count, plural, one {# diver wrote} other {# divers wrote}} in after hours",
+      "body": "{count, plural, one {# diver wrote} other {# divers wrote}} in after hours.",
+      "open": "Open the Inbox",
+      "turnOff": "Turn these off in your email settings"
+    },
     "smsWorkOrder": {
       "ready": "{shopName}: your gear on ticket #{number} is ready to collect ({pieces}).",
       "readyNoPieces": "{shopName}: your gear on ticket #{number} is ready to collect.",

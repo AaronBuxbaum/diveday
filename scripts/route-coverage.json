@@ -198,7 +198,7 @@
   },
   "/s/[shopSlug]/embed/[widget]": {
     "e2e": ["embed-catalogue.spec.ts"],
-    "visual": ["embed-courses", "embed-departure", "embed-grid"]
+    "visual": ["embed-courses", "embed-departure", "embed-grid", "embed-reviews"]
   },
   "/s/[shopSlug]/embed/schedule": {
     "e2e": [
@@ -537,6 +537,7 @@
       "calendar-sync.spec.ts",
       "currency.spec.ts",
       "depth-and-age-surfaces.spec.ts",
+      "desk-ping.spec.ts",
       "divemaster-ratio.spec.ts",
       "nitrox.spec.ts",
       "recap.spec.ts",
@@ -577,7 +578,7 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings/email": {
-    "e2e": ["weekly-digest.spec.ts"],
+    "e2e": ["desk-ping.spec.ts", "weekly-digest.spec.ts"],
     "visual": ["settings-email"],
     "a11y": []
   },

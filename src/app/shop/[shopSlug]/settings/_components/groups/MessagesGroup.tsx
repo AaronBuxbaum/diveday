@@ -2,11 +2,17 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
-import { saveReviewUrlAction } from "../../actions";
+import { nowDate } from "@/lib/clock";
+import { deskTimeOn, deskTimeValue } from "@/lib/desk-hours";
+import { formatTime } from "@/lib/format";
+import { saveDeskHoursAction, saveReviewUrlAction } from "../../actions";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
 import { featureRow, MESSAGES_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
 
-/** The Messages group: reviews, the review link, and the shop's own WhatsApp sender. */
+/**
+ * The Messages group: reviews, the review link, the desk's hours, and the
+ * shop's own WhatsApp sender.
+ */
 export function MessagesGroup({
   view,
   canManageMessaging,
@@ -14,7 +20,10 @@ export function MessagesGroup({
   view: SettingsView;
   canManageMessaging: boolean;
 }) {
-  const { shop, shopSlug, t, banner, activeSection, notSet } = view;
+  const { shop, shopSlug, t, banner, activeSection, notSet, locale } = view;
+  const now = nowDate();
+  const deskTime = (minute: number) =>
+    formatTime(deskTimeOn(minute, now, shop.timezone), locale, shop.timezone);
   const reviewLinkValue = (() => {
     if (!shop.reviewUrl) return notSet;
     try {
@@ -61,6 +70,49 @@ export function MessagesGroup({
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("settings.main.reviewLink.submit")}
+              </SubmitButton>
+            </FieldActions>
+          </FieldGrid>
+        </SettingsRow>
+
+        {/* When somebody is at the desk. A diver message outside these hours
+          pings the staff who asked, from their own email settings. */}
+        <SettingsRow
+          heading={t("settings.main.deskHours.heading")}
+          value={t("settings.main.deskHours.value", {
+            opens: deskTime(shop.deskOpensMinute),
+            closes: deskTime(shop.deskClosesMinute),
+          })}
+          description={t("settings.main.deskHours.description")}
+          sectionId="deskHours"
+          activeSection={activeSection}
+        >
+          <SectionNotice banner={banner} section="deskHours" active={activeSection} />
+          <FieldGrid as="form" action={saveDeskHoursAction} columns={2} className="mt-4">
+            <Field label={t("settings.main.deskHours.opens")}>
+              <input
+                name="deskOpens"
+                type="time"
+                required
+                defaultValue={deskTimeValue(shop.deskOpensMinute)}
+                className={controlClass}
+              />
+            </Field>
+            <Field label={t("settings.main.deskHours.closes")}>
+              <input
+                name="deskCloses"
+                type="time"
+                required
+                defaultValue={deskTimeValue(shop.deskClosesMinute)}
+                className={controlClass}
+              />
+            </Field>
+            <FieldActions>
+              <SubmitButton
+                pendingLabel={t("settings.main.deskHours.submitting")}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("settings.main.deskHours.submit")}
               </SubmitButton>
             </FieldActions>
           </FieldGrid>
