@@ -485,6 +485,9 @@ const COUNTER_COLLECTIONS: ReadonlySet<string> = new Set<CounterCollection>([
   "card_machine",
 ]);
 
+/** The line kinds a counter order may carry. */
+const COUNTER_LINE_KINDS: ReadonlySet<string> = new Set(["rental"]);
+
 /**
  * Record money a shop has already taken at the counter, in cash or on its own
  * card machine, as a paid order (ADR 20261009-counter-payments).
@@ -519,6 +522,12 @@ export async function recordCounterOrder(
   const currency = await getShopCurrency(db, input.shopId);
   const maxUnitAmountCents = maxLineItemUnitAmountCents(currency);
   if (!input.lineItems.every((item) => lineItemIsValid(item, maxUnitAmountCents))) {
+    return invalid;
+  }
+  // Counter money is rental money: any staff may record it, so it may not
+  // carry what a broader gate guards, like a dive package's credits (security
+  // review of PR #2308). A new counter use widens this list on purpose.
+  if (!input.lineItems.every((item) => COUNTER_LINE_KINDS.has(item.kind) && !item.packageId)) {
     return invalid;
   }
 

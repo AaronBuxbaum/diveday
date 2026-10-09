@@ -2412,6 +2412,16 @@ describe("counter orders", () => {
         collection: "stripe_invoice" as unknown as "cash",
       }),
     ).toEqual(invalid);
+    // Only rental lines, and never a package's credits under the any-staff gate.
+    expect(
+      await recordCounterOrder(db, { ...base, lineItems: [{ ...valid[0], kind: "dive_package" }] }),
+    ).toEqual(invalid);
+    expect(
+      await recordCounterOrder(db, {
+        ...base,
+        lineItems: [{ ...valid[0], packageId: "00000000-0000-4000-8000-000000000000" }],
+      }),
+    ).toEqual(invalid);
 
     const written = await db.select().from(orders).where(eq(orders.collection, "cash"));
     expect(written).toEqual([]);
