@@ -34,6 +34,7 @@ vi.mock("@/db/checkouts", () => ({
   markCheckoutExpiredBySessionId: vi.fn(),
   markCheckoutPaymentFailedBySessionId: vi.fn(),
   recordCheckoutStripeCustomer: vi.fn(),
+  recordCheckoutPaymentIntent: vi.fn(),
 }));
 vi.mock("@/db/tips", () => ({
   markTipPaidBySessionId: vi.fn(),
@@ -43,7 +44,10 @@ vi.mock("@/db/tips", () => ({
 vi.mock("@/db/orders", () => ({
   markOrderPaidByInvoiceId: vi.fn(),
   markOrderVoidedByInvoiceId: vi.fn(),
+  recordOrderPaymentIntent: vi.fn(),
 }));
+vi.mock("@/db/refunds", () => ({ recordStripeChargeRefund: vi.fn() }));
+vi.mock("@/db/payment-disputes", () => ({ recordStripeDispute: vi.fn() }));
 vi.mock("@/db/stripe-accounts", () => ({
   setShopStripeAccountStatus: vi.fn(),
   disconnectShopStripeAccount: vi.fn(),
@@ -60,9 +64,13 @@ const {
   markCheckoutPaidBySessionId,
   markCheckoutExpiredBySessionId,
   markCheckoutPaymentFailedBySessionId,
+  recordCheckoutPaymentIntent,
 } = await import("@/db/checkouts");
 const { markTipPaidBySessionId, markTipExpiredBySessionId } = await import("@/db/tips");
-const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId } = await import("@/db/orders");
+const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId, recordOrderPaymentIntent } =
+  await import("@/db/orders");
+const { recordStripeChargeRefund } = await import("@/db/refunds");
+const { recordStripeDispute } = await import("@/db/payment-disputes");
 const { setShopStripeAccountStatus, disconnectShopStripeAccount } = await import(
   "@/db/stripe-accounts"
 );
@@ -120,6 +128,10 @@ beforeEach(() => {
     .mockResolvedValue(FAKE_CHECKOUT as never);
   vi.mocked(markOrderPaidByInvoiceId).mockReset();
   vi.mocked(markOrderVoidedByInvoiceId).mockReset();
+  vi.mocked(recordOrderPaymentIntent).mockReset().mockResolvedValue(true);
+  vi.mocked(recordCheckoutPaymentIntent).mockReset().mockResolvedValue(true);
+  vi.mocked(recordStripeChargeRefund).mockReset().mockResolvedValue({ status: "already_recorded" });
+  vi.mocked(recordStripeDispute).mockReset().mockResolvedValue({ status: "not_found" });
   vi.mocked(setShopStripeAccountStatus).mockReset();
   vi.mocked(disconnectShopStripeAccount).mockReset();
   vi.mocked(markTipPaidBySessionId).mockReset();
@@ -226,6 +238,67 @@ describe("checkout session events", () => {
   it("checkout.session.expired expires the checkout", async () => {
     expect((await deliver("checkout.session.expired")).status).toBe(200);
     expect(markCheckoutExpiredBySessionId).toHaveBeenCalledWith(FAKE_DB, SESSION_ID, ACCOUNT);
+  });
+});
+
+describe("money reversed outside DiveDay (ADR 20261009-stripe-reversals-reach-diveday)", () => {
+  it("invoice.paid records the PaymentIntent off the real invoice-payments list", async () => {
+    vi.mocked(markOrderPaidByInvoiceId).mockResolvedValue({ id: "order_1" } as never);
+    await deliver("invoice.paid");
+    expect(recordOrderPaymentIntent).toHaveBeenCalledWith(FAKE_DB, {
+      stripeInvoiceId: "in_1QsAVeLkdIwHu7ixKmNpQrSt",
+      paymentIntentId: "pi_3QsAVfLkdIwHu7ix0PqRsT1U",
+      expectedAccountId: ACCOUNT,
+    });
+  });
+
+  it("checkout.session.completed records the session's PaymentIntent", async () => {
+    await deliver("checkout.session.completed");
+    expect(recordCheckoutPaymentIntent).toHaveBeenCalledWith(FAKE_DB, {
+      stripeSessionId: expect.any(String),
+      paymentIntentId: "pi_3QsAVgLkdIwHu7ix1YtNqW9K",
+      expectedAccountId: ACCOUNT,
+    });
+  });
+
+  it("charge.refunded takes the cumulative amount_refunded and the PaymentIntent off a real Charge", async () => {
+    const response = await deliver("charge.refunded");
+    expect(response.status).toBe(200);
+    expect(recordStripeChargeRefund).toHaveBeenCalledWith(FAKE_DB, {
+      stripeAccountId: ACCOUNT,
+      paymentIntentId: "pi_3QsAVgLkdIwHu7ix1YtNqW9K",
+      amountRefundedCents: 12_000,
+    });
+  });
+
+  it("charge.dispute.created reads the amount, reason, status and evidence deadline off a real Dispute", async () => {
+    await deliver("charge.dispute.created");
+    expect(recordStripeDispute).toHaveBeenCalledWith(FAKE_DB, {
+      stripeAccountId: ACCOUNT,
+      eventType: "charge.dispute.created",
+      occurredAt: new Date(1784900000 * 1000),
+      dispute: {
+        id: "du_1QsAVkLkdIwHu7ixDisputeA",
+        paymentIntentId: "pi_3QsAVgLkdIwHu7ix1YtNqW9K",
+        amountCents: 24_000,
+        currency: "usd",
+        reason: "fraudulent",
+        status: "needs_response",
+        evidenceDueBy: new Date(1785729599 * 1000),
+        createdAt: new Date(1784900000 * 1000),
+      },
+    });
+  });
+
+  it("charge.dispute.closed carries Stripe's decision and a null deadline", async () => {
+    await deliver("charge.dispute.closed");
+    expect(recordStripeDispute).toHaveBeenCalledWith(
+      FAKE_DB,
+      expect.objectContaining({
+        eventType: "charge.dispute.closed",
+        dispute: expect.objectContaining({ status: "won", evidenceDueBy: null }),
+      }),
+    );
   });
 });
 

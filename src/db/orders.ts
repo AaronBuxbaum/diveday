@@ -8,6 +8,7 @@ import {
   ilike,
   inArray,
   isNotNull,
+  isNull,
   lt,
   or,
   sql,
@@ -36,7 +37,13 @@ import {
 } from "./payment-operations";
 import { setBookingPayment, setBookingPaymentIfNotFinal } from "./payments";
 import { queryAll } from "./query-helpers";
-import type { Order, OrderLineItemKind, OrderStatus, PaymentOperationIntent } from "./schema";
+import type {
+  Order,
+  OrderLineItemKind,
+  OrderStatus,
+  PaymentEventOperation,
+  PaymentOperationIntent,
+} from "./schema";
 import {
   bookings,
   courses,
@@ -955,9 +962,25 @@ async function applyOrderUpdate(
     reverseCents?: number;
     /** Absolute new running total, not a delta — see `orders.refunded_cents`. */
     refundedCents?: number;
+    /**
+     * **Stripe's cumulative figure for everything reversed off this order's
+     * charge**, from a `charge.refunded` event — the refund somebody made in
+     * the Stripe dashboard (ADR 20261009-stripe-reversals-reach-diveday).
+     *
+     * Resolved against the locked row into a delta, `target − refunded_cents`,
+     * and only ever upward: a refund DiveDay already recorded is already in
+     * `refunded_cents`, so its own webhook adds nothing, and an older event
+     * delivered after a newer one (a smaller cumulative) is a no-op rather
+     * than a reversal of a reversal. Exclusive with `reverseCents`.
+     */
+    refundedTotalCents?: number;
+    /** The trail code for the booking cascade of a refund; `order_refunded` when unsaid. */
+    refundOperation?: PaymentEventOperation;
     hostedInvoiceUrl?: string | null;
     invoicePdfUrl?: string | null;
   },
+  /** Set `noop` when this call wrote nothing: no new refund to record, or a refused transition. */
+  noop?: { noop: boolean },
 ): Promise<Order | null> {
   return db.transaction(async (tx) => {
     const [current] = await tx.select().from(orders).where(eq(orders.id, order.id)).for("update");
@@ -966,10 +989,21 @@ async function applyOrderUpdate(
     // Resolved against `current`, inside the lock. Clamped so a provider
     // reporting more than the order still holds cannot drive
     // `amount_paid_cents` through its non-negative check constraint.
+    const requestedReverseCents =
+      patch.refundedTotalCents !== undefined
+        ? Math.max(0, patch.refundedTotalCents - current.refundedCents)
+        : patch.reverseCents;
     const reversedCents =
-      patch.reverseCents === undefined
+      requestedReverseCents === undefined
         ? null
-        : Math.min(patch.reverseCents, current.amountPaidCents);
+        : Math.min(requestedReverseCents, current.amountPaidCents);
+    // Stripe's cumulative figure says nothing this row does not already hold:
+    // the refund was DiveDay's own, or this is an older event arriving late.
+    // Nothing to write, and no `order.refunded` to emit a second time.
+    if (patch.refundedTotalCents !== undefined && reversedCents === 0) {
+      if (noop) noop.noop = true;
+      return current;
+    }
     const remainingCents =
       reversedCents === null ? current.amountPaidCents : current.amountPaidCents - reversedCents;
     const status: OrderStatus =
@@ -1022,6 +1056,7 @@ async function applyOrderUpdate(
         from: current.status,
         to: status,
       });
+      if (noop) noop.noop = true;
       return current;
     }
 
@@ -1087,7 +1122,7 @@ async function applyOrderUpdate(
         currency: updated.currency,
         provider: "stripe",
         providerRef: updated.stripeInvoiceId,
-        operation: "order_refunded",
+        operation: patch.refundOperation ?? "order_refunded",
       });
     }
     if (updated.status === "paid") {
@@ -1168,6 +1203,78 @@ export async function markOrderPaidByInvoiceId(
     amountPaidCents,
     ...(taxCents === null || taxCents === undefined ? {} : { taxCents }),
   });
+}
+
+/**
+ * Remember which PaymentIntent paid this invoice — the one handle a later
+ * `charge.refunded` or `charge.dispute.*` event carries back to the order
+ * (ADR 20261009-stripe-reversals-reach-diveday). Write-once: a first answer is
+ * never overwritten by a later one, and a mismatched account writes nothing.
+ */
+export async function recordOrderPaymentIntent(
+  db: DbExecutor,
+  input: { stripeInvoiceId: string; paymentIntentId: string; expectedAccountId?: string },
+): Promise<boolean> {
+  const rows = await db
+    .update(orders)
+    .set({ stripePaymentIntentId: input.paymentIntentId })
+    .where(
+      and(
+        eq(orders.stripeInvoiceId, input.stripeInvoiceId),
+        isNull(orders.stripePaymentIntentId),
+        ...(input.expectedAccountId === undefined
+          ? []
+          : [eq(orders.stripeAccountId, input.expectedAccountId)]),
+      ),
+    )
+    .returning({ id: orders.id });
+  return rows.length > 0;
+}
+
+/**
+ * What a refund made outside DiveDay did to an order.
+ *
+ * - `refunded` — the order now holds less, and `order.refunded` was enqueued.
+ * - `already_recorded` — Stripe's figure is already in `refunded_cents`: the
+ *   refund was DiveDay's own, or this is a late, older event.
+ * - `not_settled` — the order is still open here, because `invoice.paid` has
+ *   not been handled yet. The webhook asks Stripe to deliver again later
+ *   rather than drop a refund the order cannot hold yet.
+ * - `not_paid` — void: there was never money on it.
+ */
+export type ExternalOrderRefundOutcome =
+  | { status: "refunded"; order: Order }
+  | { status: "already_recorded" | "not_settled" | "not_paid" };
+
+/**
+ * Bring an order's refunded total up to what Stripe says it has reversed —
+ * through the same `applyOrderUpdate` every DiveDay refund uses, so the
+ * order's balance, its booking's payment row (with the
+ * `stripe_dashboard_refund` trail code), Reports and the integrations'
+ * `order.refunded` event all move together (ADR
+ * 20261009-stripe-reversals-reach-diveday).
+ */
+export async function applyStripeRefundedTotalToOrder(
+  db: AppDb,
+  order: Order,
+  refundedTotalCents: number,
+): Promise<ExternalOrderRefundOutcome> {
+  if (order.status === "open" || order.status === "uncollectible") return { status: "not_settled" };
+  if (order.status === "void") return { status: "not_paid" };
+  const result = { noop: false };
+  const updated = await applyOrderUpdate(
+    db,
+    order,
+    {
+      // Overridden inside the lock once the delta is resolved.
+      status: "refunded",
+      refundedTotalCents,
+      refundOperation: "stripe_dashboard_refund",
+    },
+    result,
+  );
+  if (!updated || result.noop) return { status: "already_recorded" };
+  return { status: "refunded", order: updated };
 }
 
 export async function markOrderVoidedByInvoiceId(

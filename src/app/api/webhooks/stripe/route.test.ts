@@ -11,6 +11,7 @@ vi.mock("@/db/checkouts", () => ({
   markCheckoutExpiredBySessionId: vi.fn(),
   markCheckoutPaymentFailedBySessionId: vi.fn(),
   recordCheckoutStripeCustomer: vi.fn(),
+  recordCheckoutPaymentIntent: vi.fn(),
 }));
 vi.mock("@/db/tips", () => ({
   markTipPaidBySessionId: vi.fn(),
@@ -20,7 +21,10 @@ vi.mock("@/db/tips", () => ({
 vi.mock("@/db/orders", () => ({
   markOrderPaidByInvoiceId: vi.fn(),
   markOrderVoidedByInvoiceId: vi.fn(),
+  recordOrderPaymentIntent: vi.fn(),
 }));
+vi.mock("@/db/refunds", () => ({ recordStripeChargeRefund: vi.fn() }));
+vi.mock("@/db/payment-disputes", () => ({ recordStripeDispute: vi.fn() }));
 vi.mock("@/db/stripe-accounts", () => ({
   setShopStripeAccountStatus: vi.fn(),
   disconnectShopStripeAccount: vi.fn(),
@@ -37,12 +41,16 @@ const {
   markCheckoutPaidBySessionId,
   markCheckoutExpiredBySessionId,
   markCheckoutPaymentFailedBySessionId,
+  recordCheckoutPaymentIntent,
   recordCheckoutStripeCustomer,
 } = await import("@/db/checkouts");
 const { markTipPaidBySessionId, markTipExpiredBySessionId, recordTipStripeCustomer } = await import(
   "@/db/tips"
 );
-const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId } = await import("@/db/orders");
+const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId, recordOrderPaymentIntent } =
+  await import("@/db/orders");
+const { recordStripeChargeRefund } = await import("@/db/refunds");
+const { recordStripeDispute } = await import("@/db/payment-disputes");
 const { setShopStripeAccountStatus, disconnectShopStripeAccount } = await import(
   "@/db/stripe-accounts"
 );
@@ -101,6 +109,10 @@ beforeEach(() => {
   vi.mocked(markTipPaidBySessionId).mockReset();
   vi.mocked(markTipExpiredBySessionId).mockReset();
   vi.mocked(recordCheckoutStripeCustomer).mockReset().mockResolvedValue(true);
+  vi.mocked(recordCheckoutPaymentIntent).mockReset().mockResolvedValue(true);
+  vi.mocked(recordOrderPaymentIntent).mockReset().mockResolvedValue(true);
+  vi.mocked(recordStripeChargeRefund).mockReset();
+  vi.mocked(recordStripeDispute).mockReset();
   vi.mocked(recordTipStripeCustomer).mockReset().mockResolvedValue(false);
   vi.mocked(claimStripeWebhookEvent).mockReset().mockResolvedValue(true);
   vi.mocked(hasNewerAccountUpdate).mockReset().mockResolvedValue(false);
@@ -621,6 +633,127 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     expect(disconnectShopStripeAccount).not.toHaveBeenCalled();
   });
 
+  describe("money reversed outside DiveDay (ADR 20261009-stripe-reversals-reach-diveday)", () => {
+    const refundEvent = (object: Record<string, unknown>, extra: Record<string, unknown> = {}) => ({
+      id: "evt_refund",
+      type: "charge.refunded",
+      account: "acct_1",
+      data: { object: { id: "ch_1", amount_refunded: 6_000, ...object } },
+      ...extra,
+    });
+
+    it("charge.refunded hands Stripe's cumulative figure and the PaymentIntent over", async () => {
+      vi.mocked(recordStripeChargeRefund).mockResolvedValue({ status: "checkout_refunded" });
+      const response = await post(refundEvent({ payment_intent: "pi_1" }));
+      expect(response.status).toBe(200);
+      expect(recordStripeChargeRefund).toHaveBeenCalledWith(FAKE_DB, {
+        stripeAccountId: "acct_1",
+        paymentIntentId: "pi_1",
+        amountRefundedCents: 6_000,
+      });
+    });
+
+    it("charge.refunded reads an expanded PaymentIntent as its id", async () => {
+      vi.mocked(recordStripeChargeRefund).mockResolvedValue({ status: "already_recorded" });
+      await post(refundEvent({ payment_intent: { id: "pi_2" } }));
+      expect(recordStripeChargeRefund).toHaveBeenCalledWith(
+        FAKE_DB,
+        expect.objectContaining({ paymentIntentId: "pi_2" }),
+      );
+    });
+
+    it("charge.refunded with no PaymentIntent, or no account, records nothing", async () => {
+      expect((await post(refundEvent({ payment_intent: null }))).status).toBe(200);
+      expect(
+        (await post(refundEvent({ payment_intent: "pi_1" }, { id: "evt_r2", account: undefined })))
+          .status,
+      ).toBe(200);
+      expect(recordStripeChargeRefund).not.toHaveBeenCalled();
+    });
+
+    it("a deferred refund answers 503 and gives its claim back, without paging anyone", async () => {
+      vi.mocked(recordStripeChargeRefund).mockResolvedValue({ status: "deferred" });
+      const response = await post(refundEvent({ payment_intent: "pi_1" }));
+      // Non-2xx so Stripe delivers it again; the claim released so that
+      // delivery reaches the handler instead of reading as a duplicate.
+      expect(response.status).toBe(503);
+      expect(releaseStripeWebhookEventClaim).toHaveBeenCalledWith(FAKE_DB, "evt_refund");
+      expect(Sentry.captureException).not.toHaveBeenCalled();
+    });
+
+    it("charge.dispute.* passes the dispute, its deadline and the event's own time", async () => {
+      vi.mocked(recordStripeDispute).mockResolvedValue({ status: "not_found" });
+      const created = 1_800_000_000;
+      const response = await post({
+        id: "evt_dispute",
+        type: "charge.dispute.created",
+        account: "acct_1",
+        created: created + 60,
+        data: {
+          object: {
+            id: "dp_1",
+            amount: 18_000,
+            currency: "usd",
+            created,
+            status: "needs_response",
+            reason: "fraudulent",
+            payment_intent: "pi_1",
+            evidence_details: { due_by: created + 86_400 },
+          },
+        },
+      });
+      expect(response.status).toBe(200);
+      expect(recordStripeDispute).toHaveBeenCalledWith(FAKE_DB, {
+        stripeAccountId: "acct_1",
+        eventType: "charge.dispute.created",
+        occurredAt: new Date((created + 60) * 1000),
+        dispute: {
+          id: "dp_1",
+          paymentIntentId: "pi_1",
+          amountCents: 18_000,
+          currency: "usd",
+          reason: "fraudulent",
+          status: "needs_response",
+          evidenceDueBy: new Date((created + 86_400) * 1000),
+          createdAt: new Date(created * 1000),
+        },
+      });
+    });
+
+    it("records the PaymentIntent a settling session and a paid invoice name", async () => {
+      vi.mocked(markOrderPaidByInvoiceId).mockResolvedValue({ id: "order_1" } as never);
+      await post({
+        id: "evt_pi_invoice",
+        type: "invoice.paid",
+        account: "acct_1",
+        data: {
+          object: {
+            id: "in_1",
+            amount_paid: 100,
+            payments: { data: [{ is_default: true, payment: { payment_intent: "pi_inv" } }] },
+          },
+        },
+      });
+      expect(recordOrderPaymentIntent).toHaveBeenCalledWith(FAKE_DB, {
+        stripeInvoiceId: "in_1",
+        paymentIntentId: "pi_inv",
+        expectedAccountId: "acct_1",
+      });
+
+      await post({
+        id: "evt_pi_session",
+        type: "checkout.session.completed",
+        account: "acct_1",
+        data: { object: { id: "cs_1", payment_status: "paid", payment_intent: "pi_cs" } },
+      });
+      expect(recordCheckoutPaymentIntent).toHaveBeenCalledWith(FAKE_DB, {
+        stripeSessionId: "cs_1",
+        paymentIntentId: "pi_cs",
+        expectedAccountId: "acct_1",
+      });
+    });
+  });
+
   it("an unhandled event type is a no-op 200, not an error", async () => {
     const response = await post({
       id: "evt_1",
@@ -1074,6 +1207,35 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
         data: { object: {} },
       },
       arrange: () => vi.mocked(disconnectShopStripeAccount).mockRejectedValue(boom),
+    },
+    {
+      name: "charge.refunded",
+      event: {
+        id: "evt_fail_refund",
+        type: "charge.refunded",
+        account: "acct_1",
+        data: { object: { id: "ch_1", amount_refunded: 500, payment_intent: "pi_1" } },
+      },
+      arrange: () => vi.mocked(recordStripeChargeRefund).mockRejectedValue(boom),
+    },
+    {
+      name: "charge.dispute.created",
+      event: {
+        id: "evt_fail_dispute",
+        type: "charge.dispute.created",
+        account: "acct_1",
+        data: {
+          object: {
+            id: "dp_1",
+            amount: 500,
+            currency: "usd",
+            created: 1_800_000_000,
+            status: "needs_response",
+            payment_intent: "pi_1",
+          },
+        },
+      },
+      arrange: () => vi.mocked(recordStripeDispute).mockRejectedValue(boom),
     },
   ];
 

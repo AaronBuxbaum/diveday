@@ -214,7 +214,9 @@ const invoiceResponseSchema = z.object({
  * as "Stripe says there is no money here" — so it must never be the answer to
  * "we looked in the wrong field".
  */
-function paidPaymentIntentId(invoice: z.infer<typeof invoiceResponseSchema>): string | null {
+function paidPaymentIntentId(
+  invoice: Pick<z.infer<typeof invoiceResponseSchema>, "payments" | "payment_intent">,
+): string | null {
   const payments = invoice.payments?.data ?? [];
   const settled =
     payments.find((payment) => payment.is_default && payment.payment?.payment_intent) ??
@@ -225,6 +227,24 @@ function paidPaymentIntentId(invoice: z.infer<typeof invoiceResponseSchema>): st
   const legacy = invoice.payment_intent;
   if (typeof legacy === "string") return legacy;
   return legacy?.id ?? null;
+}
+
+const invoicePaymentFieldsSchema = invoiceResponseSchema.pick({
+  payment_intent: true,
+  payments: true,
+});
+
+/**
+ * The PaymentIntent a raw Invoice object (a webhook's `data.object`) says paid
+ * it, under either shape {@link paidPaymentIntentId} reads — or null when the
+ * body carries neither, which a webhook body may: Stripe can leave the
+ * `payments` list out of an event. The webhook records it on the order so a
+ * later refund or dispute naming only the PaymentIntent finds its way back
+ * (ADR 20261009-stripe-reversals-reach-diveday).
+ */
+export function invoicePaymentIntentId(invoice: unknown): string | null {
+  const parsed = invoicePaymentFieldsSchema.safeParse(invoice);
+  return parsed.success ? paidPaymentIntentId(parsed.data) : null;
 }
 
 function taxCentsOf(invoice: z.infer<typeof invoiceResponseSchema>): number {

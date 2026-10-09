@@ -345,6 +345,13 @@ export const paymentEventOperation = pgEnum("payment_event_operation", [
    * (ADR 20260813-shop-cancellation-refunds-itself).
    */
   "shop_cancellation_refund",
+  /**
+   * A refund somebody made **outside DiveDay** — in the shop's own Stripe
+   * dashboard, say — reported by the `charge.refunded` webhook and recorded so
+   * the seat, the order and Reports agree with Stripe
+   * (ADR 20261009-stripe-reversals-reach-diveday).
+   */
+  "stripe_dashboard_refund",
 ]);
 
 /**
@@ -573,6 +580,14 @@ export const orders = pgTable(
     stripeAccountId: text("stripe_account_id").notNull(),
     stripeCustomerId: text("stripe_customer_id").notNull(),
     stripeInvoiceId: text("stripe_invoice_id").notNull(),
+    /**
+     * The PaymentIntent that paid the invoice, read off `invoice.paid` (or
+     * asked of Stripe the first time a refund or dispute names it). It is the
+     * only handle a `charge.refunded` or `charge.dispute.*` event carries back
+     * to this order (ADR 20261009-stripe-reversals-reach-diveday). Null until
+     * paid.
+     */
+    stripePaymentIntentId: text("stripe_payment_intent_id"),
     hostedInvoiceUrl: text("hosted_invoice_url"),
     invoicePdfUrl: text("invoice_pdf_url"),
     finalizedAt: timestamp("finalized_at", { withTimezone: true }),
@@ -584,6 +599,7 @@ export const orders = pgTable(
   },
   (table) => [
     uniqueIndex("orders_stripe_invoice_unique").on(table.stripeInvoiceId),
+    index("orders_stripe_payment_intent_idx").on(table.stripePaymentIntentId),
     index("orders_shop_status_idx").on(table.shopId, table.status),
     index("orders_shop_booking_idx").on(table.shopId, table.bookingId),
     /** Backs listOrdersForPerson — the person-first diver workspace's payment history. */
@@ -813,10 +829,27 @@ export const bookingCheckouts = pgTable(
      * (ADR 20260803-async-payment-failed).
      */
     asyncPaymentFailedAt: timestamp("async_payment_failed_at", { withTimezone: true }),
+    /**
+     * The PaymentIntent the session settled through, off its completion
+     * event. The handle a `charge.refunded` or `charge.dispute.*` event
+     * carries back to this checkout (ADR 20261009-stripe-reversals-reach-diveday).
+     */
+    stripePaymentIntentId: text("stripe_payment_intent_id"),
+    /**
+     * Minor units reversed off this session's charge so far, by every path:
+     * DiveDay's own cancellation refunds and a refund made in the Stripe
+     * dashboard alike. The checkout's twin of `orders.refunded_cents`, and the
+     * figure Stripe's cumulative `amount_refunded` is compared against, so a
+     * refund DiveDay made itself is never counted a second time when its
+     * webhook arrives.
+     */
+    refundedCents: integer("refunded_cents").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("booking_checkouts_stripe_session_unique").on(table.stripeSessionId),
+    index("booking_checkouts_stripe_payment_intent_idx").on(table.stripePaymentIntentId),
+    check("booking_checkouts_refunded_nonnegative", sql`${table.refundedCents} >= 0`),
     index("booking_checkouts_shop_trip_idx").on(table.shopId, table.tripId),
     check("booking_checkouts_amount_per_diver_nonnegative", sql`${table.amountPerDiverCents} >= 0`),
     check("booking_checkouts_total_nonnegative", sql`${table.totalCents} >= 0`),
@@ -913,6 +946,66 @@ export const bookingCheckoutBookings = pgTable(
  * same shape (status/session/checkout URL lifecycle), separate concern
  * (docs ADR 20260726-post-trip-tipping).
  */
+/**
+ * A card dispute (a chargeback, or an inquiry before one) a diver's bank opened
+ * against a charge DiveDay took — one row per Stripe dispute, kept current by
+ * the `charge.dispute.*` webhooks (ADR 20261009-stripe-reversals-reach-diveday).
+ *
+ * Exactly one of `order_id`/`checkout_id` names what was disputed: a dispute on
+ * a charge DiveDay never made (the shop's own till on the same Stripe account)
+ * is not recorded at all. While `closed_at` is null the owner sees a Today row
+ * with the amount and the evidence deadline.
+ *
+ * Informs, never moves money: a lost dispute is Stripe taking the funds back,
+ * which the shop sees in its own Stripe balance; nothing here rewrites the
+ * order or the seat.
+ */
+export const paymentDisputes = pgTable(
+  "payment_disputes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    stripeAccountId: text("stripe_account_id").notNull(),
+    stripeDisputeId: text("stripe_dispute_id").notNull(),
+    stripePaymentIntentId: text("stripe_payment_intent_id").notNull(),
+    orderId: uuid("order_id").references(() => orders.id),
+    checkoutId: uuid("checkout_id").references(() => bookingCheckouts.id),
+    amountCents: integer("amount_cents").notNull(),
+    currency: text("currency").notNull(),
+    /** Stripe's own reason code (`fraudulent`, `product_not_received`, …), verbatim. */
+    reason: text("reason"),
+    /** Stripe's own status code (`needs_response`, `under_review`, `won`, …), verbatim. */
+    status: text("status").notNull(),
+    /** When Stripe stops accepting evidence. Null when Stripe names no deadline. */
+    evidenceDueBy: timestamp("evidence_due_by", { withTimezone: true }),
+    openedAt: timestamp("opened_at", { withTimezone: true }).notNull(),
+    /** Set once the dispute is decided (won, lost, or a warning closed). */
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    /**
+     * The `created` time of the newest event applied. An older event delivered
+     * late never overwrites a newer one — Stripe does not promise order.
+     */
+    lastEventAt: timestamp("last_event_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("payment_disputes_stripe_dispute_unique").on(table.stripeDisputeId),
+    /** Today's read: one shop's undecided disputes. */
+    index("payment_disputes_shop_open_idx")
+      .on(table.shopId, table.evidenceDueBy)
+      .where(sql`${table.closedAt} is null`),
+    index("payment_disputes_shop_order_idx").on(table.shopId, table.orderId),
+    check("payment_disputes_amount_nonnegative", sql`${table.amountCents} >= 0`),
+    check(
+      "payment_disputes_one_target",
+      sql`(${table.orderId} is null) <> (${table.checkoutId} is null)`,
+    ),
+  ],
+);
+
 export const tipStatus = pgEnum("tip_status", ["pending", "paid", "expired"]);
 
 export const tips = pgTable(
@@ -1178,6 +1271,8 @@ export type OrderLineItemKind = (typeof orderLineItemKind.enumValues)[number];
 export type StripeWebhookEvent = typeof stripeWebhookEvents.$inferSelect;
 
 export type BookingCheckout = typeof bookingCheckouts.$inferSelect;
+
+export type PaymentDispute = typeof paymentDisputes.$inferSelect;
 
 export type Tip = typeof tips.$inferSelect;
 

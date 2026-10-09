@@ -14,10 +14,13 @@ import {
 } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { refundOnCancellation } from "@/lib/deposits";
+import { log } from "@/lib/log";
 import { capturedPaymentStatuses, isCapturedPaymentStatus } from "@/lib/payment-source";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
+import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { releasePackageCoverageForBooking } from "./bookings";
 import type { AppDb, AppTransaction } from "./client";
+import { applyStripeRefundedTotalToOrder } from "./orders";
 import {
   idempotencyKeyFor,
   recordPaymentOperationStripeObject,
@@ -26,8 +29,10 @@ import {
   startPaymentOperation,
 } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
-import type { BookingPayment, PaymentOperationIntent } from "./schema";
+import type { BookingPayment, Order, PaymentOperationIntent } from "./schema";
 import {
+  bookingCheckoutBookings,
+  bookingCheckouts,
   bookingPaymentEvents,
   bookingPayments,
   bookings,
@@ -36,6 +41,7 @@ import {
   trips,
 } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
+import { findStripePaymentTarget } from "./stripe-payment-targets";
 
 /**
  * The result of attempting an automated refund when a paid seat is cancelled.
@@ -206,6 +212,31 @@ async function claimBookingRefund<Outcome>(
 }
 
 /**
+ * Add a reversal DiveDay itself just made to the checkout's running
+ * `refunded_cents`, so that when the same refund comes back as a
+ * `charge.refunded` webhook, Stripe's cumulative figure already matches and
+ * nothing is counted twice (ADR 20261009-stripe-reversals-reach-diveday).
+ *
+ * Keyed on the captured object the reversal was taken against — the Checkout
+ * session id a checkout-paid seat carries as its `providerRef`. Anything else
+ * (an order-paid seat, a counter mark) matches no checkout and adds nothing.
+ */
+async function countCheckoutRefund(
+  tx: AppTransaction,
+  plan: Pick<BookingRefundPlan, "providerRef" | "stripeAccountId" | "refundCents">,
+): Promise<void> {
+  await tx
+    .update(bookingCheckouts)
+    .set({ refundedCents: sql`${bookingCheckouts.refundedCents} + ${plan.refundCents}` })
+    .where(
+      and(
+        eq(bookingCheckouts.stripeSessionId, plan.providerRef),
+        eq(bookingCheckouts.stripeAccountId, plan.stripeAccountId),
+      ),
+    );
+}
+
+/**
  * Automatically refund a cancelled booking when the shop's stated cancellation
  * window still holds, moving money only through the shop's own connected
  * Stripe account. Deliberately conservative and fail-safe:
@@ -302,19 +333,22 @@ export async function refundBookingOnCancellation(
     // Durable the moment Stripe confirms the refund exists — before the
     // local payment-row update below that could still fail (CR-005).
     if (result.refundId) await recordPaymentOperationStripeObject(db, intent.id, result.refundId);
-    await setBookingPayment(db, {
-      shopId: input.shopId,
-      bookingId: input.bookingId,
-      status: "refunded",
-      amountCents: plan.refundCents,
-      currency: plan.currency,
-      provider: "stripe",
-      providerRef: result.refundId ?? plan.providerRef,
-      note: "Auto-refunded on cancellation within the free window",
-      // The capture this reverses is overwritten in `booking_payments`; the
-      // append-only trail is where it survives (ADR
-      // 20260803-booking-payment-events).
-      operation: "cancellation_refund",
+    await db.transaction(async (tx) => {
+      await countCheckoutRefund(tx, plan);
+      await setBookingPayment(tx, {
+        shopId: input.shopId,
+        bookingId: input.bookingId,
+        status: "refunded",
+        amountCents: plan.refundCents,
+        currency: plan.currency,
+        provider: "stripe",
+        providerRef: result.refundId ?? plan.providerRef,
+        note: "Auto-refunded on cancellation within the free window",
+        // The capture this reverses is overwritten in `booking_payments`; the
+        // append-only trail is where it survives (ADR
+        // 20260803-booking-payment-events).
+        operation: "cancellation_refund",
+      });
     });
     await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
     return { status: "refunded", amountCents: plan.refundCents };
@@ -466,16 +500,19 @@ export async function refundBookingOnShopCancellation(
   );
   if (result.status === "refunded") {
     if (result.refundId) await recordPaymentOperationStripeObject(db, intent.id, result.refundId);
-    await setBookingPayment(db, {
-      shopId: input.shopId,
-      bookingId: input.bookingId,
-      status: "refunded",
-      amountCents: plan.refundCents,
-      currency: plan.currency,
-      provider: "stripe",
-      providerRef: result.refundId ?? plan.providerRef,
-      note: "Auto-refunded: the shop canceled this departure",
-      operation: "shop_cancellation_refund",
+    await db.transaction(async (tx) => {
+      await countCheckoutRefund(tx, plan);
+      await setBookingPayment(tx, {
+        shopId: input.shopId,
+        bookingId: input.bookingId,
+        status: "refunded",
+        amountCents: plan.refundCents,
+        currency: plan.currency,
+        provider: "stripe",
+        providerRef: result.refundId ?? plan.providerRef,
+        note: "Auto-refunded: the shop canceled this departure",
+        operation: "shop_cancellation_refund",
+      });
     });
     await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
     return { status: "refunded", amountCents: plan.refundCents };
@@ -670,4 +707,208 @@ export async function refundBookingsForShopCancelledTrip(
     );
   }
   return outcomes;
+}
+
+/**
+ * What a refund made **outside DiveDay** did here — a code, never a sentence.
+ *
+ * - `order_refunded` / `checkout_refunded` — recorded; the order (and its
+ *   `order.refunded` integration event) or the seat now say what Stripe says.
+ * - `checkout_unattributed` — recorded against a party checkout's running
+ *   total, but no single seat on it can be named as the one refunded, so no
+ *   seat's payment row was guessed at. Logged for staff to settle by hand.
+ * - `already_recorded` — Stripe's figure is already in DiveDay's books: the
+ *   refund was DiveDay's own, or this is an older event arriving late.
+ * - `deferred` — not yet: DiveDay's own refund of this money is mid-flight,
+ *   or the payment it reverses has not settled here yet. The webhook answers
+ *   non-2xx so Stripe delivers it again once that has finished.
+ * - `not_found` — a charge DiveDay never raised (the shop's own till), or one
+ *   whose checkout DiveDay retired before it settled.
+ */
+export type ExternalRefundOutcome =
+  | { status: "order_refunded"; order: Order }
+  | { status: "checkout_refunded" | "checkout_unattributed" }
+  | { status: "already_recorded" | "deferred" | "not_found" };
+
+export type ExternalRefundInput = {
+  /** The event's own `account` — the connected account whose charge this is. */
+  stripeAccountId: string;
+  paymentIntentId: string;
+  /** The charge's `amount_refunded`: everything reversed off it so far, cumulative. */
+  amountRefundedCents: number;
+  /** See {@link claimBookingRefund} — the abandoned-attempt horizon, for tests. */
+  staleBefore?: Date;
+};
+
+/**
+ * Whether DiveDay's own refund of this money is between "Stripe was asked" and
+ * "the local books say so". A fresh `started` refund intent is exactly that
+ * window: the Stripe reversal may already exist — and this very event may be
+ * its echo — while the local write that counts it has not landed. Recording it
+ * from here as well would count it twice, so the webhook waits.
+ *
+ * Only *fresh* intents count, the horizon every claim in this file uses. Past
+ * it the process that held the claim is dead and will never write; then the
+ * webhook is the only thing that can bring the books level, and it does.
+ */
+async function ownRefundInFlight(
+  db: AppDb,
+  shopId: string,
+  scope: { orderId: string } | { bookingIds: string[] },
+  staleBefore: Date,
+): Promise<boolean> {
+  if ("bookingIds" in scope && scope.bookingIds.length === 0) return false;
+  const [live] = await db
+    .select({ id: paymentOperationIntents.id })
+    .from(paymentOperationIntents)
+    .where(
+      and(
+        eq(paymentOperationIntents.shopId, shopId),
+        eq(paymentOperationIntents.kind, "refund"),
+        eq(paymentOperationIntents.status, "started"),
+        gte(paymentOperationIntents.startedAt, staleBefore),
+        "orderId" in scope
+          ? eq(paymentOperationIntents.orderId, scope.orderId)
+          : inArray(paymentOperationIntents.bookingId, scope.bookingIds),
+      ),
+    )
+    .limit(1);
+  return live !== undefined;
+}
+
+/**
+ * **Record a refund somebody made in the Stripe dashboard** (ADR
+ * 20261009-stripe-reversals-reach-diveday), from a `charge.refunded` event.
+ *
+ * Reconciles to Stripe's *cumulative* `amount_refunded`, never to the event's
+ * own refund: the delta is `amount_refunded − refunded_cents`, computed under
+ * the row's lock and applied only upward. That one rule is what makes every
+ * hostile sequence converge:
+ *
+ * - **DiveDay's own refund comes back as a webhook too.** Its local write has
+ *   already raised `refunded_cents` (orders through `refundOrder`, checkouts
+ *   through `countCheckoutRefund`), so the delta is zero. If the webhook beats
+ *   that write, `ownRefundInFlight` defers it until the write has landed.
+ * - **Redelivery, and two refunds' events in either order.** A replay or an
+ *   older event carries a cumulative already reached, and is a no-op; the
+ *   newest event carries everything.
+ * - **A refund that outruns its own settlement.** An order still open, or a
+ *   checkout still pending, cannot hold a refund yet; the event is deferred
+ *   rather than dropped, since Stripe will not send it again otherwise.
+ *
+ * An order moves through the very `applyOrderUpdate` every DiveDay refund uses,
+ * so its booking's payment row, Reports and the integrations' `order.refunded`
+ * move with it. A checkout moves its own running total, and its seat's payment
+ * row when exactly one captured seat is on it; a party checkout's refund names
+ * no seat, so none is guessed at.
+ *
+ * Money is never moved from here — this only writes down what Stripe already
+ * did. Tenant-safe by construction: the target is found by the event's own
+ * account (`findStripePaymentTarget`).
+ */
+export async function recordStripeChargeRefund(
+  db: AppDb,
+  input: ExternalRefundInput,
+  lookup?: PaymentSourceLookup,
+): Promise<ExternalRefundOutcome> {
+  const staleBefore = input.staleBefore ?? new Date(nowDate().getTime() - STALE_AFTER_MS);
+  const target = await findStripePaymentTarget(
+    db,
+    { stripeAccountId: input.stripeAccountId, paymentIntentId: input.paymentIntentId },
+    lookup,
+  );
+  if (target.kind === "none") return { status: "not_found" };
+
+  if (target.kind === "order") {
+    const { order } = target;
+    if (await ownRefundInFlight(db, order.shopId, { orderId: order.id }, staleBefore)) {
+      return { status: "deferred" };
+    }
+    const outcome = await applyStripeRefundedTotalToOrder(db, order, input.amountRefundedCents);
+    if (outcome.status === "refunded") return { status: "order_refunded", order: outcome.order };
+    if (outcome.status === "not_settled") return { status: "deferred" };
+    if (outcome.status === "not_paid") return { status: "not_found" };
+    return { status: "already_recorded" };
+  }
+
+  const { checkout } = target;
+  // A completion not handled yet: the refund has nothing to land on.
+  if (checkout.status === "pending") return { status: "deferred" };
+  // Retired here before it settled (a stale quote, a reschedule) — DiveDay
+  // never counted this money in, so there is nothing to count back out.
+  if (checkout.status !== "completed") return { status: "not_found" };
+
+  const covered = await db
+    .select({ bookingId: bookingCheckoutBookings.bookingId })
+    .from(bookingCheckoutBookings)
+    .where(
+      and(
+        eq(bookingCheckoutBookings.shopId, checkout.shopId),
+        eq(bookingCheckoutBookings.checkoutId, checkout.id),
+      ),
+    );
+  const coveredIds = covered.map((row) => row.bookingId);
+  if (await ownRefundInFlight(db, checkout.shopId, { bookingIds: coveredIds }, staleBefore)) {
+    return { status: "deferred" };
+  }
+
+  return db.transaction(async (tx): Promise<ExternalRefundOutcome> => {
+    const [current] = await tx
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkout.id))
+      .for("update");
+    if (!current) return { status: "not_found" };
+    const captured = current.settledTotalCents ?? current.totalCents;
+    const reversedTotal = Math.min(input.amountRefundedCents, captured);
+    const delta = reversedTotal - current.refundedCents;
+    if (delta <= 0) return { status: "already_recorded" };
+
+    await tx
+      .update(bookingCheckouts)
+      .set({ refundedCents: current.refundedCents + delta })
+      .where(eq(bookingCheckouts.id, current.id));
+
+    // The seats this session still holds money for. Read under the checkout's
+    // lock; each seat's own write below takes that seat's lock as well.
+    const holding =
+      coveredIds.length === 0
+        ? []
+        : await tx
+            .select()
+            .from(bookingPayments)
+            .where(
+              and(
+                eq(bookingPayments.shopId, current.shopId),
+                inArray(bookingPayments.bookingId, coveredIds),
+                eq(bookingPayments.providerRef, current.stripeSessionId),
+                inArray(bookingPayments.status, [...capturedPaymentStatuses]),
+              ),
+            );
+    const [seat, ...others] = holding;
+    if (!seat || others.length > 0) {
+      log("stripe_refund.checkout_unattributed", "warn", {
+        shopId: current.shopId,
+        checkoutId: current.id,
+        seatsHolding: holding.length,
+      });
+      return { status: "checkout_unattributed" };
+    }
+
+    const held = seat.amountCents ?? 0;
+    const remaining = Math.max(0, held - delta);
+    await setBookingPayment(tx, {
+      shopId: current.shopId,
+      bookingId: seat.bookingId,
+      // The same shape an order refund writes: a partial leaves what the shop
+      // still holds and stays `partly_refunded`, which still clears boarding.
+      status: remaining > 0 ? "partly_refunded" : "refunded",
+      amountCents: remaining > 0 ? remaining : held,
+      currency: seat.currency,
+      provider: "stripe",
+      providerRef: current.stripeSessionId,
+      operation: "stripe_dashboard_refund",
+    });
+    return { status: "checkout_refunded" };
+  });
 }
