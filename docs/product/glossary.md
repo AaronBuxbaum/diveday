@@ -5,14 +5,18 @@ new domain concept, define it here in the same PR.
 
 - **Blow-out** — the captain's call that weather or sea state makes a departure un-runnable: the
   trip is cancelled by the shop, not the diver. Distinct from a **conditions hold** (below), which
-  is reversible and keeps bookings live. In DiveDay a blow-out is called once per departure and
-  triggers the cancellation cascade: every booked diver gets one message with the cancellation,
-  their money story, and rebooking options filtered to departures they qualify for, and staff work
-  the cascade record until nobody is left unresolved (ADR
-  [20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md)). A blow-out
+  is reversible and keeps bookings live. In DiveDay a blow-out is called per departure, or for
+  several departures of one day at once (the day weather call, ADR
+  [20261009-day-weather-call](../architecture/decisions/20261009-day-weather-call.md), which never
+  offers a diver a departure the same call cancels), and triggers the cancellation cascade: every
+  booked diver gets one message with the cancellation, their money story, and rebooking options
+  filtered to departures they qualify for, and staff work the cascade record until nobody is left
+  unresolved (ADR [20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md)). A blow-out
   refunds each seat's card capture by itself as of 2026-08-13 (ADR
   [20260813-shop-cancellation-refunds-itself](../architecture/decisions/20260813-shop-cancellation-refunds-itself.md));
   a counter payment, a disconnected account, or a Stripe refusal still leaves the refund to staff.
+  A departure **underway** (past its start time, or with anybody recorded at roll call) cannot be
+  blown out, and the day call is for owners, managers and captains only.
   **It cancels the *trip* and leaves every booking active**, and every reader downstream has to expect that
   shape: `bookings.status` says nothing about a blow-out, so a surface asking "was this seat
   cancelled" gets `false` for all twelve people who drove to the dock and were sent home. The
@@ -817,6 +821,14 @@ new domain concept, define it here in the same PR.
   has sailed, since nothing on a hull that has left is left to move; the side still on the dock
   keeps the warning until it sails or its boat changes, because its divers are the ones with no
   boat.
+- **Crew news** — what a crew member is told when their boats change: put on a departure, taken off
+  one, given a different role on one, the departure called off, or an answer to their own request.
+  Recorded as `crew_notices` rows by the crew write path, never for the staffer who made the change,
+  then netted per departure and sent as one email per person. A call-off, or a change on a departure
+  leaving within a day, goes at once. Anything else waits until their crew has been still for two
+  minutes, on the hourly pass. On then off before it settles is no news, and every row is settled
+  with an outcome, never in silence (ADR
+  [20261009-crew-hear-about-their-boats](../architecture/decisions/20261009-crew-hear-about-their-boats.md)).
 - **Crew clash** — one person on two departures whose windows **overlap**. It is a time overlap and
   never a shared day: a divemaster on the 08:00 and the 14:00 is how a shop runs a Saturday, and
   `setTripCrew`/`changeTripCrew` allow it deliberately while refusing the overlap outright. The

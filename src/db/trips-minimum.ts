@@ -2,6 +2,7 @@ import { and, asc, count, eq, isNotNull, isNull, lte, ne, sql } from "drizzle-or
 import { nowDate } from "@/lib/clock";
 import { effectiveMinimum, MINIMUM_SEATS_DECISION_HOURS_DEFAULT } from "@/lib/minimum-seats";
 import type { AppDb } from "./client";
+import { flushUrgentCrewNotices, recordCrewCalledOff } from "./crew-notices";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { bookings, people, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -205,10 +206,20 @@ export async function cancelDeparturesBelowMinimum(
           shopId: departure.shopId,
           tripIds: [updated.id],
         });
+        // Its crew hear it is off (ADR 20261009-crew-hear-about-their-boats).
+        await recordCrewCalledOff(tx, {
+          shopId: departure.shopId,
+          tripIds: [updated.id],
+          actorPersonId: null,
+          now,
+        });
       }
       return updated;
     });
-    if (row) cancelled.push(departure);
+    if (row) {
+      cancelled.push(departure);
+      await flushUrgentCrewNotices(db, { shopId: departure.shopId, tripIds: [row.id], now });
+    }
   }
 
   return { considered, cancelled, deferred };

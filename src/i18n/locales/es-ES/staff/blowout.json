@@ -6,7 +6,7 @@
     "diversHeading": "{count, plural, one {Se enviará el mensaje a # buceador} other {Se enviará el mensaje a # buceadores}}",
     "noEmail": "Sin correo — marcado para llamar",
     "noDivers": "No hay nadie reservado en esta salida. Llamarla cancela la salida.",
-    "departed": "Esta salida ya zarpó, así que no hay nada que cancelar.",
+    "departed": "Esta salida está en curso o ya zarpó, así que no hay nada que cancelar.",
     "button": "Cancelar por mal tiempo",
     "calling": "Cancelando…"
   },
@@ -44,7 +44,34 @@
   "notices": {
     "called": "Cancelación llamada. La salida queda cancelada y el mensaje de cada buceador está en camino.",
     "resumed": "Se reintentaron los mensajes no enviados.",
-    "departed": "Esta salida ya zarpó, así que no se canceló nada.",
-    "error": "Eso no funcionó. Inténtalo de nuevo."
+    "departed": "Esta salida está en curso o ya zarpó, así que no se canceló nada.",
+    "error": "Eso no funcionó. Inténtalo de nuevo.",
+    "dayCalled": "{count, plural, one {Cancelación hecha. La salida está cancelada y el mensaje de cada buceador va en camino.} other {Cancelación hecha en # salidas. Están canceladas y el mensaje de cada buceador va en camino.}}",
+    "dayPartly": "{called, plural, one {# salida cancelada.} other {# salidas canceladas.}} {skipped, plural, one {# no se pudo cancelar: ya zarpó o ya no está programada.} other {# no se pudieron cancelar: ya zarparon o ya no están programadas.}}",
+    "dayNone": "Selecciona al menos una salida para cancelar."
+  },
+  "day": {
+    "title": "¿Cancelar el día por mal tiempo?",
+    "lead": "Esto cancela cada salida que selecciones y envía a cada persona reservada un solo mensaje, igual que cancelarlas una por una. A nadie se le ofrece otra salida que esta misma cancelación anula, y el equipo de cada una se entera al momento.",
+    "pickLabel": "Seleccionar",
+    "pickAll": "Todas las salidas",
+    "pickMorning": "Antes del mediodía",
+    "departuresHeading": "Salidas",
+    "booked": "{count, plural, =0 {Nadie reservado} one {# reservado} other {# reservados}}",
+    "called": "Ya cancelada por mal tiempo",
+    "canceled": "Cancelada",
+    "underway": "En curso",
+    "unsent": "Mensajes sin enviar",
+    "resume": "Terminar de enviar",
+    "openRecord": "Abrir la cascada",
+    "empty": "No hay salidas este día.",
+    "nothingToCall": "No queda nada que cancelar este día.",
+    "instead": "¿Se cae todo el día? Cancela varias salidas a la vez",
+    "crew": "Equipo: {names}",
+    "noCrew": "Sin equipo asignado",
+    "review": "Revisar la cancelación",
+    "confirmTitle": "¿Cancelar estas salidas?",
+    "confirmButton": "{departures, plural, one {Cancelar # salida} other {Cancelar # salidas}}, {divers, plural, one {# buceador} other {# buceadores}}",
+    "changeSelection": "Cambiar la selección"
   }
 }

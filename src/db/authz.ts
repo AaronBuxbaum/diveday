@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { cache } from "react";
 import {
+  canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
   canErasePersonalData,
@@ -214,6 +215,10 @@ export const canPersonReadPrivateRecapPulse = (db: DbExecutor, shopId: string, p
 
 export const canPersonConfigureTrips = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canConfigureTrips);
+
+/** Live DB-checked companion of the day weather-call gate (src/lib/authz.ts). */
+export const canPersonCallDayBlowout = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canCallDayBlowout);
 
 /**
  * Live DB-checked companion of the owner-only incident-export gate

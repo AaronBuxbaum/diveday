@@ -1,5 +1,20 @@
+CREATE TYPE "crew_notice_change" AS ENUM('assigned', 'removed', 'request_approved', 'request_declined', 'request_refused', 'role_changed', 'called_off');--> statement-breakpoint
+CREATE TYPE "crew_notice_outcome" AS ENUM('sent', 'failed', 'netted', 'skipped', 'no_recipient', 'demo');--> statement-breakpoint
 ALTER TYPE "notification_kind" ADD VALUE 'booking_cancelled';--> statement-breakpoint
 ALTER TYPE "payment_event_operation" ADD VALUE 'stripe_dashboard_refund';--> statement-breakpoint
+CREATE TABLE "crew_notices" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+	"shop_id" uuid NOT NULL,
+	"person_id" uuid NOT NULL,
+	"trip_id" uuid NOT NULL,
+	"change" "crew_notice_change" NOT NULL,
+	"actor_person_id" uuid,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"settled_at" timestamp with time zone,
+	"outcome" "crew_notice_outcome",
+	"seq" bigserial
+);
+--> statement-breakpoint
 CREATE TABLE "payment_disputes" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"shop_id" uuid NOT NULL,
@@ -26,12 +41,21 @@ ALTER TABLE "booking_checkouts" ADD COLUMN "stripe_payment_intent_id" text;--> s
 ALTER TABLE "booking_checkouts" ADD COLUMN "refunded_cents" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE "orders" ADD COLUMN "stripe_payment_intent_id" text;--> statement-breakpoint
 ALTER TABLE "tips" ADD COLUMN "stripe_payment_intent_id" text;--> statement-breakpoint
+CREATE INDEX "crew_notices_pending_idx" ON "crew_notices" ("shop_id","person_id","seq") WHERE settled_at is null;--> statement-breakpoint
+CREATE INDEX "crew_notices_person_idx" ON "crew_notices" ("person_id");--> statement-breakpoint
+CREATE INDEX "crew_notices_trip_idx" ON "crew_notices" ("trip_id");--> statement-breakpoint
+CREATE INDEX "crew_notices_actor_idx" ON "crew_notices" ("actor_person_id");--> statement-breakpoint
+CREATE INDEX "crew_notices_settled_idx" ON "crew_notices" ("settled_at");--> statement-breakpoint
 CREATE INDEX "booking_checkouts_stripe_payment_intent_idx" ON "booking_checkouts" ("stripe_payment_intent_id");--> statement-breakpoint
 CREATE INDEX "orders_stripe_payment_intent_idx" ON "orders" ("stripe_payment_intent_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "payment_disputes_stripe_dispute_unique" ON "payment_disputes" ("stripe_dispute_id");--> statement-breakpoint
 CREATE INDEX "payment_disputes_shop_open_idx" ON "payment_disputes" ("shop_id","evidence_due_by") WHERE "closed_at" is null;--> statement-breakpoint
 CREATE INDEX "payment_disputes_shop_order_idx" ON "payment_disputes" ("shop_id","order_id");--> statement-breakpoint
 CREATE INDEX "tips_stripe_payment_intent_idx" ON "tips" ("stripe_payment_intent_id");--> statement-breakpoint
+ALTER TABLE "crew_notices" ADD CONSTRAINT "crew_notices_shop_id_shops_id_fkey" FOREIGN KEY ("shop_id") REFERENCES "shops"("id") ON DELETE CASCADE;--> statement-breakpoint
+ALTER TABLE "crew_notices" ADD CONSTRAINT "crew_notices_person_id_people_id_fkey" FOREIGN KEY ("person_id") REFERENCES "people"("id") ON DELETE CASCADE;--> statement-breakpoint
+ALTER TABLE "crew_notices" ADD CONSTRAINT "crew_notices_trip_id_trips_id_fkey" FOREIGN KEY ("trip_id") REFERENCES "trips"("id") ON DELETE CASCADE;--> statement-breakpoint
+ALTER TABLE "crew_notices" ADD CONSTRAINT "crew_notices_actor_person_id_people_id_fkey" FOREIGN KEY ("actor_person_id") REFERENCES "people"("id") ON DELETE SET NULL;--> statement-breakpoint
 ALTER TABLE "payment_disputes" ADD CONSTRAINT "payment_disputes_shop_id_shops_id_fkey" FOREIGN KEY ("shop_id") REFERENCES "shops"("id");--> statement-breakpoint
 ALTER TABLE "payment_disputes" ADD CONSTRAINT "payment_disputes_order_id_orders_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id");--> statement-breakpoint
 ALTER TABLE "payment_disputes" ADD CONSTRAINT "payment_disputes_checkout_id_booking_checkouts_id_fkey" FOREIGN KEY ("checkout_id") REFERENCES "booking_checkouts"("id");--> statement-breakpoint

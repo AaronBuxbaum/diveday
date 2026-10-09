@@ -1394,6 +1394,24 @@ async function pauseRecapOnMissingAfterDive(
  * A boarded event on a seat the counter released takes that release back
  * (`reclaimReleasedSeat`). The rail never refuses; it overrules.
  */
+/**
+ * **Roll call never refuses a boat that is already counting heads**
+ * (dive-domain review, 2026-10-09). A trip takes roll-call writes while it is
+ * scheduled, and — whatever its status — once anybody, diver or crew, has a
+ * roll-call event on it: a departure cancelled after the count began (a plain
+ * cancel at the dock, a status flipped by mistake) must still be able to say
+ * who is aboard and who came back. The blow-out refuses such a trip outright
+ * (`setUpTripBlowout`); this is the other side of the same rule. The id is
+ * bound as a value so the subqueries cannot match another trip's rows.
+ */
+function scheduledOrCountingHeads(tripId: string) {
+  return or(
+    eq(trips.status, "scheduled"),
+    sql`exists (select 1 from ${rollCallEvents} where ${rollCallEvents.tripId} = ${tripId})`,
+    sql`exists (select 1 from ${rollCallCrewEvents} where ${rollCallCrewEvents.tripId} = ${tripId})`,
+  );
+}
+
 export async function recordRollCall(
   db: AppDb,
   input: {
@@ -1463,7 +1481,7 @@ export async function recordRollCall(
           eq(bookings.shopId, input.shopId),
           eq(bookings.tripId, input.tripId),
           ne(bookings.status, "cancelled"),
-          eq(trips.status, "scheduled"),
+          scheduledOrCountingHeads(input.tripId),
         ),
       )
       .limit(1)
@@ -1709,7 +1727,7 @@ export async function recordCrewRollCall(
           liveTrip(),
           eq(trips.id, input.tripId),
           eq(trips.shopId, input.shopId),
-          eq(trips.status, "scheduled"),
+          scheduledOrCountingHeads(input.tripId),
         ),
       )
       .limit(1);
