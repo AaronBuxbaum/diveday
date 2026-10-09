@@ -3,6 +3,7 @@ import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { personNamesMatch } from "@/lib/person-name";
+import { seatName } from "@/lib/held-seat";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { waiverState } from "@/lib/waivers";
@@ -97,7 +98,7 @@ export async function getClaimPageData(
     tripTitle: row.trip.title,
     startsAt: row.trip.startsAt,
     endsAt: row.trip.endsAt,
-    seatName: row.person.fullName,
+    seatName: seatName(row.person.fullName, row.booking),
   };
 }
 
@@ -579,7 +580,9 @@ export async function issuePartySeatClaims(
     const claimable = claimableNow(row.booking, row.trip, now);
     seats.push({
       bookingId: row.booking.id,
-      seatName: row.person.fullName,
+      // A held seat goes by the name it was booked under: the matched
+      // record's name would tell whoever typed the email whose it is (#2125).
+      seatName: seatName(row.person.fullName, row.booking),
       claimed: row.booking.claimedAt !== null,
       waiverSigned: waiverState(row.waiver, now) === "complete",
       claim: claimable
