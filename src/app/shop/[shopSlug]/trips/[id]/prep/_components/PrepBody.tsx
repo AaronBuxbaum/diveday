@@ -1241,6 +1241,18 @@ export function PrepBody({
                                   }
                                 : null,
                             ].filter((group) => group !== null);
+                            // One sentence per refusal a pick can come back
+                            // with, the same for a hand pick and a proposal.
+                            const pickRefusals = {
+                              unit_unavailable: t("gear.prep.notice.unitUnavailable"),
+                              unit_out_of_service: t("gear.prep.notice.unitOutOfService"),
+                              not_wanted: t("gear.prep.notice.notWanted"),
+                              already_holds_kind: t("gear.prep.notice.alreadyHoldsKind", {
+                                kindLabel,
+                              }),
+                              identity_held: t("gear.prep.notice.identityHeld"),
+                              needs_care: t("gear.prep.notice.unitNeedsCare"),
+                            };
                             const picker = (
                               <RentalUnitPicker
                                 id={selectId}
@@ -1252,12 +1264,10 @@ export function PrepBody({
                                 copy={{
                                   pickUnit: t("gear.prep.pickUnit"),
                                   assigning: t("gear.prep.assigning"),
-                                  refusals: {
-                                    unit_unavailable: t("gear.prep.notice.unitUnavailable"),
-                                    unit_out_of_service: t("gear.prep.notice.unitOutOfService"),
-                                    not_wanted: t("gear.prep.notice.notWanted"),
-                                  },
+                                  refusals: pickRefusals,
                                   refusalFallback: t("gear.prep.notice.assignFailed"),
+                                  needsCareConfirm: t("gear.prep.notice.unitNeedsCare"),
+                                  assignAnyway: t("gear.prep.assignAnyway"),
                                 }}
                               />
                             );
@@ -1300,16 +1310,7 @@ export function PrepBody({
                                             assign: t("gear.prep.proposal.assign"),
                                             assigning: t("gear.prep.assigning"),
                                             change: t("gear.prep.proposal.change"),
-                                            refusals: {
-                                              unit_unavailable: t(
-                                                "gear.prep.notice.unitUnavailable",
-                                              ),
-                                              unit_out_of_service: t(
-                                                "gear.prep.notice.unitOutOfService",
-                                              ),
-                                              not_wanted: t("gear.prep.notice.notWanted"),
-                                              needs_care: t("gear.prep.notice.unitNeedsCare"),
-                                            },
+                                            refusals: pickRefusals,
                                             refusalFallback: t("gear.prep.notice.assignFailed"),
                                           }}
                                         >

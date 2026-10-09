@@ -41,6 +41,9 @@ import { bookings, gearReservations, gearServiceEvents, shops, trips } from "./s
 import { moveTrip, setTripStatus } from "./trips";
 import { createTrip } from "./trips-create";
 
+/** A setup reservation: a hand pick whose staffer already said "Assign anyway". */
+const SETUP_PICK = { proposed: false, assignAnyway: true } as const;
+
 const TODAY = "2026-08-20";
 
 async function shopBooking(db: AppDb, shopId: string, name: string) {
@@ -306,6 +309,7 @@ describe("gear items", () => {
       // The seeded departure is in September; TODAY is 2026-08-20.
       reservedFrom: "2026-09-01",
       reservedUntil: "2026-09-02",
+      screen: SETUP_PICK,
     });
     if (!reserved.ok) throw new Error(`reservation failed: ${reserved.reason}`);
 
@@ -604,6 +608,7 @@ describe("gear service history", () => {
       bookingId: maya.bookingId,
       reservedFrom: "2026-08-19",
       reservedUntil: "2026-08-22",
+      screen: SETUP_PICK,
     });
     expect(reserved.ok).toBe(true);
 
@@ -615,7 +620,7 @@ describe("gear service history", () => {
 
 describe("reserveGearUnit's screen, held under the booking's lock (issue #2215)", () => {
   const WINDOW = { reservedFrom: "2026-09-01", reservedUntil: "2026-09-01" } as const;
-  const screen = (proposed: boolean) => ({ proposed, todayLocal: TODAY });
+  const screen = (proposed: boolean) => ({ proposed });
 
   it("gives one diver one BCD when two tablets assign different BCDs at the same instant", async () => {
     const { db, shop } = await gearShopContext();
@@ -695,6 +700,7 @@ describe("reserveGearUnit's screen, held under the booking's lock (issue #2215)"
       bookingId: earlier.bookingId,
       reservedFrom: "2026-08-10",
       reservedUntil: "2026-08-11",
+      screen: screen(false),
     });
     if (!before.ok) throw new Error(`reserve refused: ${before.reason}`);
     await returnGearReservation(db, {
@@ -704,19 +710,22 @@ describe("reserveGearUnit's screen, held under the booking's lock (issue #2215)"
       note: "Second stage free-flows",
     });
 
-    const pick = (proposed: boolean) =>
+    const pick = (proposed: boolean, assignAnyway?: boolean) =>
       reserveGearUnit(db, {
         shopId: shop.id,
         gearItemId: reg.id,
         bookingId: carmen.bookingId,
         ...WINDOW,
-        screen: screen(proposed),
+        screen: { proposed, assignAnyway },
       });
     expect(await pick(true)).toEqual({ ok: false, reason: "needs_care" });
     expect(await openReservationsOf(db, carmen.bookingId)).toBe(0);
-    // A person who chose the labeled unit from the picker saw the label: the
-    // dock decides (H-06).
-    expect((await pick(false)).ok).toBe(true);
+    // A hand pick of a regulator is life support: the staffer is asked, in
+    // words, before it is assigned (dive-domain review). Saying "Assign
+    // anyway" is the dock deciding (H-06).
+    expect(await pick(false)).toEqual({ ok: false, reason: "needs_care_confirm" });
+    expect(await openReservationsOf(db, carmen.bookingId)).toBe(0);
+    expect((await pick(false, true)).ok).toBe(true);
   });
 
   it("refuses a proposed unit whose service clock has lapsed", async () => {
@@ -743,29 +752,104 @@ describe("reserveGearUnit's screen, held under the booking's lock (issue #2215)"
     ).toEqual({ ok: false, reason: "needs_care" });
   });
 
-  it("asks nothing of a write that brings no screen", async () => {
-    // The counter's own doors reserve without the Gear tab's screen; their
-    // answers stay exactly what they were.
+  it("lets one diver take two tanks: only the kinds the fit sizes are one per diver", async () => {
     const { db, shop } = await gearShopContext();
-    const bcd3 = mustCreate(
-      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #8", size: "M" }),
+    const first = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "tank", label: "AL80-41" }),
     );
-    const bcd4 = mustCreate(
-      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #9", size: "M" }),
+    const second = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "tank", label: "AL80-42" }),
     );
     const carmen = await shopBooking(db, shop.id, "Carmen Ortiz");
-    for (const unit of [bcd3, bcd4]) {
-      expect(
-        (
-          await reserveGearUnit(db, {
-            shopId: shop.id,
-            gearItemId: unit.id,
-            bookingId: carmen.bookingId,
-            ...WINDOW,
-          })
-        ).ok,
-      ).toBe(true);
+    for (const unit of [first, second]) {
+      const outcome = await reserveGearUnit(db, {
+        shopId: shop.id,
+        gearItemId: unit.id,
+        bookingId: carmen.bookingId,
+        ...WINDOW,
+        screen: screen(false),
+      });
+      expect(outcome.ok).toBe(true);
     }
+  });
+
+  it("assigns a hand-picked wetsuit with a lapsed clock without asking: only life support asks", async () => {
+    const { db, shop } = await gearShopContext();
+    const suit = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "wetsuit", label: "Suit #4", size: "M" }),
+    );
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: suit.id,
+      kind: "visual_inspection",
+      servicedOn: "2025-08-01",
+      nextDueOn: "2026-08-01",
+    });
+    const carmen = await shopBooking(db, shop.id, "Carmen Ortiz");
+    const outcome = await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: suit.id,
+      bookingId: carmen.bookingId,
+      ...WINDOW,
+      screen: screen(false),
+    });
+    expect(outcome.ok).toBe(true);
+  });
+
+  /**
+   * **Care is read on the window's last day, not today** (dive-domain
+   * review). A regulator due on 31 August is fine on the 20th and lapsed on
+   * the 1 September dive it would be packed for.
+   */
+  it("reads a clock against the window's last day", async () => {
+    const { db, shop } = await gearShopContext();
+    const reg = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "regulator", label: "Reg #12" }),
+    );
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: reg.id,
+      kind: "service",
+      servicedOn: "2025-08-31",
+      nextDueOn: "2026-08-31",
+    });
+    const carmen = await shopBooking(db, shop.id, "Carmen Ortiz");
+    expect(
+      await reserveGearUnit(db, {
+        shopId: shop.id,
+        gearItemId: reg.id,
+        bookingId: carmen.bookingId,
+        ...WINDOW,
+        screen: screen(true),
+      }),
+    ).toEqual({ ok: false, reason: "needs_care" });
+  });
+
+  it("assigns nothing to a held seat until the desk confirms who it is", async () => {
+    const { db, shop } = await gearShopContext();
+    const bcd = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #14", size: "M" }),
+    );
+    const carmen = await shopBooking(db, shop.id, "Carmen Ortiz");
+    await db
+      .update(bookings)
+      .set({
+        identityUnconfirmedAt: new Date("2026-08-19T12:00:00Z"),
+        identityBookedAs: "C. Ortiz",
+      })
+      .where(eq(bookings.id, carmen.bookingId));
+    for (const proposed of [true, false]) {
+      expect(
+        await reserveGearUnit(db, {
+          shopId: shop.id,
+          gearItemId: bcd.id,
+          bookingId: carmen.bookingId,
+          ...WINDOW,
+          screen: screen(proposed),
+        }),
+      ).toEqual({ ok: false, reason: "identity_held" });
+    }
+    expect(await openReservationsOf(db, carmen.bookingId)).toBe(0);
   });
 });
 
@@ -792,6 +876,7 @@ describe("gear reservations", () => {
       bookingId: maya.bookingId,
       reservedFrom: "2026-09-01",
       reservedUntil: "2026-09-02",
+      screen: SETUP_PICK,
     });
     expect(first.ok).toBe(true);
 
@@ -803,6 +888,7 @@ describe("gear reservations", () => {
         bookingId: jonah.bookingId,
         reservedFrom: "2026-09-02",
         reservedUntil: "2026-09-03",
+        screen: SETUP_PICK,
       }),
     ).toEqual({ ok: false, reason: "unit_unavailable" });
 
@@ -815,6 +901,7 @@ describe("gear reservations", () => {
           bookingId: jonah.bookingId,
           reservedFrom: "2026-09-03",
           reservedUntil: "2026-09-04",
+          screen: SETUP_PICK,
         })
       ).ok,
     ).toBe(true);
@@ -834,6 +921,7 @@ describe("gear reservations", () => {
       bookingId: maya.bookingId,
       reservedFrom: "2026-09-01",
       reservedUntil: "2026-09-05",
+      screen: SETUP_PICK,
     });
     if (!first.ok) throw new Error("reserve failed");
 
@@ -852,6 +940,7 @@ describe("gear reservations", () => {
           bookingId: jonah.bookingId,
           reservedFrom: "2026-09-01",
           reservedUntil: "2026-09-05",
+          screen: SETUP_PICK,
         })
       ).ok,
     ).toBe(true);
@@ -874,6 +963,7 @@ describe("gear reservations", () => {
         bookingId: maya.bookingId,
         reservedFrom: "2026-09-01",
         reservedUntil: "2026-09-01",
+        screen: SETUP_PICK,
       }),
     ).toEqual({ ok: false, reason: "unit_out_of_service" });
 
@@ -885,6 +975,7 @@ describe("gear reservations", () => {
         bookingId: rivalBooking.bookingId,
         reservedFrom: "2026-09-01",
         reservedUntil: "2026-09-01",
+        screen: SETUP_PICK,
       }),
     ).toEqual({ ok: false, reason: "booking_not_found" });
     expect(
@@ -894,6 +985,7 @@ describe("gear reservations", () => {
         bookingId: rivalBooking.bookingId,
         reservedFrom: "2026-09-01",
         reservedUntil: "2026-09-01",
+        screen: SETUP_PICK,
       }),
     ).toEqual({ ok: false, reason: "not_found" });
     expect(
@@ -903,6 +995,7 @@ describe("gear reservations", () => {
         bookingId: maya.bookingId,
         reservedFrom: "2026-09-02",
         reservedUntil: "2026-09-01",
+        screen: SETUP_PICK,
       }),
     ).toEqual({ ok: false, reason: "invalid_window" });
     // A booking paired with the wrong trip reads as no booking at all: the
@@ -917,6 +1010,7 @@ describe("gear reservations", () => {
         tripId: maya.trip.id,
         reservedFrom: "2026-09-01",
         reservedUntil: "2026-09-01",
+        screen: SETUP_PICK,
       }),
     ).toEqual({ ok: false, reason: "booking_not_found" });
   });
@@ -936,6 +1030,7 @@ describe("gear reservations", () => {
       bookingId: maya.bookingId,
       reservedFrom: "2026-09-01",
       reservedUntil: "2026-09-02",
+      screen: SETUP_PICK,
     });
     if (!outOutcome.ok) throw new Error("reserve failed");
     await checkOutGearReservation(db, {
@@ -948,6 +1043,7 @@ describe("gear reservations", () => {
       bookingId: maya.bookingId,
       reservedFrom: "2026-09-01",
       reservedUntil: "2026-09-02",
+      screen: SETUP_PICK,
     });
 
     await cancelBooking(db, shop.id, maya.bookingId);
@@ -982,6 +1078,7 @@ describe("gear reservations", () => {
       bookingId: maya.bookingId,
       reservedFrom: "2026-09-01",
       reservedUntil: "2026-09-02",
+      screen: SETUP_PICK,
     });
     if (!out.ok) throw new Error("reserve failed");
     await checkOutGearReservation(db, { shopId: shop.id, reservationId: out.reservation.id });
@@ -991,6 +1088,7 @@ describe("gear reservations", () => {
       bookingId: maya.bookingId,
       reservedFrom: "2026-09-01",
       reservedUntil: "2026-09-02",
+      screen: SETUP_PICK,
     });
     await reserveGearUnit(db, {
       shopId: shop.id,
@@ -998,6 +1096,7 @@ describe("gear reservations", () => {
       bookingId: lena.bookingId,
       reservedFrom: "2026-09-01",
       reservedUntil: "2026-09-02",
+      screen: SETUP_PICK,
     });
 
     await setTripStatus(db, shop.id, maya.trip.id, "cancelled");
@@ -1024,6 +1123,7 @@ describe("gear reservations", () => {
       bookingId: maya.bookingId,
       reservedFrom: "2026-09-01",
       reservedUntil: "2026-09-02",
+      screen: SETUP_PICK,
     });
     if (!reserved.ok) throw new Error("reserve failed");
     const reservationId = reserved.reservation.id;
@@ -1053,6 +1153,7 @@ describe("gear reservations", () => {
       bookingId: maya.bookingId,
       reservedFrom: "2026-09-03",
       reservedUntil: "2026-09-04",
+      screen: SETUP_PICK,
     });
     if (!again.ok) throw new Error("re-reserve failed");
     expect(
@@ -1071,6 +1172,7 @@ describe("gear reservations", () => {
       bookingId: maya.bookingId,
       reservedFrom: "2026-09-05",
       reservedUntil: "2026-09-06",
+      screen: SETUP_PICK,
     });
     if (!returnedOnly.ok) throw new Error("re-reserve failed");
     expect(
@@ -1112,6 +1214,7 @@ describe("gear register readers", () => {
       bookingId: maya.bookingId,
       reservedFrom: "2026-09-01",
       reservedUntil: "2026-09-02",
+      screen: SETUP_PICK,
     });
 
     const available = await listAvailableGearUnits(db, shop.id, {
@@ -1148,6 +1251,7 @@ describe("gear register readers", () => {
       bookingId: maya.bookingId,
       reservedFrom: "2026-08-10",
       reservedUntil: "2026-08-15",
+      screen: SETUP_PICK,
     });
     if (!out.ok) throw new Error("reserve failed");
     await checkOutGearReservation(db, { shopId: shop.id, reservationId: out.reservation.id });
@@ -1157,6 +1261,7 @@ describe("gear register readers", () => {
       bookingId: jonah.bookingId,
       reservedFrom: "2026-08-10",
       reservedUntil: "2026-08-15",
+      screen: SETUP_PICK,
     });
 
     // Next month's window overlaps neither lapsed reservation — but the
@@ -1216,6 +1321,7 @@ describe("gear register readers", () => {
         bookingId: maya.bookingId,
         reservedFrom: "2026-09-01",
         reservedUntil: "2026-09-01",
+        screen: SETUP_PICK,
       });
       if (!outcome.ok) throw new Error("reserve failed");
     }
@@ -1255,6 +1361,7 @@ describe("gear register readers", () => {
       bookingId: maya.bookingId,
       reservedFrom: "2026-08-19",
       reservedUntil: TODAY,
+      screen: SETUP_PICK,
     });
     await reserveGearUnit(db, {
       shopId: shop.id,
@@ -1262,6 +1369,7 @@ describe("gear register readers", () => {
       bookingId: maya.bookingId,
       reservedFrom: "2026-08-10",
       reservedUntil: "2026-08-15",
+      screen: SETUP_PICK,
     });
     await reserveGearUnit(db, {
       shopId: rival.id,
@@ -1269,6 +1377,7 @@ describe("gear register readers", () => {
       bookingId: rivalBooking.bookingId,
       reservedFrom: "2026-08-19",
       reservedUntil: TODAY,
+      screen: SETUP_PICK,
     });
 
     const dueBack = await listGearDueBack(db, shop.id, TODAY);
@@ -1294,19 +1403,21 @@ describe("the register's three groups", () => {
   /** Out, overdue, never-collected, upcoming and free — one shop, five units. */
   async function registerShop() {
     const { db, shop } = await gearShopContext();
-    const maya = await shopBooking(db, shop.id, "Maya Reyes");
     const unit = async (
       label: string,
       window?: { from: string; until: string; collected?: boolean },
     ) => {
       const item = mustCreate(await createGearItem(db, { shopId: shop.id, kind: "bcd", label }));
       if (!window) return item;
+      // A seat of Maya's per unit: one diver holds one BCD at a time.
+      const maya = await shopBooking(db, shop.id, "Maya Reyes");
       const reserved = await reserveGearUnit(db, {
         shopId: shop.id,
         gearItemId: item.id,
         bookingId: maya.bookingId,
         reservedFrom: window.from,
         reservedUntil: window.until,
+        screen: SETUP_PICK,
       });
       if (!reserved.ok) throw new Error(`reserve refused: ${reserved.reason}`);
       if (window.collected) {
@@ -1413,6 +1524,7 @@ describe("the dive clock counts the rentals the shop wrote down", () => {
         bookingId: booking.bookingId,
         reservedFrom: window.from,
         reservedUntil: window.until,
+        screen: SETUP_PICK,
       });
       if (!reserved.ok) throw new Error("reserve refused");
       // Only a *returned* rental counts: a unit still out has not finished its
@@ -1483,6 +1595,7 @@ describe("a departure that moves takes its gear with it", () => {
         bookingId: maya.bookingId,
         reservedFrom: window.from,
         reservedUntil: window.until,
+        screen: SETUP_PICK,
       }),
     ).toMatchObject({ ok: true });
 
@@ -1510,6 +1623,7 @@ describe("a departure that moves takes its gear with it", () => {
       bookingId: maya.bookingId,
       reservedFrom: window.from,
       reservedUntil: window.until,
+      screen: SETUP_PICK,
     });
     if (!reserved.ok) throw new Error("reserve refused");
     expect(
@@ -1547,6 +1661,7 @@ describe("a departure that moves takes its gear with it", () => {
       bookingId: maya.bookingId,
       reservedFrom: mayaWindow.from,
       reservedUntil: mayaWindow.until,
+      screen: SETUP_PICK,
     });
     if (!mayaReservation.ok) throw new Error("reserve refused");
     expect(
@@ -1556,6 +1671,7 @@ describe("a departure that moves takes its gear with it", () => {
         bookingId: jonah.bookingId,
         reservedFrom: "2026-09-08",
         reservedUntil: "2026-09-08",
+        screen: SETUP_PICK,
       }),
     ).toMatchObject({ ok: true });
 
@@ -1600,6 +1716,7 @@ describe("handing a whole rental set over", () => {
         bookingId: diver.bookingId,
         reservedFrom: "2026-09-10",
         reservedUntil: "2026-09-11",
+        screen: SETUP_PICK,
       });
       if (!reserved.ok) throw new Error("reserve failed");
       reservationIds.push(reserved.reservation.id);
@@ -1714,6 +1831,7 @@ describe("returning a whole rental set", () => {
         bookingId: diver.bookingId,
         reservedFrom: "2026-09-10",
         reservedUntil: "2026-09-11",
+        screen: SETUP_PICK,
       });
       if (!reserved.ok) throw new Error("reserve failed");
       await checkOutGearReservation(db, { shopId, reservationId: reserved.reservation.id });
@@ -1807,6 +1925,7 @@ describe("returning a whole rental set", () => {
       bookingId,
       reservedFrom: "2026-09-10",
       reservedUntil: "2026-09-11",
+      screen: SETUP_PICK,
     });
     if (!reserved.ok) throw new Error("reserve failed");
 
@@ -1994,6 +2113,7 @@ describe("returning a whole rental set", () => {
         bookingId: diver.bookingId,
         reservedFrom: "2026-09-10",
         reservedUntil: "2026-09-11",
+        screen: SETUP_PICK,
       });
       if (!reserved.ok) throw new Error("reserve failed");
       await checkOutGearReservation(db, { shopId, reservationId: reserved.reservation.id });
@@ -2239,6 +2359,7 @@ describe("a unit that came home with a service concern", () => {
       bookingId: maya.bookingId,
       reservedFrom: "2026-09-01",
       reservedUntil: "2026-09-02",
+      screen: SETUP_PICK,
     });
     if (!reserved.ok) throw new Error("reserve failed");
     await checkOutGearReservation(db, { shopId: shop.id, reservationId: reserved.reservation.id });
@@ -2315,6 +2436,7 @@ describe("a unit that came home with a service concern", () => {
       bookingId: maya.bookingId,
       reservedFrom: "2026-09-05",
       reservedUntil: "2026-09-06",
+      screen: SETUP_PICK,
     });
     if (!again.ok) throw new Error("reserve failed");
     await checkOutGearReservation(db, { shopId: shop.id, reservationId: again.reservation.id });
@@ -2390,6 +2512,7 @@ describe("reserving against a cancelled booking", () => {
         tripId: maya.trip.id,
         reservedFrom: "2026-09-01",
         reservedUntil: "2026-09-02",
+        screen: SETUP_PICK,
       }),
     ).toEqual({ ok: false, reason: "booking_not_found" });
     expect(

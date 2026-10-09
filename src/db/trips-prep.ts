@@ -11,6 +11,7 @@ import {
   type GearAssignmentNeed,
   type GearServiceState,
   gearAssignmentNeeds,
+  gearKindIsOnePerDiver,
   gearServiceState,
   tripReservationWindow,
 } from "@/lib/gear";
@@ -109,7 +110,13 @@ export async function getTripPrep(
     getTripCrewAssignments(db, shop.id, tripId),
     countGearItemsByKind(db, shop.id),
     listTripGearAssignments(db, shop.id, tripId),
-    listAvailableGearUnits(db, shop.id, { ...gearWindow, todayLocal }),
+    // Care read on the window's last day, the day the unit would be packed
+    // for, as the write's own screen reads it (dive-domain review, #2215).
+    listAvailableGearUnits(db, shop.id, {
+      ...gearWindow,
+      todayLocal,
+      serviceAsOf: gearWindow.until,
+    }),
   ]);
 
   // Only the crew who actually dive the trip need their own tank — a captain
@@ -318,7 +325,15 @@ export async function screenGearPicks<P extends GearPick>(
   tripId: string,
   picks: readonly P[],
   options: { proposed: boolean },
-): Promise<{ kept: P[]; refused: number; needsCare: number }> {
+): Promise<{
+  kept: P[];
+  refused: number;
+  needsCare: number;
+  /** Picks for a held seat: nothing is assigned until the desk confirms who it is. */
+  held: number;
+  /** Picks of a kind the diver already holds one of. */
+  alreadyHeld: number;
+}> {
   const [prep, kinds] = await Promise.all([
     getTripPrep(db, shop, tripId),
     gearItemKindsById(
@@ -327,7 +342,7 @@ export async function screenGearPicks<P extends GearPick>(
       picks.map((pick) => pick.gearItemId),
     ),
   ]);
-  if (!prep) return { kept: [], refused: picks.length, needsCare: 0 };
+  if (!prep) return { kept: [], refused: picks.length, needsCare: 0, held: 0, alreadyHeld: 0 };
   const wants = new Map(
     prep.assignmentRows.map((row) => [
       row.diver.bookingId,
@@ -339,11 +354,28 @@ export async function screenGearPicks<P extends GearPick>(
   const freeUnits = new Map(
     [...prep.freeByKind.values()].flat().map((unit) => [unit.id, unit] as const),
   );
+  const heldSeats = new Set(prep.checklist.heldSeats.map((seat) => seat.bookingId));
+  const holding = new Map(
+    prep.assignmentRows.map((row) => [
+      row.diver.bookingId,
+      new Set<string>(row.assigned.map((assignment) => assignment.kind)),
+    ]),
+  );
   const kept: P[] = [];
   let needsCare = 0;
+  let held = 0;
+  let alreadyHeld = 0;
   for (const pick of picks) {
+    if (heldSeats.has(pick.bookingId)) {
+      held += 1;
+      continue;
+    }
     const kind = kinds.get(pick.gearItemId);
     const wanted = wants.get(pick.bookingId);
+    if (kind && holding.get(pick.bookingId)?.has(kind) && gearKindIsOnePerDiver(kind)) {
+      alreadyHeld += 1;
+      continue;
+    }
     if (!kind || !wanted?.has(kind)) continue;
     if (options.proposed) {
       const unit = freeUnits.get(pick.gearItemId);
@@ -355,5 +387,5 @@ export async function screenGearPicks<P extends GearPick>(
     wanted.delete(kind);
     kept.push(pick);
   }
-  return { kept, refused: picks.length - kept.length, needsCare };
+  return { kept, refused: picks.length - kept.length, needsCare, held, alreadyHeld };
 }

@@ -8,6 +8,9 @@ import type { AppDb } from "./client";
 import { createGearItem, reserveGearUnit } from "./gear";
 import { gearReservations, shops, trips } from "./schema";
 
+/** A setup reservation: a hand pick whose staffer already said "Assign anyway". */
+const SETUP_PICK = { proposed: false, assignAnyway: true } as const;
+
 /**
  * The gear double-booking guard, under genuine contention.
  *
@@ -106,6 +109,7 @@ describePostgres("reserveGearUnit under real concurrency", () => {
         bookingId,
         reservedFrom: "2026-09-01",
         reservedUntil: "2026-09-02",
+        screen: SETUP_PICK,
       }),
     );
 
@@ -142,6 +146,7 @@ describePostgres("reserveGearUnit under real concurrency", () => {
         gearItemId,
         bookingId,
         ...windows[index],
+        screen: SETUP_PICK,
       }),
     );
 
@@ -185,7 +190,7 @@ describePostgres("reserveGearUnit under real concurrency", () => {
         bookingId,
         reservedFrom: "2026-09-01",
         reservedUntil: "2026-09-02",
-        screen: { proposed: false, todayLocal: "2026-08-20" },
+        screen: { proposed: false },
       }),
     );
 
