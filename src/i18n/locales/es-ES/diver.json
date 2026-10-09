@@ -739,6 +739,26 @@
     "contactRequired": "Deja un correo o un teléfono para poder contactarte.",
     "unavailable": "Ese centro no acepta registros en este momento."
   },
+  "packages": {
+    "title": "Paquetes de inmersiones",
+    "navLabel": "Paquetes",
+    "metaDescription": "Inmersiones prepagadas en {shopName}: pagas una vez y reservas las inmersiones cuando quieras.",
+    "dives": "{count, plural, one {# inmersión} other {# inmersiones}}",
+    "perDive": "{amount} por inmersión",
+    "scopeAll": "Cualquier salida",
+    "scopeFunDives": "Solo inmersiones recreativas",
+    "useBy": "Úsalas antes del {date}",
+    "buy": "Comprar por {amount}",
+    "buying": "Abriendo el pago…",
+    "invoiceLine": "{packageName}, {count, plural, one {# inmersión} other {# inmersiones}}",
+    "afterPaying": "Cuando esté pagado, tus inmersiones estarán listas la próxima vez que reserves con este correo.",
+    "error": {
+      "invalid": "Añade tu nombre y un correo en el que podamos localizarte.",
+      "notOnSale": "Ese paquete ya no está a la venta.",
+      "unavailable": "{shopName} no puede cobrar este pago en línea ahora mismo. Ponte en contacto y lo resolverán.",
+      "failed": "La página de pago no se abrió. No se ha cobrado nada. Inténtalo de nuevo en un momento."
+    }
+  },
   "ready": {
     "metaTitle": "Tu preparación para la salida — DiveDay",
     "namelessFallback": "buceador",
@@ -832,6 +852,7 @@
     "certOptional": "Opcional",
     "keepThisPage": "Esta página es tuya: guárdala en favoritos y seguirá al día hasta que zarpes.",
     "gearOnFile": "La tripulación ya tiene tus tallas.",
+    "packageDivesLeft": "{line} · {count, plural, one {te queda # inmersión del paquete} other {te quedan # inmersiones del paquete}}",
     "changesSizesLabel": "Tallas",
     "changesTanksLabel": "Tanques",
     "changesItemWithSize": "{item} {size}",
@@ -4077,8 +4098,8 @@
       "link": "Ver la salida y reservar tu plaza"
     },
     "lastMinuteDeal": {
-      "subject": "{discountPercent}% de descuento en {tripTitle}: oferta de última hora",
-      "body": "{shopName} acaba de abrir un {discountPercent}% de descuento en {tripTitle}.",
+      "subject": "{discount} de descuento en {tripTitle}: oferta de última hora",
+      "body": "{shopName} acaba de abrir un descuento de {discount} en {tripTitle}.",
       "useCode": "Usa el código {code} al reservar:",
       "bookLink": "Reservar {tripTitle}",
       "expiry": "El código caduca el {expires} (salida) o cuando se agoten las plazas, lo que ocurra antes.",
@@ -4283,6 +4304,9 @@
       "camera": "cámara",
       "nitroxAnalyzer": "analizador de nitrox",
       "o2Kit": "kit de oxígeno",
+      "aed": "DEA",
+      "firstAidKit": "botiquín",
+      "flares": "bengalas",
       "other": "equipo",
       "withModel": "{piece} ({model})"
     },
@@ -4299,6 +4323,9 @@
         "hydroTest": "La prueba hidrostática de tu equipo ({piece}) vence el {date}.",
         "visualInspection": "La inspección visual de tu equipo ({piece}) vence el {date}.",
         "o2Clean": "La limpieza para oxígeno de tu equipo ({piece}) vence el {date}.",
+        "aedPads": "Los parches de tu equipo ({piece}) vencen el {date}.",
+        "aedBattery": "La batería de tu equipo ({piece}) vence el {date}.",
+        "expiry": "Tu equipo ({piece}) vence el {date}.",
         "note": "Toca revisar tu equipo ({piece}) antes del {date}."
       },
       "dropBy": "Pasa por {shopName} cuando quieras antes de esa fecha.",

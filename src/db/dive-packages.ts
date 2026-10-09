@@ -4,6 +4,7 @@ import {
   type DivePackageDefinition,
   entitlementExpiry,
   entitlementToSpend,
+  packageOnSale,
   type SpendableEntitlement,
   spendableCount,
 } from "@/lib/dive-packages";
@@ -23,6 +24,15 @@ export async function listDivePackages(db: DbExecutor, shopId: string) {
     .from(divePackages)
     .where(and(eq(divePackages.shopId, shopId), isNull(divePackages.deletedAt)))
     .orderBy(asc(divePackages.createdAt), asc(divePackages.name), asc(divePackages.id));
+}
+
+/**
+ * What a diver can buy online right now: the live price list less any package
+ * whose end date has passed (`packageOnSale`). The public nav and the public
+ * packages page both ask this, so a lapsed package never earns a tab.
+ */
+export async function listPackagesOnSale(db: DbExecutor, shopId: string, now = nowDate()) {
+  return (await listDivePackages(db, shopId)).filter((pkg) => packageOnSale(pkg, now));
 }
 
 /**

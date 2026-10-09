@@ -1167,6 +1167,28 @@ new domain concept, define it here in the same PR.
   array rather than a widened roll-call event, and its own answer — checked, by whom, when, or
   explicitly not checked — is what the **departure log** prints.
   See [20260824-pre-departure-safety-check](../architecture/decisions/20260824-pre-departure-safety-check.md).
+- **Certificate passenger limit** — the passenger ceiling printed on a boat's Coast Guard
+  Certificate of Inspection, stored as `boats.certified_passengers` beside the boat's own
+  `capacity`. The two are different numbers: capacity is the seats the shop sells, a business
+  choice, and the certificate is the law a boarding officer counts against. When the people
+  booked on a departure pass it, the departure's **Boat** tab says so above the
+  **pre-departure checklist**, and the fleet row says so when the seats on sale already do. It
+  **informs, never gates**; the one capacity block stays the departure's seats against the boat's
+  `capacity` (`src/lib/boat-safety.ts`).
+- **Boat papers** — a boat's three dated documents: when its next Coast Guard inspection is due,
+  and when its registration and hull insurance expire (`boats.inspection_due_on`,
+  `registration_expires_on`, `insurance_expires_on`). Typed over in Settings, Boats when renewed,
+  so the paper itself is the history. Inside 30 days a departure on that boat names the paper above
+  its pre-departure checklist; once expired, Today raises an owner row (`boat_safety_expired`).
+- **Safety kit** — the boat's own emergency equipment kept on the **gear register** as units:
+  `o2_kit`, `aed`, `first_aid_kit` and `flares` (roadmap N-08). Each may be assigned **aboard** one
+  boat (`gear_items.aboard_boat_id`; any other kind is never aboard), and runs **service clocks**
+  of its own: an AED's `aed_pads` and `aed_battery`, the printed `expiry` of flares and a first-aid
+  kit, and an O2 kit's cylinder `hydro_test` and `visual_inspection` beside its `service`. Every
+  clock inside 30 days or past it on kit aboard a departure's boat is one line on that departure's
+  Boat tab ("AED: pads expire in 12 days", "Flares: expired 3 days ago"), and a unit pulled for
+  service reads as off the boat. An expired clock, aboard or ashore, is an owner row on Today. Opt-in
+  by presence, like the rest of the register, and it **informs, never gates**.
 - **Sailed** — how many of a departure's booked divers the boat actually **carried**, as distinct
   from the roster it sold. One rule answers it per seat (`seatSailed`, `src/lib/closeout.ts`),
   reading the shop's statements about that seat strongest first: the crew's own result at the
@@ -2135,7 +2157,8 @@ new domain concept, define it here in the same PR.
   own money word, and the list pages by holder so one diver's set never splits.
 - **Service clock** — a unit's care deadlines, derived from its append-only service events
   (`gear_service_events`): manufacturer `service`, a tank's independent `hydro_test` and
-  `visual_inspection` clocks, the `o2_clean` renewal, and clockless condition `note`s. The newest
+  `visual_inspection` clocks, the `o2_clean` renewal, the printed dates of **safety kit**
+  (`aed_pads`, `aed_battery`, `expiry`), and clockless condition `note`s. The newest
   event of a kind *is* that clock; the earliest deadline is the unit's state (ok / due soon /
   overdue), which **informs, never gates** — the dock decides whether an overdue unit dives, not
   the software. The one exception is a **counter rental** of life support, which has no dock and

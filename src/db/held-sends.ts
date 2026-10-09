@@ -159,6 +159,7 @@ export async function executeHeldSend(db: AppDb, row: HeldSendRow): Promise<Held
         shopSlug: await shopSlugOf(db, row.shopId),
         tripId: payload.tripId,
         discountPercent: payload.discountPercent,
+        discountAmountCents: payload.discountAmountCents,
         createdByPersonId: row.actorPersonId ?? undefined,
         recipientPersonIds: payload.recipientPersonIds,
       });

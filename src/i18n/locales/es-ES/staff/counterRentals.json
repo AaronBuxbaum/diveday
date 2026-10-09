@@ -15,7 +15,7 @@
     "pickedHeading": "Se lleva",
     "billEmpty": "Toca el equipo que sale.",
     "inSet": "Incluido",
-    "total": "Total",
+    "total": "Total a cobrar",
     "itemsOne": "# artículo",
     "itemsOther": "# artículos",
     "removeAria": "Quitar {label}",
@@ -26,7 +26,7 @@
     "pay": {
       "heading": "Cómo paga",
       "cash": "Efectivo",
-      "cardMachine": "Datáfono",
+      "cardMachine": "Terminal de pago",
       "recorded": "Se registra como pagado",
       "invoice": "Enviar factura por email",
       "invoiceHint": "Paga en línea con tarjeta",
@@ -102,10 +102,10 @@
     "payment": {
       "heading": "Pago",
       "cash": "Efectivo",
-      "cardMachine": "Datáfono",
+      "cardMachine": "Terminal de pago",
       "invoice": "Factura",
       "tax": "Impuestos",
-      "total": "Total",
+      "total": "Importe total",
       "scan": "Escanea para pagar con tarjeta",
       "open": "Abrir página de pago"
     }

@@ -739,6 +739,26 @@
     "contactRequired": "Leave an email or a phone number so we can reach you.",
     "unavailable": "That shop isn’t taking registrations right now."
   },
+  "packages": {
+    "title": "Dive packages",
+    "navLabel": "Packages",
+    "metaDescription": "Prepaid dives at {shopName}: pay once, then book the dives as you go.",
+    "dives": "{count, plural, one {# dive} other {# dives}}",
+    "perDive": "{amount} a dive",
+    "scopeAll": "Any departure",
+    "scopeFunDives": "Fun dives only",
+    "useBy": "Use by {date}",
+    "buy": "Buy for {amount}",
+    "buying": "Opening payment…",
+    "invoiceLine": "{packageName}, {count, plural, one {# dive} other {# dives}}",
+    "afterPaying": "Once it’s paid, your dives are ready the next time you book with this email.",
+    "error": {
+      "invalid": "Add your name and an email we can reach you at.",
+      "notOnSale": "That package isn’t on sale anymore.",
+      "unavailable": "{shopName} can’t take this payment online right now. Get in touch and they’ll sort it out.",
+      "failed": "The payment page didn’t open. Nothing was charged. Try again in a moment."
+    }
+  },
   "ready": {
     "metaTitle": "Your trip readiness — DiveDay",
     "namelessFallback": "there",
@@ -832,6 +852,7 @@
     "certOptional": "Optional",
     "keepThisPage": "This page is yours to keep. Bookmark it, and it stays up to date until you sail.",
     "gearOnFile": "Your sizes are with the crew.",
+    "packageDivesLeft": "{line} · {count, plural, one {# package dive left} other {# package dives left}}",
     "changesSizesLabel": "Sizes",
     "changesTanksLabel": "Tanks",
     "changesItemWithSize": "{item} {size}",
@@ -4077,8 +4098,8 @@
       "link": "See the trip and book your spot"
     },
     "lastMinuteDeal": {
-      "subject": "{discountPercent}% off {tripTitle} — last-minute deal",
-      "body": "{shopName} just opened up {discountPercent}% off {tripTitle}.",
+      "subject": "{discount} off {tripTitle} — last-minute deal",
+      "body": "{shopName} just opened up {discount} off {tripTitle}.",
       "useCode": "Use code {code} at booking:",
       "bookLink": "Book {tripTitle}",
       "expiry": "The code expires {expires} (departure) or once seats run out, whichever comes first.",
@@ -4283,6 +4304,9 @@
       "camera": "camera",
       "nitroxAnalyzer": "nitrox analyzer",
       "o2Kit": "oxygen kit",
+      "aed": "AED",
+      "firstAidKit": "first-aid kit",
+      "flares": "flares",
       "other": "gear",
       "withModel": "{piece} ({model})"
     },
@@ -4299,6 +4323,9 @@
         "hydroTest": "The hydrostatic test on your {piece} is due on {date}.",
         "visualInspection": "The visual inspection on your {piece} is due on {date}.",
         "o2Clean": "The oxygen cleaning on your {piece} is due on {date}.",
+        "aedPads": "The pads in your {piece} expire on {date}.",
+        "aedBattery": "The battery in your {piece} expires on {date}.",
+        "expiry": "Your {piece} expires on {date}.",
         "note": "A check on your {piece} is due on {date}."
       },
       "dropBy": "Drop by {shopName} any time before then.",

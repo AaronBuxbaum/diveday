@@ -97,11 +97,17 @@ const ABSENT: PublicRouteShape = { kind: "absent" };
 
 /**
  * Routes below `/s/<shopSlug>` that name nothing but the shop — the course
- * catalogue, the review archive, the counter's self-registration door and the
- * availability document. Each 404s only when the shop does, so each folds to
- * one lookup.
+ * catalogue, the review archive, the counter's self-registration door, the
+ * package counter and the availability document. Each 404s only when the shop
+ * does, so each folds to one lookup.
  */
-const SHOP_ONLY_CHILDREN = new Set(["courses", "reviews", "register", "availability.json"]);
+const SHOP_ONLY_CHILDREN = new Set([
+  "courses",
+  "reviews",
+  "register",
+  "packages",
+  "availability.json",
+]);
 
 /**
  * The children of one departure that live under its own id: the `.ics`

@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   discountedAmountCents,
+  discountOffCents,
   isPromoExhausted,
   isPromoRedeemable,
+  isValidPromoDiscountAmountCents,
   isValidPromoDiscountPercent,
   normalizePromoCode,
   PROMO_CODE_MAX_LENGTH,
   type PromoScope,
+  promoDiscountColumns,
+  promoDiscountOf,
   promoLedgerGroup,
   promoScopeCovers,
   promoWindowState,
@@ -118,15 +122,76 @@ describe("isPromoRedeemable", () => {
 });
 
 describe("discountedAmountCents", () => {
-  it("mirrors Stripe's round-the-discount arithmetic so the quote matches the charge", () => {
-    expect(discountedAmountCents(13000, 20)).toBe(10400);
-    // 12345 * 15% = 1851.75 → discount rounds to 1852, leaving 10493.
-    expect(discountedAmountCents(12345, 15)).toBe(10493);
+  const percent = (value: number) => ({ kind: "percent", percent: value }) as const;
+  const amount = (cents: number) => ({ kind: "amount", amountCents: cents }) as const;
+
+  it("takes a percent off, rounding the discount up so the shop's share is a floor", () => {
+    expect(discountedAmountCents(13000, percent(20))).toBe(10400);
+    // 12345 * 15% = 1851.75 → the discount rounds up to 1852, leaving 10493.
+    expect(discountedAmountCents(12345, percent(15))).toBe(10493);
   });
 
-  it("handles the ends of the range without going negative", () => {
-    expect(discountedAmountCents(13000, 100)).toBe(0);
-    expect(discountedAmountCents(0, 50)).toBe(0);
+  it("handles the ends of the percent range without going negative", () => {
+    expect(discountedAmountCents(13000, percent(100))).toBe(0);
+    expect(discountedAmountCents(0, percent(50))).toBe(0);
+  });
+
+  it("takes a fixed amount off exactly", () => {
+    expect(discountedAmountCents(13000, amount(2000))).toBe(11000);
+  });
+
+  it("never takes a line below zero: $50 off a $30 booking leaves nothing to pay", () => {
+    expect(discountedAmountCents(3000, amount(5000))).toBe(0);
+    expect(discountOffCents(3000, amount(5000))).toBe(3000);
+    expect(discountOffCents(0, amount(2000))).toBe(0);
+  });
+});
+
+describe("a fixed amount is per booking, not per diver", () => {
+  it("comes off a party's whole checkout once: four divers at $120 with $20 off pay $460", () => {
+    // The checkout is one Stripe session for the whole party; the amount is
+    // taken from its discountable total, not multiplied by the party size.
+    const party = 4 * 12000;
+    expect(discountOffCents(party, { kind: "amount", amountCents: 2000 })).toBe(2000);
+    expect(discountedAmountCents(party, { kind: "amount", amountCents: 2000 })).toBe(46000);
+  });
+});
+
+describe("promoDiscountOf", () => {
+  it("reads whichever column is set", () => {
+    expect(promoDiscountOf({ discountPercent: 10, discountAmountCents: null })).toEqual({
+      kind: "percent",
+      percent: 10,
+    });
+    expect(promoDiscountOf({ discountPercent: null, discountAmountCents: 2500 })).toEqual({
+      kind: "amount",
+      amountCents: 2500,
+    });
+  });
+
+  it("answers null for a row that holds neither, rather than guessing", () => {
+    expect(promoDiscountOf({ discountPercent: null, discountAmountCents: null })).toBeNull();
+  });
+
+  it("round-trips through the two columns, the other one always null", () => {
+    expect(promoDiscountColumns({ kind: "amount", amountCents: 900 })).toEqual({
+      discountPercent: null,
+      discountAmountCents: 900,
+    });
+    expect(promoDiscountColumns({ kind: "percent", percent: 15 })).toEqual({
+      discountPercent: 15,
+      discountAmountCents: null,
+    });
+  });
+});
+
+describe("isValidPromoDiscountAmountCents", () => {
+  it("takes a positive whole number of minor units and nothing else", () => {
+    expect(isValidPromoDiscountAmountCents(2000)).toBe(true);
+    expect(isValidPromoDiscountAmountCents(0)).toBe(false);
+    expect(isValidPromoDiscountAmountCents(-100)).toBe(false);
+    expect(isValidPromoDiscountAmountCents(12.5)).toBe(false);
+    expect(isValidPromoDiscountAmountCents("2000")).toBe(false);
   });
 });
 

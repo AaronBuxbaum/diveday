@@ -16,7 +16,7 @@ import {
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { isMinorOnDate } from "@/lib/age";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -33,7 +33,7 @@ import { GEAR_KIND_ORDER, type GearItemKind, gearServiceKeepsUnitBack } from "@/
 import { currencyFractionDigits, minorToMajor, toShopCurrency } from "@/lib/money";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { InvoiceAddressFields } from "../../../orders/_components/InvoiceAddressFields";
 import { createCounterRentalAction } from "../actions";
@@ -45,59 +45,13 @@ import {
 import { RentalCardSeen } from "./_components/RentalCardSeen";
 import { RentalPersonStep } from "./_components/RentalPersonStep";
 import { RentalWindowFields } from "./_components/RentalWindowFields";
+import { RENT_OUT_NOTICES as NOTICES } from "./notices";
 
 export const instant = true;
 
 export const metadata: Metadata = {
   title: "Rent out — DiveDay",
   robots: { index: false, follow: false },
-};
-
-/** Where a refusal belongs: beside the person step, or beside the submit. */
-type NoticeDefinition = {
-  key: StaffMessageKey;
-  step: "who" | "rent";
-  /** The same sentence naming the unit, when the refusal carries one (`?unit=`). */
-  named?: StaffMessageKey;
-  tone?: NoticeTone;
-};
-
-const NOTICES: Record<string, NoticeDefinition> = {
-  invalid: { key: "counterRentals.new.notice.invalid", step: "rent" },
-  duplicate: { key: "counterRentals.new.notice.duplicate", step: "who" },
-  "invalid-window": { key: "counterRentals.new.notice.invalidWindow", step: "rent" },
-  "starts-in-past": { key: "counterRentals.new.notice.startsInPast", step: "rent" },
-  "window-too-long": { key: "counterRentals.new.notice.windowTooLong", step: "rent" },
-  "no-units": { key: "counterRentals.new.notice.noUnits", step: "rent" },
-  "too-many-units": { key: "counterRentals.new.notice.tooManyUnits", step: "rent" },
-  "person-not-found": { key: "counterRentals.new.notice.personNotFound", step: "who" },
-  "unit-not-found": { key: "counterRentals.new.notice.unitNotFound", step: "rent" },
-  "unit-out-of-service": { key: "counterRentals.new.notice.unitOutOfService", step: "rent" },
-  "unit-unavailable": {
-    key: "counterRentals.new.notice.unitUnavailableUnnamed",
-    named: "counterRentals.new.notice.unitUnavailable",
-    step: "rent",
-  },
-  "unit-needs-service": {
-    key: "counterRentals.new.notice.unitNeedsServiceUnnamed",
-    named: "counterRentals.new.notice.unitNeedsService",
-    step: "rent",
-  },
-  "unit-needs-confirm": {
-    key: "counterRentals.new.notice.unitNeedsConfirmUnnamed",
-    named: "counterRentals.new.notice.unitNeedsConfirm",
-    step: "rent",
-  },
-  "not-certified": { key: "counterRentals.new.notice.notCertified", step: "who" },
-  "no-drysuit-card": { key: "counterRentals.new.notice.noDrysuitCard", step: "who" },
-  "card-recorded": { key: "counterRentals.new.notice.cardRecorded", step: "who", tone: "success" },
-  "card-duplicate": { key: "counterRentals.new.notice.cardDuplicate", step: "who" },
-  "card-not-recorded": { key: "counterRentals.new.notice.cardNotRecorded", step: "who" },
-  "card-invalid": { key: "counterRentals.new.notice.cardInvalid", step: "who" },
-  "not-authorized": { key: "counterRentals.new.notice.notAuthorized", step: "rent" },
-  "payment-not-connected": { key: "counterRentals.new.notice.paymentNotConnected", step: "rent" },
-  "needs-email": { key: "counterRentals.new.notice.needsEmail", step: "rent" },
-  "needs-payment": { key: "counterRentals.new.notice.needsPayment", step: "rent" },
 };
 
 /**

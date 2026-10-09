@@ -5,6 +5,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { ChoicePill, ChoiceRow, controlClass, StickyFormActions } from "@/components/ui/form";
+import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { isOneCoreSet } from "@/lib/counter-rentals";
 import { formatMoneyCents } from "@/lib/format";
 import type { GearItemKind } from "@/lib/gear";
@@ -319,7 +320,7 @@ export function CounterRentalCart({
               })}
               <li className="flex min-h-12 items-center gap-3 pt-3">
                 <p className="flex-1 font-medium">{words.total}</p>
-                <p className="text-lg font-semibold tabular-nums">{total}</p>
+                <p className={FIGURE_INLINE_CLASS}>{total}</p>
                 <span aria-hidden="true" className="size-11 shrink-0" />
               </li>
             </ul>

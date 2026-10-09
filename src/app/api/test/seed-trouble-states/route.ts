@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { createDiveSite } from "@/db/dive-sites";
+import { createGearItem, recordGearService } from "@/db/gear";
 import { recordRollCall } from "@/db/manifests";
 import { queueMediaDeletion, STALE_PENDING_AFTER_MS } from "@/db/media-deletions";
 import { recordNotificationDelivery } from "@/db/notifications";
@@ -10,6 +11,7 @@ import { STALE_AFTER_MS } from "@/db/payment-operations";
 import { recordProcessorErasureObligations } from "@/db/processor-erasure";
 import { getShopReviewAggregate, setReviewPublished } from "@/db/reviews";
 import {
+  boats,
   bookingPayments,
   bookings,
   certifications,
@@ -37,7 +39,7 @@ import { moveTrip, setTripParticipantTerms } from "@/db/trips";
 import { heldSeatCounts } from "@/db/trips-queries";
 import { completeWaiver, issueWaiverRequest, recordWaiverDelivery } from "@/db/waivers";
 import { STAFF_ROLES } from "@/lib/authz";
-import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
@@ -428,8 +430,18 @@ export async function POST(request: Request) {
       ? await carrySomebodyWhoIsNotDiving(db, shop.id, actor.id, now)
       : null;
 
+  // Opt-in: a boat with lapsing safety kit and too many people for its
+  // certificate is a warning panel on that departure's Boat tab and an owner
+  // row on Today — exactly the standing warning the demo must not carry. The
+  // captures that want the panel ask for it, and address the departure by id.
+  const boatSafety =
+    new URL(request.url).searchParams.get("boatSafety") === "1"
+      ? await letTheReefBoatsKitLapse(db, shop.id, now, shop.timezone)
+      : null;
+
   return NextResponse.json({
     ok: true,
+    ...(boatSafety ? { boatSafety } : {}),
     ...(blockedMinor ? { blockedMinor } : {}),
     ...(crewClash ? { crewClash } : {}),
     ...(crewClashSailed ? { crewClashSailed } : {}),
@@ -462,6 +474,85 @@ const NOT_DIVING = [
   { fullName: "Mara Quint", participantType: "snorkeler" as const },
   { fullName: "Owen Quint", participantType: "rider" as const },
 ];
+
+/**
+ * **The reef boat's safety kit lapsing, and one passenger too many** (roadmap
+ * N-08, N-10). The next reef departure's hull gets a certificate one below the
+ * people booked on it and an insurance date three weeks out; an AED aboard with
+ * pads twelve days from expiry and flares that expired three days ago. Each
+ * line the Boat tab can say about a boat, in the order it says them.
+ */
+async function letTheReefBoatsKitLapse(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  now: Date,
+  timeZone: string,
+): Promise<{ tripId: string; boatName: string } | null> {
+  const [reef] = await db
+    .select({ id: trips.id, boatId: trips.boatId })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.title, REEF_TRIP_TITLE),
+        eq(trips.status, "scheduled"),
+        isNull(trips.deletedAt),
+        gte(trips.startsAt, now),
+      ),
+    )
+    .orderBy(trips.startsAt)
+    .limit(1);
+  if (!reef?.boatId) return null;
+  const [boat] = await db
+    .select({ id: boats.id, name: boats.name })
+    .from(boats)
+    .where(and(eq(boats.shopId, shopId), eq(boats.id, reef.boatId)))
+    .limit(1);
+  if (!boat) return null;
+
+  const booked = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, reef.id),
+        ne(bookings.status, "cancelled"),
+      ),
+    );
+  const today = calendarDateInTimezone(now, timeZone);
+  await db
+    .update(boats)
+    .set({
+      certifiedPassengers: Math.max(1, booked.length - 1),
+      insuranceExpiresOn: shiftCalendarDate(today, 21),
+    })
+    .where(eq(boats.id, boat.id));
+
+  // Register tags, which are the shop's own data (what is painted on the
+  // case), not DiveDay's copy.
+  const units = [
+    { kind: "aed", tag: "AED (Mantis)", clock: "aed_pads", dueIn: 12 },
+    { kind: "flares", tag: "Flares (Mantis)", clock: "expiry", dueIn: -3 },
+  ] as const;
+  for (const unit of units) {
+    const created = await createGearItem(db, {
+      shopId,
+      kind: unit.kind,
+      label: unit.tag,
+      aboardBoatId: boat.id,
+    });
+    if (!created.ok) continue;
+    await recordGearService(db, {
+      shopId,
+      gearItemId: created.item.id,
+      kind: unit.clock,
+      servicedOn: shiftCalendarDate(today, -700),
+      nextDueOn: shiftCalendarDate(today, unit.dueIn),
+    });
+  }
+  return { tripId: reef.id, boatName: boat.name };
+}
 
 async function carrySomebodyWhoIsNotDiving(
   db: Awaited<ReturnType<typeof getDb>>,

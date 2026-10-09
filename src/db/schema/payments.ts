@@ -64,7 +64,18 @@ export const shopPromoCodes = pgTable(
     code: text("code").notNull(),
     /** Staff's own note about what this code is for; never shown to a diver. */
     description: text("description"),
-    discountPercent: integer("discount_percent").notNull(),
+    /**
+     * Percent off, or null for a fixed-amount code. Exactly one of this and
+     * `discountAmountCents` is set (`shop_promo_codes_one_discount`).
+     */
+    discountPercent: integer("discount_percent"),
+    /**
+     * A fixed amount off, in the shop currency's minor units — "$20 off". Taken
+     * once off the whole checkout it is applied to, however many divers that
+     * checkout seats, and never below zero: Stripe's own `amount_off` coupon
+     * stops at the session total (`discountOffCents`, src/lib/promo-codes.ts).
+     */
+    discountAmountCents: integer("discount_amount_cents"),
     scope: shopPromoScope("scope").notNull().default("all"),
     status: shopPromoStatus("status").notNull().default("pending"),
     /** Null means "live now"; null `expiresAt` means the shop set no end date. */
@@ -80,7 +91,18 @@ export const shopPromoCodes = pgTable(
   (table) => [
     index("shop_promo_codes_shop_created_idx").on(table.shopId, table.createdAt),
     uniqueIndex("shop_promo_codes_shop_code_unique").on(table.shopId, table.code),
-    check("shop_promo_codes_discount_range", sql`${table.discountPercent} between 1 and 100`),
+    check(
+      "shop_promo_codes_discount_range",
+      sql`${table.discountPercent} is null or ${table.discountPercent} between 1 and 100`,
+    ),
+    check(
+      "shop_promo_codes_discount_amount_positive",
+      sql`${table.discountAmountCents} is null or ${table.discountAmountCents} > 0`,
+    ),
+    check(
+      "shop_promo_codes_one_discount",
+      sql`(${table.discountPercent} is null) <> (${table.discountAmountCents} is null)`,
+    ),
     check(
       "shop_promo_codes_max_redemptions_positive",
       sql`${table.maxRedemptions} is null or ${table.maxRedemptions} > 0`,
@@ -799,6 +821,13 @@ export const bookingCheckouts = pgTable(
      * is never refused and never recorded as zero for want of this figure.
      */
     appliedDiscountPercent: integer("applied_discount_percent"),
+    /**
+     * The fixed-amount counterpart to `applied_discount_percent`: the minor
+     * units a "$20 off" promotion was worth on *this* session — already capped
+     * at what the discountable lines came to, so it is never more than the
+     * session could lose. At most one of the two is set.
+     */
+    appliedDiscountCents: integer("applied_discount_cents"),
     currency: text("currency").notNull(),
     /** Price snapshot at checkout time, so a later trip re-price never rewrites what was asked. */
     amountPerDiverCents: integer("amount_per_diver_cents").notNull(),
@@ -888,6 +917,14 @@ export const bookingCheckouts = pgTable(
     check(
       "booking_checkouts_applied_discount_range",
       sql`${table.appliedDiscountPercent} is null or ${table.appliedDiscountPercent} between 1 and 100`,
+    ),
+    check(
+      "booking_checkouts_applied_discount_cents_positive",
+      sql`${table.appliedDiscountCents} is null or ${table.appliedDiscountCents} > 0`,
+    ),
+    check(
+      "booking_checkouts_single_discount_snapshot",
+      sql`${table.appliedDiscountPercent} is null or ${table.appliedDiscountCents} is null`,
     ),
     // A checkout applies a trip-scoped deal *or* a shop-wide code, never both:
     // the caller resolves them in that order and stops at the first hit, and

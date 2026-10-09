@@ -87,6 +87,7 @@
     "gearOverdue": "Late gear",
     "gearDueBack": "Returns",
     "gearServiceDue": "Gear service",
+    "boatSafetyExpired": "Safety expired",
     "workOrderLate": "Late repair",
     "workOrderUncollected": "Repair not collected",
     "staffCredentialDue": "Credential",
@@ -200,6 +201,7 @@
     "openGearRegister": "Open gear register",
     "openRentals": "Open rentals",
     "openGearUnit": "Open unit record",
+    "openBoats": "Open boats",
     "openStaffing": "Open staffing",
     "openUnits": "Open units",
     "openDiver": "Open diver record"

@@ -81,5 +81,17 @@
     "sitesRest": "{count, plural, one {# sitio más} other {# sitios más}} · {dives, plural, one {# inmersión entre todos} other {# inmersiones entre todos}}",
     "empty": "Todavía no ha zarpado ninguna salida este año."
   },
-  "buddySeats": "{count, plural, one {# plaza llegó} other {# plazas llegaron}} desde el enlace de un buceador"
+  "buddySeats": "{count, plural, one {# plaza llegó} other {# plazas llegaron}} desde el enlace de un buceador",
+  "byLine": {
+    "heading": "Ingresos por línea",
+    "caption": "Por el día del cobro, sin impuestos ni reembolsos",
+    "courses": "Cursos",
+    "funDives": "Inmersiones y salidas",
+    "rentals": "Alquileres",
+    "gearBench": "Taller de equipos",
+    "packages": "Paquetes de inmersiones",
+    "retail": "Venta minorista y otros"
+  },
+  "packagesOwed": "{dives, plural, one {# inmersión de paquete} other {# inmersiones de paquete}} por bucear, por valor de {amount}",
+  "returningDivers": "{returning} de {total, plural, one {# buceador} other {# buceadores}} ya habían buceado contigo"
 }

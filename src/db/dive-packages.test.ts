@@ -14,6 +14,7 @@ import {
   deleteDivePackage,
   grantPackageEntitlements,
   listDivePackages,
+  listPackagesOnSale,
   listSpendableEntitlements,
   releaseEntitlementForBooking,
   shopSellsPackages,
@@ -110,6 +111,28 @@ describe("a shop's package price list", () => {
 
     expect(await listDivePackages(db, shop.id)).toHaveLength(0);
     expect(await countSpendableDives(db, shop.id, person.id)).toBe(5);
+  });
+
+  it("offers divers only what has not lapsed", async () => {
+    const { db, shop } = await packageContext();
+    for (const [name, validUntil] of [
+      ["Open card", null],
+      ["Season card", "2999-12-31"],
+      ["Last season", "2020-12-31"],
+    ] as const) {
+      await createDivePackage(db, {
+        shopId: shop.id,
+        name,
+        diveCount: 5,
+        priceCents: 40_000,
+        scope: "fun_dives",
+        validUntil,
+      });
+    }
+    expect((await listPackagesOnSale(db, shop.id)).map((pkg) => pkg.name).sort()).toEqual([
+      "Open card",
+      "Season card",
+    ]);
   });
 });
 

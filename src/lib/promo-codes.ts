@@ -152,12 +152,79 @@ export function isPromoRedeemable(
 }
 
 /**
- * What a percent-off code leaves to pay, in minor units. Mirrors Stripe's own
- * arithmetic (it rounds the *discount*, then subtracts) so the figure quoted on
- * the booking form matches the figure charged. Stripe remains the authority —
- * this is what to show a diver, not what to bill them.
+ * **What a code takes off: a percent, or a fixed amount.** Exactly one, as the
+ * `*_one_discount` check constraints on `shop_promo_codes` and
+ * `trip_last_minute_promos` hold it.
+ *
+ * **A fixed amount comes off the whole booking once, never per diver.** A
+ * party of four paying through one checkout with a "$20 off" code pays $20
+ * less in total, not $80 less. That is Stripe's own reading of an `amount_off`
+ * coupon on a Checkout session (one session, one discount), and it is the one
+ * that keeps a redemption cap meaning what the shop typed: a capped code is
+ * spent once per checkout either way.
  */
-export function discountedAmountCents(amountCents: number, discountPercent: number): number {
-  const discount = Math.round((amountCents * discountPercent) / 100);
-  return Math.max(0, amountCents - discount);
+export type PromoDiscount =
+  | { kind: "percent"; percent: number }
+  | { kind: "amount"; amountCents: number };
+
+/**
+ * The discount a stored row carries, or null for a row holding neither half —
+ * which the check constraints make unreachable, and which a caller treats as
+ * "applies nothing" rather than guessing.
+ */
+export function promoDiscountOf(row: {
+  discountPercent: number | null;
+  discountAmountCents: number | null;
+}): PromoDiscount | null {
+  if (row.discountAmountCents !== null && row.discountAmountCents > 0) {
+    return { kind: "amount", amountCents: row.discountAmountCents };
+  }
+  if (row.discountPercent !== null && row.discountPercent > 0) {
+    return { kind: "percent", percent: row.discountPercent };
+  }
+  return null;
+}
+
+/** The two columns a discount is stored in; the other one is always null. */
+export function promoDiscountColumns(discount: PromoDiscount): {
+  discountPercent: number | null;
+  discountAmountCents: number | null;
+} {
+  return discount.kind === "percent"
+    ? { discountPercent: discount.percent, discountAmountCents: null }
+    : { discountPercent: null, discountAmountCents: discount.amountCents };
+}
+
+/** A fixed amount is a positive whole count of the currency's minor unit. */
+export function isValidPromoDiscountAmountCents(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0;
+}
+
+function wholeCents(cents: number): number {
+  return Number.isFinite(cents) ? Math.max(0, Math.trunc(cents)) : 0;
+}
+
+/**
+ * How much a discount takes off `discountableCents`, in minor units — never
+ * more than is there, so **no line is ever taken below zero**: "$50 off" a $30
+ * booking takes $30 and leaves nothing to pay, not minus $20.
+ *
+ * A percent rounds its discount *up* (`netOfPercentDiscount`'s rule), so the
+ * figure is a floor on what the shop keeps rather than a ceiling; it is what
+ * the pass-through guard hands Stripe as a fixed amount (issue #1019).
+ */
+export function discountOffCents(discountableCents: number, discount: PromoDiscount): number {
+  const total = wholeCents(discountableCents);
+  if (discount.kind === "amount") return Math.min(total, wholeCents(discount.amountCents));
+  const percent = Math.min(100, wholeCents(discount.percent));
+  return Math.min(total, Math.ceil((total * percent) / 100));
+}
+
+/**
+ * What a code leaves to pay, in minor units: `amountCents` less
+ * {@link discountOffCents}. Stripe remains the authority on what is charged;
+ * this is the figure DiveDay reconstructs when it has to.
+ */
+export function discountedAmountCents(amountCents: number, discount: PromoDiscount): number {
+  return wholeCents(amountCents) - discountOffCents(amountCents, discount);
 }

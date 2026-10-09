@@ -4,6 +4,7 @@ import {
   entitlementToSpend,
   MAX_PACKAGE_DIVE_COUNT,
   packageCoversTrip,
+  packageOnSale,
   type SpendableEntitlement,
   spendableCount,
   validateDivePackage,
@@ -166,5 +167,20 @@ describe("what a package covers", () => {
     expect(packageCoversTrip("all", { courseId: "c1" })).toBe(true);
     expect(packageCoversTrip("fun_dives", { courseId: "c1" })).toBe(false);
     expect(packageCoversTrip("fun_dives", { courseId: null })).toBe(true);
+  });
+});
+
+describe("packageOnSale", () => {
+  it("sells a package with no end date, or one that ends later", () => {
+    expect(packageOnSale({ validUntil: null }, NOW)).toBe(true);
+    expect(packageOnSale({ validUntil: "2026-08-22" }, NOW)).toBe(true);
+  });
+
+  it("never sells dives that would already be expired when paid for", () => {
+    expect(packageOnSale({ validUntil: "2026-08-21" }, NOW)).toBe(false);
+  });
+
+  it("never sells a package the shop stopped selling", () => {
+    expect(packageOnSale({ validUntil: null, deletedAt: days(-1) }, NOW)).toBe(false);
   });
 });

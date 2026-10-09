@@ -32,6 +32,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { timeZoneLabel } from "@/i18n/timezone-labels";
 import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz } from "@/lib/format";
+import { toShopCurrency } from "@/lib/money";
 import {
   PROMO_DISCOUNT_MAX,
   PROMO_DISCOUNT_MIN,
@@ -41,6 +42,7 @@ import {
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
+import { PromoDiscountFields, promoDiscountText } from "./_components/PromoDiscountFields";
 import {
   PromoCodeLedger,
   type PromoCodeRow,
@@ -94,10 +96,10 @@ const NOTICES: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
  * cursor on the first one, so "that discount is out of range" arrives *on the
  * discount box* rather than four fields above it.
  */
-const NOTICE_FIELD: Record<string, "code" | "discountPercent" | "startsAt"> = {
+const NOTICE_FIELD: Record<string, "code" | "discount" | "startsAt"> = {
   "invalid-code": "code",
   duplicate: "code",
-  "invalid-discount": "discountPercent",
+  "invalid-discount": "discount",
   "invalid-window": "startsAt",
 };
 
@@ -153,7 +155,8 @@ export default async function PromosPage({
     notice?: string;
     undoCode?: string;
     undoDescription?: string;
-    undoDiscountPercent?: string;
+    undoDiscount?: string;
+    undoDiscountKind?: string;
     undoScope?: string;
     undoStartsAt?: string;
     undoExpiresAt?: string;
@@ -167,7 +170,8 @@ export default async function PromosPage({
     notice,
     undoCode,
     undoDescription,
-    undoDiscountPercent,
+    undoDiscount,
+    undoDiscountKind,
     undoScope,
     undoStartsAt,
     undoExpiresAt,
@@ -228,7 +232,7 @@ export default async function PromosPage({
   const createStatus = notice && CREATE_FORM_NOTICES.has(notice) ? banner : undefined;
   const pageBanner = noticeField || createStatus ? undefined : banner;
   /** This box's refusal, already worded — or nothing, when the refusal was elsewhere. */
-  const fieldError = (field: "code" | "discountPercent" | "startsAt") =>
+  const fieldError = (field: "code" | "discount" | "startsAt") =>
     noticeField === field && banner
       ? banner.key === "promos.notice.invalidDiscount"
         ? t(banner.key, { min: PROMO_DISCOUNT_MIN, max: PROMO_DISCOUNT_MAX })
@@ -237,6 +241,7 @@ export default async function PromosPage({
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
   const timezone = shop?.timezone ?? "UTC";
+  const currency = toShopCurrency(shop?.currency);
 
   /**
    * One code's row, already worded. The shelf comes off `promoLedgerGroup`
@@ -258,7 +263,7 @@ export default async function PromosPage({
       id: promo.id,
       group,
       code: promo.code,
-      discount: t("promos.discountOff", { percent: promo.discountPercent }),
+      discount: promoDiscountText(t, promo, currency, locale),
       ...(badge ? { badge: { tone: badge.tone, word: t(badge.key) } } : {}),
       description: promo.description,
       // One line, three facts: what it buys, the window it buys in, and what
@@ -327,7 +332,7 @@ export default async function PromosPage({
   const dealRows: TripDealRow[] = tripDeals.map((deal) => ({
     id: deal.id,
     code: deal.code,
-    discount: t("promos.discountOff", { percent: deal.discountPercent }),
+    discount: promoDiscountText(t, deal, currency, locale),
     tripTitle: deal.tripTitle,
     href: `/shop/${shopSlug}/trips/${deal.tripId}?view=details#last-minute-deal`,
     facts: [
@@ -345,7 +350,8 @@ export default async function PromosPage({
           "notice",
           "undoCode",
           "undoDescription",
-          "undoDiscountPercent",
+          "undoDiscount",
+          "undoDiscountKind",
           "undoScope",
           "undoStartsAt",
           "undoExpiresAt",
@@ -361,13 +367,14 @@ export default async function PromosPage({
         t={t}
       />
 
-      {notice === "deleted" && undoCode && undoDiscountPercent && undoScope ? (
+      {notice === "deleted" && undoCode && undoDiscount && undoScope ? (
         <UndoToast
           message={t("promos.notice.deletedToast")}
           action={restorePromoAction}
           fields={{
             code: undoCode,
-            discountPercent: undoDiscountPercent,
+            discount: undoDiscount,
+            discountKind: undoDiscountKind === "amount" ? "amount" : "percent",
             scope: undoScope,
             description: undoDescription ?? "",
             maxRedemptions: undoMaxRedemptions ?? "",
@@ -441,21 +448,6 @@ export default async function PromosPage({
                   className={`${controlClass} uppercase`}
                 />
               </Field>
-              <Field
-                label={t("promos.fields.discount")}
-                hint={t("promos.fields.discountHint")}
-                error={fieldError("discountPercent")}
-              >
-                <input
-                  name="discountPercent"
-                  type="number"
-                  required
-                  min={PROMO_DISCOUNT_MIN}
-                  max={PROMO_DISCOUNT_MAX}
-                  defaultValue={10}
-                  className={controlClass}
-                />
-              </Field>
               <Field label={t("promos.fields.goodFor")}>
                 <select name="scope" defaultValue="all" className={controlClass}>
                   {Object.entries(SCOPE_KEYS).map(([value, key]) => (
@@ -465,6 +457,12 @@ export default async function PromosPage({
                   ))}
                 </select>
               </Field>
+              <PromoDiscountFields
+                t={t}
+                currency={currency}
+                locale={locale}
+                error={fieldError("discount")}
+              />
               <Field
                 label={t("promos.fields.redemptionCap")}
                 hint={t("promos.fields.redemptionCapHint")}

@@ -115,7 +115,8 @@ async function redeemPromoOnce(
   promo: {
     id: string;
     code: string;
-    discountPercent: number;
+    discountPercent: number | null;
+    discountAmountCents?: number | null;
     stripePromotionCodeId: string | null;
   },
   email: string,
@@ -136,7 +137,12 @@ async function redeemPromoOnce(
       cancelUrl: "https://diveday.example/no",
       describeLine: ({ tripTitle }) => tripTitle,
       promotionCode: promo.stripePromotionCodeId ?? undefined,
-      shopPromo: { id: promo.id, code: promo.code, discountPercent: promo.discountPercent },
+      shopPromo: {
+        id: promo.id,
+        code: promo.code,
+        discountPercent: promo.discountPercent,
+        discountAmountCents: promo.discountAmountCents,
+      },
     },
     checkout,
   );
@@ -186,6 +192,56 @@ describe("createShopPromoCode", () => {
     expect((await listShopPromoCodes(db, shop.id)).promos.map((promo) => promo.code)).not.toContain(
       "REEF20",
     );
+  });
+
+  it("mints a fixed-amount code as amount_off in the shop's currency, with no percent stored", async () => {
+    const { db, shop } = await promoContext();
+    const requests: Array<{ discount: unknown; currency: string }> = [];
+    const outcome = await createShopPromoCode(
+      db,
+      promoInput(shop.id, { discountPercent: null, discountAmountCents: 2_000 }),
+      fakePromotions({
+        async createShopPromotion(request) {
+          requests.push({ discount: request.discount, currency: request.currency });
+          return {
+            status: "created",
+            stripeCouponId: "coupon_a",
+            stripePromotionCodeId: "promo_a",
+          };
+        },
+      }),
+    );
+    if (!outcome.ok) throw new Error(`expected ok, got ${outcome.reason}`);
+    expect(outcome.promo.discountAmountCents).toBe(2_000);
+    expect(outcome.promo.discountPercent).toBeNull();
+    expect(requests).toEqual([
+      { discount: { kind: "amount", amountCents: 2_000 }, currency: "usd" },
+    ]);
+  });
+
+  it("refuses a code that asks for both a percent and an amount, or for neither", async () => {
+    const { db, shop } = await promoContext();
+    expect(
+      await createShopPromoCode(
+        db,
+        promoInput(shop.id, { discountPercent: 10, discountAmountCents: 1_000 }),
+        fakePromotions(),
+      ),
+    ).toEqual({ ok: false, reason: "invalid_discount" });
+    expect(
+      await createShopPromoCode(
+        db,
+        promoInput(shop.id, { discountPercent: null, discountAmountCents: null }),
+        fakePromotions(),
+      ),
+    ).toEqual({ ok: false, reason: "invalid_discount" });
+    expect(
+      await createShopPromoCode(
+        db,
+        promoInput(shop.id, { discountPercent: null, discountAmountCents: 0 }),
+        fakePromotions(),
+      ),
+    ).toEqual({ ok: false, reason: "invalid_discount" });
   });
 
   it("refuses an unusable code, an out-of-range discount, and a backwards window", async () => {

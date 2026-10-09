@@ -1249,6 +1249,20 @@ export async function resetDemoSchedule(
   await db.delete(gearServiceEvents).where(eq(gearServiceEvents.shopId, shopId));
   await db.delete(priorGearAssignments).where(eq(priorGearAssignments.shopId, shopId));
   await db.delete(gearItems).where(eq(gearItems.shopId, shopId));
+  // A boat's certificate and paper dates are settings, like the boat itself,
+  // but the demo seeds none and the one writer outside Settings is a trouble
+  // state (`/api/test/seed-trouble-states?boatSafety=1`). So the reset puts
+  // them back to "never recorded" rather than let one capture's lapsing
+  // insurance or certificate stand on the next test's manifest.
+  await db
+    .update(boats)
+    .set({
+      certifiedPassengers: null,
+      inspectionDueOn: null,
+      registrationExpiresOn: null,
+      insuranceExpiresOn: null,
+    })
+    .where(eq(boats.shopId, shopId));
   // References people, so it clears before them like any other people-scoped row.
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
   await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));

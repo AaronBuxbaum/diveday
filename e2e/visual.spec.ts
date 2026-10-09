@@ -5691,6 +5691,28 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **What the boat carries, and what it holds** (roadmap N-08, N-10): the
+       * reef boat with one passenger past its certificate, its insurance three
+       * weeks out, flares expired and AED pads twelve days from expiry —
+       * through the opt-in `?boatSafety=1` trouble state, never seeded into
+       * blue-mantis. The panel above the boat check is the one surface that
+       * says all of it.
+       */
+      test(`a manifest names the boat's lapsing kit and papers (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?boatSafety=1");
+        expect(seeded.ok()).toBe(true);
+        const { boatSafety } = (await seeded.json()) as { boatSafety?: { tripId: string } };
+        if (!boatSafety) throw new Error("seed-trouble-states found no reef departure on a boat");
+        await page.goto(`/shop/blue-mantis/trips/${boatSafety.tripId}/manifest`);
+        await page.getByRole("heading", { level: 2, name: "Aboard Mantis I" }).waitFor();
+        await offlineCopySaved(page);
+        await capture(page, "manifest-boat-safety", scheme);
+      });
+
+      /**
        * **The same manifest with one seat released** (#1209,
        * `dive-domain-expert` review 20260911).
        *
@@ -8522,6 +8544,29 @@ for (const scheme of ["light", "dark"] as const) {
       // an "empty" name. Waiting on the rendered text makes that loud.
       await page.getByText("No emergency numbers recorded").waitFor();
       await capture(page, "offline-manifest-emergency-empty", scheme);
+    });
+
+    /**
+     * **The packages a diver can buy online** (owner decision 2026-10-09).
+     * Its own shop: a package is shop configuration, which `/api/test/reset`
+     * leaves standing, so writing one into blue-mantis would follow the worker
+     * into every later capture of that shop's public pages — the new Packages
+     * tab included.
+     */
+    test(`the public packages page renders true to the design (${scheme})`, async ({
+      page,
+      privateShop,
+    }) => {
+      await page.goto(`/shop/${privateShop.slug}/promos/packages`);
+      await page.getByLabel("What you call it").fill("Ten-dive card");
+      await page.getByLabel("Dives included").fill("10");
+      await page.getByLabel("Price").fill("450");
+      await page.getByRole("button", { name: "Add package" }).click();
+      await page.getByText("Package added.").waitFor();
+      await page.goto(`/s/${privateShop.slug}/packages`);
+      await page.getByRole("heading", { level: 1, name: "Dive packages" }).waitFor();
+      await page.getByRole("button", { name: "Buy for $450" }).waitFor();
+      await capture(page, "public-packages", scheme);
     });
   });
 }

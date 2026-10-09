@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "c199ca58-e47a-4759-b115-f88272384f36",
+  "id": "39671ee4-e182-44ed-a23b-fa34f51d4e96",
   "prevIds": [
-    "b97095fc-aea1-4682-ae33-ac050804034d"
+    "2aaffcaa-8ce2-46c8-a1f3-e1e65db32d90"
   ],
   "ddl": [
     {
@@ -579,6 +579,9 @@
         "camera",
         "nitrox_analyzer",
         "o2_kit",
+        "aed",
+        "first_aid_kit",
+        "flares",
         "other"
       ],
       "name": "gear_item_kind",
@@ -610,6 +613,9 @@
         "hydro_test",
         "visual_inspection",
         "o2_clean",
+        "aed_pads",
+        "aed_battery",
+        "expiry",
         "note"
       ],
       "name": "gear_service_kind",
@@ -4633,12 +4639,25 @@
     {
       "type": "integer",
       "typeSchema": null,
-      "notNull": true,
+      "notNull": false,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
       "name": "discount_percent",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_last_minute_promos"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "discount_amount_cents",
       "entityType": "columns",
       "schema": "public",
       "table": "trip_last_minute_promos"
@@ -11846,6 +11865,19 @@
       "table": "gear_items"
     },
     {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "aboard_boat_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
       "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": false,
@@ -15707,6 +15739,19 @@
       "table": "booking_checkouts"
     },
     {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "applied_discount_cents",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "booking_checkouts"
+    },
+    {
       "type": "text",
       "typeSchema": null,
       "notNull": true,
@@ -17581,12 +17626,25 @@
     {
       "type": "integer",
       "typeSchema": null,
-      "notNull": true,
+      "notNull": false,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
       "name": "discount_percent",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_promo_codes"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "discount_amount_cents",
       "entityType": "columns",
       "schema": "public",
       "table": "shop_promo_codes"
@@ -18809,6 +18867,58 @@
       "generated": null,
       "identity": null,
       "name": "description",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boats"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "certified_passengers",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boats"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "inspection_due_on",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boats"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "registration_expires_on",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boats"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "insurance_expires_on",
       "entityType": "columns",
       "schema": "public",
       "table": "boats"
@@ -26481,6 +26591,27 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "aboard_boat_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": "\"aboard_boat_id\" is not null and \"deleted_at\" is null",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "gear_items_aboard_boat_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "\"label\" gin_trgm_ops",
           "isExpression": true,
           "asc": true,
@@ -33833,6 +33964,23 @@
     {
       "nameExplicit": false,
       "columns": [
+        "aboard_boat_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "boats",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "name": "gear_items_aboard_boat_id_boats_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
         "deleted_by_person_id"
       ],
       "schemaTo": "public",
@@ -38603,8 +38751,22 @@
       "table": "trip_invitations"
     },
     {
-      "value": "\"discount_percent\" between 5 and 90",
+      "value": "\"discount_percent\" is null or \"discount_percent\" between 5 and 90",
       "name": "trip_last_minute_promos_discount_range",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "trip_last_minute_promos"
+    },
+    {
+      "value": "\"discount_amount_cents\" is null or \"discount_amount_cents\" > 0",
+      "name": "trip_last_minute_promos_discount_amount_positive",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "trip_last_minute_promos"
+    },
+    {
+      "value": "(\"discount_percent\" is null) <> (\"discount_amount_cents\" is null)",
+      "name": "trip_last_minute_promos_one_discount",
       "entityType": "checks",
       "schema": "public",
       "table": "trip_last_minute_promos"
@@ -38981,6 +39143,20 @@
       "table": "booking_checkouts"
     },
     {
+      "value": "\"applied_discount_cents\" is null or \"applied_discount_cents\" > 0",
+      "name": "booking_checkouts_applied_discount_cents_positive",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "booking_checkouts"
+    },
+    {
+      "value": "\"applied_discount_percent\" is null or \"applied_discount_cents\" is null",
+      "name": "booking_checkouts_single_discount_snapshot",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "booking_checkouts"
+    },
+    {
       "value": "\"promo_code_id\" is null or \"trip_promo_id\" is null",
       "name": "booking_checkouts_single_promo_source",
       "entityType": "checks",
@@ -39107,8 +39283,22 @@
       "table": "payment_disputes"
     },
     {
-      "value": "\"discount_percent\" between 1 and 100",
+      "value": "\"discount_percent\" is null or \"discount_percent\" between 1 and 100",
       "name": "shop_promo_codes_discount_range",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "shop_promo_codes"
+    },
+    {
+      "value": "\"discount_amount_cents\" is null or \"discount_amount_cents\" > 0",
+      "name": "shop_promo_codes_discount_amount_positive",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "shop_promo_codes"
+    },
+    {
+      "value": "(\"discount_percent\" is null) <> (\"discount_amount_cents\" is null)",
+      "name": "shop_promo_codes_one_discount",
       "entityType": "checks",
       "schema": "public",
       "table": "shop_promo_codes"
@@ -39168,6 +39358,13 @@
       "entityType": "checks",
       "schema": "public",
       "table": "trip_reviews"
+    },
+    {
+      "value": "\"certified_passengers\" is null or \"certified_passengers\" between 1 and 999",
+      "name": "boats_certified_passengers_positive",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "boats"
     },
     {
       "value": "\"dive_number\" >= 1",

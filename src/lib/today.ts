@@ -97,6 +97,7 @@ export type TodayActionKind =
   | "gear_overdue"
   | "gear_due_back"
   | "gear_service_due"
+  | "boat_safety_expired"
   | "work_order_late"
   | "work_order_uncollected"
   | "staff_credential_due"
@@ -243,6 +244,10 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   gear_overdue: 29,
   gear_due_back: 30,
   gear_service_due: 31,
+  // Expired safety kit or boat papers (roadmap N-08, N-10): never a boarding
+  // blocker — the dock decides — so it rides with the register's rows, ahead
+  // of the bench clock because a dead AED pad is the boat's, not a rental's.
+  boat_safety_expired: 31,
   // The bench's two rows (ADR 20261008-work-order-follow-up). Below the
   // register's own chase list: a customer's regulator a day past its promise
   // is a phone call to make, not a unit missing from the racks, and a ticket
@@ -484,6 +489,10 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
     "captain",
     "crew",
   ],
+  // An owner row: renewing a boat's insurance or buying new flares is the
+  // owner's errand. The crew read the same facts on the departure's own
+  // pre-departure check, where they can act on them before the boat leaves.
+  boat_safety_expired: ["owner", "manager"],
   gear_service_due: [
     "owner",
     "manager",
@@ -630,6 +639,9 @@ export const ACTION_KIND_META = {
   gear_overdue: { tone: "warning" },
   gear_due_back: { tone: "neutral" },
   gear_service_due: { tone: "neutral" },
+  // Warning: something the boat is meant to carry, or a paper it is meant to
+  // hold, has already run out.
+  boat_safety_expired: { tone: "warning" },
   // Warning: the shop gave its word on a day and the day has gone. Ready and
   // not collected is the customer's errand, not the shop's failure.
   work_order_late: { tone: "warning" },

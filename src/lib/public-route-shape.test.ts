@@ -22,7 +22,7 @@ describe("publicRouteShape", () => {
   });
 
   it("folds every shop-only child onto the one shop lookup", () => {
-    for (const child of ["courses", "reviews", "register", "availability.json"]) {
+    for (const child of ["courses", "reviews", "register", "packages", "availability.json"]) {
       expect(publicRouteShape(`/s/${SHOP}/${child}`)).toEqual({ kind: "shop", shopSlug: SHOP });
     }
   });

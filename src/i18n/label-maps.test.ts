@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { MediaDeletionKind, PaymentOperationKind, WorkOrderLineKindValue } from "@/db/schema";
+import { BOAT_PAPERS } from "@/lib/boat-safety";
 import type { CertificationCardRowState } from "@/lib/certification-cards";
 import type { DepthUnit } from "@/lib/depth-units";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
@@ -27,6 +28,7 @@ import { SUIT_CHOICES } from "@/lib/rentals";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { ROLL_CALL_GAP_KINDS, type TodaySeason } from "@/lib/today";
 import { WORK_ORDER_OUTCOMES, WORK_ORDER_STATUSES } from "@/lib/work-orders";
+import { boatSafetyNoticeText } from "./boat-safety-labels";
 import { buddyAlertText } from "./buddy-labels";
 import {
   CARD_STATUS_KEYS,
@@ -296,6 +298,9 @@ const GEAR_ITEM_KINDS = everyCodeOf<GearItemKind>({
   camera: true,
   nitrox_analyzer: true,
   o2_kit: true,
+  aed: true,
+  first_aid_kit: true,
+  flares: true,
   other: true,
 });
 
@@ -304,6 +309,9 @@ const GEAR_SERVICE_KINDS = everyCodeOf<GearServiceKind>({
   hydro_test: true,
   visual_inspection: true,
   o2_clean: true,
+  aed_pads: true,
+  aed_battery: true,
+  expiry: true,
   note: true,
 });
 
@@ -392,6 +400,43 @@ const BLOCKER_PARAMS: Partial<Record<ReadinessBlockerCode, ReadinessBlockerParam
 const NEXT_DIVE_FACTS = { site: "Blue Hole", course: "Advanced Open Water", lens: "drift" };
 
 const CASES: readonly LabelMapCase[] = [
+  {
+    module: "boat-safety-labels.ts",
+    map: "KIT_KEYS",
+    // Both tenses of each clock, through the one door the manifest uses.
+    rows: codeRows(GEAR_SERVICE_KINDS, (locale, clock) =>
+      [false, true]
+        .map((expired) =>
+          boatSafetyNoticeText(staffTranslator(locale), {
+            code: "kit_clock",
+            gearItemId: "unit",
+            label: "AED",
+            clock,
+            dueOn: "2026-10-21",
+            expired,
+            days: 2,
+          }),
+        )
+        .join(" / "),
+    ),
+  },
+  {
+    module: "boat-safety-labels.ts",
+    map: "PAPER_KEYS",
+    rows: codeRows(BOAT_PAPERS, (locale, paper) =>
+      [false, true]
+        .map((expired) =>
+          boatSafetyNoticeText(staffTranslator(locale), {
+            code: "paper",
+            paper,
+            dueOn: "2026-10-21",
+            expired,
+            days: 2,
+          }),
+        )
+        .join(" / "),
+    ),
+  },
   {
     module: "buddy-labels.ts",
     map: "BUDDY_ALERT_KEYS",

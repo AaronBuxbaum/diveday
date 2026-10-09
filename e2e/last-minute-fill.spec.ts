@@ -147,8 +147,15 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
   // keep prompting staff to try again rather than reading the attempt as done.
   const send = page.getByRole("button", { name: /Send to \d+ divers?/ });
   await expect(send.locator("xpath=ancestor::form")).toHaveAttribute("data-hydrated", "true");
+  // A fixed amount rather than a percent (amendment 2026-10-09 to ADR
+  // 20260729-shop-promo-codes): the attempt's line names it once per booking.
+  const dealForm = send.locator("xpath=ancestor::form");
+  await dealForm.getByRole("combobox", { name: "Discount type" }).selectOption("amount");
+  await dealForm.getByRole("spinbutton", { name: "Discount" }).fill("20");
   await send.click();
-  await expect(page.getByText(/off · /)).toBeVisible({ timeout: HELD_SEND_TIMEOUT_MS });
+  await expect(page.getByText("$20 off each booking ·")).toBeVisible({
+    timeout: HELD_SEND_TIMEOUT_MS,
+  });
 
   await page.goto("/shop/blue-mantis");
   await expect(page.getByText("3 seats open, no last-minute deal sent.")).toBeVisible();

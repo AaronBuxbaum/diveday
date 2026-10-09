@@ -10,6 +10,7 @@ import { ChangedFacts, type FitRecall } from "@/app/ready/[token]/_components/Ch
 import { CourseMaterials } from "@/app/ready/[token]/_components/CourseMaterials";
 import { DayOfDetails } from "@/app/ready/[token]/_components/DayOfDetails";
 import { ExpiredLink } from "@/app/ready/[token]/_components/ExpiredLink";
+import { payStepLines } from "@/app/ready/[token]/_components/pay-step-lines";
 import { ReadyThreadBodySkeleton } from "@/app/ready/[token]/_components/ReadyThreadBodySkeleton";
 import { SignStepActions } from "@/app/ready/[token]/_components/SignStepActions";
 import {
@@ -54,6 +55,7 @@ import {
 } from "@/db/booking-capabilities";
 import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import { countSpendableDives } from "@/db/dive-packages";
 import { departureRollCallForBooking } from "@/db/manifests";
 import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
@@ -1285,22 +1287,13 @@ export default async function DiverReadinessPage({
 
     /** A money figure in the currency it was actually charged in, never today's shop setting. */
     const money = (cents: number, currency: string) => formatMoneyCents(cents, currency, locale);
-    /**
-     * What the Pay step says once it has settled: the figure, which is the one
-     * thing the step's own word ("Paid") cannot carry. The receipt's currency,
-     * not the shop's — a shop that switches currency next season must not
-     * restate last season's charge (ADR 20260731-shop-currency).
-     */
-    const paidLine =
-      paymentReceipt && paymentReceipt.amountCents !== null
-        ? money(paymentReceipt.amountCents, paymentReceipt.currency)
-        : t("ready.checklistDetail.paymentDone");
-    const depositBalanceLine =
-      paymentReceipt?.isDeposit && paymentReceipt.balanceDueCents > 0
-        ? t("booking.paymentDepositBalance", {
-            balance: money(paymentReceipt.balanceDueCents, paymentReceipt.currency),
-          })
-        : null;
+    const packageDivesLeft = await countSpendableDives(db, shop.id, data.person.id);
+    const { paidLine, depositBalanceLine } = payStepLines(
+      t,
+      money,
+      paymentReceipt,
+      packageDivesLeft,
+    );
 
     /** One step's fact, and one step's form. The two things the spine cannot derive. */
     const stepLine = (step: ThreadStep): string | null => {

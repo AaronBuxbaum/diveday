@@ -88,6 +88,26 @@ because every surface above it has to agree about what it is counting.
 The tables shipped ahead of that answer and are unused: no production path grants an entitlement, so
 changing the unit costs a migration and nothing else (H-49, pre-pilot).
 
+## Amendment, 2026-10-09: divers buy a package online
+
+The owner approved selling packages on the shop's public pages. `/s/<shop>/packages` lists every
+package still on sale (`packageOnSale`: not deleted, and its end date not passed) and earns a
+Packages tab in the public nav only while there is one. A diver picks one, gives a name and an
+email, and is sent to Stripe's hosted invoice page.
+
+The purchase is an ordinary order on the shop's connected account, raised by
+`createDiverPackageOrder` in `src/db/orders.ts`, so `invoice.paid` grants the dives through the
+same `grantPackageEntitlementsForPaidOrder` a staff-raised invoice uses. Nothing about the grant is
+new. Because no staff member raises it, the function makes its own guarantees in place of the role
+check: the price is the package row's, the only line is one `dive_package` at quantity one, Stripe
+does not email the invoice (a public form must not make the shop's account write to an address
+somebody typed), and the Stripe customer carries the name typed on the form rather than the name
+the shop has on file for that email. The diver is recorded as the order's own creator. The action
+is rate limited per IP and per email.
+
+`/ready/<token>` now says how many package dives a diver has left, on the Pay step, counted as
+`countSpendableDives` counts them.
+
 ## What this decision does not settle
 
 Two questions in the originating issue are **not** engineering calls and are deliberately left open

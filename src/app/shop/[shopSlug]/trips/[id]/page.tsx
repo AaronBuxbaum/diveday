@@ -1060,7 +1060,7 @@ export default async function ManageTripPage({
               guests={guests}
               shopSlug={shopSlug}
               locale={locale}
-              timezone={shop.timezone}
+              shop={shop}
               tripNotice={tripNotice}
               mayDiscount={mayDiscount}
               more={

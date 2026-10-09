@@ -158,3 +158,13 @@ clears.
   table.
 - **On acceptance (not before):** glossary entries for **boat** and **buyout**, and roadmap §4 /
   the charter entry move from "design open" to "design settled, implementation unscheduled".
+
+## Note 2026-10-09 — the vessel's own ceiling landed, as information
+
+This record stays Proposed. Slice 1's "the vessel's real ceiling" landed in a narrower shape with
+roadmap N-10's paper dates: `boats.certified_passengers`, the passenger limit printed on the boat's
+Coast Guard certificate, beside the existing `boats.capacity` (the seats a shop sells), which
+already refuses a departure that sells more seats than the boat holds. The certificate never
+refuses anything: the fleet row says when the seats on sale pass it, and a departure's Boat tab
+says when the people booked pass it (`src/lib/boat-safety.ts`). Nothing here touches admission,
+readiness or the roll call.

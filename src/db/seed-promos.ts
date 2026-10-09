@@ -76,7 +76,9 @@ async function seedPromosInTransaction(
     .where(and(eq(bookings.shopId, shopId), eq(bookings.id, booking.id)))
     .limit(1);
   if (!source || source.tripId !== booking.tripId || source.amountCents === null) return;
-  const settledTotalCents = Math.round(source.amountCents * (1 - reef10.discountPercent / 100));
+  const settledTotalCents = Math.round(
+    source.amountCents * (1 - (reef10.discountPercent ?? 0) / 100),
+  );
   const stripeSessionId = `cs_demo_reef10_redeemed_${shopId}`;
   const [insertedCheckout] = await db
     .insert(bookingCheckouts)

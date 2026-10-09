@@ -26,6 +26,7 @@ import backup from "./backup.json";
 import benchFollowUp from "./benchFollowUp.json";
 import billing from "./billing.json";
 import blowout from "./blowout.json";
+import boatSafety from "./boatSafety.json";
 import boats from "./boats.json";
 import bookings from "./bookings.json";
 import calendar from "./calendar.json";
@@ -109,6 +110,7 @@ const staff = {
   inbox,
   incidentExport,
   integrations,
+  boatSafety,
   boats,
   lenses,
   participants,

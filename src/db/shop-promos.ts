@@ -6,10 +6,14 @@ import {
 } from "@/lib/payments/promotions";
 import {
   isPromoRedeemable,
+  isValidPromoDiscountAmountCents,
   isValidPromoDiscountPercent,
   normalizePromoCode,
   type PromoBookingKind,
+  type PromoDiscount,
   type PromoScope,
+  promoDiscountColumns,
+  promoDiscountOf,
 } from "@/lib/promo-codes";
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
@@ -19,7 +23,7 @@ import {
   shopPromoRedemptions,
   tripLastMinutePromos,
 } from "./schema";
-import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
+import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
 
 /**
  * Shop-wide promo codes (docs ADR 20260729-shop-promo-codes). Same
@@ -32,7 +36,10 @@ import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 export type CreateShopPromoInput = {
   shopId: string;
   code: string;
-  discountPercent: number;
+  /** Percent off. Exactly one of this and `discountAmountCents`. */
+  discountPercent?: number | null;
+  /** A fixed amount off the whole booking, in the shop currency's minor units. */
+  discountAmountCents?: number | null;
   scope: PromoScope;
   description?: string | null;
   startsAt?: Date | null;
@@ -69,9 +76,8 @@ export async function createShopPromoCode(
 ): Promise<CreateShopPromoOutcome> {
   const code = normalizePromoCode(input.code);
   if (!code) return { ok: false, reason: "invalid_code" };
-  if (!isValidPromoDiscountPercent(input.discountPercent)) {
-    return { ok: false, reason: "invalid_discount" };
-  }
+  const discount = discountFromInput(input);
+  if (!discount) return { ok: false, reason: "invalid_discount" };
   const startsAt = input.startsAt ?? null;
   const expiresAt = input.expiresAt ?? null;
   if (startsAt && expiresAt && startsAt >= expiresAt)
@@ -96,7 +102,7 @@ export async function createShopPromoCode(
       shopId: input.shopId,
       code,
       description: input.description?.trim() || null,
-      discountPercent: input.discountPercent,
+      ...promoDiscountColumns(discount),
       scope: input.scope,
       startsAt,
       expiresAt,
@@ -109,7 +115,8 @@ export async function createShopPromoCode(
   const stripeResult = await promotions.createShopPromotion({
     stripeAccountId,
     code,
-    percentOff: input.discountPercent,
+    discount,
+    currency: await getShopCurrency(db, input.shopId),
     name: input.description?.trim() || `DiveDay promo — ${code}`,
     expiresAt,
     maxRedemptions,
@@ -133,6 +140,23 @@ export async function createShopPromoCode(
     .where(eq(shopPromoCodes.id, pending.id))
     .returning();
   return active ? { ok: true, promo: active } : { ok: false, reason: "stripe_failed" };
+}
+
+/**
+ * The one discount a create asked for, or null when it asked for none, both,
+ * or one out of range — every one of which is `invalid_discount`.
+ */
+function discountFromInput(input: {
+  discountPercent?: number | null;
+  discountAmountCents?: number | null;
+}): PromoDiscount | null {
+  const percent = input.discountPercent ?? null;
+  const amount = input.discountAmountCents ?? null;
+  if ((percent === null) === (amount === null)) return null;
+  if (percent !== null) {
+    return isValidPromoDiscountPercent(percent) ? { kind: "percent", percent } : null;
+  }
+  return isValidPromoDiscountAmountCents(amount) ? { kind: "amount", amountCents: amount } : null;
 }
 
 /**
@@ -359,10 +383,13 @@ export async function retryShopPromoCode(
   if (!canAcceptPayments(account)) return { ok: false, reason: "not_connected" };
   const stripeAccountId = (account as NonNullable<typeof account>).stripeAccountId;
 
+  const discount = promoDiscountOf(existing);
+  if (!discount) return { ok: false, reason: "not_found" };
   const stripeResult = await promotions.createShopPromotion({
     stripeAccountId,
     code: existing.code,
-    percentOff: existing.discountPercent,
+    discount,
+    currency: await getShopCurrency(db, shopId),
     name: existing.description?.trim() || `DiveDay promo — ${existing.code}`,
     expiresAt: existing.expiresAt,
     maxRedemptions: existing.maxRedemptions,
