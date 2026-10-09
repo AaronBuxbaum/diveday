@@ -3309,3 +3309,138 @@ describe("the manifest names a crew member rostered on two overlapping boats", (
     expect(member && "clashDepartures" in member).toBe(false);
   });
 });
+
+/**
+ * **Roll call never refuses a boat that is already counting heads**
+ * (dive-domain review, 2026-10-09). A departure can be cancelled after the
+ * crew have started roll call — a plain cancel tapped at the dock, a status
+ * flipped by mistake — and the writers used to refuse every further event on
+ * a cancelled trip, so the count of who is aboard, and who came back up,
+ * could no longer be finished. Once a trip has any roll-call event, diver or
+ * crew, its writes are accepted whatever its status; a cancelled trip nobody
+ * has counted on is still refused.
+ */
+describe("roll call on a cancelled trip that is already counting heads", () => {
+  async function cancel(db: Awaited<ReturnType<typeof manifestContext>>["db"], tripId: string) {
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, tripId));
+  }
+
+  it("keeps accepting a diver's roll call after the trip is cancelled mid-count", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    const first = await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "not_boarded",
+    });
+    expect(first.ok).toBe(true);
+    await cancel(db, reef.id);
+    const after = await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "cleared",
+    });
+    expect(after.ok).toBe(true);
+  });
+
+  it("keeps accepting a crew member's roll call, and a diver's once only crew were counted", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staff.id })
+      .onConflictDoNothing();
+    const crewFirst = await recordCrewRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      personId: staff.id,
+      recordedByPersonId: staff.id,
+      status: "not_boarded",
+    });
+    expect(crewFirst.ok).toBe(true);
+    await cancel(db, reef.id);
+    const crewAfter = await recordCrewRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      personId: staff.id,
+      recordedByPersonId: staff.id,
+      status: "cleared",
+    });
+    expect(crewAfter.ok).toBe(true);
+    const diverAfter = await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "not_boarded",
+    });
+    expect(diverAfter.ok).toBe(true);
+  });
+
+  it("still refuses roll call on a cancelled trip nobody has counted on", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staff.id })
+      .onConflictDoNothing();
+    await db.delete(rollCallEvents).where(eq(rollCallEvents.tripId, reef.id));
+    await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, reef.id));
+    await cancel(db, reef.id);
+    expect(
+      await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+      }),
+    ).toEqual({ ok: false, reason: "booking_unavailable" });
+    expect(
+      await recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staff.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+      }),
+    ).toEqual({ ok: false, reason: "trip_unavailable" });
+  });
+
+  it("never lets another trip's count open a cancelled one", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    const other = await createTrip(db, {
+      shopId: shop.id,
+      title: "Counting elsewhere",
+      startsAt: reef.startsAt,
+      endsAt: reef.endsAt,
+      capacity: 6,
+    });
+    if (!other) throw new Error("other trip not created");
+    await db.delete(rollCallEvents).where(eq(rollCallEvents.tripId, reef.id));
+    await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, reef.id));
+    await db.insert(rollCallCrewEvents).values({
+      shopId: shop.id,
+      tripId: other.id,
+      personId: staff.id,
+      recordedByPersonId: staff.id,
+      status: "not_boarded",
+      checkpoint: "departure",
+      source: "live",
+      occurredAt: nowDate(),
+    });
+    await cancel(db, reef.id);
+    expect(
+      (
+        await recordRollCall(db, {
+          shopId: shop.id,
+          tripId: reef.id,
+          bookingId: booking.booking.id,
+          recordedByPersonId: staff.id,
+          status: "not_boarded",
+        })
+      ).ok,
+    ).toBe(false);
+  });
+});
