@@ -487,8 +487,11 @@ export function DiverRollCall({
           // A diver tapped aboard after a dive with no earlier boarding is
           // boarding *now* — they joined at the second site — so their row
           // reads as the dock's would (domain review of #2123). The tap stays.
+          // Not once the crew has recorded them not back aboard: that row is
+          // the alarm, and no paperwork word may sit on it (DD9).
           const recordedTone = rollCallRecordedTone(rowState);
-          const blockedAtDock = !ready && (isDeparture || diver.boardedEarlier === false);
+          const blockedAtDock =
+            !ready && (isDeparture || (diver.boardedEarlier === false && !rowState.notBackAboard));
           const untouchedTone = blockedAtDock
             ? ROLL_CALL_ROW_TONE.blocked
             : ROLL_CALL_ROW_TONE.awaiting;
