@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { setupRequests } from "@/db/schema";
 import { issueSetupLink } from "@/db/setup-links";
+import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 import { setupLinkPath } from "@/lib/setup-links";
 
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
       contactName: "",
       email: "",
       source: "unknown",
-      locale: "en-US",
+      locale: DEFAULT_DIVER_LOCALE,
     })
     .returning({ id: setupRequests.id });
   if (!row) return NextResponse.json({ error: "insert_failed" }, { status: 500 });
