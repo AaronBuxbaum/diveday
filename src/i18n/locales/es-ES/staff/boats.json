@@ -59,5 +59,7 @@
   "inspectionDueLabel": "Próxima inspección de seguridad",
   "registrationExpiresLabel": "Vencimiento de la matrícula",
   "insuranceExpiresLabel": "Vencimiento del seguro",
-  "seatsAboveCertificate": "{capacity, plural, one {# plaza a la venta} other {# plazas a la venta}}; el certificado permite {limit}."
+  "seatsAboveCertificate": "{capacity, plural, one {# plaza a la venta} other {# plazas a la venta}}; el certificado permite {limit}. Baja las plazas para guardar esta embarcación.",
+  "seatsAboveCertificateError": "El certificado permite {limit, plural, one {# pasajero} other {# pasajeros}}, así que esta embarcación no puede vender {capacity}. Baja las plazas o corrige el certificado.",
+  "departuresAboveCertificateError": "{count, plural, one {# salida próxima de esta embarcación vende más plazas que las {limit} del certificado. Baja antes su capacidad.} other {# salidas próximas de esta embarcación venden más plazas que las {limit} del certificado. Baja antes su capacidad.}}"
 }

@@ -248,6 +248,16 @@ export const bookings = pgTable(
     pickupTime: text("pickup_time"),
     status: bookingStatus("status").notNull().default("booked"),
     /**
+     * **The diver said they are running late** (J3): the instant they tapped
+     * "Running late" on `/ready` or replied LATE to a shop message
+     * (`src/db/running-late.ts`). Null is the ordinary state. The first
+     * statement stands — a second tap or a redelivered reply changes nothing —
+     * and the counter's check-in clears it, because an arrived diver is no
+     * longer late. Gates nothing: the arrivals list says it instead of a
+     * blank, and readiness, admission and boarding never read it.
+     */
+    runningLateAt: timestamp("running_late_at", { withTimezone: true }),
+    /**
      * Set for the duration of one in-flight checkout attempt covering this
      * booking (`payment_operation_intents.id`), cleared once that attempt
      * resolves either way. A second concurrent `startBookingCheckout` call

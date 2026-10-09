@@ -14,7 +14,8 @@
   "keyword": {
     "cancel": "Asked to cancel",
     "move": "Asked to move",
-    "confirm": "Confirmed the cancellation"
+    "confirm": "Confirmed the cancellation",
+    "late": "Running late"
   },
   "attachments": "{count, plural, one {# attachment, still with the sender} other {# attachments, still with the sender}}",
   "openRecord": "Open the record for {name}",

@@ -7,6 +7,7 @@ import {
   boatSafetyNoticeIsUrgent,
   boatSafetyNotices,
   boatSafetyNoticeTone,
+  boatSeatsRefusal,
   departureSafetyDate,
   expiredBoatSafetyNotices,
   isLifeSafetyKitKind,
@@ -438,5 +439,52 @@ describe("departureSafetyDate", () => {
 
   it("still speaks for this morning's boat that has already left", () => {
     expect(departureSafetyDate(new Date("2026-10-09T11:00:00Z"), now, ZONE)).toBe("2026-10-09");
+  });
+});
+
+describe("boatSeatsRefusal (H-107)", () => {
+  it("refuses seats on sale above the certificate, in either direction of edit", () => {
+    expect(boatSeatsRefusal({ capacity: 14, certifiedPassengers: 12 })).toEqual({
+      code: "seats_above_certificate",
+      capacity: 14,
+      limit: 12,
+    });
+    // Lowering the certificate under the seats is the same refusal.
+    expect(boatSeatsRefusal({ capacity: 12, certifiedPassengers: 11 })).toMatchObject({
+      code: "seats_above_certificate",
+    });
+  });
+
+  it("lets seats up to the certificate through, and a boat with no certificate", () => {
+    expect(boatSeatsRefusal({ capacity: 12, certifiedPassengers: 12 })).toBeNull();
+    expect(boatSeatsRefusal({ capacity: 6, certifiedPassengers: 12 })).toBeNull();
+    expect(boatSeatsRefusal({ capacity: 40, certifiedPassengers: null })).toBeNull();
+  });
+
+  it("refuses a certificate under an upcoming departure's own seats, and counts them", () => {
+    expect(
+      boatSeatsRefusal({
+        capacity: 10,
+        certifiedPassengers: 10,
+        upcomingDepartureCapacities: [10, 12, 14, 8],
+      }),
+    ).toEqual({ code: "departures_above_certificate", departures: 2, limit: 10 });
+    expect(
+      boatSeatsRefusal({
+        capacity: 10,
+        certifiedPassengers: 10,
+        upcomingDepartureCapacities: [10, 8],
+      }),
+    ).toBeNull();
+  });
+
+  it("names the hull's own seats first when both are over", () => {
+    expect(
+      boatSeatsRefusal({
+        capacity: 14,
+        certifiedPassengers: 10,
+        upcomingDepartureCapacities: [14],
+      }),
+    ).toMatchObject({ code: "seats_above_certificate" });
   });
 });

@@ -10,6 +10,7 @@ import type { ParticipantType } from "@/lib/participant-types";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { type ReEntryAsk, reEntryWindowOpen } from "@/lib/re-entry";
 import type { RentalPricing } from "@/lib/rentals";
+import { canSayRunningLate, runningLateShown } from "@/lib/running-late";
 import { hasSailed } from "@/lib/trips";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { offerableWelcomeCue, type WelcomeCue } from "@/lib/welcome-cue";
@@ -208,6 +209,14 @@ export type ReadyPageData = {
    */
   canCancelBooking: boolean;
   /**
+   * **"Running late"** (J3). `open` is `canSayRunningLate` for this seat now —
+   * booked, not checked in, inside the twelve hours before a scheduled
+   * departure that has not left — and `saidAt` is when the diver already said
+   * so, on a seat still to arrive. The page draws the button while it is
+   * open and nothing has been said, and the said line while it is open after.
+   */
+  runningLate: { open: boolean; saidAt: Date | null };
+  /**
    * **The departure itself was called off** — `trips.status`, not the
    * booking's.
    *
@@ -265,6 +274,7 @@ export async function getReadyPageData(
       hotelPickupLocation: bookings.hotelPickupLocation,
       pickupTime: bookings.pickupTime,
       status: bookings.status,
+      runningLateAt: bookings.runningLateAt,
       bookingCreatedAt: bookings.createdAt,
       carriedFactsConfirmedAt: bookings.carriedFactsConfirmedAt,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
@@ -416,6 +426,15 @@ export async function getReadyPageData(
     canPay,
     cancelPreview,
     canCancelBooking,
+    runningLate: {
+      open: canSayRunningLate({
+        bookingStatus: row.status,
+        tripStatus: trip.status,
+        startsAt: trip.startsAt,
+        now,
+      }),
+      saidAt: runningLateShown({ bookingStatus: row.status, runningLateAt: row.runningLateAt }),
+    },
     departureCancelled: trip.status !== "scheduled",
     // `offerableWelcomeCue`, not `welcomeCueFor`: this is the diver's own page,
     // and the whole point of the question is that it can be asked before they

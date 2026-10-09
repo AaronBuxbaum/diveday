@@ -14,7 +14,8 @@
   "keyword": {
     "cancel": "Pidió cancelar",
     "move": "Pidió cambiar de fecha",
-    "confirm": "Confirmó la cancelación"
+    "confirm": "Confirmó la cancelación",
+    "late": "Llega tarde"
   },
   "attachments": "{count, plural, one {# archivo adjunto, sigue con quien lo envió} other {# archivos adjuntos, siguen con quien los envió}}",
   "openRecord": "Abrir la ficha de {name}",

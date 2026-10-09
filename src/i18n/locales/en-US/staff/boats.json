@@ -59,5 +59,7 @@
   "inspectionDueLabel": "Next safety inspection due",
   "registrationExpiresLabel": "Registration expires",
   "insuranceExpiresLabel": "Insurance expires",
-  "seatsAboveCertificate": "{capacity, plural, one {# seat on sale} other {# seats on sale}}; the certificate allows {limit}."
+  "seatsAboveCertificate": "{capacity, plural, one {# seat on sale} other {# seats on sale}}; the certificate allows {limit}. Lower the seats to save this boat.",
+  "seatsAboveCertificateError": "The certificate allows {limit, plural, one {# passenger} other {# passengers}}, so this boat can’t sell {capacity}. Lower the seats, or correct the certificate.",
+  "departuresAboveCertificateError": "{count, plural, one {# upcoming departure on this boat sells more seats than the certificate’s {limit}. Lower its capacity first.} other {# upcoming departures on this boat sell more seats than the certificate’s {limit}. Lower their capacity first.}}"
 }

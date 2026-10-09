@@ -458,6 +458,8 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
       // against the boat it will actually sail on rather than the one it is
       // leaving.
       boatCapacity: nextBoat?.capacity ?? null,
+      // And its certificate (H-107): no seat above it is sold.
+      boatCertifiedPassengers: nextBoat?.certifiedPassengers ?? null,
       diveMode,
       boatId,
       requiresPayment: gate?.requiresPayment ?? false,
@@ -468,6 +470,11 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     if (details.reason === "end_before_start") redirect(noticeUrl(back, "end-before-start"));
     if (details.reason === "price_required_by_gate") {
       redirect(noticeUrl(back, "price-required-by-gate", { form: "details" }));
+    }
+    if (details.reason === "capacity_above_certificate") {
+      redirect(
+        noticeUrl(back, "capacity-above-certificate", { count: details.limit, form: "details" }),
+      );
     }
     if (details.reason === "capacity_above_boat") {
       redirect(

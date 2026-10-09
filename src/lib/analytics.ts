@@ -146,7 +146,8 @@ export type AnalyticsEvent =
         | "not_scheduled"
         | "already_sailed"
         | "has_roster"
-        | "capacity_above_boat";
+        | "capacity_above_boat"
+        | "capacity_above_certificate";
     }
   | {
       /** A refund was issued after a cancellation, automatically or by a staff member. */

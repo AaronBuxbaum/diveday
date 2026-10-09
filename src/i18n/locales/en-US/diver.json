@@ -785,6 +785,11 @@
     "paymentCancelled": "Payment canceled. Your seat is still held.",
     "codeUsedUp": "That code’s been used up. Your seat is held, and you can pay the full price below.",
     "cancelSpot": "Cancel my spot",
+    "lateLead": "On your way but behind?",
+    "lateButton": "Running late",
+    "lateSending": "Telling the shop…",
+    "lateSaid": "You told the shop you’re running late at {time}.",
+    "lateUnavailable": "That didn’t reach the shop. If you’re still on your way, call them.",
     "cancelConfirm": "Cancel your spot on {trip}? This can’t be undone.",
     "cancelConfirmButton": "Yes, cancel my spot",
     "neverMind": "Never mind",
@@ -4032,7 +4037,10 @@
       "codeMismatch": "That code did not match, so nothing has changed. {shopName} will pick this up.",
       "nothingToCancel": "We could not find a seat to cancel. {shopName} will pick this up.",
       "ambiguous": "You have more than one departure booked. {shopName} will pick this up so the right seat comes off.",
-      "moveHandoff": "{shopName} will get back to you about moving your seat."
+      "moveHandoff": "{shopName} will get back to you about moving your seat.",
+      "lateOffer": "Running late? Reply LATE.",
+      "lateNoted": "Thanks. {shopName} can see you are running late.",
+      "lateNothing": "We could not find a departure in the next few hours to tell. {shopName} will pick this up."
     },
     "common": {
       "greeting": "Hi {firstName},",

@@ -8,7 +8,13 @@ import {
   canPersonManagePaymentSettings,
   canPersonManageShopSettings,
 } from "@/db/authz";
-import { type BoatPapersInput, createBoat, deleteBoat, updateBoat } from "@/db/boats";
+import {
+  type BoatPapersInput,
+  createBoat,
+  deleteBoat,
+  upcomingDepartureCapacities,
+  updateBoat,
+} from "@/db/boats";
 import { getDb } from "@/db/client";
 import { setShopDeskHours } from "@/db/desk-pings";
 import { createDivePackage, deleteDivePackage } from "@/db/dive-packages";
@@ -57,6 +63,7 @@ import {
   addressLookupConfigFromEnvironment,
   isLookupWorthy,
 } from "@/lib/address-lookup";
+import { type BoatSeatsRefusal, boatSeatsRefusal } from "@/lib/boat-safety";
 import { isBrandDisplayFontCode, parseBrandBadges, parseBrandColor } from "@/lib/brand";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
@@ -99,6 +106,7 @@ import { MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE, MAX_SHOPFRONT_PHOTOS } from "@/lib/s
 import { timeZoneAnchor } from "@/lib/timezones";
 import { LENS_NAME_MAX } from "@/lib/trip-lenses";
 import { uuidParam } from "@/lib/uuid";
+import { boatRowId } from "./boats/certificate-error";
 
 /* -------------------------------------------------------------------------- *
  * Shop settings mutations
@@ -1362,6 +1370,30 @@ function boatPapers(formData: FormData): BoatPapersInput | "invalid" {
   return { certifiedPassengers, inspectionDueOn, registrationExpiresOn, insuranceExpiresOn };
 }
 
+/**
+ * Redirects with the fleet row's field error when the boat's numbers break
+ * the certificate (H-107). `boat` names the row the error belongs on ("new"
+ * for the add form), and the numbers ride along so the sentence can say them.
+ */
+function certificateRefusal(page: string, boat: string, refusal: BoatSeatsRefusal | null) {
+  if (!refusal) return;
+  // The fragment scrolls to the row the error is on (`boatRowId`).
+  const row = `${page}#${boatRowId(boat)}`;
+  redirect(
+    refusal.code === "seats_above_certificate"
+      ? noticeUrl(row, "boat-above-certificate", {
+          boat,
+          capacity: refusal.capacity,
+          limit: refusal.limit,
+        })
+      : noticeUrl(row, "boat-departures-above-certificate", {
+          boat,
+          count: refusal.departures,
+          limit: refusal.limit,
+        }),
+  );
+}
+
 /** Creates a new boat for the shop. */
 export async function createBoatAction(formData: FormData) {
   const session = await requireStaffSession();
@@ -1376,6 +1408,9 @@ export async function createBoatAction(formData: FormData) {
   if (!name || Number.isNaN(capacity) || capacity <= 0 || papers === "invalid") {
     redirect(noticeUrl(page, "boat-invalid"));
   }
+
+  // H-107: no seat above the certificate is sold, so none is put on sale.
+  certificateRefusal(page, "new", boatSeatsRefusal({ capacity, ...papers }));
 
   const db = await getDb();
   await createBoat(db, session.user.shopId, name, capacity, description, papers);
@@ -1401,6 +1436,21 @@ export async function updateBoatAction(formData: FormData) {
   }
 
   const db = await getDb();
+  // H-107, on every save of the row: a hull already over its certificate
+  // keeps sailing, but this is the save that has to put it right. Upcoming
+  // departures are read too, so a certificate cannot be lowered under seats
+  // a departure is still selling.
+  certificateRefusal(
+    page,
+    boatId,
+    boatSeatsRefusal({
+      capacity,
+      ...papers,
+      upcomingDepartureCapacities: papers.certifiedPassengers
+        ? await upcomingDepartureCapacities(db, session.user.shopId, boatId)
+        : [],
+    }),
+  );
   await updateBoat(db, session.user.shopId, boatId, name, capacity, description, papers);
 
   revalidateAndRedirect(page, noticeUrl(page, "boat-updated"));

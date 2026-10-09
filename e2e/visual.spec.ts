@@ -3819,6 +3819,22 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today-arrival-lookup", scheme);
       });
 
+      // **"Running late, said 9:18"** (J3): the lookup row of a diver who told
+      // the shop, through the opt-in trouble state rather than the demo.
+      test(`a running-late diver in the arrival lookup renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?runningLate=1");
+        expect((await seeded.json()) as { runningLate?: unknown }).toHaveProperty("runningLate");
+        await page.goto("/shop/blue-mantis?q=Priya%20Sharma");
+        await page
+          .getByText(/^Running late, said /)
+          .first()
+          .waitFor();
+        await capture(page, "today-arrival-lookup-running-late", scheme);
+      });
+
       /**
        * **The identity menu, open** — the shop's name in the chrome bar opens
        * Settings, the language choices and Sign out (`ShopIdentityMenu` with

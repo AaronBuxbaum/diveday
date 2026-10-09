@@ -168,3 +168,16 @@ already refuses a departure that sells more seats than the boat holds. The certi
 refuses anything: the fleet row says when the seats on sale pass it, and a departure's Boat tab
 says when the people booked pass it (`src/lib/boat-safety.ts`). Nothing here touches admission,
 readiness or the roll call.
+
+## Note 2026-10-09 (later) — the certificate refuses (H-107)
+
+The note above is reversed for the certificate alone. Aaron decided the passenger limit refuses
+seats above it ([H-107](../../product/human-decisions/H-107-certificate-caps-seats.md)): a boat
+save whose `capacity` passes `certified_passengers` is refused with a field error, and so is a
+certificate lowered under the seats an upcoming departure on the hull still sells
+(`boatSeatsRefusal`); `tripDetailsPatch` refuses a departure's capacity above the assigned hull's
+certificate beside its existing refusal above the hull's `capacity`. Capacity and the certificate
+count the same people, everyone aboard but the crew. A row already over the limit keeps sailing,
+its manifest line and its danger-toned fleet row stand, and its next save must fix it. The booking
+transaction still reads only the departure's own `capacity`, and nothing here touches admission,
+readiness or the roll call.

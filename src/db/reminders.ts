@@ -214,9 +214,17 @@ function reminderSmsBody(
         time,
         minutes: input.dockCallMinutes,
       });
+  // **The day-before text teaches LATE** (J3): both of the channels a text can
+  // leave on hear it — WhatsApp through the reply keywords, platform SMS
+  // through `/api/webhooks/sms` — and the morning of a boat is the one time a
+  // diver needs it. Never on a course session, which has no boat to hold.
+  const late =
+    input.lead === "day" && !input.courseSession
+      ? ` ${t("notifications.replyKeyword.lateOffer")}`
+      : "";
   // Last, and only on a channel that can hear the answer.
   const keywords = input.replyKeywords ? ` ${t("notifications.replyKeyword.offer")}` : "";
-  return `${body}${conditions}${todoText}${materialsText}${contact}${keywords}`;
+  return `${body}${conditions}${todoText}${materialsText}${contact}${late}${keywords}`;
 }
 
 /**

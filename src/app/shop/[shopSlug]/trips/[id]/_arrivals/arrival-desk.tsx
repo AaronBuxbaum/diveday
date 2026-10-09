@@ -10,7 +10,7 @@ import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { welcomeCueText } from "@/i18n/welcome-cue-labels";
 import { counterIsClear, counterTally, isNoShowAtCounter } from "@/lib/check-in";
-import { formatWeekdayTime } from "@/lib/format";
+import { formatTime, formatWeekdayTime } from "@/lib/format";
 import { type NoShowClaim, noShowClaim, noShowGate } from "@/lib/no-show";
 import { arrivalsWindow } from "@/lib/operational-window";
 import { paperPassPath } from "@/lib/print-sheets";
@@ -232,6 +232,33 @@ export async function buildArrivalDesk({
         />,
       );
     }
+  }
+
+  // **"Running late, said 7:42"** (J3): the diver's own word, on a seat still
+  // to arrive, ahead of everything else under the name — it is the answer to
+  // the question the desk is asking about that row. `listCheckInQueue` has
+  // already dropped it from an arrived or released seat.
+  for (const row of rows) {
+    if (!row.runningLateAt) continue;
+    const line = (
+      <p key="late" className="mt-1 text-sm font-medium text-warning-strong">
+        {t("checkIn.row.runningLate", {
+          time: formatTime(row.runningLateAt, locale, timeZone),
+        })}
+      </p>
+    );
+    const existing = below.get(row.bookingId);
+    below.set(
+      row.bookingId,
+      existing ? (
+        <>
+          {line}
+          {existing}
+        </>
+      ) : (
+        line
+      ),
+    );
   }
 
   // **The welcome word, at the counter** (UX audit 2026-10-07, item 46): the
