@@ -44,6 +44,7 @@ import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/d
 import { applyPaidRentalKindsToFit } from "@/db/rental-fit";
 import type { PaymentStatus } from "@/db/schema";
 import { bookings, diveSpecialty, people } from "@/db/schema";
+import { recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
 import { getShopCurrency } from "@/db/stripe-accounts";
 import {
@@ -1100,6 +1101,15 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   if (refund.status !== "no_policy" && refund.status !== "unpaid") {
     await trackEvent({ name: "refund_issued", auto: true, status: refund.status });
   }
+  // The refund rode on this staffer's removal; the activity log names them,
+  // since the payment trail records only what moved (D5).
+  if (refund.status === "refunded") {
+    await recordShopActivity(dbi, {
+      shopId: s.user.shopId,
+      actorPersonId: s.user.personId,
+      write: { code: "seat_refunded", bookingId },
+    });
+  }
   await sendBookingCancelledNotice(dbi, {
     shopId: s.user.shopId,
     bookingId,
@@ -1714,6 +1724,18 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
           currency: await getShopCurrency(db, s.user.shopId),
         })
       : null;
+  // A write-off is a decision about money, and the payment trail records the
+  // status it moved to but never who moved it: the activity log does (D5).
+  if (saved && status.success && (status.data === "waived" || status.data === "refunded")) {
+    await recordShopActivity(db, {
+      shopId: s.user.shopId,
+      actorPersonId: s.user.personId,
+      write: {
+        code: status.data === "waived" ? "payment_waived" : "payment_marked_refunded",
+        bookingId,
+      },
+    });
+  }
   // `bid` rides along so the roster can hold that diver's card open on the
   // way back: a settled card collapses, and the payment selector a staffer
   // just used must never be what collapses it out from under them.

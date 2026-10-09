@@ -30,6 +30,7 @@ import { uuidParam } from "@/lib/uuid";
 import { PaidAtCounterLine, VoidCounterOrderForm } from "./_components/CounterPayment";
 import { DisabledDemoButton } from "./_components/DisabledDemoButton";
 import { OrderDisputeBanner, OrderMeta } from "./_components/OrderMeta";
+import { afterOrderRefunded } from "./refund-activity";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -205,9 +206,8 @@ async function refundAction(formData: FormData) {
             outcome.status === "needs_reconciliation"
             ? "refund-needs-reconciliation"
             : "refund-failed";
-  // Only a refund that actually moved money enqueues `order.refunded`; the
-  // other outcomes wrote no event and have nothing to drain.
-  if (outcome.status === "refunded") dispatchIntegrationsAfterResponse();
+  // Only a refund that moved money is logged and drained (`./refund-activity`).
+  if (outcome.status === "refunded") await afterOrderRefunded(db, session.user, orderId);
   revalidateAndRedirect(back, noticeUrl(back, notice));
 }
 

@@ -140,6 +140,35 @@ type ActivityParamShapes = {
   /** A staffer downloaded a diver's own record. */
   record_exported: { actor: string; diver: string };
   /**
+   * **Money a staffer decided about**, below — the lines the shop's activity
+   * log (`src/db/shop-activity.ts`) exists to answer "who refunded this?"
+   * with. Nothing recorded the person behind any of them before: the payment
+   * trail (`booking_payment_events`) and the order row hold what moved, never
+   * who moved it.
+   *
+   * A staff order refunded through Stripe, whole or in part. No diver name:
+   * the order is the line's object (`activity_events.order_id`), and its
+   * customer's name lives on that row, where an erasure scrubs it.
+   */
+  order_refunded: { actor: string };
+  /** A removed seat's payment was refunded by card, inside the shop's window. */
+  seat_refunded: { actor: string; diver: string };
+  /** A seat was marked waived: a free place, the shop's call. */
+  payment_waived: { actor: string; diver: string };
+  /** A seat was marked refunded without moving money through DiveDay. */
+  payment_marked_refunded: { actor: string; diver: string };
+  /**
+   * **Who changed the board**: the schedule builder's four acts, which wrote
+   * no actor anywhere until the activity log asked. Each is recorded on the
+   * departure it changed; a repeating departure is one line, on its first
+   * instance, rather than one per week it repeats.
+   */
+  departure_added: { actor: string };
+  series_added: { actor: string };
+  departure_moved: { actor: string };
+  departure_copied: { actor: string };
+  departure_deleted: { actor: string };
+  /**
    * An erasure ran over this line.
    *
    * A code rather than a blanked payload, so the row reads the same way it
@@ -217,6 +246,15 @@ export const ACTIVITY_CODES = [
   "seat_claimed",
   "medical_clearance_opened",
   "record_exported",
+  "order_refunded",
+  "seat_refunded",
+  "payment_waived",
+  "payment_marked_refunded",
+  "departure_added",
+  "series_added",
+  "departure_moved",
+  "departure_copied",
+  "departure_deleted",
   "redacted",
   "demo_charter_confirmed",
   "demo_second_dive_moved",

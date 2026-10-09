@@ -597,6 +597,11 @@
     "visual": ["settings-dive-site-import", "settings-gear-import", "settings-import"],
     "a11y": ["a11y.spec.ts"]
   },
+  "/shop/[shopSlug]/settings/activity": {
+    "e2e": ["shop-activity.spec.ts"],
+    "visual": ["settings-activity"],
+    "a11y": ["a11y.spec.ts"]
+  },
   "/shop/[shopSlug]/settings/integrations": {
     "e2e": ["integrations.spec.ts"],
     "visual": ["settings-integrations"],

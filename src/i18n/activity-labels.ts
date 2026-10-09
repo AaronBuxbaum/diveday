@@ -1,4 +1,10 @@
 import { activityParams, isActivityCode } from "@/lib/activity";
+import type {
+  ReviewModerationLineCode,
+  ShopActivityKind,
+  ShopActivitySource,
+  TripChangeLineCode,
+} from "@/lib/shop-activity";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /**
@@ -37,3 +43,45 @@ export function activityLine(t: StaffTranslator, row: { code: string; params: un
   // half, which is the trade `src/i18n/on-error.ts` was written to refuse.
   return t(key, activityParams(row.params));
 }
+
+const REVIEW_LINE_KEYS: Record<ReviewModerationLineCode, StaffMessageKey> = {
+  published: "activity.review.published",
+  hidden: "activity.review.hidden",
+};
+
+const TRIP_CHANGE_LINE_KEYS: Record<TripChangeLineCode, StaffMessageKey> = {
+  meeting_point: "activity.tripChange.meeting_point",
+  conditions: "activity.tripChange.conditions",
+};
+
+/**
+ * **A line of the shop's activity log** (`src/db/shop-activity.ts`), in words.
+ *
+ * An `activity_events` line is the trail's own sentence, exactly as the
+ * departure and the diver record read it. The other two trails store a code
+ * and an author id; their sentence takes the author's name as the people row
+ * holds it today, so an erased staffer reads as the erasure wrote them.
+ */
+export function shopActivityLineText(
+  t: StaffTranslator,
+  line: { source: ShopActivitySource; code: string; params: unknown; actorName: string | null },
+): string {
+  if (line.source === "activity") return activityLine(t, line);
+  const actor = line.actorName ?? t("activity.log.someone");
+  if (line.source === "review") {
+    const key = REVIEW_LINE_KEYS[line.code as ReviewModerationLineCode];
+    return key ? t(key, { actor }) : t("activity.unknown");
+  }
+  const key = TRIP_CHANGE_LINE_KEYS[line.code as TripChangeLineCode];
+  return key ? t(key, { actor }) : t("activity.unknown");
+}
+
+/** The kind filter's words, keyed by the kind so a seventh cannot arrive unworded. */
+export const SHOP_ACTIVITY_KIND_KEYS: Record<ShopActivityKind, StaffMessageKey> = {
+  seats: "activity.log.kind.seats",
+  departures: "activity.log.kind.departures",
+  money: "activity.log.kind.money",
+  safety: "activity.log.kind.safety",
+  records: "activity.log.kind.records",
+  reviews: "activity.log.kind.reviews",
+};

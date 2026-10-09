@@ -6512,6 +6512,17 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-export", scheme);
       });
 
+      // The shop's activity log (D5): who did what, to what, when, across the
+      // whole team, with its four filters above the first page of lines.
+      test(`the activity log renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/activity");
+        await page.getByRole("heading", { level: 1, name: "Activity" }).waitFor();
+        // The lines, not just the heading: a capture on the heading alone banks
+        // the skeleton's list.
+        await page.getByTestId("shop-activity").getByRole("listitem").first().waitFor();
+        await capture(page, "settings-activity", scheme);
+      });
+
       // The import surface: the honesty table stating what does and doesn't
       // come across, before any file is chosen.
       test(`the data-import page renders true to the design (${scheme})`, async ({ page }) => {

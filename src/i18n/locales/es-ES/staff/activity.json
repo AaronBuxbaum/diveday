@@ -24,6 +24,15 @@
     "seat_claimed": "{actor} reclamó su lugar",
     "medical_clearance_opened": "{actor} abrió la evaluación médica de {diver}",
     "record_exported": "{actor} descargó una copia del registro de {diver}",
+    "order_refunded": "{actor} reembolsó un pedido",
+    "seat_refunded": "{actor} quitó a {diver} y reembolsó la plaza con tarjeta",
+    "payment_waived": "{actor} marcó la plaza de {diver} como exonerada",
+    "payment_marked_refunded": "{actor} marcó la plaza de {diver} como reembolsada",
+    "departure_added": "{actor} puso la salida en el calendario",
+    "series_added": "{actor} puso una salida recurrente en el calendario",
+    "departure_moved": "{actor} movió la salida",
+    "departure_copied": "{actor} copió una salida en esta",
+    "departure_deleted": "{actor} eliminó la salida",
     "redacted": "[eliminado]",
     "demo_charter_confirmed": "{actor} confirmó el chárter con el capitán",
     "demo_second_dive_moved": "{actor} movió el segundo buceo a French Reef por el oleaje",
@@ -45,5 +54,39 @@
     "demo_paper_card_reminded": "{actor} le recordó a {diver} traer la tarjeta física al muelle",
     "participant_type_changed": "{actor} cambió a {diver} de {from, select, snorkeler {snorkel} rider {acompañante en el barco} other {buceo}} a {type, select, snorkeler {snorkel} rider {acompañante en el barco} other {buceo}}{certCheck, select, cleared {, y eso quitó una verificación de tarjeta} overridden {, aunque falta una tarjeta} other {}}"
   },
-  "unknown": "Una entrada anterior"
+  "unknown": "Una entrada anterior",
+  "review": {
+    "published": "{actor} publicó una reseña",
+    "hidden": "{actor} ocultó una reseña"
+  },
+  "tripChange": {
+    "meeting_point": "{actor} cambió el punto de encuentro",
+    "conditions": "{actor} publicó las condiciones"
+  },
+  "log": {
+    "title": "Actividad",
+    "someone": "Alguien",
+    "personLabel": "Quién",
+    "personAll": "Todo el equipo",
+    "kindLabel": "Qué",
+    "kindAll": "Todo",
+    "kind": {
+      "seats": "Plazas",
+      "departures": "Salidas",
+      "money": "Dinero",
+      "safety": "Certificaciones e identidad",
+      "records": "Fichas",
+      "reviews": "Reseñas"
+    },
+    "fromLabel": "Desde",
+    "toLabel": "Hasta",
+    "clear": "Borrar filtros",
+    "count": "{count, plural, one {# registro} other {# registros}}",
+    "empty": "Todavía no hay nada registrado.",
+    "emptyFiltered": "No hay coincidencias.",
+    "deletedDeparture": "{title} (eliminada)",
+    "order": "Pedido",
+    "reviews": "Reseñas",
+    "diverRecord": "Ficha del buceador"
+  }
 }

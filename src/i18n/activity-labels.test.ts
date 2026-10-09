@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVITY_CODES, activityParams, isActivityCode } from "@/lib/activity";
-import { activityLine } from "./activity-labels";
+import { activityLine, SHOP_ACTIVITY_KIND_KEYS, shopActivityLineText } from "./activity-labels";
 import { staffTranslator } from "./staff-messages";
 
 /**
@@ -100,5 +100,43 @@ describe("activity lines", () => {
     for (const code of ACTIVITY_CODES) expect(isActivityCode(code)).toBe(true);
     expect(isActivityCode("message")).toBe(false);
     expect(isActivityCode("")).toBe(false);
+  });
+});
+
+describe("shop activity log lines", () => {
+  it.each(["en-US", "es-ES"])("words the review and plan-change trails in %s", (locale) => {
+    const t = staffTranslator(locale);
+    for (const [source, code] of [
+      ["review", "published"],
+      ["review", "hidden"],
+      ["trip_change", "meeting_point"],
+      ["trip_change", "conditions"],
+    ] as const) {
+      const line = shopActivityLineText(t, {
+        source,
+        code,
+        params: {},
+        actorName: "Marisol Vega",
+      });
+      expect(line, code).toContain("Marisol Vega");
+      expect(line, code).not.toMatch(/[{}]|activity\./);
+    }
+  });
+
+  it("names nobody it was not given, and survives a code it does not know", () => {
+    const t = staffTranslator("en-US");
+    expect(
+      shopActivityLineText(t, { source: "review", code: "hidden", params: {}, actorName: null }),
+    ).toBe("Someone hid a review");
+    expect(
+      shopActivityLineText(t, { source: "trip_change", code: "boat", params: {}, actorName: "A" }),
+    ).toBe(t("activity.unknown"));
+  });
+
+  it.each(["en-US", "es-ES"])("words every kind in %s", (locale) => {
+    const t = staffTranslator(locale);
+    for (const key of Object.values(SHOP_ACTIVITY_KIND_KEYS)) {
+      expect(t(key)).not.toContain("activity.log");
+    }
   });
 });

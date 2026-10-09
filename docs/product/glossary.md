@@ -1957,6 +1957,15 @@ new domain concept, define it here in the same PR.
 - **Activity event** — an append-only staff-facing sentence describing who did operational work and
   what happened (for example, “Maya added a private note about Dana”), with the time it happened.
   Activity uses shop language, never table names or record identifiers.
+- **Activity log** — the shop-wide, owner-facing reading of who did what, to what, and when
+  (D5): every activity event, every review publish or hide, and every meeting-point or conditions
+  change a staffer made, newest first, filtered by person, kind (seats, departures, money, cards
+  and identity, records, reviews) and date. It is a read model over those append-only trails
+  (`src/db/shop-activity.ts`), not a trail of its own, and keeps nothing they do not: a line leaves
+  the log when its row is pruned, and an erased diver's lines read `[redacted]` there as they do
+  everywhere. Refunds, write-offs and the schedule builder's acts (add, repeat, move, copy, delete)
+  record their actor for it. Owners and managers only (`canViewShopActivity`); reached from
+  Settings' Data group at `/settings/activity`.
 
 - **Rental set** — typically: **BCD** (jacket, sized), **regulator** ("reg", with octopus and
   SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, a **dive

@@ -31,7 +31,8 @@
     "promosNotAuthorized": "Promo codes are limited to owners and managers.",
     "integrationsNotAuthorized": "Only an owner or manager can change integrations.",
     "billingNotAuthorized": "Billing is limited to the owner.",
-    "dayBlowoutNotAuthorized": "Calling a whole day off is limited to owners, managers and captains. You can still call one departure from its own page."
+    "dayBlowoutNotAuthorized": "Calling a whole day off is limited to owners, managers and captains. You can still call one departure from its own page.",
+    "activityNotAuthorized": "The activity log is limited to owners and managers."
   },
   "orientation": {
     "heading": "New here? A few pointers for your role.",
