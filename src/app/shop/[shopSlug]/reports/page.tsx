@@ -6,6 +6,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { getMonthMoneyDetail } from "@/db/report-lines";
 import {
   canPersonViewShopReports,
   crewCountsByTrip,
@@ -31,6 +32,7 @@ import {
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTimeZoneName, monthNames } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
+import type { RevenueLine } from "@/lib/report-lines";
 import {
   compareMonthlyReports,
   formatPercent,
@@ -95,6 +97,16 @@ function earlierMonth(left: MonthRef, right: MonthRef): MonthRef {
  * round each one. The month arithmetic, the picker's floor, the baseline
  * choice and the CSV are untouched.
  */
+/** Each revenue line's name in the staff bundle. */
+const BY_LINE_KEYS = {
+  courses: "reports.byLine.courses",
+  funDives: "reports.byLine.funDives",
+  rentals: "reports.byLine.rentals",
+  gearBench: "reports.byLine.gearBench",
+  packages: "reports.byLine.packages",
+  retail: "reports.byLine.retail",
+} as const satisfies Record<RevenueLine, string>;
+
 export default async function ReportsPage({
   params,
   searchParams,
@@ -277,7 +289,7 @@ export default async function ReportsPage({
   // one more month's worth of trips, bookings and payments, never a second
   // pass over the shop's whole history. See the PR description for the
   // measured cost.
-  const [input, tripPage, baselineInput] = await Promise.all([
+  const [input, tripPage, baselineInput, moneyDetail] = await Promise.all([
     getMonthlyReport(db, shop.id, monthStart, monthEnd, { currency, timeZone: tz }),
     // A non-numeric or missing `?page=` reads as page 1; the query clamps it
     // into range, so switching to a shorter month never strands the reader on
@@ -291,6 +303,9 @@ export default async function ReportsPage({
           timeZone: tz,
         })
       : Promise.resolve(null),
+    // The money by line, the package dives still owed, and the returning
+    // divers (owner decision 2026-10-09) — `src/lib/report-lines.ts`.
+    getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now),
   ]);
   const report = summarizeMonth(input);
   const baselineReport = baselineInput ? summarizeMonth(baselineInput) : null;
@@ -674,6 +689,57 @@ export default async function ReportsPage({
             <p className="mt-1 text-end text-sm text-muted tabular-nums">
               {t("reports.buddySeats", { count: report.buddyReferredSeats })}
             </p>
+          ) : null}
+
+          {/* The month's divers who had been out before, and the package
+              dives the shop still owes, on the quiet-line pattern above: a
+              number each, no heading, nothing at all when there is none. */}
+          {moneyDetail.divers.returning > 0 ? (
+            <p className="mt-1 text-end text-sm text-muted tabular-nums">
+              {t("reports.returningDivers", {
+                returning: moneyDetail.divers.returning,
+                total: moneyDetail.divers.total,
+              })}
+            </p>
+          ) : null}
+          {moneyDetail.packageDivesOwed.dives > 0 ? (
+            <p className="mt-1 text-end text-sm text-muted tabular-nums">
+              {t("reports.packagesOwed", {
+                dives: moneyDetail.packageDivesOwed.dives,
+                amount: formatReportMoney(
+                  moneyDetail.packageDivesOwed.valueCents,
+                  currency,
+                  locale,
+                ),
+              })}
+            </p>
+          ) : null}
+
+          {/* **Where the money came from** (owner decision 2026-10-09). Plain
+              text, one line per source, no bars: the figures are the facts,
+              and a line that came to nothing is left out rather than read as
+              $0. Its basis is the day the money was paid, which is not the
+              departures the Revenue figure is anchored to, so it says so. */}
+          {moneyDetail.lines.length > 0 ? (
+            <section aria-labelledby="reports-by-line" className="mt-10">
+              <h2 id="reports-by-line" className={SECTION_TITLE_CLASS}>
+                {t("reports.byLine.heading")}
+              </h2>
+              <p className="mt-1 text-sm text-muted">{t("reports.byLine.caption")}</p>
+              <dl className="mt-3 max-w-md">
+                {moneyDetail.lines.map(({ line, cents }) => (
+                  <div
+                    key={line}
+                    className="flex items-baseline justify-between gap-4 border-t border-border py-2 text-sm last:border-b"
+                  >
+                    <dt>{t(BY_LINE_KEYS[line])}</dt>
+                    <dd className="font-medium tabular-nums">
+                      {formatReportMoney(cents, currency, locale)}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
           ) : null}
 
           {report.tripCount > 0 ? (
