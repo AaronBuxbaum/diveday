@@ -41,7 +41,15 @@ import {
 import { recordStripeDispute } from "./payment-disputes";
 import { startPaymentOperation } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
-import { bookings, orders, paymentOperationIntents, people, personRoles, shops } from "./schema";
+import {
+  bookings,
+  divePackages,
+  orders,
+  paymentOperationIntents,
+  people,
+  personRoles,
+  shops,
+} from "./schema";
 import { setShopCurrency, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
@@ -2318,6 +2326,7 @@ describe("a diver buying a package online", () => {
     expect(result.order.status).toBe("open");
     // Nobody on the staff raised it: the diver is its own creator.
     expect(result.order.createdByPersonId).toBe(result.order.personId);
+    expect(result.order.source).toBe("public");
     const fetched = await getOrder(db, shop.id, result.order.id);
     expect(fetched?.lineItems.map((line) => [line.kind, line.packageId])).toEqual([
       ["dive_package", pkg.id],
@@ -2609,6 +2618,128 @@ describe("a diver buying a package online", () => {
     );
     if (!raised.ok) throw new Error(`staff order refused: ${raised.reason}`);
     expect((await getOrder(db, shop.id, raised.order.id))?.boughtOnline).toBe(false);
+  });
+
+  it("takes back the record it made when Stripe refuses the invoice", async () => {
+    // Layer-7 re-review: a refusal after the buyer was resolved left a person row.
+    const { db, shop, pkg } = await packageShop();
+    const result = await createDiverPackageOrder(
+      db,
+      {
+        shopId: shop.id,
+        packageId: pkg.id,
+        fullName: "Sid Stripefail",
+        email: "sid.stripefail@example.com",
+        lineDescription: "Ten-dive card",
+      },
+      fakeInvoicing({
+        async createInvoice(): Promise<CreateInvoiceResult> {
+          return { status: "failed" };
+        },
+      }),
+    );
+    expect(result).toEqual({ ok: false, reason: "stripe_failed" });
+    const [person] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.email, "sid.stripefail@example.com"));
+    expect(person).toBeUndefined();
+  });
+
+  it("leaves a diver already on file alone when Stripe refuses their invoice", async () => {
+    const { db, shop, pkg } = await packageShop();
+    const [existing] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Kept Kim", email: "kept.kim@example.com" })
+      .returning();
+    if (!existing) throw new Error("person not inserted");
+    await db.insert(personRoles).values({ personId: existing.id, role: "diver" });
+    const result = await createDiverPackageOrder(
+      db,
+      {
+        shopId: shop.id,
+        packageId: pkg.id,
+        fullName: "Kept Kim",
+        email: "kept.kim@example.com",
+        lineDescription: "Ten-dive card",
+      },
+      fakeInvoicing({
+        async createInvoice(): Promise<CreateInvoiceResult> {
+          return { status: "failed" };
+        },
+      }),
+    );
+    expect(result.ok).toBe(false);
+    const [still] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.id, existing.id));
+    expect(still?.id).toBe(existing.id);
+  });
+
+  it("refuses a package priced past what an invoice line may carry before anyone is recorded", async () => {
+    const { db, shop } = await packageShop();
+    const [pricey] = await db
+      .insert(divePackages)
+      .values({
+        shopId: shop.id,
+        name: "Too dear",
+        diveCount: 10,
+        priceCents: maxLineItemUnitAmountCents("usd") + 1,
+        scope: "all",
+      })
+      .returning();
+    if (!pricey) throw new Error("package not inserted");
+    const result = await createDiverPackageOrder(
+      db,
+      {
+        shopId: shop.id,
+        packageId: pricey.id,
+        fullName: "Val Validation",
+        email: "val.validation@example.com",
+        lineDescription: "Too dear",
+      },
+      fakeInvoicing(),
+    );
+    expect(result).toEqual({ ok: false, reason: "invalid" });
+    const [person] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.email, "val.validation@example.com"));
+    expect(person).toBeUndefined();
+  });
+
+  it("keeps a staff order a staff order after its creator leaves the staff", async () => {
+    // Layer-7 re-review: "bought online" was read from today's roles.
+    const { db, shop, pkg } = await packageShop();
+    const invoicing = fakeInvoicing();
+    const bought = await createDiverPackageOrder(
+      db,
+      {
+        shopId: shop.id,
+        packageId: pkg.id,
+        fullName: "Sal Selfserve",
+        email: "sal.selfserve@example.com",
+        lineDescription: "Ten-dive card",
+      },
+      invoicing,
+    );
+    if (!bought.ok) throw new Error(`refused: ${bought.reason}`);
+    const staff = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    const raised = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: staff,
+        createdByPersonId: staff,
+        lineItems: [{ kind: "other", description: "Logbook", quantity: 1, unitAmountCents: 1_500 }],
+      },
+      invoicing,
+    );
+    if (!raised.ok) throw new Error(`staff order refused: ${raised.reason}`);
+    await db.delete(personRoles).where(eq(personRoles.personId, staff));
+    expect((await getOrder(db, shop.id, raised.order.id))?.boughtOnline).toBe(false);
+    expect((await getOrder(db, shop.id, bought.order.id))?.boughtOnline).toBe(true);
   });
 
   it("keeps no details when the shop charges tax and has nowhere to work it out from", async () => {

@@ -115,9 +115,11 @@ it. It attaches only when the typed name matches the one on file and that person
 role; otherwise the order goes to a fresh diver record under the typed name with no email (the
 shop already has a record at that address), and the desk merges the two if they are one person.
 A refused attempt (not on sale, no payments, tax with no address to work it out from) leaves no
-person row. The diver stands as the order's own creator, because `orders.created_by_person_id` is
-required, and the order page reads that back as "bought online" rather than "by <their name>".
-A nullable creator would say it in the data; that is a schema change left for its own review.
+person row, and neither does a refusal after it: a person this request created is taken back when
+Stripe refuses the invoice. The order records how it came to exist in `orders.source` (`public`
+here, `staff` everywhere else); the diver stands as its own creator because
+`orders.created_by_person_id` is required, and the order page and both exports read `source`, so
+it says "bought online" rather than "by <their name>" whatever roles anyone holds later.
 
 `/ready/<token>` now says how many package dives a diver has left, on the Pay step, counted as
 `countSpendableDives` counts them.

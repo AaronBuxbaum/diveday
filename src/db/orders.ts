@@ -202,6 +202,8 @@ type IssueOrderOptions = {
    * belongs to someone it may not be attached to (`createDiverPackageOrder`).
    */
   customerEmail?: string;
+  /** How the order came to exist; `staff` unless a diver bought it online. */
+  source?: "staff" | "public";
 };
 
 /**
@@ -231,6 +233,45 @@ async function invoiceTaxBasis(
 }
 
 /**
+ * What an order can be refused for before anyone is asked anything: its lines,
+ * its description, and where its tax is worked out from. Read without writing,
+ * so a public purchase can ask it before a person row exists.
+ *
+ * The currency is the shop's declared one (docs ADR 20260731-shop-currency),
+ * not the connected account's and not a hardcoded "usd". Read once and used
+ * for the amount bounds, the Stripe invoice, and the local order row, so the
+ * three can never disagree — and snapshotted onto the order, which is evidence
+ * of what was billed and must survive a later change to the shop setting.
+ */
+async function orderPreconditions(
+  db: DbExecutor,
+  input: Pick<NewOrderInput, "shopId" | "lineItems" | "description" | "customerAddress">,
+): Promise<
+  | { ok: false; reason: "invalid" | "tax_location_required" }
+  | {
+      ok: true;
+      currency: string;
+      taxEnabled: boolean;
+      customerAddress: InvoiceCustomerAddress | undefined;
+    }
+> {
+  if (input.lineItems.length === 0 || input.lineItems.length > MAX_LINE_ITEMS_PER_ORDER) {
+    return { ok: false, reason: "invalid" };
+  }
+  if ((input.description?.length ?? 0) > MAX_ORDER_DESCRIPTION_LENGTH) {
+    return { ok: false, reason: "invalid" };
+  }
+  const currency = await getShopCurrency(db, input.shopId);
+  const maxUnitAmountCents = maxLineItemUnitAmountCents(currency);
+  if (!input.lineItems.every((item) => lineItemIsValid(item, maxUnitAmountCents))) {
+    return { ok: false, reason: "invalid" };
+  }
+  const taxBasis = await invoiceTaxBasis(db, input.shopId, input.customerAddress);
+  if (!taxBasis) return { ok: false, reason: "tax_location_required" };
+  return { ok: true, currency, ...taxBasis };
+}
+
+/**
  * Everything `createOrder` does after its authorization gate. Private on
  * purpose: the only two callers are `createOrder` (staff, gated by role) and
  * `createDiverPackageOrder` (a diver buying one package for themselves, gated
@@ -242,25 +283,9 @@ async function issueOrder(
   invoicing: InvoicingProvider,
   options: IssueOrderOptions,
 ): Promise<CreateOrderOutcome> {
-  if (input.lineItems.length === 0 || input.lineItems.length > MAX_LINE_ITEMS_PER_ORDER) {
-    return { ok: false, reason: "invalid" };
-  }
-  if ((input.description?.length ?? 0) > MAX_ORDER_DESCRIPTION_LENGTH) {
-    return { ok: false, reason: "invalid" };
-  }
-  // The shop's declared currency (docs ADR 20260731-shop-currency), not the
-  // connected account's and not a hardcoded "usd". Read once and used for the
-  // amount bounds, the Stripe invoice, and the local order row, so the three
-  // can never disagree — and snapshotted onto the order, which is evidence of
-  // what was billed and must survive a later change to the shop setting.
-  const currency = await getShopCurrency(db, input.shopId);
-  const taxBasis = await invoiceTaxBasis(db, input.shopId, input.customerAddress);
-  if (!taxBasis) return { ok: false, reason: "tax_location_required" };
-  const { taxEnabled, customerAddress } = taxBasis;
-  const maxUnitAmountCents = maxLineItemUnitAmountCents(currency);
-  if (!input.lineItems.every((item) => lineItemIsValid(item, maxUnitAmountCents))) {
-    return { ok: false, reason: "invalid" };
-  }
+  const checked = await orderPreconditions(db, input);
+  if (!checked.ok) return checked;
+  const { currency, taxEnabled, customerAddress } = checked;
 
   const account = await getShopStripeAccount(db, input.shopId);
   if (!canAcceptPayments(account)) return { ok: false, reason: "not_connected" };
@@ -345,6 +370,7 @@ async function issueOrder(
         bookingId: input.bookingId ?? null,
         personId: customer.id,
         createdByPersonId: input.createdByPersonId,
+        source: options.source ?? "staff",
         status,
         currency,
         totalCents: result.totalCents,
@@ -441,20 +467,20 @@ export type DiverPackageOrderOutcome =
 async function publicBuyer(
   db: AppDb,
   input: { shopId: string; fullName: string; email: string },
-): Promise<{ personId: string; attached: boolean }> {
+): Promise<{ personId: string; attached: boolean; created: boolean }> {
   const found = await findOrCreatePerson(db, {
     shopId: input.shopId,
     fullName: input.fullName,
     email: input.email,
   });
-  if (found.created) return { personId: found.person.id, attached: true };
+  if (found.created) return { personId: found.person.id, attached: true, created: true };
   if (found.nameMatches) {
     const roles = await db
       .select({ role: personRoles.role })
       .from(personRoles)
       .where(eq(personRoles.personId, found.person.id));
     if (!isStaff(roles.map((row) => row.role))) {
-      return { personId: found.person.id, attached: true };
+      return { personId: found.person.id, attached: true, created: false };
     }
   }
   const personId = await db.transaction(async (tx) => {
@@ -466,7 +492,29 @@ async function publicBuyer(
     await tx.insert(personRoles).values({ personId: fresh.id, role: "diver" });
     return fresh.id;
   });
-  return { personId, attached: false };
+  return { personId, attached: false, created: true };
+}
+
+/**
+ * Take back a person row this request created, after the order it was for was
+ * refused: a public form that fails must leave nothing behind. Best effort and
+ * narrow — only a row nothing references yet. A concurrent request that has
+ * since attached something to the same new record (an order, a booking) holds
+ * a foreign key, the delete fails, and the row stays, which is the right
+ * outcome for a record somebody is now using.
+ */
+async function discardUnusedBuyer(db: AppDb, personId: string): Promise<void> {
+  try {
+    await db.transaction(async (tx) => {
+      await tx.delete(personRoles).where(eq(personRoles.personId, personId));
+      await tx.delete(people).where(eq(people.id, personId));
+    });
+  } catch (error) {
+    log("orders.public_buyer_kept", "warn", {
+      personId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 /**
@@ -517,10 +565,19 @@ export async function createDiverPackageOrder(
     return { ok: false, reason: "not_connected" };
   }
 
-  // Before a person row exists too: a refusal must leave nothing behind.
-  if (!(await invoiceTaxBasis(db, input.shopId, undefined))) {
-    return { ok: false, reason: "tax_location_required" };
-  }
+  const lineItems: NewOrderLineItem[] = [
+    {
+      kind: "dive_package",
+      description: input.lineDescription,
+      quantity: 1,
+      unitAmountCents: pkg.priceCents,
+      packageId: pkg.id,
+    },
+  ];
+  // Before a person row exists too: everything the order can be refused for
+  // without asking Stripe is asked here, so a refusal leaves nothing behind.
+  const checked = await orderPreconditions(db, { shopId: input.shopId, lineItems });
+  if (!checked.ok) return checked;
 
   const buyer = await publicBuyer(db, input);
   const outcome = await issueOrder(
@@ -529,27 +586,23 @@ export async function createDiverPackageOrder(
       shopId: input.shopId,
       personId: buyer.personId,
       // Nobody on the staff raised it. The diver stands as its own creator,
-      // which the order page reads back as "bought online" (`getOrder`).
+      // and `source: "public"` is what the order page reads as "bought online".
       createdByPersonId: buyer.personId,
-      lineItems: [
-        {
-          kind: "dive_package",
-          description: input.lineDescription,
-          quantity: 1,
-          unitAmountCents: pkg.priceCents,
-          packageId: pkg.id,
-        },
-      ],
+      lineItems,
     },
     invoicing,
     {
       sendEmail: false,
       daysUntilDue: 1,
       customerName: input.fullName,
+      source: "public",
       ...(buyer.attached ? {} : { customerEmail: input.email }),
     },
   );
   if (outcome.ok) return outcome;
+  // Stripe refused, or something after it did: the person this request
+  // created was only ever for this order.
+  if (buyer.created) await discardUnusedBuyer(db, buyer.personId);
   return {
     ok: false,
     reason: outcome.reason === "not_authorized" ? "invalid" : outcome.reason,
@@ -1082,18 +1135,10 @@ export async function getOrder(db: DbExecutor, shopId: string, orderId: string) 
     .from(people)
     .where(and(eq(people.id, row.order.createdByPersonId), eq(people.shopId, shopId)))
     .limit(1);
-  // A diver who bought on the shop's public pages stands as their own order's
-  // creator; "by <their name>" would read as a staffer having raised it. Every
-  // staff-raised order passed `canPersonManageOrders`, so a creator who is the
-  // customer and holds no staff role is the public purchase.
-  const creatorRoles =
-    row.order.createdByPersonId === row.order.personId
-      ? await db
-          .select({ role: personRoles.role })
-          .from(personRoles)
-          .where(eq(personRoles.personId, row.order.createdByPersonId))
-      : null;
-  const boughtOnline = creatorRoles !== null && !isStaff(creatorRoles.map((r) => r.role));
+  // Recorded at insert, never inferred from whoever holds which role today: a
+  // diver's own purchase stands as its own creator, and "by <their name>"
+  // would read as a staffer having raised it.
+  const boughtOnline = row.order.source === "public";
   return { ...row, lineItems, createdBy: createdBy ?? null, boughtOnline };
 }
 
