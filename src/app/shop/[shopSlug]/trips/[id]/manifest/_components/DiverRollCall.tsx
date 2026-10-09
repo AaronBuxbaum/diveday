@@ -483,8 +483,12 @@ export function DiverRollCall({
           // danger-tinted row for a paperwork state would compete with the one
           // red on the page that means somebody is in the water (DD9), which is
           // also decision 4's rule: an alarm is earned by a recorded fact.
+          //
+          // A diver tapped aboard after a dive with no earlier boarding is
+          // boarding *now* — they joined at the second site — so their row
+          // reads as the dock's would (domain review of #2123). The tap stays.
           const recordedTone = rollCallRecordedTone(rowState);
-          const blockedAtDock = !ready && isDeparture;
+          const blockedAtDock = !ready && (isDeparture || diver.boardedEarlier === false);
           const untouchedTone = blockedAtDock
             ? ROLL_CALL_ROW_TONE.blocked
             : ROLL_CALL_ROW_TONE.awaiting;
@@ -774,7 +778,7 @@ export function DiverRollCall({
                       paperwork state at the checkpoint where the only thing
                       that matters is bodies (decision 4). The count panel
                       says nothing about it either, for the same reason. */}
-                    {!ready && isDeparture ? (
+                    {blockedAtDock ? (
                       <>
                         <ul className="flex flex-col gap-1 text-base text-danger">
                           {/* Keyed on the sentence, not the code: a trip

@@ -1049,6 +1049,9 @@ export async function getTripManifests(
       divers: diverInputs.map((diver) => ({
         ...diver,
         rollCall: effectiveByBooking.get(diver.bookingId)?.[index],
+        boardedEarlier: (effectiveByBooking.get(diver.bookingId) ?? [])
+          .slice(0, index)
+          .some((record) => record?.state === "boarded"),
       })),
     }),
   );

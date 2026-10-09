@@ -1100,3 +1100,31 @@ describe("a held seat on the manifest", () => {
     );
   });
 });
+
+/**
+ * **A diver first counted aboard after a dive is boarding then** (domain
+ * review of #2123): they joined at the second site, so the row says what the
+ * dock would have said about their readiness. The tap stays — after a dive the
+ * roll call is a head count readiness never gates — but the crew decide with
+ * the blocker in view.
+ */
+describe("a diver with no earlier boarding, after a dive", () => {
+  const blocked = { status: "blocked", blockers: [{ code: "certification_missing" }] } as const;
+
+  it("shows the dock's readiness warning, and keeps the tap", () => {
+    const { container } = renderList({
+      divers: [diver({ readiness: blocked, boardedEarlier: false })],
+    });
+    expect(dangerToned(container).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Mark boarded" })).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent(t("manifest.resolveBlockersLink"));
+  });
+
+  it("stays quiet for a diver counted aboard earlier", () => {
+    const { container } = renderList({
+      divers: [diver({ readiness: blocked, boardedEarlier: true })],
+    });
+    expect(dangerToned(container)).toHaveLength(0);
+  });
+});
