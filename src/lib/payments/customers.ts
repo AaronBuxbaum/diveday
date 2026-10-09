@@ -1,10 +1,7 @@
 import { z } from "zod";
+import { stripeKeySourceFromEnvironment } from "@/db/stripe-accounts";
 import { ERASURE_FAILURE_DETAIL } from "./erasure-failure";
-import {
-  type StripeKeySource,
-  secretKeyForCall,
-  stripeKeySourceFromEnvironment,
-} from "./stripe-keys";
+import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 
 /**
  * Customer deletion on a shop's connected Stripe account — the processor half
@@ -101,7 +98,7 @@ export function stripeCustomerProvider(
           {
             method: "DELETE",
             headers: {
-              Authorization: `Bearer ${secretKeyForCall(config, stripeAccountId)}`,
+              Authorization: `Bearer ${await secretKeyForCall(config, stripeAccountId)}`,
               "Stripe-Account": stripeAccountId,
               "Idempotency-Key": idempotencyKey,
             },
@@ -143,6 +140,6 @@ export function customerProviderFromEnvironment(
 ): CustomerProvider {
   // Per connected account: the demo's is called only with the test-mode key
   // (src/lib/payments/stripe-keys.ts, ADR 20261009-demo-test-mode-payments).
-  const keys = stripeKeySourceFromEnvironment(env);
+  const keys = stripeKeySourceFromEnvironment({ env });
   return keys ? stripeCustomerProvider(keys, fetchImpl) : disabledCustomerProvider;
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+
 import { checkoutProviderFromEnvironment } from "./checkout";
 
 /** The `stripe_api.request_threw` lines a case wrote, parsed. */
@@ -373,6 +374,12 @@ describe("stripe checkout provider", () => {
  * The demo shop's checkout is the same flow on Stripe's test mode (ADR
  * 20261009-demo-test-mode-payments): the key follows the connected account.
  */
+/**
+ * Which key each call carries is decided per account and per holder
+ * (`stripeKeySourceFromEnvironment`, tested with its database in
+ * src/db/stripe-accounts.test.ts). What a provider adds is that a call with no
+ * key it may use is never made, and is reported as a failure.
+ */
 describe("the demo's test-mode account", () => {
   const env = {
     STRIPE_SECRET_KEY: "sk_live_platformKey123",
@@ -384,15 +391,6 @@ describe("the demo's test-mode account", () => {
     status: "open",
     payment_status: "unpaid",
     amount_total: 1,
-  });
-
-  it("is called with the test-mode key, and every other account with the platform key", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(session);
-    const provider = providerWith(env, fetchImpl);
-    await provider.createCheckoutSession({ ...request, stripeAccountId: "acct_demoTestMode1" });
-    await provider.createCheckoutSession({ ...request, stripeAccountId: "acct_realShop123" });
-    expect(fetchImpl.mock.calls[0][1].headers.Authorization).toBe("Bearer sk_test_demoKey12345");
-    expect(fetchImpl.mock.calls[1][1].headers.Authorization).toBe("Bearer sk_live_platformKey123");
   });
 
   it("is never called at all when its test key is missing or is not a test key", async () => {

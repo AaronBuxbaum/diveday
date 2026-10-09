@@ -24,6 +24,7 @@ vi.mock("@/db/orders", () => ({
 vi.mock("@/db/stripe-accounts", () => ({
   setShopStripeAccountStatus: vi.fn(),
   disconnectShopStripeAccount: vi.fn(),
+  stripeAccountHolder: vi.fn(),
 }));
 vi.mock("@/db/webhook-events", () => ({
   claimStripeWebhookEvent: vi.fn(),
@@ -43,9 +44,8 @@ const { markTipPaidBySessionId, markTipExpiredBySessionId, recordTipStripeCustom
   "@/db/tips"
 );
 const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId } = await import("@/db/orders");
-const { setShopStripeAccountStatus, disconnectShopStripeAccount } = await import(
-  "@/db/stripe-accounts"
-);
+const { setShopStripeAccountStatus, disconnectShopStripeAccount, stripeAccountHolder } =
+  await import("@/db/stripe-accounts");
 const { claimStripeWebhookEvent, hasNewerAccountUpdate, releaseStripeWebhookEventClaim } =
   await import("@/db/webhook-events");
 const Sentry = await import("@sentry/nextjs");
@@ -161,7 +161,11 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined, null);
   });
 
-  it("tries test webhook secret if live webhook secret fails, and succeeds if test secret matches", async () => {
+  // With a live secret configured the deployment takes real money, so a
+  // test-signed event verifies and is then ignored unless it is the canonical
+  // demo's (ADR 20261009-demo-test-mode-payments; "test-mode events on a live
+  // platform" below).
+  it("tries test webhook secret if live webhook secret fails, and verifies when the test secret matches", async () => {
     vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_live_mode");
     vi.stubEnv("STRIPE_TEST_WEBHOOK_SECRET", "whsec_test_mode");
     const payload = eventPayload({
@@ -173,7 +177,7 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_test_mode");
     const response = await POST(webhookRequest(payload, header));
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined, null);
+    expect(markOrderPaidByInvoiceId).not.toHaveBeenCalled();
   });
 
   it("ignores (200, no state change) a checkout.session.completed signed by the live secret but claiming livemode:false", async () => {
@@ -1196,10 +1200,15 @@ describe("POST /api/webhooks/stripe — test-mode events on a live platform", ()
   }
 
   beforeEach(() => {
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
     vi.stubEnv("STRIPE_TEST_WEBHOOK_SECRET", "whsec_test_mode");
     vi.stubEnv("STRIPE_SECRET_KEY", "sk_live_platform123");
     vi.stubEnv("STRIPE_DEMO_ACCOUNT_ID", DEMO_ACCOUNT);
     vi.stubEnv("STRIPE_DEMO_SECRET_KEY", "sk_test_demoKey1234");
+    vi.stubEnv("VERCEL_ENV", "");
+    vi.mocked(stripeAccountHolder)
+      .mockReset()
+      .mockResolvedValue({ isDemo: true, isCanonicalDemo: true });
   });
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -1220,6 +1229,29 @@ describe("POST /api/webhooks/stripe — test-mode events on a live platform", ()
     expect(claimStripeWebhookEvent).not.toHaveBeenCalled();
   });
 
+  it("ignores the demo account's test event while anyone but the canonical demo holds it", async () => {
+    for (const holder of [
+      null,
+      { isDemo: false, isCanonicalDemo: false },
+      { isDemo: true, isCanonicalDemo: false },
+    ]) {
+      vi.mocked(stripeAccountHolder).mockResolvedValueOnce(holder);
+      await testModeCheckout(DEMO_ACCOUNT);
+    }
+    expect(markCheckoutPaidBySessionId).not.toHaveBeenCalled();
+    expect(claimStripeWebhookEvent).not.toHaveBeenCalled();
+  });
+
+  it("counts a live webhook secret, or Vercel production, as real money whatever the key says", async () => {
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_platform123");
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_live_mode");
+    await testModeCheckout("acct_realShop123");
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
+    vi.stubEnv("VERCEL_ENV", "production");
+    await testModeCheckout("acct_realShop123");
+    expect(markCheckoutPaidBySessionId).not.toHaveBeenCalled();
+  });
+
   it("ignores every test event when the demo pair is not configured", async () => {
     vi.stubEnv("STRIPE_DEMO_SECRET_KEY", "");
     const response = await testModeCheckout(DEMO_ACCOUNT);
@@ -1227,7 +1259,7 @@ describe("POST /api/webhooks/stripe — test-mode events on a live platform", ()
     expect(markCheckoutPaidBySessionId).not.toHaveBeenCalled();
   });
 
-  it("leaves a test-mode deployment alone: no live key, no restriction", async () => {
+  it("leaves a test-mode deployment alone: no live key or secret, no restriction", async () => {
     vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_platform123");
     await testModeCheckout("acct_anyShop123");
     expect(markCheckoutPaidBySessionId).toHaveBeenCalled();

@@ -1,9 +1,6 @@
 import { z } from "zod";
-import {
-  type StripeKeySource,
-  secretKeyForCall,
-  stripeKeySourceFromEnvironment,
-} from "./stripe-keys";
+import { stripeKeySourceFromEnvironment } from "@/db/stripe-accounts";
+import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
@@ -282,7 +279,7 @@ export function stripeInvoicingProvider(
     return fetchImpl(`https://api.stripe.com/v1${path}`, {
       method: "POST",
       headers: {
-        ...headersFor(secretKeyForCall(config, stripeAccountId), stripeAccountId),
+        ...headersFor(await secretKeyForCall(config, stripeAccountId), stripeAccountId),
         ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
       },
       body: form.toString(),
@@ -418,7 +415,7 @@ export function stripeInvoicingProvider(
         // needs, so ask for the plain object.
         const invoiceResponse = await fetchImpl(
           `https://api.stripe.com/v1/invoices/${stripeInvoiceId}`,
-          { headers: headersFor(secretKeyForCall(config, stripeAccountId), stripeAccountId) },
+          { headers: headersFor(await secretKeyForCall(config, stripeAccountId), stripeAccountId) },
         );
         if (!invoiceResponse.ok) return { status: "failed" };
         const invoiceBody = invoiceResponseSchema.safeParse(await invoiceResponse.json());
@@ -447,7 +444,7 @@ export function stripeInvoicingProvider(
     async retrieveInvoice(stripeAccountId, stripeInvoiceId) {
       try {
         const response = await fetchImpl(`https://api.stripe.com/v1/invoices/${stripeInvoiceId}`, {
-          headers: headersFor(secretKeyForCall(config, stripeAccountId), stripeAccountId),
+          headers: headersFor(await secretKeyForCall(config, stripeAccountId), stripeAccountId),
         });
         if (!response.ok) return { status: "failed" };
         const body = invoiceResponseSchema.safeParse(await response.json());
@@ -495,6 +492,6 @@ export function invoicingProviderFromEnvironment(
 ): InvoicingProvider {
   // Per connected account: the demo's is called only with the test-mode key
   // (src/lib/payments/stripe-keys.ts, ADR 20261009-demo-test-mode-payments).
-  const keys = stripeKeySourceFromEnvironment(env);
+  const keys = stripeKeySourceFromEnvironment({ env });
   return keys ? stripeInvoicingProvider(keys, fetchImpl) : disabledInvoicingProvider;
 }

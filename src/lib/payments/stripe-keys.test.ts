@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   demoStripeAccount,
+  mayOfferPayment,
   platformKeyIsLive,
   StripeKeyUnavailableError,
   secretKeyForCall,
-  stripeKeySourceFromEnvironment,
   stripeSecretKeyFor,
 } from "./stripe-keys";
 
@@ -17,13 +17,45 @@ const env = {
   STRIPE_DEMO_SECRET_KEY: TEST,
 };
 
+/** Who holds an account, as the database says (`stripeAccountHolder`). */
+const REAL_SHOP = { isDemo: false, isCanonicalDemo: false };
+const CANONICAL_DEMO = { isDemo: true, isCanonicalDemo: true };
+const MINTED_DEMO = { isDemo: true, isCanonicalDemo: false };
+
 describe("which key a Stripe call uses (ADR 20261009-demo-test-mode-payments)", () => {
-  it("uses the platform key for every shop's account", () => {
-    expect(stripeSecretKeyFor("acct_realShop123", env)).toBe(LIVE);
+  it("uses the platform key for a real shop's account", () => {
+    expect(stripeSecretKeyFor("acct_realShop123", REAL_SHOP, env)).toBe(LIVE);
+    // An account no row holds is no demo's either.
+    expect(stripeSecretKeyFor("acct_realShop123", null, env)).toBe(LIVE);
   });
 
-  it("uses only the test-mode key for the demo's account", () => {
-    expect(stripeSecretKeyFor(DEMO, env)).toBe(TEST);
+  it("uses only the test-mode key for the demo's account, held by the canonical demo", () => {
+    expect(stripeSecretKeyFor(DEMO, CANONICAL_DEMO, env)).toBe(TEST);
+  });
+
+  it("gives the demo's account no key at all when anyone else holds it, or nobody does", () => {
+    for (const holder of [REAL_SHOP, MINTED_DEMO, null]) {
+      expect(stripeSecretKeyFor(DEMO, holder, env)).toBeNull();
+    }
+  });
+
+  it("never hands a demo shop the live platform key, whatever account it holds", () => {
+    for (const holder of [CANONICAL_DEMO, MINTED_DEMO]) {
+      expect(stripeSecretKeyFor("acct_e2e_test", holder, env)).toBeNull();
+      expect(
+        stripeSecretKeyFor("acct_e2e_test", holder, { STRIPE_SECRET_KEY: "rk_live_abcdefgh" }),
+      ).toBeNull();
+      // Nor a platform key that is not plainly a test key.
+      expect(
+        stripeSecretKeyFor("acct_e2e_test", holder, { STRIPE_SECRET_KEY: "sk_mystery" }),
+      ).toBeNull();
+    }
+  });
+
+  it("lets a demo shop use a platform key that is itself test mode, as on a workstation", () => {
+    expect(stripeSecretKeyFor("acct_e2e_test", MINTED_DEMO, { STRIPE_SECRET_KEY: TEST })).toBe(
+      TEST,
+    );
   });
 
   it("never hands the demo's account the live key, whatever is missing or wrong", () => {
@@ -36,16 +68,22 @@ describe("which key a Stripe call uses (ADR 20261009-demo-test-mode-payments)", 
       "sk_test_",
       "pk_test_abcdefgh",
     ]) {
-      expect(stripeSecretKeyFor(DEMO, { ...env, STRIPE_DEMO_SECRET_KEY: demoKey })).toBeNull();
+      expect(
+        stripeSecretKeyFor(DEMO, CANONICAL_DEMO, { ...env, STRIPE_DEMO_SECRET_KEY: demoKey }),
+      ).toBeNull();
     }
     // A malformed account id is still the demo's, and still gets no key.
     const malformed = { ...env, STRIPE_DEMO_ACCOUNT_ID: "acct_x" };
-    expect(stripeSecretKeyFor("acct_x", malformed)).toBeNull();
+    expect(stripeSecretKeyFor("acct_x", CANONICAL_DEMO, malformed)).toBeNull();
+    expect(stripeSecretKeyFor("acct_x", REAL_SHOP, malformed)).toBeNull();
   });
 
   it("accepts a restricted test key, and trims what was pasted", () => {
     expect(
-      stripeSecretKeyFor(DEMO, { ...env, STRIPE_DEMO_SECRET_KEY: " rk_test_abcdefgh\n" }),
+      stripeSecretKeyFor(DEMO, CANONICAL_DEMO, {
+        ...env,
+        STRIPE_DEMO_SECRET_KEY: " rk_test_abcdefgh\n",
+      }),
     ).toBe("rk_test_abcdefgh");
   });
 
@@ -64,26 +102,40 @@ describe("which key a Stripe call uses (ADR 20261009-demo-test-mode-payments)", 
   });
 });
 
+describe("whether a shop may offer payment at all", () => {
+  it("always may when it is a real shop", () => {
+    expect(mayOfferPayment("acct_realShop123", REAL_SHOP, env)).toBe(true);
+    expect(mayOfferPayment("acct_realShop123", REAL_SHOP, {})).toBe(true);
+  });
+
+  it("may on the canonical demo only with the configured test-mode account", () => {
+    expect(mayOfferPayment(DEMO, CANONICAL_DEMO, env)).toBe(true);
+    expect(mayOfferPayment("acct_e2e_test", CANONICAL_DEMO, env)).toBe(false);
+    expect(mayOfferPayment(DEMO, MINTED_DEMO, env)).toBe(false);
+    expect(mayOfferPayment(DEMO, CANONICAL_DEMO, { ...env, STRIPE_DEMO_SECRET_KEY: "" })).toBe(
+      false,
+    );
+  });
+
+  it("may on any demo where no live key exists to reach", () => {
+    expect(mayOfferPayment("acct_e2e_test", MINTED_DEMO, {})).toBe(true);
+    expect(mayOfferPayment("acct_e2e_test", MINTED_DEMO, { STRIPE_SECRET_KEY: TEST })).toBe(true);
+  });
+});
+
 describe("a provider's key source", () => {
-  it("is absent when no call could have a key", () => {
-    expect(stripeKeySourceFromEnvironment({})).toBeNull();
-    expect(stripeKeySourceFromEnvironment({ STRIPE_DEMO_ACCOUNT_ID: DEMO })).toBeNull();
+  it("refuses a call with no key rather than guess", async () => {
+    const source = { secretKeyFor: async (id: string) => (id === DEMO ? TEST : null) };
+    expect(await secretKeyForCall(source, DEMO)).toBe(TEST);
+    await expect(secretKeyForCall(source, "acct_realShop123")).rejects.toThrow(
+      StripeKeyUnavailableError,
+    );
   });
 
-  it("routes per account, and refuses a call with no key rather than guess", () => {
-    const source = stripeKeySourceFromEnvironment(env);
-    if (!source) throw new Error("expected a key source");
-    expect(secretKeyForCall(source, "acct_realShop123")).toBe(LIVE);
-    expect(secretKeyForCall(source, DEMO)).toBe(TEST);
-
-    const demoOnly = stripeKeySourceFromEnvironment({ ...env, STRIPE_SECRET_KEY: "" });
-    if (!demoOnly) throw new Error("the demo pair alone is a key source");
-    expect(secretKeyForCall(demoOnly, DEMO)).toBe(TEST);
-    expect(() => secretKeyForCall(demoOnly, "acct_realShop123")).toThrow(StripeKeyUnavailableError);
-  });
-
-  it("passes a fixed key straight through", () => {
-    expect(secretKeyForCall({ secretKey: "sk_test_fixed" }, "acct_any")).toBe("sk_test_fixed");
+  it("passes a fixed key straight through", async () => {
+    expect(await secretKeyForCall({ secretKey: "sk_test_fixed" }, "acct_any")).toBe(
+      "sk_test_fixed",
+    );
   });
 });
 

@@ -15,8 +15,10 @@
  * test mode end to end, and a visitor's card is never charged.
  *
  * The routing is by the account a call is about, which every Stripe call here
- * already names, so there is no second payment path: a provider asks this file
- * for the key and gets the live one for every account but the demo's.
+ * already names, and by who holds it (`stripeAccountHolder`), so there is no
+ * second payment path: a provider asks for the key and gets the live one for
+ * every real shop's account, the test one for the demo's account while the
+ * canonical demo holds it, and none for any other demo shop on a live key.
  *
  * **Fails closed both ways.**
  * - A call about the demo account never gets the live key. If the demo
@@ -34,6 +36,9 @@ const ACCOUNT_ID = /^acct_[A-Za-z0-9]{6,64}$/;
 
 /** A Stripe secret or restricted key in test mode. */
 const TEST_MODE_KEY = /^(sk|rk)_test_[A-Za-z0-9]{8,}$/;
+
+/** A platform key that names test mode, however short (a fixture's `sk_test`). */
+const TEST_MODE_PREFIX = /^(sk|rk)_test(_|$)/;
 
 /** A Stripe secret or restricted key in live mode. */
 const LIVE_MODE_KEY = /^(sk|rk)_live_/;
@@ -57,15 +62,58 @@ export function isDemoTestModeAccount(
 }
 
 /**
- * The platform key for a call on `stripeAccountId`, or null when there is none
- * that may be used for it.
+ * Who holds a connected account, as the database says
+ * (`stripeAccountHolder`, src/db/stripe-accounts.ts); null when no shop does.
+ * `isCanonicalDemo` is the demo shop at `DEMO_SHOP_SLUG` with `is_demo` set.
  */
-export function stripeSecretKeyFor(stripeAccountId: string, env: Env = process.env): string | null {
+export type StripeAccountHolder = { isDemo: boolean; isCanonicalDemo: boolean } | null;
+
+/**
+ * The platform key for a call on `stripeAccountId`, or null when there is none
+ * that may be used for it. Decided by the account *and* by who holds it:
+ *
+ * - **The demo's account** gets the test-mode key, and only while the
+ *   canonical demo holds it. Held by anyone else, or by nobody, it gets no key.
+ * - **A demo shop's any other account** never gets a live platform key: only a
+ *   platform key that is itself plainly test mode, as on a workstation.
+ * - **Every other account** gets the platform key.
+ */
+export function stripeSecretKeyFor(
+  stripeAccountId: string,
+  holder: StripeAccountHolder,
+  env: Env = process.env,
+): string | null {
   const demoAccountId = env.STRIPE_DEMO_ACCOUNT_ID?.trim();
   if (demoAccountId && stripeAccountId === demoAccountId) {
-    return demoStripeAccount(env)?.secretKey ?? null;
+    return holder?.isCanonicalDemo ? (demoStripeAccount(env)?.secretKey ?? null) : null;
   }
-  return env.STRIPE_SECRET_KEY?.trim() || null;
+  const platformKey = env.STRIPE_SECRET_KEY?.trim() || null;
+  if (holder?.isDemo) return platformKey && platformKeyIsTestMode(env) ? platformKey : null;
+  return platformKey;
+}
+
+/**
+ * Whether a shop holding `stripeAccountId` may offer payment at all: what
+ * `getShopStripeAccount` asks before it hands a row to `canAcceptPayments`.
+ * A real shop always may. A demo shop may only when a call about its account
+ * could be made without the live key: the canonical demo on the configured
+ * test-mode account, or any demo while the platform key is itself test mode or
+ * absent (a workstation, the e2e fleet), where nothing can reach real money.
+ */
+export function mayOfferPayment(
+  stripeAccountId: string,
+  holder: StripeAccountHolder,
+  env: Env = process.env,
+): boolean {
+  if (!holder?.isDemo) return true;
+  if (stripeSecretKeyFor(stripeAccountId, holder, env) !== null) return true;
+  const isDemoAccount = stripeAccountId === env.STRIPE_DEMO_ACCOUNT_ID?.trim();
+  return !isDemoAccount && !env.STRIPE_SECRET_KEY?.trim();
+}
+
+/** Whether the platform key is plainly a test-mode key: false when it is absent, live or unrecognized. */
+export function platformKeyIsTestMode(env: Env = process.env): boolean {
+  return TEST_MODE_PREFIX.test(env.STRIPE_SECRET_KEY?.trim() ?? "");
 }
 
 /** Whether the platform key is a live-mode key: true only on a deployment that moves real money. */
@@ -79,7 +127,7 @@ export function platformKeyIsLive(env: Env = process.env): boolean {
  */
 export type StripeKeySource =
   | { secretKey: string }
-  | { secretKeyFor: (accountId: string) => string | null };
+  | { secretKeyFor: (accountId: string) => Promise<string | null> | string | null };
 
 /** Raised instead of making a call that has no key it may use. Every provider catches it as a failure. */
 export class StripeKeyUnavailableError extends Error {
@@ -90,17 +138,11 @@ export class StripeKeyUnavailableError extends Error {
 }
 
 /** The key a provider uses for one call. Throws {@link StripeKeyUnavailableError} rather than guess. */
-export function secretKeyForCall(source: StripeKeySource, stripeAccountId: string): string {
-  const key = "secretKey" in source ? source.secretKey : source.secretKeyFor(stripeAccountId);
+export async function secretKeyForCall(
+  source: StripeKeySource,
+  stripeAccountId: string,
+): Promise<string> {
+  const key = "secretKey" in source ? source.secretKey : await source.secretKeyFor(stripeAccountId);
   if (!key) throw new StripeKeyUnavailableError();
   return key;
-}
-
-/**
- * The key source a `*FromEnvironment` provider is built on, or null when no
- * call could have a key: neither the platform key nor the demo pair is set.
- */
-export function stripeKeySourceFromEnvironment(env: Env = process.env): StripeKeySource | null {
-  if (!env.STRIPE_SECRET_KEY?.trim() && !demoStripeAccount(env)) return null;
-  return { secretKeyFor: (accountId) => stripeSecretKeyFor(accountId, env) };
 }

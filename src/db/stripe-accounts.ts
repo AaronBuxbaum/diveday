@@ -1,4 +1,4 @@
-import { and, eq, isNull, lte, ne } from "drizzle-orm";
+import { and, eq, isNull, lte, ne, type SQL } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
@@ -11,8 +11,12 @@ import {
   type DemoStripeAccount,
   demoStripeAccount,
   isDemoTestModeAccount,
+  mayOfferPayment,
+  platformKeyIsTestMode,
+  type StripeAccountHolder,
+  stripeSecretKeyFor,
 } from "@/lib/payments/stripe-keys";
-import type { AppDb, DbExecutor } from "./client";
+import { type AppDb, type DbExecutor, getDb } from "./client";
 import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import type { ShopStripeAccount } from "./schema";
 import { shopStripeAccounts, shops } from "./schema";
@@ -128,28 +132,92 @@ export function stripeCurrencyMismatch(
   return accountCurrency === declared ? null : { shopCurrency: declared, accountCurrency };
 }
 
+/**
+ * A shop's connected account, or null when it has none **or may not offer
+ * payment through it**: a demo shop whose account could only be called with the
+ * live platform key reads as unconnected everywhere, so `canAcceptPayments` is
+ * false for it on every surface (ADR 20261009-demo-test-mode-payments,
+ * `mayOfferPayment`).
+ */
 export async function getShopStripeAccount(
   db: DbExecutor,
   shopId: string,
 ): Promise<ShopStripeAccount | null> {
-  const [row] = await db
-    .select()
-    .from(shopStripeAccounts)
-    .where(eq(shopStripeAccounts.shopId, shopId))
-    .limit(1);
-  return row ?? null;
+  return payableRow(db, eq(shopStripeAccounts.shopId, shopId));
 }
 
 export async function getShopStripeAccountByAccountId(
   db: DbExecutor,
   stripeAccountId: string,
 ): Promise<ShopStripeAccount | null> {
+  return payableRow(db, eq(shopStripeAccounts.stripeAccountId, stripeAccountId));
+}
+
+async function payableRow(db: DbExecutor, where: SQL): Promise<ShopStripeAccount | null> {
   const [row] = await db
-    .select()
+    .select({ account: shopStripeAccounts, isDemo: shops.isDemo, slug: shops.slug })
     .from(shopStripeAccounts)
+    .innerJoin(shops, eq(shops.id, shopStripeAccounts.shopId))
+    .where(where)
+    .limit(1);
+  if (!row) return null;
+  return mayOfferPayment(row.account.stripeAccountId, holderOf(row)) ? row.account : null;
+}
+
+function holderOf(shop: { isDemo: boolean; slug: string }): NonNullable<StripeAccountHolder> {
+  return { isDemo: shop.isDemo, isCanonicalDemo: shop.isDemo && shop.slug === DEMO_SHOP_SLUG };
+}
+
+/** Who holds a connected account (`stripeSecretKeyFor`), or null when no shop does. */
+export async function stripeAccountHolder(
+  db: DbExecutor,
+  stripeAccountId: string,
+): Promise<StripeAccountHolder> {
+  const [row] = await db
+    .select({ isDemo: shops.isDemo, slug: shops.slug })
+    .from(shopStripeAccounts)
+    .innerJoin(shops, eq(shops.id, shopStripeAccounts.shopId))
     .where(eq(shopStripeAccounts.stripeAccountId, stripeAccountId))
     .limit(1);
-  return row ?? null;
+  return row ? holderOf(row) : null;
+}
+
+/**
+ * The key source every Stripe provider is built on from the environment, or
+ * null when no call could have a key. Each call's key is chosen by its account
+ * and by who holds that account, read fresh (ADR
+ * 20261009-demo-test-mode-payments).
+ */
+export function stripeKeySourceFromEnvironment(
+  options: {
+    env?: Readonly<Record<string, string | undefined>>;
+    db?: () => Promise<DbExecutor>;
+  } = {},
+): { secretKeyFor: (accountId: string) => Promise<string | null> } | null {
+  const env = options.env ?? process.env;
+  const database = options.db ?? getDb;
+  if (!env.STRIPE_SECRET_KEY?.trim() && !demoStripeAccount(env)) return null;
+  // Who holds the account changes the answer only for the demo's own account,
+  // or when the platform key is not plainly test mode (where a demo shop must
+  // get none); a test-mode or absent platform key answers the same for every
+  // holder, and is not read for.
+  // (The demo's account with no valid pair gets no key whoever holds it.)
+  const holderMatters = (accountId: string) =>
+    accountId === env.STRIPE_DEMO_ACCOUNT_ID?.trim()
+      ? demoStripeAccount(env) !== null
+      : Boolean(env.STRIPE_SECRET_KEY?.trim()) && !platformKeyIsTestMode(env);
+  return {
+    secretKeyFor: async (accountId) => {
+      if (!holderMatters(accountId)) {
+        return stripeSecretKeyFor(accountId, { isDemo: false, isCanonicalDemo: false }, env);
+      }
+      return stripeSecretKeyFor(
+        accountId,
+        await stripeAccountHolder(await database(), accountId),
+        env,
+      );
+    },
+  };
 }
 
 /** One row per shop: a reconnect after a disconnect replaces the prior account id. */

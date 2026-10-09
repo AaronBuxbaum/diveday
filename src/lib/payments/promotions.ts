@@ -1,9 +1,6 @@
 import { z } from "zod";
-import {
-  type StripeKeySource,
-  secretKeyForCall,
-  stripeKeySourceFromEnvironment,
-} from "./stripe-keys";
+import { stripeKeySourceFromEnvironment } from "@/db/stripe-accounts";
+import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
@@ -136,7 +133,10 @@ export function stripePromotionProvider(
       const couponResponse = await fetchImpl("https://api.stripe.com/v1/coupons", {
         method: "POST",
         headers: {
-          ...headersFor(secretKeyForCall(config, request.stripeAccountId), request.stripeAccountId),
+          ...headersFor(
+            await secretKeyForCall(config, request.stripeAccountId),
+            request.stripeAccountId,
+          ),
           "Idempotency-Key": `${request.idempotencyKey}:coupon`,
         },
         body: couponForm.toString(),
@@ -155,7 +155,10 @@ export function stripePromotionProvider(
       const promoResponse = await fetchImpl("https://api.stripe.com/v1/promotion_codes", {
         method: "POST",
         headers: {
-          ...headersFor(secretKeyForCall(config, request.stripeAccountId), request.stripeAccountId),
+          ...headersFor(
+            await secretKeyForCall(config, request.stripeAccountId),
+            request.stripeAccountId,
+          ),
           "Idempotency-Key": `${request.idempotencyKey}:promotion_code`,
         },
         body: promoForm.toString(),
@@ -198,7 +201,7 @@ export function stripePromotionProvider(
           method: "POST",
           headers: {
             ...headersFor(
-              secretKeyForCall(config, request.stripeAccountId),
+              await secretKeyForCall(config, request.stripeAccountId),
               request.stripeAccountId,
             ),
             "Idempotency-Key": `${request.idempotencyKey}:session-discount`,
@@ -236,6 +239,6 @@ export function promotionProviderFromEnvironment(
 ): PromotionProvider {
   // Per connected account: the demo's is called only with the test-mode key
   // (src/lib/payments/stripe-keys.ts, ADR 20261009-demo-test-mode-payments).
-  const keys = stripeKeySourceFromEnvironment(env);
+  const keys = stripeKeySourceFromEnvironment({ env });
   return keys ? stripePromotionProvider(keys, fetchImpl) : disabledPromotionProvider;
 }

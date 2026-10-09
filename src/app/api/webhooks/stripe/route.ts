@@ -9,7 +9,11 @@ import {
 import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
 import { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId } from "@/db/orders";
-import { disconnectShopStripeAccount, setShopStripeAccountStatus } from "@/db/stripe-accounts";
+import {
+  disconnectShopStripeAccount,
+  setShopStripeAccountStatus,
+  stripeAccountHolder,
+} from "@/db/stripe-accounts";
 import {
   markTipExpiredBySessionId,
   markTipPaidBySessionId,
@@ -211,15 +215,22 @@ export async function POST(request: Request) {
     return new Response(null, { status: 200 });
   }
 
-  // On a deployment whose platform key is live, the only test-mode traffic
-  // with any business here is the demo shop's: its checkout runs on the
+  // On a deployment that takes real money, the only test-mode traffic with
+  // any business here is the canonical demo's: its checkout runs on the
   // test-mode key (ADR 20261009-demo-test-mode-payments). A test event about
-  // any other account, or about none, changes nothing, so a test-mode secret
-  // configured for the demo cannot move a real shop's order. A deployment
-  // that is test mode throughout (no live key) is unaffected.
-  if (verifiedWith === "test" && platformKeyIsLive()) {
+  // any other account, about none, or about the demo's account while anyone
+  // but the canonical demo holds it, changes nothing, so a test-mode secret
+  // configured for the demo cannot move a real shop's order. "Takes real
+  // money" is any sign of it, not the key's prefix alone: a live webhook
+  // secret configured, a live platform key, or Vercel's production
+  // environment. A deployment that is test mode throughout is unaffected.
+  if (verifiedWith === "test" && takesRealMoney()) {
     const demoAccountId = demoStripeAccount()?.accountId;
-    if (!demoAccountId || claimAccountId !== demoAccountId) {
+    const holder =
+      demoAccountId && claimAccountId === demoAccountId
+        ? await stripeAccountHolder(db, demoAccountId)
+        : null;
+    if (!holder?.isCanonicalDemo) {
       logOutcome("test_event_outside_demo", { verifiedWith });
       return new Response(null, { status: 200 });
     }
@@ -497,4 +508,13 @@ export async function POST(request: Request) {
   }
 
   return new Response(null, { status: 200 });
+}
+
+/** Whether this deployment moves real money: any one sign is enough. */
+function takesRealMoney(): boolean {
+  return (
+    Boolean(process.env.STRIPE_WEBHOOK_SECRET?.trim()) ||
+    platformKeyIsLive() ||
+    process.env.VERCEL_ENV === "production"
+  );
 }
