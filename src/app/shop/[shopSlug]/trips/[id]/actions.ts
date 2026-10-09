@@ -1371,13 +1371,13 @@ const IDENTITY_RELEASE_NOTICE = {
   confirmed: {
     not_needed: "identity-confirmed",
     sent: "identity-confirmed-waiver-sent",
-    ready: "new-waiver-ready",
+    ready: "identity-confirmed-waiver-ready",
     failed: "new-waiver-failed",
   },
   split: {
     not_needed: "identity-split",
     sent: "identity-split-waiver-sent",
-    ready: "new-waiver-ready",
+    ready: "identity-split-waiver-ready",
     failed: "new-waiver-failed",
   },
 } as const satisfies Record<"confirmed" | "split", Record<IdentityReleaseOutcome, string>>;

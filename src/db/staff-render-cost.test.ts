@@ -169,5 +169,8 @@ const GATE_CEILING = 4;
 const CHROME_CEILING = 20;
 // 61 → 62: the bench's two Today rows, late and uncollected work orders, are
 // one statement (`listWorkOrdersNeedingAttention`, ADR 20261008-work-order-follow-up).
-const TODAY_CEILING = 62;
+// 62 → 63: a diver first counted aboard at a later checkpoint is on the boat
+// too (issue #2142), so the queue reads who was boarded at any checkpoint
+// (`listBoardedAtAnyCheckpointByTrip`), one statement over the queue's trips.
+const TODAY_CEILING = 63;
 const TRIP_CEILING = 49;
