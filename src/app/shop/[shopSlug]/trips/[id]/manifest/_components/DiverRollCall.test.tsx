@@ -1109,7 +1109,10 @@ describe("a held seat on the manifest", () => {
  * the blocker in view.
  */
 describe("a diver with no earlier boarding, after a dive", () => {
-  const blocked = { status: "blocked", blockers: [{ code: "certification_missing" }] } as const;
+  const blocked: TripManifest["divers"][number]["readiness"] = {
+    status: "blocked",
+    blockers: [{ code: "certification_missing" }],
+  };
 
   it("shows the dock's readiness warning, and keeps the tap", () => {
     const { container } = renderList({
