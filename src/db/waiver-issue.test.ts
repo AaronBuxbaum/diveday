@@ -719,6 +719,24 @@ describe("issueWaiverOnJoin", () => {
     const result = await issueWaiverOnJoin(db, shop.id, bookingId);
     expect(result).toBeNull();
   });
+
+  it("sends nothing on a held seat, and owes nothing until the desk confirms (issue #2125)", async () => {
+    // The link would open on a record that may be somebody else's. Once the
+    // desk confirms, the same call sends it.
+    const { db, shop, bookingId } = await seededBooking();
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "Tom Quinn" })
+      .where(eq(bookings.id, bookingId));
+    expect(await issueWaiverOnJoin(db, shop.id, bookingId)).toBeNull();
+    expect(await pendingWaiverCount(db, bookingId)).toBe(0);
+
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: null, identityBookedAs: null })
+      .where(eq(bookings.id, bookingId));
+    expect(await issueWaiverOnJoin(db, shop.id, bookingId)).toMatchObject({ ok: true });
+  });
 });
 
 /**

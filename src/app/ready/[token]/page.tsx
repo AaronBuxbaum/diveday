@@ -896,7 +896,7 @@ export default async function DiverReadinessPage({
   const { detail, shop, person } = data;
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
-  const firstName = detail.person.fullName.split(" ")[0] || t("ready.namelessFallback");
+  const firstName = data.greetingName.split(" ")[0] || t("ready.namelessFallback");
   // Every date, time, and relative phrase on this page formats for `locale` —
   // the *negotiated* one. These four used to pass `shop.defaultLocale`
   // straight into the formatter, so a diver reading Spanish prose got the
@@ -1729,8 +1729,8 @@ export default async function DiverReadinessPage({
           </div>
         ) : null}
         {/* Client-only, per-device convenience (task 27): remember who just
-            booked so their next visit starts from a filled-in form. */}
-        {justBooked && person.email ? (
+            booked, never on a held seat (#2125), to prefill their next visit. */}
+        {justBooked && person.email && !data.identityHeld ? (
           <RememberBooker fullName={detail.person.fullName} email={person.email} />
         ) : null}
         {/* **The thread's first coral moment, and the only one this page

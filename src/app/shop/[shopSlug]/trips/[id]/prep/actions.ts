@@ -13,6 +13,8 @@ import {
 } from "@/db/gear";
 import { getShopById } from "@/db/shops";
 import { getTripWithBooked, screenGearPicks } from "@/db/trips";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { GEAR_RETURN_OUTCOMES, tripReservationWindow } from "@/lib/gear";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -94,7 +96,11 @@ export type AssignGearUnitResult =
        * for it. `needs_care`: a proposed unit gained a lapsed clock or an open
        * service concern since the page loaded.
        */
-      reason: GearRefusalOf<ReserveGearUnitOutcome> | "invalid" | "not_wanted" | "needs_care";
+      reason:
+        | Exclude<GearRefusalOf<ReserveGearUnitOutcome>, "already_holds_kind">
+        | "invalid"
+        | "not_wanted"
+        | "needs_care";
     };
 
 /**
@@ -155,6 +161,9 @@ export async function assignGearUnit(input: {
   if (screened.kept.length === 0) return { ok: false, reason: "not_wanted" };
 
   const window = tripReservationWindow(trip, shop.timezone);
+  // The screen again, under the booking's row lock and in the write's own
+  // transaction: a second tablet that passed the screen above at the same
+  // instant is refused here rather than handed a second unit (issue #2215).
   const outcome = await reserveGearUnit(db, {
     shopId: shop.id,
     gearItemId: parsed.data.gearItemId,
@@ -162,8 +171,17 @@ export async function assignGearUnit(input: {
     tripId: parsed.data.tripId,
     reservedFrom: window.from,
     reservedUntil: window.until,
+    screen: {
+      proposed: parsed.data.proposed === true,
+      todayLocal: calendarDateInTimezone(nowDate(), shop.timezone),
+    },
   });
-  if (!outcome.ok) return { ok: false, reason: outcome.reason };
+  if (!outcome.ok) {
+    return {
+      ok: false,
+      reason: outcome.reason === "already_holds_kind" ? "not_wanted" : outcome.reason,
+    };
+  }
   // The rest of the page holds counts and a "still to assign" list that this
   // pick just changed, so the server tree is refreshed — without the redirect
   // that would throw the staffer back to the top of a long page.

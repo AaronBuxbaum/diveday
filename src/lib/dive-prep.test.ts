@@ -1705,3 +1705,50 @@ describe("participant types on the packing list (ADR 20261007-participant-types)
     ]);
   });
 });
+
+describe("a held seat on the packing list (issue #2144)", () => {
+  // A held seat may be somebody else on the matched record, so nothing of
+  // that record is packed for it, even if a caller hands the record's fit
+  // and card through. The seat still has its row, saying why it is empty.
+  const checklist = buildDivePrepChecklist({
+    divers: [
+      diver({
+        bookingId: "held",
+        fullName: "Tom Marsh",
+        identityHeld: true,
+        wantsNitrox: true,
+        hasVerifiedNitroxCard: true,
+      }),
+      diver({ bookingId: "confirmed", fullName: "Ruth Ames" }),
+    ],
+    plannedDives: 2,
+  });
+
+  it("packs nothing for it and gives it a row of its own kind", () => {
+    expect(checklist.diverLines.find((line) => line.bookingId === "held")).toMatchObject({
+      fullName: "Tom Marsh",
+      state: "identity_held",
+      items: [],
+    });
+    expect(checklist.lines.every((line) => line.count === 1)).toBe(true);
+    expect(checklist.heldSeats).toEqual([
+      { bookingId: "held", personId: "held", fullName: "Tom Marsh" },
+    ]);
+  });
+
+  it("never fills nitrox on the matched diver's card", () => {
+    expect(checklist.tanks.nitrox).toBe(0);
+    expect(checklist.nitroxBlockers).toEqual([
+      {
+        bookingId: "held",
+        personId: "held",
+        fullName: "Tom Marsh",
+        reason: "no_verified_card",
+      },
+    ]);
+  });
+
+  it("does not send the desk to ask the matched record for sizes", () => {
+    expect(checklist.diversWithIncompleteFit).toEqual([]);
+  });
+});

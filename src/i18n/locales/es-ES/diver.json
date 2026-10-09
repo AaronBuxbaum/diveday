@@ -924,6 +924,8 @@
     "metaTitle": "Completa tu exención de responsabilidad — DiveDay",
     "unavailableHeading": "Este enlace de exención no está disponible",
     "unavailableBody": "Pide a tu centro un enlace nuevo.",
+    "heldHeading": "Esta exención espera al centro",
+    "heldBody": "El centro está verificando quién va en esta reserva. Podrás firmar cuando lo confirme.",
     "expiredHeading": "Este enlace de exención ha caducado",
     "expiredBody": "Los enlaces de exención no duran mucho y este ya no sirve. Podemos enviarte uno nuevo por correo.",
     "emailFreshLink": "Envíame un enlace nuevo",

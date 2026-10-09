@@ -126,6 +126,13 @@ export type PrepDiver = {
   wantsNitrox: boolean;
   hasVerifiedNitroxCard: boolean;
   /**
+   * A held seat (glossary): the record attached may be somebody else's, so
+   * `fit` is null and `hasVerifiedNitroxCard` false whatever that record
+   * holds, and `fullName` is the name the seat was booked under. The sizes
+   * wait until the desk confirms who this is (issue #2144). Absent is false.
+   */
+  identityHeld?: boolean;
+  /**
    * How long since this diver was last in the water, as they answered it on
    * `/ready`. Null for a booking taken before the question existed, or a diver
    * who skipped it — which is silence, not an answer, and renders nothing.
@@ -289,7 +296,11 @@ export type PrepDiverLine = {
   personId: string;
   fullName: string;
   items: PrepPiece[];
-  state: "rents" | "own_kit" | "not_recorded";
+  /**
+   * `identity_held`: a held seat, whose sizes wait until the desk confirms
+   * who this is (issue #2144). Nothing is packed for it.
+   */
+  state: "rents" | "own_kit" | "not_recorded" | "identity_held";
   /** Carried through so the by-diver view can show it beside the name. */
   lastDivedBand: DiveRecencyBand | null;
 };
@@ -323,6 +334,12 @@ export type DivePrepChecklist = {
   diverLines: PrepDiverLine[];
   /** Divers who asked for enriched air but have no verified card — packed as air. */
   nitroxBlockers: NitroxBlocker[];
+  /**
+   * Held seats (glossary): packed nothing until the desk confirms who they
+   * are, because the fit and nitrox card on the matched record may be
+   * somebody else's (issue #2144).
+   */
+  heldSeats: { bookingId: string; personId: string; fullName: string }[];
   /**
    * **Divers the packing list can't be built from yet.**
    *
@@ -761,13 +778,20 @@ export function buildDivePrepChecklist(input: {
   const diversWithIncompleteFit: DivePrepChecklist["diversWithIncompleteFit"] = [];
   const now = input.now ?? nowDate();
   const diversNeedingStaffFit: DivePrepChecklist["diversNeedingStaffFit"] = [];
+  const heldSeats: DivePrepChecklist["heldSeats"] = [];
   let nitroxDivers = 0;
 
   // Gear and tanks are for the people who get in the water. A rider takes
   // nothing from the rack; a snorkeler takes surface kit and no cylinder.
   // Neither is dropped from any head count: this is the packing list, and the
   // manifest and roll call count everyone (ADR 20261007-participant-types).
-  const inWater = input.divers.filter((diver) => rentsGear(diver.participantType));
+  // A held seat carries nothing of the matched record, whatever a caller
+  // passed: the reader already clears both, and this fails closed behind it.
+  const inWater = input.divers
+    .filter((diver) => rentsGear(diver.participantType))
+    .map((diver) =>
+      diver.identityHeld ? { ...diver, fit: null, hasVerifiedNitroxCard: false } : diver,
+    );
   for (const diver of inWater) {
     const diving = isDiver(diver.participantType);
     if (diving && nitroxTanksApproved(diver)) nitroxDivers += 1;
@@ -778,6 +802,25 @@ export function buildDivePrepChecklist(input: {
         fullName: diver.fullName,
         reason: "no_verified_card",
       });
+    }
+
+    // The seat's row says its sizes wait for the desk, and nobody is sent to
+    // fill a fit on a record that may be somebody else's.
+    if (diver.identityHeld) {
+      heldSeats.push({
+        bookingId: diver.bookingId,
+        personId: diver.personId,
+        fullName: diver.fullName,
+      });
+      diverLines.push({
+        bookingId: diver.bookingId,
+        personId: diver.personId,
+        fullName: diver.fullName,
+        items: [],
+        state: "identity_held",
+        lastDivedBand: isDiver(diver.participantType) ? diver.lastDivedBand : null,
+      });
+      continue;
     }
 
     // Asked before the pieces are laid out, and of every diver — including the
@@ -909,6 +952,7 @@ export function buildDivePrepChecklist(input: {
     // whatever order the roster query happened to return.
     diverLines: diverLines.sort((a, b) => a.fullName.localeCompare(b.fullName)),
     nitroxBlockers,
+    heldSeats,
     diversWithIncompleteFit,
     diversNeedingStaffFit: diversNeedingStaffFit.sort((a, b) =>
       a.fullName.localeCompare(b.fullName),

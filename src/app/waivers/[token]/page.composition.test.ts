@@ -128,9 +128,11 @@ describe("the waiver's pacing", () => {
 describe("one notice grammar", () => {
   it("renders every banner through the one component", () => {
     // Four treatments, one per message, converged: the refusal, the saved
-    // draft, the English-only note about the document, and the expired link's
-    // rescue outcome.
-    expect(countOf("<ShopNotice")).toBe(4);
+    // draft and the English-only note about the document here, and the
+    // expired link's rescue outcome on its own card beside the page.
+    expect(countOf("<ShopNotice")).toBe(3);
+    const doorCards = readFileSync(join(__dirname, "WaiverDoorCards.tsx"), "utf8");
+    expect(doorCards.split("<ShopNotice").length - 1).toBe(1);
   });
 
   it("keeps no hand-rolled tint band of its own", () => {
@@ -328,5 +330,19 @@ describe("what this slice was forbidden to touch", () => {
     // filling in celebrates nothing.
     expect(countOf("<EarnedMoment")).toBe(1);
     expect(positionOf("<EarnedMoment")).toBeLessThan(positionOf("<form action={completeAction}"));
+  });
+});
+
+/**
+ * **A held seat's link names nobody** (issue #2125). The signer hint is the
+ * matched person's full name and the guardian section says whether they are a
+ * minor, so the held state returns before either is read.
+ */
+describe("a held seat's release", () => {
+  it("returns its held card before the signer on file is read", () => {
+    const held = positionOf('state.state === "held"');
+    expect(held).toBeGreaterThan(-1);
+    expect(held).toBeLessThan(positionOf("getWaiverSignerOnFile("));
+    expect(held).toBeLessThan(positionOf("guardianSignatureRequired("));
   });
 });

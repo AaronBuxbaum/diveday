@@ -1,6 +1,7 @@
 import { and, asc, eq, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { PrepDiver } from "@/lib/dive-prep";
+import { seatName } from "@/lib/held-seat";
 import {
   NOTHING_RENTED,
   offeredRentalFitFields,
@@ -550,6 +551,13 @@ export async function getRentalFit(db: AppDb, shopId: string, personId: string) 
  * Everything the prep checklist needs for one departure, in one read: the
  * active roster, each diver's fit, and — separately from the booking's own
  * request flag — whether their nitrox card is verified right now.
+ *
+ * **A held seat packs nothing of the matched diver's** (issue #2144, glossary
+ * "Held seat"). The record attached to it may be somebody else's, so its row
+ * carries the name it was booked under, no fit, and no verified nitrox card,
+ * with `identityHeld` set so the page can say the sizes wait for the desk. A
+ * held seat that asked for nitrox then reads as needing a card check, which is
+ * the honest state.
  */
 export async function listTripPrepDivers(
   db: AppDb,
@@ -581,28 +589,39 @@ export async function listTripPrepDivers(
     .orderBy(asc(people.fullName));
 
   const certified = await verifiedNitroxPersonIds(db, shopId);
-  return rows.map((row) => ({
-    bookingId: row.booking.id,
-    personId: row.person.id,
-    fullName: row.person.fullName,
-    fit: row.fit,
-    wantsNitrox: row.booking.wantsNitrox,
-    hasVerifiedNitroxCard: certified.has(row.person.id),
-    lastDivedBand: row.booking.lastDivedBand,
-    hotelPickupLocation: row.booking.hotelPickupLocation,
-    pickupTime: row.booking.pickupTime,
-    participantType: row.booking.participantType,
-  }));
+  return rows.map((row) => {
+    const identityHeld = row.booking.identityUnconfirmedAt !== null;
+    return {
+      bookingId: row.booking.id,
+      personId: row.person.id,
+      fullName: seatName(row.person.fullName, row.booking),
+      fit: identityHeld ? null : row.fit,
+      wantsNitrox: row.booking.wantsNitrox,
+      hasVerifiedNitroxCard: !identityHeld && certified.has(row.person.id),
+      identityHeld,
+      lastDivedBand: row.booking.lastDivedBand,
+      hotelPickupLocation: row.booking.hotelPickupLocation,
+      pickupTime: row.booking.pickupTime,
+      participantType: row.booking.participantType,
+    };
+  });
 }
 
 /**
  * Fits for one trip's active roster, keyed by booking. Joined from bookings so
  * a caller that already has the roster does not have to wait for it first —
  * this reads in parallel with everything else a manifest needs.
+ *
+ * A held seat maps to null: the fit on the matched record is somebody's, not
+ * provably the seat's (issue #2144).
  */
 export async function rentalFitByBooking(db: AppDb, shopId: string, tripId: string) {
   const rows = await db
-    .select({ bookingId: bookings.id, fit: rentalFitProfiles })
+    .select({
+      bookingId: bookings.id,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      fit: rentalFitProfiles,
+    })
     .from(bookings)
     .leftJoin(
       rentalFitProfiles,
@@ -618,5 +637,7 @@ export async function rentalFitByBooking(db: AppDb, shopId: string, tripId: stri
         ne(bookings.status, "cancelled"),
       ),
     );
-  return new Map(rows.map((row) => [row.bookingId, row.fit]));
+  return new Map(
+    rows.map((row) => [row.bookingId, row.identityUnconfirmedAt === null ? row.fit : null]),
+  );
 }

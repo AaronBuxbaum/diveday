@@ -166,10 +166,12 @@ export async function getTripPrep(
       shop.id,
       heldUnits.map((assignment) => ({ id: assignment.gearItemId, kind: assignment.kind })),
     ),
+    // A held seat's matched record may be somebody else's, so its counter
+    // rentals are not said on the seat's row (issue #2144).
     counterRentalsHeldDuring(
       db,
       shop.id,
-      divers.map((diver) => diver.personId),
+      divers.filter((diver) => !diver.identityHeld).map((diver) => diver.personId),
       gearWindow,
     ),
   ]);
@@ -299,6 +301,11 @@ export type GearPick = { bookingId: string; gearItemId: string };
  * staffer confirming it never knowingly chose a labeled unit. A hand pick
  * from the picker saw the label in the option and may still choose it: the
  * dock decides (H-06).
+ *
+ * This is the cheap first pass, for the stale tab. The same two questions are
+ * asked again inside the write (`reserveGearUnit`'s `screen`, under the
+ * booking's row lock), which is what stops two tablets that pass this screen
+ * at the same instant from giving one diver two units of a kind (issue #2215).
  *
  * Availability is still not checked here: the exclusion constraint inside
  * `reserveGearUnit` stays the only thing that can say a unit is free. A

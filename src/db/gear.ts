@@ -435,7 +435,7 @@ export async function recordGearService(
  * superseded deadline.
  */
 export async function latestServiceClocks(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   gearItemIds?: readonly string[],
 ): Promise<Map<string, GearServiceClock[]>> {
@@ -517,7 +517,7 @@ export async function latestServiceClocks(
  * guess at "probably two a day" would run the clock fast.
  */
 async function completedDivesByUnit(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   gearItemIds: readonly string[],
 ): Promise<Map<string, { tripDate: CalendarDate; plannedDives: number }[]>> {
@@ -613,8 +613,19 @@ export type ReserveGearUnitOutcome =
         | "booking_not_found"
         | "invalid_window"
         | "unit_out_of_service"
-        | "unit_unavailable";
+        | "unit_unavailable"
+        /** Screened: the booking already holds an open unit of this kind. */
+        | "already_holds_kind"
+        /** Screened, proposed: the unit has a lapsed service clock or an open concern. */
+        | "needs_care";
     };
+
+/**
+ * The Gear tab's screen, asked **inside** the reservation's transaction
+ * (issue #2215). `proposed` re-reads the unit's care as well; `todayLocal` is
+ * the shop's calendar day that care is read against.
+ */
+export type GearPickScreen = { proposed: boolean; todayLocal: CalendarDate };
 
 /**
  * Assign one unit to one booking for an inclusive date window. The
@@ -627,6 +638,17 @@ export type ReserveGearUnitOutcome =
  * derives the window from the trip, so a stale tab pairing one trip's dates
  * with another trip's booking must read as no booking at all rather than a
  * reservation on the wrong days (security review, 2026-08-20).
+ *
+ * `screen`, when given, is the Gear tab's pick screen held under a lock until
+ * the write (issue #2215). The booking row is locked `for update`, so two
+ * picks for one diver serialize on it, and under that lock the write is
+ * refused when the booking already holds an open unit of this kind
+ * (`already_holds_kind`) or, for a proposed pick, when the unit has a lapsed
+ * service clock or an open service concern (`needs_care`). Two tablets
+ * assigning BCD #3 and BCD #4 to one diver at the same instant then get one
+ * reservation and one refusal. The screen never asks whether the unit is
+ * free: the exclusion constraint stays the register's only answer to that
+ * (ADR 20260815-minimal-gear-register).
  */
 export async function reserveGearUnit(
   db: AppDb,
@@ -637,6 +659,7 @@ export async function reserveGearUnit(
     reservedFrom: string;
     reservedUntil: string;
     tripId?: string;
+    screen?: GearPickScreen;
   },
 ): Promise<ReserveGearUnitOutcome> {
   const reservedFrom = input.reservedFrom.trim();
@@ -665,7 +688,7 @@ export async function reserveGearUnit(
         sql`select pg_advisory_xact_lock(hashtext('gear_reservations'), hashtext(${input.gearItemId}))`,
       );
       const [item] = await tx
-        .select({ id: gearItems.id, status: gearItems.status })
+        .select({ id: gearItems.id, kind: gearItems.kind, status: gearItems.status })
         .from(gearItems)
         .where(
           and(
@@ -682,7 +705,7 @@ export async function reserveGearUnit(
       // A cancelled booking holds nothing: its seat is gone, and a unit
       // reserved against it hangs on the wall as "spoken for" for a diver who
       // is not coming (dive-domain review of the Gear tab's proposals).
-      const [booking] = await tx
+      const bookingQuery = tx
         .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
         .from(bookings)
         .where(
@@ -694,7 +717,21 @@ export async function reserveGearUnit(
           ),
         )
         .limit(1);
+      // Screened, the booking row is the lock two picks for one diver meet
+      // at: the second waits here until the first commits, then reads its
+      // reservation below.
+      const [booking] = input.screen ? await bookingQuery.for("update") : await bookingQuery;
       if (!booking) return { ok: false, reason: "booking_not_found" } as const;
+
+      if (input.screen) {
+        const refusal = await screenPickUnderLock(tx, {
+          shopId: input.shopId,
+          bookingId: booking.id,
+          unit: { id: item.id, kind: item.kind },
+          screen: input.screen,
+        });
+        if (refusal) return { ok: false, reason: refusal } as const;
+      }
 
       const [reservation] = await tx
         .insert(gearReservations)
@@ -727,6 +764,46 @@ export async function reserveGearUnit(
     }
     throw error;
   }
+}
+
+/**
+ * The pick screen's two questions, asked under the booking's row lock
+ * (`reserveGearUnit`): does this booking already hold an open unit of the
+ * kind, and, for a proposed pick, does the unit now need care. Null keeps the
+ * pick.
+ */
+async function screenPickUnderLock(
+  tx: DbExecutor,
+  input: {
+    shopId: string;
+    bookingId: string;
+    unit: { id: string; kind: GearItemKind };
+    screen: GearPickScreen;
+  },
+): Promise<"already_holds_kind" | "needs_care" | null> {
+  const [held] = await tx
+    .select({ id: gearReservations.id })
+    .from(gearReservations)
+    .innerJoin(gearItems, eq(gearItems.id, gearReservations.gearItemId))
+    .where(
+      and(
+        eq(gearReservations.shopId, input.shopId),
+        eq(gearReservations.bookingId, input.bookingId),
+        isNull(gearReservations.returnedAt),
+        eq(gearItems.kind, input.unit.kind),
+        liveGearItem(),
+      ),
+    )
+    .limit(1);
+  if (held) return "already_holds_kind";
+  if (!input.screen.proposed) return null;
+
+  // One after the other: a transaction is one connection.
+  const clocks = await latestServiceClocks(tx, input.shopId, [input.unit.id]);
+  const concerns = await openServiceConcerns(tx, input.shopId, [input.unit]);
+  const lapsed =
+    gearServiceState(clocks.get(input.unit.id) ?? [], input.screen.todayLocal).state === "overdue";
+  return lapsed || concerns.has(input.unit.id) ? "needs_care" : null;
 }
 
 export type GearReservationActionOutcome =
@@ -1675,7 +1752,7 @@ export type AvailableGearUnit = {
  * would wipe the concern the return before it raised (dive-domain review).
  */
 export async function openServiceConcerns(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   units: readonly { id: string; kind: GearItemKind }[],
 ): Promise<Set<string>> {
