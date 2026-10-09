@@ -776,7 +776,8 @@ describe("a departure with somebody not back aboard", () => {
       tripId: reef.id,
       options: sendOptions(afterTrip, email),
     });
-    expect(result.ok).toBe(true);
+    // Held, said as held: the staffer who tapped is told why nothing went out.
+    expect(result).toEqual({ ok: false, reason: "held" });
     expect(recapsTo(email, missing)).toHaveLength(0);
     expect(recapsTo(email, boatmate)).toHaveLength(0);
     expect(await hasSentTripRecap(db, shop.id, reef.id)).toBe(false);
@@ -1002,6 +1003,30 @@ describe("a departure with somebody not back aboard", () => {
       expect(said.ok).toBe(true);
       expect(await paused(db, reef.id)).toBe(false);
     });
+  });
+
+  // Domain review of #2123: a hold that outlives the cron's 48-hour lookback
+  // must not lose the recap. Once a staffer releases it, it goes.
+  it("still sends once released, days after the boat came home", async () => {
+    const { db, shop, reef, missing, boatmate, staffId, afterTrip } = await missingContext();
+    const say = (status: "boarded" | "not_boarded") =>
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: missing,
+        recordedByPersonId: staffId,
+        status,
+        checkpoint: "after_dive_2",
+      });
+    await say("not_boarded");
+    await say("boarded");
+    const days = new Date(afterTrip.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const released = await unpauseTripRecapAutoSend(db, shop.id, reef.id, days);
+    expect(released.ok).toBe(true);
+
+    const email = fakeEmail();
+    await sendDueRecaps(db, sendOptions(new Date(days.getTime() + 2 * 60 * 60 * 1000), email));
+    expect(recapsTo(email, boatmate)).toHaveLength(1);
   });
 
   it("ignores a crew word about somebody no longer on the roster", async () => {

@@ -1314,7 +1314,9 @@ export async function unpauseTripRecapAutoSend(
  */
 export type SendTripRecapsResult =
   | { ok: true; summary: RecapRunSummary }
-  | { ok: false; reason: "not_found" };
+  | { ok: false; reason: "not_found" }
+  /** Somebody on the departure is "not back aboard" (#2123): nothing was sent. */
+  | { ok: false; reason: "held" };
 
 export async function sendTripRecaps(
   db: AppDb,
@@ -1327,6 +1329,9 @@ export async function sendTripRecaps(
     .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
     .limit(1);
   if (trip?.status !== "scheduled") return { ok: false, reason: "not_found" };
+  if ((await tripsWithSomebodyMissing(db, input.shopId, [input.tripId], now)).size > 0) {
+    return { ok: false, reason: "held" };
+  }
   return {
     ok: true,
     summary: await sendRecaps(
@@ -1393,7 +1398,10 @@ async function sendRecaps(
           : [
               eq(trips.recapAutoSendPaused, false),
               isNotNull(trips.endsAt),
-              gt(trips.endsAt, since),
+              // A recap a staffer released late (`unpauseTripRecapAutoSend`) —
+              // a hold on a missing diver can outlast the lookback (#2123) —
+              // is in the window by its rescheduled time, not lost to it.
+              or(gt(trips.endsAt, since), gt(trips.recapAutoSendAt, since)),
               or(
                 and(isNotNull(trips.recapAutoSendAt), lte(trips.recapAutoSendAt, now)),
                 and(isNull(trips.recapAutoSendAt), lte(trips.endsAt, eligibleBefore)),
