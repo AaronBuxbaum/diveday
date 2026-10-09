@@ -29,6 +29,7 @@ import {
   issueAndDeliverPersonWaiver,
   issueAndDeliverWaiver,
   issueWaiverOnJoin,
+  sendReleasesOnceIdentityKnown,
 } from "./waiver-issue";
 import {
   completeWaiver,
@@ -878,5 +879,42 @@ describe("getDiverWaiverRequestStatus", () => {
     await expect(getDiverWaiverChannelStates(db, shop.id, personId)).resolves.toMatchObject({
       email: "failed",
     });
+  });
+});
+
+/**
+ * **Confirm and split say what happened to the release** (dive-domain review
+ * of issue #2125). A held seat was sent nothing; once the desk knows who it
+ * is the release goes out, and the notice says whether it reached anyone, so
+ * a diver nobody could reach is handed a device or paper at the counter
+ * rather than assumed to be signing at home. Every seat a split moved is sent
+ * one too (security review).
+ */
+describe("sendReleasesOnceIdentityKnown", () => {
+  function stubSes() {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    vi.stubEnv("SES_AWS_REGION", "us-east-1");
+    vi.stubEnv("SES_AWS_ACCESS_KEY_ID", "AKIA_TEST");
+    vi.stubEnv("SES_AWS_SECRET_ACCESS_KEY", "test-secret");
+    vi.stubEnv("SES_FROM_EMAIL", "shop@diveday.example");
+    sesSend.mockResolvedValue({ MessageId: "identity-release" });
+  }
+
+  it("says sent when every seat's release went out", async () => {
+    stubSes();
+    const { db, shop, bookingId } = await seededBooking();
+    expect(await sendReleasesOnceIdentityKnown(db, shop.id, [bookingId])).toBe("sent");
+  });
+
+  it("says ready when a seat has nowhere to send it, so the counter hands it over", async () => {
+    stubSes();
+    const { db, shop, bookingId } = await seededBooking(null);
+    expect(await sendReleasesOnceIdentityKnown(db, shop.id, [bookingId])).toBe("ready");
+  });
+
+  it("says not_needed when no seat owes a release", async () => {
+    const { db, shop, bookingId } = await seededBooking();
+    await issueWaiverOnJoin(db, shop.id, bookingId);
+    expect(await sendReleasesOnceIdentityKnown(db, shop.id, [bookingId])).toBe("not_needed");
   });
 });

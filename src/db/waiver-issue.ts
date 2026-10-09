@@ -684,3 +684,45 @@ export async function deliverWaiverBatch(
   }
   return outcome;
 }
+
+/**
+ * What sending the releases a held seat was owed came to, once the desk knows
+ * who it is (confirm, or split with every seat it moved). A code the notice
+ * picks words for: `sent` when every owed release went out, `ready` when one
+ * has a link and nowhere it was sent (the row hands it over on this device or
+ * on paper), `failed` when one could not be issued, `not_needed` when no seat
+ * owed one. The worst outcome speaks for the lot.
+ */
+export type IdentityReleaseOutcome = "sent" | "ready" | "failed" | "not_needed";
+
+export async function sendReleasesOnceIdentityKnown(
+  db: AppDb,
+  shopId: string,
+  bookingIds: readonly string[],
+): Promise<IdentityReleaseOutcome> {
+  let outcome: IdentityReleaseOutcome = "not_needed";
+  const rank: Record<IdentityReleaseOutcome, number> = {
+    not_needed: 0,
+    sent: 1,
+    ready: 2,
+    failed: 3,
+  };
+  // One at a time: each send reads and writes the seat's own readiness.
+  for (const bookingId of bookingIds) {
+    const result = await issueWaiverOnJoin(db, shopId, bookingId).catch(() => "failed" as const);
+    const seat: IdentityReleaseOutcome =
+      result === null
+        ? "not_needed"
+        : result === "failed"
+          ? "failed"
+          : !result.ok
+            ? result.reason === "already_completed"
+              ? "not_needed"
+              : "failed"
+            : result.delivery === "sent"
+              ? "sent"
+              : "ready";
+    if (rank[seat] > rank[outcome]) outcome = seat;
+  }
+  return outcome;
+}

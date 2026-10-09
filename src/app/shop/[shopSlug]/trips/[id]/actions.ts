@@ -68,7 +68,11 @@ import {
   updateTripConditions,
 } from "@/db/trips";
 import { joinTripWaitlist, type WaitlistOutcome } from "@/db/waitlist";
-import { deliverWaiverBatch, issueWaiverOnJoin } from "@/db/waiver-issue";
+import {
+  deliverWaiverBatch,
+  type IdentityReleaseOutcome,
+  sendReleasesOnceIdentityKnown,
+} from "@/db/waiver-issue";
 import {
   recordInPersonWaiver,
   retireMedicalRefusal,
@@ -1278,15 +1282,14 @@ export async function confirmDiverIdentityAction(
     bookingId,
     actorPersonId: s.user.personId,
   });
+  if (!confirmed) revalidateAndRedirect(back, noticeUrl(back, "invalid", { bid: bookingId }));
   // A held seat was sent no release (issue #2125); now that the desk knows
   // who it is, it goes out the way a join's does, unless their signature
-  // already covers it. Best-effort: the confirmation stands either way.
-  if (confirmed) {
-    await issueWaiverOnJoin(db, s.user.shopId, bookingId).catch(() => null);
-  }
+  // already covers it, and the notice says where it got to.
+  const release = await sendReleasesOnceIdentityKnown(db, s.user.shopId, [bookingId]);
   revalidateAndRedirect(
     back,
-    noticeUrl(back, confirmed ? "identity-confirmed" : "invalid", { bid: bookingId }),
+    noticeUrl(back, IDENTITY_RELEASE_NOTICE.confirmed[release], { bid: bookingId }),
   );
 }
 
@@ -1333,16 +1336,40 @@ export async function splitDiverIdentityAction(
       .split(",")
       .filter((id) => uuidParam(id)),
   });
-  // The seat is its own diver now, and was sent no release while it was held
-  // (issue #2125): it goes out the way a join's does.
-  if (split.ok) await issueWaiverOnJoin(db, s.user.shopId, bookingId).catch(() => null);
+  if (!split.ok) {
+    revalidateAndRedirect(
+      back,
+      noticeUrl(back, SPLIT_REFUSAL_NOTICE[split.reason], { bid: bookingId }),
+    );
+  }
+  // Every seat that moved is its own diver's now, and was sent no release
+  // while it was held (issue #2125): each goes out the way a join's does.
+  const release = await sendReleasesOnceIdentityKnown(db, s.user.shopId, split.seatIds);
   revalidateAndRedirect(
     back,
-    noticeUrl(back, split.ok ? "identity-split" : SPLIT_REFUSAL_NOTICE[split.reason], {
-      bid: bookingId,
-    }),
+    noticeUrl(back, IDENTITY_RELEASE_NOTICE.split[release], { bid: bookingId }),
   );
 }
+
+/**
+ * Which notice confirm and split land on, by what sending the owed release
+ * came to (`sendReleasesOnceIdentityKnown`). A release that reached nobody
+ * reads as the row's to hand over, on this device or on paper.
+ */
+const IDENTITY_RELEASE_NOTICE = {
+  confirmed: {
+    not_needed: "identity-confirmed",
+    sent: "identity-confirmed-waiver-sent",
+    ready: "new-waiver-ready",
+    failed: "new-waiver-failed",
+  },
+  split: {
+    not_needed: "identity-split",
+    sent: "identity-split-waiver-sent",
+    ready: "new-waiver-ready",
+    failed: "new-waiver-failed",
+  },
+} as const satisfies Record<"confirmed" | "split", Record<IdentityReleaseOutcome, string>>;
 
 /** Which notice each refused split lands on (`splitBookingIdentity`). */
 const SPLIT_REFUSAL_NOTICE = {
