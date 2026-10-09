@@ -1554,8 +1554,9 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     );
 
   // --- orders --------------------------------------------------------------
-  // `stripe_customer_id` and `stripe_invoice_id` are NOT NULL pointers into the
-  // shop's own Stripe account and stay on the row — the local record of which
+  // `stripe_customer_id` and `stripe_invoice_id` are pointers into the shop's
+  // own Stripe account (null only on an order paid at the counter) and stay on
+  // the row — the local record of which
   // objects the order maps to is what makes the processor-side work findable at
   // all. What this statement closes is the pair of hosted document links:
   // Stripe's hosted invoice page and invoice PDF are publicly reachable URLs
@@ -1608,6 +1609,9 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // `stripe_account_id` travels with the entry rather than the shop's current
   // account, the same discipline `refundOrder` uses.
   for (const row of orderRows) {
+    // An order paid at the counter (cash, the shop's own card machine) has no
+    // Stripe ids and nothing at Stripe to erase (ADR 20261009-counter-payments).
+    if (!row.stripeAccountId || !row.stripeCustomerId || !row.stripeInvoiceId) continue;
     processorTargets.push({
       target: "stripe_customer",
       externalId: row.stripeCustomerId,

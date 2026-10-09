@@ -506,6 +506,19 @@ export const orderStatus = pgEnum("order_status", [
 ]);
 
 /**
+ * How an order's money was taken (ADR 20261009-counter-payments).
+ * `stripe_invoice` is the ordinary path: a Stripe invoice on the shop's
+ * connected account, settled by webhook. `cash` and `card_machine` are paid at
+ * the counter outside Stripe and recorded already paid; such an order carries
+ * no Stripe ids, and every Stripe operation refuses it.
+ */
+export const orderCollection = pgEnum("order_collection", [
+  "stripe_invoice",
+  "cash",
+  "card_machine",
+]);
+
+/**
  * What one order line represents — free-form `other` always available since
  * shops will invoice things this catalog doesn't anticipate.
  */
@@ -577,15 +590,17 @@ export const orders = pgTable(
      */
     refundedCents: integer("refunded_cents").notNull().default(0),
     description: text("description"),
-    stripeAccountId: text("stripe_account_id").notNull(),
-    stripeCustomerId: text("stripe_customer_id").notNull(),
-    stripeInvoiceId: text("stripe_invoice_id").notNull(),
+    /** How the money was taken; anything but `stripe_invoice` has no Stripe ids. */
+    collection: orderCollection("collection").notNull().default("stripe_invoice"),
+    stripeAccountId: text("stripe_account_id"),
+    stripeCustomerId: text("stripe_customer_id"),
+    stripeInvoiceId: text("stripe_invoice_id"),
     /**
      * The PaymentIntent that paid the invoice, read off `invoice.paid` (or
      * asked of Stripe the first time a refund or dispute names it). It is the
      * only handle a `charge.refunded` or `charge.dispute.*` event carries back
      * to this order (ADR 20261009-stripe-reversals-reach-diveday). Null until
-     * paid.
+     * paid, and always null on an order paid at the counter.
      */
     stripePaymentIntentId: text("stripe_payment_intent_id"),
     hostedInvoiceUrl: text("hosted_invoice_url"),
@@ -615,6 +630,10 @@ export const orders = pgTable(
     check("orders_tax_nonnegative", sql`${table.taxCents} >= 0`),
     check("orders_amount_paid_nonnegative", sql`${table.amountPaidCents} >= 0`),
     check("orders_refunded_nonnegative", sql`${table.refundedCents} >= 0`),
+    check(
+      "orders_stripe_ids_match_collection",
+      sql`(${table.collection} = 'stripe_invoice' and ${table.stripeAccountId} is not null and ${table.stripeCustomerId} is not null and ${table.stripeInvoiceId} is not null) or (${table.collection} <> 'stripe_invoice' and ${table.stripeAccountId} is null and ${table.stripeCustomerId} is null and ${table.stripeInvoiceId} is null and ${table.stripePaymentIntentId} is null)`,
+    ),
   ],
 );
 
@@ -1273,6 +1292,7 @@ export type ShopStripeAccount = typeof shopStripeAccounts.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 
 export type OrderStatus = (typeof orderStatus.enumValues)[number];
+export type OrderCollection = (typeof orderCollection.enumValues)[number];
 
 export type OrderLineItemKind = (typeof orderLineItemKind.enumValues)[number];
 

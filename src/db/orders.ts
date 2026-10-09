@@ -13,6 +13,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { isStaff } from "@/lib/authz";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
@@ -23,7 +24,7 @@ import {
   invoicingProviderFromEnvironment,
   isUsableInvoiceCustomerAddress,
 } from "@/lib/payments/invoicing";
-import { canPersonManageOrders } from "./authz";
+import { canPersonManageOrders, loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { grantPackageEntitlementsForPaidOrder } from "./dive-packages";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
@@ -39,6 +40,7 @@ import { setBookingPayment, setBookingPaymentIfNotFinal } from "./payments";
 import { queryAll } from "./query-helpers";
 import type {
   Order,
+  OrderCollection,
   OrderLineItemKind,
   OrderStatus,
   PaymentEventOperation,
@@ -147,6 +149,25 @@ function lineItemIsValid(item: NewOrderLineItem, maxUnitAmountCents: number): bo
     item.description.trim().length > 0 &&
     item.description.length <= MAX_LINE_ITEM_DESCRIPTION_LENGTH
   );
+}
+
+/**
+ * The Stripe invoice an order is backed by, or `null` for an order paid at the
+ * counter (`collection` is `cash` or `card_machine`), which has none (ADR
+ * 20261009-counter-payments). Every Stripe operation on an order goes through
+ * this, so a counter order is refused by construction rather than by a
+ * reminder: the check constraint `orders_stripe_ids_match_collection` makes
+ * the three ids present exactly when `collection` is `stripe_invoice`.
+ */
+export function stripeInvoiceOf(order: Order): {
+  stripeAccountId: string;
+  stripeCustomerId: string;
+  stripeInvoiceId: string;
+} | null {
+  if (order.collection !== "stripe_invoice") return null;
+  const { stripeAccountId, stripeCustomerId, stripeInvoiceId } = order;
+  if (!stripeAccountId || !stripeCustomerId || !stripeInvoiceId) return null;
+  return { stripeAccountId, stripeCustomerId, stripeInvoiceId };
 }
 
 function mapStripeStatus(stripeStatus: string): OrderStatus {
@@ -361,6 +382,189 @@ export async function createOrder(
   await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
 
   return { ok: true, order };
+}
+
+/** How a counter order's money was taken: anything but a Stripe invoice. */
+export type CounterCollection = Extract<OrderCollection, "cash" | "card_machine">;
+
+export type NewCounterOrderInput = {
+  shopId: string;
+  /** The person who paid. Must belong to the shop. */
+  personId: string;
+  /** The staff member who took the money; any active staff role will do. */
+  createdByPersonId: string;
+  collection: CounterCollection;
+  /** Same shape and bounds as {@link createOrder}'s. */
+  lineItems: NewOrderLineItem[];
+  description?: string | null;
+};
+
+export type RecordCounterOrderOutcome =
+  | { ok: true; order: Order }
+  | { ok: false; reason: "invalid" };
+
+const COUNTER_COLLECTIONS: ReadonlySet<string> = new Set<CounterCollection>([
+  "cash",
+  "card_machine",
+]);
+
+/**
+ * Record money a shop has already taken at the counter, in cash or on its own
+ * card machine, as a paid order (ADR 20261009-counter-payments).
+ *
+ * Nothing is sent anywhere: no Stripe call, no email. The row is written
+ * `paid` with `amount_paid_cents = total_cents`, the sum of the lines, so it
+ * reads as Paid on the Orders ledger and counts in Reports exactly like a
+ * settled invoice. `tax_cents` is 0 because the figure is what was collected,
+ * tax included; DiveDay computed none of it.
+ *
+ * **Any active staff member may record one.** Taking cash for a rental is day
+ * work, like renting the gear out (H-06); billing a diver by invoice stays
+ * owner/manager (H-14, `createOrder`). Every refusal is `invalid`: a caller
+ * that is not staff here, a payer from another shop, or lines that would not
+ * pass `createOrder`'s bounds.
+ *
+ * Emits `order.paid` under the same idempotency key a settled invoice uses, so
+ * an accounting integration books it once, like any other paid order.
+ */
+export async function recordCounterOrder(
+  db: AppDb,
+  input: NewCounterOrderInput,
+): Promise<RecordCounterOrderOutcome> {
+  const invalid = { ok: false, reason: "invalid" } as const;
+  if (!COUNTER_COLLECTIONS.has(input.collection)) return invalid;
+  const roles = await loadActiveStaffRoles(db, input.shopId, input.createdByPersonId);
+  if (!roles || !isStaff(roles)) return invalid;
+  if (input.lineItems.length === 0 || input.lineItems.length > MAX_LINE_ITEMS_PER_ORDER) {
+    return invalid;
+  }
+  if ((input.description?.length ?? 0) > MAX_ORDER_DESCRIPTION_LENGTH) return invalid;
+  const currency = await getShopCurrency(db, input.shopId);
+  const maxUnitAmountCents = maxLineItemUnitAmountCents(currency);
+  if (!input.lineItems.every((item) => lineItemIsValid(item, maxUnitAmountCents))) {
+    return invalid;
+  }
+
+  const [payer] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(
+      and(eq(people.id, input.personId), eq(people.shopId, input.shopId), isNull(people.deletedAt)),
+    )
+    .limit(1);
+  if (!payer) return invalid;
+
+  const totalCents = input.lineItems.reduce(
+    (total, item) => total + item.quantity * item.unitAmountCents,
+    0,
+  );
+  const passThroughCents = input.lineItems.reduce(
+    (total, item) =>
+      total + (item.kind === "pass_through_fee" ? item.quantity * item.unitAmountCents : 0),
+    0,
+  );
+  const now = nowDate();
+
+  const order = await db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(orders)
+      .values({
+        shopId: input.shopId,
+        bookingId: null,
+        personId: payer.id,
+        createdByPersonId: input.createdByPersonId,
+        status: "paid",
+        collection: input.collection,
+        currency,
+        totalCents,
+        passThroughCents,
+        taxCents: 0,
+        amountPaidCents: totalCents,
+        description: input.description ?? null,
+        stripeAccountId: null,
+        stripeCustomerId: null,
+        stripeInvoiceId: null,
+        finalizedAt: now,
+        paidAt: now,
+      })
+      .returning();
+    if (!created) throw new Error("recordCounterOrder: insert returned no row");
+
+    await tx.insert(orderLineItems).values(
+      input.lineItems.map((item) => ({
+        shopId: input.shopId,
+        orderId: created.id,
+        kind: item.kind,
+        description: item.description,
+        quantity: item.quantity,
+        unitAmountCents: item.unitAmountCents,
+        packageId: item.packageId ?? null,
+      })),
+    );
+
+    // The same paid-order consequences `createOrder` runs for an invoice Stripe
+    // already reports paid: a package bought over the counter is a package.
+    await grantPackageEntitlementsForPaidOrder(tx, {
+      shopId: input.shopId,
+      orderId: created.id,
+      purchasedAt: created.paidAt ?? undefined,
+    });
+    await enqueueOrderIntegrationEvent(tx, {
+      shopId: input.shopId,
+      orderId: created.id,
+      eventType: "order.paid",
+      idempotencyKey: `order:${created.id}:paid`,
+      status: created.status,
+      amountPaidCents: created.amountPaidCents,
+      refundedCents: created.refundedCents,
+    });
+    return created;
+  });
+
+  return { ok: true, order };
+}
+
+export type VoidCounterOrderOutcome =
+  | { ok: true; order: Order }
+  | { ok: false; reason: "not_authorized" | "not_found" | "not_voidable" };
+
+/**
+ * Take back a counter order recorded by mistake (ADR 20261009-counter-payments).
+ *
+ * Local only, since nothing reached Stripe. Owner/manager, like every other
+ * correction to the shop's money (H-14), even though recording one is any
+ * staff member's: a void takes revenue off the books. It sets `void`, stamps
+ * `voided_at`, and zeroes `amount_paid_cents`, so Reports, which sums that
+ * column, drops it. Only a `paid` counter order qualifies; a Stripe invoice is
+ * voided through Stripe (`voidOrder`) and refunded through Stripe
+ * (`refundOrder`).
+ */
+export async function voidCounterOrder(
+  db: AppDb,
+  input: { shopId: string; orderId: string; actorPersonId: string },
+): Promise<VoidCounterOrderOutcome> {
+  if (!(await canPersonManageOrders(db, input.shopId, input.actorPersonId))) {
+    return { ok: false, reason: "not_authorized" };
+  }
+  return db.transaction(async (tx): Promise<VoidCounterOrderOutcome> => {
+    const [current] = await tx
+      .select()
+      .from(orders)
+      .where(and(eq(orders.id, input.orderId), eq(orders.shopId, input.shopId)))
+      .for("update");
+    if (!current) return { ok: false, reason: "not_found" };
+    if (current.collection === "stripe_invoice" || current.status !== "paid") {
+      return { ok: false, reason: "not_voidable" };
+    }
+    const now = nowDate();
+    const [updated] = await tx
+      .update(orders)
+      .set({ status: "void", voidedAt: now, amountPaidCents: 0, updatedAt: now })
+      .where(eq(orders.id, current.id))
+      .returning();
+    if (!updated) return { ok: false, reason: "not_found" };
+    return { ok: true, order: updated };
+  });
 }
 
 /** Every person at the shop, for the new-order customer picker. */
@@ -1171,7 +1375,10 @@ async function applyOrderUpdate(
  * call) that doesn't supply an expected account opts out of the check
  * rather than being refused by it.
  */
-function accountMatches(expectedAccountId: string | undefined, rowAccountId: string): boolean {
+function accountMatches(
+  expectedAccountId: string | undefined,
+  rowAccountId: string | null,
+): boolean {
   return expectedAccountId === undefined || expectedAccountId === rowAccountId;
 }
 
@@ -1312,7 +1519,10 @@ export async function voidOrder(
     .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)))
     .limit(1);
   if (order?.status !== "open") return null;
-  const result = await invoicing.voidInvoice(order.stripeAccountId, order.stripeInvoiceId);
+  // A counter order is never `open`, but the refusal is stated, not inferred.
+  const invoice = stripeInvoiceOf(order);
+  if (!invoice) return null;
+  const result = await invoicing.voidInvoice(invoice.stripeAccountId, invoice.stripeInvoiceId);
   if (result.status !== "voided") return null;
   return applyOrderUpdate(db, order, { status: "void" });
 }
@@ -1330,6 +1540,9 @@ export async function voidOrder(
  *   own code rather than `failed` because nothing was attempted and nothing
  *   is wrong at Stripe: the staffer typed a number and needs to see which
  *   number is wrong (ADR 20260806 — new failure modes get new codes).
+ * - `not_invoiced` — the money was taken at the counter (cash or the shop's
+ *   own card machine), so there is no Stripe charge to reverse; a mistake is
+ *   corrected with `voidCounterOrder` (ADR 20261009-counter-payments).
  * - `failed` — Stripe refused the reversal, or the local write after it did.
  */
 export type RefundOrderOutcome =
@@ -1341,13 +1554,25 @@ export type RefundOrderOutcome =
         | "in_progress"
         | "invalid_amount"
         | "needs_reconciliation"
+        | "not_invoiced"
         | "failed";
     };
 
 type OrderRefundClaim =
-  | { status: "claimed"; order: Order; intent: PaymentOperationIntent }
   | {
-      status: "not_found" | "not_paid" | "in_progress" | "invalid_amount" | "needs_reconciliation";
+      status: "claimed";
+      order: Order;
+      invoice: NonNullable<ReturnType<typeof stripeInvoiceOf>>;
+      intent: PaymentOperationIntent;
+    }
+  | {
+      status:
+        | "not_found"
+        | "not_paid"
+        | "in_progress"
+        | "invalid_amount"
+        | "needs_reconciliation"
+        | "not_invoiced";
     };
 
 /**
@@ -1428,6 +1653,9 @@ async function claimOrderRefund(
       .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)))
       .for("update");
     if (!order) return { status: "not_found" };
+    // Before any intent is minted: a counter order has nothing at Stripe.
+    const invoice = stripeInvoiceOf(order);
+    if (!invoice) return { status: "not_invoiced" };
     // A part-refunded order still holds money, so it is still refundable.
     if (order.status !== "paid" && order.status !== "partly_refunded") {
       return { status: "not_paid" };
@@ -1492,7 +1720,7 @@ async function claimOrderRefund(
       kind: "refund",
       orderId: order.id,
     });
-    return { status: "claimed", order, intent };
+    return { status: "claimed", order, invoice, intent };
   });
 }
 
@@ -1539,11 +1767,11 @@ export async function refundOrder(
     options.amountCents,
   );
   if (claim.status !== "claimed") return { status: claim.status };
-  const { order, intent } = claim;
+  const { order, invoice, intent } = claim;
 
   const result = await invoicing.refundInvoice(
-    order.stripeAccountId,
-    order.stripeInvoiceId,
+    invoice.stripeAccountId,
+    invoice.stripeInvoiceId,
     idempotencyKeyFor(intent.id),
     options.amountCents,
   );
@@ -1616,7 +1844,11 @@ export async function resendOrderInvoice(
     .limit(1);
   if (!order) return { status: "not_found" };
   if (order.status !== "open") return { status: "not_open" };
-  const result = await invoicing.resendInvoice(order.stripeAccountId, order.stripeInvoiceId);
+  // A counter order is recorded paid, so it never reaches here as `open`; if
+  // it somehow did, there is still no invoice to send, which is `not_open`.
+  const invoice = stripeInvoiceOf(order);
+  if (!invoice) return { status: "not_open" };
+  const result = await invoicing.resendInvoice(invoice.stripeAccountId, invoice.stripeInvoiceId);
   return result.status === "sent" ? { status: "sent" } : { status: result.status };
 }
 
@@ -1633,7 +1865,10 @@ export async function refreshOrderStatus(
     .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)))
     .limit(1);
   if (!order) return null;
-  const result = await invoicing.retrieveInvoice(order.stripeAccountId, order.stripeInvoiceId);
+  // Nothing at Stripe to read: the counter record is the whole truth.
+  const invoice = stripeInvoiceOf(order);
+  if (!invoice) return null;
+  const result = await invoicing.retrieveInvoice(invoice.stripeAccountId, invoice.stripeInvoiceId);
   if (result.status !== "ok") return null;
   // **A refunded order refreshes its links and nothing else.** Stripe leaves an
   // invoice `paid` after a refund — the reversal attaches to the payment intent,
