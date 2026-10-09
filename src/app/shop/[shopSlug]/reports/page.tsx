@@ -32,7 +32,6 @@ import {
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTimeZoneName, monthNames } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
-import type { RevenueLine } from "@/lib/report-lines";
 import {
   compareMonthlyReports,
   formatPercent,
@@ -52,6 +51,7 @@ import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DepartureLedger, type DepartureRow } from "./_components/DepartureLedger";
 import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
 import { MonthJump } from "./_components/MonthJump";
+import { MoneyByLine, MonthDetailLines } from "./_components/MonthMoneyDetail";
 import { ReportRangeTabs } from "./_components/ReportRangeTabs";
 import { YearReport } from "./_components/YearReport";
 
@@ -97,16 +97,6 @@ function earlierMonth(left: MonthRef, right: MonthRef): MonthRef {
  * round each one. The month arithmetic, the picker's floor, the baseline
  * choice and the CSV are untouched.
  */
-/** Each revenue line's name in the staff bundle. */
-const BY_LINE_KEYS = {
-  courses: "reports.byLine.courses",
-  funDives: "reports.byLine.funDives",
-  rentals: "reports.byLine.rentals",
-  gearBench: "reports.byLine.gearBench",
-  packages: "reports.byLine.packages",
-  retail: "reports.byLine.retail",
-} as const satisfies Record<RevenueLine, string>;
-
 export default async function ReportsPage({
   params,
   searchParams,
@@ -308,6 +298,7 @@ export default async function ReportsPage({
     getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now),
   ]);
   const report = summarizeMonth(input);
+  const money = (cents: number) => formatReportMoney(cents, currency, locale);
   const baselineReport = baselineInput ? summarizeMonth(baselineInput) : null;
   const comparison: MonthComparison | null =
     baselineReport && baselineKind
@@ -663,84 +654,8 @@ export default async function ReportsPage({
             </section>
           ) : null}
 
-          {/* **A count, never the slugs** (issue #1294). This was a "Who sent
-              divers" ledger naming each partner; nothing anywhere can tell a
-              hotel's slug from one an anonymous visitor invented by editing the
-              storefront URL and booking a seat, because `partnerLinkUrl` writes
-              no row. So the shop is told the fact — their partner links are
-              working, and how hard — without a staff page printing a stranger's
-              text as a business fact.
-
-              A quiet line rather than a section, on the tax line's pattern: one
-              number does not earn a heading over it, and a month with no
-              referred seats renders nothing at all. */}
-          {report.partnerReferredSeats > 0 ? (
-            <p className="mt-3 text-end text-sm text-muted tabular-nums">
-              {t("reports.partnerArrivals", { count: report.partnerReferredSeats })}
-            </p>
-          ) : null}
-
-          {/* **Where the month's seats came from, when they came from a
-              person** (ADR 20260908-one-hand, decision 6, lever W). A quiet
-              line on the pattern the partner line above already set: a number
-              does not earn a heading over it, and a month with none renders
-              nothing at all. */}
-          {report.buddyReferredSeats > 0 ? (
-            <p className="mt-1 text-end text-sm text-muted tabular-nums">
-              {t("reports.buddySeats", { count: report.buddyReferredSeats })}
-            </p>
-          ) : null}
-
-          {/* The month's divers who had been out before, and the package
-              dives the shop still owes, on the quiet-line pattern above: a
-              number each, no heading, nothing at all when there is none. */}
-          {moneyDetail.divers.returning > 0 ? (
-            <p className="mt-1 text-end text-sm text-muted tabular-nums">
-              {t("reports.returningDivers", {
-                returning: moneyDetail.divers.returning,
-                total: moneyDetail.divers.total,
-              })}
-            </p>
-          ) : null}
-          {moneyDetail.packageDivesOwed.dives > 0 ? (
-            <p className="mt-1 text-end text-sm text-muted tabular-nums">
-              {t("reports.packagesOwed", {
-                dives: moneyDetail.packageDivesOwed.dives,
-                amount: formatReportMoney(
-                  moneyDetail.packageDivesOwed.valueCents,
-                  currency,
-                  locale,
-                ),
-              })}
-            </p>
-          ) : null}
-
-          {/* **Where the money came from** (owner decision 2026-10-09). Plain
-              text, one line per source, no bars: the figures are the facts,
-              and a line that came to nothing is left out rather than read as
-              $0. Its basis is the day the money was paid, which is not the
-              departures the Revenue figure is anchored to, so it says so. */}
-          {moneyDetail.lines.length > 0 ? (
-            <section aria-labelledby="reports-by-line" className="mt-10">
-              <h2 id="reports-by-line" className={SECTION_TITLE_CLASS}>
-                {t("reports.byLine.heading")}
-              </h2>
-              <p className="mt-1 text-sm text-muted">{t("reports.byLine.caption")}</p>
-              <dl className="mt-3 max-w-md">
-                {moneyDetail.lines.map(({ line, cents }) => (
-                  <div
-                    key={line}
-                    className="flex items-baseline justify-between gap-4 border-t border-border py-2 text-sm last:border-b"
-                  >
-                    <dt>{t(BY_LINE_KEYS[line])}</dt>
-                    <dd className="font-medium tabular-nums">
-                      {formatReportMoney(cents, currency, locale)}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-          ) : null}
+          <MonthDetailLines report={report} detail={moneyDetail} t={t} money={money} />
+          <MoneyByLine detail={moneyDetail} t={t} money={money} />
 
           {report.tripCount > 0 ? (
             <DepartureLedger

@@ -31,18 +31,18 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { timeZoneLabel } from "@/i18n/timezone-labels";
 import { nowDate } from "@/lib/clock";
-import { formatDateTimeTz, formatMoneyScanned } from "@/lib/format";
-import { currencySymbol, toShopCurrency } from "@/lib/money";
+import { formatDateTimeTz } from "@/lib/format";
+import { toShopCurrency } from "@/lib/money";
 import {
   PROMO_DISCOUNT_MAX,
   PROMO_DISCOUNT_MIN,
   type PromoLedgerGroup,
-  promoDiscountOf,
   promoLedgerGroup,
 } from "@/lib/promo-codes";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
+import { PromoDiscountFields, promoDiscountText } from "./_components/PromoDiscountFields";
 import {
   PromoCodeLedger,
   type PromoCodeRow,
@@ -242,18 +242,6 @@ export default async function PromosPage({
   const t = staffTranslator(locale);
   const timezone = shop?.timezone ?? "UTC";
   const currency = toShopCurrency(shop?.currency);
-  /** "15% off", or "$20 off each booking": what one code or deal takes off. */
-  const discountText = (row: {
-    discountPercent: number | null;
-    discountAmountCents: number | null;
-  }): string => {
-    const discount = promoDiscountOf(row);
-    return discount?.kind === "amount"
-      ? t("promos.discountAmountOff", {
-          amount: formatMoneyScanned(discount.amountCents, currency, locale),
-        })
-      : t("promos.discountOff", { percent: discount?.percent ?? 0 });
-  };
 
   /**
    * One code's row, already worded. The shelf comes off `promoLedgerGroup`
@@ -275,7 +263,7 @@ export default async function PromosPage({
       id: promo.id,
       group,
       code: promo.code,
-      discount: discountText(promo),
+      discount: promoDiscountText(t, promo, currency, locale),
       ...(badge ? { badge: { tone: badge.tone, word: t(badge.key) } } : {}),
       description: promo.description,
       // One line, three facts: what it buys, the window it buys in, and what
@@ -344,7 +332,7 @@ export default async function PromosPage({
   const dealRows: TripDealRow[] = tripDeals.map((deal) => ({
     id: deal.id,
     code: deal.code,
-    discount: discountText(deal),
+    discount: promoDiscountText(t, deal, currency, locale),
     tripTitle: deal.tripTitle,
     href: `/shop/${shopSlug}/trips/${deal.tripId}?view=details#last-minute-deal`,
     facts: [
@@ -469,33 +457,12 @@ export default async function PromosPage({
                   ))}
                 </select>
               </Field>
-              {/* A percent, or a fixed amount taken once off the whole booking
-                  (`PromoDiscount`, src/lib/promo-codes.ts). Two boxes rather
-                  than one clever one: the type is a choice the staffer makes,
-                  and the number means what the type beside it says. The range
-                  is checked on the server, where a refusal lands on the number. */}
-              <Field label={t("promos.fields.discountKind")}>
-                <select name="discountKind" defaultValue="percent" className={controlClass}>
-                  <option value="percent">{t("promos.fields.discountKindPercent")}</option>
-                  <option value="amount">
-                    {t("promos.fields.discountKindAmount", {
-                      currency: currencySymbol(currency, locale),
-                    })}
-                  </option>
-                </select>
-              </Field>
-              <Field label={t("promos.fields.discount")} error={fieldError("discount")}>
-                <input
-                  name="discount"
-                  type="number"
-                  inputMode="decimal"
-                  required
-                  min={1}
-                  step="any"
-                  defaultValue={10}
-                  className={`${controlClass} tabular-nums`}
-                />
-              </Field>
+              <PromoDiscountFields
+                t={t}
+                currency={currency}
+                locale={locale}
+                error={fieldError("discount")}
+              />
               <Field
                 label={t("promos.fields.redemptionCap")}
                 hint={t("promos.fields.redemptionCapHint")}

@@ -90,7 +90,7 @@
     "rentals": "Alquileres",
     "gearBench": "Taller de equipos",
     "packages": "Paquetes de inmersiones",
-    "retail": "Tienda y otros"
+    "retail": "Venta minorista y otros"
   },
   "packagesOwed": "{dives, plural, one {# inmersión de paquete} other {# inmersiones de paquete}} por bucear, por valor de {amount}",
   "returningDivers": "{returning} de {total, plural, one {# buceador} other {# buceadores}} ya habían buceado contigo"

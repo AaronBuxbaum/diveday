@@ -14,6 +14,7 @@ import { activityLine } from "@/i18n/activity-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { cancellationDeadline } from "@/lib/deposits";
 import { formatShortDate } from "@/lib/format";
+import { toShopCurrency } from "@/lib/money";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, spotsRemaining } from "@/lib/trips";
@@ -342,8 +343,7 @@ export function TripPromoteAndActivity({
   guests,
   shopSlug,
   locale,
-  timezone,
-  currency = "usd",
+  shop,
   tripNotice,
   mayDiscount,
   more,
@@ -351,15 +351,16 @@ export function TripPromoteAndActivity({
   guests: TripGuests;
   shopSlug: string;
   locale: string;
-  timezone: string;
-  /** The shop's currency, for a fixed-amount last-minute deal. */
-  currency?: string;
+  /** Its zone for every time here; its currency for a fixed-amount last-minute deal. */
+  shop: { timezone: string; currency: string | null };
   tripNotice?: FormNotice;
   mayDiscount: boolean;
   /** "More for this departure" (`TripMoreDisclosure`), between the two. */
   more?: ReactNode;
 }) {
   const t = staffTranslator(locale);
+  const timezone = shop.timezone;
+  const currency = toShopCurrency(shop.currency);
   const {
     trip,
     cancelled,

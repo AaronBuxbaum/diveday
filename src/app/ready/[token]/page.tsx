@@ -9,6 +9,7 @@ import { ChangedFacts, type FitRecall } from "@/app/ready/[token]/_components/Ch
 import { CourseMaterials } from "@/app/ready/[token]/_components/CourseMaterials";
 import { DayOfDetails } from "@/app/ready/[token]/_components/DayOfDetails";
 import { ExpiredLink } from "@/app/ready/[token]/_components/ExpiredLink";
+import { payStepLines } from "@/app/ready/[token]/_components/pay-step-lines";
 import { ReadyThreadBodySkeleton } from "@/app/ready/[token]/_components/ReadyThreadBodySkeleton";
 import { SignStepActions } from "@/app/ready/[token]/_components/SignStepActions";
 import {
@@ -1312,34 +1313,16 @@ export default async function DiverReadinessPage({
 
     /** A money figure in the currency it was actually charged in, never today's shop setting. */
     const money = (cents: number, currency: string) => formatMoneyCents(cents, currency, locale);
-    /**
-     * What the Pay step says once it has settled: the figure, which is the one
-     * thing the step's own word ("Paid") cannot carry. The receipt's currency,
-     * not the shop's — a shop that switches currency next season must not
-     * restate last season's charge (ADR 20260731-shop-currency).
-     */
-    const paidLine =
-      paymentReceipt && paymentReceipt.amountCents !== null
-        ? money(paymentReceipt.amountCents, paymentReceipt.currency)
-        : t("ready.checklistDetail.paymentDone");
-    // "N package dives left" (owner decision 2026-10-09): the one number a
-    // diver who bought a package asks, said where the money already is — the
-    // Pay step. Counted as `countSpendableDives` counts it, so a lapsed or
-    // spent dive is never offered; nothing is said to a diver who holds none.
     const packageDivesLeft = await countSpendableDives(db, shop.id, data.person.id);
-    const withDivesLeft = (line: string | null): string | null =>
-      line !== null && packageDivesLeft > 0
-        ? t("ready.packageDivesLeft", { line, count: packageDivesLeft })
-        : line;
-    const depositBalanceLine =
-      paymentReceipt?.isDeposit && paymentReceipt.balanceDueCents > 0
-        ? t("booking.paymentDepositBalance", {
-            balance: money(paymentReceipt.balanceDueCents, paymentReceipt.currency),
-          })
-        : null;
+    const { paidLine, depositBalanceLine } = payStepLines(
+      t,
+      money,
+      paymentReceipt,
+      packageDivesLeft,
+    );
 
     /** One step's fact, and one step's form. The two things the spine cannot derive. */
-    const baseStepLine = (step: ThreadStep): string | null => {
+    const stepLine = (step: ThreadStep): string | null => {
       if (step.id === "gear") return hasRentalFit ? t("ready.gearOnFile") : null;
       // A settled "Anything changed?" states the same fact the gear step would
       // have: the crew has their sizes. No second sentence for one fact, and
@@ -1367,9 +1350,6 @@ export default async function DiverReadinessPage({
       }
       return checklistDetailText(t, step.item);
     };
-    /** The step's fact, with the package's dives left beside the Pay step's. */
-    const stepLine = (step: ThreadStep): string | null =>
-      step.id === "pay" ? withDivesLeft(baseStepLine(step)) : baseStepLine(step);
 
     /**
      * The step's form, or nothing.

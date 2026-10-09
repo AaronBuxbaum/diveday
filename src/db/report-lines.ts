@@ -10,6 +10,7 @@ import {
   revenueLineForOrderItem,
 } from "@/lib/report-lines";
 import type { DbExecutor } from "./client";
+import { queryAll } from "./query-helpers";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -51,10 +52,10 @@ export async function getMonthMoneyDetail(
   endUtc: Date,
   now: Date,
 ): Promise<MonthMoneyDetail> {
-  const [lines, packageDivesOwed, divers] = await Promise.all([
-    moneyByLine(db, shopId, startUtc, endUtc),
-    packageDivesOwedAt(db, shopId, endUtc < now ? endUtc : now),
-    returningDivers(db, shopId, startUtc, endUtc),
+  const [lines, packageDivesOwed, divers] = await queryAll(db, [
+    () => moneyByLine(db, shopId, startUtc, endUtc),
+    () => packageDivesOwedAt(db, shopId, endUtc < now ? endUtc : now),
+    () => returningDivers(db, shopId, startUtc, endUtc),
   ]);
   return { lines, packageDivesOwed, divers };
 }
