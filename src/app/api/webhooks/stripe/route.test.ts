@@ -1172,3 +1172,64 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
     expect(releaseStripeWebhookEventClaim).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * A live deployment configures a test-mode webhook secret only so the demo
+ * shop's test-mode checkout can confirm (ADR 20261009-demo-test-mode-payments).
+ * Correctly signed test events about any other account must change nothing,
+ * so that secret can never move a real shop's money.
+ */
+describe("POST /api/webhooks/stripe — test-mode events on a live platform", () => {
+  const DEMO_ACCOUNT = "acct_demoTestMode1";
+
+  function testModeCheckout(account: string | undefined) {
+    const payload = eventPayload({
+      id: "evt_test_1",
+      type: "checkout.session.completed",
+      livemode: false,
+      ...(account ? { account } : {}),
+      data: { object: { id: "cs_test_123", payment_status: "paid" } },
+    });
+    return POST(
+      webhookRequest(payload, signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_test_mode")),
+    );
+  }
+
+  beforeEach(() => {
+    vi.stubEnv("STRIPE_TEST_WEBHOOK_SECRET", "whsec_test_mode");
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_live_platform123");
+    vi.stubEnv("STRIPE_DEMO_ACCOUNT_ID", DEMO_ACCOUNT);
+    vi.stubEnv("STRIPE_DEMO_SECRET_KEY", "sk_test_demoKey1234");
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("acts on the demo account's test checkout", async () => {
+    const response = await testModeCheckout(DEMO_ACCOUNT);
+    expect(response.status).toBe(200);
+    expect(markCheckoutPaidBySessionId).toHaveBeenCalled();
+  });
+
+  it("ignores a test event about any other account, or about none", async () => {
+    for (const account of ["acct_realShop123", undefined]) {
+      const response = await testModeCheckout(account);
+      expect(response.status).toBe(200);
+    }
+    expect(markCheckoutPaidBySessionId).not.toHaveBeenCalled();
+    expect(claimStripeWebhookEvent).not.toHaveBeenCalled();
+  });
+
+  it("ignores every test event when the demo pair is not configured", async () => {
+    vi.stubEnv("STRIPE_DEMO_SECRET_KEY", "");
+    const response = await testModeCheckout(DEMO_ACCOUNT);
+    expect(response.status).toBe(200);
+    expect(markCheckoutPaidBySessionId).not.toHaveBeenCalled();
+  });
+
+  it("leaves a test-mode deployment alone: no live key, no restriction", async () => {
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_platform123");
+    await testModeCheckout("acct_anyShop123");
+    expect(markCheckoutPaidBySessionId).toHaveBeenCalled();
+  });
+});

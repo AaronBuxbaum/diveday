@@ -342,6 +342,7 @@
     "promoHint": "(if you have one)",
     "passThroughFee": "{name}: {price} per diver (third-party charge)",
     "stripeHint": "You’ll finish paying on a secure Stripe page.",
+    "stripeTestModeHint": "This is the demo, so Stripe is in test mode. Pay with the card 4242 4242 4242 4242, any future date and any CVC. Nothing is charged.",
     "ageAttestation": "I confirm every diver on this booking meets the minimum age of {age}.",
     "cancelledHeading": "This trip was canceled",
     "cancelledBody": "for another date, or get in touch with the shop.",

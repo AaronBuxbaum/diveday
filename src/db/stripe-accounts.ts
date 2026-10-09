@@ -1,12 +1,15 @@
-import { and, eq, isNull, lte } from "drizzle-orm";
+import { and, eq, isNull, lte, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import type { AccountStatusResult } from "@/lib/payments/connect";
 import {
   type InvoiceCustomerAddress,
   isUsableInvoiceCustomerAddress,
 } from "@/lib/payments/invoicing";
+import { type DemoStripeAccount, demoStripeAccount } from "@/lib/payments/stripe-keys";
 import type { AppDb, DbExecutor } from "./client";
+import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import type { ShopStripeAccount } from "./schema";
 import { shopStripeAccounts, shops } from "./schema";
 
@@ -263,4 +266,76 @@ export async function refreshShopStripeAccountStatus(
     detailsSubmitted: result.account.detailsSubmitted,
     defaultCurrency: result.account.defaultCurrency,
   });
+}
+
+/**
+ * **Connect the canonical demo shop to its Stripe test-mode account, or take
+ * the connection away** (ADR 20261009-demo-test-mode-payments).
+ *
+ * The connection is configuration, not something anybody does in the demo's
+ * settings: `STRIPE_DEMO_ACCOUNT_ID` and `STRIPE_DEMO_SECRET_KEY`, both valid
+ * ({@link demoStripeAccount}), write a row marked connected with charges on, so
+ * the demo's public trip pages offer the same pay-at-booking step a connected
+ * shop's do. Without them the demo has no row, and books without payment as it
+ * always has.
+ *
+ * Only ever the canonical demo: matched on `is_demo` as well as the slug, the
+ * same guard the nightly refresh makes, so a real shop can never be handed the
+ * account. A minted demo cannot hold it either (one account, one shop: the
+ * unique index on `stripe_account_id`). And if some other shop already holds
+ * that account id, nothing is written and the mismatch is logged, rather than
+ * taking an account away from a shop.
+ *
+ * Idempotent. Run by the seed, by every demo reset (which clears the row with
+ * the rest of the shop's settings) and by the nightly demo refresh, so
+ * configuring the pair on a deployment connects the demo by the next morning.
+ */
+export async function syncDemoStripeAccount(
+  db: DbExecutor,
+  shopId: string,
+  config: DemoStripeAccount | null = demoStripeAccount(),
+): Promise<"connected" | "cleared" | "skipped"> {
+  const [shop] = await db
+    .select({ isDemo: shops.isDemo, slug: shops.slug, currency: shops.currency })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  if (!shop?.isDemo || shop.slug !== DEMO_SHOP_SLUG) return "skipped";
+
+  if (!config) {
+    await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
+    return "cleared";
+  }
+
+  const [elsewhere] = await db
+    .select({ shopId: shopStripeAccounts.shopId })
+    .from(shopStripeAccounts)
+    .where(
+      and(
+        eq(shopStripeAccounts.stripeAccountId, config.accountId),
+        ne(shopStripeAccounts.shopId, shopId),
+      ),
+    )
+    .limit(1);
+  if (elsewhere) {
+    log("demo_stripe_account.held_elsewhere", "error", { shopId: elsewhere.shopId });
+    return "skipped";
+  }
+
+  const values = {
+    shopId,
+    stripeAccountId: config.accountId,
+    chargesEnabled: true,
+    payoutsEnabled: true,
+    detailsSubmitted: true,
+    defaultCurrency: toShopCurrency(shop.currency),
+    connectedAt: nowDate(),
+    disconnectedAt: null,
+    updatedAt: nowDate(),
+  };
+  await db
+    .insert(shopStripeAccounts)
+    .values(values)
+    .onConflictDoUpdate({ target: shopStripeAccounts.shopId, set: values });
+  return "connected";
 }

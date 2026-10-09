@@ -10,6 +10,7 @@ import {
   refreshShopStripeAccountStatus,
   setShopStripeAccountStatus,
   stripeCurrencyMismatch,
+  syncDemoStripeAccount,
   upsertShopStripeAccount,
 } from "./stripe-accounts";
 
@@ -217,5 +218,64 @@ describe("stripeCurrencyMismatch", () => {
     });
     await disconnectShopStripeAccount(db, "acct_123");
     expect(stripeCurrencyMismatch("eur", await getShopStripeAccount(db, shop.id))).toBeNull();
+  });
+});
+
+/**
+ * The canonical demo takes a card at booking in Stripe test mode when the
+ * deployment names its test-mode account (ADR 20261009-demo-test-mode-payments).
+ * The connection is configuration: it lands only on the canonical demo, goes
+ * when the configuration does, and never takes an account from another shop.
+ */
+describe("syncDemoStripeAccount", () => {
+  const config = { accountId: "acct_demoTestMode1", secretKey: "sk_test_demoKey12345" };
+
+  it("connects the canonical demo with charges on, so its public pages take payment", async () => {
+    const { db, shop } = await shopContext();
+    expect(await syncDemoStripeAccount(db, shop.id, config)).toBe("connected");
+    const account = await getShopStripeAccount(db, shop.id);
+    expect(account?.stripeAccountId).toBe(config.accountId);
+    expect(canAcceptPayments(account)).toBe(true);
+    // Idempotent.
+    expect(await syncDemoStripeAccount(db, shop.id, config)).toBe("connected");
+  });
+
+  it("takes the connection away when the deployment no longer names one", async () => {
+    const { db, shop } = await shopContext();
+    await syncDemoStripeAccount(db, shop.id, config);
+    expect(await syncDemoStripeAccount(db, shop.id, null)).toBe("cleared");
+    expect(await getShopStripeAccount(db, shop.id)).toBeNull();
+  });
+
+  it("never touches a shop that is not the canonical demo", async () => {
+    const { db, shop } = await shopContext();
+    const { shops } = await import("./schema");
+    const { eq } = await import("drizzle-orm");
+    // The same shop, no longer a demo: a real tenant.
+    await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
+    await upsertShopStripeAccount(db, shop.id, "acct_realShop123");
+    expect(await syncDemoStripeAccount(db, shop.id, config)).toBe("skipped");
+    expect(await syncDemoStripeAccount(db, shop.id, null)).toBe("skipped");
+    expect((await getShopStripeAccount(db, shop.id))?.stripeAccountId).toBe("acct_realShop123");
+  });
+
+  it("never takes the account from a shop that already holds it", async () => {
+    const { db, shop } = await shopContext();
+    const { shops } = await import("./schema");
+    const { eq } = await import("drizzle-orm");
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other", slug: "other-shop-holding-acct", timezone: "UTC" })
+      .returning();
+    if (!other) throw new Error("insert failed");
+    await upsertShopStripeAccount(db, other.id, config.accountId);
+    const logged = vi.spyOn(console, "log").mockImplementation(() => {});
+    const errored = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await syncDemoStripeAccount(db, shop.id, config)).toBe("skipped");
+    logged.mockRestore();
+    errored.mockRestore();
+    expect(await getShopStripeAccount(db, shop.id)).toBeNull();
+    expect((await getShopStripeAccount(db, other.id))?.stripeAccountId).toBe(config.accountId);
+    expect(await db.select().from(shops).where(eq(shops.id, other.id))).toHaveLength(1);
   });
 });

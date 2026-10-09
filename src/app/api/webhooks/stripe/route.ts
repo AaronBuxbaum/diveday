@@ -23,6 +23,7 @@ import {
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { nowDate } from "@/lib/clock";
 import { type LogContext, log } from "@/lib/log";
+import { demoStripeAccount, platformKeyIsLive } from "@/lib/payments/stripe-keys";
 import { verifyStripeWebhook } from "@/lib/payments/webhook";
 
 const invoiceObjectSchema = z.object({
@@ -208,6 +209,20 @@ export async function POST(request: Request) {
   if (event.livemode !== expectedLivemode) {
     logOutcome("livemode_mismatch", { verifiedWith, livemode: event.livemode ?? null });
     return new Response(null, { status: 200 });
+  }
+
+  // On a deployment whose platform key is live, the only test-mode traffic
+  // with any business here is the demo shop's: its checkout runs on the
+  // test-mode key (ADR 20261009-demo-test-mode-payments). A test event about
+  // any other account, or about none, changes nothing, so a test-mode secret
+  // configured for the demo cannot move a real shop's order. A deployment
+  // that is test mode throughout (no live key) is unaffected.
+  if (verifiedWith === "test" && platformKeyIsLive()) {
+    const demoAccountId = demoStripeAccount()?.accountId;
+    if (!demoAccountId || claimAccountId !== demoAccountId) {
+      logOutcome("test_event_outside_demo", { verifiedWith });
+      return new Response(null, { status: 200 });
+    }
   }
 
   // Claim this event id before doing anything else: a redelivered event

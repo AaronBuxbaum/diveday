@@ -551,3 +551,42 @@ describe("TripFullSection — the shop's own better answer", () => {
     expect(screen.getAllByText("Join the wait list").length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * The demo's checkout is Stripe test mode (ADR
+ * 20261009-demo-test-mode-payments): the same form and the same hand-off, and
+ * the line under the button says which card to use and that nothing is
+ * charged, in place of the usual one.
+ */
+describe("BookSpotSection on the demo's test-mode checkout", () => {
+  function renderPay(testModePayment: boolean) {
+    renderDiver(
+      <BookSpotSection
+        trip={trip()}
+        tripRef={tripRef}
+        remaining={6}
+        payAtBooking
+        testModePayment={testModePayment}
+        perDiverPriceCents={13_000}
+        currency="usd"
+        locale="en-US"
+        timeZone="America/New_York"
+        rentalItems={[]}
+        rentalPricing={EMPTY_RENTAL_PRICING}
+      />,
+    );
+  }
+
+  it("names the test card and says nothing is charged", () => {
+    renderPay(true);
+    expect(screen.getByText(/Pay with the card 4242 4242 4242 4242/)).toBeInTheDocument();
+    expect(screen.getByText(/Nothing is charged\./)).toBeInTheDocument();
+    expect(screen.queryByText("You’ll finish paying on a secure Stripe page.")).toBeNull();
+  });
+
+  it("says nothing about test mode on a shop's own checkout", () => {
+    renderPay(false);
+    expect(screen.getByText("You’ll finish paying on a secure Stripe page.")).toBeInTheDocument();
+    expect(screen.queryByText(/4242/)).toBeNull();
+  });
+});

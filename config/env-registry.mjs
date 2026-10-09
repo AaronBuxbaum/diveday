@@ -290,6 +290,42 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
+      "The canonical demo shop's Stripe test-mode connection (ADR",
+      "20261009-demo-test-mode-payments). STRIPE_DEMO_ACCOUNT_ID is an acct_ id",
+      "connected to the platform in test mode; STRIPE_DEMO_SECRET_KEY is the",
+      "platform's test-mode key (sk_test_ or rk_test_ only, anything else is",
+      "refused). With both set, the demo's public trip pages take a card at",
+      "booking through the normal checkout, and every call about that account uses",
+      "the test key, never STRIPE_SECRET_KEY. STRIPE_TEST_WEBHOOK_SECRET signs a",
+      "test-mode endpoint at /api/webhooks/stripe listening to connected accounts;",
+      "on a live platform its events are acted on only for the demo's account.",
+      "Keep them in 1Password; they reach Vercel from .env.manual.",
+    ],
+    keys: [
+      {
+        key: "STRIPE_DEMO_ACCOUNT_ID",
+        from: "manual",
+        targets: VERCEL,
+        absent: "the demo books without payment, as a shop with no Stripe account does",
+      },
+      {
+        key: "STRIPE_DEMO_SECRET_KEY",
+        from: "manual",
+        targets: VERCEL,
+        absent:
+          "the demo is not connected; a demo account id set without it gets no key at all, never the live one",
+      },
+      {
+        key: "STRIPE_TEST_WEBHOOK_SECRET",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent:
+          "test-mode checkouts (the demo's, or a test-mode deployment's) are not confirmed by webhook",
+      },
+    ],
+  },
+  {
+    doc: [
       "DiveDay's own subscription billing: what a shop pays DiveDay, on DiveDay's own",
       "Stripe account (ADR 20261007-subscription-billing). Deliberately separate from the",
       "STRIPE_* Connect keys above, which move divers' money to shops: a restricted key",

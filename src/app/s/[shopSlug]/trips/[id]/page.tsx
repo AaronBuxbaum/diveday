@@ -57,6 +57,7 @@ import { minimumSeatsState } from "@/lib/minimum-seats";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
+import { isDemoTestModeAccount } from "@/lib/payments/stripe-keys";
 import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import { combineCertRequirements } from "@/lib/readiness";
 import { isLiveShopStaff } from "@/lib/session";
@@ -829,6 +830,9 @@ export default async function TripDetailPage({
                   remaining={remaining}
                   errorMessage={errorMessage}
                   payAtBooking={payAtBooking}
+                  testModePayment={
+                    payAtBooking && isDemoTestModeAccount(stripeAccount?.stripeAccountId)
+                  }
                   offerCodeField={offerCodeField}
                   perDiverPriceCents={perDiverPriceCents}
                   currency={shopCurrency}

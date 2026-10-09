@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  type StripeKeySource,
+  secretKeyForCall,
+  stripeKeySourceFromEnvironment,
+} from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
@@ -148,8 +153,6 @@ export interface InvoicingProvider {
 type Fetch = typeof fetch;
 type PaymentEnvironment = Readonly<Record<string, string | undefined>>;
 
-const configSchema = z.object({ secretKey: z.string().trim().min(1) });
-
 const customerResponseSchema = z.object({ id: z.string().min(1) });
 const invoiceResponseSchema = z.object({
   id: z.string().min(1),
@@ -267,7 +270,7 @@ function toCreatedInvoice(body: z.infer<typeof invoiceResponseSchema>, stripeCus
 }
 
 export function stripeInvoicingProvider(
-  config: { secretKey: string },
+  config: StripeKeySource,
   fetchImpl: Fetch,
 ): InvoicingProvider {
   async function post(
@@ -279,7 +282,7 @@ export function stripeInvoicingProvider(
     return fetchImpl(`https://api.stripe.com/v1${path}`, {
       method: "POST",
       headers: {
-        ...headersFor(config.secretKey, stripeAccountId),
+        ...headersFor(secretKeyForCall(config, stripeAccountId), stripeAccountId),
         ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
       },
       body: form.toString(),
@@ -415,7 +418,7 @@ export function stripeInvoicingProvider(
         // needs, so ask for the plain object.
         const invoiceResponse = await fetchImpl(
           `https://api.stripe.com/v1/invoices/${stripeInvoiceId}`,
-          { headers: headersFor(config.secretKey, stripeAccountId) },
+          { headers: headersFor(secretKeyForCall(config, stripeAccountId), stripeAccountId) },
         );
         if (!invoiceResponse.ok) return { status: "failed" };
         const invoiceBody = invoiceResponseSchema.safeParse(await invoiceResponse.json());
@@ -444,7 +447,7 @@ export function stripeInvoicingProvider(
     async retrieveInvoice(stripeAccountId, stripeInvoiceId) {
       try {
         const response = await fetchImpl(`https://api.stripe.com/v1/invoices/${stripeInvoiceId}`, {
-          headers: headersFor(config.secretKey, stripeAccountId),
+          headers: headersFor(secretKeyForCall(config, stripeAccountId), stripeAccountId),
         });
         if (!response.ok) return { status: "failed" };
         const body = invoiceResponseSchema.safeParse(await response.json());
@@ -490,8 +493,8 @@ export function invoicingProviderFromEnvironment(
   env: PaymentEnvironment = process.env,
   fetchImpl: Fetch = fetch,
 ): InvoicingProvider {
-  const config = configSchema.safeParse({ secretKey: env.STRIPE_SECRET_KEY });
-  return config.success
-    ? stripeInvoicingProvider(config.data, fetchImpl)
-    : disabledInvoicingProvider;
+  // Per connected account: the demo's is called only with the test-mode key
+  // (src/lib/payments/stripe-keys.ts, ADR 20261009-demo-test-mode-payments).
+  const keys = stripeKeySourceFromEnvironment(env);
+  return keys ? stripeInvoicingProvider(keys, fetchImpl) : disabledInvoicingProvider;
 }

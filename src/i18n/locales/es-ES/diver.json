@@ -342,6 +342,7 @@
     "promoHint": "(si tienes uno)",
     "passThroughFee": "{name}: {price} por buceador (cargo de terceros)",
     "stripeHint": "Terminarás de pagar en una página segura de Stripe.",
+    "stripeTestModeHint": "Esto es la demo, así que Stripe está en modo de prueba. Paga con la tarjeta 4242 4242 4242 4242, cualquier fecha futura y cualquier CVC. No se cobra nada.",
     "ageAttestation": "Confirmo que todos los buceadores de esta reserva cumplen la edad mínima de {age}.",
     "cancelledHeading": "Esta salida se canceló",
     "cancelledBody": "para otra fecha, o ponte en contacto con el centro.",

@@ -724,7 +724,8 @@ further down ([marketing-review-20260827.md](marketing-review-20260827.md), "the
 door"). Once the inventory folded into the directory, the hub was short enough that the pair
 stood one screen above the close's own, and the dare itself had gone: the demo cannot take a
 payment, so "every line" was no longer true of it (#2094). `/product` keeps two doors, hero and
-close, under the page's own tag.
+close, under the page's own tag. Since 2026-10-09 the demo takes a test-mode card once its Stripe
+pair is set (ADR 20261009-demo-test-mode-payments); the dare stays retired.
 
 `about-rules` (2026-08-28) is the same argument on the trust page, and the one where the door was
 furthest from the impulse. `/about`'s four operating rules each end in the demo action that proves

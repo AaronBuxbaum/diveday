@@ -368,3 +368,46 @@ describe("stripe checkout provider", () => {
     });
   });
 });
+
+/**
+ * The demo shop's checkout is the same flow on Stripe's test mode (ADR
+ * 20261009-demo-test-mode-payments): the key follows the connected account.
+ */
+describe("the demo's test-mode account", () => {
+  const env = {
+    STRIPE_SECRET_KEY: "sk_live_platformKey123",
+    STRIPE_DEMO_ACCOUNT_ID: "acct_demoTestMode1",
+    STRIPE_DEMO_SECRET_KEY: "sk_test_demoKey12345",
+  };
+  const session = ok({
+    id: "cs_test_1",
+    status: "open",
+    payment_status: "unpaid",
+    amount_total: 1,
+  });
+
+  it("is called with the test-mode key, and every other account with the platform key", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(session);
+    const provider = providerWith(env, fetchImpl);
+    await provider.createCheckoutSession({ ...request, stripeAccountId: "acct_demoTestMode1" });
+    await provider.createCheckoutSession({ ...request, stripeAccountId: "acct_realShop123" });
+    expect(fetchImpl.mock.calls[0][1].headers.Authorization).toBe("Bearer sk_test_demoKey12345");
+    expect(fetchImpl.mock.calls[1][1].headers.Authorization).toBe("Bearer sk_live_platformKey123");
+  });
+
+  it("is never called at all when its test key is missing or is not a test key", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    for (const demoKey of ["", "sk_live_pastedInTheWrongPlace"]) {
+      const fetchImpl = vi.fn().mockResolvedValue(session);
+      const provider = providerWith({ ...env, STRIPE_DEMO_SECRET_KEY: demoKey }, fetchImpl);
+      const result = await provider.createCheckoutSession({
+        ...request,
+        stripeAccountId: "acct_demoTestMode1",
+      });
+      expect(result).toEqual({ status: "failed" });
+      expect(fetchImpl).not.toHaveBeenCalled();
+    }
+    vi.restoreAllMocks();
+  });
+});
