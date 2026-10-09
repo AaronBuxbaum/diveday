@@ -347,6 +347,8 @@ const EXCLUDED_TABLES = [
   // entry belongs to no shop, and a shop's milestones are DiveDay's reading of
   // its progress rather than anything the shop recorded. None is a shop record.
   "setup_requests",
+  // The request's setup link: a hash of a credential, never a shop record.
+  "shop_setup_links",
   "demo_entries",
   "shop_milestones",
 ];

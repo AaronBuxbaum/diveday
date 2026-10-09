@@ -79,6 +79,12 @@ shop:
   person and leaves the entitlement on the buyer.
 - **Does a diver hold dives before paying the invoice?** No. Entitlements are granted only when the
   order reaches `paid`, including when a later Stripe webhook settles an initially open invoice.
+- **Does a refund or a chargeback take the dives back?** A full refund and a lost card dispute both
+  take back the dives not yet spent; a partial refund leaves them, and the desk decides what it
+  meant. Nothing is deleted: an entitlement is spendable only while its order is `paid` or
+  `partly_refunded` and no dispute on it was lost (`packageOrderStillBacks` in
+  `src/db/dive-packages.ts`), and Reports' "dives owed" asks the same question. Dives already spent
+  stay spent.
 
 **Nothing above changes the core decision** — entitlements rather than a balance, consumption
 through `setBookingPayment`, a link undone rather than an amount credited. Both reviewers said so
@@ -87,6 +93,37 @@ because every surface above it has to agree about what it is counting.
 
 The tables shipped ahead of that answer and are unused: no production path grants an entitlement, so
 changing the unit costs a migration and nothing else (H-49, pre-pilot).
+
+## Amendment, 2026-10-09: divers buy a package online
+
+The owner approved selling packages on the shop's public pages. `/s/<shop>/packages` lists every
+package still on sale (`packageOnSale`: not deleted, and its end date not passed) and earns a
+Packages tab in the public nav only while there is one. A diver picks one, gives a name and an
+email, and is sent to Stripe's hosted invoice page.
+
+The purchase is an ordinary order on the shop's connected account, raised by
+`createDiverPackageOrder` in `src/db/orders.ts`, so `invoice.paid` grants the dives through the
+same `grantPackageEntitlementsForPaidOrder` a staff-raised invoice uses. Nothing about the grant is
+new. Because no staff member raises it, the function makes its own guarantees in place of the role
+check: the price is the package row's, the only line is one `dive_package` at quantity one, Stripe
+does not email the invoice (a public form must not make the shop's account write to an address
+somebody typed), and the Stripe customer carries the name typed on the form rather than the name
+the shop has on file for that email. The action is rate limited per IP and per shop and email.
+
+Anyone can type any email, so the address alone never attaches the order to the person who holds
+it. It attaches only when the typed name matches the one on file and that person holds no staff
+role; otherwise the order goes to a fresh diver record under the typed name with no email (the
+shop already has a record at that address), and the desk merges the two if they are one person.
+A refused attempt (not on sale, no payments, tax with no address to work it out from) leaves no
+person row. When Stripe refuses the invoice afterwards, the emailless record made for a mismatched
+name is taken back, since no lookup can reach it; a fresh record carrying the typed email stays,
+because a second click may already have matched it. The order records how it came to exist in `orders.source` (`public`
+here, `staff` everywhere else); the diver stands as its own creator because
+`orders.created_by_person_id` is required, and the order page and both exports read `source`, so
+it says "bought online" rather than "by <their name>" whatever roles anyone holds later.
+
+`/ready/<token>` now says how many package dives a diver has left, on the Pay step, counted as
+`countSpendableDives` counts them.
 
 ## What this decision does not settle
 

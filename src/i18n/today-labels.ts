@@ -53,6 +53,9 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   gear_overdue: "today.actionKind.gearOverdue",
   gear_due_back: "today.actionKind.gearDueBack",
   gear_service_due: "today.actionKind.gearServiceDue",
+  boat_safety_kit: "today.actionKind.boatSafetyKit",
+  boat_papers_due: "today.actionKind.boatPapersDue",
+  boat_safety_expired: "today.actionKind.boatSafetyExpired",
   work_order_late: "today.actionKind.workOrderLate",
   work_order_uncollected: "today.actionKind.workOrderUncollected",
   staff_credential_due: "today.actionKind.staffCredentialDue",
@@ -933,6 +936,16 @@ export function openGearRegisterActionText(t: StaffTranslator): string {
 
 export function openGearUnitActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openGearUnit");
+}
+
+/** A departure's Boat tab, where the pre-departure check names the kit aboard. */
+export function openBoatCheckActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.openBoatCheck");
+}
+
+/** The fleet page, where a boat's papers are renewed. */
+export function openBoatsActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.openBoats");
 }
 
 /** A bench ticket still being worked after the day the shop promised it. */

@@ -14,6 +14,9 @@
     "camera": "Camera",
     "nitroxAnalyzer": "Nitrox analyzer",
     "o2Kit": "O2 kit",
+    "aed": "AED",
+    "firstAidKit": "First-aid kit",
+    "flares": "Flares",
     "other": "Other"
   },
   "status": {
@@ -25,6 +28,9 @@
     "hydroTest": "Hydro test",
     "visualInspection": "Visual inspection",
     "o2Clean": "O2 clean",
+    "aedPads": "Pads",
+    "aedBattery": "Battery",
+    "expiry": "Expiry date",
     "note": "Condition note"
   },
   "serviceState": {
@@ -109,7 +115,9 @@
     "brandModel": "Brand & model",
     "brandModelPlaceholder": "ScubaPro MK11 / C370",
     "purchasedOn": "Purchased on",
-    "optionalHint": "(optional)"
+    "optionalHint": "(optional)",
+    "aboard": "Aboard",
+    "ashore": "Ashore"
   },
   "notice": {
     "added": "On the register.",
@@ -224,7 +232,8 @@
     },
     "returnOutcomeAllGood": "Came back fine",
     "returnOutcomeFitAdjusted": "Fit adjusted at return",
-    "returnOutcomeServiceConcern": "Service concern raised"
+    "returnOutcomeServiceConcern": "Service concern raised",
+    "aboard": "Aboard {boatName}"
   },
   "prep": {
     "heading": "Rental assignments",

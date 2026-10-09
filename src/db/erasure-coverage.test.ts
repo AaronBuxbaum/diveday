@@ -419,6 +419,8 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   // reaches it.
   setup_requests:
     "a shop owner asking DiveDay to set them up: their name, address and phone, sent to DiveDay rather than to any shop. A diver is never on it. It leaves by `deleteSetupRequestsByEmail` / `deleteSetupRequestsByPhone` when that owner asks DiveDay to forget them",
+  shop_setup_links:
+    "a single-use link DiveDay minted for one setup request: a token hash, its dates and the shop it opened. No name, address or diver; it cascades with its `setup_requests` row when that owner asks DiveDay to forget them",
   demo_entries: "someone opening the demo: a source, a role and a time, and no person",
   shop_milestones:
     "when a shop reached a step of getting started, and whether a stall alert went out. A shop and a date, no diver",

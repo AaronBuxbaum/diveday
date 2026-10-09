@@ -83,3 +83,24 @@ lower than a closed month; the page labels the current month "so far" to be hone
 demo/e2e vs unit-test split (`{ history }`) is a seam to keep in mind — the lean template is what
 unit tests are calibrated to, and new history belongs behind that flag. Follow-up: standalone retail
 revenue, a trailing-months trend, and per-trip revenue in the breakdown are the obvious next columns.
+
+## Amendment, 2026-10-09: money by line, package dives owed, returning divers
+
+The owner asked the month to answer three more questions, each kept out of the headline figures so
+their meaning does not move:
+
+- **Money in, by line**: Courses, Fun dives and trips, Rentals, Gear bench, Dive packages, and
+  Retail and other. Its basis is the day the money was paid, not the departures the Revenue figure
+  is anchored to, because a gear-bench job, a retail sale and a package have no departure. It reads
+  paid invoices line by line (an invoice that bills a work order is the gear bench's whole) and
+  completed booking checkouts seat by seat (the trip ask to Courses or Fun dives by the departure,
+  the gear to Rentals). Tax and pass-through fees are left out, and a refund comes off the line it
+  was paid on, pro rata. A staff mark of cash taken at the counter has no line to read and is not
+  in it. Plain text, no bars, and a line that came to nothing is left out.
+- **Package dives still owed**: dives granted and not yet spent or lapsed at the end of the month
+  (or now, for the current month), on an order the shop still holds money for, each valued at the
+  price the diver paid over the package's dives.
+- **Returning divers**: of the distinct divers on the month's departures, how many had an active
+  booking on a departure that left before the month began.
+
+The rules are pure in `src/lib/report-lines.ts`; the reads are `src/db/report-lines.ts`.

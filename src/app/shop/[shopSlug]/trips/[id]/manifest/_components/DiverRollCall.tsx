@@ -487,8 +487,11 @@ export function DiverRollCall({
           // A diver tapped aboard after a dive with no earlier boarding is
           // boarding *now* — they joined at the second site — so their row
           // reads as the dock's would (domain review of #2123). The tap stays.
+          // Not once the crew has recorded them not back aboard: that row is
+          // the alarm, and no paperwork word may sit on it (DD9).
           const recordedTone = rollCallRecordedTone(rowState);
-          const blockedAtDock = !ready && (isDeparture || diver.boardedEarlier === false);
+          const blockedAtDock =
+            !ready && (isDeparture || (diver.boardedEarlier === false && !rowState.notBackAboard));
           const untouchedTone = blockedAtDock
             ? ROLL_CALL_ROW_TONE.blocked
             : ROLL_CALL_ROW_TONE.awaiting;
@@ -549,27 +552,33 @@ export function DiverRollCall({
           // A release standing over a referral nobody answered (issue #1282):
           // the next capsule down from the refusal (dive-domain review of #2163).
           const referralUnresolved = Boolean(diver.medicalWaiver?.overriddenReferralAt);
+          // A diver recorded not back aboard carries the alarm and nothing
+          // else: no birthday, minor or advisory word beside someone in the
+          // water (DD9). A split buddy team still shows — it is part of the
+          // search. Paper keeps every fact (the block below).
           const capsuleKind = diver.buddyAlert
             ? "buddy"
-            : blockedAtDock
-              ? "blocked"
-              : earlierRefusal
-                ? "refusal"
-                : referralUnresolved
-                  ? "referral"
-                  : diver.minor && diver.age !== null && diver.age !== undefined
-                    ? "minor"
-                    : diver.depthAdvisory?.status === "exceeds"
-                      ? "depth"
-                      : diver.birthday
-                        ? "birthday"
-                        : null;
+            : alarmed
+              ? null
+              : blockedAtDock
+                ? "blocked"
+                : earlierRefusal
+                  ? "refusal"
+                  : referralUnresolved
+                    ? "referral"
+                    : diver.minor && diver.age !== null && diver.age !== undefined
+                      ? "minor"
+                      : diver.depthAdvisory?.status === "exceeds"
+                        ? "depth"
+                        : diver.birthday
+                          ? "birthday"
+                          : null;
           const capsule =
             diver.buddyAlert && diver.buddyTeam ? (
               <Badge tone={diver.buddyAlert === "separated_after_dive" ? "danger" : "warning"}>
                 {buddyAlertText(t, diver.buddyAlert)}
               </Badge>
-            ) : blockedAtDock ? (
+            ) : alarmed ? null : blockedAtDock ? (
               <Badge tone={readinessStatusTone(diverStatus)}>
                 {readinessStatusText(t, diverStatus)}
               </Badge>

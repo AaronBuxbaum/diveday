@@ -13,8 +13,10 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { isStaff } from "@/lib/authz";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { packageOnSale } from "@/lib/dive-packages";
 import { log } from "@/lib/log";
 import { majorToMinor } from "@/lib/money";
 import {
@@ -36,6 +38,7 @@ import {
   startPaymentOperation,
 } from "./payment-operations";
 import { setBookingPayment, setBookingPaymentIfNotFinal } from "./payments";
+import { findOrCreatePerson } from "./people";
 import { queryAll } from "./query-helpers";
 import type {
   Order,
@@ -47,11 +50,13 @@ import type {
 import {
   bookings,
   courses,
+  divePackages,
   orderLineItemKind,
   orderLineItems,
   orders,
   paymentOperationIntents,
   people,
+  personRoles,
   trips,
 } from "./schema";
 import {
@@ -177,41 +182,110 @@ export async function createOrder(
   if (!(await canPersonManageOrders(db, input.shopId, input.createdByPersonId))) {
     return { ok: false, reason: "not_authorized" };
   }
+  return issueOrder(db, input, invoicing, { sendEmail: true });
+}
+
+type IssueOrderOptions = {
+  /** Whether Stripe emails the invoice (see `CreateInvoiceRequest.sendEmail`). */
+  sendEmail: boolean;
+  daysUntilDue?: number;
+  /**
+   * The name to put on the Stripe customer, when it must not be the stored
+   * one. A public form matched to an existing diver by email bills the name
+   * the form was given, so typing someone's address never shows the stranger
+   * the name the shop has on file for them.
+   */
+  customerName?: string;
+  /**
+   * The address to put on the Stripe customer, when the order's person holds
+   * none: a public purchase recorded on a fresh person because the typed email
+   * belongs to someone it may not be attached to (`createDiverPackageOrder`).
+   */
+  customerEmail?: string;
+  /** How the order came to exist; `staff` unless a diver bought it online. */
+  source?: "staff" | "public";
+};
+
+/**
+ * Where the invoice's tax is worked out from, or null when the shop charges tax
+ * and there is nowhere honest to work it out from. A demo shop with no usable
+ * address bills itself; a real one is refused, because guessing a customer's
+ * location computes the wrong jurisdiction's tax and presents it as fact
+ * (`demoShopBillingAddress`).
+ *
+ * Keyed on *usable*, not on merely present: the staff form posts all six
+ * fields on every submit, so an untouched tax fieldset arrives as an object
+ * full of empty strings rather than as `undefined`. A presence check would see
+ * that object, skip the fallback, and refuse the demo's own invoice — which is
+ * exactly what it did.
+ */
+async function invoiceTaxBasis(
+  db: DbExecutor,
+  shopId: string,
+  supplied: InvoiceCustomerAddress | undefined,
+): Promise<{ taxEnabled: boolean; customerAddress: InvoiceCustomerAddress | undefined } | null> {
+  const taxEnabled = await getShopTaxEnabled(db, shopId);
+  const usable = isUsableInvoiceCustomerAddress(supplied) ? supplied : undefined;
+  const customerAddress =
+    usable ?? (taxEnabled ? ((await demoShopBillingAddress(db, shopId)) ?? undefined) : undefined);
+  if (taxEnabled && !isUsableInvoiceCustomerAddress(customerAddress)) return null;
+  return { taxEnabled, customerAddress };
+}
+
+/**
+ * What an order can be refused for before anyone is asked anything: its lines,
+ * its description, and where its tax is worked out from. Read without writing,
+ * so a public purchase can ask it before a person row exists.
+ *
+ * The currency is the shop's declared one (docs ADR 20260731-shop-currency),
+ * not the connected account's and not a hardcoded "usd". Read once and used
+ * for the amount bounds, the Stripe invoice, and the local order row, so the
+ * three can never disagree — and snapshotted onto the order, which is evidence
+ * of what was billed and must survive a later change to the shop setting.
+ */
+async function orderPreconditions(
+  db: DbExecutor,
+  input: Pick<NewOrderInput, "shopId" | "lineItems" | "description" | "customerAddress">,
+): Promise<
+  | { ok: false; reason: "invalid" | "tax_location_required" }
+  | {
+      ok: true;
+      currency: string;
+      taxEnabled: boolean;
+      customerAddress: InvoiceCustomerAddress | undefined;
+    }
+> {
   if (input.lineItems.length === 0 || input.lineItems.length > MAX_LINE_ITEMS_PER_ORDER) {
     return { ok: false, reason: "invalid" };
   }
   if ((input.description?.length ?? 0) > MAX_ORDER_DESCRIPTION_LENGTH) {
     return { ok: false, reason: "invalid" };
   }
-  // The shop's declared currency (docs ADR 20260731-shop-currency), not the
-  // connected account's and not a hardcoded "usd". Read once and used for the
-  // amount bounds, the Stripe invoice, and the local order row, so the three
-  // can never disagree — and snapshotted onto the order, which is evidence of
-  // what was billed and must survive a later change to the shop setting.
   const currency = await getShopCurrency(db, input.shopId);
-  const taxEnabled = await getShopTaxEnabled(db, input.shopId);
-  // A demo shop with no usable address bills itself; a real one is still
-  // refused, because guessing a customer's location computes the wrong
-  // jurisdiction's tax and presents it as fact (`demoShopBillingAddress`).
-  //
-  // Keyed on *usable*, not on merely present: the staff form posts all six
-  // fields on every submit, so an untouched tax fieldset arrives here as an
-  // object full of empty strings rather than as `undefined`. A presence check
-  // would see that object, skip the fallback, and refuse the demo's own
-  // invoice — which is exactly what it did.
-  const supplied = isUsableInvoiceCustomerAddress(input.customerAddress)
-    ? input.customerAddress
-    : undefined;
-  const customerAddress =
-    supplied ??
-    (taxEnabled ? ((await demoShopBillingAddress(db, input.shopId)) ?? undefined) : undefined);
-  if (taxEnabled && !isUsableInvoiceCustomerAddress(customerAddress)) {
-    return { ok: false, reason: "tax_location_required" };
-  }
   const maxUnitAmountCents = maxLineItemUnitAmountCents(currency);
   if (!input.lineItems.every((item) => lineItemIsValid(item, maxUnitAmountCents))) {
     return { ok: false, reason: "invalid" };
   }
+  const taxBasis = await invoiceTaxBasis(db, input.shopId, input.customerAddress);
+  if (!taxBasis) return { ok: false, reason: "tax_location_required" };
+  return { ok: true, currency, ...taxBasis };
+}
+
+/**
+ * Everything `createOrder` does after its authorization gate. Private on
+ * purpose: the only two callers are `createOrder` (staff, gated by role) and
+ * `createDiverPackageOrder` (a diver buying one package for themselves, gated
+ * by the package being on sale and the line being priced from the row).
+ */
+async function issueOrder(
+  db: AppDb,
+  input: NewOrderInput,
+  invoicing: InvoicingProvider,
+  options: IssueOrderOptions,
+): Promise<CreateOrderOutcome> {
+  const checked = await orderPreconditions(db, input);
+  if (!checked.ok) return checked;
+  const { currency, taxEnabled, customerAddress } = checked;
 
   const account = await getShopStripeAccount(db, input.shopId);
   if (!canAcceptPayments(account)) return { ok: false, reason: "not_connected" };
@@ -222,7 +296,8 @@ export async function createOrder(
     .from(people)
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1);
-  if (!customer?.email) return { ok: false, reason: "invalid" };
+  const customerEmail = customer?.email ?? options.customerEmail;
+  if (!customer || !customerEmail) return { ok: false, reason: "invalid" };
 
   if (input.bookingId) {
     // Bound to the invoiced person, not just the shop: when Stripe later
@@ -255,10 +330,12 @@ export async function createOrder(
 
   const result = await invoicing.createInvoice({
     stripeAccountId,
-    customerEmail: customer.email,
-    customerName: customer.fullName,
+    customerEmail,
+    customerName: options.customerName ?? customer.fullName,
     currency,
     taxEnabled,
+    sendEmail: options.sendEmail,
+    ...(options.daysUntilDue ? { daysUntilDue: options.daysUntilDue } : {}),
     customerAddress,
     lineItems: input.lineItems.map((item) => ({
       description: item.description,
@@ -293,6 +370,7 @@ export async function createOrder(
         bookingId: input.bookingId ?? null,
         personId: customer.id,
         createdByPersonId: input.createdByPersonId,
+        source: options.source ?? "staff",
         status,
         currency,
         totalCents: result.totalCents,
@@ -361,6 +439,183 @@ export async function createOrder(
   await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
 
   return { ok: true, order };
+}
+
+export type DiverPackageOrderOutcome =
+  | { ok: true; order: Order }
+  | {
+      ok: false;
+      reason:
+        | "not_on_sale"
+        | "not_connected"
+        | "tax_location_required"
+        | "invalid"
+        | "stripe_failed";
+    };
+
+/**
+ * Who a public package purchase is recorded against.
+ *
+ * Anyone can type any email into a public form, so the address alone never
+ * attaches the order to the person who holds it. It attaches only when the
+ * typed name matches the one on file and that person is a plain diver. A staff
+ * member's record, or a name that does not match, gets a fresh diver record
+ * under the typed name instead, holding no email (the shop already has a
+ * record at that address), and the desk merges the two if they are one
+ * person. Stripe still bills the typed address and name.
+ */
+async function publicBuyer(
+  db: AppDb,
+  input: { shopId: string; fullName: string; email: string },
+): Promise<{ personId: string; attached: boolean }> {
+  const found = await findOrCreatePerson(db, {
+    shopId: input.shopId,
+    fullName: input.fullName,
+    email: input.email,
+  });
+  if (found.created) return { personId: found.person.id, attached: true };
+  if (found.nameMatches) {
+    const roles = await db
+      .select({ role: personRoles.role })
+      .from(personRoles)
+      .where(eq(personRoles.personId, found.person.id));
+    if (!isStaff(roles.map((row) => row.role))) {
+      return { personId: found.person.id, attached: true };
+    }
+  }
+  const personId = await db.transaction(async (tx) => {
+    const [fresh] = await tx
+      .insert(people)
+      .values({ shopId: input.shopId, fullName: input.fullName, email: null })
+      .returning({ id: people.id });
+    if (!fresh) throw new Error("publicBuyer: insert returned no row");
+    await tx.insert(personRoles).values({ personId: fresh.id, role: "diver" });
+    return fresh.id;
+  });
+  return { personId, attached: false };
+}
+
+/**
+ * Take back the emailless record `publicBuyer` made for this request, after
+ * the order it was for was refused: a public form that fails must leave
+ * nothing behind. Only that record — no email lookup can reach it, so no other
+ * request can have matched it. A fresh record *with* the typed email stays:
+ * a second click may already have found it and be raising its own order
+ * against it, and a stray diver row, bounded by the rate limit, is the cheaper
+ * mistake. Best effort: a row something already references keeps its foreign
+ * key, the delete fails, and the row stays.
+ */
+async function discardUnusedBuyer(db: AppDb, shopId: string, personId: string): Promise<void> {
+  try {
+    await db.transaction(async (tx) => {
+      const [own] = await tx
+        .select({ id: people.id })
+        .from(people)
+        .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.email)));
+      if (!own) return;
+      await tx.delete(personRoles).where(eq(personRoles.personId, personId));
+      await tx
+        .delete(people)
+        .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.email)));
+    });
+  } catch (error) {
+    log("orders.public_buyer_kept", "warn", {
+      personId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * A diver buying one dive package for themselves from the shop's public pages
+ * (no staff session). The invoice is raised on the shop's connected account
+ * exactly as a staff-raised one is, so `invoice.paid` reaches the same
+ * `grantPackageEntitlementsForPaidOrder` and nothing about the grant is new.
+ *
+ * What makes this safe without a role check:
+ * - the price comes from the package row, never from the caller;
+ * - only a live package that is still on sale can be bought;
+ * - one line, quantity one, kind `dive_package` — nothing else can be billed;
+ * - Stripe does not email the invoice, so a public form cannot make the
+ *   shop's account write to an address somebody else typed;
+ * - the Stripe customer carries the name typed here, not the stored one.
+ *
+ * The order records the diver as its own creator: nobody on the staff raised
+ * it, and `created_by_person_id` is a person in this shop, which they are.
+ */
+export async function createDiverPackageOrder(
+  db: AppDb,
+  input: {
+    shopId: string;
+    packageId: string;
+    fullName: string;
+    email: string;
+    /** The invoice line, composed by the caller from its own bundle. */
+    lineDescription: string;
+  },
+  invoicing: InvoicingProvider = invoicingProviderFromEnvironment(),
+): Promise<DiverPackageOrderOutcome> {
+  const [pkg] = await db
+    .select()
+    .from(divePackages)
+    .where(
+      and(
+        eq(divePackages.id, input.packageId),
+        eq(divePackages.shopId, input.shopId),
+        isNull(divePackages.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!pkg || !packageOnSale(pkg)) return { ok: false, reason: "not_on_sale" };
+
+  // Before a person row exists: a shop that cannot take money must not collect
+  // a stranger's details for an order it will never raise.
+  if (!canAcceptPayments(await getShopStripeAccount(db, input.shopId))) {
+    return { ok: false, reason: "not_connected" };
+  }
+
+  const lineItems: NewOrderLineItem[] = [
+    {
+      kind: "dive_package",
+      description: input.lineDescription,
+      quantity: 1,
+      unitAmountCents: pkg.priceCents,
+      packageId: pkg.id,
+    },
+  ];
+  // Before a person row exists too: everything the order can be refused for
+  // without asking Stripe is asked here, so a refusal leaves nothing behind.
+  const checked = await orderPreconditions(db, { shopId: input.shopId, lineItems });
+  if (!checked.ok) return checked;
+
+  const buyer = await publicBuyer(db, input);
+  const outcome = await issueOrder(
+    db,
+    {
+      shopId: input.shopId,
+      personId: buyer.personId,
+      // Nobody on the staff raised it. The diver stands as its own creator,
+      // and `source: "public"` is what the order page reads as "bought online".
+      createdByPersonId: buyer.personId,
+      lineItems,
+    },
+    invoicing,
+    {
+      sendEmail: false,
+      daysUntilDue: 1,
+      customerName: input.fullName,
+      source: "public",
+      ...(buyer.attached ? {} : { customerEmail: input.email }),
+    },
+  );
+  if (outcome.ok) return outcome;
+  // Stripe refused, or something after it did: the emailless record this
+  // request made was only ever for this order.
+  if (!buyer.attached) await discardUnusedBuyer(db, input.shopId, buyer.personId);
+  return {
+    ok: false,
+    reason: outcome.reason === "not_authorized" ? "invalid" : outcome.reason,
+  };
 }
 
 /** Every person at the shop, for the new-order customer picker. */
@@ -889,7 +1144,11 @@ export async function getOrder(db: DbExecutor, shopId: string, orderId: string) 
     .from(people)
     .where(and(eq(people.id, row.order.createdByPersonId), eq(people.shopId, shopId)))
     .limit(1);
-  return { ...row, lineItems, createdBy: createdBy ?? null };
+  // Recorded at insert, never inferred from whoever holds which role today: a
+  // diver's own purchase stands as its own creator, and "by <their name>"
+  // would read as a staffer having raised it.
+  const boughtOnline = row.order.source === "public";
+  return { ...row, lineItems, createdBy: createdBy ?? null, boughtOnline };
 }
 
 /**

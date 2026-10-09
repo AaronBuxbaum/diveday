@@ -119,15 +119,20 @@ const CAPABILITY_QUERY_PARAMS = [
    */
   "preview",
   /**
-   * The onboard setup key (ADR 20260925-shops-are-set-up-by-hand):
-   * `/onboard?setup=<key>` is the only way a shop gets created, and the key is
-   * long-lived and shared — one value opens the form for every shop until it is
-   * rotated. A leaked copy in a telemetry pipeline is a working sign-up door
-   * for anyone who can read that pipeline. `onboard-setup-key.test.ts`
-   * imports `ONBOARD_SETUP_PARAM` and asserts this list blanks it, so the two
-   * cannot drift.
+   * A setup link's token (ADR 20261009-single-use-setup-links):
+   * `/onboard?setup=<token>` is the only way a shop gets created. The token is
+   * single-use and expires, but until it is spent a copy in a telemetry
+   * pipeline is a working sign-up door for anyone who can read that pipeline.
+   * `src/lib/setup-links.test.ts` imports `SETUP_LINK_PARAM` and asserts this
+   * list blanks it, so the two cannot drift.
    */
   "setup",
+  /**
+   * The founder's demo-quiet key (`src/lib/quiet-demo-device.ts`), carried as
+   * `/api/demo/quiet?key=<key>`. It opens nothing but a quiet browser, and it is
+   * still a standing secret. `quiet-demo-device.test.ts` asserts it is blanked.
+   */
+  "key",
 ] as const;
 
 function decodeSegment(segment: string): string {

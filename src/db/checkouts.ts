@@ -14,7 +14,8 @@ import {
   type PromotionProvider,
   promotionProviderFromEnvironment,
 } from "@/lib/payments/promotions";
-import { allocateSettledTotal, netOfPercentDiscount } from "@/lib/payments/settlement";
+import { allocateSettledTotal } from "@/lib/payments/settlement";
+import { discountOffCents, type PromoDiscount, promoDiscountOf } from "@/lib/promo-codes";
 import type { AppDb, DbExecutor } from "./client";
 import { countConsumedEntitlementsForBookings } from "./dive-packages";
 import {
@@ -26,6 +27,7 @@ import {
   startPaymentOperation,
 } from "./payment-operations";
 import { setBookingPaymentIfNotFinal } from "./payments";
+import { reserveDiscountUse } from "./promo-caps";
 import type { BookingCheckout } from "./schema";
 import {
   bookingCheckoutBookings,
@@ -77,7 +79,7 @@ export type StartCheckoutInput = {
    * was quoted. Absent for a trip-scoped last-minute code, which arrives on
    * `tripPromo` below instead.
    */
-  shopPromo?: { id: string; code: string; discountPercent: number };
+  shopPromo?: CheckoutPromo;
   /**
    * The trip-scoped last-minute deal behind `promotionCode`, when *that's*
    * where it came from (`getActiveTripPromoByCode`, src/db/trip-promos.ts).
@@ -91,7 +93,7 @@ export type StartCheckoutInput = {
    * one — and recorded the party at pre-discount amounts, above what the one
    * shared payment intent had actually captured (PAY-M3).
    */
-  tripPromo?: { id: string; code: string; discountPercent: number };
+  tripPromo?: CheckoutPromo;
   /**
    * The words for the single line on the hosted Stripe page. Supplied by the
    * caller because this layer returns codes, not sentences (docs ADR
@@ -121,11 +123,30 @@ export type StartCheckoutInput = {
   }) => string;
 };
 
+/**
+ * One promotion as the booking path resolved it: a percent, or a fixed amount
+ * in minor units (`discountAmountCents`), exactly one of the two — the row's
+ * own columns, handed on as they were read.
+ */
+export type CheckoutPromo = {
+  id: string;
+  code: string;
+  discountPercent?: number | null;
+  discountAmountCents?: number | null;
+};
+
 export type StartCheckoutOutcome =
   | { ok: true; checkout: BookingCheckout; reused: boolean }
   | {
       ok: false;
-      reason: "not_connected" | "unpriced" | "invalid" | "checkout_unavailable" | "already_paid";
+      reason:
+        | "not_connected"
+        | "unpriced"
+        | "invalid"
+        | "checkout_unavailable"
+        | "already_paid"
+        /** A capped discount has nothing left; the seats are held, and paying without it works. */
+        | "promo_used_up";
     };
 
 /**
@@ -260,13 +281,22 @@ export async function startBookingCheckout(
   // discounts nothing, and recording it would understate what this session
   // captured. Trip deal first, mirroring the caller's own resolution order;
   // the two are mutually exclusive (a check constraint on the table holds it).
-  const appliedPromo = input.promotionCode
+  const resolvedPromo = input.promotionCode
     ? input.tripPromo
       ? ({ source: "trip", ...input.tripPromo } as const)
       : input.shopPromo
         ? ({ source: "shop", ...input.shopPromo } as const)
         : null
     : null;
+  const promoDiscount: PromoDiscount | null = resolvedPromo
+    ? promoDiscountOf({
+        discountPercent: resolvedPromo.discountPercent ?? null,
+        discountAmountCents: resolvedPromo.discountAmountCents ?? null,
+      })
+    : null;
+  // A promotion that carries no discount at all applies nothing: it is
+  // neither handed to Stripe's arithmetic below nor snapshotted.
+  const appliedPromo = resolvedPromo && promoDiscount ? { ...resolvedPromo, promoDiscount } : null;
 
   const passThroughCents = passThroughTotalCents(passThroughFee, input.bookingIds.length);
   const totalCents =
@@ -274,6 +304,17 @@ export async function startBookingCheckout(
     gearTotalCents +
     passThroughCents;
   if (totalCents === 0) return { ok: false, reason: "already_paid" };
+  // Everything but the third-party fee, which no promotion may touch (#1019).
+  const discountableCents = totalCents - passThroughCents;
+  // What this attempt's discount is worth, as the two snapshot columns hold
+  // it: a percent as itself, a fixed amount as the minor units it actually
+  // takes off — capped at the discountable lines, so it never exceeds them.
+  const appliedDiscountPercent =
+    appliedPromo?.promoDiscount.kind === "percent" ? appliedPromo.promoDiscount.percent : null;
+  const appliedDiscountCents =
+    appliedPromo?.promoDiscount.kind === "amount"
+      ? discountOffCents(discountableCents, appliedPromo.promoDiscount) || null
+      : null;
   // One Stripe line per (amount, kind of seat, deposit-or-fare): two divers at
   // the same figure share a line, a snorkeler at the same figure does not.
   const tripLines = new Map<
@@ -317,7 +358,8 @@ export async function startBookingCheckout(
         currency,
         taxEnabled,
         passThroughCents,
-        appliedDiscountPercent: appliedPromo?.discountPercent ?? null,
+        appliedDiscountPercent,
+        appliedDiscountCents,
         promoResolved: input.promotionCode !== undefined,
       })
     ) {
@@ -368,14 +410,55 @@ export async function startBookingCheckout(
   //
   // Only in this combination. With no fee, or no promotion, the shop's own
   // percent promotion code goes to Stripe exactly as before.
-  const discountableCents = totalCents - passThroughCents;
+  const guardsPassThrough = passThroughCents > 0 && discountableCents > 0;
+  // The local ledger is the authority on a capped discount's uses, on every
+  // path. The one-off coupon below counts against no cap at Stripe, so uses
+  // spent through it are invisible to Stripe's `max_redemptions`; if only the
+  // fee path asked the ledger, a code exhausted there would get its whole cap
+  // again from Stripe the day the fee came off (and through the coupon-failure
+  // fallback, which hands Stripe the real code). So every attempt that applies
+  // a discount reserves one use under the code's own lock before Stripe is
+  // called, and an exhausted code is refused with a reason the diver can act
+  // on (layer-7 security review).
+  let cappedSessionExpiresAt: Date | undefined;
+  if (appliedPromo) {
+    // A diver's own earlier, unpaid page for any of these seats would
+    // otherwise hold a use against their retry; the seats are claimed for this
+    // attempt now, so no other attempt is using that page's figure either.
+    await retireOverlappingPendingCheckouts(db, input.shopId, input.bookingIds);
+    const now = nowDate();
+    const reservation = await reserveDiscountUse(db, {
+      shopId: input.shopId,
+      source: appliedPromo.source,
+      promoId: appliedPromo.id,
+      intentId: intent.id,
+      now,
+    });
+    if (reservation === "used_up" || reservation === "not_reserved") {
+      await resolvePaymentOperation(db, intent.id, {
+        status: "failed",
+        errorMessage:
+          reservation === "used_up"
+            ? "promotion redemption cap reached"
+            : "promotion reservation not held",
+      });
+      await releaseBookingCheckoutClaim(db, input.bookingIds, intent.id);
+      return {
+        ok: false,
+        reason: reservation === "used_up" ? "promo_used_up" : "checkout_unavailable",
+      };
+    }
+    // An abandoned page holds a capped code's use until it expires, so it
+    // expires in minutes rather than Stripe's default day.
+    if (reservation === "reserved") {
+      cappedSessionExpiresAt = new Date(now.getTime() + CAPPED_SESSION_LIFETIME_MS);
+    }
+  }
   const passThroughDiscountGuard =
-    appliedPromo && passThroughCents > 0 && discountableCents > 0
+    appliedPromo && guardsPassThrough
       ? await promotions.createSessionDiscount({
           stripeAccountId,
-          amountOffCents:
-            discountableCents -
-            netOfPercentDiscount(discountableCents, appliedPromo.discountPercent),
+          amountOffCents: discountOffCents(discountableCents, appliedPromo.promoDiscount),
           currency,
           name: appliedPromo.code,
           idempotencyKey: idempotencyKeyFor(intent.id),
@@ -436,6 +519,7 @@ export async function startBookingCheckout(
       successUrl: input.successUrl,
       cancelUrl: input.cancelUrl,
       promotionCouponId,
+      expiresAt: cappedSessionExpiresAt,
       // One or the other, never both: Stripe reads a session's `discounts` as a
       // list and would happily apply two.
       promotionCode: promotionCouponId ? undefined : input.promotionCode,
@@ -493,7 +577,8 @@ export async function startBookingCheckout(
           promoCodeId: appliedPromo?.source === "trip" ? null : (input.shopPromo?.id ?? null),
           tripPromoId: appliedPromo?.source === "trip" ? appliedPromo.id : null,
           promoCode: appliedPromo?.code ?? input.shopPromo?.code ?? null,
-          appliedDiscountPercent: appliedPromo?.discountPercent ?? null,
+          appliedDiscountPercent,
+          appliedDiscountCents,
         })
         .returning();
       if (!row) throw new Error("startBookingCheckout: insert returned no row");
@@ -529,8 +614,10 @@ type CurrentCharge = {
   currency: string;
   taxEnabled: boolean;
   passThroughCents: number;
-  /** The percent this attempt would hand Stripe, or null for no discount. */
+  /** The percent this attempt would hand Stripe, or null for no percent discount. */
   appliedDiscountPercent: number | null;
+  /** The fixed minor units this attempt would take off, or null for none. */
+  appliedDiscountCents: number | null;
   /**
    * Whether this caller resolved a promotion at all — *not* whether one
    * applied. See the one-directional rule in {@link stillQuotesCurrentCharge}.
@@ -575,7 +662,10 @@ function stillQuotesCurrentCharge(existing: BookingCheckout, current: CurrentCha
   if (existing.passThroughCents !== current.passThroughCents) return false;
   if (existing.totalCents !== current.totalCents) return false;
   if (!current.promoResolved) return true;
-  return existing.appliedDiscountPercent === current.appliedDiscountPercent;
+  return (
+    existing.appliedDiscountPercent === current.appliedDiscountPercent &&
+    existing.appliedDiscountCents === current.appliedDiscountCents
+  );
 }
 
 /**
@@ -707,6 +797,39 @@ export async function retirePendingCheckoutIfRepriced(
  * committed before checkout ever ran (docs ADR 20260721-checkout-at-booking) and
  * this is a quote being withdrawn, not a payment being reversed.
  */
+/**
+ * How long a session spending a capped discount's one-off coupon stays
+ * payable. Stripe's floor is 30 minutes out; one more keeps the request clear
+ * of it whatever the round trip takes.
+ */
+const CAPPED_SESSION_LIFETIME_MS = 31 * 60 * 1000;
+
+/** Retire every pending checkout covering any of these bookings, whatever else it covers. */
+async function retireOverlappingPendingCheckouts(
+  db: AppDb,
+  shopId: string,
+  bookingIds: string[],
+): Promise<void> {
+  const overlapping = await db
+    .selectDistinct({ checkout: bookingCheckouts })
+    .from(bookingCheckouts)
+    .innerJoin(
+      bookingCheckoutBookings,
+      and(
+        eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
+        eq(bookingCheckoutBookings.shopId, shopId),
+      ),
+    )
+    .where(
+      and(
+        eq(bookingCheckouts.shopId, shopId),
+        eq(bookingCheckouts.status, "pending"),
+        inArray(bookingCheckoutBookings.bookingId, bookingIds),
+      ),
+    );
+  for (const { checkout } of overlapping) await retireStaleCheckout(db, checkout);
+}
+
 async function retireStaleCheckout(db: AppDb, existing: BookingCheckout): Promise<void> {
   await db
     .update(bookingCheckouts)
@@ -815,15 +938,22 @@ async function attributableTotalCents(db: DbExecutor, checkout: BookingCheckout)
   // it back after discounting the rest is the same arithmetic the fixed-amount
   // coupon performs at Stripe, so the fallback and the real settlement agree.
   const discountable = checkout.totalCents - checkout.passThroughCents;
-  const net = (percent: number) =>
-    netOfPercentDiscount(discountable, percent) + checkout.passThroughCents;
-  if (checkout.appliedDiscountPercent !== null) return net(checkout.appliedDiscountPercent);
+  const net = (discount: PromoDiscount) =>
+    discountable - discountOffCents(discountable, discount) + checkout.passThroughCents;
+  if (checkout.appliedDiscountPercent !== null) {
+    return net({ kind: "percent", percent: checkout.appliedDiscountPercent });
+  }
+  // A fixed amount's snapshot is already what it took off this session.
+  if (checkout.appliedDiscountCents !== null) {
+    return net({ kind: "amount", amountCents: checkout.appliedDiscountCents });
+  }
   if (!checkout.promoCodeId) return checkout.totalCents;
   const promo = await getShopPromoCodeById(db, checkout.shopId, checkout.promoCodeId);
   // A code deleted since (or belonging to another shop) leaves nothing to
   // reconstruct from; the asked total is the only defensible figure left.
-  if (!promo) return checkout.totalCents;
-  return net(promo.discountPercent);
+  const discount = promo ? promoDiscountOf(promo) : null;
+  if (!discount) return checkout.totalCents;
+  return net(discount);
 }
 
 /**

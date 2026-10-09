@@ -45,7 +45,8 @@ import {
   waiverLinkFromToast,
   writeCourseForm,
 } from "./helpers";
-import { E2E_FROZEN_CLOCK, ONBOARD_FORM_PATH } from "./servers";
+import { E2E_FROZEN_CLOCK } from "./servers";
+import { mintOnboardFormPath } from "./setup-link";
 
 /**
  * Visual regression coverage. Two hundred and sixty-one key surfaces × light/dark, each
@@ -2197,7 +2198,7 @@ for (const scheme of ["light", "dark"] as const) {
       // the one trial sentence (ADR 20260827-first-light, decision 1). Only
       // behind the setup key (ADR 20260925-shops-are-set-up-by-hand).
       test(`the onboarding form renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto(ONBOARD_FORM_PATH);
+        await page.goto(await mintOnboardFormPath(page));
         // This route owns a loading.tsx, and `goto` resolves on the document
         // load event while the body is still streaming — a bare capture here
         // once shot the skeleton and published it as the baseline
@@ -3559,7 +3560,7 @@ for (const scheme of ["light", "dark"] as const) {
         // (light/dark) is unique enough since this test runs once per scheme
         // and the suite has no retries (playwright.config.ts).
         const unique = `today-empty-${scheme}`;
-        await page.goto(ONBOARD_FORM_PATH);
+        await page.goto(await mintOnboardFormPath(page));
         await page
           .locator('input[name="shopName"]')
           .filter({ visible: true })
@@ -3661,7 +3662,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the first bookable moment renders true to the design (${scheme})`, async ({ page }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const unique = `bookable-${scheme}`;
-        await page.goto(ONBOARD_FORM_PATH);
+        await page.goto(await mintOnboardFormPath(page));
         await page
           .locator('input[name="shopName"]')
           .filter({ visible: true })
@@ -5687,6 +5688,31 @@ for (const scheme of ["light", "dark"] as const) {
         // of that group's state on the summary line, and it is what this shot
         // must not race.
         await capture(page, "manifest", scheme);
+      });
+
+      /**
+       * **What the boat carries, and what it holds** (roadmap N-08, N-10): the
+       * reef boat with one passenger past its certificate, its insurance three
+       * weeks out, flares expired, AED pads twelve days from expiry and the
+       * shop's O2 kit left ashore —
+       * through the opt-in `?boatSafety=1` trouble state, never seeded into
+       * blue-mantis. The panel above the boat check is the one surface that
+       * says all of it.
+       */
+      test(`a manifest names the boat's lapsing kit and papers (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?boatSafety=1");
+        expect(seeded.ok()).toBe(true);
+        const { boatSafety } = (await seeded.json()) as { boatSafety?: { tripId: string } };
+        if (!boatSafety) throw new Error("seed-trouble-states found no reef departure on a boat");
+        await page.goto(`/shop/blue-mantis/trips/${boatSafety.tripId}/manifest`);
+        await page
+          .getByRole("heading", { level: 2, name: "Mantis I: papers and safety kit" })
+          .waitFor();
+        await offlineCopySaved(page);
+        await capture(page, "manifest-boat-safety", scheme);
       });
 
       /**
@@ -8515,6 +8541,29 @@ for (const scheme of ["light", "dark"] as const) {
       // an "empty" name. Waiting on the rendered text makes that loud.
       await page.getByText("No emergency numbers recorded").waitFor();
       await capture(page, "offline-manifest-emergency-empty", scheme);
+    });
+
+    /**
+     * **The packages a diver can buy online** (owner decision 2026-10-09).
+     * Its own shop: a package is shop configuration, which `/api/test/reset`
+     * leaves standing, so writing one into blue-mantis would follow the worker
+     * into every later capture of that shop's public pages — the new Packages
+     * tab included.
+     */
+    test(`the public packages page renders true to the design (${scheme})`, async ({
+      page,
+      privateShop,
+    }) => {
+      await page.goto(`/shop/${privateShop.slug}/promos/packages`);
+      await page.getByLabel("What you call it").fill("Ten-dive card");
+      await page.getByLabel("Dives included").fill("10");
+      await page.getByLabel("Price").fill("450");
+      await page.getByRole("button", { name: "Add package" }).click();
+      await page.getByText("Package added.").waitFor();
+      await page.goto(`/s/${privateShop.slug}/packages`);
+      await page.getByRole("heading", { level: 1, name: "Dive packages" }).waitFor();
+      await page.getByRole("button", { name: "Buy for $450" }).waitFor();
+      await capture(page, "public-packages", scheme);
     });
   });
 }

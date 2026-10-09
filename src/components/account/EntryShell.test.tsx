@@ -65,7 +65,7 @@ const PICTOGRAPH = /\p{Extended_Pictographic}/u;
 const DOORS = [
   "app/sign-in/page.tsx",
   "app/onboard/page.tsx",
-  // What `/onboard` is without the setup key (ADR 20260925-shops-are-set-up-by-hand).
+  // What `/onboard` is without an open setup link (ADR 20261009-single-use-setup-links).
   "app/onboard/_components/ClosedDoor.tsx",
   "app/forgot-password/page.tsx",
   "app/verify/[token]/page.tsx",

@@ -879,6 +879,23 @@ describe("lastMinuteDealEmail", () => {
     expect(email.html).toContain(`href="${dealBase.unsubscribeUrl}"`);
     expect(email.html).toContain("Stop last-minute deal emails from Blue Mantis");
   });
+
+  it("names a percent deal once, in the subject and both bodies", () => {
+    const email = lastMinuteDealEmail(dealBase);
+    expect(email.subject.startsWith("25% off ")).toBe(true);
+    expect(email.text).toContain("just opened up 25% off ");
+    // The HTML once read "25% off% off": the figure is bold, the words are not.
+    expect(email.html).toContain("just opened up <strong>25%</strong> off ");
+    expect(email.html).not.toContain("off%");
+  });
+
+  it("names a fixed-amount deal in the shop's currency, never as a percent", () => {
+    const { discountPercent: _percent, ...rest } = dealBase;
+    const email = lastMinuteDealEmail({ ...rest, discountAmountCents: 2000, currency: "usd" });
+    expect(email.subject.startsWith("$20 off ")).toBe(true);
+    expect(email.text).toContain("just opened up $20 off ");
+    expect(email.text).not.toContain("%");
+  });
 });
 
 describe("courseInquiryEmail", () => {
@@ -1084,6 +1101,20 @@ describe("setupRequestAlertEmail (ADR 20261007-setup-request-form)", () => {
     expect(setupRequestAlertEmail({ ...request, contactPhone: "+1 305 555 0100" }).text).toContain(
       "Phone: +1 305 555 0100",
     );
+  });
+
+  it("carries the setup link with what it opens and who to send it to, when there is one", () => {
+    const url = "https://dive.day/onboard?setup=AbC_123";
+    const email = setupRequestAlertEmail({
+      ...request,
+      setupUrl: url,
+      setupUrlExpiresAt: new Date("2026-10-23T12:00:00Z"),
+    });
+    expect(email.text).toContain(`Setup link: ${url}`);
+    expect(email.text).toContain("for one shop, once, until 2026-10-23 (UTC)");
+    expect(email.text).toContain("Send it only to someone you have spoken to.");
+    expect(email.html).toContain(`href="${url}"`);
+    expect(setupRequestAlertEmail(request).text).not.toContain("Setup link");
   });
 
   it("escapes everything the requester typed", () => {

@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-10-07
 - **Amends:** [20260925-shops-are-set-up-by-hand](20260925-shops-are-set-up-by-hand.md) (its "Get set up" mail, and the "contact form" alternative it declined)
+- **Amended by:** [20261009-single-use-setup-links](20261009-single-use-setup-links.md) — the onboarding mail carries the request's single-use setup link
 
 ## Context
 

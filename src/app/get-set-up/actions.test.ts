@@ -120,6 +120,29 @@ describe("submitSetupRequestAction", () => {
     });
   });
 
+  /**
+   * The mail carries the request's own single-use setup link (ADR
+   * 20261009-single-use-setup-links), and that link opens the form with the
+   * request's answers. The reader of the thank-you page is never handed it.
+   */
+  it("mails onboarding a setup link that opens the form for this request, once", async () => {
+    const { openSetupLink, spendSetupLink } = await import("@/db/setup-links");
+    expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent" });
+    const sent = vi.mocked(notify).mock.calls[0]?.[0];
+    if (sent?.kind !== "setup_request_alert") throw new Error("expected the onboarding mail");
+    const url = new URL(sent.setupUrl ?? "");
+    expect(url.pathname).toBe("/onboard");
+    expect(sent.setupUrlExpiresAt).toBeInstanceOf(Date);
+    const token = url.searchParams.get("setup");
+    expect(await openSetupLink(db, token)).toEqual({
+      shopName: "Reef Line Divers",
+      contactName: "Ana Ruiz",
+      email: "ana@reefline.example",
+    });
+    expect(await spendSetupLink(db, token)).toBe(true);
+    expect(await openSetupLink(db, token)).toBeNull();
+  });
+
   it("clamps a tag nobody registered rather than storing it", async () => {
     await submit(setUpForm({ source: "made-up-page" }));
     const [row] = await db.select().from(setupRequests);

@@ -43,6 +43,8 @@ const { getDb } = await import("@/db/client");
 const { revalidatePath } = await import("next/cache");
 const { requireStaffSession } = await import("@/lib/session");
 const {
+  disconnectAction,
+  refreshAction,
   dischargeProcessorErasureAction,
   retryMediaDeletionAction,
   retryProcessorErasureAction,
@@ -488,5 +490,36 @@ describe("the data-compliance queue actions", () => {
     await dischargeProcessorErasureAction(new FormData());
 
     expect(await erasureStatus(db, shop.id, obligationId)).toBe("owed");
+  });
+});
+
+/**
+ * The demo's Stripe connection is configuration (ADR
+ * 20261009-demo-test-mode-payments): the canonical demo holds DiveDay's own
+ * test-mode account and anyone can be its owner, so neither Disconnect, which
+ * would deauthorize that account from the platform, nor Refresh, which would
+ * read it with the live key, runs there.
+ */
+describe("the demo shop's Stripe connection", () => {
+  it("cannot be disconnected or refreshed from the demo's settings, even by its owner", async () => {
+    const { db, shop, owner } = await context();
+    const { shopStripeAccounts } = await import("@/db/schema");
+    const { syncDemoStripeAccount } = await import("@/db/stripe-accounts");
+    expect(shop.isDemo).toBe(true);
+    await syncDemoStripeAccount(db, shop.id, {
+      accountId: "acct_demoTestMode1",
+      secretKey: "sk_test_demoTestMode1",
+    });
+    signIn(shop, owner);
+
+    for (const action of [disconnectAction, refreshAction]) {
+      const to = await redirectedTo(() => action());
+      expect(to).toContain("notice=demo-stripe");
+    }
+    const [row] = await db
+      .select()
+      .from(shopStripeAccounts)
+      .where(eq(shopStripeAccounts.shopId, shop.id));
+    expect(row).toMatchObject({ disconnectedAt: null, chargesEnabled: true });
   });
 });

@@ -1,0 +1,56 @@
+{
+  "heading": "{boatName}: documentación y equipo de seguridad",
+  "overCertificate": {
+    "booked": "{passengers, plural, one {# persona reservada} other {# personas reservadas}}; el certificado del barco permite {limit}.",
+    "aboard": "{passengers, plural, one {# pasajero a bordo} other {# pasajeros a bordo}}; el certificado del barco permite {limit}."
+  },
+  "missing": {
+    "o2Kit": "No hay oxígeno de emergencia a bordo",
+    "aed": "No hay DEA a bordo"
+  },
+  "paper": {
+    "inspection": {
+      "due": "Próxima inspección de seguridad: {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "Inspección de seguridad vencida {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "registration": {
+      "due": "Matrícula: vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "Matrícula: vencida {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "insurance": {
+      "due": "Seguro: vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "Seguro: vencido {days, plural, one {hace # día} other {hace # días}}"
+    }
+  },
+  "kit": {
+    "aedPads": {
+      "due": "{label}: los parches vencen {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "{label}: los parches vencieron {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "aedBattery": {
+      "due": "{label}: la batería vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "{label}: la batería venció {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "expiry": {
+      "due": "{label}: vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "{label}: venció {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "service": {
+      "due": "{label}: el servicio vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "{label}: el servicio venció {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "hydroTest": {
+      "due": "{label}: la prueba hidrostática vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "{label}: la prueba hidrostática venció {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "visualInspection": {
+      "due": "{label}: la inspección vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "{label}: la inspección venció {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "o2Clean": {
+      "due": "{label}: la limpieza de O2 vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "{label}: la limpieza de O2 venció {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "offService": "{label}: marcado para mantenimiento. Compruébalo antes de zarpar."
+  }
+}

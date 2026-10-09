@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { openSecret } from "@/lib/secret-box";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import type { AppDb, DbExecutor } from "./client";
 import { shops } from "./schema";
 import {
@@ -50,9 +50,13 @@ function okFetch(id = "wamid.OK") {
   );
 }
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 describe("connectShopWhatsAppAccount", () => {
   it("stores the token sealed, never in plaintext", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const result = await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });
 
     expect(result.status).toBe("connected");
@@ -62,7 +66,7 @@ describe("connectShopWhatsAppAccount", () => {
   });
 
   it("refuses to store anything when no encryption key is configured", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const result = await connectShopWhatsAppAccount(db, connectInput(shop.id), { key: null });
 
     expect(result).toEqual({ status: "refused", reason: "encryption_key_unset" });
@@ -70,7 +74,7 @@ describe("connectShopWhatsAppAccount", () => {
   });
 
   it("re-connecting rotates the token in place without duplicating the shop's row", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });
     await connectShopWhatsAppAccount(
       db,
@@ -83,7 +87,7 @@ describe("connectShopWhatsAppAccount", () => {
   });
 
   it("keeps the original connection date but clears verification on a re-connect", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const first = new Date("2026-07-01T00:00:00Z");
     await connectShopWhatsAppAccount(db, connectInput(shop.id, { now: first }), { key });
     await markShopWhatsAppVerified(db, shop.id, new Date("2026-07-02T00:00:00Z"));
@@ -105,7 +109,7 @@ describe("connectShopWhatsAppAccount", () => {
     // registration with a 133005 mismatch, have that failure swallowed, and
     // then overwrite the column — destroying the only copy of the PIN the
     // number is actually bound to and locking the shop out of re-registering.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await connectShopWhatsAppAccount(db, connectInput(shop.id, { registrationPin: "424242" }), {
       key,
     });
@@ -129,7 +133,7 @@ describe("connectShopWhatsAppAccount", () => {
     // diver's message — a reply keyword in it up to a cancellation — land in an
     // arbitrary one of the two shops. A chain completing Embedded Signup for two
     // of its DiveDay shops against one Meta Business is the ordinary way there.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const sibling = await siblingShop(db, "sibling-shop-waba-taken");
     await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_shared" }), { key });
 
@@ -151,7 +155,7 @@ describe("connectShopWhatsAppAccount", () => {
     // 23505 there aborts the whole transaction unless the insert ran in a
     // savepoint, and the refusal would surface as "current transaction is
     // aborted" instead of the worded `waba_already_connected`.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const sibling = await siblingShop(db, "sibling-shop-waba-tx");
     await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_tx" }), { key });
 
@@ -172,7 +176,7 @@ describe("connectShopWhatsAppAccount", () => {
     // row predates a recorded WABA is legal, and Postgres lets nulls repeat — so
     // tightening the column to not-null, or storing "" for absent, would refuse
     // a second shop's ordinary connection.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const sibling = await siblingShop(db, "sibling-shop-waba-null");
 
     expect(
@@ -187,7 +191,7 @@ describe("connectShopWhatsAppAccount", () => {
   });
 
   it("trims the pasted values a staff form inevitably carries", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await connectShopWhatsAppAccount(
       db,
       connectInput(shop.id, {
@@ -207,7 +211,7 @@ describe("connectShopWhatsAppAccount", () => {
 
 describe("disconnectShopWhatsAppAccount", () => {
   it("deletes the row, so no live credential is retained", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });
 
     expect(await disconnectShopWhatsAppAccount(db, shop.id)).toBe(true);
@@ -215,14 +219,14 @@ describe("disconnectShopWhatsAppAccount", () => {
   });
 
   it("reports nothing removed for a shop that never connected", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect(await disconnectShopWhatsAppAccount(db, shop.id)).toBe(false);
   });
 });
 
 describe("getShopWhatsAppAccount", () => {
   it("never hands the caller the plaintext token back", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });
 
     const account = await getShopWhatsAppAccount(db, shop.id);
@@ -232,14 +236,14 @@ describe("getShopWhatsAppAccount", () => {
 
 describe("shopIdForWhatsAppWaba", () => {
   it("resolves the WABA a delivery event names to its own shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_abc" }), { key });
 
     expect(await shopIdForWhatsAppWaba(db, "waba_abc")).toBe(shop.id);
   });
 
   it("returns null for a WABA no shop has connected, so nothing is applied unscoped", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_abc" }), { key });
 
     expect(await shopIdForWhatsAppWaba(db, "waba_someone_else")).toBeNull();
@@ -252,7 +256,7 @@ describe("shopIdForWhatsAppWaba", () => {
   // arbitrary-tenant routing the reader refuses to do. Dropping it in this test's
   // own throwaway PGlite proves the reader, not the index.
   it("refuses to guess if two shops ever hold the same WABA", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const sibling = await siblingShop(db, "sibling-shop-whatsapp-test");
     await db.execute(sql`drop index shop_whatsapp_accounts_waba_unique`);
     await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_shared" }), { key });
@@ -272,6 +276,10 @@ describe("shopIdForWhatsAppWaba", () => {
  * second Connect waits for the first row and refuses without registering.
  */
 describe("claimWhatsAppWaba", () => {
+  // Databases of their own, not the file's shared transaction: the subject is
+  // a transaction-scoped lock and two callers racing for it. Inside one
+  // wrapping transaction the callers share a connection and cannot contend,
+  // and the lock outlives the claim that took it (src/test/db.ts, "When NOT to use this").
   /** A stand-in for the Meta round trip: records the register, then stores the row. */
   function signupWork(shopId: string, registered: string[]) {
     return async (tx: DbExecutor) => {
@@ -345,7 +353,7 @@ describe("claimWhatsAppWaba", () => {
 
 describe("whatsAppProvidersForShops", () => {
   it("builds a sender that posts to the shop's own phone number id", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });
     const fetchImpl = okFetch();
 
@@ -363,29 +371,29 @@ describe("whatsAppProvidersForShops", () => {
   });
 
   it("omits a shop when no encryption key is configured at all", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });
 
     expect((await whatsAppProvidersForShops(db, [shop.id], { key: null })).size).toBe(0);
   });
 
   it("resolves many shops in one pass, omitting those with no connection", async () => {
-    const { db, shop } = await seededShopContext();
-    const other = await seededShopContext();
+    const { db, shop } = ctx;
+    const other = await siblingShop(db, "sibling-shop-no-whatsapp");
     await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });
 
-    const senders = await whatsAppProvidersForShops(db, [shop.id, other.shop.id], { key });
+    const senders = await whatsAppProvidersForShops(db, [shop.id, other.id], { key });
 
     expect([...senders.keys()]).toEqual([shop.id]);
   });
 
   it("returns an empty map for no shops without querying", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     expect(await whatsAppProvidersForShops(db, [], { key })).toEqual(new Map());
   });
 
   it("omits a shop whose sealed token cannot be opened", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });
 
     const senders = await whatsAppProvidersForShops(db, [shop.id], { key: randomBytes(32) });
@@ -395,7 +403,7 @@ describe("whatsAppProvidersForShops", () => {
 
 describe("whatsAppProviderForAccount", () => {
   it("sends the shop's stored template name and language", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await connectShopWhatsAppAccount(
       db,
       connectInput(shop.id, { templateName: "buceo_aviso", templateLanguage: "es_ES" }),

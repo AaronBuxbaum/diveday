@@ -97,6 +97,9 @@ export type TodayActionKind =
   | "gear_overdue"
   | "gear_due_back"
   | "gear_service_due"
+  | "boat_safety_kit"
+  | "boat_papers_due"
+  | "boat_safety_expired"
   | "work_order_late"
   | "work_order_uncollected"
   | "staff_credential_due"
@@ -194,6 +197,12 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // rows where nobody does.
   instructor_missing: 12,
   nitrox_gate: 13,
+  // **The boat's own emergency kit, on a departure sailing today** (roadmap
+  // N-08, dive-domain review 2026-10-09): no O2 kit or AED aboard, or oxygen,
+  // AED or flares run out or about to. Beside the weather row, above every
+  // dock count and desk chore: it is about the minutes after somebody is hurt
+  // in the water, and it is fixed before the lines come off, not after.
+  boat_safety_kit: 13.5,
   high_wind_alert: 14,
   // The dock-side counts. An unfinished *departure* count is paperwork — the
   // boat is home and nobody was ever unaccounted for in the water — so it
@@ -243,6 +252,13 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   gear_overdue: 29,
   gear_due_back: 30,
   gear_service_due: 31,
+  // The owner's boat errands (roadmap N-08, N-10): a paper inside its window,
+  // escalating to `boat_safety_expired` once it lapses, and kit that ran out
+  // ashore or on a boat not sailing today. Never a boarding blocker — the dock
+  // decides — so they ride with the register's rows, ahead of the bench clock
+  // because a dead AED pad is the boat's, not a rental's.
+  boat_safety_expired: 31,
+  boat_papers_due: 31.5,
   // The bench's two rows (ADR 20261008-work-order-follow-up). Below the
   // register's own chase list: a customer's regulator a day past its promise
   // is a phone call to make, not a unit missing from the racks, and a ticket
@@ -484,6 +500,23 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
     "captain",
     "crew",
   ],
+  // Every role: the crew loading the boat are the people who can swap the
+  // flares or fetch the other AED before it leaves, and a crew-scoped Today
+  // leads with its own departure's rows.
+  boat_safety_kit: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
+  // Owner rows: renewing a boat's insurance or buying new flares is the
+  // owner's errand, and the row's link is Settings. The crew read the same
+  // facts on the departure's own pre-departure check.
+  boat_papers_due: ["owner", "manager"],
+  boat_safety_expired: ["owner", "manager"],
   gear_service_due: [
     "owner",
     "manager",
@@ -630,6 +663,14 @@ export const ACTION_KIND_META = {
   gear_overdue: { tone: "warning" },
   gear_due_back: { tone: "neutral" },
   gear_service_due: { tone: "neutral" },
+  // Danger: the kit for the worst minutes of the day is missing or lapsing on
+  // a boat that sails today. It gates nothing — roll call and boarding go on —
+  // but it is the one boat row nobody should scroll past.
+  boat_safety_kit: { tone: "danger" },
+  // Neutral while a paper is only coming due; warning once it has run out,
+  // or once kit the boat is meant to carry has.
+  boat_papers_due: { tone: "neutral" },
+  boat_safety_expired: { tone: "warning" },
   // Warning: the shop gave its word on a day and the day has gone. Ready and
   // not collected is the customer's errand, not the shop's failure.
   work_order_late: { tone: "warning" },

@@ -1,10 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createBoat, deleteBoat } from "./boats";
+import type { AppDb } from "./client";
 import { listDiveSites } from "./dive-sites";
-import { bookings, people, rollCallEvents, userAccounts } from "./schema";
+import { bookings, people, rollCallEvents, shops, userAccounts } from "./schema";
 import { listTripChangeEvents } from "./trip-change-events";
 import {
   createTrip,
@@ -21,9 +22,13 @@ import {
   updateTripConditions,
 } from "./trips";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 describe("trip records (in-memory PGlite)", () => {
   it("returns only active, assigned crew languages for the public trip line", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const reef = (await upcomingTripsWithCounts(db, shop.id)).find(
       (trip) => trip.title === "Two-Tank Reef — Molasses & French",
     );
@@ -58,7 +63,7 @@ describe("trip records (in-memory PGlite)", () => {
   });
 
   it("stores an optional per-diver price and lets staff update or clear it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const unpriced = await createTrip(db, {
       shopId: shop.id,
@@ -103,7 +108,7 @@ describe("trip records (in-memory PGlite)", () => {
   });
 
   it("stores an optional meeting point and lets staff clear it back to null (issue #704)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await createTrip(db, {
       shopId: shop.id,
       title: "Two-Tank Reef — needs a meeting point",
@@ -143,7 +148,7 @@ describe("trip records (in-memory PGlite)", () => {
   });
 
   it("records material arrival and conditions changes in the public ledger", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await createTrip(db, {
       shopId: shop.id,
       title: "Two-Tank Reef — ledger",
@@ -195,7 +200,7 @@ describe("trip records (in-memory PGlite)", () => {
     // The Orders index's `?tripId=` line reads this: a filter matching no
     // orders still has to say which boat it filtered for, so the title comes
     // from here rather than from a row the filter just removed.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const reef = (await upcomingTripsWithCounts(db, shop.id)).find(
       (trip) => trip.title === "Two-Tank Reef — Molasses & French",
     );
@@ -207,7 +212,7 @@ describe("trip records (in-memory PGlite)", () => {
   });
 
   it("refuses to shrink capacity below the trip's active booking count", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const upcoming = await upcomingTripsWithCounts(db, shop.id);
     // 11 of 14 booked in the seed: nine divers, a snorkeler and a rider.
     const reef = upcoming.find((t) => t.title === "Two-Tank Reef — Molasses & French");
@@ -248,7 +253,7 @@ describe("trip records (in-memory PGlite)", () => {
    * could neither see nor cancel (`dive-domain-expert` review, 2026-09-11).
    */
   it("counts a released seat as room, so the floor matches the number on the page", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const reef = (await upcomingTripsWithCounts(db, shop.id)).find(
       (trip) => trip.title === "Two-Tank Reef — Molasses & French",
     );
@@ -283,7 +288,7 @@ describe("trip records (in-memory PGlite)", () => {
   });
 
   it("refuses to drop planned dives below a checkpoint staff already recorded a roll call against", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((t) => t.title === "Two-Tank Reef — Molasses & French");
     if (!reef) throw new Error("expected seeded reef trip missing");
@@ -329,7 +334,7 @@ describe("trip records (in-memory PGlite)", () => {
   });
 
   it("stores up to four ordered dives while allowing blank dive details", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const existing = (await upcomingTripsWithCounts(db, shop.id)).find((trip) => trip.diveSiteId);
     if (!existing) throw new Error("seeded dive site missing");
 
@@ -374,7 +379,7 @@ describe("trip records (in-memory PGlite)", () => {
     // rebuilt as unrelated trips. A day row left pointing at the old dates is
     // what the manifest, the crew double-booking check, and the trip page's
     // meeting-day list would all go on reading.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await createTrip(db, {
       shopId: shop.id,
       title: "Open Water weekend",
@@ -443,7 +448,7 @@ describe("trip records (in-memory PGlite)", () => {
   });
 
   it("stores a private charter trip and retrieves its private status", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const privateTrip = await createTrip(db, {
       shopId: shop.id,
@@ -476,7 +481,7 @@ describe("trip records (in-memory PGlite)", () => {
  */
 describe("editing a departure's boat, mode and public sale", () => {
   async function boatTrip() {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const hull = await createBoat(db, shop.id, "Reef Runner", 12);
     const spare = await createBoat(db, shop.id, "Blue Horizon", 12);
     const trip = await createTrip(db, {
@@ -552,8 +557,14 @@ describe("editing a departure's boat, mode and public sale", () => {
   it("refuses a hull belonging to another shop", async () => {
     // The edit form must not become the cross-tenant door `createTrip` closes.
     const { db, shop, trip } = await boatTrip();
-    const other = await seededShopContext();
-    const theirs = await createBoat(other.db, other.shop.id, "Their Boat", 12);
+    // A second tenant in the same database, so the hull exists and is refused
+    // for being someone else's — not merely for being absent.
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Reef", slug: "other-reef-hulls", timezone: "America/New_York" })
+      .returning();
+    if (!other) throw new Error("second shop insert failed");
+    const theirs = await createBoat(db, other.id, "Their Boat", 12);
 
     const outcome = await updateTrip(db, shop.id, trip.id, { ...patch(trip), boatId: theirs.id });
 
@@ -582,7 +593,7 @@ describe("editing a departure's boat, mode and public sale", () => {
  */
 describe("updateTrip and the calendar revision", () => {
   async function departure() {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await createTrip(db, {
       shopId: shop.id,
       title: "Revision — a two-tank morning",
@@ -603,11 +614,8 @@ describe("updateTrip and the calendar revision", () => {
     plannedDives: 2,
   });
 
-  const revisionOf = async (
-    db: Awaited<ReturnType<typeof seededShopContext>>["db"],
-    shopId: string,
-    tripId: string,
-  ) => (await getTripWithBooked(db, shopId, tripId))?.revision;
+  const revisionOf = async (db: AppDb, shopId: string, tripId: string) =>
+    (await getTripWithBooked(db, shopId, tripId))?.revision;
 
   it("bumps when the departure time changes", async () => {
     const { db, shop, trip } = await departure();

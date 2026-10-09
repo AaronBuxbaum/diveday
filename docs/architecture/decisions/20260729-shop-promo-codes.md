@@ -93,3 +93,40 @@ code in the Stripe dashboard directly — DiveDay never re-reads it. The failure
 refuses the discount at payment, the booking still completes at full price) but silent. A
 reconciliation pass belongs with the same background job that already reconciles stuck checkouts, if
 it becomes a real support cost.
+
+## Amendment, 2026-10-09: a fixed amount off, once per booking
+
+The owner approved fixed-amount codes ("$20 off") for both shop-wide codes and last-minute deals.
+`shop_promo_codes` and `trip_last_minute_promos` each carry exactly one of `discount_percent` or
+`discount_amount_cents` (a check constraint refuses both and neither), and the Stripe coupon is
+`amount_off` plus the shop's currency instead of `percent_off`.
+
+A fixed amount comes off **once per booking**, not once per diver: a party of four booking with a
+$20 code pays $20 less in total, not $80 less. That matches what Stripe's `amount_off` does on one
+Checkout Session, and it keeps a redemption cap meaning "this many bookings". The amount never
+takes a booking below zero: `discountOffCents` in `src/lib/promo-codes.ts` caps it at the
+discountable lines, and a pass-through fee stays whole. `booking_checkouts.applied_discount_cents`
+snapshots what was taken, beside the existing percent snapshot, so the recorded payments and a
+later refund agree with what Stripe charged.
+
+**The cap where Stripe cannot see it.** On a trip with a pass-through fee the discount reaches
+Stripe as a one-off session coupon (issue #1019), which no `max_redemptions` counts. On that path
+the checkout holds the cap itself, and because uses spent through that coupon are invisible to
+Stripe's own count, the local ledger is the authority on **every** path, fee or no fee (otherwise a
+code exhausted while a park fee applied would get its whole cap again from Stripe once the fee came
+off). After it claims the party's seats and before Stripe is called,
+`reserveDiscountUse` in `src/db/promo-caps.ts` takes a namespaced, transaction-scoped advisory lock
+on the discount, counts its uses (a shop code's redemptions or a deal's completed checkouts, checkouts
+still payable, and attempts that reserved a use and have not heard back), and either tags this
+attempt's payment-operation intent with the discount, which is the reservation the next attempt
+counts, or refuses with `promo_used_up`. The diver's seats stay booked and the landing page says
+the code is used up, so they can pay the full fare. A session spending a capped discount expires
+after 31 minutes rather than Stripe's day (Stripe's floor is 30), and the diver's own earlier
+unpaid page for any of the same seats is retired first, so an abandoned page holds a use for
+minutes and never against its own diver's retry. That retirement closes no live path today: the
+only caller that passes a code is the fresh-booking path, whose seats have no earlier page. It is
+kept for the day a code can be entered against seats already booked.
+
+A trip deal stores the cap Stripe was given (`trip_last_minute_promos.max_redemptions`, the seats open when it went out); a deal sent before
+that column existed falls back to the trip's capacity less the seats held before the deal and
+still held.

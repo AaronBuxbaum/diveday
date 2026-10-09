@@ -97,6 +97,23 @@ describe("stripe invoicing provider", () => {
     expect(fetchImpl.mock.calls[5][1].headers["Idempotency-Key"]).toBe("intent-1:send");
   });
 
+  it("finalizes without asking Stripe to email when the caller says not to", async () => {
+    // A diver buying a package online is already on the hosted page; the
+    // address came from a public form, so Stripe must not write to it.
+    const fetchImpl = sequencedFetch([
+      ok({ id: "cus_1" }),
+      ok({ id: "ii_1" }),
+      ok({ id: "ii_2" }),
+      ok({ id: "in_1", status: "draft", total: 22_000 }),
+      ok({ id: "in_1", status: "open", hosted_invoice_url: "https://x/in_1", total: 22_000 }),
+    ]);
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    const result = await provider.createInvoice({ ...request, sendEmail: false });
+    expect(result.status).toBe("created");
+    expect(fetchImpl).toHaveBeenCalledTimes(5);
+    for (const call of fetchImpl.mock.calls) expect(String(call[0])).not.toMatch(/\/send$/);
+  });
+
   it("enables exclusive automatic tax on every invoice item when requested", async () => {
     const fetchImpl = sequencedFetch([
       ok({ id: "cus_taxed" }),

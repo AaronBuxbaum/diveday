@@ -87,6 +87,9 @@
     "gearOverdue": "Gear overdue",
     "gearDueBack": "Gear due back",
     "gearServiceDue": "Gear service",
+    "boatSafetyKit": "Safety kit",
+    "boatPapersDue": "Papers due",
+    "boatSafetyExpired": "Safety expired",
     "workOrderLate": "Late repair",
     "workOrderUncollected": "Repair not collected",
     "staffCredentialDue": "Credential",
@@ -199,6 +202,8 @@
     "openInbox": "Open inbox",
     "openGearRegister": "Open gear register",
     "openGearUnit": "Open unit record",
+    "openBoatCheck": "Open boat check",
+    "openBoats": "Open boats",
     "openStaffing": "Open staffing",
     "openUnits": "Open units",
     "openDiver": "Open diver record"

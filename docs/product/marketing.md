@@ -130,7 +130,7 @@ offered in is a property of the funnel, not of any one page.
 
 **Since 2026-09-25 the second door is a request, not a sign-up** ([ADR 20260925-shops-are-set-up-by-hand](../architecture/decisions/20260925-shops-are-set-up-by-hand.md)). Every shop is set up
 by hand, so "Get set up" opens the set-up request form at `/get-set-up?from=<tag>` (since 2026-10-07, [ADR 20261007-setup-request-form](../architecture/decisions/20261007-setup-request-form.md); before that it was a mail), and
-`/onboard` without the owner's setup key is one sentence and a door to that same form. Where this section
+`/onboard` without an open single-use setup link ([ADR 20261009-single-use-setup-links](../architecture/decisions/20261009-single-use-setup-links.md)) is one sentence and a door to that same form. Where this section
 says "trial" below, read it as that door.
 
 - **The demo leads, everywhere, at every depth.** It is the primary; the trial follows as
@@ -516,6 +516,13 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   terms in medium put the heavier ink on the easier ask. `/` is not this case and does not change:
   the regular-weight line under its medium demo note is a *price line*, context beside terms rather
   than terms of its own.
+- **What "Get set up" leads to is said once per page, at the close** (issue #2097, approved by the
+  product owner 2026-10-09). `marketing.common.setUpNote`, "A person reads every request and sets
+  your shop up with you.", stands under the closing pair of `/`, `/pricing`, `/about` and every
+  feature page, the band where a reader commits. It names a person and nothing else: no response
+  time, no "free", no count of anything. Any change to its wording is a service claim and needs the
+  same sign-off. `FunnelCtas` draws it under a closing pair, chosen by the tag (`isClosingSource`), so
+  no page places it by hand; `e2e/marketing.spec.ts` asserts it once in each of those pages' `<main>`.
 - **One primary CTA per screen.** The demo leads everywhere through the shared `FunnelCtas`
   pair (the 2026-08-22 two-doors decision above — this bullet said "the trial on `/pricing`"
   until 2026-08-27, a leftover from before that decision); `/pricing`'s trial door is simply
@@ -718,7 +725,8 @@ further down ([marketing-review-20260827.md](marketing-review-20260827.md), "the
 door"). Once the inventory folded into the directory, the hub was short enough that the pair
 stood one screen above the close's own, and the dare itself had gone: the demo cannot take a
 payment, so "every line" was no longer true of it (#2094). `/product` keeps two doors, hero and
-close, under the page's own tag.
+close, under the page's own tag. Since 2026-10-09 the demo takes a test-mode card once its Stripe
+pair is set (ADR 20261009-demo-test-mode-payments); the dare stays retired.
 
 `about-rules` (2026-08-28) is the same argument on the trust page, and the one where the door was
 furthest from the impulse. `/about`'s four operating rules each end in the demo action that proves

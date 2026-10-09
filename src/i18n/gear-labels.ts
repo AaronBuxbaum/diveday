@@ -41,6 +41,9 @@ const KIND_SOURCES: Record<GearItemKind, { rental: RentalItemKind } | { key: Sta
   camera: { key: "gear.itemKinds.camera" },
   nitrox_analyzer: { key: "gear.itemKinds.nitroxAnalyzer" },
   o2_kit: { key: "gear.itemKinds.o2Kit" },
+  aed: { key: "gear.itemKinds.aed" },
+  first_aid_kit: { key: "gear.itemKinds.firstAidKit" },
+  flares: { key: "gear.itemKinds.flares" },
   other: { key: "gear.itemKinds.other" },
 };
 
@@ -77,6 +80,9 @@ const SERVICE_KIND_KEYS: Record<GearServiceKind, StaffMessageKey> = {
   hydro_test: "gear.serviceKinds.hydroTest",
   visual_inspection: "gear.serviceKinds.visualInspection",
   o2_clean: "gear.serviceKinds.o2Clean",
+  aed_pads: "gear.serviceKinds.aedPads",
+  aed_battery: "gear.serviceKinds.aedBattery",
+  expiry: "gear.serviceKinds.expiry",
   note: "gear.serviceKinds.note",
 };
 

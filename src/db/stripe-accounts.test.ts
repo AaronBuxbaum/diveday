@@ -3,15 +3,19 @@ import { seededShopContext } from "@/test/db";
 import { setShopCurrency } from "./shops";
 import {
   canAcceptPayments,
+  checkoutMode,
   disconnectShopStripeAccount,
   getShopCurrency,
   getShopStripeAccount,
   getShopStripeAccountByAccountId,
   refreshShopStripeAccountStatus,
   setShopStripeAccountStatus,
+  stripeAccountHolder,
   stripeCurrencyMismatch,
+  syncDemoStripeAccount,
   upsertShopStripeAccount,
 } from "./stripe-accounts";
+import { stripeKeySourceFromEnvironment } from "./stripe-key-source";
 
 async function shopContext() {
   return seededShopContext();
@@ -217,5 +221,163 @@ describe("stripeCurrencyMismatch", () => {
     });
     await disconnectShopStripeAccount(db, "acct_123");
     expect(stripeCurrencyMismatch("eur", await getShopStripeAccount(db, shop.id))).toBeNull();
+  });
+});
+
+/**
+ * The canonical demo takes a card at booking in Stripe test mode when the
+ * deployment names its test-mode account (ADR 20261009-demo-test-mode-payments).
+ * The connection is configuration: it lands only on the canonical demo, goes
+ * when the configuration does, and never takes an account from another shop.
+ */
+describe("syncDemoStripeAccount", () => {
+  const config = { accountId: "acct_demoTestMode1", secretKey: "sk_test_demoKey12345" };
+
+  it("connects the canonical demo with charges on, so its public pages take payment", async () => {
+    const { db, shop } = await shopContext();
+    expect(await syncDemoStripeAccount(db, shop.id, config)).toBe("connected");
+    const account = await getShopStripeAccount(db, shop.id);
+    expect(account?.stripeAccountId).toBe(config.accountId);
+    expect(canAcceptPayments(account)).toBe(true);
+    // Idempotent.
+    expect(await syncDemoStripeAccount(db, shop.id, config)).toBe("connected");
+  });
+
+  it("takes the connection away when the deployment no longer names one", async () => {
+    const { db, shop } = await shopContext();
+    await syncDemoStripeAccount(db, shop.id, config);
+    expect(await syncDemoStripeAccount(db, shop.id, null)).toBe("cleared");
+    expect(await getShopStripeAccount(db, shop.id)).toBeNull();
+  });
+
+  it("never touches a shop that is not the canonical demo", async () => {
+    const { db, shop } = await shopContext();
+    const { shops } = await import("./schema");
+    const { eq } = await import("drizzle-orm");
+    // The same shop, no longer a demo: a real tenant.
+    await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
+    await upsertShopStripeAccount(db, shop.id, "acct_realShop123");
+    expect(await syncDemoStripeAccount(db, shop.id, config)).toBe("skipped");
+    expect(await syncDemoStripeAccount(db, shop.id, null)).toBe("skipped");
+    expect((await getShopStripeAccount(db, shop.id))?.stripeAccountId).toBe("acct_realShop123");
+  });
+
+  it("never takes the account from a shop that already holds it", async () => {
+    const { db, shop } = await shopContext();
+    const { shops } = await import("./schema");
+    const { eq } = await import("drizzle-orm");
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other", slug: "other-shop-holding-acct", timezone: "UTC" })
+      .returning();
+    if (!other) throw new Error("insert failed");
+    await upsertShopStripeAccount(db, other.id, config.accountId);
+    const logged = vi.spyOn(console, "log").mockImplementation(() => {});
+    const errored = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await syncDemoStripeAccount(db, shop.id, config)).toBe("skipped");
+    logged.mockRestore();
+    errored.mockRestore();
+    expect(await getShopStripeAccount(db, shop.id)).toBeNull();
+    expect((await getShopStripeAccount(db, other.id))?.stripeAccountId).toBe(config.accountId);
+    expect(await db.select().from(shops).where(eq(shops.id, other.id))).toHaveLength(1);
+  });
+});
+
+describe("checkoutMode", () => {
+  it("is test mode only for the configured demo account, and plain Stripe for every other", async () => {
+    const { db, shop } = await shopContext();
+    await upsertShopStripeAccount(db, shop.id, "acct_demoTestMode1");
+    const account = await getShopStripeAccount(db, shop.id);
+    vi.stubEnv("STRIPE_DEMO_ACCOUNT_ID", "acct_demoTestMode1");
+    vi.stubEnv("STRIPE_DEMO_SECRET_KEY", "sk_test_demoKey12345");
+    expect(checkoutMode(account)).toBe("test-mode");
+    // Half a pair, or a live key in the demo's slot, is no test mode at all.
+    vi.stubEnv("STRIPE_DEMO_SECRET_KEY", "sk_live_notATestKey123");
+    expect(checkoutMode(account)).toBe(true);
+    vi.stubEnv("STRIPE_DEMO_SECRET_KEY", "sk_test_demoKey12345");
+    vi.stubEnv("STRIPE_DEMO_ACCOUNT_ID", "acct_someoneElse1");
+    expect(checkoutMode(account)).toBe(true);
+    expect(checkoutMode(null)).toBe(true);
+    vi.unstubAllEnvs();
+  });
+});
+
+/**
+ * **A demo shop never reaches the live key** (security review of ADR
+ * 20261009-demo-test-mode-payments): who holds an account decides its key, and
+ * a demo shop whose account could only be called with the live key offers no
+ * payment at all.
+ */
+describe("the demo and the live platform key", () => {
+  const LIVE_PLATFORM = "sk_live_platformKey123";
+  const DEMO_ACCOUNT = "acct_demoTestMode1";
+  const DEMO_KEY = "sk_test_demoKey12345";
+
+  function liveDeploymentWithDemo() {
+    vi.stubEnv("STRIPE_SECRET_KEY", LIVE_PLATFORM);
+    vi.stubEnv("STRIPE_DEMO_ACCOUNT_ID", DEMO_ACCOUNT);
+    vi.stubEnv("STRIPE_DEMO_SECRET_KEY", DEMO_KEY);
+  }
+
+  async function connected(
+    db: Awaited<ReturnType<typeof shopContext>>["db"],
+    shopId: string,
+    id: string,
+  ) {
+    await upsertShopStripeAccount(db, shopId, id);
+    await setShopStripeAccountStatus(db, id, {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+  }
+
+  it("offers no payment on a demo shop holding any account but the demo's", async () => {
+    const { db, shop } = await shopContext();
+    liveDeploymentWithDemo();
+    await connected(db, shop.id, "acct_e2e_test");
+    expect(await getShopStripeAccount(db, shop.id)).toBeNull();
+    expect(await getShopStripeAccountByAccountId(db, "acct_e2e_test")).toBeNull();
+    expect(
+      await stripeKeySourceFromEnvironment({ db: async () => db })?.secretKeyFor("acct_e2e_test"),
+    ).toBeNull();
+    vi.unstubAllEnvs();
+  });
+
+  it("offers payment on the canonical demo with the demo's account, on the test key", async () => {
+    const { db, shop } = await shopContext();
+    liveDeploymentWithDemo();
+    await connected(db, shop.id, DEMO_ACCOUNT);
+    expect(canAcceptPayments(await getShopStripeAccount(db, shop.id))).toBe(true);
+    expect(await stripeAccountHolder(db, DEMO_ACCOUNT)).toEqual({
+      isDemo: true,
+      isCanonicalDemo: true,
+    });
+    expect(
+      await stripeKeySourceFromEnvironment({ db: async () => db })?.secretKeyFor(DEMO_ACCOUNT),
+    ).toBe(DEMO_KEY);
+    vi.unstubAllEnvs();
+  });
+
+  it("gives the demo's account no key when a real shop holds it", async () => {
+    const { db, shop } = await shopContext();
+    const { shops } = await import("./schema");
+    const { eq } = await import("drizzle-orm");
+    await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
+    liveDeploymentWithDemo();
+    await connected(db, shop.id, DEMO_ACCOUNT);
+    expect(await stripeAccountHolder(db, DEMO_ACCOUNT)).toEqual({
+      isDemo: false,
+      isCanonicalDemo: false,
+    });
+    expect(
+      await stripeKeySourceFromEnvironment({ db: async () => db })?.secretKeyFor(DEMO_ACCOUNT),
+    ).toBeNull();
+    expect(
+      await stripeKeySourceFromEnvironment({ db: async () => db })?.secretKeyFor(
+        "acct_someRealShop1",
+      ),
+    ).toBe(LIVE_PLATFORM);
+    vi.unstubAllEnvs();
   });
 });

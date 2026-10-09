@@ -114,7 +114,10 @@ function deliver(name: StripeEventFixture, signingSecret = TEST_SECRET) {
 }
 
 beforeEach(() => {
-  vi.stubEnv("STRIPE_WEBHOOK_SECRET", LIVE_SECRET);
+  // A deployment that is test mode throughout: with a live secret configured
+  // too, a test event is acted on only for the canonical demo (ADR
+  // 20261009-demo-test-mode-payments), and these cases are about parsing.
+  vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
   vi.stubEnv("STRIPE_TEST_WEBHOOK_SECRET", TEST_SECRET);
   vi.mocked(getDb).mockResolvedValue(FAKE_DB as never);
   vi.mocked(markCheckoutPaidBySessionId)
@@ -364,6 +367,7 @@ describe("account events", () => {
 
 describe("the livemode cross-check, against real test-mode events", () => {
   it("signs a real test-mode event with the live secret and changes nothing", async () => {
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", LIVE_SECRET);
     // Every fixture is `livemode: false`. Verified by the *live* secret, that
     // mismatch must be a quiet 200-and-ignore — never a write to live payment
     // state, and never a non-2xx that would make Stripe retry it forever.
@@ -376,6 +380,7 @@ describe("the livemode cross-check, against real test-mode events", () => {
   });
 
   it("refuses a real event signed by neither secret", async () => {
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", LIVE_SECRET);
     const response = await deliver("invoice.paid", "whsec_not_ours");
     expect(response.status).toBe(400);
     expect(markOrderPaidByInvoiceId).not.toHaveBeenCalled();

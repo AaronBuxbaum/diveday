@@ -129,6 +129,7 @@
     "privateCharter": "Chárter privado",
     "depositLine": "{deposit} de señal al reservar · {balance} restante en el muelle",
     "freeCancellationUntil": "Cancelación gratuita hasta el {when}",
+    "sharedDemoNote": "Esta es la demo compartida: cualquiera que la pruebe puede ver lo que escribes aquí.",
     "theDay": "El día",
     "lookFor": "Busca",
     "momentsHeading": "Momentos de buceadores",
@@ -342,6 +343,7 @@
     "promoHint": "(si tienes uno)",
     "passThroughFee": "{name}: {price} por buceador (cargo de terceros)",
     "stripeHint": "Terminarás de pagar en una página segura de Stripe.",
+    "stripeTestModeHint": "Esto es la demo, así que Stripe está en modo de prueba. Paga con la tarjeta 4242 4242 4242 4242, cualquier fecha futura y cualquier CVC. No se cobra nada.",
     "ageAttestation": "Confirmo que todos los buceadores de esta reserva cumplen la edad mínima de {age}.",
     "cancelledHeading": "Esta salida se canceló",
     "cancelledBody": "para otra fecha, o ponte en contacto con el centro.",
@@ -376,6 +378,7 @@
     "confirmedDockCall": "{date}, {time}. Preséntate en el muelle {minutes, plural, one {# minuto} other {# minutos}} antes y nos encargamos del resto.",
     "paymentDepositBalance": "Tu plaza está asegurada. Los {balance} restantes se pagan en el muelle.",
     "paymentStillOpen": "Tu plaza está a salvo y el pago sigue abierto",
+    "codeUsedUp": "Ese código ya se ha agotado. Tu plaza está a salvo y puedes pagar el precio completo desde tu página de preparación.",
     "trackReadiness": "Sigue todos los pasos en tu página de preparación →",
     "errors": {
       "invalid": "Revisa tu nombre y correo electrónico e inténtalo de nuevo.",
@@ -737,6 +740,26 @@
     "contactRequired": "Deja un correo o un teléfono para poder contactarte.",
     "unavailable": "Ese centro no acepta registros en este momento."
   },
+  "packages": {
+    "title": "Paquetes de inmersiones",
+    "navLabel": "Paquetes",
+    "metaDescription": "Inmersiones prepagadas en {shopName}: pagas una vez y reservas las inmersiones cuando quieras.",
+    "dives": "{count, plural, one {# inmersión} other {# inmersiones}}",
+    "perDive": "{amount} por inmersión",
+    "scopeAll": "Cualquier salida",
+    "scopeFunDives": "Solo inmersiones recreativas",
+    "useBy": "Úsalas antes del {date}",
+    "buy": "Comprar por {amount}",
+    "buying": "Abriendo el pago…",
+    "invoiceLine": "{packageName}, {count, plural, one {# inmersión} other {# inmersiones}}",
+    "afterPaying": "Cuando esté pagado, tus inmersiones estarán listas la próxima vez que reserves con este correo.",
+    "error": {
+      "invalid": "Añade tu nombre y un correo en el que podamos localizarte.",
+      "notOnSale": "Ese paquete ya no está a la venta.",
+      "unavailable": "{shopName} no puede cobrar este pago en línea ahora mismo. Ponte en contacto y lo resolverán.",
+      "failed": "La página de pago no se abrió. No se ha cobrado nada. Inténtalo de nuevo en un momento."
+    }
+  },
   "ready": {
     "metaTitle": "Tu preparación para la salida — DiveDay",
     "namelessFallback": "buceador",
@@ -760,6 +783,7 @@
     "waiverUnavailable": "No hemos podido abrir tu exención ahora mismo. Inténtalo otra vez o pide un enlace al centro.",
     "paymentUnavailable": "No hemos podido abrir la página de pago. Tu plaza está a salvo. Inténtalo otra vez o paga en el centro.",
     "paymentCancelled": "Pago cancelado. Tu plaza sigue reservada.",
+    "codeUsedUp": "Ese código ya se ha agotado. Tu plaza sigue reservada y puedes pagar el precio completo abajo.",
     "cancelSpot": "Cancelar mi plaza",
     "cancelConfirm": "¿Cancelar tu plaza en {trip}? Esto no se puede deshacer.",
     "cancelConfirmButton": "Sí, cancelar mi plaza",
@@ -830,6 +854,7 @@
     "certOptional": "Opcional",
     "keepThisPage": "Esta página es tuya: guárdala en favoritos y seguirá al día hasta que zarpes.",
     "gearOnFile": "La tripulación ya tiene tus tallas.",
+    "packageDivesLeft": "{line} · {count, plural, one {te queda # inmersión del paquete} other {te quedan # inmersiones del paquete}}",
     "changesSizesLabel": "Tallas",
     "changesTanksLabel": "Tanques",
     "changesItemWithSize": "{item} {size}",
@@ -2042,6 +2067,10 @@
         "title": "Abrimos cada centro a mano",
         "body": "Cuéntanos de tu centro y lo abrimos contigo."
       },
+      "spentLink": {
+        "title": "Este enlace de configuración ya no sirve",
+        "body": "Un enlace de configuración abre un centro y dura dos semanas, así que pídenos uno nuevo."
+      },
       "shopSectionTitle": "Tu centro",
       "shopNameLabel": "Nombre del centro",
       "shopNamePlaceholder": "p. ej. Green Lagoon Divers",
@@ -2669,7 +2698,8 @@
       "gettingReady": "Preparando tu centro…",
       "tryDemo": "Probar la demo en vivo",
       "getSetUp": "Pide tu centro",
-      "demoNote": "La demo abre un centro de muestra en funcionamiento con un clic. Sin registro y sin tarjeta."
+      "demoNote": "La demo abre un centro de muestra en funcionamiento con un clic. Sin registro y sin tarjeta.",
+      "setUpNote": "Una persona lee cada solicitud y prepara tu centro contigo."
     },
     "price": {
       "name": "Centro fundador",
@@ -4070,8 +4100,8 @@
       "link": "Ver la salida y reservar tu plaza"
     },
     "lastMinuteDeal": {
-      "subject": "{discountPercent}% de descuento en {tripTitle}: oferta de última hora",
-      "body": "{shopName} acaba de abrir un {discountPercent}% de descuento en {tripTitle}.",
+      "subject": "{discount} de descuento en {tripTitle}: oferta de última hora",
+      "body": "{shopName} acaba de abrir un descuento de {discount} en {tripTitle}.",
       "useCode": "Usa el código {code} al reservar:",
       "bookLink": "Reservar {tripTitle}",
       "expiry": "El código caduca el {expires} (salida) o cuando se agoten las plazas, lo que ocurra antes.",
@@ -4276,6 +4306,9 @@
       "camera": "cámara",
       "nitroxAnalyzer": "analizador de nitrox",
       "o2Kit": "kit de oxígeno",
+      "aed": "DEA",
+      "firstAidKit": "botiquín",
+      "flares": "bengalas",
       "other": "equipo",
       "withModel": "{piece} ({model})"
     },
@@ -4292,6 +4325,9 @@
         "hydroTest": "La prueba hidrostática de tu equipo ({piece}) vence el {date}.",
         "visualInspection": "La inspección visual de tu equipo ({piece}) vence el {date}.",
         "o2Clean": "La limpieza para oxígeno de tu equipo ({piece}) vence el {date}.",
+        "aedPads": "Los parches de tu equipo ({piece}) vencen el {date}.",
+        "aedBattery": "La batería de tu equipo ({piece}) vence el {date}.",
+        "expiry": "Tu equipo ({piece}) vence el {date}.",
         "note": "Toca revisar tu equipo ({piece}) antes del {date}."
       },
       "dropBy": "Pasa por {shopName} cuando quieras antes de esa fecha.",

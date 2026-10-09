@@ -129,6 +129,7 @@
     "privateCharter": "Private charter",
     "depositLine": "{deposit} deposit at booking · {balance} balance at the dock",
     "freeCancellationUntil": "Free cancellation until {when}",
+    "sharedDemoNote": "This is the shared demo: anyone trying it can see what you type here.",
     "theDay": "The day",
     "lookFor": "Look for",
     "momentsHeading": "Moments from divers",
@@ -342,6 +343,7 @@
     "promoHint": "(if you have one)",
     "passThroughFee": "{name}: {price} per diver (third-party charge)",
     "stripeHint": "You’ll finish paying on a secure Stripe page.",
+    "stripeTestModeHint": "This is the demo, so Stripe is in test mode. Pay with the card 4242 4242 4242 4242, any future date and any CVC. Nothing is charged.",
     "ageAttestation": "I confirm every diver on this booking meets the minimum age of {age}.",
     "cancelledHeading": "This trip was canceled",
     "cancelledBody": "for another date, or get in touch with the shop.",
@@ -376,6 +378,7 @@
     "confirmedDockCall": "{date}, {time}. Be at the dock {minutes, plural, one {# minute} other {# minutes}} early and we’ll take it from there.",
     "paymentDepositBalance": "Your seat’s locked in. The {balance} balance is due at the dock.",
     "paymentStillOpen": "Your spot is safe and payment’s still open",
+    "codeUsedUp": "That code’s been used up. Your spot is safe, and you can pay the full price from your readiness page.",
     "trackReadiness": "Track everything on your readiness page →",
     "errors": {
       "invalid": "Check your name and email and give it another go.",
@@ -737,6 +740,26 @@
     "contactRequired": "Leave an email or a phone number so we can reach you.",
     "unavailable": "That shop isn’t taking registrations right now."
   },
+  "packages": {
+    "title": "Dive packages",
+    "navLabel": "Packages",
+    "metaDescription": "Prepaid dives at {shopName}: pay once, then book the dives as you go.",
+    "dives": "{count, plural, one {# dive} other {# dives}}",
+    "perDive": "{amount} a dive",
+    "scopeAll": "Any departure",
+    "scopeFunDives": "Fun dives only",
+    "useBy": "Use by {date}",
+    "buy": "Buy for {amount}",
+    "buying": "Opening payment…",
+    "invoiceLine": "{packageName}, {count, plural, one {# dive} other {# dives}}",
+    "afterPaying": "Once it’s paid, your dives are ready the next time you book with this email.",
+    "error": {
+      "invalid": "Add your name and an email we can reach you at.",
+      "notOnSale": "That package isn’t on sale anymore.",
+      "unavailable": "{shopName} can’t take this payment online right now. Get in touch and they’ll sort it out.",
+      "failed": "The payment page didn’t open. Nothing was charged. Try again in a moment."
+    }
+  },
   "ready": {
     "metaTitle": "Your trip readiness — DiveDay",
     "namelessFallback": "there",
@@ -760,6 +783,7 @@
     "waiverUnavailable": "We couldn’t open your waiver just now. Try again, or ask the shop for a link.",
     "paymentUnavailable": "We couldn’t open the payment page. Your seat is safe. Try again, or pay at the shop.",
     "paymentCancelled": "Payment canceled. Your seat is still held.",
+    "codeUsedUp": "That code’s been used up. Your seat is held, and you can pay the full price below.",
     "cancelSpot": "Cancel my spot",
     "cancelConfirm": "Cancel your spot on {trip}? This can’t be undone.",
     "cancelConfirmButton": "Yes, cancel my spot",
@@ -830,6 +854,7 @@
     "certOptional": "Optional",
     "keepThisPage": "This page is yours to keep. Bookmark it, and it stays up to date until you sail.",
     "gearOnFile": "Your sizes are with the crew.",
+    "packageDivesLeft": "{line} · {count, plural, one {# package dive left} other {# package dives left}}",
     "changesSizesLabel": "Sizes",
     "changesTanksLabel": "Tanks",
     "changesItemWithSize": "{item} {size}",
@@ -2042,6 +2067,10 @@
         "title": "We set up every shop by hand",
         "body": "Tell us about your shop and we’ll open it with you."
       },
+      "spentLink": {
+        "title": "This setup link no longer works",
+        "body": "A setup link opens one shop and lasts two weeks. Ask us for a new one."
+      },
       "shopSectionTitle": "Your shop",
       "shopNameLabel": "Shop name",
       "shopNamePlaceholder": "e.g. Green Lagoon Divers",
@@ -2669,7 +2698,8 @@
       "gettingReady": "Getting your shop ready…",
       "tryDemo": "Try the live demo",
       "getSetUp": "Get set up",
-      "demoNote": "The demo opens a working sample shop in one click. No sign-up and no card."
+      "demoNote": "The demo opens a working sample shop in one click. No sign-up and no card.",
+      "setUpNote": "A person reads every request and sets your shop up with you."
     },
     "price": {
       "name": "Founding shop",
@@ -4070,8 +4100,8 @@
       "link": "See the trip and book your spot"
     },
     "lastMinuteDeal": {
-      "subject": "{discountPercent}% off {tripTitle} — last-minute deal",
-      "body": "{shopName} just opened up {discountPercent}% off {tripTitle}.",
+      "subject": "{discount} off {tripTitle} — last-minute deal",
+      "body": "{shopName} just opened up {discount} off {tripTitle}.",
       "useCode": "Use code {code} at booking:",
       "bookLink": "Book {tripTitle}",
       "expiry": "The code expires {expires} (departure) or once seats run out, whichever comes first.",
@@ -4276,6 +4306,9 @@
       "camera": "camera",
       "nitroxAnalyzer": "nitrox analyzer",
       "o2Kit": "oxygen kit",
+      "aed": "AED",
+      "firstAidKit": "first-aid kit",
+      "flares": "flares",
       "other": "gear",
       "withModel": "{piece} ({model})"
     },
@@ -4292,6 +4325,9 @@
         "hydroTest": "The hydrostatic test on your {piece} is due on {date}.",
         "visualInspection": "The visual inspection on your {piece} is due on {date}.",
         "o2Clean": "The oxygen cleaning on your {piece} is due on {date}.",
+        "aedPads": "The pads in your {piece} expire on {date}.",
+        "aedBattery": "The battery in your {piece} expires on {date}.",
+        "expiry": "Your {piece} expires on {date}.",
         "note": "A check on your {piece} is due on {date}."
       },
       "dropBy": "Drop by {shopName} any time before then.",

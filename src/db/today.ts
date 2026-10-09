@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, gt, gte, inArray, lte, ne } from "drizzle-orm";
+import { boatSafetyNoticeText } from "@/i18n/boat-safety-labels";
 import { gearServiceKindLabel } from "@/i18n/gear-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
@@ -21,6 +22,8 @@ import {
   missingContactNamedDetailText,
   missingFitDetailText,
   missingFitNamedDetailText,
+  openBoatCheckActionText,
+  openBoatsActionText,
   openCrewActionText,
   openDataSettingsActionText,
   openDiverActionText,
@@ -129,6 +132,7 @@ import {
   type NextBoatDayBlocked,
   sharedInHorizonReadiness,
 } from "./blockers";
+import { todayBoatSafety } from "./boat-safety";
 import type { AppDb } from "./client";
 import { diveIntentTallyForTrips } from "./dive-intent";
 import {
@@ -2938,6 +2942,71 @@ export async function getTodayWork(
       href: `/shop/${shopSlug}/gear/${row.gearItemId}`,
       dueAt,
     });
+  }
+  // **The boat and its emergency kit** (roadmap N-08, N-10; dive-domain review
+  // 2026-10-09). Two kinds of row from one read:
+  //
+  // - On each departure sailing today, the life-safety kit: no O2 kit or AED
+  //   aboard, or oxygen, AED or flares run out or about to. Danger, every
+  //   role, under that departure's header and pointing at its Boat tab — the
+  //   crew loading the boat are who can fix it before it leaves. It gates
+  //   nothing: roll call and boarding go on.
+  // - The owner's errands: a paper inside its window (escalating once it
+  //   lapses), and kit that ran out ashore or on a boat not sailing today.
+  //
+  // The sentences are the pre-departure check's own, so the owner, the crew
+  // and the manifest read the same words. Self-gating like the register.
+  const boatSafety = await todayBoatSafety(db, shopId, {
+    todayLocal,
+    departures: todayTrips.flatMap((trip) =>
+      trip.boatId ? [{ tripId: trip.id, boatId: trip.boatId }] : [],
+    ),
+  });
+  const todayTripsById = new Map(todayTrips.map((trip) => [trip.id, trip]));
+  for (const row of boatSafety.departures) {
+    const trip = todayTripsById.get(row.tripId);
+    if (!trip) continue;
+    const when = at(trip.startsAt, timeZone, locale);
+    actions.push({
+      id: `boat-safety-kit:${row.tripId}`,
+      kind: "boat_safety_kit",
+      urgency: urgencyFor(trip.startsAt, now),
+      subject: row.boatName,
+      context: when,
+      departure: { tripId: trip.id, label: `${trip.title} · ${when}` },
+      detail: row.notices.map((notice) => boatSafetyNoticeText(t, notice)).join(" · "),
+      actionLabel: openBoatCheckActionText(t),
+      href: `/shop/${shopSlug}/trips/${trip.id}/manifest`,
+      dueAt: trip.startsAt,
+    });
+  }
+  for (const row of boatSafety.errands) {
+    const detail = row.notices.map((notice) => boatSafetyNoticeText(t, notice)).join(" · ");
+    actions.push(
+      row.subject === "boat"
+        ? {
+            id: `boat-safety:boat:${row.boatId}`,
+            kind: row.expired ? "boat_safety_expired" : "boat_papers_due",
+            urgency: row.expired ? "now" : "later",
+            subject: row.name,
+            context: null,
+            detail,
+            actionLabel: openBoatsActionText(t),
+            href: `/shop/${shopSlug}/settings/boats`,
+            dueAt: null,
+          }
+        : {
+            id: `boat-safety:kit:${row.gearItemId}`,
+            kind: "boat_safety_expired",
+            urgency: "now",
+            subject: row.label,
+            context: null,
+            detail,
+            actionLabel: openGearUnitActionText(t),
+            href: `/shop/${shopSlug}/gear/${row.gearItemId}`,
+            dueAt: null,
+          },
+    );
   }
   // The bench (ADR 20261008-work-order-follow-up): a ticket still being
   // worked after the day the shop promised it, and one ready for a week that

@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { stripeKeySourceFromEnvironment } from "@/db/stripe-key-source";
+import type { PromoDiscount } from "../promo-codes";
+import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
@@ -14,7 +17,10 @@ export type CreateTripPromotionRequest = {
   stripeAccountId: string;
   /** The exact code text the diver will type, e.g. "SAVE50-A1B2C3". */
   code: string;
-  percentOff: number;
+  /** A percent becomes `percent_off`; a fixed amount becomes `amount_off` in `currency`. */
+  discount: PromoDiscount;
+  /** The shop's currency — the only one an `amount_off` coupon can be spent in. */
+  currency: string;
   /** Pinned to the trip's departure — Stripe itself refuses redemption past this. */
   expiresAt: Date;
   /** Capped at the trip's open-seat count at send time; always at least 1. */
@@ -36,7 +42,8 @@ export type CreateTripPromotionRequest = {
 export type CreateShopPromotionRequest = {
   stripeAccountId: string;
   code: string;
-  percentOff: number;
+  discount: PromoDiscount;
+  currency: string;
   /** Staff's label, shown in the shop's own Stripe dashboard beside the coupon. */
   name: string;
   expiresAt: Date | null;
@@ -92,8 +99,6 @@ export interface PromotionProvider {
 type Fetch = typeof fetch;
 type PaymentEnvironment = Readonly<Record<string, string | undefined>>;
 
-const configSchema = z.object({ secretKey: z.string().trim().min(1) });
-
 const couponResponseSchema = z.object({ id: z.string().min(1) });
 const promotionCodeResponseSchema = z.object({ id: z.string().min(1) });
 
@@ -106,7 +111,7 @@ function headersFor(secretKey: string, stripeAccountId: string): Record<string, 
 }
 
 export function stripePromotionProvider(
-  config: { secretKey: string },
+  config: StripeKeySource,
   fetchImpl: Fetch,
 ): PromotionProvider {
   /**
@@ -118,22 +123,34 @@ export function stripePromotionProvider(
   async function createPromotion(request: {
     stripeAccountId: string;
     code: string;
-    percentOff: number;
+    discount: PromoDiscount;
+    currency: string;
     name: string;
     expiresAt: Date | null;
     maxRedemptions: number | null;
     idempotencyKey: string;
   }): Promise<CreateTripPromotionResult> {
     try {
+      // A fixed amount is an `amount_off` coupon in the shop's own currency.
+      // Stripe takes it off the session's total once and stops at zero, which
+      // is the rule DiveDay states: once per booking, never below nothing.
       const couponForm = new URLSearchParams({
         duration: "once",
-        percent_off: String(request.percentOff),
+        ...(request.discount.kind === "percent"
+          ? { percent_off: String(request.discount.percent) }
+          : {
+              amount_off: String(Math.max(1, Math.round(request.discount.amountCents))),
+              currency: request.currency,
+            }),
         name: request.name,
       });
       const couponResponse = await fetchImpl("https://api.stripe.com/v1/coupons", {
         method: "POST",
         headers: {
-          ...headersFor(config.secretKey, request.stripeAccountId),
+          ...headersFor(
+            await secretKeyForCall(config, request.stripeAccountId),
+            request.stripeAccountId,
+          ),
           "Idempotency-Key": `${request.idempotencyKey}:coupon`,
         },
         body: couponForm.toString(),
@@ -152,7 +169,10 @@ export function stripePromotionProvider(
       const promoResponse = await fetchImpl("https://api.stripe.com/v1/promotion_codes", {
         method: "POST",
         headers: {
-          ...headersFor(config.secretKey, request.stripeAccountId),
+          ...headersFor(
+            await secretKeyForCall(config, request.stripeAccountId),
+            request.stripeAccountId,
+          ),
           "Idempotency-Key": `${request.idempotencyKey}:promotion_code`,
         },
         body: promoForm.toString(),
@@ -194,7 +214,10 @@ export function stripePromotionProvider(
         const response = await fetchImpl("https://api.stripe.com/v1/coupons", {
           method: "POST",
           headers: {
-            ...headersFor(config.secretKey, request.stripeAccountId),
+            ...headersFor(
+              await secretKeyForCall(config, request.stripeAccountId),
+              request.stripeAccountId,
+            ),
             "Idempotency-Key": `${request.idempotencyKey}:session-discount`,
           },
           body: form.toString(),
@@ -228,8 +251,8 @@ export function promotionProviderFromEnvironment(
   env: PaymentEnvironment = process.env,
   fetchImpl: Fetch = fetch,
 ): PromotionProvider {
-  const config = configSchema.safeParse({ secretKey: env.STRIPE_SECRET_KEY });
-  return config.success
-    ? stripePromotionProvider(config.data, fetchImpl)
-    : disabledPromotionProvider;
+  // Per connected account: the demo's is called only with the test-mode key
+  // (src/lib/payments/stripe-keys.ts, ADR 20261009-demo-test-mode-payments).
+  const keys = stripeKeySourceFromEnvironment({ env });
+  return keys ? stripePromotionProvider(keys, fetchImpl) : disabledPromotionProvider;
 }

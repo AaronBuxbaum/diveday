@@ -7,7 +7,7 @@ afterEach(cleanup);
 
 /**
  * **The skeleton is the door the route renders by default** (docs/design/
- * pixel-craft.md, class 11; K-290). Without a setup key `/onboard` renders
+ * pixel-craft.md, class 11; K-290). Without a setup link `/onboard` renders
  * `ClosedDoor`: the marketing header, one sentence and one mail button in a
  * panel, two footer lines and the marketing footer. The skeleton drew a
  * six-field form and no chrome, about 440px taller than the door, centred in

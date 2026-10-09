@@ -1,6 +1,15 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { collectDurations, moduleCost } from "./duration-reporter";
+import {
+  DURATIONS_LOG_MARKER as MERGE_MARKER,
+  parseDurationsInput,
+} from "../../scripts/merge-test-durations.mjs";
+import {
+  collectDurations,
+  DURATIONS_LOG_MARKER,
+  durationsLogLine,
+  moduleCost,
+} from "./duration-reporter";
 
 describe("moduleCost", () => {
   it("is the file's whole wall cost, import and setup included", () => {
@@ -52,5 +61,15 @@ describe("collectDurations", () => {
         root,
       ),
     ).toEqual({});
+  });
+});
+
+describe("durationsLogLine", () => {
+  it("is one line the merge script reads back to the same map", () => {
+    const durations = { "src/a.test.ts": 1200, "src/b.test.ts": 30 };
+    const line = durationsLogLine(durations);
+    expect(line).not.toContain("\n");
+    expect(MERGE_MARKER).toBe(DURATIONS_LOG_MARKER);
+    expect(parseDurationsInput(`2026-10-09T02:36:11.2Z ${line}`)).toEqual(durations);
   });
 });

@@ -42,11 +42,13 @@ export async function GET(request: Request) {
     return NextResponse.redirect(settingsUrl);
   }
 
-  // The demo shop must never hold a live Stripe account: its seeded orders are
-  // fabricated and its order controls are disabled shop-wide, so a real
-  // connection would let it manage genuine money it can't reconcile. Refuse to
-  // link one — createOrder then stays "not connected", and every order on a demo
-  // shop remains demo (src/db/orders.ts, orders/[id]/page.tsx).
+  // A demo shop is never connected through OAuth: anyone can own one, and a
+  // real connection would let it manage genuine money it can't reconcile. The
+  // one Stripe account a demo ever holds is the canonical demo's test-mode
+  // account, written from configuration by `syncDemoStripeAccount` and only
+  // ever called with the test-mode key (ADR 20261009-demo-test-mode-payments);
+  // every other demo stays "not connected", and `getShopStripeAccount` hides
+  // any demo account a live key would reach.
   const shop = await getShopById(dbForShop, session.user.shopId);
   if (shop?.isDemo) {
     settingsUrl.searchParams.set("notice", "connect-failed");

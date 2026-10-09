@@ -1,6 +1,6 @@
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatTime } from "@/lib/format";
-import type { RollCallCheckpoint, RollCallRecord } from "@/lib/manifests";
+import type { RollCallCheckpoint, RollCallRecord, TripManifest } from "@/lib/manifests";
 import type { PersonTrailEntry } from "./PersonSheet";
 
 function trailLabel(
@@ -62,4 +62,45 @@ export function personTrailWithCurrentRecord({
       note: rollCall.note,
     },
   ];
+}
+
+/**
+ * The person sheet's Today section is a small audit trail, not a second
+ * current-state calculation. It reads the same latest record each checkpoint
+ * already uses and omits carried-forward rows, so an ashore-at-the-dock result
+ * appears once instead of being repeated after every dive.
+ */
+export function personTrailIndex(
+  manifests: readonly TripManifest[],
+  locale: string,
+  timezone: string,
+  t: StaffTranslator,
+): ReadonlyMap<string, readonly PersonTrailEntry[]> {
+  const index = new Map<string, PersonTrailEntry[]>();
+  const add = (
+    id: string,
+    checkpoint: RollCallCheckpoint,
+    rollCall: TripManifest["divers"][number]["rollCall"],
+  ) => {
+    if (!rollCall || rollCall.implied) return;
+    const state: PersonTrailEntry["state"] =
+      rollCall.state === "boarded" ? "aboard" : checkpoint === "departure" ? "ashore" : "notBack";
+    const entries = index.get(id) ?? [];
+    entries.push({
+      label: trailLabel(t, checkpoint, state),
+      detail: t("manifest.personTrailDetail", {
+        time: formatTime(rollCall.occurredAt, locale, timezone),
+        name: rollCall.recordedByName,
+      }),
+      state,
+      note: rollCall.note,
+    });
+    index.set(id, entries);
+  };
+
+  for (const snapshot of manifests) {
+    for (const diver of snapshot.divers) add(diver.bookingId, snapshot.checkpoint, diver.rollCall);
+    for (const member of snapshot.crew) add(member.id, snapshot.checkpoint, member.rollCall);
+  }
+  return index;
 }

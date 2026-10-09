@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { BoatSafetyNotices } from "@/components/BoatSafetyNotices";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { HapticsToggle } from "@/components/HapticsToggle";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
@@ -848,6 +849,12 @@ export function OfflineManifestView() {
           with no checklist items renders nothing here, not an empty card.
           Above the checkpoint switcher because the check happens once,
           before the boat leaves — not once per checkpoint. */}
+        {/* The hull's papers and safety kit as the live Boat tab said them at
+          the save, above the boat check for the same reason the live page
+          puts them there. Words, not codes: nothing here can word them. */}
+        {envelope.snapshot.boatSafety ? (
+          <BoatSafetyNotices className="mt-6" {...envelope.snapshot.boatSafety} />
+        ) : null}
         <OfflineChecklist view={view} controls={controls} />
 
         {/* **The desk, with no signal** (ADR

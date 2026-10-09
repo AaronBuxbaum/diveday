@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-25
-- **Amended by:** [20261007-setup-request-form](20261007-setup-request-form.md) — "Get set up" is now a public form at `/get-set-up` rather than the mail described below, and `trial_started` is deleted.
+- **Amended by:** [20261007-setup-request-form](20261007-setup-request-form.md) — "Get set up" is now a public form at `/get-set-up` rather than the mail described below, and `trial_started` is deleted. [20261009-single-use-setup-links](20261009-single-use-setup-links.md) — the setup key below is deleted; `/onboard` opens with a single-use link minted per set-up request.
 
 ## Context
 

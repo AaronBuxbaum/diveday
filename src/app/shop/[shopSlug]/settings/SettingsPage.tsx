@@ -113,6 +113,7 @@ function noticeMessages(
     "not-configured": { tone: "warning", text: t("settings.main.notice.notConfigured") },
     disconnected: { tone: "success", text: t("settings.main.notice.disconnected") },
     refreshed: { tone: "success", text: t("settings.main.notice.refreshed") },
+    "demo-stripe": { tone: "warning", text: t("settings.main.notice.demoStripe") },
     "not-authorized": { tone: "danger", text: t("settings.main.notice.notAuthorized") },
     // Promos' own gate (`shop/[shopSlug]/promos/page.tsx`) bounces a
     // non-owner/manager here — a distinct code from `not-authorized` above

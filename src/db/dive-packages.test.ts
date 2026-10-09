@@ -14,6 +14,7 @@ import {
   deleteDivePackage,
   grantPackageEntitlements,
   listDivePackages,
+  listPackagesOnSale,
   listSpendableEntitlements,
   releaseEntitlementForBooking,
   shopSellsPackages,
@@ -53,7 +54,10 @@ async function packageContext() {
       personId: person.id,
       createdByPersonId: person.id,
       description: "Ten-dive package",
+      // Paid: an entitlement is only spendable while its order still backs it.
+      status: "paid",
       totalCents: 90_000,
+      amountPaidCents: 90_000,
       currency: "usd",
       stripeAccountId: "acct_test",
       stripeCustomerId: "cus_test",
@@ -110,6 +114,28 @@ describe("a shop's package price list", () => {
 
     expect(await listDivePackages(db, shop.id)).toHaveLength(0);
     expect(await countSpendableDives(db, shop.id, person.id)).toBe(5);
+  });
+
+  it("offers divers only what has not lapsed", async () => {
+    const { db, shop } = await packageContext();
+    for (const [name, validUntil] of [
+      ["Open card", null],
+      ["Season card", "2999-12-31"],
+      ["Last season", "2020-12-31"],
+    ] as const) {
+      await createDivePackage(db, {
+        shopId: shop.id,
+        name,
+        diveCount: 5,
+        priceCents: 40_000,
+        scope: "fun_dives",
+        validUntil,
+      });
+    }
+    expect((await listPackagesOnSale(db, shop.id)).map((pkg) => pkg.name).sort()).toEqual([
+      "Open card",
+      "Season card",
+    ]);
   });
 });
 
@@ -285,7 +311,9 @@ describe("booking a departure with a package", () => {
         personId,
         createdByPersonId: personId,
         description: "Ten-dive package",
+        status: "paid",
         totalCents: 90_000,
+        amountPaidCents: 90_000,
         currency: "usd",
         stripeAccountId: "acct_test",
         stripeCustomerId: "cus_test",
@@ -440,7 +468,9 @@ describe("a booking made under an unconfirmed identity", () => {
         personId,
         createdByPersonId: staffPerson.person.id,
         description: "Ten-dive package",
+        status: "paid",
         totalCents: 90_000,
+        amountPaidCents: 90_000,
         currency: "usd",
         stripeAccountId: "acct_test",
         stripeCustomerId: "cus_test",
@@ -541,7 +571,9 @@ describe("confirming a name-match seat's identity", () => {
         personId,
         createdByPersonId: staffPerson.person.id,
         description: "Ten-dive package",
+        status: "paid",
         totalCents: 90_000,
+        amountPaidCents: 90_000,
         currency: "usd",
         stripeAccountId: "acct_test",
         stripeCustomerId: "cus_test",

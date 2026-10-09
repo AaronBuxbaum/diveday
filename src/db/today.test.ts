@@ -7,6 +7,7 @@ import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { assembleDaySpine, sortStationRows } from "@/lib/today";
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
+import { createBoat } from "./boats";
 import { cancelBooking, createBookingParty } from "./bookings";
 import { createGearItem, recordGearService, reserveGearUnit, returnGearReservation } from "./gear";
 import { markInboundAnswered, recordInboundMessage } from "./inbound-messages";
@@ -22,6 +23,7 @@ import { listTripReadiness } from "./readiness";
 import { saveRentalFit } from "./rental-fit";
 import { submitTripReview } from "./reviews";
 import {
+  boats as boatsTable,
   bookings as bookingsTable,
   courses,
   inboundMessages,
@@ -3205,6 +3207,120 @@ describe("unclosed roll call (DOM-H3)", () => {
       expect(work.actions.some((action) => action.id === `gear-service:${distant.item.id}`)).toBe(
         false,
       );
+    });
+
+    it("puts expired kit ashore and lapsed boat papers on one owner row each, never twice", async () => {
+      const { db, shop } = ctx;
+      const today = calendarDateInTimezone(nowDate(), shop.timezone);
+      const hull = await createBoat(db, shop.id, "Papers Hull", 12, null, {
+        certifiedPassengers: 12,
+        inspectionDueOn: null,
+        registrationExpiresOn: null,
+        insuranceExpiresOn: shiftCalendarDate(today, -2),
+      });
+      // Aboard a hull with no departure today: the owner's errand, not a boat row.
+      const aed = await createGearItem(db, {
+        shopId: shop.id,
+        kind: "aed",
+        label: "AED Papers Hull",
+        aboardBoatId: hull.id,
+      });
+      if (!aed.ok) throw new Error("item refused");
+      await recordGearService(db, {
+        shopId: shop.id,
+        gearItemId: aed.item.id,
+        kind: "aed_pads",
+        servicedOn: shiftCalendarDate(today, -700),
+        nextDueOn: shiftCalendarDate(today, -3),
+      });
+
+      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      expect(work.actions.find((a) => a.id === `boat-safety:kit:${aed.item.id}`)).toMatchObject({
+        kind: "boat_safety_expired",
+        urgency: "now",
+        subject: "AED Papers Hull",
+        detail: "AED Papers Hull: pads expired 3 days ago",
+        href: `/shop/${shop.slug}/gear/${aed.item.id}`,
+      });
+      expect(work.actions.find((a) => a.id === `boat-safety:boat:${hull.id}`)).toMatchObject({
+        kind: "boat_safety_expired",
+        subject: "Papers Hull",
+        detail: "Insurance expired 2 days ago",
+        href: `/shop/${shop.slug}/settings/boats`,
+      });
+      // Safety kit never rides the register's bench-clock row: one dead AED,
+      // one row.
+      expect(work.actions.some((a) => a.id === `gear-service:${aed.item.id}`)).toBe(false);
+    });
+
+    it("raises a paper inside its window as a quiet owner errand before it lapses", async () => {
+      const { db, shop } = ctx;
+      const today = calendarDateInTimezone(nowDate(), shop.timezone);
+      const hull = await createBoat(db, shop.id, "Inspection Hull", 12, null, {
+        certifiedPassengers: null,
+        // 75 days out: inside the inspection's 90-day window.
+        inspectionDueOn: shiftCalendarDate(today, 75),
+        registrationExpiresOn: null,
+        insuranceExpiresOn: null,
+      });
+      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      expect(work.actions.find((a) => a.id === `boat-safety:boat:${hull.id}`)).toMatchObject({
+        kind: "boat_papers_due",
+        urgency: "later",
+        detail: "Next safety inspection due in 75 days",
+        href: `/shop/${shop.slug}/settings/boats`,
+      });
+    });
+
+    it("raises today's departure's missing AED and lapsed flares as one row on that departure", async () => {
+      const { db, shop } = ctx;
+      const today = calendarDateInTimezone(nowDate(), shop.timezone);
+      const [reef] = await db
+        .select({ id: tripsTable.id, boatId: tripsTable.boatId, startsAt: tripsTable.startsAt })
+        .from(tripsTable)
+        .where(
+          and(
+            eq(tripsTable.shopId, shop.id),
+            eq(tripsTable.title, "Two-Tank Reef — Molasses & French"),
+            isNull(tripsTable.deletedAt),
+          ),
+        )
+        .orderBy(tripsTable.startsAt)
+        .limit(1);
+      if (!reef?.boatId) throw new Error("the seeded reef trip sails on no boat");
+      const [hull] = await db
+        .select({ name: boatsTable.name })
+        .from(boatsTable)
+        .where(eq(boatsTable.id, reef.boatId));
+      // The shop keeps an AED — on the shelf, not aboard this hull.
+      const shelf = await createGearItem(db, { shopId: shop.id, kind: "aed", label: "AED shelf" });
+      if (!shelf.ok) throw new Error("item refused");
+      const flares = await createGearItem(db, {
+        shopId: shop.id,
+        kind: "flares",
+        label: "Flares reef",
+        aboardBoatId: reef.boatId,
+      });
+      if (!flares.ok) throw new Error("item refused");
+      await recordGearService(db, {
+        shopId: shop.id,
+        gearItemId: flares.item.id,
+        kind: "expiry",
+        servicedOn: shiftCalendarDate(today, -900),
+        nextDueOn: shiftCalendarDate(today, -3),
+      });
+
+      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      expect(work.actions.find((a) => a.id === `boat-safety-kit:${reef.id}`)).toMatchObject({
+        kind: "boat_safety_kit",
+        subject: hull?.name,
+        departure: { tripId: reef.id },
+        detail: "No AED aboard · Flares reef: expired 3 days ago",
+        href: `/shop/${shop.slug}/trips/${reef.id}/manifest`,
+      });
+      // Said once: not again as the owner's errand, nor as a bench clock.
+      expect(work.actions.some((a) => a.id === `boat-safety:kit:${flares.item.id}`)).toBe(false);
+      expect(work.actions.some((a) => a.id === `gear-service:${flares.item.id}`)).toBe(false);
     });
 
     it("is tenant-safe: another shop's queue never sees this fleet", async () => {

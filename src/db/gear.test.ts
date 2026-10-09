@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { gearServiceState, tripReservationWindow } from "@/lib/gear";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import {
@@ -84,8 +84,8 @@ async function rivalShop(db: AppDb) {
  * assertion about exactly the rows each test wrote — and doubles as proof
  * the readers are shop-scoped.
  */
-async function gearShopContext() {
-  const { db } = await seededShopContext();
+async function gearShopContext(source: { db: AppDb } = ctx) {
+  const { db } = source;
   const [shop] = await db
     .insert(shops)
     .values({ name: "Gear Test Divers", slug: "gear-test", timezone: "America/New_York" })
@@ -98,6 +98,10 @@ function mustCreate(outcome: Awaited<ReturnType<typeof createGearItem>>) {
   if (!outcome.ok) throw new Error(`create refused: ${outcome.reason}`);
   return outcome.item;
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 describe("gear items", () => {
   it("names exactly one holder: a booking or a person-held counter rental", async () => {
@@ -185,7 +189,11 @@ describe("gear items", () => {
   });
 
   it("refuses a duplicate tag and an empty one — the tag is how a wet hand finds the row", async () => {
-    const { db, shop } = await gearShopContext();
+    // A database of its own, not the file's shared transaction: the duplicate
+    // is refused by the unique index, a violation aborts a wrapping
+    // transaction, and the rival shop's create after it would fail for that
+    // reason alone (src/test/db.ts, "When NOT to use this").
+    const { db, shop } = await gearShopContext(await seededShopContext());
     mustCreate(await createGearItem(db, { shopId: shop.id, kind: "regulator", label: "Reg #4" }));
 
     expect(
@@ -230,7 +238,9 @@ describe("gear items", () => {
   });
 
   it("deletes a unit softly — off the register, history intact — and other tenants cannot reach it", async () => {
-    const { db, shop } = await gearShopContext();
+    // A database of its own: the refused restore below is the unique index
+    // answering, which aborts a wrapping transaction (src/test/db.ts, "When NOT to use this").
+    const { db, shop } = await gearShopContext(await seededShopContext());
     const rival = await rivalShop(db);
     const item = mustCreate(
       await createGearItem(db, { shopId: shop.id, kind: "gopro", label: "GoPro A" }),
@@ -623,7 +633,10 @@ describe("reserveGearUnit's screen, held under the booking's lock (issue #2215)"
   const screen = (proposed: boolean) => ({ proposed });
 
   it("gives one diver one BCD when two tablets assign different BCDs at the same instant", async () => {
-    const { db, shop } = await gearShopContext();
+    // A database of its own: the two assignments must race as two
+    // transactions, and inside the file's shared one they would run as one
+    // (src/test/db.ts, "When NOT to use this").
+    const { db, shop } = await gearShopContext(await seededShopContext());
     const bcd3 = mustCreate(
       await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #3", size: "M" }),
     );

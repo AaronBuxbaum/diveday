@@ -388,7 +388,14 @@ export function BookSpotSection({
    */
   otherSeatOffers?: ReadonlyArray<Omit<MoneyBlockSeatLine, "count">>;
   errorMessage?: string;
-  payAtBooking: boolean;
+  /**
+   * Whether the booking takes the card now, and `"test-mode"` when the checkout
+   * it hands off to is Stripe test mode: only ever the canonical demo's (ADR
+   * 20261009-demo-test-mode-payments). The same form and the same Stripe page;
+   * the line under the button tells a visitor which card to use and that
+   * nothing is charged.
+   */
+  payAtBooking: boolean | "test-mode";
   /**
    * Whether a code could apply to this booking at all (`tripMayTakeACode`).
    * The code box shows only then: an empty box on every paid booking sends a
@@ -706,7 +713,11 @@ export function BookSpotSection({
           {/* The scariest hop on hotel wifi (task 19) — said once, up front,
               rather than only after the tap commits the diver to it. Only when
               there is a checkout to hop to. */}
-          {payAtBooking ? <p className="mt-2 text-xs text-muted">{t("stripeHint")}</p> : null}
+          {payAtBooking ? (
+            <p className="mt-2 text-xs text-muted">
+              {t(payAtBooking === "test-mode" ? "stripeTestModeHint" : "stripeHint")}
+            </p>
+          ) : null}
           {/* The one sentence still ahead of a diver who has decided. */}
           {terms}
           {/* The refusal used to render above the whole form — above the party

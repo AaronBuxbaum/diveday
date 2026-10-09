@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DEV_ONBOARD_SETUP_KEY } from "@/lib/onboard-setup-key";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
 import { seededTestDb } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
@@ -11,7 +10,7 @@ import { nextHeadersStub } from "@/test/next-headers";
  * This is code that fails silently — a signup still works perfectly with its
  * alert quietly gone — so this file pins that it still fires. The
  * `trial_started` event that used to fire beside it is gone: `/onboard` opens
- * only behind the setup key, so it counted the founder's own form fills, and
+ * only behind a setup link, so it counted the founder's own form fills, and
  * the funnel's conversion is `setup_requested` now (ADR
  * 20261007-setup-request-form).
  *
@@ -58,11 +57,37 @@ const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { sendNotification } = await import("@/db/notifications");
 const { onboardAction } = await import("./actions");
+const { recordSetupRequest } = await import("@/db/funnel");
+const { issueSetupLink } = await import("@/db/setup-links");
+
+type TestDb = Awaited<ReturnType<typeof seededTestDb>>;
+
+/**
+ * The link the next form carries. Shaped like a real token but minted nowhere
+ * until {@link mintLink} runs, so a case that never reaches the database
+ * still gets as far as its own refusal.
+ */
+let setupToken = "A".repeat(43);
+
+/** A fresh open link, as the founder's mail would carry for one request. */
+async function mintLink(db: TestDb): Promise<void> {
+  const request = await recordSetupRequest(db, {
+    shopName: "Reef Runners",
+    region: "Key Largo",
+    runsBoat: true,
+    currentSystem: "paper",
+    contactName: "Marisol Vega",
+    email: "marisol@reefrunners.example",
+    phone: null,
+    source: "pricing",
+    locale: "en-US",
+  });
+  setupToken = (await issueSetupLink(db, { setupRequestId: request.id })).token;
+}
 
 function onboardForm(overrides: Record<string, string> = {}): FormData {
   const form = new FormData();
-  // The fixed key a non-production run accepts; the suite runs under `test`.
-  form.set("setup", DEV_ONBOARD_SETUP_KEY);
+  form.set("setup", setupToken);
   form.set("shopName", "Reef Runners");
   form.set("shopSlug", "reef-runners");
   form.set("timezone", "America/New_York");
@@ -103,8 +128,11 @@ async function signUp(form = onboardForm()): Promise<string> {
  * already exists is also the more honest fixture — the slug and email
  * uniqueness checks have something real to miss.
  */
-async function useDb(): Promise<void> {
-  vi.mocked(getDb).mockResolvedValue(await seededTestDb());
+async function useDb(): Promise<TestDb> {
+  const db = await seededTestDb();
+  vi.mocked(getDb).mockResolvedValue(db);
+  await mintLink(db);
+  return db;
 }
 
 beforeEach(() => {
@@ -128,6 +156,17 @@ afterEach(() => {
 });
 
 describe("onboardAction instrumentation", () => {
+  it("records which shop the link opened, in the same transaction", async () => {
+    const db = await useDb();
+    expect(await signUp()).toBe("/shop/reef-runners");
+    const { shopSetupLinks, shops: shopTable } = await import("@/db/schema");
+    const { eq } = await import("drizzle-orm");
+    const [shop] = await db.select().from(shopTable).where(eq(shopTable.slug, "reef-runners"));
+    const [link] = await db.select().from(shopSetupLinks);
+    expect(link?.spentAt).not.toBeNull();
+    expect(link?.spentByShopId).toBe(shop?.id);
+  });
+
   it("alerts the founder once, on one sign-up", async () => {
     await useDb();
     expect(await signUp()).toBe("/shop/reef-runners");
@@ -161,14 +200,36 @@ describe("onboardAction instrumentation", () => {
   });
 
   it("counts nothing when the slug was already taken", async () => {
-    await useDb();
+    const db = await useDb();
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     await signUp();
+    await mintLink(db);
     hoisted.afterTasks.length = 0;
     vi.mocked(sendNotification).mockClear();
 
     expect(await signUp()).toContain("error=shop_slug_taken");
     expect(sendNotification).not.toHaveBeenCalled();
+    logged.mockRestore();
+  });
+
+  it("counts nothing, and creates nothing, for a second shop on a spent link", async () => {
+    const db = await useDb();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await signUp()).toBe("/shop/reef-runners");
+    hoisted.afterTasks.length = 0;
+    vi.mocked(sendNotification).mockClear();
+
+    // The same link, a different shop and owner: everything else would pass.
+    const landing = await signUp(
+      onboardForm({ shopSlug: "reef-runners-two", ownerEmail: "second@reefrunners.example" }),
+    );
+    expect(landing).toContain("/onboard?error=setup_link_closed");
+    expect(landing).not.toContain(setupToken);
+    expect(landing).not.toContain("/shop/");
+    expect(sendNotification).not.toHaveBeenCalled();
+    const { shops } = await import("@/db/schema");
+    const { eq } = await import("drizzle-orm");
+    expect(await db.select().from(shops).where(eq(shops.slug, "reef-runners-two"))).toEqual([]);
     logged.mockRestore();
   });
 
@@ -187,9 +248,10 @@ describe("onboardAction instrumentation", () => {
    * it alerts nobody, because no shop exists to count.
    */
   it("says an address is already registered, and creates nothing when it is", async () => {
-    await useDb();
+    const db = await useDb();
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(await signUp()).toBe("/shop/reef-runners");
+    await mintLink(db);
     hoisted.afterTasks.length = 0;
     vi.mocked(sendNotification).mockClear();
 
@@ -220,6 +282,7 @@ describe("onboardAction instrumentation", () => {
     // returned promise exists. The trailing `.catch()` this used to carry
     // never saw it, and it surfaced as an unhandled rejection.
     const db = await seededTestDb();
+    await mintLink(db);
     vi.mocked(getDb)
       .mockResolvedValueOnce(db) // the action's own handle
       .mockRejectedValue(new Error("no database"));

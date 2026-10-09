@@ -1167,6 +1167,39 @@ new domain concept, define it here in the same PR.
   array rather than a widened roll-call event, and its own answer — checked, by whom, when, or
   explicitly not checked — is what the **departure log** prints.
   See [20260824-pre-departure-safety-check](../architecture/decisions/20260824-pre-departure-safety-check.md).
+- **Certificate passenger limit** — the passenger ceiling printed on a passenger vessel's
+  certificate (in the US, the Coast Guard's Certificate of Inspection), stored as
+  `boats.certified_passengers` beside the boat's own `capacity`. The two are different numbers:
+  capacity is the seats the shop sells, a business choice, and the certificate is what a boarding
+  officer counts against. When the people booked on a departure pass it, the departure's **Boat**
+  tab says so in danger ink above the **pre-departure checklist**; once the crew have recorded more
+  people aboard than it allows, the line counts them ("13 passengers aboard") instead of the
+  bookings. The fleet row says so when the seats on sale already do. It **informs, never gates**;
+  the one capacity block stays the departure's seats against the boat's `capacity`
+  (`src/lib/boat-safety.ts`).
+- **Boat papers** — a boat's three dated documents: when its next safety inspection is due, and
+  when its registration and hull insurance expire (`boats.inspection_due_on`,
+  `registration_expires_on`, `insurance_expires_on`). Typed over in Settings, Boats when renewed,
+  so the paper itself is the history. Each has its own window — 90 days for the inspection, 60 for
+  registration and insurance (`BOAT_PAPER_HORIZON_DAYS`) — inside which a departure on that boat
+  names the paper above its pre-departure checklist and Today carries a quiet owner errand
+  (`boat_papers_due`), escalating once it lapses (`boat_safety_expired`).
+- **Safety kit** — the boat's own emergency equipment kept on the **gear register** as units:
+  `o2_kit`, `aed`, `first_aid_kit` and `flares` (roadmap N-08). Each may be assigned **aboard** one
+  boat (`gear_items.aboard_boat_id`; any other kind is never aboard), and runs **service clocks**
+  of its own: an AED's `aed_pads` and `aed_battery`, the printed `expiry` of flares and a first-aid
+  kit, and an O2 kit's cylinder `hydro_test` and `visual_inspection` beside its `service`. Every
+  clock inside 30 days or past it on kit aboard a departure's boat is one line on that departure's
+  Boat tab ("AED: pads expire in 12 days", "Flares: expired 3 days ago"), judged on the
+  departure's own date; a unit flagged for service reads "flagged for service. Check before
+  sailing.", because the register knows the flag, not where the unit is. An O2 kit and an AED are
+  **must-carry**: a shop that keeps one on its register is told, in danger ink, when a hull has
+  none in service aboard ("No emergency oxygen aboard"). On a departure sailing today, missing
+  oxygen or AED and any oxygen, AED or flare clock due or past is one danger row on Today for
+  every role, under that departure (`boat_safety_kit`); everything else that has expired is the
+  owner's errand. Safety kit never takes a bench-clock row (`gear_service_due`). Opt-in by
+  presence, like the rest of the register, and it **informs, never gates**: roll call and boarding
+  go on.
 - **Sailed** — how many of a departure's booked divers the boat actually **carried**, as distinct
   from the roster it sold. One rule answers it per seat (`seatSailed`, `src/lib/closeout.ts`),
   reading the shop's statements about that seat strongest first: the crew's own result at the
@@ -1864,6 +1897,7 @@ new domain concept, define it here in the same PR.
   go out as SMS meanwhile. See
   [20260802-whatsapp-embedded-signup](../architecture/decisions/20260802-whatsapp-embedded-signup.md).
 - **Set-up request** — a shop asking to be set up, sent from the public form at `/get-set-up` (every "Get set up" button opens it). One `setup_requests` row with the shop's answers, the contact's details and the funnel tag of the page that sent them; the founder opens the shop by hand from it ([ADR 20261007-setup-request-form](../architecture/decisions/20261007-setup-request-form.md)). Not a booking inquiry, which is a diver asking a shop.
+- **Setup link** — the single-use link that opens the sign-up form at `/onboard` for one shop. Minted for each set-up request and sent only to the founder in that request's onboarding mail; it expires after two weeks and is spent by the shop it creates. Stored as a hash in `shop_setup_links` ([ADR 20261009-single-use-setup-links](../architecture/decisions/20261009-single-use-setup-links.md)). Not a staff invite, which brings a person into a shop that already exists.
 - **Dive day (north star)** — one real shop's local calendar day on which at least one diver was boarded at a departure roll call. Counted per week, it is the north star in [rollout.md](rollout.md#metrics--the-scoreboard). Two boats out on one Saturday is one dive day ([ADR 20261007-founder-metrics](../architecture/decisions/20261007-founder-metrics.md)).
 - **Activation milestone** — a first-time step a real shop has taken: created, first departure, first public booking, first diver-signed waiver, first roll call, and (once billing exists) first paid month. Stored once each in `shop_milestones`. A shop is **stalled** when its newest step is 7 or more days old and the next is missing; the founder digest names a stall once.
 - **Demo mode** — a shop flagged `isDemo` gets the Demo Playground banner, its role switcher, and a
@@ -2134,7 +2168,8 @@ new domain concept, define it here in the same PR.
   own money word, and the list pages by holder so one diver's set never splits.
 - **Service clock** — a unit's care deadlines, derived from its append-only service events
   (`gear_service_events`): manufacturer `service`, a tank's independent `hydro_test` and
-  `visual_inspection` clocks, the `o2_clean` renewal, and clockless condition `note`s. The newest
+  `visual_inspection` clocks, the `o2_clean` renewal, the printed dates of **safety kit**
+  (`aed_pads`, `aed_battery`, `expiry`), and clockless condition `note`s. The newest
   event of a kind *is* that clock; the earliest deadline is the unit's state (ok / due soon /
   overdue), which **informs, never gates** — the dock decides whether an overdue unit dives, not
   the software. The one exception is a **counter rental** of life support, which has no dock and

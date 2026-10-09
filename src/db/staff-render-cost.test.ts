@@ -175,5 +175,9 @@ const CHROME_CEILING = 20;
 // 63 → 64: an undecided chargeback is a Today row for the owner
 // (`listOpenPaymentDisputes`, ADR 20261009-stripe-reversals-reach-diveday),
 // one statement read beside the stuck operations.
-const TODAY_CEILING = 64;
+// 64 → 66: the owner row for expired boat papers and safety kit
+// (`listExpiredBoatSafety`, roadmap N-08) reads the fleet's paper dates and the
+// safety-kit units. Their clocks are a third read, skipped while the register
+// holds no safety kit, as the seeded shop's does not.
+const TODAY_CEILING = 66;
 const TRIP_CEILING = 49;

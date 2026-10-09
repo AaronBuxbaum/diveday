@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { stripeKeySourceFromEnvironment } from "@/db/stripe-key-source";
+import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
@@ -55,6 +57,14 @@ export type CreateInvoiceRequest = {
   lineItems: InvoiceLineItem[];
   /** Days a diver has to pay before the invoice is overdue; Stripe requires this for `send_invoice`. */
   daysUntilDue?: number;
+  /**
+   * Whether Stripe emails the invoice once it is finalized. Defaults to true:
+   * staff raise an invoice so the diver receives it. A diver buying online is
+   * already looking at the hosted page, and an email to whatever address a
+   * public form was given would let anyone make the shop's Stripe account
+   * write to a stranger, so that path passes false.
+   */
+  sendEmail?: boolean;
   /** Opt-in Stripe Tax. When enabled, every invoice item is tax-exclusive. */
   taxEnabled?: boolean;
   /** Sent to Stripe's Customer object for tax calculation; never stored locally. */
@@ -147,8 +157,6 @@ export interface InvoicingProvider {
 
 type Fetch = typeof fetch;
 type PaymentEnvironment = Readonly<Record<string, string | undefined>>;
-
-const configSchema = z.object({ secretKey: z.string().trim().min(1) });
 
 const customerResponseSchema = z.object({ id: z.string().min(1) });
 const invoiceResponseSchema = z.object({
@@ -287,7 +295,7 @@ function toCreatedInvoice(body: z.infer<typeof invoiceResponseSchema>, stripeCus
 }
 
 export function stripeInvoicingProvider(
-  config: { secretKey: string },
+  config: StripeKeySource,
   fetchImpl: Fetch,
 ): InvoicingProvider {
   async function post(
@@ -299,7 +307,7 @@ export function stripeInvoicingProvider(
     return fetchImpl(`https://api.stripe.com/v1${path}`, {
       method: "POST",
       headers: {
-        ...headersFor(config.secretKey, stripeAccountId),
+        ...headersFor(await secretKeyForCall(config, stripeAccountId), stripeAccountId),
         ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
       },
       body: form.toString(),
@@ -382,12 +390,14 @@ export function stripeInvoicingProvider(
         if (!finalizeBody.success) return { status: "failed" };
 
         // Best-effort: staff can still share hosted_invoice_url if Stripe's own send fails.
-        await post(
-          request.stripeAccountId,
-          `/invoices/${finalizeBody.data.id}/send`,
-          new URLSearchParams(),
-          `${key}:send`,
-        ).catch(() => undefined);
+        if (request.sendEmail !== false) {
+          await post(
+            request.stripeAccountId,
+            `/invoices/${finalizeBody.data.id}/send`,
+            new URLSearchParams(),
+            `${key}:send`,
+          ).catch(() => undefined);
+        }
 
         return { status: "created", ...toCreatedInvoice(finalizeBody.data, stripeCustomerId) };
       } catch (error) {
@@ -435,7 +445,7 @@ export function stripeInvoicingProvider(
         // needs, so ask for the plain object.
         const invoiceResponse = await fetchImpl(
           `https://api.stripe.com/v1/invoices/${stripeInvoiceId}`,
-          { headers: headersFor(config.secretKey, stripeAccountId) },
+          { headers: headersFor(await secretKeyForCall(config, stripeAccountId), stripeAccountId) },
         );
         if (!invoiceResponse.ok) return { status: "failed" };
         const invoiceBody = invoiceResponseSchema.safeParse(await invoiceResponse.json());
@@ -464,7 +474,7 @@ export function stripeInvoicingProvider(
     async retrieveInvoice(stripeAccountId, stripeInvoiceId) {
       try {
         const response = await fetchImpl(`https://api.stripe.com/v1/invoices/${stripeInvoiceId}`, {
-          headers: headersFor(config.secretKey, stripeAccountId),
+          headers: headersFor(await secretKeyForCall(config, stripeAccountId), stripeAccountId),
         });
         if (!response.ok) return { status: "failed" };
         const body = invoiceResponseSchema.safeParse(await response.json());
@@ -510,8 +520,8 @@ export function invoicingProviderFromEnvironment(
   env: PaymentEnvironment = process.env,
   fetchImpl: Fetch = fetch,
 ): InvoicingProvider {
-  const config = configSchema.safeParse({ secretKey: env.STRIPE_SECRET_KEY });
-  return config.success
-    ? stripeInvoicingProvider(config.data, fetchImpl)
-    : disabledInvoicingProvider;
+  // Per connected account: the demo's is called only with the test-mode key
+  // (src/lib/payments/stripe-keys.ts, ADR 20261009-demo-test-mode-payments).
+  const keys = stripeKeySourceFromEnvironment({ env });
+  return keys ? stripeInvoicingProvider(keys, fetchImpl) : disabledInvoicingProvider;
 }

@@ -34,7 +34,7 @@ export function EmbedBookedNotice({
   confirmed,
   readinessLink,
   emailsOnTheWay,
-  payCancelled,
+  payNotice,
   paymentUrl = null,
 }: {
   shop: Shop;
@@ -44,12 +44,14 @@ export function EmbedBookedNotice({
   trip: Trip;
   confirmed: Confirmed;
   /**
-   * The diver backed out of the hosted payment page and Stripe returned them
-   * here. The seat was committed before checkout ever started, so the one thing
-   * worth saying is that it survived — the balance itself is on `/ready`, where
-   * every other payment state now lives.
+   * The page's `?pay=` value. `cancelled`: the diver backed out of the hosted
+   * payment page and Stripe returned them here. `code-used-up`: the code they
+   * typed had nothing left, so no payment page opened. The seat was committed
+   * before checkout ever started either way, so the one thing worth saying is
+   * that it survived — the balance itself is on `/ready`, where every other
+   * payment state now lives. Anything else says nothing.
    */
-  payCancelled: boolean;
+  payNotice: string | undefined;
   /**
    * Path to `./ready/route.ts`, which trades this booking's `confirm` token for
    * a readiness capability and redirects. A path rather than a minted
@@ -100,8 +102,10 @@ export function EmbedBookedNotice({
         <p className="mt-3 text-sm text-muted">{t("booking.emailsOnTheWay")}</p>
       ) : null}
 
-      {payCancelled ? (
+      {payNotice === "cancelled" ? (
         <p className="mt-3 text-sm text-muted">{t("booking.paymentStillOpen")}</p>
+      ) : payNotice === "code-used-up" ? (
+        <p className="mt-3 text-sm text-muted">{t("booking.codeUsedUp")}</p>
       ) : null}
 
       {/* Paying is the one thing this frame cannot do itself. Said in words,

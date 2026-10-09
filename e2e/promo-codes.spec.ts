@@ -112,6 +112,23 @@ test.describe("as owner", () => {
     await expect(failed.getByRole("button", { name: /^Switch/ })).toHaveCount(0);
   });
 
+  test("a fixed-amount code says it comes off once per booking", async ({ page, request }) => {
+    // Owner decision 2026-10-09 (amendment to ADR 20260729-shop-promo-codes):
+    // "$20 off" is per booking, not per diver. The row says so in its own
+    // words, even when Stripe refused to mint it.
+    await request.post("/api/test/seed-stripe-account");
+    await page.goto("/shop/blue-mantis/promos");
+    await openNewCodeForm(page);
+
+    await page.getByRole("textbox", { name: "Code" }).fill("E2EFLAT");
+    await page.getByRole("combobox", { name: "Discount type" }).selectOption("amount");
+    await page.getByRole("spinbutton", { name: "Discount" }).fill("20");
+    await page.getByRole("button", { name: "Create code" }).click();
+
+    const row = page.locator("li").filter({ hasText: "E2EFLAT" }).filter({ visible: true });
+    await expect(row.getByText("$20 off each booking")).toBeVisible();
+  });
+
   test("a code that already exists is refused on the Code box, not in a banner", async ({
     page,
     request,

@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  date,
   doublePrecision,
   index,
   integer,
@@ -164,6 +165,33 @@ export const boats = pgTable(
      * listed by name and seats alone, never with DiveDay filler.
      */
     description: text("description"),
+    /**
+     * **The vessel's legal passenger ceiling**, as printed on its Coast Guard
+     * Certificate of Inspection (or the shop's own flag state's equivalent).
+     * Not `capacity` above: that is how many seats the shop *sells*, a
+     * business number, where this is the number a boarding officer counts
+     * against. Optional, because a shop that has not typed it in has said
+     * nothing, and nothing reads a missing limit as zero.
+     *
+     * Informs, never gates: the manifest says so when the people booked aboard
+     * pass it (`boatSafetyNotices`, `src/lib/boat-safety.ts`), and the fleet
+     * row says so when the seats on sale already do. The one capacity block
+     * that exists stays where it was — a departure may not sell more seats
+     * than `capacity`.
+     */
+    certifiedPassengers: integer("certified_passengers"),
+    /**
+     * The boat's three paper clocks, each a shop-local calendar date (no
+     * instant in it): when the next safety inspection is due, when the
+     * registration runs out, and when the hull insurance does. Nullable each,
+     * and each informs ahead of time: 90 days for the inspection, 60 for the
+     * other two (`src/lib/boat-safety.ts`). Stored on the boat rather than as events because the shop
+     * renews a document by typing the next date over the last one; the
+     * history of a paper is the paper itself.
+     */
+    inspectionDueOn: date("inspection_due_on"),
+    registrationExpiresOn: date("registration_expires_on"),
+    insuranceExpiresOn: date("insurance_expires_on"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /**
      * Deleting a hull stamps this and leaves the row (ADR
@@ -183,6 +211,11 @@ export const boats = pgTable(
     // capacity check all read this shape, and a deleted hull is not a boat the
     // shop has.
     index("boats_shop_live_idx").on(table.shopId).where(sql`${table.deletedAt} is null`),
+    // A certificate that allows nobody aboard is a typo, not a vessel.
+    check(
+      "boats_certified_passengers_positive",
+      sql`${table.certifiedPassengers} is null or ${table.certifiedPassengers} between 1 and 999`,
+    ),
   ],
 );
 

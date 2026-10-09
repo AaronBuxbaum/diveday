@@ -21,7 +21,7 @@ import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getShopReviewAggregate } from "@/db/reviews";
 import { tripMayTakeACode } from "@/db/shop-promos";
 import { shopBySlugCached } from "@/db/shops-cached";
-import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { canAcceptPayments, checkoutMode, getShopStripeAccount } from "@/db/stripe-accounts";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { siteSightings } from "@/db/trip-sightings";
 import {
@@ -66,6 +66,7 @@ import { tripPageJsonLd } from "@/lib/structured-data";
 import { hasSailed, isFull, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { worthALook } from "@/lib/worth-a-look";
+import { BookingFinePrint } from "./_components/BookingFinePrint";
 import {
   BookSpotSection,
   CancelledTripNotice,
@@ -82,7 +83,6 @@ import { TripAlternatives } from "./_components/TripAlternatives";
 import { dayCoverPhoto, TripDayPlan } from "./_components/TripDayPlan";
 import { TripHeader } from "./_components/TripHeader";
 import { pitchHasDoor, pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
-import { TripTerms } from "./_components/TripTerms";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
 import { offerHandoff } from "./actions";
 
@@ -790,7 +790,7 @@ export default async function TripDetailPage({
                   confirmed={confirmed}
                   readinessLink={readinessLink}
                   emailsOnTheWay={emailsOnTheWay}
-                  payCancelled={pay === "cancelled"}
+                  payNotice={pay}
                   paymentUrl={
                     pay === "due"
                       ? ((await getLatestCheckoutForBooking(db, shop.id, confirmed.booking.id))
@@ -820,7 +820,7 @@ export default async function TripDetailPage({
                   alternatives={alternatives}
                   offerLastMinuteList={shop.lastMinuteListEnabled}
                   requirement={requirementSentence}
-                  terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
+                  terms={<BookingFinePrint shop={shop} trip={trip} locale={locale} />}
                 />
               ) : (
                 <BookSpotSection
@@ -828,7 +828,7 @@ export default async function TripDetailPage({
                   tripRef={tripRef}
                   remaining={remaining}
                   errorMessage={errorMessage}
-                  payAtBooking={payAtBooking}
+                  payAtBooking={payAtBooking && checkoutMode(stripeAccount)}
                   offerCodeField={offerCodeField}
                   perDiverPriceCents={perDiverPriceCents}
                   currency={shopCurrency}
@@ -844,7 +844,7 @@ export default async function TripDetailPage({
                   eLearningFeeCents={eLearningFeeCents}
                   {...checkoutSeatTerms(trip, trip.course)}
                   balanceDueAt={trip.startsAt}
-                  terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
+                  terms={<BookingFinePrint shop={shop} trip={trip} locale={locale} />}
                   knownDiver={knownDiverPanel}
                   requirement={requirementSentence}
                   offerHandoff={offerHandoff.bind(null, tripRef)}

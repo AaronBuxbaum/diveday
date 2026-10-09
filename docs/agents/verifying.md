@@ -19,9 +19,11 @@ line between the two.
 ## The unit suite's projects
 
 `vitest.config.ts` splits the suite into Vitest projects by what each file needs, read from its
-source by `src/test/projects.ts`. `pnpm test <file>`, `pnpm test:changed` and CI's `--shard` are
-unchanged: they see one run across every project, and the shard sequencer deals all of them
-together.
+source by `src/test/projects.ts`. `pnpm test <file>` and `pnpm test:changed` are unchanged: they
+see one run across every project. CI's four unit shards run every project but `guards`
+(`--project '!guards'`), dealt together by the shard sequencer; `guards` runs once, in the
+`Repository safeguards` job, because it is bounded by reading the repository rather than by test
+count.
 
 | Project | Holds | Runs as | Shortcut |
 | --- | --- | --- | --- |
@@ -80,7 +82,8 @@ the build and the browser jobs; `Unit tests that read docs` runs the unit files 
 document path instead. The shards are dealt by each file's recorded CI duration when
 `scripts/test-durations.json` exists, and by a source estimate when it does not
 (`src/test/shard-sequencer.ts`). When their finish times drift apart, refresh it from one green
-run: download every `unit-durations-<n>` artifact and run
+run: save every shard's `unit-durations-<n>` artifact, or its job log where the artifact download
+is out of reach (the log carries the same map on its `diveday-test-durations:` line), and run
 `node scripts/merge-test-durations.mjs <files…>`.
 
 **So the PR is the instrument, not the trophy.** Open it before it is green when that is the

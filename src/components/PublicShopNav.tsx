@@ -63,7 +63,9 @@ const linkClass =
  * Before this, `/s/<slug>/courses` was reachable only from inside itself: the
  * schedule never linked to it, so a diver who wanted to learn to dive had to
  * guess the URL. The header carries the whole public map instead of each page
- * growing its own cross-links. Two tabs is the whole map: a third for a page
+ * growing its own cross-links. Packages is the one third tab, and only for a
+ * shop with a package on sale (owner decision 2026-10-09: divers buy them
+ * online). Anything further belongs on a page, not here: a fourth for a page
  * most divers never need is the row-of-equals principle 8 warns about.
  *
  * Never rendered in `?embed=1` mode: the layout drops the entire header there

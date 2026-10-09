@@ -8,7 +8,7 @@ import {
   canPersonManagePaymentSettings,
   canPersonManageShopSettings,
 } from "@/db/authz";
-import { createBoat, deleteBoat, updateBoat } from "@/db/boats";
+import { type BoatPapersInput, createBoat, deleteBoat, updateBoat } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { createDivePackage, deleteDivePackage } from "@/db/dive-packages";
 import { shopSearchAnchor } from "@/db/dive-sites";
@@ -57,6 +57,7 @@ import {
   isLookupWorthy,
 } from "@/lib/address-lookup";
 import { isBrandDisplayFontCode, parseBrandBadges, parseBrandColor } from "@/lib/brand";
+import { isValidCalendarDate } from "@/lib/calendar-date";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
 import { validateDivePackage } from "@/lib/dive-packages";
 import {
@@ -914,12 +915,30 @@ export async function saveSearchListingAction(formData: FormData) {
   revalidateAndRedirect(settings, noticeUrl(settings, notice, { saved: "searchListing" }));
 }
 
+/**
+ * A demo shop's Stripe connection is configuration, not a setting (ADR
+ * 20261009-demo-test-mode-payments): the canonical demo holds DiveDay's own
+ * test-mode account, and anyone can be its owner. Disconnecting would
+ * deauthorize that account from the platform for every visitor, and a refresh
+ * would read it with the live key. So neither runs on a demo shop.
+ */
+async function demoStripeBlock(
+  db: Awaited<ReturnType<typeof getDb>>,
+  session: { user: { shopId: string; shopSlug: string } },
+): Promise<void> {
+  const shop = await getShopById(db, session.user.shopId);
+  if (!shop?.isDemo) return;
+  const settings = shopPath(session.user.shopSlug, "settings");
+  revalidateAndRedirect(settings, noticeUrl(settings, "demo-stripe", { saved: "stripe" }));
+}
+
 export async function disconnectAction() {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
   await paymentSettingsBlock(session);
   const db = await getDb();
+  await demoStripeBlock(db, session);
   const account = await getShopStripeAccount(db, session.user.shopId);
   if (account && !account.disconnectedAt) {
     const provider = connectProviderFromEnvironment();
@@ -935,6 +954,7 @@ export async function refreshAction() {
   await settingsBlock(session);
   await paymentSettingsBlock(session);
   const db = await getDb();
+  await demoStripeBlock(db, session);
   const account = await getShopStripeAccount(db, session.user.shopId);
   if (account) {
     const provider = connectProviderFromEnvironment();
@@ -1291,6 +1311,41 @@ function boatDescription(formData: FormData): string | null {
   return text.length > 0 ? text : null;
 }
 
+/**
+ * The certificate's passenger limit and the boat's three paper dates, as the
+ * fleet row posts them. Every one optional, and an empty box is a cleared
+ * value; anything that is not a whole number of passengers or a real calendar
+ * day refuses the save rather than being dropped, so a typo is never stored as
+ * "nothing said" (roadmap N-10).
+ */
+function boatPapers(formData: FormData): BoatPapersInput | "invalid" {
+  const text = (name: string) => String(formData.get(name) ?? "").trim();
+  const day = (name: string): string | null | "invalid" => {
+    const value = text(name);
+    if (!value) return null;
+    return isValidCalendarDate(value) ? value : "invalid";
+  };
+  const passengersText = text("certifiedPassengers");
+  const certifiedPassengers = passengersText ? Number(passengersText) : null;
+  if (
+    certifiedPassengers !== null &&
+    (!Number.isInteger(certifiedPassengers) || certifiedPassengers < 1 || certifiedPassengers > 999)
+  ) {
+    return "invalid";
+  }
+  const inspectionDueOn = day("inspectionDueOn");
+  const registrationExpiresOn = day("registrationExpiresOn");
+  const insuranceExpiresOn = day("insuranceExpiresOn");
+  if (
+    inspectionDueOn === "invalid" ||
+    registrationExpiresOn === "invalid" ||
+    insuranceExpiresOn === "invalid"
+  ) {
+    return "invalid";
+  }
+  return { certifiedPassengers, inspectionDueOn, registrationExpiresOn, insuranceExpiresOn };
+}
+
 /** Creates a new boat for the shop. */
 export async function createBoatAction(formData: FormData) {
   const session = await requireStaffSession();
@@ -1300,18 +1355,19 @@ export async function createBoatAction(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const capacity = Number(formData.get("capacity") ?? 0);
   const description = boatDescription(formData);
+  const papers = boatPapers(formData);
 
-  if (!name || Number.isNaN(capacity) || capacity <= 0) {
+  if (!name || Number.isNaN(capacity) || capacity <= 0 || papers === "invalid") {
     redirect(noticeUrl(page, "boat-invalid"));
   }
 
   const db = await getDb();
-  await createBoat(db, session.user.shopId, name, capacity, description);
+  await createBoat(db, session.user.shopId, name, capacity, description, papers);
 
   revalidateAndRedirect(page, noticeUrl(page, "boat-created"));
 }
 
-/** Updates an existing boat's name and capacity. */
+/** Updates an existing boat: its name, seats, line, certificate and papers. */
 export async function updateBoatAction(formData: FormData) {
   const session = await requireStaffSession();
   const page = shopPath(session.user.shopSlug, "settings", "boats");
@@ -1322,13 +1378,14 @@ export async function updateBoatAction(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const capacity = Number(formData.get("capacity") ?? 0);
   const description = boatDescription(formData);
+  const papers = boatPapers(formData);
 
-  if (!boatId || !name || Number.isNaN(capacity) || capacity <= 0) {
+  if (!boatId || !name || Number.isNaN(capacity) || capacity <= 0 || papers === "invalid") {
     redirect(noticeUrl(page, "boat-invalid"));
   }
 
   const db = await getDb();
-  await updateBoat(db, session.user.shopId, boatId, name, capacity, description);
+  await updateBoat(db, session.user.shopId, boatId, name, capacity, description, papers);
 
   revalidateAndRedirect(page, noticeUrl(page, "boat-updated"));
 }

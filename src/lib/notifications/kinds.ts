@@ -12,7 +12,7 @@ import {
 import { CREW_NOTICE_CHANGES, CREW_TRIP_ROLES } from "@/lib/crew-notices";
 import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
 import { SHOP_MILESTONES } from "@/lib/founder-metrics";
-import { GEAR_KIND_ORDER } from "@/lib/gear";
+import { GEAR_KIND_ORDER, GEAR_SERVICE_KINDS } from "@/lib/gear";
 import { REPLY_BODY_MAX_LENGTH } from "@/lib/inbox";
 import { DIVER_EMAIL_MAX } from "@/lib/person-fields";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
@@ -331,7 +331,10 @@ const lastMinuteDealSchema = z.object({
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
-  discountPercent: z.number().int().min(1).max(100),
+  // One of the two: a percent, or a fixed amount in the shop's currency.
+  discountPercent: z.number().int().min(1).max(100).optional(),
+  discountAmountCents: z.number().int().positive().optional(),
+  currency: z.string().trim().length(3).optional(),
   code: z.string().trim().min(1).max(40),
   bookingUrl: z.url().max(2_000),
   expiresAt: z.date(),
@@ -794,6 +797,13 @@ const setupRequestAlertSchema = z.object({
   source: z.string().trim().min(1).max(60),
   /** The language the reader filled the form in. */
   requestLocale: z.string().trim().min(2).max(10),
+  /**
+   * The single-use link that opens `/onboard` for this request's shop (ADR
+   * 20261009-single-use-setup-links), and when it stops working. Absent when
+   * no link could be minted or the deployment has no public origin.
+   */
+  setupUrl: z.url().max(2_000).optional(),
+  setupUrlExpiresAt: z.coerce.date().optional(),
 });
 
 const sourceCountSchema = z.object({
@@ -1088,7 +1098,7 @@ const gearServiceDueSchema = z.object({
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   piece: customerGearPieceSchema,
-  clock: z.enum(["service", "hydro_test", "visual_inspection", "o2_clean", "note"]),
+  clock: z.enum(GEAR_SERVICE_KINDS),
   dueOn: calendarDateSchema,
   unsubscribeUrl: z.url().max(2_000),
 });

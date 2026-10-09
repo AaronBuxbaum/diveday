@@ -623,11 +623,24 @@ export const tripLastMinutePromos = pgTable(
       .notNull()
       .references(() => trips.id),
     status: tripLastMinutePromoStatus("status").notNull().default("pending"),
-    discountPercent: integer("discount_percent").notNull(),
+    /** Percent off, or null for a fixed-amount deal; exactly one of the two is set. */
+    discountPercent: integer("discount_percent"),
+    /**
+     * A fixed amount off the whole booking, in minor units — "$20 off". Same
+     * rule as a shop-wide code: once per checkout, never below zero.
+     */
+    discountAmountCents: integer("discount_amount_cents"),
     /** The human-typed code, e.g. "SAVE50-A1B2C3" — unique per shop's Stripe account. */
     code: text("code").notNull(),
     stripeCouponId: text("stripe_coupon_id"),
     stripePromotionCodeId: text("stripe_promotion_code_id"),
+    /**
+     * The redemption cap Stripe was given: the departure's open seats when the
+     * deal went out. Kept so the checkout can hold the same cap where Stripe
+     * cannot see it (a pass-through fee's one-off coupon). Null on a deal sent
+     * before this column existed.
+     */
+    maxRedemptions: integer("max_redemptions"),
     /** Pinned to the trip's departure at creation; a later reschedule does not move it. */
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     /** How many last-minute-list entries the blast email actually went to. */
@@ -638,7 +651,18 @@ export const tripLastMinutePromos = pgTable(
   (table) => [
     index("trip_last_minute_promos_trip_created_idx").on(table.tripId, table.createdAt),
     uniqueIndex("trip_last_minute_promos_shop_code_unique").on(table.shopId, table.code),
-    check("trip_last_minute_promos_discount_range", sql`${table.discountPercent} between 5 and 90`),
+    check(
+      "trip_last_minute_promos_discount_range",
+      sql`${table.discountPercent} is null or ${table.discountPercent} between 5 and 90`,
+    ),
+    check(
+      "trip_last_minute_promos_discount_amount_positive",
+      sql`${table.discountAmountCents} is null or ${table.discountAmountCents} > 0`,
+    ),
+    check(
+      "trip_last_minute_promos_one_discount",
+      sql`(${table.discountPercent} is null) <> (${table.discountAmountCents} is null)`,
+    ),
   ],
 );
 

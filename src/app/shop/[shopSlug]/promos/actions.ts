@@ -10,8 +10,9 @@ import {
   retryShopPromoCode,
   setShopPromoEnabled,
 } from "@/db/shop-promos";
+import { getShopById } from "@/db/shops";
+import { majorToMinor, minorToMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { PROMO_DISCOUNT_MAX, PROMO_DISCOUNT_MIN } from "@/lib/promo-codes";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
@@ -44,13 +45,30 @@ function parseInstant(raw: FormDataEntryValue | null): Date | null | undefined {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
+/**
+ * The form's two discount boxes: a number, and whether it is a percent or an
+ * amount of the shop's currency in whole units. The range is checked once, by
+ * `createShopPromoCode`, whose refusal lands on the discount box; here a value
+ * only has to be a number at all.
+ */
 const promoFormSchema = z.object({
   code: z.string().trim().min(1).max(40),
   description: z.string().trim().max(200),
-  discountPercent: z.coerce.number().int().min(PROMO_DISCOUNT_MIN).max(PROMO_DISCOUNT_MAX),
+  discount: z.coerce.number().finite().min(0).max(10_000_000),
+  discountKind: z.enum(["percent", "amount"]).default("percent"),
   scope: z.enum(["all", "trips", "courses"]),
   maxRedemptions: z.union([z.literal(""), z.coerce.number().int().min(1).max(100_000)]),
 });
+
+/** The discount the form asked for, as the two columns `createShopPromoCode` takes. */
+async function discountFromForm(
+  shopId: string,
+  form: { discount: number; discountKind: "percent" | "amount" },
+): Promise<{ discountPercent?: number; discountAmountCents?: number }> {
+  if (form.discountKind === "percent") return { discountPercent: form.discount };
+  const currency = toShopCurrency((await getShopById(await getDb(), shopId))?.currency);
+  return { discountAmountCents: majorToMinor(form.discount, currency) };
+}
 
 export async function createPromoAction(formData: FormData) {
   const { session, promos } = await requirePromoManager();
@@ -67,7 +85,7 @@ export async function createPromoAction(formData: FormData) {
     shopId: session.user.shopId,
     code: parsed.data.code,
     description: parsed.data.description,
-    discountPercent: parsed.data.discountPercent,
+    ...(await discountFromForm(session.user.shopId, parsed.data)),
     scope: parsed.data.scope,
     startsAt,
     expiresAt,
@@ -132,11 +150,23 @@ export async function deletePromoAction(formData: FormData) {
   // hand-assembled `URLSearchParams`: an `undefined` value drops out of the
   // query on its own, which is what the four conditional `.set()` calls this
   // replaced were for.
+  // The discount rides back the way the form spelled it: a percent, or the
+  // amount in whole currency units, beside which of the two it is.
+  const undoDiscount =
+    existing.discountAmountCents !== null
+      ? {
+          undoDiscount: minorToMajor(
+            existing.discountAmountCents,
+            toShopCurrency((await getShopById(db, session.user.shopId))?.currency),
+          ),
+          undoDiscountKind: "amount",
+        }
+      : { undoDiscount: existing.discountPercent ?? undefined, undoDiscountKind: "percent" };
   revalidateAndRedirect(
     promos,
     noticeUrl(promos, "deleted", {
       undoCode: existing.code,
-      undoDiscountPercent: existing.discountPercent,
+      ...undoDiscount,
       undoScope: existing.scope,
       undoDescription: existing.description || undefined,
       undoStartsAt: existing.startsAt?.toISOString(),
@@ -169,7 +199,7 @@ export async function restorePromoAction(formData: FormData) {
     shopId: session.user.shopId,
     code: parsed.data.code,
     description: parsed.data.description,
-    discountPercent: parsed.data.discountPercent,
+    ...(await discountFromForm(session.user.shopId, parsed.data)),
     scope: parsed.data.scope,
     startsAt,
     expiresAt,

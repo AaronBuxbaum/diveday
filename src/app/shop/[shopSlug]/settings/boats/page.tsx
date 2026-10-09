@@ -8,6 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import {
   controlClass,
+  DateField,
   Field,
   FieldActions,
   FieldGrid,
@@ -15,9 +16,17 @@ import {
 } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { canPersonManageShopSettings } from "@/db/authz";
-import { countBoatDepartures, listBoats } from "@/db/boats";
+import { type Boat, countBoatDepartures, listBoats } from "@/db/boats";
+import { boatSafetyNoticeText } from "@/i18n/boat-safety-labels";
 import { requestLocale } from "@/i18n/request";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import {
+  boatPaperNotices,
+  boatSafetyNoticeIsUrgent,
+  passengersAboveCertificate,
+} from "@/lib/boat-safety";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { AddPanel } from "../_components/AddPanel";
@@ -74,6 +83,7 @@ export default async function BoatsSettingsPage({
     boatDepartures.set(boat.id, await countBoatDepartures(db, session.user.shopId, boat.id));
   }
   const banner = noticeFromParam(notice, boatNoticeMessages(t));
+  const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
 
   return (
     <main className={settingsPaneClass()}>
@@ -139,6 +149,8 @@ export default async function BoatsSettingsPage({
                         className={textareaClassFor(2)}
                       />
                     </div>
+                    <BoatPaperFields boat={boat} t={t} />
+                    <BoatPaperFacts boat={boat} t={t} todayLocal={todayLocal} />
                     {/* **Save and Delete on one line**, in the update form's
                         own action row rather than a form of their own apart.
                         The confirm posts to the delete through `formAction`,
@@ -238,6 +250,7 @@ export default async function BoatsSettingsPage({
                   className={textareaClassFor(2)}
                 />
               </Field>
+              <BoatPaperFields t={t} className="sm:col-span-2" />
               <FieldActions>
                 <SubmitButton
                   pendingLabel={t("boats.submitting")}
@@ -251,5 +264,89 @@ export default async function BoatsSettingsPage({
         </div>
       </SectionCard>
     </main>
+  );
+}
+
+/**
+ * **The certificate and the three paper dates** (roadmap N-10), under the
+ * boat's own line. Captioned, because a date box with only a placeholder says
+ * nothing once it holds a date. All four optional: an empty box is a boat the
+ * shop has not dated, and nothing reads it as expired.
+ */
+function BoatPaperFields({
+  boat,
+  t,
+  className = "",
+}: {
+  boat?: Boat;
+  t: StaffTranslator;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`grid w-full grid-cols-1 gap-3 sm:basis-full sm:grid-cols-2 ${className}`.trim()}
+    >
+      <Field label={t("boats.certifiedPassengersLabel")}>
+        <input
+          name="certifiedPassengers"
+          type="number"
+          min={1}
+          max={999}
+          inputMode="numeric"
+          defaultValue={boat?.certifiedPassengers ?? ""}
+          className={`${controlClass} tabular-nums`}
+        />
+      </Field>
+      <Field label={t("boats.inspectionDueLabel")}>
+        <DateField name="inspectionDueOn" defaultValue={boat?.inspectionDueOn ?? ""} />
+      </Field>
+      <Field label={t("boats.registrationExpiresLabel")}>
+        <DateField name="registrationExpiresOn" defaultValue={boat?.registrationExpiresOn ?? ""} />
+      </Field>
+      <Field label={t("boats.insuranceExpiresLabel")}>
+        <DateField name="insuranceExpiresOn" defaultValue={boat?.insuranceExpiresOn ?? ""} />
+      </Field>
+    </div>
+  );
+}
+
+/**
+ * What the row's own numbers say, in the pre-departure check's words: seats on
+ * sale past the certificate, and a paper inside its last 30 days or past them.
+ * Informs; the save still goes through. Nothing renders for a boat in order.
+ */
+function BoatPaperFacts({
+  boat,
+  t,
+  todayLocal,
+}: {
+  boat: Boat;
+  t: StaffTranslator;
+  todayLocal: string;
+}) {
+  const papers = boatPaperNotices(boat, todayLocal);
+  const overSold = passengersAboveCertificate(boat.capacity, boat.certifiedPassengers);
+  if (papers.length === 0 && !overSold) return null;
+  return (
+    <ul className="w-full space-y-1 text-sm sm:basis-full">
+      {overSold ? (
+        <li className="font-medium text-warning-strong">
+          {t("boats.seatsAboveCertificate", {
+            capacity: boat.capacity,
+            limit: boat.certifiedPassengers ?? 0,
+          })}
+        </li>
+      ) : null}
+      {papers.map((notice) => (
+        <li
+          key={notice.code === "paper" ? notice.paper : notice.code}
+          className={
+            boatSafetyNoticeIsUrgent(notice) ? "font-medium text-warning-strong" : "text-muted"
+          }
+        >
+          {boatSafetyNoticeText(t, notice)}
+        </li>
+      ))}
+    </ul>
   );
 }

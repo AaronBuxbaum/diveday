@@ -64,7 +64,18 @@ export const shopPromoCodes = pgTable(
     code: text("code").notNull(),
     /** Staff's own note about what this code is for; never shown to a diver. */
     description: text("description"),
-    discountPercent: integer("discount_percent").notNull(),
+    /**
+     * Percent off, or null for a fixed-amount code. Exactly one of this and
+     * `discountAmountCents` is set (`shop_promo_codes_one_discount`).
+     */
+    discountPercent: integer("discount_percent"),
+    /**
+     * A fixed amount off, in the shop currency's minor units — "$20 off". Taken
+     * once off the whole checkout it is applied to, however many divers that
+     * checkout seats, and never below zero: Stripe's own `amount_off` coupon
+     * stops at the session total (`discountOffCents`, src/lib/promo-codes.ts).
+     */
+    discountAmountCents: integer("discount_amount_cents"),
     scope: shopPromoScope("scope").notNull().default("all"),
     status: shopPromoStatus("status").notNull().default("pending"),
     /** Null means "live now"; null `expiresAt` means the shop set no end date. */
@@ -80,7 +91,18 @@ export const shopPromoCodes = pgTable(
   (table) => [
     index("shop_promo_codes_shop_created_idx").on(table.shopId, table.createdAt),
     uniqueIndex("shop_promo_codes_shop_code_unique").on(table.shopId, table.code),
-    check("shop_promo_codes_discount_range", sql`${table.discountPercent} between 1 and 100`),
+    check(
+      "shop_promo_codes_discount_range",
+      sql`${table.discountPercent} is null or ${table.discountPercent} between 1 and 100`,
+    ),
+    check(
+      "shop_promo_codes_discount_amount_positive",
+      sql`${table.discountAmountCents} is null or ${table.discountAmountCents} > 0`,
+    ),
+    check(
+      "shop_promo_codes_one_discount",
+      sql`(${table.discountPercent} is null) <> (${table.discountAmountCents} is null)`,
+    ),
     check(
       "shop_promo_codes_max_redemptions_positive",
       sql`${table.maxRedemptions} is null or ${table.maxRedemptions} > 0`,
@@ -490,6 +512,14 @@ export const shopStripeAccounts = pgTable(
   (table) => [uniqueIndex("shop_stripe_accounts_stripe_account_unique").on(table.stripeAccountId)],
 );
 
+/**
+ * How an order came to exist: raised by someone on the staff, or bought by a
+ * diver on the shop's public pages (ADR 20260822-a-package-is-entitlements-not-money).
+ * Recorded at insert so the order page never has to guess it from whoever
+ * holds which role today.
+ */
+export const orderSource = pgEnum("order_source", ["staff", "public"]);
+
 export const orderStatus = pgEnum("order_status", [
   "open",
   "paid",
@@ -553,6 +583,12 @@ export const orders = pgTable(
       .notNull()
       .references(() => people.id),
     status: orderStatus("status").notNull().default("open"),
+    /**
+     * `public` for a diver's own purchase on the shop's pages, where
+     * `created_by_person_id` is the diver themselves; `staff` for everything a
+     * staffer raised.
+     */
+    source: orderSource("source").notNull().default("staff"),
     currency: text("currency").notNull(),
     totalCents: integer("total_cents").notNull(),
     /** Shop-configured conservation/park fee charged separately per diver. */
@@ -780,6 +816,13 @@ export const bookingCheckouts = pgTable(
      * is never refused and never recorded as zero for want of this figure.
      */
     appliedDiscountPercent: integer("applied_discount_percent"),
+    /**
+     * The fixed-amount counterpart to `applied_discount_percent`: the minor
+     * units a "$20 off" promotion was worth on *this* session — already capped
+     * at what the discountable lines came to, so it is never more than the
+     * session could lose. At most one of the two is set.
+     */
+    appliedDiscountCents: integer("applied_discount_cents"),
     currency: text("currency").notNull(),
     /** Price snapshot at checkout time, so a later trip re-price never rewrites what was asked. */
     amountPerDiverCents: integer("amount_per_diver_cents").notNull(),
@@ -869,6 +912,14 @@ export const bookingCheckouts = pgTable(
     check(
       "booking_checkouts_applied_discount_range",
       sql`${table.appliedDiscountPercent} is null or ${table.appliedDiscountPercent} between 1 and 100`,
+    ),
+    check(
+      "booking_checkouts_applied_discount_cents_positive",
+      sql`${table.appliedDiscountCents} is null or ${table.appliedDiscountCents} > 0`,
+    ),
+    check(
+      "booking_checkouts_single_discount_snapshot",
+      sql`${table.appliedDiscountPercent} is null or ${table.appliedDiscountCents} is null`,
     ),
     // A checkout applies a trip-scoped deal *or* a shop-wide code, never both:
     // the caller resolves them in that order and stops at the first hit, and
@@ -1133,6 +1184,15 @@ export const paymentOperationIntents = pgTable(
     orderId: uuid("order_id").references(() => orders.id),
     /** Reserved for a future refund path that has a booking_checkouts row in hand; no caller sets this today. */
     checkoutId: uuid("checkout_id").references(() => bookingCheckouts.id),
+    /**
+     * The capped discount a checkout_session attempt is spending, written under
+     * the promo's advisory lock before Stripe is called. A `started` intent
+     * carrying one is a reservation against the cap (`discountCapReached`,
+     * src/db/promo-caps.ts), so two attempts at a code's last use cannot both
+     * reach Stripe. At most one of the two is set.
+     */
+    promoCodeId: uuid("promo_code_id").references(() => shopPromoCodes.id),
+    tripPromoId: uuid("trip_promo_id").references(() => tripLastMinutePromos.id),
     /** The Stripe object id once known, even if the local finalize write then failed. */
     stripeObjectId: text("stripe_object_id"),
     errorMessage: text("error_message"),
@@ -1157,6 +1217,10 @@ export const paymentOperationIntents = pgTable(
     index("payment_operation_intents_stale_scan_idx")
       .on(table.kind, table.startedAt)
       .where(sql`${table.status} = 'started'`),
+    check(
+      "payment_operation_intents_single_promo",
+      sql`${table.promoCodeId} is null or ${table.tripPromoId} is null`,
+    ),
   ],
 );
 
