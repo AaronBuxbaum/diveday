@@ -55,6 +55,14 @@ export type CreateInvoiceRequest = {
   lineItems: InvoiceLineItem[];
   /** Days a diver has to pay before the invoice is overdue; Stripe requires this for `send_invoice`. */
   daysUntilDue?: number;
+  /**
+   * Whether Stripe emails the invoice once it is finalized. Defaults to true:
+   * staff raise an invoice so the diver receives it. A diver buying online is
+   * already looking at the hosted page, and an email to whatever address a
+   * public form was given would let anyone make the shop's Stripe account
+   * write to a stranger, so that path passes false.
+   */
+  sendEmail?: boolean;
   /** Opt-in Stripe Tax. When enabled, every invoice item is tax-exclusive. */
   taxEnabled?: boolean;
   /** Sent to Stripe's Customer object for tax calculation; never stored locally. */
@@ -382,12 +390,14 @@ export function stripeInvoicingProvider(
         if (!finalizeBody.success) return { status: "failed" };
 
         // Best-effort: staff can still share hosted_invoice_url if Stripe's own send fails.
-        await post(
-          request.stripeAccountId,
-          `/invoices/${finalizeBody.data.id}/send`,
-          new URLSearchParams(),
-          `${key}:send`,
-        ).catch(() => undefined);
+        if (request.sendEmail !== false) {
+          await post(
+            request.stripeAccountId,
+            `/invoices/${finalizeBody.data.id}/send`,
+            new URLSearchParams(),
+            `${key}:send`,
+          ).catch(() => undefined);
+        }
 
         return { status: "created", ...toCreatedInvoice(finalizeBody.data, stripeCustomerId) };
       } catch (error) {

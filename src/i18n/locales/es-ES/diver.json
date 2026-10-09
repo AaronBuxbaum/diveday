@@ -733,6 +733,26 @@
     "contactRequired": "Deja un correo o un teléfono para poder contactarte.",
     "unavailable": "Ese centro no acepta registros en este momento."
   },
+  "packages": {
+    "title": "Paquetes de inmersiones",
+    "navLabel": "Paquetes",
+    "metaDescription": "Inmersiones prepagadas en {shopName}: pagas una vez y reservas las inmersiones cuando quieras.",
+    "dives": "{count, plural, one {# inmersión} other {# inmersiones}}",
+    "perDive": "{amount} por inmersión",
+    "scopeAll": "Cualquier salida",
+    "scopeFunDives": "Solo inmersiones recreativas",
+    "useBy": "Úsalas antes del {date}",
+    "buy": "Comprar por {amount}",
+    "buying": "Abriendo el pago…",
+    "invoiceLine": "{packageName}, {count, plural, one {# inmersión} other {# inmersiones}}",
+    "afterPaying": "Cuando esté pagado, tus inmersiones estarán listas la próxima vez que reserves con este correo.",
+    "error": {
+      "invalid": "Añade tu nombre y un correo en el que podamos localizarte.",
+      "notOnSale": "Ese paquete ya no está a la venta.",
+      "unavailable": "{shopName} no puede cobrar este pago en línea ahora mismo. Ponte en contacto y lo resolverán.",
+      "failed": "La página de pago no se abrió. No se ha cobrado nada. Inténtalo de nuevo en un momento."
+    }
+  },
   "ready": {
     "metaTitle": "Tu preparación para la salida — DiveDay",
     "namelessFallback": "buceador",
@@ -826,6 +846,7 @@
     "certOptional": "Opcional",
     "keepThisPage": "Esta página es tuya: guárdala en favoritos y seguirá al día hasta que zarpes.",
     "gearOnFile": "La tripulación ya tiene tus tallas.",
+    "packageDivesLeft": "{line} · {count, plural, one {te queda # inmersión del paquete} other {te quedan # inmersiones del paquete}}",
     "changesSizesLabel": "Tallas",
     "changesTanksLabel": "Tanques",
     "changesItemWithSize": "{item} {size}",

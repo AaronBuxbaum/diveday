@@ -50,7 +50,12 @@ describe("the confirmation paints before the thread", () => {
     expect(body).toBeGreaterThan(-1);
     const page = positionOf("export default async function DiverReadinessPage");
     const thread = SOURCE.slice(body, suspense);
-    for (const read of ["issuePartySeatClaims(", "resolvePaymentReceipt(", "listTripDives("]) {
+    for (const read of [
+      "issuePartySeatClaims(",
+      "resolvePaymentReceipt(",
+      "listTripDives(",
+      "countSpendableDives(",
+    ]) {
       expect(SOURCE.slice(page, body)).not.toContain(read);
       expect(thread).toContain(read);
     }

@@ -52,6 +52,7 @@ import {
 } from "@/db/booking-capabilities";
 import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import { countSpendableDives } from "@/db/dive-packages";
 import { departureRollCallForBooking } from "@/db/manifests";
 import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
@@ -1321,6 +1322,15 @@ export default async function DiverReadinessPage({
       paymentReceipt && paymentReceipt.amountCents !== null
         ? money(paymentReceipt.amountCents, paymentReceipt.currency)
         : t("ready.checklistDetail.paymentDone");
+    // "N package dives left" (owner decision 2026-10-09): the one number a
+    // diver who bought a package asks, said where the money already is — the
+    // Pay step. Counted as `countSpendableDives` counts it, so a lapsed or
+    // spent dive is never offered; nothing is said to a diver who holds none.
+    const packageDivesLeft = await countSpendableDives(db, shop.id, data.person.id);
+    const withDivesLeft = (line: string | null): string | null =>
+      line !== null && packageDivesLeft > 0
+        ? t("ready.packageDivesLeft", { line, count: packageDivesLeft })
+        : line;
     const depositBalanceLine =
       paymentReceipt?.isDeposit && paymentReceipt.balanceDueCents > 0
         ? t("booking.paymentDepositBalance", {
@@ -1329,7 +1339,7 @@ export default async function DiverReadinessPage({
         : null;
 
     /** One step's fact, and one step's form. The two things the spine cannot derive. */
-    const stepLine = (step: ThreadStep): string | null => {
+    const baseStepLine = (step: ThreadStep): string | null => {
       if (step.id === "gear") return hasRentalFit ? t("ready.gearOnFile") : null;
       // A settled "Anything changed?" states the same fact the gear step would
       // have: the crew has their sizes. No second sentence for one fact, and
@@ -1357,6 +1367,9 @@ export default async function DiverReadinessPage({
       }
       return checklistDetailText(t, step.item);
     };
+    /** The step's fact, with the package's dives left beside the Pay step's. */
+    const stepLine = (step: ThreadStep): string | null =>
+      step.id === "pay" ? withDivesLeft(baseStepLine(step)) : baseStepLine(step);
 
     /**
      * The step's form, or nothing.

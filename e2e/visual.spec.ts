@@ -8496,6 +8496,29 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByText("No emergency numbers recorded").waitFor();
       await capture(page, "offline-manifest-emergency-empty", scheme);
     });
+
+    /**
+     * **The packages a diver can buy online** (owner decision 2026-10-09).
+     * Its own shop: a package is shop configuration, which `/api/test/reset`
+     * leaves standing, so writing one into blue-mantis would follow the worker
+     * into every later capture of that shop's public pages — the new Packages
+     * tab included.
+     */
+    test(`the public packages page renders true to the design (${scheme})`, async ({
+      page,
+      privateShop,
+    }) => {
+      await page.goto(`/shop/${privateShop.slug}/promos/packages`);
+      await page.getByLabel("What you call it").fill("Ten-dive card");
+      await page.getByLabel("Dives included").fill("10");
+      await page.getByLabel("Price").fill("450");
+      await page.getByRole("button", { name: "Add package" }).click();
+      await page.getByText("Package added.").waitFor();
+      await page.goto(`/s/${privateShop.slug}/packages`);
+      await page.getByRole("heading", { level: 1, name: "Dive packages" }).waitFor();
+      await page.getByRole("button", { name: "Buy for $450" }).waitFor();
+      await capture(page, "public-packages", scheme);
+    });
   });
 }
 

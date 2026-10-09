@@ -15,6 +15,7 @@ import {
 } from "drizzle-orm";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { packageOnSale } from "@/lib/dive-packages";
 import { log } from "@/lib/log";
 import { majorToMinor } from "@/lib/money";
 import {
@@ -36,6 +37,7 @@ import {
   startPaymentOperation,
 } from "./payment-operations";
 import { setBookingPayment, setBookingPaymentIfNotFinal } from "./payments";
+import { findOrCreatePerson } from "./people";
 import { queryAll } from "./query-helpers";
 import type {
   Order,
@@ -47,6 +49,7 @@ import type {
 import {
   bookings,
   courses,
+  divePackages,
   orderLineItemKind,
   orderLineItems,
   orders,
@@ -177,6 +180,34 @@ export async function createOrder(
   if (!(await canPersonManageOrders(db, input.shopId, input.createdByPersonId))) {
     return { ok: false, reason: "not_authorized" };
   }
+  return issueOrder(db, input, invoicing, { sendEmail: true });
+}
+
+type IssueOrderOptions = {
+  /** Whether Stripe emails the invoice (see `CreateInvoiceRequest.sendEmail`). */
+  sendEmail: boolean;
+  daysUntilDue?: number;
+  /**
+   * The name to put on the Stripe customer, when it must not be the stored
+   * one. A public form matched to an existing diver by email bills the name
+   * the form was given, so typing someone's address never shows the stranger
+   * the name the shop has on file for them.
+   */
+  customerName?: string;
+};
+
+/**
+ * Everything `createOrder` does after its authorization gate. Private on
+ * purpose: the only two callers are `createOrder` (staff, gated by role) and
+ * `createDiverPackageOrder` (a diver buying one package for themselves, gated
+ * by the package being on sale and the line being priced from the row).
+ */
+async function issueOrder(
+  db: AppDb,
+  input: NewOrderInput,
+  invoicing: InvoicingProvider,
+  options: IssueOrderOptions,
+): Promise<CreateOrderOutcome> {
   if (input.lineItems.length === 0 || input.lineItems.length > MAX_LINE_ITEMS_PER_ORDER) {
     return { ok: false, reason: "invalid" };
   }
@@ -256,9 +287,11 @@ export async function createOrder(
   const result = await invoicing.createInvoice({
     stripeAccountId,
     customerEmail: customer.email,
-    customerName: customer.fullName,
+    customerName: options.customerName ?? customer.fullName,
     currency,
     taxEnabled,
+    sendEmail: options.sendEmail,
+    ...(options.daysUntilDue ? { daysUntilDue: options.daysUntilDue } : {}),
     customerAddress,
     lineItems: input.lineItems.map((item) => ({
       description: item.description,
@@ -361,6 +394,97 @@ export async function createOrder(
   await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
 
   return { ok: true, order };
+}
+
+export type DiverPackageOrderOutcome =
+  | { ok: true; order: Order }
+  | {
+      ok: false;
+      reason:
+        | "not_on_sale"
+        | "not_connected"
+        | "tax_location_required"
+        | "invalid"
+        | "stripe_failed";
+    };
+
+/**
+ * A diver buying one dive package for themselves from the shop's public pages
+ * (no staff session). The invoice is raised on the shop's connected account
+ * exactly as a staff-raised one is, so `invoice.paid` reaches the same
+ * `grantPackageEntitlementsForPaidOrder` and nothing about the grant is new.
+ *
+ * What makes this safe without a role check:
+ * - the price comes from the package row, never from the caller;
+ * - only a live package that is still on sale can be bought;
+ * - one line, quantity one, kind `dive_package` — nothing else can be billed;
+ * - Stripe does not email the invoice, so a public form cannot make the
+ *   shop's account write to an address somebody else typed;
+ * - the Stripe customer carries the name typed here, not the stored one.
+ *
+ * The order records the diver as its own creator: nobody on the staff raised
+ * it, and `created_by_person_id` is a person in this shop, which they are.
+ */
+export async function createDiverPackageOrder(
+  db: AppDb,
+  input: {
+    shopId: string;
+    packageId: string;
+    fullName: string;
+    email: string;
+    /** The invoice line, composed by the caller from its own bundle. */
+    lineDescription: string;
+  },
+  invoicing: InvoicingProvider = invoicingProviderFromEnvironment(),
+): Promise<DiverPackageOrderOutcome> {
+  const [pkg] = await db
+    .select()
+    .from(divePackages)
+    .where(
+      and(
+        eq(divePackages.id, input.packageId),
+        eq(divePackages.shopId, input.shopId),
+        isNull(divePackages.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!pkg || !packageOnSale(pkg)) return { ok: false, reason: "not_on_sale" };
+
+  // Before a person row exists: a shop that cannot take money must not collect
+  // a stranger's details for an order it will never raise.
+  if (!canAcceptPayments(await getShopStripeAccount(db, input.shopId))) {
+    return { ok: false, reason: "not_connected" };
+  }
+
+  const { person } = await findOrCreatePerson(db, {
+    shopId: input.shopId,
+    fullName: input.fullName,
+    email: input.email,
+  });
+  const outcome = await issueOrder(
+    db,
+    {
+      shopId: input.shopId,
+      personId: person.id,
+      createdByPersonId: person.id,
+      lineItems: [
+        {
+          kind: "dive_package",
+          description: input.lineDescription,
+          quantity: 1,
+          unitAmountCents: pkg.priceCents,
+          packageId: pkg.id,
+        },
+      ],
+    },
+    invoicing,
+    { sendEmail: false, daysUntilDue: 1, customerName: input.fullName },
+  );
+  if (outcome.ok) return outcome;
+  return {
+    ok: false,
+    reason: outcome.reason === "not_authorized" ? "invalid" : outcome.reason,
+  };
 }
 
 /** Every person at the shop, for the new-order customer picker. */
