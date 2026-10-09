@@ -12,7 +12,7 @@ import {
 import { CREW_NOTICE_CHANGES, CREW_TRIP_ROLES } from "@/lib/crew-notices";
 import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
 import { SHOP_MILESTONES } from "@/lib/founder-metrics";
-import { GEAR_KIND_ORDER } from "@/lib/gear";
+import { GEAR_KIND_ORDER, GEAR_SERVICE_KINDS } from "@/lib/gear";
 import { REPLY_BODY_MAX_LENGTH } from "@/lib/inbox";
 import { DIVER_EMAIL_MAX } from "@/lib/person-fields";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
@@ -1041,7 +1041,7 @@ const gearServiceDueSchema = z.object({
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   piece: customerGearPieceSchema,
-  clock: z.enum(["service", "hydro_test", "visual_inspection", "o2_clean", "note"]),
+  clock: z.enum(GEAR_SERVICE_KINDS),
   dueOn: calendarDateSchema,
   unsubscribeUrl: z.url().max(2_000),
 });

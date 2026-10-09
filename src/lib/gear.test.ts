@@ -36,7 +36,29 @@ describe("gear kind coverage", () => {
     expect(GEAR_SERVICE_KINDS_FOR.torch).toEqual(["service", "note"]);
     expect(GEAR_SERVICE_KINDS_FOR.dpv).toEqual(["service", "note"]);
     expect(GEAR_SERVICE_KINDS_FOR.nitrox_analyzer).toEqual(["service", "note"]);
-    expect(GEAR_SERVICE_KINDS_FOR.o2_kit).toEqual(["service", "note"]);
+    // The boat's safety kit (roadmap N-08): the O2 kit's cylinder runs a
+    // tank's two compliance clocks beside the regulator's service, an AED its
+    // two printed dates, and a consumable the one date on its packet.
+    expect(GEAR_SERVICE_KINDS_FOR.o2_kit).toEqual([
+      "service",
+      "hydro_test",
+      "visual_inspection",
+      "note",
+    ]);
+    expect(GEAR_SERVICE_KINDS_FOR.aed).toEqual([
+      "aed_pads",
+      "aed_battery",
+      "visual_inspection",
+      "note",
+    ]);
+    expect(GEAR_SERVICE_KINDS_FOR.first_aid_kit).toEqual(["expiry", "visual_inspection", "note"]);
+    expect(GEAR_SERVICE_KINDS_FOR.flares).toEqual(["expiry", "note"]);
+  });
+
+  it("suggests no date for a clock whose date is printed on the packet", () => {
+    for (const clock of ["aed_pads", "aed_battery", "expiry"] as const) {
+      expect(suggestNextDueOn(clock, "2026-10-09")).toBeNull();
+    }
   });
 
   it("splits a combined rental-fit answer into independently reservable units", () => {

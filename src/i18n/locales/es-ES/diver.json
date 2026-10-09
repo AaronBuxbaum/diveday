@@ -4265,6 +4265,9 @@
       "camera": "cámara",
       "nitroxAnalyzer": "analizador de nitrox",
       "o2Kit": "kit de oxígeno",
+      "aed": "DEA",
+      "firstAidKit": "botiquín",
+      "flares": "bengalas",
       "other": "equipo",
       "withModel": "{piece} ({model})"
     },
@@ -4281,6 +4284,9 @@
         "hydroTest": "La prueba hidrostática de tu equipo ({piece}) vence el {date}.",
         "visualInspection": "La inspección visual de tu equipo ({piece}) vence el {date}.",
         "o2Clean": "La limpieza para oxígeno de tu equipo ({piece}) vence el {date}.",
+        "aedPads": "Los parches de tu equipo ({piece}) vencen el {date}.",
+        "aedBattery": "La batería de tu equipo ({piece}) vence el {date}.",
+        "expiry": "Tu equipo ({piece}) vence el {date}.",
         "note": "Toca revisar tu equipo ({piece}) antes del {date}."
       },
       "dropBy": "Pasa por {shopName} cuando quieras antes de esa fecha.",

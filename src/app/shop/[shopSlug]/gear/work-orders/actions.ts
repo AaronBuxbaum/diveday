@@ -20,7 +20,12 @@ import {
 } from "@/db/work-orders";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { GEAR_KIND_ORDER, type GearItemKind, type GearServiceKind } from "@/lib/gear";
+import {
+  GEAR_KIND_ORDER,
+  GEAR_SERVICE_KINDS,
+  type GearItemKind,
+  type GearServiceKind,
+} from "@/lib/gear";
 import { currencyFractionDigits, MAX_PRICE_MINOR_UNITS, majorToMinor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -228,13 +233,7 @@ export async function saveWorkOrderAction(formData: FormData) {
 }
 
 // The register's care kinds, as its own unit page parses them.
-const careKindValues: [GearServiceKind, ...GearServiceKind[]] = [
-  "service",
-  "hydro_test",
-  "visual_inspection",
-  "o2_clean",
-  "note",
-];
+const careKindValues: [GearServiceKind, ...GearServiceKind[]] = [...GEAR_SERVICE_KINDS];
 
 /** One row of the Work done form, as the form posts it (`care.<n>.<field>`). */
 const careRowSchema = z.object({

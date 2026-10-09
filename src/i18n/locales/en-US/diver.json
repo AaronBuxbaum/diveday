@@ -4265,6 +4265,9 @@
       "camera": "camera",
       "nitroxAnalyzer": "nitrox analyzer",
       "o2Kit": "oxygen kit",
+      "aed": "AED",
+      "firstAidKit": "first-aid kit",
+      "flares": "flares",
       "other": "gear",
       "withModel": "{piece} ({model})"
     },
@@ -4281,6 +4284,9 @@
         "hydroTest": "The hydrostatic test on your {piece} is due on {date}.",
         "visualInspection": "The visual inspection on your {piece} is due on {date}.",
         "o2Clean": "The oxygen cleaning on your {piece} is due on {date}.",
+        "aedPads": "The pads in your {piece} expire on {date}.",
+        "aedBattery": "The battery in your {piece} expires on {date}.",
+        "expiry": "Your {piece} expires on {date}.",
         "note": "A check on your {piece} is due on {date}."
       },
       "dropBy": "Drop by {shopName} any time before then.",

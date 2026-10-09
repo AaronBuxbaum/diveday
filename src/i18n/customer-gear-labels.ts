@@ -30,6 +30,9 @@ const PIECE_KEYS: Record<GearItemKind, DiverMessageKey> = {
   camera: "notifications.gearPieces.camera",
   nitrox_analyzer: "notifications.gearPieces.nitroxAnalyzer",
   o2_kit: "notifications.gearPieces.o2Kit",
+  aed: "notifications.gearPieces.aed",
+  first_aid_kit: "notifications.gearPieces.firstAidKit",
+  flares: "notifications.gearPieces.flares",
   other: "notifications.gearPieces.other",
 };
 
@@ -53,6 +56,9 @@ const DUE_KEYS: Record<GearServiceKind, DiverMessageKey> = {
   hydro_test: "notifications.gearServiceDue.due.hydroTest",
   visual_inspection: "notifications.gearServiceDue.due.visualInspection",
   o2_clean: "notifications.gearServiceDue.due.o2Clean",
+  aed_pads: "notifications.gearServiceDue.due.aedPads",
+  aed_battery: "notifications.gearServiceDue.due.aedBattery",
+  expiry: "notifications.gearServiceDue.due.expiry",
   note: "notifications.gearServiceDue.due.note",
 };
 

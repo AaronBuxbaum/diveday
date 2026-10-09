@@ -17,6 +17,7 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
+import { isSafetyKitKind } from "@/lib/boat-safety";
 import {
   type CalendarDate,
   calendarDateInTimezone,
@@ -25,6 +26,7 @@ import {
 import { nowDate } from "@/lib/clock";
 import {
   GEAR_KIND_ORDER,
+  GEAR_SERVICE_KINDS,
   type GearItemKind,
   type GearItemStatus,
   type GearReturnOutcome,
@@ -48,6 +50,7 @@ import { recordDeskEvent } from "./desk-events";
 import { type OffsetPage, offsetPage } from "./paging";
 import { violatesExclusionConstraint, violatesUniqueIndex } from "./query-helpers";
 import {
+  boats,
   bookings,
   type GearItem,
   type GearReservation,
@@ -55,6 +58,7 @@ import {
   gearItems,
   gearReservations,
   gearServiceEvents,
+  gearServiceKind,
   people,
   priorGearAssignments,
   rentalFitProfiles,
@@ -68,6 +72,8 @@ import { liveTrip } from "./trips-live";
 // the build, not a migration at 2am.
 gearItemKind.enumValues satisfies readonly GearItemKind[];
 GEAR_KIND_ORDER satisfies readonly (typeof gearItemKind.enumValues)[number][];
+gearServiceKind.enumValues satisfies readonly GearServiceKind[];
+GEAR_SERVICE_KINDS satisfies readonly (typeof gearServiceKind.enumValues)[number][];
 
 function optional(value: string | undefined) {
   return value?.trim() || null;
@@ -105,11 +111,40 @@ export type GearItemInput = {
   serialNumber?: string;
   brandModel?: string;
   purchasedOn?: string;
+  /**
+   * The hull a piece of safety kit lives aboard. `undefined` leaves an edited
+   * unit's assignment as it was; `null` (or "") brings it ashore. Ignored and
+   * cleared for any kind that is not safety kit (`isSafetyKitKind`).
+   */
+  aboardBoatId?: string | null;
 };
 
 export type CreateGearItemOutcome =
   | { ok: true; item: GearItem }
-  | { ok: false; reason: "empty_label" | "duplicate_label" | "invalid_date" };
+  | { ok: false; reason: "empty_label" | "duplicate_label" | "invalid_date" | "invalid_boat" };
+
+/**
+ * What to write to `aboard_boat_id`: `undefined` to leave it, `null` to clear
+ * it, or a hull id this shop still runs. A boat id from another shop or a
+ * deleted hull is `"invalid"` — a forged or stale select must not hang a unit
+ * on a vessel the shop cannot see.
+ */
+async function aboardBoatFor(
+  db: DbExecutor,
+  shopId: string,
+  kind: GearItemKind,
+  aboardBoatId: string | null | undefined,
+): Promise<string | null | undefined | "invalid"> {
+  if (!isSafetyKitKind(kind)) return null;
+  if (aboardBoatId === undefined) return undefined;
+  if (!aboardBoatId) return null;
+  const [boat] = await db
+    .select({ id: boats.id })
+    .from(boats)
+    .where(and(eq(boats.id, aboardBoatId), eq(boats.shopId, shopId), isNull(boats.deletedAt)))
+    .limit(1);
+  return boat ? boat.id : "invalid";
+}
 
 /**
  * Add one unit to the register. The label is the shop's own tag and must be
@@ -125,6 +160,8 @@ export async function createGearItem(
   const purchasedOn = optional(input.purchasedOn);
   if (purchasedOn && !isValidCalendarDate(purchasedOn))
     return { ok: false, reason: "invalid_date" };
+  const aboardBoatId = await aboardBoatFor(db, input.shopId, input.kind, input.aboardBoatId);
+  if (aboardBoatId === "invalid") return { ok: false, reason: "invalid_boat" };
   try {
     const [item] = await db
       .insert(gearItems)
@@ -136,6 +173,7 @@ export async function createGearItem(
         serialNumber: optional(input.serialNumber),
         brandModel: optional(input.brandModel),
         purchasedOn,
+        aboardBoatId: aboardBoatId ?? null,
       })
       .returning();
     if (!item) return { ok: false, reason: "duplicate_label" };
@@ -150,7 +188,10 @@ export async function createGearItem(
 
 export type UpdateGearItemOutcome =
   | { ok: true; item: GearItem }
-  | { ok: false; reason: "not_found" | "empty_label" | "duplicate_label" | "invalid_date" };
+  | {
+      ok: false;
+      reason: "not_found" | "empty_label" | "duplicate_label" | "invalid_date" | "invalid_boat";
+    };
 
 export async function updateGearItem(
   db: AppDb,
@@ -161,6 +202,8 @@ export async function updateGearItem(
   const purchasedOn = optional(input.purchasedOn);
   if (purchasedOn && !isValidCalendarDate(purchasedOn))
     return { ok: false, reason: "invalid_date" };
+  const aboardBoatId = await aboardBoatFor(db, input.shopId, input.kind, input.aboardBoatId);
+  if (aboardBoatId === "invalid") return { ok: false, reason: "invalid_boat" };
   try {
     const [item] = await db
       .update(gearItems)
@@ -171,6 +214,9 @@ export async function updateGearItem(
         serialNumber: optional(input.serialNumber),
         brandModel: optional(input.brandModel),
         purchasedOn,
+        // Left out of the write when the form did not carry it, so a unit's
+        // hull survives an edit from a form that never showed the select.
+        ...(aboardBoatId === undefined ? {} : { aboardBoatId }),
         updatedAt: nowDate(),
       })
       .where(

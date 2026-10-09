@@ -49,6 +49,9 @@ export type GearItemKind =
   | "camera"
   | "nitrox_analyzer"
   | "o2_kit"
+  | "aed"
+  | "first_aid_kit"
+  | "flares"
   | "other";
 
 /**
@@ -69,9 +72,23 @@ export type GearItemStatus = (typeof GEAR_ITEM_STATUSES)[number];
 /**
  * The clocks a unit can run: manufacturer service, a tank's two independent
  * compliance clocks (DOT hydrostatic test, annual visual inspection), the
- * nitrox O2-clean renewal, and a dated condition note with no clock at all.
+ * nitrox O2-clean renewal, an AED's pads and battery (two printed dates,
+ * replaced on their own schedules), the one printed `expiry` a consumable
+ * carries (flares, a first-aid kit's contents), and a dated condition note
+ * with no clock at all.
  */
-export type GearServiceKind = "service" | "hydro_test" | "visual_inspection" | "o2_clean" | "note";
+export const GEAR_SERVICE_KINDS = [
+  "service",
+  "hydro_test",
+  "visual_inspection",
+  "o2_clean",
+  "aed_pads",
+  "aed_battery",
+  "expiry",
+  "note",
+] as const;
+
+export type GearServiceKind = (typeof GEAR_SERVICE_KINDS)[number];
 
 /**
  * Fleet display order. The four shared kinds before mask/fins keep the prep
@@ -101,6 +118,9 @@ export const GEAR_KIND_ORDER = [
   "camera",
   "nitrox_analyzer",
   "o2_kit",
+  "aed",
+  "first_aid_kit",
+  "flares",
   "other",
 ] as const satisfies readonly GearItemKind[];
 
@@ -138,13 +158,19 @@ export function gearKindRank(kind: GearItemKind): number {
  * form suggests, never what it enforces. Staff always own the date they
  * write: manufacturer intervals genuinely vary (annual vs. two-year regulator
  * service), rental fleets run shorter, and hydro is US DOT's five years.
- * `note` has no clock.
+ * `note` has no clock, and the printed-expiry clocks have no convention to
+ * suggest: whoever replaced the pads reads the date off them.
  */
 export const GEAR_SERVICE_INTERVAL_MONTHS: Record<GearServiceKind, number | null> = {
   service: 12,
   hydro_test: 60,
   visual_inspection: 12,
   o2_clean: 12,
+  // The three printed dates: the date is on the packet, and a suggestion would
+  // only be a second, wrong number beside it.
+  aed_pads: null,
+  aed_battery: null,
+  expiry: null,
   note: null,
 };
 
@@ -174,7 +200,12 @@ export const GEAR_SERVICE_KINDS_FOR: Record<GearItemKind, readonly GearServiceKi
   reel: ["note"],
   camera: ["note"],
   nitrox_analyzer: ["service", "note"],
-  o2_kit: ["service", "note"],
+  // The cylinder's two compliance clocks as on any tank, and the regulator's
+  // service. The O2 kit is the boat's first safety-kit kind (roadmap N-08).
+  o2_kit: ["service", "hydro_test", "visual_inspection", "note"],
+  aed: ["aed_pads", "aed_battery", "visual_inspection", "note"],
+  first_aid_kit: ["expiry", "visual_inspection", "note"],
+  flares: ["expiry", "note"],
   other: ["service", "note"],
 };
 
