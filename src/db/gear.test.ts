@@ -633,7 +633,10 @@ describe("reserveGearUnit's screen, held under the booking's lock (issue #2215)"
   const screen = (proposed: boolean) => ({ proposed });
 
   it("gives one diver one BCD when two tablets assign different BCDs at the same instant", async () => {
-    const { db, shop } = await gearShopContext();
+    // A database of its own: the two assignments must race as two
+    // transactions, and inside the file's shared one they would run as one
+    // (src/test/db.ts, "When NOT to use this").
+    const { db, shop } = await gearShopContext(await seededShopContext());
     const bcd3 = mustCreate(
       await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #3", size: "M" }),
     );
