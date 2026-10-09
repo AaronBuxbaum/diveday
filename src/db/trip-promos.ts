@@ -7,11 +7,17 @@ import {
   lastMinuteEntryMatchesTripDate,
   orderLastMinuteRecipients,
 } from "@/lib/last-minute-list";
+import { minorToMajor } from "@/lib/money";
 import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import {
   type PromotionProvider,
   promotionProviderFromEnvironment,
 } from "@/lib/payments/promotions";
+import {
+  isValidPromoDiscountAmountCents,
+  type PromoDiscount,
+  promoDiscountColumns,
+} from "@/lib/promo-codes";
 import { publicTripPath } from "@/lib/public-routes";
 import { combineCertRequirements } from "@/lib/readiness";
 import { spotsRemaining } from "@/lib/trips";
@@ -30,7 +36,7 @@ import {
 } from "./schema";
 import { listCertificationSummaries } from "./self-declared-cards";
 import { getShopById } from "./shops";
-import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
+import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
 import { getTripWaitlist, getTripWithBooked } from "./trips";
 import { liveTrip } from "./trips-live";
 
@@ -38,10 +44,30 @@ export type SendLastMinuteDealInput = {
   shopId: string;
   shopSlug: string;
   tripId: string;
-  discountPercent: number;
+  /** Percent off. Exactly one of this and `discountAmountCents`. */
+  discountPercent?: number | null;
+  /**
+   * A fixed amount off the whole booking, in minor units — once per checkout,
+   * never per diver, and never below zero (`discountOffCents`).
+   */
+  discountAmountCents?: number | null;
   createdByPersonId?: string;
   recipientPersonIds?: string[];
 };
+
+/** The one discount a deal asks for, or null when it asks for none, both, or one out of range. */
+export function lastMinuteDealDiscount(input: {
+  discountPercent?: number | null;
+  discountAmountCents?: number | null;
+}): PromoDiscount | null {
+  const percent = input.discountPercent ?? null;
+  const amount = input.discountAmountCents ?? null;
+  if ((percent === null) === (amount === null)) return null;
+  if (percent !== null) {
+    return isValidLastMinuteDiscountPercent(percent) ? { kind: "percent", percent } : null;
+  }
+  return isValidPromoDiscountAmountCents(amount) ? { kind: "amount", amountCents: amount } : null;
+}
 
 export type SendLastMinuteDealOutcome =
   | { ok: true; promoId: string; code: string; recipientCount: number }
@@ -71,9 +97,8 @@ export async function sendLastMinuteDealBlast(
   promotions: PromotionProvider = promotionProviderFromEnvironment(),
   notifications?: NotificationProvider,
 ): Promise<SendLastMinuteDealOutcome> {
-  if (!isValidLastMinuteDiscountPercent(input.discountPercent)) {
-    return { ok: false, reason: "invalid_discount" };
-  }
+  const discount = lastMinuteDealDiscount(input);
+  if (!discount) return { ok: false, reason: "invalid_discount" };
 
   const [shop, tripRow, account, tripRequirement, siteRequirement] = await Promise.all([
     getShopById(db, input.shopId),
@@ -150,13 +175,18 @@ export async function sendLastMinuteDealBlast(
     waitlist.map(({ person }) => person.id),
   );
 
-  const code = generateLastMinutePromoCode(input.discountPercent);
+  const currency = await getShopCurrency(db, input.shopId);
+  const code = generateLastMinutePromoCode(
+    discount.kind === "percent"
+      ? discount.percent
+      : Math.round(minorToMajor(discount.amountCents, currency)),
+  );
   const [pendingRow] = await db
     .insert(tripLastMinutePromos)
     .values({
       shopId: input.shopId,
       tripId: input.tripId,
-      discountPercent: input.discountPercent,
+      ...promoDiscountColumns(discount),
       code,
       expiresAt: tripRow.startsAt,
       createdByPersonId: input.createdByPersonId,
@@ -167,7 +197,8 @@ export async function sendLastMinuteDealBlast(
   const stripeResult = await promotions.createTripPromotion({
     stripeAccountId,
     code,
-    percentOff: input.discountPercent,
+    discount,
+    currency,
     expiresAt: tripRow.startsAt,
     maxRedemptions: openSeats,
     idempotencyKey: pendingRow.id,
@@ -208,7 +239,9 @@ export async function sendLastMinuteDealBlast(
             startsAt: tripRow.startsAt,
             endsAt: tripRow.endsAt,
             timezone: shop.timezone,
-            discountPercent: input.discountPercent,
+            ...(discount.kind === "percent"
+              ? { discountPercent: discount.percent }
+              : { discountAmountCents: discount.amountCents, currency }),
             code,
             bookingUrl,
             expiresAt: tripRow.startsAt,

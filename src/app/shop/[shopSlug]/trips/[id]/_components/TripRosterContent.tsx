@@ -343,6 +343,7 @@ export function TripPromoteAndActivity({
   shopSlug,
   locale,
   timezone,
+  currency = "usd",
   tripNotice,
   mayDiscount,
   more,
@@ -351,6 +352,8 @@ export function TripPromoteAndActivity({
   shopSlug: string;
   locale: string;
   timezone: string;
+  /** The shop's currency, for a fixed-amount last-minute deal. */
+  currency?: string;
   tripNotice?: FormNotice;
   mayDiscount: boolean;
   /** "More for this departure" (`TripMoreDisclosure`), between the two. */
@@ -405,6 +408,7 @@ export function TripPromoteAndActivity({
               promos={lastMinute.promos}
               promoRecipients={lastMinute.promoRecipients}
               timezone={timezone}
+              currency={currency}
               status={noticeForForm(tripNotice, "last-minute-deal")}
               tripId={trip.id}
             />

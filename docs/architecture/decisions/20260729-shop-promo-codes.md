@@ -93,3 +93,18 @@ code in the Stripe dashboard directly — DiveDay never re-reads it. The failure
 refuses the discount at payment, the booking still completes at full price) but silent. A
 reconciliation pass belongs with the same background job that already reconciles stuck checkouts, if
 it becomes a real support cost.
+
+## Amendment, 2026-10-09: a fixed amount off, once per booking
+
+The owner approved fixed-amount codes ("$20 off") for both shop-wide codes and last-minute deals.
+`shop_promo_codes` and `trip_last_minute_promos` each carry exactly one of `discount_percent` or
+`discount_amount_cents` (a check constraint refuses both and neither), and the Stripe coupon is
+`amount_off` plus the shop's currency instead of `percent_off`.
+
+A fixed amount comes off **once per booking**, not once per diver: a party of four booking with a
+$20 code pays $20 less in total, not $80 less. That matches what Stripe's `amount_off` does on one
+Checkout Session, and it keeps a redemption cap meaning "this many bookings". The amount never
+takes a booking below zero: `discountOffCents` in `src/lib/promo-codes.ts` caps it at the
+discountable lines, and a pass-through fee stays whole. `booking_checkouts.applied_discount_cents`
+snapshots what was taken, beside the existing percent snapshot, so the recorded payments and a
+later refund agree with what Stripe charged.

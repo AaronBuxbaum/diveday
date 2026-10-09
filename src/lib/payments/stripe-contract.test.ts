@@ -677,7 +677,8 @@ describe("promotion provider against real Coupon and PromotionCode payloads", ()
       await provider.createTripPromotion({
         stripeAccountId: "acct_1Nv0FGQ9RKHgCVdK",
         code: "SAVE10-A1B2C3",
-        percentOff: 10,
+        discount: { kind: "percent", percent: 10 },
+        currency: "usd",
         expiresAt: new Date(1_784_727_000 * 1000),
         maxRedemptions: 4,
         idempotencyKey: "intent-promo-1",

@@ -15,7 +15,8 @@ function providerWith(env: Record<string, string | undefined>, fetchImpl: unknow
 const request = {
   stripeAccountId: "acct_123",
   code: "SAVE50-A1B2C3",
-  percentOff: 50,
+  discount: { kind: "percent", percent: 50 } as const,
+  currency: "usd",
   expiresAt: new Date("2026-07-29T12:00:00Z"),
   maxRedemptions: 4,
   idempotencyKey: "promo-1",
@@ -107,7 +108,8 @@ describe("createShopPromotion", () => {
   const shopRequest = {
     stripeAccountId: "acct_123",
     code: "REEF20",
-    percentOff: 20,
+    discount: { kind: "percent", percent: 20 } as const,
+    currency: "usd",
     name: "Returning divers",
     expiresAt: null,
     maxRedemptions: null,
@@ -157,5 +159,23 @@ describe("createShopPromotion", () => {
     const fetchImpl = vi.fn().mockRejectedValue(new Error("network"));
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
     expect(await provider.createShopPromotion(shopRequest)).toEqual({ status: "failed" });
+  });
+
+  it("mints a fixed-amount code as amount_off in the shop's currency, never a percent", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(ok({ id: "coupon_3" }))
+      .mockResolvedValueOnce(ok({ id: "promo_3" }));
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    await provider.createShopPromotion({
+      ...shopRequest,
+      discount: { kind: "amount", amountCents: 2000 },
+      currency: "eur",
+    });
+
+    const couponForm = new URLSearchParams(fetchImpl.mock.calls[0][1].body);
+    expect(couponForm.get("amount_off")).toBe("2000");
+    expect(couponForm.get("currency")).toBe("eur");
+    expect(couponForm.has("percent_off")).toBe(false);
   });
 });

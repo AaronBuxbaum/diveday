@@ -142,6 +142,55 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
     });
   });
 
+  it("sends a fixed-amount deal as amount_off in the shop's currency, storing no percent", async () => {
+    const { db, shop, openTrip } = await context();
+    await connectStripe(db, shop.id);
+    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+    const minted: unknown[] = [];
+    const outcome = await sendLastMinuteDealBlast(
+      db,
+      {
+        shopId: shop.id,
+        shopSlug: "blue-mantis",
+        tripId: openTrip.id,
+        discountAmountCents: 2_000,
+      },
+      fakePromotions({
+        async createTripPromotion(request) {
+          minted.push({ discount: request.discount, currency: request.currency });
+          return {
+            status: "created",
+            stripeCouponId: "coupon_a",
+            stripePromotionCodeId: "promo_a",
+          };
+        },
+      }),
+    );
+    if (!outcome.ok) throw new Error(`expected success, got ${outcome.reason}`);
+    // The code names the figure in whole units, like a percent deal's does.
+    expect(outcome.code).toMatch(/^SAVE20-/);
+    expect(minted).toEqual([{ discount: { kind: "amount", amountCents: 2_000 }, currency: "usd" }]);
+    const [promo] = await listTripLastMinutePromos(db, shop.id, openTrip.id);
+    expect(promo).toMatchObject({ discountPercent: null, discountAmountCents: 2_000 });
+  });
+
+  it("refuses a deal that asks for both a percent and an amount", async () => {
+    const { db, shop, openTrip } = await context();
+    await expect(
+      sendLastMinuteDealBlast(
+        db,
+        {
+          shopId: shop.id,
+          shopSlug: "blue-mantis",
+          tripId: openTrip.id,
+          discountPercent: 25,
+          discountAmountCents: 2_000,
+        },
+        fakePromotions(),
+      ),
+    ).resolves.toEqual({ ok: false, reason: "invalid_discount" });
+  });
+
   it("still finds every matching recipient once a wait-listed diver's trip has an open seat", async () => {
     // The trip was full when this diver joined its wait list, holding "a
     // place in line" — a cancellation just freed the seat the deal is about

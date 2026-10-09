@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { PromoDiscount } from "../promo-codes";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
@@ -14,7 +15,10 @@ export type CreateTripPromotionRequest = {
   stripeAccountId: string;
   /** The exact code text the diver will type, e.g. "SAVE50-A1B2C3". */
   code: string;
-  percentOff: number;
+  /** A percent becomes `percent_off`; a fixed amount becomes `amount_off` in `currency`. */
+  discount: PromoDiscount;
+  /** The shop's currency — the only one an `amount_off` coupon can be spent in. */
+  currency: string;
   /** Pinned to the trip's departure — Stripe itself refuses redemption past this. */
   expiresAt: Date;
   /** Capped at the trip's open-seat count at send time; always at least 1. */
@@ -36,7 +40,8 @@ export type CreateTripPromotionRequest = {
 export type CreateShopPromotionRequest = {
   stripeAccountId: string;
   code: string;
-  percentOff: number;
+  discount: PromoDiscount;
+  currency: string;
   /** Staff's label, shown in the shop's own Stripe dashboard beside the coupon. */
   name: string;
   expiresAt: Date | null;
@@ -118,16 +123,25 @@ export function stripePromotionProvider(
   async function createPromotion(request: {
     stripeAccountId: string;
     code: string;
-    percentOff: number;
+    discount: PromoDiscount;
+    currency: string;
     name: string;
     expiresAt: Date | null;
     maxRedemptions: number | null;
     idempotencyKey: string;
   }): Promise<CreateTripPromotionResult> {
     try {
+      // A fixed amount is an `amount_off` coupon in the shop's own currency.
+      // Stripe takes it off the session's total once and stops at zero, which
+      // is the rule DiveDay states: once per booking, never below nothing.
       const couponForm = new URLSearchParams({
         duration: "once",
-        percent_off: String(request.percentOff),
+        ...(request.discount.kind === "percent"
+          ? { percent_off: String(request.discount.percent) }
+          : {
+              amount_off: String(Math.max(1, Math.round(request.discount.amountCents))),
+              currency: request.currency,
+            }),
         name: request.name,
       });
       const couponResponse = await fetchImpl("https://api.stripe.com/v1/coupons", {

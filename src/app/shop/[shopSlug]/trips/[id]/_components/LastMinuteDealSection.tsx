@@ -11,12 +11,14 @@ import type { CertificationSummary } from "@/db/self-declared-cards";
 import type { TripLastMinutePromoRecipientItem } from "@/db/trip-promos";
 import { certificationSummaryText, certificationSummaryUnchecked } from "@/i18n/readiness-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { formatDateTimeTz } from "@/lib/format";
+import { formatDateTimeTz, formatMoneyScanned } from "@/lib/format";
 import {
   type CourseTargetInfo,
   filterEligibleLastMinuteRecipients,
   reviewLastMinuteRecipients,
 } from "@/lib/last-minute-list";
+import { currencySymbol } from "@/lib/money";
+import { promoDiscountOf } from "@/lib/promo-codes";
 import type { CertRequirementSource } from "@/lib/readiness";
 import type { FormNotice } from "@/lib/staff-notices";
 import { LastMinuteSendButton } from "./LastMinuteSendButton";
@@ -68,6 +70,7 @@ export function LastMinuteDealSection({
   promos,
   promoRecipients,
   timezone,
+  currency = "usd",
   locale,
   status,
 }: {
@@ -95,6 +98,8 @@ export function LastMinuteDealSection({
   promos: TripLastMinutePromo[];
   promoRecipients?: TripLastMinutePromoRecipientItem[];
   timezone: string;
+  /** The shop's currency: a fixed-amount deal is typed and shown in it. */
+  currency?: string;
   locale: string;
 }) {
   const t = staffTranslator(locale);
@@ -112,6 +117,15 @@ export function LastMinuteDealSection({
   // hold no card is below a Deep-and-nitrox charter too, and that departure has
   // no minimum level for anyone to be compared against.
   const review = reviewLastMinuteRecipients(eligibleRecipients, requirement);
+  /** "25% off", or "$20 off each booking". */
+  const dealDiscountText = (promo: TripLastMinutePromo): string => {
+    const discount = promoDiscountOf(promo);
+    return discount?.kind === "amount"
+      ? t("trips.lastMinute.amountOff", {
+          amount: formatMoneyScanned(discount.amountCents, currency, locale),
+        })
+      : t("trips.lastMinute.percentOff", { percent: discount?.percent ?? 0 });
+  };
   return (
     // No top margin of its own: this renders inside a disclosure panel that
     // owns its inset. `scroll-mt-24` stays — the send action redirects to this
@@ -192,23 +206,33 @@ export function LastMinuteDealSection({
               </p>
             ) : null}
           </div>
-          <FieldGrid columns={1} className="max-w-28">
-            <Field label={t("trips.lastMinute.discountLabel")}>
+          <FieldGrid columns={1} className="max-w-44">
+            <Field label={t("trips.lastMinute.discountLabel")} group>
+              {/* A number and what it counts: percent off, or a fixed amount
+                  of the shop's currency off each booking. The server holds a
+                  percent to 5–90 and an amount to above zero. */}
               <div className="flex items-center gap-1.5">
                 <input
-                  name="discountPercent"
+                  name="discount"
                   type="number"
-                  inputMode="numeric"
-                  min={5}
-                  max={90}
-                  step={5}
+                  inputMode="decimal"
+                  min={1}
+                  step="any"
                   defaultValue={25}
                   aria-label={t("trips.lastMinute.discountPercentAriaLabel")}
                   // `md`, the height of the send button this row
                   // bottom-aligns it with.
-                  className={controlClass}
+                  className={`${controlClass} tabular-nums`}
                 />
-                <span className="text-sm text-muted">%</span>
+                <select
+                  name="discountKind"
+                  defaultValue="percent"
+                  aria-label={t("trips.lastMinute.discountKindAriaLabel")}
+                  className={`${controlClass} w-20 shrink-0`}
+                >
+                  <option value="percent">%</option>
+                  <option value="amount">{currencySymbol(currency, locale)}</option>
+                </select>
               </div>
             </Field>
           </FieldGrid>
@@ -280,8 +304,7 @@ export function LastMinuteDealSection({
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-medium">
-                      {t("trips.lastMinute.percentOff", { percent: promo.discountPercent })} ·{" "}
-                      <span className="font-mono">{promo.code}</span>
+                      {dealDiscountText(promo)} · <span className="font-mono">{promo.code}</span>
                     </p>
                     <p className="text-muted">
                       {t("trips.lastMinute.sentTo", {

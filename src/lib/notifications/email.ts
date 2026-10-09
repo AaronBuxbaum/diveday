@@ -10,6 +10,7 @@ import { type FlySafeResult, flySafeMessageKey } from "@/lib/fly-safe";
 import {
   formatDateTimeTz,
   formatMoneyCents,
+  formatMoneyScanned,
   formatShortDate,
   formatTime,
   formatTimeRangeTz,
@@ -123,7 +124,11 @@ type LastMinuteDealEmailInput = {
   startsAt: Date;
   endsAt: Date;
   timezone: string;
-  discountPercent: number;
+  /** Percent off; absent for a fixed-amount deal. */
+  discountPercent?: number;
+  /** A fixed amount off the whole booking, in minor units, with its currency. */
+  discountAmountCents?: number;
+  currency?: string;
   /** The code the diver types on the booking form. */
   code: string;
   bookingUrl: string;
@@ -818,14 +823,20 @@ export function lastMinuteDealEmail(input: LastMinuteDealEmailInput): Notificati
   const title = escapeHtml(input.tripTitle);
   const code = escapeHtml(input.code);
 
+  // "25%" or "$20": the one figure the deal is about, said the same way in
+  // the subject, the text and the HTML.
+  const discount =
+    input.discountAmountCents !== undefined
+      ? formatMoneyScanned(input.discountAmountCents, input.currency ?? "usd", input.locale)
+      : `${input.discountPercent ?? 0}%`;
   const body = t("notifications.lastMinuteDeal.body", {
     shopName: input.shopName,
-    discountPercent: input.discountPercent,
+    discount,
     tripTitle: input.tripTitle,
   });
   const bodyHtml = t("notifications.lastMinuteDeal.body", {
     shopName: escapeHtml(input.shopName),
-    discountPercent: `<strong>${input.discountPercent}% off</strong>`,
+    discount: `<strong>${escapeHtml(discount)}</strong>`,
     tripTitle: `<strong>${title}</strong>`,
   });
   const useCode = t("notifications.lastMinuteDeal.useCode", { code: input.code });
@@ -838,7 +849,7 @@ export function lastMinuteDealEmail(input: LastMinuteDealEmailInput): Notificati
 
   return {
     subject: t("notifications.lastMinuteDeal.subject", {
-      discountPercent: input.discountPercent,
+      discount,
       tripTitle: input.tripTitle,
     }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${date}\n${time}\n\n${useCode}\n${input.bookingUrl}\n\n${expiry}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,

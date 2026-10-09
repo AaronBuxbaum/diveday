@@ -4064,8 +4064,8 @@
       "link": "See the trip and book your spot"
     },
     "lastMinuteDeal": {
-      "subject": "{discountPercent}% off {tripTitle} — last-minute deal",
-      "body": "{shopName} just opened up {discountPercent}% off {tripTitle}.",
+      "subject": "{discount} off {tripTitle} — last-minute deal",
+      "body": "{shopName} just opened up {discount} off {tripTitle}.",
       "useCode": "Use code {code} at booking:",
       "bookLink": "Book {tripTitle}",
       "expiry": "The code expires {expires} (departure) or once seats run out, whichever comes first.",

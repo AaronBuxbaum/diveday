@@ -88,4 +88,19 @@ describe("heldSendPayloadSchema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("holds a deal at a percent or a fixed amount, never both and never neither", () => {
+    const deal = { kind: "last_minute_deal", tripId: booking, recipientPersonIds: [booking] };
+    expect(heldSendPayloadSchema.safeParse({ ...deal, discountAmountCents: 2_000 }).success).toBe(
+      true,
+    );
+    expect(
+      heldSendPayloadSchema.safeParse({ ...deal, discountPercent: 20, discountAmountCents: 2_000 })
+        .success,
+    ).toBe(false);
+    expect(heldSendPayloadSchema.safeParse(deal).success).toBe(false);
+    expect(heldSendPayloadSchema.safeParse({ ...deal, discountAmountCents: 0 }).success).toBe(
+      false,
+    );
+  });
 });

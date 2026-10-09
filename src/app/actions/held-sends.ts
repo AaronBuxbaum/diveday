@@ -16,6 +16,7 @@ import { getShopById } from "@/db/shops";
 import { trackEvent } from "@/lib/analytics";
 import { nowMs } from "@/lib/clock";
 import { type HeldSendPayload, heldSendPayloadSchema } from "@/lib/held-sends";
+import { majorToMinor, toShopCurrency } from "@/lib/money";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
@@ -38,7 +39,25 @@ const uuidList = (formData: FormData, name: string) => [
   ...new Set(formData.getAll(name).map(String).filter(Boolean)),
 ];
 
-function payloadFromForm(formData: FormData): HeldSendPayload {
+/**
+ * A deal's discount off the form: a percent, or a fixed amount the staffer
+ * typed in whole currency units and DiveDay stores in minor units. `discount`
+ * and `discountKind` are the deal form's two controls; a bare `discountPercent`
+ * is the older single-box spelling and still reads as a percent.
+ */
+function dealDiscountFromForm(
+  formData: FormData,
+  currency: string,
+): { discountPercent?: number; discountAmountCents?: number } {
+  const raw = formData.get("discount") ?? formData.get("discountPercent");
+  const value = Number(String(raw ?? "").trim());
+  if (formData.get("discountKind") === "amount") {
+    return { discountAmountCents: Number.isFinite(value) ? majorToMinor(value, currency) : value };
+  }
+  return { discountPercent: value };
+}
+
+function payloadFromForm(formData: FormData, currency: string): HeldSendPayload {
   const kind = String(formData.get("holdKind") ?? "");
   const optional = (name: string) => String(formData.get(name) ?? "").trim() || undefined;
   const raw =
@@ -58,7 +77,7 @@ function payloadFromForm(formData: FormData): HeldSendPayload {
         ? {
             kind,
             tripId: optional("tripId"),
-            discountPercent: Number(formData.get("discountPercent")),
+            ...dealDiscountFromForm(formData, currency),
             recipientPersonIds: uuidList(formData, "recipientPersonIds"),
           }
         : { kind, tripId: optional("tripId"), entryId: optional("entryId") };
@@ -68,7 +87,9 @@ function payloadFromForm(formData: FormData): HeldSendPayload {
 export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
   const session = await requireStaffSession();
   const db = await getDb();
-  const payload = payloadFromForm(formData);
+  // The shop's currency, only to read a fixed-amount deal's major units.
+  const currency = toShopCurrency((await getShopById(db, session.user.shopId))?.currency);
+  const payload = payloadFromForm(formData, currency);
   if (payload.kind === "last_minute_deal") {
     // Discounting is money work wherever the button sits (issue #714): the
     // same gate the promo page and the old immediate action stood behind.

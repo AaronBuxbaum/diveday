@@ -2345,3 +2345,157 @@ describe("startBookingCheckout across participant types", () => {
     );
   });
 });
+
+/**
+ * **A fixed-amount code: "$20 off", once per booking, never below zero.**
+ *
+ * One Stripe Checkout session pays for a whole party, and an `amount_off`
+ * coupon comes off that session's total once. So a party of two with "$20
+ * off" pays $20 less in all, not $40 — the rule `PromoDiscount` states and
+ * the staff form says beside the box ("once per booking").
+ */
+describe("a fixed-amount promotion", () => {
+  async function amountCode(
+    db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+    shopId: string,
+    code: string,
+    amountCents: number,
+  ) {
+    const created = await createShopPromoCode(
+      db,
+      { shopId, code, discountAmountCents: amountCents, scope: "all" },
+      fakePromotions(),
+    );
+    if (!created.ok) throw new Error(`promo creation failed: ${created.reason}`);
+    return created.promo;
+  }
+
+  function withPromo(
+    base: ReturnType<typeof startInput>,
+    promo: Awaited<ReturnType<typeof amountCode>>,
+  ) {
+    return {
+      ...base,
+      promotionCode: promo.stripePromotionCodeId ?? undefined,
+      shopPromo: {
+        id: promo.id,
+        code: promo.code,
+        discountPercent: promo.discountPercent,
+        discountAmountCents: promo.discountAmountCents,
+      },
+    };
+  }
+
+  it("comes off the party's whole checkout once, not once per diver", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const promo = await amountCode(db, shop.id, "TWENTY", 2_000);
+    expect(promo.discountPercent).toBeNull();
+
+    const start = await startBookingCheckout(
+      db,
+      withPromo(startInput(shop.id, reef.id, bookingIds), promo),
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+    // Two divers at $180: the snapshot is $20, the amount the session loses.
+    expect(start.checkout.totalCents).toBe(36_000);
+    expect(start.checkout.appliedDiscountCents).toBe(2_000);
+    expect(start.checkout.appliedDiscountPercent).toBeNull();
+
+    // With no settled figure from Stripe, the party is recorded net of the
+    // $20, split by each diver's ask — $340 in all, never $320.
+    await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
+    const recorded = await Promise.all(
+      bookingIds.map(
+        async (bookingId) => (await getBookingPayment(db, shop.id, bookingId))?.amountCents ?? 0,
+      ),
+    );
+    expect(recorded).toEqual([17_000, 17_000]);
+  });
+
+  it("never takes the booking below zero: $500 off a $360 party snapshots $360", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const promo = await amountCode(db, shop.id, "BIGONE", 50_000);
+
+    const start = await startBookingCheckout(
+      db,
+      withPromo(startInput(shop.id, reef.id, bookingIds), promo),
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+    expect(start.checkout.appliedDiscountCents).toBe(36_000);
+
+    await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
+    for (const bookingId of bookingIds) {
+      expect((await getBookingPayment(db, shop.id, bookingId))?.amountCents).toBe(0);
+    }
+  });
+
+  it("keeps the pass-through fee whole, taking the amount off the shop's own lines only", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await setShopPassThroughFee(db, shop.id, { name: "Park fee", amountCents: 1_500 });
+    const promo = await amountCode(db, shop.id, "PARKSAFE", 50_000);
+    const seen = recordingCheckout();
+
+    const outcome = await startBookingCheckout(
+      db,
+      withPromo(startInput(shop.id, reef.id, bookingIds), promo),
+      seen.provider,
+      fakePromotions({
+        async createSessionDiscount(request) {
+          // $500 asked, $360 of seats to take it from: the two $15 park fees
+          // are not the shop's to discount.
+          expect(request.amountOffCents).toBe(36_000);
+          return { status: "created", stripeCouponId: "coupon_session" };
+        },
+      }),
+    );
+    if (!outcome.ok) throw new Error("checkout start failed");
+    expect(outcome.checkout.appliedDiscountCents).toBe(36_000);
+    expect(seen.requests[0]?.promotionCouponId).toBe("coupon_session");
+  });
+
+  it("re-mints a pending session when the diver's code changes from a percent to an amount", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const percent = await createShopPromoCode(
+      db,
+      { shopId: shop.id, code: "TENPC", discountPercent: 10, scope: "all" },
+      fakePromotions(),
+    );
+    if (!percent.ok) throw new Error("percent promo failed");
+    const amount = await amountCode(db, shop.id, "TENOFF", 1_000);
+    const provider = fakeCheckout();
+
+    const first = await startBookingCheckout(
+      db,
+      withPromo(startInput(shop.id, reef.id, bookingIds), percent.promo),
+      provider,
+    );
+    if (!first.ok) throw new Error("first checkout failed");
+    const second = await startBookingCheckout(
+      db,
+      withPromo(startInput(shop.id, reef.id, bookingIds), amount),
+      provider,
+    );
+    if (!second.ok) throw new Error("second checkout failed");
+    expect(second.reused).toBe(false);
+    expect(second.checkout.appliedDiscountCents).toBe(1_000);
+  });
+
+  it("is refused by the table when a row claims both a percent and an amount", async () => {
+    const { db, shop } = await seededShopContext();
+    const { shopPromoCodes } = await import("./schema");
+    await expect(
+      db.insert(shopPromoCodes).values({
+        shopId: shop.id,
+        code: "BOTH",
+        discountPercent: 10,
+        discountAmountCents: 1_000,
+        scope: "all",
+      }),
+    ).rejects.toThrow();
+    await expect(
+      db.insert(shopPromoCodes).values({ shopId: shop.id, code: "NEITHER", scope: "all" }),
+    ).rejects.toThrow();
+  });
+});

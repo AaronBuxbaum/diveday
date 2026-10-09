@@ -879,6 +879,23 @@ describe("lastMinuteDealEmail", () => {
     expect(email.html).toContain(`href="${dealBase.unsubscribeUrl}"`);
     expect(email.html).toContain("Stop last-minute deal emails from Blue Mantis");
   });
+
+  it("names a percent deal once, in the subject and both bodies", () => {
+    const email = lastMinuteDealEmail(dealBase);
+    expect(email.subject.startsWith("25% off ")).toBe(true);
+    expect(email.text).toContain("just opened up 25% off ");
+    // The HTML once read "25% off% off": the figure is bold, the words are not.
+    expect(email.html).toContain("just opened up <strong>25%</strong> off ");
+    expect(email.html).not.toContain("off%");
+  });
+
+  it("names a fixed-amount deal in the shop's currency, never as a percent", () => {
+    const { discountPercent: _percent, ...rest } = dealBase;
+    const email = lastMinuteDealEmail({ ...rest, discountAmountCents: 2000, currency: "usd" });
+    expect(email.subject.startsWith("$20 off ")).toBe(true);
+    expect(email.text).toContain("just opened up $20 off ");
+    expect(email.text).not.toContain("%");
+  });
 });
 
 describe("courseInquiryEmail", () => {
