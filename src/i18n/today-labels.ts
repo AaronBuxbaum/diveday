@@ -870,12 +870,23 @@ export function gearOverdueDetailText(
   return t("today.gear.overdueDetail", gearUnitsParams(locale, input));
 }
 
-export function gearDueBackDetailText(
+/**
+ * **Who is bringing gear back today**, as one row's subject (Aaron,
+ * 2026-10-09): up to three names, joined through `Intl.ListFormat`, else a
+ * count. The units are not named; the Rentals list the row opens has them.
+ */
+export function gearDueBackSubjectText(
   t: StaffTranslator,
   locale: string,
-  input: { unitLabels: readonly string[] },
+  names: readonly string[],
 ): string {
-  return t("today.gear.dueBackDetail", gearUnitsParams(locale, input));
+  return names.length <= 3
+    ? cachedListFormat(locale, { type: "conjunction" }).format(names)
+    : t("today.gear.dueBackPeople", { count: names.length });
+}
+
+export function gearDueBackDetailText(t: StaffTranslator): string {
+  return t("today.gear.dueBackDetail");
 }
 
 function gearUnitsParams<T extends { unitLabels: readonly string[] }>(
@@ -929,6 +940,10 @@ export function gearServiceDueDetailText(
 
 export function openGearRegisterActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openGearRegister");
+}
+
+export function openRentalsActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.openRentals");
 }
 
 export function openGearUnitActionText(t: StaffTranslator): string {

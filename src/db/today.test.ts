@@ -3148,8 +3148,15 @@ describe("unclosed roll call (DOM-H3)", () => {
       if (!reserved.ok) throw new Error("reserve refused");
 
       const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-      const row = work.actions.find((action) => action.id === `gear-due-back:${booking.personId}`);
-      expect(row).toMatchObject({ kind: "gear_due_back" });
+      const rows = work.actions.filter((action) => action.kind === "gear_due_back");
+      // One row for every return today, naming people and never the units,
+      // and opening the Rentals list (Aaron, 2026-10-09).
+      expect(rows).toHaveLength(1);
+      const [row] = rows;
+      expect(row).toMatchObject({ id: "gear-due-back", detail: "Gear due back today." });
+      expect(row?.subject).not.toBe("");
+      expect(row?.detail).not.toContain("5mm #90");
+      expect(row?.href).toBe(`/shop/${shop.slug}/gear?view=rentals`);
       // Due by tonight, not overdue at breakfast: the deadline is the end of
       // the shop-local day and still ahead of now.
       expect(row?.dueAt?.getTime()).toBeGreaterThan(nowMs());
