@@ -295,7 +295,9 @@ export async function FeaturePageBody({
               demo={page.demo}
               className="mt-8 justify-center"
             />
-            <p className="mt-3 text-sm font-medium text-balance text-muted">{t("marketing.common.setUpNote")}</p>
+            <p className="mt-3 text-sm font-medium text-balance text-muted">
+              {t("marketing.common.setUpNote")}
+            </p>
             <p className="mt-6 font-medium text-balance">
               {t("marketing.featureChrome.closePrice", price)}
             </p>

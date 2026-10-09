@@ -476,7 +476,9 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 page is warmest, the only door left asked for an account
                 (issue #785). */}
             <FunnelCtas locale={locale} source="pricing-close" className="mt-8 justify-center" />
-            <p className="mt-3 text-sm font-medium text-balance text-muted">{t("marketing.common.setUpNote")}</p>
+            <p className="mt-3 text-sm font-medium text-balance text-muted">
+              {t("marketing.common.setUpNote")}
+            </p>
             {/* The same terms at the second door. `demoNote` is stated once
                 per page, at the first door (docs/product/marketing.md) — the
                 trial note is deliberately not: a reader who scrolled five

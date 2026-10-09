@@ -557,7 +557,9 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                 {t("marketing.home.tryDescription")}
               </p>
               <FunnelCtas locale={locale} source="home-closing" className="mt-8 justify-center" />
-              <p className="mt-3 text-sm font-medium text-balance text-muted">{t("marketing.common.setUpNote")}</p>
+              <p className="mt-3 text-sm font-medium text-balance text-muted">
+                {t("marketing.common.setUpNote")}
+              </p>
               <p className="mt-6 font-medium">
                 {t("marketing.home.priceLine", {
                   price: earlyAccessPrice.price,
