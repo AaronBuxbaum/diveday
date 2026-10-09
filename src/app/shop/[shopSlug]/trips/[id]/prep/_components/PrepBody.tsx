@@ -29,6 +29,7 @@ import { proposalKey } from "@/lib/gear-proposals";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { counterRowId } from "../../_arrivals/focus";
 import {
   assignGearUnit,
   checkOutTripGearSetAction,
@@ -521,14 +522,29 @@ export function PrepBody({
                     {checklist.nitroxBlockers.map((blocker) => (
                       <li key={blocker.bookingId} className="flex gap-1.5">
                         <span aria-hidden="true">•</span>
-                        <span>
-                          <Link
-                            href={`/shop/${shopSlug}/divers/${blocker.personId}`}
-                            className="font-medium hover:text-primary hover:underline"
-                          >
-                            {blocker.fullName}
-                          </Link>
-                        </span>
+                        {blocker.reason === "identity_held" ? (
+                          // A held seat: any card on the matched record may be
+                          // somebody else's, so the door is the seat's own
+                          // roster row, never that person's record.
+                          <span>
+                            <span className="font-medium">{blocker.fullName}</span>{" "}
+                            <Link
+                              href={`${shopPath(shopSlug, "trips", tripId)}#${counterRowId(blocker.bookingId)}`}
+                              className="text-primary hover:underline"
+                            >
+                              {t("tripPrep.nitroxConfirmIdentityFirst")}
+                            </Link>
+                          </span>
+                        ) : (
+                          <span>
+                            <Link
+                              href={`/shop/${shopSlug}/divers/${blocker.personId}`}
+                              className="font-medium hover:text-primary hover:underline"
+                            >
+                              {blocker.fullName}
+                            </Link>
+                          </span>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -619,7 +635,15 @@ export function PrepBody({
                   <ul className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
                     {checklist.heldSeats.map((seat) => (
                       <li key={seat.bookingId} className="font-medium">
-                        {seat.fullName}
+                        {seat.paidFor.length > 0
+                          ? t("tripPrep.heldSeatPaidFor", {
+                              name: seat.fullName,
+                              pieces: cachedListFormat(locale, {
+                                style: "long",
+                                type: "conjunction",
+                              }).format(seat.paidFor.map((kind) => rentalItemLabel(t, kind))),
+                            })
+                          : seat.fullName}
                       </li>
                     ))}
                   </ul>

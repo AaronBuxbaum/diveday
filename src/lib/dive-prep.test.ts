@@ -1732,7 +1732,7 @@ describe("a held seat on the packing list (issue #2144)", () => {
     });
     expect(checklist.lines.every((line) => line.count === 1)).toBe(true);
     expect(checklist.heldSeats).toEqual([
-      { bookingId: "held", personId: "held", fullName: "Tom Marsh" },
+      { bookingId: "held", personId: "held", fullName: "Tom Marsh", paidFor: [] },
     ]);
   });
 
@@ -1794,5 +1794,11 @@ describe("a held seat that paid for gear at checkout", () => {
 
   it("still asks nobody for the matched record's sizes", () => {
     expect(checklist.diversWithIncompleteFit).toEqual([]);
+  });
+
+  it("says what each held seat paid for, boots not among it", () => {
+    expect(checklist.heldSeats).toEqual([
+      expect.objectContaining({ bookingId: "held", paidFor: ["bcd", "wetsuit"] }),
+    ]);
   });
 });

@@ -346,11 +346,17 @@ export type DivePrepChecklist = {
   /** Divers who asked for enriched air but have no verified card — packed as air. */
   nitroxBlockers: NitroxBlocker[];
   /**
-   * Held seats (glossary): packed nothing until the desk confirms who they
-   * are, because the fit and nitrox card on the matched record may be
-   * somebody else's (issue #2144).
+   * Held seats (glossary): packed nothing of the matched record's until the
+   * desk confirms who they are, because its fit and nitrox card may be
+   * somebody else's (issue #2144); what the seat paid for is racked unsized.
    */
-  heldSeats: { bookingId: string; personId: string; fullName: string }[];
+  heldSeats: {
+    bookingId: string;
+    personId: string;
+    fullName: string;
+    /** What the seat paid for at checkout, as the diver ticked it (no boots). */
+    paidFor: RentalItemKind[];
+  }[];
   /**
    * **Divers the packing list can't be built from yet.**
    *
@@ -522,10 +528,7 @@ function offersKind(offered: CatalogScope, kind: RentalItemKind): boolean {
  * A held seat's paid pieces: no size, fitted at check-in, in the rack's order,
  * with boots riding along a suit as they do for every fit (`rentedItems`).
  */
-function paidPiecesAtCheckIn(
-  kinds: readonly RentalItemKind[],
-  offered: CatalogScope,
-): PrepPiece[] {
+function paidPiecesAtCheckIn(kinds: readonly RentalItemKind[], offered: CatalogScope): PrepPiece[] {
   const paid = new Set<RentalItemKind>(kinds);
   if (paid.has("wetsuit")) paid.add("boots");
   return KIND_ORDER.filter((kind) => paid.has(kind)).map((kind) => ({
@@ -860,10 +863,12 @@ export function buildDivePrepChecklist(input: {
     // fill a fit on a record that may be somebody else's. What it paid for at
     // checkout is its own, so those pieces go on the rack unsized.
     if (diver.identityHeld) {
+      const paid = new Set(diver.paidRentalKinds ?? []);
       heldSeats.push({
         bookingId: diver.bookingId,
         personId: diver.personId,
         fullName: diver.fullName,
+        paidFor: KIND_ORDER.filter((kind) => paid.has(kind)),
       });
       const items = paidPiecesAtCheckIn(diver.paidRentalKinds ?? [], offered).filter((item) =>
         rentsKind(diver.participantType, item.kind),

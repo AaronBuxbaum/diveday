@@ -449,6 +449,7 @@
     "certifySpecialtyGroup": "Especialidad",
     "certifying": "Certificando…",
     "checkedInPill": "Registrado",
+    "applyPaidGear": "Añadir a su equipo de alquiler registrado lo que pagó: {pieces}",
     "confirmIdentityMessage": "¿Confirmar que esta reserva es de {name}? Embarcará con las certificaciones y la exención de {name}, y no se puede deshacer.",
     "confirmRemoveBooking": "¿Eliminar a {name} de esta salida? Si tiene derecho a reembolso, se emitirá automáticamente.",
     "confirmResendWaiver": "¿Enviar a {name} un nuevo enlace de exención? Su enlace anterior dejará de funcionar.",

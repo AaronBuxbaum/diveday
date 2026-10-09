@@ -39,6 +39,7 @@ import {
   upsertTripRequirements,
 } from "@/db/readiness";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
+import { applyPaidRentalKindsToFit } from "@/db/rental-fit";
 import type { PaymentStatus } from "@/db/schema";
 import { bookings, diveSpecialty, people } from "@/db/schema";
 import { getShopById } from "@/db/shops";
@@ -1283,6 +1284,12 @@ export async function confirmDiverIdentityAction(
     actorPersonId: s.user.personId,
   });
   if (!confirmed) revalidateAndRedirect(back, noticeUrl(back, "invalid", { bid: bookingId }));
+  // The gear this seat paid for at checkout waited on the booking while it was
+  // held (`paid_rental_kinds`); the staffer's tick carries it to the fit, which
+  // is a standing record, so it is theirs to decline.
+  if (formData.get("applyPaidGear") === "on") {
+    await applyPaidRentalKindsToFit(db, { shopId: s.user.shopId, bookingId });
+  }
   // A held seat was sent no release (issue #2125); now that the desk knows
   // who it is, it goes out the way a join's does, unless their signature
   // already covers it, and the notice says where it got to.
@@ -1342,6 +1349,10 @@ export async function splitDiverIdentityAction(
       noticeUrl(back, SPLIT_REFUSAL_NOTICE[split.reason], { bid: bookingId }),
     );
   }
+  // The new diver's fit is empty and the gear is what this seat paid for, so
+  // it goes straight on: otherwise it would leave the rack the moment the
+  // seat stopped being held.
+  await applyPaidRentalKindsToFit(db, { shopId: s.user.shopId, bookingId });
   // Every seat that moved is its own diver's now, and was sent no release
   // while it was held (issue #2125): each goes out the way a join's does.
   const release = await sendReleasesOnceIdentityKnown(db, s.user.shopId, split.seatIds);

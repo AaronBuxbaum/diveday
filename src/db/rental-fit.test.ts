@@ -895,9 +895,7 @@ describe("paid rental kinds on a held seat (dive-domain review of issue #2144)",
     });
 
     // Still held: the fit is somebody's whose identity is unproven.
-    expect(await applyPaidRentalKindsToFit(db, { shopId, bookingId: held.bookingId })).toBe(
-      false,
-    );
+    expect(await applyPaidRentalKindsToFit(db, { shopId, bookingId: held.bookingId })).toBe(false);
     expect(await getRentalFit(db, shopId, held.personId)).toMatchObject({
       rentsBcd: true,
       rentsRegulator: false,

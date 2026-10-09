@@ -919,4 +919,40 @@ describe("a held seat on the Gear tab (issue #2144)", () => {
     const byDiver = renderPrep(heldPrep(), { grouping: "diver" }).container;
     expect(within(byDiver).getAllByText(t("tripPrep.heldSeatSizesWait")).length).toBeGreaterThan(0);
   });
+  it("sends the nitrox question to the roster row, never to the matched diver's record", () => {
+    // The card on the matched record may be somebody else's; the first job is
+    // the identity question on the seat's own row (dive-domain review).
+    const { container } = renderPrep(heldPrep());
+    const link = within(container).getByRole("link", {
+      name: new RegExp(t("tripPrep.nitroxConfirmIdentityFirst")),
+    });
+    expect(link.getAttribute("href")).toMatch(/\/trips\/[^/#]+#booking-held$/);
+    expect(container.querySelector('a[href*="/divers/p9"]')).toBeNull();
+  });
+
+  it("says what a held seat paid for", () => {
+    const prep = heldPrep();
+    prep.checklist = buildDivePrepChecklist({
+      divers: [
+        {
+          bookingId: "held",
+          personId: "p9",
+          fullName: "Tom Marsh",
+          fit: null,
+          wantsNitrox: false,
+          hasVerifiedNitroxCard: false,
+          identityHeld: true,
+          paidRentalKinds: ["regulator", "wetsuit"],
+          lastDivedBand: null,
+        },
+      ],
+      plannedDives: 2,
+    });
+    const { container } = renderPrep(prep);
+    expect(
+      within(container).getByText(
+        t("tripPrep.heldSeatPaidFor", { name: "Tom Marsh", pieces: "Regulator and Wetsuit" }),
+      ),
+    ).toBeTruthy();
+  });
 });
