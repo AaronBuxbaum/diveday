@@ -30,7 +30,12 @@ async function seededOrder() {
     })
     .returning();
   if (!order) throw new Error("order insert failed");
-  return { db, shop, order };
+  // The Stripe ids as inserted, typed as present: this is an invoiced order.
+  return {
+    db,
+    shop,
+    order: { ...order, stripeAccountId: "acct_demo", stripeInvoiceId: "in_demo_target" },
+  };
 }
 
 function lookupAnswering(answer: Awaited<ReturnType<PaymentSourceLookup["findSource"]>>) {

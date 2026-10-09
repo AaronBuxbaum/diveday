@@ -6,7 +6,7 @@ import {
 } from "@/lib/payments/payment-sources";
 import { recordCheckoutPaymentIntent } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
-import { recordOrderPaymentIntent } from "./orders";
+import { recordOrderPaymentIntent, stripeInvoiceOf } from "./orders";
 import type { BookingCheckout, Order } from "./schema";
 import { bookingCheckouts, orders, tips } from "./schema";
 
@@ -103,9 +103,12 @@ export async function findStripePaymentTarget(
         ),
       )
       .limit(1);
-    if (found) {
+    // Matched by its invoice id, so never an order paid at the counter; the
+    // narrowing is stated rather than asserted (ADR 20261009-counter-payments).
+    const invoice = found ? stripeInvoiceOf(found) : null;
+    if (found && invoice) {
       await recordOrderPaymentIntent(db, {
-        stripeInvoiceId: found.stripeInvoiceId,
+        stripeInvoiceId: invoice.stripeInvoiceId,
         paymentIntentId: input.paymentIntentId,
         expectedAccountId: input.stripeAccountId,
       });
