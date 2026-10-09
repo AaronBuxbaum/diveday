@@ -577,6 +577,21 @@ export default async function WaiverPage({
     );
   }
 
+  // A held seat (issue #2125): whoever holds this link may not be the person
+  // the seat was matched to, so the page names nobody, renders no form and
+  // asks nothing until the desk confirms who it is. No signer hint, no
+  // guardian section (which would say whether that person is a minor).
+  if (state.state === "held") {
+    return (
+      <ExpiredLinkCard
+        title={t("waiver.heldHeading")}
+        text={t("waiver.heldBody")}
+        shop={shop}
+        t={t}
+      />
+    );
+  }
+
   const { record } = state;
   const recordBookingId = record.bookingId;
   const emergencyContact = recordBookingId

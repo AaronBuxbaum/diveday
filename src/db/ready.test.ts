@@ -259,10 +259,13 @@ describe("a held seat's ready page", () => {
 
     await db
       .update(bookings)
-      .set({ identityUnconfirmedAt: nowDate() })
+      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "Tom Marsh" })
       .where(eq(bookings.id, booking.id));
     const held = await getReadyPageData(db, booking.id);
     expect(held?.identityHeld).toBe(true);
+    // The page greets the name the booker typed, never the matched person's
+    // (issue #2125).
+    expect(held?.bookedAs).toBe("Tom Marsh");
     expect(held?.emergencyContact).toEqual({ name: null, phone: null });
     expect(held?.rentalFit).toBeNull();
     expect(held?.fitConfirmation).toBeNull();
@@ -273,6 +276,7 @@ describe("a held seat's ready page", () => {
       .where(eq(bookings.id, booking.id));
     const confirmed = await getReadyPageData(db, booking.id);
     expect(confirmed?.identityHeld).toBe(false);
+    expect(confirmed?.bookedAs).toBeNull();
     expect(confirmed?.emergencyContact).toEqual({ name: "Held Contact", phone: "555-0101" });
     expect(confirmed?.rentalFit).toEqual(onFile);
   });

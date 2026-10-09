@@ -468,6 +468,10 @@ export async function saveEmergencyContactFromReady(token: string, formData: For
 export async function payFromReady(token: string) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  // The page draws no pay step on a held seat, and this refuses the hand-made
+  // post: the address on the record may be the matched person's, not the
+  // booker's, and Stripe would be handed it as the customer (issue #2125).
+  refuseWhileHeld(token, ctx.data);
   const origin = publicAppUrl();
   if (!ctx.data.canPay || !origin || !ctx.data.person.email) {
     redirect(`${base(token)}?error=pay`);

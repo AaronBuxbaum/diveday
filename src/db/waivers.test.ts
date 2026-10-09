@@ -53,6 +53,7 @@ import {
   recordMedicalEvaluation,
   retireMedicalRefusal,
   saveBookingEmergencyContact,
+  saveWaiverDraft,
   saveWaiverTemplate,
   standingWaiverExposure,
   WAIVER_INTEGRITY_PAGE_SIZE,
@@ -1430,8 +1431,8 @@ describe("an emergency contact on a held seat", () => {
   // Issue #2082: a held seat may be a different human from the matched person,
   // so its bearer links must neither read nor overwrite that person's contact.
   // Staff, who can see who is standing at the counter, still can.
-  async function heldSeat() {
-    const ctx = await waiverContext();
+  async function heldSeat(given?: Awaited<ReturnType<typeof waiverContext>>) {
+    const ctx = given ?? (await waiverContext());
     await ctx.db
       .update(people)
       .set({ emergencyContactName: "Kept Contact", emergencyContactPhone: "555-0099" })
@@ -1498,16 +1499,32 @@ describe("an emergency contact on a held seat", () => {
     });
   });
 
-  it("does not let a clean release signed there carry to the diver's other bookings", async () => {
-    const { db, person, shop, booking } = await heldSeat();
-    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
-    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
-    await completeWaiver(db, issued.token, {
-      signerName: person.fullName,
-      agreed: true,
-      medicalAnswers: clearAnswers,
+  // A held seat is issued no link and signs nothing now (issue #2125), so a
+  // release on one is a record signed before the seat was held; the readers
+  // below still treat it as the seat's, not the matched person's.
+  async function signedThenHeld(medicalAnswers: typeof clearAnswers) {
+    const ctx = await waiverContext();
+    const issued = await issueWaiverRequest(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.booking.id,
       now,
     });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    await completeWaiver(ctx.db, issued.token, {
+      signerName: ctx.person.fullName,
+      agreed: true,
+      medicalAnswers,
+      now,
+    });
+    await ctx.db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: now })
+      .where(eq(bookings.id, ctx.booking.id));
+    return { ...ctx, issued };
+  }
+
+  it("does not let a clean release signed there carry to the diver's other bookings", async () => {
+    const { db, shop, booking, issued } = await signedThenHeld(clearAnswers);
     const carried = async () =>
       (
         (await listSignedWaiversByPerson(db, shop.id, [booking.personId])).get(booking.personId) ??
@@ -1523,15 +1540,7 @@ describe("an emergency contact on a held seat", () => {
   });
 
   it("still carries a medical hold signed there, failing toward the hold", async () => {
-    const { db, person, shop, booking } = await heldSeat();
-    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
-    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
-    await completeWaiver(db, issued.token, {
-      signerName: person.fullName,
-      agreed: true,
-      medicalAnswers: medicalReferralAnswers,
-      now,
-    });
+    const { db, shop, booking, issued } = await signedThenHeld(medicalReferralAnswers);
     const signed =
       (await listSignedWaiversByPerson(db, shop.id, [booking.personId])).get(booking.personId) ??
       [];
@@ -1539,15 +1548,25 @@ describe("an emergency contact on a held seat", () => {
   });
 
   it("does not land a contact typed into the waiver onto the matched person", async () => {
-    const { db, person, shop, booking } = await heldSeat();
-    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
-    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
-    await completeWaiver(db, issued.token, {
-      signerName: person.fullName,
-      agreed: true,
-      medicalAnswers: clearAnswers,
-      emergencyContact: { name: "Someone Else", phone: "555-0123" },
+    // A link issued before the seat was held: the signature is refused whole,
+    // contact and all (issue #2125).
+    const ctx = await waiverContext();
+    const issued = await issueWaiverRequest(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.booking.id,
+      now,
     });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    const { db, person, booking } = await heldSeat(ctx);
+    expect(
+      await completeWaiver(db, issued.token, {
+        signerName: person.fullName,
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        emergencyContact: { name: "Someone Else", phone: "555-0123" },
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "identity_unconfirmed" });
     await expect(contactOnFile(db, booking.personId)).resolves.toEqual({
       name: "Kept Contact",
       phone: "555-0099",
@@ -3859,5 +3878,63 @@ describe("listTripWaiverStatuses row order (issue #1753)", () => {
     // …and the roster it sits beside gives the identical order.
     const roster = await getTripRoster(db, shop.id, trip.id);
     expect(statuses.map((row) => row.booking.id)).toEqual(roster.map((row) => row.booking.id));
+  });
+});
+
+describe("a release on a held seat (issue #2125)", () => {
+  // The bearer of a held seat's link may be somebody other than the matched
+  // person, so no link is issued while the seat is held, and one issued
+  // before stops opening, drafting or signing until the desk confirms.
+  async function hold(db: Awaited<ReturnType<typeof waiverContext>>["db"], bookingId: string) {
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: now, identityBookedAs: "Tom Marsh" })
+      .where(eq(bookings.id, bookingId));
+  }
+  const signature = (signerName: string) => ({
+    signerName,
+    agreed: true,
+    medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
+    now,
+  });
+
+  it("issues no link while the seat is held", async () => {
+    const { db, shop, booking } = await waiverContext();
+    await hold(db, booking.id);
+    expect(await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now })).toEqual({
+      ok: false,
+      reason: "identity_unconfirmed",
+    });
+  });
+
+  it("holds a link issued earlier: no form, no draft, no signature", async () => {
+    const { db, shop, booking, person } = await waiverContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    await hold(db, booking.id);
+
+    expect((await getWaiverForToken(db, issued.token, now)).state).toBe("held");
+    expect(
+      await saveWaiverDraft(db, issued.token, {
+        signerName: person.fullName,
+        acknowledged: true,
+        medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
+        now,
+      }),
+    ).toBe(false);
+    // Even signed under the matched person's own name.
+    expect(await completeWaiver(db, issued.token, signature(person.fullName))).toEqual({
+      ok: false,
+      reason: "identity_unconfirmed",
+    });
+
+    // Confirmed, the same link signs.
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: null, identityBookedAs: null })
+      .where(eq(bookings.id, booking.id));
+    expect(await completeWaiver(db, issued.token, signature(person.fullName))).toMatchObject({
+      ok: true,
+    });
   });
 });

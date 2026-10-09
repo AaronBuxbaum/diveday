@@ -330,3 +330,17 @@ describe("what this slice was forbidden to touch", () => {
     expect(positionOf("<EarnedMoment")).toBeLessThan(positionOf("<form action={completeAction}"));
   });
 });
+
+/**
+ * **A held seat's link names nobody** (issue #2125). The signer hint is the
+ * matched person's full name and the guardian section says whether they are a
+ * minor, so the held state returns before either is read.
+ */
+describe("a held seat's release", () => {
+  it("returns its held card before the signer on file is read", () => {
+    const held = positionOf('state.state === "held"');
+    expect(held).toBeGreaterThan(-1);
+    expect(held).toBeLessThan(positionOf("getWaiverSignerOnFile("));
+    expect(held).toBeLessThan(positionOf("guardianSignatureRequired("));
+  });
+});

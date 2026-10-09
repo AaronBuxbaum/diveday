@@ -68,7 +68,7 @@ import {
   updateTripConditions,
 } from "@/db/trips";
 import { joinTripWaitlist, type WaitlistOutcome } from "@/db/waitlist";
-import { deliverWaiverBatch } from "@/db/waiver-issue";
+import { deliverWaiverBatch, issueWaiverOnJoin } from "@/db/waiver-issue";
 import {
   recordInPersonWaiver,
   retireMedicalRefusal,
@@ -1272,11 +1272,18 @@ export async function confirmDiverIdentityAction(
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!uuidParam(bookingId)) redirect(back);
-  const confirmed = await confirmBookingIdentity(await getDb(), {
+  const db = await getDb();
+  const confirmed = await confirmBookingIdentity(db, {
     shopId: s.user.shopId,
     bookingId,
     actorPersonId: s.user.personId,
   });
+  // A held seat was sent no release (issue #2125); now that the desk knows
+  // who it is, it goes out the way a join's does, unless their signature
+  // already covers it. Best-effort: the confirmation stands either way.
+  if (confirmed) {
+    await issueWaiverOnJoin(db, s.user.shopId, bookingId).catch(() => null);
+  }
   revalidateAndRedirect(
     back,
     noticeUrl(back, confirmed ? "identity-confirmed" : "invalid", { bid: bookingId }),
@@ -1310,7 +1317,8 @@ export async function splitDiverIdentityAction(
       }),
     );
   }
-  const split = await splitBookingIdentity(await getDb(), {
+  const db = await getDb();
+  const split = await splitBookingIdentity(db, {
     shopId: s.user.shopId,
     bookingId,
     actorPersonId: s.user.personId,
@@ -1325,6 +1333,9 @@ export async function splitDiverIdentityAction(
       .split(",")
       .filter((id) => uuidParam(id)),
   });
+  // The seat is its own diver now, and was sent no release while it was held
+  // (issue #2125): it goes out the way a join's does.
+  if (split.ok) await issueWaiverOnJoin(db, s.user.shopId, bookingId).catch(() => null);
   revalidateAndRedirect(
     back,
     noticeUrl(back, split.ok ? "identity-split" : SPLIT_REFUSAL_NOTICE[split.reason], {

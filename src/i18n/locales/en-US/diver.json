@@ -922,6 +922,8 @@
     "metaTitle": "Complete your waiver — DiveDay",
     "unavailableHeading": "This waiver link isn’t available",
     "unavailableBody": "Ask your dive shop for a fresh link.",
+    "heldHeading": "This release waits for the shop",
+    "heldBody": "The shop is checking who is on this booking. You can sign once they have.",
     "expiredHeading": "This waiver link has expired",
     "expiredBody": "Waiver links don’t stay open for long, and this one has run out. We can email you a fresh one.",
     "emailFreshLink": "Email me a fresh link",

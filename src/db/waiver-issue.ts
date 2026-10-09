@@ -534,6 +534,15 @@ export async function issueWaiverOnJoin(
   const readiness = await getBookingReadiness(db, shopId, bookingId);
   const needsWaiver = readiness?.blockers.some((blocker) => blocker.code === "waiver_not_sent");
   if (!needsWaiver) return null;
+  // A held seat is owed nothing yet: its link would open on a record that may
+  // be somebody else's, so `issueWaiverRequest` refuses it. Nothing to report
+  // as a failure; confirming the seat sends it (issue #2125).
+  const [seat] = await db
+    .select({ identityUnconfirmedAt: bookings.identityUnconfirmedAt })
+    .from(bookings)
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .limit(1);
+  if (seat?.identityUnconfirmedAt) return null;
   return issueAndDeliverWaiver(db, shopId, bookingId);
 }
 

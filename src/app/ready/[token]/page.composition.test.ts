@@ -526,3 +526,18 @@ describe("the sign step's actions", () => {
     expect(SIGN_STEP).toContain("href={`/ready/${token}/forms`}");
   });
 });
+
+/**
+ * **A held seat is greeted as booked** (issue #2125). The matched person's
+ * name would tell the booker whose record their email reached, and their name
+ * and address must not be remembered on the booker's device.
+ */
+describe("a held seat's greeting", () => {
+  it("greets the booked-as name while held, and remembers nobody", () => {
+    expect(SOURCE).toContain(
+      'const greetedName = data.identityHeld ? (data.bookedAs ?? "") : detail.person.fullName;',
+    );
+    expect(SOURCE).toContain("justBooked && person.email && !data.identityHeld ? (");
+    expect(countOf("detail.person.fullName")).toBe(2);
+  });
+});
