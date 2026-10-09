@@ -9,7 +9,7 @@ import { setTripStatus, upcomingTripsWithCounts } from "@/db/trips";
 import { createTrip } from "@/db/trips-create";
 import { getTripPrep } from "@/db/trips-prep";
 import { nowDate } from "@/lib/clock";
-import { tripReservationWindow } from "@/lib/gear";
+import { gearKindIsLifeSupport, tripReservationWindow } from "@/lib/gear";
 import { seededShopContext } from "@/test/db";
 import { staffSession } from "@/test/staff-session";
 
@@ -297,6 +297,7 @@ describe("confirmProposedGearUnits", () => {
       tripId,
       reservedFrom: dates.from,
       reservedUntil: dates.until,
+      screen: { proposed: false },
     });
     if (!first.ok) throw new Error(`could not hold ${held.label}: ${first.reason}`);
 
@@ -359,9 +360,31 @@ describe("assignGearUnit", () => {
 
   it("still lets a hand pick choose a labeled unit, knowingly", async () => {
     const { db, shop, tripId, picks } = await context();
-    const [pick] = picks;
+    const pick = picks.find((entry) => !gearKindIsLifeSupport(entry.kind));
+    if (!pick) throw new Error("the seeded reef trip proposes only life support");
     await flagServiceConcern(db, shop.id, pick);
     expect(await assignGearUnit({ tripId, ...only(pick) })).toEqual({ ok: true });
+    expect(await reservationsFor(db, pick.gearItemId)).toHaveLength(1);
+  });
+
+  /**
+   * **Life support asks first** (dive-domain review of issue #2215): a
+   * hand-picked BCD, regulator or computer that needs care is assigned only
+   * once the staffer says "Assign anyway".
+   */
+  it("asks before a hand-picked life-support unit that needs care, then assigns it anyway", async () => {
+    const { db, shop, tripId, picks } = await context();
+    const pick = picks.find((entry) => gearKindIsLifeSupport(entry.kind));
+    if (!pick) throw new Error("the seeded reef trip proposes no life support");
+    await flagServiceConcern(db, shop.id, pick);
+    expect(await assignGearUnit({ tripId, ...only(pick) })).toEqual({
+      ok: false,
+      reason: "needs_care_confirm",
+    });
+    expect(await reservationsFor(db, pick.gearItemId)).toHaveLength(0);
+    expect(await assignGearUnit({ tripId, ...only(pick), assignAnyway: true })).toEqual({
+      ok: true,
+    });
     expect(await reservationsFor(db, pick.gearItemId)).toHaveLength(1);
   });
 });

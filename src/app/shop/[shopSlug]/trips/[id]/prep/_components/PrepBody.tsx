@@ -29,6 +29,7 @@ import { proposalKey } from "@/lib/gear-proposals";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { counterRowId } from "../../_arrivals/focus";
 import {
   assignGearUnit,
   checkOutTripGearSetAction,
@@ -313,7 +314,9 @@ export function PrepBody({
   // An empty packing table means one of two different things, and the rental-kit
   // empty state says which rather than making the crew scroll back up to guess.
   const needsSorting =
-    checklist.diversWithIncompleteFit.length > 0 || checklist.diversNeedingStaffFit.length > 0;
+    checklist.diversWithIncompleteFit.length > 0 ||
+    checklist.diversNeedingStaffFit.length > 0 ||
+    checklist.heldSeats.length > 0;
   // The "Sizes still missing" card's two halves, sorted once: each is drawn
   // only when it has somebody in it.
   const partialFit = checklist.diversWithIncompleteFit.filter(
@@ -405,7 +408,9 @@ export function PrepBody({
       <span className="text-muted">
         {line.state === "own_kit"
           ? t("shared.rentalFit.ownKit")
-          : t("shared.rentalFit.notRecorded")}
+          : line.state === "identity_held"
+            ? t("tripPrep.heldSeatSizesWait")
+            : t("shared.rentalFit.notRecorded")}
       </span>
     );
 
@@ -517,14 +522,29 @@ export function PrepBody({
                     {checklist.nitroxBlockers.map((blocker) => (
                       <li key={blocker.bookingId} className="flex gap-1.5">
                         <span aria-hidden="true">•</span>
-                        <span>
-                          <Link
-                            href={`/shop/${shopSlug}/divers/${blocker.personId}`}
-                            className="font-medium hover:text-primary hover:underline"
-                          >
-                            {blocker.fullName}
-                          </Link>
-                        </span>
+                        {blocker.reason === "identity_held" ? (
+                          // A held seat: any card on the matched record may be
+                          // somebody else's, so the door is the seat's own
+                          // roster row, never that person's record.
+                          <span>
+                            <span className="font-medium">{blocker.fullName}</span>{" "}
+                            <Link
+                              href={`${shopPath(shopSlug, "trips", tripId)}#${counterRowId(blocker.bookingId)}`}
+                              className="text-primary hover:underline"
+                            >
+                              {t("tripPrep.nitroxConfirmIdentityFirst")}
+                            </Link>
+                          </span>
+                        ) : (
+                          <span>
+                            <Link
+                              href={`/shop/${shopSlug}/divers/${blocker.personId}`}
+                              className="font-medium hover:text-primary hover:underline"
+                            >
+                              {blocker.fullName}
+                            </Link>
+                          </span>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -600,6 +620,33 @@ export function PrepBody({
                       </div>
                     ) : null}
                   </div>
+                </SectionCard>
+              ) : null}
+
+              {/* A held seat's sizes and nitrox card are the matched
+                  record's, which may be somebody else's (issue #2144). Its
+                  names are said once here, so nobody packs from that record
+                  or fills a fit onto it. */}
+              {checklist.heldSeats.length > 0 ? (
+                <SectionCard
+                  title={t("tripPrep.heldSeatsHeading")}
+                  description={t("tripPrep.heldSeatsDescription")}
+                >
+                  <ul className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                    {checklist.heldSeats.map((seat) => (
+                      <li key={seat.bookingId} className="font-medium">
+                        {seat.paidFor.length > 0
+                          ? t("tripPrep.heldSeatPaidFor", {
+                              name: seat.fullName,
+                              pieces: cachedListFormat(locale, {
+                                style: "long",
+                                type: "conjunction",
+                              }).format(seat.paidFor.map((kind) => rentalItemLabel(t, kind))),
+                            })
+                          : seat.fullName}
+                      </li>
+                    ))}
+                  </ul>
                 </SectionCard>
               ) : null}
 
@@ -1218,6 +1265,18 @@ export function PrepBody({
                                   }
                                 : null,
                             ].filter((group) => group !== null);
+                            // One sentence per refusal a pick can come back
+                            // with, the same for a hand pick and a proposal.
+                            const pickRefusals = {
+                              unit_unavailable: t("gear.prep.notice.unitUnavailable"),
+                              unit_out_of_service: t("gear.prep.notice.unitOutOfService"),
+                              not_wanted: t("gear.prep.notice.notWanted"),
+                              already_holds_kind: t("gear.prep.notice.alreadyHoldsKind", {
+                                kindLabel,
+                              }),
+                              identity_held: t("gear.prep.notice.identityHeld"),
+                              needs_care: t("gear.prep.notice.unitNeedsCare"),
+                            };
                             const picker = (
                               <RentalUnitPicker
                                 id={selectId}
@@ -1229,12 +1288,10 @@ export function PrepBody({
                                 copy={{
                                   pickUnit: t("gear.prep.pickUnit"),
                                   assigning: t("gear.prep.assigning"),
-                                  refusals: {
-                                    unit_unavailable: t("gear.prep.notice.unitUnavailable"),
-                                    unit_out_of_service: t("gear.prep.notice.unitOutOfService"),
-                                    not_wanted: t("gear.prep.notice.notWanted"),
-                                  },
+                                  refusals: pickRefusals,
                                   refusalFallback: t("gear.prep.notice.assignFailed"),
+                                  needsCareConfirm: t("gear.prep.notice.unitNeedsCare"),
+                                  assignAnyway: t("gear.prep.assignAnyway"),
                                 }}
                               />
                             );
@@ -1277,16 +1334,7 @@ export function PrepBody({
                                             assign: t("gear.prep.proposal.assign"),
                                             assigning: t("gear.prep.assigning"),
                                             change: t("gear.prep.proposal.change"),
-                                            refusals: {
-                                              unit_unavailable: t(
-                                                "gear.prep.notice.unitUnavailable",
-                                              ),
-                                              unit_out_of_service: t(
-                                                "gear.prep.notice.unitOutOfService",
-                                              ),
-                                              not_wanted: t("gear.prep.notice.notWanted"),
-                                              needs_care: t("gear.prep.notice.unitNeedsCare"),
-                                            },
+                                            refusals: pickRefusals,
                                             refusalFallback: t("gear.prep.notice.assignFailed"),
                                           }}
                                         >

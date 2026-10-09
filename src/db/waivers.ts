@@ -679,7 +679,13 @@ export type IssueWaiverOutcome =
         | "booking_unavailable"
         | "person_not_found"
         | "template_not_found"
-        | "already_completed";
+        | "already_completed"
+        /**
+         * The booking is a held seat (`identity_unconfirmed_at`): whoever holds
+         * the link may not be the matched person, so none is issued until the
+         * desk confirms who it is (issue #2125, mirroring `bookingSigner`).
+         */
+        | "identity_unconfirmed";
     };
 
 /**
@@ -729,6 +735,7 @@ export async function issueWaiverRequest(
             personId: bookings.personId,
             dateOfBirth: people.dateOfBirth,
             tripStatus: trips.status,
+            identityUnconfirmedAt: bookings.identityUnconfirmedAt,
           })
           .from(bookings)
           .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -747,6 +754,7 @@ export async function issueWaiverRequest(
     if (booking && booking.tripStatus !== "scheduled") {
       return { ok: false, reason: "booking_unavailable" };
     }
+    if (booking?.identityUnconfirmedAt) return { ok: false, reason: "identity_unconfirmed" };
     const personId = booking?.personId ?? input.personId;
     if (!personId) return { ok: false, reason: "person_not_found" };
     let dateOfBirth = booking?.dateOfBirth ?? null;
@@ -879,6 +887,12 @@ export type TokenWaiverState =
   // way to reach someone, not a wall with nothing to click.
   | { state: "expired"; record: typeof waiverRecords.$inferSelect }
   | { state: "available"; record: typeof waiverRecords.$inferSelect }
+  /**
+   * A live link on a held seat (`identity_unconfirmed_at`): it opens no form,
+   * names nobody and takes no draft or signature until the desk confirms who
+   * is in the seat (issue #2125). The record is carried for the shop's name.
+   */
+  | { state: "held"; record: typeof waiverRecords.$inferSelect }
   | { state: "completed"; record: typeof waiverRecords.$inferSelect };
 
 /**
@@ -907,6 +921,14 @@ export async function getWaiverForToken(
   if (!record) return { state: "unavailable" };
   if (record.status !== "pending") return { state: "completed", record };
   if (record.expiresAt <= now) return { state: "expired", record };
+  if (record.bookingId) {
+    const [booking] = await db
+      .select({ identityUnconfirmedAt: bookings.identityUnconfirmedAt })
+      .from(bookings)
+      .where(and(eq(bookings.id, record.bookingId), eq(bookings.shopId, record.shopId)))
+      .limit(1);
+    if (booking?.identityUnconfirmedAt) return { state: "held", record };
+  }
   return { state: "available", record };
 }
 
@@ -1039,7 +1061,9 @@ export type CompleteWaiverOutcome =
         /** The diver is a minor on the signing day and no guardian section came with the signature. */
         | "guardian_required"
         /** A guardian section came, and it is not a signature: no consent, no relationship, no email, or the diver's own name. */
-        | "guardian_invalid";
+        | "guardian_invalid"
+        /** The booking is a held seat: nothing is signed onto the matched record until the desk confirms (issue #2125). */
+        | "identity_unconfirmed";
     };
 
 /**
@@ -1298,6 +1322,7 @@ export async function completeWaiver(
   const state = await getWaiverForToken(db, token, now);
   if (state.state === "unavailable") return { ok: false, reason: "unavailable" };
   if (state.state === "expired") return { ok: false, reason: "expired" };
+  if (state.state === "held") return { ok: false, reason: "identity_unconfirmed" };
   if (state.state === "completed") {
     return { ok: true, status: completedStatus(state.record.status), idempotent: true };
   }

@@ -4,12 +4,20 @@ import {
   markCheckoutExpiredBySessionId,
   markCheckoutPaidBySessionId,
   markCheckoutPaymentFailedBySessionId,
+  recordCheckoutPaymentIntent,
   recordCheckoutStripeCustomer,
 } from "@/db/checkouts";
 import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
-import { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId } from "@/db/orders";
+import {
+  markOrderPaidByInvoiceId,
+  markOrderVoidedByInvoiceId,
+  recordOrderPaymentIntent,
+} from "@/db/orders";
+import { recordStripeDispute } from "@/db/payment-disputes";
+import { recordStripeChargeRefund } from "@/db/refunds";
 import { disconnectShopStripeAccount, setShopStripeAccountStatus } from "@/db/stripe-accounts";
+import { recordTipPaymentIntent } from "@/db/stripe-payment-targets";
 import {
   markTipExpiredBySessionId,
   markTipPaidBySessionId,
@@ -23,6 +31,8 @@ import {
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { nowDate } from "@/lib/clock";
 import { type LogContext, log } from "@/lib/log";
+import { invoicePaymentIntentId } from "@/lib/payments/invoicing";
+import { paymentSourceLookupFromEnvironment } from "@/lib/payments/payment-sources";
 import { verifyStripeWebhook } from "@/lib/payments/webhook";
 
 const invoiceObjectSchema = z.object({
@@ -57,7 +67,87 @@ const checkoutSessionObjectSchema = z.object({
     .union([z.string().min(1), z.object({ id: z.string().min(1) })])
     .nullable()
     .optional(),
+  // The PaymentIntent the session settled through — string or expanded. A
+  // later refund or dispute names only this (ADR
+  // 20261009-stripe-reversals-reach-diveday).
+  payment_intent: z
+    .union([z.string().min(1), z.object({ id: z.string().min(1) })])
+    .nullable()
+    .optional(),
 });
+
+/** A string-or-expanded Stripe reference, as its id. */
+function idOf(ref: string | { id: string } | null | undefined): string | null {
+  if (!ref) return null;
+  return typeof ref === "string" ? ref : ref.id;
+}
+
+/**
+ * The Charge a `charge.refunded` event carries. Only the cumulative
+ * `amount_refunded` and the PaymentIntent are read: the event's own refund is
+ * not in the body (Stripe stopped embedding `refunds` on a Charge), and the
+ * cumulative figure is the one that makes every delivery order converge
+ * (`recordStripeChargeRefund`).
+ */
+const chargeObjectSchema = z.object({
+  id: z.string().min(1),
+  amount_refunded: z.number().int().nonnegative(),
+  payment_intent: z
+    .union([z.string().min(1), z.object({ id: z.string().min(1) })])
+    .nullable()
+    .optional(),
+});
+
+/** The Dispute every `charge.dispute.*` event carries. */
+const disputeObjectSchema = z.object({
+  id: z.string().min(1),
+  amount: z.number().int().nonnegative(),
+  currency: z.string().min(1),
+  created: z.number().int(),
+  status: z.string().min(1),
+  reason: z.string().nullable().optional(),
+  payment_intent: z
+    .union([z.string().min(1), z.object({ id: z.string().min(1) })])
+    .nullable()
+    .optional(),
+  evidence_details: z
+    .object({ due_by: z.number().int().nullable().optional() })
+    .nullable()
+    .optional(),
+});
+
+/**
+ * Record the PaymentIntent a session settled through, on whichever checkout
+ * owns the session. Best-effort for the same reason the Customer write above
+ * is: it must never swallow a settlement, and a refund that later finds no
+ * recorded intent asks Stripe instead.
+ */
+async function recordSessionPaymentIntent(
+  db: AppDb,
+  session: z.infer<typeof checkoutSessionObjectSchema>,
+  expectedAccountId: string | undefined,
+  logOutcome: (outcome: string, extra?: LogContext) => void,
+): Promise<void> {
+  const paymentIntentId = idOf(session.payment_intent);
+  if (!paymentIntentId) return;
+  try {
+    const onCheckout = await recordCheckoutPaymentIntent(db, {
+      stripeSessionId: session.id,
+      paymentIntentId,
+      expectedAccountId,
+    });
+    // A tip shares the session id space (ADR 20260726-post-trip-tipping).
+    if (!onCheckout && expectedAccountId) {
+      await recordTipPaymentIntent(db, {
+        stripeSessionId: session.id,
+        paymentIntentId,
+        expectedAccountId,
+      });
+    }
+  } catch (error) {
+    logOutcome("payment_intent_record_failed", { error: String(error) });
+  }
+}
 
 /**
  * Record the Customer object this event says Stripe holds, on whichever of the
@@ -209,6 +299,11 @@ export async function POST(request: Request) {
     logOutcome("livemode_mismatch", { verifiedWith, livemode: event.livemode ?? null });
     return new Response(null, { status: 200 });
   }
+  // Which charge a reversal is about, asked of Stripe only with a key of this
+  // event's own mode (ADR 20261009-stripe-reversals-reach-diveday).
+  const sourceLookup = paymentSourceLookupFromEnvironment(process.env, fetch, {
+    livemode: expectedLivemode,
+  });
 
   // Claim this event id before doing anything else: a redelivered event
   // (Stripe's webhooks are at-least-once) is a no-op past this point,
@@ -237,6 +332,11 @@ export async function POST(request: Request) {
     return new Response(null, { status: 200 });
   }
 
+  // Set by a handler that cannot apply this event *yet* — DiveDay's own refund
+  // of the same money is mid-flight, or the payment it reverses has not
+  // settled here. Answered like a failure (claim given back, non-2xx) so Stripe
+  // delivers it again, but without paging anyone: nothing is wrong.
+  let deferred = false;
   try {
     switch (event.type) {
       case "invoice.paid": {
@@ -250,6 +350,14 @@ export async function POST(request: Request) {
             invoiceTaxCents(invoice.data),
           );
           logOutcome(order ? "order_paid" : "order_not_found");
+          const paymentIntentId = order ? invoicePaymentIntentId(event.data.object) : null;
+          if (paymentIntentId) {
+            await recordOrderPaymentIntent(db, {
+              stripeInvoiceId: invoice.data.id,
+              paymentIntentId,
+              expectedAccountId: event.account,
+            });
+          }
           // A paid order enqueues `order.paid` for every connected
           // integration. Stripe's webhook is the most common way an order
           // becomes paid, so draining here is what makes the write-driven
@@ -277,6 +385,7 @@ export async function POST(request: Request) {
         const session = checkoutSessionObjectSchema.safeParse(event.data.object);
         if (session.success) {
           await recordSessionCustomer(db, session.data, event.account, logOutcome);
+          await recordSessionPaymentIntent(db, session.data, event.account, logOutcome);
         }
         // "completed" alone is not "paid": async payment methods complete the
         // session before the money settles. Only Stripe saying paid clears the
@@ -310,6 +419,7 @@ export async function POST(request: Request) {
         const session = checkoutSessionObjectSchema.safeParse(event.data.object);
         if (session.success) {
           await recordSessionCustomer(db, session.data, event.account, logOutcome);
+          await recordSessionPaymentIntent(db, session.data, event.account, logOutcome);
           const checkout = await markCheckoutPaidBySessionId(
             db,
             session.data.id,
@@ -421,6 +531,89 @@ export async function POST(request: Request) {
         }
         break;
       }
+      case "charge.refunded": {
+        // A refund made anywhere — DiveDay's own, or one somebody made in the
+        // shop's Stripe dashboard (ADR 20261009-stripe-reversals-reach-diveday).
+        // Reconciled to Stripe's cumulative figure, so DiveDay's own refunds,
+        // replays and out-of-order deliveries all add nothing.
+        const charge = chargeObjectSchema.safeParse(event.data.object);
+        const paymentIntentId = charge.success ? idOf(charge.data.payment_intent) : null;
+        if (!charge.success) {
+          logOutcome("malformed_payload");
+        } else if (!event.account) {
+          logOutcome("missing_account");
+        } else if (!paymentIntentId) {
+          // A charge with no PaymentIntent was never made by DiveDay.
+          logOutcome("refund_target_not_found");
+        } else {
+          const outcome = await recordStripeChargeRefund(
+            db,
+            {
+              stripeAccountId: event.account,
+              paymentIntentId,
+              amountRefundedCents: charge.data.amount_refunded,
+              chargeId: charge.data.id,
+              occurredAt,
+            },
+            sourceLookup,
+          );
+          if (outcome.status === "deferred") {
+            deferred = true;
+          } else {
+            logOutcome(
+              outcome.status === "not_found"
+                ? "refund_target_not_found"
+                : `refund_${outcome.status}`,
+            );
+            // An order refund enqueued `order.refunded` for every connected
+            // integration; drain it after the 200, as `invoice.paid` does.
+            if (outcome.status === "order_refunded") dispatchIntegrationsAfterResponse();
+          }
+        }
+        break;
+      }
+      case "charge.dispute.created":
+      case "charge.dispute.updated":
+      case "charge.dispute.closed": {
+        const dispute = disputeObjectSchema.safeParse(event.data.object);
+        const paymentIntentId = dispute.success ? idOf(dispute.data.payment_intent) : null;
+        if (!dispute.success) {
+          logOutcome("malformed_payload");
+        } else if (!event.account) {
+          logOutcome("missing_account");
+        } else if (!paymentIntentId) {
+          logOutcome("dispute_target_not_found");
+        } else {
+          const dueBy = dispute.data.evidence_details?.due_by;
+          const outcome = await recordStripeDispute(
+            db,
+            {
+              stripeAccountId: event.account,
+              eventType: event.type,
+              occurredAt,
+              dispute: {
+                id: dispute.data.id,
+                paymentIntentId,
+                amountCents: dispute.data.amount,
+                currency: dispute.data.currency,
+                reason: dispute.data.reason ?? null,
+                status: dispute.data.status,
+                evidenceDueBy: dueBy ? new Date(dueBy * 1000) : null,
+                createdAt: new Date(dispute.data.created * 1000),
+              },
+            },
+            sourceLookup,
+          );
+          logOutcome(
+            outcome.status === "recorded"
+              ? "dispute_recorded"
+              : outcome.status === "stale"
+                ? "stale_dispute_event"
+                : "dispute_target_not_found",
+          );
+        }
+        break;
+      }
       default:
         // invoice.payment_failed and anything else: no local state change
         // today. (`checkout.session.async_payment_failed` left this branch in
@@ -443,7 +636,9 @@ export async function POST(request: Request) {
     // `setShopStripeAccountStatus` is gated by `hasNewerAccountUpdate`, and
     // `disconnectShopStripeAccount` neither moves `disconnectedAt` on a row
     // that is already disconnected nor touches one reconnected since this
-    // event's own `created` time.
+    // event's own `created` time, `recordStripeChargeRefund` only ever raises a
+    // refunded total to Stripe's cumulative figure, and `recordStripeDispute`
+    // upserts one row per dispute ordered by the event's `created` time.
     //
     // The two ordering checks above are what a release must not undermine, and
     // the reason it nulls `claimed_at` instead of deleting the row: the ledger
@@ -479,6 +674,20 @@ export async function POST(request: Request) {
     });
     logOutcome("handler_failed", { claimReleased: released });
     return new Response(null, { status: 500 });
+  }
+
+  if (deferred) {
+    // Released the same way a failed handle releases, for the same reason:
+    // the retry must reach the handler. A release that fails is the one case a
+    // retry cannot heal, so it is reported like the failure path reports it.
+    const released = await releaseStripeWebhookEventClaim(db, event.id).catch((releaseError) => {
+      Sentry.captureException(releaseError, {
+        tags: { stripe_webhook_event_type: event.type, stripe_webhook_stage: "claim_release" },
+      });
+      return false;
+    });
+    logOutcome("deferred", { claimReleased: released });
+    return new Response(null, { status: 503 });
   }
 
   return new Response(null, { status: 200 });

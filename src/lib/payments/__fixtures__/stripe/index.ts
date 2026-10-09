@@ -50,6 +50,9 @@ export type StripeObjectFixture =
 export type StripeEventFixture =
   | "account.application.deauthorized"
   | "account.updated"
+  | "charge.dispute.closed"
+  | "charge.dispute.created"
+  | "charge.refunded"
   | "checkout.session.async_payment_failed"
   | "checkout.session.async_payment_succeeded"
   | "checkout.session.completed"
@@ -75,6 +78,9 @@ export const STRIPE_OBJECT_FIXTURES: readonly StripeObjectFixture[] = [
 export const STRIPE_EVENT_FIXTURES: readonly StripeEventFixture[] = [
   "account.application.deauthorized",
   "account.updated",
+  "charge.dispute.closed",
+  "charge.dispute.created",
+  "charge.refunded",
   "checkout.session.async_payment_failed",
   "checkout.session.async_payment_succeeded",
   "checkout.session.completed",

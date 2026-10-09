@@ -7,6 +7,7 @@ import { fakeCheckout, fakeCourtesy, fakeEmail, fakeSms } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { recordCourseNextStep } from "./course-next-step";
 import { upsertExecutedDive } from "./executed-dives";
+import { recordCrewRollCall, recordRollCall } from "./manifests";
 import { recordDiverOwnLocale } from "./people";
 import { issueShopCertification } from "./readiness";
 import {
@@ -20,6 +21,7 @@ import {
   getRecapPageData,
   getRecapPageState,
   hasSentTripRecap,
+  isRecapOpen,
   listCrewRecapPhotosForTrip,
   listRecapPhotosForTrip,
   MAX_RECAP_CAPTION_LENGTH,
@@ -37,12 +39,15 @@ import {
   people,
   priorVisits,
   recapPhotos,
+  rollCallCrewEvents,
   rollCallEvents,
+  tripAssignments,
   trips,
 } from "./schema";
 import { setShopCurrency, setShopReviewUrl } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
+import { listRollCallGaps } from "./today";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 const ORIGIN = "https://diveday.test";
@@ -676,6 +681,382 @@ describe("a diver who never left the dock", () => {
     const email = fakeEmail();
     await sendDueRecaps(db, sendOptions(afterTrip, email));
     expect(recapsTo(email, boarded)).toHaveLength(1);
+  });
+});
+
+/**
+ * **The recap waits while somebody is "not back aboard"** (issue #2123). A
+ * diver counted back after dive one and then marked "not back aboard" after
+ * dive two read as sailed, and four hours after the boat was due home the cron
+ * emailed them "welcome back, here's your dive log". If that word is a real
+ * incident, the email lands in an inbox a family may be reading. So every
+ * recap on a departure waits — email, staff send and the page — for exactly as
+ * long as Today's missing-diver (or missing-crew) row stands.
+ */
+describe("a departure with somebody not back aboard", () => {
+  async function missingContext() {
+    const ctx = await recapContext();
+    const [staff] = await listStaff(ctx.db, ctx.shop.id);
+    if (!staff) throw new Error("no staff");
+    const party = await createBookingParty(ctx.db, [
+      {
+        actor: "staff",
+        shopId: ctx.shop.id,
+        tripId: ctx.reef.id,
+        fullName: "Bo Boatmate",
+        email: "recap-boatmate@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+    const [boatmate] = party.bookings.map((b) => b.bookingId);
+    if (!boatmate) throw new Error("party booking missing");
+    let minute = 0;
+    const at = () => new Date(ctx.reef.startsAt.getTime() + minute++ * 60 * 1000);
+    const record = (
+      bookingId: string,
+      status: "boarded" | "not_boarded" | "cleared",
+      checkpoint: string,
+    ) =>
+      ctx.db.insert(rollCallEvents).values({
+        shopId: ctx.shop.id,
+        tripId: ctx.reef.id,
+        bookingId,
+        recordedByPersonId: staff.person.id,
+        status,
+        checkpoint,
+        occurredAt: at(),
+      });
+    const recordCrew = (
+      personId: string,
+      status: "boarded" | "not_boarded" | "cleared",
+      checkpoint: string,
+    ) =>
+      ctx.db.insert(rollCallCrewEvents).values({
+        shopId: ctx.shop.id,
+        tripId: ctx.reef.id,
+        personId,
+        recordedByPersonId: staff.person.id,
+        status,
+        checkpoint,
+        occurredAt: at(),
+      });
+    // Rae (the context's own booking) sailed, came back after dive one, and
+    // was marked not back aboard after dive two. Bo was counted back each time.
+    for (const bookingId of [ctx.bookingId, boatmate]) {
+      await record(bookingId, "boarded", "departure");
+      await record(bookingId, "boarded", "after_dive_1");
+    }
+    await record(boatmate, "boarded", "after_dive_2");
+    return {
+      ...ctx,
+      missing: ctx.bookingId,
+      boatmate,
+      staffId: staff.person.id,
+      record,
+      recordCrew,
+    };
+  }
+
+  const sendOptions = (afterTrip: Date, email: ReturnType<typeof fakeEmail>) => ({
+    now: afterTrip,
+    emailProvider: email.provider,
+    smsProvider: fakeSms().provider,
+    appOrigin: ORIGIN,
+  });
+  const recapsTo = (email: ReturnType<typeof fakeEmail>, bookingId: string) =>
+    email.sent.filter((n) => n.kind === "trip_recap" && n.bookingId === bookingId);
+
+  it("sends no recap to anybody on the departure, and records nothing to send later", async () => {
+    const { db, missing, boatmate, record, afterTrip } = await missingContext();
+    await record(missing, "not_boarded", "after_dive_2");
+
+    const email = fakeEmail();
+    await sendDueRecaps(db, sendOptions(afterTrip, email));
+    expect(recapsTo(email, missing)).toHaveLength(0);
+    expect(recapsTo(email, boatmate)).toHaveLength(0);
+    // No delivery row, so nothing is marked done: the recap is owed, not sent.
+    expect(await rowsFor(db, missing)).toHaveLength(0);
+    expect(await rowsFor(db, boatmate)).toHaveLength(0);
+  });
+
+  it("refuses a staff send for that departure too, and does not call it sent", async () => {
+    const { db, shop, reef, missing, boatmate, record, afterTrip } = await missingContext();
+    await record(missing, "not_boarded", "after_dive_2");
+
+    const email = fakeEmail();
+    const result = await sendTripRecaps(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      options: sendOptions(afterTrip, email),
+    });
+    // Held, said as held: the staffer who tapped is told why nothing went out.
+    expect(result).toEqual({ ok: false, reason: "held" });
+    expect(recapsTo(email, missing)).toHaveLength(0);
+    expect(recapsTo(email, boatmate)).toHaveLength(0);
+    expect(await hasSentTripRecap(db, shop.id, reef.id)).toBe(false);
+  });
+
+  it("holds the recap page for everybody on the departure, saying only that it is not ready", async () => {
+    const { db, shop, missing, boatmate, record, afterTrip } = await missingContext();
+    await record(missing, "not_boarded", "after_dive_2");
+
+    for (const bookingId of [missing, boatmate]) {
+      expect(await getRecapPageData(db, bookingId, undefined, afterTrip)).toBeNull();
+      const state = await getRecapPageState(db, bookingId, undefined, afterTrip);
+      expect(state.kind).toBe("waiting");
+      if (state.kind !== "waiting") throw new Error("unreachable");
+      expect(state.shop.slug).toBe(shop.slug);
+    }
+  });
+
+  it("waits exactly as long as Today's missing-diver row stands", async () => {
+    const { db, shop, reef, missing, record, afterTrip } = await missingContext();
+    const missingRow = async () =>
+      (await listRollCallGaps(db, shop.id, afterTrip)).some(
+        (gap) => gap.tripId === reef.id && gap.reason === "missing_diver",
+      );
+    expect(await missingRow()).toBe(false);
+    expect(await getRecapPageData(db, missing, undefined, afterTrip)).not.toBeNull();
+
+    await record(missing, "not_boarded", "after_dive_2");
+    expect(await missingRow()).toBe(true);
+    expect(await getRecapPageData(db, missing, undefined, afterTrip)).toBeNull();
+
+    await record(missing, "boarded", "after_dive_2");
+    expect(await missingRow()).toBe(false);
+    expect(await getRecapPageData(db, missing, undefined, afterTrip)).not.toBeNull();
+  });
+
+  it("sends the recap once the same diver is counted back aboard", async () => {
+    const { db, missing, boatmate, record, afterTrip } = await missingContext();
+    await record(missing, "not_boarded", "after_dive_2");
+    await sendDueRecaps(db, sendOptions(afterTrip, fakeEmail()));
+
+    await record(missing, "boarded", "after_dive_2");
+    const email = fakeEmail();
+    await sendDueRecaps(db, sendOptions(afterTrip, email));
+    expect(recapsTo(email, missing)).toHaveLength(1);
+    expect(recapsTo(email, boatmate)).toHaveLength(1);
+    expect((await getRecapPageState(db, missing, undefined, afterTrip)).kind).toBe("recap");
+  });
+
+  it("sends the recap once the not-back word is undone", async () => {
+    const { db, missing, record, afterTrip } = await missingContext();
+    await record(missing, "not_boarded", "after_dive_2");
+    await record(missing, "cleared", "after_dive_2");
+    const email = fakeEmail();
+    await sendDueRecaps(db, sendOptions(afterTrip, email));
+    expect(recapsTo(email, missing)).toHaveLength(1);
+  });
+
+  it("keeps waiting while an earlier dive's not-back word stands under a later boarding", async () => {
+    // Counted back after dive two does not retract dive one's word: Today
+    // still raises the row about it until somebody corrects that checkpoint.
+    const { db, missing, record, afterTrip } = await missingContext();
+    await record(missing, "not_boarded", "after_dive_1");
+    await record(missing, "boarded", "after_dive_2");
+    const email = fakeEmail();
+    await sendDueRecaps(db, sendOptions(afterTrip, email));
+    expect(recapsTo(email, missing)).toHaveLength(0);
+    expect(await getRecapPageData(db, missing, undefined, afterTrip)).toBeNull();
+  });
+
+  it("ignores the word on a booking cancelled since", async () => {
+    const { db, missing, boatmate, record, afterTrip } = await missingContext();
+    await record(missing, "not_boarded", "after_dive_2");
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, missing));
+    const email = fakeEmail();
+    await sendDueRecaps(db, sendOptions(afterTrip, email));
+    expect(recapsTo(email, boatmate)).toHaveLength(1);
+  });
+
+  it("waits for a crew member on the roster marked not back aboard", async () => {
+    const { db, reef, missing, boatmate, staffId, recordCrew, afterTrip } = await missingContext();
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staffId })
+      .onConflictDoNothing();
+    await recordCrew(staffId, "boarded", "departure");
+    await recordCrew(staffId, "not_boarded", "after_dive_1");
+    expect(await getRecapPageData(db, missing, undefined, afterTrip)).toBeNull();
+    expect(await getRecapPageData(db, boatmate, undefined, afterTrip)).toBeNull();
+
+    await recordCrew(staffId, "boarded", "after_dive_1");
+    const email = fakeEmail();
+    await sendDueRecaps(db, sendOptions(afterTrip, email));
+    expect(recapsTo(email, boatmate)).toHaveLength(1);
+  });
+
+  // Security review of #2123: "your recap isn't ready yet" is a promise that
+  // correcting somebody else's roll call keeps. For a seat whose own recap is
+  // dead it would be a lie, and it would tell a held seat's bearer the boat had
+  // somebody missing.
+  it("still answers a held seat on that departure as dead, not waiting", async () => {
+    const { db, missing, boatmate, record, afterTrip } = await missingContext();
+    await record(missing, "not_boarded", "after_dive_2");
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: afterTrip })
+      .where(eq(bookings.id, boatmate));
+    expect((await getRecapPageState(db, boatmate, undefined, afterTrip)).kind).toBe("dead");
+    expect(await isRecapOpen(db, boatmate, afterTrip)).toBe(false);
+  });
+
+  it("still answers a diver left at the dock on that departure as dead, not waiting", async () => {
+    const { db, shop, reef, missing, record, afterTrip } = await missingContext();
+    await record(missing, "not_boarded", "after_dive_2");
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: reef.id,
+        fullName: "Del Dockside",
+        email: "recap-dockside@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+    const ashore = party.bookings[0]?.bookingId;
+    if (!ashore) throw new Error("party booking missing");
+    await record(ashore, "not_boarded", "departure");
+    expect((await getRecapPageState(db, ashore, undefined, afterTrip)).kind).toBe("dead");
+    expect((await getRecapPageState(db, missing, undefined, afterTrip)).kind).toBe("waiting");
+  });
+
+  it("is open for the same seat once nobody is missing", async () => {
+    const { db, boatmate, afterTrip } = await missingContext();
+    expect(await isRecapOpen(db, boatmate, afterTrip)).toBe(true);
+  });
+
+  // Domain review of #2123: the hold and Today's alarm are one reading, so a
+  // departure whose plan shrinks below the checkpoint the word was spoken at
+  // stops raising the row — and stops holding the recap — together.
+  it("stops waiting with Today's row when the planned dive count shrinks", async () => {
+    const { db, shop, reef, missing, record, afterTrip } = await missingContext();
+    await record(missing, "not_boarded", "after_dive_2");
+    expect(await getRecapPageData(db, missing, undefined, afterTrip)).toBeNull();
+    await db.update(trips).set({ plannedDives: 1 }).where(eq(trips.id, reef.id));
+    const missingRow = (await listRollCallGaps(db, shop.id, afterTrip)).some(
+      (gap) => gap.tripId === reef.id && gap.reason === "missing_diver",
+    );
+    expect(missingRow).toBe(false);
+    expect(await isRecapOpen(db, missing, afterTrip)).toBe(true);
+  });
+
+  // Domain review of #2123: a "not back aboard" that was corrected may still
+  // have been an incident. The automatic send stops the moment it is said, and
+  // only a staffer releases it — the hold above lifts on the correction alone.
+  describe("pauses the automatic send", () => {
+    const paused = async (db: Awaited<ReturnType<typeof missingContext>>["db"], id: string) =>
+      (await db.select({ p: trips.recapAutoSendPaused }).from(trips).where(eq(trips.id, id)))[0]?.p;
+
+    it("when a diver is marked not back aboard, and keeps it paused once corrected", async () => {
+      const { db, shop, reef, missing, boatmate, staffId, afterTrip } = await missingContext();
+      const say = (status: "boarded" | "not_boarded") =>
+        recordRollCall(db, {
+          shopId: shop.id,
+          tripId: reef.id,
+          bookingId: missing,
+          recordedByPersonId: staffId,
+          status,
+          checkpoint: "after_dive_2",
+        });
+      expect((await say("not_boarded")).ok).toBe(true);
+      expect(await paused(db, reef.id)).toBe(true);
+      expect((await say("boarded")).ok).toBe(true);
+      expect(await paused(db, reef.id)).toBe(true);
+
+      const email = fakeEmail();
+      await sendDueRecaps(db, sendOptions(afterTrip, email));
+      expect(recapsTo(email, boatmate)).toHaveLength(0);
+      // The page is not held: the word was corrected, and the link is the
+      // diver's own to open.
+      expect(await isRecapOpen(db, boatmate, afterTrip)).toBe(true);
+    });
+
+    it("when a crew member is marked not back aboard", async () => {
+      const { db, shop, reef, staffId } = await missingContext();
+      await db
+        .insert(tripAssignments)
+        .values({ tripId: reef.id, personId: staffId })
+        .onConflictDoNothing();
+      const said = await recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staffId,
+        recordedByPersonId: staffId,
+        status: "not_boarded",
+        checkpoint: "after_dive_1",
+      });
+      expect(said.ok).toBe(true);
+      expect(await paused(db, reef.id)).toBe(true);
+    });
+
+    it("not for a diver left at the dock", async () => {
+      const { db, shop, reef, staffId } = await missingContext();
+      const party = await createBookingParty(db, [
+        {
+          actor: "staff",
+          shopId: shop.id,
+          tripId: reef.id,
+          fullName: "Del Dockside",
+          email: "recap-dockside-2@example.com",
+        },
+      ]);
+      if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+      const ashore = party.bookings[0]?.bookingId;
+      if (!ashore) throw new Error("party booking missing");
+      const said = await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: ashore,
+        recordedByPersonId: staffId,
+        status: "not_boarded",
+        checkpoint: "departure",
+      });
+      expect(said.ok).toBe(true);
+      expect(await paused(db, reef.id)).toBe(false);
+    });
+  });
+
+  // Domain review of #2123: a hold that outlives the cron's 48-hour lookback
+  // must not lose the recap. Once a staffer releases it, it goes.
+  it("still sends once released, days after the boat came home", async () => {
+    const { db, shop, reef, missing, boatmate, staffId, afterTrip } = await missingContext();
+    const say = (status: "boarded" | "not_boarded") =>
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: missing,
+        recordedByPersonId: staffId,
+        status,
+        checkpoint: "after_dive_2",
+      });
+    await say("not_boarded");
+    await say("boarded");
+    const days = new Date(afterTrip.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const released = await unpauseTripRecapAutoSend(db, shop.id, reef.id, days);
+    expect(released.ok).toBe(true);
+
+    const email = fakeEmail();
+    await sendDueRecaps(db, sendOptions(new Date(days.getTime() + 2 * 60 * 60 * 1000), email));
+    expect(recapsTo(email, boatmate)).toHaveLength(1);
+  });
+
+  it("ignores a crew word about somebody no longer on the roster", async () => {
+    const { db, shop, reef, boatmate, recordCrew, afterTrip } = await missingContext();
+    const [outsider] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.shopId, shop.id))
+      .limit(1);
+    if (!outsider) throw new Error("seed people missing");
+    const rostered = await db
+      .select()
+      .from(tripAssignments)
+      .where(and(eq(tripAssignments.tripId, reef.id), eq(tripAssignments.personId, outsider.id)));
+    if (rostered.length > 0) return;
+    await recordCrew(outsider.id, "not_boarded", "after_dive_1");
+    expect(await getRecapPageData(db, boatmate, undefined, afterTrip)).not.toBeNull();
   });
 });
 

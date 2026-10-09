@@ -210,6 +210,57 @@ export function gearAssignmentNeeds(
   return [{ kind: piece.kind as Exclude<RentalItemKind, "mask_fins">, size: piece.size }];
 }
 
+/**
+ * Every rental-fit piece, so the register kinds a diver wears one of can be
+ * derived from the fit itself rather than listed twice.
+ */
+const RENTAL_FIT_PIECES: Record<RentalItemKind, true> = {
+  bcd: true,
+  regulator: true,
+  wetsuit: true,
+  boots: true,
+  mask_fins: true,
+  weights: true,
+  dive_computer: true,
+  gopro: true,
+  drysuit: true,
+  hood: true,
+  gloves: true,
+  torch: true,
+  smb: true,
+};
+
+const ONE_PER_DIVER_KINDS: ReadonlySet<GearItemKind> = new Set(
+  (Object.keys(RENTAL_FIT_PIECES) as RentalItemKind[]).flatMap((kind) =>
+    gearAssignmentNeeds({ kind, size: null }).map((need) => need.kind),
+  ),
+);
+
+/**
+ * Whether a diver takes one unit of this kind at most: the kinds the rental
+ * fit reaches. A second BCD on one diver is a mistake; a second tank is a
+ * two-tank dive, so tanks and register-only kinds are never limited
+ * (dive-domain review of issue #2215).
+ */
+export function gearKindIsOnePerDiver(kind: GearItemKind): boolean {
+  return ONE_PER_DIVER_KINDS.has(kind);
+}
+
+const LIFE_SUPPORT_KINDS: ReadonlySet<GearItemKind> = new Set([
+  "bcd",
+  "regulator",
+  "dive_computer",
+]);
+
+/**
+ * The units a diver breathes or ascends by. A hand pick of one with a lapsed
+ * service clock or an open concern asks the staffer to assign it anyway, in
+ * so many words (dive-domain review of issue #2215).
+ */
+export function gearKindIsLifeSupport(kind: GearItemKind): boolean {
+  return LIFE_SUPPORT_KINDS.has(kind);
+}
+
 /** The service-form suggestion: the conventional next deadline for this clock. */
 export function suggestNextDueOn(
   kind: GearServiceKind,

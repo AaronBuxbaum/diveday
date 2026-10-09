@@ -44,7 +44,7 @@ cannot see it.
 | Self-registration (the counter QR) | `src/app/s/[shopSlug]/register/actions.ts` | shop | `RATE_LIMITS.selfRegisterByShop` (120/hour) |
 | Self-registration's waiver mail | `src/app/s/[shopSlug]/register/actions.ts` | recipient address | `RATE_LIMITS.selfRegisterEmailByRecipient` (3/hour) — drops the send, never the registration |
 | Self-registration's waiver text (phone-only registrant) | `src/app/s/[shopSlug]/register/actions.ts` | recipient number in E.164, across every shop | `RATE_LIMITS.selfRegisterTextByRecipient` (3/hour) — drops the send, never the registration |
-| Self-registration's waiver texts, shop-wide | `src/app/s/[shopSlug]/register/actions.ts` | shop, per day | `RATE_LIMITS.selfRegisterTextByShop` (40/day) — drops the send, never the registration, and logs `self_registration.release_skipped` at warn with outcome `shop_text_cap`. Before either bucket, the anonymous path texts only a number in the shop's own calling code and never from a demo shop (`anonymousTextRecipient`, `src/lib/self-registration.ts`) |
+| Self-registration's waiver texts, shop-wide | `src/app/s/[shopSlug]/register/actions.ts` | shop, per day | `RATE_LIMITS.selfRegisterTextByShop` (40/day) — drops the send, never the registration, and logs `self_registration.release_skipped` at warn with outcome `shop_text_cap`. Before either bucket, the anonymous path texts only a number in the shop's own country and never from a demo shop: its calling code and, for a `+1` shop, one of that country's own area codes, so a US or Canadian shop never texts the Caribbean, Pacific-territory, premium 900 or toll-free ranges (`anonymousTextRecipient`, `src/lib/self-registration.ts`; `NANP_AREA_CODES`, `src/lib/phone.ts`; refused as `foreign_number` or `foreign_area_code`) |
 | Contact-email confirmation link (a save that changes the address, or the resend control; issue #1288) | `src/app/shop/[shopSlug]/settings/actions.ts` | shop, **and** the recipient address | `RATE_LIMITS.contactConfirmationByShop` (3/hour) + `RATE_LIMITS.contactConfirmationByRecipient` (3/hour) — drops the send, never the save; the settings form takes any address and a demo owner login is one click away, so this is what keeps it from being a branded-mail relay |
 | Readiness actions | `src/app/ready/[token]/actions.ts` `contextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Self-cancelling a booking from the readiness link | same file | IP | `RATE_LIMITS.bookingSelfCancel` (5/hour) |
@@ -57,7 +57,7 @@ cannot see it.
 | Core Web Vitals beacon | `src/app/api/vitals/route.ts` | IP | `RATE_LIMITS.webVitalsBeacon` (300/hour) |
 | CSP violation report | `src/app/api/csp-report/route.ts` | IP | `RATE_LIMITS.cspReport` (120/hour) |
 
-Three notes the table can't carry:
+Five notes the table can't carry:
 
 - **`capabilityAction` is deliberately the loosest per-IP policy** (60/hour, not
   30). A dock or boat WiFi is one shared IP carrying several divers who each
@@ -90,6 +90,19 @@ Three notes the table can't carry:
 - **`addressLookup` is a spend bound, not a security boundary.** The action is
   already owner/manager-gated; each keystroke past the minimum length is a
   billed Amazon Location request on the shop's own account.
+- **The counter QR's text gate has an account-wide backstop that the app does
+  not own** (issue #2151). The area-code gate only covers the anonymous path:
+  staff-initiated texts still reach any number a person chose, Caribbean
+  included. What bounds every SMS DiveDay sends is the account's SNS
+  `MonthlySpendLimit`, which starts at $1 and is raised only by the Support
+  case in manual action `sns-sms-account-limits`
+  ([manual-actions.md](manual-actions.md), item 13). Its value lives in that
+  case and the console, not in `infra/lib/infra-stack.ts`; read it with
+  `aws sns get-sms-attributes --attributes MonthlySpendLimit` before quoting
+  it. When asking for a raise, ask for no more than the shops' real volume,
+  and restrict destination countries in AWS End User Messaging SMS (a
+  protect configuration that allows only the countries live shops are in) so
+  a pumping run against a staff path stops at the account, not the bill.
 
 Every capability-token check happens **before** the token is verified, so it
 throttles brute-force token guessing and not only replay of a link already

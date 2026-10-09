@@ -133,6 +133,19 @@ const NOTICE_KEYS: Record<
   },
   "identity-confirmed": { form: "roster", tone: "success", key: "trips.notices.identityConfirmed" },
   "identity-split": { form: "roster", tone: "success", key: "trips.notices.identitySplit" },
+  // The release a held seat was owed, sent once the desk knew who it is. When
+  // it could not reach anyone the notice is `new-waiver-ready` or
+  // `new-waiver-failed` instead, and the row hands it over (issue #2125).
+  "identity-confirmed-waiver-sent": {
+    form: "roster",
+    tone: "success",
+    key: "trips.notices.identityConfirmedWaiverSent",
+  },
+  "identity-split-waiver-sent": {
+    form: "roster",
+    tone: "success",
+    key: "trips.notices.identitySplitWaiverSent",
+  },
   // A refused seat freed for a fresh release (`sendNewWaiverAction`). Success
   // when the email went; warning when the seat is ready but the link still has
   // to reach the diver from their row.

@@ -869,6 +869,33 @@ export async function recordCheckoutStripeCustomer(
 }
 
 /**
+ * Remember which PaymentIntent this session settled through — the one handle a
+ * later `charge.refunded` or `charge.dispute.*` event carries back to the
+ * checkout (ADR 20261009-stripe-reversals-reach-diveday). Write-once like the
+ * Customer id above, with the same account cross-check.
+ */
+export async function recordCheckoutPaymentIntent(
+  db: DbExecutor,
+  input: { stripeSessionId: string; paymentIntentId: string; expectedAccountId?: string },
+): Promise<boolean> {
+  if (input.paymentIntentId.trim().length === 0) return false;
+  const [updated] = await db
+    .update(bookingCheckouts)
+    .set({ stripePaymentIntentId: input.paymentIntentId })
+    .where(
+      and(
+        eq(bookingCheckouts.stripeSessionId, input.stripeSessionId),
+        isNull(bookingCheckouts.stripePaymentIntentId),
+        input.expectedAccountId === undefined
+          ? undefined
+          : eq(bookingCheckouts.stripeAccountId, input.expectedAccountId),
+      ),
+    )
+    .returning({ id: bookingCheckouts.id });
+  return updated !== undefined;
+}
+
+/**
  * Mark a checkout paid from Stripe's own evidence and cascade every covered
  * booking through the shared payment gate, both in one transaction so a
  * crash between the two writes can never leave the checkout "completed"

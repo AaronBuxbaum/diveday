@@ -1,4 +1,5 @@
 import type { MedicalAnswers, WaiverRecord } from "@/db/schema";
+import { type CalendarDate, calendarDateInTimezone, isValidCalendarDate } from "./calendar-date";
 import { nowDate } from "./clock";
 import {
   type GuardianSignature,
@@ -429,7 +430,7 @@ export type MedicalWaiverMark = {
    * ({@link overriddenRefusal}) — its record and date, or null. A warning,
    * never a block: the crew reads it with a link to the refused record.
    */
-  overriddenRefusal: { recordId: string; at: Date } | null;
+  overriddenRefusal: OverriddenRefusal | null;
   /**
    * **The record a `cleared` mark hangs on, and whether the physician's
    * evaluation itself is stored against it** (issue #1283) — null for every
@@ -534,12 +535,45 @@ function flaggedPromptsOf(record: WaiverRecord): string[] {
 export function overriddenRefusal(
   standing: WaiverRecord | null,
   personSignedWaivers: readonly WaiverRecord[],
-): { recordId: string; at: Date } | null {
+): OverriddenRefusal | null {
   if (!standing || !isCleanCompletion(standing)) return null;
   const candidates = personSignedWaivers.some((record) => record.id === standing.id)
     ? personSignedWaivers
     : [...personSignedWaivers, standing];
   return unansweredRefusal(candidates, signatureTime(standing));
+}
+
+/**
+ * An earlier release a physician refused: its record, when staff recorded the
+ * "no", and the physician's own evaluation day when one was stored. The day is
+ * what a crew reads (dive-domain review of #2163); `at` stands in without it.
+ */
+export type OverriddenRefusal = {
+  recordId: string;
+  at: Date;
+  /** Optional so a mark built by hand (a test, an older fixture) still types. */
+  evaluatedOn?: CalendarDate | null;
+};
+
+/**
+ * **The two days a crew reads beside a medical warning**, in the shop's zone:
+ * the physician's evaluation day for an earlier refusal (falling back to the
+ * day staff recorded it), and the day of a referral a release stands over.
+ * One derivation for the live roll call and the offline dock copy, so the two
+ * never print different days. Absent keys mean no warning.
+ */
+export function medicalWarningDays(
+  mark: Pick<MedicalWaiverMark, "overriddenRefusal" | "overriddenReferralAt"> | null | undefined,
+  timeZone: string,
+): { refusedOn?: CalendarDate; referredOn?: CalendarDate } {
+  const refusal = mark?.overriddenRefusal;
+  const referral = mark?.overriddenReferralAt;
+  return {
+    ...(refusal
+      ? { refusedOn: refusal.evaluatedOn ?? calendarDateInTimezone(refusal.at, timeZone) }
+      : {}),
+    ...(referral ? { referredOn: calendarDateInTimezone(referral, timeZone) } : {}),
+  };
 }
 
 /**
@@ -550,7 +584,7 @@ export function overriddenRefusal(
 function unansweredRefusal(
   records: readonly WaiverRecord[],
   signedBefore: number,
-): { recordId: string; at: Date } | null {
+): OverriddenRefusal | null {
   const refusals = records
     .filter((record) => isStandingRefusal(record) && signatureTime(record) < signedBefore)
     .sort((a, b) => (decidedAfter(a, b) ? -1 : decidedAfter(b, a) ? 1 : 0));
@@ -563,7 +597,13 @@ function unansweredRefusal(
         refused.every((prompt) => flaggedPromptsOf(record).includes(prompt)),
     );
     if (!answered && refusal.medicalClearanceDeclinedAt) {
-      return { recordId: refusal.id, at: refusal.medicalClearanceDeclinedAt };
+      return {
+        recordId: refusal.id,
+        at: refusal.medicalClearanceDeclinedAt,
+        evaluatedOn: isValidCalendarDate(refusal.medicalClearanceEvaluatedOn ?? "")
+          ? (refusal.medicalClearanceEvaluatedOn ?? null)
+          : null,
+      };
     }
   }
   return null;

@@ -613,6 +613,10 @@
     "noRecapBody": "There’s no recap for this booking.",
     "noShowHeading": "This booking is marked as a no-show",
     "noShowBody": "{shop} recorded that you didn’t make this departure, so there’s no day to look back on.",
+    "waitingHeading": "Your recap isn’t ready yet",
+    "waitingBody": "Check back on this link later.",
+    "heldHeading": "Your dive day is with the shop",
+    "heldBody": "{shop} is confirming who was on this booking. Ask them for anything from this trip.",
     "photoAdded": "Added to your recap. Thanks for sharing!",
     "photoMissing": "Pick a photo first, then add it.",
     "photoUnsupported": "Photo uploads aren’t set up for this shop yet, so tag them when you post.",
@@ -922,6 +926,8 @@
     "metaTitle": "Complete your waiver — DiveDay",
     "unavailableHeading": "This waiver link isn’t available",
     "unavailableBody": "Ask your dive shop for a fresh link.",
+    "heldHeading": "This release waits for the shop",
+    "heldBody": "The shop is checking who is on this booking. You can sign once they have.",
     "expiredHeading": "This waiver link has expired",
     "expiredBody": "Waiver links don’t stay open for long, and this one has run out. We can email you a fresh one.",
     "emailFreshLink": "Email me a fresh link",
@@ -4020,6 +4026,15 @@
       "body": "{shopName} runs {tripTitle} on {date} with at least {minimum, plural, one {# diver} other {# divers}}, and it had {booked, plural, one {# booking} other {# bookings}} by the time they said they’d decide, so it’s off. Your seat is released, and there’s nothing you need to do.",
       "moneyRefunded": "You’ve been refunded in full. The money is on its way back to the card you paid with, and can take a few days to land.",
       "moneyRefundOwed": "You’re owed a full refund, and {shopName} will be in touch to get it back to you.",
+      "findAnother": "See what else is running"
+    },
+    "bookingCancelled": {
+      "subject": "Booking canceled: {tripTitle}",
+      "bodyByDiver": "Your booking for {tripTitle} on {date} is canceled, and your seat is released.",
+      "bodyByShop": "{shopName} has canceled your booking for {tripTitle} on {date}, and your seat is released.",
+      "moneyRefunded": "{amount} is on its way back to the card you paid with, and can take a few days to land.",
+      "moneyForfeit": "It was canceled after {shopName}’s free-cancellation window closed, so under their policy nothing is refunded.",
+      "moneyFollowUp": "{shopName} will be in touch about what you paid.",
       "findAnother": "See what else is running"
     },
     "tripBlowout": {

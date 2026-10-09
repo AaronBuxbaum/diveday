@@ -15,6 +15,7 @@ import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests
 import { queueMediaDeletion, resolveMediaDeletion } from "./media-deletions";
 import { setBookingNitrox } from "./nitrox";
 import { recordNotificationDelivery } from "./notifications";
+import { recordStripeDispute } from "./payment-disputes";
 import { startPaymentOperation } from "./payment-operations";
 import { setBookingPayment } from "./payments";
 import { listTripReadiness } from "./readiness";
@@ -25,6 +26,7 @@ import {
   courses,
   inboundMessages,
   nitroxCertifications,
+  orders,
   people,
   personRoles as personRolesTable,
   rollCallCrewEvents as rollCallCrewEventsTable,
@@ -54,6 +56,9 @@ import {
 } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 import { addCustomerGearItem, createWorkOrder, setWorkOrderStatus } from "./work-orders";
+
+/** A setup reservation: a hand pick whose staffer already said "Assign anyway". */
+const SETUP_PICK = { proposed: false, assignAnyway: true } as const;
 
 const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
 
@@ -1591,6 +1596,63 @@ describe("role lens raw material", () => {
       expect(owedRow(withoutFlag)).toBeUndefined();
     });
 
+    it("shows an undecided card dispute with its amount and deadline, and clears it once decided", async () => {
+      // ADR 20261009-stripe-reversals-reach-diveday.
+      const { db, shop } = ctx;
+      const [customer] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
+      if (!customer) throw new Error("seeded person missing");
+      const [order] = await db
+        .insert(orders)
+        .values({
+          shopId: shop.id,
+          personId: customer.id,
+          createdByPersonId: customer.id,
+          status: "paid",
+          currency: "usd",
+          totalCents: 24_000,
+          amountPaidCents: 24_000,
+          stripeAccountId: "acct_today_dispute",
+          stripeCustomerId: "cus_today",
+          stripeInvoiceId: "in_today_dispute",
+          stripePaymentIntentId: "pi_today_dispute",
+        })
+        .returning();
+      if (!order) throw new Error("order insert failed");
+      const opened = nowDate();
+      const dispute = (eventType: string, status: string, occurredAt: Date) =>
+        recordStripeDispute(db, {
+          stripeAccountId: "acct_today_dispute",
+          eventType,
+          occurredAt,
+          dispute: {
+            id: "dp_today",
+            paymentIntentId: "pi_today_dispute",
+            amountCents: 24_000,
+            currency: "usd",
+            reason: "fraudulent",
+            status,
+            evidenceDueBy: new Date(Date.UTC(2031, 0, 15, 23, 59)),
+            createdAt: opened,
+          },
+        });
+      expect((await dispute("charge.dispute.created", "needs_response", opened)).status).toBe(
+        "recorded",
+      );
+      const t = staffTranslator("en-US");
+      const work = () =>
+        getTodayWork(db, shop.id, shop.slug, shop.timezone, undefined, undefined, t, "en-US", true);
+
+      const row = (await work()).actions.find((a) => a.kind === "payment_dispute");
+      expect(row?.subject).toBe(customer.fullName);
+      expect(row?.detail).toContain("$240.00");
+      expect(row?.detail).toContain("Jan");
+      expect(row?.urgency).toBe("now");
+      expect(row?.href).toBe(`/shop/${shop.slug}/orders/${order.id}`);
+
+      await dispute("charge.dispute.closed", "won", new Date(opened.getTime() + 60_000));
+      expect((await work()).actions.find((a) => a.kind === "payment_dispute")).toBeUndefined();
+    });
+
     it("is tenant-safe: another shop's queue never surfaces this shop's ops alerts", async () => {
       const { db, shop } = ctx;
       const intent = await startPaymentOperation(db, { shopId: shop.id, kind: "invoice" });
@@ -2597,6 +2659,165 @@ describe("unclosed roll call (DOM-H3)", () => {
         expect(rowsFor(work, fixture.trip.id).map((row) => row.kind)).toEqual(["blocked_aboard"]);
       });
 
+      /**
+       * **Boarded after the dock count** (issue #2142). A two-site day where a
+       * diver is picked up at the second site, or rides out on a chase boat:
+       * the crew's first word about them is `boarded` at `after_dive_1`, and
+       * their dock result is empty or `not_boarded`. They are aboard, on a
+       * medical hold, while the boat is out — the row this describe exists for.
+       */
+      describe("first counted aboard after the dock count", () => {
+        async function insertRollCall(input: {
+          tripId: string;
+          bookingId: string;
+          staffId: string;
+          status: "boarded" | "not_boarded" | "cleared";
+          checkpoint: string;
+          occurredAt?: Date;
+        }) {
+          await ctx.db.insert(rollCallEventsTable).values({
+            shopId: ctx.shop.id,
+            tripId: input.tripId,
+            bookingId: input.bookingId,
+            recordedByPersonId: input.staffId,
+            status: input.status,
+            checkpoint: input.checkpoint,
+            source: "live",
+            occurredAt: input.occurredAt ?? nowDate(),
+          });
+        }
+
+        async function twoSiteDay(dockResult: "none" | "not_boarded", endedHoursAgo = -2.5) {
+          const { db, shop } = ctx;
+          const fixture = await returnedTrip(db, shop.id, {
+            endedHoursAgo,
+            divers: 1,
+            plannedDives: 2,
+            title: "Blocked Aboard, second site — Molasses",
+          });
+          const [pickedUp] = fixture.bookingIds;
+          if (!pickedUp) throw new Error("fixture booking missing");
+          const base = { tripId: fixture.trip.id, bookingId: pickedUp, staffId: fixture.staffId };
+          if (dockResult === "not_boarded") {
+            await insertRollCall({
+              ...base,
+              status: "not_boarded",
+              checkpoint: "departure",
+              occurredAt: new Date(fixture.trip.startsAt.getTime() + 5 * 60 * 1000),
+            });
+          }
+          await insertRollCall({ ...base, status: "boarded", checkpoint: "after_dive_1" });
+          return { ...fixture, pickedUp };
+        }
+
+        it("keeps the Aboard row for a diver with no dock result", async () => {
+          const { db, shop } = ctx;
+          const { trip, pickedUp } = await twoSiteDay("none");
+          const readiness = await listTripReadiness(db, shop.id, trip.id);
+          expect(readiness.every((row) => row.readiness.status === "blocked")).toBe(true);
+
+          const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+          const rows = rowsFor(work, trip.id);
+          expect(rows.map((row) => row.kind)).toEqual(["blocked_aboard"]);
+          expect(rows[0]?.id).toContain(pickedUp);
+          expect(work.outTripIds).toContain(trip.id);
+          const badge = await countBlockedDiversNextBoatDay(db, shop.id, shop.timezone);
+          expect(work.blockedAboard).toBeGreaterThanOrEqual(1);
+          expect(badge.aboard).toBe(work.blockedAboard);
+        });
+
+        it("keeps the Aboard row for a diver marked not boarded at the dock", async () => {
+          const { db, shop } = ctx;
+          const { trip, pickedUp } = await twoSiteDay("not_boarded");
+
+          const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+          const rows = rowsFor(work, trip.id);
+          expect(rows.map((row) => row.kind)).toEqual(["blocked_aboard"]);
+          expect(rows[0]?.id).toContain(pickedUp);
+        });
+
+        it("keeps a cancelled departure out when its only boarding came after the dock", async () => {
+          const { db, shop } = ctx;
+          const { trip } = await twoSiteDay("none");
+          await db
+            .update(tripsTable)
+            .set({ status: "cancelled" })
+            .where(eq(tripsTable.id, trip.id));
+
+          const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+          expect(rowsFor(work, trip.id).map((row) => row.kind)).toEqual(["blocked_aboard"]);
+          expect(work.outTripIds).toContain(trip.id);
+        });
+
+        it("drops the row when the after-dive boarding is undone", async () => {
+          const { db, shop } = ctx;
+          const { trip, pickedUp, staffId } = await twoSiteDay("none");
+          await insertRollCall({
+            tripId: trip.id,
+            bookingId: pickedUp,
+            staffId,
+            status: "cleared",
+            checkpoint: "after_dive_1",
+            occurredAt: new Date(nowMs() + 1000),
+          });
+
+          const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+          expect(rowsFor(work, trip.id)).toEqual([]);
+        });
+
+        it("drops the row for a booking cancelled after it boarded", async () => {
+          const { db, shop } = ctx;
+          const { trip, pickedUp } = await twoSiteDay("none");
+          await db
+            .update(bookingsTable)
+            .set({ status: "cancelled" })
+            .where(eq(bookingsTable.id, pickedUp));
+
+          const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+          expect(rowsFor(work, trip.id)).toEqual([]);
+        });
+
+        it("never reads an after-dive not boarded as aboard", async () => {
+          // That word is the missing-diver row's, which already exists; the
+          // Aboard row stays about somebody the crew counted onto the boat.
+          const { db, shop } = ctx;
+          const fixture = await returnedTrip(db, shop.id, {
+            endedHoursAgo: -2.5,
+            divers: 1,
+            plannedDives: 2,
+            title: "Blocked, never aboard — Molasses",
+          });
+          const [diver] = fixture.bookingIds;
+          if (!diver) throw new Error("fixture booking missing");
+          await insertRollCall({
+            tripId: fixture.trip.id,
+            bookingId: diver,
+            staffId: fixture.staffId,
+            status: "not_boarded",
+            checkpoint: "after_dive_1",
+          });
+
+          const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+          expect(rowsFor(work, fixture.trip.id).map((row) => row.kind)).not.toContain(
+            "blocked_aboard",
+          );
+        });
+
+        it("marks the in-window row Aboard by the same rule", async () => {
+          // Sailed half an hour ago, so still a live station: the ordinary
+          // path draws the row, and it must agree with the boats-out path.
+          const { db, shop } = ctx;
+          const { trip, pickedUp } = await twoSiteDay("none", -3.5);
+
+          const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+          expect(work.departures.some((departure) => departure.tripId === trip.id)).toBe(true);
+          const kinds = rowsFor(work, trip.id)
+            .filter((row) => row.id.includes(pickedUp))
+            .map((row) => row.kind);
+          expect(kinds).toEqual(["blocked_aboard"]);
+        });
+      });
+
       it("keeps the Aboard row when the desk cancels the departure after it boarded", async () => {
         // The roll call outranks a later desk word, as for the fly-safe reader
         // (#1836): the boarding was recorded before the cancel and the diver is
@@ -2850,6 +3071,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         bookingId: booking.id,
         reservedFrom: shiftCalendarDate(today, -4),
         reservedUntil: shiftCalendarDate(today, -2),
+        screen: SETUP_PICK,
       });
       if (!reserved.ok) throw new Error("reserve refused");
 
@@ -2878,7 +3100,8 @@ describe("unclosed roll call (DOM-H3)", () => {
       const today = calendarDateInTimezone(nowDate(), shop.timezone);
       const booking = await anySeededBooking(db, shop.id);
       const reserve = async (label: string, until: string) => {
-        const item = await createGearItem(db, { shopId: shop.id, kind: "bcd", label });
+        // Tanks: a diver may hold several, where a second BCD is refused.
+        const item = await createGearItem(db, { shopId: shop.id, kind: "tank", label });
         if (!item.ok) throw new Error("item refused");
         const reserved = await reserveGearUnit(db, {
           shopId: shop.id,
@@ -2886,6 +3109,7 @@ describe("unclosed roll call (DOM-H3)", () => {
           bookingId: booking.id,
           reservedFrom: shiftCalendarDate(today, -6),
           reservedUntil: until,
+          screen: SETUP_PICK,
         });
         if (!reserved.ok) throw new Error("reserve refused");
       };
@@ -2919,6 +3143,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         bookingId: booking.id,
         reservedFrom: today,
         reservedUntil: today,
+        screen: SETUP_PICK,
       });
       if (!reserved.ok) throw new Error("reserve refused");
 

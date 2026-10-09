@@ -12,6 +12,7 @@ import {
   canPersonRetireMedicalRefusal,
 } from "@/db/authz";
 import { getBoatById } from "@/db/boats";
+import { sendBookingCancelledNotice } from "@/db/booking-cancelled-notice";
 import {
   bookingDiverName,
   cancelBooking,
@@ -40,6 +41,7 @@ import {
   upsertTripRequirements,
 } from "@/db/readiness";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
+import { applyPaidRentalKindsToFit } from "@/db/rental-fit";
 import type { PaymentStatus } from "@/db/schema";
 import { bookings, diveSpecialty, people } from "@/db/schema";
 import { getShopById } from "@/db/shops";
@@ -69,7 +71,11 @@ import {
   updateTripConditions,
 } from "@/db/trips";
 import { joinTripWaitlist, type WaitlistOutcome } from "@/db/waitlist";
-import { deliverWaiverBatch } from "@/db/waiver-issue";
+import {
+  deliverWaiverBatch,
+  type IdentityReleaseOutcome,
+  sendReleasesOnceIdentityKnown,
+} from "@/db/waiver-issue";
 import {
   recordInPersonWaiver,
   retireMedicalRefusal,
@@ -1048,7 +1054,8 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
-  await cancelBooking(dbi, s.user.shopId, bookingId);
+  const cancelled = await cancelBooking(dbi, s.user.shopId, bookingId);
+  const from = cancelled?.previousStatus ?? "cancelled";
   await trackEvent({ name: "booking_cancelled", source: "staff" });
   // Same activity line an add writes (addBookingAction), for the same reason:
   // the trip's log, read from the Trip surface, is the record of who touched
@@ -1072,6 +1079,13 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   // that isn't allowed to.
   if (!(await canPersonRefund(dbi, s.user.shopId, s.user.personId))) {
     const owed = await bookingRefundMayBeOwed(dbi, s.user.shopId, bookingId);
+    await sendBookingCancelledNotice(dbi, {
+      shopId: s.user.shopId,
+      bookingId,
+      cancelledBy: "shop",
+      from,
+      refund: { status: "not_attempted" },
+    });
     const notice = owed ? "booking-removed-refund-owner" : "booking-removed";
     revalidateAndRedirect(back, noticeUrl(back, notice, { bid: bookingId }));
   }
@@ -1086,6 +1100,13 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   if (refund.status !== "no_policy" && refund.status !== "unpaid") {
     await trackEvent({ name: "refund_issued", auto: true, status: refund.status });
   }
+  await sendBookingCancelledNotice(dbi, {
+    shopId: s.user.shopId,
+    bookingId,
+    cancelledBy: "shop",
+    from,
+    refund,
+  });
   revalidateAndRedirect(back, noticeUrl(back, refundNotice(refund), { bid: bookingId }));
 }
 
@@ -1278,14 +1299,26 @@ export async function confirmDiverIdentityAction(
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!uuidParam(bookingId)) redirect(back);
-  const confirmed = await confirmBookingIdentity(await getDb(), {
+  const db = await getDb();
+  const confirmed = await confirmBookingIdentity(db, {
     shopId: s.user.shopId,
     bookingId,
     actorPersonId: s.user.personId,
   });
+  if (!confirmed) revalidateAndRedirect(back, noticeUrl(back, "invalid", { bid: bookingId }));
+  // The gear this seat paid for at checkout waited on the booking while it was
+  // held (`paid_rental_kinds`); the staffer's tick carries it to the fit, which
+  // is a standing record, so it is theirs to decline.
+  if (formData.get("applyPaidGear") === "on") {
+    await applyPaidRentalKindsToFit(db, { shopId: s.user.shopId, bookingId });
+  }
+  // A held seat was sent no release (issue #2125); now that the desk knows
+  // who it is, it goes out the way a join's does, unless their signature
+  // already covers it, and the notice says where it got to.
+  const release = await sendReleasesOnceIdentityKnown(db, s.user.shopId, [bookingId]);
   revalidateAndRedirect(
     back,
-    noticeUrl(back, confirmed ? "identity-confirmed" : "invalid", { bid: bookingId }),
+    noticeUrl(back, IDENTITY_RELEASE_NOTICE.confirmed[release], { bid: bookingId }),
   );
 }
 
@@ -1316,7 +1349,8 @@ export async function splitDiverIdentityAction(
       }),
     );
   }
-  const split = await splitBookingIdentity(await getDb(), {
+  const db = await getDb();
+  const split = await splitBookingIdentity(db, {
     shopId: s.user.shopId,
     bookingId,
     actorPersonId: s.user.personId,
@@ -1331,13 +1365,44 @@ export async function splitDiverIdentityAction(
       .split(",")
       .filter((id) => uuidParam(id)),
   });
+  if (!split.ok) {
+    revalidateAndRedirect(
+      back,
+      noticeUrl(back, SPLIT_REFUSAL_NOTICE[split.reason], { bid: bookingId }),
+    );
+  }
+  // The new diver's fit is empty and the gear is what this seat paid for, so
+  // it goes straight on: otherwise it would leave the rack the moment the
+  // seat stopped being held.
+  await applyPaidRentalKindsToFit(db, { shopId: s.user.shopId, bookingId });
+  // Every seat that moved is its own diver's now, and was sent no release
+  // while it was held (issue #2125): each goes out the way a join's does.
+  const release = await sendReleasesOnceIdentityKnown(db, s.user.shopId, split.seatIds);
   revalidateAndRedirect(
     back,
-    noticeUrl(back, split.ok ? "identity-split" : SPLIT_REFUSAL_NOTICE[split.reason], {
-      bid: bookingId,
-    }),
+    noticeUrl(back, IDENTITY_RELEASE_NOTICE.split[release], { bid: bookingId }),
   );
 }
+
+/**
+ * Which notice confirm and split land on, by what sending the owed release
+ * came to (`sendReleasesOnceIdentityKnown`). A release that reached nobody
+ * reads as the row's to hand over, on this device or on paper.
+ */
+const IDENTITY_RELEASE_NOTICE = {
+  confirmed: {
+    not_needed: "identity-confirmed",
+    sent: "identity-confirmed-waiver-sent",
+    ready: "new-waiver-ready",
+    failed: "new-waiver-failed",
+  },
+  split: {
+    not_needed: "identity-split",
+    sent: "identity-split-waiver-sent",
+    ready: "new-waiver-ready",
+    failed: "new-waiver-failed",
+  },
+} as const satisfies Record<"confirmed" | "split", Record<IdentityReleaseOutcome, string>>;
 
 /** Which notice each refused split lands on (`splitBookingIdentity`). */
 const SPLIT_REFUSAL_NOTICE = {

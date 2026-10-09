@@ -613,6 +613,10 @@
     "noRecapBody": "Esta reserva no tiene resumen.",
     "noShowHeading": "Esta reserva figura como no presentado",
     "noShowBody": "{shop} registró que no llegaste a esta salida, así que no hay día que recordar.",
+    "waitingHeading": "Tu resumen aún no está listo",
+    "waitingBody": "Vuelve a abrir este enlace más tarde.",
+    "heldHeading": "Tu día de buceo lo tiene el centro",
+    "heldBody": "{shop} está verificando quién iba en esta reserva. Pídeles lo que necesites de esta salida.",
     "photoAdded": "Añadida a tu resumen. ¡Gracias por compartirla!",
     "photoMissing": "Elige primero una foto y luego añádela.",
     "photoUnsupported": "Este centro todavía no tiene activada la subida de fotos, así que etiquétalas cuando publiques.",
@@ -922,6 +926,8 @@
     "metaTitle": "Completa tu exención de responsabilidad — DiveDay",
     "unavailableHeading": "Este enlace de exención no está disponible",
     "unavailableBody": "Pide a tu centro un enlace nuevo.",
+    "heldHeading": "Esta exención espera al centro",
+    "heldBody": "El centro está verificando quién va en esta reserva. Podrás firmar cuando lo confirme.",
     "expiredHeading": "Este enlace de exención ha caducado",
     "expiredBody": "Los enlaces de exención no duran mucho y este ya no sirve. Podemos enviarte uno nuevo por correo.",
     "emailFreshLink": "Envíame un enlace nuevo",
@@ -4020,6 +4026,15 @@
       "body": "{shopName} realiza {tripTitle} el {date} con un mínimo de {minimum, plural, one {# buceador} other {# buceadores}}, y tenía {booked, plural, one {# reserva} other {# reservas}} cuando dijeron que lo decidirían, así que se cancela. Tu plaza queda liberada y no tienes que hacer nada.",
       "moneyRefunded": "Te hemos reembolsado el importe completo: el dinero va de vuelta a la tarjeta con la que pagaste y puede tardar unos días en llegar.",
       "moneyRefundOwed": "Te corresponde el reembolso completo, y {shopName} se pondrá en contacto contigo para devolvértelo.",
+      "findAnother": "Ver qué más hay programado"
+    },
+    "bookingCancelled": {
+      "subject": "Reserva cancelada: {tripTitle}",
+      "bodyByDiver": "Tu reserva para {tripTitle} el {date} está cancelada y tu plaza queda liberada.",
+      "bodyByShop": "{shopName} ha cancelado tu reserva para {tripTitle} el {date} y tu plaza queda liberada.",
+      "moneyRefunded": "{amount} va de vuelta a la tarjeta con la que pagaste y puede tardar unos días en llegar.",
+      "moneyForfeit": "Se canceló después de que cerrara el plazo de cancelación gratuita de {shopName}, así que según su política no se reembolsa nada.",
+      "moneyFollowUp": "{shopName} se pondrá en contacto contigo sobre lo que pagaste.",
       "findAnother": "Ver qué más hay programado"
     },
     "tripBlowout": {

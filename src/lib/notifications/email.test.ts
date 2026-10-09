@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  bookingCancelledEmail,
   bookingConfirmationEmail,
   courseInquiryEmail,
   demoStartedAlertEmail,
@@ -220,6 +221,70 @@ describe("tripMinimumNotMetEmail", () => {
     const email = tripMinimumNotMetEmail(swept);
     expect(email.text).toContain("at least 4 divers");
     expect(email.text).not.toContain("refund");
+  });
+});
+
+describe("bookingCancelledEmail", () => {
+  const canceled = {
+    ...base,
+    cancelledBy: "diver" as const,
+    scheduleUrl: "https://diveday.example/s/blue-mantis",
+  };
+
+  it("names the trip and the amount on its way back", () => {
+    const email = bookingCancelledEmail({
+      ...canceled,
+      money: { story: "refunded", amountCents: 12_500, currency: "usd" },
+    });
+    expect(email.subject).toBe("Booking canceled: Two-Tank Reef");
+    expect(email.text).toContain("Your booking for Two-Tank Reef");
+    expect(email.text).toContain("$125.00 is on its way back");
+    expect(email.html).toContain("<strong>Two-Tank Reef</strong>");
+    expect(email.html).toContain('href="https://diveday.example/s/blue-mantis"');
+  });
+
+  it("says the shop’s policy keeps the money past the window", () => {
+    const email = bookingCancelledEmail({ ...canceled, money: { story: "forfeit" } });
+    expect(email.text).toContain("Blue Mantis’s free-cancellation window closed");
+    expect(email.text).toContain("nothing is refunded");
+  });
+
+  it("says the shop will be in touch when the money is not settled here", () => {
+    const email = bookingCancelledEmail({
+      ...canceled,
+      cancelledBy: "shop",
+      money: { story: "shop_will_follow_up" },
+    });
+    expect(email.text).toContain("Blue Mantis has canceled your booking");
+    expect(email.text).toContain("Blue Mantis will be in touch about what you paid");
+  });
+
+  it("says nothing about money to a diver who never paid", () => {
+    const email = bookingCancelledEmail({ ...canceled, money: { story: "none" } });
+    expect(email.text).not.toMatch(/refund|paid/i);
+    expect(email.html).not.toMatch(/refund|paid/i);
+  });
+
+  it("escapes the shop's own words in the html body", () => {
+    const email = bookingCancelledEmail({
+      ...canceled,
+      tripTitle: "<b>Reef</b>",
+      shopName: "Fish & Co",
+      money: { story: "forfeit" },
+    });
+    expect(email.html).toContain("&lt;b&gt;Reef&lt;/b&gt;");
+    expect(email.html).toContain("Fish &amp; Co");
+  });
+
+  it("writes the amount in the diver's own locale", () => {
+    const email = bookingCancelledEmail({
+      ...canceled,
+      locale: "es-ES",
+      money: { story: "refunded", amountCents: 12_500, currency: "eur" },
+    });
+    expect(email.subject).toBe("Reserva cancelada: Two-Tank Reef");
+    expect(email.text).toContain("125,00");
+    expect(email.text).toContain("€");
   });
 });
 

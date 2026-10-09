@@ -13,7 +13,7 @@ import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_BOX, INSET_NOTE_CLASS } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
-import { controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
+import { ChoiceRow, controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel } from "@/components/ui/ledger";
 import { StatusMark, StatusMarkColumn } from "@/components/ui/StatusMark";
@@ -31,7 +31,7 @@ import {
   readinessStatusTone,
   SPECIALTY_KEYS,
 } from "@/i18n/readiness-labels";
-import { drysuitCardWarningText, rentalFitLineText } from "@/i18n/rental-labels";
+import { drysuitCardWarningText, rentalFitLineText, rentalItemLabel } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { ageOnDate, birthdayCallout, isMinorOnDate, maxPlausibleBirthDate } from "@/lib/age";
 import type { CalendarDate } from "@/lib/calendar-date";
@@ -50,6 +50,7 @@ import { flaggedMedicalPrompts } from "@/lib/medical";
 import { isDiver, PARTICIPANT_TYPES } from "@/lib/participant-types";
 import { paymentSourceLine } from "@/lib/payment-source";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
+import { type RentableItemKind, toRentableKinds } from "@/lib/rentals";
 import { shopPath } from "@/lib/staff-notices";
 import { waiverState } from "@/lib/waivers";
 import { CourseFormsRowControl } from "./CourseFormsRowControl";
@@ -698,6 +699,11 @@ export function RosterRow({
    * who may board, so it does not wait behind the row's mark.
    */
   const sameNameSeats = sameNameHeldSeats?.get(booking.id) ?? [];
+  const paidGear = identityUnconfirmed
+    ? toRentableKinds(booking.paidRentalKinds ?? []).filter(
+        (kind): kind is RentableItemKind => kind !== "nitrox",
+      )
+    : [];
   const identityCheck = identityUnconfirmed ? (
     <IdentityCheck
       bookingId={booking.id}
@@ -732,6 +738,18 @@ export function RosterRow({
       confirm={
         <form action={confirmIdentityAction}>
           <input type="hidden" name="bookingId" value={booking.id} />
+          {/* What this seat paid for at checkout waited on the booking while
+              it was held; "Same person" may carry it to the standing fit,
+              ticked, and the staffer may decline (dive-domain review). */}
+          {paidGear.length > 0 ? (
+            <ChoiceRow type="checkbox" name="applyPaidGear" defaultChecked className="pb-2">
+              {t("trips.roster.applyPaidGear", {
+                pieces: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(
+                  paidGear.map((kind) => rentalItemLabel(t, kind)),
+                ),
+              })}
+            </ChoiceRow>
+          ) : null}
           <InlineConfirm
             triggerLabel={t("shared.identityCheck.same")}
             ariaLabel={t("shared.identityCheck.sameAria", { name: person.fullName })}

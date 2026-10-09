@@ -98,6 +98,10 @@ export async function confirmProposedGearUnits(input: {
           tripId: parsed.data.tripId,
           reservedFrom: window.from,
           reservedUntil: window.until,
+          // Held under the booking's lock to the write: a second tablet's
+          // "Assign all" cannot give this diver a second unit of the kind
+          // (issue #2215). Its refusal is counted like any other.
+          screen: { proposed: true },
         });
         if (outcome.ok) assigned += 1;
         else refused += 1;

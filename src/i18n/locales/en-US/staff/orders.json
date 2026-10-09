@@ -78,6 +78,8 @@
     "tax": "Tax",
     "refundedSoFar": "Refunded",
     "stillHeld": "Still held",
+    "disputeOpen": "The cardholder’s bank is disputing {amount}. Send Stripe your evidence by {due}.",
+    "disputeOpenNoDeadline": "The cardholder’s bank is disputing {amount}. Answer it in Stripe.",
     "refundAmountLabel": "Refund ({currency})",
     "refunding": "Refunding…",
     "notice": {

@@ -489,6 +489,10 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "orders",
   "order_line_items",
   "tips",
+  // A card dispute on one of those orders or checkouts: one mutable row per
+  // dispute, kept current by Stripe, the shop's books like the order it is
+  // about (ADR 20261009-stripe-reversals-reach-diveday). Not a trail.
+  "payment_disputes",
   "dive_package_entitlements",
   "shop_promo_redemptions",
   // Credentials that live and die with the thing they open: revoked, spent, or

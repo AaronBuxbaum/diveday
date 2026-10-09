@@ -27,7 +27,7 @@ import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { OrderMeta } from "./_components/OrderMeta";
+import { OrderDisputeBanner, OrderMeta } from "./_components/OrderMeta";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -323,7 +323,7 @@ export default async function OrderDetailPage({
         // never sees the button that would have answered it.
         <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
       ) : null}
-
+      <OrderDisputeBanner shop={shop} orderId={id} session={session} locale={locale} />
       {/* `padding="lg"`: the receipt is a card someone works *inside* —
           Refresh, Void and Refund all live in it. No `title`; the page header
           above already names the order, and the status badge is the heading

@@ -1295,7 +1295,9 @@ new domain concept, define it here in the same PR.
 - **Held** — a roll-call *mark*, not a roll-call event: the dashed ring a diver's row wears when
   nobody has recorded anything about them **and readiness has not cleared them to board**. It exists
   only at the dock, because readiness gates boarding there and nowhere else — after a dive roll call
-  is a physical head count, and a blocked diver counts back aboard like anyone else. A held row
+  is a physical head count, and a blocked diver counts back aboard like anyone else. One who was
+  never counted aboard earlier is boarding at that count (they joined at a later site), so their
+  row shows the dock's readiness capsule and blockers — but keeps its tap. A held row
   carries no tap at all: the act that clears it is ashore, on the Trip tab, and offering a tap the
   server would refuse is a control that lies. It is not a state anything is stored as — the row is
   simply *awaiting* with a readiness blocker (see **Readiness**), drawn so a captain can tell at a
@@ -1422,8 +1424,9 @@ new domain concept, define it here in the same PR.
   that named nobody could not help anyone find a missing person
   ([ADR 20260804-crew-roll-call-is-per-person](../architecture/decisions/20260804-crew-roll-call-is-per-person.md)).
 
-  A departure-checkpoint result also changes what Today's departure card says about a **blocked**
-  diver, and the split is worth knowing: blocked-and-**aboard** is the more serious of the two — the
+  A `boarded` result at any checkpoint — the dock, or an after-dive count for a diver who joined
+  the boat at a later site (issue #2142) — also changes what Today's departure card says about a
+  **blocked** diver, and the split is worth knowing: blocked-and-**aboard** is the more serious of the two — the
   gate is behind them, not in front — and is an **Aboard** row at the top of Needs you (see
   **Aboard blocker kind**); blocked-and-**ashore** keeps the ordinary blocker row; a diver marked **not boarded** stays in the ashore group until an hour past
   the scheduled departure, because until the lines are off "not boarded" still reads as *isn't
@@ -1572,9 +1575,9 @@ new domain concept, define it here in the same PR.
   **keeps outranking every older signature** (`isStandingRefusal` in `src/lib/waivers.ts`), so the
   seat stays blocked as not cleared until the new release is signed. **A clean new release clears
   the diver without a second physician, and says so** (H-98, Aaron 2026-10-07): it boards them,
-  and the roster, the manifest and the diver record warn that a physician did not clear this
-  diver, with a link to the refused record on the roster and the diver record
-  (`overriddenRefusal`). Any staffer may record a paper waiver after a refusal (Aaron, 2026-10-07).
+  and the roster, the manifest (its offline dock copy too, by date only: issue #2163) and the
+  diver record warn that a physician did not clear this diver, with a link to the refused record
+  on the roster and the diver record (`overriddenRefusal`). Any staffer may record a paper waiver after a refusal (Aaron, 2026-10-07).
   The warning ends only when a physician has since cleared a release
   that flagged every question the refused one did, ordered by when each physician answered.
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
@@ -1729,7 +1732,17 @@ new domain concept, define it here in the same PR.
   cancel the booking and move its refund. **No recap for a diver left at the dock**: a booking whose
   standing departure roll call is `not_boarded` gets neither the email nor the page, unless an
   after-dive `boarded` shows they joined the boat at a later site (`bookingsLeftAtTheDock`,
-  `src/db/recap.ts`, issue #2105). A held seat gets none until staff **Confirm identity**. See
+  `src/db/recap.ts`, issue #2105). A held seat gets none until staff **Confirm identity**. **Held
+  while somebody is missing**: while any diver or rostered crew member on the departure has an
+  after-dive "not back aboard" standing — exactly while Today raises its missing-diver or
+  missing-crew row, read through the same function (`tripsWithSomebodyMissing`,
+  `src/db/today.ts`) — every recap on that departure waits: the email, a staff send (which says
+  "Recaps are held until the roll call is corrected"), `/recap`, and the after-dive `/ready`. The
+  page answers with the **waiting** state, which says only that the recap is not ready yet; the
+  four writers on it (photo, tip, review, pulse) refuse while it is closed (`recapClosedReason`).
+  And the word pauses the automatic send in the same transaction, so once it is corrected a
+  staffer releases the recap from the close-out rather than the cron deciding a near-miss was
+  nothing (issue #2123). See
   [20260723-post-trip-recap](../architecture/decisions/20260723-post-trip-recap.md) and
   [20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md).
 - **After-state** — the third and last state of the diver's thread, after *prep* and *the dive day*:
@@ -1741,7 +1754,10 @@ new domain concept, define it here in the same PR.
   shop recorded no roll call it waits four hours after the scheduled return — the floor the recap
   *send* already uses, because nothing else in the product knows whether this person dived
   (`isAfterTheDive`, `src/lib/thread-steps.ts`). A cancelled booking, a **blow-out**, and a no-show
-  are each answered by their own notice before it is ever asked.
+  are each answered by their own notice before it is ever asked. **Waiting**: while somebody on the
+  departure is "not back aboard" after a dive, the after-state is held for everyone aboard and the
+  page says only that the recap is not ready yet, on the same link (see **Post-trip recap**). A
+  held seat and a diver left at the dock are dead seats, answered before the wait.
 - **Dive record** — the card the after-state is built around, headed "Dive log entry", and the one
   thing on the page that prints: everything else is `print:hidden`, and on paper the card gains a
   ruled Notes block and a signature rule. **It states only what the shop wrote down** — the diver,
@@ -2414,6 +2430,9 @@ new domain concept, define it here in the same PR.
   owns (ADR
   [20260826-stripe-tax-is-opt-in-and-provider-owned](../architecture/decisions/20260826-stripe-tax-is-opt-in-and-provider-owned.md)),
   and from a **deposit**, which is the shop's money held early.
+- **Dashboard refund** — a refund somebody made outside DiveDay, usually in the shop's own Stripe dashboard. The `charge.refunded` webhook records it on the order or checkout it reverses, reconciled to Stripe's cumulative `amount_refunded`, so a refund DiveDay made itself is never counted twice. Its trail code is `stripe_dashboard_refund`. A party checkout's dashboard refund names no seat, so no seat's payment is changed; it waits on the stuck-operations queue for a human, and no automatic refund runs against that checkout's seats until then. ADR [20261009-stripe-reversals-reach-diveday](../architecture/decisions/20261009-stripe-reversals-reach-diveday.md).
+- **Card dispute** — a diver's bank taking a charge back, or asking about it first (an inquiry). One `payment_disputes` row per Stripe dispute against one of the shop's orders or checkouts, kept current by the `charge.dispute.*` webhooks. While it is undecided the owner sees a Today row with the amount and the day Stripe stops taking evidence. It informs and never moves money. Same ADR.
+- **Cancellation notice** — the email a diver gets when one booking is canceled, by themselves from their trip-prep link or by staff from the roster (`booking_cancelled`). It names the trip and says what happened to the money in one sentence: the amount Stripe reversed, that the shop's free-cancellation window had closed, or that the shop will be in touch. A diver who never paid reads nothing about money. Not sent for a blow-out or a minimum-head-count cancellation, which carry their own message, nor to a seat with no address, nor when staff remove a seat that was not `booked` (checked in, no-show) (`src/db/booking-cancelled-notice.ts`).
 - **Subscription (DiveDay billing)** — what a *shop* pays *DiveDay*: one monthly price, billed by Stripe Billing on DiveDay's own Stripe account, never through the shop's connected account (that is the shop's money from divers). One row per shop in `shop_subscriptions`, written by the billing webhook; Settings > Billing is the owner's alone. ADR [20261007-subscription-billing](../architecture/decisions/20261007-subscription-billing.md).
 - **Billing standing** — the one word a shop's subscription reads as: *trialing*, *free term*, *active*, *past due*, *canceled* or *trial ended*. Derived, never stored, by `billingStanding` in `src/lib/billing/standing.ts` from the trial window, the free term and Stripe's own status. *In good standing* means trialing, free term or active; nothing gates on it.
 - **Free term** — free months DiveDay grants a shop by hand (the founding offer), set with `pnpm billing:free-term <shop-slug> <last-free-day>`. The date is the last free day, inclusive, in the shop's zone. Adding a card during the trial or a free term charges nothing until the free time ends.
@@ -2518,7 +2537,13 @@ new domain concept, define it here in the same PR.
   the departure log show the seat's own state (its name as booked, readiness, payment, roll-call
   marks) and withhold the matched person's particulars (contact, emergency contact, age, sizes,
   nitrox, medical answers), saying only that other holds may apply (`withholdHeldSeatParticulars`,
-  `src/lib/held-seat.ts`; issue #1690). It ends one of two ways, both on the roster: **Confirm
+  `src/lib/held-seat.ts`; issue #1690). The Gear tab packs nothing of the matched diver's for it
+  either: its booked-as name, no sizes and no verified nitrox card until the desk confirms who it
+  is (`listTripPrepDivers`, issue #2144). Its bearer links name nobody: `/ready` greets the name
+  it was booked under and remembers nothing on the device, no release link is issued or signed
+  until the desk confirms or splits it (`issueWaiverRequest` and `completeWaiver` refuse
+  `identity_unconfirmed`), and confirming or splitting sends the release then (issue #2125). It
+  ends one of two ways, both on the roster: **Confirm
   identity** or **Split off a held seat**. Crew never settle it at the rail.
 - **Confirm identity** — the staff tap that clears `bookings.identity_unconfirmed_at`, and the
   most consequential one in the product: it says *this person is the diver this seat was attached

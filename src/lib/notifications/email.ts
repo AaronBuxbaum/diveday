@@ -9,6 +9,7 @@ import type { DemoRoleId } from "@/lib/demo-roles";
 import { type FlySafeResult, flySafeMessageKey } from "@/lib/fly-safe";
 import {
   formatDateTimeTz,
+  formatMoneyCents,
   formatShortDate,
   formatTime,
   formatTimeRangeTz,
@@ -383,6 +384,59 @@ export function tripMinimumNotMetEmail(input: TripMinimumNotMetEmailInput): Noti
         : null;
   return {
     subject: t("notifications.tripMinimumNotMet.subject", { tripTitle: input.tripTitle }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n${money ? `\n${money}\n` : ""}\n${findAnother}:\n${input.scheduleUrl}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${money ? `<p>${escapeHtml(money)}</p>` : ""}${emailButton(input.scheduleUrl, findAnother)}`,
+  };
+}
+
+export type BookingCancelledEmailInput = {
+  locale: DiverLocale;
+  diverName: string;
+  shopName: string;
+  tripTitle: string;
+  startsAt: Date;
+  timezone: string;
+  cancelledBy: "diver" | "shop";
+  money:
+    | { story: "none" | "forfeit" | "shop_will_follow_up" }
+    | { story: "refunded"; amountCents: number; currency: string };
+  scheduleUrl: string;
+};
+
+/**
+ * "Your booking is canceled", one seat at a time: the diver canceled it from
+ * their trip-prep link, or the shop took it off the roster. It names the trip
+ * and says what happened to the money in one sentence: the amount on its way
+ * back, that the shop's policy keeps it, or that the shop will be in touch.
+ * A diver who never paid reads nothing about money (design/principles.md #9).
+ */
+export function bookingCancelledEmail(input: BookingCancelledEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const date = formatShortDate(input.startsAt, input.locale, input.timezone);
+  const bodyKey =
+    input.cancelledBy === "diver"
+      ? "notifications.bookingCancelled.bodyByDiver"
+      : "notifications.bookingCancelled.bodyByShop";
+  const body = t(bodyKey, { shopName: input.shopName, tripTitle: input.tripTitle, date });
+  const bodyHtml = t(bodyKey, {
+    shopName: escapeHtml(input.shopName),
+    tripTitle: `<strong>${escapeHtml(input.tripTitle)}</strong>`,
+    date: escapeHtml(date),
+  });
+  const money =
+    input.money.story === "refunded"
+      ? t("notifications.bookingCancelled.moneyRefunded", {
+          amount: formatMoneyCents(input.money.amountCents, input.money.currency, input.locale),
+        })
+      : input.money.story === "forfeit"
+        ? t("notifications.bookingCancelled.moneyForfeit", { shopName: input.shopName })
+        : input.money.story === "shop_will_follow_up"
+          ? t("notifications.bookingCancelled.moneyFollowUp", { shopName: input.shopName })
+          : null;
+  const findAnother = t("notifications.bookingCancelled.findAnother");
+  return {
+    subject: t("notifications.bookingCancelled.subject", { tripTitle: input.tripTitle }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n${money ? `\n${money}\n` : ""}\n${findAnother}:\n${input.scheduleUrl}\n`,
     html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${money ? `<p>${escapeHtml(money)}</p>` : ""}${emailButton(input.scheduleUrl, findAnother)}`,
   };

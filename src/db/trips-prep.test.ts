@@ -17,6 +17,9 @@ import { upcomingTripsWithCounts } from "./trips";
 import { listStaff, setTripCrew } from "./trips-crew";
 import { getTripPrep, screenGearPicks } from "./trips-prep";
 
+/** A setup reservation: a hand pick whose staffer already said "Assign anyway". */
+const SETUP_PICK = { proposed: false, assignAnyway: true } as const;
+
 async function context() {
   const { db, shop } = fileCtx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
@@ -57,6 +60,7 @@ async function reserveOneUnit(ctx: Awaited<ReturnType<typeof context>>) {
     tripId: ctx.tripId,
     reservedFrom: window.from,
     reservedUntil: window.until,
+    screen: SETUP_PICK,
   });
   if (!reserved.ok) throw new Error(`reservation failed: ${reserved.reason}`);
   const after = await prepFor(ctx);
@@ -477,6 +481,7 @@ describe("getTripPrep", () => {
         tripId: ctx.tripId,
         reservedFrom: window.from,
         reservedUntil: window.until,
+        screen: SETUP_PICK,
       });
       if (!reserved.ok) throw new Error(`mask reservation failed: ${reserved.reason}`);
 
@@ -502,7 +507,7 @@ describe("screenGearPicks", () => {
     const ctx = await context();
     const pick = await aWantedPick(ctx);
     expect(await screenGearPicks(ctx.db, ctx.shop, ctx.tripId, [pick], { proposed: true })).toEqual(
-      { kept: [pick], refused: 0, needsCare: 0 },
+      { kept: [pick], refused: 0, needsCare: 0, held: 0, alreadyHeld: 0 },
     );
   });
 
@@ -511,7 +516,7 @@ describe("screenGearPicks", () => {
     const pick = await aWantedPick(ctx);
     await flagServiceConcern(ctx, pick.gearItemId, pick.bookingId);
     expect(await screenGearPicks(ctx.db, ctx.shop, ctx.tripId, [pick], { proposed: true })).toEqual(
-      { kept: [], refused: 1, needsCare: 1 },
+      { kept: [], refused: 1, needsCare: 1, held: 0, alreadyHeld: 0 },
     );
   });
 
@@ -520,7 +525,7 @@ describe("screenGearPicks", () => {
     const pick = await aWantedPick(ctx);
     await lapseServiceClock(ctx, pick.gearItemId);
     expect(await screenGearPicks(ctx.db, ctx.shop, ctx.tripId, [pick], { proposed: true })).toEqual(
-      { kept: [], refused: 1, needsCare: 1 },
+      { kept: [], refused: 1, needsCare: 1, held: 0, alreadyHeld: 0 },
     );
   });
 
@@ -531,6 +536,6 @@ describe("screenGearPicks", () => {
     await lapseServiceClock(ctx, pick.gearItemId);
     expect(
       await screenGearPicks(ctx.db, ctx.shop, ctx.tripId, [pick], { proposed: false }),
-    ).toEqual({ kept: [pick], refused: 0, needsCare: 0 });
+    ).toEqual({ kept: [pick], refused: 0, needsCare: 0, held: 0, alreadyHeld: 0 });
   });
 });

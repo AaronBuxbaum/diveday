@@ -81,6 +81,7 @@
     "stuckPaymentOperation": "Stripe",
     "failedPhotoDeletion": "Limpieza",
     "owedRefund": "Reembolso pendiente",
+    "paymentDispute": "Disputa de tarjeta",
     "reviewsPending": "Reseñas",
     "unansweredMessages": "Mensajes",
     "gearOverdue": "Equipo atrasado",
@@ -149,13 +150,13 @@
     "overflow": "{leading} y {rest, plural, one {# más} other {# más}}"
   },
   "detail": {
-    "missingDiver": "{uncounted, plural, one {# de {total} buceadores no ha vuelto} other {# de {total} buceadores no han vuelto}} a bordo tras la inmersión {dive}.",
-    "missingDiverStale": "{uncounted, plural, one {# de {total} buceadores sigue marcado} other {# de {total} buceadores siguen marcados}} como no vuelto a bordo tras la inmersión {dive}. Reconstrúyelo desde el manifiesto.",
+    "missingDiver": "{uncounted, plural, one {# de {total} buceadores no ha vuelto} other {# de {total} buceadores no han vuelto}} a bordo tras la inmersión {dive}. Los resúmenes quedan retenidos hasta que se corrija el pase de lista.",
+    "missingDiverStale": "{uncounted, plural, one {# de {total} buceadores sigue marcado} other {# de {total} buceadores siguen marcados}} como no vuelto a bordo tras la inmersión {dive}. Reconstrúyelo desde el manifiesto. Los resúmenes quedan retenidos hasta que se corrija el pase de lista.",
     "openRollCall": "El barco ha vuelto sin contar la inmersión {dive}: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado.",
     "openRollCallUnderway": "El barco está fuera y el recuento de la inmersión {dive} sigue abierto: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado.",
     "openRollCallStale": "El recuento de la inmersión {dive} nunca se cerró: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado. Reconstrúyelo desde el manifiesto.",
-    "missingCrew": "{uncounted, plural, one {# de {total} tripulantes no ha vuelto} other {# de {total} tripulantes no han vuelto}} a bordo tras la inmersión {dive}.",
-    "missingCrewStale": "{uncounted, plural, one {# de {total} tripulantes sigue marcado} other {# de {total} tripulantes siguen marcados}} como no vuelto a bordo tras la inmersión {dive}. Reconstrúyelo desde el manifiesto.",
+    "missingCrew": "{uncounted, plural, one {# de {total} tripulantes no ha vuelto} other {# de {total} tripulantes no han vuelto}} a bordo tras la inmersión {dive}. Los resúmenes quedan retenidos hasta que se corrija el pase de lista.",
+    "missingCrewStale": "{uncounted, plural, one {# de {total} tripulantes sigue marcado} other {# de {total} tripulantes siguen marcados}} como no vuelto a bordo tras la inmersión {dive}. Reconstrúyelo desde el manifiesto. Los resúmenes quedan retenidos hasta que se corrija el pase de lista.",
     "openCrewRollCall": "El barco ha vuelto sin contar la tripulación de la inmersión {dive}: {uncounted, plural, one {# de {total} tripulantes no tiene} other {# de {total} tripulantes no tienen}} resultado.",
     "openCrewRollCallUnderway": "El barco está fuera y el recuento de tripulación de la inmersión {dive} sigue abierto: {uncounted, plural, one {# de {total} tripulantes no tiene} other {# de {total} tripulantes no tienen}} resultado.",
     "openCrewRollCallStale": "El recuento de tripulación de la inmersión {dive} nunca se cerró: {uncounted, plural, one {# de {total} tripulantes no tiene} other {# de {total} tripulantes no tienen}} resultado. Reconstrúyelo desde el manifiesto.",
@@ -192,6 +193,7 @@
     "resendWaiverLink": "Reenviar enlace de exención",
     "resendConfirmation": "Reenviar confirmación",
     "openOrders": "Revisar en Pedidos",
+    "openOrder": "Abrir pedido",
     "openDataSettings": "Revisar en Ajustes",
     "openReviews": "Ver reseñas",
     "openInbox": "Ver mensajes",
@@ -236,7 +238,10 @@
     "owedRefundDetailNoAmount": "Pendiente de {tripTitle} del {when}. Devuelve lo que pagó y luego marca la plaza como reembolsada.",
     "owedRefundGroupSubject": "{count, plural, one {# reembolso pendiente} other {# reembolsos pendientes}}",
     "owedRefundGroupDetail": "{amount} de {tripTitle} del {when}: {names}. Devuélvelo y luego marca cada plaza como reembolsada.",
-    "owedRefundGroupDetailNoAmount": "{tripTitle} del {when}: {names}. Devuélvelo y luego marca cada plaza como reembolsada."
+    "owedRefundGroupDetailNoAmount": "{tripTitle} del {when}: {names}. Devuélvelo y luego marca cada plaza como reembolsada.",
+    "disputeSubject": "Disputa de tarjeta",
+    "disputeDetail": "{amount} en disputa. Envía tus pruebas a Stripe antes del {due}.",
+    "disputeDetailNoDeadline": "{amount} en disputa. Respóndela en Stripe."
   },
   "reviewsPending": {
     "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión"

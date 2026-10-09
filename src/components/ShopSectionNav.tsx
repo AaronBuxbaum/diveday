@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import { DiveDayIcon, StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { MENU_PANEL } from "@/components/ui/menu";
@@ -65,6 +65,27 @@ function rowAriaCurrent(
   return isStaffDestinationPage(pathname, root, item.destination) ? "page" : "true";
 }
 
+const subscribeNever = () => () => {};
+
+/**
+ * **A key that changes once, the moment hydration is over** (issue #2273).
+ *
+ * Both navs stream in under their own `<Suspense>`, so a staffer quick off the
+ * mark can click a link before they hydrate. They then hydrate against the
+ * address the click moved to, over HTML the server wrote for the one it left,
+ * and React does not patch an attribute or a class that differs at hydration:
+ * the old row stayed lit and `aria-current` kept naming the page left behind.
+ * Keyed on this, each nav is drawn afresh right after hydrating, from the
+ * address as it is.
+ */
+function useHydratedKey(): string {
+  return useSyncExternalStore(
+    subscribeNever,
+    () => "client",
+    () => "server",
+  );
+}
+
 function BlockedBadge({ count, label }: { count: number; label: string }) {
   return (
     <Badge
@@ -92,6 +113,7 @@ const sidebarRowClass = `flex min-h-11 items-center gap-3 ${SEGMENT_CORNER} px-3
  * nothing, so the shop's map never leaves the screen.
  */
 export function ShopSidebar({ root, gates, items, blocked, copy }: NavProps) {
+  const hydratedKey = useHydratedKey();
   const pathname = usePathname() ?? "";
   const current = currentStaffSection(pathname, root, gates);
   const main = items.filter((item) => item.section !== "settings");
@@ -120,6 +142,7 @@ export function ShopSidebar({ root, gates, items, blocked, copy }: NavProps) {
   };
   return (
     <nav
+      key={hydratedKey}
       aria-label={copy.navAriaLabel}
       className="flex h-full flex-col justify-between gap-4 px-3 py-4"
     >
@@ -141,6 +164,7 @@ const tabClass =
  * roll call owns the whole phone.
  */
 export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
+  const hydratedKey = useHydratedKey();
   const pathname = usePathname() ?? "";
   const current = currentStaffSection(pathname, root, gates);
   const tabs = items.filter((item) =>
@@ -152,6 +176,7 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
   const moreActive = rest.some((item) => item.section === current);
   return (
     <nav
+      key={hydratedKey}
       aria-label={copy.navAriaLabel}
       data-staff-tabbar=""
       data-staff-chrome="true"

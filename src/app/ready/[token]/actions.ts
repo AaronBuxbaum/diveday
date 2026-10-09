@@ -2,6 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import {
+  type CancellationRefundSeen,
+  sendBookingCancelledNotice,
+} from "@/db/booking-cancelled-notice";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import {
   confirmCarriedFacts,
@@ -468,6 +472,10 @@ export async function saveEmergencyContactFromReady(token: string, formData: For
 export async function payFromReady(token: string) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  // The page draws no pay step on a held seat, and this refuses the hand-made
+  // post: the address on the record may be the matched person's, not the
+  // booker's, and Stripe would be handed it as the customer (issue #2125).
+  refuseWhileHeld(token, ctx.data);
   const origin = publicAppUrl();
   if (!ctx.data.canPay || !origin || !ctx.data.person.email) {
     redirect(`${base(token)}?error=pay`);
@@ -536,8 +544,9 @@ export async function cancelMyBookingAction(token: string) {
   // only shows the unavailable notice. Staff can still see and fix a missed
   // refund from the booking's payment record; the diver just needs the
   // confirmation either way.
+  let refund: CancellationRefundSeen = { status: "not_attempted" };
   try {
-    const refund = await refundBookingOnCancellation(ctx.db, {
+    refund = await refundBookingOnCancellation(ctx.db, {
       shopId: ctx.data.shop.id,
       bookingId: ctx.bookingId,
     });
@@ -550,6 +559,16 @@ export async function cancelMyBookingAction(token: string) {
       errorCode: error instanceof Error ? error.name : "unknown_error",
     });
   }
+  // The written record of what just happened, with the money in it: the page
+  // below says it once, and this is what the diver still has tomorrow.
+  await sendBookingCancelledNotice(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    cancelledBy: "diver",
+    // `selfCancelBooking` only ever cancels a booked seat.
+    from: "booked",
+    refund,
+  });
   redirect(`${base(token)}?cancelled=1`);
 }
 

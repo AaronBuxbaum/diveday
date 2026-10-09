@@ -704,6 +704,13 @@ export async function openCounterFor(page: Page, shopSlug: string, diverName: st
     .first()
     .click();
   await page.waitForURL(new RegExp(`/shop/${shopSlug}/trips/[0-9a-f-]{36}(\\?[^#]*)?(#.*)?$`));
+  // The nav follows the page: a departure lights Schedule, which claims it
+  // (issue #2252). A sidebar left on Today is a stale router, not a slow one.
+  await page
+    .locator("a[aria-current]")
+    .filter({ hasText: "Schedule", visible: true })
+    .first()
+    .waitFor();
   const tripId = new URL(page.url()).pathname.match(/\/trips\/([0-9a-f-]{36})$/)?.[1];
   if (!tripId) throw new Error(`no trip id in ${page.url()} after opening ${diverName}'s counter`);
   return tripId;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import type { AssignGearUnitResult } from "../actions";
 
@@ -30,6 +31,10 @@ export interface RentalUnitPickerCopy {
   refusals: Record<string, string>;
   /** The fallback, for a reason this build has no sentence for. */
   refusalFallback: string;
+  /** Said when a hand-picked life-support unit needs care (`needs_care_confirm`). */
+  needsCareConfirm: string;
+  /** The one control that assigns that unit all the same. */
+  assignAnyway: string;
 }
 
 /**
@@ -73,20 +78,28 @@ export function RentalUnitPicker({
     tripId: string;
     bookingId: string;
     gearItemId: string;
+    assignAnyway?: boolean;
   }) => Promise<AssignGearUnitResult>;
   copy: RentalUnitPickerCopy;
 }) {
   const [value, setValue] = useState(defaultValue);
   const [refusal, setRefusal] = useState<string | null>(null);
+  // The life-support unit waiting on "Assign anyway", if one is.
+  const [confirming, setConfirming] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const previous = useRef(defaultValue);
 
-  function pick(next: string) {
+  function pick(next: string, assignAnyway = false) {
     if (!next || next === previous.current) return;
     setValue(next);
     setRefusal(null);
+    setConfirming(null);
     startTransition(async () => {
-      const result = await assign({ tripId, bookingId, gearItemId: next });
+      const result = await assign(
+        assignAnyway
+          ? { tripId, bookingId, gearItemId: next, assignAnyway }
+          : { tripId, bookingId, gearItemId: next },
+      );
       if (result.ok) {
         previous.current = next;
         return;
@@ -94,6 +107,14 @@ export function RentalUnitPicker({
       // Back to what it held, so the row never claims a reservation the
       // database refused.
       setValue(previous.current);
+      // A hand-picked BCD, regulator or computer that needs care is asked
+      // about rather than refused: the dock decides, in so many words
+      // (dive-domain review of issue #2215).
+      if (result.reason === "needs_care_confirm") {
+        setRefusal(copy.needsCareConfirm);
+        setConfirming(next);
+        return;
+      }
       setRefusal(copy.refusals[result.reason] ?? copy.refusalFallback);
     });
   }
@@ -148,6 +169,15 @@ export function RentalUnitPicker({
         >
           {refusal}
         </p>
+      ) : null}
+      {confirming && !isPending ? (
+        <button
+          type="button"
+          onClick={() => pick(confirming, true)}
+          className={buttonClass({ variant: "secondary", size: "sm", className: "mt-2" })}
+        >
+          {copy.assignAnyway}
+        </button>
       ) : null}
     </>
   );
