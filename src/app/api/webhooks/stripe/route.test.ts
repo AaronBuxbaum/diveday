@@ -646,11 +646,17 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       vi.mocked(recordStripeChargeRefund).mockResolvedValue({ status: "checkout_refunded" });
       const response = await post(refundEvent({ payment_intent: "pi_1" }));
       expect(response.status).toBe(200);
-      expect(recordStripeChargeRefund).toHaveBeenCalledWith(FAKE_DB, {
-        stripeAccountId: "acct_1",
-        paymentIntentId: "pi_1",
-        amountRefundedCents: 6_000,
-      });
+      expect(recordStripeChargeRefund).toHaveBeenCalledWith(
+        FAKE_DB,
+        {
+          stripeAccountId: "acct_1",
+          paymentIntentId: "pi_1",
+          amountRefundedCents: 6_000,
+          chargeId: "ch_1",
+          occurredAt: expect.any(Date),
+        },
+        expect.anything(),
+      );
     });
 
     it("charge.refunded reads an expanded PaymentIntent as its id", async () => {
@@ -659,6 +665,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       expect(recordStripeChargeRefund).toHaveBeenCalledWith(
         FAKE_DB,
         expect.objectContaining({ paymentIntentId: "pi_2" }),
+        expect.anything(),
       );
     });
 
@@ -703,21 +710,25 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
         },
       });
       expect(response.status).toBe(200);
-      expect(recordStripeDispute).toHaveBeenCalledWith(FAKE_DB, {
-        stripeAccountId: "acct_1",
-        eventType: "charge.dispute.created",
-        occurredAt: new Date((created + 60) * 1000),
-        dispute: {
-          id: "dp_1",
-          paymentIntentId: "pi_1",
-          amountCents: 18_000,
-          currency: "usd",
-          reason: "fraudulent",
-          status: "needs_response",
-          evidenceDueBy: new Date((created + 86_400) * 1000),
-          createdAt: new Date(created * 1000),
+      expect(recordStripeDispute).toHaveBeenCalledWith(
+        FAKE_DB,
+        {
+          stripeAccountId: "acct_1",
+          eventType: "charge.dispute.created",
+          occurredAt: new Date((created + 60) * 1000),
+          dispute: {
+            id: "dp_1",
+            paymentIntentId: "pi_1",
+            amountCents: 18_000,
+            currency: "usd",
+            reason: "fraudulent",
+            status: "needs_response",
+            evidenceDueBy: new Date((created + 86_400) * 1000),
+            createdAt: new Date(created * 1000),
+          },
         },
-      });
+        expect.anything(),
+      );
     });
 
     it("records the PaymentIntent a settling session and a paid invoice name", async () => {

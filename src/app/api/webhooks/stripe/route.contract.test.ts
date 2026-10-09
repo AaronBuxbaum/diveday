@@ -264,30 +264,40 @@ describe("money reversed outside DiveDay (ADR 20261009-stripe-reversals-reach-di
   it("charge.refunded takes the cumulative amount_refunded and the PaymentIntent off a real Charge", async () => {
     const response = await deliver("charge.refunded");
     expect(response.status).toBe(200);
-    expect(recordStripeChargeRefund).toHaveBeenCalledWith(FAKE_DB, {
-      stripeAccountId: ACCOUNT,
-      paymentIntentId: "pi_3QsAVgLkdIwHu7ix1YtNqW9K",
-      amountRefundedCents: 12_000,
-    });
+    expect(recordStripeChargeRefund).toHaveBeenCalledWith(
+      FAKE_DB,
+      {
+        stripeAccountId: ACCOUNT,
+        paymentIntentId: "pi_3QsAVgLkdIwHu7ix1YtNqW9K",
+        amountRefundedCents: 12_000,
+        chargeId: "ch_3QsAVgLkdIwHu7ix1ZpMrX8L",
+        occurredAt: new Date(1784645400 * 1000),
+      },
+      expect.anything(),
+    );
   });
 
   it("charge.dispute.created reads the amount, reason, status and evidence deadline off a real Dispute", async () => {
     await deliver("charge.dispute.created");
-    expect(recordStripeDispute).toHaveBeenCalledWith(FAKE_DB, {
-      stripeAccountId: ACCOUNT,
-      eventType: "charge.dispute.created",
-      occurredAt: new Date(1784900000 * 1000),
-      dispute: {
-        id: "du_1QsAVkLkdIwHu7ixDisputeA",
-        paymentIntentId: "pi_3QsAVgLkdIwHu7ix1YtNqW9K",
-        amountCents: 24_000,
-        currency: "usd",
-        reason: "fraudulent",
-        status: "needs_response",
-        evidenceDueBy: new Date(1785729599 * 1000),
-        createdAt: new Date(1784900000 * 1000),
+    expect(recordStripeDispute).toHaveBeenCalledWith(
+      FAKE_DB,
+      {
+        stripeAccountId: ACCOUNT,
+        eventType: "charge.dispute.created",
+        occurredAt: new Date(1784900000 * 1000),
+        dispute: {
+          id: "du_1QsAVkLkdIwHu7ixDisputeA",
+          paymentIntentId: "pi_3QsAVgLkdIwHu7ix1YtNqW9K",
+          amountCents: 24_000,
+          currency: "usd",
+          reason: "fraudulent",
+          status: "needs_response",
+          evidenceDueBy: new Date(1785729599 * 1000),
+          createdAt: new Date(1784900000 * 1000),
+        },
       },
-    });
+      expect.anything(),
+    );
   });
 
   it("charge.dispute.closed carries Stripe's decision and a null deadline", async () => {
@@ -298,6 +308,7 @@ describe("money reversed outside DiveDay (ADR 20261009-stripe-reversals-reach-di
         eventType: "charge.dispute.closed",
         dispute: expect.objectContaining({ status: "won", evidenceDueBy: null }),
       }),
+      expect.anything(),
     );
   });
 });

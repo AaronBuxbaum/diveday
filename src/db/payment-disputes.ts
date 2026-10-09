@@ -109,6 +109,9 @@ export async function recordStripeDispute(
         reason: row.reason,
         status: row.status,
         evidenceDueBy: row.evidenceDueBy,
+        // Cleared only by a strictly newer event (the guard below refuses an
+        // equal-time update to a closed row), so a close is never undone by
+        // an `updated` Stripe stamped in the same second.
         closedAt: closed ? sql`coalesce(${paymentDisputes.closedAt}, ${row.closedAt})` : sql`null`,
         lastEventAt: row.lastEventAt,
         updatedAt: row.updatedAt,
@@ -116,8 +119,14 @@ export async function recordStripeDispute(
       // Never let an older event overwrite a newer one, and never let a row
       // move to another shop's account: the dispute id is Stripe's, but the
       // account is the event's own statement of whose it is.
+      //
+      // Same-second events are ambiguous — Stripe's `created` has one-second
+      // resolution — so an equal time may only *close* a dispute or touch one
+      // still open; it never reopens one already decided.
       setWhere: and(
-        sql`${paymentDisputes.lastEventAt} <= ${row.lastEventAt}`,
+        closed
+          ? sql`${paymentDisputes.lastEventAt} <= ${row.lastEventAt}`
+          : sql`(${paymentDisputes.lastEventAt} < ${row.lastEventAt} or (${paymentDisputes.lastEventAt} = ${row.lastEventAt} and ${paymentDisputes.closedAt} is null))`,
         eq(paymentDisputes.stripeAccountId, row.stripeAccountId),
       ),
     })

@@ -54,6 +54,40 @@ describe("stripePaymentSourceLookup", () => {
     expect(await thrown.findSource("acct_1", "pi_1")).toEqual({ status: "failed" });
   });
 
+  it("answers none for a permanent Stripe refusal, and retries only what may pass next time", async () => {
+    for (const status of [400, 401, 403, 404]) {
+      const refused = stripePaymentSourceLookup({ secretKey: "sk_test" }, (async () =>
+        jsonResponse({ error: {} }, status)) as never);
+      expect(await refused.findSource("acct_1", "pi_1")).toEqual({ status: "none" });
+    }
+    for (const status of [429, 500, 503]) {
+      const busy = stripePaymentSourceLookup({ secretKey: "sk_test" }, (async () =>
+        jsonResponse({ error: {} }, status)) as never);
+      expect(await busy.findSource("acct_1", "pi_1")).toEqual({ status: "failed" });
+    }
+  });
+
+  it("never asks Stripe about an event from the other mode than its key", async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ data: [] }));
+    const live = { STRIPE_SECRET_KEY: "sk_live_x" };
+    expect(
+      await paymentSourceLookupFromEnvironment(live, fetchImpl as never, {
+        livemode: false,
+      }).findSource("acct_1", "pi_1"),
+    ).toEqual({ status: "not_configured" });
+    const test = { STRIPE_SECRET_KEY: "rk_test_x" };
+    expect(
+      await paymentSourceLookupFromEnvironment(test, fetchImpl as never, {
+        livemode: true,
+      }).findSource("acct_1", "pi_1"),
+    ).toEqual({ status: "not_configured" });
+    expect(fetchImpl).not.toHaveBeenCalled();
+    await paymentSourceLookupFromEnvironment(live, fetchImpl as never, {
+      livemode: true,
+    }).findSource("acct_1", "pi_1");
+    expect(fetchImpl).toHaveBeenCalled();
+  });
+
   it("is not_configured without a platform key", async () => {
     expect(await paymentSourceLookupFromEnvironment({}).findSource("acct_1", "pi_1")).toEqual({
       status: "not_configured",

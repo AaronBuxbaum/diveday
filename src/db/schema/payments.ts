@@ -938,15 +938,6 @@ export const bookingCheckoutBookings = pgTable(
 );
 
 /**
- * A post-trip tip, a hosted Stripe Checkout the diver's own recap page
- * offers. Deliberately its own small table rather than reusing
- * `booking_checkouts`: a tip is always exactly one booking (never a party),
- * settles no booking-payment gate, and its webhook handling must never be
- * able to cascade into `markCheckoutPaidBySessionId`'s booking-paid logic —
- * same shape (status/session/checkout URL lifecycle), separate concern
- * (docs ADR 20260726-post-trip-tipping).
- */
-/**
  * A card dispute (a chargeback, or an inquiry before one) a diver's bank opened
  * against a charge DiveDay took — one row per Stripe dispute, kept current by
  * the `charge.dispute.*` webhooks (ADR 20261009-stripe-reversals-reach-diveday).
@@ -1008,6 +999,15 @@ export const paymentDisputes = pgTable(
 
 export const tipStatus = pgEnum("tip_status", ["pending", "paid", "expired"]);
 
+/**
+ * A post-trip tip, a hosted Stripe Checkout the diver's own recap page
+ * offers. Deliberately its own small table rather than reusing
+ * `booking_checkouts`: a tip is always exactly one booking (never a party),
+ * settles no booking-payment gate, and its webhook handling must never be
+ * able to cascade into `markCheckoutPaidBySessionId`'s booking-paid logic —
+ * same shape (status/session/checkout URL lifecycle), separate concern
+ * (docs ADR 20260726-post-trip-tipping).
+ */
 export const tips = pgTable(
   "tips",
   {
@@ -1032,6 +1032,13 @@ export const tips = pgTable(
      * (`security-reviewer`, 2026-09-12).
      */
     stripeCustomerId: text("stripe_customer_id"),
+    /**
+     * The PaymentIntent the tip was paid with, written once when the session
+     * completes. Only so a refund or a dispute of a tip is recognised as one
+     * and Stripe is not asked about it (ADR 20261009-stripe-reversals-reach-diveday);
+     * nothing records a tip's reversal yet.
+     */
+    stripePaymentIntentId: text("stripe_payment_intent_id"),
     checkoutUrl: text("checkout_url"),
     currency: text("currency").notNull(),
     amountCents: integer("amount_cents").notNull(),
@@ -1042,6 +1049,7 @@ export const tips = pgTable(
   (table) => [
     uniqueIndex("tips_stripe_session_unique").on(table.stripeSessionId),
     index("tips_shop_booking_idx").on(table.shopId, table.bookingId),
+    index("tips_stripe_payment_intent_idx").on(table.stripePaymentIntentId),
     check("tips_amount_positive", sql`${table.amountCents} > 0`),
   ],
 );

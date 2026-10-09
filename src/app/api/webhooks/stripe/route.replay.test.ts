@@ -44,7 +44,13 @@ const { getBookingPayment, listBookingPaymentEvents, setBookingPayment } = await
 const { bookingCheckouts, integrationEvents, orders, paymentDisputes, tips } = await import(
   "@/db/schema"
 );
-const { startPaymentOperation, resolvePaymentOperation } = await import("@/db/payment-operations");
+const {
+  listStuckPaymentOperations,
+  recordPaymentOperationStripeObject,
+  resolvePaymentOperation,
+  startPaymentOperation,
+} = await import("@/db/payment-operations");
+const { paymentOperationIntents } = await import("@/db/schema");
 const { refundBookingOnShopCancellation } = await import("@/db/refunds");
 const { listOpenPaymentDisputes } = await import("@/db/payment-disputes");
 const { getShopStripeAccount, setShopStripeAccountStatus, upsertShopStripeAccount } = await import(
@@ -1015,6 +1021,129 @@ describe("charge.refunded hostile sequences (real handlers, real db)", () => {
       .where(eq(bookingCheckouts.stripeSessionId, sessionId));
     expect(checkout?.refundedCents).toBe(5_000);
   });
+
+  /** Every `started` refund intent this shop holds, however fresh. */
+  async function stuckRefunds(db: Db, shopId: string) {
+    // Any age: `started_at` is the database clock, which the frozen test clock is not.
+    const stuck = await listStuckPaymentOperations(db, shopId, new Date("2100-01-01T00:00:00Z"));
+    return stuck
+      .map((op) => op.intent)
+      .filter((intent) => intent.kind === "refund")
+      .map((intent) => ({
+        orderId: intent.orderId,
+        checkoutId: intent.checkoutId,
+        bookingId: intent.bookingId,
+        stripeObjectId: intent.stripeObjectId,
+      }));
+  }
+
+  async function partyScenario() {
+    const { db, shop } = await connectedShop();
+    const reef = await pricedReef(db, shop.id);
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: reef.id,
+        fullName: "Party A",
+        email: "pa@example.com",
+      },
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: reef.id,
+        fullName: "Party B",
+        email: "pb@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+    const bookingIds = party.bookings.map((b) => b.bookingId);
+    const start = await startBookingCheckout(
+      db,
+      {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingIds,
+        customerEmail: "pa@example.com",
+        successUrl: "https://diveday.example/return",
+        cancelUrl: "https://diveday.example/cancel",
+        describeLine: ({ tripTitle }) => tripTitle,
+      },
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+    return { db, shop, bookingIds, checkout: start.checkout };
+  }
+
+  it("a party checkout's unattributed dashboard refund goes to the stuck queue, and no seat is refunded on top of it", async () => {
+    const { db, shop, bookingIds, checkout } = await partyScenario();
+    await deliver(completedWithIntent("evt_pu1", checkout.stripeSessionId, "pi_pu"));
+    expect((await deliver(chargeRefunded("evt_pu2", "pi_pu", 5_000))).status).toBe(200);
+
+    // A human matches it to a seat, from the queue every stuck Stripe call uses.
+    expect(await stuckRefunds(db, shop.id)).toEqual([
+      { orderId: null, checkoutId: checkout.id, bookingId: null, stripeObjectId: "ch_for_pi_pu" },
+    ]);
+    // A replay is the same refund, not a second one.
+    await deliver(chargeRefunded("evt_pu2", "pi_pu", 5_000));
+    await deliver(chargeRefunded("evt_pu3", "pi_pu", 5_000));
+    expect(await stuckRefunds(db, shop.id)).toHaveLength(1);
+
+    // Until then, DiveDay never reverses a seat of that charge itself: the
+    // 5,000 may already be this seat's money.
+    let asked = 0;
+    const outcome = await refundBookingOnShopCancellation(
+      db,
+      { shopId: shop.id, bookingId: bookingIds[0] as string },
+      fakeCheckout({
+        async refundCheckoutSession() {
+          asked += 1;
+          return { status: "refunded" as const, refundId: "re_again" };
+        },
+      }),
+    );
+    expect(outcome).toEqual({ status: "needs_reconciliation" });
+    expect(asked).toBe(0);
+  });
+
+  it("DiveDay's own refund that died after Stripe confirmed it is never counted again, however old", async () => {
+    const { db, shop, bookingId, sessionId } = await checkoutScenario();
+    await deliver(completedWithIntent("evt_od1", sessionId, "pi_dead"));
+    const before = await checkoutTerminal(db, shop.id, sessionId, bookingId);
+    const intent = await startPaymentOperation(db, { shopId: shop.id, kind: "refund", bookingId });
+    await recordPaymentOperationStripeObject(db, intent.id, "re_dead");
+    // Well past the five-minute horizon: the process that held it is gone.
+    await db
+      .update(paymentOperationIntents)
+      .set({ startedAt: new Date(nowMs() - 60 * 60 * 1000) })
+      .where(eq(paymentOperationIntents.id, intent.id));
+
+    expect((await deliver(chargeRefunded("evt_od2", "pi_dead", 4_000))).status).toBe(503);
+    expect(await checkoutTerminal(db, shop.id, sessionId, bookingId)).toEqual(before);
+  });
+
+  it("a reversal still waiting after two days goes to the stuck queue instead of waiting forever", async () => {
+    const { db, shop, bookingId, order } = await orderScenario();
+    await db
+      .update(orders)
+      .set({ stripePaymentIntentId: "pi_never" })
+      .where(eq(orders.id, order.id));
+    const before = await orderMoney(db, shop.id, order.id, bookingId);
+
+    // Fresh: Stripe retries.
+    expect((await deliver(chargeRefunded("evt_pk1", "pi_never", 2_000))).status).toBe(503);
+    expect(await stuckRefunds(db, shop.id)).toEqual([]);
+
+    // Two days on and still unsettled here: a human looks instead.
+    const old = chargeRefunded("evt_pk2", "pi_never", 2_000, 49 * 3_600);
+    expect((await deliver(old)).status).toBe(200);
+    expect(await stuckRefunds(db, shop.id)).toEqual([
+      { orderId: order.id, checkoutId: null, bookingId: null, stripeObjectId: "ch_for_pi_never" },
+    ]);
+    expect((await deliver(old)).status).toBe(200);
+    expect(await stuckRefunds(db, shop.id)).toHaveLength(1);
+    expect(await orderMoney(db, shop.id, order.id, bookingId)).toEqual(before);
+  });
 });
 
 describe("charge.dispute.* hostile sequences (real handlers, real db)", () => {
@@ -1087,6 +1216,26 @@ describe("charge.dispute.* hostile sequences (real handlers, real db)", () => {
       .where(eq(paymentDisputes.stripeDisputeId, "dp_1"));
     expect(row?.status).toBe("won");
     expect(row?.closedAt).not.toBeNull();
+  });
+
+  it("an update stamped the same second as the close never reopens it", async () => {
+    const { db, shop, sessionId } = await checkoutScenario();
+    const completed = completedPaid("evt_e0", sessionId, REEF_PRICE_CENTS);
+    await deliver({
+      ...completed,
+      data: { object: { ...completed.data.object, payment_intent: "pi_disputed" } },
+    });
+    await deliver(
+      disputeEvent("evt_e1", "charge.dispute.created", "needs_response", { ageSeconds: 60 }),
+    );
+    await deliver(disputeEvent("evt_e2", "charge.dispute.closed", "lost"));
+    await deliver(disputeEvent("evt_e3", "charge.dispute.updated", "under_review"));
+    expect(await listOpenPaymentDisputes(db, shop.id)).toEqual([]);
+    const [row] = await db
+      .select()
+      .from(paymentDisputes)
+      .where(eq(paymentDisputes.stripeDisputeId, "dp_1"));
+    expect(row?.status).toBe("lost");
   });
 
   it("a dispute on a charge DiveDay never made is not recorded", async () => {

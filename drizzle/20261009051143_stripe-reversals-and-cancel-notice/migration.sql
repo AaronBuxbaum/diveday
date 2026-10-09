@@ -25,11 +25,13 @@ CREATE TABLE "payment_disputes" (
 ALTER TABLE "booking_checkouts" ADD COLUMN "stripe_payment_intent_id" text;--> statement-breakpoint
 ALTER TABLE "booking_checkouts" ADD COLUMN "refunded_cents" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE "orders" ADD COLUMN "stripe_payment_intent_id" text;--> statement-breakpoint
+ALTER TABLE "tips" ADD COLUMN "stripe_payment_intent_id" text;--> statement-breakpoint
 CREATE INDEX "booking_checkouts_stripe_payment_intent_idx" ON "booking_checkouts" ("stripe_payment_intent_id");--> statement-breakpoint
 CREATE INDEX "orders_stripe_payment_intent_idx" ON "orders" ("stripe_payment_intent_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "payment_disputes_stripe_dispute_unique" ON "payment_disputes" ("stripe_dispute_id");--> statement-breakpoint
 CREATE INDEX "payment_disputes_shop_open_idx" ON "payment_disputes" ("shop_id","evidence_due_by") WHERE "closed_at" is null;--> statement-breakpoint
 CREATE INDEX "payment_disputes_shop_order_idx" ON "payment_disputes" ("shop_id","order_id");--> statement-breakpoint
+CREATE INDEX "tips_stripe_payment_intent_idx" ON "tips" ("stripe_payment_intent_id");--> statement-breakpoint
 ALTER TABLE "payment_disputes" ADD CONSTRAINT "payment_disputes_shop_id_shops_id_fkey" FOREIGN KEY ("shop_id") REFERENCES "shops"("id");--> statement-breakpoint
 ALTER TABLE "payment_disputes" ADD CONSTRAINT "payment_disputes_order_id_orders_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id");--> statement-breakpoint
 ALTER TABLE "payment_disputes" ADD CONSTRAINT "payment_disputes_checkout_id_booking_checkouts_id_fkey" FOREIGN KEY ("checkout_id") REFERENCES "booking_checkouts"("id");--> statement-breakpoint

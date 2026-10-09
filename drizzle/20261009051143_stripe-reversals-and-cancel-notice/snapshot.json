@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "dbc8d37c-e560-4209-a9af-aaf5a82bedda",
+  "id": "17440cb3-1189-4a72-811a-86069b59dd80",
   "prevIds": [
     "cb636c51-43be-4d9f-a1f5-8bf66663db5c"
   ],
@@ -17784,6 +17784,19 @@
       "default": null,
       "generated": null,
       "identity": null,
+      "name": "stripe_payment_intent_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "tips"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
       "name": "checkout_url",
       "entityType": "columns",
       "schema": "public",
@@ -28383,6 +28396,27 @@
       "method": "btree",
       "concurrently": false,
       "name": "tips_shop_booking_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "tips"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "stripe_payment_intent_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "tips_stripe_payment_intent_idx",
       "entityType": "indexes",
       "schema": "public",
       "table": "tips"

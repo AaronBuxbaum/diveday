@@ -575,6 +575,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "stripe_account_id", // provider linkage, useless outside this Stripe account
     "stripe_customer_id", // provider linkage, same as stripe_account_id above
     "checkout_url", // an ephemeral Stripe Checkout link, same reasoning as booking_checkouts
+    "stripe_payment_intent_id", // provider linkage, same reasoning as booking_checkouts
   ],
   dive_sites: [
     "shop_id",

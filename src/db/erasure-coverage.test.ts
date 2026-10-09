@@ -270,6 +270,8 @@ const ERASURE_KEEPS: Record<string, string> = {
   trip_invitations:
     "that an invitation was sent for a seat, by id. Its risk is not disclosure but #1616, where the foreign key aborts the erasure transaction outright",
   trip_read_marks: "how far a staff member has read a trip’s desk feed",
+  payment_disputes:
+    "a card dispute's amount, status and evidence deadline, pointing at its order or checkout by id with no name, address or free text; the diver is reached through that order or checkout, which the erasure redacts (ADR 20261009-stripe-reversals-reach-diveday)",
   booking_referrals:
     "that one seat arrived from another seat's recap link — two booking ids and a timestamp, and nothing else. Both bookings carry their own erasure, so the diver either side of the link is erased where they are stored",
   trip_sightings:
@@ -612,6 +614,27 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     held: "copy",
     why: "the same pointer on the append-only twin, copied from the mutation that caused the row (`setBookingPayment`, src/db/payments.ts)",
   },
+  "orders.stripe_payment_intent_id": {
+    held: "copy",
+    why: "the PaymentIntent that paid the invoice `orders.stripe_invoice_id` already names; its charge's billing details are the same payment's, discharged by the same manual Stripe deletion request (ADR 20261009-stripe-reversals-reach-diveday)",
+  },
+  "booking_checkouts.stripe_payment_intent_id": {
+    held: "copy",
+    why: "the PaymentIntent behind the session `booking_checkouts.stripe_session_id` already names; same discharge as orders.stripe_payment_intent_id",
+  },
+  "tips.stripe_payment_intent_id": {
+    held: "copy",
+    why: "the PaymentIntent behind the tip's session `tips.stripe_session_id` already names; same discharge as orders.stripe_payment_intent_id",
+  },
+  "payment_disputes.stripe_payment_intent_id": {
+    held: "copy",
+    why: "the disputed payment, already censused on the order or checkout the dispute row points at",
+  },
+  "payment_disputes.stripe_dispute_id": {
+    held: "copy",
+    why: "Stripe's dispute about a payment already censused on its order or checkout; the evidence and the cardholder's bank details live at Stripe under that payment, and DiveDay stores none of them",
+  },
+  "payment_disputes.stripe_account_id": { held: "shop", why: "as orders.stripe_account_id" },
   "booking_checkouts.checkout_url": {
     held: "copy",
     why: "Stripe's hosted page for the session on this row, and it embeds the `cs_…` it was built from. Expiring that session is what `stripe_session_id` already owes",

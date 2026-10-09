@@ -1,14 +1,14 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { log } from "@/lib/log";
 import {
   type PaymentSourceLookup,
   paymentSourceLookupFromEnvironment,
 } from "@/lib/payments/payment-sources";
 import { recordCheckoutPaymentIntent } from "./checkouts";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { recordOrderPaymentIntent } from "./orders";
 import type { BookingCheckout, Order } from "./schema";
-import { bookingCheckouts, orders } from "./schema";
+import { bookingCheckouts, orders, tips } from "./schema";
 
 /**
  * What a Stripe charge DiveDay is told about was for: one of its own orders
@@ -75,6 +75,20 @@ export async function findStripePaymentTarget(
     .limit(1);
   if (checkout) return { kind: "checkout", checkout };
 
+  // A tip's charge: DiveDay's, but nothing records a tip's reversal yet, so it
+  // is answered here without asking Stripe on every refund or dispute of one.
+  const [tip] = await db
+    .select({ id: tips.id })
+    .from(tips)
+    .where(
+      and(
+        eq(tips.stripePaymentIntentId, input.paymentIntentId),
+        eq(tips.stripeAccountId, input.stripeAccountId),
+      ),
+    )
+    .limit(1);
+  if (tip) return tipCharge(input.stripeAccountId);
+
   const source = await lookup.findSource(input.stripeAccountId, input.paymentIntentId);
   if (source.status === "failed") throw new PaymentSourceLookupFailed();
 
@@ -118,6 +132,15 @@ export async function findStripePaymentTarget(
       });
       return { kind: "checkout", checkout: found };
     }
+    if (
+      await recordTipPaymentIntent(db, {
+        stripeSessionId: source.stripeSessionId,
+        paymentIntentId: input.paymentIntentId,
+        expectedAccountId: input.stripeAccountId,
+      })
+    ) {
+      return tipCharge(input.stripeAccountId);
+    }
   }
 
   // The shop's own till on the same Stripe account, a tip, or an account the
@@ -127,4 +150,37 @@ export async function findStripePaymentTarget(
     lookup: source.status,
   });
   return { kind: "none" };
+}
+
+function tipCharge(stripeAccountId: string): StripePaymentTarget {
+  log("stripe_payment_target.tip", "info", { account: stripeAccountId });
+  return { kind: "none" };
+}
+
+/**
+ * Write a tip's PaymentIntent once, as its session completes or when Stripe
+ * names it — the tip twin of `recordCheckoutPaymentIntent`. True when a tip on
+ * that session and account took the id (or already had it).
+ */
+export async function recordTipPaymentIntent(
+  db: DbExecutor,
+  input: { stripeSessionId: string; paymentIntentId: string; expectedAccountId: string },
+): Promise<boolean> {
+  if (input.paymentIntentId.trim().length === 0) return false;
+  const scope = and(
+    eq(tips.stripeSessionId, input.stripeSessionId),
+    eq(tips.stripeAccountId, input.expectedAccountId),
+  );
+  const [updated] = await db
+    .update(tips)
+    .set({ stripePaymentIntentId: input.paymentIntentId })
+    .where(and(scope, isNull(tips.stripePaymentIntentId)))
+    .returning({ id: tips.id });
+  if (updated) return true;
+  const [held] = await db
+    .select({ id: tips.id })
+    .from(tips)
+    .where(and(scope, eq(tips.stripePaymentIntentId, input.paymentIntentId)))
+    .limit(1);
+  return held !== undefined;
 }

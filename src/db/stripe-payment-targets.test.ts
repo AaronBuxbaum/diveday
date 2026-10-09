@@ -2,8 +2,12 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { seededShopContext } from "@/test/db";
-import { orders, people } from "./schema";
-import { findStripePaymentTarget, PaymentSourceLookupFailed } from "./stripe-payment-targets";
+import { bookings, orders, people, tips } from "./schema";
+import {
+  findStripePaymentTarget,
+  PaymentSourceLookupFailed,
+  recordTipPaymentIntent,
+} from "./stripe-payment-targets";
 
 /** A paid invoiced order on `acct_demo`, with no PaymentIntent recorded yet. */
 async function seededOrder() {
@@ -107,5 +111,60 @@ describe("findStripePaymentTarget", () => {
         lookup,
       ),
     ).rejects.toBeInstanceOf(PaymentSourceLookupFailed);
+  });
+
+  it("knows a tip's charge for what it is, and never asks Stripe about it", async () => {
+    const { db, shop } = await seededShopContext();
+    const [booking] = await db.select().from(bookings).where(eq(bookings.shopId, shop.id)).limit(1);
+    if (!booking) throw new Error("seeded booking missing");
+    await db.insert(tips).values({
+      shopId: shop.id,
+      bookingId: booking.id,
+      status: "paid",
+      stripeAccountId: "acct_demo",
+      stripeSessionId: "cs_tip_target",
+      currency: "usd",
+      amountCents: 2_000,
+    });
+    expect(
+      await recordTipPaymentIntent(db, {
+        stripeSessionId: "cs_tip_target",
+        paymentIntentId: "pi_tip",
+        expectedAccountId: "acct_demo",
+      }),
+    ).toBe(true);
+    const { lookup, calls } = lookupAnswering({ status: "failed" });
+
+    expect(
+      await findStripePaymentTarget(
+        db,
+        { stripeAccountId: "acct_demo", paymentIntentId: "pi_tip" },
+        lookup,
+      ),
+    ).toEqual({ kind: "none" });
+    expect(calls).toEqual([]);
+  });
+
+  it("remembers a tip Stripe names, so the next event is local", async () => {
+    const { db, shop } = await seededShopContext();
+    const [booking] = await db.select().from(bookings).where(eq(bookings.shopId, shop.id)).limit(1);
+    if (!booking) throw new Error("seeded booking missing");
+    await db.insert(tips).values({
+      shopId: shop.id,
+      bookingId: booking.id,
+      status: "paid",
+      stripeAccountId: "acct_demo",
+      stripeSessionId: "cs_tip_named",
+      currency: "usd",
+      amountCents: 2_000,
+    });
+    const { lookup, calls } = lookupAnswering({
+      status: "checkout_session",
+      stripeSessionId: "cs_tip_named",
+    });
+    const input = { stripeAccountId: "acct_demo", paymentIntentId: "pi_tip_named" };
+    expect(await findStripePaymentTarget(db, input, lookup)).toEqual({ kind: "none" });
+    expect(await findStripePaymentTarget(db, input, lookup)).toEqual({ kind: "none" });
+    expect(calls).toHaveLength(1);
   });
 });

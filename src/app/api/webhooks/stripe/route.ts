@@ -17,6 +17,7 @@ import {
 import { recordStripeDispute } from "@/db/payment-disputes";
 import { recordStripeChargeRefund } from "@/db/refunds";
 import { disconnectShopStripeAccount, setShopStripeAccountStatus } from "@/db/stripe-accounts";
+import { recordTipPaymentIntent } from "@/db/stripe-payment-targets";
 import {
   markTipExpiredBySessionId,
   markTipPaidBySessionId,
@@ -31,6 +32,7 @@ import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { nowDate } from "@/lib/clock";
 import { type LogContext, log } from "@/lib/log";
 import { invoicePaymentIntentId } from "@/lib/payments/invoicing";
+import { paymentSourceLookupFromEnvironment } from "@/lib/payments/payment-sources";
 import { verifyStripeWebhook } from "@/lib/payments/webhook";
 
 const invoiceObjectSchema = z.object({
@@ -129,11 +131,19 @@ async function recordSessionPaymentIntent(
   const paymentIntentId = idOf(session.payment_intent);
   if (!paymentIntentId) return;
   try {
-    await recordCheckoutPaymentIntent(db, {
+    const onCheckout = await recordCheckoutPaymentIntent(db, {
       stripeSessionId: session.id,
       paymentIntentId,
       expectedAccountId,
     });
+    // A tip shares the session id space (ADR 20260726-post-trip-tipping).
+    if (!onCheckout && expectedAccountId) {
+      await recordTipPaymentIntent(db, {
+        stripeSessionId: session.id,
+        paymentIntentId,
+        expectedAccountId,
+      });
+    }
   } catch (error) {
     logOutcome("payment_intent_record_failed", { error: String(error) });
   }
@@ -289,6 +299,11 @@ export async function POST(request: Request) {
     logOutcome("livemode_mismatch", { verifiedWith, livemode: event.livemode ?? null });
     return new Response(null, { status: 200 });
   }
+  // Which charge a reversal is about, asked of Stripe only with a key of this
+  // event's own mode (ADR 20261009-stripe-reversals-reach-diveday).
+  const sourceLookup = paymentSourceLookupFromEnvironment(process.env, fetch, {
+    livemode: expectedLivemode,
+  });
 
   // Claim this event id before doing anything else: a redelivered event
   // (Stripe's webhooks are at-least-once) is a no-op past this point,
@@ -531,11 +546,17 @@ export async function POST(request: Request) {
           // A charge with no PaymentIntent was never made by DiveDay.
           logOutcome("refund_target_not_found");
         } else {
-          const outcome = await recordStripeChargeRefund(db, {
-            stripeAccountId: event.account,
-            paymentIntentId,
-            amountRefundedCents: charge.data.amount_refunded,
-          });
+          const outcome = await recordStripeChargeRefund(
+            db,
+            {
+              stripeAccountId: event.account,
+              paymentIntentId,
+              amountRefundedCents: charge.data.amount_refunded,
+              chargeId: charge.data.id,
+              occurredAt,
+            },
+            sourceLookup,
+          );
           if (outcome.status === "deferred") {
             deferred = true;
           } else {
@@ -564,21 +585,25 @@ export async function POST(request: Request) {
           logOutcome("dispute_target_not_found");
         } else {
           const dueBy = dispute.data.evidence_details?.due_by;
-          const outcome = await recordStripeDispute(db, {
-            stripeAccountId: event.account,
-            eventType: event.type,
-            occurredAt,
-            dispute: {
-              id: dispute.data.id,
-              paymentIntentId,
-              amountCents: dispute.data.amount,
-              currency: dispute.data.currency,
-              reason: dispute.data.reason ?? null,
-              status: dispute.data.status,
-              evidenceDueBy: dueBy ? new Date(dueBy * 1000) : null,
-              createdAt: new Date(dispute.data.created * 1000),
+          const outcome = await recordStripeDispute(
+            db,
+            {
+              stripeAccountId: event.account,
+              eventType: event.type,
+              occurredAt,
+              dispute: {
+                id: dispute.data.id,
+                paymentIntentId,
+                amountCents: dispute.data.amount,
+                currency: dispute.data.currency,
+                reason: dispute.data.reason ?? null,
+                status: dispute.data.status,
+                evidenceDueBy: dueBy ? new Date(dueBy * 1000) : null,
+                createdAt: new Date(dispute.data.created * 1000),
+              },
             },
-          });
+            sourceLookup,
+          );
           logOutcome(
             outcome.status === "recorded"
               ? "dispute_recorded"
