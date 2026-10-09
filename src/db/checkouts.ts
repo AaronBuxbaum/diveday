@@ -27,7 +27,7 @@ import {
   startPaymentOperation,
 } from "./payment-operations";
 import { setBookingPaymentIfNotFinal } from "./payments";
-import { discountCapReached } from "./promo-caps";
+import { reserveDiscountUse } from "./promo-caps";
 import type { BookingCheckout } from "./schema";
 import {
   bookingCheckoutBookings,
@@ -139,7 +139,14 @@ export type StartCheckoutOutcome =
   | { ok: true; checkout: BookingCheckout; reused: boolean }
   | {
       ok: false;
-      reason: "not_connected" | "unpriced" | "invalid" | "checkout_unavailable" | "already_paid";
+      reason:
+        | "not_connected"
+        | "unpriced"
+        | "invalid"
+        | "checkout_unavailable"
+        | "already_paid"
+        /** A capped discount has nothing left; the seats are held, and paying without it works. */
+        | "promo_used_up";
     };
 
 /**
@@ -405,25 +412,36 @@ export async function startBookingCheckout(
   // percent promotion code goes to Stripe exactly as before.
   const guardsPassThrough = passThroughCents > 0 && discountableCents > 0;
   // The one-off coupon counts against no cap at Stripe, so on this path the
-  // code's cap is held here, inside this attempt's claim, and an exhausted
-  // code is refused as Stripe refuses one handed to it directly (layer-7
-  // security review).
-  if (
-    appliedPromo &&
-    guardsPassThrough &&
-    (await discountCapReached(db, {
+  // code's cap is held here: one use reserved under the code's own lock before
+  // Stripe is called, and an exhausted code refused with a reason the diver can
+  // act on (layer-7 security review).
+  let cappedSessionExpiresAt: Date | undefined;
+  if (appliedPromo && guardsPassThrough) {
+    // A diver's own earlier, unpaid page for any of these seats would
+    // otherwise hold a use against their retry; the seats are claimed for this
+    // attempt now, so no other attempt is using that page's figure either.
+    await retireOverlappingPendingCheckouts(db, input.shopId, input.bookingIds);
+    const now = nowDate();
+    const reservation = await reserveDiscountUse(db, {
       shopId: input.shopId,
       source: appliedPromo.source,
       promoId: appliedPromo.id,
-      now: nowDate(),
-    }))
-  ) {
-    await resolvePaymentOperation(db, intent.id, {
-      status: "failed",
-      errorMessage: "promotion redemption cap reached",
+      intentId: intent.id,
+      now,
     });
-    await releaseBookingCheckoutClaim(db, input.bookingIds, intent.id);
-    return { ok: false, reason: "checkout_unavailable" };
+    if (reservation === "used_up") {
+      await resolvePaymentOperation(db, intent.id, {
+        status: "failed",
+        errorMessage: "promotion redemption cap reached",
+      });
+      await releaseBookingCheckoutClaim(db, input.bookingIds, intent.id);
+      return { ok: false, reason: "promo_used_up" };
+    }
+    // An abandoned page holds a capped code's use until it expires, so it
+    // expires in minutes rather than Stripe's default day.
+    if (reservation === "reserved") {
+      cappedSessionExpiresAt = new Date(now.getTime() + CAPPED_SESSION_LIFETIME_MS);
+    }
   }
   const passThroughDiscountGuard =
     appliedPromo && guardsPassThrough
@@ -490,6 +508,7 @@ export async function startBookingCheckout(
       successUrl: input.successUrl,
       cancelUrl: input.cancelUrl,
       promotionCouponId,
+      expiresAt: cappedSessionExpiresAt,
       // One or the other, never both: Stripe reads a session's `discounts` as a
       // list and would happily apply two.
       promotionCode: promotionCouponId ? undefined : input.promotionCode,
@@ -767,6 +786,39 @@ export async function retirePendingCheckoutIfRepriced(
  * committed before checkout ever ran (docs ADR 20260721-checkout-at-booking) and
  * this is a quote being withdrawn, not a payment being reversed.
  */
+/**
+ * How long a session spending a capped discount's one-off coupon stays
+ * payable. Stripe's floor is 30 minutes out; one more keeps the request clear
+ * of it whatever the round trip takes.
+ */
+const CAPPED_SESSION_LIFETIME_MS = 31 * 60 * 1000;
+
+/** Retire every pending checkout covering any of these bookings, whatever else it covers. */
+async function retireOverlappingPendingCheckouts(
+  db: AppDb,
+  shopId: string,
+  bookingIds: string[],
+): Promise<void> {
+  const overlapping = await db
+    .selectDistinct({ checkout: bookingCheckouts })
+    .from(bookingCheckouts)
+    .innerJoin(
+      bookingCheckoutBookings,
+      and(
+        eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
+        eq(bookingCheckoutBookings.shopId, shopId),
+      ),
+    )
+    .where(
+      and(
+        eq(bookingCheckouts.shopId, shopId),
+        eq(bookingCheckouts.status, "pending"),
+        inArray(bookingCheckoutBookings.bookingId, bookingIds),
+      ),
+    );
+  for (const { checkout } of overlapping) await retireStaleCheckout(db, checkout);
+}
+
 async function retireStaleCheckout(db: AppDb, existing: BookingCheckout): Promise<void> {
   await db
     .update(bookingCheckouts)

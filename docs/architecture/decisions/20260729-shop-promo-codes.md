@@ -111,10 +111,16 @@ later refund agree with what Stripe charged.
 
 **The cap where Stripe cannot see it.** On a trip with a pass-through fee the discount reaches
 Stripe as a one-off session coupon (issue #1019), which no `max_redemptions` counts. On that path
-the checkout holds the cap itself, after it claims the party's seats: `discountCapReached` in
-`src/db/promo-caps.ts` counts a shop code's redemptions plus its checkouts still open, and refuses
-the attempt as Stripe refuses an exhausted code. A trip deal's cap, the seats open when it went out,
-is not stored on its row, so it is read back as the trip's capacity less the seats held before the
-deal and still held; that is never tighter than Stripe's own cap. Two attempts starting in the same
-instant can still both take the last use, because the open checkout is written only after Stripe
-answers.
+the checkout holds the cap itself, after it claims the party's seats and before Stripe is called:
+`reserveDiscountUse` in `src/db/promo-caps.ts` takes a transaction-scoped advisory lock on the
+discount, counts its uses (a shop code's redemptions or a deal's completed checkouts, checkouts
+still payable, and attempts that reserved a use and have not heard back), and either tags this
+attempt's payment-operation intent with the discount, which is the reservation the next attempt
+counts, or refuses with `promo_used_up`. The diver's seats stay booked and the landing page says
+the code is used up, so they can pay the full fare. A session spending a capped coupon expires
+after 31 minutes rather than Stripe's day (Stripe's floor is 30), and the diver's own earlier
+unpaid page for any of the same seats is retired first, so an abandoned page holds a use for
+minutes and never against its own diver's retry. A trip deal stores the cap Stripe was given
+(`trip_last_minute_promos.max_redemptions`, the seats open when it went out); a deal sent before
+that column existed falls back to the trip's capacity less the seats held before the deal and
+still held.

@@ -2552,7 +2552,7 @@ describe("a capped discount on the pass-through path", () => {
     const later = await party(db, shop.id, reef.id, "Cap Plusone");
     expect(await startBookingCheckout(db, withCode(later), fakeCheckout())).toEqual({
       ok: false,
-      reason: "checkout_unavailable",
+      reason: "promo_used_up",
     });
     // The refused attempt leaves the seat free to pay another way.
     const [seat] = await db
@@ -2641,7 +2641,146 @@ describe("a capped discount on the pass-through path", () => {
     const later = await party(db, shop.id, reef.id, "Deal Plusone");
     expect(await startBookingCheckout(db, withDeal(later), fakeCheckout())).toEqual({
       ok: false,
-      reason: "checkout_unavailable",
+      reason: "promo_used_up",
     });
+  });
+
+  async function cappedCode(
+    db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+    shopId: string,
+    code: string,
+    maxRedemptions: number | null,
+  ) {
+    const created = await createShopPromoCode(
+      db,
+      { shopId, code, discountPercent: 20, scope: "all", maxRedemptions },
+      fakePromotions(),
+    );
+    if (!created.ok) throw new Error(`promo creation failed: ${created.reason}`);
+    return (base: ReturnType<typeof startInput>) => ({
+      ...base,
+      promotionCode: created.promo.stripePromotionCodeId ?? undefined,
+      shopPromo: {
+        id: created.promo.id,
+        code: created.promo.code,
+        discountPercent: created.promo.discountPercent,
+      },
+    });
+  }
+
+  it("lets exactly one of two attempts at a code's last use reach Stripe", async () => {
+    // Layer-7 re-review: the pending row was written only after two Stripe
+    // round trips, so concurrent attempts could each count the same free use.
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await setShopPassThroughFee(db, shop.id, { name: "Park fee", amountCents: 1_500 });
+    const withCode = await cappedCode(db, shop.id, "LASTONE", 1);
+    const other = await party(db, shop.id, reef.id, "Racing Second");
+    const inner = fakeCheckout();
+    let sessions = 0;
+    const slow = fakeCheckout({
+      async createCheckoutSession(request) {
+        sessions += 1;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        return inner.createCheckoutSession(request);
+      },
+    });
+
+    const outcomes = await Promise.all([
+      startBookingCheckout(db, withCode(startInput(shop.id, reef.id, bookingIds)), slow),
+      startBookingCheckout(db, withCode(startInput(shop.id, reef.id, other)), slow),
+    ]);
+    expect(outcomes.filter((outcome) => outcome.ok)).toHaveLength(1);
+    expect(outcomes.filter((outcome) => !outcome.ok)).toEqual([
+      { ok: false, reason: "promo_used_up" },
+    ]);
+    expect(sessions).toBe(1);
+  });
+
+  it("gives a session spending a capped code half an hour, and an uncapped one Stripe's day", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await setShopPassThroughFee(db, shop.id, { name: "Park fee", amountCents: 1_500 });
+    const capped = await cappedCode(db, shop.id, "SHORT", 5);
+    const uncapped = await cappedCode(db, shop.id, "LONG", null);
+    const seen = recordingCheckout();
+
+    const first = await startBookingCheckout(
+      db,
+      capped(startInput(shop.id, reef.id, bookingIds)),
+      seen.provider,
+    );
+    if (!first.ok) throw new Error(`capped checkout refused: ${first.reason}`);
+    expect(seen.requests[0]?.expiresAt?.getTime()).toBe(nowDate().getTime() + 31 * 60 * 1000);
+
+    const other = await party(db, shop.id, reef.id, "Uncapped Diver");
+    const second = await startBookingCheckout(
+      db,
+      uncapped(startInput(shop.id, reef.id, other)),
+      seen.provider,
+    );
+    if (!second.ok) throw new Error(`uncapped checkout refused: ${second.reason}`);
+    expect(seen.requests[1]?.expiresAt).toBeUndefined();
+  });
+
+  it("lets a diver retry with the code past their own earlier, unpaid page", async () => {
+    // Layer-7 re-review: the diver's own pending session for a different party
+    // held the last use against their retry for a day.
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await setShopPassThroughFee(db, shop.id, { name: "Park fee", amountCents: 1_500 });
+    const withCode = await cappedCode(db, shop.id, "RETRY", 1);
+    const provider = fakeCheckout();
+    const first = await startBookingCheckout(
+      db,
+      withCode(startInput(shop.id, reef.id, bookingIds)),
+      provider,
+    );
+    if (!first.ok) throw new Error(`first checkout refused: ${first.reason}`);
+
+    // The same diver adds a friend and checks out the bigger party.
+    const friend = await party(db, shop.id, reef.id, "Late Friend");
+    const retry = await startBookingCheckout(
+      db,
+      withCode(startInput(shop.id, reef.id, [...bookingIds, ...friend])),
+      provider,
+    );
+    expect(retry.ok).toBe(true);
+    const [earlier] = await db
+      .select({ status: bookingCheckouts.status })
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, first.checkout.id));
+    expect(earlier?.status).toBe("expired");
+  });
+
+  it("holds a trip deal to the cap Stripe was given, even after the boat shrinks", async () => {
+    // Layer-7 re-review: the estimate read today's capacity, so lowering it
+    // after the deal went out tightened the cap below Stripe's.
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await setShopPassThroughFee(db, shop.id, { name: "Park fee", amountCents: 1_500 });
+    const counted = (await upcomingTripsWithCounts(db, shop.id, new Date(0))).find(
+      (t) => t.id === reef.id,
+    );
+    if (!counted) throw new Error("reef missing");
+    await db
+      .update(trips)
+      .set({ capacity: counted.booked + 2 })
+      .where(eq(trips.id, reef.id));
+    const deal = await sentTripDeal(db, shop.id, reef.id, 25);
+    expect(deal.maxRedemptions).toBe(2);
+    const later = await party(db, shop.id, reef.id, "Deal Second");
+    await db
+      .update(trips)
+      .set({ capacity: counted.booked + 1 })
+      .where(eq(trips.id, reef.id));
+    const withDeal = (ids: string[]) => ({
+      ...startInput(shop.id, reef.id, ids),
+      promotionCode: deal.stripePromotionCodeId ?? undefined,
+      tripPromo: { id: deal.id, code: deal.code, discountPercent: deal.discountPercent },
+    });
+    const provider = fakeCheckout();
+
+    const first = await startBookingCheckout(db, withDeal(bookingIds), provider);
+    if (!first.ok) throw new Error(`first checkout refused: ${first.reason}`);
+    await markCheckoutPaidBySessionId(db, first.checkout.stripeSessionId);
+    const second = await startBookingCheckout(db, withDeal(later), provider);
+    expect(second.ok).toBe(true);
   });
 });

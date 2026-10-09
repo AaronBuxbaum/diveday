@@ -159,6 +159,29 @@ describe("stripe checkout provider", () => {
     expect(form.get("discounts[0][promotion_code]")).toBe("promo_123");
   });
 
+  it("asks Stripe to close the hosted page early only when told to", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      ok({
+        id: "cs_1",
+        status: "open",
+        payment_status: "unpaid",
+        url: "https://checkout.stripe.com/c/pay/cs_1",
+        amount_total: 18_000,
+        expires_at: 1_790_000_000,
+      }),
+    );
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    await provider.createCheckoutSession({
+      ...request,
+      expiresAt: new Date("2026-10-09T12:31:00.000Z"),
+    });
+    await provider.createCheckoutSession(request);
+    const early = new URLSearchParams(fetchImpl.mock.calls[0][1].body);
+    const plain = new URLSearchParams(fetchImpl.mock.calls[1][1].body);
+    expect(early.get("expires_at")).toBe(String(Date.UTC(2026, 9, 9, 12, 31) / 1000));
+    expect(plain.has("expires_at")).toBe(false);
+  });
+
   it("omits the discounts param when no promotion code is given", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(
       ok({

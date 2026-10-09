@@ -34,7 +34,7 @@ const confirmed = {
 const readyRoute = "/s/reef-shop/trips/trip-1/ready?booking=tok";
 
 function renderNotice(
-  overrides: { readinessLink?: string; emailsOnTheWay?: boolean; payCancelled?: boolean } = {},
+  overrides: { readinessLink?: string; emailsOnTheWay?: boolean; payNotice?: string } = {},
 ) {
   return renderDiver(
     <EmbedBookedNotice
@@ -45,7 +45,7 @@ function renderNotice(
       confirmed={confirmed}
       readinessLink={overrides.readinessLink ?? readyRoute}
       emailsOnTheWay={overrides.emailsOnTheWay ?? false}
-      payCancelled={overrides.payCancelled ?? false}
+      payNotice={overrides.payNotice}
     />,
   );
 }
@@ -143,12 +143,18 @@ describe("EmbedBookedNotice", () => {
    * The balance itself is on `/ready`, where every other payment state lives.
    */
   it("says the seat survived an abandoned payment", () => {
-    renderNotice({ payCancelled: true });
+    renderNotice({ payNotice: "cancelled" });
     expect(screen.getByText(/Your spot is safe/)).toBeVisible();
   });
 
+  it("says a used-up code left the seat held and the full price payable", () => {
+    renderNotice({ payNotice: "code-used-up" });
+    expect(screen.getByText(/That code’s been used up/)).toBeVisible();
+  });
+
   it("says nothing about payment when none was attempted", () => {
-    renderNotice({ payCancelled: false });
+    renderNotice({});
     expect(screen.queryByText(/Your spot is safe/)).toBeNull();
+    expect(screen.queryByText(/used up/)).toBeNull();
   });
 });
