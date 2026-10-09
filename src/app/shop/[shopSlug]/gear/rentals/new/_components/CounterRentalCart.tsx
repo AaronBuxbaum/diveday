@@ -9,7 +9,7 @@ import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { isOneCoreSet } from "@/lib/counter-rentals";
 import { formatMoneyCents } from "@/lib/format";
 import type { GearItemKind } from "@/lib/gear";
-import { majorToMinor } from "@/lib/money";
+import { currencySymbol, majorToMinor } from "@/lib/money";
 import {
   CONFIRM_FIELD_PREFIX,
   PAYMENT_FIELD,
@@ -52,6 +52,13 @@ export type CartWords = {
   submit: string;
   submitting: string;
 };
+
+/**
+ * A price box a fixed 7rem wide beside its unit's name: the shared control
+ * without its `w-full`, which would otherwise win over the width and squeeze
+ * the name to one letter a line on a phone.
+ */
+const PRICE_BOX_CLASS = `${controlClass.replace("w-full", "")} w-28 shrink-0 text-end tabular-nums`;
 
 /** A typed price as minor units; blank or unreadable counts as nothing. */
 function centsOf(raw: string, currency: string): number {
@@ -134,6 +141,7 @@ export function CounterRentalCart({
       .filter((unit) => !(asSet && coreKinds.includes(unit.kind)))
       .reduce((sum, unit) => sum + centsOf(priceOf(unit), currency), 0);
   const total = formatMoneyCents(totalCents, currency, locale);
+  const symbol = currencySymbol(currency, locale);
   const count = (picked.length === 1 ? words.items.one : words.items.other).replace(
     "#",
     String(picked.length),
@@ -253,7 +261,8 @@ export function CounterRentalCart({
                     value={setFigure}
                     onChange={(event) => setSetFigure(event.currentTarget.value)}
                     aria-label={words.setLabel}
-                    className={`${controlClass} w-28 shrink-0 text-end tabular-nums`}
+                    placeholder={symbol}
+                    className={PRICE_BOX_CLASS}
                   />
                   <span aria-hidden="true" className="size-11 shrink-0" />
                 </li>
@@ -284,7 +293,8 @@ export function CounterRentalCart({
                             setPrices((previous) => ({ ...previous, [unit.id]: value }));
                           }}
                           aria-label={unit.priceAria}
-                          className={`${controlClass} w-28 shrink-0 text-end tabular-nums`}
+                          placeholder={symbol}
+                          className={PRICE_BOX_CLASS}
                         />
                       )}
                       <button

@@ -7641,6 +7641,9 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Remove Fins #1" }).waitFor();
         await page.getByRole("radio", { name: /^Cash/ }).check();
         await capture(page, "counter-rental-form", scheme);
+        // The bar at the foot, which a full-page capture cannot paint where it
+        // stands: how many items and how much, beside Rent out.
+        await captureStickyFoot(page, "counter-rental-form-foot", scheme);
       });
 
       // The ticket the person walks off with: who, the tags, the back-by

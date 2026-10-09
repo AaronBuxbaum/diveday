@@ -423,7 +423,7 @@
   },
   "/shop/[shopSlug]/gear/rentals/new": {
     "e2e": ["counter-rentals.spec.ts"],
-    "visual": ["counter-rental-form"]
+    "visual": ["counter-rental-form", "counter-rental-form-foot"]
   },
   "/shop/[shopSlug]/inbox": {
     "e2e": ["inbox.spec.ts"],

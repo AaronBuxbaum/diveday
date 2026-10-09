@@ -127,6 +127,10 @@ function RentalRow({
     <LedgerRow
       align="first-line"
       pad="lg"
+      // On a phone the ticket door drops under the units, end-aligned, so the
+      // trip and its dates keep the width (Aaron, 2026-10-09: the rental
+      // screens read cramped).
+      stacked
       trailing={
         ticketHref ? (
           <Link

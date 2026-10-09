@@ -51,25 +51,36 @@ async function payBy(page: Page, choice: "Cash" | "Card machine" | "No charge") 
 test.describe("staff", () => {
   signedInAsOwner();
 
-  test("rents units out at the counter, hands them over, and takes them back", async ({ page }) => {
+  test("prices the picks, records a cash payment, and shows it on the ticket", async ({ page }) => {
     await startRentalForCustomer(page);
     await pickUnit(page, "Mask", "Mask #2");
     await pickUnit(page, "Fins", "Fins #2");
     // The shop's own prices, a running total, and the bar at the foot that
-    // says how many and how much the whole time (Aaron, 2026-10-09).
+    // says how many and how much the whole time (Aaron, 2026-10-09). The demo
+    // prices mask and fins as one pair, carried on the fins.
     await expect(page.getByText("2 items", { exact: true })).toBeVisible();
-    await expect(page.getByRole("list", { name: "Going out" })).toContainText("$16.00");
+    await expect(page.getByRole("list", { name: "Going out" })).toContainText("$8.00");
     await payBy(page, "Cash");
     await page.getByRole("button", { name: "Rent out", exact: true }).click();
 
-    // The ticket: who, what, the one date that matters, and what was paid.
     await expect(
       page.getByRole("status").filter({ hasText: "Rented out. Payment recorded." }),
     ).toBeVisible();
     const payment = page.getByRole("region", { name: "Payment" });
     await expect(payment).toContainText("Paid");
     await expect(payment).toContainText("Cash");
-    await expect(payment).toContainText("$16.00");
+    await expect(payment).toContainText("$8.00");
+  });
+
+  test("rents units out at the counter, hands them over, and takes them back", async ({ page }) => {
+    await startRentalForCustomer(page);
+    await pickUnit(page, "Mask", "Mask #2");
+    await pickUnit(page, "Fins", "Fins #2");
+    await payBy(page, "No charge");
+    await page.getByRole("button", { name: "Rent out", exact: true }).click();
+
+    // The ticket: who, what, and the one date that matters.
+    await expect(page.getByRole("status").filter({ hasText: "Rented out." })).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: CUSTOMER })).toBeVisible();
     const units = page.getByRole("list").filter({ hasText: "Mask #2" });
     await expect(units).toContainText("Fins #2");
@@ -82,19 +93,25 @@ test.describe("staff", () => {
 
     await page.getByRole("button", { name: "Hand over" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Handed over." })).toBeVisible();
-
-    // The register sees the counter rental out, with the person holding it.
-    await page.goto("/shop/blue-mantis/gear");
-    await expect(page.getByRole("heading", { level: 2, name: /^Out/ })).toBeVisible();
-    await expect(page.getByText(CUSTOMER).first()).toBeVisible();
-
-    await page.goBack();
-    await expect(page.getByRole("heading", { level: 1, name: CUSTOMER })).toBeVisible();
     await page.getByRole("button", { name: "All good" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Back on the wall." })).toBeVisible();
     // Nothing is left to hand over or bring back.
     await expect(page.getByRole("button", { name: "All good" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Hand over" })).toHaveCount(0);
+  });
+
+  test("the register sees a handed-over counter rental out, with its holder", async ({ page }) => {
+    await startRentalForCustomer(page);
+    await pickUnit(page, "Mask", "Mask #3");
+    await payBy(page, "No charge");
+    await page.getByRole("button", { name: "Rent out", exact: true }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Rented out." })).toBeVisible();
+    await page.getByRole("button", { name: "Hand over" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Handed over." })).toBeVisible();
+
+    await page.goto("/shop/blue-mantis/gear");
+    await expect(page.getByRole("heading", { level: 2, name: /^Out/ })).toBeVisible();
+    await expect(page.getByText(CUSTOMER).first()).toBeVisible();
   });
 
   test("reads the free units again as the dates change, with no button", async ({ page }) => {
