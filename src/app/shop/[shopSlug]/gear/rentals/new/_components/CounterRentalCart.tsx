@@ -4,7 +4,13 @@ import { type ReactNode, useId, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { ChoicePill, ChoiceRow, controlClass, StickyFormActions } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  ChoicePill,
+  ChoiceRow,
+  controlClass,
+  StickyFormActions,
+} from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { isOneCoreSet } from "@/lib/counter-rentals";
 import { formatMoneyCents } from "@/lib/format";
@@ -335,9 +341,13 @@ export function CounterRentalCart({
               </li>
             </ul>
 
-            <fieldset className="min-w-0">
-              <legend className="text-sm font-medium">{words.payHeading}</legend>
-              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div>
+              <ChoiceFieldset
+                legend={words.payHeading}
+                required
+                className="min-w-0"
+                bodyClassName="grid grid-cols-1 gap-2 sm:grid-cols-2"
+              >
                 {payments.map((choice) => (
                   <ChoicePill
                     key={choice.value}
@@ -352,9 +362,9 @@ export function CounterRentalCart({
                     {choice.hint ? <span className="block text-muted">{choice.hint}</span> : null}
                   </ChoicePill>
                 ))}
-              </div>
+              </ChoiceFieldset>
               {paymentNote ? <p className="mt-3 text-sm text-muted">{paymentNote}</p> : null}
-            </fieldset>
+            </div>
             {payment === "invoice" ? invoiceExtras : null}
           </div>
         )}
