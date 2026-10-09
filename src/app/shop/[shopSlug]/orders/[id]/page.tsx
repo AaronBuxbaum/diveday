@@ -309,8 +309,7 @@ export default async function OrderDetailPage({
           <OrderMeta
             order={order.order}
             personId={order.person.id}
-            createdByName={order.createdBy?.fullName ?? null}
-            boughtOnline={order.boughtOnline}
+            createdBy={{ name: order.createdBy?.fullName ?? null, online: order.boughtOnline }}
             shopSlug={shopSlug}
             locale={locale}
             timezone={timezone}
