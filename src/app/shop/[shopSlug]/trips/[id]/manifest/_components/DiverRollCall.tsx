@@ -552,27 +552,33 @@ export function DiverRollCall({
           // A release standing over a referral nobody answered (issue #1282):
           // the next capsule down from the refusal (dive-domain review of #2163).
           const referralUnresolved = Boolean(diver.medicalWaiver?.overriddenReferralAt);
+          // A diver recorded not back aboard carries the alarm and nothing
+          // else: no birthday, minor or advisory word beside someone in the
+          // water (DD9). A split buddy team still shows — it is part of the
+          // search. Paper keeps every fact (the block below).
           const capsuleKind = diver.buddyAlert
             ? "buddy"
-            : blockedAtDock
-              ? "blocked"
-              : earlierRefusal
-                ? "refusal"
-                : referralUnresolved
-                  ? "referral"
-                  : diver.minor && diver.age !== null && diver.age !== undefined
-                    ? "minor"
-                    : diver.depthAdvisory?.status === "exceeds"
-                      ? "depth"
-                      : diver.birthday
-                        ? "birthday"
-                        : null;
+            : alarmed
+              ? null
+              : blockedAtDock
+                ? "blocked"
+                : earlierRefusal
+                  ? "refusal"
+                  : referralUnresolved
+                    ? "referral"
+                    : diver.minor && diver.age !== null && diver.age !== undefined
+                      ? "minor"
+                      : diver.depthAdvisory?.status === "exceeds"
+                        ? "depth"
+                        : diver.birthday
+                          ? "birthday"
+                          : null;
           const capsule =
             diver.buddyAlert && diver.buddyTeam ? (
               <Badge tone={diver.buddyAlert === "separated_after_dive" ? "danger" : "warning"}>
                 {buddyAlertText(t, diver.buddyAlert)}
               </Badge>
-            ) : blockedAtDock ? (
+            ) : alarmed ? null : blockedAtDock ? (
               <Badge tone={readinessStatusTone(diverStatus)}>
                 {readinessStatusText(t, diverStatus)}
               </Badge>
