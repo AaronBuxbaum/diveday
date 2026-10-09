@@ -128,9 +128,11 @@ describe("the waiver's pacing", () => {
 describe("one notice grammar", () => {
   it("renders every banner through the one component", () => {
     // Four treatments, one per message, converged: the refusal, the saved
-    // draft, the English-only note about the document, and the expired link's
-    // rescue outcome.
-    expect(countOf("<ShopNotice")).toBe(4);
+    // draft and the English-only note about the document here, and the
+    // expired link's rescue outcome on its own card beside the page.
+    expect(countOf("<ShopNotice")).toBe(3);
+    const doorCards = readFileSync(join(__dirname, "WaiverDoorCards.tsx"), "utf8");
+    expect(doorCards.split("<ShopNotice").length - 1).toBe(1);
   });
 
   it("keeps no hand-rolled tint band of its own", () => {

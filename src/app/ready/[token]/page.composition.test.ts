@@ -534,10 +534,8 @@ describe("the sign step's actions", () => {
  */
 describe("a held seat's greeting", () => {
   it("greets the booked-as name while held, and remembers nobody", () => {
-    expect(SOURCE).toContain(
-      'const greetedName = data.identityHeld ? (data.bookedAs ?? "") : detail.person.fullName;',
-    );
+    expect(SOURCE).toContain('const firstName = data.greetingName.split(" ")[0]');
     expect(SOURCE).toContain("justBooked && person.email && !data.identityHeld ? (");
-    expect(countOf("detail.person.fullName")).toBe(2);
+    expect(countOf("detail.person.fullName")).toBe(1);
   });
 });
