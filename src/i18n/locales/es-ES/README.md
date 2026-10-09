@@ -429,6 +429,13 @@ names fell after `Zoe` in the test suite and nobody could say where they fell in
 Nothing in these bundles affects it, and no copy change can break it. If a list ever comes back in
 the wrong order, the column is the place to look, never the translation.
 
+## Money taken at the counter: **efectivo** and **terminal de pago**
+
+A payment the shop takes outside Stripe is *cash* or the shop's own *card machine*. The Spanish is
+**efectivo** and **terminal de pago**: "datáfono" is Spain's word and "posnet" is Argentina's, and
+"terminal de pago" reads the same across Latin America. The order page says *Pagado en efectivo el
+{date}* / *Pagado con terminal de pago el {date}*.
+
 ## Deliberately left alone
 
 Not everything that looks peninsular is. These stay, and changing them would be a retranslation

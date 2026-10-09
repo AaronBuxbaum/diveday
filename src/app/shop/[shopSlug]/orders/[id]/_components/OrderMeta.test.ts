@@ -41,7 +41,7 @@ async function disputedOrder() {
   const now = new Date("2026-10-09T12:00:00Z");
   await db.insert(paymentDisputes).values({
     shopId: shop.id,
-    stripeAccountId: order.stripeAccountId,
+    stripeAccountId: "acct_demo",
     stripeDisputeId: "dp_banner",
     stripePaymentIntentId: "pi_banner",
     orderId: order.id,

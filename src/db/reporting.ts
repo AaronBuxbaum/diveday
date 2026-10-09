@@ -438,6 +438,32 @@ export async function getMonthlyReport(
       ),
     );
 
+  // **Orders that belong to no booking**: a gear rental at the counter, a
+  // retail sale, an air fill. No departure names them, so they are anchored to
+  // when the money arrived (`paid_at`) inside the same window, and counted on
+  // the same retained basis as the invoices above (`amount_paid_cents`, net of
+  // refunds; a void counter order is zeroed). This is where a payment taken at
+  // the counter in cash or on the shop's own card machine reaches Reports (ADR
+  // 20261009-counter-payments); a Stripe-invoiced one with no booking was
+  // missing from the month for the same reason and arrives here too.
+  const [standaloneOrderRevenue] = await db
+    .select({
+      total: sum(orders.amountPaidCents),
+      tax: sum(orders.taxCents),
+      passThrough: sum(orders.passThroughCents),
+    })
+    .from(orders)
+    .where(
+      and(
+        eq(orders.shopId, shopId),
+        isNull(orders.bookingId),
+        inArray(orders.status, ["paid", "partly_refunded"]),
+        gt(orders.amountPaidCents, 0),
+        gte(orders.paidAt, startUtc),
+        lt(orders.paidAt, endUtc),
+      ),
+    );
+
   // Imported source history is not tied to a local trip, so it lives on its
   // own calendar-day timeline rather than pretending an imported booking was a
   // DiveDay departure. It can affect the aggregate only if the import parser
@@ -572,17 +598,20 @@ export async function getMonthlyReport(
   const currentRevenueCents =
     Number(baseRevenue?.total ?? 0) +
     Number(recoveredDeposits?.total ?? 0) +
-    Number(invoiceRevenue?.total ?? 0);
+    Number(invoiceRevenue?.total ?? 0) +
+    Number(standaloneOrderRevenue?.total ?? 0);
   const passThroughCents =
     Number(currentPassThrough?.total ?? 0) +
     Number(recoveredDeposits?.passThrough ?? 0) +
     Number(invoiceRevenue?.passThrough ?? 0) +
-    Number(invoiceBookingAmounts?.passThrough ?? 0);
+    Number(invoiceBookingAmounts?.passThrough ?? 0) +
+    Number(standaloneOrderRevenue?.passThrough ?? 0);
   const taxCents =
     Number(currentCheckoutTax?.total ?? 0) +
     Number(recoveredDeposits?.tax ?? 0) +
     Number(invoiceRevenue?.tax ?? 0) +
-    Number(invoiceBookingAmounts?.total ?? 0);
+    Number(invoiceBookingAmounts?.total ?? 0) +
+    Number(standaloneOrderRevenue?.tax ?? 0);
   const importedPaymentCents = Number(importedFinancialTotals?.payments ?? 0);
   const importedRefundCents = Number(importedFinancialTotals?.refunds ?? 0);
 

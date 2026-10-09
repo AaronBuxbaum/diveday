@@ -48,6 +48,12 @@ export type OrderLedgerRow = {
    * (principle 9), and `Badge` is the only pill on the page.
    */
   status: { word: string; tone: BadgeTone } | null;
+  /**
+   * How money taken at the counter was taken ("Cash", "Card machine"), already
+   * worded; absent for a Stripe invoice, which is the ordinary case (ADR
+   * 20261009-counter-payments). Quiet text beside the amount, never a badge.
+   */
+  method?: string | null;
   /** Already formatted in the order's own stored currency. */
   amount: string;
 };
@@ -111,6 +117,7 @@ function Row({ row }: { row: OrderLedgerRow }) {
               {row.status.word}
             </Badge>
           ) : null}
+          {row.method ? <span className="text-sm text-muted">{row.method}</span> : null}
           {/* The one figure on the row, and the only thing a reader scans a
               money column for: tabular, right-aligned, and set at the row
               title's weight so the eye can run down it. */}
