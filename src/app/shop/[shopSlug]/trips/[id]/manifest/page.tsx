@@ -48,7 +48,6 @@ import {
   rollCallCheckpoints,
   rollCallRowState,
   splitBuddyTeamIds,
-  type TripManifest,
 } from "@/lib/manifests";
 import { webPushPublicKey } from "@/lib/notifications/web-push";
 import { serializeManifests } from "@/lib/offline-manifests";
@@ -66,16 +65,17 @@ import { tripTabsCopy } from "../_components/trip-tabs-copy";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CrewRollCall } from "./_components/CrewRollCall";
+import { DepartureBoatSafety } from "./_components/DepartureBoatSafety";
 import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
 import { type ExecutedDiveLabels, ExecutedDiveLog } from "./_components/ExecutedDiveLog";
 import { ManifestMoreMenu } from "./_components/ManifestMoreMenu";
-import type { PersonTrailEntry } from "./_components/PersonSheet";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
 import {
   PrintedKitBlanks,
   PrintedMissingProcedure,
   printedBoatProcedureCopy,
 } from "./_components/PrintedBoatProcedure";
+import { personTrailIndex } from "./_components/person-trail";
 import { SeenGroup } from "./_components/SeenGroup";
 import { StageStrip } from "./_components/StageStrip";
 import { SummaryPanel } from "./_components/SummaryPanel";
@@ -211,63 +211,6 @@ function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): ExecutedD
       plan_change_note_too_long: t("manifest.executedDive.refusal.planChangeNoteTooLong"),
     },
   };
-}
-
-function personTrailLabel(
-  t: StaffTranslator,
-  checkpoint: RollCallCheckpoint,
-  state: PersonTrailEntry["state"],
-): string {
-  if (checkpoint === "departure") {
-    return state === "aboard"
-      ? t("manifest.personTrailBoardedAtDock")
-      : t("manifest.personTrailNotBoardedAtDock");
-  }
-  const dive = Number(checkpoint.slice("after_dive_".length));
-  return state === "aboard"
-    ? t("manifest.personTrailBackAfterDive", { dive })
-    : t("manifest.personTrailNotBackAfterDive", { dive });
-}
-
-/**
- * The person sheet's Today section is a small audit trail, not a second
- * current-state calculation. It reads the same latest record each checkpoint
- * already uses and omits carried-forward rows, so an ashore-at-the-dock result
- * appears once instead of being repeated after every dive.
- */
-function personTrailIndex(
-  manifests: readonly TripManifest[],
-  locale: string,
-  timezone: string,
-  t: StaffTranslator,
-): ReadonlyMap<string, readonly PersonTrailEntry[]> {
-  const index = new Map<string, PersonTrailEntry[]>();
-  const add = (
-    id: string,
-    checkpoint: RollCallCheckpoint,
-    rollCall: TripManifest["divers"][number]["rollCall"],
-  ) => {
-    if (!rollCall || rollCall.implied) return;
-    const state: PersonTrailEntry["state"] =
-      rollCall.state === "boarded" ? "aboard" : checkpoint === "departure" ? "ashore" : "notBack";
-    const entries = index.get(id) ?? [];
-    entries.push({
-      label: personTrailLabel(t, checkpoint, state),
-      detail: t("manifest.personTrailDetail", {
-        time: formatTime(rollCall.occurredAt, locale, timezone),
-        name: rollCall.recordedByName,
-      }),
-      state,
-      note: rollCall.note,
-    });
-    index.set(id, entries);
-  };
-
-  for (const snapshot of manifests) {
-    for (const diver of snapshot.divers) add(diver.bookingId, snapshot.checkpoint, diver.rollCall);
-    for (const member of snapshot.crew) add(member.id, snapshot.checkpoint, member.rollCall);
-  }
-  return index;
 }
 
 export default async function TripManifestPage({
@@ -851,6 +794,14 @@ export default async function TripManifestPage({
             the boat-check items are a "one tap away" concern). It used to stand
             fully expanded *above* the checkpoint switch, five full-width buttons
             between the masthead and the head count at every checkpoint. */}
+        <DepartureBoatSafety
+          db={db}
+          shop={shop}
+          tripId={tripId}
+          passengersAboard={departureManifest.summary.totalDivers}
+          idPrefix={idPrefix}
+          t={t}
+        />
         <PreDepartureCheckList
           idPrefix={idPrefix}
           action={boundPreDepartureCheckAction}

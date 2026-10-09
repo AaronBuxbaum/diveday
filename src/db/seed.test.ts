@@ -10,6 +10,7 @@ import { createBooking } from "./bookings";
 import { shopSenderFor } from "./notifications";
 import {
   accountSessions,
+  boats,
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -207,6 +208,32 @@ describe("resetDemoSchedule", () => {
       .from(shopStripeAccounts)
       .where(eq(shopStripeAccounts.shopId, shop.id));
     expect(stripeRow).toBeUndefined();
+  });
+
+  it("puts a boat's certificate and paper dates back to never recorded, so a lapsed insurance date from one capture never stands on the next manifest", async () => {
+    const { db, shop } = await seededShopContext();
+    await db
+      .update(boats)
+      .set({
+        certifiedPassengers: 6,
+        inspectionDueOn: "2026-01-01",
+        registrationExpiresOn: "2026-01-01",
+        insuranceExpiresOn: "2026-01-01",
+      })
+      .where(eq(boats.shopId, shop.id));
+
+    await resetDemoSchedule(db, shop.id);
+
+    const fleet = await db.select().from(boats).where(eq(boats.shopId, shop.id));
+    expect(fleet.length).toBeGreaterThan(0);
+    for (const boat of fleet) {
+      expect(boat).toMatchObject({
+        certifiedPassengers: null,
+        inspectionDueOn: null,
+        registrationExpiresOn: null,
+        insuranceExpiresOn: null,
+      });
+    }
   });
 
   it("restores the waiver to its seeded version history with the shop's own title, so an edited release text doesn't leak into the next spec", async () => {

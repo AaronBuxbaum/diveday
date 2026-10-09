@@ -12,7 +12,7 @@
   "src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx": 606,
   "src/app/shop/[shopSlug]/dive-sites/page.tsx": 631,
   "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 507,
-  "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 845,
+  "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 779,
   "src/app/shop/[shopSlug]/gear/page.tsx": 480,
   "src/app/shop/[shopSlug]/orders/[id]/page.tsx": 541,
   "src/app/shop/[shopSlug]/orders/page.tsx": 850,
@@ -26,7 +26,7 @@
   "src/app/shop/[shopSlug]/settings/team/page.tsx": 873,
   "src/app/shop/[shopSlug]/staffing/page.tsx": 626,
   "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
-  "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1187,
+  "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1138,
   "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1185,
   "src/app/waivers/[token]/page.tsx": 1404
 }

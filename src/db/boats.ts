@@ -5,6 +5,18 @@ import { boats, trips } from "./schema";
 
 export type Boat = typeof boats.$inferSelect;
 
+/**
+ * The certificate's passenger limit and the boat's three paper dates, as the
+ * fleet row edits them. Every field nullable: a shop that has not typed one in
+ * has said nothing (`src/lib/boat-safety.ts`).
+ */
+export type BoatPapersInput = {
+  certifiedPassengers: number | null;
+  inspectionDueOn: string | null;
+  registrationExpiresOn: string | null;
+  insuranceExpiresOn: string | null;
+};
+
 /** The shop's fleet: the hulls it has, never the ones it deleted. */
 export async function listBoats(db: AppDb, shopId: string): Promise<Boat[]> {
   return db
@@ -88,6 +100,7 @@ export async function createBoat(
   name: string,
   capacity: number,
   description: string | null = null,
+  papers?: BoatPapersInput,
 ): Promise<Boat> {
   const [boat] = await db
     .insert(boats)
@@ -96,6 +109,7 @@ export async function createBoat(
       name,
       capacity,
       description,
+      ...papers,
     })
     .returning();
   if (!boat) {
@@ -111,10 +125,12 @@ export async function updateBoat(
   name: string,
   capacity: number,
   description: string | null = null,
+  /** Absent leaves the papers as they were; the fleet row always sends them. */
+  papers?: BoatPapersInput,
 ): Promise<Boat | null> {
   const [boat] = await db
     .update(boats)
-    .set({ name, capacity, description })
+    .set({ name, capacity, description, ...papers })
     .where(and(eq(boats.shopId, shopId), eq(boats.id, boatId), isNull(boats.deletedAt)))
     .returning();
   return boat ?? null;

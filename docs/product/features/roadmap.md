@@ -822,21 +822,15 @@ alongside them moved several of these prerequisites.
   `missing_diver_events` table, `src/lib/missing-diver.ts`, a boat-mode surface under the manifest
   and the offline copy; the incident export gains the trail. *Effort:* L. *Needs:* domain,
   security, ADR.
-- **N-08 Safety kit as register units.** O2 kit, AED, first-aid kit and flares become `gear_items`
-  kinds with the service clocks the register already has (O2 cylinder hydro, AED pad and battery
-  expiry, kit inspection), so the pre-departure check can say "AED pads expire in 12 days" beside
-  the shop's own safety line. Opt-in by presence, like the rest of the register. *Build:* new
-  `gear_item_kind` values + service-event kinds, one line in `pre-departure-check.ts`. *Effort:* M.
-  *Needs:* domain.
 - **N-09 Drill log.** A shop records an emergency drill (missing diver, O2 administration,
   man-overboard) as a dated event with who took part. Renders on Reports and feeds N-46. *Build:*
   `shop_drills` table, one Settings inset. *Effort:* S.
-- **N-10 Boat clocks.** Engine hours and fuel per departure (the crew enters both at *Home*), Coast
-  Guard inspection, registration and hull-insurance dates, and the safety-equipment expiries that
-  belong to the vessel rather than a kit. Renders as one "Boat" panel with the register's
-  service-clock sentences. Never touches capacity authority — the proposed boat-resource ADR owns
-  that. *Build:* `boat_log_entries` + `boat_clocks`, a stage-event hook, one page under Settings or
-  the gear shelf. *Effort:* M.
+- **N-10 Boat clocks.** Engine hours and fuel per departure (the crew enters both at *Home*),
+  rendered as one "Boat" panel with the register's service-clock sentences. The Coast Guard
+  inspection, registration and insurance dates and the safety kit aboard shipped 2026-10-09 with
+  N-08 ([../shipped.md](../shipped.md#boat-papers-and-safety-kit-delivered-2026-10-09)). Never
+  touches capacity authority — the proposed boat-resource ADR owns that. *Build:*
+  `boat_log_entries`, a stage-event hook. *Effort:* S.
 
 ### Regulators and paper
 

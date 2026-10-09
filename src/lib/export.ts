@@ -31,7 +31,8 @@ export type ExportFile = { name: string; content: string | Uint8Array };
  */
 export const EXPORT_FILE_NOTES = {
   "shop.csv": "The shop profile, packing checklist, rental catalog, and rental prices.",
-  "boats.csv": "The shop's boats and their passenger capacities.",
+  "boats.csv":
+    "The shop's boats: the seats each sells, the passenger limit on its Coast Guard certificate when the shop recorded one, and the dates its next inspection is due and its registration and insurance expire. Every date is a calendar day the shop typed; an empty one was never recorded.",
   "trip_lenses.csv":
     "The shop's trip tags, as they appear on its public schedule. trips.csv points at one by lens_id.",
   "contacts.csv":
@@ -114,9 +115,9 @@ export const EXPORT_FILE_NOTES = {
     "Each course form a student signed, one row per booking and form version: the title, version and full text exactly as signed, the typed name, how it was signed ('typed_consent' online on the student's own link, 'in_person_attested' recorded from paper by the staffer in recorded_by_person_id), and a minor's guardian co-signature. A form counts for the booking it was signed on and only at the course's current version. anonymized_at means the student was erased and the names are blank by decision.",
   "rental_fit.csv": "Each diver's rental kit and sizes.",
   "gear_items.csv":
-    "The shop's own rental fleet, one row per physical unit — the shop's tag, kind, size, serial number, and whether it is in service or pulled for service. Status is the shop's own operational call, never a certification of anything. A deleted unit is here too, carrying its deleted_at stamp: the row and its history stay, so this file is the whole fleet the shop has ever tagged.",
+    "The shop's own rental fleet, one row per physical unit — the shop's tag, kind, size, serial number, and whether it is in service or pulled for service, and for the boat's safety kit (O2 kit, AED, first-aid kit, flares) the boat it lives aboard in aboard_boat_id. Status is the shop's own operational call, never a certification of anything. A deleted unit is here too, carrying its deleted_at stamp: the row and its history stay, so this file is the whole fleet the shop has ever tagged.",
   "gear_service_events.csv":
-    "Each unit's care history, oldest first: manufacturer services, tank hydrostatic tests and visual inspections, O2-clean renewals, and dated condition notes, each with the deadline staff set for that clock. The newest event of a kind is that clock's current state. This is the shop's own maintenance record — proof of care for a unit, not a work order.",
+    "Each unit's care history, oldest first: manufacturer services, tank hydrostatic tests and visual inspections, O2-clean renewals, an AED's pads and battery, the printed expiry of flares and first-aid kits, and dated condition notes, each with the deadline staff set for that clock. The newest event of a kind is that clock's current state. This is the shop's own maintenance record — proof of care for a unit, not a work order.",
   "gear_reservations.csv":
     "Which unit was assigned to a booking or directly to a counter-rental holder, and for what dates, with the handover and return stamps. A reservation is fulfillment, never money: the rental charge lives in order_line_items.csv and booking_checkout_bookings.csv. A row with an empty returned_at is a unit still out.",
   "customer_gear_items.csv":

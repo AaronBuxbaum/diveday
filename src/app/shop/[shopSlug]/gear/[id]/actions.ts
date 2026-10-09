@@ -14,7 +14,12 @@ import {
 import { getShopById } from "@/db/shops";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { GEAR_KIND_ORDER, type GearItemKind, type GearServiceKind } from "@/lib/gear";
+import {
+  GEAR_KIND_ORDER,
+  GEAR_SERVICE_KINDS,
+  type GearItemKind,
+  type GearServiceKind,
+} from "@/lib/gear";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
@@ -24,13 +29,7 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
 // fleet position is a compile error (issue #1799); zod's `enum` wants a
 // mutable non-empty tuple.
 const kindValues = [...GEAR_KIND_ORDER] as [GearItemKind, ...GearItemKind[]];
-const SERVICE_KINDS: [GearServiceKind, ...GearServiceKind[]] = [
-  "service",
-  "hydro_test",
-  "visual_inspection",
-  "o2_clean",
-  "note",
-];
+const SERVICE_KINDS: [GearServiceKind, ...GearServiceKind[]] = [...GEAR_SERVICE_KINDS];
 
 const unitIdSchema = z.object({ gearItemId: z.uuid() });
 
@@ -60,6 +59,11 @@ const unitFormSchema = z.object({
   serialNumber: z.string().trim().max(80),
   brandModel: z.string().trim().max(120),
   purchasedOn: z.string().trim().max(10),
+  /**
+   * Only on a safety-kit unit's form, and only when the shop runs boats; absent
+   * leaves the unit's hull as it was. "" is Ashore.
+   */
+  aboardBoatId: z.union([z.uuid(), z.literal("")]).optional(),
 });
 
 export async function updateGearItemAction(formData: FormData) {
@@ -67,14 +71,19 @@ export async function updateGearItemAction(formData: FormData) {
   const parsed = unitFormSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) revalidateAndRedirect(unit, noticeUrl(unit, "invalid"));
 
+  const { aboardBoatId, ...fields } = parsed.data;
   const outcome = await updateGearItem(await getDb(), {
     shopId: session.user.shopId,
     gearItemId,
-    ...parsed.data,
+    ...fields,
+    aboardBoatId: aboardBoatId === undefined ? undefined : aboardBoatId || null,
   });
   if (outcome.ok) revalidateAndRedirect(unit, noticeUrl(unit, "updated"));
-  const to = refusalPath(outcome.reason);
-  revalidateAndRedirect(to, noticeUrl(to, outcome.reason));
+  // A boat that is not this shop's live hull is a stale or forged select, not
+  // something the staffer can fix by retyping: the plain refusal.
+  const reason = outcome.reason === "invalid_boat" ? "invalid" : outcome.reason;
+  const to = refusalPath(reason);
+  revalidateAndRedirect(to, noticeUrl(to, reason));
 }
 
 const statusSchema = z.object({

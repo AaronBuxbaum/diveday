@@ -15,6 +15,7 @@ import {
 import { bookings } from "./bookings";
 import { people, shops } from "./core";
 import { orders } from "./payments";
+import { boats } from "./trips";
 
 /**
  * Rental fit profiles and the gear register: items, service events,
@@ -268,8 +269,10 @@ export const rentalFitProfiles = pgTable(
  * as separate physical units, and adds the two
  * kinds a fleet has that a fit never mentions: `tank` — the compliance-heavy
  * unit with its own hydro/VIP clocks — and `other` for the odd tagged thing
- * (torch, SMB, camera tray) a shop still wants on the register. Keep aligned
- * with `GearItemKind` in `src/lib/gear.ts`.
+ * (torch, SMB, camera tray) a shop still wants on the register. `o2_kit`,
+ * `aed`, `first_aid_kit` and `flares` are the boat's **safety kit**: units
+ * with expiry clocks that may live aboard one hull (`gear_items.aboard_boat_id`,
+ * roadmap N-08). Keep aligned with `GearItemKind` in `src/lib/gear.ts`.
  */
 export const gearItemKind = pgEnum("gear_item_kind", [
   "bcd",
@@ -292,6 +295,9 @@ export const gearItemKind = pgEnum("gear_item_kind", [
   "camera",
   "nitrox_analyzer",
   "o2_kit",
+  "aed",
+  "first_aid_kit",
+  "flares",
   "other",
 ]);
 
@@ -335,7 +341,10 @@ export const gearReturnOutcome = pgEnum("gear_return_outcome", [
  * What kind of care a service event records. `service` is the manufacturer
  * service (regulators, BCDs, computers); `hydro_test` and `visual_inspection`
  * are a tank's two independent compliance clocks; `o2_clean` is the nitrox
- * cleanliness renewal; `note` is a dated condition observation with no clock
+ * cleanliness renewal; `aed_pads` and `aed_battery` are an AED's two printed
+ * expiry dates (replaced on their own schedules, so two clocks); `expiry` is
+ * the one printed date a consumable carries — flares, a first-aid kit's
+ * contents; `note` is a dated condition observation with no clock
  * of its own. Deliberately not a work order: no parts, no labor, no billing
  * (vision non-goal — DiveDay never repairs customer gear).
  */
@@ -344,6 +353,9 @@ export const gearServiceKind = pgEnum("gear_service_kind", [
   "hydro_test",
   "visual_inspection",
   "o2_clean",
+  "aed_pads",
+  "aed_battery",
+  "expiry",
   "note",
 ]);
 
@@ -379,6 +391,19 @@ export const gearItems = pgTable(
     /** Staff free text set alongside `needs_service` ("inflator sticks"). */
     serviceNote: text("service_note"),
     /**
+     * **Which boat this piece of safety kit lives aboard** — "the AED on
+     * Mantis I". Only a safety-kit kind carries one (`SAFETY_KIT_KINDS`,
+     * `src/lib/boat-safety.ts`; `updateGearItem` clears it for any other
+     * kind), and it is what lets the departure's pre-departure check name the
+     * pads that expire on *that* hull's AED. Null is ordinary: kit kept
+     * ashore, or a shop that never said.
+     *
+     * `set null` on the boat's side is never exercised — a boat is
+     * soft-deleted (`boats.deleted_at`) — and a deleted boat's kit simply
+     * stops appearing on any departure.
+     */
+    aboardBoatId: uuid("aboard_boat_id").references(() => boats.id, { onDelete: "set null" }),
+    /**
      * Set when staff delete a unit (ADR 20260820-every-delete-is-soft). The row
      * stays, and so do its `gear_service_events` and `gear_reservations` — a
      * fleet's care history is the last thing a delete should take, and it is
@@ -412,6 +437,11 @@ export const gearItems = pgTable(
     // (CR-018, same reasoning as `people_full_name_trgm_idx`). The tag is the
     // one the schema comment above calls "how a wet hand finds the row"; the
     // serial is what a recall or a service centre names.
+    // The pre-departure check's one question of this table: what lives aboard
+    // this hull. Partial, because almost every unit lives on the wall.
+    index("gear_items_aboard_boat_idx")
+      .on(table.aboardBoatId)
+      .where(sql`${table.aboardBoatId} is not null and ${table.deletedAt} is null`),
     index("gear_items_label_trgm_idx").using("gin", sql`${table.label} gin_trgm_ops`),
     index("gear_items_serial_trgm_idx").using("gin", sql`${table.serialNumber} gin_trgm_ops`),
     index("gear_items_brand_model_trgm_idx").using("gin", sql`${table.brandModel} gin_trgm_ops`),

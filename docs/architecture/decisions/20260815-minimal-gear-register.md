@@ -443,3 +443,23 @@ line is built.
   only liability page, and the ticket is not a second one.
 - **Still no money on a ticket.** Billing lives on the order; the counter ticket links it on screen
   and hides the link in print.
+
+## Amendment 2026-10-09 — the boat's safety kit lives on the register
+
+Roadmap N-08, approved by Aaron for the project stack. The boat's own emergency equipment is
+register units, not a second inventory:
+
+- **Four kinds are safety kit**: `o2_kit` (already a kind) and three new ones, `aed`,
+  `first_aid_kit` and `flares` (`SAFETY_KIT_KINDS`, `src/lib/boat-safety.ts`). They follow the
+  register's one taxonomy: the enum, `GEAR_KIND_ORDER`, the clock list and the labels.
+- **Three new clocks**: `aed_pads` and `aed_battery` (an AED's two printed dates, replaced on their
+  own schedules) and `expiry` (the one printed date on flares or a first-aid kit's contents). None
+  suggests a date: the date is on the packet. An O2 kit now also runs a tank's `hydro_test` and
+  `visual_inspection` for its cylinder.
+- **A unit of safety kit may live aboard one boat** (`gear_items.aboard_boat_id`, nullable). Only
+  the four kinds carry one, and `updateGearItem` clears it for any other kind; a boat id that is
+  not one of this shop's live hulls is refused.
+- **The pre-departure check reads it**: every clock inside 30 days or past it on the kit aboard a
+  departure's boat is one line above the checklist, and an expired clock on any safety kit, aboard
+  or ashore, is Today's owner row `boat_safety_expired` in place of the register's own bench row
+  for that unit. Informs, never gates, like every other service clock here.
