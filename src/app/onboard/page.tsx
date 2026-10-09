@@ -11,8 +11,6 @@ import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, DateField, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/ledger";
-import { getDb } from "@/db/client";
-import { openSetupLink } from "@/db/setup-links";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { MAX_FIRST_DAY_NAME, parseFirstDayFields } from "@/lib/first-day";
@@ -23,7 +21,6 @@ import {
   type OnboardErrorCode,
   suggestShopSlug,
 } from "@/lib/onboarding";
-import { SETUP_LINK_PARAM } from "@/lib/setup-links";
 import {
   type CuratedTimeZone,
   type CuratedTimezoneGroupKey,
@@ -31,6 +28,7 @@ import {
 } from "@/lib/timezones";
 import { ClosedDoor } from "./_components/ClosedDoor";
 import { OnboardDemoDoor } from "./_components/OnboardDemoDoor";
+import { SetupLinkField, setupLinkDoor } from "./_components/setup-link-door";
 import { onboardAction } from "./actions";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -228,7 +226,7 @@ export default async function OnboardPage({
     ownerEmail?: string;
     boat?: string;
     departure?: string;
-    /** The setup link's token ({@link SETUP_LINK_PARAM}); without an open one there is no form. */
+    /** The setup link's token; without an open one there is no form (`setupLinkDoor`). */
     setup?: string | string[];
   }>;
 }) {
@@ -236,19 +234,13 @@ export default async function OnboardPage({
     await searchParams;
   const t = diverTranslator(await requestLocale());
 
-  // **Shut without an open link** (ADR 20261009-single-use-setup-links). A
-  // visitor who arrives from a search result is told where to ask; one holding
-  // a link that is spent, expired or mistyped is told it no longer works. The
-  // three are one answer: the page never says which.
-  if (setup === undefined) return <ClosedDoor t={t} />;
-  const link = await openSetupLink(await getDb(), setup);
-  if (!link || typeof setup !== "string") return <ClosedDoor t={t} spentLink />;
+  // **Shut without an open link** (ADR 20261009-single-use-setup-links).
+  const opened = await setupLinkDoor(setup);
+  if (opened.door !== "open") return <ClosedDoor t={t} spentLink={opened.door === "spent"} />;
 
   // A hand-edited parameter loses itself and nothing else.
   const firstDay = parseFirstDayFields({ boat, departure });
-  // The request's own answers fill the form the first time it opens; a bounce
-  // back carries what was typed since, which wins.
-  const shopNameValue = shopName ?? link.shopName;
+  const shopNameValue = shopName ?? opened.link.shopName;
 
   // The refusal lands on the box that earned it, not in a banner above the
   // whole form (docs/design/forms-and-controls.md); only a code about the
@@ -289,7 +281,7 @@ export default async function OnboardPage({
       >
         {errorField && errorField !== "form" ? <FieldErrorFocus key={error} /> : null}
         <form action={onboardAction} className="flex flex-col gap-5">
-          <input type="hidden" name={SETUP_LINK_PARAM} value={setup} />
+          <SetupLinkField token={opened.token} />
           <section className="flex flex-col gap-4">
             <GroupLabel as="h2">{t("account.onboard.shopSectionTitle")}</GroupLabel>
             <FieldGrid columns={2}>
@@ -420,7 +412,7 @@ export default async function OnboardPage({
                   type="text"
                   required
                   autoComplete="name"
-                  defaultValue={ownerName ?? link.contactName}
+                  defaultValue={ownerName ?? opened.link.contactName}
                   placeholder={t("account.onboard.fullNamePlaceholder")}
                   className={controlClass}
                 />
@@ -433,7 +425,7 @@ export default async function OnboardPage({
                   type="email"
                   required
                   autoComplete="email"
-                  defaultValue={ownerEmail ?? link.email}
+                  defaultValue={ownerEmail ?? opened.link.email}
                   placeholder={t("account.onboard.emailPlaceholder")}
                   className={controlClass}
                 />

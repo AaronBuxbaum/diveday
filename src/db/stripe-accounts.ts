@@ -7,7 +7,11 @@ import {
   type InvoiceCustomerAddress,
   isUsableInvoiceCustomerAddress,
 } from "@/lib/payments/invoicing";
-import { type DemoStripeAccount, demoStripeAccount } from "@/lib/payments/stripe-keys";
+import {
+  type DemoStripeAccount,
+  demoStripeAccount,
+  isDemoTestModeAccount,
+} from "@/lib/payments/stripe-keys";
 import type { AppDb, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import type { ShopStripeAccount } from "./schema";
@@ -251,6 +255,15 @@ export async function disconnectShopStripeAccount(
  */
 export function canAcceptPayments(account: ShopStripeAccount | null): boolean {
   return !!account && account.disconnectedAt === null && account.chargesEnabled;
+}
+
+/**
+ * Which checkout a booking on `account` hands off to, once it can take a
+ * charge at all: Stripe, or Stripe in test mode, which only the canonical
+ * demo's account ever is (ADR 20261009-demo-test-mode-payments).
+ */
+export function checkoutMode(account: ShopStripeAccount | null): true | "test-mode" {
+  return isDemoTestModeAccount(account?.stripeAccountId) ? "test-mode" : true;
 }
 
 /** Refresh stored account flags from a live Stripe lookup; a failed lookup leaves the stored row untouched. */

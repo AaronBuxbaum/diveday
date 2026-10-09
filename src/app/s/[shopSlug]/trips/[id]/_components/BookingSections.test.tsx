@@ -559,14 +559,13 @@ describe("TripFullSection — the shop's own better answer", () => {
  * charged, in place of the usual one.
  */
 describe("BookSpotSection on the demo's test-mode checkout", () => {
-  function renderPay(testModePayment: boolean) {
+  function renderPay(payAtBooking: true | "test-mode") {
     renderDiver(
       <BookSpotSection
         trip={trip()}
         tripRef={tripRef}
         remaining={6}
-        payAtBooking
-        testModePayment={testModePayment}
+        payAtBooking={payAtBooking}
         perDiverPriceCents={13_000}
         currency="usd"
         locale="en-US"
@@ -578,14 +577,14 @@ describe("BookSpotSection on the demo's test-mode checkout", () => {
   }
 
   it("names the test card and says nothing is charged", () => {
-    renderPay(true);
+    renderPay("test-mode");
     expect(screen.getByText(/Pay with the card 4242 4242 4242 4242/)).toBeInTheDocument();
     expect(screen.getByText(/Nothing is charged\./)).toBeInTheDocument();
     expect(screen.queryByText("You’ll finish paying on a secure Stripe page.")).toBeNull();
   });
 
   it("says nothing about test mode on a shop's own checkout", () => {
-    renderPay(false);
+    renderPay(true);
     expect(screen.getByText("You’ll finish paying on a secure Stripe page.")).toBeInTheDocument();
     expect(screen.queryByText(/4242/)).toBeNull();
   });

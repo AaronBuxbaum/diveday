@@ -21,7 +21,7 @@ import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getShopReviewAggregate } from "@/db/reviews";
 import { tripMayTakeACode } from "@/db/shop-promos";
 import { shopBySlugCached } from "@/db/shops-cached";
-import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { canAcceptPayments, checkoutMode, getShopStripeAccount } from "@/db/stripe-accounts";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { siteSightings } from "@/db/trip-sightings";
 import {
@@ -57,7 +57,6 @@ import { minimumSeatsState } from "@/lib/minimum-seats";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
-import { isDemoTestModeAccount } from "@/lib/payments/stripe-keys";
 import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import { combineCertRequirements } from "@/lib/readiness";
 import { isLiveShopStaff } from "@/lib/session";
@@ -829,10 +828,7 @@ export default async function TripDetailPage({
                   tripRef={tripRef}
                   remaining={remaining}
                   errorMessage={errorMessage}
-                  payAtBooking={payAtBooking}
-                  testModePayment={
-                    payAtBooking && isDemoTestModeAccount(stripeAccount?.stripeAccountId)
-                  }
+                  payAtBooking={payAtBooking && checkoutMode(stripeAccount)}
                   offerCodeField={offerCodeField}
                   perDiverPriceCents={perDiverPriceCents}
                   currency={shopCurrency}

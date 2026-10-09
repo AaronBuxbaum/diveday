@@ -521,7 +521,8 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   your shop up with you.", stands under the closing pair of `/`, `/pricing`, `/about` and every
   feature page, the band where a reader commits. It names a person and nothing else: no response
   time, no "free", no count of anything. Any change to its wording is a service claim and needs the
-  same sign-off. `e2e/marketing.spec.ts` asserts it once in each of those pages' `<main>`.
+  same sign-off. `FunnelCtas` draws it under a closing pair, chosen by the tag (`isClosingSource`), so
+  no page places it by hand; `e2e/marketing.spec.ts` asserts it once in each of those pages' `<main>`.
 - **One primary CTA per screen.** The demo leads everywhere through the shared `FunnelCtas`
   pair (the 2026-08-22 two-doors decision above — this bullet said "the trial on `/pricing`"
   until 2026-08-27, a leftover from before that decision); `/pricing`'s trial door is simply

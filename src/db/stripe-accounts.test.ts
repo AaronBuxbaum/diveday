@@ -3,6 +3,7 @@ import { seededShopContext } from "@/test/db";
 import { setShopCurrency } from "./shops";
 import {
   canAcceptPayments,
+  checkoutMode,
   disconnectShopStripeAccount,
   getShopCurrency,
   getShopStripeAccount,
@@ -277,5 +278,24 @@ describe("syncDemoStripeAccount", () => {
     expect(await getShopStripeAccount(db, shop.id)).toBeNull();
     expect((await getShopStripeAccount(db, other.id))?.stripeAccountId).toBe(config.accountId);
     expect(await db.select().from(shops).where(eq(shops.id, other.id))).toHaveLength(1);
+  });
+});
+
+describe("checkoutMode", () => {
+  it("is test mode only for the configured demo account, and plain Stripe for every other", async () => {
+    const { db, shop } = await shopContext();
+    await upsertShopStripeAccount(db, shop.id, "acct_demoTestMode1");
+    const account = await getShopStripeAccount(db, shop.id);
+    vi.stubEnv("STRIPE_DEMO_ACCOUNT_ID", "acct_demoTestMode1");
+    vi.stubEnv("STRIPE_DEMO_SECRET_KEY", "sk_test_demoKey12345");
+    expect(checkoutMode(account)).toBe("test-mode");
+    // Half a pair, or a live key in the demo's slot, is no test mode at all.
+    vi.stubEnv("STRIPE_DEMO_SECRET_KEY", "sk_live_notATestKey123");
+    expect(checkoutMode(account)).toBe(true);
+    vi.stubEnv("STRIPE_DEMO_SECRET_KEY", "sk_test_demoKey12345");
+    vi.stubEnv("STRIPE_DEMO_ACCOUNT_ID", "acct_someoneElse1");
+    expect(checkoutMode(account)).toBe(true);
+    expect(checkoutMode(null)).toBe(true);
+    vi.unstubAllEnvs();
   });
 });

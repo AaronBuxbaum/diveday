@@ -54,6 +54,10 @@ import { type FunnelSource, setUpHref } from "@/lib/funnel";
  *
  * The `<form>` is `display: contents` so its button is a direct child of the
  * flex row and the two doors size and wrap as one pair.
+ *
+ * **At a page's close the pair says who reads a set-up request** (#2097): one
+ * line under the doors, once per page, decided by the tag rather than by each
+ * page (docs/product/marketing.md, "What Get set up leads to").
  */
 export function FunnelCtas({
   locale,
@@ -71,24 +75,40 @@ export function FunnelCtas({
   const t = diverTranslator(locale);
   const width = "w-full sm:w-auto";
   return (
-    <div className={`flex ${width} flex-col gap-3 sm:flex-row${className ? ` ${className}` : ""}`}>
-      <form action={enterDemoAction} className="contents">
-        <FunnelTag source={source} />
-        {demo ? <input type="hidden" name="role" value={demo.role} /> : null}
-        {demo?.landing ? <input type="hidden" name="landing" value={demo.landing} /> : null}
-        <SubmitButton
-          pendingLabel={t("marketing.common.gettingReady")}
-          className={buttonClass({ busy: true, className: width })}
-        >
-          {t("marketing.common.tryDemo")}
-        </SubmitButton>
-      </form>
-      <Link
-        href={setUpHref(source)}
-        className={buttonClass({ variant: "outline", className: width })}
+    <>
+      <div
+        className={`flex ${width} flex-col gap-3 sm:flex-row${className ? ` ${className}` : ""}`}
       >
-        {t("marketing.common.getSetUp")}
-      </Link>
-    </div>
+        <form action={enterDemoAction} className="contents">
+          <FunnelTag source={source} />
+          {demo ? <input type="hidden" name="role" value={demo.role} /> : null}
+          {demo?.landing ? <input type="hidden" name="landing" value={demo.landing} /> : null}
+          <SubmitButton
+            pendingLabel={t("marketing.common.gettingReady")}
+            className={buttonClass({ busy: true, className: width })}
+          >
+            {t("marketing.common.tryDemo")}
+          </SubmitButton>
+        </form>
+        <Link
+          href={setUpHref(source)}
+          className={buttonClass({ variant: "outline", className: width })}
+        >
+          {t("marketing.common.getSetUp")}
+        </Link>
+      </div>
+      {isClosingSource(source) ? (
+        <p className="mt-3 text-sm font-medium text-balance text-muted">
+          {t("marketing.common.setUpNote")}
+        </p>
+      ) : null}
+    </>
   );
 }
+
+/** The pair at the end of a page: the tags whose position is the page's close. */
+export function isClosingSource(source: FunnelSource): boolean {
+  return CLOSING_SOURCES.has(source) || /^feature-.+-close$/.test(source);
+}
+
+const CLOSING_SOURCES = new Set<FunnelSource>(["home-closing", "pricing-close", "about-closing"]);
