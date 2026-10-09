@@ -1,4 +1,4 @@
-import { and, count, eq, gt, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { and, count, eq, gt, isNull, lt, ne, notExists, or, sql } from "drizzle-orm";
 import type { AppDb, DbExecutor } from "./client";
 import { STALE_AFTER_MS } from "./payment-operations";
 import {
@@ -136,6 +136,19 @@ async function discountUses(
         // horizon the booking claim uses.
         gt(paymentOperationIntents.startedAt, new Date(now.getTime() - STALE_AFTER_MS)),
         ...(exceptIntentId ? [ne(paymentOperationIntents.id, exceptIntentId)] : []),
+        // An attempt whose checkout row already landed is counted there, as a
+        // live pending page; until its intent resolves it must not count twice.
+        notExists(
+          db
+            .select({ one: sql`1` })
+            .from(bookingCheckouts)
+            .where(
+              and(
+                eq(bookingCheckouts.shopId, ref.shopId),
+                eq(bookingCheckouts.stripeSessionId, paymentOperationIntents.stripeObjectId),
+              ),
+            ),
+        ),
       ),
     );
   return paid + Number(held?.total ?? 0) + Number(reserved?.total ?? 0);

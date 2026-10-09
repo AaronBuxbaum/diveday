@@ -5,7 +5,7 @@ import { seededShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { resolvePaymentOperation, startPaymentOperation } from "./payment-operations";
 import { reserveDiscountUse } from "./promo-caps";
-import { paymentOperationIntents, shops } from "./schema";
+import { bookingCheckouts, paymentOperationIntents, shops, trips } from "./schema";
 import { createShopPromoCode } from "./shop-promos";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 
@@ -40,6 +40,38 @@ describe("reserveDiscountUse", () => {
 
     const second = await startPaymentOperation(db, { shopId: shop.id, kind: "checkout_session" });
     expect(await reserveDiscountUse(db, { ...ref, intentId: second.id })).toBe("used_up");
+  });
+
+  it("counts an attempt once while its checkout row has landed and its intent is still open", async () => {
+    // Layer-7 confirm review: between the pending checkout's insert and the
+    // intent's resolve, the same use read as both, refusing the last real buyer.
+    const { db, shop, promo } = await cappedCode(2);
+    const ref = { shopId: shop.id, source: "shop" as const, promoId: promo.id, now: nowDate() };
+    const first = await startPaymentOperation(db, { shopId: shop.id, kind: "checkout_session" });
+    expect(await reserveDiscountUse(db, { ...ref, intentId: first.id })).toBe("reserved");
+    await db
+      .update(paymentOperationIntents)
+      .set({ stripeObjectId: "cs_caps_first" })
+      .where(eq(paymentOperationIntents.id, first.id));
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, shop.id))
+      .limit(1);
+    if (!trip) throw new Error("seeded shop has no trip");
+    await db.insert(bookingCheckouts).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      stripeAccountId: "acct_caps",
+      stripeSessionId: "cs_caps_first",
+      promoCodeId: promo.id,
+      currency: "usd",
+      amountPerDiverCents: 10000,
+      totalCents: 9000,
+    });
+
+    const second = await startPaymentOperation(db, { shopId: shop.id, kind: "checkout_session" });
+    expect(await reserveDiscountUse(db, { ...ref, intentId: second.id })).toBe("reserved");
   });
 
   it("holds nothing for an intent that has already resolved", async () => {
