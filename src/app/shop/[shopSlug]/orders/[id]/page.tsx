@@ -13,14 +13,13 @@ import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { canPersonRefund } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/orders";
-import { listOpenPaymentDisputes } from "@/db/payment-disputes";
 import type { OrderStatus } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { formatMoneyCents, formatShortDate } from "@/lib/format";
+import { formatMoneyCents } from "@/lib/format";
 import { currencySymbol, majorToMinor, minorToMajor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
@@ -28,7 +27,7 @@ import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { OrderMeta } from "./_components/OrderMeta";
+import { OrderDisputeBanner, OrderMeta } from "./_components/OrderMeta";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -294,23 +293,6 @@ export default async function OrderDetailPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const demoActionHint = t("orders.detail.demoActionHint");
-  // A card dispute the diver's bank opened against this order and has not
-  // decided (ADR 20261009-stripe-reversals-reach-diveday). Today carries the
-  // same row; here it sits on the money it is about.
-  const [dispute] = await listOpenPaymentDisputes(db, shop.id, {
-    orderId: order.order.id,
-    limit: 1,
-  });
-  const disputeLine = dispute
-    ? dispute.evidenceDueBy
-      ? t("orders.detail.disputeOpen", {
-          amount: formatMoneyCents(dispute.amountCents, dispute.currency, locale),
-          due: formatShortDate(dispute.evidenceDueBy, locale, timezone),
-        })
-      : t("orders.detail.disputeOpenNoDeadline", {
-          amount: formatMoneyCents(dispute.amountCents, dispute.currency, locale),
-        })
-    : null;
   const banner = noticeFromParam(notice, NOTICES);
 
   return (
@@ -341,9 +323,7 @@ export default async function OrderDetailPage({
         // never sees the button that would have answered it.
         <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
       ) : null}
-
-      {disputeLine ? <StaffNoticeBanner tone="warning">{disputeLine}</StaffNoticeBanner> : null}
-
+      <OrderDisputeBanner shop={shop} orderId={order.order.id} locale={locale} />
       {/* `padding="lg"`: the receipt is a card someone works *inside* —
           Refresh, Void and Refund all live in it. No `title`; the page header
           above already names the order, and the status badge is the heading
