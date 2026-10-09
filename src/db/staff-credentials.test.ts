@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { people, personRoles, staffCredentialKind } from "./schema";
 import {
@@ -38,8 +38,9 @@ async function makePerson(
   return person.id;
 }
 
-async function context() {
-  const { db, shop } = await seededShopContext();
+/** The file's shared database unless a test needs one of its own. */
+async function context(source: Awaited<ReturnType<typeof seededShopContext>> = ctx) {
+  const { db, shop } = source;
   const staff = await makePerson(db, shop.id, ["instructor"], { name: "Marisol Vega" });
   return { db, shop, staff };
 }
@@ -51,6 +52,10 @@ const card = (personId: string, shopId: string, identifier = "PADI-123456") => (
   name: "Open Water Scuba Instructor",
   identifier,
 });
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 describe("createStaffCredential", () => {
   it("files a pending credential for a live staff member of this shop", async () => {
@@ -123,7 +128,11 @@ describe("createStaffCredential", () => {
   });
 
   it("refuses the same card number twice for one person and kind, case-insensitively", async () => {
-    const { db, shop, staff } = await context();
+    // A database of its own, not the file's shared transaction: the refusal is
+    // the unique index answering, a violation aborts a wrapping transaction,
+    // and the list read after it would fail for that reason alone
+    // (src/test/db.ts, "When NOT to use this").
+    const { db, shop, staff } = await context(await seededShopContext());
     expect(await createStaffCredential(db, card(staff, shop.id, "padi-123456"))).not.toBeNull();
     expect(await createStaffCredential(db, card(staff, shop.id, "PADI-123456"))).toBeNull();
     // The refusal is a null, never a thrown 500 — and the list is unchanged.

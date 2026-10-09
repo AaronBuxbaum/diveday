@@ -2,7 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
 import {
@@ -20,9 +20,13 @@ import {
 import { activityEvents, bookings, people } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 describe("staff-only operational context", () => {
   it("saves a private booking note before boarding and records a plain-language activity event", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
     if (!trip) throw new Error("expected a booked trip");
     const [rosterEntry] = await getTripRoster(db, shop.id, trip.id);
@@ -53,6 +57,9 @@ describe("staff-only operational context", () => {
     // first — which changes the moment anything moves rows on disk. A VACUUM
     // does exactly that, and it flipped this list in the visual baseline:
     // "deleted a private note" rendered above the "added" it followed.
+    //
+    // A database of its own, not the file's shared transaction: VACUUM refuses
+    // to run inside a transaction block (src/test/db.ts, "When NOT to use this").
     const { db, shop } = await seededShopContext();
     const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
     if (!trip) throw new Error("expected a booked trip");
@@ -90,7 +97,7 @@ describe("staff-only operational context", () => {
   });
 
   it("refuses blank notes and cross-shop booking access", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [actor] = await listStaff(db, shop.id);
     if (!actor) throw new Error("expected seeded staff");
     await expect(
@@ -123,7 +130,7 @@ describe("staff-only operational context", () => {
   });
 
   it("keeps the matched diver's notes off a held seat, and the seat's own notes on it (issue #1690)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
     if (!trip) throw new Error("expected a booked trip");
     const [rosterEntry] = await getTripRoster(db, shop.id, trip.id);
@@ -162,7 +169,7 @@ describe("staff-only operational context", () => {
   });
 
   it("shares a diver note between the diver record and a trip manifest", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
     if (!trip) throw new Error("expected a booked trip");
     const [rosterEntry] = await getTripRoster(db, shop.id, trip.id);
@@ -218,7 +225,7 @@ describe("staff-only operational context", () => {
   });
 
   it("deletes a diver note without touching booking-scoped notes", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
     if (!trip) throw new Error("expected a booked trip");
     const [rosterEntry] = await getTripRoster(db, shop.id, trip.id);
@@ -250,7 +257,7 @@ describe("staff-only operational context", () => {
   });
 
   it("deletes a private booking note and records a plain-language activity event", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
     if (!trip) throw new Error("expected a booked trip");
     const [rosterEntry] = await getTripRoster(db, shop.id, trip.id);
@@ -290,7 +297,7 @@ describe("staff-only operational context", () => {
     // §7): `deleteInternalNoteAction` reads this return value straight into the
     // redirect that drives the toast, and `restoreInternalNoteAction` reuses
     // `addInternalNote` with exactly these fields to recreate the note.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
     if (!trip) throw new Error("expected a booked trip");
     const [rosterEntry] = await getTripRoster(db, shop.id, trip.id);
@@ -332,7 +339,7 @@ describe("staff-only operational context", () => {
   });
 
   it("refuses to delete a note that doesn't exist or belongs to another shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const otherShopId = "99999999-8888-4777-8666-555555555555";
     const [actor] = await listStaff(db, shop.id);
     if (!actor) throw new Error("expected seeded staff");
@@ -399,7 +406,7 @@ describe("a diver's own activity trail", () => {
   }
 
   it("reads one person's lines newest first, a page at a time", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const priya = await seededDiver(db, shop.id, "Priya Sharma");
 
     const first = await pagedDiverActivity(db, shop.id, priya, { pageSize: 5 });
@@ -419,7 +426,7 @@ describe("a diver's own activity trail", () => {
   });
 
   it("lands a request past the end on the last real page, never on an empty one", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const priya = await seededDiver(db, shop.id, "Priya Sharma");
 
     const far = await pagedDiverActivity(db, shop.id, priya, { page: 99, pageSize: 5 });
@@ -428,7 +435,7 @@ describe("a diver's own activity trail", () => {
   });
 
   it("carries what a person did, not only what was done about them", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
     if (!trip) throw new Error("expected a booked trip");
     const [rosterEntry] = await getTripRoster(db, shop.id, trip.id);
@@ -454,7 +461,7 @@ describe("a diver's own activity trail", () => {
   });
 
   it("never reaches another shop's trail through the same person id", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const priya = await seededDiver(db, shop.id, "Priya Sharma");
     const otherShopId = "99999999-8888-4777-8666-555555555555";
 
@@ -481,7 +488,7 @@ describe("a diver's own activity trail", () => {
    * asserts the outcome the staffer sees either way.
    */
   it("still reads redacted once the person has been erased", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const priya = await seededDiver(db, shop.id, "Priya Sharma");
     const owner = await seededDiver(db, shop.id, "Dana Reyes");
     expect((await pagedDiverActivity(db, shop.id, priya)).total).toBeGreaterThan(0);
@@ -505,7 +512,7 @@ describe("a diver's own activity trail", () => {
    * record it was written on. `subject_person_id` is what claims it now.
    */
   it("puts a note written on a diver's record on that diver's trail, and on the writer's", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const priya = await seededDiver(db, shop.id, "Priya Sharma");
     const [actor] = await listStaff(db, shop.id);
     if (!actor) throw new Error("expected seeded staff");
@@ -559,7 +566,7 @@ describe("a diver's own activity trail", () => {
    * from that sweep and this fails while the reader still hands the line back.
    */
   it("destroys every line the trail claims, whichever handle claims it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const priya = await seededDiver(db, shop.id, "Priya Sharma");
     const owner = await seededDiver(db, shop.id, "Dana Reyes");
     const [actor] = await listStaff(db, shop.id);

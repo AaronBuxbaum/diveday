@@ -4,7 +4,7 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { checkInBooking, listCheckInQueue, undoCheckInBooking } from "./check-in";
 import { listDepartureBoardedBookingIds, recordRollCall } from "./manifests";
 import { listTripsReadiness } from "./readiness";
@@ -25,8 +25,9 @@ import { completeWaiver, issueWaiverRequest } from "./waivers";
 const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
 const HOUR = 60 * 60 * 1000;
 
-async function context() {
-  const { db, shop } = await seededShopContext();
+/** The file's shared database unless a test needs one of its own. */
+async function context(source: Awaited<ReturnType<typeof seededShopContext>> = ctx) {
+  const { db, shop } = source;
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const reef = trips.find((trip) => trip.title === "Two-Tank Reef — Molasses & French");
   if (!reef) throw new Error("seeded reef trip missing");
@@ -43,6 +44,10 @@ async function context() {
     personName: booking.person.fullName,
   };
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 describe("counter check-in", () => {
   it("searches the bounded queue and keeps blocked divers out of check-in", async () => {
@@ -175,7 +180,11 @@ describe("counter check-in", () => {
    * distinct trips instead.
    */
   it("gives a diver at most one seat per departure, so a seat count is a departure count", async () => {
-    const { db, shop, reef, booking } = await context();
+    // A database of its own, not the file's shared transaction: the second
+    // seat is refused by the unique index, a violation aborts a wrapping
+    // transaction, and the queue read after it would fail for that reason
+    // alone (src/test/db.ts, "When NOT to use this").
+    const { db, shop, reef, booking } = await context(await seededShopContext());
     await expect(
       db.insert(bookings).values({
         bookedAs: "diver",

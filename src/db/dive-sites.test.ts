@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DIVE_SITE_DIFFICULTIES, SITE_LIBRARY_GROUPS } from "@/lib/dive-site-difficulty";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import {
   copyDiveSite,
   countGlobalDiveSiteTemplates,
@@ -32,6 +32,10 @@ import { bookings, diveSites, globalDiveSites, globalDiveSiteVersions } from "./
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { getTripDiveSitesPeek, getTripWithBooked } from "./trips-record";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 describe("dive-site library", () => {
   /**
    * `dive_sites_shop_name_unique` is a hard (shop_id, name) index and an import
@@ -43,7 +47,7 @@ describe("dive-site library", () => {
    * page into its error boundary.
    */
   it("imports a catalog template beside a same-named site instead of violating the unique index", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // By name, not "the first card": the catalog is a real library of Florida
     // sites ordered by slug now, and only this one collides with a site the
     // seeded shop already holds — which is the collision under test.
@@ -67,7 +71,7 @@ describe("dive-site library", () => {
   });
 
   it("pulls a newer template revision without overwriting a local edit", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const catalogEntry = (await listGlobalDiveSiteTemplates(db)).templates.find(
       (row) => row.version.briefing.name === "Molasses Reef",
     );
@@ -144,6 +148,10 @@ describe("dive-site library", () => {
    * as an answer the form can word, like every other one.
    */
   it("answers a name the shop already holds instead of throwing the unique violation", async () => {
+    // A database of its own, not the file's shared transaction: the refusal is
+    // the unique index answering, a violation aborts a wrapping transaction,
+    // and every read after it would fail for that reason alone
+    // (src/test/db.ts, "When NOT to use this").
     const { db, shop } = await seededShopContext();
     // A name off the shop's own library rather than a literal: the site the
     // production save collided with was one the shop had imported from the
@@ -172,7 +180,7 @@ describe("dive-site library", () => {
    * cannot see.
    */
   it("refuses a name an archived site still holds", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const archived = await createDiveSite(db, { shopId: shop.id, name: "Retired Ledge" });
     await deleteDiveSite(db, shop.id, archived.id);
     // Gone from the library the staffer can see...
@@ -187,7 +195,7 @@ describe("dive-site library", () => {
   });
 
   it("keeps a tide station and preference through create and edit, and clears them on a blank", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const site = await createDiveSite(db, {
       shopId: shop.id,
       name: "Carysfort Wall",
@@ -220,7 +228,7 @@ describe("dive-site library", () => {
    * ever looked at, which is worse than the nagging it replaced.
    */
   it("keeps a station acknowledgment only for the id it was given for", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const site = await createDiveSite(db, {
       shopId: shop.id,
       name: "Flower Garden Banks",
@@ -269,7 +277,7 @@ describe("dive-site library", () => {
   });
 
   it("refuses to store an acknowledgment with no station to acknowledge", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // A tick with no id suppresses nothing and would read in the CSV as an
     // answer to a question nobody put.
     const created = await createDiveSite(db, {
@@ -297,7 +305,7 @@ describe("dive-site library", () => {
   });
 
   it("carries a station acknowledgment onto a copy, which copies the pairing whole", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const source = await createDiveSite(db, {
       shopId: shop.id,
       name: "Stetson Bank",
@@ -318,7 +326,7 @@ describe("dive-site library", () => {
   });
 
   it("keeps the full briefing and readiness gates through create and edit", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const site = await createDiveSite(db, {
       shopId: shop.id,
@@ -368,7 +376,7 @@ describe("dive-site library", () => {
   });
 
   it("copies a site into an independent editable briefing", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const original = await createDiveSite(db, {
       shopId: shop.id,
@@ -391,7 +399,7 @@ describe("dive-site library", () => {
   });
 
   it("will not copy another shop's site", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const site = await createDiveSite(db, { shopId: shop.id, name: "Davis Ledge" });
 
     expect(
@@ -400,7 +408,7 @@ describe("dive-site library", () => {
   });
 
   it("archives a site while keeping the briefing row intact", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const site = await createDiveSite(db, { shopId: shop.id, name: "Archive Point" });
 
     expect(await deleteDiveSite(db, shop.id, site.id)).toBe(true);
@@ -426,7 +434,7 @@ describe("the shop's search anchor", () => {
    * are the only lat/lng this app stores for a shop.
    */
   it("is a dive site's forecast coordinate, as [longitude, latitude]", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // Sorts first by name, so it is the one a stable anchor must pick.
     await createDiveSite(db, {
       shopId: shop.id,
@@ -444,7 +452,7 @@ describe("the shop's search anchor", () => {
   it("stays on the same site across calls, so a bias never wobbles mid-search", async () => {
     // A bias that moved between keystrokes would reshuffle a list the staffer
     // is part-way through reading.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await createDiveSite(db, {
       shopId: shop.id,
       name: "AAA Anchor Reef",
@@ -466,7 +474,7 @@ describe("the shop's search anchor", () => {
   it("skips a site that carries only one half of a coordinate", async () => {
     // Both columns are independently nullable, and half a coordinate is not a
     // position — biasing to longitude 0 would be a different ocean.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     for (const site of await listDiveSites(db, shop.id)) {
       await deleteDiveSite(db, shop.id, site.id);
     }
@@ -480,7 +488,7 @@ describe("the shop's search anchor", () => {
   });
 
   it("is null for a shop with no sited water yet, rather than an invented center", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     for (const site of await listDiveSites(db, shop.id)) {
       await deleteDiveSite(db, shop.id, site.id);
     }
@@ -505,7 +513,7 @@ describe("dive-site library paging and search", () => {
   }
 
   it("returns one page at a time with a stable order and an honest total", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const seededTotal = (await listDiveSites(db, shop.id)).length;
     await seedSites(db, shop.id, 30);
 
@@ -537,7 +545,7 @@ describe("dive-site library paging and search", () => {
   });
 
   it("clamps a page number that could never exist rather than handing the driver a bad offset", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     for (const requested of [0, -3, Number.NaN]) {
       const page = await listDiveSitesPage(db, shop.id, {}, { page: requested, pageSize: 5 });
@@ -557,7 +565,7 @@ describe("dive-site library paging and search", () => {
   });
 
   it("searches the name and the location, case-insensitively, and pages the matches", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await seedSites(db, shop.id, 30);
 
     const byName = await listDiveSitesPage(db, shop.id, { query: "paging site 00" });
@@ -585,7 +593,7 @@ describe("dive-site library paging and search", () => {
   });
 
   it("never shows one shop's sites to another, searching or paging", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await createDiveSite(db, { shopId: shop.id, name: "Shared Name Ledge" });
     const stranger = "00000000-0000-0000-0000-000000000000";
 
@@ -600,7 +608,7 @@ describe("dive-site library paging and search", () => {
   });
 
   it("leaves deleted sites out of both the page and the count", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const site = await createDiveSite(db, {
       shopId: shop.id,
       name: "Retired Ledge",
@@ -616,7 +624,7 @@ describe("dive-site library paging and search", () => {
   });
 
   it("counts the whole library, not the page or the search that is showing", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await seedSites(db, shop.id, 30);
     const size = await diveSiteLibrarySize(db, shop.id);
     const everything = await listDiveSites(db, shop.id);
@@ -662,7 +670,7 @@ describe("published dive-site catalog paging", () => {
   }
 
   it("returns one page at a time with an honest total and a stable order", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const seeded = (await listGlobalDiveSiteTemplates(db)).total;
     await publishTemplates(db, 30);
 
@@ -694,7 +702,7 @@ describe("published dive-site catalog paging", () => {
    * the badge asks for exactly the ids it is rendering instead.
    */
   it("looks up current versions by id, so a badge survives a template past page 1", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await publishTemplates(db, 30);
     // `catalog-site-*` sorts after `molasses-reef`, so this one is well past
     // the first page of the catalog the library no longer reads.
@@ -738,7 +746,7 @@ describe("published dive-site catalog paging", () => {
  */
 describe("a dive site's planning note", () => {
   async function noteContext() {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("the seeded shop has no staff");
     const site = await createDiveSite(db, { shopId: shop.id, name: "Silted Entry Reef" });
@@ -821,7 +829,7 @@ describe("a dive site's planning note", () => {
     // `getTripDiveSitesPeek` feeds the waiver success page and `/ready`. A
     // column added to its projection would publish a staff note to divers with
     // nothing failing, so the assertion is on the returned object's own keys.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id, new Date(0));
     if (!trip) throw new Error("the seeded shop has no departures");
     const [peek] = await getTripDiveSitesPeek(db, trip.id);
@@ -838,7 +846,7 @@ describe("a dive site's planning note", () => {
 
 describe("a dive-site briefing saved from two tabs", () => {
   it("refuses the second save rather than reverting the first", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const site = await createDiveSite(db, { shopId: shop.id, name: "Two Tabs Reef" });
     const opened = site.rowVersion;
 
@@ -875,7 +883,7 @@ describe("a dive-site briefing saved from two tabs", () => {
    * case ordinary and takes the clock out of it.
    */
   it("protects a site that has never been saved", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const site = await createDiveSite(db, { shopId: shop.id, name: "Never Saved Reef" });
     expect(site.rowVersion).toBe(0);
 
@@ -904,7 +912,7 @@ describe("a dive-site briefing saved from two tabs", () => {
    * two overlap, so no information means allow.
    */
   it("allows a save that carries no generation at all", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const site = await createDiveSite(db, { shopId: shop.id, name: "Old Release Reef" });
     await updateDiveSiteForForm(
       db,
@@ -928,7 +936,7 @@ describe("a dive-site briefing saved from two tabs", () => {
    * turns into an existence oracle.
    */
   it("says missing rather than conflict for another shop's site", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const site = await createDiveSite(db, { shopId: shop.id, name: "Other Shop Reef" });
     expect(
       await updateDiveSiteForForm(
@@ -943,7 +951,7 @@ describe("a dive-site briefing saved from two tabs", () => {
 
   /** A deleted site is gone to the editor, whatever generation the tab holds. */
   it("says missing rather than conflict for a deleted site", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const site = await createDiveSite(db, { shopId: shop.id, name: "Deleted Reef" });
     await deleteDiveSite(db, shop.id, site.id);
     expect(
@@ -998,14 +1006,14 @@ describe("the library's difficulty groups", () => {
  */
 describe("the published catalog's size", () => {
   it("counts what the catalog itself can show, and never a fetched page's total", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const listed = await listGlobalDiveSiteTemplates(db, { limit: 2 });
     expect(listed.templates).toHaveLength(2);
     expect(await countGlobalDiveSiteTemplates(db)).toBe(listed.total);
   });
 
   it("ignores a template whose current version was never published", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const before = await countGlobalDiveSiteTemplates(db);
     // `currentVersion` pointing at a version row that does not exist: invisible
     // to the catalog's own inner join, and so invisible to the door as well.
@@ -1020,7 +1028,7 @@ describe("the published catalog's size", () => {
  */
 describe("a dive site's public slug", () => {
   it("is minted from the name, and survives the shop correcting the name", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const site = await createDiveSite(db, { shopId: shop.id, name: "Carysfort Wall" });
     expect(site.slug).toBe("carysfort-wall");
 
@@ -1032,7 +1040,7 @@ describe("a dive site's public slug", () => {
   });
 
   it("suffixes two different names that fold to one segment", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const first = await createDiveSite(db, { shopId: shop.id, name: "Pillar Patch" });
     // A different name — the `(shop_id, name)` index would refuse a repeat —
     // that the slug grammar folds onto the same segment.
@@ -1042,7 +1050,7 @@ describe("a dive site's public slug", () => {
   });
 
   it("is scoped to the shop, and a deleted site's page is gone while its segment stays", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const site = await createDiveSite(db, { shopId: shop.id, name: "Sombrero Ledge" });
     expect(await getDiveSiteBySlug(db, randomUUID(), "sombrero-ledge")).toBeNull();
 
@@ -1055,7 +1063,7 @@ describe("a dive site's public slug", () => {
   });
 
   it("gives an imported template the segment of its deconflicted name", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const catalogEntry = (await listGlobalDiveSiteTemplates(db)).templates.find(
       (row) => row.version.briefing.name === "Molasses Reef",
     );
@@ -1072,7 +1080,7 @@ describe("a dive site's public slug", () => {
  */
 describe("what a dive site's public page reads", () => {
   it("lists live, scheduled, public departures going to the site, once each", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const molasses = (await listDiveSites(db, shop.id)).find(
       (site) => site.name === "Molasses Reef",
     );
@@ -1097,7 +1105,7 @@ describe("what a dive site's public page reads", () => {
    * 2026-09-11).
    */
   it("counts a released seat as room, the way the trip page and the booking do", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const molasses = (await listDiveSites(db, shop.id)).find(
       (site) => site.name === "Molasses Reef",
     );
@@ -1124,7 +1132,7 @@ describe("what a dive site's public page reads", () => {
   });
 
   it("never shows a stranger another shop's site, or a private charter", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const site = await createDiveSite(db, { shopId: shop.id, name: "Quiet Mooring" });
     expect(await listUpcomingDeparturesForSite(db, randomUUID(), site.id)).toEqual([]);
     // Nothing is scheduled here at all yet, which is the ordinary state of a
@@ -1133,7 +1141,7 @@ describe("what a dive site's public page reads", () => {
   });
 
   it("puts a listed shop's sites in the sitemap and leaves the demo's out", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const rows = await listDiveSitesForSitemap(db);
     // The demo shop is a fixture, not a business — the same scope its schedule
     // and course pages keep (ADR 20260813-search-listing-is-a-choice).

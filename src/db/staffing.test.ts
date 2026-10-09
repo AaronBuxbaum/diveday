@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, HOUR_MS, nowMs } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { bookings, courses, people, staffShifts, tripAssignments } from "./schema";
@@ -33,9 +33,13 @@ async function seatDiver(db: AppDb, shopId: string, tripId: string, tag: string)
   await db.insert(bookings).values({ bookedAs: "diver", shopId, tripId, personId: diver.id });
 }
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 describe("staffing view", () => {
   it("shows roles, working windows, and the departures a person crews", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await db.delete(staffShifts).where(eq(staffShifts.shopId, shop.id));
     const staff = await listStaff(db, shop.id);
     const instructor = staff.find((entry) => entry.roles.includes("instructor"));
@@ -77,7 +81,7 @@ describe("staffing view", () => {
    * from two passes could disagree; this pins that they cannot.
    */
   it("hands back the departures behind the count, in the count's own codes", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
     const endsAt = new Date(startsAt.getTime() + 4 * 60 * 60 * 1000);
     const bare = await createTrip(db, {
@@ -112,7 +116,7 @@ describe("staffing view", () => {
   });
 
   it("rejects overlapping shifts for one staff member and scopes writes to the shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await db.delete(staffShifts).where(eq(staffShifts.shopId, shop.id));
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("seeded staff missing");
@@ -155,7 +159,7 @@ describe("staffing view", () => {
    * issue #1339 split the intro cap off from the entry-level one.
    */
   async function overRatioSessionView(courseTitle: string, withinRatio: number, tag: string) {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [course] = await db
       .select()
       .from(courses)
@@ -237,11 +241,17 @@ describe("staffing view", () => {
    * `ratio` beside it. On the week's chip that reads "Over student ratio",
    * which sends a manager — or a divemaster pressing "Ask for this one" — after
    * crew who cannot raise an instructor-to-student cap by a single seat.
+   *
+   * Two tests rather than one: both sessions sit in the same window and take
+   * the same instructor, so in one database the second `setTripCrew` is
+   * refused as a double booking. Each pins its own code.
    */
-  it("tells the intro cap and the entry-level one apart in the code it hands back", async () => {
+  it("hands back the intro cap's own code for an over-ratio Discover Scuba session", async () => {
     const intro = await overRatioSessionView("Discover Scuba Diving", 2, "dsd-code");
     expect(intro.gapTrips.map((trip) => trip.gap)).toEqual(["over_intro_ratio"]);
+  });
 
+  it("keeps the entry-level cap's code for an over-ratio Open Water session", async () => {
     // The entry-level cap, which a certified assistant does raise, keeps the
     // word it had: the split adds a code, it does not rename the old one.
     const entryLevel = await overRatioSessionView("Open Water Diver", 8, "ow-code");
@@ -255,7 +265,7 @@ describe("staffing view", () => {
     // course session instructorless, so the assignment is inserted directly —
     // standing in for the states that reach it anyway (a data import, or a
     // crew member who has since lost their instructor role).
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [course] = await db
       .select()
       .from(courses)
@@ -291,7 +301,7 @@ describe("staffing view", () => {
   it("leaves an adequately crewed course session out of the count", async () => {
     // The count rises only when `courseCrewGap` reports something other than
     // "none". One instructor, one seat.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [course] = await db
       .select()
       .from(courses)
@@ -349,7 +359,7 @@ describe("staffing view", () => {
    * reads this next must not be able to disagree".
    */
   it("counts a captain-only charter with divers aboard as uncrewed", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const staff = await listStaff(db, shop.id);
     // Rostered as this trip's captain, so what else they hold in the shop is
     // beside the point: a captain is driving the boat, not supervising anybody
@@ -417,7 +427,7 @@ describe("staffing view", () => {
    * to arrive sorted.
    */
   it("orders departures sharing a start time by title, not by arrival", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
     const endsAt = new Date(startsAt.getTime() + 4 * HOUR_MS);
     const titles = ["Sunset drift", "Afternoon wall", "Reef two-tank", "Blue hole"];
@@ -507,7 +517,7 @@ describe("staffing view", () => {
     }
 
     it("says both facts — nobody aboard and no instructor — in one row", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const staff = await listStaff(db, shop.id);
       const captain = staff.find((entry) => entry.roles.includes("captain"));
       if (!captain) throw new Error("seeded captain missing");
@@ -533,7 +543,7 @@ describe("staffing view", () => {
     it("still names the instructor gap once somebody is in the water", async () => {
       // The half that must not move. A divemaster aboard makes "No crew"
       // false, and the instructor is then genuinely the one thing outstanding.
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const staff = await listStaff(db, shop.id);
       const divemaster = staff.find(
         (entry) => entry.roles.includes("divemaster") && !entry.roles.includes("instructor"),
@@ -554,7 +564,7 @@ describe("staffing view", () => {
       // — while "Course needs instructor" stays true and stays actionable,
       // since a session without one cannot take an enrolment however empty it
       // is.
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { readWeek } = await courseSession(db, shop.id, "Unbooked session", []);
 
       expect((await readWeek()).gapTrips.map((gap) => gap.gap)).toEqual(["no_instructor"]);
@@ -568,7 +578,7 @@ describe("staffing view", () => {
    * staying silent.
    */
   it("counts a departure rostered under the shop's own target, in Today's quieter code", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const staff = await listStaff(db, shop.id);
     const divemaster = staff.find((entry) => entry.roles.includes("divemaster"));
     if (!divemaster) throw new Error("seeded divemaster missing");
@@ -622,7 +632,7 @@ describe("staffing view", () => {
    * has.
    */
   it("says nothing about an empty, a self-guided, or an already-sailed departure", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
     const endsAt = new Date(startsAt.getTime() + 4 * HOUR_MS);
     const empty = await createTrip(db, {
@@ -703,7 +713,7 @@ describe("staffing view", () => {
    * class shows busy on Thursday and free for the two days it is being taught.
    */
   it("hands back a multi-day departure's meeting windows, not just its run", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const staff = await listStaff(db, shop.id);
     const instructor = staff.find((entry) => entry.roles.includes("instructor"));
     if (!instructor) throw new Error("seeded instructor missing");
@@ -746,7 +756,7 @@ describe("staffing view", () => {
    * again.
    */
   it("does not let an instructor rostered as deck crew cover a course session", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [course] = await db
       .select()
       .from(courses)
@@ -805,7 +815,7 @@ describe("staffing view", () => {
   });
 
   it("shows a staff member's crewed trips on their staffing card", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const staff = await listStaff(db, shop.id);
     const instructor = staff.find((entry) => entry.roles.includes("instructor"));
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
@@ -827,7 +837,7 @@ describe("staffing view", () => {
 
 describe("crewShiftCoverage", () => {
   it("reports which of a trip's crew have a shift overlapping the trip window", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await db.delete(staffShifts).where(eq(staffShifts.shopId, shop.id));
     const staff = await listStaff(db, shop.id);
     const [onShift, offShift] = staff;
@@ -854,7 +864,7 @@ describe("crewShiftCoverage", () => {
   it("returns an empty set for no crew at a shop that schedules shifts", async () => {
     // The seeded fixture already carries staff shifts, so this shop "uses
     // shifts" — an empty crew list is then an empty answer, never null.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("seeded upcoming trip missing");
     expect(await crewShiftCoverage(db, shop.id, trip, [])).toEqual(new Set());
@@ -866,7 +876,7 @@ describe("crewShiftCoverage", () => {
     // trip, forever — the expected state formatted as an alert (design
     // principle 9). No shifts on file means shift coverage is not a question
     // this shop asks, which is a different answer from "nobody is covered".
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await db.delete(staffShifts).where(eq(staffShifts.shopId, shop.id));
     const staff = await listStaff(db, shop.id);
     const [crew] = staff;

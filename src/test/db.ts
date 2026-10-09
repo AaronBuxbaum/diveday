@@ -191,6 +191,16 @@ const ROLLBACK = Symbol("diveday:rollback");
  *   writes carries the same instant. `dbNow()` reads that same frozen clock,
  *   so a test using it stays consistent — but one comparing two writes
  *   *expecting* them to differ will not see a difference.
+ * - **A test that catches a constraint violation and keeps querying.** The
+ *   violation aborts the wrapping transaction, and every read after it fails
+ *   with "current transaction is aborted" — a failure about the harness, not
+ *   the code. Likewise `VACUUM`, which refuses to run in a transaction block.
+ *
+ * One such test need not keep its whole file off this context: the file takes
+ * `fileScopedShopContext()` and that test takes its own
+ * `await seededShopContext()`, saying why in a comment (`gear.test.ts` and
+ * `check-in.test.ts` do). A test that wants a *second* booking or tenant
+ * usually needs a second row in the same database, not a second database.
  *
  * The rule, short: **read-heavy files that commit nothing.** If a file's tests
  * only read the seeded fixture and write rows they then read back, this is

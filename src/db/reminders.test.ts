@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_DOCK_DAY_RHYTHM } from "@/lib/diver-planning";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeEmail, fakeSms, fakeCourtesy as fakeWhatsApp } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { recordCourseMaterialsDone } from "./course-materials";
@@ -34,8 +34,13 @@ import { completeWaiver, issueWaiverRequest } from "./waivers";
 const PHONE = "+13055559999";
 const ORIGIN = "https://diveday.example";
 
-async function reminderContext() {
-  const { db, shop } = await seededShopContext();
+/**
+ * The file's shared database unless a test hands it another. The two tests
+ * that compare against a control run need the control in a database of its
+ * own — a pass writes delivery rows, and the measured pass would read them.
+ */
+async function reminderContext(source: Awaited<ReturnType<typeof seededShopContext>> = ctx) {
+  const { db, shop } = source;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
@@ -68,6 +73,10 @@ function rowsFor(db: Awaited<ReturnType<typeof reminderContext>>["db"], bookingI
 
 const emailsFor = (email: ReturnType<typeof fakeEmail>, bookingId: string) =>
   email.sent.filter((n) => "bookingId" in n && n.bookingId === bookingId);
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 describe("sendDueReminders", () => {
   it("emails the due 7-day reminder, records it, and is a no-op on a second run", async () => {
@@ -615,7 +624,7 @@ describe("sendDueReminders and the reminder rhythm", () => {
     // The `settled` count is compared against an identical run whose diver was
     // left un-ready, because the seeded shop has other bookings on the same
     // board and a bare count would be about all of them.
-    const control = await reminderContext();
+    const control = await reminderContext(await seededShopContext());
     const controlSummary = await pass(control.db, control.inWeekBucket);
 
     const ctx = await reminderContext();
@@ -666,7 +675,7 @@ describe("sendDueReminders and the reminder rhythm", () => {
     // Pins the order of the two checks: the suppression runs before the
     // no-email-no-phone branch, so a diver who needed no message is not
     // reported to the shop as an unreachable one.
-    const control = await reminderContext();
+    const control = await reminderContext(await seededShopContext());
     const controlSummary = await pass(control.db, control.inWeekBucket);
 
     const ctx = await reminderContext();

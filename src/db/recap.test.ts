@@ -2,7 +2,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { toDiverLocale } from "@/i18n/settings";
 import { nowDate, nowMs } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeCourtesy, fakeEmail, fakeSms } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { recordCourseNextStep } from "./course-next-step";
@@ -47,8 +47,18 @@ import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from ".
 
 const ORIGIN = "https://diveday.test";
 
-async function recapContext() {
-  const { db, shop } = await seededShopContext();
+const RAE = { fullName: "Rae Recap", email: "recap-rae@example.com" };
+
+/**
+ * Books a diver onto the demo reef day, in the file's shared database unless a
+ * test hands it another. A test that needs a second booking on the same day
+ * names a second diver: the same one twice is refused as `already_booked`.
+ */
+async function recapContext(
+  source: Awaited<ReturnType<typeof seededShopContext>> = ctx,
+  diver: { fullName: string; email: string } = RAE,
+) {
+  const { db, shop } = source;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
@@ -57,8 +67,7 @@ async function recapContext() {
       actor: "staff",
       shopId: shop.id,
       tripId: reef.id,
-      fullName: "Rae Recap",
-      email: "recap-rae@example.com",
+      ...diver,
     },
   ]);
   if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
@@ -76,6 +85,10 @@ async function recapContext() {
 
 const rowsFor = (db: Awaited<ReturnType<typeof recapContext>>["db"], bookingId: string) =>
   db.select().from(notificationDeliveries).where(eq(notificationDeliveries.bookingId, bookingId));
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 describe("getRecapPageData", () => {
   it("returns the diver, the sites dived, and the trip for a live booking", async () => {
@@ -306,7 +319,7 @@ async function pendingTipContext() {
  */
 describe("the course recap's certification", () => {
   async function courseSessionContext() {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const all = await upcomingTripsWithCounts(db, shop.id, new Date(0));
     const session = all.find((trip) => trip.title.startsWith("Advanced Open Water Diver"));
     if (!session) throw new Error("the seeded shop is missing its course session");
@@ -802,7 +815,10 @@ describe("recap photos and crew shout-out", () => {
       reason: "limit",
     });
 
-    const cancelled = await recapContext();
+    const cancelled = await recapContext(ctx, {
+      fullName: "Cal Cancelled",
+      email: "recap-cal@example.com",
+    });
     await cancelled.db
       .update(bookings)
       .set({ status: "cancelled" })
@@ -841,7 +857,10 @@ describe("recap photos and crew shout-out", () => {
     // At the cap, the pre-check refuses before bytes would ever be stored.
     expect(await canAddRecapPhoto(db, bookingId)).toEqual({ ok: false, reason: "limit" });
 
-    const cancelled = await recapContext();
+    const cancelled = await recapContext(ctx, {
+      fullName: "Cal Cancelled",
+      email: "recap-cal@example.com",
+    });
     await cancelled.db
       .update(bookings)
       .set({ status: "cancelled" })
@@ -851,7 +870,10 @@ describe("recap photos and crew shout-out", () => {
       reason: "cancelled",
     });
 
-    const noShow = await recapContext();
+    const noShow = await recapContext(ctx, {
+      fullName: "Nell Noshow",
+      email: "recap-nell@example.com",
+    });
     await noShow.db
       .update(bookings)
       .set({ status: "no_show" })
@@ -1163,7 +1185,11 @@ describe("sendDueRecaps", () => {
     // diver spent ashore. Crediting either would hand them the longer wait for
     // nothing.
     for (const status of ["cancelled", "no_show"] as const) {
-      const { db, shop, reef, bookingId, afterTrip } = await recapContext();
+      // Each pass on a database of its own: the first leaves yesterday's
+      // departure and today's recorded dive behind.
+      const { db, shop, reef, bookingId, afterTrip } = await recapContext(
+        status === "cancelled" ? ctx : await seededShopContext(),
+      );
       const [staff] = await listStaff(db, shop.id);
       if (!staff) throw new Error("no staff");
       const yesterdayStart = new Date(reef.startsAt.getTime() - 20 * 60 * 60 * 1000);
