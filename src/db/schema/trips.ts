@@ -182,10 +182,10 @@ export const boats = pgTable(
     certifiedPassengers: integer("certified_passengers"),
     /**
      * The boat's three paper clocks, each a shop-local calendar date (no
-     * instant in it): when the next Coast Guard inspection is due, when the
+     * instant in it): when the next safety inspection is due, when the
      * registration runs out, and when the hull insurance does. Nullable each,
-     * and each informs on the same 30-day horizon the gear register's service
-     * clocks use. Stored on the boat rather than as events because the shop
+     * and each informs ahead of time: 90 days for the inspection, 60 for the
+     * other two (`src/lib/boat-safety.ts`). Stored on the boat rather than as events because the shop
      * renews a document by typing the next date over the last one; the
      * history of a paper is the paper itself.
      */
