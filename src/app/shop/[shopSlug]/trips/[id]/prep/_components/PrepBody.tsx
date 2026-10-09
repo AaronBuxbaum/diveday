@@ -313,7 +313,9 @@ export function PrepBody({
   // An empty packing table means one of two different things, and the rental-kit
   // empty state says which rather than making the crew scroll back up to guess.
   const needsSorting =
-    checklist.diversWithIncompleteFit.length > 0 || checklist.diversNeedingStaffFit.length > 0;
+    checklist.diversWithIncompleteFit.length > 0 ||
+    checklist.diversNeedingStaffFit.length > 0 ||
+    checklist.heldSeats.length > 0;
   // The "Sizes still missing" card's two halves, sorted once: each is drawn
   // only when it has somebody in it.
   const partialFit = checklist.diversWithIncompleteFit.filter(
@@ -405,7 +407,9 @@ export function PrepBody({
       <span className="text-muted">
         {line.state === "own_kit"
           ? t("shared.rentalFit.ownKit")
-          : t("shared.rentalFit.notRecorded")}
+          : line.state === "identity_held"
+            ? t("tripPrep.heldSeatSizesWait")
+            : t("shared.rentalFit.notRecorded")}
       </span>
     );
 
@@ -600,6 +604,25 @@ export function PrepBody({
                       </div>
                     ) : null}
                   </div>
+                </SectionCard>
+              ) : null}
+
+              {/* A held seat's sizes and nitrox card are the matched
+                  record's, which may be somebody else's (issue #2144). Its
+                  names are said once here, so nobody packs from that record
+                  or fills a fit onto it. */}
+              {checklist.heldSeats.length > 0 ? (
+                <SectionCard
+                  title={t("tripPrep.heldSeatsHeading")}
+                  description={t("tripPrep.heldSeatsDescription")}
+                >
+                  <ul className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                    {checklist.heldSeats.map((seat) => (
+                      <li key={seat.bookingId} className="font-medium">
+                        {seat.fullName}
+                      </li>
+                    ))}
+                  </ul>
                 </SectionCard>
               ) : null}
 

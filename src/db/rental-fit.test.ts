@@ -17,7 +17,7 @@ import {
   setNeedsStaffFit,
   toDiverRentalFit,
 } from "./rental-fit";
-import { people, rentalFitProfiles } from "./schema";
+import { bookings, people, rentalFitProfiles } from "./schema";
 import { setShopRentalItems } from "./shops";
 import { upcomingTripsWithCounts } from "./trips";
 
@@ -808,7 +808,69 @@ describe("listTripPrepDivers", () => {
     const rows = await listTripPrepDivers(db, shopId, tripId);
     expect(rows.some((r) => r.bookingId === bookingId)).toBe(false);
   });
+
+  it("packs nothing of the matched diver's for a held seat (issue #2144)", async () => {
+    // A held seat may be somebody else on the matched record: a child booked
+    // with a parent's email. The parent's sizes and verified nitrox card are
+    // facts about the parent, never about whoever walks up the gangway.
+    const { db, shopId, tripId } = await context();
+    const held = await heldSeatOnFittedNitroxDiver(db, shopId, tripId, "Helen Marsh", "Tom Marsh");
+    const confirmed = await heldSeatOnFittedNitroxDiver(db, shopId, tripId, "Ruth Ames", null);
+
+    const rows = await listTripPrepDivers(db, shopId, tripId);
+    expect(rows.find((r) => r.bookingId === held.bookingId)).toMatchObject({
+      fullName: "Tom Marsh",
+      fit: null,
+      hasVerifiedNitroxCard: false,
+      identityHeld: true,
+    });
+    expect(rows.find((r) => r.bookingId === confirmed.bookingId)).toMatchObject({
+      fullName: "Ruth Ames",
+      fit: { bcdSize: "M" },
+      hasVerifiedNitroxCard: true,
+      identityHeld: false,
+    });
+
+    const fits = await rentalFitByBooking(db, shopId, tripId);
+    expect(fits.get(held.bookingId)).toBeNull();
+    expect(fits.get(confirmed.bookingId)).toMatchObject({ bcdSize: "M" });
+  });
 });
+
+/**
+ * A booked diver with a fit and a verified nitrox card on file. With
+ * `bookedAs`, the seat is held: the booking's identity is unconfirmed and it
+ * was booked under that other name.
+ */
+async function heldSeatOnFittedNitroxDiver(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  fullName: string,
+  bookedAs: string | null,
+) {
+  const visitor = await bookVisitor(db, shopId, tripId, fullName);
+  await saveRentalFit(db, baseFitInput(shopId, visitor.personId));
+  const cert = await createNitroxCertification(db, {
+    shopId,
+    personId: visitor.personId,
+    agency: "padi",
+    identifier: `NX-${fullName.replace(/\s+/g, "-")}`,
+  });
+  if (!cert) throw new Error("cert insert failed");
+  await reviewNitroxCertification(db, { shopId, certificationId: cert.id, status: "verified" });
+  if (bookedAs) {
+    await db
+      .update(bookings)
+      .set({
+        identityUnconfirmedAt: new Date("2026-09-01T12:00:00Z"),
+        identityBookedAs: bookedAs,
+        identityMatchedBy: "shared_email",
+      })
+      .where(eq(bookings.id, visitor.bookingId));
+  }
+  return visitor;
+}
 
 describe("rentalFitByBooking", () => {
   it("keys fits by booking id for the trip's active roster", async () => {

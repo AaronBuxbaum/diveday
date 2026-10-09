@@ -166,10 +166,12 @@ export async function getTripPrep(
       shop.id,
       heldUnits.map((assignment) => ({ id: assignment.gearItemId, kind: assignment.kind })),
     ),
+    // A held seat's matched record may be somebody else's, so its counter
+    // rentals are not said on the seat's row (issue #2144).
     counterRentalsHeldDuring(
       db,
       shop.id,
-      divers.map((diver) => diver.personId),
+      divers.filter((diver) => !diver.identityHeld).map((diver) => diver.personId),
       gearWindow,
     ),
   ]);

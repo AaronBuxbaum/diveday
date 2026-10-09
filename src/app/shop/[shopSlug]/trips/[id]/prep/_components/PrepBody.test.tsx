@@ -882,3 +882,41 @@ describe("a diver holding a counter rental over the departure", () => {
     expect(within(container).queryByText(/on a counter rental/)).toBeNull();
   });
 });
+
+describe("a held seat on the Gear tab (issue #2144)", () => {
+  function heldPrep(): TripPrep {
+    const prep = prepFor();
+    prep.checklist = buildDivePrepChecklist({
+      divers: [
+        {
+          bookingId: "held",
+          personId: "p9",
+          fullName: "Tom Marsh",
+          fit: null,
+          wantsNitrox: true,
+          hasVerifiedNitroxCard: false,
+          identityHeld: true,
+          lastDivedBand: null,
+        },
+        diver(4, "Ana Costa", {
+          fit: { rentsBcd: true, bcdSize: "M", fitStatedAt: new Date() } as never,
+        }),
+      ],
+      plannedDives: 2,
+    });
+    return prep;
+  }
+
+  it("says the sizes wait for the desk, by item and by diver, and never asks for a fit", () => {
+    const byItem = renderPrep(heldPrep()).container;
+    expect(within(byItem).getByText(t("tripPrep.heldSeatsHeading"))).toBeTruthy();
+    expect(within(byItem).getAllByText("Tom Marsh").length).toBeGreaterThan(0);
+    expect(within(byItem).queryByText(t("tripPrep.missingSizesHeading"))).toBeNull();
+    // Nitrox asked for on a seat whose card is not provably theirs: a card check.
+    expect(within(byItem).getByText(t("tripPrep.nitroxBlockedHeading"))).toBeTruthy();
+    cleanup();
+
+    const byDiver = renderPrep(heldPrep(), { grouping: "diver" }).container;
+    expect(within(byDiver).getAllByText(t("tripPrep.heldSeatSizesWait")).length).toBeGreaterThan(0);
+  });
+});
