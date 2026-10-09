@@ -358,6 +358,7 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       { path: "/shop/blue-mantis/divers/new", heading: "Add a diver" },
       { path: "/shop/blue-mantis/settings/security", heading: "Account security" },
       { path: "/shop/blue-mantis/settings/integrations", heading: "Shop integrations" },
+      { path: "/shop/blue-mantis/settings/activity", heading: "Activity" },
       {
         path: "/shop/blue-mantis/settings/safety-checklist",
         heading: "Pre-departure checklist",

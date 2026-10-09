@@ -178,7 +178,8 @@ describe("permission gating", () => {
     // of contact details for people who have not booked — stopped
     // distinguishing it the day the inbox began showing a stranger's address
     // and message to every live staff role.
-    expect(gated).toEqual(["reports", "promoCodes", "waivers", "team", "settings"]);
+    // The activity log (D5) takes the settings gate: owner and manager reading.
+    expect(gated).toEqual(["reports", "promoCodes", "waivers", "team", "activity", "settings"]);
 
     const visible = visibleStaffDestinations(crew).map((destination) => destination.id);
     // The two consumers: the nav's sections and the search.
@@ -274,6 +275,7 @@ describe("what each consumer derives", () => {
       "team",
       "calendarFeed",
       "emailSettings",
+      "activity",
       "settings",
     ]);
   });

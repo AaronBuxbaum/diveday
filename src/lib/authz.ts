@@ -134,6 +134,17 @@ export function canManageBilling(roles: readonly Role[] | undefined): boolean {
   return (roles ?? []).some((role) => role === "owner");
 }
 
+/**
+ * Read the shop's activity log (D5, `src/db/shop-activity.ts`): who refunded,
+ * who wrote a seat past a missing card, who changed a departure, across the
+ * whole team. It is an account of the staff's own work, named person by
+ * person, so it is the accountable roles' reading rather than the crew's —
+ * the same owner/manager gate as reports and the export.
+ */
+export function canViewShopActivity(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
 /** Issue or record a refund — money leaving the shop's account. */
 export function canRefund(roles: readonly Role[] | undefined): boolean {
   return isOwnerOrManager(roles);

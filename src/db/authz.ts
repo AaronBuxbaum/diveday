@@ -21,6 +21,7 @@ import {
   canReadPrivateRecapPulse,
   canRefund,
   canRetireMedicalRefusal,
+  canViewShopActivity,
   type Role,
 } from "@/lib/authz";
 import type { DbExecutor } from "./client";
@@ -144,6 +145,10 @@ export const canPersonManageMessagingSettings = (
 
 export const canPersonRefund = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canRefund);
+
+/** Live DB-checked companion of the activity-log gate (src/lib/authz.ts). */
+export const canPersonViewShopActivity = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canViewShopActivity);
 
 /**
  * Live DB-checked companion of the invoicing gate (src/lib/authz.ts).

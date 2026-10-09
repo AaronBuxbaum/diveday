@@ -260,6 +260,13 @@ export async function DataGroup({
       ) : null}
 
       <InsetGroup>
+        {/* Who did what, across the team (D5). The hub is already owner and
+          manager reading, the log's own gate; the page re-checks it. */}
+        <SettingsDoorRow
+          href={`/shop/${shopSlug}/settings/activity`}
+          heading={t("activity.log.title")}
+        />
+
         <SettingsDoorRow
           href={`/shop/${shopSlug}/settings/integrations`}
           heading={t("settings.main.integrations.heading")}

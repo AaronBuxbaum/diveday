@@ -24,6 +24,15 @@
     "seat_claimed": "{actor} claimed their seat",
     "medical_clearance_opened": "{actor} opened the physician’s evaluation for {diver}",
     "record_exported": "{actor} downloaded a copy of {diver}’s record",
+    "order_refunded": "{actor} refunded an order",
+    "seat_refunded": "{actor} removed {diver} and refunded the seat by card",
+    "payment_waived": "{actor} marked {diver}’s seat waived",
+    "payment_marked_refunded": "{actor} marked {diver}’s seat refunded",
+    "departure_added": "{actor} put the departure on the board",
+    "series_added": "{actor} put a repeating departure on the board",
+    "departure_moved": "{actor} moved the departure",
+    "departure_copied": "{actor} copied a departure to this one",
+    "departure_deleted": "{actor} deleted the departure",
     "redacted": "[redacted]",
     "demo_charter_confirmed": "{actor} confirmed the charter with the captain",
     "demo_second_dive_moved": "{actor} moved the second dive to French Reef for the swell",
@@ -45,5 +54,39 @@
     "demo_paper_card_reminded": "{actor} reminded {diver} to bring the paper card to the dock",
     "participant_type_changed": "{actor} changed {diver} from {from, select, snorkeler {snorkeling} rider {riding along} other {diving}} to {type, select, snorkeler {snorkeling} rider {riding along} other {diving}}{certCheck, select, cleared {, which cleared a card check} overridden {, past a missing card} other {}}"
   },
-  "unknown": "An earlier entry"
+  "unknown": "An earlier entry",
+  "review": {
+    "published": "{actor} published a review",
+    "hidden": "{actor} hid a review"
+  },
+  "tripChange": {
+    "meeting_point": "{actor} changed the meeting point",
+    "conditions": "{actor} posted conditions"
+  },
+  "log": {
+    "title": "Activity",
+    "someone": "Someone",
+    "personLabel": "Who",
+    "personAll": "Everyone",
+    "kindLabel": "What",
+    "kindAll": "Everything",
+    "kind": {
+      "seats": "Seats",
+      "departures": "Departures",
+      "money": "Money",
+      "safety": "Cards and identity",
+      "records": "Records",
+      "reviews": "Reviews"
+    },
+    "fromLabel": "From",
+    "toLabel": "To",
+    "clear": "Clear",
+    "count": "{count, plural, one {# entry} other {# entries}}",
+    "empty": "Nothing recorded yet.",
+    "emptyFiltered": "Nothing matches.",
+    "deletedDeparture": "{title} (deleted)",
+    "order": "Order",
+    "reviews": "Reviews",
+    "diverRecord": "Diver record"
+  }
 }
