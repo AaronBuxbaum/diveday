@@ -15,6 +15,7 @@ import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests
 import { queueMediaDeletion, resolveMediaDeletion } from "./media-deletions";
 import { setBookingNitrox } from "./nitrox";
 import { recordNotificationDelivery } from "./notifications";
+import { recordStripeDispute } from "./payment-disputes";
 import { startPaymentOperation } from "./payment-operations";
 import { setBookingPayment } from "./payments";
 import { listTripReadiness } from "./readiness";
@@ -25,6 +26,7 @@ import {
   courses,
   inboundMessages,
   nitroxCertifications,
+  orders,
   people,
   personRoles as personRolesTable,
   rollCallCrewEvents as rollCallCrewEventsTable,
@@ -1589,6 +1591,63 @@ describe("role lens raw material", () => {
       // And it is opt-in like every other ops alert.
       const withoutFlag = await getTodayWork(db, shop.id, shop.slug, shop.timezone, tomorrow);
       expect(owedRow(withoutFlag)).toBeUndefined();
+    });
+
+    it("shows an undecided card dispute with its amount and deadline, and clears it once decided", async () => {
+      // ADR 20261009-stripe-reversals-reach-diveday.
+      const { db, shop } = ctx;
+      const [customer] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
+      if (!customer) throw new Error("seeded person missing");
+      const [order] = await db
+        .insert(orders)
+        .values({
+          shopId: shop.id,
+          personId: customer.id,
+          createdByPersonId: customer.id,
+          status: "paid",
+          currency: "usd",
+          totalCents: 24_000,
+          amountPaidCents: 24_000,
+          stripeAccountId: "acct_today_dispute",
+          stripeCustomerId: "cus_today",
+          stripeInvoiceId: "in_today_dispute",
+          stripePaymentIntentId: "pi_today_dispute",
+        })
+        .returning();
+      if (!order) throw new Error("order insert failed");
+      const opened = nowDate();
+      const dispute = (eventType: string, status: string, occurredAt: Date) =>
+        recordStripeDispute(db, {
+          stripeAccountId: "acct_today_dispute",
+          eventType,
+          occurredAt,
+          dispute: {
+            id: "dp_today",
+            paymentIntentId: "pi_today_dispute",
+            amountCents: 24_000,
+            currency: "usd",
+            reason: "fraudulent",
+            status,
+            evidenceDueBy: new Date(Date.UTC(2031, 0, 15, 23, 59)),
+            createdAt: opened,
+          },
+        });
+      expect((await dispute("charge.dispute.created", "needs_response", opened)).status).toBe(
+        "recorded",
+      );
+      const t = staffTranslator("en-US");
+      const work = () =>
+        getTodayWork(db, shop.id, shop.slug, shop.timezone, undefined, undefined, t, "en-US", true);
+
+      const row = (await work()).actions.find((a) => a.kind === "payment_dispute");
+      expect(row?.subject).toBe(customer.fullName);
+      expect(row?.detail).toContain("$240.00");
+      expect(row?.detail).toContain("Jan");
+      expect(row?.urgency).toBe("now");
+      expect(row?.href).toBe(`/shop/${shop.slug}/orders/${order.id}`);
+
+      await dispute("charge.dispute.closed", "won", new Date(opened.getTime() + 60_000));
+      expect((await work()).actions.find((a) => a.kind === "payment_dispute")).toBeUndefined();
     });
 
     it("is tenant-safe: another shop's queue never surfaces this shop's ops alerts", async () => {

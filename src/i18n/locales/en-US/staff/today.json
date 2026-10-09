@@ -81,6 +81,7 @@
     "stuckPaymentOperation": "Stripe",
     "failedPhotoDeletion": "Cleanup",
     "owedRefund": "Refund owed",
+    "paymentDispute": "Card dispute",
     "reviewsPending": "Reviews",
     "unansweredMessages": "Messages",
     "gearOverdue": "Gear overdue",
@@ -192,6 +193,7 @@
     "resendWaiverLink": "Resend waiver link",
     "resendConfirmation": "Resend confirmation",
     "openOrders": "Review in Orders",
+    "openOrder": "Open order",
     "openDataSettings": "Review in Settings",
     "openReviews": "Open reviews",
     "openInbox": "Open inbox",
@@ -236,7 +238,10 @@
     "owedRefundDetailNoAmount": "Owed for {tripTitle} on {when}. Return what they paid, then mark the seat refunded.",
     "owedRefundGroupSubject": "{count, plural, one {# refund owed} other {# refunds owed}}",
     "owedRefundGroupDetail": "{amount} for {tripTitle} on {when}: {names}. Return it, then mark each seat refunded.",
-    "owedRefundGroupDetailNoAmount": "{tripTitle} on {when}: {names}. Return it, then mark each seat refunded."
+    "owedRefundGroupDetailNoAmount": "{tripTitle} on {when}: {names}. Return it, then mark each seat refunded.",
+    "disputeSubject": "Card dispute",
+    "disputeDetail": "{amount} disputed. Send Stripe your evidence by {due}.",
+    "disputeDetailNoDeadline": "{amount} disputed. Answer it in Stripe."
   },
   "reviewsPending": {
     "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you"

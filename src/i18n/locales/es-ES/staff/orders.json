@@ -78,6 +78,8 @@
     "tax": "Impuesto",
     "refundedSoFar": "Reembolsado",
     "stillHeld": "Retenido",
+    "disputeOpen": "El banco del titular de la tarjeta disputa {amount}. Envía tus pruebas a Stripe antes del {due}.",
+    "disputeOpenNoDeadline": "El banco del titular de la tarjeta disputa {amount}. Respóndela en Stripe.",
     "refundAmountLabel": "Reembolsar ({currency})",
     "refunding": "Reembolsando…",
     "notice": {

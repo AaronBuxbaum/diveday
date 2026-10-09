@@ -29,6 +29,7 @@ import {
   openGuestsActionText,
   openInboxActionText,
   openLastMinuteDealActionText,
+  openOrderActionText,
   openOrdersActionText,
   openPrepListActionText,
   openReviewsActionText,
@@ -39,6 +40,8 @@ import {
   openWorkOrderActionText,
   overRatioDetailText,
   overRatioIntroDetailText,
+  paymentDisputeDetailText,
+  paymentDisputeSubjectText,
   ratingLapsedDetailText,
   rentalFitConfirmDetailText,
   reviewsPendingSubjectText,
@@ -85,7 +88,7 @@ import {
   inWaterDivemasterCount,
 } from "@/lib/divemaster-ratio";
 import { PREP_SECTION_ID } from "@/lib/element-id";
-import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
+import { formatDateTimeTz, formatMoneyCents, formatShortDate, formatTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
 import {
@@ -142,6 +145,7 @@ import { listPendingMediaDeletions, STALE_PENDING_AFTER_MS } from "./media-delet
 import { authorizesNitroxFill } from "./nitrox";
 import { listNotificationDeliveryIssues } from "./notifications";
 import { openOrdersForBookings } from "./orders";
+import { listOpenPaymentDisputes } from "./payment-disputes";
 import { listStuckPaymentOperations, STALE_AFTER_MS } from "./payment-operations";
 import { listTripsReadiness } from "./readiness";
 import { listOwedShopCancellationRefunds, OWED_REFUND_STALE_AFTER_MS } from "./refunds";
@@ -2564,13 +2568,49 @@ export async function getTodayWork(
   // Orders, deletions to Settings' Data group — and each row's `href` points at
   // wherever its panel now is.
   if (includeOpsAlerts) {
-    const [stuckOperations, pendingDeletions, owedRefunds] = await Promise.all([
+    const [stuckOperations, pendingDeletions, owedRefunds, openDisputes] = await Promise.all([
       listStuckPaymentOperations(db, shopId, new Date(now.getTime() - STALE_AFTER_MS)),
       listPendingMediaDeletions(db, shopId, new Date(now.getTime() - STALE_PENDING_AFTER_MS)),
       listOwedShopCancellationRefunds(db, shopId, {
         olderThan: new Date(now.getTime() - OWED_REFUND_STALE_AFTER_MS),
       }),
+      listOpenPaymentDisputes(db, shopId),
     ]);
+
+    // A diver's bank is taking a charge back (ADR
+    // 20261009-stripe-reversals-reach-diveday). One row per undecided dispute,
+    // from the day Stripe reports it until it is decided: the amount and the
+    // day Stripe stops taking evidence are what the owner acts on. The door is
+    // the order it was raised against, or the departure a checkout paid for.
+    for (const dispute of openDisputes) {
+      actions.push({
+        id: `payment-dispute:${dispute.id}`,
+        kind: "payment_dispute",
+        urgency: "now",
+        subject: dispute.personName ?? paymentDisputeSubjectText(t),
+        context: dispute.tripTitle,
+        detail: paymentDisputeDetailText(t, {
+          amount: formatMoneyCents(dispute.amountCents, dispute.currency, locale),
+          due: dispute.evidenceDueBy
+            ? formatShortDate(dispute.evidenceDueBy, locale, timeZone)
+            : null,
+        }),
+        actionLabel: dispute.orderId
+          ? openOrderActionText(t)
+          : dispute.tripId
+            ? openTripActionText(t)
+            : openOrdersActionText(t),
+        href: dispute.orderId
+          ? `/shop/${shopSlug}/orders/${dispute.orderId}`
+          : dispute.tripId
+            ? `/shop/${shopSlug}/trips/${dispute.tripId}`
+            : `/shop/${shopSlug}/orders`,
+        // Undated on purpose, like every row here: the deadline is in the
+        // sentence, and a dated row would sort against departures it is not
+        // about.
+        dueAt: null,
+      });
+    }
 
     for (const op of stuckOperations) {
       const when = formatShortDate(op.intent.startedAt, locale, timeZone);
