@@ -55,6 +55,7 @@ import {
 import { stopListedSmsProvider } from "./sms-opt-outs";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getLatestTipForBooking, refreshTipFromStripe } from "./tips";
+import { tripsWithSomebodyMissing } from "./today";
 import { listTripSightings } from "./trip-sightings";
 import { getTripWithBooked, listTripDives } from "./trips";
 import { tripCrewByTrip } from "./trips-crew";
@@ -287,6 +288,12 @@ export type RecapPageState =
   | { kind: "departure-cancelled"; shop: DeadRecapShop }
   /** Dead, but ours: the booking tier — name the shop, offer its hand. */
   | { kind: "dead"; shop: DeadRecapShop }
+  /**
+   * Somebody on this departure is "not back aboard" and nothing has retracted
+   * it (`bookingsWaitingOnAMissingPerson`). Says only that the recap is not
+   * ready: never why, and never anything about anybody else on the boat.
+   */
+  | { kind: "waiting"; shop: DeadRecapShop }
   /** The token parsed and resolved no booking at all: name nobody. */
   | { kind: "unknown" };
 
@@ -316,46 +323,105 @@ export async function getRecapPageState(
   db: AppDb,
   bookingId: string,
   checkoutProvider?: CheckoutProvider,
+  now: Date = nowDate(),
 ): Promise<RecapPageState> {
-  const data = await getRecapPageData(db, bookingId, checkoutProvider);
-  if (data) return { kind: "recap", data };
+  const closed = await recapClosedReason(db, bookingId, now);
+  if (closed === null) {
+    const data = await loadRecapPageData(db, bookingId, checkoutProvider);
+    if (data) return { kind: "recap", data };
+  }
+  if (closed === "unknown") return { kind: "unknown" };
 
-  const [row] = await db
+  const [shop] = await db
     .select({
       name: shops.name,
       slug: shops.slug,
       contactEmail: shops.contactEmail,
       contactPhone: shops.contactPhone,
       defaultLocale: shops.defaultLocale,
-      bookingStatus: bookings.status,
-      tripStatus: trips.status,
     })
     .from(bookings)
     .innerJoin(shops, eq(shops.id, bookings.shopId))
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+  if (!shop) return { kind: "unknown" };
+  if (closed === "departure-cancelled") return { kind: "departure-cancelled", shop };
+  if (closed === "waiting") return { kind: "waiting", shop };
+  return { kind: "dead", shop };
+}
+
+/**
+ * **Why a recap is closed, or null when it is open** — the one gate the page,
+ * `/ready` and all four recap writers (photo, tip, review, pulse) ask, so a
+ * form loaded before a hold, or a crafted post, never writes through a recap
+ * the page would not show (security review of #2123).
+ *
+ * The order is the disclosure order, and it matters. The booking tier wins
+ * first and by name: a cancelled booking and a no-show share `dead`, so the
+ * failure state never says which happened — written as a negation, a `no_show`
+ * on a called-off departure once took the departure branch and told the two
+ * apart (`security-reviewer`, issue #1119). A called-off departure is next,
+ * because it is not a fact about the diver. Then the causes that are facts
+ * about *this seat*: a held seat (#2082 — whoever holds the link may not be
+ * the diver) and a diver the crew left at the dock (#2105) are both `dead`,
+ * and are decided **before** the wait, so neither ever reads "your recap isn't
+ * ready yet" — a promise that correcting somebody else's roll call would not
+ * keep. Only then does a missing diver or crew member hold the whole departure
+ * (`waiting`, #2123).
+ */
+export type RecapClosedReason = "unknown" | "dead" | "departure-cancelled" | "waiting";
+
+export async function recapClosedReason(
+  db: AppDb,
+  bookingId: string,
+  now: Date = nowDate(),
+): Promise<RecapClosedReason | null> {
+  const [row] = await db
+    .select({
+      shopId: bookings.shopId,
+      tripId: bookings.tripId,
+      status: bookings.status,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      tripStatus: trips.status,
+    })
+    .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(and(eq(bookings.id, bookingId), liveTrip()))
     .limit(1);
-  if (!row) return { kind: "unknown" };
+  if (!row) return "unknown";
+  if (row.status === "cancelled" || row.status === "no_show") return "dead";
+  // Read `getRecapPageData`'s doc comment before relaxing this: an active
+  // booking on a cancelled trip is the *normal* shape of a blow-out.
+  if (row.tripStatus !== "scheduled") return "departure-cancelled";
+  if (row.identityUnconfirmedAt) return "dead";
+  const one = [{ booking: { id: bookingId }, shop: { id: row.shopId }, trip: { id: row.tripId } }];
+  if ((await bookingsLeftAtTheDock(db, one)).has(bookingId)) return "dead";
+  if ((await bookingsWaitingOnAMissingPerson(db, one, now)).has(bookingId)) return "waiting";
+  return null;
+}
 
-  const { bookingStatus, tripStatus, ...shop } = row;
-  // **The booking tier wins first, and by name rather than by a negation.**
-  // Written as `bookingStatus !== "cancelled" && tripStatus === "cancelled"`
-  // it read correctly and behaved otherwise: a `no_show` on a called-off
-  // departure is not `"cancelled"`, so it took the departure branch — and a
-  // bearer who could see the trip had left the shop's public board could then
-  // tell a cancelled seat from a no-show by which card rendered, which is the
-  // one distinction the paragraph above promises never to make. It was latent
-  // when it was found, because nothing in the product wrote `no_show` at all;
-  // `markBookingNoShow` (`src/db/no-show.ts`, issue #1209) is the writer that
-  // arrived, so the ordering is live now and shipped ahead of it
-  // (`security-reviewer`, on issue #1119).
-  if (bookingStatus === "cancelled" || bookingStatus === "no_show") return { kind: "dead", shop };
-  if (tripStatus === "cancelled") return { kind: "departure-cancelled", shop };
-  // An active booking on a live departure that `getRecapPageData` still nulled
-  // — a diver the crew left at the dock (`bookingsLeftAtTheDock`). The booking
-  // tier is the honest answer: it is the no-show's own sentence, and it says
-  // the least of the three.
-  return { kind: "dead", shop };
+/** {@link recapClosedReason} as the yes/no a recap writer needs. */
+export async function isRecapOpen(
+  db: AppDb,
+  bookingId: string,
+  now: Date = nowDate(),
+): Promise<boolean> {
+  return (await recapClosedReason(db, bookingId, now)) === null;
+}
+
+/**
+ * The departure roll call for one booking, corrected for a late boarding: a
+ * dock `not_boarded` stands only while no after-dive `boarded` says the diver
+ * joined the boat later. The /ready page asks this the same way the recap does.
+ */
+export async function departureAfterLateBoarding<T extends string | null>(
+  db: DbExecutor,
+  departure: T,
+  candidate: { booking: { id: string }; shop: { id: string }; trip: { id: string } },
+): Promise<T | "boarded"> {
+  if (departure !== "not_boarded") return departure;
+  const leftAtTheDock = await bookingsLeftAtTheDock(db, [candidate]);
+  return leftAtTheDock.has(candidate.booking.id) ? departure : "boarded";
 }
 
 /**
@@ -414,6 +480,53 @@ export async function bookingsLeftAtTheDock(
 }
 
 /**
+ * **The bookings whose recap waits because somebody on their departure is "not
+ * back aboard"** (issue #2123), out of a set of candidates.
+ *
+ * A diver counted back after dive one and then marked "not back aboard" after
+ * dive two still read as sailed, so four hours after the boat was due home the
+ * cron emailed them "welcome back, here's your dive log". If that word is a
+ * real incident, the email lands in an inbox a family may be reading. So while
+ * any diver or rostered crew member on a departure has an after-dive
+ * `not_boarded` standing — the condition Today raises its missing-diver and
+ * missing-crew rows on (`tripsWithSomebodyMissing`, src/db/today.ts)
+ * — **every** recap on that departure waits: the email, a staff send, and the
+ * page. That covers the diver themselves, whose last word is the not-back one,
+ * and the boatmates, whose "welcome back" would be the same email to a group
+ * chat. The manifest's alarm is read, never changed: failing toward "missing"
+ * is the safe direction there, and the recap simply follows it.
+ *
+ * Nothing is recorded as skipped. Once the word is corrected the recap is owed
+ * as before: the cron sends it within its lookback, and the link works again.
+ */
+export async function bookingsWaitingOnAMissingPerson(
+  db: AppDb,
+  candidates: readonly {
+    booking: { id: string };
+    shop: { id: string };
+    trip: { id: string };
+  }[],
+  now: Date = nowDate(),
+): Promise<Set<string>> {
+  const tripIdsByShop = new Map<string, Set<string>>();
+  for (const { shop, trip } of candidates) {
+    const tripIds = tripIdsByShop.get(shop.id) ?? new Set<string>();
+    tripIds.add(trip.id);
+    tripIdsByShop.set(shop.id, tripIds);
+  }
+  const alarmed = new Set<string>();
+  // One shop at a time: the reader is tenant-scoped.
+  for (const [shopId, tripIds] of tripIdsByShop) {
+    for (const tripId of await tripsWithSomebodyMissing(db, shopId, [...tripIds], now)) {
+      alarmed.add(tripId);
+    }
+  }
+  return new Set(
+    candidates.filter(({ trip }) => alarmed.has(trip.id)).map(({ booking }) => booking.id),
+  );
+}
+
+/**
  * Everything the recap page renders for one booking, or null when there was no
  * day to look back on. Sites are de-duplicated by name in dive order, so a
  * two-tank day on one site reads as one site, not two.
@@ -444,14 +557,23 @@ export async function getRecapPageData(
   db: AppDb,
   bookingId: string,
   checkoutProvider?: CheckoutProvider,
+  now: Date = nowDate(),
+): Promise<RecapPageData | null> {
+  if ((await recapClosedReason(db, bookingId, now)) !== null) return null;
+  return loadRecapPageData(db, bookingId, checkoutProvider);
+}
+
+/** The page's content, once {@link recapClosedReason} has said it is open. */
+async function loadRecapPageData(
+  db: AppDb,
+  bookingId: string,
+  checkoutProvider?: CheckoutProvider,
 ): Promise<RecapPageData | null> {
   const [row] = await db
     .select({
       shopId: bookings.shopId,
       tripId: bookings.tripId,
       personId: bookings.personId,
-      status: bookings.status,
-      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       diverName: people.fullName,
       diverEmail: people.email,
       shopName: shops.name,
@@ -477,29 +599,9 @@ export async function getRecapPageData(
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(eq(bookings.id, bookingId))
     .limit(1);
-  // A no-show never dived — showing them "here's what you dived" content
-  // (or the tip/review asks that ride the same page) would be dishonest
-  // regardless of how they reached the link. Same fail-closed-uniformly
-  // notice as a cancelled booking gets, so a link's failure state never
-  // itself discloses which of the two happened (Codex finding: the earlier
-  // no-show fix only gated canTip/reviewUrl here, not the page itself).
-  if (!row || row.status === "cancelled" || row.status === "no_show") return null;
-  // A held seat (#2082): everything below is about the diver record the seat
-  // was matched to, and whoever holds this link may not be them. Staff confirm
-  // who it is, and the recap comes back with the same link.
-  if (row.identityUnconfirmedAt) return null;
-
+  if (!row) return null;
   const trip = await getTripWithBooked(db, row.shopId, row.tripId);
   if (!trip) return null;
-  // The departure itself was called off. Read the doc comment above before
-  // relaxing this: an active booking on a cancelled trip is the *normal*
-  // shape of a blow-out, not an inconsistency to tolerate.
-  if (trip.status !== "scheduled") return null;
-  // The crew left this diver at the dock: the same answer the email gets.
-  const ashore = await bookingsLeftAtTheDock(db, [
-    { booking: { id: bookingId }, shop: { id: row.shopId }, trip: { id: row.tripId } },
-  ]);
-  if (ashore.has(bookingId)) return null;
 
   const [
     dives,
@@ -1227,7 +1329,9 @@ export async function unpauseTripRecapAutoSend(
  */
 export type SendTripRecapsResult =
   | { ok: true; summary: RecapRunSummary }
-  | { ok: false; reason: "not_found" };
+  | { ok: false; reason: "not_found" }
+  /** Somebody on the departure is "not back aboard" (#2123): nothing was sent. */
+  | { ok: false; reason: "held" };
 
 export async function sendTripRecaps(
   db: AppDb,
@@ -1240,6 +1344,9 @@ export async function sendTripRecaps(
     .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
     .limit(1);
   if (trip?.status !== "scheduled") return { ok: false, reason: "not_found" };
+  if ((await tripsWithSomebodyMissing(db, input.shopId, [input.tripId], now)).size > 0) {
+    return { ok: false, reason: "held" };
+  }
   return {
     ok: true,
     summary: await sendRecaps(
@@ -1306,7 +1413,10 @@ async function sendRecaps(
           : [
               eq(trips.recapAutoSendPaused, false),
               isNotNull(trips.endsAt),
-              gt(trips.endsAt, since),
+              // A recap a staffer released late (`unpauseTripRecapAutoSend`) —
+              // a hold on a missing diver can outlast the lookback (#2123) —
+              // is in the window by its rescheduled time, not lost to it.
+              or(gt(trips.endsAt, since), gt(trips.recapAutoSendAt, since)),
               or(
                 and(isNotNull(trips.recapAutoSendAt), lte(trips.recapAutoSendAt, now)),
                 and(isNull(trips.recapAutoSendAt), lte(trips.endsAt, eligibleBefore)),
@@ -1318,7 +1428,12 @@ async function sendRecaps(
   // no-show never did — but nobody marks a no-show for someone who turned up,
   // so the roll call is the only place that fact is written (issue #2105).
   const ashore = await bookingsLeftAtTheDock(db, candidates);
-  const rows = candidates.filter((row) => !ashore.has(row.booking.id));
+  // And nobody on a boat with somebody "not back aboard" is told "welcome
+  // back" (issue #2123). Not recorded as skipped: the recap is still owed.
+  const waiting = await bookingsWaitingOnAMissingPerson(db, candidates, now);
+  const rows = candidates.filter(
+    (row) => !ashore.has(row.booking.id) && !waiting.has(row.booking.id),
+  );
   const summary: RecapRunSummary = {
     scanned: rows.length,
     sent: 0,

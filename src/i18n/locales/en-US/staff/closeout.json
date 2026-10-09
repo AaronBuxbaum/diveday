@@ -2,6 +2,7 @@
   "notice": {
     "recapSent": "Any still-outstanding recaps were sent.",
     "recapAttention": "Some recaps need attention. Open the departure they belong to.",
+    "recapHeld": "Recaps are held until the roll call is corrected.",
     "recapNotReady": "Recaps cannot be sent until four hours after the departure ends.",
     "recapLocked": "This recap has been sent. Its note and photos can no longer be changed.",
     "crewPhotoAdded": "Crew photo added to this departure.",

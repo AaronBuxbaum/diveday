@@ -4,7 +4,12 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
-import { addRecapPhoto, canAddRecapPhoto, MAX_RECAP_PHOTOS_PER_BOOKING } from "@/db/recap";
+import {
+  addRecapPhoto,
+  canAddRecapPhoto,
+  isRecapOpen,
+  MAX_RECAP_PHOTOS_PER_BOOKING,
+} from "@/db/recap";
 import { parseRecapPulseCategories, submitRecapPulse } from "@/db/recap-pulses";
 import { submitTripReview } from "@/db/reviews";
 import { getTipCurrencyForBooking, startTipCheckout, tipBoundsCents } from "@/db/tips";
@@ -85,6 +90,9 @@ export async function uploadRecapPhotoAction(token: string, formData: FormData) 
   // booking gets its own notice — "that photo didn't upload, try a smaller
   // file" is a lie when the real reason is there's nothing to add a photo to
   // (task 56).
+  // A recap the page would not show takes no photo either (security review of
+  // #2123): a held recap, a held seat, a diver left at the dock.
+  if (!(await isRecapOpen(db, bookingId))) redirect(`${back}?photo=cancelled`);
   const eligibility = await canAddRecapPhoto(db, bookingId);
   if (!eligibility.ok) {
     redirect(
@@ -176,6 +184,7 @@ export async function startTipAction(token: string, formData: FormData) {
     : Number.NaN;
 
   const db = await getDb();
+  if (!(await isRecapOpen(db, bookingId))) redirect(`${back}?tip=error`);
   // The diver types a major-unit amount ("20"); what gets charged is an integer
   // count of the *shop currency's* minor unit. The conversion is the currency's
   // own, never a literal 100 — a ¥ tip of 20 is 20, not 2000 (docs ADR
@@ -242,6 +251,7 @@ export async function submitReviewAction(token: string, formData: FormData) {
 
   const rating = parseReviewRating(formData.get("rating"));
   if (rating === null) redirect(`${back}?review=error`);
+  if (!(await isRecapOpen(await getDb(), bookingId))) redirect(`${back}?review=did_not_dive`);
 
   // Same first-hand signal as the photo upload above (docs ADR
   // 20260731-per-person-notification-locale) — the diver wrote this review
@@ -313,6 +323,7 @@ export async function submitRecapPulseAction(token: string, formData: FormData) 
   // form carries is dropped rather than refused, so a stale tab posting a
   // retired code still saves the codes it got right.
   const categories = parseRecapPulseCategories(formData.getAll("category"));
+  if (!(await isRecapOpen(await getDb(), bookingId))) redirect(`${back}?pulse=error`);
 
   // Same first-hand signal the review and the photo upload record (docs ADR
   // 20260731-per-person-notification-locale) — this diver, their own device,

@@ -1,0 +1,1 @@
+ALTER TABLE "bookings" ADD COLUMN "paid_rental_kinds" jsonb DEFAULT '[]' NOT NULL;

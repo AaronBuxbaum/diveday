@@ -171,6 +171,11 @@ export async function deleteCrewRecapPhotoAction(tripId: string, formData: FormD
 export async function sendRecapAction(tripId: string) {
   const { staff, home } = await shopHome();
   const result = await sendTripRecaps(await getDb(), { shopId: staff.user.shopId, tripId });
+  // Somebody on the boat is still "not back aboard" (#2123): nothing went out,
+  // and the staffer is told why rather than that it failed.
+  if (!result.ok && result.reason === "held") {
+    revalidateAndRedirect(home, noticeUrl(home, "recap-held"));
+  }
   if (!result.ok) revalidateAndRedirect(home, noticeUrl(home, "invalid"));
   revalidateAndRedirect(
     home,

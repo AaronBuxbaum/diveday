@@ -132,6 +132,42 @@ describe("party linkage (createBookingParty)", () => {
 });
 
 describe("issuePartySeatClaims", () => {
+  /**
+   * **A held seat goes by the name it was booked under** (security review of
+   * issue #2125). A party seat typed with somebody else's email is matched to
+   * that person's record and held; the organizer's /ready panel reads this
+   * list, so printing the matched record's name told whoever typed the email
+   * whose record it reached.
+   */
+  it("names a held seat as it was booked, never the matched person", async () => {
+    const { db, shop, open } = await seededContext();
+    const { lead, memberOne } = await bookParty(db, shop.id, open.id);
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: new Date(nowMs()), identityBookedAs: "Milo Typed" })
+      .where(eq(bookings.id, memberOne.bookingId));
+    const [person] = await db
+      .select({ id: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, memberOne.bookingId));
+    await db
+      .update(people)
+      .set({ fullName: "Victim Matched-Record" })
+      .where(eq(people.id, person?.id ?? ""));
+
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    const held = seats.find((seat) => seat.bookingId === memberOne.bookingId);
+    expect(held?.seatName).toBe("Milo Typed");
+    expect(JSON.stringify(seats)).not.toContain("Victim");
+    // And the claim page that seat's link opens says the same.
+    const token = await claimTokenFor(db, shop.id, lead.bookingId, memberOne.bookingId);
+    const page = await getClaimPageData(db, token);
+    expect(page?.seatName).toBe("Milo Typed");
+  });
+
   it("mints a claim link per unclaimed member seat and never one for the lead", async () => {
     const { db, shop, open } = await seededContext();
     const { lead, memberOne, memberTwo } = await bookParty(db, shop.id, open.id);

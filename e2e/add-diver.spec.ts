@@ -510,7 +510,9 @@ test("a held seat that is someone else gets its own diver record", async ({ page
 
   // The notice names how her waiver gets signed, since she has none.
   await expect(page.getByRole("status")).toContainText("They have their own diver record now");
-  await expect(page.getByRole("status")).toContainText("send their waiver from their record");
+  await expect(page.getByRole("status")).toContainText(
+    "Their waiver is ready: send it from their row",
+  );
   const hana = rosterRow(page, "Hana Park").filter({ visible: true }).first();
   await expect(hana).toBeVisible();
   await expect(hana.getByRole("button", { name: /^Same person as / })).toHaveCount(0);

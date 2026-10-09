@@ -421,6 +421,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "identity_unconfirmed_at", // H-13 review state, not a shop record
     "identity_booked_as", // H-13 review state: the name the held booking was made under
     "identity_matched_by", // H-13 review state: why the booking was matched
+    "paid_rental_kinds", // held-seat prep state: the order lines already carry what was paid for
     // Seat-claim linkage (ADR 20260804-seat-claim-links): a pointer at another
     // booking row's id, which does not survive a re-import — same class as
     // pending_checkout_intent_id.

@@ -28,7 +28,7 @@ import { welcomeCueFor } from "@/lib/welcome-cue";
 import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
 import { listTripBuddyTeams } from "./buddy-pairs";
-import type { AppDb, DbExecutor } from "./client";
+import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
@@ -400,6 +400,65 @@ export async function listDepartureRollCallByTrip(
 }
 
 /**
+ * **Who the crew have counted onto the boat at any checkpoint**, by trip: the
+ * bookings whose standing result at the departure checkpoint *or* at any
+ * after-dive checkpoint is `boarded` (issue #2142).
+ *
+ * A diver picked up at the second site, or who rode out on a chase boat, is
+ * first recorded `boarded` at `after_dive_1`; their dock result is empty or
+ * `not_boarded`. Read from the dock alone, they were never aboard, and Today
+ * dropped the "Aboard" row of a diver on a medical hold while they were in the
+ * water. This is the one answer to "is this person on the boat" for that row.
+ *
+ * - **Newest event per checkpoint wins**, and a newest `cleared` drops that
+ *   checkpoint out — the same supersession every roll-call reader here applies.
+ * - **Only `boarded` counts.** An after-dive `not_boarded` is the missing-diver
+ *   row's word, never "aboard"; a dock `not_boarded` is "never left".
+ * - **A cancelled booking is nobody**, the guard the departure reader carries.
+ *
+ * One grouped query for the departures asked about, never one per booking.
+ */
+export async function listBoardedAtAnyCheckpointByTrip(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Map<string, Set<string>>> {
+  const byTrip = new Map<string, Set<string>>();
+  if (tripIds.length === 0) return byTrip;
+  const rows = await db
+    .select({
+      tripId: rollCallEvents.tripId,
+      bookingId: rollCallEvents.bookingId,
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
+    })
+    .from(rollCallEvents)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
+    )
+    .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, [...tripIds])))
+    .orderBy(
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
+    );
+  // Newest first, so the first row per booking and checkpoint is that
+  // checkpoint's standing result.
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const key = `${row.bookingId}\u0000${row.checkpoint}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (row.status !== "boarded") continue;
+    const aboard = byTrip.get(row.tripId) ?? new Set<string>();
+    aboard.add(row.bookingId);
+    byTrip.set(row.tripId, aboard);
+  }
+  return byTrip;
+}
+
+/**
  * **Every seat the crew have spoken for at an after-dive checkpoint**, by trip.
  *
  * The departure reader above is pinned to the dock on purpose, and its docblock
@@ -429,7 +488,26 @@ export async function listAfterDiveRollCallByTrip(
   tripIds: string[],
 ): Promise<Map<string, Map<string, "boarded" | "missing_after_dive">>> {
   const byTrip = new Map<string, Map<string, "boarded" | "missing_after_dive">>();
-  if (tripIds.length === 0) return byTrip;
+  // A `boarded` anywhere outranks a `missing_after_dive`, the same precedence
+  // `onTheWaterByRollCall` applies: the crew counted this person back onto the
+  // boat.
+  for (const row of await standingAfterDiveResults(db, shopId, tripIds)) {
+    const spoken = byTrip.get(row.tripId) ?? new Map<string, "boarded" | "missing_after_dive">();
+    if (row.status === "boarded") spoken.set(row.bookingId, "boarded");
+    else if (!spoken.has(row.bookingId)) spoken.set(row.bookingId, "missing_after_dive");
+    byTrip.set(row.tripId, spoken);
+  }
+  return byTrip;
+}
+
+/**
+ * Each booking's **standing result at each after-dive checkpoint** of the trips
+ * asked about: newest event per booking and checkpoint wins, a newest `cleared`
+ * drops that checkpoint out, and a cancelled booking is nobody. The one diver
+ * query behind `listAfterDiveRollCallByTrip`.
+ */
+async function standingAfterDiveResults(db: DbExecutor, shopId: string, tripIds: string[]) {
+  if (tripIds.length === 0) return [];
   const rows = await db
     .select({
       tripId: rollCallEvents.tripId,
@@ -455,21 +533,18 @@ export async function listAfterDiveRollCallByTrip(
       desc(rollCallEvents.seq),
     );
   // Newest first, so the first row seen per booking *and* checkpoint is that
-  // checkpoint's standing result. A `boarded` anywhere outranks a
-  // `missing_after_dive`, the same precedence `onTheWaterByRollCall` applies:
-  // the crew counted this person back onto the boat.
+  // checkpoint's standing result.
   const seen = new Set<string>();
+  const standing: { tripId: string; bookingId: string; status: "boarded" | "not_boarded" }[] = [];
   for (const row of rows) {
     const key = `${row.bookingId}:${row.checkpoint}`;
     if (seen.has(key)) continue;
     seen.add(key);
     if (!standingResultMeansSailed(row.checkpoint, row.status)) continue;
-    const spoken = byTrip.get(row.tripId) ?? new Map<string, "boarded" | "missing_after_dive">();
-    if (row.status === "boarded") spoken.set(row.bookingId, "boarded");
-    else if (!spoken.has(row.bookingId)) spoken.set(row.bookingId, "missing_after_dive");
-    byTrip.set(row.tripId, spoken);
+    if (row.status === "cleared") continue;
+    standing.push({ tripId: row.tripId, bookingId: row.bookingId, status: row.status });
   }
-  return byTrip;
+  return standing;
 }
 
 /**
@@ -974,6 +1049,9 @@ export async function getTripManifests(
       divers: diverInputs.map((diver) => ({
         ...diver,
         rollCall: effectiveByBooking.get(diver.bookingId)?.[index],
+        boardedEarlier: (effectiveByBooking.get(diver.bookingId) ?? [])
+          .slice(0, index)
+          .some((record) => record?.state === "boarded"),
       })),
     }),
   );
@@ -1287,6 +1365,26 @@ async function reclaimReleasedSeat(
 }
 
 /**
+ * **A "not back aboard" after a dive stops the automatic recap for the whole
+ * departure** (domain review of #2123), in the same transaction as the word.
+ * The recap page and the email already wait while the word stands; this is for
+ * after it is corrected. A person counted back an hour later may still have
+ * been an incident, and "welcome back" is not the cron's call to make then —
+ * a staffer releases it from the close-out. Never written at the dock, where
+ * `not_boarded` means "never left" (`src/lib/roll-call.ts`).
+ */
+async function pauseRecapOnMissingAfterDive(
+  tx: AppTransaction,
+  input: { shopId: string; tripId: string; status: string; checkpoint: RollCallCheckpoint },
+) {
+  if (input.status !== "not_boarded" || input.checkpoint === "departure") return;
+  await tx
+    .update(trips)
+    .set({ recapAutoSendPaused: true })
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)));
+}
+
+/**
  * Roll call is append-only operational history. At departure, a boarded event
  * has an additional hard gate: the shared readiness service must prove the diver
  * ready at the moment staff board them. After-dive checkpoints are a physical
@@ -1459,6 +1557,7 @@ export async function recordRollCall(
       })
       .returning({ id: rollCallEvents.id });
     if (!event) throw new Error("recordRollCall: insert returned no row");
+    await pauseRecapOnMissingAfterDive(tx, { ...input, checkpoint });
     // The rail has contradicted the desk. Nothing above refused it and nothing
     // here does either (the docblock says why); what happens instead is that
     // the seat the counter released comes back with the body the crew are
@@ -1795,6 +1894,7 @@ export async function recordCrewRollCall(
       })
       .returning({ id: rollCallCrewEvents.id });
     if (!event) throw new Error("recordCrewRollCall: insert returned no row");
+    await pauseRecapOnMissingAfterDive(tx, { ...input, checkpoint });
     // The seat was released and the rail has now said the person sailed, so it
     // comes back with them — the same consequence, the same trail lines and the
     // same one-direction rule as the diver path's (`reclaimReleasedSeat`).

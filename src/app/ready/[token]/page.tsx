@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { HeldAfterDiveCard, NoShowCard } from "@/app/ready/[token]/_components/AfterDiveDoors";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
 import { CarriedPreparation } from "@/app/ready/[token]/_components/CarriedPreparation";
@@ -32,6 +33,7 @@ import { EarnedMoment } from "@/components/EarnedMoment";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { FlashParams } from "@/components/FlashParams";
 import { PartyClaimPanel } from "@/components/PartyClaimPanel";
+import { RecapWaitingCard } from "@/components/RecapWaitingCard";
 import { RememberBooker } from "@/components/RememberBooker";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -55,7 +57,7 @@ import { getDb } from "@/db/client";
 import { departureRollCallForBooking } from "@/db/manifests";
 import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
-import { bookingsLeftAtTheDock, getRecapPageData } from "@/db/recap";
+import { departureAfterLateBoarding, getRecapPageState } from "@/db/recap";
 import { certificationAgency, certificationLevel, type DiveSpecialty } from "@/db/schema";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopById, getShopBySlug } from "@/db/shops";
@@ -895,7 +897,7 @@ export default async function DiverReadinessPage({
   const { detail, shop, person } = data;
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
-  const firstName = detail.person.fullName.split(" ")[0] || t("ready.namelessFallback");
+  const firstName = data.greetingName.split(" ")[0] || t("ready.namelessFallback");
   // Every date, time, and relative phrase on this page formats for `locale` —
   // the *negotiated* one. These four used to pass `shop.defaultLocale`
   // straight into the formatter, so a diver reading Spanish prose got the
@@ -978,45 +980,17 @@ export default async function DiverReadinessPage({
   const departure = theBoatIsHome({ endsAt: detail.trip.endsAt })
     ? await departureRollCallForBooking(db, shop.id, detail.trip.id, bookingId)
     : null;
-  // A dock `not_boarded` stands only while no after-dive `boarded` says they
-  // joined the boat later; the recap asks the same question the same way.
-  const boarded =
-    departure === "not_boarded" &&
-    !(
-      await bookingsLeftAtTheDock(db, [
-        { booking: { id: bookingId }, shop: { id: shop.id }, trip: { id: detail.trip.id } },
-      ])
-    ).has(bookingId)
-      ? "boarded"
-      : departure;
+  const boarded = await departureAfterLateBoarding(db, departure, {
+    booking: { id: bookingId },
+    shop: { id: shop.id },
+    trip: { id: detail.trip.id },
+  });
   if (isAfterTheDive({ endsAt: detail.trip.endsAt, boarded })) {
-    const recap = await getRecapPageData(db, bookingId);
-    if (!recap) {
-      /**
-       * **A no-show, said plainly and with somebody to ask.**
-       *
-       * Both cancellations — the booking's and the departure's — are answered
-       * above, so `getRecapPageData`'s uniform null means
-       * `bookings.status = 'no_show'` here (or a cancellation that landed in
-       * the microseconds between the two reads, which this notice's contact
-       * line covers either way).
-       *
-       * It used to render "This readiness link isn't available" over "This
-       * booking didn't sail" — two sentences, both false for this reader: the
-       * token had just verified, and the boat sailed without them. A diver
-       * being charged a no-show fee, holding DiveDay's own page telling them
-       * the trip never ran, is where a chargeback argument starts.
-       */
-      return (
-        <ExpiredLinkCard
-          glyph="cancelled"
-          title={t("recap.noShowHeading")}
-          text={t("recap.noShowBody", { shop: detail.shop.name })}
-          shop={shopContact}
-          t={t}
-        />
-      );
-    }
+    if (data.identityHeld) return <HeldAfterDiveCard shop={shopContact} t={t} />;
+    const recapState = await getRecapPageState(db, bookingId);
+    if (recapState.kind === "waiting") return <RecapWaitingCard shop={shopContact} t={t} />;
+    const recap = recapState.kind === "recap" ? recapState.data : null;
+    if (!recap) return <NoShowCard shop={shopContact} t={t} />;
     const recapToken = signRecapToken(bookingId);
     const after = await buildAfterStateProps({
       db,
@@ -1729,8 +1703,8 @@ export default async function DiverReadinessPage({
           </div>
         ) : null}
         {/* Client-only, per-device convenience (task 27): remember who just
-            booked so their next visit starts from a filled-in form. */}
-        {justBooked && person.email ? (
+            booked, never on a held seat (#2125), to prefill their next visit. */}
+        {justBooked && person.email && !data.identityHeld ? (
           <RememberBooker fullName={detail.person.fullName} email={person.email} />
         ) : null}
         {/* **The thread's first coral moment, and the only one this page

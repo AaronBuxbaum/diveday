@@ -1705,3 +1705,100 @@ describe("participant types on the packing list (ADR 20261007-participant-types)
     ]);
   });
 });
+
+describe("a held seat on the packing list (issue #2144)", () => {
+  // A held seat may be somebody else on the matched record, so nothing of
+  // that record is packed for it, even if a caller hands the record's fit
+  // and card through. The seat still has its row, saying why it is empty.
+  const checklist = buildDivePrepChecklist({
+    divers: [
+      diver({
+        bookingId: "held",
+        fullName: "Tom Marsh",
+        identityHeld: true,
+        wantsNitrox: true,
+        hasVerifiedNitroxCard: true,
+      }),
+      diver({ bookingId: "confirmed", fullName: "Ruth Ames" }),
+    ],
+    plannedDives: 2,
+  });
+
+  it("packs nothing for it and gives it a row of its own kind", () => {
+    expect(checklist.diverLines.find((line) => line.bookingId === "held")).toMatchObject({
+      fullName: "Tom Marsh",
+      state: "identity_held",
+      items: [],
+    });
+    expect(checklist.lines.every((line) => line.count === 1)).toBe(true);
+    expect(checklist.heldSeats).toEqual([
+      { bookingId: "held", personId: "held", fullName: "Tom Marsh", paidFor: [] },
+    ]);
+  });
+
+  it("never fills nitrox on the matched diver's card, and says why in its own words", () => {
+    // Not "no verified card": the card may exist and belong to somebody else.
+    // The reason sends the desk to the roster row, never the matched record
+    // (dive-domain review).
+    expect(checklist.tanks.nitrox).toBe(0);
+    expect(checklist.nitroxBlockers).toEqual([
+      {
+        bookingId: "held",
+        personId: "held",
+        fullName: "Tom Marsh",
+        reason: "identity_held",
+      },
+    ]);
+  });
+
+  it("does not send the desk to ask the matched record for sizes", () => {
+    expect(checklist.diversWithIncompleteFit).toEqual([]);
+  });
+});
+
+/**
+ * **A held seat's paid gear still goes on the rack** (dive-domain review of
+ * issue #2144). The seat paid for a BCD and a wetsuit at checkout; its sizes
+ * wait for the desk, but the pieces do not: they are counted as "fit at
+ * check-in" lines, so the boat is not loaded one set short.
+ */
+describe("a held seat that paid for gear at checkout", () => {
+  const checklist = buildDivePrepChecklist({
+    divers: [
+      diver({
+        bookingId: "held",
+        fullName: "Tom Marsh",
+        identityHeld: true,
+        paidRentalKinds: ["bcd", "wetsuit"],
+      }),
+    ],
+    plannedDives: 2,
+  });
+
+  it("lists the paid pieces unsized, at check-in, with boots riding along the suit", () => {
+    const line = checklist.diverLines.find((entry) => entry.bookingId === "held");
+    expect(line?.state).toBe("identity_held");
+    expect(line?.items.map((item) => [item.kind, item.size, item.fitAtCheckIn])).toEqual([
+      ["bcd", null, true],
+      ["wetsuit", null, true],
+      ["boots", null, true],
+    ]);
+    expect(
+      checklist.lines.map((entry) => [entry.kind, entry.size, entry.count, entry.fitAtCheckIn]),
+    ).toEqual([
+      ["bcd", null, 1, true],
+      ["wetsuit", null, 1, true],
+      ["boots", null, 1, true],
+    ]);
+  });
+
+  it("still asks nobody for the matched record's sizes", () => {
+    expect(checklist.diversWithIncompleteFit).toEqual([]);
+  });
+
+  it("says what each held seat paid for, boots not among it", () => {
+    expect(checklist.heldSeats).toEqual([
+      expect.objectContaining({ bookingId: "held", paidFor: ["bcd", "wetsuit"] }),
+    ]);
+  });
+});

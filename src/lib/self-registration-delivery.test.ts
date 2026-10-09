@@ -25,6 +25,59 @@ describe("anonymousTextRecipient: which numbers the counter QR will text", () =>
     });
   });
 
+  it("refuses a +1 number outside the shop's own country: the Caribbean premium routes (issue #2151)", () => {
+    // Jamaica, the Dominican Republic's three codes, the Bahamas, and the
+    // US territories that bill as their own routes all share `+1`.
+    for (const number of [
+      "+1 876 555 0110",
+      "(809) 555-0110",
+      "+1 829 555 0110",
+      "+1 849 555 0110",
+      "+1 242 555 0110",
+      "+1 787 555 0110",
+      "+1 671 555 0110",
+      // Canada, for a US shop.
+      "+1 416 555 0110",
+    ]) {
+      expect(anonymousTextRecipient(number, usShop), number).toEqual({
+        refused: "foreign_area_code",
+      });
+    }
+  });
+
+  it("refuses a +1 number that is not a place: premium 900, toll-free, personal", () => {
+    for (const number of ["+1 900 555 0110", "+1 800 555 0110", "+1 500 555 0110"]) {
+      expect(anonymousTextRecipient(number, usShop), number).toEqual({
+        refused: "foreign_area_code",
+      });
+    }
+  });
+
+  it("texts a Canadian number for a Canadian shop, and a US one only for a US shop", () => {
+    const caShop = { ...usShop, addressCountry: "CA" };
+    expect(anonymousTextRecipient("416-555-0110", caShop)).toEqual({ recipient: "+14165550110" });
+    expect(anonymousTextRecipient("+1 604 555 0110", caShop)).toEqual({
+      recipient: "+16045550110",
+    });
+    expect(anonymousTextRecipient("+1 305 555 0110", caShop)).toEqual({
+      refused: "foreign_area_code",
+    });
+    expect(anonymousTextRecipient("+1 907 555 0110", usShop)).toEqual({
+      recipient: "+19075550110",
+    });
+  });
+
+  it("texts a Caribbean shop's own island, and nobody else's", () => {
+    const jmShop = { ...usShop, addressCountry: "JM" };
+    expect(anonymousTextRecipient("876-555-0110", jmShop)).toEqual({ recipient: "+18765550110" });
+    expect(anonymousTextRecipient("+1 809 555 0110", jmShop)).toEqual({
+      refused: "foreign_area_code",
+    });
+    expect(anonymousTextRecipient("+1 305 555 0110", jmShop)).toEqual({
+      refused: "foreign_area_code",
+    });
+  });
+
   it("refuses everything from a shop whose country it cannot read", () => {
     expect(anonymousTextRecipient("+13055550110", { ...usShop, addressCountry: null })).toEqual({
       refused: "foreign_number",

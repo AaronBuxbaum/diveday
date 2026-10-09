@@ -264,6 +264,15 @@ export type ManifestDiverInput = {
    * every roster looked like before the first writer landed.
    */
   notHere?: boolean;
+  /**
+   * Whether a standing `boarded` result sits at a checkpoint **before** this
+   * one (domain review of #2123). False at an after-dive checkpoint means a
+   * `boarded` here would be this diver's first — they joined at the second
+   * site — so the roll call shows their readiness the way the dock does.
+   * Absent reads as true: a manifest assembled by hand, or an older snapshot,
+   * says nothing it cannot back.
+   */
+  boardedEarlier?: boolean;
 };
 
 export type ManifestCrewMember = {
