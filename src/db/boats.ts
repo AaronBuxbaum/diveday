@@ -1,7 +1,8 @@
-import { and, count, eq, isNull, ne } from "drizzle-orm";
+import { and, count, eq, gt, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
 import { boats, trips } from "./schema";
+import { liveTrip } from "./trips-live";
 
 export type Boat = typeof boats.$inferSelect;
 
@@ -92,6 +93,33 @@ export async function countBoatDepartures(
     // telling the shop how much history the delete touches.
     .where(and(eq(trips.shopId, shopId), eq(trips.boatId, boatId), ne(trips.status, "cancelled")));
   return row?.departures ?? 0;
+}
+
+/**
+ * The seats each upcoming departure on this hull sells — live, scheduled and
+ * not yet started — for the certificate check a boat save runs (H-107,
+ * `boatSeatsRefusal`). A departure that has started is history the
+ * certificate can no longer change.
+ */
+export async function upcomingDepartureCapacities(
+  db: AppDb,
+  shopId: string,
+  boatId: string,
+  now: Date = nowDate(),
+): Promise<number[]> {
+  const rows = await db
+    .select({ capacity: trips.capacity })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.boatId, boatId),
+        eq(trips.status, "scheduled"),
+        liveTrip(),
+        gt(trips.startsAt, now),
+      ),
+    );
+  return rows.map((row) => row.capacity);
 }
 
 export async function createBoat(

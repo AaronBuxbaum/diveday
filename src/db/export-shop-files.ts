@@ -1123,6 +1123,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // seat, and a shop that moved its data would otherwise ask the
       // whole board the question over again.
       "carried_facts_confirmed_at",
+      // The diver saying they were running late (J3): a statement they
+      // made on this seat, in the same class as the two above.
+      "running_late_at",
       // The instructor's own words to this student, and who wrote them
       // (issues #1196, #1205). The student read it on their recap; a
       // shop moving its data takes the sentence with it.
@@ -1172,6 +1175,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
           buddyReferralByBooking.get(row.id),
           row.welcomeSharedAt,
           row.carriedFactsConfirmedAt,
+          row.runningLateAt,
           row.courseNextStep,
           row.courseNextStepAt,
           row.courseNextStepByPersonId,

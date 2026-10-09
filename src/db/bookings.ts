@@ -1038,6 +1038,8 @@ async function createBookingRecord(
         // returns (`createBookingParty`).
         partyLeadBookingId: null,
         claimedAt: null,
+        // "Running late" (J3) was said about the seat's earlier life.
+        runningLateAt: null,
         // Same reasoning as the two lines above: a reactivated row is a *new*
         // booking, so it carries this booking's referral — including null,
         // which un-credits a partner who did not send this visit rather than

@@ -1008,6 +1008,8 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         lastDivedBand: null,
         reEntryAsk: null,
         welcomeSharedAt: null,
+        // "Running late" (J3) is the diver's own statement on the seat.
+        runningLateAt: null,
         // The instructor's next step is prose about this named student — "book
         // your deep dive with Marcus before the card arrives" — so it goes
         // with them (issues #1196, #1205). All three columns together, or the

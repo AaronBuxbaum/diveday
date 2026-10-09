@@ -8,10 +8,15 @@ import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
 import { CarriedPreparation } from "@/app/ready/[token]/_components/CarriedPreparation";
 import { ChangedFacts, type FitRecall } from "@/app/ready/[token]/_components/ChangedFacts";
 import { CourseMaterials } from "@/app/ready/[token]/_components/CourseMaterials";
+import {
+  CANCEL_PREVIEW_KEY,
+  verifiedCancelNotice,
+} from "@/app/ready/[token]/_components/cancel-notices";
 import { DayOfDetails } from "@/app/ready/[token]/_components/DayOfDetails";
 import { ExpiredLink } from "@/app/ready/[token]/_components/ExpiredLink";
 import { payStepLines } from "@/app/ready/[token]/_components/pay-step-lines";
 import { ReadyThreadBodySkeleton } from "@/app/ready/[token]/_components/ReadyThreadBodySkeleton";
+import { RunningLate } from "@/app/ready/[token]/_components/RunningLate";
 import { READY_NOTICES } from "@/app/ready/[token]/_components/ready-notices";
 import { SignStepActions } from "@/app/ready/[token]/_components/SignStepActions";
 import {
@@ -59,7 +64,7 @@ import { getDb } from "@/db/client";
 import { countSpendableDives } from "@/db/dive-packages";
 import { departureRollCallForBooking } from "@/db/manifests";
 import { getBookingPayment } from "@/db/payments";
-import { getReadyPageData, type ReadyPageData } from "@/db/ready";
+import { getReadyPageData } from "@/db/ready";
 import { departureAfterLateBoarding, getRecapPageState } from "@/db/recap";
 import { certificationAgency, certificationLevel, type DiveSpecialty } from "@/db/schema";
 import { issuePartySeatClaims } from "@/db/seat-claims";
@@ -68,7 +73,7 @@ import { listTripChangeEvents } from "@/db/trip-change-events";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
-import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import {
   DIVER_CERTIFICATION_AGENCY_KEYS,
   DIVER_CERTIFICATION_LEVEL_KEYS,
@@ -591,39 +596,6 @@ function NitroxEntry({
     </CertificationDisclosure>
   );
 }
-
-/**
- * What to tell a diver whose seat is gone about money they had already paid —
- * derived from the booking's own current payment status and nothing else. It has
- * never been read off the query string: `?cancelled=1` is a trigger telling the
- * page to look, so a hand-edited URL can neither claim a refund that did not
- * happen nor hide one that did.
- *
- * This collapses several distinct non-refund outcomes (past the free-
- * cancellation window, no stated window, a failed/manual Stripe reversal) into
- * one honest "still paid, shop handles it" message, since none of those
- * specific reasons survive as durable state to verify against — only whether
- * the payment row currently reads `refunded` or still `paid`/`deposit_paid`
- * does.
- */
-function verifiedCancelNotice(paymentStatus: string | null | undefined): DiverMessageKey | null {
-  if (paymentStatus === "refunded") return "ready.refundIssued";
-  if (paymentStatus === "paid" || paymentStatus === "deposit_paid") return "ready.refundManual";
-  return null;
-}
-
-/**
- * What cancelling right now would mean for money already paid. This is the one
- * consequence the button cannot show on its own, which is why it is the only
- * sentence beside it — a diver past the free-cancellation window learning that
- * *after* the irreversible tap is the failure this exists to prevent.
- */
-const CANCEL_PREVIEW_KEY: Record<ReadyPageData["cancelPreview"], DiverMessageKey | null> = {
-  refund: "ready.cancelPreviewRefund",
-  forfeit: "ready.cancelPreviewForfeit",
-  no_policy: "ready.cancelPreviewNoPolicy",
-  unpaid: null,
-};
 
 /** The "This booking was cancelled" notice, with refund copy derived from the booking's current payment status. */
 function cancelledNotice(
@@ -1413,6 +1385,7 @@ export default async function DiverReadinessPage({
                 Each brought its own before — 32, 24, 24, 32, 40, 40 — so the
                 column stepped unevenly down one scroll. */}
         <div className="mt-10 space-y-10">
+          <RunningLate token={token} data={data} locale={locale} t={t} />
           {fullShop && fullTrip ? (
             <TripArrivalCard
               shop={{

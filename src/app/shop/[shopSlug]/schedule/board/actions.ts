@@ -429,6 +429,12 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   // be one of *this* shop's live words.
   if (lensId && !(await getTripLens(db, shop.id, lensId))) return await invalid();
 
+  // The hull the panel just assigned. Its own prefill puts this number in
+  // the box, but the box is editable afterwards and the server has to be the
+  // one that says no — to the hull's seats and to its certificate (H-107).
+  const assignedBoat = boatId
+    ? ((await listBoats(await getDb(), shop.id)).find((boat) => boat.id === boatId) ?? null)
+    : null;
   const details = tripDetailsPatch(
     {
       date,
@@ -443,13 +449,8 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       diveMode,
       boatId,
       capacity,
-      // The hull the panel just assigned. Its own prefill puts this number in
-      // the box, but the box is editable afterwards and the server has to be
-      // the one that says no.
-      boatCapacity: boatId
-        ? ((await listBoats(await getDb(), shop.id)).find((boat) => boat.id === boatId)?.capacity ??
-          null)
-        : null,
+      boatCapacity: assignedBoat?.capacity ?? null,
+      boatCertifiedPassengers: assignedBoat?.certifiedPassengers ?? null,
     },
     shop,
   );
@@ -464,6 +465,14 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       // its refusals through `BUILDER_NOTICE_KEYS`. `count` rides alongside so
       // the banner can name the hull's number rather than say "too many".
       redirect(`${back}?builder=capacity-above-boat&count=${details.boatCapacity}`);
+    }
+    if (details.reason === "capacity_above_certificate") {
+      await trackEvent({
+        name: "schedule_builder_action",
+        action: "add",
+        outcome: "capacity_above_certificate",
+      });
+      redirect(`${back}?builder=capacity-above-certificate&count=${details.limit}`);
     }
     if (details.reason === "end_before_start") {
       await trackEvent({
@@ -627,6 +636,9 @@ async function addPatternDeparture(
       boatId,
       capacity: also.capacity ?? fallback.capacity,
       boatCapacity: boatId ? (boats?.find((boat) => boat.id === boatId)?.capacity ?? null) : null,
+      boatCertifiedPassengers: boatId
+        ? (boats?.find((boat) => boat.id === boatId)?.certifiedPassengers ?? null)
+        : null,
     },
     shop,
   );

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseReplyKeyword } from "../reply-keywords";
 import { smsRecipient } from "./sms";
 
 /**
@@ -13,6 +14,12 @@ import { smsRecipient } from "./sms";
  *
  * HELP needs nothing from the app: the answer is AWS's to send, and it is the
  * same for every diver.
+ *
+ * One more word is read, and it is not a carrier's: `LATE` (J3), which the
+ * day-before text teaches. It tells the arrivals list a diver is on the way
+ * and behind, gates nothing and is answered by nobody, so it is the one thing
+ * a reply here may say to a shop (`markPhoneRunningLate`). The token list is
+ * the reply keywords' own, so WhatsApp and SMS accept the same words.
  */
 
 /**
@@ -41,6 +48,7 @@ const inboundSchema = z.object({
 export type SmsReply =
   | { kind: "stop"; phone: string }
   | { kind: "start"; phone: string }
+  | { kind: "late"; phone: string }
   | { kind: "ignored" };
 
 /**
@@ -66,5 +74,7 @@ export function parseSmsReply(raw: string): SmsReply {
     .toUpperCase();
   if (STOP_WORDS.has(word)) return { kind: "stop", phone };
   if (START_WORDS.has(word)) return { kind: "start", phone };
+  const keyword = parseReplyKeyword(inbound.data.messageBody);
+  if (keyword.kind === "intent" && keyword.intent === "late") return { kind: "late", phone };
   return { kind: "ignored" };
 }

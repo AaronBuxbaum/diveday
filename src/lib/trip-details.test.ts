@@ -239,6 +239,45 @@ describe("capacity against the assigned hull", () => {
 });
 
 /**
+ * **Nor more seats than the hull's certificate allows** (H-107). Separate from
+ * the hull's own capacity, because a boat saved before the decision may still
+ * sell more seats than its certificate, and a departure on it must not.
+ */
+describe("capacity against the hull's certificate", () => {
+  it("refuses more seats than the certificate allows, and names its number", () => {
+    const result = tripDetailsPatch(
+      { ...base, capacity: 14, boatCapacity: 16, boatCertifiedPassengers: 12 },
+      shop,
+    );
+    if (result.ok) throw new Error("expected a refusal");
+    if (result.reason !== "capacity_above_certificate") throw new Error(`got ${result.reason}`);
+    expect(result.limit).toBe(12);
+  });
+
+  it("accepts seats up to the certificate exactly", () => {
+    expect(
+      ok({ capacity: 12, boatCapacity: 16, boatCertifiedPassengers: 12 }).startsAt,
+    ).toBeInstanceOf(Date);
+  });
+
+  it("leaves a hull with no certificate recorded alone", () => {
+    expect(
+      ok({ capacity: 12, boatCapacity: 12, boatCertifiedPassengers: null }).startsAt,
+    ).toBeInstanceOf(Date);
+  });
+
+  it("names the hull's own number first when the seats pass both", () => {
+    expect(refusal({ capacity: 20, boatCapacity: 12, boatCertifiedPassengers: 10 })).toBe(
+      "capacity_above_boat",
+    );
+  });
+
+  it("does not check a submission that is not changing capacity", () => {
+    expect(ok({ boatCapacity: 16, boatCertifiedPassengers: 12 }).startsAt).toBeInstanceOf(Date);
+  });
+});
+
+/**
  * **A payment gate on a departure with no price is a gate nobody can clear.**
  *
  * `checkoutCharge` returns null for an unpriced trip, so the booking action

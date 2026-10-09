@@ -46,6 +46,14 @@ describe("parseReplyKeyword", () => {
     }
   });
 
+  it("reads LATE and its Spanish words, and never a lone L", () => {
+    for (const body of ["LATE", "late.", "Running late!", "tarde", "Llego tarde", "retraso"]) {
+      expect(parseReplyKeyword(body)).toEqual({ kind: "intent", intent: "late" });
+    }
+    expect(parseReplyKeyword("L")).toEqual({ kind: "none" });
+    expect(parseReplyKeyword("Running late, be there at 8")).toEqual({ kind: "none" });
+  });
+
   it("leaves a sentence alone, which is the whole point", () => {
     // Every one of these is a real message shape the inbox exists for. Reading
     // a command out of any of them would cancel a seat nobody asked about.

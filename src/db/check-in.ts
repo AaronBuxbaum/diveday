@@ -7,6 +7,7 @@ import { offlineEventOutOfBounds } from "@/lib/offline-events";
 import { arrivalsWindow } from "@/lib/operational-window";
 import { priorVisitStanding } from "@/lib/prior-visits";
 import type { ReadinessResult } from "@/lib/readiness";
+import { runningLateShown } from "@/lib/running-late";
 import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
@@ -59,6 +60,12 @@ export type CheckInQueueRow = {
    * does, like every other row.
    */
   bookingStatus: "booked" | "checked_in" | "no_show";
+  /**
+   * When the diver said they are running late (J3), on a seat still to
+   * arrive; null otherwise. Already filtered through `runningLateShown`, so a
+   * reader never shows it on an arrived or released seat.
+   */
+  runningLateAt: Date | null;
   readiness: ReadinessResult;
   /**
    * The diver's latest departure roll-call record on the manifest is
@@ -177,6 +184,7 @@ export async function listCheckInQueue(
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
       bookingStatus: bookings.status,
+      runningLateAt: bookings.runningLateAt,
       emergencyContactName: people.emergencyContactName,
       emergencyContactPhone: people.emergencyContactPhone,
     })
@@ -213,6 +221,7 @@ export async function listCheckInQueue(
   return rows.map(({ emergencyContactName, emergencyContactPhone, ...row }) => ({
     ...row,
     bookingStatus: row.bookingStatus as "booked" | "checked_in" | "no_show",
+    runningLateAt: runningLateShown(row),
     boarded: boardedBookingIds.has(row.bookingId),
     onTheWater: boardedBookingIds.has(row.bookingId)
       ? "boarded"
@@ -590,7 +599,9 @@ export async function checkInBooking(
 
     const [updated] = await tx
       .update(bookings)
-      .set({ status: "checked_in" })
+      // An arrived diver is no longer late (J3): the statement clears with the
+      // tap, so an undo does not bring back a "running late" from this morning.
+      .set({ status: "checked_in", runningLateAt: null })
       .where(and(eq(bookings.id, booking.id), eq(bookings.status, "booked")))
       .returning({ id: bookings.id });
     if (!updated) return { ok: false, reason: "not_bookable" };

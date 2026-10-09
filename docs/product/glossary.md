@@ -729,6 +729,15 @@ new domain concept, define it here in the same PR.
   checkpoint, and its writers cannot reach `roll_call_events`: an arrival is never promoted to
   aboard by the queue
   ([ADR 20260907-the-counter-survives-offline](../architecture/decisions/20260907-the-counter-survives-offline.md)).
+- **Running late** — a diver's own statement, before the boat leaves, that they are on the way and
+  behind (J3). Said by tapping "Running late" on their `/ready` link or by replying `LATE` to a
+  shop's WhatsApp, email or the night-before text, and stored as one instant,
+  `bookings.running_late_at` (`src/db/running-late.ts`). Open only on a booked seat not yet checked
+  in, inside the twelve hours before a scheduled departure and never after it
+  (`canSayRunningLate`); the first statement stands. The arrivals list (Today's arrival lookup and
+  the Divers tab once arrivals open) says "Running late, said 7:42" in the shop's zone on that row
+  until the diver checks in, which clears it. **It gates nothing** and it is not a **no-show**: the
+  diver still has to arrive, and a diver who said it and never came is still the desk's call.
 - **No-show** — one staffer's recorded statement that a booked diver did not come. The status is
   `bookings.status = "no_show"`, written only by `markBookingNoShow` (`src/db/no-show.ts`), behind
   the Divers tab's "Not here" disclosure (inside the arrivals window, on any row the gate allows, blocked or not) and its confirm tap. **It is not the three things it is most easily mistaken
@@ -1174,9 +1183,12 @@ new domain concept, define it here in the same PR.
   officer counts against. When the people booked on a departure pass it, the departure's **Boat**
   tab says so in danger ink above the **pre-departure checklist**; once the crew have recorded more
   people aboard than it allows, the line counts them ("13 passengers aboard") instead of the
-  bookings. The fleet row says so when the seats on sale already do. It **informs, never gates**;
-  the one capacity block stays the departure's seats against the boat's `capacity`
-  (`src/lib/boat-safety.ts`).
+  bookings. **No seat above it is sold** (H-107): a boat whose seats on sale pass it is refused at
+  save with a field error, so is a certificate lowered under the seats an upcoming departure on the
+  hull still sells, and a departure may not sell more seats than its boat's certificate
+  (`boatSeatsRefusal`, `tripDetailsPatch`). Capacity and the certificate count the same people,
+  everyone aboard but the crew. A boat saved over it before H-107 keeps sailing, its fleet row says
+  so in danger ink, and its next save must fix it (`src/lib/boat-safety.ts`).
 - **Boat papers** — a boat's three dated documents: when its next safety inspection is due, and
   when its registration and hull insurance expire (`boats.inspection_due_on`,
   `registration_expires_on`, `insurance_expires_on`). Typed over in Settings, Boats when renewed,

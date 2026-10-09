@@ -248,6 +248,42 @@ describe("counter check-in", () => {
     ).resolves.toMatchObject({ ok: true, duplicate: true });
   });
 
+  it("clears a running-late statement when the diver checks in (J3)", async () => {
+    const { db, shop, reef, staff, booking, personName } = await context();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id });
+    expect(issued.ok).toBe(true);
+    if (!issued.ok) return;
+    await completeWaiver(db, issued.token, {
+      signerName: personName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    const said = new Date(reef.startsAt.getTime() - HOUR);
+    await db.update(bookings).set({ runningLateAt: said }).where(eq(bookings.id, booking.id));
+    const before = await listCheckInQueue(db, shop.id, { tripId: reef.id });
+    expect(before.find((row) => row.bookingId === booking.id)?.runningLateAt).toEqual(said);
+
+    const outcome = await checkInBooking(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+    });
+    expect(outcome).toMatchObject({ ok: true });
+    const [saved] = await db
+      .select({ at: bookings.runningLateAt })
+      .from(bookings)
+      .where(eq(bookings.id, booking.id));
+    expect(saved?.at).toBeNull();
+    // An undo puts the seat back to arriving, not back to "running late".
+    await undoCheckInBooking(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+    });
+    const after = await listCheckInQueue(db, shop.id, { tripId: reef.id });
+    expect(after.find((row) => row.bookingId === booking.id)?.runningLateAt).toBeNull();
+  });
+
   it("shows a diver as boarded once roll call records them, independent of counter check-in (task 149)", async () => {
     // Check-in and boarding are two different questions — arrived vs.
     // aboard. The check-in queue's own description promises this split, but

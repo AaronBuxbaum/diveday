@@ -36,7 +36,7 @@ import { MINUTE_MS } from "./clock";
  */
 
 /** What a recognised keyword is asking for. Matches the `inbound_keyword_intent` pgEnum. */
-export type ReplyKeywordIntent = "cancel" | "move";
+export type ReplyKeywordIntent = "cancel" | "move" | "late";
 
 export type ReplyKeywordParse =
   | { kind: "intent"; intent: ReplyKeywordIntent }
@@ -62,6 +62,11 @@ export const KEYWORD_MAX_LENGTH = 24;
 const KEYWORD_TOKENS: Record<ReplyKeywordIntent, readonly string[]> = {
   cancel: ["c", "cancel", "cancelar", "cancelacion"],
   move: ["m", "move", "mover", "cambiar", "cambio"],
+  // **No single letter for this one** (J3): `LATE` is the word a shop
+  // message teaches, and an `L` alone is too easy to send by accident for a
+  // reply that tells a crew where somebody is. Never a code either: four
+  // letters, and the code alphabet has no `L`.
+  late: ["late", "running late", "tarde", "llego tarde", "retraso"],
 };
 
 /**

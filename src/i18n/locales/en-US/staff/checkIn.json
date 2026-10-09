@@ -7,7 +7,8 @@
     "notHere": "{count, plural, one {# person is not here} other {# people are not here}}"
   },
   "row": {
-    "arrived": "Checked in"
+    "arrived": "Checked in",
+    "runningLate": "Running late, said {time}"
   },
   "noShow": {
     "door": "Not here",

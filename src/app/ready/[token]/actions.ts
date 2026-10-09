@@ -35,6 +35,7 @@ import {
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
 import { refundBookingOnCancellation } from "@/db/refunds";
 import { saveRentalFit, saveRentalFitNote } from "@/db/rental-fit";
+import { markBookingRunningLate } from "@/db/running-late";
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
 import { setWelcomeConsent } from "@/db/welcome-cues";
@@ -511,6 +512,27 @@ export async function payFromReady(token: string) {
  * The move a diver cannot make here is a *move* — rescheduling is the shop's
  * (ADR 20260821-the-diver-may-release-their-own-seat).
  */
+/**
+ * **"Running late"** (J3): the diver tells the shop from their own link. Not
+ * refused on a held seat — it says nothing about the diver record, only that
+ * whoever holds this seat is on the way. The write re-checks the window, so a
+ * stale page tapped after check-in or after the boat left changes nothing.
+ */
+export async function sayRunningLateAction(token: string) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const outcome = await markBookingRunningLate(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    now: nowDate(),
+  });
+  if (outcome.status === "closed") {
+    revalidateAndRedirect(base(token), `${base(token)}?error=late`);
+  }
+  // No banner: the block's own line now says what was said and when.
+  revalidateAndRedirect(base(token));
+}
+
 export async function cancelMyBookingAction(token: string) {
   const ip = await clientIp();
   if (

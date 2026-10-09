@@ -22,7 +22,8 @@
     "hasRoster": "Hay buceadores reservados en esta salida, así que no se puede eliminar. Cancélala desde su propia página.",
     "addedNamed": "“{title}” ya está en el calendario.",
     "addedSeries": "“{title}” ya está en el calendario: {count, plural, one {# salida programada} other {# salidas programadas}}.",
-    "capacityAboveBoat": "Esa capacidad supera lo que admite el barco asignado."
+    "capacityAboveBoat": "Esa capacidad supera lo que admite el barco asignado.",
+    "capacityAboveCertificate": "Esa capacidad supera el límite de pasajeros del certificado del barco."
   },
   "builder": {
     "ariaLabel": "Constructor del calendario",

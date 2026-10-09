@@ -28,6 +28,14 @@ describe("parseSmsReply", () => {
     expect(parseSmsReply(inbound("Stop by the shop at 7?"))).toEqual({ kind: "ignored" });
   });
 
+  it.each(["LATE", "late.", "Running late", "tarde"])("reads %j as running late (J3)", (body) => {
+    expect(parseSmsReply(inbound(body))).toEqual({ kind: "late", phone: "+13055550134" });
+  });
+
+  it("does not read a sentence about lateness as LATE", () => {
+    expect(parseSmsReply(inbound("Running late, there by 8"))).toEqual({ kind: "ignored" });
+  });
+
   it("leaves HELP to the reply AWS sends from the number", () => {
     expect(parseSmsReply(inbound("HELP"))).toEqual({ kind: "ignored" });
   });

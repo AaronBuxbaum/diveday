@@ -517,3 +517,75 @@ describe("handleInboundReplyKeyword — what it does", () => {
     expect(await statusOf(db, bookingId)).toBe("booked");
   });
 });
+
+describe("handleInboundReplyKeyword — LATE (J3)", () => {
+  it("marks the soonest open seat running late and answers the diver", async () => {
+    const { db, shop, trip, bookingId } = await context();
+    const provider = acceptingProvider();
+    const now = new Date(trip.startsAt.getTime() - 40 * 60 * 1000);
+    const messageId = await inbound(db, shop.id, "LATE", { receivedAt: now });
+
+    expect(
+      await handleInboundReplyKeyword(db, {
+        shopId: shop.id,
+        inboundMessageId: messageId,
+        now,
+        provider,
+      }),
+    ).toBe("running_late");
+    const [seat] = await db
+      .select({ status: bookings.status, at: bookings.runningLateAt })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    // It releases nothing: the seat is still booked, now with the instant said.
+    expect(seat).toEqual({ status: "booked", at: now });
+    const [message] = await db
+      .select({ intent: inboundMessages.keywordIntent })
+      .from(inboundMessages)
+      .where(eq(inboundMessages.id, messageId));
+    expect(message?.intent).toBe("late");
+    expect(replyBodies(provider.sent)).toHaveLength(1);
+  });
+
+  it("changes nothing when no departure is close enough to be late for", async () => {
+    const { db, shop, bookingId, now } = await context();
+    const provider = acceptingProvider();
+    const messageId = await inbound(db, shop.id, "late", { receivedAt: now });
+
+    expect(
+      await handleInboundReplyKeyword(db, {
+        shopId: shop.id,
+        inboundMessageId: messageId,
+        now,
+        provider,
+      }),
+    ).toBe("nothing_late");
+    const [seat] = await db
+      .select({ at: bookings.runningLateAt })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    expect(seat?.at).toBeNull();
+  });
+
+  it("never reads LATE out of a message nobody vouched for", async () => {
+    const { db, shop, trip, bookingId } = await context();
+    const now = new Date(trip.startsAt.getTime() - 40 * 60 * 1000);
+    const messageId = await inbound(db, shop.id, "LATE", {
+      receivedAt: now,
+      senderAuthenticated: false,
+    });
+    expect(
+      await handleInboundReplyKeyword(db, {
+        shopId: shop.id,
+        inboundMessageId: messageId,
+        now,
+        provider: acceptingProvider(),
+      }),
+    ).toBe("unknown_sender");
+    const [seat] = await db
+      .select({ at: bookings.runningLateAt })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    expect(seat?.at).toBeNull();
+  });
+});
