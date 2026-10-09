@@ -169,5 +169,11 @@ const GATE_CEILING = 4;
 const CHROME_CEILING = 20;
 // 61 → 62: the bench's two Today rows, late and uncollected work orders, are
 // one statement (`listWorkOrdersNeedingAttention`, ADR 20261008-work-order-follow-up).
-const TODAY_CEILING = 62;
+// 62 → 63: a diver first counted aboard at a later checkpoint is on the boat
+// too (issue #2142), so the queue reads who was boarded at any checkpoint
+// (`listBoardedAtAnyCheckpointByTrip`), one statement over the queue's trips.
+// 63 → 64: an undecided chargeback is a Today row for the owner
+// (`listOpenPaymentDisputes`, ADR 20261009-stripe-reversals-reach-diveday),
+// one statement read beside the stuck operations.
+const TODAY_CEILING = 64;
 const TRIP_CEILING = 49;
