@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   CREW_NOTICE_SETTLE_MS,
+  CREW_NOTICE_URGENT_MS,
   type CrewNoticeRow,
   crewNoticesSettled,
+  crewNoticeUrgent,
   netCrewNotices,
 } from "./crew-notices";
 
@@ -52,8 +54,45 @@ describe("netCrewNotices", () => {
     ]);
   });
 
-  it("says nothing about an approval the boat then refused, because they are not on it", () => {
+  it("says nothing about a bare approval, because the assignment it ran says the rest", () => {
     expect(netCrewNotices(rows([A, "request_approved"]))).toEqual([]);
+  });
+
+  it("tells the asker when the boat refused the approval, not that it was approved", () => {
+    expect(netCrewNotices(rows([A, "request_approved"], [A, "request_refused"]))).toEqual([
+      { tripId: A, change: "request_refused" },
+    ]);
+  });
+
+  it("says a role change to somebody who stayed aboard", () => {
+    expect(netCrewNotices(rows([A, "role_changed"]))).toEqual([
+      { tripId: A, change: "role_changed" },
+    ]);
+  });
+
+  it("folds a role change into the assignment it followed", () => {
+    expect(netCrewNotices(rows([A, "assigned"], [A, "role_changed"]))).toEqual([
+      { tripId: A, change: "assigned" },
+    ]);
+  });
+
+  it("says nothing about a role change on a departure they then left", () => {
+    expect(netCrewNotices(rows([A, "role_changed"], [A, "removed"]))).toEqual([
+      { tripId: A, change: "removed" },
+    ]);
+  });
+
+  it("tells the crew a departure was called off, whatever came before it", () => {
+    expect(netCrewNotices(rows([A, "assigned"], [A, "called_off"]))).toEqual([
+      { tripId: A, change: "called_off" },
+    ]);
+    expect(netCrewNotices(rows([A, "role_changed"], [A, "called_off"]))).toEqual([
+      { tripId: A, change: "called_off" },
+    ]);
+  });
+
+  it("lets a later assignment on a reinstated departure outrank its call-off", () => {
+    expect(netCrewNotices(rows([A, "called_off"], [A, "removed"], [A, "assigned"]))).toEqual([]);
   });
 
   it("tells a person their ask was declined", () => {
@@ -70,6 +109,23 @@ describe("netCrewNotices", () => {
 
   it("returns nothing for nothing", () => {
     expect(netCrewNotices([])).toEqual([]);
+  });
+});
+
+describe("crewNoticeUrgent", () => {
+  const now = new Date("2026-10-09T12:00:00Z");
+
+  it("sends at once for a departure leaving inside the next day", () => {
+    expect(crewNoticeUrgent(new Date(now.getTime() + CREW_NOTICE_URGENT_MS), now)).toBe(true);
+    expect(crewNoticeUrgent(new Date(now.getTime() + 60_000), now)).toBe(true);
+  });
+
+  it("leaves a later departure to the hourly pass", () => {
+    expect(crewNoticeUrgent(new Date(now.getTime() + CREW_NOTICE_URGENT_MS + 1), now)).toBe(false);
+  });
+
+  it("is urgent for a departure that has already started, so it is settled and recorded", () => {
+    expect(crewNoticeUrgent(new Date(now.getTime() - 60_000), now)).toBe(true);
   });
 });
 

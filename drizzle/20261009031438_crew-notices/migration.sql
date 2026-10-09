@@ -1,4 +1,5 @@
-CREATE TYPE "crew_notice_change" AS ENUM('assigned', 'removed', 'request_approved', 'request_declined');--> statement-breakpoint
+CREATE TYPE "crew_notice_change" AS ENUM('assigned', 'removed', 'request_approved', 'request_declined', 'request_refused', 'role_changed', 'called_off');--> statement-breakpoint
+CREATE TYPE "crew_notice_outcome" AS ENUM('sent', 'failed', 'netted', 'skipped', 'no_recipient', 'demo');--> statement-breakpoint
 CREATE TABLE "crew_notices" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"shop_id" uuid NOT NULL,
@@ -8,6 +9,7 @@ CREATE TABLE "crew_notices" (
 	"actor_person_id" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"settled_at" timestamp with time zone,
+	"outcome" "crew_notice_outcome",
 	"seq" bigserial
 );
 --> statement-breakpoint

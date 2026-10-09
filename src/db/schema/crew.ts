@@ -277,6 +277,26 @@ export const crewNoticeChange = pgEnum("crew_notice_change", [
   "removed",
   "request_approved",
   "request_declined",
+  /** An approval whose assignment the boat then refused (ratio, course rules, a clash). */
+  "request_refused",
+  /** Still aboard, in a different role. */
+  "role_changed",
+  /** The departure itself was cancelled (a blow-out, a day call, a plain cancel). */
+  "called_off",
+]);
+
+/**
+ * What became of a settled notice — so a row is never settled in silence
+ * (ADR 20261009-crew-hear-about-their-boats). `skipped` is a departure that had
+ * started, or stopped existing, before the news could go out.
+ */
+export const crewNoticeOutcome = pgEnum("crew_notice_outcome", [
+  "sent",
+  "failed",
+  "netted",
+  "skipped",
+  "no_recipient",
+  "demo",
 ]);
 
 /**
@@ -312,6 +332,8 @@ export const crewNotices = pgTable(
     actorPersonId: uuid("actor_person_id").references(() => people.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     settledAt: timestamp("settled_at", { withTimezone: true }),
+    /** Set with `settled_at`: what the pass did with this row. */
+    outcome: crewNoticeOutcome("outcome"),
     /**
      * The order these were written in, which `created_at` cannot answer for an
      * assign and a remove inside one instant — and netting needs the order.
@@ -330,6 +352,7 @@ export const crewNotices = pgTable(
 );
 
 export type CrewNoticeChangeValue = (typeof crewNoticeChange.enumValues)[number];
+export type CrewNoticeOutcomeValue = (typeof crewNoticeOutcome.enumValues)[number];
 
 export type TripAssignmentRole = (typeof tripAssignmentRole.enumValues)[number];
 

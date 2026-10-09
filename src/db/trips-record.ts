@@ -14,6 +14,7 @@ import {
 import type { TripDiveMode } from "@/lib/trip-details";
 import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import type { AppDb, DbExecutor } from "./client";
+import { recordCrewCalledOff } from "./crew-notices";
 import { recordDeskEvent } from "./desk-events";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import type { Trip } from "./schema";
@@ -792,7 +793,18 @@ export async function setTripStatus(
   tripId: string,
   status: "scheduled" | "cancelled",
   now: Date = nowDate(),
+  options: { actorPersonId?: string | null } = {},
 ) {
+  // Only a real call-off is news to the crew: a departure already cancelled
+  // being cancelled again tells nobody twice.
+  const [before] =
+    status === "cancelled"
+      ? await db
+          .select({ status: trips.status })
+          .from(trips)
+          .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+          .limit(1)
+      : [];
   const [trip] = await db
     .update(trips)
     // Stamped on the way into `cancelled` and **cleared** on the way back to
@@ -809,6 +821,16 @@ export async function setTripStatus(
   // wall, and prep re-assigns from what is actually free.
   if (trip && status === "cancelled") {
     await releaseUnclaimedGearReservationsForTrips(db, { shopId, tripIds: [tripId] });
+    // The crew hear it was called off (ADR 20261009-crew-hear-about-their-boats);
+    // the caller tells them once this commits (`flushUrgentCrewNotices`).
+    if (before?.status === "scheduled") {
+      await recordCrewCalledOff(db, {
+        shopId,
+        tripIds: [tripId],
+        actorPersonId: options.actorPersonId ?? null,
+        now,
+      });
+    }
   }
   return trip ?? null;
 }

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { sendDueCrewNotices } from "@/db/crew-notices";
 import { CREW_NOTICE_CRON_CRONTAB } from "@/lib/crew-notices";
+import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
 
@@ -25,11 +26,9 @@ const CRON_MONITOR_CONFIG = {
  * queued for a retry.
  */
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return NextResponse.json({ error: "not_configured" }, { status: 503 });
-  if (request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return new NextResponse(null, { status: 401 });
-  }
+  // The shared constant-time check every cron route uses (src/lib/cron-auth.ts).
+  const refused = requireCronSecret(request);
+  if (refused) return refused;
 
   const checkInId = Sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { flushUrgentCrewNotices, recordCrewNotices } from "@/db/crew-notices";
 import {
   decideCrewAssignmentRequest,
   deleteCrewAvailabilityBlock,
@@ -269,6 +270,7 @@ export async function decideCrewRequestAction(week: string, formData: FormData) 
     return;
   }
   if (decision === "declined") {
+    await flushUrgentCrewNotices(db, { shopId: session.user.shopId, tripIds: [outcome.tripId] });
     revalidateAndRedirect(path, noticeUrl(path, "request-declined", at));
     return;
   }
@@ -280,6 +282,18 @@ export async function decideCrewRequestAction(week: string, formData: FormData) 
     { actorPersonId: session.user.personId },
   );
   if (!assigned) {
+    // The asker was approved and is still not aboard: they hear that, not the
+    // approval (ADR 20261009-crew-hear-about-their-boats).
+    await recordCrewNotices(db, [
+      {
+        shopId: session.user.shopId,
+        tripId: outcome.tripId,
+        personId: outcome.personId,
+        change: "request_refused",
+        actorPersonId: session.user.personId,
+      },
+    ]);
+    await flushUrgentCrewNotices(db, { shopId: session.user.shopId, tripIds: [outcome.tripId] });
     revalidateAndRedirect(path, noticeUrl(path, "request-approved-not-assigned", at));
     return;
   }

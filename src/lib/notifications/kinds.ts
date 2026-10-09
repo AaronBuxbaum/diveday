@@ -9,7 +9,7 @@ import {
   MAX_LEARNING_MATERIALS,
   MAX_SCHEDULE_DAYS,
 } from "@/lib/courses";
-import { CREW_NOTICE_CHANGES } from "@/lib/crew-notices";
+import { CREW_NOTICE_CHANGES, CREW_TRIP_ROLES } from "@/lib/crew-notices";
 import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
 import { SHOP_MILESTONES } from "@/lib/founder-metrics";
 import { GEAR_KIND_ORDER } from "@/lib/gear";
@@ -1069,6 +1069,7 @@ const crewScheduleChangeSchema = z.object({
     .array(
       z.object({
         change: z.enum(CREW_NOTICE_CHANGES),
+        role: z.enum(CREW_TRIP_ROLES).nullable().optional(),
         tripTitle: z.string().trim().min(1).max(200),
         startsAt: z.date(),
         tripUrl: z.url().max(2_000),

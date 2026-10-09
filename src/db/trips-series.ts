@@ -19,6 +19,7 @@ import {
 import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import { utcToWallTime, type WallTime, wallTimeToUtc } from "@/lib/zoned";
 import type { AppDb, AppTransaction } from "./client";
+import { flushUrgentCrewNotices, recordCrewCalledOff } from "./crew-notices";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { queryAll } from "./query-helpers";
 import {
@@ -771,7 +772,7 @@ export async function cancelOffCadenceSeriesTrips(
 ): Promise<number> {
   const stale = await listOffCadenceSeriesTrips(db, shopId, seriesId, now);
   if (stale.length === 0) return 0;
-  return db.transaction(async (tx) => {
+  const cancelledIds = await db.transaction(async (tx) => {
     const cancelled = await tx
       .update(trips)
       // Same stamp as any other cancellation. An off-cadence occurrence being
@@ -798,8 +799,17 @@ export async function cancelOffCadenceSeriesTrips(
       shopId,
       tripIds: cancelled.map((trip) => trip.id),
     });
-    return cancelled.length;
+    // Each called-off date tells its crew (ADR 20261009-crew-hear-about-their-boats).
+    await recordCrewCalledOff(tx, {
+      shopId,
+      tripIds: cancelled.map((trip) => trip.id),
+      actorPersonId: null,
+      now,
+    });
+    return cancelled.map((trip) => trip.id);
   });
+  await flushUrgentCrewNotices(db, { shopId, tripIds: cancelledIds, now });
+  return cancelledIds.length;
 }
 
 export type SeriesCadencePatch = {
@@ -942,7 +952,18 @@ export async function cancelFutureSeriesTrips(
       shopId,
       tripIds: rows.map((trip) => trip.id),
     });
+    await recordCrewCalledOff(tx, {
+      shopId,
+      tripIds: rows.map((trip) => trip.id),
+      actorPersonId: null,
+      now,
+    });
     return rows;
+  });
+  await flushUrgentCrewNotices(db, {
+    shopId,
+    tripIds: cancelled.map((trip) => trip.id),
+    now,
   });
   await setSeriesRepeat(db, shopId, seriesId, false, now);
   return cancelled.length;

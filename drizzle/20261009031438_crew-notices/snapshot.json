@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "74db2272-6e6a-4844-bedc-10589fd4cf8a",
+  "id": "8684f2f6-c702-41d2-b0e8-811e8183832e",
   "prevIds": [
     "cb636c51-43be-4d9f-a1f5-8bf66663db5c"
   ],
@@ -350,9 +350,25 @@
         "assigned",
         "removed",
         "request_approved",
-        "request_declined"
+        "request_declined",
+        "request_refused",
+        "role_changed",
+        "called_off"
       ],
       "name": "crew_notice_change",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "sent",
+        "failed",
+        "netted",
+        "skipped",
+        "no_recipient",
+        "demo"
+      ],
+      "name": "crew_notice_outcome",
       "entityType": "enums",
       "schema": "public"
     },
@@ -8551,6 +8567,19 @@
       "generated": null,
       "identity": null,
       "name": "settled_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crew_notices"
+    },
+    {
+      "type": "crew_notice_outcome",
+      "typeSchema": "public",
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "outcome",
       "entityType": "columns",
       "schema": "public",
       "table": "crew_notices"

@@ -98,19 +98,22 @@ describe("the write path", () => {
     expect(await countPendingCrewNotices(db, shop.id, crew.id)).toBe(0);
   });
 
-  it("records nothing for a role change on somebody already aboard", async () => {
+  it("records a role change on somebody already aboard, and nothing for the same role again", async () => {
     const { db, shop, owner, crew } = await context();
     const trip = await departure(3);
     const as = { actorPersonId: owner.id };
     await changeTripCrew(db, shop.id, trip.id, { operation: "assign", personId: crew.id }, as);
-    await changeTripCrew(
-      db,
-      shop.id,
-      trip.id,
-      { operation: "assign", personId: crew.id, tripRole: "crew" },
-      as,
-    );
-    expect(await countPendingCrewNotices(db, shop.id, crew.id)).toBe(1);
+    const roleChange = {
+      operation: "assign" as const,
+      personId: crew.id,
+      tripRole: "crew" as const,
+    };
+    await changeTripCrew(db, shop.id, trip.id, roleChange, as);
+    expect(await countPendingCrewNotices(db, shop.id, crew.id)).toBe(2);
+    await changeTripCrew(db, shop.id, trip.id, roleChange, as);
+    expect(await countPendingCrewNotices(db, shop.id, crew.id)).toBe(2);
+    const rows = await db.select().from(crewNotices).where(eq(crewNotices.personId, crew.id));
+    expect(rows.map((row) => row.change)).toContain("role_changed");
   });
 
   it("records nothing for a change the boat refused", async () => {

@@ -25,7 +25,7 @@ describe("crewScheduleChangeEmail", () => {
         },
       ],
     });
-    expect(email.subject).toContain("You’re crewing Two-Tank <Reef>");
+    expect(email.subject).toMatch(/^Blue <Mantis>: You’re crewing Two-Tank <Reef>, Oct\s17/);
     expect(email.text).toContain("Hi Ana");
     expect(email.text).toContain("You’re crewing Two-Tank <Reef>");
     expect(email.text).toContain("https://diveday.example/shop/blue/trips/1");
@@ -87,6 +87,53 @@ describe("crewScheduleChangeEmail", () => {
       ],
     });
     expect(email.subject).toContain("Ya no estás en Arrecife");
+    expect(email.subject).toContain("Blue <Mantis>");
+  });
+
+  it("names the role they are aboard in, in the staffer's language", () => {
+    const one = (locale: "en-US" | "es-ES", change: "assigned" | "role_changed") =>
+      crewScheduleChangeEmail({
+        ...base,
+        locale,
+        changes: [
+          {
+            change,
+            role: "divemaster",
+            tripTitle: "Reef",
+            startsAt: SATURDAY,
+            tripUrl: "https://x.example/1",
+          },
+        ],
+      });
+    expect(one("en-US", "assigned").text).toContain("You’re crewing Reef");
+    expect(one("en-US", "assigned").text).toContain("as divemaster");
+    expect(one("en-US", "role_changed").text).toContain("Your role on Reef");
+    expect(one("en-US", "role_changed").text).toContain("is now divemaster");
+    expect(one("es-ES", "assigned").text).toContain("equipo");
+    expect(one("es-ES", "assigned").text).not.toContain("tripulación");
+  });
+
+  it("tells the crew a departure was called off, and an asker the boat refused them", () => {
+    const email = crewScheduleChangeEmail({
+      ...base,
+      changes: [
+        {
+          change: "called_off",
+          tripTitle: "Reef",
+          startsAt: SATURDAY,
+          tripUrl: "https://x.example/1",
+        },
+        {
+          change: "request_refused",
+          tripTitle: "Wreck",
+          startsAt: SUNDAY,
+          tripUrl: "https://x.example/2",
+        },
+      ],
+    });
+    expect(email.text).toMatch(/Reef, Oct\s17, .+, was called off/);
+    expect(email.text).toContain("Your request to crew Wreck");
+    expect(email.text).toContain("couldn’t be added");
   });
 });
 

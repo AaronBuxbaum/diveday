@@ -25,6 +25,7 @@ import { getDb } from "@/db/client";
 import { type PaperCourseFormOutcome, recordPaperCourseForm } from "@/db/course-forms";
 import { recordCourseMaterialsDone } from "@/db/course-materials";
 import { recordCourseNextStep } from "@/db/course-next-step";
+import { flushUrgentCrewNotices } from "@/db/crew-notices";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { sendNotification } from "@/db/notifications";
 import { addInternalNote, deleteInternalNote, recordTripActivity } from "@/db/operations";
@@ -661,7 +662,12 @@ export async function cancelTripAction(shopSlug: string, tripId: string) {
   // owner/manager on the per-booking path), so it's open to all staff. Bulk
   // schedule management (reinstate, whole-series cancel, create) stays config.
   const s = (await requireShopSurface(shopSlug)).session;
-  await setTripStatus(await getDb(), s.user.shopId, tripId, "cancelled");
+  const db = await getDb();
+  await setTripStatus(db, s.user.shopId, tripId, "cancelled", nowDate(), {
+    actorPersonId: s.user.personId,
+  });
+  // Its crew hear it is off now, not on the hour (ADR 20261009-crew-hear-about-their-boats).
+  await flushUrgentCrewNotices(db, { shopId: s.user.shopId, tripIds: [tripId] });
   revalidateAndRedirect(back, noticeUrl(back, "cancelled"));
 }
 

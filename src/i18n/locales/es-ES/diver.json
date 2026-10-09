@@ -4283,16 +4283,30 @@
       "dropBySms": "Pasa cuando quieras antes de esa fecha."
     },
     "crewSchedule": {
-      "subjectAssigned": "Estás en la tripulación de {tripTitle}, {when}",
-      "subjectRemoved": "Ya no estás en {tripTitle}, {when}",
-      "subjectApproved": "Solicitud aprobada: {tripTitle}, {when}",
-      "subjectDeclined": "Solicitud rechazada: {tripTitle}, {when}",
+      "subjectAssigned": "{shopName}: Estás en el equipo de {tripTitle}, {when}",
+      "subjectRemoved": "{shopName}: Ya no estás en {tripTitle}, {when}",
+      "subjectApproved": "{shopName}: Solicitud aprobada para {tripTitle}, {when}",
+      "subjectDeclined": "{shopName}: Solicitud rechazada para {tripTitle}, {when}",
+      "subjectRefused": "{shopName}: No se te pudo sumar a {tripTitle}, {when}",
+      "subjectRoleChanged": "{shopName}: Nuevo puesto en {tripTitle}, {when}",
+      "subjectCalledOff": "{shopName}: {tripTitle}, {when}, se canceló",
       "subjectMany": "Cambiaron tus salidas en {shopName}",
       "intro": "Cambiaron tus salidas en {shopName}:",
-      "assigned": "Estás en la tripulación de {tripTitle}, {when}.",
-      "removed": "Ya no estás en la tripulación de {tripTitle}, {when}.",
-      "approved": "Aprobaron tu solicitud para {tripTitle}, {when}. Estás en la tripulación.",
+      "assigned": "Estás en el equipo de {tripTitle}, {when}.",
+      "removed": "Ya no estás en el equipo de {tripTitle}, {when}.",
+      "approved": "Aprobaron tu solicitud para {tripTitle}, {when}. Estás en el equipo.",
       "declined": "Rechazaron tu solicitud para {tripTitle}, {when}.",
+      "refused": "Aprobaron tu solicitud para {tripTitle}, {when}, pero no se te pudo sumar al equipo.",
+      "roleChanged": "Tu puesto en {tripTitle}, {when}, ahora es {role}.",
+      "roleChangedNoRole": "Cambió tu puesto en {tripTitle}, {when}.",
+      "calledOff": "{tripTitle}, {when}, se canceló. No te necesitan para esa salida.",
+      "asRole": "Vas como {role}.",
+      "roles": {
+        "instructor": "instructor de buceo",
+        "divemaster": "guía de buceo",
+        "captain": "capitán",
+        "crew": "tripulante"
+      },
       "open": "Abrir la salida"
     },
     "smsWorkOrder": {

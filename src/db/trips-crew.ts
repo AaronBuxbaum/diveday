@@ -7,7 +7,7 @@ import { countInWaterCrew, type TripCrewRole } from "@/lib/crew-roles";
 import { reviewManifestChange } from "@/lib/manifest-change-review";
 import { hasReturned } from "@/lib/trips";
 import type { AppDb, DbExecutor } from "./client";
-import { recordCrewNotices } from "./crew-notices";
+import { flushUrgentCrewNotices, recordCrewNotices } from "./crew-notices";
 import { listCrewAvailabilityBlocks } from "./crew-requests";
 import { publishManifestEvent } from "./manifest-events";
 import {
@@ -692,8 +692,9 @@ export async function setTripCrew(
     // edit that says nothing about roles preserves them instead of blanking
     // them.
     await tx.delete(tripAssignments).where(eq(tripAssignments.tripId, tripId));
-    // The crew hear about it: everyone who came on, everyone who came off —
-    // never the people who stayed, and never the staffer who did it.
+    // The crew hear about it: everyone who came on, everyone who came off,
+    // anyone who stayed in a different role — never the people whose place did
+    // not change, and never the staffer who did it.
     await recordCrewNotices(
       tx,
       [
@@ -701,6 +702,18 @@ export async function setTripCrew(
           .filter((personId) => !existingRoles.has(personId))
           .map((personId) => ({ personId, change: "assigned" as const })),
         ...dropped.map((personId) => ({ personId, change: "removed" as const })),
+        ...requested
+          .filter((entry) => {
+            const personId = crewInputPersonId(entry);
+            return (
+              existingRoles.has(personId) &&
+              (existingRoles.get(personId) ?? null) !== roleAfterChange(entry)
+            );
+          })
+          .map((entry) => ({
+            personId: crewInputPersonId(entry),
+            change: "role_changed" as const,
+          })),
       ].map((notice) => ({
         ...notice,
         shopId,
@@ -725,7 +738,11 @@ export async function setTripCrew(
   // real change: this fans out to a push service, and a refused assignment
   // (unknown staff, a scheduling conflict) changed nothing worth waking a
   // phone for.
-  if (changed) await publishManifestEvent(db, shopId, tripId);
+  if (changed) {
+    await publishManifestEvent(db, shopId, tripId);
+    // Late news goes now, not on the hour (`flushUrgentCrewNotices`).
+    await flushUrgentCrewNotices(db, { shopId, tripIds: [tripId], now: options.now });
+  }
   return changed;
 }
 
@@ -802,7 +819,7 @@ export async function changeTripCrewOutcome(
   change: TripCrewChange,
   options: CrewChangeOptions = {},
 ): Promise<TripCrewOutcome> {
-  return db.transaction(async (tx): Promise<TripCrewOutcome> => {
+  const outcome = await db.transaction(async (tx): Promise<TripCrewOutcome> => {
     const [eligible] = await tx
       .select({ personId: people.id })
       .from(people)
@@ -935,14 +952,20 @@ export async function changeTripCrewOutcome(
       // above): one person, two hulls, these same hours.
       if (conflict.length > 0) return { ok: false, refusal: "crew_clash" };
       const [already] = await tx
-        .select({ personId: tripAssignments.personId })
+        .select({ personId: tripAssignments.personId, tripRole: tripAssignments.tripRole })
         .from(tripAssignments)
         .where(
           and(eq(tripAssignments.tripId, tripId), eq(tripAssignments.personId, change.personId)),
         )
         .limit(1);
-      // A role change on somebody already aboard is not news to them.
-      if (!already) {
+      // Put on the boat, or — already aboard — given a different job on it.
+      // The same role again is nothing new.
+      const news = !already
+        ? ("assigned" as const)
+        : change.tripRole !== undefined && change.tripRole !== already.tripRole
+          ? ("role_changed" as const)
+          : null;
+      if (news) {
         await recordCrewNotices(
           tx,
           [
@@ -950,7 +973,7 @@ export async function changeTripCrewOutcome(
               shopId,
               tripId,
               personId: change.personId,
-              change: "assigned",
+              change: news,
               actorPersonId: options.actorPersonId ?? null,
             },
           ],
@@ -997,6 +1020,9 @@ export async function changeTripCrewOutcome(
     }
     return { ok: true };
   });
+  // Late news goes now, not on the hour (`flushUrgentCrewNotices`).
+  if (outcome.ok) await flushUrgentCrewNotices(db, { shopId, tripIds: [tripId], now: options.now });
+  return outcome;
 }
 
 /**

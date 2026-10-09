@@ -51,12 +51,14 @@ test.describe("a crew member put on a departure", () => {
 
     const owed = await preview(request, CREW);
     expect(owed.notification?.kind).toBe("crew_schedule_change");
-    expect(owed.notification?.changes).toContainEqual({
-      change: "assigned",
-      tripTitle: title,
-      startsAt: expect.any(String),
-      tripUrl: expect.stringContaining("/trips/"),
-    });
+    expect(owed.notification?.changes).toContainEqual(
+      expect.objectContaining({
+        change: "assigned",
+        tripTitle: title,
+        startsAt: expect.any(String),
+        tripUrl: expect.stringContaining("/trips/"),
+      }),
+    );
 
     await page.getByRole("button", { name: `Unassign ${CREW}` }).click();
     await expect(page.getByLabel("Assign crew")).toBeVisible();

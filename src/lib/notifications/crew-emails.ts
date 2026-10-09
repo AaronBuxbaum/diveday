@@ -1,6 +1,6 @@
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
-import type { CrewNoticeChange } from "@/lib/crew-notices";
+import type { CrewNoticeChange, CrewTripRole } from "@/lib/crew-notices";
 import { formatDateTimeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
 import { firstNameOf } from "@/lib/person-name";
@@ -18,6 +18,8 @@ export type CrewScheduleChangeEmailInput = {
   timezone: string;
   changes: readonly {
     change: CrewNoticeChange;
+    /** Their role on the departure now, when they are on it and one is set. */
+    role?: CrewTripRole | null;
     tripTitle: string;
     startsAt: Date;
     tripUrl: string;
@@ -29,6 +31,9 @@ const LINE_KEY = {
   removed: "notifications.crewSchedule.removed",
   request_approved: "notifications.crewSchedule.approved",
   request_declined: "notifications.crewSchedule.declined",
+  request_refused: "notifications.crewSchedule.refused",
+  role_changed: "notifications.crewSchedule.roleChanged",
+  called_off: "notifications.crewSchedule.calledOff",
 } as const satisfies Record<CrewNoticeChange, string>;
 
 const SUBJECT_KEY = {
@@ -36,14 +41,36 @@ const SUBJECT_KEY = {
   removed: "notifications.crewSchedule.subjectRemoved",
   request_approved: "notifications.crewSchedule.subjectApproved",
   request_declined: "notifications.crewSchedule.subjectDeclined",
+  request_refused: "notifications.crewSchedule.subjectRefused",
+  role_changed: "notifications.crewSchedule.subjectRoleChanged",
+  called_off: "notifications.crewSchedule.subjectCalledOff",
 } as const satisfies Record<CrewNoticeChange, string>;
+
+const ROLE_KEY = {
+  instructor: "notifications.crewSchedule.roles.instructor",
+  divemaster: "notifications.crewSchedule.roles.divemaster",
+  captain: "notifications.crewSchedule.roles.captain",
+  crew: "notifications.crewSchedule.roles.crew",
+} as const satisfies Record<CrewTripRole, string>;
+
+/** The changes that leave somebody aboard, and so can say in what role. */
+const ABOARD: ReadonlySet<CrewNoticeChange> = new Set(["assigned", "request_approved"]);
 
 function line(
   t: DiverTranslator,
-  change: CrewNoticeChange,
+  entry: { change: CrewNoticeChange; role?: CrewTripRole | null },
   values: { tripTitle: string; when: string },
 ): string {
-  return t(LINE_KEY[change], values);
+  const role = entry.role ? t(ROLE_KEY[entry.role]) : null;
+  if (entry.change === "role_changed") {
+    return role
+      ? t("notifications.crewSchedule.roleChanged", { ...values, role })
+      : t("notifications.crewSchedule.roleChangedNoRole", values);
+  }
+  const said = t(LINE_KEY[entry.change], values);
+  return role && ABOARD.has(entry.change)
+    ? `${said} ${t("notifications.crewSchedule.asRole", { role })}`
+    : said;
 }
 
 /**
@@ -59,12 +86,16 @@ export function crewScheduleChangeEmail(input: CrewScheduleChangeEmailInput): No
   const lines = input.changes.map((entry) => {
     const when = formatDateTimeTz(entry.startsAt, input.locale, input.timezone);
     return {
-      text: line(t, entry.change, { tripTitle: entry.tripTitle, when }),
-      html: line(t, entry.change, {
+      text: line(t, entry, { tripTitle: entry.tripTitle, when }),
+      html: line(t, entry, {
         tripTitle: `<strong>${escapeHtml(entry.tripTitle)}</strong>`,
         when: escapeHtml(when),
       }),
-      subject: t(SUBJECT_KEY[entry.change], { tripTitle: entry.tripTitle, when }),
+      subject: t(SUBJECT_KEY[entry.change], {
+        shopName: input.shopName,
+        tripTitle: entry.tripTitle,
+        when,
+      }),
       url: entry.tripUrl,
     };
   });
