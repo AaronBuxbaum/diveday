@@ -1,9 +1,9 @@
 import { and, asc, eq, isNull, ne } from "drizzle-orm";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
+import { seatName } from "@/lib/held-seat";
 import { log } from "@/lib/log";
 import { personNamesMatch } from "@/lib/person-name";
-import { seatName } from "@/lib/held-seat";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { waiverState } from "@/lib/waivers";
