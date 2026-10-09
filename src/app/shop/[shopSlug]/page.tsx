@@ -131,13 +131,13 @@ type EveningNoticeMap = BorrowedEveningNotices & Record<FitKeepRefusalCode, Even
  * bare key map: `invalid` is a recap send that failed, a crew photo this
  * departure cannot take, or a fit-keep whose reservation the desk could not
  * re-prove, and `unknown-person` is a fit-keep aimed at a person id that is
- * not this shop's. Both reached this page with no entry here at all, so the
- * refusal rendered nothing while this comment claimed otherwise.
+ * not this shop's — each has an entry, so no refusal renders as silence.
  */
 const EVENING_NOTICES: EveningNoticeMap = {
   "recap-sent": { key: "closeout.notice.recapSent", tone: "success" },
   "recap-send-attention": { key: "closeout.notice.recapAttention", tone: "warning" },
   "recap-not-ready": { key: "closeout.notice.recapNotReady", tone: "neutral" },
+  "recap-held": { key: "closeout.notice.recapHeld", tone: "warning" },
   "recap-locked": { key: "closeout.notice.recapLocked", tone: "neutral" },
   "recap-photo-removed": { key: "trips.notices.recapPhotoRemoved", tone: "success" },
   "crew-photo-added": { key: "closeout.notice.crewPhotoAdded", tone: "success" },

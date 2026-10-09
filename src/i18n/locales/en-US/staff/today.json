@@ -149,13 +149,13 @@
     "overflow": "{leading} and {rest, plural, one {# other} other {# others}}"
   },
   "detail": {
-    "missingDiver": "{uncounted, plural, one {# of {total} divers is} other {# of {total} divers are}} not back aboard after dive {dive}.",
-    "missingDiverStale": "{uncounted, plural, one {# of {total} divers is} other {# of {total} divers are}} still marked not back aboard after dive {dive}. Reconstruct it from the manifest.",
+    "missingDiver": "{uncounted, plural, one {# of {total} divers is} other {# of {total} divers are}} not back aboard after dive {dive}. Recaps are held until the roll call is corrected.",
+    "missingDiverStale": "{uncounted, plural, one {# of {total} divers is} other {# of {total} divers are}} still marked not back aboard after dive {dive}. Reconstruct it from the manifest. Recaps are held until the roll call is corrected.",
     "openRollCall": "Boat is back with dive {dive} uncounted: {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result.",
     "openRollCallUnderway": "Boat is out, dive {dive} count still open: {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result.",
     "openRollCallStale": "Dive {dive} roll call never closed: {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result. Reconstruct it from the manifest.",
-    "missingCrew": "{uncounted, plural, one {# of {total} crew is} other {# of {total} crew are}} not back aboard after dive {dive}.",
-    "missingCrewStale": "{uncounted, plural, one {# of {total} crew is} other {# of {total} crew are}} still marked not back aboard after dive {dive}. Reconstruct it from the manifest.",
+    "missingCrew": "{uncounted, plural, one {# of {total} crew is} other {# of {total} crew are}} not back aboard after dive {dive}. Recaps are held until the roll call is corrected.",
+    "missingCrewStale": "{uncounted, plural, one {# of {total} crew is} other {# of {total} crew are}} still marked not back aboard after dive {dive}. Reconstruct it from the manifest. Recaps are held until the roll call is corrected.",
     "openCrewRollCall": "Boat is back with the dive {dive} crew uncounted: {uncounted, plural, one {# of {total} crew has} other {# of {total} crew have}} no result.",
     "openCrewRollCallUnderway": "Boat is out, dive {dive} crew count still open: {uncounted, plural, one {# of {total} crew has} other {# of {total} crew have}} no result.",
     "openCrewRollCallStale": "Dive {dive} crew count never closed: {uncounted, plural, one {# of {total} crew has} other {# of {total} crew have}} no result. Reconstruct it from the manifest.",

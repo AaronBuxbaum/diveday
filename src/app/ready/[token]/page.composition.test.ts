@@ -456,16 +456,18 @@ describe("after the dive", () => {
     );
   });
 
-  it("names the shop on both of its live-token dead ends", () => {
+  it("names the shop on each of its live-token dead ends", () => {
     // A cancelled departure and a no-show are not expired links: the token
     // verified, the shop is already in scope, and the reader's question is
     // *who do I ask*. Issue #801 gave the expired branch the shop's name and
     // contact details for exactly that reason; these two named nobody.
     // One now, not two: the cancelled-departure card moved into the
     // `!capability` block, where the shop is not yet in scope and it builds its
-    // own contact object from the booking it resolved.
-    expect(countOf("shop={shopContact}")).toBe(1);
+    // own contact object from the booking it resolved. The second is a recap
+    // that waits while somebody on the boat is not back aboard (issue #2123).
+    expect(countOf("shop={shopContact}")).toBe(2);
     expect(SOURCE).toContain('t("recap.noShowHeading")');
+    expect(SOURCE).toContain("<RecapWaitingCard shop={shopContact} t={t} />");
     // And never the pair of sentences it replaced — "This readiness link isn't
     // available" over "This booking didn't sail" — both false for this reader.
     expect(SOURCE).not.toContain('t("recap.didNotDiveBody")');

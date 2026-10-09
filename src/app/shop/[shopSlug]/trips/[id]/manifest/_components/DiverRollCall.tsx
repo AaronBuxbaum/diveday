@@ -20,6 +20,7 @@ import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-label
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { welcomeCueText } from "@/i18n/welcome-cue-labels";
+import { formatCalendarDate } from "@/lib/calendar-date";
 import { diverRowId, scopedId } from "@/lib/element-id";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { withholdHeldSeatParticulars } from "@/lib/held-seat";
@@ -31,6 +32,7 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import type { ReadinessBlocker } from "@/lib/readiness";
+import { medicalWarningDays } from "@/lib/waivers";
 import { SHARED_FACT_MIN } from "../../_components/shared-facts";
 import { HoldPlace } from "./HoldPlace";
 import { PersonBuddyList } from "./PersonBuddyList";
@@ -108,6 +110,9 @@ function DiverFacts({
 }) {
   // The pickup belongs to the booking, not to the matched person, so a held
   // seat keeps it.
+  // The two warning days, in the shop's zone and with the year: the refusal by
+  // the physician's evaluation (dive-domain review of #2163).
+  const warningDays = medicalWarningDays(diver.medicalWaiver, timezone);
   const pickup = diver.hotelPickupLocation ? (
     <p>
       <span className="font-bold">{t("manifest.hotelPickupLabel")}</span>
@@ -213,7 +218,7 @@ function DiverFacts({
           {diver.medicalWaiver.overriddenRefusal ? (
             <span className="mt-0.5 block font-medium text-warning-strong">
               {t("manifest.medicalEarlierRefusal", {
-                date: formatShortDate(diver.medicalWaiver.overriddenRefusal.at, locale, timezone),
+                date: formatCalendarDate(warningDays.refusedOn ?? "", locale),
               })}
             </span>
           ) : null}
@@ -223,7 +228,7 @@ function DiverFacts({
           {diver.medicalWaiver.overriddenReferralAt ? (
             <span className="mt-0.5 block font-medium text-warning-strong">
               {t("manifest.medicalReferralUnresolved", {
-                date: formatShortDate(diver.medicalWaiver.overriddenReferralAt, locale, timezone),
+                date: formatCalendarDate(warningDays.referredOn ?? "", locale),
               })}
             </span>
           ) : null}
@@ -478,8 +483,12 @@ export function DiverRollCall({
           // danger-tinted row for a paperwork state would compete with the one
           // red on the page that means somebody is in the water (DD9), which is
           // also decision 4's rule: an alarm is earned by a recorded fact.
+          //
+          // A diver tapped aboard after a dive with no earlier boarding is
+          // boarding *now* — they joined at the second site — so their row
+          // reads as the dock's would (domain review of #2123). The tap stays.
           const recordedTone = rollCallRecordedTone(rowState);
-          const blockedAtDock = !ready && isDeparture;
+          const blockedAtDock = !ready && (isDeparture || diver.boardedEarlier === false);
           const untouchedTone = blockedAtDock
             ? ROLL_CALL_ROW_TONE.blocked
             : ROLL_CALL_ROW_TONE.awaiting;
@@ -537,19 +546,24 @@ export function DiverRollCall({
           // carries every fact the screen tucks away; it does not carry the
           // same fact twice.
           const earlierRefusal = Boolean(diver.medicalWaiver?.overriddenRefusal);
+          // A release standing over a referral nobody answered (issue #1282):
+          // the next capsule down from the refusal (dive-domain review of #2163).
+          const referralUnresolved = Boolean(diver.medicalWaiver?.overriddenReferralAt);
           const capsuleKind = diver.buddyAlert
             ? "buddy"
             : blockedAtDock
               ? "blocked"
               : earlierRefusal
                 ? "refusal"
-                : diver.minor && diver.age !== null && diver.age !== undefined
-                  ? "minor"
-                  : diver.depthAdvisory?.status === "exceeds"
-                    ? "depth"
-                    : diver.birthday
-                      ? "birthday"
-                      : null;
+                : referralUnresolved
+                  ? "referral"
+                  : diver.minor && diver.age !== null && diver.age !== undefined
+                    ? "minor"
+                    : diver.depthAdvisory?.status === "exceeds"
+                      ? "depth"
+                      : diver.birthday
+                        ? "birthday"
+                        : null;
           const capsule =
             diver.buddyAlert && diver.buddyTeam ? (
               <Badge tone={diver.buddyAlert === "separated_after_dive" ? "danger" : "warning"}>
@@ -561,6 +575,8 @@ export function DiverRollCall({
               </Badge>
             ) : earlierRefusal ? (
               <Badge tone="warning">{t("manifest.medicalEarlierRefusalChip")}</Badge>
+            ) : referralUnresolved ? (
+              <Badge tone="warning">{t("manifest.medicalReferralUnresolvedChip")}</Badge>
             ) : diver.minor && diver.age !== null && diver.age !== undefined ? (
               <Badge tone="warning" tabularNums>
                 {t("manifest.minorAge", { age: diver.age })}
@@ -762,7 +778,7 @@ export function DiverRollCall({
                       paperwork state at the checkpoint where the only thing
                       that matters is bodies (decision 4). The count panel
                       says nothing about it either, for the same reason. */}
-                    {!ready && isDeparture ? (
+                    {blockedAtDock ? (
                       <>
                         <ul className="flex flex-col gap-1 text-base text-danger">
                           {/* Keyed on the sentence, not the code: a trip
@@ -945,6 +961,9 @@ export function DiverRollCall({
                     ) : null}
                     {earlierRefusal && capsuleKind !== "refusal" ? (
                       <Badge tone="warning">{t("manifest.medicalEarlierRefusalChip")}</Badge>
+                    ) : null}
+                    {referralUnresolved && capsuleKind !== "referral" ? (
+                      <Badge tone="warning">{t("manifest.medicalReferralUnresolvedChip")}</Badge>
                     ) : null}
                     {diver.birthday && capsuleKind !== "birthday" ? (
                       <Badge tone="primary">{birthdayCalloutText(t, diver.birthday)}</Badge>

@@ -29,6 +29,16 @@ vi.mock("@/db/recap-pulses", async (importOriginal) => {
   return { ...actual, submitRecapPulse: vi.fn() };
 });
 vi.mock("@/db/people", () => ({ recordDiverOwnLocaleForBooking: vi.fn() }));
+vi.mock("@/db/recap", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/recap")>();
+  return {
+    ...actual,
+    isRecapOpen: vi.fn(async () => true),
+    canAddRecapPhoto: vi.fn(async () => ({ ok: true })),
+  };
+});
+vi.mock("@/db/reviews", () => ({ submitTripReview: vi.fn() }));
+vi.mock("@/lib/storage", () => ({ storeRecapImage: vi.fn(), deleteStoredImage: vi.fn() }));
 vi.mock("@/db/tips", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/tips")>();
   return {
@@ -58,7 +68,11 @@ const { submitRecapPulse } = await import("@/db/recap-pulses");
 const { verifyRecapToken } = await import("@/lib/recap-links");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { startTipCheckout } = await import("@/db/tips");
-const { startTipAction, submitRecapPulseAction } = await import("./actions");
+const { isRecapOpen } = await import("@/db/recap");
+const { submitTripReview } = await import("@/db/reviews");
+const { storeRecapImage } = await import("@/lib/storage");
+const { startTipAction, submitRecapPulseAction, submitReviewAction, uploadRecapPhotoAction } =
+  await import("./actions");
 
 const TOKEN = "signed-recap-token";
 const BOOKING_ID = "0f2a9c1e-1111-4222-8333-444444444444";
@@ -85,6 +99,7 @@ beforeEach(() => {
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, retryAfterMs: 0 });
   vi.mocked(verifyRecapToken).mockReturnValue(BOOKING_ID);
   vi.mocked(submitRecapPulse).mockResolvedValue({ ok: true, withdrawn: false });
+  vi.mocked(isRecapOpen).mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -206,5 +221,64 @@ describe("startTipAction", () => {
       ),
     ).toBe("https://checkout.test/tip");
     expect(vi.mocked(startTipCheckout).mock.calls[0]?.[1]).toMatchObject({ amountCents: 2500 });
+  });
+});
+
+/**
+ * **Nothing writes through a recap the page would not show** (security review
+ * of #2123). A recap that waits on a missing diver, a held seat, a diver left
+ * at the dock: the page renders a card with no forms, and a form loaded before
+ * the hold, or a crafted post, must not reach any of the four writers.
+ */
+describe("a recap that is not open", () => {
+  async function landing(
+    action: (token: string, data: FormData) => Promise<unknown>,
+    data: FormData,
+  ) {
+    try {
+      await action(TOKEN, data);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (message.startsWith("REDIRECT:")) return message.slice("REDIRECT:".length);
+      throw error;
+    }
+    throw new Error("action returned without redirecting");
+  }
+
+  beforeEach(() => {
+    vi.mocked(isRecapOpen).mockResolvedValue(false);
+  });
+
+  it("refuses a photo before any bytes are stored", async () => {
+    const data = new FormData();
+    data.append("photo", new File(["x"], "reef.jpg", { type: "image/jpeg" }));
+    expect(await landing(uploadRecapPhotoAction, data)).toBe(`/recap/${TOKEN}?photo=cancelled`);
+    expect(storeRecapImage).not.toHaveBeenCalled();
+  });
+
+  it("refuses a tip before any checkout starts", async () => {
+    expect(await landing(startTipAction, form([["amount", "10"]]))).toBe(
+      `/recap/${TOKEN}?tip=error`,
+    );
+    expect(startTipCheckout).not.toHaveBeenCalled();
+  });
+
+  it("refuses a review", async () => {
+    expect(await landing(submitReviewAction, form([["rating", "5"]]))).toBe(
+      `/recap/${TOKEN}?review=did_not_dive`,
+    );
+    expect(submitTripReview).not.toHaveBeenCalled();
+  });
+
+  it("refuses a pulse", async () => {
+    expect(await landing(submitRecapPulseAction, form([["category", "gear"]]))).toBe(
+      `/recap/${TOKEN}?pulse=error`,
+    );
+    expect(submitRecapPulse).not.toHaveBeenCalled();
+  });
+
+  it("asks about the booking the token names", async () => {
+    await landing(submitRecapPulseAction, form([["category", "gear"]]));
+    expect(vi.mocked(isRecapOpen).mock.calls[0]?.[1]).toBe(BOOKING_ID);
   });
 });

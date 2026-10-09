@@ -1295,7 +1295,9 @@ new domain concept, define it here in the same PR.
 - **Held** — a roll-call *mark*, not a roll-call event: the dashed ring a diver's row wears when
   nobody has recorded anything about them **and readiness has not cleared them to board**. It exists
   only at the dock, because readiness gates boarding there and nowhere else — after a dive roll call
-  is a physical head count, and a blocked diver counts back aboard like anyone else. A held row
+  is a physical head count, and a blocked diver counts back aboard like anyone else. One who was
+  never counted aboard earlier is boarding at that count (they joined at a later site), so their
+  row shows the dock's readiness capsule and blockers — but keeps its tap. A held row
   carries no tap at all: the act that clears it is ashore, on the Trip tab, and offering a tap the
   server would refuse is a control that lies. It is not a state anything is stored as — the row is
   simply *awaiting* with a readiness blocker (see **Readiness**), drawn so a captain can tell at a
@@ -1422,8 +1424,9 @@ new domain concept, define it here in the same PR.
   that named nobody could not help anyone find a missing person
   ([ADR 20260804-crew-roll-call-is-per-person](../architecture/decisions/20260804-crew-roll-call-is-per-person.md)).
 
-  A departure-checkpoint result also changes what Today's departure card says about a **blocked**
-  diver, and the split is worth knowing: blocked-and-**aboard** is the more serious of the two — the
+  A `boarded` result at any checkpoint — the dock, or an after-dive count for a diver who joined
+  the boat at a later site (issue #2142) — also changes what Today's departure card says about a
+  **blocked** diver, and the split is worth knowing: blocked-and-**aboard** is the more serious of the two — the
   gate is behind them, not in front — and is an **Aboard** row at the top of Needs you (see
   **Aboard blocker kind**); blocked-and-**ashore** keeps the ordinary blocker row; a diver marked **not boarded** stays in the ashore group until an hour past
   the scheduled departure, because until the lines are off "not boarded" still reads as *isn't
@@ -1572,9 +1575,9 @@ new domain concept, define it here in the same PR.
   **keeps outranking every older signature** (`isStandingRefusal` in `src/lib/waivers.ts`), so the
   seat stays blocked as not cleared until the new release is signed. **A clean new release clears
   the diver without a second physician, and says so** (H-98, Aaron 2026-10-07): it boards them,
-  and the roster, the manifest and the diver record warn that a physician did not clear this
-  diver, with a link to the refused record on the roster and the diver record
-  (`overriddenRefusal`). Any staffer may record a paper waiver after a refusal (Aaron, 2026-10-07).
+  and the roster, the manifest (its offline dock copy too, by date only: issue #2163) and the
+  diver record warn that a physician did not clear this diver, with a link to the refused record
+  on the roster and the diver record (`overriddenRefusal`). Any staffer may record a paper waiver after a refusal (Aaron, 2026-10-07).
   The warning ends only when a physician has since cleared a release
   that flagged every question the refused one did, ordered by when each physician answered.
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
@@ -1729,7 +1732,17 @@ new domain concept, define it here in the same PR.
   cancel the booking and move its refund. **No recap for a diver left at the dock**: a booking whose
   standing departure roll call is `not_boarded` gets neither the email nor the page, unless an
   after-dive `boarded` shows they joined the boat at a later site (`bookingsLeftAtTheDock`,
-  `src/db/recap.ts`, issue #2105). A held seat gets none until staff **Confirm identity**. See
+  `src/db/recap.ts`, issue #2105). A held seat gets none until staff **Confirm identity**. **Held
+  while somebody is missing**: while any diver or rostered crew member on the departure has an
+  after-dive "not back aboard" standing — exactly while Today raises its missing-diver or
+  missing-crew row, read through the same function (`tripsWithSomebodyMissing`,
+  `src/db/today.ts`) — every recap on that departure waits: the email, a staff send (which says
+  "Recaps are held until the roll call is corrected"), `/recap`, and the after-dive `/ready`. The
+  page answers with the **waiting** state, which says only that the recap is not ready yet; the
+  four writers on it (photo, tip, review, pulse) refuse while it is closed (`recapClosedReason`).
+  And the word pauses the automatic send in the same transaction, so once it is corrected a
+  staffer releases the recap from the close-out rather than the cron deciding a near-miss was
+  nothing (issue #2123). See
   [20260723-post-trip-recap](../architecture/decisions/20260723-post-trip-recap.md) and
   [20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md).
 - **After-state** — the third and last state of the diver's thread, after *prep* and *the dive day*:
@@ -1741,7 +1754,10 @@ new domain concept, define it here in the same PR.
   shop recorded no roll call it waits four hours after the scheduled return — the floor the recap
   *send* already uses, because nothing else in the product knows whether this person dived
   (`isAfterTheDive`, `src/lib/thread-steps.ts`). A cancelled booking, a **blow-out**, and a no-show
-  are each answered by their own notice before it is ever asked.
+  are each answered by their own notice before it is ever asked. **Waiting**: while somebody on the
+  departure is "not back aboard" after a dive, the after-state is held for everyone aboard and the
+  page says only that the recap is not ready yet, on the same link (see **Post-trip recap**). A
+  held seat and a diver left at the dock are dead seats, answered before the wait.
 - **Dive record** — the card the after-state is built around, headed "Dive log entry", and the one
   thing on the page that prints: everything else is `print:hidden`, and on paper the card gains a
   ruled Notes block and a signature rule. **It states only what the shop wrote down** — the diver,

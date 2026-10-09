@@ -7,7 +7,9 @@ import {
   isCleanCompletion,
   isCompletedWaiverCurrent,
   isUnresolvedMedicalHold,
+  type MedicalWaiverMark,
   medicalWaiverMark,
+  medicalWarningDays,
   needsMedicalReview,
   overriddenReferralAt,
   overriddenRefusal,
@@ -680,7 +682,11 @@ describe("overriddenRefusal", () => {
     });
 
   it("names the refused record a clean new release stands over, retired or not", () => {
-    const expected = { recordId: "refusal", at: refusal().medicalClearanceDeclinedAt };
+    const expected = {
+      recordId: "refusal",
+      at: refusal().medicalClearanceDeclinedAt,
+      evaluatedOn: null,
+    };
     expect(overriddenRefusal(reSigned(), [refusal(), reSigned()])).toEqual(expected);
     expect(overriddenRefusal(reSigned(), [refusal({ supersededAt: null }), reSigned()])).toEqual(
       expected,
@@ -702,6 +708,15 @@ describe("overriddenRefusal", () => {
     expect(status).toMatchObject({
       medical: { overriddenReferralAt: null, overriddenRefusal: { recordId: "refusal" } },
     });
+  });
+
+  it("carries the physician's own evaluation day when one was stored", () => {
+    expect(
+      overriddenRefusal(reSigned(), [
+        refusal({ medicalClearanceEvaluatedOn: "2026-05-02" }),
+        reSigned(),
+      ])?.evaluatedOn,
+    ).toBe("2026-05-02");
   });
 
   it("names the newest of several refusals", () => {
@@ -783,6 +798,7 @@ describe("overriddenRefusal", () => {
     expect(overriddenRefusal(earlyYes, [lateNo, earlyYes])).toEqual({
       recordId: "refusal",
       at: lateNo.medicalClearanceDeclinedAt,
+      evaluatedOn: "2026-07-10",
     });
   });
 
@@ -910,5 +926,56 @@ describe("a referral a later clean signature stood over", () => {
       completedAt: new Date(SIGN_NOW.getTime() - 600_000),
     });
     expect(overriddenReferralAt(reSigned(), [resolvedReferral, reSigned()])).toBeNull();
+  });
+});
+
+/**
+ * The two dates a crew reads beside a medical warning, as calendar days in the
+ * shop's zone (dive-domain review of #2163): the physician's evaluation day for
+ * a refusal, falling back to when staff recorded it, and the referral's day.
+ */
+describe("medicalWarningDays", () => {
+  const mark = (overrides: Partial<MedicalWaiverMark>): MedicalWaiverMark => ({
+    at: new Date("2026-07-01T15:00:00.000Z"),
+    source: "digital",
+    overriddenReferralAt: null,
+    overriddenRefusal: null,
+    clearance: null,
+    guardian: null,
+    ...overrides,
+  });
+
+  it("says nothing for a mark with neither warning, or no mark", () => {
+    expect(medicalWarningDays(mark({}), "America/New_York")).toEqual({});
+    expect(medicalWarningDays(null, "America/New_York")).toEqual({});
+    expect(medicalWarningDays(undefined, "America/New_York")).toEqual({});
+  });
+
+  it("dates a refusal by the physician's evaluation, not by when it was typed in", () => {
+    const refusal = {
+      recordId: "r",
+      at: new Date("2026-05-20T13:00:00.000Z"),
+      evaluatedOn: "2026-05-02" as const,
+    };
+    expect(medicalWarningDays(mark({ overriddenRefusal: refusal }), "America/New_York")).toEqual({
+      refusedOn: "2026-05-02",
+    });
+  });
+
+  it("falls back to the shop's day the refusal was recorded", () => {
+    // 01:00 UTC on May 3 is still May 2 in Miami.
+    const refusal = { recordId: "r", at: new Date("2026-05-03T01:00:00.000Z"), evaluatedOn: null };
+    expect(medicalWarningDays(mark({ overriddenRefusal: refusal }), "America/New_York")).toEqual({
+      refusedOn: "2026-05-02",
+    });
+  });
+
+  it("dates a referral by the shop's day", () => {
+    expect(
+      medicalWarningDays(
+        mark({ overriddenReferralAt: new Date("2026-06-11T02:00:00.000Z") }),
+        "America/New_York",
+      ),
+    ).toEqual({ referredOn: "2026-06-10" });
   });
 });

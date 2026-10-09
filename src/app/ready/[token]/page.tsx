@@ -32,6 +32,7 @@ import { EarnedMoment } from "@/components/EarnedMoment";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { FlashParams } from "@/components/FlashParams";
 import { PartyClaimPanel } from "@/components/PartyClaimPanel";
+import { RecapWaitingCard } from "@/components/RecapWaitingCard";
 import { RememberBooker } from "@/components/RememberBooker";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -55,7 +56,7 @@ import { getDb } from "@/db/client";
 import { departureRollCallForBooking } from "@/db/manifests";
 import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
-import { bookingsLeftAtTheDock, getRecapPageData } from "@/db/recap";
+import { bookingsLeftAtTheDock, getRecapPageState } from "@/db/recap";
 import { certificationAgency, certificationLevel, type DiveSpecialty } from "@/db/schema";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopById, getShopBySlug } from "@/db/shops";
@@ -990,16 +991,15 @@ export default async function DiverReadinessPage({
       ? "boarded"
       : departure;
   if (isAfterTheDive({ endsAt: detail.trip.endsAt, boarded })) {
-    const recap = await getRecapPageData(db, bookingId);
+    const recapState = await getRecapPageState(db, bookingId);
+    if (recapState.kind === "waiting") return <RecapWaitingCard shop={shopContact} t={t} />;
+    const recap = recapState.kind === "recap" ? recapState.data : null;
     if (!recap) {
       /**
        * **A no-show, said plainly and with somebody to ask.**
        *
-       * Both cancellations — the booking's and the departure's — are answered
-       * above, so `getRecapPageData`'s uniform null means
-       * `bookings.status = 'no_show'` here (or a cancellation that landed in
-       * the microseconds between the two reads, which this notice's contact
-       * line covers either way).
+       * Cancellations and a wait (#2123) are answered above; what is left is a
+       * dead seat (`recapClosedReason`): a no-show, left at the dock, or held.
        *
        * It used to render "This readiness link isn't available" over "This
        * booking didn't sail" — two sentences, both false for this reader: the

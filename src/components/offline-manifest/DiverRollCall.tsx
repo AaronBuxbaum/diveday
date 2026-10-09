@@ -6,6 +6,7 @@ import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallLabelText } from "@/i18n/manifest-labels";
 import { readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
+import { formatCalendarDate } from "@/lib/calendar-date";
 import { isHeldSeat } from "@/lib/held-seat";
 import { rollCallLabel, rollCallRecordedTone, rollCallRowState } from "@/lib/manifests";
 import { joinedDiving, leftDiving } from "@/lib/participant-types";
@@ -110,6 +111,11 @@ function OfflineDiverRow({
   // the exception control's weight now reads it too — it is what
   // decides whether that control is the row's *only* one.
   const showBoardControl = ready || !isDeparture;
+  // The live roll call's two medical warnings (issue #2163), dates only. A
+  // held seat never carries them, and the facts block below says why instead.
+  const withheld = diver.identityWithheld || isHeldSeat(diver);
+  const medicalWarnings = withheld ? undefined : diver.medicalWarnings;
+  const warningDate = (day: string) => formatCalendarDate(day, locale);
   const stateWord = `${rollCallLabelText(t, rollCallLabel(checkpoint, state))}${
     state?.pending ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}` : ""
   }`;
@@ -194,6 +200,14 @@ function OfflineDiverRow({
             {diver.notHere ? (
               <Badge tone="neutral">{t("shared.offlineManifest.single.notHereBadge")}</Badge>
             ) : null}
+            {/* The live roll call's capsule for the same fact (H-98): a
+              physician refused an earlier release. Never a block; the
+              crew at the rail decides with it in view. */}
+            {medicalWarnings?.refusedOn ? (
+              <Badge tone="warning">{t("manifest.medicalEarlierRefusalChip")}</Badge>
+            ) : medicalWarnings?.referredOn ? (
+              <Badge tone="warning">{t("manifest.medicalReferralUnresolvedChip")}</Badge>
+            ) : null}
             {/* Snorkeler or rider, as on the live roll call (ADR
               20261007-participant-types). Every row is still called;
               this only says who the body is. */}
@@ -257,15 +271,19 @@ function OfflineDiverRow({
             of its own: one word list is the whole point, exactly as
             `rollCallLabelText` is shared for the state pills above.
 
-            No medical line to disclose here — the dock payload
-            deliberately never carries one (see the allow-list in
-            offline-manifests.ts) — so this is always the plain
-            two-fact summary, never the "& medical" variant. */}
+            The only medical facts the dock payload carries are the
+            two warnings (`medicalWarnings` in offline-manifests.ts,
+            issue #2163), so the summary says "& medical" exactly when
+            one of them is on the row. */}
           <details className="group/offlinefacts mt-2 max-w-xl">
             <summary className="group/summary -mx-2 flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-base font-medium text-muted select-none transition-colors hover:bg-surface-sunken/70 hover:text-primary focus-visible:focus-ring-inset [&::-webkit-details-marker]:hidden">
               <DisclosureCaret className="group-open/offlinefacts:rotate-90" />
               <span className="group-hover/summary:underline">
-                {t("manifest.diverFactsSummary")}
+                {t(
+                  medicalWarnings
+                    ? "manifest.diverFactsSummaryWithMedical"
+                    : "manifest.diverFactsSummary",
+                )}
               </span>
             </summary>
             <div className="mb-1 grid gap-2 rounded-inset border border-border/70 bg-surface-sunken/50 p-3 text-base">
@@ -274,7 +292,7 @@ function OfflineDiverRow({
                 so it says why rather than "Not on file" (issue
                 #1690). Either signal withholds: the saved flag, or
                 the identity blocker on the row, failing closed. */}
-              {diver.identityWithheld || isHeldSeat(diver) ? (
+              {withheld ? (
                 <p className="text-muted">{t("manifest.identityWithheldDetails")}</p>
               ) : (
                 <>
@@ -301,6 +319,26 @@ function OfflineDiverRow({
                       </span>
                     </p>
                   )}
+                  {/* The live manifest's own sentences, in the same tone
+                    (`DiverRollCall.tsx` under `/manifest`). */}
+                  {medicalWarnings ? (
+                    <p>
+                      {medicalWarnings.refusedOn ? (
+                        <span className="block font-medium text-warning-strong">
+                          {t("manifest.medicalEarlierRefusal", {
+                            date: warningDate(medicalWarnings.refusedOn),
+                          })}
+                        </span>
+                      ) : null}
+                      {medicalWarnings.referredOn ? (
+                        <span className="mt-0.5 block font-medium text-warning-strong">
+                          {t("manifest.medicalReferralUnresolved", {
+                            date: warningDate(medicalWarnings.referredOn),
+                          })}
+                        </span>
+                      ) : null}
+                    </p>
+                  ) : null}
                 </>
               )}
             </div>
