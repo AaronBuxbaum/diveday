@@ -300,6 +300,11 @@ export type GearPick = { bookingId: string; gearItemId: string };
  * from the picker saw the label in the option and may still choose it: the
  * dock decides (H-06).
  *
+ * This is the cheap first pass, for the stale tab. The same two questions are
+ * asked again inside the write (`reserveGearUnit`'s `screen`, under the
+ * booking's row lock), which is what stops two tablets that pass this screen
+ * at the same instant from giving one diver two units of a kind (issue #2215).
+ *
  * Availability is still not checked here: the exclusion constraint inside
  * `reserveGearUnit` stays the only thing that can say a unit is free. A
  * proposed unit no longer in the free list is left for that write to refuse,

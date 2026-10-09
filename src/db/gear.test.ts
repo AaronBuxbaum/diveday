@@ -613,6 +613,170 @@ describe("gear service history", () => {
   });
 });
 
+describe("reserveGearUnit's screen, held under the booking's lock (issue #2215)", () => {
+  const WINDOW = { reservedFrom: "2026-09-01", reservedUntil: "2026-09-01" } as const;
+  const screen = (proposed: boolean) => ({ proposed, todayLocal: TODAY });
+
+  it("gives one diver one BCD when two tablets assign different BCDs at the same instant", async () => {
+    const { db, shop } = await gearShopContext();
+    const bcd3 = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #3", size: "M" }),
+    );
+    const bcd4 = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #4", size: "M" }),
+    );
+    const carmen = await shopBooking(db, shop.id, "Carmen Ortiz");
+
+    const outcomes = await Promise.all(
+      [bcd3, bcd4].map((unit) =>
+        reserveGearUnit(db, {
+          shopId: shop.id,
+          gearItemId: unit.id,
+          bookingId: carmen.bookingId,
+          tripId: carmen.trip.id,
+          ...WINDOW,
+          screen: screen(false),
+        }),
+      ),
+    );
+
+    expect(outcomes.filter((outcome) => outcome.ok)).toHaveLength(1);
+    expect(outcomes.filter((outcome) => !outcome.ok)).toEqual([
+      { ok: false, reason: "already_holds_kind" },
+    ]);
+    const held = await db
+      .select({ id: gearReservations.id })
+      .from(gearReservations)
+      .where(eq(gearReservations.bookingId, carmen.bookingId));
+    expect(held).toHaveLength(1);
+  });
+
+  it("still lets the diver hold one unit of each kind, and a returned unit holds nothing", async () => {
+    const { db, shop } = await gearShopContext();
+    const bcd = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #5", size: "M" }),
+    );
+    const reg = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "regulator", label: "Reg #5" }),
+    );
+    const spare = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #6", size: "M" }),
+    );
+    const carmen = await shopBooking(db, shop.id, "Carmen Ortiz");
+    const reserve = (gearItemId: string) =>
+      reserveGearUnit(db, {
+        shopId: shop.id,
+        gearItemId,
+        bookingId: carmen.bookingId,
+        ...WINDOW,
+        screen: screen(false),
+      });
+
+    const first = await reserve(bcd.id);
+    if (!first.ok) throw new Error(`reserve refused: ${first.reason}`);
+    expect((await reserve(reg.id)).ok).toBe(true);
+    expect(await reserve(spare.id)).toEqual({ ok: false, reason: "already_holds_kind" });
+
+    await returnGearReservation(db, { shopId: shop.id, reservationId: first.reservation.id });
+    expect((await reserve(spare.id)).ok).toBe(true);
+  });
+
+  it("refuses a proposed unit that gained an open service concern, and lets a hand pick choose it", async () => {
+    const { db, shop } = await gearShopContext();
+    const reg = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "regulator", label: "Reg #7" }),
+    );
+    const earlier = await shopBooking(db, shop.id, "Ben Okafor");
+    const carmen = await shopBooking(db, shop.id, "Carmen Ortiz");
+    // The unit's last return, landing between the tab's screen and the write.
+    const before = await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: reg.id,
+      bookingId: earlier.bookingId,
+      reservedFrom: "2026-08-10",
+      reservedUntil: "2026-08-11",
+    });
+    if (!before.ok) throw new Error(`reserve refused: ${before.reason}`);
+    await returnGearReservation(db, {
+      shopId: shop.id,
+      reservationId: before.reservation.id,
+      outcome: "service_concern",
+      note: "Second stage free-flows",
+    });
+
+    const pick = (proposed: boolean) =>
+      reserveGearUnit(db, {
+        shopId: shop.id,
+        gearItemId: reg.id,
+        bookingId: carmen.bookingId,
+        ...WINDOW,
+        screen: screen(proposed),
+      });
+    expect(await pick(true)).toEqual({ ok: false, reason: "needs_care" });
+    expect(await openReservationsOf(db, carmen.bookingId)).toBe(0);
+    // A person who chose the labeled unit from the picker saw the label: the
+    // dock decides (H-06).
+    expect((await pick(false)).ok).toBe(true);
+  });
+
+  it("refuses a proposed unit whose service clock has lapsed", async () => {
+    const { db, shop } = await gearShopContext();
+    const tank = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "tank", label: "AL80-31" }),
+    );
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: tank.id,
+      kind: "visual_inspection",
+      servicedOn: "2025-08-01",
+      nextDueOn: "2026-08-01",
+    });
+    const carmen = await shopBooking(db, shop.id, "Carmen Ortiz");
+    expect(
+      await reserveGearUnit(db, {
+        shopId: shop.id,
+        gearItemId: tank.id,
+        bookingId: carmen.bookingId,
+        ...WINDOW,
+        screen: screen(true),
+      }),
+    ).toEqual({ ok: false, reason: "needs_care" });
+  });
+
+  it("asks nothing of a write that brings no screen", async () => {
+    // The counter's own doors reserve without the Gear tab's screen; their
+    // answers stay exactly what they were.
+    const { db, shop } = await gearShopContext();
+    const bcd3 = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #8", size: "M" }),
+    );
+    const bcd4 = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #9", size: "M" }),
+    );
+    const carmen = await shopBooking(db, shop.id, "Carmen Ortiz");
+    for (const unit of [bcd3, bcd4]) {
+      expect(
+        (
+          await reserveGearUnit(db, {
+            shopId: shop.id,
+            gearItemId: unit.id,
+            bookingId: carmen.bookingId,
+            ...WINDOW,
+          })
+        ).ok,
+      ).toBe(true);
+    }
+  });
+});
+
+async function openReservationsOf(db: AppDb, bookingId: string): Promise<number> {
+  const rows = await db
+    .select({ id: gearReservations.id })
+    .from(gearReservations)
+    .where(eq(gearReservations.bookingId, bookingId));
+  return rows.length;
+}
+
 describe("gear reservations", () => {
   it("assigns a unit, and the database — not the app — refuses the double-booking", async () => {
     const { db, shop } = await gearShopContext();

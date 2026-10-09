@@ -6,6 +6,8 @@ import { getDb } from "@/db/client";
 import { reserveGearUnit } from "@/db/gear";
 import { getShopById } from "@/db/shops";
 import { getTripWithBooked, screenGearPicks } from "@/db/trips";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { tripReservationWindow } from "@/lib/gear";
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
@@ -78,6 +80,7 @@ export async function confirmProposedGearUnits(input: {
   if (!shop || !trip || trip.status === "cancelled") return { ok: false, reason: "invalid" };
 
   const window = tripReservationWindow(trip, shop.timezone);
+  const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
   let assigned = 0;
   let refused = 0;
   try {
@@ -98,6 +101,10 @@ export async function confirmProposedGearUnits(input: {
           tripId: parsed.data.tripId,
           reservedFrom: window.from,
           reservedUntil: window.until,
+          // Held under the booking's lock to the write: a second tablet's
+          // "Assign all" cannot give this diver a second unit of the kind
+          // (issue #2215). Its refusal is counted like any other.
+          screen: { proposed: true, todayLocal },
         });
         if (outcome.ok) assigned += 1;
         else refused += 1;
