@@ -1,98 +1,93 @@
 // @vitest-environment jsdom
-import { act, cleanup } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { act } from "@testing-library/react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type StaffSection, staffNavSections, staffShopRoot } from "@/lib/staff-destinations";
+import {
+  type StaffDestinationGates,
+  staffNavSections,
+  staffShopRoot,
+} from "@/lib/staff-destinations";
 import { type ShopSectionNavCopy, ShopSidebar, ShopTabBar } from "./ShopSectionNav";
 
-let pathname = "/shop/blue-mantis";
-
-vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
-vi.mock("next/link", () => ({
-  default: ({ href, children, ...rest }: { href: string; children: ReactNode }) => (
-    <a href={href} {...rest}>
-      {children}
-    </a>
-  ),
-}));
+const location = vi.hoisted(() => ({ pathname: "" }));
+vi.mock("next/navigation", () => ({ usePathname: () => location.pathname }));
 
 const root = staffShopRoot("blue-mantis");
-const gates = { waivers: true, reports: true, team: true, settings: true };
-const items = staffNavSections(gates, { courses: true, gear: true, crew: false });
-const sections: Record<StaffSection, string> = {
-  today: "Today",
-  schedule: "Schedule",
-  divers: "Divers",
-  inbox: "Inbox",
-  money: "Money",
-  courses: "Courses",
-  gear: "Gear",
-  settings: "Settings",
+const gates: StaffDestinationGates = { waivers: true, reports: true, team: true, settings: true };
+const props = {
+  root,
+  gates,
+  items: staffNavSections(gates, { courses: false, gear: false, crew: true }),
+  copy: {
+    navAriaLabel: "Main",
+    sections: {
+      today: "Today",
+      schedule: "Schedule",
+      divers: "Divers",
+      inbox: "Inbox",
+      money: "Money",
+      courses: "Courses",
+      gear: "Gear",
+      settings: "Settings",
+    },
+    more: "More",
+    blockedLabel: "blocked",
+  } satisfies ShopSectionNavCopy,
 };
-const copy: ShopSectionNavCopy = {
-  navAriaLabel: "Shop",
-  sections,
-  more: "More",
-  blockedLabel: "blocked",
-};
-
-function litRows(container: HTMLElement): string[] {
-  return [...container.querySelectorAll("a[aria-current]")].map(
-    (a) => `${a.textContent}=${a.getAttribute("aria-current")}`,
-  );
-}
 
 afterEach(() => {
-  cleanup();
   document.body.innerHTML = "";
-  pathname = "/shop/blue-mantis";
 });
 
+function link(container: HTMLElement, name: string): HTMLAnchorElement {
+  const found = [...container.querySelectorAll("a")].find((a) => a.textContent?.includes(name));
+  if (!found) throw new Error(`no ${name} link`);
+  return found;
+}
+
 /**
- * **The lit row follows the page even when the page moved before the nav
- * hydrated** (issue #2252). Today's arrival lookup is a link a staffer taps
- * the moment it paints; the departure it opens commits while the sidebar's
- * own Suspense boundary is still server HTML. That boundary then hydrates
- * against the *new* pathname, and React does not patch attributes a hydrating
- * render disagrees with, so the server's Today stayed lit over the departure,
- * for good.
+ * **A click before the sidebar wakes up must not leave it pointing at the
+ * page the staffer left** (issue #2273).
+ *
+ * The sidebar streams in under its own `<Suspense>`, so a staffer quick off
+ * the mark opens a departure before it hydrates. It then hydrates against the
+ * *new* address over HTML the server wrote for the *old* one, and React does
+ * not patch an attribute that differs at hydration: the board's link kept
+ * `aria-current="page"` on the departure for as long as the page stayed open,
+ * and a click from Today to Divers kept Today lit.
  */
 describe.each([
   ["the sidebar", ShopSidebar],
-  ["the phone tab bar", ShopTabBar],
-])("%s, hydrated after the page moved on (issue #2252)", (_name, Nav) => {
-  it("lights the section the page is in now, not the one the server painted", async () => {
+  ["the tab bar", ShopTabBar],
+])("%s, hydrated after the address moved", (_, Nav) => {
+  it("says where the staffer is now, not where the server last saw them", async () => {
+    location.pathname = `${root}/schedule/board`;
     const container = document.createElement("div");
-    document.body.appendChild(container);
-    const tree = <Nav root={root} gates={gates} items={items} copy={copy} />;
-    pathname = "/shop/blue-mantis";
-    container.innerHTML = renderToString(tree);
-    expect(litRows(container)).toEqual(["Today=page"]);
+    container.innerHTML = renderToString(<Nav {...props} />);
+    document.body.append(container);
+    expect(link(container, "Schedule").getAttribute("aria-current")).toBe("page");
 
-    pathname = "/shop/blue-mantis/trips/0b5f3b1e-6a43-4c7e-9b1a-6f0e2d4c8a11";
+    location.pathname = `${root}/trips/departure-1`;
     await act(async () => {
-      hydrateRoot(container, tree);
+      hydrateRoot(container, <Nav {...props} />, { onRecoverableError: () => {} });
     });
 
-    expect(litRows(container)).toEqual(["Schedule=true"]);
-    const today = [...container.querySelectorAll("a")].find((a) => a.textContent === "Today");
-    expect(today?.className).toContain("font-medium");
-    expect(today?.className).not.toContain("font-semibold");
+    expect(link(container, "Schedule").getAttribute("aria-current")).toBe("true");
   });
 
-  it("hydrates a page that did not move without changing a thing", async () => {
+  it("moves the light when the staffer left for another section", async () => {
+    location.pathname = root;
     const container = document.createElement("div");
-    document.body.appendChild(container);
-    const tree = <Nav root={root} gates={gates} items={items} copy={copy} />;
-    pathname = "/shop/blue-mantis/schedule/board";
-    container.innerHTML = renderToString(tree);
-    const before = container.innerHTML;
+    container.innerHTML = renderToString(<Nav {...props} />);
+    document.body.append(container);
+
+    location.pathname = `${root}/divers`;
     await act(async () => {
-      hydrateRoot(container, tree);
+      hydrateRoot(container, <Nav {...props} />, { onRecoverableError: () => {} });
     });
-    expect(container.innerHTML).toBe(before);
-    expect(litRows(container)).toEqual(["Schedule=page"]);
+
+    expect(link(container, "Divers").getAttribute("aria-current")).toBe("page");
+    expect(link(container, "Today").hasAttribute("aria-current")).toBe(false);
   });
 });

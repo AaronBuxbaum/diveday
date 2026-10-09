@@ -65,25 +65,22 @@ function rowAriaCurrent(
   return isStaffDestinationPage(pathname, root, item.destination) ? "page" : "true";
 }
 
-const subscribeToNothing = () => () => {};
+const subscribeNever = () => () => {};
 
 /**
- * **A key that changes once, the moment hydration is over** (issue #2252).
+ * **A key that changes once, the moment hydration is over** (issue #2273).
  *
- * The lit row is the one thing in the nav that depends on the URL, and the
- * nav hydrates in a Suspense boundary of its own. A staffer who taps a link
- * the moment Today paints (the arrival lookup is built for exactly that) can
- * commit the next page before that boundary hydrates; it then hydrates against
- * the new pathname, and React never patches an attribute a hydrating render
- * disagrees with. The server's lit row stayed lit over the wrong page for good.
- *
- * Keying the nav's rows by this value rebuilds them from the client's own
- * render once hydration ends, so the lit row is always the one the pathname
- * says: `"server"` on the server and while hydrating, `"client"` after.
+ * Both navs stream in under their own `<Suspense>`, so a staffer quick off the
+ * mark can click a link before they hydrate. They then hydrate against the
+ * address the click moved to, over HTML the server wrote for the one it left,
+ * and React does not patch an attribute or a class that differs at hydration:
+ * the old row stayed lit and `aria-current` kept naming the page left behind.
+ * Keyed on this, each nav is drawn afresh right after hydrating, from the
+ * address as it is.
  */
-function useNavRenderKey(): "server" | "client" {
+function useHydratedKey(): string {
   return useSyncExternalStore(
-    subscribeToNothing,
+    subscribeNever,
     () => "client",
     () => "server",
   );
@@ -116,8 +113,8 @@ const sidebarRowClass = `flex min-h-11 items-center gap-3 ${SEGMENT_CORNER} px-3
  * nothing, so the shop's map never leaves the screen.
  */
 export function ShopSidebar({ root, gates, items, blocked, copy }: NavProps) {
+  const hydratedKey = useHydratedKey();
   const pathname = usePathname() ?? "";
-  const renderKey = useNavRenderKey();
   const current = currentStaffSection(pathname, root, gates);
   const main = items.filter((item) => item.section !== "settings");
   const foot = items.filter((item) => item.section === "settings");
@@ -145,7 +142,7 @@ export function ShopSidebar({ root, gates, items, blocked, copy }: NavProps) {
   };
   return (
     <nav
-      key={renderKey}
+      key={hydratedKey}
       aria-label={copy.navAriaLabel}
       className="flex h-full flex-col justify-between gap-4 px-3 py-4"
     >
@@ -167,8 +164,8 @@ const tabClass =
  * roll call owns the whole phone.
  */
 export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
+  const hydratedKey = useHydratedKey();
   const pathname = usePathname() ?? "";
-  const renderKey = useNavRenderKey();
   const current = currentStaffSection(pathname, root, gates);
   const tabs = items.filter((item) =>
     (STAFF_PHONE_TABS as readonly StaffSection[]).includes(item.section),
@@ -179,12 +176,13 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
   const moreActive = rest.some((item) => item.section === current);
   return (
     <nav
+      key={hydratedKey}
       aria-label={copy.navAriaLabel}
       data-staff-tabbar=""
       data-staff-chrome="true"
       className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden"
     >
-      <ul key={renderKey} className="mx-auto flex h-(--tabbar-h) max-w-xl items-stretch">
+      <ul className="mx-auto flex h-(--tabbar-h) max-w-xl items-stretch">
         {tabs.map((item) => {
           const active = item.section === current;
           return (
