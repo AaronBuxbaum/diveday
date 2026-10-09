@@ -28,7 +28,7 @@ import { welcomeCueFor } from "@/lib/welcome-cue";
 import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
 import { listTripBuddyTeams } from "./buddy-pairs";
-import type { AppDb, DbExecutor } from "./client";
+import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
@@ -1362,6 +1362,26 @@ async function reclaimReleasedSeat(
 }
 
 /**
+ * **A "not back aboard" after a dive stops the automatic recap for the whole
+ * departure** (domain review of #2123), in the same transaction as the word.
+ * The recap page and the email already wait while the word stands; this is for
+ * after it is corrected. A person counted back an hour later may still have
+ * been an incident, and "welcome back" is not the cron's call to make then —
+ * a staffer releases it from the close-out. Never written at the dock, where
+ * `not_boarded` means "never left" (`src/lib/roll-call.ts`).
+ */
+async function pauseRecapOnMissingAfterDive(
+  tx: AppTransaction,
+  input: { shopId: string; tripId: string; status: string; checkpoint: RollCallCheckpoint },
+) {
+  if (input.status !== "not_boarded" || input.checkpoint === "departure") return;
+  await tx
+    .update(trips)
+    .set({ recapAutoSendPaused: true })
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)));
+}
+
+/**
  * Roll call is append-only operational history. At departure, a boarded event
  * has an additional hard gate: the shared readiness service must prove the diver
  * ready at the moment staff board them. After-dive checkpoints are a physical
@@ -1534,6 +1554,7 @@ export async function recordRollCall(
       })
       .returning({ id: rollCallEvents.id });
     if (!event) throw new Error("recordRollCall: insert returned no row");
+    await pauseRecapOnMissingAfterDive(tx, { ...input, checkpoint });
     // The rail has contradicted the desk. Nothing above refused it and nothing
     // here does either (the docblock says why); what happens instead is that
     // the seat the counter released comes back with the body the crew are
@@ -1870,6 +1891,7 @@ export async function recordCrewRollCall(
       })
       .returning({ id: rollCallCrewEvents.id });
     if (!event) throw new Error("recordCrewRollCall: insert returned no row");
+    await pauseRecapOnMissingAfterDive(tx, { ...input, checkpoint });
     // The seat was released and the rail has now said the person sailed, so it
     // comes back with them — the same consequence, the same trail lines and the
     // same one-direction rule as the diver path's (`reclaimReleasedSeat`).

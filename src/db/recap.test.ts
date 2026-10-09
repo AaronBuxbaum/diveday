@@ -7,6 +7,7 @@ import { fakeCheckout, fakeCourtesy, fakeEmail, fakeSms } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { recordCourseNextStep } from "./course-next-step";
 import { upsertExecutedDive } from "./executed-dives";
+import { recordCrewRollCall, recordRollCall } from "./manifests";
 import { recordDiverOwnLocale } from "./people";
 import { issueShopCertification } from "./readiness";
 import {
@@ -925,6 +926,82 @@ describe("a departure with somebody not back aboard", () => {
     );
     expect(missingRow).toBe(false);
     expect(await isRecapOpen(db, missing, afterTrip)).toBe(true);
+  });
+
+  // Domain review of #2123: a "not back aboard" that was corrected may still
+  // have been an incident. The automatic send stops the moment it is said, and
+  // only a staffer releases it — the hold above lifts on the correction alone.
+  describe("pauses the automatic send", () => {
+    const paused = async (db: Awaited<ReturnType<typeof missingContext>>["db"], id: string) =>
+      (await db.select({ p: trips.recapAutoSendPaused }).from(trips).where(eq(trips.id, id)))[0]?.p;
+
+    it("when a diver is marked not back aboard, and keeps it paused once corrected", async () => {
+      const { db, shop, reef, missing, boatmate, staffId, afterTrip } = await missingContext();
+      const say = (status: "boarded" | "not_boarded") =>
+        recordRollCall(db, {
+          shopId: shop.id,
+          tripId: reef.id,
+          bookingId: missing,
+          recordedByPersonId: staffId,
+          status,
+          checkpoint: "after_dive_2",
+        });
+      expect((await say("not_boarded")).ok).toBe(true);
+      expect(await paused(db, reef.id)).toBe(true);
+      expect((await say("boarded")).ok).toBe(true);
+      expect(await paused(db, reef.id)).toBe(true);
+
+      const email = fakeEmail();
+      await sendDueRecaps(db, sendOptions(afterTrip, email));
+      expect(recapsTo(email, boatmate)).toHaveLength(0);
+      // The page is not held: the word was corrected, and the link is the
+      // diver's own to open.
+      expect(await isRecapOpen(db, boatmate, afterTrip)).toBe(true);
+    });
+
+    it("when a crew member is marked not back aboard", async () => {
+      const { db, shop, reef, staffId } = await missingContext();
+      await db
+        .insert(tripAssignments)
+        .values({ tripId: reef.id, personId: staffId })
+        .onConflictDoNothing();
+      const said = await recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staffId,
+        recordedByPersonId: staffId,
+        status: "not_boarded",
+        checkpoint: "after_dive_1",
+      });
+      expect(said.ok).toBe(true);
+      expect(await paused(db, reef.id)).toBe(true);
+    });
+
+    it("not for a diver left at the dock", async () => {
+      const { db, shop, reef, staffId } = await missingContext();
+      const party = await createBookingParty(db, [
+        {
+          actor: "staff",
+          shopId: shop.id,
+          tripId: reef.id,
+          fullName: "Del Dockside",
+          email: "recap-dockside-2@example.com",
+        },
+      ]);
+      if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+      const ashore = party.bookings[0]?.bookingId;
+      if (!ashore) throw new Error("party booking missing");
+      const said = await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: ashore,
+        recordedByPersonId: staffId,
+        status: "not_boarded",
+        checkpoint: "departure",
+      });
+      expect(said.ok).toBe(true);
+      expect(await paused(db, reef.id)).toBe(false);
+    });
   });
 
   it("ignores a crew word about somebody no longer on the roster", async () => {
