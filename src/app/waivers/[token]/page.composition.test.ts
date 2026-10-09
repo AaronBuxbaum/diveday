@@ -346,3 +346,25 @@ describe("a held seat's release", () => {
     expect(held).toBeLessThan(positionOf("guardianSignatureRequired("));
   });
 });
+
+/**
+ * **A refused submit records nothing about the person** (security review of
+ * issue #2125). The diver's own language is first-hand evidence only once the
+ * writer accepted the form; recorded before it, a held or dead link wrote a
+ * locale onto the matched person's record. The held branch returns before any
+ * form renders, so the page keeps no held-seat branches of its own.
+ */
+describe("the diver's own locale", () => {
+  it("is recorded only after the draft or the signature is taken", () => {
+    const draft = SOURCE.slice(positionOf("async function saveDraftAction"));
+    expect(draft.indexOf("if (savedDraft) {")).toBeGreaterThan(-1);
+    expect(draft.indexOf("recordDiverOwnLocale(")).toBeGreaterThan(
+      draft.indexOf("const savedDraft = await saveWaiverDraft("),
+    );
+    const complete = SOURCE.slice(positionOf("async function completeAction"));
+    expect(complete.indexOf("recordDiverOwnLocale(")).toBeGreaterThan(
+      complete.indexOf("if (!outcome.ok) {"),
+    );
+    expect(SOURCE).not.toContain("identityHeld");
+  });
+});
