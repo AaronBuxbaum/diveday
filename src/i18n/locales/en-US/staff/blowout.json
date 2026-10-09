@@ -45,6 +45,26 @@
     "called": "Blow-out called. The trip is canceled and every diver’s message is on its way.",
     "resumed": "Retried the unsent messages.",
     "departed": "This departure has already left, so nothing was canceled.",
-    "error": "That didn’t work. Try again."
+    "error": "That didn’t work. Try again.",
+    "dayCalled": "{count, plural, one {Blow-out called. The departure is canceled and every diver’s message is on its way.} other {Blow-out called on # departures. They are canceled and every diver’s message is on its way.}}",
+    "dayPartly": "{called, plural, one {# departure called.} other {# departures called.}} {skipped, plural, one {# had already left or was already called.} other {# had already left or were already called.}}",
+    "dayNone": "Tick at least one departure to call."
+  },
+  "day": {
+    "title": "Call a blow-out for the day?",
+    "lead": "This cancels every departure you tick and sends each booked diver one message, the same as calling each one on its own. Nobody is offered another departure this call cancels.",
+    "pickLabel": "Tick",
+    "pickAll": "All departures",
+    "pickMorning": "Morning only",
+    "departuresHeading": "Departures",
+    "booked": "{count, plural, =0 {Nobody booked} one {# booked} other {# booked}}",
+    "called": "Already called",
+    "canceled": "Canceled",
+    "departed": "Already left",
+    "openRecord": "Open the cascade",
+    "empty": "No departures on this day.",
+    "nothingToCall": "Nothing left to call on this day.",
+    "button": "Call the blow-out",
+    "instead": "Calling the whole day? Call several departures at once"
   }
 }

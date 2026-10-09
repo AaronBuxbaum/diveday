@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
@@ -14,6 +15,7 @@ import type { PaymentStatus } from "@/db/schema";
 import { getTripRoster, getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -146,6 +148,23 @@ export default async function BlowoutPage({
         <SectionCard as="div" padding="lg" className="max-w-2xl">
           <p className="text-sm">{t("blowout.confirm.lead", { tripTitle: trip.title })}</p>
           <p className="mt-3 text-sm text-muted">{t("blowout.confirm.moneyNote")}</p>
+          {departed ? null : (
+            // The whole morning is usually what the weather closes (ADR
+            // 20261009-day-weather-call); calling the boats one at a time
+            // offered each boat's divers the next one about to be called.
+            <Link
+              href={shopPath(
+                shopSlug,
+                "schedule",
+                "blowout",
+                "day",
+                calendarDateInTimezone(trip.startsAt, shop.timezone),
+              )}
+              className={`mt-3 ${buttonClass({ variant: "link", size: "sm", flush: true })}`}
+            >
+              {t("blowout.day.instead")}
+            </Link>
+          )}
           {roster.length === 0 ? (
             // Nested inside the confirm card, so no icon, fill or shadow.
             <EmptyState

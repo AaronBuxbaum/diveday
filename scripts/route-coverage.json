@@ -478,6 +478,11 @@
     "visual": ["blowout-cascade", "blowout-confirm"],
     "a11y": ["a11y.spec.ts"]
   },
+  "/shop/[shopSlug]/schedule/blowout/day/[date]": {
+    "e2e": ["day-blowout.spec.ts"],
+    "visual": ["blowout-day"],
+    "a11y": []
+  },
   "/shop/[shopSlug]/schedule/board": {
     "e2e": [
       "a11y.spec.ts",

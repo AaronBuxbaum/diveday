@@ -27,6 +27,6 @@
   "src/app/shop/[shopSlug]/staffing/page.tsx": 626,
   "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
   "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1187,
-  "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1186,
+  "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1185,
   "src/app/waivers/[token]/page.tsx": 1489
 }

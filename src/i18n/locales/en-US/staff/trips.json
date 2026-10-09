@@ -179,6 +179,7 @@
     "cancelHint": "Takes it off the public schedule and notifies booked divers.",
     "cancelConfirm": "Yes, cancel this departure",
     "weatherBlowout": "Weather blow-out…",
+    "dayBlowout": "Weather blow-out for the whole day…",
     "viewBlowout": "View the blow-out cascade"
   },
   "details": {

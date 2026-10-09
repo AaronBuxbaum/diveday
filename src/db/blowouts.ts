@@ -1,4 +1,18 @@
-import { and, count, eq, gt, inArray, isNull, lte, ne, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  ne,
+  notInArray,
+  sql,
+} from "drizzle-orm";
 import {
   BLOWOUT_OFFER_HORIZON_DAYS,
   type BlowoutCandidateTrip,
@@ -99,10 +113,19 @@ export async function callTripBlowout(
   input: CallBlowoutInput,
 ): Promise<CallBlowoutOutcome> {
   const now = input.now ?? nowDate();
+  const setup = await setUpTripBlowout(db, input, now);
+  if (!setup.ok) return setup;
+  return finishTripBlowout(db, input, setup, now);
+}
 
-  // Phase one: the durable facts — trip cancelled, blow-out recorded, roster
-  // snapshotted — land together or not at all.
-  const setup = await db.transaction(async (tx) => {
+type BlowoutSetup = Extract<Awaited<ReturnType<typeof setUpTripBlowout>>, { ok: true }>;
+
+/**
+ * Phase one: the durable facts (trip canceled, blow-out recorded, roster
+ * snapshotted) land together or not at all.
+ */
+async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
+  return db.transaction(async (tx) => {
     const [trip] = await tx
       .select()
       .from(trips)
@@ -175,10 +198,25 @@ export async function callTripBlowout(
 
     return { ok: true as const, blowoutId, trip, resumed: Boolean(existing) };
   });
-  if (!setup.ok) return setup;
+}
 
-  // Phase two: work the pending rows. Everything below is resumable — no
-  // failure past this point can undo the cancellation or the record.
+/**
+ * Phase two: work the pending rows. Everything here is resumable — no failure
+ * past phase one can undo the cancellation or the record.
+ *
+ * `alsoCalled` names the sister departures a day call is canceling in the same
+ * act, which no diver may be offered as an alternative. They are already
+ * canceled by the time this runs (`callDayBlowout` sets every one up first),
+ * so the scheduled-only candidate read drops them anyway; naming them is the
+ * rule said where it is relied on, not a second guess at it.
+ */
+async function finishTripBlowout(
+  db: AppDb,
+  input: CallBlowoutInput,
+  setup: BlowoutSetup,
+  now: Date,
+  alsoCalled: readonly string[] = [],
+): Promise<CallBlowoutOutcome> {
   const summary = await sendPendingBlowoutMessages(db, {
     shopId: input.shopId,
     blowoutId: setup.blowoutId,
@@ -186,6 +224,7 @@ export async function callTripBlowout(
     now,
     provider: input.provider,
     checkout: input.checkout,
+    alsoCalled,
   });
 
   const [{ total }] = await db
@@ -201,6 +240,91 @@ export async function callTripBlowout(
   await publishManifestEvent(db, input.shopId, input.tripId);
 
   return { ok: true, blowoutId: setup.blowoutId, resumed: setup.resumed, total, ...summary };
+}
+
+export type DayBlowoutInput = Omit<CallBlowoutInput, "tripId"> & { tripIds: readonly string[] };
+
+/** One departure's answer inside a day call, in the order it was asked for. */
+export type DayBlowoutResult = { tripId: string; outcome: CallBlowoutOutcome };
+
+/**
+ * **One weather call for several departures** (ADR 20261009-day-weather-call).
+ *
+ * Each departure goes through exactly the single-trip blow-out — its own
+ * transaction, its own record, its own refunds and messages — so a day call
+ * can never behave differently from five calls in a row. What it adds is the
+ * order: **every departure is set up (canceled) before any message is
+ * written**, so no diver on the 08:00 boat is offered the 10:30 one that the
+ * same call is about to cancel. A departure that cannot be called (already
+ * gone, not this shop's) is answered for and the others go ahead.
+ */
+export async function callDayBlowout(
+  db: AppDb,
+  input: DayBlowoutInput,
+): Promise<DayBlowoutResult[]> {
+  const now = input.now ?? nowDate();
+  const tripIds = [...new Set(input.tripIds)];
+  const setups: { tripId: string; setup: Awaited<ReturnType<typeof setUpTripBlowout>> }[] = [];
+  for (const tripId of tripIds) {
+    setups.push({ tripId, setup: await setUpTripBlowout(db, { ...input, tripId }, now) });
+  }
+  const called = setups.flatMap((row) => (row.setup.ok ? [row.tripId] : []));
+  const results: DayBlowoutResult[] = [];
+  for (const { tripId, setup } of setups) {
+    results.push({
+      tripId,
+      outcome: setup.ok
+        ? await finishTripBlowout(db, { ...input, tripId }, setup, now, called)
+        : setup,
+    });
+  }
+  return results;
+}
+
+/** One departure of a shop day, as the day call's page lists it. */
+export type DayBlowoutDepartureRow = {
+  id: string;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  status: "scheduled" | "cancelled";
+  /** Seats held by anybody (divers, snorkelers, riders), canceled ones excluded. */
+  booked: number;
+  calledOff: boolean;
+};
+
+/** Every live departure leaving inside `[from, to)`, with who is on it. */
+export async function listDayBlowoutDepartures(
+  db: DbExecutor,
+  shopId: string,
+  bounds: { from: Date; to: Date },
+): Promise<DayBlowoutDepartureRow[]> {
+  const rows = await db
+    .select({
+      id: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+      status: trips.status,
+      booked: count(bookings.id),
+      calledOff:
+        sql<boolean>`exists (select 1 from ${tripBlowouts} where ${tripBlowouts.tripId} = ${trips.id} and ${tripBlowouts.shopId} = ${shopId})`.mapWith(
+          Boolean,
+        ),
+    })
+    .from(trips)
+    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        gte(trips.startsAt, bounds.from),
+        lt(trips.startsAt, bounds.to),
+      ),
+    )
+    .groupBy(trips.id)
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
+  return rows;
 }
 
 /** One diver's cert evidence at this shop — the same rows the booking gate reads. */
@@ -256,6 +380,7 @@ async function blowoutCandidates(
   db: DbExecutor,
   shopId: string,
   now: Date,
+  alsoCalled: readonly string[] = [],
 ): Promise<BlowoutCandidateTrip[]> {
   const horizonEnd = new Date(now.getTime() + BLOWOUT_OFFER_HORIZON_DAYS * 24 * 60 * 60 * 1_000);
   const rows = await db
@@ -274,6 +399,7 @@ async function blowoutCandidates(
         eq(trips.status, "scheduled"),
         gt(trips.startsAt, now),
         lte(trips.startsAt, horizonEnd),
+        alsoCalled.length > 0 ? notInArray(trips.id, [...alsoCalled]) : undefined,
       ),
     )
     .groupBy(trips.id);
@@ -318,6 +444,8 @@ async function sendPendingBlowoutMessages(
     now: Date;
     provider?: NotificationProvider;
     checkout?: CheckoutProvider;
+    /** Sister departures canceled by the same day call; never offered. */
+    alsoCalled?: readonly string[];
   },
 ): Promise<SendSummary> {
   const summary: SendSummary = { sent: 0, queued: 0, failed: 0, noEmail: 0 };
@@ -346,7 +474,7 @@ async function sendPendingBlowoutMessages(
     return summary;
   }
 
-  const candidates = await blowoutCandidates(db, input.shopId, input.now);
+  const candidates = await blowoutCandidates(db, input.shopId, input.now, input.alsoCalled);
   const candidateTitles = new Map(
     (
       await db

@@ -1,10 +1,17 @@
-import { and, eq, like } from "drizzle-orm";
+import { and, eq, inArray, like } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications";
 import { seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeEmail } from "@/test/fakes";
-import { callTripBlowout, getTripBlowout, hasTripBlowout, resumeTripBlowout } from "./blowouts";
+import {
+  callDayBlowout,
+  callTripBlowout,
+  getTripBlowout,
+  hasTripBlowout,
+  listDayBlowoutDepartures,
+  resumeTripBlowout,
+} from "./blowouts";
 import { createBookingParty } from "./bookings";
 import { drainNotificationRetries } from "./notifications";
 import { setBookingPayment } from "./payments";
@@ -441,5 +448,132 @@ describe("callTripBlowout — what the message says", () => {
 
     record = await getTripBlowout(ctx.db, ctx.shop.id, ctx.trip.id);
     expect(record?.divers[0].rebooked).toBe(true);
+  });
+});
+
+describe("callDayBlowout — one weather call for several departures", () => {
+  /** Another departure of the same morning, with its own booked diver. */
+  async function sister(ctx: Ctx, title: string, hoursOut: number, diver?: string) {
+    const trip = await createTrip(ctx.db, {
+      shopId: ctx.shop.id,
+      title,
+      startsAt: new Date(ctx.now.getTime() + hoursOut * HOUR),
+      endsAt: new Date(ctx.now.getTime() + (hoursOut + 2) * HOUR),
+      capacity: 12,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("sister trip could not be created");
+    if (diver) {
+      const party = await createBookingParty(ctx.db, [
+        {
+          actor: "staff" as const,
+          shopId: ctx.shop.id,
+          tripId: trip.id,
+          fullName: diver,
+          email: `${diver.toLowerCase().replace(/\W+/g, ".")}@example.com`,
+        },
+      ]);
+      if (!party.ok) throw new Error(`sister roster could not be booked: ${party.reason}`);
+    }
+    return trip;
+  }
+
+  it("cancels every departure called, and offers no diver a sister the same call cancels", async () => {
+    const ctx = await context([{ fullName: "Ada Storm", email: "ada.storm@example.com" }]);
+    const second = await sister(ctx, "Storm-Test Second Boat", 21, "Ben Gale");
+    // Left standing: the one boat of the morning the call does not touch.
+    const spared = await sister(ctx, "Storm-Test Spared Boat", 21.5);
+    const email = fakeEmail();
+
+    const results = await callDayBlowout(ctx.db, {
+      shopId: ctx.shop.id,
+      tripIds: [ctx.trip.id, second.id],
+      calledByPersonId: ctx.ownerId,
+      provider: email.provider,
+    });
+
+    expect(results.map((row) => [row.tripId, row.outcome.ok])).toEqual([
+      [ctx.trip.id, true],
+      [second.id, true],
+    ]);
+    const statuses = await ctx.db
+      .select({ id: tripsTable.id, status: tripsTable.status })
+      .from(tripsTable)
+      .where(inArray(tripsTable.id, [ctx.trip.id, second.id, spared.id]));
+    expect(Object.fromEntries(statuses.map((row) => [row.id, row.status]))).toEqual({
+      [ctx.trip.id]: "cancelled",
+      [second.id]: "cancelled",
+      [spared.id]: "scheduled",
+    });
+
+    const sends = blowoutSends(email.sent);
+    expect(sends.map((send) => send.diverName).sort()).toEqual(["Ada Storm", "Ben Gale"]);
+    const offered = sends.flatMap((send) => send.alternatives.map((alt) => alt.bookingUrl));
+    // The spared boat is still a plan, and the soonest one: it is offered…
+    expect(offered.some((url) => url.endsWith(`/trips/${spared.id}`))).toBe(true);
+    // …and neither boat this call cancels is offered to anybody.
+    expect(offered.some((url) => url.includes(ctx.trip.id))).toBe(false);
+    expect(offered.some((url) => url.includes(second.id))).toBe(false);
+
+    // Each departure has its own ordinary cascade record.
+    expect((await getTripBlowout(ctx.db, ctx.shop.id, ctx.trip.id))?.divers).toHaveLength(1);
+    expect((await getTripBlowout(ctx.db, ctx.shop.id, second.id))?.divers).toHaveLength(1);
+  });
+
+  it("answers for a departure that has left and still calls the rest", async () => {
+    const ctx = await context([{ fullName: "Ada Storm", email: "ada.storm@example.com" }]);
+    const gone = await sister(ctx, "Storm-Test Gone Boat", -3);
+    const email = fakeEmail();
+    const results = await callDayBlowout(ctx.db, {
+      shopId: ctx.shop.id,
+      tripIds: [gone.id, ctx.trip.id, ctx.trip.id],
+      calledByPersonId: ctx.ownerId,
+      provider: email.provider,
+    });
+    expect(results).toEqual([
+      { tripId: gone.id, outcome: { ok: false, reason: "trip_departed" } },
+      { tripId: ctx.trip.id, outcome: expect.objectContaining({ ok: true, sent: 1 }) },
+    ]);
+  });
+
+  it("is the single-trip call, so calling a departure again resumes and re-sends nobody", async () => {
+    const ctx = await context([{ fullName: "Ada Storm", email: "ada.storm@example.com" }]);
+    const email = fakeEmail();
+    await callTripBlowout(ctx.db, callInput(ctx, email.provider));
+    const [again] = await callDayBlowout(ctx.db, {
+      shopId: ctx.shop.id,
+      tripIds: [ctx.trip.id],
+      calledByPersonId: ctx.ownerId,
+      provider: email.provider,
+    });
+    expect(again?.outcome).toMatchObject({ ok: true, resumed: true, sent: 0 });
+    expect(blowoutSends(email.sent)).toHaveLength(1);
+  });
+
+  it("refuses another shop's departure inside the same call", async () => {
+    const ctx = await context();
+    const [result] = await callDayBlowout(ctx.db, {
+      shopId: ctx.shop.id,
+      tripIds: ["00000000-0000-4000-8000-000000000999"],
+      calledByPersonId: ctx.ownerId,
+      provider: fakeEmail().provider,
+    });
+    expect(result?.outcome).toEqual({ ok: false, reason: "not_found" });
+  });
+});
+
+describe("listDayBlowoutDepartures", () => {
+  it("lists a day's departures in order, with who is booked and which were already called", async () => {
+    const ctx = await context([
+      { fullName: "Ada Storm", email: "ada.storm@example.com" },
+      { fullName: "Ben Gale", email: "ben.gale@example.com" },
+    ]);
+    await callTripBlowout(ctx.db, callInput(ctx, fakeEmail().provider));
+    const from = new Date(ctx.trip.startsAt.getTime() - HOUR);
+    const to = new Date(ctx.trip.startsAt.getTime() + HOUR);
+    const rows = await listDayBlowoutDepartures(ctx.db, ctx.shop.id, { from, to });
+    const mine = rows.find((row) => row.id === ctx.trip.id);
+    expect(mine).toMatchObject({ booked: 2, calledOff: true, status: "cancelled" });
+    expect(rows.every((row) => row.startsAt >= from && row.startsAt < to)).toBe(true);
   });
 });

@@ -5,11 +5,13 @@ new domain concept, define it here in the same PR.
 
 - **Blow-out** — the captain's call that weather or sea state makes a departure un-runnable: the
   trip is cancelled by the shop, not the diver. Distinct from a **conditions hold** (below), which
-  is reversible and keeps bookings live. In DiveDay a blow-out is called once per departure and
-  triggers the cancellation cascade: every booked diver gets one message with the cancellation,
-  their money story, and rebooking options filtered to departures they qualify for, and staff work
-  the cascade record until nobody is left unresolved (ADR
-  [20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md)). A blow-out
+  is reversible and keeps bookings live. In DiveDay a blow-out is called per departure, or for
+  several departures of one day at once (the day weather call, ADR
+  [20261009-day-weather-call](../architecture/decisions/20261009-day-weather-call.md), which never
+  offers a diver a departure the same call cancels), and triggers the cancellation cascade: every
+  booked diver gets one message with the cancellation, their money story, and rebooking options
+  filtered to departures they qualify for, and staff work the cascade record until nobody is left
+  unresolved (ADR [20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md)). A blow-out
   refunds each seat's card capture by itself as of 2026-08-13 (ADR
   [20260813-shop-cancellation-refunds-itself](../architecture/decisions/20260813-shop-cancellation-refunds-itself.md));
   a counter payment, a disconnected account, or a Stripe refusal still leaves the refund to staff.
