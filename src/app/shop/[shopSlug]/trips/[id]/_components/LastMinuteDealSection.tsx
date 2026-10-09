@@ -206,33 +206,41 @@ export function LastMinuteDealSection({
               </p>
             ) : null}
           </div>
-          <FieldGrid columns={1} className="max-w-44">
+          <FieldGrid columns={1} className="max-w-52">
             <Field label={t("trips.lastMinute.discountLabel")} group>
               {/* A number and what it counts: percent off, or a fixed amount
                   of the shop's currency off each booking. The server holds a
-                  percent to 5–90 and an amount to above zero. */}
+                  percent to 5–90 and an amount to above zero. Each control
+                  sits in a box of its own width: `controlClass` is `w-full`,
+                  and a second width utility on the control itself would win
+                  or lose by stylesheet order, which on a phone squeezed the
+                  number box to nothing. */}
               <div className="flex items-center gap-1.5">
-                <input
-                  name="discount"
-                  type="number"
-                  inputMode="decimal"
-                  min={1}
-                  step="any"
-                  defaultValue={25}
-                  aria-label={t("trips.lastMinute.discountPercentAriaLabel")}
-                  // `md`, the height of the send button this row
-                  // bottom-aligns it with.
-                  className={`${controlClass} tabular-nums`}
-                />
-                <select
-                  name="discountKind"
-                  defaultValue="percent"
-                  aria-label={t("trips.lastMinute.discountKindAriaLabel")}
-                  className={`${controlClass} w-20 shrink-0`}
-                >
-                  <option value="percent">%</option>
-                  <option value="amount">{currencySymbol(currency, locale)}</option>
-                </select>
+                <div className="w-24">
+                  <input
+                    name="discount"
+                    type="number"
+                    inputMode="decimal"
+                    min={1}
+                    step="any"
+                    defaultValue={25}
+                    aria-label={t("trips.lastMinute.discountPercentAriaLabel")}
+                    // `md`, the height of the send button this row
+                    // bottom-aligns it with.
+                    className={`${controlClass} tabular-nums`}
+                  />
+                </div>
+                <div className="w-20 shrink-0">
+                  <select
+                    name="discountKind"
+                    defaultValue="percent"
+                    aria-label={t("trips.lastMinute.discountKindAriaLabel")}
+                    className={controlClass}
+                  >
+                    <option value="percent">%</option>
+                    <option value="amount">{currencySymbol(currency, locale)}</option>
+                  </select>
+                </div>
               </div>
             </Field>
           </FieldGrid>
