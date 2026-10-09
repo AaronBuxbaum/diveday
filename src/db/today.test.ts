@@ -7,6 +7,7 @@ import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { assembleDaySpine, sortStationRows } from "@/lib/today";
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
+import { createBoat } from "./boats";
 import { cancelBooking, createBookingParty } from "./bookings";
 import { createGearItem, recordGearService, reserveGearUnit, returnGearReservation } from "./gear";
 import { markInboundAnswered, recordInboundMessage } from "./inbound-messages";
@@ -3139,6 +3140,48 @@ describe("unclosed roll call (DOM-H3)", () => {
       expect(work.actions.some((action) => action.id === `gear-service:${distant.item.id}`)).toBe(
         false,
       );
+    });
+
+    it("puts expired safety kit and boat papers on one owner row each, never twice", async () => {
+      const { db, shop } = ctx;
+      const today = calendarDateInTimezone(nowDate(), shop.timezone);
+      const hull = await createBoat(db, shop.id, "Papers Hull", 12, null, {
+        certifiedPassengers: 12,
+        inspectionDueOn: null,
+        registrationExpiresOn: null,
+        insuranceExpiresOn: shiftCalendarDate(today, -2),
+      });
+      const aed = await createGearItem(db, {
+        shopId: shop.id,
+        kind: "aed",
+        label: "AED Papers Hull",
+        aboardBoatId: hull.id,
+      });
+      if (!aed.ok) throw new Error("item refused");
+      await recordGearService(db, {
+        shopId: shop.id,
+        gearItemId: aed.item.id,
+        kind: "aed_pads",
+        servicedOn: shiftCalendarDate(today, -700),
+        nextDueOn: shiftCalendarDate(today, -3),
+      });
+
+      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      expect(work.actions.find((a) => a.id === `boat-safety:kit:${aed.item.id}`)).toMatchObject({
+        kind: "boat_safety_expired",
+        urgency: "now",
+        subject: "AED Papers Hull",
+        detail: "AED Papers Hull: pads expired 3 days ago",
+        href: `/shop/${shop.slug}/gear/${aed.item.id}`,
+      });
+      expect(work.actions.find((a) => a.id === `boat-safety:boat:${hull.id}`)).toMatchObject({
+        kind: "boat_safety_expired",
+        subject: "Papers Hull",
+        detail: "Insurance expired 2 days ago",
+        href: `/shop/${shop.slug}/settings/boats`,
+      });
+      // The register's own bench row would say the same thing about the unit.
+      expect(work.actions.some((a) => a.id === `gear-service:${aed.item.id}`)).toBe(false);
     });
 
     it("is tenant-safe: another shop's queue never sees this fleet", async () => {

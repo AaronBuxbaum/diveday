@@ -1,0 +1,49 @@
+{
+  "heading": "A bordo de {boatName}",
+  "overCertificate": "{aboard, plural, one {# persona reservada a bordo} other {# personas reservadas a bordo}}; el certificado de la Guardia Costera permite {limit}.",
+  "paper": {
+    "inspection": {
+      "due": "Inspección de la Guardia Costera: vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "Inspección de la Guardia Costera: vencida {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "registration": {
+      "due": "Matrícula: vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "Matrícula: vencida {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "insurance": {
+      "due": "Seguro: vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "Seguro: vencido {days, plural, one {hace # día} other {hace # días}}"
+    }
+  },
+  "kit": {
+    "aedPads": {
+      "due": "{label}: los parches vencen {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "{label}: los parches vencieron {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "aedBattery": {
+      "due": "{label}: la batería vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "{label}: la batería venció {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "expiry": {
+      "due": "{label}: vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "{label}: venció {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "service": {
+      "due": "{label}: el servicio vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "{label}: el servicio venció {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "hydroTest": {
+      "due": "{label}: la prueba hidrostática vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "{label}: la prueba hidrostática venció {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "visualInspection": {
+      "due": "{label}: la inspección vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "{label}: la inspección venció {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "o2Clean": {
+      "due": "{label}: la limpieza de O2 vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "{label}: la limpieza de O2 venció {days, plural, one {hace # día} other {hace # días}}"
+    },
+    "offService": "{label}: retirado del barco para servicio"
+  }
+}

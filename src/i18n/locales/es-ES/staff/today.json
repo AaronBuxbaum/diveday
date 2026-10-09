@@ -86,6 +86,7 @@
     "gearOverdue": "Equipo atrasado",
     "gearDueBack": "Devolución hoy",
     "gearServiceDue": "Mantenimiento",
+    "boatSafetyExpired": "Seguridad vencida",
     "workOrderLate": "Reparación atrasada",
     "workOrderUncollected": "Reparación sin recoger",
     "staffCredentialDue": "Credencial",
@@ -197,6 +198,7 @@
     "openInbox": "Ver mensajes",
     "openGearRegister": "Abrir registro de equipo",
     "openGearUnit": "Abrir ficha de la unidad",
+    "openBoats": "Abrir embarcaciones",
     "openStaffing": "Abrir personal",
     "openUnits": "Abrir unidades",
     "openDiver": "Abrir ficha del buceador"

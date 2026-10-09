@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, gt, gte, inArray, lte, ne } from "drizzle-orm";
+import { boatSafetyNoticeText } from "@/i18n/boat-safety-labels";
 import { gearServiceKindLabel } from "@/i18n/gear-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
@@ -21,6 +22,7 @@ import {
   missingContactNamedDetailText,
   missingFitDetailText,
   missingFitNamedDetailText,
+  openBoatsActionText,
   openCrewActionText,
   openDataSettingsActionText,
   openDiverActionText,
@@ -59,6 +61,7 @@ import {
 } from "@/i18n/today-labels";
 import { sayHelloSentences } from "@/i18n/welcome-cue-labels";
 import type { Role } from "@/lib/authz";
+import { isSafetyKitKind } from "@/lib/boat-safety";
 import {
   calendarDateInTimezone,
   calendarDateToUtcMidnight,
@@ -126,6 +129,7 @@ import {
   type NextBoatDayBlocked,
   sharedInHorizonReadiness,
 } from "./blockers";
+import { listExpiredBoatSafety } from "./boat-safety";
 import type { AppDb } from "./client";
 import { diveIntentTallyForTrips } from "./dive-intent";
 import {
@@ -2880,6 +2884,9 @@ export async function getTodayWork(
   }
   for (const row of gearServiceDueRows) {
     if (row.state.state !== "overdue" && row.state.state !== "due_soon") continue;
+    // Expired safety kit is the owner row below, which names every clock that
+    // ran out; a second row for the same unit would be the same fact twice.
+    if (row.state.state === "overdue" && isSafetyKitKind(row.kind)) continue;
     const dueAt = localMidnight(row.state.nextDueOn);
     actions.push({
       id: `gear-service:${row.gearItemId}`,
@@ -2898,6 +2905,39 @@ export async function getTodayWork(
       href: `/shop/${shopSlug}/gear/${row.gearItemId}`,
       dueAt,
     });
+  }
+  // **What the boat should carry, or hold, and no longer does** (roadmap N-08,
+  // N-10): an expired paper on a live boat, and an expired clock on any live
+  // safety-kit unit. One row per boat and per unit; the sentences are the
+  // pre-departure check's own, so the owner and the crew read the same words.
+  // Self-gating like the register: a shop that never dated anything has none.
+  for (const row of await listExpiredBoatSafety(db, shopId, todayLocal)) {
+    const detail = row.notices.map((notice) => boatSafetyNoticeText(t, notice)).join(" · ");
+    actions.push(
+      row.subject === "boat"
+        ? {
+            id: `boat-safety:boat:${row.boatId}`,
+            kind: "boat_safety_expired",
+            urgency: "now",
+            subject: row.name,
+            context: null,
+            detail,
+            actionLabel: openBoatsActionText(t),
+            href: `/shop/${shopSlug}/settings/boats`,
+            dueAt: null,
+          }
+        : {
+            id: `boat-safety:kit:${row.gearItemId}`,
+            kind: "boat_safety_expired",
+            urgency: "now",
+            subject: row.label,
+            context: null,
+            detail,
+            actionLabel: openGearUnitActionText(t),
+            href: `/shop/${shopSlug}/gear/${row.gearItemId}`,
+            dueAt: null,
+          },
+    );
   }
   // The bench (ADR 20261008-work-order-follow-up): a ticket still being
   // worked after the day the shop promised it, and one ready for a week that

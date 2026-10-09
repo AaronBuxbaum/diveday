@@ -54,5 +54,10 @@
   "requestPlanBoatExceeded": "Group exceeds largest boat capacity",
   "requestPlanCrewSuggestionOne": "Bring {divemasters} divemaster for your {ratio}:1 target.",
   "requestPlanCrewSuggestionOther": "Bring {divemasters} divemasters for your {ratio}:1 target.",
-  "descriptionLabel": "One line about the boat, for your public page (optional)"
+  "descriptionLabel": "One line about the boat, for your public page (optional)",
+  "certifiedPassengersLabel": "Coast Guard passenger limit",
+  "inspectionDueLabel": "Coast Guard inspection due",
+  "registrationExpiresLabel": "Registration expires",
+  "insuranceExpiresLabel": "Insurance expires",
+  "seatsAboveCertificate": "{capacity, plural, one {# seat on sale} other {# seats on sale}}; the certificate allows {limit}."
 }

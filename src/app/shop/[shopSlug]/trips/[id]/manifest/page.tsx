@@ -12,6 +12,7 @@ import { PushOptIn, type PushOptInCopy } from "@/components/PushOptIn";
 import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { departureBoatId, departureBoatSafety } from "@/db/boat-safety";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
 import { listDeskEventsSince } from "@/db/desk-events";
 import { diveIntentTallyForTrip } from "@/db/dive-intent";
@@ -24,6 +25,7 @@ import type { ExecutedDive } from "@/db/schema";
 import { listShopPickedSpecies, listTripSightings } from "@/db/trip-sightings";
 import { latestTripStage } from "@/db/trip-stages";
 import { listTripDives } from "@/db/trips";
+import { boatSafetyNoticeText } from "@/i18n/boat-safety-labels";
 import { catchUpSentences } from "@/i18n/desk-event-labels";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
@@ -33,6 +35,8 @@ import { diverTranslator } from "@/i18n/messages";
 import { staffSoulsOnBoardLine } from "@/i18n/participant-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { boatSafetyNoticeIsUrgent } from "@/lib/boat-safety";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
 import { groupCatchUp } from "@/lib/desk-events";
@@ -63,6 +67,7 @@ import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { TripTabs } from "../_components/TripTabs";
 import { tripTabsCopy } from "../_components/trip-tabs-copy";
+import { BoatSafetyNotices } from "./_components/BoatSafetyNotices";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CrewRollCall } from "./_components/CrewRollCall";
@@ -394,6 +399,16 @@ export default async function TripManifestPage({
   );
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
+
+  // **The boat itself** (roadmap N-08, N-10): everyone on the departure list
+  // against the hull's certificate, its papers, and the safety kit assigned
+  // aboard it. Counted off the departure checkpoint whichever one is open —
+  // the certificate is about who is booked to sail, not who is back yet.
+  const boatSafety = await departureBoatSafety(db, shop.id, {
+    boatId: await departureBoatId(db, shop.id, tripId),
+    passengersAboard: departureManifest.summary.totalDivers,
+    todayLocal: calendarDateInTimezone(nowDate(), shop.timezone),
+  });
 
   const plannedDiveCount = departureManifest.trip.plannedDives;
   const checkpoints = rollCallCheckpoints(plannedDiveCount);
@@ -851,6 +866,16 @@ export default async function TripManifestPage({
             the boat-check items are a "one tap away" concern). It used to stand
             fully expanded *above* the checkpoint switch, five full-width buttons
             between the masthead and the head count at every checkpoint. */}
+        {boatSafety ? (
+          <BoatSafetyNotices
+            idPrefix={idPrefix}
+            heading={t("boatSafety.heading", { boatName: boatSafety.boatName })}
+            lines={boatSafety.notices.map((notice) => ({
+              text: boatSafetyNoticeText(t, notice),
+              urgent: boatSafetyNoticeIsUrgent(notice),
+            }))}
+          />
+        ) : null}
         <PreDepartureCheckList
           idPrefix={idPrefix}
           action={boundPreDepartureCheckAction}

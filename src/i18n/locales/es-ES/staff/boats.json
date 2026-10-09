@@ -54,5 +54,10 @@
   "requestPlanBoatExceeded": "El grupo supera la capacidad de tu embarcación más grande",
   "requestPlanCrewSuggestionOne": "Lleva {divemasters} divemaster para tu objetivo de {ratio}:1.",
   "requestPlanCrewSuggestionOther": "Lleva {divemasters} divemasters para tu objetivo de {ratio}:1.",
-  "descriptionLabel": "Una línea sobre la embarcación, para tu página pública (opcional)"
+  "descriptionLabel": "Una línea sobre la embarcación, para tu página pública (opcional)",
+  "certifiedPassengersLabel": "Límite de pasajeros de la Guardia Costera",
+  "inspectionDueLabel": "Próxima inspección de la Guardia Costera",
+  "registrationExpiresLabel": "Vencimiento de la matrícula",
+  "insuranceExpiresLabel": "Vencimiento del seguro",
+  "seatsAboveCertificate": "{capacity, plural, one {# plaza a la venta} other {# plazas a la venta}}; el certificado permite {limit}."
 }

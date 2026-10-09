@@ -18,6 +18,7 @@ import {
   FormStatus,
   textareaClassFor,
 } from "@/components/ui/form";
+import { listBoats } from "@/db/boats";
 import { type GearItemDetail, getGearItemDetail } from "@/db/gear";
 import {
   gearItemKindLabel,
@@ -29,6 +30,7 @@ import {
 } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { isSafetyKitKind } from "@/lib/boat-safety";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
@@ -121,7 +123,10 @@ export default async function GearUnitPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(id)) notFound();
-  const detail = await getGearItemDetail(db, shop.id, id);
+  const [detail, fleet] = await Promise.all([
+    getGearItemDetail(db, shop.id, id),
+    shop.hasBoatDiving ? listBoats(db, shop.id) : Promise.resolve([]),
+  ]);
   if (!detail) notFound();
 
   const locale = await requestLocale(shop.defaultLocale);
@@ -171,7 +176,19 @@ export default async function GearUnitPage({
       }
     : null;
 
-  const identity = [gearItemKindLabel(t, item.kind), item.size, item.brandModel, item.serialNumber]
+  // **Safety kit lives aboard a boat** (roadmap N-08): the hull is part of
+  // what the unit *is* to a crew ("the AED on Mantis I"), so it joins the
+  // masthead's identity line, and the details form offers it only for the
+  // safety-kit kinds of a shop that runs boats.
+  const offersBoat = isSafetyKitKind(item.kind) && fleet.length > 0;
+  const aboard = fleet.find((boat) => boat.id === item.aboardBoatId) ?? null;
+  const identity = [
+    gearItemKindLabel(t, item.kind),
+    aboard ? t("gear.unit.aboard", { boatName: aboard.name }) : null,
+    item.size,
+    item.brandModel,
+    item.serialNumber,
+  ]
     .filter(Boolean)
     .join(" · ");
 
@@ -472,6 +489,22 @@ export default async function GearUnitPage({
                 <Field label={t("gear.form.purchasedOn")} hint={t("gear.form.optionalHint")}>
                   <DateField name="purchasedOn" defaultValue={item.purchasedOn ?? ""} />
                 </Field>
+                {offersBoat ? (
+                  <Field label={t("gear.form.aboard")}>
+                    <select
+                      name="aboardBoatId"
+                      className={controlClass}
+                      defaultValue={aboard?.id ?? ""}
+                    >
+                      <option value="">{t("gear.form.ashore")}</option>
+                      {fleet.map((boat) => (
+                        <option key={boat.id} value={boat.id}>
+                          {boat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                ) : null}
                 <FieldActions>
                   <SubmitButton
                     pendingLabel={t("gear.unit.details.saving")}
