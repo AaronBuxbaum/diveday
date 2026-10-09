@@ -613,6 +613,8 @@
     "noRecapBody": "Esta reserva no tiene resumen.",
     "noShowHeading": "Esta reserva figura como no presentado",
     "noShowBody": "{shop} registró que no llegaste a esta salida, así que no hay día que recordar.",
+    "heldHeading": "Tu día de buceo lo tiene el centro",
+    "heldBody": "{shop} está verificando quién iba en esta reserva. Pídeles lo que necesites de esta salida.",
     "photoAdded": "Añadida a tu resumen. ¡Gracias por compartirla!",
     "photoMissing": "Elige primero una foto y luego añádela.",
     "photoUnsupported": "Este centro todavía no tiene activada la subida de fotos, así que etiquétalas cuando publiques.",

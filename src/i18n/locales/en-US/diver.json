@@ -613,6 +613,8 @@
     "noRecapBody": "There’s no recap for this booking.",
     "noShowHeading": "This booking is marked as a no-show",
     "noShowBody": "{shop} recorded that you didn’t make this departure, so there’s no day to look back on.",
+    "heldHeading": "Your dive day is with the shop",
+    "heldBody": "{shop} is confirming who was on this booking. Ask them for anything from this trip.",
     "photoAdded": "Added to your recap. Thanks for sharing!",
     "photoMissing": "Pick a photo first, then add it.",
     "photoUnsupported": "Photo uploads aren’t set up for this shop yet, so tag them when you post.",

@@ -464,8 +464,12 @@ describe("after the dive", () => {
     // One now, not two: the cancelled-departure card moved into the
     // `!capability` block, where the shop is not yet in scope and it builds its
     // own contact object from the booking it resolved.
-    expect(countOf("shop={shopContact}")).toBe(1);
-    expect(SOURCE).toContain('t("recap.noShowHeading")');
+    // The no-show and the held seat's card, both handed the shop's contact;
+    // their words live in `_components/AfterDiveDoors.tsx`.
+    expect(countOf("shop={shopContact}")).toBe(2);
+    expect(SOURCE).toContain("<NoShowCard shop={shopContact} t={t} />");
+    const doors = readFileSync(join(__dirname, "_components/AfterDiveDoors.tsx"), "utf8");
+    expect(doors).toContain('t("recap.noShowHeading")');
     // And never the pair of sentences it replaced — "This readiness link isn't
     // available" over "This booking didn't sail" — both false for this reader.
     expect(SOURCE).not.toContain('t("recap.didNotDiveBody")');
@@ -537,5 +541,21 @@ describe("a held seat's greeting", () => {
     expect(SOURCE).toContain('const firstName = data.greetingName.split(" ")[0]');
     expect(SOURCE).toContain("justBooked && person.email && !data.identityHeld ? (");
     expect(countOf("detail.person.fullName")).toBe(1);
+  });
+});
+
+/**
+ * **After the dive, a held seat is not called a no-show** (security review
+ * of issue #2125). The recap reads nothing for a held seat, and the null it
+ * returns used to fall through to "marked as a no-show": a false fact about
+ * somebody who may have dived. The held seat gets its own neutral card,
+ * decided before the recap is read.
+ */
+describe("a held seat after the dive", () => {
+  it("answers with its own card before the recap is read", () => {
+    const held = positionOf("if (data.identityHeld) return <HeldAfterDiveCard");
+    expect(held).toBeGreaterThan(-1);
+    expect(held).toBeLessThan(positionOf("await getRecapPageData(db, bookingId)"));
+    expect(positionOf("<NoShowCard")).toBeGreaterThan(held);
   });
 });

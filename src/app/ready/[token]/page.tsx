@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { HeldAfterDiveCard, NoShowCard } from "@/app/ready/[token]/_components/AfterDiveDoors";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
 import { CarriedPreparation } from "@/app/ready/[token]/_components/CarriedPreparation";
@@ -990,33 +991,9 @@ export default async function DiverReadinessPage({
       ? "boarded"
       : departure;
   if (isAfterTheDive({ endsAt: detail.trip.endsAt, boarded })) {
+    if (data.identityHeld) return <HeldAfterDiveCard shop={shopContact} t={t} />;
     const recap = await getRecapPageData(db, bookingId);
-    if (!recap) {
-      /**
-       * **A no-show, said plainly and with somebody to ask.**
-       *
-       * Both cancellations — the booking's and the departure's — are answered
-       * above, so `getRecapPageData`'s uniform null means
-       * `bookings.status = 'no_show'` here (or a cancellation that landed in
-       * the microseconds between the two reads, which this notice's contact
-       * line covers either way).
-       *
-       * It used to render "This readiness link isn't available" over "This
-       * booking didn't sail" — two sentences, both false for this reader: the
-       * token had just verified, and the boat sailed without them. A diver
-       * being charged a no-show fee, holding DiveDay's own page telling them
-       * the trip never ran, is where a chargeback argument starts.
-       */
-      return (
-        <ExpiredLinkCard
-          glyph="cancelled"
-          title={t("recap.noShowHeading")}
-          text={t("recap.noShowBody", { shop: detail.shop.name })}
-          shop={shopContact}
-          t={t}
-        />
-      );
-    }
+    if (!recap) return <NoShowCard shop={shopContact} t={t} />;
     const recapToken = signRecapToken(bookingId);
     const after = await buildAfterStateProps({
       db,

@@ -4,7 +4,7 @@
   "src/app/onboard/page.tsx": 479,
   "src/app/page.tsx": 592,
   "src/app/pricing/page.tsx": 504,
-  "src/app/ready/[token]/page.tsx": 1761,
+  "src/app/ready/[token]/page.tsx": 1738,
   "src/app/s/[shopSlug]/page.tsx": 1351,
   "src/app/s/[shopSlug]/trips/[id]/page.tsx": 877,
   "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
