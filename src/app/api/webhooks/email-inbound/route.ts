@@ -155,8 +155,11 @@ export async function POST(request: Request) {
       log("email_inbound.reply_keyword", "info", { shopId, outcome });
     }
     // The desk's after-hours ping (src/db/desk-pings.ts): only for a message
-    // actually filed, and never able to fail this webhook.
-    await pingDeskAfterHoursSafely(db, { shopId, receivedAt: notification.receivedAt });
+    // actually filed from a sender whose domain checks passed (a spoofed burst
+    // to the reply-to address must not page the owner), and never able to
+    // fail this webhook.
+    if (senderAuthenticated)
+      await pingDeskAfterHoursSafely(db, { shopId, receivedAt: notification.receivedAt });
   }
   // Ids and outcomes only — never the sender, the subject or the words.
   log("email_inbound.recorded", "info", {

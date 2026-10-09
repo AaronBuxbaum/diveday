@@ -127,6 +127,25 @@ describe("recordShopActivity", () => {
     ).toBe(false);
   });
 
+  it("never fails the act it describes when the database refuses the line", async () => {
+    const { db, shop } = ctx;
+    const { owner } = await bookedSeat(db, shop.id);
+    // A refund has already moved money by the time its line is written; a
+    // dropped connection must cost the line, not the staffer's success page.
+    const broken = {
+      select: () => {
+        throw new Error("connection reset");
+      },
+    } as unknown as AppDb;
+    expect(
+      await recordShopActivity(broken, {
+        shopId: shop.id,
+        actorPersonId: owner.id,
+        write: { code: "order_refunded", orderId: owner.id },
+      }),
+    ).toBe(false);
+  });
+
   it("records a departure deleted after the delete it describes", async () => {
     const { db, shop } = ctx;
     const { trip, owner } = await bookedSeat(db, shop.id);

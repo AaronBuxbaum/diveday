@@ -249,6 +249,8 @@ describe("email-inbound webhook — filing a reply", () => {
         senderAuthenticated: false,
       }),
     );
+    // A spoofed burst to the reply-to address must not page the owner.
+    expect(pingDeskAfterHoursSafely).not.toHaveBeenCalled();
   });
 
   /**

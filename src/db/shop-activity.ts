@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
 import type { ActivityEntry } from "@/lib/activity";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
 import {
   activityCodesOfKind,
   type ShopActivityKind,
@@ -315,6 +316,24 @@ export type ShopActivityWrite =
  * handle `anonymizeDiver` redacts it by.
  */
 export async function recordShopActivity(
+  db: DbExecutor,
+  input: { shopId: string; actorPersonId: string; write: ShopActivityWrite },
+): Promise<boolean> {
+  try {
+    return await writeShopActivity(db, input);
+  } catch (error) {
+    // The act already happened (a refund may have moved money): a failed
+    // line is logged, never surfaced as a failed act. Codes and ids only.
+    log("shop_activity.write_failed", "error", {
+      shopId: input.shopId,
+      code: input.write.code,
+      error: error instanceof Error ? error.name : "unknown",
+    });
+    return false;
+  }
+}
+
+async function writeShopActivity(
   db: DbExecutor,
   input: { shopId: string; actorPersonId: string; write: ShopActivityWrite },
 ): Promise<boolean> {
