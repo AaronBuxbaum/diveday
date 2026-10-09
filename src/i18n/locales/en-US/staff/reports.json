@@ -81,5 +81,17 @@
     "sitesRest": "{count, plural, one {# more site} other {# more sites}} · {dives, plural, one {# dive between them} other {# dives between them}}",
     "empty": "No departures have sailed this year yet."
   },
-  "buddySeats": "{count, plural, one {# seat} other {# seats}} arrived on a buddy’s link"
+  "buddySeats": "{count, plural, one {# seat} other {# seats}} arrived on a buddy’s link",
+  "byLine": {
+    "heading": "Money in, by line",
+    "caption": "By the day it was paid, after tax and refunds",
+    "courses": "Courses",
+    "funDives": "Fun dives and trips",
+    "rentals": "Rentals",
+    "gearBench": "Gear bench",
+    "packages": "Dive packages",
+    "retail": "Retail and other"
+  },
+  "packagesOwed": "{dives, plural, one {# package dive} other {# package dives}} still to dive, worth {amount}",
+  "returningDivers": "{returning} of {total, plural, one {# diver} other {# divers}} had dived with you before"
 }

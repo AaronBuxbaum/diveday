@@ -44,12 +44,20 @@ const waiverSendPayload = z
     message: "empty_batch",
   });
 
-const lastMinuteDealPayload = z.object({
-  kind: z.literal("last_minute_deal"),
-  tripId: z.uuid(),
-  discountPercent: z.number().int().min(1).max(100),
-  recipientPersonIds: z.array(z.uuid()).min(1).max(500),
-});
+const lastMinuteDealPayload = z
+  .object({
+    kind: z.literal("last_minute_deal"),
+    tripId: z.uuid(),
+    /** Percent off, or a fixed amount in minor units: exactly one of the two. */
+    discountPercent: z.number().int().min(1).max(100).optional(),
+    discountAmountCents: z.number().int().positive().optional(),
+    recipientPersonIds: z.array(z.uuid()).min(1).max(500),
+  })
+  .refine(
+    (payload) =>
+      (payload.discountPercent === undefined) !== (payload.discountAmountCents === undefined),
+    { message: "one_discount" },
+  );
 
 const waitlistInvitePayload = z.object({
   kind: z.literal("waitlist_invite"),

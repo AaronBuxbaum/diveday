@@ -331,7 +331,10 @@ const lastMinuteDealSchema = z.object({
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
-  discountPercent: z.number().int().min(1).max(100),
+  // One of the two: a percent, or a fixed amount in the shop's currency.
+  discountPercent: z.number().int().min(1).max(100).optional(),
+  discountAmountCents: z.number().int().positive().optional(),
+  currency: z.string().trim().length(3).optional(),
   code: z.string().trim().min(1).max(40),
   bookingUrl: z.url().max(2_000),
   expiresAt: z.date(),

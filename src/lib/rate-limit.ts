@@ -518,6 +518,13 @@ export const RATE_LIMITS = {
   /** Starting a post-trip tip checkout, per recap token. */
   tipStart: perHour(10),
   /**
+   * Buying a dive package from the public pages, per IP and per email. Each
+   * attempt raises a Stripe invoice on the shop's account, so a visitor who
+   * keeps tapping Buy is bounded well below "cluttering the Orders index".
+   */
+  packagePurchaseByIp: perHour(10),
+  packagePurchaseByEmail: perHour(5),
+  /**
    * Leaving or revising a review, per recap token. A diver edits their own
    * review a handful of times at most; the unique index already caps them at
    * one row, so this bounds the write rate rather than the review count.

@@ -291,7 +291,7 @@ describe("LastMinuteDealSection recipient review", () => {
    */
   it("draws the discount box at md, the height of the send button beside it", () => {
     renderSection([recipient("Ravi Menon", "advanced_open_water")], null);
-    const discount = screen.getByLabelText("Discount percent");
+    const discount = screen.getByRole("spinbutton", { name: "Discount" });
     expect(discount).toHaveClass("min-h-12");
     expect(discount).not.toHaveClass("min-h-11");
     expect(screen.getByRole("button", { name: /Send to/ })).toHaveClass("min-h-12");

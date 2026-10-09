@@ -215,6 +215,10 @@
     "e2e": ["self-registration.spec.ts"],
     "visual": ["shopfront-register"]
   },
+  "/s/[shopSlug]/packages": {
+    "e2e": ["package-purchase.spec.ts"],
+    "visual": ["public-packages"]
+  },
   "/s/[shopSlug]/reviews": {
     "e2e": ["reviews.spec.ts"],
     "visual": ["public-reviews"]

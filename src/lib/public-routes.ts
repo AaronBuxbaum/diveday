@@ -24,6 +24,11 @@ export function publicReviewsPath(shopSlug: string): string {
   return `${publicSchedulePath(shopSlug)}/reviews`;
 }
 
+/** The shop's prepaid dive packages, bought online (shown only when it sells any). */
+export function publicPackagesPath(shopSlug: string): string {
+  return `${publicSchedulePath(shopSlug)}/packages`;
+}
+
 /**
  * The shop's own self-registration door — the page behind the QR a shop prints
  * for its counter (issue #1236). `noindex`, and deliberately not linked from

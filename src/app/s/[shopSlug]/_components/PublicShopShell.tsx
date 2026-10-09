@@ -36,6 +36,7 @@ import { tapTargetLinkClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
+import { listPackagesOnSale } from "@/db/dive-packages";
 import { listShopRolesPresent } from "@/db/shop-roles";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { listShopSpokenLanguages } from "@/db/staff-accounts";
@@ -55,7 +56,7 @@ import {
   parseEmbedFontParam,
 } from "@/lib/embed-routes";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { publicCoursesPath, publicSchedulePath } from "@/lib/public-routes";
+import { publicCoursesPath, publicPackagesPath, publicSchedulePath } from "@/lib/public-routes";
 import { isLiveShopStaff } from "@/lib/session";
 
 /**
@@ -100,14 +101,24 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
 
   // The public map, built once for the whole namespace so no page has to grow
   // its own cross-links. Courses only earns a tab when the shop has something
-  // to teach — an existence probe (`limit 1`), not a catalog read, because it
+  // to teach, and Packages when it has something on sale — an existence probe (`limit 1`), not a catalog read, because it
   // runs on every public render and the header shows no number. Skipped
   // entirely for an embed, which drops the header anyway.
   const navItems: PublicShopNavItem[] = [];
   if (!isEmbed && shop) {
     navItems.push({ href: publicSchedulePath(shop.slug), label: t("schedule.title") });
-    if (await hasActiveCourses(db, shop.id)) {
+    // The same probe, and two reads at once rather than one after the other.
+    // Packages earns a tab only while one is on sale: a shop that has never
+    // defined one, or whose packages have all lapsed, shows no such door.
+    const [teaches, packagesOnSale] = await Promise.all([
+      hasActiveCourses(db, shop.id),
+      listPackagesOnSale(db, shop.id),
+    ]);
+    if (teaches) {
       navItems.push({ href: publicCoursesPath(shop.slug), label: t("courses.index.title") });
+    }
+    if (packagesOnSale.length > 0) {
+      navItems.push({ href: publicPackagesPath(shop.slug), label: t("packages.navLabel") });
     }
   }
 

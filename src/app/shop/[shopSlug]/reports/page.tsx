@@ -6,6 +6,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { getMonthMoneyDetail } from "@/db/report-lines";
 import {
   canPersonViewShopReports,
   crewCountsByTrip,
@@ -50,6 +51,7 @@ import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DepartureLedger, type DepartureRow } from "./_components/DepartureLedger";
 import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
 import { MonthJump } from "./_components/MonthJump";
+import { MoneyByLine, MonthDetailLines } from "./_components/MonthMoneyDetail";
 import { ReportRangeTabs } from "./_components/ReportRangeTabs";
 import { YearReport } from "./_components/YearReport";
 
@@ -277,7 +279,7 @@ export default async function ReportsPage({
   // one more month's worth of trips, bookings and payments, never a second
   // pass over the shop's whole history. See the PR description for the
   // measured cost.
-  const [input, tripPage, baselineInput] = await Promise.all([
+  const [input, tripPage, baselineInput, moneyDetail] = await Promise.all([
     getMonthlyReport(db, shop.id, monthStart, monthEnd, { currency, timeZone: tz }),
     // A non-numeric or missing `?page=` reads as page 1; the query clamps it
     // into range, so switching to a shorter month never strands the reader on
@@ -291,8 +293,12 @@ export default async function ReportsPage({
           timeZone: tz,
         })
       : Promise.resolve(null),
+    // The money by line, the package dives still owed, and the returning
+    // divers (owner decision 2026-10-09) — `src/lib/report-lines.ts`.
+    getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now),
   ]);
   const report = summarizeMonth(input);
+  const money = (cents: number) => formatReportMoney(cents, currency, locale);
   const baselineReport = baselineInput ? summarizeMonth(baselineInput) : null;
   const comparison: MonthComparison | null =
     baselineReport && baselineKind
@@ -648,33 +654,8 @@ export default async function ReportsPage({
             </section>
           ) : null}
 
-          {/* **A count, never the slugs** (issue #1294). This was a "Who sent
-              divers" ledger naming each partner; nothing anywhere can tell a
-              hotel's slug from one an anonymous visitor invented by editing the
-              storefront URL and booking a seat, because `partnerLinkUrl` writes
-              no row. So the shop is told the fact — their partner links are
-              working, and how hard — without a staff page printing a stranger's
-              text as a business fact.
-
-              A quiet line rather than a section, on the tax line's pattern: one
-              number does not earn a heading over it, and a month with no
-              referred seats renders nothing at all. */}
-          {report.partnerReferredSeats > 0 ? (
-            <p className="mt-3 text-end text-sm text-muted tabular-nums">
-              {t("reports.partnerArrivals", { count: report.partnerReferredSeats })}
-            </p>
-          ) : null}
-
-          {/* **Where the month's seats came from, when they came from a
-              person** (ADR 20260908-one-hand, decision 6, lever W). A quiet
-              line on the pattern the partner line above already set: a number
-              does not earn a heading over it, and a month with none renders
-              nothing at all. */}
-          {report.buddyReferredSeats > 0 ? (
-            <p className="mt-1 text-end text-sm text-muted tabular-nums">
-              {t("reports.buddySeats", { count: report.buddyReferredSeats })}
-            </p>
-          ) : null}
+          <MonthDetailLines report={report} detail={moneyDetail} t={t} money={money} />
+          <MoneyByLine detail={moneyDetail} t={t} money={money} />
 
           {report.tripCount > 0 ? (
             <DepartureLedger

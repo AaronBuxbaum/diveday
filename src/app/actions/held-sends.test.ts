@@ -88,6 +88,23 @@ describe("holdSendAction", () => {
     expect(row?.actorPersonId).toBe(owner.personId);
   });
 
+  it("holds a fixed-amount deal in minor units, typed in whole currency units", async () => {
+    const { db, shop, owner, seat } = await context();
+    signIn(shop, owner);
+    const form = dealForm(seat.tripId, owner.personId);
+    form.delete("discountPercent");
+    form.set("discount", "20");
+    form.set("discountKind", "amount");
+    await holdSendAction(form);
+    const [row] = await heldRows(db, shop.id);
+    expect(row?.payload).toEqual({
+      kind: "last_minute_deal",
+      tripId: seat.tripId,
+      discountAmountCents: 2_000,
+      recipientPersonIds: [owner.personId],
+    });
+  });
+
   it("holds a waiver send from the surface's own hidden inputs, and Undo takes it back", async () => {
     const { db, shop, captain, seat } = await context();
     signIn(shop, captain);

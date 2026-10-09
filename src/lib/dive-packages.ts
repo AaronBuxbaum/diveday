@@ -177,3 +177,19 @@ export function spendableCount(held: readonly SpendableEntitlement[], now = nowD
       (row.expiresAt === null || row.expiresAt.getTime() > now.getTime()),
   ).length;
 }
+
+/**
+ * Whether a package can still be sold to a diver online.
+ *
+ * A package whose end date has passed would grant dives that are already
+ * expired the moment they are paid for, so the public page neither lists it
+ * nor takes money for it. Staff can still see it in Settings.
+ */
+export function packageOnSale(
+  pkg: { validUntil: string | null; deletedAt?: Date | null },
+  now = nowDate(),
+): boolean {
+  if (pkg.deletedAt) return false;
+  const expiry = entitlementExpiry(pkg.validUntil);
+  return expiry === null || expiry.getTime() > now.getTime();
+}
