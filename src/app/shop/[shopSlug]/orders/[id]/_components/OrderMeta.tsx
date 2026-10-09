@@ -30,7 +30,7 @@ import { shopPath } from "@/lib/staff-notices";
 export async function OrderMeta({
   order,
   personId,
-  createdByName,
+  createdBy,
   shopSlug,
   locale,
   timezone,
@@ -38,7 +38,11 @@ export async function OrderMeta({
 }: {
   order: { id: string; shopId: string; createdAt: Date };
   personId: string;
-  createdByName: string | null;
+  /**
+   * Who raised it, or `online` when the diver bought it on the shop's public
+   * pages and nobody on the staff did.
+   */
+  createdBy: { name: string | null; online: boolean };
   shopSlug: string;
   locale: string;
   timezone: string;
@@ -49,7 +53,11 @@ export async function OrderMeta({
   return (
     <p className="text-sm text-muted">
       {t("orders.detail.raisedOn", { date: formatShortDate(order.createdAt, locale, timezone) })}
-      {createdByName ? ` · ${t("orders.detail.createdBy", { name: createdByName })}` : ""}
+      {createdBy.online
+        ? ` · ${t("orders.detail.boughtOnline")}`
+        : createdBy.name
+          ? ` · ${t("orders.detail.createdBy", { name: createdBy.name })}`
+          : ""}
       {" · "}
       <Link href={shopPath(shopSlug, "divers", personId)} className={linkClass}>
         {t("orders.detail.diverRecord")}

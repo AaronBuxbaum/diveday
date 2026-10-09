@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "39671ee4-e182-44ed-a23b-fa34f51d4e96",
+  "id": "265614ea-664d-40b7-8108-f252b7581b31",
   "prevIds": [
     "2aaffcaa-8ce2-46c8-a1f3-e1e65db32d90"
   ],
@@ -799,16 +799,6 @@
     },
     {
       "values": [
-        "stripe_invoice",
-        "cash",
-        "card_machine"
-      ],
-      "name": "order_collection",
-      "entityType": "enums",
-      "schema": "public"
-    },
-    {
-      "values": [
         "trip_fee",
         "course_fee",
         "e_learning_fee",
@@ -821,6 +811,15 @@
         "other"
       ],
       "name": "order_line_item_kind",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "staff",
+        "public"
+      ],
+      "name": "order_source",
       "entityType": "enums",
       "schema": "public"
     },
@@ -4697,6 +4696,19 @@
       "generated": null,
       "identity": null,
       "name": "stripe_promotion_code_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_last_minute_promos"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "max_redemptions",
       "entityType": "columns",
       "schema": "public",
       "table": "trip_last_minute_promos"
@@ -16935,6 +16947,19 @@
       "table": "orders"
     },
     {
+      "type": "order_source",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'staff'",
+      "generated": null,
+      "identity": null,
+      "name": "source",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "orders"
+    },
+    {
       "type": "text",
       "typeSchema": null,
       "notNull": true,
@@ -17026,22 +17051,9 @@
       "table": "orders"
     },
     {
-      "type": "order_collection",
-      "typeSchema": "public",
-      "notNull": true,
-      "dimensions": 0,
-      "default": "'stripe_invoice'",
-      "generated": null,
-      "identity": null,
-      "name": "collection",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "orders"
-    },
-    {
       "type": "text",
       "typeSchema": null,
-      "notNull": false,
+      "notNull": true,
       "dimensions": 0,
       "default": null,
       "generated": null,
@@ -17054,7 +17066,7 @@
     {
       "type": "text",
       "typeSchema": null,
-      "notNull": false,
+      "notNull": true,
       "dimensions": 0,
       "default": null,
       "generated": null,
@@ -17067,7 +17079,7 @@
     {
       "type": "text",
       "typeSchema": null,
-      "notNull": false,
+      "notNull": true,
       "dimensions": 0,
       "default": null,
       "generated": null,
@@ -17515,6 +17527,32 @@
       "generated": null,
       "identity": null,
       "name": "checkout_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "payment_operation_intents"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "promo_code_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "payment_operation_intents"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "trip_promo_id",
       "entityType": "columns",
       "schema": "public",
       "table": "payment_operation_intents"
@@ -35409,6 +35447,40 @@
     {
       "nameExplicit": false,
       "columns": [
+        "promo_code_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shop_promo_codes",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "payment_operation_intents_wOv22MgfdNda_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "payment_operation_intents"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "trip_promo_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "trip_last_minute_promos",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "payment_operation_intents_Ykz0XvNLTW0j_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "payment_operation_intents"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
         "shop_id"
       ],
       "schemaTo": "public",
@@ -39262,13 +39334,6 @@
       "table": "orders"
     },
     {
-      "value": "(\"collection\" = 'stripe_invoice' and \"stripe_account_id\" is not null and \"stripe_customer_id\" is not null and \"stripe_invoice_id\" is not null) or (\"collection\" <> 'stripe_invoice' and \"stripe_account_id\" is null and \"stripe_customer_id\" is null and \"stripe_invoice_id\" is null and \"stripe_payment_intent_id\" is null)",
-      "name": "orders_stripe_ids_match_collection",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "orders"
-    },
-    {
       "value": "\"amount_cents\" >= 0",
       "name": "payment_disputes_amount_nonnegative",
       "entityType": "checks",
@@ -39281,6 +39346,13 @@
       "entityType": "checks",
       "schema": "public",
       "table": "payment_disputes"
+    },
+    {
+      "value": "\"promo_code_id\" is null or \"trip_promo_id\" is null",
+      "name": "payment_operation_intents_single_promo",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "payment_operation_intents"
     },
     {
       "value": "\"discount_percent\" is null or \"discount_percent\" between 1 and 100",

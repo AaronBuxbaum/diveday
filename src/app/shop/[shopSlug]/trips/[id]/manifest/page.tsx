@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BoatSafetyNotices } from "@/components/BoatSafetyNotices";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { HapticsToggle } from "@/components/HapticsToggle";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
@@ -65,8 +66,8 @@ import { tripTabsCopy } from "../_components/trip-tabs-copy";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CrewRollCall } from "./_components/CrewRollCall";
-import { DepartureBoatSafety } from "./_components/DepartureBoatSafety";
 import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
+import { departureBoatSafetySection } from "./_components/departure-boat-safety";
 import { type ExecutedDiveLabels, ExecutedDiveLog } from "./_components/ExecutedDiveLog";
 import { ManifestMoreMenu } from "./_components/ManifestMoreMenu";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
@@ -337,6 +338,7 @@ export default async function TripManifestPage({
   );
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
+  const boatSafety = await departureBoatSafetySection(db, shop, departureManifest, t);
 
   const plannedDiveCount = departureManifest.trip.plannedDives;
   const checkpoints = rollCallCheckpoints(plannedDiveCount);
@@ -794,14 +796,7 @@ export default async function TripManifestPage({
             the boat-check items are a "one tap away" concern). It used to stand
             fully expanded *above* the checkpoint switch, five full-width buttons
             between the masthead and the head count at every checkpoint. */}
-        <DepartureBoatSafety
-          db={db}
-          shop={shop}
-          tripId={tripId}
-          passengersAboard={departureManifest.summary.totalDivers}
-          idPrefix={idPrefix}
-          t={t}
-        />
+        {boatSafety ? <BoatSafetyNotices idPrefix={idPrefix} {...boatSafety} /> : null}
         <PreDepartureCheckList
           idPrefix={idPrefix}
           action={boundPreDepartureCheckAction}
@@ -1019,6 +1014,7 @@ export default async function TripManifestPage({
               label: item.label,
               check: checklistChecks.get(item.id),
             })),
+            boatSafety,
           )}
           copy={
             {

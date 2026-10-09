@@ -378,6 +378,7 @@
     "confirmedDockCall": "{date}, {time}. Preséntate en el muelle {minutes, plural, one {# minuto} other {# minutos}} antes y nos encargamos del resto.",
     "paymentDepositBalance": "Tu plaza está asegurada. Los {balance} restantes se pagan en el muelle.",
     "paymentStillOpen": "Tu plaza está a salvo y el pago sigue abierto",
+    "codeUsedUp": "Ese código ya se ha agotado. Tu plaza está a salvo y puedes pagar el precio completo desde tu página de preparación.",
     "trackReadiness": "Sigue todos los pasos en tu página de preparación →",
     "errors": {
       "invalid": "Revisa tu nombre y correo electrónico e inténtalo de nuevo.",
@@ -782,6 +783,7 @@
     "waiverUnavailable": "No hemos podido abrir tu exención ahora mismo. Inténtalo otra vez o pide un enlace al centro.",
     "paymentUnavailable": "No hemos podido abrir la página de pago. Tu plaza está a salvo. Inténtalo otra vez o paga en el centro.",
     "paymentCancelled": "Pago cancelado. Tu plaza sigue reservada.",
+    "codeUsedUp": "Ese código ya se ha agotado. Tu plaza sigue reservada y puedes pagar el precio completo abajo.",
     "cancelSpot": "Cancelar mi plaza",
     "cancelConfirm": "¿Cancelar tu plaza en {trip}? Esto no se puede deshacer.",
     "cancelConfirmButton": "Sí, cancelar mi plaza",

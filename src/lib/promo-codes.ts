@@ -137,9 +137,11 @@ export type PromoRedeemability = {
  * identical (the code simply doesn't apply), so distinguishing them here would
  * only ever leak which codes a shop actually has.
  *
- * Note what this does *not* check: the redemption cap. Stripe owns that count
- * and enforces it at checkout; re-deriving it locally would be a second,
- * lagging source of truth for the same fact.
+ * Note what this does *not* check: the redemption cap. Stripe enforces it when
+ * the code itself reaches a Checkout session. The one path where it does not —
+ * a pass-through fee, where the discount goes over as a one-off coupon — holds
+ * the cap itself, at the checkout (`discountCapReached` in
+ * `src/db/promo-caps.ts`).
  */
 export function isPromoRedeemable(
   promo: PromoRedeemability,

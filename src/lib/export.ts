@@ -32,7 +32,7 @@ export type ExportFile = { name: string; content: string | Uint8Array };
 export const EXPORT_FILE_NOTES = {
   "shop.csv": "The shop profile, packing checklist, rental catalog, and rental prices.",
   "boats.csv":
-    "The shop's boats: the seats each sells, the passenger limit on its Coast Guard certificate when the shop recorded one, and the dates its next inspection is due and its registration and insurance expire. Every date is a calendar day the shop typed; an empty one was never recorded.",
+    "The shop's boats: the seats each sells, the passenger limit on its certificate when the shop recorded one, and the dates its next safety inspection is due and its registration and insurance expire. Every date is a calendar day the shop typed; an empty one was never recorded.",
   "trip_lenses.csv":
     "The shop's trip tags, as they appear on its public schedule. trips.csv points at one by lens_id.",
   "contacts.csv":
@@ -147,7 +147,7 @@ export const EXPORT_FILE_NOTES = {
   "notification_deliveries.csv":
     'Whether each diver actually got each message the shop sent them — booking confirmation, waiver request, trip reminder, conditions hold, recap — with what the email or SMS provider said came of it and, when something went wrong, why. One row per booking and message kind: a resend overwrites in place rather than appending, so this is the latest outcome per message, not a send history. It is here because "did this diver ever get their waiver request" is a question a shop has to be able to answer about its own past, sometimes years later, and no other file in this bundle can. The retry queue and rate-limit state behind it are not included — those are plumbing.',
   "orders.csv":
-    "Shop-issued orders with their Stripe invoice references — reconcilable against the shop's own Stripe account, which stays the shop's. collection says how the money was taken: stripe_invoice, or cash and card_machine for a payment taken at the counter, which has no Stripe reference.",
+    "Shop-issued orders with their Stripe invoice references — reconcilable against the shop's own Stripe account, which stays the shop's. collection says how the money was taken: stripe_invoice, or cash and card_machine for a payment taken at the counter, which has no Stripe reference. source is staff for an order someone on the staff raised and public for one a diver bought on the shop's own pages; a public order names the diver as its creator, because nobody on the staff raised it.",
   "order_line_items.csv": "The lines on each order (trip fees, courses, rentals, nitrox, retail).",
   "work_order_bills.csv":
     "Which order billed which service ticket, one row per bill. A ticket whose bill was voided can be billed again, so a ticket may have more than one row; the newest is its bill. The money itself is in orders.csv and order_line_items.csv.",

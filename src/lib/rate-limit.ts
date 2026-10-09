@@ -518,7 +518,7 @@ export const RATE_LIMITS = {
   /** Starting a post-trip tip checkout, per recap token. */
   tipStart: perHour(10),
   /**
-   * Buying a dive package from the public pages, per IP and per email. Each
+   * Buying a dive package from the public pages, per IP and per shop and email. Each
    * attempt raises a Stripe invoice on the shop's account, so a visitor who
    * keeps tapping Buy is bounded well below "cluttering the Orders index".
    */

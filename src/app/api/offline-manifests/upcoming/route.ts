@@ -1,9 +1,11 @@
 import { loadActiveStaffRoles } from "@/db/authz";
+import { departureBoatSafetyFor } from "@/db/boat-safety";
 import { getDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { getShopById } from "@/db/shops";
 import { listTripIdsInOfflineManifestWindow } from "@/db/trips";
+import { boatSafetySection } from "@/i18n/boat-safety-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -110,6 +112,24 @@ export async function GET() {
       const checks = checklistItems.length
         ? await latestPreDepartureChecksForTrip(db, shop.id, tripId)
         : new Map();
+      // The boat's papers and kit, worded as the Boat tab words them, so a
+      // copy primed here says what the one saved from the page says.
+      const departure = manifests[0];
+      const boatSafety = departure
+        ? boatSafetySection(
+            t,
+            await departureBoatSafetyFor(db, shop.id, {
+              tripId,
+              startsAt: departure.trip.startsAt,
+              timeZone: shop.timezone,
+              now,
+              passengers: {
+                booked: departure.summary.totalDivers,
+                boarded: departure.summary.boarded,
+              },
+            }),
+          )
+        : null;
       return serializeManifests(
         manifests,
         shopIdentity,
@@ -119,6 +139,7 @@ export async function GET() {
           label: item.label,
           check: checks.get(item.id),
         })),
+        boatSafety,
       );
     }),
   );

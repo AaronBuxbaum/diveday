@@ -634,6 +634,13 @@ export const tripLastMinutePromos = pgTable(
     code: text("code").notNull(),
     stripeCouponId: text("stripe_coupon_id"),
     stripePromotionCodeId: text("stripe_promotion_code_id"),
+    /**
+     * The redemption cap Stripe was given: the departure's open seats when the
+     * deal went out. Kept so the checkout can hold the same cap where Stripe
+     * cannot see it (a pass-through fee's one-off coupon). Null on a deal sent
+     * before this column existed.
+     */
+    maxRedemptions: integer("max_redemptions"),
     /** Pinned to the trip's departure at creation; a later reschedule does not move it. */
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     /** How many last-minute-list entries the blast email actually went to. */

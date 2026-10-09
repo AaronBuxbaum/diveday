@@ -14,7 +14,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 
 const { getDb } = await import("@/db/client");
 const { orders, paymentDisputes, people } = await import("@/db/schema");
-const { OrderDisputeBanner } = await import("./OrderMeta");
+const { OrderDisputeBanner, OrderMeta } = await import("./OrderMeta");
 
 /** A seeded paid order with an undecided dispute on it. */
 async function disputedOrder() {
@@ -78,5 +78,33 @@ describe("OrderDisputeBanner", () => {
       locale: "en-US",
     });
     expect(banner).toBeNull();
+  });
+});
+
+describe("OrderMeta", () => {
+  async function metaText(createdBy: { name: string | null; online: boolean }) {
+    const { order, shop } = await disputedOrder();
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { staffTranslator } = await import("@/i18n/staff-messages");
+    const element = await OrderMeta({
+      order,
+      personId: order.personId,
+      createdBy,
+      shopSlug: shop.slug,
+      locale: "en-US",
+      timezone: "UTC",
+      t: staffTranslator("en-US"),
+    });
+    return renderToStaticMarkup(element);
+  }
+
+  it("says a diver's own purchase was bought online, never that they raised it", async () => {
+    const html = await metaText({ name: "Ola Online", online: true });
+    expect(html).toContain("bought online");
+    expect(html).not.toContain("by Ola Online");
+  });
+
+  it("names the staffer who raised an order", async () => {
+    expect(await metaText({ name: "Dana Desk", online: false })).toContain("by Dana Desk");
   });
 });

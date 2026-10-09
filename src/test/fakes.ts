@@ -70,7 +70,7 @@ export function fakeCheckout(overrides: Partial<CheckoutProvider> = {}): Checkou
         // A fresh session has no Customer yet: Stripe mints one only
         // `if_required`, i.e. when the session settles (issue #1621).
         stripeCustomerId: null,
-        expiresAt: new Date(nowMs() + DAY_MS),
+        expiresAt: request.expiresAt ?? new Date(nowMs() + DAY_MS),
       };
     },
     async retrieveCheckoutSession(): Promise<CheckoutSessionLookupResult> {

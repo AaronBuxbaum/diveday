@@ -54,6 +54,7 @@
     "diverRecord": "Diver record",
     "raisedOn": "Raised {date}",
     "createdBy": "by {name}",
+    "boughtOnline": "bought online",
     "status": {
       "open": "Open — awaiting payment",
       "paid": "Paid",

@@ -54,6 +54,7 @@
     "diverRecord": "Ficha del buceador",
     "raisedOn": "Emitido el {date}",
     "createdBy": "por {name}",
+    "boughtOnline": "comprado en línea",
     "status": {
       "open": "Abierto — pendiente de pago",
       "paid": "Pagado",

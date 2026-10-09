@@ -512,6 +512,14 @@ export const shopStripeAccounts = pgTable(
   (table) => [uniqueIndex("shop_stripe_accounts_stripe_account_unique").on(table.stripeAccountId)],
 );
 
+/**
+ * How an order came to exist: raised by someone on the staff, or bought by a
+ * diver on the shop's public pages (ADR 20260822-a-package-is-entitlements-not-money).
+ * Recorded at insert so the order page never has to guess it from whoever
+ * holds which role today.
+ */
+export const orderSource = pgEnum("order_source", ["staff", "public"]);
+
 export const orderStatus = pgEnum("order_status", [
   "open",
   "paid",
@@ -588,6 +596,12 @@ export const orders = pgTable(
       .notNull()
       .references(() => people.id),
     status: orderStatus("status").notNull().default("open"),
+    /**
+     * `public` for a diver's own purchase on the shop's pages, where
+     * `created_by_person_id` is the diver themselves; `staff` for everything a
+     * staffer raised.
+     */
+    source: orderSource("source").notNull().default("staff"),
     currency: text("currency").notNull(),
     totalCents: integer("total_cents").notNull(),
     /** Shop-configured conservation/park fee charged separately per diver. */
@@ -1189,6 +1203,15 @@ export const paymentOperationIntents = pgTable(
     orderId: uuid("order_id").references(() => orders.id),
     /** Reserved for a future refund path that has a booking_checkouts row in hand; no caller sets this today. */
     checkoutId: uuid("checkout_id").references(() => bookingCheckouts.id),
+    /**
+     * The capped discount a checkout_session attempt is spending, written under
+     * the promo's advisory lock before Stripe is called. A `started` intent
+     * carrying one is a reservation against the cap (`discountCapReached`,
+     * src/db/promo-caps.ts), so two attempts at a code's last use cannot both
+     * reach Stripe. At most one of the two is set.
+     */
+    promoCodeId: uuid("promo_code_id").references(() => shopPromoCodes.id),
+    tripPromoId: uuid("trip_promo_id").references(() => tripLastMinutePromos.id),
     /** The Stripe object id once known, even if the local finalize write then failed. */
     stripeObjectId: text("stripe_object_id"),
     errorMessage: text("error_message"),
@@ -1213,6 +1236,10 @@ export const paymentOperationIntents = pgTable(
     index("payment_operation_intents_stale_scan_idx")
       .on(table.kind, table.startedAt)
       .where(sql`${table.status} = 'started'`),
+    check(
+      "payment_operation_intents_single_promo",
+      sql`${table.promoCodeId} is null or ${table.tripPromoId} is null`,
+    ),
   ],
 );
 

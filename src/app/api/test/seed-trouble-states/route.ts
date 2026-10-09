@@ -430,9 +430,9 @@ export async function POST(request: Request) {
       ? await carrySomebodyWhoIsNotDiving(db, shop.id, actor.id, now)
       : null;
 
-  // Opt-in: a boat with lapsing safety kit and too many people for its
-  // certificate is a warning panel on that departure's Boat tab and an owner
-  // row on Today — exactly the standing warning the demo must not carry. The
+  // Opt-in: a boat with lapsing safety kit, no O2 kit aboard and too many
+  // people for its certificate is a danger panel on that departure's Boat tab
+  // and a row on Today — exactly the standing warning the demo must not carry. The
   // captures that want the panel ask for it, and address the departure by id.
   const boatSafety =
     new URL(request.url).searchParams.get("boatSafety") === "1"
@@ -551,6 +551,10 @@ async function letTheReefBoatsKitLapse(
       nextDueOn: shiftCalendarDate(today, unit.dueIn),
     });
   }
+  // The shop's O2 kit left on the shelf: the shop keeps one, and this hull
+  // sails without it — the must-carry line, in danger ink.
+  const shelved = { kind: "o2_kit", tag: "O2 (shop)" } as const;
+  await createGearItem(db, { shopId, kind: shelved.kind, label: shelved.tag });
   return { tripId: reef.id, boatName: boat.name };
 }
 

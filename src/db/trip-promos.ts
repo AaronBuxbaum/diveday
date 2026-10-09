@@ -189,6 +189,9 @@ export async function sendLastMinuteDealBlast(
       ...promoDiscountColumns(discount),
       code,
       expiresAt: tripRow.startsAt,
+      // The cap Stripe is about to be given, kept so the checkout can hold the
+      // same cap on the path Stripe cannot see (src/db/promo-caps.ts).
+      maxRedemptions: openSeats,
       createdByPersonId: input.createdByPersonId,
     })
     .returning();

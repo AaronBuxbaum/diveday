@@ -4,7 +4,7 @@
   "src/app/onboard/page.tsx": 479,
   "src/app/page.tsx": 592,
   "src/app/pricing/page.tsx": 504,
-  "src/app/ready/[token]/page.tsx": 1728,
+  "src/app/ready/[token]/page.tsx": 1644,
   "src/app/s/[shopSlug]/page.tsx": 1351,
   "src/app/s/[shopSlug]/trips/[id]/page.tsx": 877,
   "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
@@ -26,7 +26,7 @@
   "src/app/shop/[shopSlug]/settings/team/page.tsx": 873,
   "src/app/shop/[shopSlug]/staffing/page.tsx": 626,
   "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
-  "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1138,
+  "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1134,
   "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1185,
   "src/app/waivers/[token]/page.tsx": 1404
 }

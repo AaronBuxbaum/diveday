@@ -691,7 +691,7 @@ export async function bookSpot(
         })
         .filter((line): line is NonNullable<typeof line> => line !== null)
     : [];
-  const checkoutUrl = await startCheckoutUrl(dbi, {
+  const started = await startCheckoutUrl(dbi, {
     shopId: shopNow.id,
     tripId,
     bookingIds: outcome.bookings.map((entry) => entry.bookingId),
@@ -719,6 +719,7 @@ export async function bookSpot(
       : undefined,
     gearLines,
   });
+  const checkoutUrl = started.url;
   if (checkoutUrl) {
     revalidatePath(base);
     // Inside the embed the frame stays put: Stripe's hosted page refuses to be
@@ -729,6 +730,11 @@ export async function bookSpot(
     // the real page, stated").
     if (embed) redirect(`${landing}&pay=due`);
     redirect(checkoutUrl);
+  }
+  // The seats are booked either way; a code with nothing left to give is said
+  // where the diver lands, so they can pay the full fare from there.
+  if (started.promoUsedUp) {
+    revalidateAndRedirect(base, `${landing}${landing.includes("?") ? "&" : "?"}pay=code-used-up`);
   }
   revalidateAndRedirect(base, landing);
 }
@@ -775,7 +781,11 @@ async function creditBuddyReferral(
   }
 }
 
-/** The hosted payment page for these fresh bookings, or null when pay-at-booking can't run. */
+/**
+ * The hosted payment page for these fresh bookings, or a null url when
+ * pay-at-booking can't run — with `promoUsedUp` when the reason is a capped
+ * code that has nothing left.
+ */
 async function startCheckoutUrl(
   dbi: Awaited<ReturnType<typeof getDb>>,
   input: {
@@ -797,9 +807,9 @@ async function startCheckoutUrl(
     /** Priced gear a diver chose at booking, threaded straight to `startBookingCheckout`. */
     gearLines?: Array<{ bookingId: string; description: string; amountCents: number }>;
   },
-): Promise<string | null> {
+): Promise<{ url: string | null; promoUsedUp: boolean }> {
   const origin = publicAppUrl();
-  if (!origin || !input.customerEmail) return null;
+  if (!origin || !input.customerEmail) return { url: null, promoUsedUp: false };
   const returnBase = `${origin}${input.landing}`;
   // The hosted Stripe line's words come from the diver's bundle, not from
   // `src/db` (docs ADR 20260731-domain-layer-copy-leaks). Both callers of this
@@ -823,7 +833,10 @@ async function startCheckoutUrl(
     gearLines: input.gearLines,
     describeLine: (parts) => describeCheckoutLine(t, parts),
   }).catch(() => null);
-  return outcome?.ok ? (outcome.checkout.checkoutUrl ?? null) : null;
+  return {
+    url: outcome?.ok ? (outcome.checkout.checkoutUrl ?? null) : null,
+    promoUsedUp: outcome?.ok === false && outcome.reason === "promo_used_up",
+  };
 }
 
 export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formData: FormData) {

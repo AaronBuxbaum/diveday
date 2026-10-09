@@ -39,7 +39,7 @@ cannot see it.
 | Booking | same file, `bookSpot` | IP | `RATE_LIMITS.booking` (10/hour) |
 | Booking-confirmation actions (rental fit, pay, "sign your waiver now") | same file, `confirmContextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Last-minute-list join | `src/app/s/[shopSlug]/actions.ts` | IP, **and** the address any certification claim is *about* | `RATE_LIMITS.lastMinuteListJoin` (10/hour) + `RATE_LIMITS.declarationByPerson` (5/hour) |
-| Buying a dive package online | `src/app/s/[shopSlug]/packages/actions.ts` | IP **and** the email typed | `RATE_LIMITS.packagePurchaseByIp` (10/hour) + `RATE_LIMITS.packagePurchaseByEmail` (5/hour) |
+| Buying a dive package online | `src/app/s/[shopSlug]/packages/actions.ts` | IP **and** the shop plus the email typed | `RATE_LIMITS.packagePurchaseByIp` (10/hour) + `RATE_LIMITS.packagePurchaseByEmail` (5/hour) |
 | Course inquiry | `src/app/s/[shopSlug]/courses/[slug]/actions.ts` | IP | `RATE_LIMITS.courseInquiry` (10/hour) |
 | Self-registration (the counter QR) | `src/app/s/[shopSlug]/register/actions.ts` | IP | `RATE_LIMITS.selfRegisterByIp` (10/hour) |
 | Self-registration (the counter QR) | `src/app/s/[shopSlug]/register/actions.ts` | shop | `RATE_LIMITS.selfRegisterByShop` (120/hour) |

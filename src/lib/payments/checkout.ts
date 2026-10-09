@@ -69,6 +69,13 @@ export type CreateCheckoutSessionRequest = {
    * caller picks one, and Stripe would apply both if given both.
    */
   promotionCouponId?: string;
+  /**
+   * When the hosted page stops being payable, if sooner than Stripe's 24-hour
+   * default. Set for a session spending a capped discount's one-off coupon, so
+   * an abandoned page holds the cap for minutes rather than a day. Stripe
+   * refuses anything under 30 minutes out.
+   */
+  expiresAt?: Date;
   /** Opt-in Stripe Tax. When enabled, every line is tax-exclusive. */
   taxEnabled?: boolean;
 };
@@ -238,6 +245,9 @@ export function stripeCheckoutProvider(
           }
           form.set(`line_items[${index}][quantity]`, String(line.quantity));
         });
+        if (request.expiresAt) {
+          form.set("expires_at", String(Math.floor(request.expiresAt.getTime() / 1000)));
+        }
         if (request.promotionCouponId) {
           form.set("discounts[0][coupon]", request.promotionCouponId);
         } else if (request.promotionCode) {

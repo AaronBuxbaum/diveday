@@ -790,7 +790,7 @@ export default async function TripDetailPage({
                   confirmed={confirmed}
                   readinessLink={readinessLink}
                   emailsOnTheWay={emailsOnTheWay}
-                  payCancelled={pay === "cancelled"}
+                  payNotice={pay}
                   paymentUrl={
                     pay === "due"
                       ? ((await getLatestCheckoutForBooking(db, shop.id, confirmed.booking.id))
