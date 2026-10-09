@@ -1,6 +1,7 @@
 import { MINUTE_MS } from "@/lib/clock";
 // Dependency-free, like `./roll-call` below — see the note there.
 import { type ArrivalStatus, latestArrival } from "./arrival";
+import type { CalendarDate } from "./calendar-date";
 import { nowDate } from "./clock";
 import type { EmergencyReference } from "./emergency-reference";
 // Dependency-free too (type-only imports), for the same reason.
@@ -23,6 +24,7 @@ import {
   rollCallCheckpoints,
 } from "./roll-call";
 import { hasSailed } from "./trips";
+import { medicalWarningDays } from "./waivers";
 
 /**
  * Bumped whenever the snapshot shape changes. It is the AES-GCM additional
@@ -348,10 +350,12 @@ export type OfflineManifestPayload = {
           notHere?: boolean;
           /**
            * **The two medical warnings the live roll call shows** (issue
-           * #2163), as dates and nothing else: when a physician refused an
-           * earlier release this one stands over (`overriddenRefusal`, H-98),
-           * and when a referral this release replaced rather than answered
-           * was made (`overriddenReferralAt`, issue #1282). The words are the
+           * #2163), as calendar days in the shop's zone and nothing else: the
+           * day a physician refused an earlier release this one stands over
+           * (`overriddenRefusal`, H-98), and the day of a referral this release
+           * replaced rather than answered (`overriddenReferralAt`, issue
+           * #1282). `medicalWarningDays` (src/lib/waivers.ts) derives both, for
+           * this copy and the live roll call alike. The words are the
            * live manifest's own (`manifest.medicalEarlierRefusal`,
            * `manifest.medicalReferralUnresolved`), resolved by the viewer.
            *
@@ -376,8 +380,9 @@ export type OfflineManifestPayload = {
            * which is how every copy read before this change.
            */
           medicalWarnings?: {
-            earlierRefusalAt?: string;
-            referralUnresolvedAt?: string;
+            /** The physician's evaluation day, else the day the "no" was recorded. */
+            refusedOn?: CalendarDate;
+            referredOn?: CalendarDate;
           };
           /** Dropped at save time; the dock does not need it (kept for shape parity). */
           email: null;
@@ -913,7 +918,7 @@ export function serializeManifests(
         notHere: diver.notHere,
         // Dates only, and absent when there is nothing to warn about: see the
         // allow-list type above.
-        ...offlineMedicalWarnings(diver.medicalWaiver),
+        ...offlineMedicalWarnings(diver.medicalWaiver, shop.timezone),
         // Names only, never a teammate's booking or person id — the dock copy
         // displays teams and must stay unable to compute divergence from a
         // snapshot.
@@ -945,22 +950,16 @@ export function serializeManifests(
 }
 
 /**
- * The dock copy's medical warnings for one diver (issue #2163): the two dates
- * the live roll call warns on, read off the medical mark, and nothing else of
- * it. An empty object when there is neither, so the spread writes no field.
+ * The dock copy's medical warnings for one diver (issue #2163): the two days
+ * the live roll call warns on, and nothing else of the mark. An empty object
+ * when there is neither, so the spread writes no field.
  */
-function offlineMedicalWarnings(mark: TripManifest["divers"][number]["medicalWaiver"]): {
-  medicalWarnings?: NonNullable<OfflineDiverRow["medicalWarnings"]>;
-} {
-  const earlierRefusalAt = mark?.overriddenRefusal?.at.toISOString();
-  const referralUnresolvedAt = mark?.overriddenReferralAt?.toISOString();
-  if (!earlierRefusalAt && !referralUnresolvedAt) return {};
-  return {
-    medicalWarnings: {
-      ...(earlierRefusalAt ? { earlierRefusalAt } : {}),
-      ...(referralUnresolvedAt ? { referralUnresolvedAt } : {}),
-    },
-  };
+function offlineMedicalWarnings(
+  mark: TripManifest["divers"][number]["medicalWaiver"],
+  timeZone: string,
+): { medicalWarnings?: NonNullable<OfflineDiverRow["medicalWarnings"]> } {
+  const days = medicalWarningDays(mark, timeZone);
+  return days.refusedOn || days.referredOn ? { medicalWarnings: days } : {};
 }
 
 type OfflineDiverRow = OfflineManifestPayload["manifests"][number]["divers"][number];

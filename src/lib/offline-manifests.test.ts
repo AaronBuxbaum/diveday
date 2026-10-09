@@ -1159,9 +1159,11 @@ describe("offline manifest policy", () => {
           },
         }),
       );
+      // Calendar days in the shop's zone — the same derivation the live roll
+      // call prints (`medicalWarningDays`), never an instant.
       expect(payload.manifests[0]?.divers[0]?.medicalWarnings).toEqual({
-        earlierRefusalAt: "2026-05-02T13:00:00.000Z",
-        referralUnresolvedAt: "2026-06-10T14:00:00.000Z",
+        refusedOn: "2026-05-02",
+        referredOn: "2026-06-10",
       });
       const json = JSON.stringify(payload);
       expect(json).not.toContain("refused-record-secret");
@@ -1175,14 +1177,28 @@ describe("offline manifest policy", () => {
       expect(
         save(mark({ overriddenReferralAt: new Date("2026-06-10T14:00:00.000Z") })).manifests[0]
           ?.divers[0]?.medicalWarnings,
-      ).toEqual({ referralUnresolvedAt: "2026-06-10T14:00:00.000Z" });
+      ).toEqual({ referredOn: "2026-06-10" });
       expect(
         save(
           mark({
             overriddenRefusal: { recordId: "r", at: new Date("2026-05-02T13:00:00.000Z") },
           }),
         ).manifests[0]?.divers[0]?.medicalWarnings,
-      ).toEqual({ earlierRefusalAt: "2026-05-02T13:00:00.000Z" });
+      ).toEqual({ refusedOn: "2026-05-02" });
+    });
+
+    it("dates a refusal by the physician's evaluation day", () => {
+      expect(
+        save(
+          mark({
+            overriddenRefusal: {
+              recordId: "r",
+              at: new Date("2026-05-20T13:00:00.000Z"),
+              evaluatedOn: "2026-05-02",
+            },
+          }),
+        ).manifests[0]?.divers[0]?.medicalWarnings,
+      ).toEqual({ refusedOn: "2026-05-02" });
     });
 
     it("writes no medical field at all for a diver with no warning", () => {

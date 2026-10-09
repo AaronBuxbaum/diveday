@@ -142,25 +142,37 @@ describe("the offline manifest's sections", () => {
     const copy = savedCopy();
     const [first, second] = copy.snapshot.manifests[0]?.divers ?? [];
     if (!first || !second) throw new Error("fixture divers missing");
-    first.medicalWarnings = {
-      earlierRefusalAt: "2026-05-02T16:00:00.000Z",
-      referralUnresolvedAt: "2026-06-10T16:00:00.000Z",
-    };
+    first.medicalWarnings = { refusedOn: "2026-05-02", referredOn: "2026-06-10" };
     const trip = offlineTripView(copy, "departure");
     if (!trip) throw new Error("the fixture carries a manifest");
     const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
     const warned = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
-    expect(warned).toContain("Doctor said no before");
+    expect(warned).toContain("Physician said no before");
+    // Ranked after the refusal, as on the live roll call: one capsule.
+    expect(warned).not.toContain("Referral not cleared");
     expect(warned).toContain("Contact, gear & medical");
     expect(warned).toMatch(
-      /A physician did not clear this diver on Sat,\sMay\s2 \(earlier waiver\)/,
+      /A physician did not clear this diver on May\s2,\s2026 \(earlier waiver\)/,
     );
     expect(warned).toMatch(
-      /Re-signed after a referral with no physician clearance on file \(Wed,\sJun\s10\)/,
+      /Re-signed after a referral with no physician clearance on file \(referred Jun\s10,\s2026\)/,
     );
     const plain = container.querySelector("#offline-roll-call-b-marcus")?.textContent ?? "";
     expect(plain).not.toContain("physician");
     expect(plain).not.toContain("medical");
+  });
+
+  it("shows the referral capsule when there is no refusal", () => {
+    const copy = savedCopy();
+    const [first] = copy.snapshot.manifests[0]?.divers ?? [];
+    if (!first) throw new Error("fixture diver missing");
+    first.medicalWarnings = { referredOn: "2026-06-10" };
+    const trip = offlineTripView(copy, "departure");
+    if (!trip) throw new Error("the fixture carries a manifest");
+    const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+    const row = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
+    expect(row).toContain("Referral not cleared");
+    expect(row).not.toContain("Physician said no before");
   });
 
   it("never shows a held seat's medical warnings", () => {
@@ -168,13 +180,13 @@ describe("the offline manifest's sections", () => {
     const [first] = copy.snapshot.manifests[0]?.divers ?? [];
     if (!first) throw new Error("fixture diver missing");
     first.identityWithheld = true;
-    first.medicalWarnings = { earlierRefusalAt: "2026-05-02T16:00:00.000Z" };
+    first.medicalWarnings = { refusedOn: "2026-05-02" };
     const trip = offlineTripView(copy, "departure");
     if (!trip) throw new Error("the fixture carries a manifest");
     const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
     const row = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
     expect(row).not.toContain("physician");
-    expect(row).not.toContain("Doctor said no before");
+    expect(row).not.toContain("Physician said no before");
   });
 
   it("draws the crew half under its own heading", () => {

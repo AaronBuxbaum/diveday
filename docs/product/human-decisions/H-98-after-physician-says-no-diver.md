@@ -17,6 +17,6 @@ Whether a clean new release clears the diver on its own.
 
 ## Unblocks / follow-up
 
-The offline manifest carries no medical warnings yet (#2163).
+The offline manifest carries the warning too, as the physician's evaluation day and nothing else of the record (#2163). The live and offline roll calls both put it on the row as a capsule, ahead of an unresolved-referral capsule.
 
 Part of the [human decision log](README.md#decision-register).

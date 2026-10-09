@@ -489,7 +489,7 @@ describe("the earlier-refusal capsule", () => {
     clearance: null,
     guardian: null,
   } as unknown as TripManifest["divers"][number]["medicalWaiver"];
-  const CAPSULE = "Doctor said no before";
+  const CAPSULE = "Physician said no before";
 
   function capsuleOf(container: HTMLElement) {
     return container.querySelector(".basis-full");
@@ -555,6 +555,62 @@ describe("the earlier-refusal capsule", () => {
     expect(row.querySelector(".basis-full")).toHaveTextContent(CAPSULE);
     expect(row.querySelector(".basis-full")).not.toHaveTextContent("Minor");
     expect(screen.getAllByText("Minor · age 13").length).toBeGreaterThan(0);
+  });
+
+  it("dates the refusal by the physician's evaluation, with the year", () => {
+    const evaluated = {
+      ...refusedBefore,
+      overriddenRefusal: {
+        recordId: "w-refused",
+        at: new Date("2026-08-20T12:00:00.000Z"),
+        evaluatedOn: "2026-08-03",
+      },
+    } as TripManifest["divers"][number]["medicalWaiver"];
+    const { container } = renderList({ divers: [diver({ medicalWaiver: evaluated })] });
+    expect(container.textContent).toMatch(/did not clear this diver on Aug\s3,\s2026/);
+  });
+});
+
+/**
+ * **A release standing over a referral nobody answered gets a row capsule
+ * too** (dive-domain review of #2163), ranked just after the earlier refusal.
+ */
+describe("the unresolved-referral capsule", () => {
+  const referred = {
+    at: new Date("2026-09-01T12:00:00.000Z"),
+    source: "digital",
+    overriddenReferralAt: new Date("2026-06-11T02:00:00.000Z"),
+    overriddenRefusal: null,
+    clearance: null,
+    guardian: null,
+  } as unknown as TripManifest["divers"][number]["medicalWaiver"];
+
+  it("puts a warning capsule on the row, and dates the referral with its year", () => {
+    const { container } = renderList({ divers: [diver({ medicalWaiver: referred })] });
+    expect(container.querySelector(".basis-full")).toHaveTextContent("Referral not cleared");
+    expect(container.textContent).toMatch(
+      /no physician clearance on file \(referred Jun\s10,\s2026\)/,
+    );
+  });
+
+  it("yields to an earlier refusal, which keeps the capsule", () => {
+    const both = {
+      ...referred,
+      overriddenRefusal: { recordId: "w", at: new Date("2026-05-02T16:00:00.000Z") },
+    } as TripManifest["divers"][number]["medicalWaiver"];
+    const { container } = renderList({ divers: [diver({ medicalWaiver: both })] });
+    expect(container.querySelector(".basis-full")).toHaveTextContent("Physician said no before");
+    expect(container.querySelector(".basis-full")).not.toHaveTextContent("Referral not cleared");
+  });
+
+  it("is short in Spanish too", () => {
+    const { container } = renderList({
+      divers: [diver({ medicalWaiver: referred })],
+      locale: "es-ES",
+    });
+    const text = container.querySelector(".basis-full")?.textContent ?? "";
+    expect(text.length).toBeGreaterThan(0);
+    expect(text.length).toBeLessThanOrEqual(24);
   });
 });
 

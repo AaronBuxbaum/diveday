@@ -6,7 +6,7 @@ import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallLabelText } from "@/i18n/manifest-labels";
 import { readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
-import { formatShortDate } from "@/lib/format";
+import { formatCalendarDate } from "@/lib/calendar-date";
 import { isHeldSeat } from "@/lib/held-seat";
 import { rollCallLabel, rollCallRecordedTone, rollCallRowState } from "@/lib/manifests";
 import { joinedDiving, leftDiving } from "@/lib/participant-types";
@@ -115,8 +115,7 @@ function OfflineDiverRow({
   // held seat never carries them, and the facts block below says why instead.
   const withheld = diver.identityWithheld || isHeldSeat(diver);
   const medicalWarnings = withheld ? undefined : diver.medicalWarnings;
-  const warningDate = (iso: string) =>
-    formatShortDate(new Date(iso), locale, view.envelope.snapshot.shop.timezone);
+  const warningDate = (day: string) => formatCalendarDate(day, locale);
   const stateWord = `${rollCallLabelText(t, rollCallLabel(checkpoint, state))}${
     state?.pending ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}` : ""
   }`;
@@ -204,8 +203,10 @@ function OfflineDiverRow({
             {/* The live roll call's capsule for the same fact (H-98): a
               physician refused an earlier release. Never a block; the
               crew at the rail decides with it in view. */}
-            {medicalWarnings?.earlierRefusalAt ? (
+            {medicalWarnings?.refusedOn ? (
               <Badge tone="warning">{t("manifest.medicalEarlierRefusalChip")}</Badge>
+            ) : medicalWarnings?.referredOn ? (
+              <Badge tone="warning">{t("manifest.medicalReferralUnresolvedChip")}</Badge>
             ) : null}
             {/* Snorkeler or rider, as on the live roll call (ADR
               20261007-participant-types). Every row is still called;
@@ -322,17 +323,17 @@ function OfflineDiverRow({
                     (`DiverRollCall.tsx` under `/manifest`). */}
                   {medicalWarnings ? (
                     <p>
-                      {medicalWarnings.earlierRefusalAt ? (
+                      {medicalWarnings.refusedOn ? (
                         <span className="block font-medium text-warning-strong">
                           {t("manifest.medicalEarlierRefusal", {
-                            date: warningDate(medicalWarnings.earlierRefusalAt),
+                            date: warningDate(medicalWarnings.refusedOn),
                           })}
                         </span>
                       ) : null}
-                      {medicalWarnings.referralUnresolvedAt ? (
+                      {medicalWarnings.referredOn ? (
                         <span className="mt-0.5 block font-medium text-warning-strong">
                           {t("manifest.medicalReferralUnresolved", {
-                            date: warningDate(medicalWarnings.referralUnresolvedAt),
+                            date: warningDate(medicalWarnings.referredOn),
                           })}
                         </span>
                       ) : null}
