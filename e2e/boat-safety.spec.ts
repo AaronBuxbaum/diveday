@@ -14,7 +14,8 @@ function boatRow(page: Page, name: string) {
 
 /**
  * **The boat as a machine with papers and an emergency kit** (roadmap N-08,
- * N-10). The owner records the reef boat's certificate and an insurance date
+ * N-10). The owner is refused a certificate under the seats on sale (H-107),
+ * then records the reef boat's real certificate and an insurance date
  * that has already passed, hangs an AED aboard it with pads twelve days from
  * expiry, and the departure that sails today on that boat says all three
  * things above its boat check. The insurance, being expired, is an owner row
@@ -35,17 +36,37 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   test.setTimeout(60_000);
   const shop = `/shop/${privateShop.slug}`;
 
-  // 1. Settings, Boats: the certificate and a lapsed insurance date.
+  // 1. Settings, Boats. H-107: a certificate under the fourteen seats the
+  //    boat sells is refused on the row, and nothing is saved…
   await page.goto(`${shop}/settings/boats`);
   const row = boatRow(page, BOAT);
   await row.getByLabel("Passenger limit on the boat’s certificate").fill("10");
-  await row.getByLabel("Insurance expires").fill(daysFromNow(-3));
   await row.getByRole("button", { name: "Save boat" }).click();
+  const refused = boatRow(page, BOAT).getByRole("alert");
+  await expect(refused).toHaveText(
+    "The certificate allows 10 passengers, so this boat can’t sell 14. Lower the seats, or correct the certificate.",
+  );
+  await expect(
+    boatRow(page, BOAT).getByLabel("Passenger limit on the boat’s certificate"),
+  ).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByRole("status").filter({ hasText: "Boat updated." })).toHaveCount(0);
+
+  //    …and so are fewer seats under it while today's departure still sells
+  //    fourteen on this hull.
+  await boatRow(page, BOAT).getByLabel("Capacity (seats)").fill("12");
+  await boatRow(page, BOAT).getByLabel("Passenger limit on the boat’s certificate").fill("12");
+  await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
+  await expect(boatRow(page, BOAT).getByRole("alert")).toHaveText(
+    /upcoming departures? on this boat sells? more seats than the certificate’s 12\./,
+  );
+
+  //    The certificate the boat really carries, and a lapsed insurance date.
+  await boatRow(page, BOAT).getByLabel("Passenger limit on the boat’s certificate").fill("14");
+  await boatRow(page, BOAT).getByLabel("Insurance expires").fill(daysFromNow(-3));
+  await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Boat updated." })).toBeVisible();
   await expect(boatRow(page, BOAT).getByText("Insurance expired 3 days ago")).toBeVisible();
-  await expect(
-    boatRow(page, BOAT).getByText(/seats on sale; the certificate allows 10\./),
-  ).toBeVisible();
+  await expect(boatRow(page, BOAT).getByRole("alert")).toHaveCount(0);
 
   // 2. The gear register: an AED, aboard the boat, with its pads' date.
   await page.goto(`${shop}/gear`);
@@ -76,9 +97,6 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   await page.goto(reefManifest);
   const section = page.getByRole("region", { name: `${BOAT}: papers and safety kit` });
   await expect(section).toBeVisible();
-  await expect(
-    section.getByText(/people booked; the boat’s certificate allows 10\./),
-  ).toBeVisible();
   await expect(section.getByText("Insurance expired 3 days ago")).toBeVisible();
   await expect(section.getByText("AED e2e: pads expire in 12 days")).toBeVisible();
   await page.emulateMedia({ media: "print" });

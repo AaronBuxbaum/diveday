@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, isNull, lte } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, lte, ne } from "drizzle-orm";
 import { canSayRunningLate, RUNNING_LATE_LEAD_MS } from "@/lib/running-late";
 import type { AppDb } from "./client";
 import { bookings, people, trips } from "./schema";
@@ -90,12 +90,31 @@ async function stamp(
     : { status: "closed" };
 }
 
-/** The `/ready` button: this exact seat, which the signed link already named. */
+/**
+ * The `/ready` button: this exact seat, which the signed link already named —
+ * and, when it is a party organizer's, the party's other seats on the same
+ * boat that can still say it. The organizer typed every one of those names
+ * and they travel together; a desk that saw one of a family of four late and
+ * three blanks would be reading a guess. The outcome is the organizer's own.
+ */
 export async function markBookingRunningLate(
   db: AppDb,
   input: { shopId: string; bookingId: string; now: Date },
 ): Promise<RunningLateOutcome> {
-  return stamp(db, input.shopId, input.bookingId, input.now);
+  const own = await stamp(db, input.shopId, input.bookingId, input.now);
+  if (own.status !== "marked") return own;
+  const party = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.partyLeadBookingId, input.bookingId),
+        eq(bookings.status, "booked"),
+      ),
+    );
+  for (const seat of party) await stamp(db, input.shopId, seat.id, input.now);
+  return own;
 }
 
 /**
@@ -144,7 +163,8 @@ export async function markPersonRunningLate(
 /**
  * A `LATE` text to DiveDay's one number. The carrier vouches for the phone and
  * nothing names a shop, so this finds **the soonest open seat held under
- * exactly that number, in any shop**: every writer of `people.phone` stores
+ * exactly that number, in any shop**, and every other seat on that same
+ * departure held under it: every writer of `people.phone` stores
  * E.164 (`storedPhone`), the same digits the carrier reports. A number on two
  * divers' records, or on none, finds what it finds — the statement gates
  * nothing, and no answer goes back over SMS (ADR 20260907-two-way-inbox,
@@ -155,7 +175,7 @@ export async function markPhoneRunningLate(
   input: { phone: string; now: Date },
 ): Promise<RunningLateOutcome> {
   const [next] = await db
-    .select({ bookingId: bookings.id, shopId: bookings.shopId })
+    .select({ bookingId: bookings.id, shopId: bookings.shopId, tripId: bookings.tripId })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -172,5 +192,26 @@ export async function markPhoneRunningLate(
     .orderBy(asc(trips.startsAt))
     .limit(1);
   if (!next) return { status: "closed" };
-  return stamp(db, next.shopId, next.bookingId, input.now);
+  const outcome = await stamp(db, next.shopId, next.bookingId, input.now);
+  // **Every seat on that boat under the same number**: a parent who booked
+  // the family with one phone texts once for all of them. Same shop, same
+  // departure, same exact digits — never a second boat.
+  const family = await db
+    .select({ bookingId: bookings.id })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(
+      and(
+        eq(bookings.shopId, next.shopId),
+        eq(bookings.tripId, next.tripId),
+        eq(bookings.status, "booked"),
+        eq(people.shopId, next.shopId),
+        eq(people.phone, input.phone),
+        isNull(people.deletedAt),
+        isNull(people.anonymizedAt),
+        ne(bookings.id, next.bookingId),
+      ),
+    );
+  for (const seat of family) await stamp(db, next.shopId, seat.bookingId, input.now);
+  return outcome;
 }

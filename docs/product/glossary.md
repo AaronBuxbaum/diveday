@@ -734,7 +734,8 @@ new domain concept, define it here in the same PR.
   shop's WhatsApp, email or the night-before text, and stored as one instant,
   `bookings.running_late_at` (`src/db/running-late.ts`). Open only on a booked seat not yet checked
   in, inside the twelve hours before a scheduled departure and never after it
-  (`canSayRunningLate`); the first statement stands. The arrivals list (Today's arrival lookup and
+  (`canSayRunningLate`); the first statement stands. A party organizer's tap covers the party's
+  seats, and a text covers every seat on that boat under the same number. The arrivals list (Today's arrival lookup and
   the Divers tab once arrivals open) says "Running late, said 7:42" in the shop's zone on that row
   until the diver checks in, which clears it. **It gates nothing** and it is not a **no-show**: the
   diver still has to arrive, and a diver who said it and never came is still the desk's call.

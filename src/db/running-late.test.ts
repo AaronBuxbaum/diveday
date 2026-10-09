@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS, MINUTE_MS } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { createBooking } from "./bookings";
+import { createBooking, createBookingParty } from "./bookings";
 import { listCheckInQueue } from "./check-in";
 import {
   markBookingRunningLate,
@@ -173,5 +173,62 @@ describe("markPhoneRunningLate (a LATE text)", () => {
     const { db, personId, now } = await context();
     await db.update(people).set({ deletedAt: now }).where(eq(people.id, personId));
     expect(await markPhoneRunningLate(db, { phone: E164, now })).toEqual({ status: "closed" });
+  });
+});
+
+describe("one statement for the people travelling together", () => {
+  it("covers a party organizer's other seats from their link", async () => {
+    const { db, shop, trip, now } = await context();
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Ada Lead",
+        email: "ada.lead@example.com",
+      },
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Ben Lead",
+        email: "ben.lead@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error(`party failed: ${party.reason}`);
+    const [lead, member] = party.bookings;
+    if (!lead || !member) throw new Error("party seats missing");
+    await markBookingRunningLate(db, { shopId: shop.id, bookingId: lead.bookingId, now });
+    expect(await lateAt(member.bookingId)).toEqual(now);
+    // A member's own tap speaks for that member alone.
+    await db.update(bookings).set({ runningLateAt: null }).where(eq(bookings.id, lead.bookingId));
+    await db.update(bookings).set({ runningLateAt: null }).where(eq(bookings.id, member.bookingId));
+    await markBookingRunningLate(db, { shopId: shop.id, bookingId: member.bookingId, now });
+    expect(await lateAt(lead.bookingId)).toBeNull();
+  });
+
+  it("covers every seat on that boat held under the texting number, and nothing else", async () => {
+    const { db, shop, trip, bookingId, now } = await context();
+    const sibling = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      fullName: "Kit Okafor",
+      email: "kit.late@example.com",
+      phone: DIVER.phone,
+    });
+    const stranger = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      fullName: "Una Other",
+      email: "una.other@example.com",
+      phone: "+1-305-555-0144",
+    });
+    if (!sibling.ok || !stranger.ok) throw new Error("setup bookings failed");
+    await markPhoneRunningLate(db, { phone: E164, now });
+    expect(await lateAt(bookingId)).toEqual(now);
+    expect(await lateAt(sibling.bookingId)).toEqual(now);
+    expect(await lateAt(stranger.bookingId)).toBeNull();
   });
 });
