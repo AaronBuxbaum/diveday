@@ -5,7 +5,7 @@ import {
   calendarDateWeekday,
   shiftCalendarDate,
 } from "@/lib/calendar-date";
-import { isWithinSendWindow } from "@/lib/send-window";
+import { DEFAULT_SEND_WINDOW, isWithinSendWindow } from "@/lib/send-window";
 import type { TodayAction, TodayActionKind } from "@/lib/today";
 import { wallTimeToUtc } from "@/lib/zoned";
 
@@ -222,8 +222,38 @@ export const WEEKLY_DIGEST_SECTION_PATHS: Record<WeeklyDigestSectionKind, readon
 };
 
 /**
- * Hourly, on the minute every other hourly pass shares, so each shop's Monday
- * 08:00 is reached within the hour wherever it is (`isWeeklyDigestDue`). Every
- * pass but the first on a shop's Monday stops at the claim check.
+ * Hourly from Sunday to Tuesday UTC, at `:04` inside the five minutes every
+ * hourly pass shares, so each shop's Monday 08:00 is reached within the hour
+ * wherever it is (`isWeeklyDigestDue`). Every pass but the first on a shop's
+ * Monday stops at the claim check. The other four days no shop anywhere is in
+ * its Monday, so the pass is not scheduled on them at all, and the route skips
+ * the database on the Sunday and Tuesday hours that are outside every zone's
+ * Monday too (`weeklyDigestMayBeDueSomewhere`; code review 2026-10-10, item 11).
  */
-export const WEEKLY_DIGEST_CRON_CRONTAB = "0 * * * *";
+export const WEEKLY_DIGEST_CRON_CRONTAB = "4 * * * 0-2";
+
+/** How far ahead of UTC the earliest zone runs (Kiribati, +14:00), in minutes. */
+const EARLIEST_ZONE_AHEAD_MINUTES = 14 * 60;
+/** How far behind UTC the latest zone runs (Baker Island, −12:00), in minutes. */
+const LATEST_ZONE_BEHIND_MINUTES = 12 * 60;
+const MINUTES_PER_DAY = 24 * 60;
+const MINUTES_PER_WEEK = 7 * MINUTES_PER_DAY;
+
+/**
+ * Whether **any** shop, in any zone, could be inside its Monday sending hours
+ * at `now` — the question the route asks before it opens the database. Monday
+ * 08:00 in the earliest zone is Sunday 18:00 UTC; Monday 20:00 in the latest is
+ * Tuesday 08:00 UTC. Outside that span `isWeeklyDigestDue` is false for every
+ * shop whatever its zone, so the pass has nothing to do.
+ */
+export function weeklyDigestMayBeDueSomewhere(now: Date): boolean {
+  const sinceMonday =
+    ((now.getUTCDay() + 6) % 7) * MINUTES_PER_DAY + now.getUTCHours() * 60 + now.getUTCMinutes();
+  const opens = DEFAULT_SEND_WINDOW.startHour * 60 - EARLIEST_ZONE_AHEAD_MINUTES;
+  const closes = DEFAULT_SEND_WINDOW.endHour * 60 + LATEST_ZONE_BEHIND_MINUTES;
+  // Sunday evening is the end of last week by the arithmetic above; it opens
+  // this week's span, so read it as minutes before Monday.
+  const position =
+    sinceMonday >= MINUTES_PER_WEEK + opens ? sinceMonday - MINUTES_PER_WEEK : sinceMonday;
+  return position >= opens && position < closes;
+}

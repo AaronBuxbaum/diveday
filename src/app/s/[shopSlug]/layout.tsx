@@ -3,6 +3,7 @@ import { ErrorBoundaryIntlProvider } from "@/i18n/ErrorBoundaryIntlProvider";
 import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-messages";
 import { diverTranslator } from "@/i18n/messages";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
+import { connectionForRoute } from "@/lib/observability/render-connection";
 import { PublicShopMainContent } from "./_components/PublicShopMainContent";
 import {
   PublicShopBrand,
@@ -56,6 +57,9 @@ export default function PublicShopLayout({
       <Suspense fallback={null}>
         <PublicShopBrand params={params} />
       </Suspense>
+      <Suspense fallback={null}>
+        <PublicRenderCost />
+      </Suspense>
       {/* The fallback holds the header's height as well as its skip link. The
           skip link follows the root layout's pattern — the default-locale label
           is in the static shell so a keyboard user always has a target, and the
@@ -91,4 +95,17 @@ export default function PublicShopLayout({
       </Suspense>
     </>
   );
+}
+
+/**
+ * **What a diver-facing render cost**, logged after the response as one
+ * `render.db_queries` line (code review 2026-10-10, item 3). Armed here, once,
+ * for every page under `/s/[shopSlug]/**`, with the broad `/s/**` label as a
+ * fallback: a page that arms its own route name keeps it. In its own boundary
+ * and behind `connection()` because the layout is synchronous on purpose (see
+ * above) and the count only means anything for a render that served a request.
+ */
+async function PublicRenderCost() {
+  await connectionForRoute("/s/**", { fallback: true });
+  return null;
 }
