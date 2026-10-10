@@ -599,7 +599,17 @@ export const test = base.extend<
               workerInfo.project.outputDir,
               `.${role}-session-${workerInfo.parallelIndex}.json`,
             );
-            const context = await browser.newContext({ baseURL: workerBaseURL });
+            // **Signed out on purpose.** Playwright applies the test's own
+            // `use` options to every `browser.newContext()` in it, so inside a
+            // `signedInAs(...)` block this context opened already signed in as
+            // that role: `/sign-in` redirected to /shop, the Email field never
+            // rendered, and the sign-in for a *second* role waited out the
+            // test (found writing the intro-ratio staffing spec, issue #1676).
+            // It only ever worked when an earlier test had cached the role.
+            const context = await browser.newContext({
+              baseURL: workerBaseURL,
+              storageState: { cookies: [], origins: [] },
+            });
             try {
               const page = await context.newPage();
               await signInAs(page, DEV_STAFF_LOGINS[role]);

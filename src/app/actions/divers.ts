@@ -1,10 +1,8 @@
 "use server";
 
-import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { createDiver } from "@/db/divers";
-import { people } from "@/db/schema";
+import { createDiver, findLiveDiverIdByEmail } from "@/db/divers";
 import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { diverSearchPrefill } from "@/lib/person-fields";
@@ -38,18 +36,7 @@ export async function createDiverFromSearchAction(formData: FormData) {
   // still safe: the email is the identity key, so take the staffer to the
   // existing record instead of making a duplicate.
   if (!person && prefill.email) {
-    const [existing] = await db
-      .select({ id: people.id })
-      .from(people)
-      .where(
-        and(
-          eq(people.shopId, staff.user.shopId),
-          eq(people.email, prefill.email.toLowerCase()),
-          isNull(people.deletedAt),
-        ),
-      )
-      .limit(1);
-    personId = existing?.id;
+    personId = (await findLiveDiverIdByEmail(db, staff.user.shopId, prefill.email)) ?? undefined;
   }
 
   if (!personId) revalidateAndRedirect(roster, noticeUrl(roster, "invalid"));

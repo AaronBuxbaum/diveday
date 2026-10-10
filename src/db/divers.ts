@@ -47,6 +47,27 @@ import {
   listSignedWaiversByPerson,
 } from "./waivers";
 
+/**
+ * The live person in this shop who owns an email, or null. The email is the
+ * identity key (people_shop_email_unique), so this is how a caller that was
+ * refused a second row finds the first: matched case-insensitively against
+ * the stored lower-case form, and never a removed person.
+ */
+export async function findLiveDiverIdByEmail(
+  db: AppDb,
+  shopId: string,
+  email: string,
+): Promise<string | null> {
+  const key = email.trim().toLowerCase();
+  if (!key) return null;
+  const [row] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.shopId, shopId), eq(people.email, key), isNull(people.deletedAt)))
+    .limit(1);
+  return row?.id ?? null;
+}
+
 export type NewDiver = {
   shopId: string;
   /** Contact-only intake may fill the display name from email or phone. */
@@ -72,16 +93,7 @@ export async function createDiver(db: AppDb, input: NewDiver) {
   // stored form: a person whose only name is their number reads better as
   // "+1 305 555 0110" than as "+13055550110", and the name is not a key.
   const fullName = input.fullName?.trim() || email || typed || "Unnamed diver";
-  if (email) {
-    const [existing] = await db
-      .select({ id: people.id })
-      .from(people)
-      .where(
-        and(eq(people.shopId, input.shopId), eq(people.email, email), isNull(people.deletedAt)),
-      )
-      .limit(1);
-    if (existing) return null;
-  }
+  if (email && (await findLiveDiverIdByEmail(db, input.shopId, email))) return null;
 
   try {
     return await db.transaction(async (tx) => {

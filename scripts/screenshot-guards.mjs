@@ -44,3 +44,34 @@ export const SKELETON_SELECTOR =
  * should not fail a screenshot.
  */
 export const MIN_MAIN_TEXT = 40;
+
+/**
+ * **The offline manifest reads its page from this browser's own storage**
+ * (issue #2235). `/offline-manifest` renders from an encrypted IndexedDB copy,
+ * and until it has read the store it shows "Opening the manifest saved on this
+ * device…", which passes every rule above. The page sets this marker on the
+ * document once the store has been read; a capture waits for it.
+ */
+export const OFFLINE_SETTLED_SELECTOR = "html[data-offline-settled]";
+
+/** The staff manifest's own line once it has saved this phone's copy. */
+export const OFFLINE_COPY_SAVED = /(Fresh|Aging|Stale) copy/;
+
+/** The demo shop the dev logins belong to (src/db/dev-credentials.ts). */
+export const DEMO_SHOP_SLUG = "blue-mantis";
+
+/**
+ * What capturing one path needs before the shot, for the offline manifest; `null`
+ * for every other path, which keeps them flag-free. A fresh browser context
+ * holds no saved copy, so `?trip=<id>` first opens that trip's staff manifest,
+ * which saves one the same way it does on a crew phone, and the capture then
+ * shows the roll call rather than "Nothing saved on this phone yet".
+ */
+export function offlineManifestPlan(target, shopSlug = DEMO_SHOP_SLUG) {
+  const url = new URL(target, "http://localhost");
+  if (url.pathname !== "/offline-manifest") return null;
+  const trip = url.searchParams.get("trip");
+  return {
+    seedPath: trip ? `/shop/${shopSlug}/trips/${encodeURIComponent(trip)}/manifest` : null,
+  };
+}

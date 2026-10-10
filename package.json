@@ -29,6 +29,7 @@
     "visual:run": "pnpm visual:capture && pnpm visual:compare",
     "visual:capture": "playwright test e2e/visual.spec.ts",
     "visual:compare": "node scripts/visual-compare.mjs",
+    "visual:layers": "node scripts/visual-diff-layers.mjs",
     "visual:report": "node scripts/visual-report.mjs",
     "visual:prune": "dotenv -c -- node scripts/prune-visual-bucket.mjs",
     "infra:bootstrap": "dotenv -c -- node scripts/infra-bootstrap.mjs",

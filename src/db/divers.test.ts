@@ -14,6 +14,7 @@ import type { AppDb } from "./client";
 import {
   createDiver,
   deleteDiver,
+  findLiveDiverIdByEmail,
   findSimilarDivers,
   getDiverProfile,
   listBookableDivers,
@@ -92,6 +93,35 @@ describe("person-first diver records", () => {
     expect(byPhone?.fullName).toBe("+1 305 555 0188");
     // The *name* keeps the typed spacing; the phone column does not (below).
     expect(byPhone?.phone).toBe("+13055550188");
+  });
+
+  /**
+   * **The email finds the person it belongs to** (issue #2234): the lookup the
+   * staff search's "Add diver" falls back on when `createDiver` refuses a second
+   * row. It matches whatever case was typed, stays inside the shop, and never
+   * hands back a removed person, whose email no longer names anyone here.
+   */
+  it("finds the live diver who owns an email, and nobody else", async () => {
+    const { db, shop } = ctx;
+    const owner = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Email Owner",
+      email: "owner-2234@example.com",
+    });
+    expect(owner).not.toBeNull();
+    expect(await findLiveDiverIdByEmail(db, shop.id, "  Owner-2234@Example.com ")).toBe(owner?.id);
+    expect(await findLiveDiverIdByEmail(db, shop.id, "nobody-2234@example.com")).toBeNull();
+    expect(await findLiveDiverIdByEmail(db, shop.id, "   ")).toBeNull();
+
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Shop 2234", slug: "other-shop-2234", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!other) throw new Error("shop insert failed");
+    expect(await findLiveDiverIdByEmail(db, other.id, "owner-2234@example.com")).toBeNull();
+
+    expect(await deleteDiver(db, shop.id, owner?.id ?? "")).toBe(true);
+    expect(await findLiveDiverIdByEmail(db, shop.id, "owner-2234@example.com")).toBeNull();
   });
 
   /**

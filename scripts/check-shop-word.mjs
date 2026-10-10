@@ -169,8 +169,11 @@ const RULES = [
     // The negative lookahead is the whole rule: `comprobante` is a rental
     // receipt in diver.json's capabilities list and is correct. Everything else
     // inflects — comprobar, comprobación, comprobado, comprobamos, comprobará,
-    // Comprobando — so this matches the stem and excludes the one noun.
-    pattern: /\bcomprob(?!antes?\b)\w*/i,
+    // Comprobando — so this matches the stem and excludes the one noun. The
+    // stem also changes under stress (issue #2102): compruebo, comprueba,
+    // comprueban, and with a pronoun and its accent, compruébalo — the second
+    // branch, which no noun shares.
+    pattern: /\bcompr(?:ob(?!antes?\b)|u[eé]b)\w*/i,
     says: 'confirming a fact against evidence is "verificar"; looking something over is "revisar". "Comprobar/comprobación" reads as Spain',
   },
   {

@@ -853,6 +853,72 @@ export function housePhrases(entries, locale) {
 }
 
 /**
+ * Implementation words: how the software does a thing, where a buyer reading a
+ * public page wants what happens (issue #2104). The marketing-page skill's copy
+ * checklist forbids them ("Offline wording in captain's words"), and a reviewer
+ * caught the boat manifest page saying roll calls "sync" when the phone
+ * reconnects; nothing mechanical did. Public pages only, the same
+ * `SHAPE_SCOPES` the shape rules read: a staff screen may name its calendar
+ * sync. Deliberately not here: "API", "database" and "webhooks", which the
+ * switching guides use correctly about the incumbents' products and which a
+ * buyer comparing exports asks about by those words.
+ *
+ * Spanish boundaries are spelled out because `\b` does not see an accented
+ * letter as part of a word, so `caché\b` would never match before a space.
+ */
+const ES_EDGE_BEFORE = "(?<![A-Za-zÀ-ÿ])";
+const ES_EDGE_AFTER = "(?![A-Za-zÀ-ÿ])";
+export const IMPLEMENTATION_WORDS = {
+  "en-US": {
+    implementation:
+      /\b(?:sync(?:s|ed|ing)?|synchroni[sz](?:e|es|ed|ing|ation)|cach(?:e|es|ed|ing)|fail[- ]closed|offline-first)\b/gi,
+    encryption: /\b(?:en|de)crypt(?:s|ed|ing|ion)?\b/gi,
+  },
+  "es-ES": {
+    implementation: new RegExp(
+      `${ES_EDGE_BEFORE}(?:sincroniz[a-zà-ÿ]*|(?:en )?cach[eé]s?|fail[- ]closed|offline-first)${ES_EDGE_AFTER}`,
+      "gi",
+    ),
+    encryption: new RegExp(
+      `${ES_EDGE_BEFORE}(?:cifrad[oa]s?|cifrar|encriptad[oa]s?|encriptar)${ES_EDGE_AFTER}`,
+      "gi",
+    ),
+  },
+};
+
+/**
+ * Where "encrypted" is the fact a reader came for, by bundle key, with the
+ * reason beside each. Every other public string says what happens instead.
+ * Keyed rather than per page so a new privacy paragraph has to be argued for.
+ */
+export const ENCRYPTION_ALLOWLIST = new Map([
+  [
+    "marketing.privacy.collect.devicesBody",
+    "what a crew phone holds offline and why it cannot be read off the device",
+  ],
+  [
+    "marketing.privacy.processors.pushBody",
+    "what the push service is handed: a payload it cannot read",
+  ],
+  [
+    "marketing.privacy.collect.staffBody",
+    "the stored password, which Spanish calls 'contraseña cifrada'",
+  ],
+]);
+
+export function implementationWords(value, locale, key = "") {
+  const rules = IMPLEMENTATION_WORDS[locale];
+  if (!rules || !inShapeScope(key)) return [];
+  const found = [];
+  for (const [rule, pattern] of Object.entries(rules)) {
+    if (rule === "encryption" && ENCRYPTION_ALLOWLIST.has(key)) continue;
+    pattern.lastIndex = 0;
+    for (const match of value.matchAll(pattern)) found.push({ rule, text: match[0] });
+  }
+  return found;
+}
+
+/**
  * Every tell in one bundle value, for one locale. The shape rules apply only
  * to a key under `SHAPE_SCOPES`; a call with no key measures words and
  * typography alone.
@@ -865,6 +931,7 @@ export function findTells(value, locale, key = "") {
     ...straightApostrophes(value),
     ...straightDoubleQuotes(value),
     ...(inShapeScope(key) ? shapeTells(value) : []),
+    ...implementationWords(value, locale, key),
   ];
   for (const [rule, pattern] of Object.entries(rules)) {
     pattern.lastIndex = 0;
@@ -1265,7 +1332,7 @@ async function main() {
   if (violations.length > 0) {
     console.error(`Voice violations:\n${violations.map((v) => `- ${v}`).join("\n")}`);
     console.error(
-      "A prose em-dash becomes a full stop, a comma or a colon; an intensifier is deleted; a lead-in is deleted; a 'not just X' contrast states the thing; an apostrophe is ’ (U+2019), never ' — the ICU-quoted `'{depth18}'` markers are the only exception; quotation marks are “ ”, never \", with no exception, since \" means nothing to ICU. A British spelling takes its American form (colour → color, cancelled → canceled, grey → gray). A mirrored pair keeps one of its halves; an anaphoric triplet becomes a list of however many things are true; a tag sentence joins the sentence before it or goes; a house phrase on three pages is reworded on two of them, or joins HOUSE_PHRASE_ALLOWLIST only when it is the name of a thing. The full list and the reasoning: docs/design/brand.md, \"What gives us away\". `node scripts/check-voice.mjs --report <file>` lists every hit.",
+      'A prose em-dash becomes a full stop, a comma or a colon; an intensifier is deleted; a lead-in is deleted; a \'not just X\' contrast states the thing; an apostrophe is ’ (U+2019), never \' — the ICU-quoted `\'{depth18}\'` markers are the only exception; quotation marks are “ ”, never ", with no exception, since " means nothing to ICU. A British spelling takes its American form (colour → color, cancelled → canceled, grey → gray). A mirrored pair keeps one of its halves; an anaphoric triplet becomes a list of however many things are true; a tag sentence joins the sentence before it or goes; a house phrase on three pages is reworded on two of them, or joins HOUSE_PHRASE_ALLOWLIST only when it is the name of a thing. A public page says what happens, not how: no sync, cache, fail-closed or offline-first, and "encrypted" only where ENCRYPTION_ALLOWLIST names the key. The full list and the reasoning: docs/design/brand.md, "What gives us away". `node scripts/check-voice.mjs --report <file>` lists every hit.',
     );
     process.exit(1);
   }

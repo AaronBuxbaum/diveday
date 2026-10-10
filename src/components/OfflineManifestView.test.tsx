@@ -791,6 +791,29 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     expect(await screen.findByText("Nothing saved on this device yet")).toBeInTheDocument();
   });
 
+  /**
+   * The marker `scripts/screenshot.mjs` waits on (issue #2235): absent while
+   * the store is being opened, set once it has been read, gone on unmount.
+   */
+  it("marks the document settled once the store has been read, and not before", async () => {
+    let answer: (value: OfflineManifestEnvelope[]) => void = () => {};
+    vi.mocked(listOfflineManifests).mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+
+    const view = render(<OfflineManifestView />);
+    expect(document.documentElement.dataset.offlineSettled).toBeUndefined();
+
+    await act(async () => answer([]));
+    expect(await screen.findByText("Nothing saved on this device yet")).toBeInTheDocument();
+    expect(document.documentElement.dataset.offlineSettled).toBe("");
+
+    view.unmount();
+    expect(document.documentElement.dataset.offlineSettled).toBeUndefined();
+  });
+
   it("re-derives the freshness pill on its periodic tick instead of freezing at mount time", async () => {
     // Freshness is computed inline from the wall clock at render time, so
     // nothing re-renders this component as time passes on its own — capture

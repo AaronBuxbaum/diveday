@@ -22,14 +22,20 @@ import { type ReactNode, useEffect, useState } from "react";
  *
  * The first paint is still the server's, attribute and all, so a row that must
  * be open before JavaScript arrives (the requirements row, fail-closed) is.
+ *
+ * `label` is the row's own label, the word its summary already shows, named
+ * on the group so a screen reader entering the open editor hears whose it is
+ * and a spec finds the row by its name rather than its id (issue #1868).
  */
 export function AboutRowDetails({
   id,
+  label,
   open = false,
   className,
   children,
 }: {
   id: string;
+  label: string;
   open?: boolean;
   className?: string;
   children: ReactNode;
@@ -43,6 +49,7 @@ export function AboutRowDetails({
   return (
     <details
       id={id}
+      aria-label={label}
       open={isOpen}
       className={className}
       onToggle={(event) => setIsOpen(event.currentTarget.open)}

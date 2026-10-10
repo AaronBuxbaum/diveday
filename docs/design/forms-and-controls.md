@@ -241,6 +241,13 @@ be real and not just a visual convention.
 </Field>
 ```
 
+**A field behind a "More details" disclosure is optional by position and carries no hint** (issue
+#1867). Folding the rare answers away is how a form says they are rare, so none of them may carry a
+native `required` either: a disclosure the diver never opens cannot hold an answer the form insists
+on. The disclosure's own summary is what says so, because an opened disclosure looks exactly like
+the fields above it: name it for what it holds ("More details"), never for what it asks of the
+reader. `DateRequestForm` is the example, and its test pins that the folded fields carry neither.
+
 ### `hint` or `description`: where the words go, not how long they are
 
 Both take a `ReactNode` and both read as "the helper text", which is how a **31-word** sentence

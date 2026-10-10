@@ -651,4 +651,27 @@ test.describe("fill-tight", () => {
   test("leaves a hover fill with 8px of padding alone", async ({ page }) => {
     await leavesState(page, "fill-tight", chip(8), "chip");
   });
+
+  // Issue #1992: the diver record's "Email waiver" button carries its delivery
+  // state as an sr-only word, whose text Range reports full rects running past
+  // the button's end. Tailwind's `sr-only` declarations verbatim (v4), so the
+  // fixture hides the word the way the app does rather than a hand-made way.
+  const SR_ONLY = `.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap; border-width: 0; }`;
+  const withStateWord = (padding: number) =>
+    html(
+      `${SR_ONLY}
+       .chip { display: inline-block; padding: ${padding}px; border-radius: 6px; }
+       .chip:hover { background: #eef2ff; }`,
+      `<p class="meta"><a class="chip" href="#">Email waiver<span class="sr-only"> Didn’t go out</span></a></p>`,
+    );
+
+  test("leaves a fill alone whose only overrun is an sr-only word", async ({ page }) => {
+    await leavesState(page, "fill-tight", withStateWord(8), "chip");
+  });
+
+  test("still flags the visible label hugging that fill", async ({ page }) => {
+    const flag = await flagsState(page, "fill-tight", withStateWord(2), "chip");
+    expect(flag.measure.right).toBeCloseTo(2, 0);
+  });
 });

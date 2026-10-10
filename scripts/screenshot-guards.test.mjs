@@ -3,7 +3,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
-import { MIN_MAIN_TEXT, SKELETON_SELECTOR } from "./screenshot-guards.mjs";
+import {
+  MIN_MAIN_TEXT,
+  OFFLINE_COPY_SAVED,
+  OFFLINE_SETTLED_SELECTOR,
+  offlineManifestPlan,
+  SKELETON_SELECTOR,
+} from "./screenshot-guards.mjs";
 
 /**
  * **The screenshot guard, held to the two skeleton idioms that actually exist.**
@@ -118,5 +124,42 @@ describe("every loading.tsx this repo ships", () => {
     const withoutPulse = loadingFiles().filter((entry) => !entry.anywhere);
     expect(withoutPulse.length).toBeGreaterThan(0);
     expect(MIN_MAIN_TEXT).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * The offline manifest renders from this browser's storage, so a capture has
+ * to give it a copy and then wait for the page to have read it (issue #2235).
+ */
+describe("the offline manifest", () => {
+  it("seeds a trip's copy from its staff manifest before the capture", () => {
+    expect(offlineManifestPlan("/offline-manifest?trip=abc-123")).toEqual({
+      seedPath: "/shop/blue-mantis/trips/abc-123/manifest",
+    });
+  });
+
+  it("needs no seed for the list, only the wait", () => {
+    expect(offlineManifestPlan("/offline-manifest")).toEqual({ seedPath: null });
+  });
+
+  it("leaves every other path alone, so none of them needs a new flag", () => {
+    for (const target of [
+      "/",
+      "/shop/blue-mantis",
+      "/shop/blue-mantis/trips/x/manifest",
+      "/offline",
+    ]) {
+      expect(offlineManifestPlan(target)).toBeNull();
+    }
+  });
+
+  it("matches the marker the page sets, and the line the staff manifest prints", () => {
+    const { document } = new JSDOM("<!doctype html><html data-offline-settled><body></body></html>")
+      .window;
+    expect(document.querySelector(OFFLINE_SETTLED_SELECTOR)).not.toBeNull();
+    expect(OFFLINE_COPY_SAVED.test("Fresh copy")).toBe(true);
+    expect(OFFLINE_COPY_SAVED.test("Stale copy")).toBe(true);
+    const source = readFileSync(path.join(REPO, "src/components/OfflineManifestView.tsx"), "utf8");
+    expect(source).toContain("document.documentElement.dataset.offlineSettled");
   });
 });

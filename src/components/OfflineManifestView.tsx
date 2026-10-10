@@ -133,6 +133,17 @@ export function OfflineManifestView() {
   //    branch is chosen by an ordinary client render instead of by error
   //    recovery.
   const [storeRead, setStoreRead] = useState(false);
+  // A marker for the tools that photograph this page (`scripts/screenshot.mjs`,
+  // issue #2235): set on the document once the store has been read, so a
+  // capture waits for the real branch rather than the "Opening…" one below.
+  // It changes nothing anyone sees.
+  useEffect(() => {
+    if (!storeRead) return;
+    document.documentElement.dataset.offlineSettled = "";
+    return () => {
+      delete document.documentElement.dataset.offlineSettled;
+    };
+  }, [storeRead]);
   /**
    * Unsynced roll call this device threw away at the retention ceiling
    * (`OFFLINE_MANIFEST_PENDING_GRACE_MS`). Read from storage rather than

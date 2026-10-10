@@ -26,6 +26,9 @@ red run. Each rule names what enforces it; the reasoning and the incidents are i
   A convention, not a guard (#1403).
 - **A failing or flaky test is part of the work**, even when unrelated; search open PRs for a fix
   in flight first.
+- **A test's budget is one call with its measured reason**: `test.slow()` or `test.setTimeout()`,
+  never both (the later one replaces the first). Each CI shard's summary lists the tests over half
+  their own budget (`scripts/e2e-budget-report.mjs`, #1906).
 - **Bound the page, not the capture**: a huge screenshot means the page needs a pager, never a
   `?filter=` in the spec.
 - **A trouble state is photographed through `src/app/api/test/seed-trouble-states/route.ts`**,

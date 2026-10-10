@@ -97,9 +97,10 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   page,
 }) => {
   // A held send counts eight seconds down before it leaves (ADR
-  // 20260906-before-you-ask, decision 2); this test sends one, so it takes
-  // the slow budget rather than racing the hold against the default.
-  test.slow();
+  // 20260906-before-you-ask, decision 2); this test sends one, and the
+  // explicit budget below covers the hold. No `test.slow()` beside it: the
+  // later `test.setTimeout` replaces whatever slow() set, so the two never
+  // composed (issue #1906).
   // Chains several sequential navigations and status-toast waits — same
   // aggregate-cost reasoning as visual.spec.ts's test.setTimeout: legitimate
   // per-step cost under 2-worker CI load can sum past the default 15s test
@@ -1092,9 +1093,10 @@ test("the waiver page fits a phone even with unbreakable text in the template", 
   page,
 }) => {
   // A held send counts eight seconds down before it leaves (ADR
-  // 20260906-before-you-ask, decision 2); this test sends one, so it takes
-  // the slow budget rather than racing the hold against the default.
-  test.slow();
+  // 20260906-before-you-ask, decision 2); this test sends one, and the
+  // explicit budget below covers the hold. No `test.slow()` beside it: the
+  // later `test.setTimeout` replaces whatever slow() set, so the two never
+  // composed (issue #1906).
   test.setTimeout(60_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);

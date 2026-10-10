@@ -106,7 +106,7 @@ describe("boatSafetyNoticeText", () => {
         label: "Kit de O2",
         kind: "o2_kit",
       }),
-    ).toBe("Kit de O2: marcado para mantenimiento. Compruébalo antes de zarpar.");
+    ).toBe("Kit de O2: marcado para mantenimiento. Revísalo antes de zarpar.");
   });
 });
 

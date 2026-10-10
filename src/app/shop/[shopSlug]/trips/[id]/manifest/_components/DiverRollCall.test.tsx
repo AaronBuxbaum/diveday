@@ -575,6 +575,74 @@ describe("the earlier-refusal capsule", () => {
  * **A release standing over a referral nobody answered gets a row capsule
  * too** (dive-domain review of #2163), ranked just after the earlier refusal.
  */
+/**
+ * **A diver aboard while blocked reads "Blocked", not their buddy's absence**
+ * (dive-domain review of the manifest-blocked-aboard capture). At the dock,
+ * `separated_dock` is a heads-up about a teammate still to gather; the
+ * readiness blocker is about *this* body, aboard a boat it is not cleared
+ * for, and the head count above already says so. Only a split team after a
+ * dive outranks the blocker.
+ */
+describe("a blocked diver marked aboard at the dock", () => {
+  const blocked: TripManifest["divers"][number]["readiness"] = {
+    status: "blocked",
+    blockers: [{ code: "certification_missing" }],
+  };
+  const SEPARATED_AT_DOCK = t("shared.buddyTeam.separatedDock");
+
+  function onScreen(text: string) {
+    return screen
+      .queryAllByText(text)
+      .filter((element) => !element.closest(".hidden.print\\:block"));
+  }
+
+  it("says Blocked over a teammate still ashore", () => {
+    renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          readiness: blocked,
+          rollCall: boardedAt(),
+          buddyAlert: "separated_dock",
+          buddyTeam: { teamId: "t-1", others: [] },
+        }),
+      ],
+    });
+    expect(onScreen("Blocked").length).toBeGreaterThan(0);
+    expect(onScreen(SEPARATED_AT_DOCK)).toHaveLength(0);
+  });
+
+  it("keeps the buddy heads-up for a cleared diver", () => {
+    renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          rollCall: boardedAt(),
+          buddyAlert: "separated_dock",
+          buddyTeam: { teamId: "t-1", others: [] },
+        }),
+      ],
+    });
+    expect(onScreen(SEPARATED_AT_DOCK).length).toBeGreaterThan(0);
+  });
+
+  it("still yields to a team that did not come back after a dive", () => {
+    renderList({
+      divers: [
+        diver({
+          readiness: blocked,
+          boardedEarlier: false,
+          rollCall: boardedAt(),
+          buddyAlert: "separated_after_dive",
+          buddyTeam: { teamId: "t-1", others: [] },
+        }),
+      ],
+    });
+    expect(onScreen("Someone unaccounted for").length).toBeGreaterThan(0);
+    expect(onScreen("Blocked")).toHaveLength(0);
+  });
+});
+
 describe("the unresolved-referral capsule", () => {
   const referred = {
     at: new Date("2026-09-01T12:00:00.000Z"),

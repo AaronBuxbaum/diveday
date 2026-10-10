@@ -22,9 +22,10 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   request,
 }) => {
   // A held send counts eight seconds down before it leaves (ADR
-  // 20260906-before-you-ask, decision 2); this test sends one, so it takes
-  // the slow budget rather than racing the hold against the default.
-  test.slow();
+  // 20260906-before-you-ask, decision 2); this test sends one, and the
+  // explicit budget below covers the hold. No `test.slow()` beside it: the
+  // later `test.setTimeout` replaces whatever slow() set, so the two never
+  // composed (issue #1906).
   // Public opt-in, a staff sign-in, and two round trips through the send action
   // all in one flow — the suite's 15s default is sized for a single real flow,
   // not a chain of them.
@@ -107,9 +108,10 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
   request,
 }) => {
   // A held send counts eight seconds down before it leaves (ADR
-  // 20260906-before-you-ask, decision 2); this test sends one, so it takes
-  // the slow budget rather than racing the hold against the default.
-  test.slow();
+  // 20260906-before-you-ask, decision 2); this test sends one, and the
+  // explicit budget below covers the hold. No `test.slow()` beside it: the
+  // later `test.setTimeout` replaces whatever slow() set, so the two never
+  // composed (issue #1906).
   test.setTimeout(45_000);
   await request.post("/api/test/seed-stripe-account");
   await page.goto("/s/blue-mantis");

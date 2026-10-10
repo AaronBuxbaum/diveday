@@ -24,6 +24,45 @@ import { EXEMPT_FILE, findCopy, looksLikeCopy } from "./check-copy.mjs";
 
 const texts = (source, isTsx = true) => findCopy(source, { isTsx }).map((hit) => hit.text);
 
+describe("looksLikeCopy — a ternary's head is code", () => {
+  /**
+   * An arrow whose body is a ternary over JSX puts `row.editor ? (` between a
+   * `>` and the next `<`. The property-access rule's guard against sentence
+   * punctuation read the ternary's `? ` as a question mark, so the scan reported
+   * it as copy (issue #1864).
+   */
+  it("excuses an identifier or member expression feeding a ternary", () => {
+    expect(looksLikeCopy("row.editor ? (")).toBe(false);
+    expect(looksLikeCopy("row.editor ?(")).toBe(false);
+    expect(looksLikeCopy("open ? (")).toBe(false);
+    expect(looksLikeCopy("trip.crew.lead?")).toBe(false);
+  });
+
+  it("still reports a question and a sentence that runs on", () => {
+    expect(looksLikeCopy("Ready to dive?")).toBe(true);
+    expect(looksLikeCopy("Ready to dive? (")).toBe(true);
+    expect(looksLikeCopy("Check the trip. Then")).toBe(true);
+    expect(looksLikeCopy("Dive?")).toBe(true);
+  });
+
+  it("does not report the arrow-ternary shape in a component", () => {
+    const source = `export function Rows({ rows }) {
+  return (
+    <ul>
+      {rows.map((row) =>
+        row.editor ? (
+          <Editor row={row} />
+        ) : (
+          <Plain row={row} />
+        ),
+      )}
+    </ul>
+  );
+}`;
+    expect(texts(source)).toEqual([]);
+  });
+});
+
 describe("looksLikeCopy — an emoji is a word", () => {
   /**
    * The letters test is what a value passes to count as prose, and a glyph has

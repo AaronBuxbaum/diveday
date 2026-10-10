@@ -100,7 +100,7 @@ evidence, about a fortnight.
 - **verificar vs. revisar.** *Verificar* is confirming a fact against evidence — a card, an age, a
   connection, readiness. *Revisar* is looking something over — a price list, an address, a browser
   setting, a page you were told to come back to. Both replace *comprobar*, which is understood
-  everywhere but reads as Spain.
+  everywhere but reads as Spain, in every form: the stressed stem too (*comprueba*, *compruébalo*).
 
 ## The sentence names a height turn — **pleamar / bajamar** — and **la estoa** is the shop's own word
 

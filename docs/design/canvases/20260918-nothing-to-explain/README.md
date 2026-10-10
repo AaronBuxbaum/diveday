@@ -133,7 +133,7 @@ comment, a test pins the rule, and this table moves.
 
 The sources here are the working files. To change a board, edit its `.dc.html`, re-seed a fresh
 copy with the design skill's helper (the four artboards, `canvas.json`, the four `.jpg` files, the
-title "Nothing to explain"), check it, and republish to the URL above. The seeded output is build
+title "Nothing to explain"), check it, and republish to the URL above. Without the skill, `node scripts/publish-canvas.mjs` on this directory builds the gallery page it was first published as. The seeded output is build
 output and is never committed ([design-artifacts.md](../../design-artifacts.md)). The four boards
 share one prose stylesheet, pasted verbatim into each between `/* kit:start */` and `/* kit:end */`,
 and one app stylesheet between `/* app:start */` and `/* app:end */`; each direction's own sheet sits
