@@ -145,9 +145,10 @@ export async function getClaimPageData(
  * over. `defaultLocale` is in the set because the page has to choose a language
  * before it can say anything at all.
  *
- * Like `/ready`'s, this attribution is **permanent**: `booking_capabilities` is
- * never pruned, so a claim URL from last season still names the shop that
- * issued it. That is recorded in
+ * Like `/ready`'s, this attribution outlives revocation and expiry: it lasts
+ * until the row is pruned, 90 days past its `expires_at` (`booking_capabilities`
+ * in `src/lib/retention.ts`, issue #1726), and after that the URL names nobody.
+ * That is recorded in
  * docs/engineering/capability-telemetry-runbook.md, where an exposed URL is
  * assessed.
  */

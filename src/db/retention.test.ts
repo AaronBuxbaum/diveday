@@ -232,6 +232,56 @@ describe("pruneExpiredRecords", () => {
     ]);
   });
 
+  // H-82 (issue #1726): booking links age out on the same clock, and the
+  // assertion that protects a diver is the narrow one — a row whose
+  // `expires_at` is still ahead survives *whatever* its `revoked_at` or its
+  // age, because a revoked link can still be inside its life and the dead-link
+  // page reads it there.
+  it("prunes only long-expired booking links, never one still inside its life", async () => {
+    const { db, shop, entry } = await retentionContext();
+    const window = RETENTION_DAYS.booking_capabilities;
+    const live = new Date(NOW.getTime() + 60 * 60 * 1000);
+    const link = (tokenHash: string, expiresAt: Date, revokedAt: Date | null = null) => ({
+      shopId: shop.id,
+      bookingId: entry.booking.id,
+      purpose: "readiness" as const,
+      tokenHash,
+      issuedAt: daysAgo(window * 4),
+      expiresAt,
+      revokedAt,
+    });
+    await db.insert(schema.bookingCapabilities).values([
+      link("cap-long-dead", daysAgo(window + 1)),
+      link("cap-long-dead-revoked", daysAgo(window + 1), daysAgo(window + 30)),
+      link("cap-recently-dead", daysAgo(window - 1)),
+      link("cap-still-live", live),
+      // Revoked long ago, issued long ago, not yet expired: kept. Pruning on
+      // `revoked_at` or on age is exactly the mistake this row is here for.
+      link("cap-revoked-unexpired", live, daysAgo(window * 2)),
+    ]);
+
+    const summary = await pruneExpiredRecords(db, { now: NOW });
+    // At least ours: the seed may hold links of its own that are long dead.
+    expect(outcomeFor(summary, "booking_capabilities").deleted).toBeGreaterThanOrEqual(2);
+
+    const mine = new Set([
+      "cap-long-dead",
+      "cap-long-dead-revoked",
+      "cap-recently-dead",
+      "cap-still-live",
+      "cap-revoked-unexpired",
+    ]);
+    const remaining = (
+      await db
+        .select({ tokenHash: schema.bookingCapabilities.tokenHash })
+        .from(schema.bookingCapabilities)
+    )
+      .map((row) => row.tokenHash)
+      .filter((hash) => mine.has(hash))
+      .sort();
+    expect(remaining).toEqual(["cap-recently-dead", "cap-revoked-unexpired", "cap-still-live"]);
+  });
+
   it("leaves a freshly written money trail entirely alone", async () => {
     const { db, shop, entry } = await retentionContext();
     await setBookingPayment(db, {
@@ -503,16 +553,15 @@ const OUTSIDE_RETENTION: readonly string[] = [
   // Credentials that live and die with the thing they open: revoked, spent, or
   // deleted with their parent. The token tables that are *not* here
   // (`account_tokens`, `shop_contact_email_confirmation_tokens`,
-  // `integration_oauth_states`) are the ones whose already-dead rows are kept
-  // on purpose for an incident review — which is what a window is for, and why
-  // they have one.
+  // `integration_oauth_states`, `booking_capabilities`) are the ones whose
+  // already-dead rows are kept on purpose for an incident review — which is
+  // what a window is for, and why they have one.
   "user_accounts",
   "account_sessions",
   "account_security",
   "account_step_ups",
   "auth_provider_accounts",
   "auth_verifications",
-  "booking_capabilities",
   "calendar_feeds",
   "last_minute_list_unsubscribe_tokens",
   "person_courtesy_email_unsubscribe_tokens",
