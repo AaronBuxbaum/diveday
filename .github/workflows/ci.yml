@@ -87,6 +87,20 @@ jobs:
       # this job runs on every pull request, docs-only included, so a guard over
       # a document still answers to a docs-only change.
       - run: pnpm exec vitest run --project guards --reporter=dot
+      # The body names the reviewer agents a safety-critical or security-sensitive diff needs
+      # (scripts/check-pr-body.mjs; docs/agents/repo-checks.md#pr-body). The body is read live
+      # so an edit counts on a re-run; without `pull-requests: read` that read fails and the
+      # event's copy is used. Passed through env and a file, never interpolated into the script.
+      - name: Pull request body names its reviews
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          gh pr view "$PR_NUMBER" --json body --jq .body > "$RUNNER_TEMP/pr-body.md" 2>/dev/null || printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
+          node scripts/check-pr-body.mjs --body-file "$RUNNER_TEMP/pr-body.md" --base "origin/$BASE_REF"
 
   lint:
     name: Lint
