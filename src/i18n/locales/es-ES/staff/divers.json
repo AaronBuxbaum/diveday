@@ -255,7 +255,8 @@
       "lists": "Listas e invitaciones"
     },
     "nothingToMove": "Todavía no hay nada registrado.",
-    "bookingConflict": "Ambos registros tienen un lugar en la misma salida, lo que suele indicar dos personas. Si de verdad son un solo buceador, mueve primero el lugar sobrante a otra salida.",
+    "bookingConflict": "Ambos registros tienen un lugar en la misma salida, lo que suele indicar dos personas. Si de verdad son un solo buceador, cancela primero el lugar sobrante o muévelo a otra salida.",
+    "keptSeatCancelled": "En esta salida, el lugar del registro que se conserva está cancelado y el del otro no. Conserva el otro registro.",
     "birthDateMinorHint": "La fecha que conserves decide qué exenciones necesitan la firma de un padre, una madre o un tutor.",
     "openMedicalHold": "Una respuesta médica de este registro aún necesita la autorización de un médico.",
     "declinedClearance": "Un médico no autorizó una respuesta médica de este registro.",

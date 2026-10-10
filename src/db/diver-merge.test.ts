@@ -275,6 +275,138 @@ describe("diver record merge", () => {
 });
 
 /**
+ * **A seat that is already over does not block a merge** (issue #2177). A
+ * cancelled seat, or any seat on a deleted departure, cannot be resolved any
+ * further — there is no way to remove a cancelled booking — so refusing on it
+ * blocked two records that both once sat on one departure forever: a walk-in
+ * entered twice at the counter whose duplicate seat was cancelled is exactly
+ * that. Such a seat on the merged-away record stays there, keeping its pointer
+ * and the departure log intact; the `(trip_id, person_id)` key never sees two
+ * seats under the kept record. Two live seats still refuse, and so does a live
+ * seat moving onto a kept record whose own seat is cancelled, because the key
+ * has room for one seat per person and the live one must not be left behind.
+ */
+describe("diver record merge, a seat that is already over", () => {
+  async function seatBoth(
+    f: Awaited<ReturnType<typeof mergeFixtures>>,
+    sourceStatus: "booked" | "cancelled",
+    survivorStatus: "booked" | "cancelled",
+  ) {
+    const [sourceSeat, survivorSeat] = await f.db
+      .insert(bookings)
+      .values([
+        {
+          bookedAs: "diver",
+          shopId: f.shop.id,
+          tripId: f.trip.id,
+          personId: f.source.id,
+          status: sourceStatus,
+        },
+        {
+          bookedAs: "diver",
+          shopId: f.shop.id,
+          tripId: f.trip.id,
+          personId: f.survivor.id,
+          status: survivorStatus,
+        },
+      ])
+      .returning({ id: bookings.id });
+    if (!sourceSeat || !survivorSeat) throw new Error("seat insert failed");
+    return { sourceSeat, survivorSeat };
+  }
+  const merge = (f: Awaited<ReturnType<typeof mergeFixtures>>, flip = false) =>
+    mergeDiverRecords({
+      db: f.db,
+      shopId: f.shop.id,
+      personId: flip ? f.survivor.id : f.source.id,
+      survivorId: flip ? f.source.id : f.survivor.id,
+      actorPersonId: f.owner.id,
+    });
+  const holder = async (f: Awaited<ReturnType<typeof mergeFixtures>>, id: string) =>
+    (
+      await f.db.select({ personId: bookings.personId }).from(bookings).where(eq(bookings.id, id))
+    )[0]?.personId;
+
+  it("merges when the merged-away record's seat is cancelled, and leaves that seat behind", async () => {
+    const f = await mergeFixtures();
+    const { sourceSeat, survivorSeat } = await seatBoth(f, "cancelled", "booked");
+    expect(await merge(f)).toEqual({
+      ok: true,
+      survivorId: f.survivor.id,
+      mergedPersonId: f.source.id,
+    });
+    expect(await holder(f, sourceSeat.id)).toBe(f.source.id);
+    expect(await holder(f, survivorSeat.id)).toBe(f.survivor.id);
+  });
+
+  it("merges when both seats are cancelled, and moves neither", async () => {
+    const f = await mergeFixtures();
+    const { sourceSeat, survivorSeat } = await seatBoth(f, "cancelled", "cancelled");
+    expect((await merge(f)).ok).toBe(true);
+    expect(await holder(f, sourceSeat.id)).toBe(f.source.id);
+    expect(await holder(f, survivorSeat.id)).toBe(f.survivor.id);
+  });
+
+  it("merges two seats on a deleted departure, leaving the merged-away one behind", async () => {
+    const f = await mergeFixtures();
+    const { sourceSeat, survivorSeat } = await seatBoth(f, "booked", "booked");
+    await f.db.update(trips).set({ deletedAt: nowDate() }).where(eq(trips.id, f.trip.id));
+    expect((await merge(f)).ok).toBe(true);
+    expect(await holder(f, sourceSeat.id)).toBe(f.source.id);
+    expect(await holder(f, survivorSeat.id)).toBe(f.survivor.id);
+  });
+
+  it("still moves the merged-away record's other seats to the kept record", async () => {
+    const f = await mergeFixtures();
+    const { sourceSeat } = await seatBoth(f, "cancelled", "booked");
+    const [otherTrip] = await f.db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, f.shop.id), sql`${trips.id} <> ${f.trip.id}`))
+      .limit(1);
+    if (!otherTrip) throw new Error("merge fixture needs a second trip");
+    const [elsewhere] = await f.db
+      .insert(bookings)
+      .values({
+        bookedAs: "diver",
+        shopId: f.shop.id,
+        tripId: otherTrip.id,
+        personId: f.source.id,
+        status: "cancelled",
+      })
+      .returning({ id: bookings.id });
+    if (!elsewhere) throw new Error("seat insert failed");
+    expect((await merge(f)).ok).toBe(true);
+    expect(await holder(f, sourceSeat.id)).toBe(f.source.id);
+    // Cancelled too, but on a departure the kept record never sat on: it moves.
+    expect(await holder(f, elsewhere.id)).toBe(f.survivor.id);
+  });
+
+  it("refuses a live seat onto a kept record whose seat is cancelled, and merges the other way", async () => {
+    const f = await mergeFixtures();
+    const { sourceSeat, survivorSeat } = await seatBoth(f, "booked", "cancelled");
+    expect(await merge(f)).toEqual({ ok: false, reason: "booking_conflict" });
+    expect(await holder(f, sourceSeat.id)).toBe(f.source.id);
+    const [untouched] = await f.db.select().from(people).where(eq(people.id, f.source.id));
+    expect(untouched?.mergedIntoPersonId).toBeNull();
+
+    // Kept the other way round, the cancelled seat is the one left behind.
+    expect((await merge(f, true)).ok).toBe(true);
+    expect(await holder(f, sourceSeat.id)).toBe(f.source.id);
+    expect(await holder(f, survivorSeat.id)).toBe(f.survivor.id);
+    const [merged] = await f.db.select().from(people).where(eq(people.id, f.survivor.id));
+    expect(merged?.mergedIntoPersonId).toBe(f.source.id);
+  });
+
+  it("still refuses two live seats on one departure", async () => {
+    const f = await mergeFixtures();
+    await seatBoth(f, "booked", "booked");
+    expect(await merge(f)).toEqual({ ok: false, reason: "booking_conflict" });
+    expect(await merge(f, true)).toEqual({ ok: false, reason: "booking_conflict" });
+  });
+});
+
+/**
  * The merge moves history table by table from a hard-coded list, so a table
  * added tomorrow with a `person_id` is silently forgotten: no error, no failing
  * test, just a row left pointing at a diver the shop just removed. That is how

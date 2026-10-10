@@ -301,7 +301,7 @@
   },
   "blockerRow": {
     "requirementsNotConfigured": "{count, plural, one {Requisitos de la salida sin configurar.} other {Requisitos de la salida sin configurar para # buceadores.}}",
-    "identityUnconfirmed": "{count, plural, one {Coincidencia de ficha sin confirmar.} other {# coincidencias de ficha sin confirmar.}}",
+    "identityUnconfirmed": "{count, plural, one {Coincidencia de ficha sin confirmar. Los recordatorios esperan hasta confirmarla.} other {# coincidencias de ficha sin confirmar. Los recordatorios esperan hasta confirmarlas.}}",
     "waiverNotSent": "{count, plural, one {Exención sin firmar, aún sin enviar.} other {# exenciones sin firmar, aún sin enviar.}}",
     "waiverPending": "{count, plural, one {Exención sin firmar, enlace enviado.} other {# exenciones sin firmar, enlaces enviados.}}",
     "waiverExpired": "{count, plural, one {El enlace de la exención caducó.} other {# enlaces de exención caducados.}}",

@@ -57,6 +57,20 @@ describe("UnsavedChangesGuard", () => {
     expect(screen.queryByText("Unsaved changes")).toBeNull();
   });
 
+  it("keeps its live region in the page before the first edit, so the first change is announced", () => {
+    // A live region inserted already carrying its text is often not announced
+    // (issue #1979): the region exists, empty, from the first paint, and the
+    // first edit only changes its text.
+    const { container } = render(<Editor />);
+    const before = container.querySelector('[aria-live="polite"]');
+    expect(before).not.toBeNull();
+    expect(before?.textContent).toBe("");
+    fireEvent.input(screen.getByLabelText("Subhead"), { target: { value: "Half a thought" } });
+    const after = container.querySelector('[aria-live="polite"]');
+    expect(after).toBe(before);
+    expect(after?.textContent).toBe("Unsaved changes");
+  });
+
   it("names the unsaved state the moment the form is dirty", () => {
     render(<Editor />);
     fireEvent.input(screen.getByLabelText("Subhead"), { target: { value: "Half a thought" } });

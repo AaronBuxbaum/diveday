@@ -379,6 +379,18 @@ export const gearItems = pgTable(
      * The shop's own tag, exactly as written on the unit ("BCD #14",
      * "AL80-023"). Unique per shop because the tag is how a wet hand finds
      * the row — two units sharing a tag is a labeling bug worth refusing.
+     *
+     * **`COLLATE "und-x-icu"` in the database**, set by
+     * `drizzle/20261010081009_site-gear-course-collation` — the same treatment
+     * `people.full_name` has (see its comment in `core.ts`). The type here is
+     * plain `text` because drizzle-orm's pg-core has no way to say it, and a
+     * later `pnpm db:generate` will not take it back off.
+     *
+     * On the column so that every `orderBy` over it inherits it with no query
+     * edit: the gear register puts "Ángel" beside "Ana"
+     * rather than after "Zoe", on PGlite and on a real server alike.
+     * Deterministic, so the per-shop unique index stays byte equality.
+     * `src/db/name-collation.test.ts` proves it.
      */
     label: text("label").notNull(),
     /** Optional; mirrors the fit profile's free-text sizes ("M", "10", "3mm L"). */

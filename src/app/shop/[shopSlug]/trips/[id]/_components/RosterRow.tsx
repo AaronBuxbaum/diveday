@@ -685,6 +685,10 @@ export function RosterRow({
           {t("shared.identityCheck.noContactOnFile", { name: person.fullName })}
         </span>
       )}
+      {/* `sendDueReminders` sends a held seat no week-out or night-before
+          reminder until this is confirmed (issue #2124), so the desk can ring
+          ahead rather than learn it from an unprepared diver on the day. */}
+      <span className="basis-full text-muted">{t("shared.identityCheck.remindersHeld")}</span>
     </div>
   ) : null;
   /**

@@ -325,9 +325,9 @@ test.describe("contact import — prior visits", () => {
  * rows and the separately-labelled revenue/refund contribution.
  */
 const PAYMENT_HISTORY_CSV = [
-  "Full Name,Email,Payment Date,Payment Status,Payment Amount,Payment Currency,Payment Direction,Payment ID,Receipt Number,Stripe Payment Intent ID",
-  "Source Sloane,source.sloane@example.com,2026-03-04,Paid,USD 165.00,USD,Payment,legacy-pay-1001,REC-1001,pi_legacy_1001",
-  "Source Sloane,source.sloane@example.com,2026-03-05,Refunded,USD 25.00,USD,Refund,legacy-refund-1001,REC-1002,pi_legacy_1002",
+  "Full Name,Email,Payment Date,Payment Status,Payment Amount,Payment Currency,Payment Direction,Payment ID,Receipt Number,Receipt URL,Stripe Payment Intent ID",
+  "Source Sloane,source.sloane@example.com,2026-03-04,Paid,USD 165.00,USD,Payment,legacy-pay-1001,REC-1001,/import-receipts/rec-1001.pdf,pi_legacy_1001",
+  "Source Sloane,source.sloane@example.com,2026-03-05,Refunded,USD 25.00,USD,Refund,legacy-refund-1001,REC-1002,,pi_legacy_1002",
 ].join("\n");
 
 test.describe("contact import — payment and receipt history", () => {
@@ -373,6 +373,24 @@ test.describe("contact import — payment and receipt history", () => {
       "href",
       /\/shop\/blue-mantis\/divers\//,
     );
+    // The receipt, in the row's second cell, opens the receipt — not the
+    // diver. The name's row-opening overlay once covered the whole row, so a
+    // pointer on the receipt landed on the diver's record (#1989).
+    const receipt = history.getByRole("link", { name: "Receipt REC-1001" });
+    await expect(receipt).toBeVisible();
+    // `elementFromPoint` answers only inside the viewport, and this table is
+    // at the foot of the page.
+    await receipt.scrollIntoViewIfNeeded();
+    const hit = await receipt.evaluate((link) => {
+      const box = link.getBoundingClientRect();
+      const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+      return top === link || link.contains(top);
+    });
+    expect(hit).toBe(true);
+    const [receiptTab] = await Promise.all([page.waitForEvent("popup"), receipt.click()]);
+    expect(new URL(receiptTab.url()).pathname).toBe("/import-receipts/rec-1001.pdf");
+    await receiptTab.close();
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\/orders\?/);
 
     await page.goto("/shop/blue-mantis/reports?month=2026-03");
     const importedNotice = page.getByRole("region", { name: "Unverified imported history" });

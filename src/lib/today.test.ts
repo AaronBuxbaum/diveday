@@ -137,6 +137,31 @@ describe("diverBlockerAction", () => {
     expect(result?.detail).toBe("Medical answer needs a doctor’s sign-off.");
   });
 
+  // Issue #2124: a held seat gets no readiness reminder until staff confirm who
+  // it is (`sendDueReminders`), so the row says so — the desk can phone ahead.
+  it("says a held seat's reminders wait on the confirm", () => {
+    const result = diverBlockerAction(
+      { ...input, blockers: [blocker("identity_unconfirmed")] },
+      "blue-reef",
+      NOW,
+    );
+    expect(result?.detail).toBe("Record match not confirmed. Reminders wait until it is.");
+  });
+
+  it("says it of a boat's worth of held seats too", () => {
+    const rows = collapseDiverActions(
+      [
+        { ...input, blockers: [blocker("identity_unconfirmed")] },
+        { ...input, bookingId: "b2", personId: "p2", blockers: [blocker("identity_unconfirmed")] },
+      ],
+      "blue-reef",
+      NOW,
+    );
+    expect(rows.map((row) => row.subject)).toEqual([
+      "2 record matches not confirmed. Reminders wait until they are.",
+    ]);
+  });
+
   it("says a cert gap without the levels, which the record carries", () => {
     const result = diverBlockerAction(
       {

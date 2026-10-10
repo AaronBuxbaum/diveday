@@ -374,6 +374,7 @@
       "diver-medical-not-cleared",
       "diver-profile",
       "diver-profile-deleted",
+      "diver-profile-erase-refused",
       "diver-profile-imported",
       "diver-profile-not-certified",
       "diver-profile-paper-waiver",

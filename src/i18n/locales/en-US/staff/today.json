@@ -301,7 +301,7 @@
   },
   "blockerRow": {
     "requirementsNotConfigured": "{count, plural, one {Trip requirements not set.} other {Trip requirements not set for # divers.}}",
-    "identityUnconfirmed": "{count, plural, one {Record match not confirmed.} other {# record matches not confirmed.}}",
+    "identityUnconfirmed": "{count, plural, one {Record match not confirmed. Reminders wait until it is.} other {# record matches not confirmed. Reminders wait until they are.}}",
     "waiverNotSent": "{count, plural, one {Waiver not signed, not sent yet.} other {# waivers not signed, not sent yet.}}",
     "waiverPending": "{count, plural, one {Waiver not signed, link sent.} other {# waivers not signed, links sent.}}",
     "waiverExpired": "{count, plural, one {Waiver link expired.} other {# waiver links expired.}}",
