@@ -1,4 +1,4 @@
-import { realpathSync } from "node:fs";
+import { appendFileSync, readFileSync, realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -51,7 +51,36 @@ const VALUE_FLAGS = {
   "--prompt": "prompt",
   "--waiting-on": "waitingOn",
   "--parked": "parked",
+  "--over-quota": "overQuota",
 };
+
+/**
+ * The filing quota: at most FOLLOW_UP_QUOTA issues from one checkout in QUOTA_WINDOW_HOURS.
+ * Backlog sweeps filed 54 `needs-triage` issues in three bursts on 2026-10-09 and 2026-10-10 and
+ * none was triaged: a queue written faster than anyone reads it is no memory at all. The ledger
+ * is a gitignored file in the checkout (a cloud container's whole life is one run); the eleventh
+ * filing is refused unless `--over-quota "<why>"` says why this one cannot wait.
+ */
+export const FOLLOW_UP_QUOTA = 10;
+export const QUOTA_WINDOW_HOURS = 12;
+export const QUOTA_LEDGER = ".claude/.follow-up-log";
+
+/** How many of `stamps` (ISO strings, one per filed issue) fall in the window ending `now`. */
+export function filedInWindow(stamps, now = new Date()) {
+  const since = now.getTime() - QUOTA_WINDOW_HOURS * 3_600_000;
+  return stamps.filter((stamp) => {
+    const at = Date.parse(stamp);
+    return Number.isFinite(at) && at >= since && at <= now.getTime();
+  }).length;
+}
+
+function readLedger(root) {
+  try {
+    return readFileSync(path.join(root, QUOTA_LEDGER), "utf8").split("\n").filter(Boolean);
+  } catch {
+    return [];
+  }
+}
 /** The four prose flags name a file to read, or `-` for stdin. */
 const FILE_FLAGS = new Set(["--noticed", "--why", "--proposed", "--prompt"]);
 const REQUIRED_FLAGS = [
@@ -374,6 +403,14 @@ async function main() {
     return;
   }
 
+  const filed = filedInWindow(readLedger(root));
+  if (filed >= FOLLOW_UP_QUOTA && !parsed.overQuota) {
+    console.error(
+      `file-follow-up: DID NOT FILE — ${filed} follow-ups were filed from this checkout in the last ${QUOTA_WINDOW_HOURS} hours, and the quota is ${FOLLOW_UP_QUOTA}. Do the most valuable of what is left, fold related notes into one issue, or say in your hand-off what you did not file. If this one cannot wait, pass --over-quota "<why>". See docs/agents/issue-tracker.md's Filing a follow-up section.`,
+    );
+    process.exit(1);
+  }
+
   const result = runBounded(
     "gh",
     [
@@ -393,6 +430,11 @@ async function main() {
       `file-follow-up: \`gh issue create\` failed — ${String(result.stderr ?? "").trim()}`,
     );
     process.exit(1);
+  }
+  try {
+    appendFileSync(path.join(root, QUOTA_LEDGER), `${new Date().toISOString()}\n`);
+  } catch {
+    // An unwritable ledger loses a count, never an issue.
   }
   console.log(`file-follow-up: filed ${String(result.stdout ?? "").trim()}`);
 }

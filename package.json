@@ -88,6 +88,7 @@
     "brand:icons": "tsx scripts/render-brand-icons.tsx",
     "check:context-budget": "node scripts/check-context-budget.mjs",
     "agent:health": "node scripts/agent-health.mjs",
+    "agent:doctor": "node scripts/agent-doctor.mjs",
     "simulate:day": "node scripts/simulate-day.mjs",
     "persona:bots": "node scripts/persona-bots.mjs"
   },

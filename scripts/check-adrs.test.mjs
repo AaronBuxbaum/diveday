@@ -1,89 +1,92 @@
 import { describe, expect, it } from "vitest";
 
-import { runGuard } from "./guard-fixture.mjs";
+import { adrSummary, END, indexTable, START, withIndex } from "./adr-index.mjs";
+import { adrProblems, adrWords, isCapped, WORD_CAP } from "./check-adrs.mjs";
 
-const DIR = "docs/architecture/decisions";
-
-const adr = (heading, { status = "Accepted", date = "2026-10-10", sections } = {}) =>
+const adr = (id, { status = "Accepted", body = "Short." } = {}) =>
   [
-    `# ${heading}`,
+    `# ${id} — Use a thing`,
     "",
     `- **Status:** ${status}`,
-    `- **Date:** ${date}`,
+    "- **Date:** 2026-10-11",
     "",
-    ...(sections ?? ["Context", "Decision", "Alternatives considered", "Consequences"]).flatMap(
-      (section) => [`## ${section}`, "", "Text.", ""],
-    ),
+    "## Context",
+    "",
+    body,
+    "",
+    "## Decision",
+    "",
+    "## Alternatives considered",
+    "",
+    "## Consequences",
   ].join("\n");
 
-const run = (records) =>
-  runGuard(
-    "check-adrs.mjs",
-    Object.fromEntries(Object.entries(records).map(([name, body]) => [`${DIR}/${name}`, body])),
-  );
-
-describe("check-adrs", () => {
-  it("passes a well-formed record of each id shape, and ignores the README and template", () => {
-    const result = run({
-      "20261010-one-thing.md": adr("20261010-one-thing — One thing"),
-      "0042-old-thing.md": adr("0042 — Old thing"),
-      "README.md": "# Index\n",
-      "0000-template.md": "# NNNN — Title\n",
-    });
-    expect(result.stderr).toBe("");
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain("adrs: 2 records valid");
-  });
-
-  it("refuses an id that is neither NNNN-slug nor YYYYMMDD-slug", () => {
-    const result = run({ "Thing.md": adr("Thing — Thing") });
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain(
-      "Thing.md: id must be NNNN-slug (historical) or YYYYMMDD-slug (new)",
+describe("the ADR word cap", () => {
+  it("holds a new ADR to the cap and leaves the older corpus alone", () => {
+    const long = "word ".repeat(WORD_CAP + 1);
+    expect(isCapped("20261011-new-thing")).toBe(true);
+    expect(isCapped("20261010-today")).toBe(false);
+    expect(isCapped("0001-nextjs-fullstack")).toBe(false);
+    const [problem] = adrProblems(
+      "20261011-new-thing.md",
+      adr("20261011-new-thing", { body: long }),
+    ).failures;
+    expect(problem).toMatch(/words; an ADR dated after 20261010 holds at most 500/);
+    expect(adrProblems("20261009-old.md", adr("20261009-old", { body: long })).failures).toEqual(
+      [],
     );
   });
 
-  it("refuses a heading whose id does not match the filename", () => {
-    const result = run({ "20261010-one-thing.md": adr("20261010-other — One thing") });
-    expect(result.stderr).toContain("heading id must be 20261010-one-thing");
+  it("does not count the template's HTML guidance", () => {
+    expect(adrWords("one <!-- a long\nguidance comment here --> two")).toBe(2);
   });
 
-  it("holds a historical record's heading to its four digits", () => {
-    const result = run({ "0042-old-thing.md": adr("0042-old-thing — Old thing") });
-    expect(result.stderr).toContain("0042-old-thing.md: heading id must be 0042");
-  });
-
-  it("accepts a status that begins with a known word, and refuses one that does not", () => {
-    expect(
-      run({
-        "20261010-a.md": adr("20261010-a — A", { status: "Superseded by 20261011-b" }),
-      }).status,
-    ).toBe(0);
-    expect(run({ "20261010-a.md": adr("20261010-a — A", { status: "Draft" }) }).stderr).toContain(
-      "status must begin with Proposed, Accepted, Deprecated, Superseded",
+  it("keeps the shape checks it always had", () => {
+    expect(adrProblems("20261011-x.md", "# 20261011-x — T\n").failures.join("\n")).toMatch(
+      /status must begin with[\s\S]*missing ISO Date[\s\S]*missing section “Context”/,
     );
   });
+});
 
-  it("refuses a date that is not ISO", () => {
+describe("the generated index", () => {
+  const known = new Set(["20260801-old", "20260901-new"]);
+
+  it("reads title, status and the successor named in the status line", () => {
     expect(
-      run({ "20261010-a.md": adr("20261010-a — A", { date: "10 October 2026" }) }).stderr,
-    ).toContain("20261010-a.md: missing ISO Date metadata");
+      adrSummary(
+        "20260801-old.md",
+        adr("20260801-old", {
+          status: "Superseded on 2026-09-20 by [20260901-new](20260901-new.md)",
+        }),
+        known,
+      ),
+    ).toEqual({
+      id: "20260801-old",
+      title: "Use a thing",
+      status: "Superseded",
+      supersededBy: "20260901-new",
+    });
+    expect(
+      adrSummary("x.md", adr("x", { status: "Superseded by 20260901-new" }), known).supersededBy,
+    ).toBe("20260901-new");
+    expect(adrSummary("x.md", adr("x"), known).supersededBy).toBe("");
   });
 
-  it("names each missing section", () => {
-    const { stderr } = run({
-      "20261010-a.md": adr("20261010-a — A", { sections: ["Context", "Decision"] }),
-    });
-    expect(stderr).toContain("missing section “Alternatives considered”");
-    expect(stderr).toContain("missing section “Consequences”");
-  });
-
-  it("refuses two historical records that share their four digits", () => {
-    const { status, stderr } = run({
-      "0042-one.md": adr("0042 — One"),
-      "0042-two.md": adr("0042 — Two"),
-    });
-    expect(status).toBe(1);
-    expect(stderr).toMatch(/duplicate ADR id 0042: 0042-(one|two)\.md, 0042-(one|two)\.md/);
+  it("writes one row per ADR between the markers and leaves the rest of the README alone", () => {
+    const table = indexTable([
+      { id: "0001-a", title: "A | B", status: "Accepted", supersededBy: "" },
+      { id: "0002-b", title: "B", status: "Superseded", supersededBy: "0003-c" },
+    ]);
+    expect(table.split("\n")).toEqual([
+      "| ADR | Decision | Status | Superseded by |",
+      "| --- | --- | --- | --- |",
+      "| [0001-a](0001-a.md) | A \\| B | Accepted |  |",
+      "| [0002-b](0002-b.md) | B | Superseded | [0003-c](0003-c.md) |",
+    ]);
+    const readme = `# ADRs\n\nprose\n\n${START}\nold\n${END}\n\ntail\n`;
+    const next = withIndex(readme, "T");
+    expect(next).toBe(`# ADRs\n\nprose\n\n${START}\n\nT\n\n${END}\n\ntail\n`);
+    expect(withIndex(next, "T")).toBe(next);
+    expect(withIndex("# no markers", "T")).toBeNull();
   });
 });

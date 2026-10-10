@@ -396,6 +396,12 @@ The follow-ups guard (`scripts/check-follow-ups.mjs`) is the one guard that make
 
 It keeps its three outcomes. Exit 0 is clean, exit 1 is a malformed issue, and exit **2** is `SKIPPED`: `gh` could not answer, so nothing was validated. That code is unreachable from any validation path, so a genuine failure can never downgrade itself into a skip. Every guard in `check:repo` exits 0 or fails; none reads the network, and `check-repo.mjs` no longer has a skipped outcome at all.
 
+### pr-body
+
+The pr-body guard (`scripts/check-pr-body.mjs`), outside `check:repo`, reads the one thing no branch contains, the pull request's body, so it is a step in CI's `Repository safeguards` job rather than a row in this table: on every pull request event it fetches the body live (or takes the event's copy) and diffs against the base **ref**, three-dot, for the reason the CI-change-detection write-up above gives. When the diff touches a safety-critical path (manifests, roll call, readiness, trip admission, certifications, medical, erasure, seat-diver, nitrox) it fails unless the body's `## Reviews launched` section names `dive-domain-expert` with an answer; when it touches auth, a `[token]` route's server code, personal-data schema, or export/import, the same for `security-reviewer`. "An answer" is what the agent found, or "not needed because <reason>"; an empty line or the template's placeholder is not. The path list is `REVIEWS` in the script and only covers `src/**`, minus the copy bundles and the PWA web manifest (`src/app/manifest.ts`).
+
+It exists because AGENTS.md's "launched, never skipped" was a rule nothing read: between 2026-10-07 and 2026-10-10, 17 of 85 merged pull requests mentioned a reviewer anywhere, while `src/lib/manifests.ts`, `src/db/seat-diver.ts` and the course-form seal changed. It checks that a launch is *recorded*, never that the review was good. The section comes from `.github/pull_request_template.md`, whose other headings (Before / After, What, How, Visual diffs, Follow-ups filed, ADRs and glossary, Stack position) are what a human reviewer reads first; only the Reviews section is enforced. Locally: `node scripts/check-pr-body.mjs --body-file <draft.md>` diffs against `origin/main`.
+
 ## Now Biome rules
 
 Five guards that were one syntactic pattern each are rules in `pnpm lint` now: a GritQL plugin in `scripts/lint-rules/<rule>.grit`, scoped and exempted by an `overrides` entry in `biome.json`, and tested through that real config by `scripts/lint-rules/lint-rules.test.mjs`. A rule reads the syntax tree, so a comment or a string that only *mentions* the call is no longer refused; nothing else moved. That was checked before the guards were deleted: each old guard and its rule ran over every `.ts`/`.tsx` under `src/` with scopes and exemptions lifted, then over a copy with the refused shapes and their look-alikes injected into every `try` body, `catch` body and function in the tree (from 722 refused lines for `timezone` to 4,733 for `redirectInTry`), and the two sets of refused lines were identical apart from the twelve comment lines `clock` used to count. `pnpm lint:rules` runs these rules alone.
@@ -732,11 +738,8 @@ For `src/db/` and `drizzle/`; the rules themselves are in `.claude/rules/db.md`.
 
 Follow the **schema-change** skill. The short form: edit `src/db/schema.ts`, `pnpm db:generate`
 with a `--name`, review the generated SQL once, seed if e2e needs rows, and **before you push** run
-the four coverage guards that assert over `schema.ts` from files you will never touch:
-
-```bash
-pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/db/retention.test.ts --reporter=dot
-```
+the four coverage guards that assert over `schema.ts` from files you will never touch (the
+**verify** skill's checklist, step 3, carries the command).
 
 Touching `schema.ts` at all is the trigger, not the shape of the change — `pnpm test:changed`
 selects the whole suite after a schema edit, and that run belongs to CI

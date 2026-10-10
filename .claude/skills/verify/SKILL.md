@@ -5,37 +5,38 @@ description: Verify a change works before committing — checks, the running app
 
 # Verify a change
 
-Run the layers that your change touches. A change is verified when you've **observed** it
-working, not when checks pass.
+This is the one pre-commit and pre-push checklist; AGENTS.md, `.claude/rules/` and `docs/agents/`
+point here rather than repeat it, and [docs/agents/verifying.md](../../../docs/agents/verifying.md)
+holds the why. A change is verified when you have **observed** it working, not when checks pass.
 
-## 1. Always: static + unit
+## The checklist
 
-```bash
-pnpm check:repo   # the static guards, concurrently — one run reports every failure
-pnpm lint         # biome
-pnpm typecheck    # tsc
-pnpm test <file> --reporter=dot   # the test you are iterating on
-```
+Before every commit:
 
-`pnpm check` — the same four phases plus the **whole** unit suite, concurrently and fail-slow — is
-the bar, and CI is where you clear it: a full local unit run saturates the box for twenty minutes
-while CI's four shards answer in a few, and `scripts/guard-bash.mjs` refuses the bare form for that
-reason ([docs/agents/verifying.md](../../../docs/agents/verifying.md)). When you do read a
-`pnpm check` log, read the whole tail before fixing anything — the list at the bottom is complete,
-and fixing all of it in one pass is the point.
+1. **The guard you touched**: `node scripts/check-<name>.mjs`, or `pnpm check:repo` (every static
+   guard, concurrently, every failure in one run) when you changed something a guard reads.
+2. **`pnpm lint`** and **`pnpm typecheck`**.
+3. **`pnpm test <file> --reporter=dot`** for each test file you touched or whose module you touched.
+   After any edit under `src/db/schema/`, also the four schema guards, which nothing you edit
+   selects:
+   `pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/db/retention.test.ts --reporter=dot`
+4. **A flow changed**: one `pnpm e2e <spec> --reporter=line` (section 2).
+5. **UI changed**: look at it (section 3).
 
-Then, **before you push**, run what your diff *reaches* rather than only what you edited:
+Before every push:
 
-```bash
-pnpm test:changed
-```
+6. **`pnpm test:changed`**: the tests your diff reaches through the import graph, which is the only
+   local run that reaches a coverage guard in a file you never touched. After a schema edit it
+   selects the whole suite; step 3's four guards stand in for it then.
+7. **One validated push per round.** Commit as often as you like; push once, when the checklist
+   is green for the round's work, because each push cancels the CI run of the one before it
+   (the measurement is in [verifying.md](../../../docs/agents/verifying.md#one-validated-push-per-round)).
+   A second push is right only when the `unpushed-work` hook is saving work before a turn ends,
+   or when you push to learn what only CI can answer and say so in the PR.
 
-It selects by import graph, so it picks up the coverage guards — the ones that assert over
-`src/db/schema/` from files your change never touches, and therefore the ones a focused
-`pnpm test <file>` can never select. When you touched `schema.ts`, `test:changed` widens to the
-whole suite and belongs to CI; name the four guards by path instead
-(`src/db/export.test.ts`, `src/db/diver-merge.test.ts`, `src/db/delete-path-coverage.test.ts`,
-`src/db/retention.test.ts`). See [docs/agents/verifying.md](../../../docs/agents/verifying.md).
+CI runs anything whole: `pnpm check`, the whole unit suite, `next build`, the whole e2e suite and
+the visual run. The shell guard refuses the bare local forms. When you do read a `pnpm check` log,
+read the whole tail before fixing anything; the list at the bottom is complete.
 
 ## 2. Flows changed: e2e
 

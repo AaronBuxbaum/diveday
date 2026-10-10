@@ -5,22 +5,9 @@ line between the two.
 
 ## Run locally: anything you can scope to the change
 
-- the one guard you touched — `node scripts/check-<name>.mjs`
-- `pnpm test <file> --reporter=dot`, and — **before you push** — `pnpm test:changed`, which selects
-  by import graph and so reaches the coverage guards a focused run structurally cannot (see below)
-- `pnpm typecheck` and `pnpm lint`, both of which are seconds
-- `node scripts/check-repo.mjs` when you touched something a static guard reads — it is
-  concurrent and finishes in under a minute
-- one focused spec: `pnpm e2e <spec> --reporter=line`, or `pnpm e2e:run <spec>` after one
-  `pnpm e2e:build`
-- `node scripts/screenshot.mjs <path…>` against a running `pnpm dev` — looking at UI you changed
-  is not optional and has no CI substitute
-- `node scripts/contact-sheet.mjs` against a running `pnpm dev` — every `page.tsx` route,
-  signed in as the demo owner for `/shop/**`, at phone width in
-  light, tiled with captions into `screenshots/contact-sheet.jpg` (under the canvas guard's cap).
-  Ids and tokens are filled from links on pages it already visited; routes it could not reach or
-  capture are listed. `--budget` (60 page loads by default) keeps one run under the supervisor's
-  restart threshold
+The list is the **verify** skill's checklist ([SKILL.md](../../.claude/skills/verify/SKILL.md)),
+and only there. Everything on it is scoped to your diff, which is the whole test for "local"; the
+sections below are why each line is on it, and why the rest is not.
 
 ## The unit suite's projects
 
@@ -64,11 +51,8 @@ entries, measured 2026-09-06 — and on a stack the diff against `origin/main` i
 beneath you, so that is a floor rather than a ceiling. That run belongs to CI. When you touched
 a file under `src/db/schema/`, name the four by path instead:
 
-```bash
-pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/db/retention.test.ts --reporter=dot
-```
-
-40 tests, about a minute, and it catches every failure listed above. The trigger is touching
+The command is step 3 of the verify skill's checklist: 40 tests, about a minute, and it catches
+every failure listed above. The trigger is touching
 any schema module at all — 16j-B added only columns and tripped two guards.
 
 ## Push and read CI: anything whole
@@ -154,9 +138,22 @@ waiver, the counter, the manifest, the closing block, the recap pass — and rea
 rather than the runner's output: the transcript names the state and the shop-clock hour, which is
 what a failure here is about.
 
+## One validated push per round
+
+Each push to a branch cancels the CI run of the push before it (per-ref concurrency in `ci.yml`).
+Measured on 2026-10-10: 9 of the last 25 runs were cancelled that way — runs 4548 to 4551 were four
+pushes to one branch in thirty minutes — at about 70 runner-minutes per cancelled full run, against
+a 20-job concurrency cap that every other open branch shares. Three speculative pushes buy one CI
+answer and cost two runs nobody reads. So push when the round's checklist is green, once; the
+exceptions are in the verify skill.
+
 ## The one thing CI cannot answer
 
-Whether the surface looks right. Screenshots, phone and desktop, are yours — in light only, unless
+Whether the surface looks right. `node scripts/screenshot.mjs <path…>` against a running `pnpm dev`
+takes the phone and desktop pair; `node scripts/contact-sheet.mjs` tiles every route in
+`scripts/route-coverage.json` at phone width in light into `screenshots/contact-sheet.jpg`, filling
+ids and tokens from links it already visited, with `--budget` (60 page loads by default) keeping one
+run under the dev supervisor's restart threshold. Screenshots, phone and desktop, are yours — in light only, unless
 the work is itself about colour (then `screenshot.mjs --both`); that is the owner's rule,
 [H-90](../product/human-decisions/README.md#decision-register). CI's visual run keeps both schemes, so a
 dark pixel that moved still shows up as a diff — but it tells you a pixel *moved*, never that the
