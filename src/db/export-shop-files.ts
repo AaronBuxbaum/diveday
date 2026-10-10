@@ -1,8 +1,42 @@
 import { calendarDateInTimezone } from "@/lib/calendar-date";
-import { verifyCourseFormIntegrity } from "@/lib/course-form-integrity";
 import { EXPORT_FILE_NOTES } from "@/lib/export";
 import { WEEKDAY_EXPORT_CODES, weekdaysIn } from "@/lib/recurrence";
 import type { ShopExportContext } from "./export";
+import {
+  BOOKING_ARRIVAL_EVENTS_CSV,
+  BOOKING_CHECKOUT_BOOKINGS_CSV,
+  BOOKING_PAYMENT_EVENTS_CSV,
+  BOOKINGS_CSV,
+  BUDDY_PAIRS_CSV,
+  CERTIFICATIONS_CSV,
+  COURSE_FORM_RECORDS_CSV,
+  COURSE_INQUIRIES_CSV,
+  CUSTOMER_GEAR_ITEMS_CSV,
+  DIVE_PACKAGE_ENTITLEMENTS_CSV,
+  GEAR_RESERVATIONS_CSV,
+  IMPORTED_PAYMENT_HISTORY_CSV,
+  LAST_MINUTE_LIST_CSV,
+  NITROX_CERTIFICATIONS_CSV,
+  NOTIFICATION_DELIVERIES_CSV,
+  ORDER_LINE_ITEMS_CSV,
+  ORDERS_CSV,
+  PRIOR_VISITS_CSV,
+  RECAP_PHOTOS_CSV,
+  RENTAL_FIT_CSV,
+  REVIEW_MODERATION_EVENTS_CSV,
+  ROLL_CALL_EVENTS_CSV,
+  SPECIALTY_CERTIFICATIONS_CSV,
+  shopFile,
+  TIPS_CSV,
+  TRIP_INVITATIONS_CSV,
+  TRIP_LAST_MINUTE_PROMO_RECIPIENTS_CSV,
+  TRIP_REVIEWS_CSV,
+  WAITLIST_ENTRIES_CSV,
+  WAIVER_RECORDS_CSV,
+  WORK_ORDER_CARE_CSV,
+  WORK_ORDER_LINES_CSV,
+  WORK_ORDERS_CSV,
+} from "./export-shared-files";
 import type { ExportFileSpec } from "./export-tables";
 import { certificationLevel } from "./schema";
 
@@ -465,154 +499,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["people.csv"],
   },
-  {
-    file: "certifications.csv",
-    header: [
-      "id",
-      "person_id",
-      "person_name",
-      "agency",
-      "level",
-      "identifier",
-      // The number the *diver* typed, which is never the number above: one
-      // is a claim and one is what the shop holds, and a file that
-      // merged them would launder the first into the second on the way
-      // back in (issue #630).
-      "declared_identifier",
-      "status",
-      "review_note",
-      "reviewed_at",
-      "reviewed_by_person_id",
-      // Set when the review was the agency's own page, read through the
-      // DiveDay browser extension (H-105); review_note then holds its words.
-      "agency_checked_at",
-      // Provenance from the contact importer (ADR 20260724-import-verified-cards):
-      // a non-null imported_at is the definitive "this card was migrated, not
-      // carded on sight" marker, permanent even after a staff confirm.
-      "imported_at",
-      "imported_from_label",
-      // The weaker sibling of imported_at, and it travels for the same
-      // reason: a non-null self_declared_at means the level came off a
-      // public opt-in the diver filled in themselves, with no card
-      // sighted. Dropping it from the export would launder a claim into
-      // an ordinary card the moment the file is read back.
-      "self_declared_at",
-      // A third provenance, alongside imported_at and self_declared_at
-      // above: a non-null issued_by_shop_at means this shop's own
-      // instructor certified the diver from a course session's roster
-      // (issue #717), never a captured or self-declared card.
-      // issued_from_trip_id names that session; issued_by_person_id
-      // names the instructor. Same reasoning as the other two
-      // provenance stamps — dropping any of the three from the export
-      // would launder one kind of card into another on the way back in.
-      "issued_by_shop_at",
-      "issued_from_trip_id",
-      "issued_by_person_id",
-      "deleted_at",
-      "deleted_by_person_id",
-      "created_at",
-    ],
-    rows: ({ personName, certificationRows }) =>
-      certificationRows.map((row) => [
-        row.id,
-        row.personId,
-        personName.get(row.personId),
-        row.agency,
-        row.level,
-        row.identifier,
-        row.declaredIdentifier,
-        row.status,
-        row.reviewNote,
-        row.reviewedAt,
-        row.reviewedByPersonId,
-        row.agencyCheckedAt,
-        row.importedAt,
-        row.importedFromLabel,
-        row.selfDeclaredAt,
-        row.issuedByShopAt,
-        row.issuedFromTripId,
-        row.issuedByPersonId,
-        row.deletedAt,
-        row.deletedByPersonId,
-        row.createdAt,
-      ]),
-    note: EXPORT_FILE_NOTES["certifications.csv"],
-  },
-  {
-    file: "specialty_certifications.csv",
-    header: [
-      "id",
-      "person_id",
-      "person_name",
-      "agency",
-      "specialty",
-      "identifier",
-      "status",
-      "review_note",
-      "reviewed_at",
-      "reviewed_by_person_id",
-      "deleted_at",
-      "deleted_by_person_id",
-      "created_at",
-    ],
-    rows: ({ personName, specialtyRows }) =>
-      specialtyRows.map((row) => [
-        row.id,
-        row.personId,
-        personName.get(row.personId),
-        row.agency,
-        row.specialty,
-        row.identifier,
-        row.status,
-        row.reviewNote,
-        row.reviewedAt,
-        row.reviewedByPersonId,
-        row.deletedAt,
-        row.deletedByPersonId,
-        row.createdAt,
-      ]),
-    note: EXPORT_FILE_NOTES["specialty_certifications.csv"],
-  },
-  {
-    file: "nitrox_certifications.csv",
-    header: [
-      "id",
-      "person_id",
-      "person_name",
-      "agency",
-      "identifier",
-      "status",
-      "review_note",
-      "reviewed_at",
-      "reviewed_by_person_id",
-      "imported_at",
-      "imported_from_label",
-      // Same reason as the level card's — see certifications.csv above.
-      "self_declared_at",
-      "deleted_at",
-      "deleted_by_person_id",
-      "created_at",
-    ],
-    rows: ({ personName, nitroxRows }) =>
-      nitroxRows.map((row) => [
-        row.id,
-        row.personId,
-        personName.get(row.personId),
-        row.agency,
-        row.identifier,
-        row.status,
-        row.reviewNote,
-        row.reviewedAt,
-        row.reviewedByPersonId,
-        row.importedAt,
-        row.importedFromLabel,
-        row.selfDeclaredAt,
-        row.deletedAt,
-        row.deletedByPersonId,
-        row.createdAt,
-      ]),
-    note: EXPORT_FILE_NOTES["nitrox_certifications.csv"],
-  },
+  shopFile(CERTIFICATIONS_CSV),
+  shopFile(SPECIALTY_CERTIFICATIONS_CSV),
+  shopFile(NITROX_CERTIFICATIONS_CSV),
   {
     file: "trips.csv",
     header: [
@@ -1061,145 +950,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["staff_credentials.csv"],
   },
-  {
-    file: "bookings.csv",
-    header: [
-      "id",
-      "trip_id",
-      "trip_title",
-      "trip_starts_at",
-      "person_id",
-      "person_name",
-      "status",
-      // Diver, snorkeler or rider (ADR 20261007-participant-types): what
-      // this seat was for, and which gates it was asked to clear; and
-      // what it was sold as, which differs when staff changed it.
-      "participant_type",
-      "booked_as",
-      "wants_nitrox",
-      "conditions_briefed_at",
-      // What the diver said this dive was for, and the one support they
-      // asked for when they said they were easing back (ADR
-      // 20260904-reef-all-the-way-down). Codes rather than words: an
-      // export is the shop's own database handed back, and the sentence a
-      // diver read was in whichever language they read it in.
-      "dive_intent",
-      "re_entry_ask",
-      // The diver's own answer to "when did you last dive?" (ADR
-      // 20260821-currency-is-what-catches-people). A statement they made
-      // about themselves, on the seat they made it for — the same kind of
-      // record as `dive_intent` beside it, and a shop moving its data
-      // elsewhere should not have to ask every returning diver again.
-      "last_dived_band",
-      // The party structure a shop booked (ADR 20260804-seat-claim-links).
-      // Both are real records of what happened to a seat, so both travel:
-      // `party_lead_booking_id` is a booking id from this same file's `id`
-      // column, and `claimed_at` sits alongside `conditions_briefed_at` as
-      // another plain fact about the seat. Dropping either would let a shop
-      // export a party of six and get back six unrelated singles.
-      "party_lead_booking_id",
-      "claimed_at",
-      // Which partner's link brought this diver (issue #1285). A plain
-      // fact about the seat, like `claimed_at` above it — a shop that
-      // exported its bookings and got them back un-credited would have
-      // silently lost every partner's attribution.
-      //
-      // Kept here although no *page* renders it any more (issue #1294):
-      // an export is the shop's own database handed back under the
-      // strictest gate in the product, and its contract is completeness.
-      // That is a different question from a staff surface presenting a
-      // stranger's text as a business fact. Hostile text cannot escape a
-      // CSV cell either — `csvCell`'s formula guard covers the one
-      // reachable shape, a leading `-`.
-      "referral_source",
-      // **Which diver's link brought this one** (the buddy seat, ADR
-      // 20260908-one-hand, decision 6, lever W). A plain fact about the
-      // seat, in exactly the class `party_lead_booking_id` and
-      // `referral_source` above are in, so it travels with it rather
-      // than in a file of its own.
-      "referred_by_booking_id",
-      // The diver's own consent to have the crew told this is a first
-      // trip, or a return after a long gap (issue #1182). A statement
-      // they made about themselves on this seat, the same kind of record
-      // as `last_dived_band` above — and a shop that moved its data would
-      // otherwise be asking every one of them again.
-      "welcome_shared_at",
-      // The diver answering "nothing has changed" about the sizes, gas
-      // and emergency contact the shop already holds (ADR
-      // 20260904-reef-all-the-way-down, D15). Same class as the two
-      // columns above: a statement they made about themselves on this
-      // seat, and a shop that moved its data would otherwise ask the
-      // whole board the question over again.
-      "carried_facts_confirmed_at",
-      // The diver saying they were running late (J3): a statement they
-      // made on this seat, in the same class as the two above.
-      "running_late_at",
-      // The instructor's own words to this student, and who wrote them
-      // (issues #1196, #1205). The student read it on their recap; a
-      // shop moving its data takes the sentence with it.
-      "course_next_step",
-      "course_next_step_at",
-      "course_next_step_by_person_id",
-      // The tick that this student finished the course's learning
-      // materials, and who ticked it (ADR 20261008-course-learning-materials).
-      "course_materials_done_at",
-      "course_materials_done_by_person_id",
-      "hotel_pickup_location",
-      "pickup_time",
-      "payment_status",
-      "payment_amount_cents",
-      "payment_currency",
-      "payment_provider",
-      "created_at",
-    ],
-    rows: ({
-      personName,
-      tripTitle,
-      tripStartsAt,
-      bookingRows,
-      paymentByBooking,
-      buddyReferralByBooking,
-    }) =>
-      bookingRows.map((row) => {
-        const payment = paymentByBooking.get(row.id);
-        return [
-          row.id,
-          row.tripId,
-          tripTitle.get(row.tripId),
-          tripStartsAt.get(row.tripId),
-          row.personId,
-          personName.get(row.personId),
-          row.status,
-          row.participantType,
-          row.bookedAs,
-          row.wantsNitrox,
-          row.conditionsBriefedAt,
-          row.diveIntent,
-          row.reEntryAsk,
-          row.lastDivedBand,
-          row.partyLeadBookingId,
-          row.claimedAt,
-          row.referralSource,
-          buddyReferralByBooking.get(row.id),
-          row.welcomeSharedAt,
-          row.carriedFactsConfirmedAt,
-          row.runningLateAt,
-          row.courseNextStep,
-          row.courseNextStepAt,
-          row.courseNextStepByPersonId,
-          row.courseMaterialsDoneAt,
-          row.courseMaterialsDoneByPersonId,
-          row.hotelPickupLocation,
-          row.pickupTime,
-          payment?.status ?? "unpaid",
-          payment?.amountCents,
-          payment?.currency,
-          payment?.provider,
-          row.createdAt,
-        ];
-      }),
-    note: EXPORT_FILE_NOTES["bookings.csv"],
-  },
+  shopFile(BOOKINGS_CSV),
   {
     file: "trip_help_requests.csv",
     header: [
@@ -1242,91 +993,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       }),
     note: EXPORT_FILE_NOTES["trip_help_requests.csv"],
   },
-  {
-    file: "waitlist_entries.csv",
-    header: [
-      "id",
-      "trip_id",
-      "trip_title",
-      "trip_starts_at",
-      "person_id",
-      "person_name",
-      "invited_at",
-      "created_at",
-    ],
-    rows: ({ personName, waitlistRows, tripTitle, tripStartsAt }) =>
-      waitlistRows.map((row) => [
-        row.id,
-        row.tripId,
-        tripTitle.get(row.tripId),
-        tripStartsAt.get(row.tripId),
-        row.personId,
-        personName.get(row.personId),
-        row.invitedAt,
-        row.createdAt,
-      ]),
-    note: EXPORT_FILE_NOTES["waitlist_entries.csv"],
-  },
-  {
-    file: "trip_invitations.csv",
-    header: [
-      "id",
-      "trip_id",
-      "trip_title",
-      "trip_starts_at",
-      "source",
-      "course_inquiry_id",
-      "person_id",
-      "person_name",
-      "created_by_person_id",
-      "created_by_name",
-      "invited_at",
-      "created_at",
-    ],
-    rows: ({ personName, tripTitle, tripStartsAt, inquiryById, invitationRows }) =>
-      invitationRows.map((row) => {
-        const inquiry = row.courseInquiryId ? inquiryById.get(row.courseInquiryId) : undefined;
-        const personId = row.personId ?? inquiry?.personId ?? null;
-        return [
-          row.id,
-          row.tripId,
-          tripTitle.get(row.tripId),
-          tripStartsAt.get(row.tripId),
-          row.source,
-          row.courseInquiryId,
-          personId,
-          personId ? personName.get(personId) : inquiry?.name,
-          row.createdByPersonId,
-          personName.get(row.createdByPersonId),
-          row.invitedAt,
-          row.createdAt,
-        ];
-      }),
-    note: EXPORT_FILE_NOTES["trip_invitations.csv"],
-  },
-  {
-    file: "last_minute_list.csv",
-    header: [
-      "id",
-      "person_id",
-      "person_name",
-      "available_from",
-      "available_until",
-      "unsubscribed_at",
-      "created_at",
-    ],
-    rows: ({ personName, lastMinuteListRows }) =>
-      lastMinuteListRows.map((row) => [
-        row.id,
-        row.personId,
-        personName.get(row.personId),
-        row.availableFrom,
-        row.availableUntil,
-        row.unsubscribedAt,
-        row.createdAt,
-      ]),
-    note: EXPORT_FILE_NOTES["last_minute_list.csv"],
-  },
+  shopFile(WAITLIST_ENTRIES_CSV),
+  shopFile(TRIP_INVITATIONS_CSV),
+  shopFile(LAST_MINUTE_LIST_CSV),
   {
     file: "trip_last_minute_promos.csv",
     header: [
@@ -1362,58 +1031,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["trip_last_minute_promos.csv"],
   },
-  {
-    file: "trip_last_minute_promo_recipients.csv",
-    header: ["id", "trip_promo_id", "person_id", "person_name", "email", "created_at"],
-    rows: ({ personName, lastMinutePromoRecipientRows }) =>
-      lastMinutePromoRecipientRows.map((row) => [
-        row.id,
-        row.tripPromoId,
-        row.personId,
-        personName.get(row.personId),
-        row.email,
-        row.createdAt,
-      ]),
-    note: EXPORT_FILE_NOTES["trip_last_minute_promo_recipients.csv"],
-  },
-  {
-    file: "booking_payment_events.csv",
-    header: [
-      "id",
-      "booking_id",
-      "person_id",
-      "person_name",
-      "status",
-      "previous_status",
-      "amount_cents",
-      "currency",
-      "provider",
-      "provider_ref",
-      "operation",
-      "note",
-      "occurred_at",
-    ],
-    rows: ({ personName, bookingPerson, paymentEventRows }) =>
-      paymentEventRows.map((row) => {
-        const personId = bookingPerson.get(row.bookingId);
-        return [
-          row.id,
-          row.bookingId,
-          personId,
-          personId ? personName.get(personId) : null,
-          row.status,
-          row.previousStatus,
-          row.amountCents,
-          row.currency,
-          row.provider,
-          row.providerRef,
-          row.operation,
-          row.note,
-          row.occurredAt,
-        ];
-      }),
-    note: EXPORT_FILE_NOTES["booking_payment_events.csv"],
-  },
+  shopFile(TRIP_LAST_MINUTE_PROMO_RECIPIENTS_CSV),
+  shopFile(BOOKING_PAYMENT_EVENTS_CSV),
   {
     file: "booking_checkouts.csv",
     header: [
@@ -1475,34 +1094,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["booking_checkouts.csv"],
   },
-  {
-    file: "booking_checkout_bookings.csv",
-    header: [
-      "checkout_id",
-      "booking_id",
-      "person_id",
-      "person_name",
-      "trip_cents",
-      "gear_cents",
-      "pass_through_cents",
-      "tax_cents",
-    ],
-    rows: ({ personName, bookingPerson, checkoutBookingRows }) =>
-      checkoutBookingRows.map((row) => {
-        const personId = bookingPerson.get(row.bookingId) ?? null;
-        return [
-          row.checkoutId,
-          row.bookingId,
-          personId,
-          personId ? personName.get(personId) : null,
-          row.tripCents,
-          row.gearCents,
-          row.passThroughCents,
-          row.taxCents,
-        ];
-      }),
-    note: EXPORT_FILE_NOTES["booking_checkout_bookings.csv"],
-  },
+  shopFile(BOOKING_CHECKOUT_BOOKINGS_CSV),
   {
     file: "executed_dives.csv",
     header: [
@@ -1592,94 +1184,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["trip_sightings.csv"],
   },
-  {
-    file: "booking_arrival_events.csv",
-    header: [
-      "id",
-      "trip_id",
-      "trip_title",
-      "trip_starts_at",
-      "booking_id",
-      "person_id",
-      "person_name",
-      "status",
-      "source",
-      "client_event_id",
-      "offline_snapshot_saved_at",
-      "recorded_by_person_id",
-      "recorded_by_name",
-      "occurred_at",
-      "created_at",
-    ],
-    rows: ({ personName, tripTitle, tripStartsAt, bookingPerson, arrivalRows }) =>
-      arrivalRows.map((row) => {
-        const personId = bookingPerson.get(row.bookingId);
-        return [
-          row.id,
-          row.tripId,
-          tripTitle.get(row.tripId),
-          tripStartsAt.get(row.tripId),
-          row.bookingId,
-          personId,
-          personId ? personName.get(personId) : null,
-          row.status,
-          row.source,
-          row.clientEventId,
-          row.offlineSnapshotSavedAt,
-          row.recordedByPersonId,
-          personName.get(row.recordedByPersonId),
-          row.occurredAt,
-          row.createdAt,
-        ];
-      }),
-    note: EXPORT_FILE_NOTES["booking_arrival_events.csv"],
-  },
-  {
-    file: "roll_call_events.csv",
-    header: [
-      "id",
-      "trip_id",
-      "trip_title",
-      "trip_starts_at",
-      "booking_id",
-      "person_id",
-      "person_name",
-      "status",
-      "checkpoint",
-      "source",
-      "client_event_id",
-      "offline_snapshot_saved_at",
-      "recorded_by_person_id",
-      "recorded_by_name",
-      "note",
-      "occurred_at",
-      "created_at",
-    ],
-    rows: ({ personName, tripTitle, tripStartsAt, bookingPerson, rollCallRows }) =>
-      rollCallRows.map((row) => {
-        const personId = bookingPerson.get(row.bookingId);
-        return [
-          row.id,
-          row.tripId,
-          tripTitle.get(row.tripId),
-          tripStartsAt.get(row.tripId),
-          row.bookingId,
-          personId,
-          personId ? personName.get(personId) : null,
-          row.status,
-          row.checkpoint,
-          row.source,
-          row.clientEventId,
-          row.offlineSnapshotSavedAt,
-          row.recordedByPersonId,
-          personName.get(row.recordedByPersonId),
-          row.note,
-          row.occurredAt,
-          row.createdAt,
-        ];
-      }),
-    note: EXPORT_FILE_NOTES["roll_call_events.csv"],
-  },
+  shopFile(BOOKING_ARRIVAL_EVENTS_CSV),
+  shopFile(ROLL_CALL_EVENTS_CSV),
   {
     file: "roll_call_crew_events.csv",
     header: [
@@ -1719,48 +1225,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["roll_call_crew_events.csv"],
   },
-  {
-    file: "buddy_pairs.csv",
-    header: [
-      "pair_id",
-      "trip_id",
-      "trip_title",
-      "trip_starts_at",
-      "member_kind",
-      "booking_id",
-      "crew_person_id",
-      "person_id",
-      "person_name",
-      "paired_by_person_id",
-      "paired_by_name",
-      "created_at",
-    ],
-    // One row per member, diver or crew (ADR 20260804-buddy-teams).
-    // `person_id` resolves to the same thing either way — the human — so a
-    // reader who only cares "who was on this team" reads one column;
-    // `member_kind` is what tells them whether that human held a seat.
-    rows: ({ personName, tripTitle, tripStartsAt, bookingPerson, buddyPairRows }) =>
-      buddyPairRows.map((row) => {
-        const personId = row.bookingId
-          ? (bookingPerson.get(row.bookingId) ?? null)
-          : row.crewPersonId;
-        return [
-          row.pairId,
-          row.tripId,
-          tripTitle.get(row.tripId),
-          tripStartsAt.get(row.tripId),
-          row.bookingId ? "diver" : "crew",
-          row.bookingId,
-          row.crewPersonId,
-          personId,
-          personId ? personName.get(personId) : null,
-          row.pairedByPersonId,
-          personName.get(row.pairedByPersonId),
-          row.createdAt,
-        ];
-      }),
-    note: EXPORT_FILE_NOTES["buddy_pairs.csv"],
-  },
+  shopFile(BUDDY_PAIRS_CSV),
   {
     file: "waiver_templates.csv",
     header: ["id", "title", "version", "material_generation", "deleted_at", "created_at", "body"],
@@ -1801,138 +1266,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["waiver_materiality_decisions.csv"],
   },
-  {
-    file: "waiver_records.csv",
-    header: [
-      "id",
-      "person_id",
-      "person_name",
-      "booking_id",
-      "template_id",
-      "template_title",
-      "template_version",
-      "template_generation",
-      "status",
-      "signed_name",
-      "signature_method",
-      "recorded_by_person_id",
-      "recorded_by_name",
-      "started_at",
-      "consented_at",
-      "signed_at",
-      "completed_at",
-      "medical_review_required",
-      "medical_answers",
-      // The physician clearance that ends a medical hold (issue #1252).
-      // Its *document* is deliberately not here — see EXCLUDED_COLUMNS in
-      // src/db/export.test.ts — but the fact and its accountable staff
-      // member are the shop's own evidence, and a restore that lost them
-      // would re-block every cleared diver with no record of who cleared
-      // them or when the physician evaluated them.
-      "medical_cleared_at",
-      "medical_cleared_by_person_id",
-      "medical_cleared_by_name",
-      // The same act with the opposite answer (issue #1283), exported for
-      // the same reason and with more force: a refusal is the record of
-      // why a diver stayed ashore, and a restore that lost it would show
-      // the destination a diver still "awaiting" an answer that arrived
-      // months ago. Its document is excluded exactly as the clearance's
-      // is; the fact and its accountable staff member are the shop's own.
-      "medical_clearance_declined_at",
-      "medical_clearance_declined_by_person_id",
-      "medical_clearance_declined_by_name",
-      "medical_clearance_evaluated_on",
-      "medical_clearance_physician_name",
-      // The guardian's half of a minor's release (ADR
-      // 20260907-guardian-co-signature): who co-signed, as what, how,
-      // and when. Inside the seal, so a destination that re-verified the
-      // hash without them would read every minor's release as tampered.
-      "guardian_name",
-      "guardian_relationship",
-      "guardian_email",
-      "guardian_signature_method",
-      "guardian_consented_at",
-      "guardian_signed_at",
-      "integrity_hash",
-      "integrity_version",
-      "superseded_at",
-      "expires_at",
-      "imported_from_label",
-      "import_source_document_url",
-      "import_source_medical_document_url",
-      // Which seal the row's `integrity_hash` is over: version 2 means
-      // this release was stripped when its diver was erased, and the
-      // signature and medical answers above are blank by decision rather
-      // than by omission (ADR 20260802-diver-data-erasure).
-      "anonymized_at",
-      "anonymized_by_person_id",
-      // Version 3: the release followed its seat to a new diver record
-      // (issue #2080). Inside the seal with `person_id`.
-      "moved_from_person_id",
-      "moved_at",
-      "moved_by_person_id",
-      // Version 4: the guardian asked for their address to be erased and
-      // the shop did (H-103, issue #1673). Inside the seal, so a
-      // destination re-verifying it needs both.
-      "guardian_email_erased_at",
-      "guardian_email_erased_by_person_id",
-      "created_at",
-    ],
-    rows: ({ personName, waiverRows }) =>
-      waiverRows.map((row) => [
-        row.id,
-        row.personId,
-        personName.get(row.personId),
-        row.bookingId,
-        row.templateId,
-        row.templateTitle,
-        row.templateVersion,
-        row.templateGeneration,
-        row.status,
-        row.signedName,
-        row.signatureMethod,
-        row.recordedByPersonId,
-        row.recordedByPersonId ? personName.get(row.recordedByPersonId) : null,
-        row.startedAt,
-        row.consentedAt,
-        row.signedAt,
-        row.completedAt,
-        row.medicalReviewRequired,
-        row.medicalAnswers ? JSON.stringify(row.medicalAnswers) : null,
-        row.medicalClearedAt,
-        row.medicalClearedByPersonId,
-        row.medicalClearedByPersonId ? personName.get(row.medicalClearedByPersonId) : null,
-        row.medicalClearanceDeclinedAt,
-        row.medicalClearanceDeclinedByPersonId,
-        row.medicalClearanceDeclinedByPersonId
-          ? personName.get(row.medicalClearanceDeclinedByPersonId)
-          : null,
-        row.medicalClearanceEvaluatedOn,
-        row.medicalClearancePhysicianName,
-        row.guardianName,
-        row.guardianRelationship,
-        row.guardianEmail,
-        row.guardianSignatureMethod,
-        row.guardianConsentedAt,
-        row.guardianSignedAt,
-        row.integrityHash,
-        row.integrityVersion,
-        row.supersededAt,
-        row.expiresAt,
-        row.importedFromLabel,
-        row.importSourceDocumentUrl,
-        row.importSourceMedicalDocumentUrl,
-        row.anonymizedAt,
-        row.anonymizedByPersonId,
-        row.movedFromPersonId,
-        row.movedAt,
-        row.movedByPersonId,
-        row.guardianEmailErasedAt,
-        row.guardianEmailErasedByPersonId,
-        row.createdAt,
-      ]),
-    note: EXPORT_FILE_NOTES["waiver_records.csv"],
-  },
+  shopFile(WAIVER_RECORDS_CSV),
   {
     file: "course_forms.csv",
     header: ["id", "title", "current_version", "deleted_at", "created_at"],
@@ -1987,162 +1321,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["course_form_requirements.csv"],
   },
-  {
-    file: "course_form_records.csv",
-    header: [
-      "id",
-      "person_id",
-      "person_name",
-      "booking_id",
-      "form_id",
-      "form_version_id",
-      "form_title",
-      "form_version",
-      "course_title",
-      "trip_id",
-      "instructor_names",
-      "paper_signed_on",
-      "signed_name",
-      "signature_method",
-      "recorded_by_person_id",
-      "recorded_by_name",
-      "consented_at",
-      "signed_at",
-      "guardian_name",
-      "guardian_relationship",
-      "guardian_signature_method",
-      "guardian_consented_at",
-      "guardian_signed_at",
-      "anonymized_at",
-      "anonymized_by_person_id",
-      // The seal and, beside it, what it says at the moment of export
-      // (issue #2266): `valid`, `invalid` or `unsealed`.
-      "integrity_hash",
-      "integrity_version",
-      "integrity_check",
-      "created_at",
-      "form_body",
-    ],
-    rows: ({ personName, courseFormRecordRows }) =>
-      courseFormRecordRows.map((row) => [
-        row.id,
-        row.personId,
-        personName.get(row.personId),
-        row.bookingId,
-        row.formId,
-        row.formVersionId,
-        row.formTitle,
-        row.formVersion,
-        row.courseTitle,
-        row.tripId,
-        row.instructorNames,
-        row.paperSignedOn,
-        row.signedName,
-        row.signatureMethod,
-        row.recordedByPersonId,
-        row.recordedByPersonId ? personName.get(row.recordedByPersonId) : null,
-        row.consentedAt,
-        row.signedAt,
-        row.guardianName,
-        row.guardianRelationship,
-        row.guardianSignatureMethod,
-        row.guardianConsentedAt,
-        row.guardianSignedAt,
-        row.anonymizedAt,
-        row.anonymizedByPersonId,
-        row.integrityHash,
-        row.integrityVersion,
-        verifyCourseFormIntegrity(row),
-        row.createdAt,
-        row.formBody,
-      ]),
-    note: EXPORT_FILE_NOTES["course_form_records.csv"],
-  },
-  {
-    file: "rental_fit.csv",
-    header: [
-      "person_id",
-      "person_name",
-      "rents_bcd",
-      "rents_regulator",
-      "rents_wetsuit",
-      "rents_mask_fins",
-      "rents_weights",
-      "rents_dive_computer",
-      "rents_gopro",
-      "rents_drysuit",
-      "rents_hood",
-      "rents_gloves",
-      "rents_torch",
-      "rents_smb",
-      "bcd_size",
-      "wetsuit_size",
-      "drysuit_size",
-      "hood_size",
-      "glove_size",
-      "boot_size",
-      "fin_size",
-      "weight_preference",
-      "dives_dry",
-      "note",
-      "needs_staff_fit_at",
-      "needs_staff_fit_note",
-      // Who raised the flag, by the same id + name pair every other
-      // person reference in the bundle uses. A safety flag without its
-      // attribution is a rumour.
-      "needs_staff_fit_by",
-      "needs_staff_fit_by_name",
-      // A staffer keeping the size a unit actually came back in (issue
-      // #1174). Carried for the same reason the flag above it is, and
-      // with the same id + name pair: the diver's own thread reads this
-      // back as "Keiko kept your BCD at M", so a bundle without the
-      // attribution would restore a sentence with nobody in it. The
-      // item says which piece, which is what stops the sentence naming
-      // the wrong one.
-      "fit_confirmed_at",
-      "fit_confirmed_by",
-      "fit_confirmed_by_name",
-      "fit_confirmed_item",
-      "updated_at",
-    ],
-    rows: ({ personName, rentalFitRows }) =>
-      rentalFitRows.map((row) => [
-        row.personId,
-        personName.get(row.personId),
-        row.rentsBcd,
-        row.rentsRegulator,
-        row.rentsWetsuit,
-        row.rentsMaskFins,
-        row.rentsWeights,
-        row.rentsDiveComputer,
-        row.rentsGopro,
-        row.rentsDrysuit,
-        row.rentsHood,
-        row.rentsGloves,
-        row.rentsTorch,
-        row.rentsSmb,
-        row.bcdSize,
-        row.wetsuitSize,
-        row.drysuitSize,
-        row.hoodSize,
-        row.gloveSize,
-        row.bootSize,
-        row.finSize,
-        row.weightPreference,
-        row.divesDry,
-        row.note,
-        row.needsStaffFitAt,
-        row.needsStaffFitNote,
-        row.needsStaffFitBy,
-        row.needsStaffFitBy ? personName.get(row.needsStaffFitBy) : null,
-        row.fitConfirmedAt,
-        row.fitConfirmedBy,
-        row.fitConfirmedBy ? personName.get(row.fitConfirmedBy) : null,
-        row.fitConfirmedItem,
-        row.updatedAt,
-      ]),
-    note: EXPORT_FILE_NOTES["rental_fit.csv"],
-  },
+  shopFile(COURSE_FORM_RECORDS_CSV),
+  shopFile(RENTAL_FIT_CSV),
   {
     file: "gear_items.csv",
     header: [
@@ -2209,155 +1389,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["gear_service_events.csv"],
   },
-  {
-    file: "gear_reservations.csv",
-    header: [
-      "id",
-      "gear_item_id",
-      "gear_item_label",
-      "booking_id",
-      "person_id",
-      "person_name",
-      "reserved_from",
-      "reserved_until",
-      "checked_out_at",
-      "returned_at",
-      "return_outcome",
-      "return_note",
-      "dives_logged",
-      "released_at",
-      "released_by_person_id",
-      "released_by_person_name",
-      "created_at",
-    ],
-    rows: ({ personName, bookingPerson, gearItemLabel, gearReservationRows }) =>
-      gearReservationRows.map((row) => {
-        const holderPersonId =
-          row.personId ?? (row.bookingId ? (bookingPerson.get(row.bookingId) ?? null) : null);
-        return [
-          row.id,
-          row.gearItemId,
-          gearItemLabel.get(row.gearItemId),
-          row.bookingId,
-          row.personId,
-          holderPersonId ? personName.get(holderPersonId) : null,
-          row.reservedFrom,
-          row.reservedUntil,
-          row.checkedOutAt,
-          row.returnedAt,
-          row.returnOutcome,
-          row.returnNote,
-          row.divesLogged,
-          row.releasedAt,
-          row.releasedByPersonId,
-          row.releasedByPersonId ? personName.get(row.releasedByPersonId) : null,
-          row.createdAt,
-        ];
-      }),
-    note: EXPORT_FILE_NOTES["gear_reservations.csv"],
-  },
-  {
-    file: "customer_gear_items.csv",
-    header: [
-      "id",
-      "person_id",
-      "person_name",
-      "kind",
-      "brand_model",
-      "serial_number",
-      "note",
-      "service_due_on",
-      "inspection_due_on",
-      "hydro_due_on",
-      "deleted_at",
-      "deleted_by_person_id",
-      "deleted_by_name",
-      "created_at",
-      "updated_at",
-    ],
-    rows: ({ personName, customerGearItemRows }) =>
-      customerGearItemRows.map((row) => [
-        row.id,
-        row.personId,
-        personName.get(row.personId),
-        row.kind,
-        row.brandModel,
-        row.serialNumber,
-        row.note,
-        row.serviceDueOn,
-        row.inspectionDueOn,
-        row.hydroDueOn,
-        row.deletedAt,
-        row.deletedByPersonId,
-        row.deletedByPersonId ? personName.get(row.deletedByPersonId) : null,
-        row.createdAt,
-        row.updatedAt,
-      ]),
-    note: EXPORT_FILE_NOTES["customer_gear_items.csv"],
-  },
-  {
-    file: "work_orders.csv",
-    header: [
-      "id",
-      "number",
-      "person_id",
-      "person_name",
-      "gear_item_id",
-      "gear_item_label",
-      "status",
-      "reported_problem",
-      "promised_on",
-      "technician_person_id",
-      "technician_name",
-      "technician_notes",
-      "work_performed",
-      "received_at",
-      "ready_at",
-      "picked_up_at",
-      "outcome",
-      "outcome_note",
-      "outcome_recorded_at",
-      "outcome_recorded_by_person_id",
-      "outcome_recorded_by_name",
-      "unit_prior_status",
-      "unit_prior_service_note",
-      "deleted_at",
-      "deleted_by_person_id",
-      "created_at",
-      "updated_at",
-    ],
-    rows: ({ personName, gearItemLabel, workOrderRows }) =>
-      workOrderRows.map((row) => [
-        row.id,
-        row.number,
-        row.personId,
-        row.personId ? personName.get(row.personId) : null,
-        row.gearItemId,
-        row.gearItemId ? gearItemLabel.get(row.gearItemId) : null,
-        row.status,
-        row.reportedProblem,
-        row.promisedOn,
-        row.technicianPersonId,
-        row.technicianPersonId ? personName.get(row.technicianPersonId) : null,
-        row.technicianNotes,
-        row.workPerformed,
-        row.receivedAt,
-        row.readyAt,
-        row.pickedUpAt,
-        row.outcome,
-        row.outcomeNote,
-        row.outcomeRecordedAt,
-        row.outcomeRecordedByPersonId,
-        row.outcomeRecordedByPersonId ? personName.get(row.outcomeRecordedByPersonId) : null,
-        row.unitPriorStatus,
-        row.unitPriorServiceNote,
-        row.deletedAt,
-        row.deletedByPersonId,
-        row.createdAt,
-        row.updatedAt,
-      ]),
-    note: EXPORT_FILE_NOTES["work_orders.csv"],
-  },
+  shopFile(GEAR_RESERVATIONS_CSV),
+  shopFile(CUSTOMER_GEAR_ITEMS_CSV),
+  shopFile(WORK_ORDERS_CSV),
   {
     file: "work_order_items.csv",
     header: ["id", "work_order_id", "customer_gear_item_id", "created_at"],
@@ -2370,60 +1404,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["work_order_items.csv"],
   },
-  {
-    file: "work_order_lines.csv",
-    header: [
-      "id",
-      "work_order_id",
-      "kind",
-      "description",
-      "quantity_hundredths",
-      "unit_amount_cents",
-      "deleted_at",
-      "created_at",
-      "updated_at",
-    ],
-    rows: ({ workOrderLineRows }) =>
-      workOrderLineRows.map((row) => [
-        row.id,
-        row.workOrderId,
-        row.kind,
-        row.description,
-        row.quantityHundredths,
-        row.unitAmountCents,
-        row.deletedAt,
-        row.createdAt,
-        row.updatedAt,
-      ]),
-    note: EXPORT_FILE_NOTES["work_order_lines.csv"],
-  },
-  {
-    file: "work_order_care.csv",
-    header: [
-      "id",
-      "work_order_id",
-      "customer_gear_item_id",
-      "kind",
-      "passed",
-      "performed_on",
-      "next_due_on",
-      "next_due_dives",
-      "created_at",
-    ],
-    rows: ({ workOrderCareRows }) =>
-      workOrderCareRows.map((row) => [
-        row.id,
-        row.workOrderId,
-        row.customerGearItemId,
-        row.kind,
-        row.passed,
-        row.performedOn,
-        row.nextDueOn,
-        row.nextDueDives,
-        row.createdAt,
-      ]),
-    note: EXPORT_FILE_NOTES["work_order_care.csv"],
-  },
+  shopFile(WORK_ORDER_LINES_CSV),
+  shopFile(WORK_ORDER_CARE_CSV),
   {
     file: "work_order_events.csv",
     header: [
@@ -2502,86 +1484,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["pre_departure_check_events.csv"],
   },
-  {
-    // History the shop brought in from its previous system
-    // (ADR 20260725-import-prior-visits). In the bundle because a shop's
-    // own history is its own to take back out, and out of the operational
-    // files because that is exactly what it never was.
-    file: "prior_visits.csv",
-    header: [
-      "id",
-      "person_id",
-      "person_name",
-      "visited_on",
-      "title",
-      "status_label",
-      "amount_label",
-      "source_label",
-      "source_reference",
-      "imported_at",
-    ],
-    rows: ({ personName, priorVisitRows }) =>
-      priorVisitRows.map((row) => [
-        row.id,
-        row.personId,
-        personName.get(row.personId),
-        row.visitedOn,
-        row.title,
-        row.statusLabel,
-        row.amountLabel,
-        row.sourceLabel,
-        row.sourceReference,
-        row.importedAt,
-      ]),
-    note: EXPORT_FILE_NOTES["prior_visits.csv"],
-  },
-  {
-    // Separate source evidence, deliberately not folded into orders.csv:
-    // an old processor's receipt or Stripe reference is not a DiveDay
-    // invoice. The export keeps the source row portable without making
-    // the next system mistake it for a live payment.
-    file: "imported_payment_history.csv",
-    header: [
-      "id",
-      "person_id",
-      "person_name",
-      "occurred_on",
-      "direction",
-      "title",
-      "status_label",
-      "amount_label",
-      "amount_cents",
-      "currency",
-      "payment_reference",
-      "receipt_reference",
-      "receipt_document_url",
-      "source_label",
-      "source_reference",
-      "stripe_reference",
-      "imported_at",
-    ],
-    rows: ({ personName, importedPaymentHistoryRows }) =>
-      importedPaymentHistoryRows.map((row) => [
-        row.id,
-        row.personId,
-        personName.get(row.personId),
-        row.occurredOn,
-        row.direction,
-        row.title,
-        row.statusLabel,
-        row.amountLabel,
-        row.amountCents,
-        row.currency,
-        row.paymentReference,
-        row.receiptReference,
-        row.receiptDocumentUrl,
-        row.sourceLabel,
-        row.sourceReference,
-        row.stripeReference,
-        row.importedAt,
-      ]),
-    note: EXPORT_FILE_NOTES["imported_payment_history.csv"],
-  },
+  shopFile(PRIOR_VISITS_CSV),
+  shopFile(IMPORTED_PAYMENT_HISTORY_CSV),
   {
     file: "internal_notes.csv",
     header: [
@@ -2645,119 +1549,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["activity_events.csv"],
   },
-  {
-    file: "notification_deliveries.csv",
-    header: [
-      "id",
-      "booking_id",
-      "person_id",
-      "person_name",
-      "kind",
-      "status",
-      "provider_message_id",
-      "provider_status",
-      "provider_status_at",
-      "provider_detail",
-      "send_http_status",
-      "send_error_code",
-      "send_error",
-      "attempted_at",
-      "created_at",
-    ],
-    rows: ({ personName, bookingPerson, notificationRows }) =>
-      notificationRows.map((row) => {
-        const personId = bookingPerson.get(row.bookingId) ?? null;
-        return [
-          row.id,
-          row.bookingId,
-          personId,
-          personId ? personName.get(personId) : null,
-          row.kind,
-          row.status,
-          row.providerMessageId,
-          row.providerStatus,
-          row.providerStatusAt,
-          row.providerDetail,
-          row.sendHttpStatus,
-          row.sendErrorCode,
-          row.sendError,
-          row.attemptedAt,
-          row.createdAt,
-        ];
-      }),
-    note: EXPORT_FILE_NOTES["notification_deliveries.csv"],
-  },
-  {
-    file: "orders.csv",
-    header: [
-      "id",
-      "person_id",
-      "person_name",
-      "booking_id",
-      "created_by_person_id",
-      "created_by_name",
-      "source",
-      "status",
-      "collection",
-      "currency",
-      "total_cents",
-      "pass_through_cents",
-      "tax_cents",
-      "amount_paid_cents",
-      "refunded_cents",
-      "description",
-      "stripe_invoice_id",
-      "hosted_invoice_url",
-      "invoice_pdf_url",
-      "finalized_at",
-      "paid_at",
-      "voided_at",
-      "refunded_at",
-      "created_at",
-    ],
-    rows: ({ personName, orderRows }) =>
-      orderRows.map((row) => [
-        row.id,
-        row.personId,
-        personName.get(row.personId),
-        row.bookingId,
-        row.createdByPersonId,
-        personName.get(row.createdByPersonId),
-        row.source,
-        row.status,
-        row.collection,
-        row.currency,
-        row.totalCents,
-        row.passThroughCents,
-        row.taxCents,
-        row.amountPaidCents,
-        row.refundedCents,
-        row.description,
-        row.stripeInvoiceId,
-        row.hostedInvoiceUrl,
-        row.invoicePdfUrl,
-        row.finalizedAt,
-        row.paidAt,
-        row.voidedAt,
-        row.refundedAt,
-        row.createdAt,
-      ]),
-    note: EXPORT_FILE_NOTES["orders.csv"],
-  },
-  {
-    file: "order_line_items.csv",
-    header: ["order_id", "kind", "description", "quantity", "unit_amount_cents", "created_at"],
-    rows: ({ orderLineRows }) =>
-      orderLineRows.map((row) => [
-        row.orderId,
-        row.kind,
-        row.description,
-        row.quantity,
-        row.unitAmountCents,
-        row.createdAt,
-      ]),
-    note: EXPORT_FILE_NOTES["order_line_items.csv"],
-  },
+  shopFile(NOTIFICATION_DELIVERIES_CSV),
+  shopFile(ORDERS_CSV),
+  shopFile(ORDER_LINE_ITEMS_CSV),
   {
     file: "work_order_bills.csv",
     header: ["id", "work_order_id", "order_id", "created_by_person_id", "created_at"],
@@ -2792,40 +1586,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["customer_gear_reminder_settings.csv"],
   },
-  {
-    file: "tips.csv",
-    header: [
-      "id",
-      "booking_id",
-      "person_id",
-      "person_name",
-      "status",
-      "currency",
-      "amount_cents",
-      "stripe_session_id",
-      "expires_at",
-      "completed_at",
-      "created_at",
-    ],
-    rows: ({ personName, bookingPerson, tipRows }) =>
-      tipRows.map((row) => {
-        const personId = bookingPerson.get(row.bookingId) ?? null;
-        return [
-          row.id,
-          row.bookingId,
-          personId,
-          personId ? personName.get(personId) : null,
-          row.status,
-          row.currency,
-          row.amountCents,
-          row.stripeSessionId,
-          row.expiresAt,
-          row.completedAt,
-          row.createdAt,
-        ];
-      }),
-    note: EXPORT_FILE_NOTES["tips.csv"],
-  },
+  shopFile(TIPS_CSV),
   {
     file: "dive_sites.csv",
     header: [
@@ -2997,20 +1758,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["dive_site_moments.csv"],
   },
-  {
-    file: "recap_photos.csv",
-    header: ["id", "booking_id", "trip_id", "image_url", "caption", "created_at"],
-    rows: ({ recapPhotoRows }) =>
-      recapPhotoRows.map((row) => [
-        row.id,
-        row.bookingId,
-        row.tripId,
-        row.imageUrl,
-        row.caption,
-        row.createdAt,
-      ]),
-    note: EXPORT_FILE_NOTES["recap_photos.csv"],
-  },
+  shopFile(RECAP_PHOTOS_CSV),
   {
     file: "trip_recap_photos.csv",
     header: [
@@ -3034,39 +1782,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["trip_recap_photos.csv"],
   },
-  {
-    file: "trip_reviews.csv",
-    header: [
-      "id",
-      "booking_id",
-      "trip_id",
-      "person_id",
-      "diver_name",
-      "rating",
-      "comment",
-      "is_standout",
-      "is_published",
-      "published_at",
-      "created_at",
-      "updated_at",
-    ],
-    rows: ({ reviewRows }) =>
-      reviewRows.map(({ review, diverName }) => [
-        review.id,
-        review.bookingId,
-        review.tripId,
-        review.personId,
-        diverName,
-        review.rating,
-        review.comment,
-        review.isStandout,
-        review.isPublished,
-        review.publishedAt,
-        review.createdAt,
-        review.updatedAt,
-      ]),
-    note: EXPORT_FILE_NOTES["trip_reviews.csv"],
-  },
+  shopFile(TRIP_REVIEWS_CSV),
   {
     file: "recap_pulses.csv",
     header: [
@@ -3104,31 +1820,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["recap_pulses.csv"],
   },
-  {
-    file: "review_moderation_events.csv",
-    header: [
-      "id",
-      "review_id",
-      "action",
-      "reason",
-      "reason_note",
-      "recorded_by_person_id",
-      "recorded_by_name",
-      "occurred_at",
-    ],
-    rows: ({ reviewModerationRows }) =>
-      reviewModerationRows.map(({ event, staffName }) => [
-        event.id,
-        event.reviewId,
-        event.action,
-        event.reason,
-        event.reasonNote,
-        event.recordedByPersonId,
-        staffName,
-        event.occurredAt,
-      ]),
-    note: EXPORT_FILE_NOTES["review_moderation_events.csv"],
-  },
+  shopFile(REVIEW_MODERATION_EVENTS_CSV),
   {
     file: "dive_packages.csv",
     header: [
@@ -3156,31 +1848,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["dive_packages.csv"],
   },
-  {
-    file: "dive_package_entitlements.csv",
-    header: [
-      "id",
-      "package_id",
-      "person_id",
-      "order_id",
-      "booking_id",
-      "consumed_at",
-      "expires_at",
-      "created_at",
-    ],
-    rows: ({ entitlementRows }) =>
-      entitlementRows.map((row) => [
-        row.id,
-        row.packageId,
-        row.personId,
-        row.orderId,
-        row.bookingId,
-        row.consumedAt,
-        row.expiresAt,
-        row.createdAt,
-      ]),
-    note: EXPORT_FILE_NOTES["dive_package_entitlements.csv"],
-  },
+  shopFile(DIVE_PACKAGE_ENTITLEMENTS_CSV),
   {
     file: "shop_promo_codes.csv",
     header: [
@@ -3302,52 +1970,5 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["courses.csv"],
   },
-  {
-    file: "course_inquiries.csv",
-    header: [
-      "id",
-      "course_id",
-      "course_title",
-      "interest",
-      "person_id",
-      "person_name",
-      "name",
-      "email",
-      "phone",
-      "experience_level",
-      "timing",
-      "preferred_date",
-      "alternate_date",
-      "date_flexible",
-      "divers",
-      "message",
-      "created_at",
-    ],
-    rows: ({ personName, courseTitle, inquiryRows }) =>
-      inquiryRows.map((row) => [
-        row.id,
-        row.courseId,
-        // Null for a request that names no course — it says what it is
-        // about in `interest` instead, the column beside this one.
-        row.courseId ? courseTitle.get(row.courseId) : null,
-        row.interest,
-        row.personId,
-        // Resolved at capture time by exact email match against a live
-        // diver, never back-filled — so a null here is a lead nobody could
-        // tie to a person, not a lookup this export skipped.
-        row.personId ? personName.get(row.personId) : null,
-        row.name,
-        row.email,
-        row.phone,
-        row.experienceLevel,
-        row.timing,
-        row.preferredDate,
-        row.alternateDate,
-        row.dateFlexible,
-        row.divers,
-        row.message,
-        row.createdAt,
-      ]),
-    note: EXPORT_FILE_NOTES["course_inquiries.csv"],
-  },
+  shopFile(COURSE_INQUIRIES_CSV),
 ];
