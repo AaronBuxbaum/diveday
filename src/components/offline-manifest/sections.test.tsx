@@ -147,13 +147,13 @@ describe("the offline manifest's sections", () => {
     const warned = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
     expect(warned).toContain("Physician said no before");
     // Ranked after the refusal, as on the live roll call: one capsule.
-    expect(warned).not.toContain("Referral not cleared");
+    expect(warned).not.toContain("Referral still open");
     expect(warned).toContain("Contact, gear & medical");
     expect(warned).toMatch(
       /A physician did not clear this diver on May\s2,\s2026 \(earlier waiver\)/,
     );
     expect(warned).toMatch(
-      /Re-signed after a referral with no physician clearance on file \(referred Jun\s10,\s2026\)/,
+      /Referred to a physician on Jun\s10,\s2026; re-signed with no physician clearance on file/,
     );
     const plain = container.querySelector("#offline-roll-call-b-marcus")?.textContent ?? "";
     expect(plain).not.toContain("physician");
@@ -169,7 +169,7 @@ describe("the offline manifest's sections", () => {
     if (!trip) throw new Error("the fixture carries a manifest");
     const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
     const row = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
-    expect(row).toContain("Referral not cleared");
+    expect(row).toContain("Referral still open");
     expect(row).not.toContain("Physician said no before");
   });
 

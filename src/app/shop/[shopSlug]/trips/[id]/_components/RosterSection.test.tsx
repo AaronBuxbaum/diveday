@@ -1504,9 +1504,9 @@ describe("an unanswered referral under a cleared release", () => {
 
     // Ready, not blocked: the override stands.
     expect(screen.getByRole("heading", { name: /^Ready/ })).toBeVisible();
-    const line = screen.getByText(/Re-signed after a referral on/);
+    const line = screen.getByText(/Referred to a physician on/);
     expect(line).toBeVisible();
-    expect(line.textContent).toMatch(/Aug\s1, with no physician clearance on file/);
+    expect(line.textContent).toMatch(/Aug\s1; re-signed with no physician clearance on file/);
     const link = within(line.closest("li") as HTMLElement).getByRole("link", {
       name: "View the referral",
     });
@@ -1524,7 +1524,7 @@ describe("an unanswered referral under a cleared release", () => {
       readiness: new Map([["r", referredRow("blocked")]]) as ReadinessByBooking,
       waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
     });
-    expect(screen.queryByText(/Re-signed after a referral on/)).toBeNull();
+    expect(screen.queryByText(/Referred to a physician on/)).toBeNull();
   });
 });
 

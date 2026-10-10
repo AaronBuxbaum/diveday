@@ -663,7 +663,9 @@ describe("an unanswered referral's warning", () => {
       "/shop/blue-mantis/divers/p-referred/waivers/w-referred",
     );
     // The warning itself is printed on screen and on paper alike.
-    expect(screen.getAllByText(/Re-signed after a referral/).length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText(/re-signed with no physician clearance on file/).length,
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it("draws no link for a release with no referral behind it", () => {
@@ -753,9 +755,9 @@ describe("the unresolved-referral capsule", () => {
 
   it("puts a warning capsule on the row, and dates the referral with its year", () => {
     const { container } = renderList({ divers: [diver({ medicalWaiver: referred })] });
-    expect(container.querySelector(".basis-full")).toHaveTextContent("Referral not cleared");
+    expect(container.querySelector(".basis-full")).toHaveTextContent("Referral still open");
     expect(container.textContent).toMatch(
-      /no physician clearance on file \(referred Jun\s10,\s2026\)/,
+      /Referred to a physician on Jun\s10,\s2026; re-signed with no physician clearance on file/,
     );
   });
 
@@ -766,7 +768,7 @@ describe("the unresolved-referral capsule", () => {
     } as TripManifest["divers"][number]["medicalWaiver"];
     const { container } = renderList({ divers: [diver({ medicalWaiver: both })] });
     expect(container.querySelector(".basis-full")).toHaveTextContent("Physician said no before");
-    expect(container.querySelector(".basis-full")).not.toHaveTextContent("Referral not cleared");
+    expect(container.querySelector(".basis-full")).not.toHaveTextContent("Referral still open");
   });
 
   it("is short in Spanish too", () => {

@@ -1592,9 +1592,9 @@ new domain concept, define it here in the same PR.
   version and new links snapshot the current one. The exact template version is snapshotted into each
   issued record; a signed record is immutable and a replacement link creates a new record. Some
   answers on the medical form require a physician sign-off — that's a blocking state, not a checkbox,
-  and the only thing that ends it is a **physician clearance** recorded against that record. The
-  hold is a fact about the diver, not the trip: it blocks every departure, including one that does
-  not require the release (H-104).
+  ended by a **physician clearance** recorded against that record or, while it stays open, by a clean
+  later release (H-98 amended, #2195). The hold is a fact about the diver, not the trip: until one of
+  those, it blocks every departure, including one that does not require the release (H-104).
 
   **Publishing a version invalidates every standing signature at the shop, at once.** A signature is
   held against the version it was signed on, so a new version leaves every booked diver on every
@@ -1643,10 +1643,10 @@ new domain concept, define it here in the same PR.
   recorded against it — until then it never does — and a stale or old-version signature falls back to
   "send a fresh link." See [20260721-waiver-sign-once](../architecture/decisions/20260721-waiver-sign-once.md).
 - **Physician clearance** — the shop recording that a physician evaluated a diver the medical
-  questionnaire had **referred**, and cleared them to dive. It is the only thing that ends a
-  `medical_review` hold, and it is a separate act from the paper attestation, whose staff-facing
-  words are the opposite ("no answer needs physician sign-off"). DiveDay records the shop's act; it
-  never grants the clearance
+  questionnaire had **referred**, and cleared them to dive. It is the only thing that clears that
+  `medical_review` record itself (a clean later release can stand over it, below), and it is a
+  separate act from the paper attestation, whose staff-facing words are the opposite ("no answer
+  needs physician sign-off"). DiveDay records the shop's act; it never grants the clearance
   ([20260805-rstc-medical-questionnaire](../architecture/decisions/20260805-rstc-medical-questionnaire.md)).
 
   Three properties worth knowing. It is recorded against **one waiver record** — the one carrying
@@ -1676,6 +1676,10 @@ new domain concept, define it here in the same PR.
   on the roster and the diver record (`overriddenRefusal`). Any staffer may record a paper waiver after a refusal (Aaron, 2026-10-07).
   The warning ends only when a physician has since cleared a release
   that flagged every question the refused one did, ordered by when each physician answered.
+  A clean later release also stands over a referral no physician has answered (H-98 amended,
+  #2195). The diver record, the Divers tab and the live manifest warn with a link to the referral
+  (`overriddenReferral`); the offline copy and paper show the date only. A booking whose own
+  release is the open referral still waits for a physician.
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
   paper — a copy on the boat or on shore — that the app never saw signed. It creates the same
   immutable completed record, marked as staff-attested and stamped with the staff member who recorded

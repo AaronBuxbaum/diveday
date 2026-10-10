@@ -134,9 +134,12 @@ export async function getTripGuests(
   );
 
   // The fact a held seat's "Same person" confirm is weighed against: the
-  // matched diver's last dive day at this shop, the line the name-match prompt
-  // already showed this staffer at the seating (issue #1789). Not this
-  // departure's: the seat on it is the claim, not evidence for it.
+  // matched diver's last dive day at this shop, the same line the name-match
+  // prompt shows staff who seat a diver (issue #1789). A staff-seated hold met
+  // it there already; an online hold (a public booking that reused an email
+  // under another name, H-13) met no prompt, so this is the first time any
+  // staffer sees it. Not this departure's: the seat on it is the claim, not
+  // evidence for it.
   const heldPersonIds = roster
     .filter(({ booking }) => booking.identityUnconfirmedAt)
     .map(({ booking }) => booking.personId);

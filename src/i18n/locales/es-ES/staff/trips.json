@@ -537,7 +537,7 @@
     "signedPlain": "Firmado el {date}",
     "viewSignedRecord": "Ver registro firmado",
     "earlierRefusal": "Un médico no autorizó a esta persona el {date} (exención anterior).",
-    "referralUnresolved": "Firmada de nuevo tras una derivación médica del {date}, sin autorización de un médico registrada.",
+    "referralUnresolved": "Derivación médica del {date}; firmada de nuevo sin autorización de un médico registrada.",
     "viewReferral": "Ver la derivación",
     "waiverColumnHeading": "Exención",
     "waiverLinkExpired": "Enlace caducado",

@@ -275,7 +275,7 @@ describe("the waiver group", () => {
     const group = screen.getByTestId("diver-file-group-waiver");
     const door = group.querySelector("summary");
     expect(door).toHaveTextContent(
-      /Signed · Good until Jul 21, 2027 · Referral on Jun 2, 2026 not answered/,
+      /Signed · Good until Jul 21, 2027 · Physician referral open since Jun 2, 2026/,
     );
     // Warning ink, because the summary stands on the diver's own second answer
     // rather than on anything the shop has seen.
@@ -314,7 +314,9 @@ describe("the waiver group", () => {
 
     const group = screen.getByTestId("diver-file-group-waiver");
     expect(
-      within(group).getByText(/Re-signed after a referral, with no physician clearance on file/),
+      within(group).getByText(
+        /Referred to a physician on Jun 2, 2026; re-signed with no physician clearance on file/,
+      ),
     ).toBeInTheDocument();
     expect(within(group).getByRole("link", { name: "View the referral" })).toHaveAttribute(
       "href",
@@ -401,7 +403,7 @@ describe("the waiver group", () => {
     );
 
     const group = screen.getByTestId("diver-file-group-waiver");
-    expect(group).not.toHaveTextContent(/not answered/);
+    expect(group).not.toHaveTextContent(/referral open/);
     expect(group.querySelector("span.text-sm")?.className).toContain("text-muted");
     expect(group.querySelector("details")).toBeNull();
   });

@@ -756,9 +756,11 @@ export function RosterRow({
   /**
    * **The one fact the attestation turns on** (issue #1789, H-79): the
    * matched diver's last dive day at this shop, beside the question. It is the
-   * line the name-match prompt showed the same staffer at the same desk when
-   * the seat was taken, about the same person, so it widens no disclosure
-   * gate; nothing else from the matched record joins it here.
+   * same line the name-match prompt shows staff who seat a diver, and nothing
+   * else from the matched record joins it here. Only a staff-seated hold saw
+   * it before: an online hold (a public booking that reused an email under
+   * another name, H-13) met no prompt, so the roster is the first place any
+   * staffer reads it.
    *
    * "No dive days here yet" is said every time, unlike the name-match
    * prompt's sibling rule (`noDiveDayNeedsSaying`), which goes quiet when

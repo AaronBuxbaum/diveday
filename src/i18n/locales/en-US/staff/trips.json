@@ -537,7 +537,7 @@
     "signedPlain": "Signed {date}",
     "viewSignedRecord": "View signed record",
     "earlierRefusal": "A physician did not clear this diver on {date} (earlier waiver).",
-    "referralUnresolved": "Re-signed after a referral on {date}, with no physician clearance on file.",
+    "referralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file.",
     "viewReferral": "View the referral",
     "waiverColumnHeading": "Waiver",
     "waiverLinkExpired": "Link expired",
