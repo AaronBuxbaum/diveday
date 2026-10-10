@@ -191,8 +191,16 @@ export default defineConfig({
   // branch's parent commit, pulled from S3. Nothing visual is committed to the
   // repo. See docs/architecture/decisions/20260729-reg-suit-visual-regression.md
   // and the `visual-triage` skill.
+  // On CI the JSON report records every test's duration against its own
+  // effective budget, on the contended runner where budgets actually run out;
+  // `scripts/e2e-budget-report.mjs` reads it into the job summary (issue
+  // #1906). Outside `playwright-report/`, which the html reporter clears.
   reporter: process.env.CI
-    ? ([["github"], ["html", { open: "never" }]] as const)
+    ? ([
+        ["github"],
+        ["html", { open: "never" }],
+        ["json", { outputFile: "e2e-durations/results.json" }],
+      ] as const)
     : ([["list"]] as const),
   use: {
     // Real base URL is assigned per worker in e2e/fixtures.ts; this is only a
