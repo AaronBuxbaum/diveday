@@ -19,7 +19,7 @@ import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
-import { recordPaperCourseFormAction } from "../actions";
+import { recordPaperCourseFormAction } from "../course-actions";
 import { AddDiverSection } from "./AddDiverSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
@@ -305,24 +305,26 @@ export function TripRosterContent({
             ) : null,
           addDiverGroup: !acceptsDivers ? null : (
             <AddDiverSection
-              shopSlug={shopSlug}
-              full={isFull(trip)}
-              query={diverQuery}
-              candidates={diverCandidates}
-              tripId={trip.id}
-              addBookingAction={actions.addBookingAction}
-              addToWaitlistAction={actions.addToWaitlistAction}
-              addExistingDiverAction={actions.addExistingDiverAction}
-              inviteAction={actions.createDirectTripInvitationAction}
-              status={noticeForForm(tripNotice, "add-diver")}
-              locale={locale}
-              timeZone={timezone}
-              confirmName={confirmName}
-              confirmEmail={confirmEmail}
-              confirmPhone={confirmPhone}
-              confirmMatches={confirmMatches}
-              shopRentalItems={shopRentalItems}
-              walkInOpen={walkInOpen}
+              context={{
+                shopSlug,
+                full: isFull(trip),
+                query: diverQuery,
+                candidates: diverCandidates,
+                tripId: trip.id,
+                addBookingAction: actions.addBookingAction,
+                addToWaitlistAction: actions.addToWaitlistAction,
+                addExistingDiverAction: actions.addExistingDiverAction,
+                inviteAction: actions.createDirectTripInvitationAction,
+                status: noticeForForm(tripNotice, "add-diver"),
+                locale,
+                timeZone: timezone,
+                confirmName,
+                confirmEmail,
+                confirmPhone,
+                confirmMatches,
+                shopRentalItems,
+                walkInOpen,
+              }}
             />
           ),
         }}

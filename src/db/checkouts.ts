@@ -646,7 +646,7 @@ type CurrentCharge = {
  * minted at a different percent, or at none, no longer matches. A caller that
  * resolved *nothing* is not evidence the discount went away — `payForBooking`
  * and the ready page's Pay button (`src/app/s/[shopSlug]/trips/[id]/actions.ts`,
- * `src/app/ready/[token]/actions.ts`) never resolve a code at all, because a
+ * `src/app/ready/[token]/booking-actions.ts`) never resolve a code at all, because a
  * diver returning to a session they already hold has typed nothing new. Treating
  * that silence as "the promo is gone" would retire every discounted session on
  * the diver's way back to it and re-mint at full price, which is this ticket's

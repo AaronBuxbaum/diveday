@@ -474,6 +474,20 @@ function Seats({ seats, label, sailed }: { seats: WeekSeats; label: string; sail
   );
 }
 
+/** What every departure row on the week reads, built once by `WeekBoard`. */
+type WeekBoatBoard = {
+  /** Whether the week has a habit at all — decides the line's ink, not its presence. */
+  hasUsualCrew: boolean;
+  shopSlug: string;
+  canConfigure: boolean;
+  openKey: string | null;
+  onToggle: (key: string) => void;
+  onChoose: (kind: RowActionKind, tripId: string) => void;
+  onCloseMenu: () => void;
+  registerToggle: (key: string) => (el: HTMLButtonElement | null) => void;
+  copy: WeekBoardCopy;
+};
+
 /**
  * One departure on a day's row — a boat, or a multi-day course on the day it
  * starts. Both wear the same move/copy/remove menu and the same flags, which
@@ -492,6 +506,7 @@ function Seats({ seats, label, sailed }: { seats: WeekSeats; label: string; sail
  * one on every row.
  */
 function WeekBoat({
+  board,
   departure,
   seats,
   seatsLabel,
@@ -499,16 +514,8 @@ function WeekBoat({
   time,
   runs,
   crewLine,
-  hasUsualCrew,
-  shopSlug,
-  canConfigure,
-  openKey,
-  onToggle,
-  onChoose,
-  onCloseMenu,
-  registerToggle,
-  copy,
 }: {
+  board: WeekBoatBoard;
   departure: WeekDeparture;
   seats: WeekSeats;
   seatsLabel: string;
@@ -528,17 +535,18 @@ function WeekBoat({
    * fact twice on the one shape that has no hull to be about.
    */
   crewLine: { names: string } | null;
-  /** Whether the week has a habit at all — decides the line's ink, not its presence. */
-  hasUsualCrew: boolean;
-  shopSlug: string;
-  canConfigure: boolean;
-  openKey: string | null;
-  onToggle: (key: string) => void;
-  onChoose: (kind: RowActionKind, tripId: string) => void;
-  onCloseMenu: () => void;
-  registerToggle: (key: string) => (el: HTMLButtonElement | null) => void;
-  copy: WeekBoardCopy;
 }) {
+  const {
+    hasUsualCrew,
+    shopSlug,
+    canConfigure,
+    openKey,
+    onToggle,
+    onChoose,
+    onCloseMenu,
+    registerToggle,
+    copy,
+  } = board;
   const sailed = departure.status === "sailed";
   const actions = canConfigure && !sailed;
   return (
@@ -719,6 +727,17 @@ export function WeekBoard({
       .flatMap((day) => day.entries)
       .flatMap((entry) => (entry.crew ? [{ crew: entry.crew }] : [])),
   );
+  const board: WeekBoatBoard = {
+    hasUsualCrew: usualCrew !== null,
+    shopSlug,
+    canConfigure,
+    openKey,
+    onToggle,
+    onChoose,
+    onCloseMenu,
+    registerToggle,
+    copy,
+  };
 
   return (
     // `data-week-board` is the copy-free hook a test asks "is the board
@@ -811,15 +830,7 @@ export function WeekBoard({
                 time={row.time}
                 runs={row.runs}
                 crewLine={row.crewLine}
-                hasUsualCrew={usualCrew !== null}
-                shopSlug={shopSlug}
-                canConfigure={canConfigure}
-                openKey={openKey}
-                onToggle={onToggle}
-                onChoose={onChoose}
-                onCloseMenu={onCloseMenu}
-                registerToggle={registerToggle}
-                copy={copy}
+                board={board}
               />
               {panelUnder(departure.tripId) ? (
                 <div className="px-2 pb-3">{panelUnder(departure.tripId)}</div>

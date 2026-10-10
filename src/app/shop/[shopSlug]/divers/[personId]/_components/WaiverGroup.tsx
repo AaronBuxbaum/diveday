@@ -16,7 +16,7 @@ import type { DiverStatusRow } from "@/lib/diver-status";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { smsRecipient } from "@/lib/notifications/sms";
 import { shopPath } from "@/lib/staff-notices";
-import { markWaiverInPersonAction, recordMedicalClearanceAction } from "../actions";
+import { markWaiverInPersonAction, recordMedicalClearanceAction } from "../waiver-actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { fileGap } from "./file-gap";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";

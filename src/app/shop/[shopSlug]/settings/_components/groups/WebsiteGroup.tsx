@@ -9,7 +9,7 @@ import {
   MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE,
   MAX_SHOPFRONT_PHOTOS,
 } from "@/lib/storage/limits";
-import { saveSearchListingAction, saveShopPhotosAction } from "../../actions";
+import { saveSearchListingAction, saveShopPhotosAction } from "../../website-actions";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
 import { featureRow, SectionNotice, SettingsGroup, type SettingsView, WEBSITE_GROUP } from "./kit";
 

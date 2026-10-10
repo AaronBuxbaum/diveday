@@ -60,7 +60,8 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { default: CourseFormsPage } = await import("./page");
-const { saveNoteFromReady, signCourseFormFromReady } = await import("../actions");
+const { saveNoteFromReady } = await import("../day-of-actions");
+const { signCourseFormFromReady } = await import("../paperwork-actions");
 
 afterEach(() => vi.clearAllMocks());
 

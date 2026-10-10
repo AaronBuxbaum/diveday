@@ -5,7 +5,7 @@ import type { ReadyPageData } from "@/db/ready";
 import { diverTranslator } from "@/i18n/messages";
 import { DayOfDetails } from "./DayOfDetails";
 
-vi.mock("../actions", () => {
+vi.mock("../day-of-actions", () => {
   const action = async () => {};
   return {
     saveDiveIntentFromReady: action,

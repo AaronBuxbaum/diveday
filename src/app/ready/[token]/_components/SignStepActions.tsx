@@ -3,7 +3,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverChecklistItem } from "@/lib/readiness-summary";
-import { signWaiverFromReady } from "../actions";
+import { signWaiverFromReady } from "../paperwork-actions";
 
 /**
  * **The thread's sign step: the release's act, and the course forms' door.**

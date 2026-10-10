@@ -16,8 +16,12 @@ import { noticeFromParam } from "@/lib/staff-notices";
 import { LENS_NAME_MAX } from "@/lib/trip-lenses";
 import { AddPanel } from "../_components/AddPanel";
 import { settingsPaneClass } from "../_components/settings-pane";
-import { createTripLensAction, deleteTripLensAction, updateTripLensAction } from "../actions";
 import { lensNoticeMessages } from "../sub-page-notices";
+import {
+  createTripLensAction,
+  deleteTripLensAction,
+  updateTripLensAction,
+} from "../trip-tag-actions";
 
 // See the sibling settings sub-pages (ADR 20260804-instant-navigation).
 export const instant = true;

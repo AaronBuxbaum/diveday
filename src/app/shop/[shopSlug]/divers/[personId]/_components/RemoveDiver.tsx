@@ -1,7 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { deletePersonAction } from "../actions";
+import { deletePersonAction } from "../record-actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
 

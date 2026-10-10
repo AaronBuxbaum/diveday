@@ -23,7 +23,7 @@ import {
   saveNoteFromReady,
   saveReEntryAskFromReady,
   saveWelcomeConsentFromReady,
-} from "../actions";
+} from "../day-of-actions";
 
 /** One radio, worded on its right. */
 function RadioRow({

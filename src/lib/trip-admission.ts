@@ -49,7 +49,7 @@ import {
  * card is *almost* never a self-assertion: with one stamped exception, divers
  * cannot write cards. The callers of `createCertification` /
  * `createSpecialtyCertification` / `createNitroxCertification` are the
- * authenticated staff surface `src/app/shop/[shopSlug]/divers/[personId]/actions.ts`
+ * authenticated staff surface `src/app/shop/[shopSlug]/divers/[personId]/card-actions.ts`
  * and the staff-run contact importer, so those rows are a staffer's
  * transcription of something they were handed. `pending` there means "a staffer
  * typed it, nobody has looked the number up with the agency yet" — a queue

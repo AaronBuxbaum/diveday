@@ -23,7 +23,7 @@ trip fills, or was never actually available, between page load and submit.
 ## Decision
 
 - **Reuses the existing readiness capability, not a new token purpose.** Cancel and reschedule are
-  both server actions gated by `contextFor()` in `src/app/ready/[token]/actions.ts`, which verifies
+  both server actions gated by `contextFor()` in `src/app/ready/[token]/action-helpers.ts`, which verifies
   the same `"readiness"`-purpose token every other action on that page already uses. A bearer of the
   link can only ever touch the one booking the token resolves to.
 - **Reschedule is atomic book-then-cancel, not cancel-then-rebook.** `rescheduleBooking`

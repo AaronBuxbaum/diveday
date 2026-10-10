@@ -84,6 +84,28 @@ describe("PersonSheet", () => {
     fireEvent.click(screen.getByRole("presentation"));
     expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
+
+  /**
+   * The keyboard contract on a safety surface: whichever way the sheet closes, the crew member
+   * lands back on the name they opened it from, not at the top of the manifest.
+   */
+  it("hands focus back to the name it opened from on every close", () => {
+    render(<PersonSheet {...props} />);
+    const trigger = screen.getByRole("button", { name: "Open details for Meera Iyer" });
+
+    fireEvent.click(trigger);
+    expect(screen.getByRole("dialog")).toContainElement(document.activeElement as HTMLElement);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(trigger).toHaveFocus();
+
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("presentation"));
+    expect(trigger).toHaveFocus();
+
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("button", { name: "Close person details" }));
+    expect(trigger).toHaveFocus();
+  });
 });
 
 /**

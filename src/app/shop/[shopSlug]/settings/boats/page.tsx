@@ -24,7 +24,7 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { AddPanel } from "../_components/AddPanel";
 import { settingsPaneClass } from "../_components/settings-pane";
-import { createBoatAction, deleteBoatAction, updateBoatAction } from "../actions";
+import { createBoatAction, deleteBoatAction, updateBoatAction } from "../boat-actions";
 import { boatNoticeMessages } from "../sub-page-notices";
 import { BoatPaperFacts, BoatPaperFields } from "./_components/BoatPaperFields";
 import { boatCertificateError, boatRowId } from "./certificate-error";

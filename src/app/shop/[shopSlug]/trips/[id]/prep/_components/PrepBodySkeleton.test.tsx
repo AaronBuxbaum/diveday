@@ -28,9 +28,10 @@ function tanks() {
 describe("PrepBodySkeleton", () => {
   it("stands a heading line, then the per-dive basis line, then the tiles", () => {
     const [heading, basis, tiles] = Array.from(tanks()?.children ?? []);
-    // The line box of the heading it stands in for, read off the list, so a
+    // The line box of the heading it stands in for, read off the list's tanks
+    // section (`PrepTanks`, which `PrepBody` draws first), so a
     // change to the list's section titles that is not made here goes red.
-    const list = readFileSync(join(__dirname, "PrepBody.tsx"), "utf8");
+    const list = readFileSync(join(__dirname, "PrepTanks.tsx"), "utf8");
     expect(list).toMatch(
       /id=\{scopedId\(idPrefix, "tanks-heading"\)\} className=\{SECTION_TITLE_CLASS\}/,
     );

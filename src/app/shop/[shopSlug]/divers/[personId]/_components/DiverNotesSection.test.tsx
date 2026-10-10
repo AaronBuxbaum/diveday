@@ -8,10 +8,7 @@ import { DiverNotesSection } from "./DiverNotesSection";
 
 // The add and delete forms reach server actions, and with them the whole Next
 // server runtime. This suite is about how a note's lines are drawn.
-vi.mock("../actions", () => ({
-  addDiverNoteAction: vi.fn(),
-  deleteDiverNoteAction: vi.fn(),
-}));
+vi.mock("../note-actions", () => ({ addDiverNoteAction: vi.fn(), deleteDiverNoteAction: vi.fn() }));
 
 afterEach(cleanup);
 

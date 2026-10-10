@@ -19,16 +19,15 @@ import { personThread } from "@/db/inbound-messages";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
-import { listCustomerGearItems, listWorkOrdersForPerson } from "@/db/work-orders";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { resolveDiverNotice } from "@/lib/diver-notices";
 import { bookingIsAhead, splitDiverStatus } from "@/lib/diver-status";
 import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { counterRentalFormPath } from "../../gear/rentals/rental-form";
 import { ActivitySection } from "./_components/ActivitySection";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationsGroup } from "./_components/CertificationsGroup";
@@ -39,14 +38,16 @@ import { DiverNotesSection } from "./_components/DiverNotesSection";
 import { DiverRecordFoot } from "./_components/DiverRecordFoot";
 import { DiverStatusLedger } from "./_components/DiverStatusLedger";
 import { DiverStory } from "./_components/DiverStory";
-import { DiverWorkOrdersGroup } from "./_components/DiverWorkOrdersGroup";
-import { GearAndSizesWithRentals } from "./_components/GearAndSizesWithRentals";
+import { GearAndSizes } from "./_components/GearAndSizes";
 import { NoticeBanner } from "./_components/NoticeBanner";
 import { RestoreDiver } from "./_components/RestoreDiver";
 import { WaiverGroup } from "./_components/WaiverGroup";
+import { WorkOrdersGroup } from "./_components/WorkOrdersGroup";
+import { loadDiverGear } from "./_lib/gear-load";
 import { canRaiseInvoiceFor } from "./_lib/invoice-door";
 import { diverStatusRows } from "./_lib/status-load";
-import { restoreCardAction, restoreDiverNoteAction } from "./actions";
+import { restoreCardAction } from "./card-actions";
+import { restoreDiverNoteAction } from "./note-actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -168,8 +169,7 @@ export default async function DiverDetailPage({
     notes,
     activityPage,
     thread,
-    ownPieces,
-    diverWorkOrders,
+    gear,
   ] = await Promise.all([
     canPersonDeleteDiver(db, shop.id, session.user.personId),
     canPersonMergeDiver(db, shop.id, session.user.personId),
@@ -205,12 +205,7 @@ export default async function DiverDetailPage({
     // What this diver wrote and what the shop wrote back, interleaved by time.
     // Shop-scoped from the session like every read here.
     personThread(db, shop.id, personId),
-    // The diver's own gear and the bench's tickets on it (ADR
-    // 20261008-gear-work-orders), shop-scoped from the session like the rest.
-    listCustomerGearItems(db, shop.id, personId),
-    listWorkOrdersForPerson(db, shop.id, personId, {
-      todayLocal: calendarDateInTimezone(nowDate(), shop.timezone),
-    }),
+    loadDiverGear(db, shop, personId, { removed }),
   ]);
   // `orders/new` refuses outright without a payable account, so the story's
   // foot simply omits "New invoice" rather than offering a link that bounces.
@@ -437,21 +432,25 @@ export default async function DiverDetailPage({
             t={t}
             status={noticeForForm(diverNotice, "reply")}
           />
-          <GearAndSizesWithRentals
+          <GearAndSizes
             diver={diver}
             shopSlug={shopSlug}
             personId={personId}
-            shop={shop}
+            rentalItems={shop.rentalItems}
+            counterRentals={gear.counterRentals}
+            rentGearHref={gear.hasFleet ? counterRentalFormPath(shopSlug, { personId }) : undefined}
             canOverride={canOverrideFit}
             locale={locale}
             t={t}
             status={noticeForForm(diverNotice, "fit")}
           />
-          <DiverWorkOrdersGroup
-            shop={shop}
+          <WorkOrdersGroup
+            shopSlug={shop.slug}
+            timezone={shop.timezone}
+            reminders={gear.reminders}
             personId={personId}
-            pieces={ownPieces}
-            orders={diverWorkOrders}
+            pieces={gear.ownPieces}
+            orders={gear.workOrders}
             locale={locale}
             t={t}
             status={noticeForForm(diverNotice, "work-orders")}

@@ -3,7 +3,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Field, FieldActions, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { RENTAL_TERMS_MAX_LENGTH } from "@/lib/rental-terms";
-import { saveRentalTermsAction } from "../../actions";
+import { saveRentalTermsAction } from "../../rental-actions";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
 import { RENTALS_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
 

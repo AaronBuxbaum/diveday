@@ -118,17 +118,14 @@ import {
   theBoatIsHome,
 } from "@/lib/thread-steps";
 import { liveStageOf, STAGE_SENTENCE_KEYS } from "@/lib/trip-stages";
+import { cancelMyBookingAction, payFromReady } from "./booking-actions";
 import {
-  cancelMyBookingAction,
-  confirmCarriedFactsFromReady,
-  payFromReady,
   saveCertificationFromReady,
-  saveEmergencyContactFromReady,
-  saveFitFromReady,
   saveNitroxCertificationFromReady,
   saveSpecialtyFromReady,
-  saveTanksFromReady,
-} from "./actions";
+} from "./cert-actions";
+import { confirmCarriedFactsFromReady, saveFitFromReady, saveTanksFromReady } from "./gear-actions";
+import { saveEmergencyContactFromReady } from "./paperwork-actions";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = diverTranslator(await requestLocale());
@@ -906,7 +903,7 @@ export default async function DiverReadinessPage({
         timeZone={detail.shop.timezone}
         namespaces={["recap", "common", "booking", "reviews", "trip"]}
       >
-        <AfterState {...after} />
+        <AfterState context={after} />
       </DiverIntlProvider>
     );
   }

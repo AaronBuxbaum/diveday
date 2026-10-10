@@ -37,7 +37,7 @@ vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { agencyCheckAction } = await import("./actions");
+const { agencyCheckAction } = await import("./card-actions");
 
 const NAUI_PAGE = "Verify Diver Certification\nLena Ortiz\n1990-04-12\nAdvanced Scuba Diver";
 

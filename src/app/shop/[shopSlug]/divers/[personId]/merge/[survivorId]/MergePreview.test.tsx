@@ -5,7 +5,7 @@ import type { DiverMergePreview, DiverMergeSide } from "@/db/diver-merge";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { MergePreview } from "./MergePreview";
 
-vi.mock("../../actions", () => ({
+vi.mock("../../record-actions", () => ({
   mergeDiverAction: Object.assign(() => {}, { bind: () => () => {} }),
 }));
 

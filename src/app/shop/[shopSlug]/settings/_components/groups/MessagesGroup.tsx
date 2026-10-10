@@ -5,7 +5,7 @@ import { InsetGroup } from "@/components/ui/ledger";
 import { nowDate } from "@/lib/clock";
 import { deskTimeOn, deskTimeValue } from "@/lib/desk-hours";
 import { formatTime } from "@/lib/format";
-import { saveDeskHoursAction, saveReviewUrlAction } from "../../actions";
+import { saveDeskHoursAction, saveReviewUrlAction } from "../../messages-actions";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
 import { featureRow, MESSAGES_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
 

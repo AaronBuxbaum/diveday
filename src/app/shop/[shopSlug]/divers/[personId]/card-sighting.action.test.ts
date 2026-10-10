@@ -53,7 +53,7 @@ const {
   deleteCertificationAction,
   reviewAction,
   reviewSpecialtyAction,
-} = await import("./actions");
+} = await import("./card-actions");
 
 async function context() {
   const { db, shop } = ctx;

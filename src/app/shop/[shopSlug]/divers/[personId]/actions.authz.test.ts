@@ -49,6 +49,9 @@ vi.mock("next/navigation", () => ({
   redirect: vi.fn((to: string) => {
     throw new Error(`REDIRECT:${to}`);
   }),
+  notFound: vi.fn(() => {
+    throw new Error("NOT_FOUND");
+  }),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/db/client", async (importOriginal) => {
@@ -59,14 +62,9 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const {
-  deletePersonAction,
-  eraseGuardianEmailAction,
-  erasePersonAction,
-  mergeDiverAction,
-  replyToDiverAction,
-  savePersonAction,
-} = await import("./actions");
+const { replyToDiverAction, savePersonAction } = await import("./details-actions");
+const { deletePersonAction, eraseGuardianEmailAction, erasePersonAction, mergeDiverAction } =
+  await import("./record-actions");
 const { mergeDiverRecords } = await import("@/db/diver-merge");
 
 /**
@@ -509,6 +507,20 @@ describe("merging two diver records", () => {
       expect((await personRow(db, twin.id)).fullName).toBe(before.fullName);
     });
   }
+});
+
+describe("a form posted with another shop's slug bound into it", () => {
+  it("is a 404 and writes nothing, whichever shop the staffer belongs to", async () => {
+    const { db, shop, owner, diver } = await context();
+    const before = await personRow(db, diver);
+    signIn(shop, owner);
+    const formData = new FormData();
+    formData.set("fullName", "Written Under Another Shop's Slug");
+
+    await expect(savePersonAction("another-shop", diver, formData)).rejects.toThrow("NOT_FOUND");
+
+    expect((await personRow(db, diver)).fullName).toBe(before.fullName);
+  });
 });
 
 describe("a form posted on a record merged away while it was open", () => {

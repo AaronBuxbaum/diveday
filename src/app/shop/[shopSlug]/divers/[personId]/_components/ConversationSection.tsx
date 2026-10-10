@@ -11,7 +11,7 @@ import {
   replyDestination,
   whatsAppReplyWindowOpen,
 } from "@/lib/inbox";
-import { replyToDiverAction } from "../actions";
+import { replyToDiverAction } from "../details-actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 

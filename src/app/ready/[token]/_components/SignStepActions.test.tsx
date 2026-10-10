@@ -5,7 +5,7 @@ import { diverTranslator } from "@/i18n/messages";
 import type { DiverChecklistItem } from "@/lib/readiness-summary";
 import { SignStepActions } from "./SignStepActions";
 
-vi.mock("../actions", () => ({ signWaiverFromReady: async () => {} }));
+vi.mock("../paperwork-actions", () => ({ signWaiverFromReady: async () => {} }));
 
 /**
  * The sign step's two doors (ADR 20261008-course-forms). The forms door opens

@@ -189,6 +189,63 @@
   "domain-strings": {
     "//": "English strings returned from src/lib or src/db, per file. Written by `node scripts/check-domain-strings.mjs --write`. This number may only go down — see scripts/check-domain-strings.mjs."
   },
+  "function-length": {
+    "//": "Line counts of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 400 lines, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
+    "//absorbed": [
+      {
+        "why": "merge of layer 4 (speed layer grew getTodayWork and ManageTripPage; the erasure split shrank scrub)",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": "1043 -> 1047",
+          "src/db/today.ts#getTodayWork": "1438 -> 1453"
+        }
+      }
+    ],
+    "src/app/api/test/seed-trouble-states/route.ts#POST": 405,
+    "src/app/api/webhooks/stripe/route.ts#POST": 501,
+    "src/app/ready/[token]/_components/AfterState.tsx#AfterState": 476,
+    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 989,
+    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 1101,
+    "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 503,
+    "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 615,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx#TripDetailPage": 732,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": 529,
+    "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 705,
+    "src/app/shop/[shopSlug]/dive-sites/_components/SiteFields.tsx#SiteFields": 714,
+    "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 488,
+    "src/app/shop/[shopSlug]/divers/[personId]/page.tsx#DiverDetailPage": 404,
+    "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 402,
+    "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 645,
+    "src/app/shop/[shopSlug]/page.tsx#TodayBody": 767,
+    "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 460,
+    "src/app/shop/[shopSlug]/reports/page.tsx#ReportsPage": 586,
+    "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 786,
+    "src/app/shop/[shopSlug]/schedule/board/page.tsx#ScheduleBoardPage": 890,
+    "src/app/shop/[shopSlug]/settings/import/ImportWizard.tsx#ImportWizard": 553,
+    "src/app/shop/[shopSlug]/staffing/page.tsx#StaffingPage": 454,
+    "src/app/shop/[shopSlug]/trips/[id]/_components/CrewSection.tsx#CrewSection": 442,
+    "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 502,
+    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 516,
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.tsx#DiverRollCall": 755,
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx#TripManifestPage": 918,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 1047,
+    "src/app/waivers/[token]/page.tsx#WaiverPage": 791,
+    "src/components/BookingPartyFields.tsx#BookingPartyFields": 416,
+    "src/components/DateRequestForm.tsx#DateRequestForm": 418,
+    "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 537,
+    "src/components/search/CommandPalette.tsx#CommandPalette": 658,
+    "src/db/bookings.ts#createBookingRecord": 470,
+    "src/db/checkouts.ts#startBookingCheckout": 443,
+    "src/db/export.ts#loadShopExportContext": 508,
+    "src/db/reminders.ts#sendDueReminders": 453,
+    "src/db/reporting.ts#getMonthlyReport": 510,
+    "src/db/seed-dive-sites.ts#seedDiveSites": 525,
+    "src/db/seed-history.ts#seedHistory": 863,
+    "src/db/seed-more-trips.ts#seedMoreTrips": 747,
+    "src/db/seed-trips.ts#seedTrips": 582,
+    "src/db/seed.ts#resetDemoSchedule": 452,
+    "src/db/today.ts#getTodayWork": 1453,
+    "src/lib/import.ts#prepareContactImport": 638
+  },
   "locale": {
     "//": "Undeclared es-ES values still byte-identical to their en-US counterpart, per bundle file. Written by `node scripts/check-locale.mjs --write`. This number may only go down, and it will never reach zero — the acronyms, the course-name ladder and the placeholder-only templates are the same string in Spanish on purpose. See scripts/check-locale.mjs and docs/agents/repo-checks.md."
   },
@@ -239,17 +296,17 @@
     "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 592,
     "src/app/pricing/page.tsx": 468,
-    "src/app/ready/[token]/page.tsx": 1617,
+    "src/app/ready/[token]/page.tsx": 1614,
     "src/app/s/[shopSlug]/page.tsx": 1336,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 867,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
     "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx": 772,
-    "src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx": 606,
+    "src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx": 406,
     "src/app/shop/[shopSlug]/dive-sites/page.tsx": 630,
-    "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 507,
+    "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 506,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 779,
     "src/app/shop/[shopSlug]/gear/page.tsx": 480,
-    "src/app/shop/[shopSlug]/orders/[id]/page.tsx": 539,
+    "src/app/shop/[shopSlug]/orders/[id]/page.tsx": 404,
     "src/app/shop/[shopSlug]/orders/page.tsx": 824,
     "src/app/shop/[shopSlug]/page.tsx": 1052,
     "src/app/shop/[shopSlug]/promos/page.tsx": 608,
@@ -263,7 +320,7 @@
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1134,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1183,
-    "src/app/waivers/[token]/page.tsx": 1404
+    "src/app/waivers/[token]/page.tsx": 916
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

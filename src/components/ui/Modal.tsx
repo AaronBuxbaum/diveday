@@ -3,7 +3,7 @@
 import { useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { useDialog } from "@/components/useDialog";
+import { useDialogBehaviour } from "@/components/ui/useDialogBehaviour";
 import { motionMs } from "@/lib/motion";
 
 /**
@@ -16,7 +16,7 @@ import { motionMs } from "@/lib/motion";
  * or card ancestor with its own `backdrop-blur`/`transform` would otherwise
  * become the containing block for `position: fixed`, clipping the backdrop to
  * that ancestor's box instead of the viewport). Reuses the entrance/exit
- * timing, focus trap and Escape `CommandPalette` uses (`useDialog`) rather
+ * timing, focus trap and Escape `CommandPalette` uses (`useDialogBehaviour`) rather
  * than inventing a second.
  */
 export function Modal({
@@ -34,7 +34,7 @@ export function Modal({
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
-  const { mounted, closing } = useDialog({
+  const { mounted, closing, dialogProps } = useDialogBehaviour({
     open,
     onClose,
     containerRef: dialogRef,
@@ -56,9 +56,8 @@ export function Modal({
       <div
         ref={dialogRef}
         role="dialog"
-        aria-modal="true"
+        {...dialogProps}
         aria-labelledby={titleId}
-        tabIndex={-1}
         className={`w-full max-w-md rounded-panel border border-border bg-surface p-5 shadow-2xl outline-none sm:p-6 ${closing ? "animate-scale-out" : "animate-scale-in"} ${className}`}
       >
         <h2 id={titleId} className={SECTION_TITLE_CLASS}>
