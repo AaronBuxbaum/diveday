@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
+import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
@@ -23,6 +24,7 @@ import {
   people,
   personRoles,
 } from "./schema";
+import { createStaffCredential } from "./staff-credentials";
 import { createTrip, setTripCrew, upcomingTripsWithCounts } from "./trips";
 import { changeTripCrew, getTripCrewIds, listStaff } from "./trips-crew";
 
@@ -237,6 +239,57 @@ describe("crew assignment requests", () => {
     // One row per person, not one per role they hold: the roles are read by a
     // second query for exactly this reason.
     expect(byPerson.size).toBe(2);
+  });
+
+  /**
+   * Issue #2173. The hint states the supervision claim, so it reads the
+   * requester's recorded ratings the way Today does (#1853): an instructor
+   * whose every instructor rating renewed before the departure is not hinted
+   * as closing an instructor gap, while one with a current card still is.
+   */
+  it("narrows a requester whose instructor rating has lapsed by the departure", async () => {
+    const { db, shop, trip } = await context();
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((row) => row.roles.includes("instructor"));
+    if (!instructor) throw new Error("demo staff missing an instructor");
+    const tripDay = calendarDateInTimezone(trip.endsAt, shop.timezone);
+    const made = await createStaffCredential(db, {
+      shopId: shop.id,
+      personId: instructor.person.id,
+      kind: "instructor_rating",
+      name: "Instructor rating",
+      renewsAt: shiftCalendarDate(tripDay, -1),
+    });
+    if (!made) throw new Error("credential refused");
+    expect(
+      await requestCrewAssignment(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: instructor.person.id,
+        actorPersonId: instructor.person.id,
+        now,
+      }),
+    ).toMatchObject({ ok: true });
+    const lapsed = (await listCrewAssignmentRequests(db, shop.id, [trip.id])).find(
+      (request) => request.personId === instructor.person.id,
+    );
+    // The roster still says instructor; the rating does not, so the ask does
+    // not close an instructor gap and the staffing week says so.
+    expect(lapsed?.inWaterRole).not.toBe("instructor");
+
+    // A second card, current on the dive day, makes the rung held again: one
+    // current rating among several still counts.
+    await createStaffCredential(db, {
+      shopId: shop.id,
+      personId: instructor.person.id,
+      kind: "instructor_rating",
+      name: "Instructor rating (renewed)",
+      renewsAt: tripDay,
+    });
+    const renewed = (await listCrewAssignmentRequests(db, shop.id, [trip.id])).find(
+      (request) => request.personId === instructor.person.id,
+    );
+    expect(renewed?.inWaterRole).toBe("instructor");
   });
 
   it("refuses an ask made on somebody else's behalf, even by the owner", async () => {

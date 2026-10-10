@@ -61,6 +61,27 @@ describe("reviewManifestChange", () => {
     ).toBe(true);
   });
 
+  /**
+   * Issue #2173. The review counts whatever claim its caller hands it: a member
+   * carrying the rungs their ratings lapsed off is read through the same
+   * `inWaterCrewRole` Today uses. The crew editor in `src/db/trips-crew.ts`
+   * hands it the roster's claim (no lapse) on purpose, because H-59 keeps an
+   * assignment from ever being refused for a lapse.
+   */
+  it("reads a lapsed instructor rating when the caller passes one", () => {
+    const lapsed = reviewManifestChange({
+      courseRequiresInstructor: true,
+      proposedCrew: [{ tripRole: null, shopRoles: ["instructor"], lapsedRungs: ["instructor"] }],
+    });
+    expect(lapsed.risks.map((risk) => risk.code)).toContain("course_without_instructor");
+    expect(
+      reviewManifestChange({
+        courseRequiresInstructor: true,
+        proposedCrew: [{ tripRole: null, shopRoles: ["instructor"] }],
+      }).blocking,
+    ).toBe(false);
+  });
+
   it("keeps an empty crew visible as a non-blocking operational gap", () => {
     expect(reviewManifestChange({ proposedCrew: [] })).toEqual({
       blocking: false,

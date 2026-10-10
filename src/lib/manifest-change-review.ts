@@ -33,6 +33,13 @@ export function reviewManifestChange(input: {
    * a shop-wide instructor rostered as this session's captain is driving the
    * boat, and a course session whose only instructor is on the helm has no
    * instructor (review 20260803, D8).
+   *
+   * Lapsed ratings are the caller's to pass (`lapsedRungs` on each member),
+   * and this review reads them through that same rule. Its only callers today
+   * are the crew editor's refusals in `src/db/trips-crew.ts`, which pass none:
+   * H-59 keeps an assignment from ever being refused for a lapse, so those
+   * refusals count the roster's claim while Today, the staffing week, the trip
+   * page and the crew-request hint state the narrowed one (issue #2173).
    */
   proposedCrew?: readonly TripCrewAssignment[];
   boardingGateChanged?: boolean;

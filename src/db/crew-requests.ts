@@ -1,6 +1,7 @@
 import { and, asc, count, eq, gte, inArray, isNull, lte, ne } from "drizzle-orm";
 
 import { STAFF_ROLES } from "@/lib/authz";
+import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import type {
@@ -8,7 +9,7 @@ import type {
   CrewAssignmentRequest,
   CrewRequestState,
 } from "@/lib/crew-requests";
-import { inWaterCrewRole } from "@/lib/crew-roles";
+import { inWaterCrewRole, lapsedRungs, lastDayOfDeparture } from "@/lib/crew-roles";
 import type { AppDb, DbExecutor } from "./client";
 import { recordCrewNotices } from "./crew-notices";
 import {
@@ -18,8 +19,10 @@ import {
   crewAvailabilityBlocks,
   people,
   personRoles,
+  shops,
   trips,
 } from "./schema";
+import { ratingCredentialsByPerson } from "./staff-credentials";
 import { courseCrewCountsByTrip } from "./today";
 import { liveTrip } from "./trips-live";
 
@@ -223,25 +226,62 @@ export async function listCrewAssignmentRequests(
   // (issue #1339). A second query rather than a join on the select above: one
   // row per `(person, role)` would fan the requests out and silently duplicate
   // every ask made by somebody holding two roles.
-  const rolesByPerson = await shopRolesByPerson(
-    db,
-    live.map((row) => row.request.personId),
-  );
-  return live.map(({ request, person }) => ({
-    id: request.id,
-    tripId: request.tripId,
-    personId: request.personId,
-    personName: person.fullName,
-    // No per-trip role: the ask names a departure, never a job on it, so this
-    // is the shop-wide inference `inWaterCrewRole` makes for an unspecified
-    // row — the same one the assignment itself will get when it lands.
-    inWaterRole: inWaterCrewRole({
-      tripRole: null,
-      shopRoles: rolesByPerson.get(request.personId) ?? [],
-    }),
-    state: (request.decision ?? "pending") as CrewRequestState,
-    requestedAt: request.requestedAt,
-  }));
+  const requesterIds = live.map((row) => row.request.personId);
+  const rolesByPerson = await shopRolesByPerson(db, requesterIds);
+  // The hint states the supervision claim ("this ask will not close the
+  // gap"), so it reads the requester's recorded ratings against the
+  // departure's last shop-local day, as Today, the staffing week and the trip
+  // page do (issue #2173, after #1853). Otherwise a lapsed instructor's ask
+  // was hinted as closing a gap the Today row on the same session says it
+  // will not. The crew editor's refusals still count the roster's claim
+  // (H-59), so approving the ask is never refused for a lapse.
+  const credentials = await ratingCredentialsByPerson(db, shopId, requesterIds);
+  const divesOnByTrip = await lastDayByTrip(db, shopId, [
+    ...new Set(live.map((row) => row.request.tripId)),
+  ]);
+  return live.map(({ request, person }) => {
+    const divesOn = divesOnByTrip.get(request.tripId);
+    return {
+      id: request.id,
+      tripId: request.tripId,
+      personId: request.personId,
+      personName: person.fullName,
+      // No per-trip role: the ask names a departure, never a job on it, so this
+      // is the shop-wide inference `inWaterCrewRole` makes for an unspecified
+      // row, narrowed by any rung the requester's ratings have lapsed off by
+      // the day the departure is last in the water.
+      inWaterRole: inWaterCrewRole({
+        tripRole: null,
+        shopRoles: rolesByPerson.get(request.personId) ?? [],
+        lapsedRungs:
+          divesOn === undefined
+            ? []
+            : lapsedRungs(credentials.get(request.personId) ?? [], divesOn),
+      }),
+      state: (request.decision ?? "pending") as CrewRequestState,
+      requestedAt: request.requestedAt,
+    };
+  });
+}
+
+/**
+ * The shop-local day each of these live departures is last in the water on
+ * (`lastDayOfDeparture`), the day a requester's ratings are read against.
+ */
+async function lastDayByTrip(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Map<string, CalendarDate>> {
+  const byTrip = new Map<string, CalendarDate>();
+  if (tripIds.length === 0) return byTrip;
+  const rows = await db
+    .select({ id: trips.id, endsAt: trips.endsAt, timeZone: shops.timezone })
+    .from(trips)
+    .innerJoin(shops, eq(shops.id, trips.shopId))
+    .where(and(liveTrip(), eq(trips.shopId, shopId), inArray(trips.id, [...tripIds])));
+  for (const row of rows) byTrip.set(row.id, lastDayOfDeparture(row.endsAt, row.timeZone));
+  return byTrip;
 }
 
 /** Every standing role each of these people holds, folded one entry per person. */
