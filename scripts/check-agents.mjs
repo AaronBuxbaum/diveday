@@ -150,6 +150,31 @@ for (const token of routePathTokens) {
   }
 }
 
+// 5a. Reviewer agents run with `omitClaudeMd: true` and read `AGENTS.subagent.md` instead: the
+// route map's review-relevant rows and the hard rules. It misroutes the same way AGENTS.md does
+// when a path in it is renamed away, and an agent that skips CLAUDE.md without pointing at it
+// reviews with no map at all.
+const subagentMd = await readFile(path.join(ROOT, "AGENTS.subagent.md"), "utf8").catch(() => null);
+if (subagentMd === null) {
+  problems.push("AGENTS.subagent.md: missing — the reviewer agents read it in place of AGENTS.md");
+} else {
+  for (const token of repoPathTokens(subagentMd)) {
+    try {
+      await access(path.join(ROOT, token));
+    } catch {
+      problems.push(`AGENTS.subagent.md: path "${token}" does not exist`);
+    }
+  }
+}
+for (const file of agentFiles) {
+  const contents = await readFile(path.join(ROOT, ".claude/agents", file), "utf8");
+  const head = contents.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
+  if (/^omitClaudeMd:\s*true\s*$/m.test(head) && !contents.includes("AGENTS.subagent.md"))
+    problems.push(
+      `.claude/agents/${file}: omitClaudeMd is set but the body never points at AGENTS.subagent.md`,
+    );
+}
+
 // 5b. The path-scoped rules carry the other half of the route map — the rows that only matter
 // under one directory moved there so a session that never touches it never pays for them — and
 // misroute exactly as badly when a path they name is renamed away. Every rules file needs
