@@ -73,7 +73,13 @@ async function openReservations(db: AppDb, gearItemId: string): Promise<number> 
   const [row] = await db
     .select({ held: count(gearReservations.id) })
     .from(gearReservations)
-    .where(and(eq(gearReservations.gearItemId, gearItemId), isNull(gearReservations.returnedAt)));
+    .where(
+      and(
+        eq(gearReservations.gearItemId, gearItemId),
+        isNull(gearReservations.returnedAt),
+        isNull(gearReservations.releasedAt),
+      ),
+    );
   return row?.held ?? 0;
 }
 
