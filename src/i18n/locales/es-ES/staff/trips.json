@@ -14,7 +14,7 @@
   "phases": {
     "label": "Etapa",
     "prep": "Preparación",
-    "checkin": "Registro",
+    "checkin": "Check-in",
     "aboard": "A bordo",
     "back": "De vuelta"
   },

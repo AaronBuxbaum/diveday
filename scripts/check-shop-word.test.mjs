@@ -241,6 +241,63 @@ describe("the words the es-ES README settled", () => {
     });
   });
 
+  describe("a buddy team is una pareja de buceo (issue #2098)", () => {
+    const MANIFEST = "src/i18n/locales/es-ES/staff/manifest.json";
+
+    it("refuses the gear-shaped phrase the Boat tab used, in a staff bundle", () => {
+      expect(rules({ k: "Equipos de buceo" }, MANIFEST)).toEqual(["buddy-team"]);
+      expect(rules({ k: "Crear equipo de buceo" }, MANIFEST)).toEqual(["buddy-team"]);
+    });
+
+    it("refuses the marketing phrase in any bundle", () => {
+      expect(rules({ k: "Equipos de compañeros, y en el pase de lista" })).toEqual(["buddy-team"]);
+    });
+
+    it("refuses the bare word only where the key is about buddy teams", () => {
+      expect(rules({ buddyTeamLabel: "Equipo {number, number, ::00}" }, MANIFEST)).toEqual([
+        "buddy-team",
+      ]);
+      expect(rules({ buddyTeam: { with: "Equipo: {names}" } }, MANIFEST)).toEqual(["buddy-team"]);
+      // One report per string, even when two shapes of the mistake match it.
+      expect(rules({ buddyHeading: "Equipos de buceo" }, MANIFEST)).toEqual(["buddy-team"]);
+    });
+
+    it("leaves the staff team and the gear alone", () => {
+      // The two other meanings of `equipo` the README keeps. The rental page
+      // sells "equipo de buceo" in diver.json, which is the scoped half.
+      expect(rules({ team: { title: "Equipo" } }, STAFF)).toEqual([]);
+      expect(rules({ k: "Usa una dirección que lea todo el equipo." }, STAFF)).toEqual([]);
+      expect(rules({ k: "Alquiler de equipo de buceo y control de mantenimiento" })).toEqual([]);
+      expect(rules({ k: "Ajustar el equipo a estos buceadores en el check-in" }, STAFF)).toEqual(
+        [],
+      );
+    });
+
+    it("accepts pareja de buceo", () => {
+      expect(rules({ buddyHeading: "Parejas de buceo" }, MANIFEST)).toEqual([]);
+      expect(rules({ buddyTeamLabel: "Pareja {number, number, ::00}" }, MANIFEST)).toEqual([]);
+    });
+  });
+
+  describe("check-in is el check-in (issue #2098)", () => {
+    it("refuses registro de llegada and llegada y registro", () => {
+      expect(rules({ k: "Registro de llegada" })).toEqual(["check-in"]);
+      expect(rules({ k: "control de certificaciones, registro de llegada y el manifiesto" })).toEqual(
+        ["check-in"],
+      );
+      expect(rules({ k: "Llegada y registro" }, STAFF)).toEqual(["check-in"]);
+    });
+
+    it("leaves the tap's verb and a plain record alone", () => {
+      // The README keeps the verb on the control: "Registrar", "Registrado".
+      // And `registro` alone is a record — "Sin registro de quién ni cuándo".
+      expect(rules({ k: "Registrar a {name}" }, STAFF)).toEqual([]);
+      expect(rules({ k: "Registrado" }, STAFF)).toEqual([]);
+      expect(rules({ k: "Sin registro de quién ni cuándo" }, STAFF)).toEqual([]);
+      expect(rules({ k: "Llegada y check-in" }, STAFF)).toEqual([]);
+    });
+  });
+
   it("reports every rule a single string breaks, not only the first", () => {
     // A string can be wrong twice, and reporting one at a time turns a sweep
     // into as many rounds as the string has mistakes.

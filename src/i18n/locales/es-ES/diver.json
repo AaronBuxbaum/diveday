@@ -235,7 +235,7 @@
     "forecastCrewCall": "Las condiciones se confirman en el muelle.",
     "forecastCreditPrefix": "Previsión de",
     "timeline": {
-      "arrive": "Llegada y registro",
+      "arrive": "Llegada y check-in",
       "gearSetup": "Monta tu equipo",
       "briefing": "Briefing de la tripulación",
       "departure": "Salida",
@@ -2417,7 +2417,7 @@
     "today": "Hoy",
     "todayStart": "7:30",
     "todayUntil": "hasta las 11:00",
-    "phaseCheckin": "Registro",
+    "phaseCheckin": "Check-in",
     "readyCount": "Listos: 7 de 9",
     "blockedCount": "2 bloqueados",
     "spotsOpen": "3 plazas libres",
@@ -2637,7 +2637,7 @@
     "home": {
       "eyebrow": "Software para centros de buceo",
       "heroTitle": "Cada buceador reservado, firmado, verificado y localizado.",
-      "heroDescription": "Reservas en línea, exenciones y formularios médicos, control de certificaciones, registro de llegada y el manifiesto del barco, en una sola aplicación para tu centro de buceo. Un buceador que no está listo aparece con su nombre en recepción días antes de la salida.",
+      "heroDescription": "Reservas en línea, exenciones y formularios médicos, control de certificaciones, check-in y el manifiesto del barco, en una sola aplicación para tu centro de buceo. Un buceador que no está listo aparece con su nombre en recepción días antes de la salida.",
       "heroPriceLine": "Un precio único de {price} {cadence}, sin comisión sobre tus reservas.",
       "phoneFrameLabel": "Un capitán pasando lista en DiveDay en el muelle: 4 de 9 buceadores a bordo, un nombre marcado a bordo y el siguiente aún por llamar.",
       "dockEyebrow": "En el muelle",
@@ -2778,7 +2778,7 @@
         "item8": "WhatsApp desde el número del propio centro, conectado en Ajustes, con las respuestas en Mensajes"
       },
       "checkIn": {
-        "item1": "Registro de llegada en la pestaña Buceadores de la salida: un toque por buceador, cada uno con su opción de deshacer",
+        "item1": "Check-in en la pestaña Buceadores de la salida: un toque por buceador, cada uno con su opción de deshacer",
         "item2": "Una búsqueda de llegadas en Hoy por nombre, teléfono o correo, o con el código de una confirmación",
         "item3": "Misma persona u Otra persona en una plaza retenida, para que los papeles queden con el buceador que nombran",
         "item4": "Lo que falta resolver de un buceador bloqueado, en su fila, en lugar del toque Registrar",
@@ -2791,7 +2791,7 @@
         "item1": "Un pase de lista por nombre antes de zarpar y después de cada inmersión, tripulación incluida, con un historial que nada sobrescribe",
         "item2": "Un pase de lista sin señal, incorporado al registro en vivo cuando el teléfono se reconecta",
         "item3": "Un pase de lista que no marca a bordo en el muelle a un buceador bloqueado, con cada motivo y lo que falta resolver en la fila",
-        "item4": "Equipos de compañeros, y en el pase de lista en vivo un aviso en la fila de cada compañero cuando alguien se marca como que no volvió a bordo",
+        "item4": "Parejas de buceo, y en el pase de lista en vivo un aviso en la fila de cada compañero cuando alguien se marca como que no volvió a bordo",
         "item5": "El mismo pase de lista en cada teléfono de la tripulación con señal, a medida que cambia",
         "item6": "Modo barco en el pase de lista (alto contraste para una pantalla a pleno sol), y una presión con la palma mojada o una cortina de agua sobre el cristal no cuenta como toque",
         "item7": "Toques de etapa, del embarque al puerto, que se ven en el enlace de la salida de cada buceador",
@@ -3500,7 +3500,7 @@
         "textsTerm": "Mensajes de texto",
         "textsBody": "el número de móvil que se da con una reserva se usa solo para escribir a ese buceador sobre sus reservas, desde el número propio de DiveDay. Los números de móvil y el consentimiento para escribirles nunca se comparten ni se venden a nadie para su propio marketing. Responder STOP a cualquier mensaje los detiene, y el número queda en una lista de bajas para no volver a escribirle hasta que responda START.",
         "devicesTerm": "La copia en un teléfono del barco",
-        "devicesBody": "Para que el pase de lista siga funcionando sin señal, un teléfono de la tripulación guarda su propia copia de los manifiestos de los próximos dos días. De cada buceador guarda su nombre y su contacto de emergencia; sus tallas de equipo de alquiler y si pidió nitrox; quién va en su equipo de buceo; si se registró o si el mostrador marcó que no vino; si puede embarcar y, si no, por qué, lo que puede ser una retención médica; y cada marca del pase de lista, con el nombre de quien la hizo en la tripulación y cualquier nota que haya escrito. Se guarda cifrada en ese teléfono, con una clave que el navegador no devuelve, así que no se puede leer desde el almacenamiento del dispositivo. Quien tenga el teléfono desbloqueado puede abrirla, igual que con el manifiesto en papel al que sustituye. Se elimina cuando otro centro inicia sesión en ese teléfono, y se borra sola a los catorce días de haberse guardado o a los siete días del fin de la salida, lo que ocurra antes."
+        "devicesBody": "Para que el pase de lista siga funcionando sin señal, un teléfono de la tripulación guarda su propia copia de los manifiestos de los próximos dos días. De cada buceador guarda su nombre y su contacto de emergencia; sus tallas de equipo de alquiler y si pidió nitrox; con quién forma pareja de buceo; si hizo el check-in o si el mostrador marcó que no vino; si puede embarcar y, si no, por qué, lo que puede ser una retención médica; y cada marca del pase de lista, con el nombre de quien la hizo en la tripulación y cualquier nota que haya escrito. Se guarda cifrada en ese teléfono, con una clave que el navegador no devuelve, así que no se puede leer desde el almacenamiento del dispositivo. Quien tenga el teléfono desbloqueado puede abrirla, igual que con el manifiesto en papel al que sustituye. Se elimina cuando otro centro inicia sesión en ese teléfono, y se borra sola a los catorce días de haberse guardado o a los siete días del fin de la salida, lo que ocurra antes."
       },
       "where": {
         "heading": "Dónde se procesa",
@@ -3775,9 +3775,9 @@
         "demoPlace": "los Mensajes del centro, como propietario"
       },
       "checkIn": {
-        "name": "Registro de llegada",
+        "name": "Check-in",
         "summary": "Un toque por buceador en el mostrador, una búsqueda para quien no sabe en qué barco va, y quienes llegan sin reserva añadidos al momento.",
-        "metaTitle": "Registro de llegada para la hora pico de un centro de buceo",
+        "metaTitle": "Check-in para la hora pico de un centro de buceo",
         "metaDescription": "Registra a los buceadores con un toque en la lista de la propia salida. Quien no está listo muestra lo que falta en lugar del toque, y quienes llegan sin reserva pueden completar sus datos con el código de tu mostrador antes de que les des su plaza.",
         "title": "La hora pico es un toque por buceador, y quien no está listo muestra lo que falta en lugar del toque.",
         "lede": "Las llegadas se abren en la pestaña Buceadores de la salida, con el recuento de quién ha llegado, un toque Registrar junto a cada buceador listo y lo que falta junto a quien no lo está.",

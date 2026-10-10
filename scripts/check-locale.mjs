@@ -277,6 +277,12 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/gear.json itemKinds.dpv", "kit acronym, used as-is in Spanish"],
   ["diver.json booking.money.eLearning", "loanword Spanish diving uses"],
   ["staff/reviews.json pulseCategoryBriefing", "loanword Spanish diving uses"],
+  ["staff/trips.json phases.checkin", "settled loanword (es-ES README, “Check-in is el check-in”)"],
+  ["diver.json fallback.phaseCheckin", "settled loanword (es-ES README, “Check-in is el check-in”)"],
+  [
+    "diver.json marketing.featurePages.checkIn.name",
+    "settled loanword (es-ES README, “Check-in is el check-in”)",
+  ],
   [
     "staff/checkIn.json walkIn.title",
     "loanword this file already uses (its Spanish reads “Modo mostrador”, “Volver al check-in”)",

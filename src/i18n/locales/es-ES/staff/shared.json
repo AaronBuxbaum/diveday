@@ -368,7 +368,7 @@
       "crewNoneAboard": "Toda la tripulación de esta salida figura en tierra, así que nadie a bordo está en la lista de tripulación. Quien saliera se añade en la lista de tripulación de la salida, que necesita cobertura: este control sigue abierto hasta entonces.",
       "crewNotBackAboard": "{count, plural, one {# tripulante no ha vuelto a bordo.} other {# tripulantes no han vuelto a bordo.}} Este control sigue abierto.",
       "crewOlderCopy": "{count, plural, one {A # tripulante no se le puede pasar lista en esta copia guardada} other {A # tripulantes no se les puede pasar lista en esta copia guardada}} porque se guardó antes de que el pase de lista de tripulación funcionara sin conexión. Actualiza la copia la próxima vez que tengas cobertura o regístralos en el manifiesto en vivo.",
-      "buddyReadOnlyHere": "Los equipos de buceo se muestran tal como se guardaron. Si alguien del equipo está a bordo se registra en el pase de lista en vivo, y esta copia no lo sigue.",
+      "buddyReadOnlyHere": "Las parejas de buceo se muestran tal como se guardaron. Si alguien de la pareja está a bordo se registra en el pase de lista en vivo, y esta copia no lo sigue.",
       "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}}",
       "readyBadge": "Listo cuando se guardó",
       "blockedBadge": "Bloqueado cuando se guardó",
@@ -474,7 +474,7 @@
     "notBackAboard": "Sin regresar a bordo"
   },
   "buddyTeam": {
-    "with": "Equipo: {names}",
+    "with": "Pareja: {names}",
     "separatedDock": "Alguien no está a bordo",
     "separatedAfterDive": "Alguien sin contabilizar"
   },
