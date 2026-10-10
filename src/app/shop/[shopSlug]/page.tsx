@@ -778,8 +778,6 @@ async function TodayBody({
           scheduleUrl={publicScheduleUrl}
           scheduleHref={publicSchedulePath(shopSlug)}
           copy={{
-            // A short title and the trip in the body (#2174): the whole
-            // sentence as a 24px heading wrapped to three lines at 390.
             heading: t("shopHome.firstBookable.heading"),
             body:
               seriesCount > 1

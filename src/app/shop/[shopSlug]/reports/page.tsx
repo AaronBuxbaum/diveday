@@ -541,15 +541,11 @@ export default async function ReportsPage({
       <ReportRangeTabs shopSlug={shopSlug} range="month" t={t} className="mb-6" />
 
       {/*
-        Month navigator — plain server-rendered links, and between them one
-        month list that applies on change (`MonthJump`; UX audit item 22, which
-        retired its "Go" button). The arrows walk neighbouring months; the list
-        exists because they are useless for a far one. It runs from the shop's
-        first month to this one (or to the month on screen, when a staffer has
-        stepped past it), newest first, each in the shop's language (#1983).
-
-        One size across the row: the arrows are `icon`, 48px squares, level
-        with the 48px select, which is as wide as its longest month.
+        Month navigator — server-rendered arrows for neighbouring months, and
+        between them a list that applies on change for a far one (`MonthJump`,
+        UX audit item 22): the shop's first month to this one or the month on
+        screen, newest first, in the shop's language (#1983). The arrows are
+        48px `icon` squares, level with the 48px select.
       */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 className={SECTION_TITLE_CLASS}>

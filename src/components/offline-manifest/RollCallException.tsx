@@ -99,7 +99,7 @@ export function OfflineRollCallException({
             // her, she's aboard", named on the control so it cannot be
             // read as a generic "Confirm".
             onClick={() => record(subject, { status: "boarded" }, state)}
-            className={`${OFFLINE_BOAT_TARGET_CLASS} border border-success bg-success/15 text-success-strong`}
+            className={`${OFFLINE_BOAT_TARGET_CLASS} border border-success bg-success-tint text-success-strong`}
           >
             {busy
               ? t("shared.offlineManifest.single.saving")
@@ -136,7 +136,7 @@ export function OfflineRollCallException({
           }
           className={`${OFFLINE_BOAT_TARGET_CLASS} ${
             missing
-              ? "border border-danger bg-danger/15 text-danger"
+              ? "border border-danger bg-danger-tint text-danger"
               : recordedNotBoarded
                 ? "border border-border-strong bg-surface-sunken"
                 : "border border-border-strong bg-surface hover:bg-surface-sunken"

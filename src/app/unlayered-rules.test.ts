@@ -28,7 +28,7 @@ const ALLOWED: Record<string, string> = {
   "select:not([multiple]):not([size])":
     "The closed select's arrow strip: its padding-inline-end must beat controlClass's px-3, or option text runs under the arrow on every select.",
   "select:not([multiple]):not([size]):dir(rtl)":
-    "The same arrow, mirrored for right-to-left; it moves with the rule above.",
+    "The same arrow, mirrored for a script written the other way; it moves with the rule above.",
   body: "The document's ground, ink, face and overflow-x: clip, which must hold whatever a layout puts on <body>; the page never scrolls sideways.",
   "html:has([data-staff-sidebar])":
     "Publishes --shell-start, the sidebar's width, to the page: a custom property no utility writes, not an element default.",
