@@ -3,6 +3,8 @@
   "title": "Rentals",
   "counter": "Counter rental",
   "ticketFor": "Rental ticket for {name}",
+  "waiver": "Waiver: {standing}",
+  "sendWaiver": "Send waiver",
   "pagination": {
     "total": "{count, plural, one {# person} other {# people}}"
   }

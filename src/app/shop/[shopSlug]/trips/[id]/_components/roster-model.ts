@@ -124,6 +124,13 @@ export type RosterRows = {
   /** Per held seat, the other held seats a split may move with it (`sameNameHeldSeats`). */
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
   /**
+   * Per held seat, the matched diver's last dive day at this shop, or null for
+   * none (issue #1789): the evidence line in the armed "Same person" confirm.
+   */
+  heldSeatLastDiveDay?: ReadonlyMap<string, Date | null>;
+  /** Per seat, the unspent package dives its diver could put toward this trip (issue #1697). */
+  packageDivesByBooking?: ReadonlyMap<string, number>;
+  /**
    * The booking a staffer just acted on (`?bid=`), if any — a saved contact,
    * an updated payment. Acting on a row can move what they touched into the
    * reference panel or settle the row into the Ready group, and a control

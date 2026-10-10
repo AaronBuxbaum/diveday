@@ -23,6 +23,7 @@ import { DAY_MS } from "@/lib/clock";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { isDiver, type ParticipantType, rentsGear, rentsKind } from "@/lib/participant-types";
 import { nowDate } from "./clock";
+import type { GearItemKind } from "./gear";
 import {
   rentalFitCompleteness,
   SIZED_RENTAL_KINDS,
@@ -133,6 +134,13 @@ export type PrepDiver = {
    */
   identityHeld?: boolean;
   /**
+   * The register kinds this booking holds a live reservation for
+   * (`listTripGearAssignments`). A piece it already holds is never marked as
+   * one the shop no longer rents (`PrepPiece.notOffered`, issue #1811). Absent
+   * is "holds nothing", which keeps every mark: over-marking is the safe way.
+   */
+  heldGearKinds?: readonly GearItemKind[];
+  /**
    * The rental pieces this seat paid for at checkout
    * (`bookings.paid_rental_kinds`). Read only for a held seat: its sizes are
    * the matched record's, but what it paid for is its own, so the pieces go on
@@ -242,6 +250,11 @@ export type PrepPiece = {
    * nothing while the fit behind it still records one. So the list
    * over-includes and names the reason, which is a loose end a staffer can
    * actually close — put the item back in the catalog, or ask the diver.
+   *
+   * **Never set on a piece this booking already holds** on the gear register
+   * (a live reservation, `heldGearKinds`): the unit is on its peg with the
+   * diver's name against it, so "you no longer rent this" would be the wrong
+   * sentence a few rows from "Drysuit #3 · checked out" (issue #1811, H-78).
    */
   notOffered: boolean;
 };
@@ -278,10 +291,11 @@ export type PrepLine = {
   /** These divers are in drysuits and rent gloves: wet or dry is still to settle (`PrepPiece`). */
   drysuitGloves: boolean;
   /**
-   * This line's item is not in the shop's catalog any more (`PrepPiece`). A
-   * property of the shop rather than of the diver, so it is the same answer
-   * for every diver on the line and never splits one — which is why
-   * {@link prepLineKey} does not read it.
+   * This line's item is not in the shop's catalog any more, and these divers
+   * hold no unit of it (`PrepPiece`). Mostly a property of the shop, but a
+   * booking that already holds the piece is not told otherwise (issue #1811),
+   * so the same size can be two rows: the held ones and the ones to ask about.
+   * {@link prepLineKey} reads it for that reason.
    */
   notOffered: boolean;
 };
@@ -485,11 +499,12 @@ function size(value: string | null): string | null {
  * for "nobody wrote a size down". Exported because the page keys its rendered
  * rows by it: two rows the grouping kept apart must not share a React key.
  *
- * `notOffered` is deliberately absent. It is a fact about the shop's catalog,
- * so every piece of one kind on one departure carries the same answer and it
- * can never be what separates two rows.
+ * `notOffered` separates two rows too: one diver can already hold a unit of a
+ * kind the shop has since dropped while the next diver in the same size holds
+ * none (issue #1811), and the packer has a different job for each.
  */
 export function prepLineKey(piece: Omit<PrepPiece, "kind">): string {
+  if (piece.notOffered) return `\u0000not-offered:${prepLineKey({ ...piece, notOffered: false })}`;
   if (piece.fitAtCheckIn) return "\u0000fit";
   if (piece.drysuitWeightCheck) return "\u0000drysuit-weight";
   const stated = piece.size?.toLowerCase() ?? "";
@@ -525,16 +540,54 @@ function catalogScope(offeredKinds: readonly string[] | undefined): CatalogScope
  * `src/lib/rentals.ts`) — so asking the catalog about `boots` directly would
  * read every shop on earth as having dropped them.
  */
-function offersKind(offered: CatalogScope, kind: RentalItemKind): boolean {
+function offersKind(
+  offered: CatalogScope,
+  kind: RentalItemKind,
+  held: HeldPieces = NOTHING_HELD,
+): boolean {
   if (offered === null) return true;
+  if (held.has(kind)) return true;
   return offered.has(kind === "boots" ? "wetsuit" : kind);
+}
+
+/**
+ * **The pieces this booking already holds a unit of**, read off the gear
+ * register's live reservations (issue #1811, ruled under H-78: the rule lives
+ * here, once, so the prep list and the manifest cannot drift apart).
+ *
+ * A held piece is never marked as one the shop no longer rents: the unit is
+ * reserved to this diver, so the shop is handing it over whatever its catalog
+ * now says. Only a live reservation counts. A paid rental line on the order
+ * with no unit behind it keeps the mark; whether money taken means the gear
+ * is still owed is a refund conversation, and the mark is what starts it.
+ *
+ * Exact kinds only, and over-marking is the direction every doubt falls:
+ * mask & fins is one fit piece and two tagged units, so it counts as held only
+ * when both are; a held wetsuit does not vouch for boots nobody reserved.
+ */
+type HeldPieces = ReadonlySet<RentalItemKind>;
+
+const NOTHING_HELD: HeldPieces = new Set();
+
+function heldPieces(heldGearKinds: readonly GearItemKind[] | undefined): HeldPieces {
+  if (!heldGearKinds || heldGearKinds.length === 0) return NOTHING_HELD;
+  const units = new Set<string>(heldGearKinds);
+  return new Set(
+    KIND_ORDER.filter((kind) =>
+      kind === "mask_fins" ? units.has("mask") && units.has("fins") : units.has(kind),
+    ),
+  );
 }
 
 /**
  * A held seat's paid pieces: no size, fitted at check-in, in the rack's order,
  * with boots riding along a suit as they do for every fit (`rentedItems`).
  */
-function paidPiecesAtCheckIn(kinds: readonly RentalItemKind[], offered: CatalogScope): PrepPiece[] {
+function paidPiecesAtCheckIn(
+  kinds: readonly RentalItemKind[],
+  offered: CatalogScope,
+  held: HeldPieces = NOTHING_HELD,
+): PrepPiece[] {
   const paid = new Set<RentalItemKind>(kinds);
   if (paid.has("wetsuit")) paid.add("boots");
   return KIND_ORDER.filter((kind) => paid.has(kind)).map((kind) => ({
@@ -544,7 +597,7 @@ function paidPiecesAtCheckIn(kinds: readonly RentalItemKind[], offered: CatalogS
     drysuitWeightCheck: false,
     drysuitFinFit: false,
     drysuitGloves: false,
-    notOffered: !offersKind(offered, kind),
+    notOffered: !offersKind(offered, kind, held),
   }));
 }
 
@@ -565,9 +618,13 @@ function paidPiecesAtCheckIn(kinds: readonly RentalItemKind[], offered: CatalogS
  * other line reads the catalog: the two drysuit consequences follow
  * `inDrysuit` below, a fact about the diver that no catalog edit changes.
  */
-function rentedItems(fit: RentalFit, offered: CatalogScope = null): PrepPiece[] {
+function rentedItems(
+  fit: RentalFit,
+  offered: CatalogScope = null,
+  held: HeldPieces = NOTHING_HELD,
+): PrepPiece[] {
   const flagged = Boolean(fit.needsStaffFitAt);
-  const offers = (kind: RentalItemKind) => offersKind(offered, kind);
+  const offers = (kind: RentalItemKind) => offersKind(offered, kind, held);
   /**
    * **The diver is in a drysuit**, whoever owns it (H-78).
    *
@@ -876,9 +933,11 @@ export function buildDivePrepChecklist(input: {
         fullName: diver.fullName,
         paidFor: KIND_ORDER.filter((kind) => paid.has(kind)),
       });
-      const items = paidPiecesAtCheckIn(diver.paidRentalKinds ?? [], offered).filter((item) =>
-        rentsKind(diver.participantType, item.kind),
-      );
+      const items = paidPiecesAtCheckIn(
+        diver.paidRentalKinds ?? [],
+        offered,
+        heldPieces(diver.heldGearKinds),
+      ).filter((item) => rentsKind(diver.participantType, item.kind));
       diverLines.push({
         bookingId: diver.bookingId,
         personId: diver.personId,
@@ -941,7 +1000,7 @@ export function buildDivePrepChecklist(input: {
     // it returns, so a diver's row reads down the rack in the same order the
     // by-item rows do — and neither grouping can hold a piece the other
     // doesn't.
-    const items = rentedItems(diver.fit, offered).filter((item) =>
+    const items = rentedItems(diver.fit, offered, heldPieces(diver.heldGearKinds)).filter((item) =>
       rentsKind(diver.participantType, item.kind),
     );
     diverLines.push({
@@ -1092,6 +1151,11 @@ export function staffFitPieces(
  * sees every piece the fit asks for. A caller that **has** one should pass it,
  * so a piece the shop stopped renting reads as such on the rail too
  * (`notOffered`, issue #1755's review).
+ *
+ * `heldGearKinds` is the register kinds this booking holds a live reservation
+ * for: a piece it already holds is not marked (issue #1811, {@link heldPieces}).
+ * Absent keeps every mark, so a caller with no booking in scope (the diver
+ * record, the seat-a-diver list) is unchanged.
  */
 export function rentalFitLine(
   fit: RentalFit | null,
@@ -1103,6 +1167,7 @@ export function rentalFitLine(
    * record; it is just not what this seat is handed on the dock.
    */
   participantType?: ParticipantType | null,
+  heldGearKinds?: readonly GearItemKind[],
 ): RentalFitLine {
   // A row that exists only to hold the diver's note reads exactly as no row at
   // all: they have not answered the gear question, so there is nothing to pack
@@ -1115,7 +1180,7 @@ export function rentalFitLine(
   if (fit.needsStaffFitAt) {
     return { state: "needs_staff_fit", note: fit.needsStaffFitNote?.trim() || null };
   }
-  const items = rentedItems(fit, catalogScope(offeredKinds))
+  const items = rentedItems(fit, catalogScope(offeredKinds), heldPieces(heldGearKinds))
     .filter((item) => participantType === undefined || rentsKind(participantType, item.kind))
     .map((item) => ({
       kind: item.kind,

@@ -8,6 +8,7 @@ import {
   rentalFitLine,
   staffFitPieces,
 } from "./dive-prep";
+import type { GearItemKind } from "./gear";
 
 const fullFit: RentalFit = {
   rentsBcd: true,
@@ -1413,6 +1414,114 @@ describe("a piece the shop stopped renting", () => {
     });
     expect(lineFor(dropped, "boots", "9")).toMatchObject({ notOffered: true });
     expect(lineFor(dropped, "wetsuit", "5mm M")).toMatchObject({ notOffered: true });
+  });
+
+  /**
+   * Issue #1811 (H-78): a booking that already holds a unit of the dropped
+   * kind on the gear register is not told the shop no longer rents it. One
+   * rule in `rentalFitLine`/`buildDivePrepChecklist`, so the prep list and the
+   * manifest rail cannot disagree. Over-marking stays the safe direction for
+   * everything else.
+   */
+  describe("a piece this booking already holds", () => {
+    it("drops the mark on the rail when the booking holds a live drysuit reservation", () => {
+      const line = rentalFitLine(drysuitDiver, noDrysuits, undefined, ["drysuit"]);
+      const items = line.state === "rents" ? line.items : [];
+      expect(items.find((item) => item.kind === "drysuit")).toEqual({
+        kind: "drysuit",
+        size: "ML",
+      });
+    });
+
+    it("drops the mark on the packing list for the holder only, in a row of its own", () => {
+      const checklist = buildDivePrepChecklist({
+        divers: [
+          diver({
+            bookingId: "b1",
+            fullName: "Held Hana",
+            fit: drysuitDiver,
+            heldGearKinds: ["drysuit"],
+          }),
+          diver({ bookingId: "b2", fullName: "Asked Ari", fit: drysuitDiver }),
+        ],
+        plannedDives: 1,
+        offeredKinds: noDrysuits,
+      });
+      const suits = checklist.lines.filter((line) => line.kind === "drysuit" && line.size === "ML");
+      // Same size, two jobs: one suit is on its peg with a name on it, the
+      // other is a conversation with the diver. One row would say one of them.
+      expect(suits).toHaveLength(2);
+      expect(suits.find((line) => !line.notOffered)?.divers).toEqual(["Held Hana"]);
+      expect(suits.find((line) => line.notOffered)?.divers).toEqual(["Asked Ari"]);
+      const held = checklist.diverLines.find((row) => row.bookingId === "b1")?.items ?? [];
+      expect(held.find((piece) => piece.kind === "drysuit")?.notOffered).toBe(false);
+    });
+
+    it("keeps the mark when the booking holds nothing", () => {
+      for (const heldGearKinds of [undefined, []]) {
+        const line = rentalFitLine(drysuitDiver, noDrysuits, undefined, heldGearKinds);
+        const items = line.state === "rents" ? line.items : [];
+        expect(items.find((item) => item.kind === "drysuit")?.notOffered).toBe(true);
+      }
+    });
+
+    it("keeps the mark when the booking holds some other kind", () => {
+      // A held regulator says nothing about the suit.
+      const line = rentalFitLine(drysuitDiver, noDrysuits, undefined, ["regulator", "bcd"]);
+      const items = line.state === "rents" ? line.items : [];
+      expect(items.find((item) => item.kind === "drysuit")?.notOffered).toBe(true);
+    });
+
+    it("counts mask and fins as held only when both units are", () => {
+      const fit: RentalFit = { ...fullFit, rentsMaskFins: true, finSize: "US 9" };
+      const catalog = ["bcd", "regulator", "wetsuit", "weights"];
+      const marked = (held: GearItemKind[]) => {
+        const line = rentalFitLine(fit, catalog, undefined, held);
+        const items = line.state === "rents" ? line.items : [];
+        return items.find((item) => item.kind === "mask_fins")?.notOffered === true;
+      };
+      expect(marked(["fins"])).toBe(true);
+      expect(marked(["mask"])).toBe(true);
+      expect(marked(["mask", "fins"])).toBe(false);
+    });
+
+    it("does not let a held wetsuit vouch for boots nobody reserved", () => {
+      const dropped = ["bcd", "regulator", "mask_fins", "weights"];
+      const checklist = buildDivePrepChecklist({
+        divers: [diver({ bookingId: "b1", fullName: "Wet Wanda", heldGearKinds: ["wetsuit"] })],
+        plannedDives: 1,
+        offeredKinds: dropped,
+      });
+      expect(lineFor(checklist, "wetsuit", "5mm M")).toMatchObject({ notOffered: false });
+      expect(lineFor(checklist, "boots", "9")).toMatchObject({ notOffered: true });
+    });
+
+    it("drops the mark on a held seat's paid piece the booking holds a unit of", () => {
+      const checklist = buildDivePrepChecklist({
+        divers: [
+          diver({
+            bookingId: "b1",
+            fullName: "Held Seat",
+            identityHeld: true,
+            paidRentalKinds: ["drysuit", "torch"],
+            heldGearKinds: ["drysuit"],
+          }),
+        ],
+        plannedDives: 1,
+        offeredKinds: noDrysuits,
+      });
+      const items = checklist.diverLines[0]?.items ?? [];
+      expect(items.find((piece) => piece.kind === "drysuit")?.notOffered).toBe(false);
+      // Paid for and not reserved: money taken is not a unit on a peg, so the
+      // mark stays and the refund conversation still starts here.
+      expect(items.find((piece) => piece.kind === "torch")?.notOffered).toBe(true);
+    });
+
+    it("changes nothing when no catalog was handed over", () => {
+      const line = rentalFitLine(drysuitDiver, undefined, undefined, ["drysuit"]);
+      const items = line.state === "rents" ? line.items : [];
+      expect(items.some((item) => item.notOffered)).toBe(false);
+    });
   });
 });
 

@@ -108,6 +108,19 @@ export type BookingPerson =
        * returning diver picked out of the search by a staffer who went looking
        * for them is not a guess, and "enter once, reuse everywhere" has to keep
        * costing nothing.
+       *
+       * **Re-decided after the phone arm widened, and kept** (H-79, issue
+       * #1790, 2026-09-16). Since #1765 the search also matches a punctuated
+       * or national-only number against the stored E.164, so a ten-digit
+       * needle can reach a row in another country, and the search list is
+       * longer than it was. The owner ruled that a seat picked from it still
+       * lands released: choosing a row is a deliberate act, every row prints
+       * the name, email and grouped phone to read before the tap, and a held
+       * seat there would cost a tap on every ordinary search-and-seat. Holding
+       * only phone-arm matches was considered and not taken. Do not add the
+       * flag to the search door, and do not narrow the search, anchor the
+       * phone match or raise the digit floor instead: each re-breaks the
+       * pasted-number case #1765 fixed. Pinned in `seat-diver.test.ts`.
        */
       fromNameMatch?: { typedName: string };
     }
@@ -788,6 +801,11 @@ async function createBookingRecord(
   //    off the counter's name prompt rather than out of a search a staffer went
   //    looking in (issue #1556) — and, on that path, the typed name disagrees
   //    with the one on file, or two divers answer to it.
+  //
+  // This is where the two counter doors part, on purpose: a seat picked from
+  // the search list carries no `fromNameMatch` and lands released, namesake
+  // or not, however the row was found (H-79, issue #1790; the reasoning is on
+  // `BookingPerson.fromNameMatch`).
   let identityUnconfirmed = false;
   // What the staffer is shown beside the matched record while the flag stands,
   // and what a split-off record is named (`splitBookingIdentity`).

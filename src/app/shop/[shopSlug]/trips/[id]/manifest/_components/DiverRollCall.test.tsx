@@ -630,7 +630,51 @@ describe("the earlier-refusal capsule", () => {
 /**
  * **A release standing over a referral nobody answered gets a row capsule
  * too** (dive-domain review of #2163), ranked just after the earlier refusal.
+ *
+ * The owner kept that override (2026-10-09, issue #2195, amending H-98): the
+ * diver boards, and the warning links back to the referral on screen. Paper
+ * prints the same warning with nothing to tap.
  */
+describe("an unanswered referral's warning", () => {
+  const referredBefore = {
+    at: new Date("2026-09-01T12:00:00.000Z"),
+    source: "digital",
+    overriddenReferralAt: new Date("2026-08-20T12:00:00.000Z"),
+    overriddenReferral: {
+      recordId: "w-referred",
+      personId: "p-referred",
+      at: new Date("2026-08-20T12:00:00.000Z"),
+    },
+    overriddenRefusal: null,
+    clearance: null,
+    guardian: null,
+  } as unknown as TripManifest["divers"][number]["medicalWaiver"];
+
+  it("links to the referral once, from the on-screen facts", () => {
+    renderList({ divers: [diver({ medicalWaiver: referredBefore })] });
+    // Paper carries the warning unlinked; the link is in the sheet.
+    expect(screen.queryByRole("link", { name: "View the referral" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+
+    const links = screen.getAllByRole("link", { name: "View the referral" });
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/p-referred/waivers/w-referred",
+    );
+    // The warning itself is printed on screen and on paper alike.
+    expect(
+      screen.getAllByText(/re-signed with no physician clearance on file/).length,
+    ).toBeGreaterThanOrEqual(1);
+  });
+
+  it("draws no link for a release with no referral behind it", () => {
+    renderList({ divers: [diver()] });
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    expect(screen.queryByRole("link", { name: "View the referral" })).toBeNull();
+  });
+});
+
 /**
  * **A diver aboard while blocked reads "Blocked", not their buddy's absence**
  * (dive-domain review of the manifest-blocked-aboard capture). At the dock,
@@ -711,9 +755,9 @@ describe("the unresolved-referral capsule", () => {
 
   it("puts a warning capsule on the row, and dates the referral with its year", () => {
     const { container } = renderList({ divers: [diver({ medicalWaiver: referred })] });
-    expect(container.querySelector(".basis-full")).toHaveTextContent("Referral not cleared");
+    expect(container.querySelector(".basis-full")).toHaveTextContent("Referral still open");
     expect(container.textContent).toMatch(
-      /no physician clearance on file \(referred Jun\s10,\s2026\)/,
+      /Referred to a physician on Jun\s10,\s2026; re-signed with no physician clearance on file/,
     );
   });
 
@@ -724,7 +768,7 @@ describe("the unresolved-referral capsule", () => {
     } as TripManifest["divers"][number]["medicalWaiver"];
     const { container } = renderList({ divers: [diver({ medicalWaiver: both })] });
     expect(container.querySelector(".basis-full")).toHaveTextContent("Physician said no before");
-    expect(container.querySelector(".basis-full")).not.toHaveTextContent("Referral not cleared");
+    expect(container.querySelector(".basis-full")).not.toHaveTextContent("Referral still open");
   });
 
   it("is short in Spanish too", () => {

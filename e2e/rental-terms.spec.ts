@@ -60,6 +60,10 @@ async function expectTermsAndReceivedBy(ticket: Locator) {
   await expect(ticket.getByText("Received by", { exact: true })).toBeVisible();
   await expect(ticket.getByText("Printed name", { exact: true })).toBeVisible();
   await expect(ticket.getByText("Date", { exact: true })).toBeVisible();
-  // A receipt for gear, never a waiver or a bill (CR-015).
+  // A receipt for gear, never a waiver or a bill (CR-015). The paper is what
+  // the person carries away, so read it as printed: the screen-only waiver
+  // line staff see on a counter ticket (H-108) is not on it.
+  await ticket.page().emulateMedia({ media: "print" });
   await expect(ticket.getByText(/i agree|waive|liabilit|total|deposit|\$/i)).toHaveCount(0);
+  await ticket.page().emulateMedia({ media: "screen" });
 }

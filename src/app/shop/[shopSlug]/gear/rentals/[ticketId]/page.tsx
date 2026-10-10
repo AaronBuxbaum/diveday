@@ -1,27 +1,32 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { FlashParams } from "@/components/FlashParams";
 import { PrintButton } from "@/components/PrintButton";
 import { EYEBROW_CLASS, EyebrowBackLink } from "@/components/ShopPageHeader";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
-import { getCounterRentalTicket } from "@/db/gear-counter-rentals";
+import { counterRentalWaiverStandings, getCounterRentalTicket } from "@/db/gear-counter-rentals";
 import { getOrder } from "@/db/orders";
 import { gearItemKindLabel, gearPhaseLabel, gearReturnOutcomeLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { waiverRowStateText, waiverRowStateTone } from "@/i18n/waiver-labels";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { counterRentalWaiverFlag } from "@/lib/counter-rentals";
 import { reservationPhase } from "@/lib/gear";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { WaiverSendControl } from "../../../_components/today/WaiverSendControl";
 import { GearReturnPane } from "../../../trips/[id]/prep/_components/GearReturnPane";
 import { RentalTicketReceipt } from "../../_components/RentalTicketReceipt";
 import {
@@ -99,7 +104,17 @@ export default async function CounterRentalTicketPage({
   const t = staffTranslator(locale);
   const ticket = await getCounterRentalTicket(db, shop.id, ticketId);
   if (!ticket) notFound();
-  const billing = ticket.orderId ? await getOrder(db, shop.id, ticket.orderId) : null;
+  const [billing, waivers] = await Promise.all([
+    ticket.orderId ? getOrder(db, shop.id, ticket.orderId) : null,
+    counterRentalWaiverStandings(db, {
+      shopId: shop.id,
+      timezone: shop.timezone,
+      personIds: [ticket.personId],
+    }),
+  ]);
+  // The person's release, said and never gated on (issue #2261, H-108).
+  const waiverState = waivers.get(ticket.personId);
+  const waiverFlag = waiverState ? counterRentalWaiverFlag(waiverState) : null;
 
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
   const banner = noticeFromParam(notice, NOTICES);
@@ -140,6 +155,36 @@ export default async function CounterRentalTicketPage({
           <div className="print:hidden">
             <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
           </div>
+        ) : null}
+
+        {/* **The person's waiver, informing only** (issue #2261, H-108): a
+            counter rental never waits on it, so this is a line and a way to
+            send the link, never a gate. Screen only — the slip the person
+            carries away is a receipt for gear, not a note about them. */}
+        {waiverState && waiverFlag ? (
+          <section className="mt-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
+            <p
+              className={`inline-flex items-baseline gap-1.5 font-medium ${
+                waiverRowStateTone(waiverState) === "danger" ? "text-danger" : "text-warning-strong"
+              }`}
+            >
+              <span className="flex h-lh shrink-0 items-center self-start">
+                <DiveDayIcon name="warning" className="size-4 shrink-0" />
+              </span>
+              <span>
+                {t("gearRentals.waiver", { standing: waiverRowStateText(t, waiverState) })}
+              </span>
+            </p>
+            {waiverFlag.offerLink ? (
+              <WaiverSendControl
+                surface="diver"
+                personId={ticket.personId}
+                bookingIds={[]}
+                label={t("gearRentals.sendWaiver")}
+                copy={waiverSendCopy(t)}
+              />
+            ) : null}
+          </section>
         ) : null}
 
         <section aria-labelledby="ticket-units-heading" className="mt-8">

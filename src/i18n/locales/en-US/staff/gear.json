@@ -150,6 +150,7 @@
     "importCellTooLong": "One of that file’s values is longer than 2,000 characters, so nothing was read.",
     "imported": "Imported {events} service events across {units} new units, plus {assignments} historical assignments. {skipped} duplicate service events and {assignmentSkipped} unmatched or duplicate assignments were left alone.",
     "returnedSet": "Back on the wall.",
+    "returnedSetPulled": "Back. Pulled for service.",
     "concernNeedsWords": "A service concern needs a line saying what happened, so a technician can act on it.",
     "nothingOut": "Nothing from that set is out.",
     "nothingToHandOver": "That set is already out."
@@ -278,7 +279,8 @@
     "returnFitAdjusted": "Fit adjusted",
     "returnServiceConcern": "Service concern",
     "returnNoteLabel": "What to tell the technician",
-    "returnNotePlaceholder": "Torn strap, second stage free-flowed"
+    "returnNotePlaceholder": "Torn strap, second stage free-flowed",
+    "returnPullToBench": "Pull for service"
   },
   "ticket": {
     "eyebrow": "Rental",

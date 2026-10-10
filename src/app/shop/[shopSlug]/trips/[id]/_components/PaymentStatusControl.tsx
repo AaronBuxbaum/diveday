@@ -43,6 +43,7 @@ export function PaymentStatusControl({
   action,
   sourceNote,
   refundNote,
+  packageNote = null,
   allowedStatuses,
   copy,
 }: {
@@ -61,11 +62,19 @@ export function PaymentStatusControl({
   sourceNote: string | null;
   /** e.g. "Refund-eligible until …" — shown only while the status is (deposit) paid. */
   refundNote: string | null;
+  /**
+   * The diver holds unspent package dives this trip could take (issue #1697,
+   * H-79). Shown only while money is still to be taken: a fare already
+   * collected stands, so the line exists to be read before the cash.
+   */
+  packageNote?: string | null;
   copy: PaymentStatusControlCopy;
 }) {
   const [optimisticStatus, setOptimisticStatus] = useOptimistic(status);
   const showRefund =
     (optimisticStatus === "paid" || optimisticStatus === "deposit_paid") && refundNote;
+  const showPackage =
+    (optimisticStatus === "unpaid" || optimisticStatus === "deposit_paid") && packageNote;
   return (
     <form
       action={(formData) => {
@@ -80,6 +89,11 @@ export function PaymentStatusControl({
         {sourceNote ? <span className="text-muted"> · {sourceNote}</span> : null}
         {showRefund ? <span className="text-muted"> · {refundNote}</span> : null}
       </span>
+      {showPackage ? (
+        <span className="basis-full text-sm" data-testid="payment-package-note">
+          {packageNote}
+        </span>
+      ) : null}
       {/* **The picker and the button it submits wrap as one.** Label,
           select and Update were three siblings of this wrapping row, so on a
           phone a short label ("Payment: Unpaid") kept the select on the first

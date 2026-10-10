@@ -7,6 +7,7 @@ import {
   packageOnSale,
   type SpendableEntitlement,
   spendableCount,
+  spendableCountForTrip,
 } from "@/lib/dive-packages";
 import type { AppDb, DbExecutor } from "./client";
 import {
@@ -199,6 +200,73 @@ export async function listSpendableEntitlements(
       asc(divePackageEntitlements.id),
     );
   return rows;
+}
+
+/**
+ * How many unspent dives each of these people could put toward one departure,
+ * in one read over the roster (issue #1697, H-79). A person with none is
+ * absent from the map.
+ *
+ * The roster's payment control reads it so a staffer about to take a fare can
+ * see the package first: a fare already collected stands
+ * (`settleConfirmedPackageCoverage` leaves it alone), so the line is there to
+ * stop the situation arising, not to unwind it. The same backing rule as
+ * {@link listSpendableEntitlements}, so a refunded or disputed package never
+ * shows here.
+ */
+export async function spendableDivesForTrip(
+  db: DbExecutor,
+  shopId: string,
+  personIds: readonly string[],
+  trip: { courseId: string | null },
+  now = nowDate(),
+): Promise<Map<string, number>> {
+  if (personIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      personId: divePackageEntitlements.personId,
+      id: divePackageEntitlements.id,
+      packageId: divePackageEntitlements.packageId,
+      scope: divePackages.scope,
+      expiresAt: divePackageEntitlements.expiresAt,
+      consumedAt: divePackageEntitlements.consumedAt,
+    })
+    .from(divePackageEntitlements)
+    .innerJoin(
+      divePackages,
+      and(
+        eq(divePackages.id, divePackageEntitlements.packageId),
+        eq(divePackages.shopId, divePackageEntitlements.shopId),
+      ),
+    )
+    .innerJoin(
+      orders,
+      and(
+        eq(orders.id, divePackageEntitlements.orderId),
+        eq(orders.shopId, divePackageEntitlements.shopId),
+      ),
+    )
+    .where(
+      and(
+        eq(divePackageEntitlements.shopId, shopId),
+        inArray(divePackageEntitlements.personId, [...personIds]),
+        isNull(divePackageEntitlements.consumedAt),
+        packageOrderStillBacks(),
+      ),
+    );
+
+  const heldByPerson = new Map<string, SpendableEntitlement[]>();
+  for (const { personId, ...entitlement } of rows) {
+    const held = heldByPerson.get(personId);
+    if (held) held.push(entitlement);
+    else heldByPerson.set(personId, [entitlement]);
+  }
+  const counts = new Map<string, number>();
+  for (const [personId, held] of heldByPerson) {
+    const spendable = spendableCountForTrip(held, trip, now);
+    if (spendable > 0) counts.set(personId, spendable);
+  }
+  return counts;
 }
 
 /** How many dives this diver can still spend — what both they and the shop ask. */

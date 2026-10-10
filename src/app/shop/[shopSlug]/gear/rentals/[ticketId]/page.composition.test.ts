@@ -54,6 +54,23 @@ describe("the counter-rental ticket", () => {
     expect(pane).not.toMatch(/name="dives"[^>]*required/);
   });
 
+  /**
+   * Issue #2261, H-108: the person's waiver is said on screen with the link to
+   * send, never on the slip they carry away, and nothing on the ticket waits
+   * on it.
+   */
+  it("says the person's waiver on screen only, with the send beside it", () => {
+    const line = SOURCE.slice(
+      SOURCE.indexOf("waiverState && waiverFlag"),
+      SOURCE.indexOf('aria-labelledby="ticket-units-heading"'),
+    );
+    expect(line).toContain("print:hidden");
+    expect(line).toContain('t("gearRentals.waiver"');
+    expect(line).toContain("waiverFlag.offerLink ? (");
+    expect(line).toContain("<WaiverSendControl");
+    expect(line).toContain("personId={ticket.personId}");
+  });
+
   it("does not call a flagged return back on the wall", () => {
     expect(SOURCE).toContain('"returned-flagged"');
   });

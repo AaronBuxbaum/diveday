@@ -159,7 +159,7 @@ export default async function GearRegisterPage({
       listGearServiceDueRows(db, shop.id, { todayLocal }),
       countGearRentalHolders(db, shop.id),
       rentalsView
-        ? listGearRentals(db, shop.id, { todayLocal, page: wantedPage })
+        ? listGearRentals(db, shop.id, { todayLocal, page: wantedPage, timezone: shop.timezone })
         : Promise.resolve(null),
     ]);
   const fleetTotal = [...countsByKind.values()].reduce((sum, value) => sum + value, 0);

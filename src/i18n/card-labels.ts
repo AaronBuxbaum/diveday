@@ -38,6 +38,13 @@ export const HELD_CARD_STATUS_KEYS: Record<HeldCardDisplayStatus, StaffMessageKe
   confirm_to_clear: "divers.shared.cardStatus.confirmToClear",
 };
 
+/**
+ * The tone of a card's held status wherever it is *summarized* — the side of
+ * the glossary's "Confirm to clear" rule that is loud. The same fact on the
+ * card's own row is the neutral prompt in `CERTIFICATION_ROW_STATE_BADGE`
+ * below: one fact, two contexts, and `card-labels.test.ts` pins both halves
+ * against the glossary so neither drifts alone.
+ */
 export function heldCardStatusTone(status: HeldCardDisplayStatus): "success" | "warning" {
   // Warning, not success: the card is on file, and the gate is not open yet.
   return status === "confirm_to_clear" ? "warning" : cardStatusTone(status);
@@ -61,8 +68,9 @@ export function heldCardStatusTone(status: HeldCardDisplayStatus): "success" | "
  * - `imported_unconfirmed` → **neutral**, worded "certified · confirm to
  *   clear". A prompt, not a warning: the card came across already checked by
  *   the shop's own previous system, and one tap opens the gate. The *blocker*
- *   derived from the same fact — the record's status ledger, the home's
- *   station, readiness itself — carries the blocker's own tone, which is the
+ *   derived from the same fact — the record's status ledger, the closed
+ *   Certification records door, the home's station, `heldCardStatusTone`
+ *   above, readiness itself — carries the blocker's own tone, which is the
  *   tone escalation this ADR states out loud: one fact, two contexts. The
  *   gate has never been the badge's job (`src/lib/readiness.ts` decides who
  *   boards), and the word carries the state whatever the tone.

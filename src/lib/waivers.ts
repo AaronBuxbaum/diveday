@@ -423,8 +423,19 @@ export type MedicalWaiverMark = {
    * that the release standing today replaced a referral rather than answering
    * it, and staff decide. Derived on every read, never stored, so it cannot
    * drift from the records it describes.
+   *
+   * **The owner kept the override** (2026-10-09, issue #2195, amending H-98):
+   * a later clean release may stand over an unresolved referral, and the
+   * warning links back to it ({@link overriddenReferral}).
    */
   overriddenReferralAt: Date | null;
+  /**
+   * The referral itself — its record and date — so a surface that can open a
+   * record links the warning to it (issue #2195). `overriddenReferralAt` is
+   * this one's `at`, kept for the dated surfaces that carry no id (the
+   * offline manifest carries the day and nothing else of the record).
+   */
+  overriddenReferral: OverriddenReferral | null;
   /**
    * **An earlier release a physician refused, that this one stands over**
    * ({@link overriddenRefusal}) — its record and date, or null. A warning,
@@ -476,13 +487,40 @@ export function overriddenReferralAt(
   standing: WaiverRecord | null,
   personSignedWaivers: readonly WaiverRecord[],
 ): Date | null {
+  return overriddenReferral(standing, personSignedWaivers)?.at ?? null;
+}
+
+/**
+ * An unresolved referral a standing clean release stands over: its record,
+ * whose it is (the record's page lives under the person), and when it was
+ * signed.
+ */
+export type OverriddenReferral = { recordId: string; personId: string; at: Date };
+
+/**
+ * {@link overriddenReferralAt} with the record it is about, so the warning
+ * can link to the referral (issue #2195). The one derivation: the date above
+ * is read from this.
+ *
+ * **Kept as a warning, not a block, by decision** (Aaron, 2026-10-09, issue
+ * #2195, amending H-98). A later clean signature clears the diver even over
+ * a referral no physician answered, as it does over a physician's "no"; every
+ * surface that warns about the refusal warns about this too, with the
+ * referral one tap away. `effectiveWaiverForBooking` is unchanged.
+ */
+export function overriddenReferral(
+  standing: WaiverRecord | null,
+  personSignedWaivers: readonly WaiverRecord[],
+): OverriddenReferral | null {
   if (!standing || !isCleanCompletion(standing)) return null;
   const standingTime = signatureTime(standing);
   const referral = personSignedWaivers
     .filter((record) => isUnresolvedMedicalHold(record) && !isStandingRefusal(record))
     .filter((record) => record.id !== standing.id && signatureTime(record) < standingTime)
     .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
-  return referral ? new Date(signatureTime(referral)) : null;
+  return referral
+    ? { recordId: referral.id, personId: referral.personId, at: new Date(signatureTime(referral)) }
+    : null;
 }
 
 /**
@@ -631,7 +669,8 @@ export function medicalWaiverMark(
   if (record === null || !isCleanCompletion(record)) return null;
   const at = record.signedAt ?? record.completedAt;
   if (!at) return null;
-  const overridden = overriddenReferralAt(record, personSignedWaivers);
+  const referral = overriddenReferral(record, personSignedWaivers);
+  const overridden = referral?.at ?? null;
   const refusal = overriddenRefusal(record, personSignedWaivers);
   const guardian = guardianSignatureOf(record);
   // A referral a physician cleared is the strongest medical evidence a shop
@@ -648,6 +687,7 @@ export function medicalWaiverMark(
       at: evaluatedAt === null ? record.medicalClearedAt : new Date(evaluatedAt),
       source: "cleared",
       overriddenReferralAt: overridden,
+      overriddenReferral: referral,
       overriddenRefusal: refusal,
       clearance: {
         recordId: record.id,
@@ -660,6 +700,7 @@ export function medicalWaiverMark(
   // above is the only one a `medical_cleared_at` can reach.
   const uncleared = {
     overriddenReferralAt: overridden,
+    overriddenReferral: referral,
     overriddenRefusal: refusal,
     clearance: null,
     guardian,

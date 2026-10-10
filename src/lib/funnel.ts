@@ -92,6 +92,11 @@ const FIXED_SOURCES = [
   "product-spreadsheet",
   "pricing",
   "pricing-close",
+  // The export band's annotated screen ends in one door into the demo as the
+  // owner, who downloads the export (issue #1955). Its own tag for the reason
+  // `switching-hub-preview` has one: a reader who opened the demo from the
+  // "what if I leave?" screen is a different moment from either pricing pair.
+  "pricing-export",
   // `/about`'s two demo positions, split for the same reason as the three
   // above. The four checkable rules are where that page manufactures its
   // impulse — every card ends in the demo action that proves it, and the band

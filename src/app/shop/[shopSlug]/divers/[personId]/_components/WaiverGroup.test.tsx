@@ -275,12 +275,53 @@ describe("the waiver group", () => {
     const group = screen.getByTestId("diver-file-group-waiver");
     const door = group.querySelector("summary");
     expect(door).toHaveTextContent(
-      /Signed · Good until Jul 21, 2027 · Referral on Jun 2, 2026 not answered/,
+      /Signed · Good until Jul 21, 2027 · Physician referral open since Jun 2, 2026/,
     );
     // Warning ink, because the summary stands on the diver's own second answer
     // rather than on anything the shop has seen.
     expect(door?.querySelector("span")?.className).toContain("text-warning-strong");
     expect(group).toHaveAttribute("open");
+  });
+
+  /**
+   * **The override stands, and the warning links back** (Aaron, 2026-10-09,
+   * issue #2195, amending H-98): a clean release that replaced an unresolved
+   * referral clears the diver, and the record's warning opens the referral.
+   */
+  it("links the unanswered referral's warning to the referral itself", () => {
+    renderCard(
+      diver({
+        email: "priya@dive.day",
+        waiver: {
+          state: "current",
+          signedAt: new Date("2026-07-21T15:00:00.000Z"),
+          expiresAt: new Date("2027-07-21T15:00:00.000Z"),
+          medical: {
+            at: new Date("2026-07-21T15:00:00.000Z"),
+            source: "digital",
+            overriddenReferralAt: new Date("2026-06-02T15:00:00.000Z"),
+            overriddenReferral: {
+              recordId: "w-referred",
+              personId: "p-1",
+              at: new Date("2026-06-02T15:00:00.000Z"),
+            },
+            overriddenRefusal: null,
+            clearance: null,
+          },
+        } as DiverProfile["waiver"],
+      }),
+    );
+
+    const group = screen.getByTestId("diver-file-group-waiver");
+    expect(
+      within(group).getByText(
+        /Referred to a physician on Jun 2, 2026; re-signed with no physician clearance on file/,
+      ),
+    ).toBeInTheDocument();
+    expect(within(group).getByRole("link", { name: "View the referral" })).toHaveAttribute(
+      "href",
+      expect.stringMatching(/\/divers\/[^/]+\/waivers\/w-referred$/),
+    );
   });
 
   /**
@@ -362,7 +403,7 @@ describe("the waiver group", () => {
     );
 
     const group = screen.getByTestId("diver-file-group-waiver");
-    expect(group).not.toHaveTextContent(/not answered/);
+    expect(group).not.toHaveTextContent(/referral open/);
     expect(group.querySelector("span.text-sm")?.className).toContain("text-muted");
     expect(group.querySelector("details")).toBeNull();
   });

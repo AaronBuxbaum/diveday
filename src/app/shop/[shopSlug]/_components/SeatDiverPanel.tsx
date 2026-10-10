@@ -9,8 +9,9 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import type { BookableDiver, SimilarDiver } from "@/db/divers";
 import { fill } from "@/i18n/fill";
+import type { CalendarDate } from "@/lib/calendar-date";
 import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
-import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
+import { candidateBirthDate, noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { newDiverHref } from "@/lib/person-fields";
 
 /** Every word this panel says, resolved by the page from the staff bundle. */
@@ -56,6 +57,12 @@ export type SeatDiverPanelCopy = {
    * (`noDiveDayNeedsSaying`, `src/lib/name-match-evidence.ts`).
    */
   confirmMatchesNoDiveDay: string;
+  /**
+   * A candidate's date of birth, formatted by the page in its locale (H-79,
+   * issue #1698). Called only for a candidate with a real date on file; the
+   * panel prints nothing for the rest (`candidateBirthDate`).
+   */
+  confirmMatchesBorn: (dateOfBirth: CalendarDate) => string;
   confirmMatchesSubmit?: string;
 };
 
@@ -148,6 +155,7 @@ export function SeatDiverPanel({
                       )
                     </span>
                   ) : null}
+                  <CandidateBirthDate match={match} born={copy.confirmMatchesBorn} />
                   {match.lastDiveDayAt ? (
                     <span className="text-muted text-xs ms-1">
                       {copy.confirmMatchesLastDive(match.lastDiveDayAt)}
@@ -223,4 +231,19 @@ export function SeatDiverPanel({
       </SectionCard>
     </div>
   );
+}
+
+/**
+ * The candidate's date of birth beside the contact line (H-79, issue #1698),
+ * or nothing at all when the record has none on file.
+ */
+function CandidateBirthDate({
+  match,
+  born,
+}: {
+  match: SimilarDiver;
+  born: (dateOfBirth: CalendarDate) => string;
+}) {
+  const dateOfBirth = candidateBirthDate(match);
+  return dateOfBirth ? <span className="text-muted text-xs ms-1">{born(dateOfBirth)}</span> : null;
 }

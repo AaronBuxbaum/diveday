@@ -67,7 +67,9 @@ export type SeatDiverPerson =
    * spread straight into `createBooking` below: it carries the name the
    * staffer typed into the counter's "is this the same diver?" prompt, and
    * that booking decides from the name whether the seat is
-   * identity-unconfirmed (issue #1556).
+   * identity-unconfirmed (issue #1556). A door seating a diver picked from
+   * a search list passes no `fromNameMatch`, and its seat lands released by
+   * decision (H-79, issue #1790; `BookingPerson.fromNameMatch`).
    */
   | { personId: string; fromNameMatch?: { typedName: string } }
   | { fullName: string; email?: string; phone?: string };

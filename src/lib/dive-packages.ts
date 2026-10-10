@@ -179,6 +179,27 @@ export function spendableCount(held: readonly SpendableEntitlement[], now = nowD
 }
 
 /**
+ * How many of a diver's unspent dives this departure could take: the ones not
+ * yet expired, on a package that covers it ({@link packageCoversTrip}).
+ *
+ * What the roster's payment control says before a staffer takes money for a
+ * seat (issue #1697, H-79): a fare already collected stands, so the moment to
+ * see the package is before the cash, not after.
+ */
+export function spendableCountForTrip(
+  held: readonly SpendableEntitlement[],
+  trip: { courseId: string | null },
+  now = nowDate(),
+): number {
+  return held.filter(
+    (row) =>
+      row.consumedAt === null &&
+      packageCoversTrip(row.scope, trip) &&
+      (row.expiresAt === null || row.expiresAt.getTime() > now.getTime()),
+  ).length;
+}
+
+/**
  * Whether a package can still be sold to a diver online.
  *
  * A package whose end date has passed would grant dives that are already

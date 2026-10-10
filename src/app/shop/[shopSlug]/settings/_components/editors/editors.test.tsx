@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { ReactElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { RemovablePhoto } from "@/components/RemovablePhoto";
@@ -17,6 +18,7 @@ import { BrandColorField } from "../BrandColorField";
 import type { SettingsShop } from "../groups/kit";
 import { DockDayForm, EmergencyReferenceForm } from "./BoatsSitesEditors";
 import { ProfileForm } from "./ProfileForm";
+import { RentalItemsForm } from "./RentalEditors";
 
 /**
  * **The editors that left the hub for pages of their own** (#1854). Each is
@@ -227,5 +229,26 @@ describe("the emergency reference editor", () => {
       EMERGENCY.lineExamples,
       ...lines.slice(1).map(() => undefined),
     ]);
+  });
+});
+
+/**
+ * **The count beside the catalog** (issue #1792, H-78): how many divers' fits
+ * still ask for a piece the shop dropped, said where the catalog is edited and
+ * silent at zero. The form offers no way to clear them.
+ */
+describe("the rental catalog editor", () => {
+  it("says how many fits still ask for a dropped piece", async () => {
+    const { shop } = await demoShop();
+    const html = renderToStaticMarkup(<RentalItemsForm shop={shop} t={t} droppedFits={3} />);
+    expect(html).toContain("3 divers’ rental fits still ask for gear you no longer rent.");
+    const one = renderToStaticMarkup(<RentalItemsForm shop={shop} t={t} droppedFits={1} />);
+    expect(one).toContain("1 diver’s rental fit still asks for gear you no longer rent.");
+  });
+
+  it("says nothing when no fit asks for a dropped piece", async () => {
+    const { shop } = await demoShop();
+    const html = renderToStaticMarkup(<RentalItemsForm shop={shop} t={t} droppedFits={0} />);
+    expect(html).not.toContain("no longer rent");
   });
 });

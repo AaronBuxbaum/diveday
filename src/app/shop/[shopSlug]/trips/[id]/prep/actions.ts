@@ -284,18 +284,31 @@ export async function returnTripGearSetAction(formData: FormData) {
   const departure = departureOf(session.user.shopSlug, parsed.data.tripId);
   const landing = packingListOf(session.user.shopSlug, parsed.data.tripId);
 
+  // The units ticked "Needs service" under a concern (issue #2205): a repeated
+  // field, so it is read on its own rather than through `fromEntries`. Anything
+  // that is not a unit id is dropped; the writer only reaches units this
+  // return closes, so a forged id pulls nothing.
+  const pullGearItemIds = formData
+    .getAll("pull")
+    .filter((value): value is string => typeof value === "string")
+    .filter((value) => z.uuid().safeParse(value).success);
+  // A set with a unit just pulled for service is not "back on the wall", so
+  // that return answers with its own notice.
   const outcome = await returnTripGearSet(await getDb(), {
     shopId: session.user.shopId,
     bookingId: parsed.data.bookingId,
     outcome: parsed.data.outcome,
     note: parsed.data.note,
+    pullGearItemIds,
   });
   revalidateAndRedirect(
     departure,
     noticeUrl(
       landing,
       outcome.ok
-        ? "gear-returned-set"
+        ? parsed.data.outcome === "service_concern" && pullGearItemIds.length > 0
+          ? "gear-returned-set-pulled"
+          : "gear-returned-set"
         : outcome.reason === "not_found"
           ? "gear-nothing-out"
           : RESERVATION_ACTION_NOTICE[outcome.reason],

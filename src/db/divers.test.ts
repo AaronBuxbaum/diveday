@@ -17,6 +17,7 @@ import {
   findLiveDiverIdByEmail,
   findSimilarDivers,
   getDiverProfile,
+  lastDiveDaysHere,
   listBookableDivers,
   listDiverSummaries,
   restoreDiver,
@@ -2716,6 +2717,34 @@ describe("findSimilarDivers name similarity and exact matching", () => {
     const noMatches = await findSimilarDivers(db, shop.id, "Jane Smith");
     expect(noMatches).toHaveLength(0);
   });
+
+  /**
+   * H-79 (issue #1698): the date of birth is the fact that tells two people
+   * with one name apart, so it rides on every candidate, and a record nobody
+   * has dated stays null rather than inventing one.
+   */
+  it("carries each candidate's date of birth, and null where none is on file", async () => {
+    const { db, shop } = ctx;
+    const dated = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Wilhelmina Oyelaran",
+      email: "w.oyelaran.dated@example.com",
+    });
+    const undated = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Wilhelmina Oyelaran",
+      email: "w.oyelaran.undated@example.com",
+    });
+    if (!dated || !undated) throw new Error("createDiver refused a candidate");
+    // Dated the way a record usually gets one: on the diver record, later.
+    await db.update(people).set({ dateOfBirth: "1984-03-09" }).where(eq(people.id, dated.id));
+
+    const matches = await findSimilarDivers(db, shop.id, "Wilhelmina Oyelaran");
+    const birthDates = new Map(matches.map((match) => [match.id, match.dateOfBirth]));
+
+    expect(birthDates.get(dated.id)).toBe("1984-03-09");
+    expect(birthDates.get(undated.id)).toBeNull();
+  });
 });
 
 /**
@@ -2940,5 +2969,57 @@ describe("findSimilarDivers last dive day", () => {
     await db.insert(executedDives).values({ shopId: shop.id, tripId: trip.id, diveNumber: 1 });
 
     expect(await lastDiveDayOf(db, shop.id, person.id)).toEqual(trip.startsAt);
+  });
+
+  /**
+   * A held seat's "Same person" confirm reads the same fact (issue #1789),
+   * minus the departure the seat sits on: that seat is the claim being
+   * checked, so it can never be the evidence for it.
+   */
+  it("leaves out the departure a held seat is asking about", async () => {
+    const { db, shop } = ctx;
+    const person = await candidate(db, shop.id);
+    const earlier = await sailedSeat(
+      db,
+      shop.id,
+      person.id,
+      "Last week",
+      new Date(nowMs() - 7 * 24 * HOUR_MS),
+    );
+    const thisOne = await sailedSeat(
+      db,
+      shop.id,
+      person.id,
+      "This morning",
+      new Date(nowMs() - 2 * HOUR_MS),
+    );
+
+    const everything = await lastDiveDaysHere(db, shop.id, [person.id]);
+    const exceptThisOne = await lastDiveDaysHere(db, shop.id, [person.id], {
+      exceptTripId: thisOne.id,
+    });
+    const onlyThisOne = await lastDiveDaysHere(db, shop.id, [person.id], {
+      exceptTripId: earlier.id,
+    });
+
+    expect(everything.get(person.id)).toEqual(thisOne.startsAt);
+    expect(exceptThisOne.get(person.id)).toEqual(earlier.startsAt);
+    expect(onlyThisOne.get(person.id)).toEqual(thisOne.startsAt);
+  });
+
+  it("has no entry for a person whose only seat is the one being asked about", async () => {
+    const { db, shop } = ctx;
+    const person = await candidate(db, shop.id);
+    const thisOne = await sailedSeat(
+      db,
+      shop.id,
+      person.id,
+      "This morning",
+      new Date(nowMs() - 2 * HOUR_MS),
+    );
+
+    const days = await lastDiveDaysHere(db, shop.id, [person.id], { exceptTripId: thisOne.id });
+
+    expect(days.has(person.id)).toBe(false);
   });
 });

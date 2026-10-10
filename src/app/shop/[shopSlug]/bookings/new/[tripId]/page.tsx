@@ -273,6 +273,8 @@ export default async function NewBookingDiverPage({
               date: formatShortDate(at, locale, shop.timezone),
             }),
           confirmMatchesNoDiveDay: t("divers.page.confirmMatchesNoDiveDay"),
+          confirmMatchesBorn: (dateOfBirth) =>
+            t("divers.page.confirmMatchesBorn", { date: formatCalendarDate(dateOfBirth, locale) }),
           confirmMatchesSubmit: t("divers.page.confirmMatchesSubmit"),
         }}
       />

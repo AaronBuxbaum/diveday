@@ -232,7 +232,7 @@
       "bottomTimeDescription": "Tu tiempo de fondo planificado habitual.",
       "surfaceIntervalLabel": "Intervalo de superficie entre inmersiones",
       "surfaceIntervalDescription": "0 si las inmersiones son seguidas.",
-      "stepArrive": "Llegada y registro",
+      "stepArrive": "Llegada y check-in",
       "stepGearSetup": "Montaje del equipo",
       "stepBriefing": "Briefing de la tripulación",
       "stepDeparture": "Salida",
@@ -291,7 +291,8 @@
       "detail": "Marca lo que alquilas. Lo que no marques desaparece del formulario de equipo y de la lista de preparación.",
       "legend": "Equipo y servicios de alquiler",
       "submit": "Guardar catálogo de alquiler",
-      "submitting": "Guardando…"
+      "submitting": "Guardando…",
+      "droppedFits": "{count, plural, one {El ajuste de alquiler de # buceador aún pide equipo que ya no alquilas.} other {Los ajustes de alquiler de # buceadores aún piden equipo que ya no alquilas.}}"
     },
     "rentalPricing": {
       "heading": "Precios de alquiler",
@@ -629,7 +630,7 @@
     "rowCount": "{count, plural, one {# fila} other {# filas}}",
     "notIncluded": {
       "label": "No incluido, a propósito:",
-      "text": "copias de manifiesto sin conexión, colas de reintento de notificaciones, la vinculación con Stripe, el rastro de equipos de buceo, el estado de cancelación por clima, los libros de conciliación de DiveDay y las URL de imágenes pegadas sin guardar. Las notas del personal, el historial de actividad, los resultados de notificaciones, los intentos de pago, los canjes de promociones y los interesados en cursos <mono>sí</mono> se exportan. Las fotos y los recibos importados guardados de forma segura se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp nunca se exportan; consulta el README."
+      "text": "copias de manifiesto sin conexión, colas de reintento de notificaciones, la vinculación con Stripe, el rastro de parejas de buceo, el estado de cancelación por clima, los libros de conciliación de DiveDay y las URL de imágenes pegadas sin guardar. Las notas del personal, el historial de actividad, los resultados de notificaciones, los intentos de pago, los canjes de promociones y los interesados en cursos <mono>sí</mono> se exportan. Las fotos y los recibos importados guardados de forma segura se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp nunca se exportan; consulta el README."
     }
   },
   "crewSheet": {

@@ -383,7 +383,10 @@ export const EXPORT_TABLES = {
   // (ADR 20260804-buddy-teams).
   buddyPairMembers: {
     table: buddyPairMembers,
-    order: [asc(buddyPairMembers.createdAt), asc(buddyPairMembers.pairId)],
+    // Ordered after the read, by team (`sortBuddyMemberRowsByTeam`, issue
+    // #1795): a team's order needs its members' names, which this plain read
+    // does not have.
+    order: [],
     scope: { shopColumn: buddyPairMembers.shopId },
   },
   certifications: {

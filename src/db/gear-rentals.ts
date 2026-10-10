@@ -2,8 +2,10 @@ import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { CalendarDate } from "@/lib/calendar-date";
 import type { GearItemKind } from "@/lib/gear";
 import { type GearRentalHolder, groupGearRentals } from "@/lib/gear-rentals";
+import type { ShopWaiverStatus } from "@/lib/waivers";
 import type { AppDb } from "./client";
 import { openGearReservation } from "./gear";
+import { counterRentalWaiverStandings } from "./gear-counter-rentals";
 import { type OffsetPage, offsetPage } from "./paging";
 import {
   bookingPayments,
@@ -56,7 +58,15 @@ export type GearRentalUnit = {
   money: GearRentalMoney | null;
 };
 
-export type GearRentalsPage = OffsetPage<GearRentalHolder<GearRentalUnit>>;
+export type GearRentalsPage = OffsetPage<GearRentalHolder<GearRentalUnit>> & {
+  /**
+   * Where each counter-rental holder on the page stands with the shop's
+   * release (issue #2261, H-108), said on their counter rows and never a
+   * gate. A trip rental's waiver is the booking's readiness, said on the
+   * departure, so only a holder with a counter rental on the page is read.
+   */
+  counterWaivers?: ReadonlyMap<string, ShopWaiverStatus["state"]>;
+};
 
 /**
  * **Every open rental the shop has, by holder** — trip rentals and counter
@@ -77,16 +87,31 @@ export type GearRentalsPage = OffsetPage<GearRentalHolder<GearRentalUnit>>;
 export async function listGearRentals(
   db: AppDb,
   shopId: string,
-  options: { todayLocal: CalendarDate; page?: number; pageSize?: number },
+  options: {
+    todayLocal: CalendarDate;
+    page?: number;
+    pageSize?: number;
+    /** The shop's zone; given, the page carries `counterWaivers` (H-108). */
+    timezone?: string;
+  },
 ): Promise<GearRentalsPage> {
   const units = await listOpenRentalUnits(db, shopId);
   const holders = groupGearRentals(units, options.todayLocal);
-  return offsetPage({
+  const page = await offsetPage({
     page: options.page,
     pageSize: options.pageSize ?? 20,
     countRows: async () => holders.length,
     fetchRows: async (offset, limit) => holders.slice(offset, offset + limit),
   });
+  if (!options.timezone) return page;
+  const counterWaivers = await counterRentalWaiverStandings(db, {
+    shopId,
+    timezone: options.timezone,
+    personIds: page.rows
+      .filter((holder) => holder.rentals.some((rental) => !rental.bookingId))
+      .map((holder) => holder.personId),
+  });
+  return { ...page, counterWaivers };
 }
 
 /** How many people hold an open rental — the number the register's chip states. */

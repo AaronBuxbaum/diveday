@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { HandEntryPrompt } from "@/components/seat-diver/HandEntryPrompt";
+import { NameMatchCandidateFacts } from "@/components/seat-diver/NameMatchCandidateFacts";
 import { PersonCandidateList } from "@/components/seat-diver/PersonCandidateList";
 import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
 import { buttonClass } from "@/components/ui/button";
@@ -9,8 +10,6 @@ import type { BookableDiver, SimilarDiver } from "@/db/divers";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { rentalFitLine } from "@/lib/dive-prep";
-import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
-import { formatShortDate } from "@/lib/format";
 import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { newDiverHref } from "@/lib/person-fields";
 import type { FormNotice } from "@/lib/staff-notices";
@@ -130,26 +129,14 @@ export function AddDiverSection({
                       {match.fullName}
                     </button>
                   </form>
-                  {match.email || match.phone ? (
-                    <span className="text-muted text-xs ms-1">
-                      (
-                      {[match.email, displayStoredPhoneWhole(match.phone)]
-                        .filter(Boolean)
-                        .join(", ")}
-                      )
-                    </span>
-                  ) : null}
-                  {match.lastDiveDayAt ? (
-                    <span className="text-muted text-xs ms-1">
-                      {t("divers.page.confirmMatchesLastDive", {
-                        date: formatShortDate(match.lastDiveDayAt, locale, timeZone),
-                      })}
-                    </span>
-                  ) : sayNoDiveDay ? (
-                    <span className="text-muted text-xs ms-1">
-                      {t("divers.page.confirmMatchesNoDiveDay")}
-                    </span>
-                  ) : null}
+                  <NameMatchCandidateFacts
+                    match={match}
+                    sayNoDiveDay={sayNoDiveDay}
+                    t={t}
+                    locale={locale}
+                    timeZone={timeZone}
+                    size="xs"
+                  />
                 </li>
               ))}
             </ul>

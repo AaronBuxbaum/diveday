@@ -4,6 +4,7 @@ import { ageOnDate, birthdayCallout } from "@/lib/age";
 import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
+import { tripReservationWindow } from "@/lib/gear";
 import { log } from "@/lib/log";
 import {
   isRollCallAccountedFor,
@@ -16,6 +17,7 @@ import { isWaiverCode } from "@/lib/today";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { seededShopContext } from "@/test/db";
 import { checkInBooking, undoCheckInBooking } from "./check-in";
+import { listAvailableGearUnits, reserveGearUnit } from "./gear";
 import { subscribeManifestEvents } from "./manifest-events";
 import {
   departureRollCallForBooking,
@@ -3508,5 +3510,59 @@ describe("boarded at an earlier checkpoint", () => {
     expect(at("departure", sailed.booking.id)).toBe(false);
     expect(at("after_dive_1", sailed.booking.id)).toBe(true);
     expect(at("after_dive_1", joined.booking.id)).toBe(false);
+  });
+});
+
+/**
+ * **The rail and the prep list agree about a piece the booking already holds**
+ * (issue #1811, H-78). The shop drops regulators from its catalog after one is
+ * reserved to a diver: the manifest's fit line for that diver carries no
+ * "no longer rented" mark, and a diver holding none still does. The rule is
+ * `rentalFitLine`'s; the manifest only hands it the register's facts.
+ */
+describe("a dropped kind this booking already holds, on the manifest", () => {
+  it("clears the mark for the holder and keeps it for everyone else", async () => {
+    const { db, shop, reef } = await manifestContext();
+    const before = await getTripManifest(db, shop.id, reef.id);
+    const rentsRegulator = (before?.divers ?? []).filter(
+      (diver) =>
+        diver.rentalFit.state === "rents" &&
+        diver.rentalFit.items.some((item) => item.kind === "regulator"),
+    );
+    const [holder, other] = rentsRegulator;
+    if (!holder || !other) throw new Error("demo reef trip needs two divers renting a regulator");
+    const window = tripReservationWindow(reef, shop.timezone);
+    const [unit] = await listAvailableGearUnits(db, shop.id, {
+      ...window,
+      todayLocal: calendarDateInTimezone(nowDate(), shop.timezone),
+      kind: "regulator",
+    });
+    if (!unit) throw new Error("demo shop has no free regulator");
+    const reserved = await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: unit.id,
+      bookingId: holder.bookingId,
+      tripId: reef.id,
+      reservedFrom: window.from,
+      reservedUntil: window.until,
+      screen: { proposed: false, assignAnyway: true },
+    });
+    if (!reserved.ok) throw new Error(`reservation failed: ${reserved.reason}`);
+    const [row] = await db
+      .select({ rentalItems: shops.rentalItems })
+      .from(shops)
+      .where(eq(shops.id, shop.id));
+    await db
+      .update(shops)
+      .set({ rentalItems: (row?.rentalItems ?? []).filter((item) => item !== "regulator") })
+      .where(eq(shops.id, shop.id));
+
+    const manifest = await getTripManifest(db, shop.id, reef.id);
+    const regulatorOf = (bookingId: string) => {
+      const fit = manifest?.divers.find((diver) => diver.bookingId === bookingId)?.rentalFit;
+      return fit?.state === "rents" ? fit.items.find((item) => item.kind === "regulator") : null;
+    };
+    expect(regulatorOf(holder.bookingId)).toEqual({ kind: "regulator", size: null });
+    expect(regulatorOf(other.bookingId)?.notOffered).toBe(true);
   });
 });

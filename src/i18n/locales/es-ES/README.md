@@ -418,6 +418,54 @@ manifest reads the type in one word.
 | joining as | participa como |
 | diver seats (the divers-only cap) | plazas de buceo |
 
+## A buddy team is **una pareja de buceo**
+
+Settled 2026-10-06 by the product owner (issue #2098), after the dive-domain review of the marketing
+copy. The staff Boat tab said **equipos de buceo**, which a Latin American crew reads as *dive gear*
+— the same words a rental page uses for the kit — and the public pages said **equipos de compañeros**.
+**Pareja de buceo** is what a divemaster says on the dock for two people diving together, and it
+names a trio, and a divemaster's group, too: the word is about who looks after whom, not a head
+count. The incident export says so in its roster description, because a reader outside the shop
+takes pareja to mean two.
+
+| English | Spanish |
+| --- | --- |
+| buddy team / buddy teams | pareja de buceo / parejas de buceo *(feminine: una, esta, dividida, deshecha)* |
+| Team 01 (the numbered label) | Pareja 01 |
+| Buddy team: {names} | Pareja: {names} |
+| form a buddy team | crear una pareja de buceo |
+| dissolve (a team) | deshacer (la pareja) |
+| has no buddy team | no tiene pareja de buceo |
+| a buddy (one person) | un compañero *(unchanged)* |
+
+**Equipo** still means two other things, and both stay: the shop's **staff team** (Settings →
+Equipo) and **gear** (*equipo de alquiler*, *alquiler de equipo de buceo* on a public page). Neither
+is a buddy team, which is exactly why the buddy team cannot be one either.
+`scripts/check-shop-word.mjs` refuses **equipo(s) de buceo** in the staff bundles, where nothing
+rents gear under that name, refuses **equipo(s)** in any key named for a buddy team, and refuses
+**equipos de compañeros** everywhere. A diver-facing page that rents *equipo de buceo* passes.
+
+## Check-in is **el check-in**
+
+Settled 2026-10-06 by the product owner, in the same sitting (issue #2098). The staff bundles said
+**check-in** ten times and **registro de llegada** four, and Latin American shops say it in English,
+so the noun is **el check-in** everywhere: the phase on a departure, the feature on a public page,
+and in a sentence (*hacer el check-in*, *ajustar en el check-in*).
+
+| English | Spanish |
+| --- | --- |
+| check-in (the feature, the phase, the act) | el check-in |
+| Arrive and check in (a step) | Llegada y check-in |
+| Check in (the tap on a row) | Registrar |
+| Checked in (a pill, a group) | Registrado / Registrados |
+| Checking in… | Registrando… |
+
+**The tap stays a Spanish verb.** A button needs one word, *Registrar* is one word every crew
+reads as "this person is here", and *Hacer check-in* is twice as wide on the narrowest phone row.
+What the ruling settled is the name of the thing, not the verb on the control. The marketing pages
+say "un toque Registrar" because that is the label on the screen they describe.
+`scripts/check-shop-word.mjs` refuses **registro de llegada** and **llegada y registro**.
+
 ## How names sort: nothing to do here
 
 `Ángel` lands between `Ana` and `Bea`, and `Ñuria` after `Nuria`, on every screen that lists people

@@ -15,6 +15,7 @@ import {
   gearServiceKeepsUnitBack,
   gearServiceState,
 } from "@/lib/gear";
+import { type ShopWaiverStatus, shopWaiverStatus } from "@/lib/waivers";
 import type { AppDb } from "./client";
 import {
   type GearReservationActionOutcome,
@@ -39,6 +40,7 @@ import {
   people,
   specialtyCertifications,
 } from "./schema";
+import { getCurrentWaiverTemplate, listSignedWaiversByPerson } from "./waivers";
 
 /**
  * **Counter rentals** — units lent to a person who is not on a boat that day
@@ -813,4 +815,47 @@ function groupCounterRentals(rows: readonly CounterRentalRow[]): CounterRentalTi
     });
   }
   return [...byKey.values()];
+}
+
+/**
+ * **Where each counter-rental holder stands with the shop's release** (issue
+ * #2261, H-108): the ticket and the Rentals list say it, and nothing gates on
+ * it. Read through the same `shopWaiverStatus` the diver record uses, because
+ * the release belongs to the person — signed once, on any booking or on a link
+ * sent from their record — so a counter has had a person's waiver to read all
+ * along. Shop-scoped on every read; a person id from another shop answers
+ * nothing, which the caller reads as "say nothing".
+ */
+export async function counterRentalWaiverStandings(
+  db: AppDb,
+  input: { shopId: string; timezone: string; personIds: readonly string[] },
+): Promise<Map<string, ShopWaiverStatus["state"]>> {
+  const standings = new Map<string, ShopWaiverStatus["state"]>();
+  const personIds = [...new Set(input.personIds)];
+  if (personIds.length === 0) return standings;
+  const [holders, signed, template] = await Promise.all([
+    db
+      .select({ id: people.id, dateOfBirth: people.dateOfBirth })
+      .from(people)
+      .where(
+        and(
+          eq(people.shopId, input.shopId),
+          inArray(people.id, personIds),
+          isNull(people.deletedAt),
+        ),
+      ),
+    listSignedWaiversByPerson(db, input.shopId, personIds),
+    getCurrentWaiverTemplate(db, input.shopId),
+  ]);
+  for (const holder of holders) {
+    standings.set(
+      holder.id,
+      shopWaiverStatus({
+        personSignedWaivers: signed.get(holder.id) ?? [],
+        currentTemplateVersion: template?.materialGeneration ?? null,
+        signer: { dateOfBirth: holder.dateOfBirth, timezone: input.timezone },
+      }).state,
+    );
+  }
+  return standings;
 }

@@ -291,7 +291,8 @@
       "detail": "Tick what you rent. Anything unticked drops off the kit form and the prep list.",
       "legend": "Rentable gear and services",
       "submit": "Save rental catalog",
-      "submitting": "Saving…"
+      "submitting": "Saving…",
+      "droppedFits": "{count, plural, one {# diver’s rental fit still asks for gear you no longer rent.} other {# divers’ rental fits still ask for gear you no longer rent.}}"
     },
     "rentalPricing": {
       "heading": "Rental prices",

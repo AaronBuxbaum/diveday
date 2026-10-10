@@ -108,6 +108,7 @@ export type RetainedTable =
   | "activity_events"
   | "account_tokens"
   | "shop_contact_email_confirmation_tokens"
+  | "booking_capabilities"
   | "booking_payment_events"
   | "push_subscriptions"
   | "trip_desk_events"
@@ -212,6 +213,21 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * table forever.
    */
   shop_contact_email_confirmation_tokens: 90,
+  /**
+   * The same 90 days past `expires_at` again (H-82, issue #1726): a booking
+   * link — readiness, confirm, claim, handoff, course forms — is a hashed
+   * bearer credential, and the readiness and confirm pages mint one per tap,
+   * so the table grows with traffic rather than with bookings. Revoking a row
+   * does not delete it, so without a window every retired link stayed forever.
+   *
+   * **A link that still works is never eligible**: the clock is the row's own
+   * expiry, never `revoked_at` or its age, so the window starts only once
+   * the link has stopped working and can never cut into its life. What ends 90 days after expiry is the dead-link page's
+   * courtesy — naming the shop that issued it (issue #801) and offering a fresh
+   * link to the address on the booking (issue #850). A link that old is a past
+   * trip's, and the page falls back to its plain notice.
+   */
+  booking_capabilities: 90,
   /**
    * 2555 days (7 years). The local money ledger DATA-M3 exists to provide;
    * matched to the ordinary financial-records horizon rather than to anything

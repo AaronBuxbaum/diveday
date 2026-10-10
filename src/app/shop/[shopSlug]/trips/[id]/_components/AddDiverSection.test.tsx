@@ -150,6 +150,7 @@ describe("AddDiverSection name-match prompt", () => {
     fullName: "Nadia Ruiz",
     email: null,
     phone: null,
+    dateOfBirth: null,
     lastDiveDayAt: null,
     ...over,
   });
@@ -198,6 +199,24 @@ describe("AddDiverSection name-match prompt", () => {
         name: "Is this the same Nadia Ruis? Picking one reuses that diver’s record, and their certifications and waiver only count once someone confirms it’s the same person.",
       }),
     ).toBeInTheDocument();
+  });
+
+  /**
+   * H-79 (issue #1698): the date of birth tells two people with one name
+   * apart, and a record with none prints nothing at all.
+   */
+  it("prints a candidate's date of birth beside the contact line, and nothing where none is on file", () => {
+    renderPrompt([
+      match({ email: "nadia@example.test", dateOfBirth: "1984-03-09" }),
+      match({ id: "person-3", fullName: "Nadia Ruiseco", email: "ruiseco@example.test" }),
+    ]);
+
+    expect(screen.getByText("Born Mar 9, 1984").closest("li")).toHaveTextContent(
+      "Nadia Ruiz(nadia@example.test)Born Mar 9, 1984",
+    );
+    expect(screen.getByRole("button", { name: "Nadia Ruiseco" }).closest("li")).toHaveTextContent(
+      /^Nadia Ruiseco\(ruiseco@example\.test\)$/,
+    );
   });
 
   it("dates a candidate's last dive day in the shop's zone", () => {
@@ -288,7 +307,14 @@ describe("AddDiverSection spacing", () => {
       candidates: [],
       confirmName: "Nadia Ruis",
       confirmMatches: [
-        { id: "person-2", fullName: "Nadia Ruiz", email: null, phone: null, lastDiveDayAt: null },
+        {
+          id: "person-2",
+          fullName: "Nadia Ruiz",
+          email: null,
+          phone: null,
+          dateOfBirth: null,
+          lastDiveDayAt: null,
+        },
       ],
     },
   };

@@ -153,6 +153,8 @@ export function RosterRow({
     elearningQueryByBooking,
     courseMaterialsDoneByPerson,
     sameNameHeldSeats,
+    heldSeatLastDiveDay,
+    packageDivesByBooking,
     keepOpenBookingId,
     namesakeRefusedBookingId,
     participantTypeCertBookingId,
@@ -533,6 +535,16 @@ export function RosterRow({
   const earlierRefusal = showsPersonDetail
     ? (readinessByBooking.get(booking.id)?.overriddenRefusal ?? null)
     : null;
+  /**
+   * **A clean release stood over a referral no physician answered, and the
+   * row says so the same way** (Aaron, 2026-10-09, issue #2195, amending
+   * H-98): the override stands, and the warning links back to the referral.
+   * Never alongside the refusal line for one record (`overriddenReferral`
+   * leaves refusals out), and withheld on a held seat for the same reason.
+   */
+  const earlierReferral = showsPersonDetail
+    ? (readinessByBooking.get(booking.id)?.overriddenReferral ?? null)
+    : null;
   // What withholding dropped is still said to exist, never which: the
   // manifest's rule (dive-domain review 2026-10-06).
   const moreHoldsBehindConfirmation =
@@ -569,6 +581,25 @@ export function RosterRow({
                 className={linkAction}
               >
                 {t("trips.roster.viewSignedRecord")}
+              </Link>
+            ),
+          },
+        ]
+      : []),
+    ...(earlierReferral
+      ? [
+          {
+            key: "earlier-referral",
+            text: t("trips.roster.referralUnresolved", {
+              date: formatShortDate(earlierReferral.at, locale, shopTimezone),
+            }),
+            tone: "warning" as const,
+            actions: (
+              <Link
+                href={shopPath(shopSlug, "divers", person.id, "waivers", earlierReferral.recordId)}
+                className={linkAction}
+              >
+                {t("trips.roster.viewReferral")}
               </Link>
             ),
           },
@@ -702,7 +733,50 @@ export function RosterRow({
    * seat into its own record. Like the medical hold, it is a decision about
    * who may board, so it does not wait behind the row's mark.
    */
+  /**
+   * **Unspent package dives, said before anyone takes the fare** (issue
+   * #1697, H-79: the fare stands). A seat booked while the diver held a
+   * covering dive spent it at booking; this line is for the seats that did
+   * not, chiefly one held on an unconfirmed identity, where coverage waits for
+   * "Same person" (`settleConfirmedPackageCoverage`) and cash taken first
+   * would stand beside a package still holding every dive. A held seat names
+   * no count: the dives are the matched person's, and the row says only that
+   * confirming comes first. A snorkeler's or rider's seat spends no dives.
+   */
+  const packageDives = isDiver(booking.participantType)
+    ? (packageDivesByBooking?.get(booking.id) ?? 0)
+    : 0;
+  const packageNote =
+    packageDives === 0
+      ? null
+      : identityUnconfirmed
+        ? t("trips.roster.packageDivesUnusedHeld", { name: person.fullName })
+        : t("trips.roster.packageDivesUnused", { count: packageDives });
   const sameNameSeats = sameNameHeldSeats?.get(booking.id) ?? [];
+  /**
+   * **The one fact the attestation turns on** (issue #1789, H-79): the
+   * matched diver's last dive day at this shop, beside the question. It is the
+   * same line the name-match prompt shows staff who seat a diver, and nothing
+   * else from the matched record joins it here. Only a staff-seated hold saw
+   * it before: an online hold (a public booking that reused an email under
+   * another name, H-13) met no prompt, so the roster is the first place any
+   * staffer reads it.
+   *
+   * "No dive days here yet" is said every time, unlike the name-match
+   * prompt's sibling rule (`noDiveDayNeedsSaying`), which goes quiet when
+   * every candidate lacks a day. That rule compares a list; this is one
+   * deliberate question about one person, and for a walk-in who has never
+   * been here the blank is itself the answer.
+   */
+  const heldSeatLastDive = identityUnconfirmed ? heldSeatLastDiveDay?.get(booking.id) : undefined;
+  const heldSeatEvidence =
+    heldSeatLastDive === undefined
+      ? undefined
+      : heldSeatLastDive
+        ? t("divers.page.confirmMatchesLastDive", {
+            date: formatShortDate(heldSeatLastDive, locale, shopTimezone),
+          })
+        : t("divers.page.confirmMatchesNoDiveDay");
   const paidGear = identityUnconfirmed
     ? toRentableKinds(booking.paidRentalKinds ?? []).filter(
         (kind): kind is RentableItemKind => kind !== "nitrox",
@@ -758,6 +832,7 @@ export function RosterRow({
             triggerLabel={t("shared.identityCheck.same")}
             ariaLabel={t("shared.identityCheck.sameAria", { name: person.fullName })}
             message={t("trips.roster.confirmIdentityMessage", { name: person.fullName })}
+            evidence={heldSeatEvidence}
             confirmLabel={t("trips.roster.identityConfirmButton")}
             cancelLabel={t("trips.roster.neverMind")}
             pendingLabel={t("trips.roster.confirming")}
@@ -976,6 +1051,7 @@ export function RosterRow({
               mayWriteOffPayment ? PAYMENT_STATUSES_ALL : PAYMENT_STATUSES_RECORDING_ONLY
             }
             sourceNote={paymentSource}
+            packageNote={packageNote}
             refundNote={
               refundEligible && cancellationDeadline
                 ? t("trips.roster.refundEligibleUntil", {

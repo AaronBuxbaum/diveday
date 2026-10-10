@@ -213,6 +213,10 @@ export function WaiverGroup({
   // is not, and the record is where the staffer who can act is standing.
   const overriddenReferralAt =
     diver.waiver.state === "current" ? (diver.waiver.medical?.overriddenReferralAt ?? null) : null;
+  // The owner kept that override (2026-10-09, issue #2195, amending H-98), so
+  // the line links back to the referral, the way the refusal's does below.
+  const overriddenReferral =
+    diver.waiver.state === "current" ? (diver.waiver.medical?.overriddenReferral ?? null) : null;
   // **A physician refused an earlier release, and a new one cleared the diver
   // anyway** (Aaron, 2026-10-07, issue #2158). Allowed, and said out loud with
   // the refused record one tap away.
@@ -344,13 +348,29 @@ export function WaiverGroup({
             </p>
           ) : null}
           {overriddenReferralAt ? (
-            <p className="px-5 pb-3 text-sm font-medium text-warning-strong sm:px-6">
-              {t("divers.waiver.referralUnresolved", {
-                date: formatCalendarDate(
-                  calendarDateInTimezone(overriddenReferralAt, timezone),
-                  locale,
-                ),
-              })}
+            <p className="flex flex-wrap items-baseline gap-x-4 px-5 pb-3 text-sm font-medium text-warning-strong sm:px-6">
+              <span>
+                {t("divers.waiver.referralUnresolved", {
+                  date: formatCalendarDate(
+                    calendarDateInTimezone(overriddenReferralAt, timezone),
+                    locale,
+                  ),
+                })}
+              </span>
+              {overriddenReferral ? (
+                <Link
+                  href={shopPath(
+                    shopSlug,
+                    "divers",
+                    personId,
+                    "waivers",
+                    overriddenReferral.recordId,
+                  )}
+                  className={buttonClass({ variant: "link", size: "sm", flush: true })}
+                >
+                  {t("divers.waiver.viewReferralRecord")}
+                </Link>
+              ) : null}
             </p>
           ) : null}
           {/* **The ways to get it signed, out in the open** (Aaron, 2026-10-03:

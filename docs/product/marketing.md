@@ -481,7 +481,7 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   because a builder's note that ends "as that role" cannot end on a button that says nothing about
   the role ([design/brand.md](../design/brand.md), "The two registers of the public pages"). One
   per screen a visitor could open, tagged per screen in `src/lib/funnel.ts`
-  (`switching-hub-preview`), never primary weight, and never the page's demo button: the spec
+  (`switching-hub-preview`, and `pricing-export` under `/pricing`'s export drawing since issue #1955), never primary weight, and never the page's demo button: the spec
   counts "Try the live demo" by name, and a screen door is not one. The homepage's screens carried
   three until 2026-10-05 (`home-diver-moment`, `home-desk-moment`, `home-dock-moment`, retired and
   kept registered for their history); its steps now end in the feature page's name instead, and

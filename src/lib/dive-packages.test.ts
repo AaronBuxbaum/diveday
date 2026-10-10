@@ -7,6 +7,7 @@ import {
   packageOnSale,
   type SpendableEntitlement,
   spendableCount,
+  spendableCountForTrip,
   validateDivePackage,
 } from "./dive-packages";
 
@@ -182,5 +183,34 @@ describe("packageOnSale", () => {
 
   it("never sells a package the shop stopped selling", () => {
     expect(packageOnSale({ validUntil: null, deletedAt: days(-1) }, NOW)).toBe(false);
+  });
+});
+
+/**
+ * What the roster's payment control counts before a fare is taken (issue
+ * #1697): only dives this departure could actually take.
+ */
+describe("spendableCountForTrip", () => {
+  const funDive = { courseId: null };
+  const course = { courseId: "course-1" };
+
+  it("counts unspent, unexpired dives on a package that covers the trip", () => {
+    const held = [
+      entitlement({ id: "a" }),
+      entitlement({ id: "b", expiresAt: days(3) }),
+      entitlement({ id: "c", consumedAt: days(-1) }),
+      entitlement({ id: "d", expiresAt: days(-1) }),
+    ];
+    expect(spendableCountForTrip(held, funDive, NOW)).toBe(2);
+  });
+
+  it("leaves out a fun-dive package on a course session", () => {
+    const held = [entitlement({ id: "a", scope: "fun_dives" }), entitlement({ id: "b" })];
+    expect(spendableCountForTrip(held, course, NOW)).toBe(1);
+    expect(spendableCountForTrip(held, funDive, NOW)).toBe(2);
+  });
+
+  it("treats a dive expiring exactly now as gone", () => {
+    expect(spendableCountForTrip([entitlement({ expiresAt: NOW })], funDive, NOW)).toBe(0);
   });
 });

@@ -122,6 +122,7 @@
     "confirmMatchesTitle": "Is this the same {name}? Picking one reuses that diver’s record, and their certifications and waiver only count once someone confirms it’s the same person.",
     "confirmMatchesLastDive": "Last dive day here: {date}",
     "confirmMatchesNoDiveDay": "No dive days here yet",
+    "confirmMatchesBorn": "Born {date}",
     "confirmMatchesSubmit": "Create new diver anyway"
   },
   "list": {
@@ -375,7 +376,7 @@
     "waiverHeldSince": "Held since {date}",
     "waiverNotClearedOn": "Answered {date}",
     "waiverEarlierRefusal": "A physician did not clear them on {date}",
-    "waiverReferralOpen": "Referral on {date} not answered",
+    "waiverReferralOpen": "Physician referral open since {date}",
     "sendWaiverViaEmail": "Email waiver",
     "sendWaiverViaSms": "Text waiver",
     "copyWaiverLink": "Copy link",
@@ -488,7 +489,7 @@
     "waiverHeld": "A medical answer is with a doctor for sign-off.",
     "waiverNotCleared": "A physician did not clear this diver to dive.",
     "waiverEarlierRefusal": "A physician did not clear this diver on an earlier waiver.",
-    "waiverReferralOpen": "A physician referral was never answered.",
+    "waiverReferralOpen": "A physician referral is still open.",
     "openBalance": "{count, plural, one {One seat still owes money.} other {# seats still owe money.}}",
     "noEmergencyContact": "No emergency contact on file.",
     "onDeparture": "On {when}.",
@@ -526,7 +527,8 @@
   "waiver": {
     "earlierRefusal": "A physician did not clear this diver on {date} (earlier waiver).",
     "viewRefusedRecord": "View signed record",
-    "referralUnresolved": "Re-signed after a referral, with no physician clearance on file ({date}). Record one, or ask.",
+    "referralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file. Record one, or ask.",
+    "viewReferralRecord": "View the referral",
     "openClearanceDocument": "Open the physician’s evaluation"
   },
   "details": {

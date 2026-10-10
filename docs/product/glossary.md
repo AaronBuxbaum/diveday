@@ -115,10 +115,16 @@ new domain concept, define it here in the same PR.
   18 m) and a spreadsheet cell is not a card sighting (H-23,
   ADR 20260725-import-specialty-cards). One thing imports `pending` rather than `verified`: a card
   the source file's own status column marks unverified.
-- **Confirm to clear** — the display state of an imported specialty card no staffer has confirmed
-  yet: on file, `verified`, and still holding its gate. Shown as “certified · confirm to clear” in a
-  warning tone rather than the plain green “certified” a hand-verified card gets, so the two are never
-  read as the same thing at a busy desk.
+- **Confirm to clear** — the display state of an imported specialty or nitrox card no staffer has
+  confirmed yet: on file, `verified`, and still holding its gate (for nitrox, the fill). One fact,
+  two tones. On the card's own row
+  inside the diver's file the badge reads “certified · confirm to clear” in a **neutral** tone: a
+  prompt, answered by one tap beside it. Every summary of that unfinished work — the closed
+  Certification records door, the status ledger, the home's station, the held-card status — wears
+  the **warning** tone, because a summary is where a staffer decides whether to open the file at
+  all. Neither looks like a hand-verified card, so the two are never read as the same thing at a
+  busy desk. Only `src/lib/readiness.ts` decides who boards; the tones carry no gate
+  (`src/i18n/card-labels.test.ts` keeps this entry and the code in step).
 - **Shop-issued certification** — a level card **this shop's own instructor certified**, from a per-
   student tap on a course session's own roster (issue #717), never automatic. It lands `verified`
   immediately (`issued_by_shop_at` set, alongside `issued_from_trip_id` naming the session and
@@ -1178,7 +1184,7 @@ new domain concept, define it here in the same PR.
   people — a head count is the practice that leaves people behind, which is why no DiveDay surface
   asks for one. The number printed beside each name is a line number and never an identity; see
   **roll-call order**.
-- **Roll-call order** — the order the manifest lists divers in: **oldest seat first, then the diver's name, then the booking id** (`getTripRoster`, `src/db/trips-roster.ts`). The screen, the departure log and the saved dock copy all read that one query, so the three can never disagree about who sits where in the list. The **number beside each name is a line number, not the diver's number**: it is that row's position in today's list, so it shifts when a seat is cancelled, when a released seat is resold to somebody else, and when a name is corrected inside a group of seats sold in the same instant. It exists so a person can keep their place down a wet list, and for nothing else — **the roll is still called by name** (see **Manifest**), and no note, message, export or radio call ever refers to a diver as a number. A shop wanting a number a diver keeps for the day (a tank station, a group) does not have one: that is a stored fact about a person on a departure, not a position in a list. The order is stable against a re-read and against a fresh seed of the same data; it is not stable against the roster's own contents changing (issue #1720, and #1759 for the stronger promise).
+- **Roll-call order** — the order the manifest lists divers in: **oldest seat first, then the diver's name, then the booking id** (`getTripRoster`, `src/db/trips-roster.ts`). The screen, the departure log and the saved dock copy all read that one query, so the three can never disagree about who sits where in the list. The **number beside each name is a line number, not the diver's number**: it is that row's position in today's list, so it shifts when a seat is cancelled, when a released seat is resold to somebody else, and when a name is corrected inside a group of seats sold in the same instant. It exists so a person can keep their place down a wet list, and for nothing else — **the roll is still called by name** (see **Manifest**), and no note, message, export or radio call ever refers to a diver as a number. A shop wanting a number a diver keeps for the day (a tank station, a group) does not have one: that is a stored fact about a person on a departure, not a position in a list. The order is stable against a re-read and against a fresh seed of the same data; it is not stable against the roster's own contents changing (issue #1720). The rename case is the owner's accepted cost, not an open question: the name stays the tie-break and no monotonic seat number is added (H-81, issue #1759).
 - **Paper pass** — the A6 pass printed at the counter for a diver without a phone: the departure,
   the hull, the meeting point, the shop's dock call, what to bring, and a code carrying **the
   booking's id and nothing else**. A booking id is not a capability — the counter resolves it inside
@@ -1586,9 +1592,9 @@ new domain concept, define it here in the same PR.
   version and new links snapshot the current one. The exact template version is snapshotted into each
   issued record; a signed record is immutable and a replacement link creates a new record. Some
   answers on the medical form require a physician sign-off — that's a blocking state, not a checkbox,
-  and the only thing that ends it is a **physician clearance** recorded against that record. The
-  hold is a fact about the diver, not the trip: it blocks every departure, including one that does
-  not require the release (H-104).
+  ended by a **physician clearance** recorded against that record or, while it stays open, by a clean
+  later release (H-98 amended, #2195). The hold is a fact about the diver, not the trip: until one of
+  those, it blocks every departure, including one that does not require the release (H-104).
 
   **Publishing a version invalidates every standing signature at the shop, at once.** A signature is
   held against the version it was signed on, so a new version leaves every booked diver on every
@@ -1637,10 +1643,10 @@ new domain concept, define it here in the same PR.
   recorded against it — until then it never does — and a stale or old-version signature falls back to
   "send a fresh link." See [20260721-waiver-sign-once](../architecture/decisions/20260721-waiver-sign-once.md).
 - **Physician clearance** — the shop recording that a physician evaluated a diver the medical
-  questionnaire had **referred**, and cleared them to dive. It is the only thing that ends a
-  `medical_review` hold, and it is a separate act from the paper attestation, whose staff-facing
-  words are the opposite ("no answer needs physician sign-off"). DiveDay records the shop's act; it
-  never grants the clearance
+  questionnaire had **referred**, and cleared them to dive. It is the only thing that clears that
+  `medical_review` record itself (a clean later release can stand over it, below), and it is a
+  separate act from the paper attestation, whose staff-facing words are the opposite ("no answer
+  needs physician sign-off"). DiveDay records the shop's act; it never grants the clearance
   ([20260805-rstc-medical-questionnaire](../architecture/decisions/20260805-rstc-medical-questionnaire.md)).
 
   Three properties worth knowing. It is recorded against **one waiver record** — the one carrying
@@ -1670,6 +1676,10 @@ new domain concept, define it here in the same PR.
   on the roster and the diver record (`overriddenRefusal`). Any staffer may record a paper waiver after a refusal (Aaron, 2026-10-07).
   The warning ends only when a physician has since cleared a release
   that flagged every question the refused one did, ordered by when each physician answered.
+  A clean later release also stands over a referral no physician has answered (H-98 amended,
+  #2195). The diver record, the Divers tab and the live manifest warn with a link to the referral
+  (`overriddenReferral`); the offline copy and paper show the date only. A booking whose own
+  release is the open referral still waits for a physician.
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
   paper — a copy on the boat or on shore — that the app never saw signed. It creates the same
   immutable completed record, marked as staff-attested and stamped with the staff member who recorded
@@ -2049,7 +2059,12 @@ new domain concept, define it here in the same PR.
   marked on every surface that reads the fit, not only the trip prep list — the roll call, the
   offline manifest snapshot, the seat-a-diver list and the diver record's own fit summary all say
   it now (issue #1804), because two surfaces describing one departure differently is worse than
-  either sentence. The offline snapshot freezes that fact with everything else it holds, so a shop
+  either sentence. **A piece this booking already holds is not marked** (issue #1811, H-78): a
+  live reservation of that kind on the gear register means a unit is on its peg with the diver's
+  name against it, so the prep list and the manifest rail read it as an ordinary piece. The rule is
+  one place, `rentalFitLine`/`buildDivePrepChecklist` handed the booking's held register kinds;
+  mask & fins counts as held only when both units are, and a paid rental line with no unit behind
+  it keeps the mark, because money taken is a refund conversation the mark starts. The offline snapshot freezes that fact with everything else it holds, so a shop
   that re-adds the piece after a snapshot is taken carries the old mark onto the boat until the
   next one. No *other* line changes with it: the weighting, the fin sizing and the drysuit-card
   advisory are not about the rental at all. They follow **Dives dry** below, which the catalog
@@ -2178,8 +2193,9 @@ new domain concept, define it here in the same PR.
   anybody. **The service screen** refuses a life-support unit whose service clock is overdue as of
   the window's last day or that has an open service concern, and lends a flagged soft-goods unit
   only with its own "Lend anyway": the one place a **service clock** gates. Counter tanks are air
-  only; a nitrox fill is not modelled. The waiver is not re-checked at the counter, a known gap:
-  the one shop-wide waiver is signed per booking (CR-015) and a counter rental has no booking.
+  only; a nitrox fill is not modelled. **The waiver informs and never gates** (H-108): the
+  release is the person's, so the ticket and the Rentals list say its standing when it is short of
+  signed ("Waiver: Not signed"), and the ticket offers the person's waiver link.
   Trip-scoped reads (prep, manifests) never count one; a departure's Gear tab names the units a
   booked diver holds on one over its window. ADR 20260815-minimal-gear-register, amendment
   2026-10-08.
@@ -2203,7 +2219,10 @@ new domain concept, define it here in the same PR.
   inspection, hydro test or O2 clean for a tank, and never a note for either. A soft good (a
   wetsuit, a mask, fins) has no service and no check to write, so a dated note is its clearing
   event, because a note is the only record those units ever get. A return with no outcome (the
-  register's quick Return) says nothing, and leaves an earlier concern standing. A regulator is
+  register's quick Return) says nothing, and leaves an earlier concern standing. A concern on a
+  departure's set return can also **pull the unit for service** in the same act (issue #2205): one
+  unticked box per unit, shown only once the concern is open, which moves a ticked unit to
+  `needs_service` with the concern as its note. Never automatic, and still no service event. A regulator is
   never proposed for a diver who asked for nitrox, because the register cannot yet say which
   regulators are O2-clean. One unit is never proposed twice. Every pick, one row or "Assign all",
   goes through `assignGearUnit` or `confirmProposedGearUnits`, and each is re-read against what

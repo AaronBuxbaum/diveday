@@ -428,6 +428,43 @@ describe("seatDiver identity reporting (what a door is allowed to claim)", () =>
     expect(await bookingIdentityHold(db, result.bookingId)).toBeNull();
   });
 
+  /**
+   * **A seat picked from the counter's search list lands released, by
+   * decision** (H-79, issue #1790). That list is a search a staffer went
+   * looking in, not a guess the product offered, and holding it would put a
+   * held seat and an extra tap on every ordinary search-and-seat. It stays so
+   * when the search is the kind most likely to have found the wrong row: a
+   * namesake on file, which on the name prompt would hold the seat, and a
+   * phone-arm match since #1765 widened it. The db cannot see which arm
+   * matched, which is the point: the door decides, by carrying no
+   * `fromNameMatch`, and this pins what that door gets.
+   */
+  it("holds nothing on a search-list seat, even with a namesake on file", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+    const [namesake] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: diver.fullName, phone: "+447700900123" })
+      .returning({ id: people.id });
+    if (!namesake) throw new Error("namesake insert returned no row");
+    await db.insert(personRoles).values({ personId: namesake.id, role: "diver" });
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      // What the counter's "divers not booked today" seat link submits: the
+      // row's id and nothing else.
+      diver: { personId: diver.id },
+      entry: "walk_in",
+      refusals: "coarse",
+    });
+
+    expect(result).toMatchObject({ ok: true, identityUnconfirmed: false });
+    if (!result.ok) throw new Error("expected the diver to be seated");
+    expect(await bookingIdentityHold(db, result.bookingId)).toBeNull();
+  });
+
   it("reports a held seat for a name typed against someone else's address", async () => {
     const { db, shop, open, actorPersonId } = await context();
     const diver = await bookableDiver(db, shop.id, open.id);

@@ -37,7 +37,15 @@ import {
   updateGearItem,
 } from "./gear";
 import { saveRentalFit } from "./rental-fit";
-import { bookings, gearReservations, gearServiceEvents, people, shops, trips } from "./schema";
+import {
+  bookings,
+  gearItems,
+  gearReservations,
+  gearServiceEvents,
+  people,
+  shops,
+  trips,
+} from "./schema";
 import { moveTrip, setTripStatus } from "./trips";
 import { createTrip } from "./trips-create";
 
@@ -2087,6 +2095,171 @@ describe("returning a whole rental set", () => {
     expect(untouched?.returnedAt).toBeNull();
     expect(untouched?.outcome).toBeNull();
     expect(await outcomesOf(db, reservationIds)).toHaveLength(2);
+  });
+
+  /**
+   * **Pulling a unit to the bench from the return** (issue #2205). Opt-in per
+   * unit, only on a service concern, in the same transaction as the return,
+   * and still no `gear_service_events` row.
+   */
+  describe("pulling a unit to the bench on a service concern", () => {
+    async function unitsOf(db: AppDb, reservationIds: string[]) {
+      const rows = await db
+        .select({ id: gearItems.id, label: gearItems.label })
+        .from(gearReservations)
+        .innerJoin(gearItems, eq(gearItems.id, gearReservations.gearItemId))
+        .where(inArray(gearReservations.id, reservationIds));
+      const byLabel = new Map(rows.map((row) => [row.label, row.id]));
+      const reg = byLabel.get("Reg #21");
+      const bcd = byLabel.get("BCD #21");
+      if (!reg || !bcd) throw new Error("set units missing");
+      return { reg, bcd };
+    }
+
+    async function statusOf(db: AppDb, gearItemId: string) {
+      const [row] = await db
+        .select({ status: gearItems.status, serviceNote: gearItems.serviceNote })
+        .from(gearItems)
+        .where(eq(gearItems.id, gearItemId));
+      return row;
+    }
+
+    async function onTheWall(db: AppDb, shopId: string) {
+      const units = await listAvailableGearUnits(db, shopId, {
+        from: "2026-09-20",
+        until: "2026-09-20",
+        todayLocal: "2026-09-20",
+      });
+      return new Set(units.map((unit) => unit.id));
+    }
+
+    it("pulls only the ticked unit, with the concern as its service note", async () => {
+      const { db, shop } = await gearShopContext();
+      const { bookingId, reservationIds } = await aSetOut(db, shop.id);
+      const { reg, bcd } = await unitsOf(db, reservationIds);
+
+      expect(
+        await returnTripGearSet(db, {
+          shopId: shop.id,
+          bookingId,
+          outcome: "service_concern",
+          note: "second stage free-flowed on the descent",
+          pullGearItemIds: [reg],
+        }),
+      ).toEqual({ ok: true });
+
+      expect(await statusOf(db, reg)).toEqual({
+        status: "needs_service",
+        serviceNote: "second stage free-flowed on the descent",
+      });
+      // The BCD came home in the same armful and nobody ticked it.
+      expect(await statusOf(db, bcd)).toEqual({ status: "in_service", serviceNote: null });
+      const wall = await onTheWall(db, shop.id);
+      expect(wall.has(reg)).toBe(false);
+      expect(wall.has(bcd)).toBe(true);
+      // A concern is still a flag, never a service record.
+      const events = await db
+        .select({ id: gearServiceEvents.id })
+        .from(gearServiceEvents)
+        .where(inArray(gearServiceEvents.gearItemId, [reg, bcd]));
+      expect(events).toHaveLength(0);
+      for (const row of await outcomesOf(db, reservationIds)) {
+        expect(row.outcome).toBe("service_concern");
+      }
+    });
+
+    it("leaves every unit in service when nothing is ticked", async () => {
+      const { db, shop } = await gearShopContext();
+      const { bookingId, reservationIds } = await aSetOut(db, shop.id);
+      const { reg, bcd } = await unitsOf(db, reservationIds);
+
+      expect(
+        await returnTripGearSet(db, {
+          shopId: shop.id,
+          bookingId,
+          outcome: "service_concern",
+          note: "mask strap scratched",
+        }),
+      ).toEqual({ ok: true });
+
+      expect((await statusOf(db, reg))?.status).toBe("in_service");
+      expect((await statusOf(db, bcd))?.status).toBe("in_service");
+      const wall = await onTheWall(db, shop.id);
+      expect(wall.has(reg)).toBe(true);
+    });
+
+    it("ignores a tick on any outcome but a service concern", async () => {
+      const { db, shop } = await gearShopContext();
+      const { bookingId, reservationIds } = await aSetOut(db, shop.id);
+      const { reg } = await unitsOf(db, reservationIds);
+
+      await returnTripGearSet(db, {
+        shopId: shop.id,
+        bookingId,
+        outcome: "all_good",
+        pullGearItemIds: [reg],
+      });
+      expect((await statusOf(db, reg))?.status).toBe("in_service");
+    });
+
+    it("pulls nothing when the concern is refused for want of words", async () => {
+      const { db, shop } = await gearShopContext();
+      const { bookingId, reservationIds } = await aSetOut(db, shop.id);
+      const { reg } = await unitsOf(db, reservationIds);
+
+      expect(
+        await returnTripGearSet(db, {
+          shopId: shop.id,
+          bookingId,
+          outcome: "service_concern",
+          pullGearItemIds: [reg],
+        }),
+      ).toEqual({ ok: false, reason: "concern_needs_words" });
+      expect((await statusOf(db, reg))?.status).toBe("in_service");
+    });
+
+    it("never reaches a unit this return did not close", async () => {
+      // An id from another set, or another shop, rides in on a forged form:
+      // only the units this act brought home can be pulled by it.
+      const { db, shop } = await gearShopContext();
+      const { bookingId } = await aSetOut(db, shop.id);
+      const elsewhere = mustCreate(
+        await createGearItem(db, { shopId: shop.id, kind: "regulator", label: "Reg #99" }),
+      );
+
+      await returnTripGearSet(db, {
+        shopId: shop.id,
+        bookingId,
+        outcome: "service_concern",
+        note: "free-flow",
+        pullGearItemIds: [elsewhere.id],
+      });
+      expect((await statusOf(db, elsewhere.id))?.status).toBe("in_service");
+    });
+
+    it("keeps a technician's note on a unit already off the wall", async () => {
+      const { db, shop } = await gearShopContext();
+      const { bookingId, reservationIds } = await aSetOut(db, shop.id);
+      const { reg } = await unitsOf(db, reservationIds);
+      await setGearItemStatus(db, {
+        shopId: shop.id,
+        gearItemId: reg,
+        status: "needs_service",
+        serviceNote: "inflator sticks",
+      });
+
+      await returnTripGearSet(db, {
+        shopId: shop.id,
+        bookingId,
+        outcome: "service_concern",
+        note: "free-flow",
+        pullGearItemIds: [reg],
+      });
+      expect(await statusOf(db, reg)).toEqual({
+        status: "needs_service",
+        serviceNote: "inflator sticks",
+      });
+    });
   });
 
   /**

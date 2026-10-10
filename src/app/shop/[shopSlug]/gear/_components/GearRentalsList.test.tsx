@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { GearRentalsPage, GearRentalUnit } from "@/db/gear-rentals";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { groupGearRentals } from "@/lib/gear-rentals";
+import type { ShopWaiverStatus } from "@/lib/waivers";
 import { GearRentalsList } from "./GearRentalsList";
 
 afterEach(cleanup);
@@ -39,7 +40,10 @@ function row(overrides: Partial<GearRentalUnit> & { reservationId: string }): Ge
   };
 }
 
-function renderList(rows: GearRentalUnit[]) {
+function renderList(
+  rows: GearRentalUnit[],
+  counterWaivers?: ReadonlyMap<string, ShopWaiverStatus["state"]>,
+) {
   const holders = groupGearRentals(rows, TODAY);
   const page: GearRentalsPage = {
     rows: holders,
@@ -47,6 +51,7 @@ function renderList(rows: GearRentalUnit[]) {
     pageCount: 1,
     pageSize: 20,
     total: holders.length,
+    counterWaivers,
   };
   return render(
     <GearRentalsList
@@ -162,5 +167,39 @@ describe("GearRentalsList", () => {
     expect(screen.getByText("Unpaid")).toBeInTheDocument();
     const quiet = screen.getByRole("link", { name: "Rental ticket for Quiet Diver" }).closest("li");
     expect(within(quiet as HTMLElement).queryByText(/Paid|Unpaid|Open/)).toBeNull();
+  });
+});
+
+/**
+ * **The holder's waiver on a counter rental** (issue #2261, H-108): said in
+ * the release's own word when it is short of signed, never on a trip rental
+ * (the booking's readiness says that on the departure), and silent once
+ * signed.
+ */
+describe("GearRentalsList's counter waiver word", () => {
+  const counter = (overrides: Partial<GearRentalUnit> = {}) =>
+    row({
+      reservationId: "c1",
+      bookingId: null,
+      counterRentalStamp: "2026-10-08 10:00:00.000001+00",
+      tripId: null,
+      tripTitle: null,
+      tripStartsAt: null,
+      ...overrides,
+    });
+
+  it("says a counter holder's waiver is not signed", () => {
+    renderList([counter()], new Map([["person-ana", "none"]]));
+    expect(screen.getByText("Waiver: Not signed")).toBeInTheDocument();
+  });
+
+  it("says nothing once the waiver is signed", () => {
+    renderList([counter()], new Map([["person-ana", "current"]]));
+    expect(screen.queryByText(/Waiver:/)).toBeNull();
+  });
+
+  it("says nothing on a trip rental, whatever the person's standing", () => {
+    renderList([row({ reservationId: "1" })], new Map([["person-ana", "none"]]));
+    expect(screen.queryByText(/Waiver:/)).toBeNull();
   });
 });

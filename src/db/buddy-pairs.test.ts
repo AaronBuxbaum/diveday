@@ -10,6 +10,7 @@ import {
   listTripBuddyTeamEvents,
   listTripBuddyTeams,
   removeBuddyTeamMember,
+  sortBuddyMemberRowsByTeam,
 } from "./buddy-pairs";
 import { getTripManifest, getTripManifests, recordCrewRollCall, recordRollCall } from "./manifests";
 import {
@@ -951,5 +952,35 @@ describe("the buddy-team recorder must be live staff (defense in depth)", () => 
       }),
     ).toEqual({ ok: false, reason: "staff_not_found" });
     expect((await stateOf(db, shop.id, trip.id)).trail.map((e) => e.action)).toEqual(["formed"]);
+  });
+});
+
+/**
+ * The export's team order (H-81, issue #1795), on plain rows. The database
+ * path is pinned in `export.test.ts`; these are the two last resorts it cannot
+ * cheaply reach.
+ */
+describe("sortBuddyMemberRowsByTeam", () => {
+  const at = new Date("2026-07-21T13:30:00.000Z");
+  const row = (id: string, pairId: string, name: string) => ({ id, pairId, createdAt: at, name });
+
+  it("falls back to pair_id only for two teams formed together with the same names", () => {
+    const rows = [
+      row("r1", "pair-b", "Ana Ruiz"),
+      row("r2", "pair-a", "Ana Ruiz"),
+      row("r3", "pair-b", "Zoe Adler"),
+      row("r4", "pair-a", "Zoe Adler"),
+    ];
+    expect(sortBuddyMemberRowsByTeam(rows, (r) => r.name).map((r) => r.id)).toEqual([
+      "r2",
+      "r4",
+      "r1",
+      "r3",
+    ]);
+  });
+
+  it("orders two same-named members of one team by their row id", () => {
+    const rows = [row("r9", "pair-a", "John Smith"), row("r1", "pair-a", "John Smith")];
+    expect(sortBuddyMemberRowsByTeam(rows, (r) => r.name).map((r) => r.id)).toEqual(["r1", "r9"]);
   });
 });

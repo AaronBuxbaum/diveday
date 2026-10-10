@@ -180,4 +180,6 @@ const CHROME_CEILING = 20;
 // safety-kit units. Their clocks are a third read, skipped while the register
 // holds no safety kit, as the seeded shop's does not.
 const TODAY_CEILING = 66;
-const TRIP_CEILING = 49;
+// 49 → 50: the payment control's unused package dives (`spendableDivesForTrip`,
+// issue #1697, H-79) are one statement over the roster's people.
+const TRIP_CEILING = 50;

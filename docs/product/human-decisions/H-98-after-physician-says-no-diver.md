@@ -19,4 +19,8 @@ Whether a clean new release clears the diver on its own.
 
 The offline manifest carries the warning too, as the physician's evaluation day and nothing else of the record (#2163). The live and offline roll calls both put it on the row as a capsule, ahead of an unresolved-referral capsule.
 
+## Amendment 2026-10-09: an unresolved referral (issue #2195)
+
+**Decided 2026-10-09 (Aaron Buxbaum, on the issue):** a later clean waiver may also stand over a referral that no physician has answered yet, the same way it stands over a physician's "no". The diver is cleared, and every surface that warns about an earlier refusal warns about the open referral too, with a link back to it: the diver record, the trip's Divers tab and the live manifest (`overriddenReferral` in `src/lib/waivers.ts`). `effectiveWaiverForBooking` is unchanged, so a booking whose own release is the unresolved hold still waits for a physician. The recommended alternatives (block until a physician clears it, or let staff retire a referral as answered in error) were not taken. The offline manifest and paper print the warning with its date and no link.
+
 Part of the [human decision log](README.md#decision-register).

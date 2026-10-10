@@ -479,6 +479,22 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // "The two doors, and which one leads").
   await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(3);
 
+  // The export band's drawing ends in its own door into the demo as the
+  // owner (issue #1955): link weight, so the count above does not move and the
+  // band holds no primary, and tagged by name so a typo or a recycled tag
+  // fails here rather than opening a second bucket (src/lib/funnel.ts).
+  const exportDoor = page.getByRole("main").getByRole("button", {
+    name: "Open the demo as the owner →",
+  });
+  await expect(exportDoor).toBeVisible();
+  await expect(exportDoor).not.toHaveClass(/(^|\s)bg-primary(\s|$)/);
+  await expect(
+    page.locator('form:has(button:text-is("Open the demo as the owner →")) input[name="source"]'),
+  ).toHaveValue("pricing-export");
+  await expect(
+    page.locator('form:has(button:text-is("Open the demo as the owner →")) input[name="role"]'),
+  ).toHaveValue("owner");
+
   // And the demo *leads*: first in the DOM, primary weight, with the trial
   // behind it. This page carried them the other way round under the same two
   // labels, so a visitor told on the homepage that the demo was the thing to

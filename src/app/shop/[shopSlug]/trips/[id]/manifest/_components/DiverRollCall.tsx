@@ -33,6 +33,7 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import type { ReadinessBlocker } from "@/lib/readiness";
+import { shopPath } from "@/lib/staff-notices";
 import { medicalWarningDays } from "@/lib/waivers";
 import { SHARED_FACT_MIN } from "../../_components/shared-facts";
 import { HoldPlace } from "./HoldPlace";
@@ -88,6 +89,7 @@ function DiverFacts({
   locale,
   timezone,
   columns,
+  referralHref,
   t,
 }: {
   diver: TripManifest["divers"][number];
@@ -106,6 +108,11 @@ function DiverFacts({
    * a boat to carry and lose, to buy width nothing needed.
    */
   columns: 1 | 2;
+  /**
+   * Where an unanswered referral's warning links, on screen only (issue
+   * #2195): paper has nothing to tap. Absent, the warning is drawn unlinked.
+   */
+  referralHref?: (referral: { personId: string; recordId: string }) => string;
   t: StaffTranslator;
 }) {
   // The pickup belongs to the booking, not to the matched person, so a held
@@ -230,6 +237,19 @@ function DiverFacts({
               {t("manifest.medicalReferralUnresolved", {
                 date: formatCalendarDate(warningDays.referredOn ?? "", locale),
               })}
+              {/* The override stands, and the warning links back to the
+                  referral (Aaron, 2026-10-09, issue #2195, amending H-98). */}
+              {referralHref && diver.medicalWaiver.overriddenReferral ? (
+                <>
+                  {" "}
+                  <Link
+                    href={referralHref(diver.medicalWaiver.overriddenReferral)}
+                    className="font-semibold text-primary hover:underline"
+                  >
+                    {t("manifest.medicalReferralLink")}
+                  </Link>
+                </>
+              ) : null}
             </span>
           ) : null}
         </p>
@@ -853,6 +873,15 @@ export function DiverRollCall({
                       locale={locale}
                       timezone={timezone}
                       columns={1}
+                      referralHref={(referral) =>
+                        shopPath(
+                          shopSlug,
+                          "divers",
+                          referral.personId,
+                          "waivers",
+                          referral.recordId,
+                        )
+                      }
                       t={t}
                     />
                     {/* The facts the row's one capsule could not carry — who

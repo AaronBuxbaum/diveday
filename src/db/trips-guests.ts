@@ -15,7 +15,8 @@ import { sameNameHeldSeats as findSameNameHeldSeats } from "./bookings";
 import type { AppDb } from "./client";
 import { type CourseMaterialsDone, courseMaterialsDoneByPerson } from "./course-materials";
 import { courseNextStepsByBooking } from "./course-next-step";
-import { findSimilarDivers, listBookableDivers } from "./divers";
+import { spendableDivesForTrip } from "./dive-packages";
+import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "./divers";
 import { listLastMinuteList } from "./last-minute-list";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
@@ -132,6 +133,39 @@ export async function getTripGuests(
       })),
   );
 
+  // The fact a held seat's "Same person" confirm is weighed against: the
+  // matched diver's last dive day at this shop, the same line the name-match
+  // prompt shows staff who seat a diver (issue #1789). A staff-seated hold met
+  // it there already; an online hold (a public booking that reused an email
+  // under another name, H-13) met no prompt, so this is the first time any
+  // staffer sees it. Not this departure's: the seat on it is the claim, not
+  // evidence for it.
+  const heldPersonIds = roster
+    .filter(({ booking }) => booking.identityUnconfirmedAt)
+    .map(({ booking }) => booking.personId);
+  const heldLastDiveDays = await lastDiveDaysHere(db, shop.id, heldPersonIds, {
+    exceptTripId: tripId,
+  });
+  const heldSeatLastDiveDay = new Map<string, Date | null>(
+    roster
+      .filter(({ booking }) => booking.identityUnconfirmedAt)
+      .map(({ booking }) => [booking.id, heldLastDiveDays.get(booking.personId) ?? null] as const),
+  );
+
+  // Unspent package dives this departure could take, per seat, so the payment
+  // control says so before anyone takes a fare (issue #1697, H-79).
+  const packageDivesByPerson = await spendableDivesForTrip(
+    db,
+    shop.id,
+    [...new Set(roster.map(({ booking }) => booking.personId))],
+    { courseId: trip.courseId },
+  );
+  const packageDivesByBooking = new Map<string, number>();
+  for (const { booking } of roster) {
+    const dives = packageDivesByPerson.get(booking.personId);
+    if (dives) packageDivesByBooking.set(booking.id, dives);
+  }
+
   // Keep the three staff-note entry points one system: a diver-record note is
   // visible on Guests for the same booking, just as it is on Manifest. It is
   // edited on the diver record, the canonical scope, so this roster does not
@@ -246,6 +280,16 @@ export async function getTripGuests(
     notesByBooking,
     courseNextStepByBooking,
     sameNameHeldSeats,
+    /**
+     * Per held seat, the matched diver's last dive day at this shop, or null
+     * when there is none (issue #1789). Only held seats have an entry.
+     */
+    heldSeatLastDiveDay,
+    /**
+     * Per seat, the unspent package dives its diver could put toward this
+     * departure; seats with none are absent (issue #1697).
+     */
+    packageDivesByBooking,
     /**
      * A split on this departure must take a date of birth: it is a course
      * with a minimum age, which reads the new record's date (issue #2081). A
