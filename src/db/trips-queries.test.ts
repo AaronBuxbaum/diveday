@@ -106,6 +106,54 @@ describe("paged schedule queries", () => {
     );
   });
 
+  /**
+   * Four boats leaving at the same minute (issue #2175). The board orders them
+   * by title, then id, so its keyset cursor has to carry the title too, or a
+   * page boundary between two of them skips or repeats one. The titles are
+   * dealt against id order, so a pass means the title key decides rather than
+   * the ids happening to agree with it; and every page size from 1 to 5 puts
+   * a boundary at each position among the four.
+   */
+  it("pages same-minute departures by title, never skipping or repeating one at a page boundary", async () => {
+    const { db, shop } = ctx;
+    const startsAt = new Date(nowDate().getTime() + 400 * 24 * 60 * 60 * 1000);
+    const endsAt = new Date(startsAt.getTime() + 4 * 60 * 60 * 1000);
+    const created: string[] = [];
+    for (let n = 0; n < 4; n++) {
+      const trip = await createTrip(db, {
+        shopId: shop.id,
+        title: `Same minute ${n}`,
+        startsAt,
+        endsAt,
+        capacity: 10,
+        plannedDives: 2,
+      });
+      if (!trip) throw new Error("failed to create same-minute fixture");
+      created.push(trip.id);
+    }
+    const byId = [...created].sort();
+    const titles = ["Delta drift", "Charlie wall", "Bravo reef", "Alpha wreck"];
+    for (const [index, id] of byId.entries()) {
+      await db.update(trips).set({ title: titles[index] }).where(eq(trips.id, id));
+    }
+    const expected = [...byId].reverse();
+
+    const all = await upcomingTripsWithCounts(db, shop.id);
+    for (let limit = 1; limit <= 5; limit++) {
+      const seen: string[] = [];
+      let cursor: string | undefined;
+      for (let hops = 0; hops < 200; hops++) {
+        const page = await pagedUpcomingTripsWithCounts(db, shop.id, { cursor, limit });
+        seen.push(...page.trips.map((t) => t.id));
+        if (!page.nextCursor) break;
+        cursor = page.nextCursor;
+      }
+      expect(new Set(seen).size).toBe(seen.length);
+      expect(seen.filter((id) => created.includes(id))).toEqual(expected);
+      expect(seen).toEqual(all.map((t) => t.id));
+    }
+  });
+
   it("treats a hand-crafted cursor carrying a non-uuid id as page one", async () => {
     const { db, shop } = ctx;
     // `?after=` on the **public** schedule (`/s/[shopSlug]`) is a URL string
@@ -116,7 +164,7 @@ describe("paged schedule queries", () => {
     // (FU-20260814-orders-stray-person-id-500's sweep). `decodeCursor` already
     // says anything unparsable is page one; this is that.
     const forged = Buffer.from(
-      JSON.stringify(["2026-07-24T00:00:00.000Z", "nope"]),
+      JSON.stringify(["2026-07-24T00:00:00.000Z", "Wreck Trek", "nope"]),
       "utf8",
     ).toString("base64url");
     const forgedPage = await pagedUpcomingTripsWithCounts(db, shop.id, { cursor: forged });
