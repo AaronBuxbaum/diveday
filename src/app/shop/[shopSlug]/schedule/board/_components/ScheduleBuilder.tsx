@@ -11,7 +11,7 @@ import { groupLabelClass } from "@/components/ui/ledger";
 import { fill, pluralForm } from "@/i18n/fill";
 import { shiftCalendarDate } from "@/lib/calendar-date";
 import type { MovePreflight, MovePreflightSection } from "@/lib/move-preflight";
-import { AddPanel } from "./AddPanel";
+import { AddPanel, type AddPanelBuilder } from "./AddPanel";
 import type {
   BuilderActions,
   BuilderCopy,
@@ -692,6 +692,20 @@ export function ScheduleBuilder({
     setOpen(openAdd === "closed" ? null : "add:top");
   }, [pathname]);
 
+  // What the top panel and every week-row panel share; each adds its own day.
+  const addPanelBuilder: AddPanelBuilder = {
+    locale,
+    addDraft,
+    draftActions: actions.draft,
+    loadPattern,
+    loadTideWindow,
+    options,
+    price,
+    copy,
+    more,
+    onAdd: actions.add,
+  };
+
   return (
     // `data-schedule-builder` is the copy-free hook a test asks "has the
     // board finished streaming?" with — true whether or not the week has
@@ -720,21 +734,12 @@ export function ScheduleBuilder({
           two identical forms at once. */}
       {canConfigure && open === "add:top" ? (
         <AddPanel
-          locale={locale}
-          addDraft={addDraft}
-          draftActions={actions.draft}
-          loadPattern={loadPattern}
-          loadTideWindow={loadTideWindow}
+          builder={addPanelBuilder}
           dateIso={defaultDateIso}
-          options={options}
-          price={price}
-          copy={copy}
-          more={more}
           initialCourse={initialCourse}
           initialSite={initialSite}
           requestPlan={requestPlan}
           startExpanded={openAdd === "expanded"}
-          onAdd={actions.add}
           onCancel={cancelTopAdd}
         />
       ) : null}
@@ -774,20 +779,11 @@ export function ScheduleBuilder({
                       dateIso: weekAdd,
                       node: (
                         <AddPanel
-                          locale={locale}
-                          addDraft={addDraft}
-                          draftActions={actions.draft}
-                          loadPattern={loadPattern}
-                          loadTideWindow={loadTideWindow}
+                          builder={addPanelBuilder}
                           dateIso={weekAdd}
-                          options={options}
-                          price={price}
-                          copy={copy}
-                          more={more}
                           initialCourse={null}
                           requestPlan={null}
                           startExpanded={false}
-                          onAdd={actions.add}
                           onCancel={() => closePanel(`w:add:${weekAdd}`)}
                         />
                       ),

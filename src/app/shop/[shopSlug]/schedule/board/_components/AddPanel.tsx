@@ -50,6 +50,26 @@ import { useAddPanel } from "./use-add-panel";
  */
 const GROUP_FRAME = "rounded-lg border border-border bg-surface p-5";
 
+/** What every add panel on the board shares, built once by `ScheduleBuilder`: the draft, the loaders, the options and the words. */
+export type AddPanelBuilder = {
+  /** The reader's language, for the time fields' readings. */
+  locale: string;
+  /** What this person had typed into the add panel when they last left it, if fresh. */
+  addDraft: FormDraftProps["draft"];
+  draftActions: FormDraftActions;
+  /** The weekday's pattern, fetched when the panel opens with nothing else to say. */
+  loadPattern?: (dateIso: string) => Promise<BuilderPattern | null>;
+  /** The tide at the chosen site for this departure, worded; null renders nothing. */
+  loadTideWindow?: (input: BuilderTideWindowInput) => Promise<string | null>;
+  /** `null` until the panel's own fetch lands; the selects say so meanwhile. */
+  options: BuilderOptions | null;
+  price: BuilderPriceInput;
+  copy: BuilderCopy;
+  more: BuilderMoreOptions;
+  // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
+  onAdd: (formData: FormData) => void | Promise<void>;
+};
+
 /**
  * The one form that creates a departure, pre-dated to whichever day header it
  * was opened from. Two depths, one form, one action: "More options" discloses
@@ -62,47 +82,35 @@ const GROUP_FRAME = "rounded-lg border border-border bg-surface p-5";
  * silently discarding whatever a staff member had typed.
  */
 export function AddPanel({
-  locale,
-  addDraft,
-  draftActions,
-  loadPattern,
-  loadTideWindow,
+  builder,
   dateIso,
-  options,
-  price,
-  copy,
-  more,
   initialCourse,
   initialSite,
   requestPlan,
   startExpanded,
-  onAdd,
   onCancel,
 }: {
-  /** The reader's language, for the time fields' readings. */
-  locale: string;
-  /** What this person had typed into the add panel when they last left it, if fresh. */
-  addDraft: FormDraftProps["draft"];
-  draftActions: FormDraftActions;
-  /** The weekday's pattern, fetched when the panel opens with nothing else to say. */
-  loadPattern?: (dateIso: string) => Promise<BuilderPattern | null>;
-  /** The tide at the chosen site for this departure, worded; null renders nothing. */
-  loadTideWindow?: (input: BuilderTideWindowInput) => Promise<string | null>;
+  builder: AddPanelBuilder;
   dateIso: string;
-  /** `null` until the panel's own fetch lands; the selects say so meanwhile. */
-  options: BuilderOptions | null;
-  price: BuilderPriceInput;
-  copy: BuilderCopy;
-  more: BuilderMoreOptions;
   initialCourse: BuilderInitialCourse | null;
   initialSite?: BuilderInitialSite | null;
   requestPlan?: BuilderRequestPlan | null;
   /** Opened straight into its full depth — a link that meant the whole form. */
   startExpanded: boolean;
-  // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
-  onAdd: (formData: FormData) => void | Promise<void>;
   onCancel: () => void;
 }) {
+  const {
+    locale,
+    addDraft,
+    draftActions,
+    loadPattern,
+    loadTideWindow,
+    options,
+    price,
+    copy,
+    more,
+    onAdd,
+  } = builder;
   const {
     expanded,
     courseId,
