@@ -154,12 +154,6 @@ export default async function ScheduleBoardPage({
   const { locale, t } = await requestTranslator(shop.defaultLocale);
   const st = staffTranslator(locale);
   const now = nowDate();
-  // The reader's own half-typed add panel, if they left one in the last day
-  // (ADR 20260906-before-you-ask, decision 3).
-  const draft = await readFormDraft(db, shop.id, session.user.personId, "add_departure", now);
-  const addDraft = draft
-    ? { fields: draft.fields, savedAtLabel: formatTime(draft.savedAt, locale, shop.timezone) }
-    : null;
   const todayIso = toDateInputValue(utcToWallTime(now, tz));
   // Which week the desktop grid draws. Total by construction: a malformed or
   // missing `?week=` lands on the one the shop is in rather than refusing the
@@ -173,9 +167,32 @@ export default async function ScheduleBoardPage({
   // they are two queries and a whole catalogue of client props for two selects
   // inside a panel that is closed by default, so they load when it opens
   // (`loadBuilderOptionsAction`).
-  const [range, canConfigure, openRollCalls, shopBoats, weekRows, weekAsks] = await Promise.all([
+  //
+  // **One wave** (code review 2026-10-10, item 25): every read the board makes
+  // is here, and the two that need another's answer — the week's crew needs
+  // the week's ids, the request rows need the configure gate — are chained
+  // onto it inside the batch rather than awaited one at a time after it.
+  const canConfigureRead = canPersonConfigureTrips(db, shop.id, session.user.personId);
+  const weekRead = weekBoard(db, shop.id, weekStartIso, tz, now);
+  const [
+    draft,
+    range,
+    canConfigure,
+    openRollCalls,
+    shopBoats,
+    weekRows,
+    weekAsks,
+    boatsEverOwned,
+    crewByTrip,
+    requestedCourse,
+    requestedSite,
+    requestRows,
+  ] = await Promise.all([
+    // The reader's own half-typed add panel, if they left one in the last day
+    // (ADR 20260906-before-you-ask, decision 3).
+    readFormDraft(db, shop.id, session.user.personId, "add_departure", now),
     upcomingScheduleRange(db, shop.id, now),
-    canPersonConfigureTrips(db, shop.id, session.user.personId),
+    canConfigureRead,
     // Departures that already came back with a head count still open (DOM-H3).
     // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips
     // whose `startsAt` is still ahead of `now` — so this is its own backwards
@@ -196,7 +213,7 @@ export default async function ScheduleBoardPage({
     // decision 5). It reaches backwards, which the stream never does: a week
     // that has already half-happened is most of what "what does my week look
     // like" means.
-    weekBoard(db, shop.id, weekStartIso, tz, now),
+    weekRead,
     // **The days somebody asked for** (ADR 20260919-one-idea, slice 23f —
     // "a request is a day someone asked for, drawn as a ghost on the week").
     // Bounded to the week for the same reason everything else here is: Tide
@@ -204,60 +221,62 @@ export default async function ScheduleBoardPage({
     // weeks out is that week's business. `/shop/<slug>/requests` stays the
     // unbounded reading of the same rows.
     listDateRequestsForCalendarDates(db, shop.id, weekDates(weekStartIso)),
+    // **Names come from every hull the shop has ever had, not just the live
+    // ones.** A departure that sailed on a boat the shop has since deleted must
+    // still say which vessel — that is the whole reason deleting one is a stamp
+    // rather than a delete (ADR 20260820-every-delete-is-soft). `shopBoats`
+    // stays live: it is the picker and the fleet count, and a deleted hull is
+    // not a boat this shop has.
+    listBoatsForHistory(db, shop.id),
+    // **Who is crewing the week the board is drawing.** Depends on the ids the
+    // week read produced, so it is chained onto that read. One reading, so one
+    // list: this used to union the stream's cursor page with the week's ids,
+    // and the two never agreed about which departures were on the board
+    // (#1923). A shop that keeps no crew schedule prints no crew line, so it
+    // reads none.
+    shop.crewScheduleEnabled
+      ? weekRead.then((week) =>
+          tripCrewByTrip(
+            db,
+            shop.id,
+            Object.values(week.days).flatMap((entries) => entries.map((entry) => entry.tripId)),
+          ),
+        )
+      : new Map<string, Array<{ id: string; name: string }>>(),
+    // A course the catalogue sent us here to schedule. One list read, and only
+    // on the rare navigation that names a course — scoped to the session's own
+    // shop, so a `?course=` from another tenant simply resolves to nothing.
+    course
+      ? listActiveCourses(db, shop.id).then((rows) => rows.find((row) => row.id === course) ?? null)
+      : null,
+    // A dive site the library sent us here to schedule.
+    site
+      ? listDiveSites(db, shop.id).then((rows) => rows.find((row) => row.id === site) ?? null)
+      : null,
+    // Read for whoever can open the board, since 2026-09-16 (issue #1679). This
+    // carried the same `canPersonViewShopReports` check as `/requests`, on the
+    // written ground that it was "the same live report gate that protects
+    // /requests" — and that page is ungated now, so the check protected nothing
+    // and only broke the day group's one act: a captain tapping "Add departure"
+    // got a builder with no requests block and no explanation. `shop.id` is
+    // still the scope (`listDateRequestsByIds`), so a shareable URL still cannot
+    // pull another tenant's lead.
+    //
+    // Read only for a reader the add panel renders for: the plan is drawn inside
+    // it and nowhere else, so for anyone else these rows were loaded and shown
+    // to nobody. `/requests` no longer offers them the link (issue #1831); a
+    // hand-typed `?requests=` from a captain now reads nothing either.
+    requestIds.length > 0
+      ? canConfigureRead.then((allowed) =>
+          allowed ? listDateRequestsByIds(db, shop.id, requestIds) : [],
+        )
+      : [],
   ]);
-  // **Names come from every hull the shop has ever had, not just the live
-  // ones.** A departure that sailed on a boat the shop has since deleted must
-  // still say which vessel — that is the whole reason deleting one is a stamp
-  // rather than a delete (ADR 20260820-every-delete-is-soft). `shopBoats` above
-  // stays live: it is the picker and the fleet count, and a deleted hull is not
-  // a boat this shop has.
-  const boatMap = new Map(
-    (await listBoatsForHistory(db, shop.id)).map((boat) => [boat.id, boat.name]),
-  );
+  const addDraft = draft
+    ? { fields: draft.fields, savedAtLabel: formatTime(draft.savedAt, locale, shop.timezone) }
+    : null;
+  const boatMap = new Map(boatsEverOwned.map((boat) => [boat.id, boat.name]));
   const hasUpcoming = range.first !== null;
-  // **Who is crewing the week the board is drawing.** Depends on the ids the
-  // week read produced, so it runs as a second wave rather than inside the
-  // batch above. One reading now, so one list: this used to union the stream's
-  // cursor page with the week's ids, and the two never agreed about which
-  // departures were on the board (#1923).
-  // A shop that keeps no crew schedule prints no crew line, so it reads none.
-  const crewByTrip = shop.crewScheduleEnabled
-    ? await tripCrewByTrip(
-        db,
-        shop.id,
-        Object.values(weekRows.days).flatMap((entries) => entries.map((entry) => entry.tripId)),
-      )
-    : new Map<string, Array<{ id: string; name: string }>>();
-
-  // A course the catalogue sent us here to schedule. One list read, and only
-  // on the rare navigation that names a course — scoped to the session's own
-  // shop, so a `?course=` from another tenant simply resolves to nothing.
-  const requestedCourse = course
-    ? ((await listActiveCourses(db, shop.id)).find((row) => row.id === course) ?? null)
-    : null;
-
-  // A dive site the library sent us here to schedule.
-  const requestedSite = site
-    ? ((await listDiveSites(db, shop.id)).find((row) => row.id === site) ?? null)
-    : null;
-
-  // Read for whoever can open the board, since 2026-09-16 (issue #1679). This
-  // carried the same `canPersonViewShopReports` check as `/requests`, on the
-  // written ground that it was "the same live report gate that protects
-  // /requests" — and that page is ungated now, so the check protected nothing
-  // and only broke the day group's one act: a captain tapping "Add departure"
-  // got a builder with no requests block and no explanation. `shop.id` is
-  // still the scope (`listDateRequestsByIds`), so a shareable URL still cannot
-  // pull another tenant's lead.
-  //
-  // Read only for a reader the add panel renders for: the plan is drawn inside
-  // it and nowhere else, so for anyone else these rows were loaded and shown
-  // to nobody. `/requests` no longer offers them the link (issue #1831); a
-  // hand-typed `?requests=` from a captain now reads nothing either.
-  const requestRows =
-    canConfigure && requestIds.length > 0
-      ? await listDateRequestsByIds(db, shop.id, requestIds)
-      : [];
   const requestAdvice = adviseRequests(
     requestRows.map((request) => ({
       id: request.id,

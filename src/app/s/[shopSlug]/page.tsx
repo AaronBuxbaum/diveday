@@ -254,9 +254,10 @@ export default async function SchedulePage({
    * **The shop's trip tags** — ADR
    * 20260904-reef-all-the-way-down, decision 2 (issue #1162).
    *
-   * Read before the batch below rather than inside it, because the list query
-   * needs the resolved lens id: the narrowing happens in SQL inside
-   * `upcomingTripScope`, so the keyset pages stay honest. Never in the frame —
+   * Read inside the batch below, and the list query waits on it only when the
+   * URL names a lens: the narrowing happens in SQL inside `upcomingTripScope`,
+   * so the keyset pages stay honest, and it needs the resolved lens id. With no
+   * `?lens=` (every first visit) the list starts beside it. Never in the frame —
    * `FilterChips` renders a `<nav>` landmark and `?embed=1` promises the host
    * page zero navigation landmarks.
    *
@@ -264,9 +265,97 @@ export default async function SchedulePage({
    * board with "Every departure" current, which is what a link shared before
    * the shop deleted a word should do.
    */
-  const lenses = isEmbed ? [] : await listTripLenses(db, shop.id);
-  const activeLens = resolveLens(lens, lenses);
+  const lensesRead = isEmbed ? Promise.resolve([]) : listTripLenses(db, shop.id);
+  const activeLensRead = lens
+    ? lensesRead.then((rows) => resolveLens(lens, rows))
+    : Promise.resolve(null);
 
+  // The published-review *list* still streams in separately (below, via
+  // <ScheduleReviewsSection>) — it is the slower, independent read the shell
+  // and trip list never needed to wait behind (docs task 119 follow-up:
+  // streaming the schedule).
+  //
+  // The **aggregate** joined this batch when the shopfront landed: it is one
+  // row, and it is now part of the identity band at the very top of the page
+  // (ADR 20260827-clearwater-surface-language, decision 8), where streaming it
+  // separately would either pop a rating line in under the shop's name or cost
+  // a reserved gap on every shop that has no reviews at all. It is handed down
+  // to the reviews section rather than read twice.
+  //
+  // Both, and the courses shelf, stand down inside the frame: `?embed=1`
+  // renders neither the hero nor the shelves.
+  //
+  // **One batch, its dependents chained inside it** (code review 2026-10-10,
+  // item 24): the lenses, the shop-ever-sailed count (only when nothing is
+  // ahead) and each departure's sites and requirements (which need only the
+  // listed trip ids) used to be four more round trips one after another.
+  const upcomingRead = activeLensRead.then((activeLens) =>
+    pagedUpcomingTripsWithCounts(db, shop.id, {
+      cursor: after,
+      now,
+      ...listMonthBounds,
+      hasSpace: hasSpaceFilter ? true : undefined,
+      tripType: tripTypeFilter,
+      publicOnly: true,
+      lensId: activeLens?.id,
+    }),
+  );
+  const rangeRead = upcomingScheduleRange(db, shop.id, now, { publicOnly: true });
+  const [
+    lenses,
+    activeLens,
+    range,
+    { trips: upcoming, nextCursor },
+    reviewAggregate,
+    activeCourses,
+    boats,
+    everHadDeparture,
+    [diveSitesByTrip, requirementsByTrip],
+  ] = await Promise.all([
+    lensesRead,
+    activeLensRead,
+    rangeRead,
+    upcomingRead,
+    // A shop that switched reviews off shows no stars anywhere, not an
+    // empty rating (ADR 20261005-optional-shop-features).
+    isEmbed || !shop.reviewsEnabled ? EMPTY_REVIEW_AGGREGATE : getShopReviewAggregate(db, shop.id),
+    isEmbed ? [] : listActiveCourses(db, shop.id),
+    // The fleet, for the storefront's boats section (Harbor). Not in the
+    // widget: an embed is the list-first window and names no hulls.
+    isEmbed ? [] : listBoats(db, shop.id),
+    /**
+     * **Has this shop ever run a departure** — which is not what `hasUpcoming`
+     * asks.
+     *
+     * `upcomingScheduleRange` is scheduled, public, and ahead of now, so it
+     * goes false for a shop between seasons with three hundred departures
+     * behind it, and for one whose whole board is currently private. The deal
+     * list below stands down on that signal, and standing it down for those
+     * two shops is backwards: an off-season visitor is exactly the person
+     * worth telling when a boat needs to fill seats at a discount. The count
+     * only runs in the rare case the cheap signal already says no.
+     */
+    rangeRead.then(
+      async (scheduled) => scheduled.first !== null || (await countShopTrips(db, shop.id)) > 0,
+    ),
+    upcomingRead.then(({ trips: listed }) => {
+      const ids = listed.map((trip) => trip.id);
+      return Promise.all([
+        // Where each departure on this page actually goes. One read for the
+        // page, not one per card — and read off the *dives* rather than
+        // `trips.dive_site_id` (dive one's site, copied onto the trip row), so
+        // a two-site day names both and a day whose open tank is the first one
+        // still names the site it visits.
+        tripDiveSiteSummaries(db, shop.id, ids),
+        // What each departure asks of anybody — the trip's own gate folded
+        // with every site it visits, one read for the page. A property of the
+        // *trip*, so it is safe on an anonymous page: it says nothing about
+        // any reader, and the map holds only the departures that demand
+        // something (issue #695).
+        tripRequirementSummaries(db, shop.id, ids),
+      ]);
+    }),
+  ]);
   // The view a diver has built — month, embed mode, the lens, and every list
   // filter — must survive every link that re-renders this page. A pager or
   // month arrow that drops `hasSpace` quietly hands back the full unfiltered
@@ -304,42 +393,6 @@ export default async function SchedulePage({
     return `${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`;
   };
 
-  // The published-review *list* still streams in separately (below, via
-  // <ScheduleReviewsSection>) — it is the slower, independent read the shell
-  // and trip list never needed to wait behind (docs task 119 follow-up:
-  // streaming the schedule).
-  //
-  // The **aggregate** joined this batch when the shopfront landed: it is one
-  // row, and it is now part of the identity band at the very top of the page
-  // (ADR 20260827-clearwater-surface-language, decision 8), where streaming it
-  // separately would either pop a rating line in under the shop's name or cost
-  // a reserved gap on every shop that has no reviews at all. It is handed down
-  // to the reviews section rather than read twice.
-  //
-  // Both, and the courses shelf, stand down inside the frame: `?embed=1`
-  // renders neither the hero nor the shelves.
-  const [range, { trips: upcoming, nextCursor }, reviewAggregate, activeCourses, boats] =
-    await Promise.all([
-      upcomingScheduleRange(db, shop.id, now, { publicOnly: true }),
-      pagedUpcomingTripsWithCounts(db, shop.id, {
-        cursor: after,
-        now,
-        ...listMonthBounds,
-        hasSpace: hasSpaceFilter ? true : undefined,
-        tripType: tripTypeFilter,
-        publicOnly: true,
-        lensId: activeLens?.id,
-      }),
-      // A shop that switched reviews off shows no stars anywhere, not an
-      // empty rating (ADR 20261005-optional-shop-features).
-      isEmbed || !shop.reviewsEnabled
-        ? EMPTY_REVIEW_AGGREGATE
-        : getShopReviewAggregate(db, shop.id),
-      isEmbed ? [] : listActiveCourses(db, shop.id),
-      // The fleet, for the storefront's boats section (Harbor). Not in the
-      // widget: an embed is the list-first window and names no hulls.
-      isEmbed ? [] : listBoats(db, shop.id),
-    ]);
   // The widget shows a window; the page shows the schedule. Sliced here rather
   // than asked for in the query so the two surfaces read the same list and can
   // never disagree about what is next (issue #805).
@@ -358,19 +411,6 @@ export default async function SchedulePage({
         })
       : null;
   const hasUpcoming = range.first !== null;
-  /**
-   * **Has this shop ever run a departure** — which is not what `hasUpcoming`
-   * asks.
-   *
-   * `upcomingScheduleRange` is scheduled, public, and ahead of now, so it goes
-   * false for a shop between seasons with three hundred departures behind it,
-   * and for one whose whole board is currently private. The deal list below
-   * stands down on that signal, and standing it down for those two shops is
-   * backwards: an off-season visitor is exactly the person worth telling when a
-   * boat needs to fill seats at a discount. The count only runs in the rare
-   * case the cheap signal already says no.
-   */
-  const everHadDeparture = hasUpcoming || (await countShopTrips(db, shop.id)) > 0;
 
   /**
    * **The off-season as a designed state** (N-45).
@@ -398,25 +438,6 @@ export default async function SchedulePage({
   const quietLine = quiet.opensAt
     ? t("schedule.offSeason.back", { date: formatShortDate(quiet.opensAt, locale, tz) })
     : null;
-  // Where each departure on this page actually goes. One read for the page,
-  // not one per card — and read off the *dives* rather than `trips.dive_site_id`
-  // (dive one's site, copied onto the trip row), so a two-site day names both
-  // and a day whose open tank is the first one still names the site it visits.
-  const diveSitesByTrip = await tripDiveSiteSummaries(
-    db,
-    shop.id,
-    upcoming.map((trip) => trip.id),
-  );
-
-  // What each departure asks of anybody — the trip's own gate folded with every
-  // site it visits, one read for the page. A property of the *trip*, so it is
-  // safe on an anonymous page: it says nothing about any reader, and the map
-  // holds only the departures that demand something (issue #695).
-  const requirementsByTrip = await tripRequirementSummaries(
-    db,
-    shop.id,
-    upcoming.map((trip) => trip.id),
-  );
 
   // Which departures ask for more than the reader said they hold.
   //
