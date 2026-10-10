@@ -507,8 +507,50 @@ describe("ChoicePill and ChoiceRow", () => {
       "border",
       "px-4",
       "text-sm",
-      "hover:bg-surface-sunken",
+      "not-has-[input:checked]:hover:bg-surface-sunken",
     );
+  });
+
+  /**
+   * **Chosen and focused never look alike** (#2170). The ring a focused
+   * radio's pill wears is an outline; the chosen look is the pill's own edge
+   * and fill, hung on the pill holding a *checked* input. A keyboard landing
+   * on an unanswered "Yes" focuses it without checking it, so that pill must
+   * not match what the chosen look reads, and the answered "No" must.
+   */
+  it("gives the chosen pill its own edge and fill, which a focused unchosen pill does not match", () => {
+    render(
+      <>
+        <ChoicePill type="radio" name="asthma" value="yes" size="md">
+          Yes
+        </ChoicePill>
+        <ChoicePill type="radio" name="asthma" value="no" size="md" defaultChecked>
+          No
+        </ChoicePill>
+        <ChoicePill type="checkbox" name="roles" value="captain" defaultChecked>
+          Captain
+        </ChoicePill>
+      </>,
+    );
+    const yes = screen.getByRole("radio", { name: "Yes" });
+    const no = screen.getByRole("radio", { name: "No" });
+    act(() => yes.focus());
+    expect(yes).toHaveFocus();
+    expect(yes).not.toBeChecked();
+
+    const chosen = ["has-[input:checked]:border-primary", "has-[input:checked]:bg-primary-tint"];
+    for (const box of [yes, no, screen.getByRole("checkbox", { name: "Captain" })]) {
+      const pill = box.closest("label");
+      expect(pill).toHaveClass(...chosen);
+      // The chosen look is not an outline: that is the focus ring's.
+      for (const token of pill?.className.split(/\s+/) ?? []) {
+        if (token.startsWith("has-[input:checked]")) expect(token).not.toMatch(/outline|ring/);
+      }
+    }
+    // What the variant reads: the pill holds a checked input.
+    expect(yes.closest("label")?.querySelector("input:checked")).toBeNull();
+    expect(no.closest("label")?.querySelector("input:checked")).toBe(no);
+    expect(yes.closest("label")).toHaveClass(radioRingClass);
   });
 
   /**
@@ -623,7 +665,7 @@ describe("ChoicePill and ChoiceRow", () => {
       "bg-surface",
       "pe-4",
       "text-sm",
-      "hover:bg-surface-sunken",
+      "not-has-[input:checked]:hover:bg-surface-sunken",
     );
     expect(pill).toContainElement(screen.getByRole("button", { name: "What are fins?" }));
   });

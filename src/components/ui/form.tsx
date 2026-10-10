@@ -718,8 +718,8 @@ export function Field({
  * stood 13×13 on a page whose checkbox was 16×16 (the pixel probe,
  * waiver-active). `shrink-0` because a flex or grid row shrinks a box beside
  * a label long enough to wrap, and a squashed box is a sliver. The colour is
- * not here: `globals.css` gives every input `accent-color: var(--primary)`,
- * unlayered, so a utility would say it twice and lose.
+ * not here: `globals.css` gives every input `accent-color: var(--primary)`
+ * in `@layer base`, so a utility would only say it twice.
  *
  * Reach for `ChoiceRow` or `ChoicePill`, which carry this; the bare class is
  * for a box whose row is its own business (a selectable card, a box beside a
@@ -858,6 +858,24 @@ export function ChoiceRow({
  * by hand at `pl-3 gap-3`, 4px off the plain pill beside them, with no fill
  * and no hover (RentalFitForm, K-13 review).
  */
+/**
+ * **A chosen pill looks chosen, and never like a focused one** (#2170). A
+ * radio's focus ring is drawn on its pill (`radioRingClass`), and the pill had
+ * no chosen look of its own, so the native dot was the only sign of an answer:
+ * a diver tabbing into an unanswered medical question landed on "Yes" with a
+ * primary ring round the whole pill, which can read as already answered.
+ *
+ * So the chosen pill takes a primary border and the primary tint, a fill and
+ * an edge, which an outline never is: focused is a ring outside the border,
+ * chosen is the pill itself changing, and a pill that is both wears both. The
+ * hover's sunken fill steps aside on a chosen pill so the tint holds under
+ * the pointer. The native dot stays, and under forced colours, where the
+ * browser repaints borders and drops the tint, it is still the record of the
+ * answer, as it was before.
+ */
+const CHOICE_PILL_CHOSEN = "has-[input:checked]:border-primary has-[input:checked]:bg-primary-tint";
+const CHOICE_PILL_HOVER = "not-has-[input:checked]:hover:bg-surface-sunken";
+
 export function ChoicePill({
   type,
   size = "sm",
@@ -866,7 +884,7 @@ export function ChoicePill({
   children,
   ...input
 }: ChoiceProps & { size?: "sm" | "md"; aside?: ReactNode }) {
-  const pill = `rounded-lg border border-border bg-surface transition-colors hover:bg-surface-sunken ${size === "md" ? "text-base" : "text-sm"}`;
+  const pill = `rounded-lg border border-border bg-surface transition-colors ${CHOICE_PILL_HOVER} ${CHOICE_PILL_CHOSEN} ${size === "md" ? "text-base" : "text-sm"}`;
   const row = "grid cursor-pointer grid-cols-[auto_1fr] content-center items-start gap-x-2 py-2";
   const ring = type === "radio" ? ` ${radioRingClass}` : "";
   if (aside === undefined || aside === null || aside === false) {

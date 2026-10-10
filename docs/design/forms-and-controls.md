@@ -840,7 +840,7 @@ happened, and until the form is submitted nothing has.
 A checkbox or radio a person sees is drawn one way, from `src/components/ui/form.tsx`:
 
 - **`choiceClass`** is the box: `size-4 shrink-0`, 16px and never squashed beside a label that
-  wraps. The colour is `globals.css`'s `accent-color` on every input, not a utility.
+  wraps. The colour is `globals.css`'s `accent-color` on every input, in `@layer base`.
 - **`ChoiceRow`** is a box with its words beside it — a waiver's agreement, a readiness answer, a
   publish choice. The label is the whole row, at least 44px tall, and the box sits on the middle of
   the words' first line however many lines they wrap to.
@@ -894,6 +894,17 @@ the global ring on themselves: a square ring round a square box is the right sha
 refuses a visible radio without `radioClass` and a file that wears it with no `radioRingClass`;
 `e2e/waivers.spec.ts` asks a real browser that the waiver's first medical answer has no outline of
 its own and a 3px one on its rounded pill.
+
+**A chosen pill looks chosen, and that look is never an outline** (#2170). With the ring on the
+pill, a pill with no chosen state of its own left the native dot as the only sign of an answer, so a
+diver tabbing into an unanswered medical question saw "Yes" ringed in primary and could read it as
+answered. A `ChoicePill` holding a checked box (radio or checkbox) takes a primary border and the
+`primary-tint` fill (`has-[input:checked]:border-primary has-[input:checked]:bg-primary-tint`), and
+its sunken hover steps aside so the tint holds under the pointer. Focused is a ring outside the
+border; chosen is the pill's own edge and fill; a pill that is both wears both. The dot stays native:
+under forced colours the browser repaints the border and drops the fill, and the dot is still the
+answer's record there, as it was before. `form.test.tsx` pins that a focused, unanswered pill does
+not match what the chosen look reads.
 
 A box with words is a `ChoiceRow`, not a `Field`: `Field` wraps a child that is not one control in
 a `<label>`, so a row inside it is a label in a label. Where a row needs a field's caption beside
