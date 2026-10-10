@@ -235,14 +235,15 @@ describe("the outbox drain's cadence", () => {
     expect(drain?.schedule).toBe(INTEGRATIONS_CRON_CRONTAB);
   });
 
-  it("drains hourly, on the :00 the other hourly passes already wake the database for", () => {
+  it("drains hourly, inside the minutes the other hourly passes already wake the database for", () => {
     // `markIntegrationDeliveryFailed` backs off min(60, 2 ** (attempt - 1))
     // minutes, so the cron is the real floor under every rung: hourly means a
     // failed delivery retries at the next hour. Accepted on 2026-10-06 for the
     // compute it saves (ADR 20260919-integration-delivery-is-write-driven's
     // amendment). Never slower than the ladder's top rung of sixty minutes,
-    // and never off the hour, where it would wake the database on its own.
-    expect(INTEGRATIONS_CRON_CRONTAB).toBe("0 * * * *");
+    // and never outside the hour's first five minutes, where it would wake the
+    // database on its own.
+    expect(INTEGRATIONS_CRON_CRONTAB).toBe("3 * * * *");
   });
 });
 

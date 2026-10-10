@@ -5,8 +5,10 @@ import {
   mondayOnOrBefore,
   overdueTodayActions,
   seatFillPercent,
+  WEEKLY_DIGEST_CRON_CRONTAB,
   type WeeklyDigestFacts,
   weeklyDigestGrade,
+  weeklyDigestMayBeDueSomewhere,
   weeklyDigestSections,
   weeklyDigestWanted,
 } from "./weekly-digest";
@@ -88,6 +90,61 @@ describe("isWeeklyDigestDue", () => {
     // Sunday 23:00 UTC is Monday 10:00 in Sydney (AEDT, UTC+11).
     expect(isWeeklyDigestDue(new Date("2026-10-11T23:00:00Z"), "Australia/Sydney")).toBe(true);
     expect(isWeeklyDigestDue(new Date("2026-10-11T23:00:00Z"), "America/New_York")).toBe(false);
+  });
+});
+
+describe("weeklyDigestMayBeDueSomewhere", () => {
+  it("opens when the earliest zone reaches Monday 08:00 and closes when the latest leaves 20:00", () => {
+    // Monday 08:00 at UTC+14 is Sunday 18:00 UTC; Monday 20:00 at UTC−12 is
+    // Tuesday 08:00 UTC.
+    expect(weeklyDigestMayBeDueSomewhere(new Date("2026-10-11T17:59:00Z"))).toBe(false);
+    expect(weeklyDigestMayBeDueSomewhere(new Date("2026-10-11T18:00:00Z"))).toBe(true);
+    expect(weeklyDigestMayBeDueSomewhere(new Date("2026-10-12T12:00:00Z"))).toBe(true);
+    expect(weeklyDigestMayBeDueSomewhere(new Date("2026-10-13T07:59:00Z"))).toBe(true);
+    expect(weeklyDigestMayBeDueSomewhere(new Date("2026-10-13T08:00:00Z"))).toBe(false);
+  });
+
+  it("is false on the four days no zone is in its Monday", () => {
+    for (const iso of [
+      "2026-10-14T12:00:00Z",
+      "2026-10-15T00:00:00Z",
+      "2026-10-16T23:00:00Z",
+      "2026-10-17T12:00:00Z",
+    ]) {
+      expect(weeklyDigestMayBeDueSomewhere(new Date(iso))).toBe(false);
+    }
+  });
+
+  /**
+   * The property the route's skip rests on: whenever a shop in any zone is due,
+   * the gate is open. Swept hour by hour over a week, across zones from the
+   * earliest to the latest offset in use.
+   */
+  it("is never closed while some shop is due", () => {
+    const zones = [
+      "Pacific/Kiritimati",
+      "Pacific/Auckland",
+      "Australia/Sydney",
+      "Asia/Singapore",
+      "Europe/London",
+      "America/New_York",
+      "America/Los_Angeles",
+      "Pacific/Honolulu",
+      "Pacific/Pago_Pago",
+      "Etc/GMT+12",
+    ];
+    const start = Date.parse("2026-10-10T00:00:00Z");
+    for (let hour = 0; hour < 24 * 8; hour += 1) {
+      const now = new Date(start + hour * 3_600_000);
+      if (zones.some((zone) => isWeeklyDigestDue(now, zone))) {
+        expect(weeklyDigestMayBeDueSomewhere(now), now.toISOString()).toBe(true);
+      }
+    }
+  });
+
+  it("is scheduled only on the UTC days the gate can open", () => {
+    // Sunday to Tuesday, UTC: the span above, and nothing wider.
+    expect(WEEKLY_DIGEST_CRON_CRONTAB.split(" ")[4]).toBe("0-2");
   });
 });
 

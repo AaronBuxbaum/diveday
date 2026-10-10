@@ -57,22 +57,34 @@ describe("the daily tick", () => {
   });
 
   /**
-   * The reason the four hourly passes share `:00` rather than being spread
-   * across the hour. A serverless Postgres compute sleeps after five idle
-   * minutes and bills for the time it is awake, so what the bill tracks is the
-   * number of distinct minutes something wakes it, not the number of passes:
-   * three passes on one minute is one wake-up, and the same three at `:00`,
-   * `:10` and `:20` is three. This is the assertion that stops a future
-   * "stagger them so they don't collide" from quietly restoring a duty cycle
-   * set by the clock instead of by use. A pass that genuinely needs its own
-   * minute may have one — it just has to say so here. The integrations drain
-   * had `:30` until 2026-10-06, when it joined `:00` to halve the idle wake-ups.
+   * **One database wake an hour, without one stampede an hour.** A serverless
+   * Postgres compute sleeps after five idle minutes and bills for the time it
+   * is awake, so what the bill tracks is the number of separate stretches
+   * something wakes it, not the number of passes: passes inside five
+   * consecutive minutes keep one compute awake once, and the same passes at
+   * `:00`, `:10` and `:20` wake it three times. That is what this assertion
+   * stops a future "spread them across the hour" from quietly restoring. The
+   * integrations drain had `:30` until 2026-10-06, when it joined the others
+   * to halve the idle wake-ups.
+   *
+   * Inside those minutes they are a minute apart rather than on one: six cold
+   * functions opening pools against the pooler at the same second was a
+   * connection spike at the top of every hour (code review 2026-10-10, item
+   * 11). Aaron chose `:00`–`:04` over a wider spread, to keep the one wake.
    */
-  it("wakes the database on as few distinct minutes an hour as the passes allow", () => {
+  it("keeps every hourly pass inside the hour's first five minutes, at most two to a minute", () => {
     const hourlyMinutes = vercelCrons()
       .filter((cron) => cron.schedule.split(" ")[1] === "*")
-      .flatMap((cron) => cron.schedule.split(" ")[0].split(","));
-    expect(new Set(hourlyMinutes)).toEqual(new Set(["0"]));
+      .flatMap((cron) => cron.schedule.split(" ")[0].split(","))
+      .map(Number);
+    expect(hourlyMinutes.length).toBeGreaterThan(0);
+    for (const minute of hourlyMinutes) {
+      expect(minute).toBeGreaterThanOrEqual(0);
+      expect(minute).toBeLessThanOrEqual(4);
+    }
+    const perMinute = new Map<number, number>();
+    for (const minute of hourlyMinutes) perMinute.set(minute, (perMinute.get(minute) ?? 0) + 1);
+    expect(Math.max(...perMinute.values())).toBeLessThanOrEqual(2);
   });
 
   it("wakes no *queue-draining* pass more often than daily, so a day is the floor on retry latency", () => {
@@ -122,7 +134,7 @@ describe("the daily tick", () => {
       // Crew news (ADR 20261009-crew-hear-about-their-boats) is the sixth: a
       // crew member taken off tomorrow's boat cannot hear it a day later. It
       // calls only `sendDueCrewNotices`, which sends fresh mail of a kind that
-      // is never queued, and it shares `:00` with the others.
+      // is never queued, and it runs inside the others' five minutes.
       "/api/cron/crew-notices",
     ]);
     const subDaily = vercelCrons().filter((cron) => {
