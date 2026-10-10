@@ -155,21 +155,26 @@ test.describe("settings that change the shop", () => {
     expect((await page.request.get(`/s/${privateShop.slug}/availability.json`)).status()).toBe(200);
   });
 
-  test("the rail opens a setting and the row edits in place", async ({ page, privateShop }) => {
-    // J7. The rail is the map; tapping a destination on it opens that row
-    // *where it already is* — settings never became twenty routes.
+  test("the rail opens a setting's own page, and the save lands back on it", async ({
+    page,
+    privateShop,
+  }) => {
+    // J7. The rail is the map; a one-fact row opens where it is, and an
+    // editor longer than about three fields is a page of its own (#1854) —
+    // the shop profile is one.
     test.setTimeout(60_000);
     await page.goto(`/shop/${privateShop.slug}/settings`);
     const rail = page.getByRole("navigation", { name: "Settings sections" });
     await rail.getByRole("link", { name: "Shop profile & branding" }).click();
+    await expect(page).toHaveURL(new RegExp(`/shop/${privateShop.slug}/settings/profile$`));
 
     const tagline = page.getByLabel("Tagline");
     await expect(tagline).toBeVisible();
     await tagline.fill("Small-boat reef and wreck diving out of Key Largo.");
     await page.getByRole("button", { name: "Save profile" }).click();
 
-    // Saved, and the row comes back open with its notice inside it — the
-    // `?saved=<section>` round trip, unchanged by the decomposition.
+    // Saved, and the page comes back with its notice: the action's redirect
+    // lands on the profile page rather than at the top of the hub.
     await expect(
       page.getByRole("status").filter({ hasText: "Shop profile and branding saved." }),
     ).toBeVisible();

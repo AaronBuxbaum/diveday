@@ -219,7 +219,7 @@ export function FirstRunChecklist({
           done={profileDone}
           doneLabel={copy.profileDone}
           doneBadge={copy.doneBadge}
-          href={`/shop/${shopSlug}/settings#profile`}
+          href={`/shop/${shopSlug}/settings/profile`}
           actionLabel={copy.profileAction}
           primary={nextStep === "profile"}
         />

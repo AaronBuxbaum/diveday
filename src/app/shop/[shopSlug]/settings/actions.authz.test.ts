@@ -52,7 +52,11 @@ const {
   saveCrewScheduleAction,
   saveShopFeatureAction,
   saveDockDayRhythmAction,
+  saveEmergencyReferenceAction,
   savePackingAction,
+  saveProfileAction,
+  saveRentalItemsAction,
+  saveRentalPricingAction,
   saveTaxAction,
   saveTimezoneAction,
   saveUnitsAction,
@@ -368,9 +372,38 @@ describe("every settings mutation refuses the daily crew", () => {
     signIn(shop, owner);
 
     expect(await redirectedTo(() => saveDockDayRhythmAction(dockDayForm()))).toBe(
-      `/shop/${shop.slug}/settings?notice=dock-saved&saved=dockCall`,
+      `/shop/${shop.slug}/settings/dock-day?notice=dock-saved`,
     );
     expect((await getShopById(db, shop.id))?.dockCallMinutes).toBe(90);
+  });
+
+  /**
+   * The five editors that left the hub for pages of their own (#1854) answer
+   * on those pages, with a plain `?notice=` and no `saved=` row to reopen:
+   * a notice that sent the owner back to the hub would land them on a door,
+   * not on what they just saved.
+   */
+  it("answers each editor that left the hub on its own page", async () => {
+    const { shop, owner } = await context();
+    signIn(shop, owner);
+    const page = (route: string) => `/shop/${shop.slug}/settings/${route}?notice=`;
+
+    const emergency = new FormData();
+    emergency.set("emergencyVessel", "Blue Mantis II");
+    expect(await redirectedTo(() => saveEmergencyReferenceAction(emergency))).toBe(
+      `${page("emergency-reference")}emergency-saved`,
+    );
+    expect(await redirectedTo(() => saveRentalItemsAction(new FormData()))).toBe(
+      `${page("rentals")}rentals-saved`,
+    );
+    expect(await redirectedTo(() => saveRentalPricingAction(new FormData()))).toMatch(
+      new RegExp(`^${page("rental-prices").replace("?", "\\?")}rental-prices-`),
+    );
+    const profile = new FormData();
+    profile.set("brandColor", "not a colour");
+    expect(await redirectedTo(() => saveProfileAction(profile))).toBe(
+      `${page("profile")}profile-invalid`,
+    );
   });
 });
 

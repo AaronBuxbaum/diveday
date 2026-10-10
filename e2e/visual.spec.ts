@@ -6260,14 +6260,30 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "offline-manifest-removed-other-shop", scheme);
       });
 
-      // Shop settings, where staff set the rental catalog and its prices.
+      // The settings hub, the directory every shop setting hangs off.
       test(`shop settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Rental prices" }).waitFor();
+        await page.getByRole("heading", { name: "Rental terms" }).waitFor();
         // One row open in the capture, so the baseline shows the disclosure's
-        // open-form treatment as well as the at-rest directory.
-        await openSettingsRow(page, "Rental prices");
+        // open-form treatment as well as the at-rest directory. Rental prices
+        // used to be the open one; it is a page of its own now (#1854).
+        await openSettingsRow(page, "Rental terms");
         await capture(page, "settings-payments", scheme);
+      });
+
+      /**
+       * What the shop rents and what it charges for it, each on a page of its
+       * own since #1854: a grid of catalogue pills, and a price box per offered
+       * item. Hub rows until then, open in `settings-payments`.
+       */
+      test(`the rental pages render true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/rentals");
+        await page.getByRole("heading", { level: 1, name: "What we rent" }).waitFor();
+        await page.getByRole("button", { name: "Save rental catalog" }).waitFor();
+        await capture(page, "settings-rentals", scheme);
+        await page.goto("/shop/blue-mantis/settings/rental-prices");
+        await page.getByRole("heading", { level: 1, name: "Rental prices" }).waitFor();
+        await capture(page, "settings-rental-prices", scheme);
       });
 
       /**
@@ -6325,9 +6341,9 @@ for (const scheme of ["light", "dark"] as const) {
        * stops matching shows up as pixels here.
        */
       test(`the dock-day rhythm card renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Dock-day rhythm" }).waitFor();
-        await openSettingsRow(page, "Dock-day rhythm");
+        // A page of its own since #1854.
+        await page.goto("/shop/blue-mantis/settings/dock-day");
+        await page.getByRole("heading", { level: 1, name: "Dock-day rhythm" }).waitFor();
         await page.getByLabel("Surface interval between dives").waitFor();
         await capture(page, "settings-dock-day-rhythm", scheme);
       });
@@ -6350,9 +6366,9 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the emergency reference card renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Emergency reference" }).waitFor();
-        await openSettingsRow(page, "Emergency reference");
+        // A page of its own since #1854.
+        await page.goto("/shop/blue-mantis/settings/emergency-reference");
+        await page.getByRole("heading", { level: 1, name: "Emergency reference" }).waitFor();
         await page.getByRole("button", { name: "Save emergency reference" }).waitFor();
         await capture(page, "settings-emergency", scheme);
       });
@@ -8551,8 +8567,7 @@ for (const scheme of ["light", "dark"] as const) {
     }) => {
       // Settings → clear → manifest → the saved copy, in one flow.
       test.setTimeout(FLOW_TIMEOUT_MS);
-      await page.goto(`/shop/${privateShop.slug}/settings`);
-      await openSettingsRow(page, "Emergency reference");
+      await page.goto(`/shop/${privateShop.slug}/settings/emergency-reference`);
       // Cleared through the shop's own form, which is how a shop would arrive
       // in this state — not by writing the column behind the app's back.
       const filled = page.locator(
@@ -8566,7 +8581,7 @@ for (const scheme of ["light", "dark"] as const) {
       for (const field of await filled.all()) await field.fill("");
       await page.locator('textarea[name="emergencyPlan"]').fill("");
       await page.getByRole("button", { name: "Save emergency reference" }).click();
-      // The row comes back open with its saved notice — the destination's own
+      // The page comes back with its saved notice — the destination's own
       // render, not a timing guess.
       await page.getByText("Emergency reference saved.").waitFor();
 
@@ -8678,11 +8693,10 @@ for (const scheme of ["light", "dark"] as const) {
       // The mint and the live sign-in the fixture pays for, then one settings
       // round-trip and board → trip → Prep before the capture.
       test.setTimeout(FLOW_TIMEOUT_MS);
-      await page.goto(`/shop/${privateShop.slug}/settings`);
-      await openSettingsRow(page, "What we rent");
+      await page.goto(`/shop/${privateShop.slug}/settings/rentals`);
       await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
       await page.getByRole("button", { name: "Save rental catalog" }).click();
-      // The row comes back open with its saved notice — the destination's own
+      // The page comes back with its saved notice — the destination's own
       // render, not a timing guess.
       await page.getByText("Rental catalog saved.").waitFor();
 
@@ -8725,8 +8739,8 @@ for (const scheme of ["light", "dark"] as const) {
       page,
       privateShop,
     }) => {
-      await page.goto(`/shop/${privateShop.slug}/settings`);
-      await openSettingsRow(page, "Shop profile & branding");
+      // A page of its own since #1854.
+      await page.goto(`/shop/${privateShop.slug}/settings/profile`);
       await page.getByRole("button", { name: "Save profile" }).waitFor();
       // The stored photos' own boxes: a mint that lost its brand fails here,
       // rather than photographing the empty row under this name.

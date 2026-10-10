@@ -3,19 +3,13 @@ import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { ImageFileInput } from "@/components/ImageFileInput";
-import { RemovablePhoto } from "@/components/RemovablePhoto";
-import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { type Fact, FactLine } from "@/components/ui/FactLine";
-import { ChoiceFieldset, ChoiceRow, Field, FieldActions } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
-import { listDiveSites } from "@/db/dive-sites";
-import { diveSites, mediaDeletionAttempts, processorErasureObligations, shops } from "@/db/schema";
+import { mediaDeletionAttempts, processorErasureObligations, shops } from "@/db/schema";
 import { getShopBySlug, setShopDivingOptions } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
-import { STAFF_MESSAGES } from "@/i18n/staff-messages";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
@@ -30,7 +24,6 @@ import {
 } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
-import { BrandColorField } from "./_components/BrandColorField";
 import { CounterQrCard } from "./CounterQrCard";
 import { SETTINGS_RAIL_ROWS, type SectionId, settingsSectionFragment } from "./settings-groups";
 
@@ -248,121 +241,6 @@ describe("the units card", () => {
     expect(names).toContain("temperatureUnit");
     expect(names).toContain("currency");
   });
-
-  it("renders shop profile fields for tagline, description, and logo", async () => {
-    const element = await renderSettings("owner");
-    const names = inputNamesIn(element);
-    expect(names).toContain("tagline");
-    expect(names).toContain("logoFile");
-  });
-
-  /**
-   * Harbor's brand (ADR 20260901-diveday-reimagined, decision 2) is edited on
-   * the same row as the logo and tagline: one place a shop says who it is.
-   */
-  it("renders the brand fields — color, face, cover photo, year and badges — on the profile row", async () => {
-    const element = await renderSettings("owner");
-    const names = inputNamesIn(element);
-    for (const name of ["brandHeroFile", "brandHeroImageAlt", "establishedYear", "badge"]) {
-      expect(names).toContain(name);
-    }
-    expect(selectNamesIn(element)).toContain("brandDisplayFont");
-    // The colour is a Client Component (picker + hex field), so it appears in
-    // the server tree as an element rather than as an `<input name>`.
-    expect(findElements(element, BrandColorField)).toHaveLength(1);
-  });
-});
-
-/**
- * **No caption label wraps another label** (K-13 review). The profile row's
- * logo, cover photo and badges were `Field`s around composites holding labels
- * of their own, so the page nested a label in a label: with a logo on file the
- * caption "Logo" labelled the "Remove logo" box and a click on it ticked the
- * box, and "Badges" labelled the first badge.
- */
-describe("the profile row's captions", () => {
-  const PROFILE = STAFF_MESSAGES["en-US"].settings.main.profile;
-
-  /** Every element in a tree carrying `name`, whatever renders it. */
-  function named(node: unknown, name: string, found: ReactElement<{ id?: string }>[] = []) {
-    if (node === null || typeof node !== "object") return found;
-    if (Array.isArray(node)) {
-      for (const child of node) named(child, name, found);
-      return found;
-    }
-    if ("props" in node) {
-      const element = node as ReactElement<{ name?: unknown; id?: string; children?: unknown }>;
-      if (element.props?.name === name) found.push(element);
-      named(element.props?.children, name, found);
-    }
-    return found;
-  }
-
-  async function profileBody() {
-    const [row] = findElements<{ sectionId?: string; children?: unknown }>(
-      await renderSettings("owner", async (db, session) => {
-        await db
-          .update(shops)
-          .set({ logoUrl: "/dive-sites/logo.png" })
-          .where(eq(shops.id, session.user.shopId));
-      }),
-      settingsRowsModule.SettingsRow,
-    ).filter((candidate) => candidate.props.sectionId === "profile");
-    return row?.props.children;
-  }
-
-  it("names the logo and cover-photo pickers with their captions, never the remove box", async () => {
-    const body = await profileBody();
-    const fields = findElements<{ label?: unknown; htmlFor?: string }>(body, Field);
-    for (const [label, input] of [
-      [PROFILE.logo, "logoFile"],
-      [PROFILE.heroPhoto, "brandHeroFile"],
-    ] as const) {
-      const [field] = fields.filter((candidate) => candidate.props.label === label);
-      expect(field?.props.htmlFor, label).toBeTruthy();
-      const [picker] = named(body, input);
-      expect(picker?.props.id, input).toBe(field?.props.htmlFor);
-    }
-  });
-
-  /**
-   * The logo and the cover photo were a raw `<img>` beside a visible checkbox,
-   * above a bare file input: the one form still drawing "take a stored photo
-   * back off" its own way (K-247 follow-up). They are `RemovablePhoto`s now,
-   * the logo in its square shape, picked with `ImageFileInput`, posting the
-   * same `removeLogo` / `removeHero` and `logoFile` / `brandHeroFile` the save
-   * action reads.
-   */
-  it("takes a stored logo and cover photo back off the way every stored photo is", async () => {
-    const body = await profileBody();
-    const photos = findElements<{ name?: string; value?: string; shape?: string }>(
-      body,
-      RemovablePhoto,
-    );
-    expect(photos.map(({ props }) => [props.name, props.value ?? "true", props.shape])).toEqual([
-      ["removeLogo", "true", "logo"],
-      ["removeHero", "true", undefined],
-    ]);
-    expect(
-      findElements<{ name?: string }>(body, ImageFileInput).map(({ props }) => props.name),
-    ).toEqual(["logoFile", "brandHeroFile"]);
-    expect(findElements(body, "img")).toHaveLength(0);
-  });
-
-  it("captions the badges as a group of choices, not with a field's label", async () => {
-    const body = await profileBody();
-    const groups = findElements<{ legend?: unknown; hint?: unknown; children?: unknown }>(
-      body,
-      ChoiceFieldset,
-    ).filter((group) => group.props.legend === PROFILE.badges);
-    expect(groups).toHaveLength(1);
-    expect(groups[0]?.props.hint).toBe(PROFILE.badgesHint);
-    expect(inputNamesIn(groups[0]?.props.children)).toContain("badge");
-    const wrapping = findElements<{ children?: unknown }>(body, Field).filter(
-      (field) => findElements(field.props.children, ChoiceRow).length > 0,
-    );
-    expect(wrapping).toHaveLength(0);
-  });
 });
 
 /*
@@ -528,11 +406,7 @@ describe("the hub's summary values", () => {
     expect(await valueFacts("crewSchedule")).toEqual(["On", "6:1 divers per divemaster"]);
   });
 
-  it("lets only the shop's own words wrap: the tagline and the fee's name", async () => {
-    const [tagline, ...profile] = (await valueFacts("profile")).filter(Boolean);
-    expect(tagline).toEqual({ value: "Diving the Keys since 2012", wraps: true });
-    for (const fact of profile) expect(typeof fact).toBe("string");
-
+  it("lets only the shop's own words wrap: the fee's name", async () => {
     const [feeName, price] = await valueFacts("passThrough");
     expect(feeName).toEqual({ value: "Marine park fee", wraps: true });
     expect(price).toBe("$5 / diver");
@@ -642,132 +516,34 @@ describe("the diving options a shop runs", () => {
     const element = await renderSettings("owner");
     const hrefs = hrefsIn(element);
     expect(hrefs).not.toContain(`/shop/${SHOP_SLUG}/promos/packages`);
-    for (const segment of ["boats", "trip-tags"]) {
+    // The five whole-form rows that were pages wearing a disclosure (#1854)
+    // are doors too; their editors are tested where they live now
+    // (`_components/editors/editors.test.tsx`).
+    for (const segment of [
+      "boats",
+      "trip-tags",
+      "profile",
+      "dock-day",
+      "emergency-reference",
+      "rentals",
+      "rental-prices",
+    ]) {
       expect(hrefs).toContain(`/shop/${SHOP_SLUG}/settings/${segment}`);
     }
     const names = inputNamesIn(element);
-    for (const name of ["boatId", "lensId", "packageId", "capacity", "diveCount"]) {
+    for (const name of [
+      "boatId",
+      "lensId",
+      "packageId",
+      "capacity",
+      "diveCount",
+      "tagline",
+      "logoFile",
+      "emergencyLabel-0",
+      "nitroxPrice",
+    ]) {
       expect(names, `${name} is still on the hub`).not.toContain(name);
     }
-  });
-});
-
-/**
- * **One beat per line on a phone** (K-585). The preview was a greedy
- * `flex-wrap` strip, so at 390 five lines held one beat each and the third
- * held two, 25px apart, and the list read as a list with one line carrying two
- * beats. From `sm` up it is the strip it was.
- */
-describe("the dock-day preview's layout", () => {
-  it("stacks the beats on a phone and runs them as a strip from sm up", async () => {
-    const [row] = findElements<{ sectionId?: string; children?: unknown }>(
-      await renderSettings("owner"),
-      settingsRowsModule.SettingsRow,
-    ).filter((candidate) => candidate.props.sectionId === "dockCall");
-    const lists = findElements<{ className?: string }>(row?.props.children, "dl");
-    expect(lists).toHaveLength(1);
-    const classes = lists[0]?.props.className?.split(" ") ?? [];
-    expect(classes).toEqual(expect.arrayContaining(["grid", "sm:flex", "sm:flex-wrap"]));
-    expect(classes).not.toContain("flex");
-    expect(classes).not.toContain("flex-wrap");
-  });
-});
-
-/*
- * The dock-day preview describes the shop's own six numbers, and a dive site
- * may override one of them (`dive_sites.expected_bottom_time_minutes`). The
- * preview used to say nothing about that, so a shop reading it had no way to
- * know which departures it did not describe.
- */
-describe("the dock-day preview and the sites that override it", () => {
-  it("says nothing extra when no site sets its own bottom time", async () => {
-    const hrefs = hrefsIn(await renderSettings("owner"));
-    expect(hrefs.filter((href) => href.includes("/dive-sites/"))).toHaveLength(0);
-  });
-
-  it("links the sites that do", async () => {
-    let overridden = "";
-    const element = await renderSettings("owner", async (db, session) => {
-      const [site] = await listDiveSites(db, session.user.shopId);
-      if (!site) throw new Error("the seed has no dive site");
-      overridden = site.id;
-      await db
-        .update(diveSites)
-        .set({ expectedBottomTimeMinutes: 30 })
-        .where(eq(diveSites.id, site.id));
-    });
-    expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/dive-sites/${overridden}`);
-  });
-});
-
-/**
- * **The emergency reference row**, drawn like every other row on the hub. It
- * is the one thing on this page a crew reads when something has gone wrong,
- * and it was the one row whose body was spelled its own way.
- */
-describe("the emergency reference row", () => {
-  const EMERGENCY = STAFF_MESSAGES["en-US"].settings.main.emergency;
-
-  async function emergencyRow() {
-    const rows = findElements<{ sectionId?: string; description?: string; children?: unknown }>(
-      await renderSettings("owner"),
-      settingsRowsModule.SettingsRow,
-    ).filter((row) => row.props.sectionId === "emergency");
-    expect(rows).toHaveLength(1);
-    return rows[0] as NonNullable<(typeof rows)[number]>;
-  }
-
-  /**
-   * Its intro was a `<p>` inside the `mt-4` form, not the row's description,
-   * so its first line sat 16px lower than every other row's (55px from label
-   * to first line at 1280, against 39 on the rows around it; K-437).
-   */
-  it("says what it is for in the row's description, where every row does", async () => {
-    const row = await emergencyRow();
-    expect(row.props.description).toBe(EMERGENCY.intro);
-    const paragraphs = findElements<{ children?: unknown }>(row.props.children, "p");
-    expect(paragraphs.filter((p) => p.props.children === EMERGENCY.intro)).toHaveLength(0);
-  });
-
-  /**
-   * Its Save was `size: "sm"` in a bare `<div>`: 44px with a 14px label, where
-   * every other Save on the hub is the default 48px with 16px, in
-   * `FieldActions` (K-308).
-   */
-  it("saves with the hub's one Save, at its size and in its row", async () => {
-    const row = await emergencyRow();
-    const saves = findElements<{ children?: unknown; className?: string }>(
-      findElements(row.props.children, FieldActions),
-      SubmitButton,
-    ).filter((button) => button.props.children === EMERGENCY.submit);
-    expect(saves).toHaveLength(1);
-    expect(saves[0]?.props.className).toBe(buttonClass({ variant: "secondary" }));
-  });
-
-  /**
-   * The examples were each label box's placeholder, and a half-width box is
-   * 331px at 1280 and 324 at 390: "Chamber, dive-accident hotline, coast
-   * guard…" was cut mid-word, and the Spanish is longer (K-583). They are the
-   * first line's description now, which wraps, and no box carries them.
-   */
-  it("gives its examples once, under the first line, where they wrap", async () => {
-    const row = await emergencyRow();
-    const lines = findElements<{ description?: unknown; children?: unknown }>(
-      row.props.children,
-      Field,
-    ).filter((field) => {
-      const control = field.props.children as ReactElement<{ name?: string }> | undefined;
-      return control?.props?.name?.startsWith("emergencyLabel-");
-    });
-    expect(lines.length).toBeGreaterThan(1);
-    for (const line of lines) {
-      const control = line.props.children as ReactElement<{ placeholder?: unknown }>;
-      expect(control.props.placeholder).toBeUndefined();
-    }
-    expect(lines.map((line) => line.props.description)).toEqual([
-      EMERGENCY.lineExamples,
-      ...lines.slice(1).map(() => undefined),
-    ]);
   });
 });
 

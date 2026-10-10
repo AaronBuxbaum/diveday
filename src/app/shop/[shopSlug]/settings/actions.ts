@@ -124,8 +124,10 @@ import { boatRowId } from "./boats/certificate-error";
  * The notice codes are matched by `noticeMessages()` in `SettingsPage.tsx` and
  * the section ids by its `SECTION_IDS` — a new action here needs a row in both.
  *
- * **Three editors answer on a page of their own**, not in a hub row: boats,
- * trip tags, and dive packages. Their actions still live
+ * **Some editors answer on a page of their own**, not in a hub row: boats,
+ * trip tags, dive packages, and (#1854) what the shop rents, its rental
+ * prices, the emergency reference, the dock-day rhythm and the shop profile.
+ * Their actions still live
  * here, beside the ones they share validation and vocabulary with, but they
  * name `page` rather than `settings` and carry no `?saved=` — there is no row
  * to reopen, and the page's own banner renders the code
@@ -363,16 +365,16 @@ export async function savePassThroughFeeAction(formData: FormData) {
  */
 export async function saveDockDayRhythmAction(formData: FormData) {
   const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
+  const page = shopPath(session.user.shopSlug, "settings", "dock-day");
   await settingsBlock(session);
   const rhythm = parseDockDayRhythm(
     Object.fromEntries(DOCK_DAY_FIELDS.map((field) => [field, formData.get(field)])),
   );
   if (!rhythm) {
-    redirect(noticeUrl(settings, "dock-invalid", { saved: "dockCall" }));
+    redirect(noticeUrl(page, "dock-invalid"));
   }
   await setShopDockDayRhythm(await getDb(), session.user.shopId, rhythm);
-  revalidateAndRedirect(settings, noticeUrl(settings, "dock-saved", { saved: "dockCall" }));
+  revalidateAndRedirect(page, noticeUrl(page, "dock-saved"));
 }
 
 /**
@@ -386,7 +388,7 @@ export async function saveDockDayRhythmAction(formData: FormData) {
  */
 export async function saveEmergencyReferenceAction(formData: FormData) {
   const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
+  const page = shopPath(session.user.shopSlug, "settings", "emergency-reference");
   await settingsBlock(session);
   const reference = normalizeEmergencyReference({
     lines: Array.from({ length: MAX_EMERGENCY_LINES }, (_, index) => ({
@@ -398,7 +400,7 @@ export async function saveEmergencyReferenceAction(formData: FormData) {
     plan: String(formData.get("emergencyPlan") ?? "").slice(0, 2000),
   });
   await setShopEmergencyReference(await getDb(), session.user.shopId, reference);
-  revalidateAndRedirect(settings, noticeUrl(settings, "emergency-saved", { saved: "emergency" }));
+  revalidateAndRedirect(page, noticeUrl(page, "emergency-saved"));
 }
 
 /**
@@ -467,14 +469,14 @@ export async function deleteDivePackageAction(formData: FormData) {
 /** Which gear the shop rents. Unchecked kinds simply drop out of the catalog. */
 export async function saveRentalItemsAction(formData: FormData) {
   const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
+  const page = shopPath(session.user.shopSlug, "settings", "rentals");
   await settingsBlock(session);
   await paymentSettingsBlock(session);
   const selected = SHOP_CATALOG_ITEMS.filter((item) => formData.get(item.name) === "on").map(
     (item) => item.kind,
   );
   await setShopRentalItems(await getDb(), session.user.shopId, toRentableKinds(selected));
-  revalidateAndRedirect(settings, noticeUrl(settings, "rentals-saved", { saved: "rentals" }));
+  revalidateAndRedirect(page, noticeUrl(page, "rentals-saved"));
 }
 
 /**
@@ -502,12 +504,12 @@ function parsePriceAmount(
 /** What the shop charges for rental gear: a set price, per-piece prices, and per-dive nitrox. */
 export async function saveRentalPricingAction(formData: FormData) {
   const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
+  const page = shopPath(session.user.shopSlug, "settings", "rental-prices");
   await settingsBlock(session);
   await paymentSettingsBlock(session);
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
-  if (!shop) redirect(noticeUrl(settings, "rental-prices-invalid", { saved: "rentalPricing" }));
+  if (!shop) redirect(noticeUrl(page, "rental-prices-invalid"));
   const currency = toShopCurrency(shop.currency);
   const set = parsePriceAmount(formData.get("setPrice"), currency);
   let invalid = !set.ok;
@@ -531,17 +533,14 @@ export async function saveRentalPricingAction(formData: FormData) {
     else nitroxCents = nitrox.cents;
   }
   if (invalid || !set.ok) {
-    redirect(noticeUrl(settings, "rental-prices-invalid", { saved: "rentalPricing" }));
+    redirect(noticeUrl(page, "rental-prices-invalid"));
   }
   await setShopRentalPricing(db, session.user.shopId, {
     setCents: set.cents,
     perItemCents,
     nitroxCents,
   });
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "rental-prices-saved", { saved: "rentalPricing" }),
-  );
+  revalidateAndRedirect(page, noticeUrl(page, "rental-prices-saved"));
 }
 
 /**
@@ -728,7 +727,7 @@ const profileSchema = z.object({
  */
 export async function saveProfileAction(formData: FormData) {
   const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
+  const page = shopPath(session.user.shopSlug, "settings", "profile");
   await settingsBlock(session);
 
   const parsed = profileSchema.safeParse({
@@ -737,16 +736,16 @@ export async function saveProfileAction(formData: FormData) {
     brandHeroImageAlt: String(formData.get("brandHeroImageAlt") ?? "").trim(),
     establishedYear: String(formData.get("establishedYear") ?? ""),
   });
-  if (!parsed.success) redirect(noticeUrl(settings, "profile-invalid", { saved: "profile" }));
+  if (!parsed.success) redirect(noticeUrl(page, "profile-invalid"));
   const brandColor = parseBrandColor(formData.get("brandColor"));
-  if (!brandColor.valid) redirect(noticeUrl(settings, "profile-invalid", { saved: "profile" }));
+  if (!brandColor.valid) redirect(noticeUrl(page, "profile-invalid"));
   const fontInput = String(formData.get("brandDisplayFont") ?? "");
   const brandDisplayFont = isBrandDisplayFontCode(fontInput) ? fontInput : null;
   const brandBadges = parseBrandBadges(formData.getAll("badge"));
 
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
-  if (!shop) redirect(noticeUrl(settings, "profile-invalid", { saved: "profile" }));
+  if (!shop) redirect(noticeUrl(page, "profile-invalid"));
 
   const logoFile = formData.get("logoFile");
   const removeLogo = formData.get("removeLogo") === "true";
@@ -764,7 +763,7 @@ export async function saveProfileAction(formData: FormData) {
     if (stored.status === "stored") {
       logoUrl = stored.url;
     } else {
-      redirect(noticeUrl(settings, "profile-invalid", { saved: "profile" }));
+      redirect(noticeUrl(page, "profile-invalid"));
     }
   }
 
@@ -782,7 +781,7 @@ export async function saveProfileAction(formData: FormData) {
     if (stored.status === "stored") {
       brandHeroImageUrl = stored.url;
     } else {
-      redirect(noticeUrl(settings, "profile-invalid", { saved: "profile" }));
+      redirect(noticeUrl(page, "profile-invalid"));
     }
   }
 
@@ -818,8 +817,8 @@ export async function saveProfileAction(formData: FormData) {
   }
 
   revalidatePath(`/s/${session.user.shopSlug}`);
-  revalidatePath(settings);
-  revalidateAndRedirect(settings, noticeUrl(settings, "profile-saved", { saved: "profile" }));
+  revalidatePath(page);
+  revalidateAndRedirect(page, noticeUrl(page, "profile-saved"));
 }
 
 /**

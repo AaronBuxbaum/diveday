@@ -1,11 +1,5 @@
 import { expect, test } from "./fixtures";
-import {
-  bookASeatAndOpenThread,
-  daysFromNow,
-  openSettingsRow,
-  seededTripId,
-  signInAsOwner,
-} from "./helpers";
+import { bookASeatAndOpenThread, daysFromNow, seededTripId, signInAsOwner } from "./helpers";
 
 /**
  * The dock-day rhythm, end to end: six numbers a shop types in Settings, and
@@ -42,8 +36,7 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
   test.setTimeout(60_000);
   const SHOP = privateShop.slug;
 
-  await page.goto(`/shop/${SHOP}/settings`);
-  await openSettingsRow(page, "Dock-day rhythm");
+  await page.goto(`/shop/${SHOP}/settings/dock-day`);
 
   // Briefs on the boat, kits up at the dock, walks in off the beach.
   await page.getByLabel("Briefing before departure").fill("0");
