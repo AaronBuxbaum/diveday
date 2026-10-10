@@ -31,7 +31,7 @@ or cancel calls the shop, whose number, address and map are on this page already
 
 Deleted with it:
 
-- `cancelMyBookingAction` and `rescheduleMyBookingAction` (`src/app/ready/[token]/actions.ts`), and
+- `cancelMyBookingAction` and `rescheduleMyBookingAction` (`src/app/ready/[token]/booking-actions.ts`), and
   the `error-cancel` / `saved-rescheduled` / `error-reschedule` notices only they produced.
 - `cancelPreview`, `rescheduleCandidates`, `rescheduleBlocked`, `manageState` and
   `canManageBooking` from `getReadyPageData`, along with the upcoming-trips scan that filled the

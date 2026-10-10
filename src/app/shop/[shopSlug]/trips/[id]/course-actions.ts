@@ -46,8 +46,11 @@ export async function certifyDiverFromRosterAction(
   const bookingId = String(formData.get("bookingId") ?? "");
   const personId = String(formData.get("personId") ?? "");
   const award = String(formData.get("award") ?? "");
-  if (!uuidParam(bookingId) || !uuidParam(personId) || !award) redirect(back);
+  if (!uuidParam(tripId) || !uuidParam(bookingId) || !uuidParam(personId) || !award) redirect(back);
   const db = await getDb();
+  // The row posts its own booking; one from another departure of this shop is
+  // not this roster's to certify from.
+  if ((await getShopBookingTripId(db, s.user.shopId, bookingId)) !== tripId) redirect(back);
   // **An intro session certifies nobody** (dive-domain review). The roster
   // draws no Certify control on one, but a post reaches this regardless, and
   // a forged `award=open_water` on a DSD would otherwise land a verified card
@@ -105,9 +108,11 @@ export async function saveCourseNextStepAction(
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
-  if (!uuidParam(bookingId)) redirect(back);
+  if (!uuidParam(tripId) || !uuidParam(bookingId)) redirect(back);
+  const db = await getDb();
+  if ((await getShopBookingTripId(db, s.user.shopId, bookingId)) !== tripId) redirect(back);
 
-  const outcome = await recordCourseNextStep(await getDb(), {
+  const outcome = await recordCourseNextStep(db, {
     shopId: s.user.shopId,
     bookingId,
     instructorPersonId: s.user.personId,
@@ -148,9 +153,11 @@ export async function setCourseMaterialsDoneAction(
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
-  if (!uuidParam(bookingId)) redirect(back);
+  if (!uuidParam(tripId) || !uuidParam(bookingId)) redirect(back);
+  const db = await getDb();
+  if ((await getShopBookingTripId(db, s.user.shopId, bookingId)) !== tripId) redirect(back);
 
-  const outcome = await recordCourseMaterialsDone(await getDb(), {
+  const outcome = await recordCourseMaterialsDone(db, {
     shopId: s.user.shopId,
     bookingId,
     staffPersonId: s.user.personId,

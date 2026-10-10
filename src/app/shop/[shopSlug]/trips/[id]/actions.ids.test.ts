@@ -29,8 +29,13 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
+vi.mock("@/db/bookings", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/bookings")>();
+  return { ...actual, getShopBookingTripId: vi.fn() };
+});
 
 const { getDb } = await import("@/db/client");
+const { getShopBookingTripId } = await import("@/db/bookings");
 const { requireShopSurface } = await import("@/lib/session");
 const {
   addToWaitlistAction,
@@ -92,6 +97,32 @@ describe("a malformed id on the trip roster", () => {
 
     expect(to).toBe(tripLanding(TRIP_ID));
     expect(getDb).not.toHaveBeenCalled();
+  });
+
+  it("refuses a course note on a departure id that is not an id", async () => {
+    // Bound into the action like the wait-list join's; the three course
+    // actions compare it to the booking's own departure before writing.
+    signIn();
+
+    const to = await redirectedTo(() =>
+      saveCourseNextStepAction(SHOP_SLUG, NOT_A_UUID, bookingForm(BOOKING_ID)),
+    );
+
+    expect(to).toBe(tripLanding(NOT_A_UUID));
+    expect(getDb).not.toHaveBeenCalled();
+  });
+
+  it("refuses a course note for a booking that sits on another departure", async () => {
+    signIn();
+    vi.mocked(getDb).mockResolvedValue({} as never);
+    vi.mocked(getShopBookingTripId).mockResolvedValue("55555555-5555-4555-8555-555555555555");
+
+    const to = await redirectedTo(() =>
+      saveCourseNextStepAction(SHOP_SLUG, TRIP_ID, bookingForm(BOOKING_ID)),
+    );
+
+    expect(to).toBe(tripLanding(TRIP_ID));
+    expect(getShopBookingTripId).toHaveBeenCalledWith({}, SHOP_ID, BOOKING_ID);
   });
 
   it("refuses a wait-list join on a departure id that is not an id", async () => {

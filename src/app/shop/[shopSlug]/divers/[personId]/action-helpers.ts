@@ -99,6 +99,11 @@ export async function requireDiverActionContext(
   if (!personId) notFound();
 
   const staff = await requireStaffSession();
+  // The slug is bound into the action by the form, so a replay can name any
+  // shop. The reads and writes below scope by the session's shop, but the
+  // paths revalidated and redirected to are built from the slug, so a slug
+  // that is not the session's shop is refused before either is built.
+  if (shopSlug !== staff.user.shopSlug) notFound();
   const db = await getDb();
   const base = shopPath(shopSlug, "divers", personId);
   if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {

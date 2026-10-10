@@ -544,8 +544,8 @@ describe("offeredRentalFitFields / NOTHING_RENTED", () => {
 describe("RENTAL_FIT_TEXT_LIMITS", () => {
   it("is the one cap both writers of rental_fit_profiles read", () => {
     // Both schemas must read these: the staff fit editor
-    // (`src/app/shop/[shopSlug]/divers/[personId]/actions.ts`) and the diver's
-    // gear form (`src/app/ready/[token]/actions.ts`). Each posts back whatever
+    // (`src/app/shop/[shopSlug]/divers/[personId]/fit-actions.ts`) and the diver's
+    // gear form (`src/app/ready/[token]/gear-actions.ts`). Each posts back whatever
     // staff stored, so a tighter cap on either fails `safeParse` on a form
     // where every visible box is right (`?error=fit`).
     //

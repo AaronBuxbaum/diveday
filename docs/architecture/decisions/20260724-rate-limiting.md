@@ -49,7 +49,7 @@ per-source abuse control. PR #139 explicitly deferred per-token/IP recap limits 
   is opacity, not authentication; no salt is needed because the goal is "don't let a memory dump or
   a stray log line hand back a usable credential," not "resist offline guessing of the key itself."
 - **Capability-token actions are rate-limited at each file's shared verification chokepoint**
-  (`contextFor` in `src/app/ready/[token]/actions.ts`, `confirmContextFor` in the schedule actions
+  (`contextFor` in `src/app/ready/[token]/action-helpers.ts`, `confirmContextFor` in the schedule actions
   file), checked **before** `verifyBookingCapability` runs. One check per file protects every action
   in it, and checking pre-verification means it also throttles brute-force guessing of the token
   itself, not just replay of a link already known to be valid. The waiver page's two inline actions
