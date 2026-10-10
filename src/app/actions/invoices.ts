@@ -1,11 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import { resendOrderInvoice } from "@/db/orders";
 import { trackEvent } from "@/lib/analytics";
+import { parseForm } from "@/lib/form-parse";
 import { requireStaffSession } from "@/lib/session";
 import type { InvoiceResendState } from "./invoice-resend-types";
+
+const resendForm = z.object({ orderId: z.string().default("") });
 
 /**
  * One-tap re-send of an already-invoiced Stripe payment from the Today queue,
@@ -22,7 +26,8 @@ export async function resendInvoiceAction(
   formData: FormData,
 ): Promise<InvoiceResendState> {
   const session = await requireStaffSession();
-  const orderId = String(formData.get("orderId") ?? "");
+  const parsed = parseForm(resendForm, formData);
+  const orderId = parsed.ok ? parsed.data.orderId : "";
   if (!orderId) return { status: "error", reason: "not_found" };
 
   const outcome = await resendOrderInvoice(await getDb(), session.user.shopId, orderId);

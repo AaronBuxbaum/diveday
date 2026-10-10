@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { z } from "zod";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
@@ -36,6 +37,7 @@ import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-label
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
+import { parseForm } from "@/lib/form-parse";
 import { joinFacts } from "@/lib/format";
 import { capturePhoto } from "@/lib/marine-life-tiles";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -43,6 +45,8 @@ import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { SiteLibraryLedger } from "./_components/SiteLibraryLedger";
+
+const templateImportForm = z.object({ templateId: z.string().default("") });
 
 /** `?notice=` codes this page redirects back to itself with. Read through
  * `noticeFromParam`, never a bare `NOTICES[notice]` — the param is
@@ -327,7 +331,8 @@ async function CatalogView({
   async function importAction(formData: FormData) {
     "use server";
     const active = await requireStaffSession();
-    const id = String(formData.get("templateId") ?? "");
+    const parsed = parseForm(templateImportForm, formData);
+    const id = parsed.ok ? parsed.data.templateId : "";
     const site = await importGlobalDiveSiteTemplate(await getDb(), active.user.shopId, id);
     if (!site) revalidateAndRedirect(back);
     revalidateAndRedirect(back, noticeUrl(`${back}/${site.id}`, "imported"));

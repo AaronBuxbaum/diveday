@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { PrintButton } from "@/components/PrintButton";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -19,6 +20,7 @@ import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { parseForm } from "@/lib/form-parse";
 import { formatMoneyCents } from "@/lib/format";
 import { currencySymbol, majorToMinor, minorToMajor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -31,6 +33,12 @@ import { PaidAtCounterLine, VoidCounterOrderForm } from "./_components/CounterPa
 import { DisabledDemoButton } from "./_components/DisabledDemoButton";
 import { OrderDisputeBanner, OrderMeta } from "./_components/OrderMeta";
 import { afterOrderRefunded } from "./refund-activity";
+
+/** Every money control on this page posts the order id; the refund adds what to send back. */
+const orderForm = z.object({
+  orderId: z.string().default(""),
+  amountMajor: z.string().optional(),
+});
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -100,7 +108,8 @@ async function isDemoShop(db: Awaited<ReturnType<typeof getDb>>, shopId: string)
 async function refreshAction(formData: FormData) {
   "use server";
   const session = await requireStaffSession();
-  const orderId = uuidParam(String(formData.get("orderId") ?? "")) ?? "";
+  const parsed = parseForm(orderForm, formData);
+  const orderId = (parsed.ok && uuidParam(parsed.data.orderId)) || "";
   const db = await getDb();
   const back = shopPath(session.user.shopSlug, "orders", orderId);
   if (await isDemoShop(db, session.user.shopId)) {
@@ -121,7 +130,8 @@ async function refreshAction(formData: FormData) {
 async function voidAction(formData: FormData) {
   "use server";
   const session = await requireStaffSession();
-  const orderId = uuidParam(String(formData.get("orderId") ?? "")) ?? "";
+  const parsed = parseForm(orderForm, formData);
+  const orderId = (parsed.ok && uuidParam(parsed.data.orderId)) || "";
   const db = await getDb();
   const back = shopPath(session.user.shopSlug, "orders", orderId);
   if (await isDemoShop(db, session.user.shopId)) {
@@ -138,7 +148,8 @@ async function voidAction(formData: FormData) {
 async function refundAction(formData: FormData) {
   "use server";
   const session = await requireStaffSession();
-  const orderId = uuidParam(String(formData.get("orderId") ?? "")) ?? "";
+  const parsed = parseForm(orderForm, formData);
+  const orderId = (parsed.ok && uuidParam(parsed.data.orderId)) || "";
   const db = await getDb();
   const back = shopPath(session.user.shopSlug, "orders", orderId);
   // Money leaving the account is owner/manager work, re-checked against live
@@ -171,7 +182,7 @@ async function refundAction(formData: FormData) {
   // order under its own `FOR UPDATE` lock and refuses anything above what that
   // row still holds, so the `max` on the input below is a convenience for the
   // person and nothing more. A hand-posted form gets `invalid_amount`.
-  const typedAmount = String(formData.get("amountMajor") ?? "").trim();
+  const typedAmount = (parsed.ok ? (parsed.data.amountMajor ?? "") : "").trim();
   const existing = orderId ? await getOrder(db, session.user.shopId, orderId) : null;
   if (typedAmount && (!existing || !Number.isFinite(Number(typedAmount)))) {
     revalidateAndRedirect(back, noticeUrl(back, "refund-invalid-amount"));
