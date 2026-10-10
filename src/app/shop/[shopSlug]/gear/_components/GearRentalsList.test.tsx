@@ -51,11 +51,11 @@ function renderList(
     pageCount: 1,
     pageSize: 20,
     total: holders.length,
+    counterWaivers,
   };
   return render(
     <GearRentalsList
       page={page}
-      counterWaivers={counterWaivers}
       shopSlug="blue-mantis"
       t={t}
       locale="en-US"

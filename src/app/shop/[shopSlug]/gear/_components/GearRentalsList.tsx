@@ -48,15 +48,12 @@ import {
  */
 export function GearRentalsList({
   page,
-  counterWaivers,
   shopSlug,
   t,
   locale,
   pageHref,
 }: {
   page: GearRentalsPage;
-  /** Each counter-rental holder's waiver standing (`counterRentalWaiverStandings`). */
-  counterWaivers?: ReadonlyMap<string, ShopWaiverStatus["state"]>;
   shopSlug: string;
   t: StaffTranslator;
   locale: string;
@@ -85,7 +82,7 @@ export function GearRentalsList({
                 <RentalRow
                   key={rental.key}
                   rental={rental}
-                  waiver={rental.bookingId ? undefined : counterWaivers?.get(holder.personId)}
+                  waiver={rental.bookingId ? undefined : page.counterWaivers?.get(holder.personId)}
                   holderName={holder.name}
                   shopSlug={shopSlug}
                   t={t}

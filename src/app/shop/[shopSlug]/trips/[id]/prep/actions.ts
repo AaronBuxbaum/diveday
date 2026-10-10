@@ -292,6 +292,8 @@ export async function returnTripGearSetAction(formData: FormData) {
     .getAll("pull")
     .filter((value): value is string => typeof value === "string")
     .filter((value) => z.uuid().safeParse(value).success);
+  // A set with a unit just pulled for service is not "back on the wall", so
+  // that return answers with its own notice.
   const outcome = await returnTripGearSet(await getDb(), {
     shopId: session.user.shopId,
     bookingId: parsed.data.bookingId,
@@ -304,8 +306,7 @@ export async function returnTripGearSetAction(formData: FormData) {
     noticeUrl(
       landing,
       outcome.ok
-        ? // "Back on the wall" would be wrong about a unit just pulled for service.
-          parsed.data.outcome === "service_concern" && pullGearItemIds.length > 0
+        ? parsed.data.outcome === "service_concern" && pullGearItemIds.length > 0
           ? "gear-returned-set-pulled"
           : "gear-returned-set"
         : outcome.reason === "not_found"
