@@ -134,6 +134,16 @@ export type DiverMergeResult =
  */
 const SINGLETON_PER_PERSON_TABLES = ["rental_fit_profiles", "last_minute_list_entries"] as const;
 
+/**
+ * Tables unique on `(trip_id, person_id)` besides `bookings`. Both records on
+ * one departure's wait list, or both invited to it, would collide on the
+ * repoint; the kept record's row stands and the merged-away duplicate goes,
+ * as `SINGLETON_PER_PERSON_TABLES` does per person. Now reachable, because a
+ * cancelled seat no longer refuses a merge on a departure both records share
+ * (issue #2177).
+ */
+const ONE_PER_DEPARTURE_PER_PERSON_TABLES = ["trip_waitlist_entries", "trip_invitations"] as const;
+
 export const DIVER_HISTORY_TABLES = [
   "course_inquiries",
   // What the bench told this diver about their own gear (ADR
@@ -550,7 +560,7 @@ export type DiverMergeSharedDeparture = {
   title: string;
   startsAt: Date;
   /**
-   * The kept record's seat here is already over (cancelled), and the merged-away
+   * The kept record's seat here is cancelled, and the merged-away
    * record's is live. Nothing on the departure needs resolving: keeping the
    * other record instead leaves the cancelled seat behind (issue #2177).
    */
@@ -562,8 +572,8 @@ type MergeAssessment =
   | {
       ok: true;
       /**
-       * The merged-away record's seats that stay on it: each is already over
-       * (cancelled, or on a deleted departure) on a departure the kept record
+       * The merged-away record's seats that stay on it: each is cancelled, on a
+       * departure the kept record
        * also holds a seat on, so the `(trip_id, person_id)` key has no room for
        * it under the kept record (issue #2177).
        */
@@ -687,8 +697,7 @@ async function assessMerge(
   // was aboard. Staff resolve that on the departure first; the preview names
   // each one so they know where to go.
   //
-  // A seat that is already over — cancelled, or on a deleted departure — is
-  // not that (issue #2177). Nothing can resolve it any further (a cancelled
+  // A *cancelled* seat is not that (issue #2177). Nothing can resolve it any further (a cancelled
   // booking cannot be removed), so refusing on it blocked the merge forever.
   // The merged-away record's over seat simply stays on that record, keeping
   // its pointer and the departure log intact, and the kept record's seat is
@@ -696,20 +705,20 @@ async function assessMerge(
   // merged-away record beside an over seat on the kept one: the key has room
   // for one seat, and the live seat must not be left on a removed record.
   // Merged the other way round, that same pair is the first shape and merges.
+  //
+  // Fail closed: only the seat's own `cancelled` status makes it over. A seat
+  // on a deleted departure still counts as live here — `deleteTrip` refuses a
+  // departure with bookings today, but this check does not lean on that.
   const bookingRows = await db
     .select({
       id: bookings.id,
       personId: bookings.personId,
       tripId: bookings.tripId,
       status: bookings.status,
-      tripDeletedAt: trips.deletedAt,
     })
     .from(bookings)
-    // diveday:allow-deleted-trips: a seat on a deleted departure is a seat that is over, which the merge leaves behind
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(and(eq(bookings.shopId, shopId), inArray(bookings.personId, ids)));
-  const seatIsOver = (row: (typeof bookingRows)[number]) =>
-    row.status === "cancelled" || row.tripDeletedAt !== null;
+  const seatIsOver = (row: (typeof bookingRows)[number]) => row.status === "cancelled";
   const seatsByTrip = new Map<
     string,
     { source?: (typeof bookingRows)[number]; survivor?: (typeof bookingRows)[number] }
@@ -1241,6 +1250,13 @@ export async function mergeDiverRecords(input: {
           (await hasPersonRow(tx, tableName, input.shopId, source.id));
         await tx.execute(
           sql`delete from ${sql.raw(quotedTable(tableName))} where "shop_id" = ${input.shopId} and "person_id" = ${sourceWins ? survivor.id : source.id}`,
+        );
+      }
+
+      for (const tableName of ONE_PER_DEPARTURE_PER_PERSON_TABLES) {
+        const table = sql.raw(quotedTable(tableName));
+        await tx.execute(
+          sql`delete from ${table} where "shop_id" = ${input.shopId} and "person_id" = ${source.id} and "trip_id" in (select "trip_id" from ${table} where "shop_id" = ${input.shopId} and "person_id" = ${survivor.id})`,
         );
       }
 

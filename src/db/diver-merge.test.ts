@@ -11,6 +11,7 @@ import { fileScopedShopContext } from "@/test/db";
 import {
   DIVER_HISTORY_TABLES,
   DIVER_MERGE_COUNT_GROUPS,
+  getDiverMergePreview,
   listDiverMergeCandidates,
   listDiverMergeDuplicateIds,
   mergeDiverRecords,
@@ -20,6 +21,7 @@ import {
   STAFF_HISTORY_TABLES,
   STAFF_PERSON_ONLY_TABLES,
 } from "./diver-merge";
+import { getBookingReadiness } from "./readiness";
 import {
   activityEvents,
   bookings,
@@ -34,7 +36,9 @@ import {
   rentalFitProfiles,
   shops,
   tripDeskEvents,
+  tripInvitations,
   trips,
+  tripWaitlistEntries,
   waiverRecords,
   waiverTemplates,
 } from "./schema";
@@ -347,13 +351,163 @@ describe("diver record merge, a seat that is already over", () => {
     expect(await holder(f, survivorSeat.id)).toBe(f.survivor.id);
   });
 
-  it("merges two seats on a deleted departure, leaving the merged-away one behind", async () => {
+  // Fail closed (review of #2177): only the seat's own status says it is over.
+  // A departure being deleted does not, whatever `deleteTrip` refuses today.
+  it("still refuses two live seats on a deleted departure", async () => {
     const f = await mergeFixtures();
-    const { sourceSeat, survivorSeat } = await seatBoth(f, "booked", "booked");
+    await seatBoth(f, "booked", "booked");
+    await f.db.update(trips).set({ deletedAt: nowDate() }).where(eq(trips.id, f.trip.id));
+    expect(await merge(f)).toEqual({ ok: false, reason: "booking_conflict" });
+  });
+
+  it("leaves a cancelled seat behind on a deleted departure too", async () => {
+    const f = await mergeFixtures();
+    const { sourceSeat, survivorSeat } = await seatBoth(f, "cancelled", "booked");
     await f.db.update(trips).set({ deletedAt: nowDate() }).where(eq(trips.id, f.trip.id));
     expect((await merge(f)).ok).toBe(true);
     expect(await holder(f, sourceSeat.id)).toBe(f.source.id);
     expect(await holder(f, survivorSeat.id)).toBe(f.survivor.id);
+  });
+
+  it("moves what hangs off the seat left behind: its release goes to the kept record", async () => {
+    const f = await mergeFixtures();
+    const { sourceSeat } = await seatBoth(f, "cancelled", "booked");
+    const [template] = await f.db
+      .select()
+      .from(waiverTemplates)
+      .where(eq(waiverTemplates.shopId, f.shop.id))
+      .limit(1);
+    if (!template) throw new Error("expected a seeded waiver template");
+    const signedAt = nowDate();
+    const [release] = await f.db
+      .insert(waiverRecords)
+      .values({
+        shopId: f.shop.id,
+        personId: f.source.id,
+        bookingId: sourceSeat.id,
+        templateId: template.id,
+        templateTitle: template.title,
+        templateVersion: template.version,
+        templateBody: template.body,
+        status: "completed",
+        signedName: "Maya Rivera",
+        signatureMethod: "typed",
+        tokenHash: `hash-${crypto.randomUUID()}`,
+        expiresAt: signedAt,
+        consentedAt: signedAt,
+        signedAt,
+        completedAt: signedAt,
+      })
+      .returning();
+    if (!release) throw new Error("release insert failed");
+    await f.db
+      .update(waiverRecords)
+      .set({
+        integrityHash: computeWaiverIntegrityHash(release),
+        integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
+      })
+      .where(eq(waiverRecords.id, release.id));
+
+    expect((await merge(f)).ok).toBe(true);
+    const [moved] = await f.db.select().from(waiverRecords).where(eq(waiverRecords.id, release.id));
+    // The person's paper follows the person; the booking pointer still names
+    // the seat it was signed for, which stayed behind.
+    expect(moved?.personId).toBe(f.survivor.id);
+    expect(moved?.bookingId).toBe(sourceSeat.id);
+    expect(await holder(f, sourceSeat.id)).toBe(f.source.id);
+  });
+
+  it("drops the merged-away record's duplicate wait-list and invitation rows on the shared departure", async () => {
+    const f = await mergeFixtures();
+    await seatBoth(f, "cancelled", "booked");
+    await f.db.insert(tripWaitlistEntries).values([
+      { shopId: f.shop.id, tripId: f.trip.id, personId: f.source.id },
+      { shopId: f.shop.id, tripId: f.trip.id, personId: f.survivor.id },
+    ]);
+    await f.db.insert(tripInvitations).values([
+      {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        source: "direct",
+        personId: f.source.id,
+        createdByPersonId: f.owner.id,
+      },
+      {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        source: "direct",
+        personId: f.survivor.id,
+        createdByPersonId: f.owner.id,
+      },
+    ]);
+    expect((await merge(f)).ok).toBe(true);
+    const waitlist = await f.db
+      .select({ personId: tripWaitlistEntries.personId })
+      .from(tripWaitlistEntries)
+      .where(eq(tripWaitlistEntries.tripId, f.trip.id));
+    expect(waitlist.filter((row) => row.personId === f.survivor.id)).toHaveLength(1);
+    expect(waitlist.filter((row) => row.personId === f.source.id)).toHaveLength(0);
+    const invitations = await f.db
+      .select({ personId: tripInvitations.personId })
+      .from(tripInvitations)
+      .where(eq(tripInvitations.tripId, f.trip.id));
+    expect(invitations.map((row) => row.personId)).toEqual([f.survivor.id]);
+  });
+
+  it("leaves the kept record's live seat Ready", async () => {
+    const { db, shop } = ctx;
+    const seated = await db
+      .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
+      .from(bookings)
+      .innerJoin(personRoles, eq(personRoles.personId, bookings.personId))
+      .where(and(eq(bookings.shopId, shop.id), eq(bookings.status, "booked")));
+    let kept: (typeof seated)[number] | undefined;
+    for (const row of seated) {
+      if ((await getBookingReadiness(db, shop.id, row.id))?.status === "ready") {
+        kept = row;
+        break;
+      }
+    }
+    if (!kept) throw new Error("expected a seeded seat that reads Ready");
+    const roles = await db
+      .select({ role: personRoles.role })
+      .from(personRoles)
+      .where(eq(personRoles.personId, kept.personId));
+    if (roles.some((row) => row.role !== "diver")) throw new Error("ready seat is not a diver's");
+
+    const [owner] = await db
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
+      .limit(1);
+    const [duplicate] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Walk-in Twice" })
+      .returning();
+    if (!owner || !duplicate) throw new Error("fixture insert failed");
+    await db.insert(personRoles).values({ personId: duplicate.id, role: "diver" });
+    await db.insert(bookings).values({
+      bookedAs: "diver",
+      shopId: shop.id,
+      tripId: kept.tripId,
+      personId: duplicate.id,
+      status: "cancelled",
+    });
+
+    const preview = await getDiverMergePreview(db, shop.id, duplicate.id, kept.personId);
+    expect(preview?.refusal).toBeNull();
+    expect(
+      await mergeDiverRecords({
+        db,
+        shopId: shop.id,
+        personId: duplicate.id,
+        survivorId: kept.personId,
+        actorPersonId: owner.id,
+        acknowledged: preview?.acknowledgement || undefined,
+      }),
+    ).toMatchObject({ ok: true });
+    expect((await getBookingReadiness(db, shop.id, kept.id))?.status).toBe("ready");
   });
 
   it("still moves the merged-away record's other seats to the kept record", async () => {

@@ -768,7 +768,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     });
 
     expect(screen.getByTestId("identity-contact")).toHaveTextContent(
-      "Reminders wait until you confirm who this is.",
+      "Reminders and the waiver wait until you confirm who this is.",
     );
   });
 
