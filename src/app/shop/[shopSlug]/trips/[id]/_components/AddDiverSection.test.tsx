@@ -17,16 +17,18 @@ describe("AddDiverSection", () => {
   it("renders search form and add diver link when trip is not full", () => {
     render(
       <AddDiverSection
-        shopSlug="blue-mantis"
-        tripId="trip-1"
-        full={false}
-        query=""
-        candidates={[]}
-        addBookingAction={action}
-        addToWaitlistAction={action}
-        addExistingDiverAction={action}
-        locale="en-US"
-        timeZone="America/Cancun"
+        context={{
+          shopSlug: "blue-mantis",
+          tripId: "trip-1",
+          full: false,
+          query: "",
+          candidates: [],
+          addBookingAction: action,
+          addToWaitlistAction: action,
+          addExistingDiverAction: action,
+          locale: "en-US",
+          timeZone: "America/Cancun",
+        }}
       />,
     );
 
@@ -50,12 +52,12 @@ describe("AddDiverSection", () => {
       timeZone: "America/Cancun",
       walkInOpen: true,
     };
-    const { rerender } = render(<AddDiverSection {...props} query="" />);
+    const { rerender } = render(<AddDiverSection context={{ ...props, query: "" }} />);
     expect(screen.getByRole("searchbox")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Add diver" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Add as a walk-in" })).toBeNull();
 
-    rerender(<AddDiverSection {...props} query="Zed Quill" />);
+    rerender(<AddDiverSection context={{ ...props, query: "Zed Quill" }} />);
     expect(screen.getByRole("link", { name: "Add as a walk-in" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers/new?name=Zed+Quill&surface=walk-in&tripId=trip-1",
@@ -70,16 +72,18 @@ describe("AddDiverSection", () => {
   it("offers waitlist addition directly when trip is full", () => {
     render(
       <AddDiverSection
-        shopSlug="blue-mantis"
-        tripId="trip-1"
-        full={true}
-        query=""
-        candidates={[]}
-        addBookingAction={action}
-        addToWaitlistAction={action}
-        addExistingDiverAction={action}
-        locale="en-US"
-        timeZone="America/Cancun"
+        context={{
+          shopSlug: "blue-mantis",
+          tripId: "trip-1",
+          full: true,
+          query: "",
+          candidates: [],
+          addBookingAction: action,
+          addToWaitlistAction: action,
+          addExistingDiverAction: action,
+          locale: "en-US",
+          timeZone: "America/Cancun",
+        }}
       />,
     );
 
@@ -92,16 +96,18 @@ describe("AddDiverSection", () => {
   it("offers direct add-diver link with prefill when no matches are found", () => {
     render(
       <AddDiverSection
-        shopSlug="blue-mantis"
-        tripId="trip-1"
-        full={false}
-        query="Nobody Here"
-        candidates={[]}
-        addBookingAction={action}
-        addToWaitlistAction={action}
-        addExistingDiverAction={action}
-        locale="en-US"
-        timeZone="America/Cancun"
+        context={{
+          shopSlug: "blue-mantis",
+          tripId: "trip-1",
+          full: false,
+          query: "Nobody Here",
+          candidates: [],
+          addBookingAction: action,
+          addToWaitlistAction: action,
+          addExistingDiverAction: action,
+          locale: "en-US",
+          timeZone: "America/Cancun",
+        }}
       />,
     );
 
@@ -120,16 +126,18 @@ describe("AddDiverSection", () => {
 
     render(
       <AddDiverSection
-        shopSlug="blue-mantis"
-        tripId="trip-1"
-        full={false}
-        query="Avery"
-        candidates={[candidate]}
-        addBookingAction={action}
-        addToWaitlistAction={action}
-        addExistingDiverAction={action}
-        locale="en-US"
-        timeZone="America/Cancun"
+        context={{
+          shopSlug: "blue-mantis",
+          tripId: "trip-1",
+          full: false,
+          query: "Avery",
+          candidates: [candidate],
+          addBookingAction: action,
+          addToWaitlistAction: action,
+          addExistingDiverAction: action,
+          locale: "en-US",
+          timeZone: "America/Cancun",
+        }}
       />,
     );
 
@@ -166,18 +174,20 @@ describe("AddDiverSection name-match prompt", () => {
   ) =>
     render(
       <AddDiverSection
-        shopSlug="blue-mantis"
-        tripId="trip-1"
-        full={false}
-        query={search.query ?? ""}
-        candidates={search.candidates ?? []}
-        addBookingAction={action}
-        addToWaitlistAction={action}
-        addExistingDiverAction={action}
-        locale="en-US"
-        timeZone="America/Cancun"
-        confirmName="Nadia Ruis"
-        confirmMatches={confirmMatches}
+        context={{
+          shopSlug: "blue-mantis",
+          tripId: "trip-1",
+          full: false,
+          query: search.query ?? "",
+          candidates: search.candidates ?? [],
+          addBookingAction: action,
+          addToWaitlistAction: action,
+          addExistingDiverAction: action,
+          locale: "en-US",
+          timeZone: "America/Cancun",
+          confirmName: "Nadia Ruis",
+          confirmMatches,
+        }}
       />,
     );
 
@@ -324,14 +334,16 @@ describe("AddDiverSection spacing", () => {
     (_state, props) => {
       const { container } = render(
         <AddDiverSection
-          shopSlug="blue-mantis"
-          tripId="trip-1"
-          addBookingAction={action}
-          addToWaitlistAction={action}
-          addExistingDiverAction={action}
-          locale="en-US"
-          timeZone="America/Cancun"
-          {...props}
+          context={{
+            shopSlug: "blue-mantis",
+            tripId: "trip-1",
+            addBookingAction: action,
+            addToWaitlistAction: action,
+            addExistingDiverAction: action,
+            locale: "en-US",
+            timeZone: "America/Cancun",
+            ...props,
+          }}
         />,
       );
 

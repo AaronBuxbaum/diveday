@@ -14,43 +14,8 @@ import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { newDiverHref } from "@/lib/person-fields";
 import type { FormNotice } from "@/lib/staff-notices";
 
-/**
- * Adding a diver leads with the shop's existing people so a returning diver is
- * *picked*, never re-typed — the "enter once, reuse everywhere" path that keeps
- * the roster from spawning a second person row and orphaning the first diver's
- * certs, waivers, and rental fit.
- *
- * Typing a query presents both the matching candidate divers and a one-tap
- * "Add diver" path prefilled with their name or email.
- *
- * **One column at one gap, and no part brings a margin of its own.** Each
- * part carried its own top margin (the status `mt-2`, the search row `mt-4`,
- * the full boat's line `mt-1`), so the space under the roster's band was
- * whatever the first part to render happened to carry: 28px above the search
- * row against the 20px below it (pixel probe, trip-guests). The roster's
- * wrapper owns the inset on both sides; `className` is a caller's placement.
- */
-export function AddDiverSection({
-  shopSlug,
-  tripId,
-  full,
-  query,
-  candidates,
-  addBookingAction,
-  addToWaitlistAction,
-  addExistingDiverAction,
-  inviteAction,
-  status,
-  locale,
-  timeZone,
-  confirmName,
-  confirmEmail,
-  confirmPhone,
-  confirmMatches,
-  shopRentalItems,
-  walkInOpen = false,
-  className = "",
-}: {
+/** What the add-diver band reads, built once by `TripRosterContent`. */
+export type AddDiverContext = {
   shopSlug: string;
   tripId: string;
   full: boolean;
@@ -91,7 +56,51 @@ export function AddDiverSection({
    */
   walkInOpen?: boolean;
   className?: string;
+};
+
+/**
+ * Adding a diver leads with the shop's existing people so a returning diver is
+ * *picked*, never re-typed — the "enter once, reuse everywhere" path that keeps
+ * the roster from spawning a second person row and orphaning the first diver's
+ * certs, waivers, and rental fit.
+ *
+ * Typing a query presents both the matching candidate divers and a one-tap
+ * "Add diver" path prefilled with their name or email.
+ *
+ * **One column at one gap, and no part brings a margin of its own.** Each
+ * part carried its own top margin (the status `mt-2`, the search row `mt-4`,
+ * the full boat's line `mt-1`), so the space under the roster's band was
+ * whatever the first part to render happened to carry: 28px above the search
+ * row against the 20px below it (pixel probe, trip-guests). The roster's
+ * wrapper owns the inset on both sides; `className` is a caller's placement.
+ */
+export function AddDiverSection({
+  context,
+  className = "",
+}: {
+  context: AddDiverContext;
+  className?: string;
 }) {
+  const {
+    shopSlug,
+    tripId,
+    full,
+    query,
+    candidates,
+    addBookingAction,
+    addToWaitlistAction,
+    addExistingDiverAction,
+    inviteAction,
+    status,
+    locale,
+    timeZone,
+    confirmName,
+    confirmEmail,
+    confirmPhone,
+    confirmMatches,
+    shopRentalItems,
+    walkInOpen = false,
+  } = context;
   const t = staffTranslator(locale);
   const searched = query.length > 0;
   // A candidate with no dive day says so only when a sibling has one; the rule

@@ -305,24 +305,26 @@ export function TripRosterContent({
             ) : null,
           addDiverGroup: !acceptsDivers ? null : (
             <AddDiverSection
-              shopSlug={shopSlug}
-              full={isFull(trip)}
-              query={diverQuery}
-              candidates={diverCandidates}
-              tripId={trip.id}
-              addBookingAction={actions.addBookingAction}
-              addToWaitlistAction={actions.addToWaitlistAction}
-              addExistingDiverAction={actions.addExistingDiverAction}
-              inviteAction={actions.createDirectTripInvitationAction}
-              status={noticeForForm(tripNotice, "add-diver")}
-              locale={locale}
-              timeZone={timezone}
-              confirmName={confirmName}
-              confirmEmail={confirmEmail}
-              confirmPhone={confirmPhone}
-              confirmMatches={confirmMatches}
-              shopRentalItems={shopRentalItems}
-              walkInOpen={walkInOpen}
+              context={{
+                shopSlug,
+                full: isFull(trip),
+                query: diverQuery,
+                candidates: diverCandidates,
+                tripId: trip.id,
+                addBookingAction: actions.addBookingAction,
+                addToWaitlistAction: actions.addToWaitlistAction,
+                addExistingDiverAction: actions.addExistingDiverAction,
+                inviteAction: actions.createDirectTripInvitationAction,
+                status: noticeForForm(tripNotice, "add-diver"),
+                locale,
+                timeZone: timezone,
+                confirmName,
+                confirmEmail,
+                confirmPhone,
+                confirmMatches,
+                shopRentalItems,
+                walkInOpen,
+              }}
             />
           ),
         }}
