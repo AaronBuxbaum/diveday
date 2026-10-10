@@ -673,34 +673,34 @@ export function BookSpotSection({
             before — see `MoneyBlock`. */}
         {perDiverPriceCents === null ? null : (
           <MoneyBlock
-            className="border-t border-border pt-4"
-            fareCents={perDiverPriceCents}
-            partySize={diverCount}
-            otherSeats={moneySeats}
-            gearCents={gearTotalCents}
-            courseFeeCents={courseFeeCents ?? null}
-            eLearningFeeCents={eLearningFeeCents ?? null}
-            passThroughFeeLine={
-              passThroughFee
+            context={{
+              fareCents: perDiverPriceCents,
+              partySize: diverCount,
+              otherSeats: moneySeats,
+              gearCents: gearTotalCents,
+              courseFeeCents: courseFeeCents ?? null,
+              eLearningFeeCents: eLearningFeeCents ?? null,
+              passThroughFeeLine: passThroughFee
                 ? t("passThroughFee", {
                     name: passThroughFee.name,
                     price: money(passThroughFee.amountCents),
                   })
-                : null
-            }
-            passThroughTotalCents={passThroughTotalCents}
-            // Only where there *is* a checkout for Stripe to add tax at. On a
-            // book-now-pay-later seat the sentence used to render anyway, under
-            // a total labelled "Due at the shop" — a page telling a diver about
-            // a checkout step that does not exist for them (issue #1019's line,
-            // read in the wrong branch).
-            taxLine={taxEnabled && payAtBooking ? "checkout" : "none"}
-            dueNow={payAtBooking ? "checkout" : "at_shop"}
-            depositCents={depositCents ?? null}
-            balanceDueAt={balanceDueAt ?? null}
-            currency={currency}
-            locale={locale}
-            timeZone={timeZone}
+                : null,
+              passThroughTotalCents,
+              // Only where there *is* a checkout for Stripe to add tax at. On a
+              // book-now-pay-later seat the sentence used to render anyway, under
+              // a total labelled "Due at the shop" — a page telling a diver about
+              // a checkout step that does not exist for them (issue #1019's line,
+              // read in the wrong branch).
+              taxLine: taxEnabled && payAtBooking ? "checkout" : "none",
+              dueNow: payAtBooking ? "checkout" : "at_shop",
+              depositCents: depositCents ?? null,
+              balanceDueAt: balanceDueAt ?? null,
+              currency,
+              locale,
+              timeZone,
+            }}
+            className="border-t border-border pt-4"
           />
         )}
         <div className="mt-1">

@@ -54,24 +54,8 @@ export type MoneyBlockSeatLine = {
  */
 export type MoneyBlockDueNow = "checkout" | "at_shop" | "none";
 
-export function MoneyBlock({
-  fareCents,
-  partySize,
-  gearCents,
-  courseFeeCents,
-  eLearningFeeCents,
-  passThroughFeeLine,
-  passThroughTotalCents,
-  taxLine,
-  dueNow,
-  depositCents,
-  balanceDueAt,
-  currency,
-  locale,
-  timeZone,
-  otherSeats = [],
-  className = "",
-}: {
+/** What the money block states, assembled by the booking form. */
+export type MoneyBlockContext = {
   /** The per-diver fare the checkout charges (`perDiverBookingPriceCents`). */
   fareCents: number;
   partySize: number;
@@ -113,8 +97,32 @@ export function MoneyBlock({
    * rather than showing "× 0 divers".
    */
   otherSeats?: ReadonlyArray<MoneyBlockSeatLine>;
+};
+
+export function MoneyBlock({
+  context,
+  className = "",
+}: {
+  context: MoneyBlockContext;
   className?: string;
 }) {
+  const {
+    fareCents,
+    partySize,
+    gearCents,
+    courseFeeCents,
+    eLearningFeeCents,
+    passThroughFeeLine,
+    passThroughTotalCents,
+    taxLine,
+    dueNow,
+    depositCents,
+    balanceDueAt,
+    currency,
+    locale,
+    timeZone,
+    otherSeats = [],
+  } = context;
   const t = useTranslations("booking");
   const money = (cents: number) => formatMoneyCents(cents, currency, locale);
   if (dueNow === "none") return null;
