@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { closeToBudget, formatBudgetReport, reportTests } from "./e2e-budget-report.mjs";
+import { closeToBudget, formatBudgetReport, parseArgs, reportTests } from "./e2e-budget-report.mjs";
 
 const result = (duration, status = "passed") => ({ duration, status });
 const report = {
@@ -69,5 +69,17 @@ describe("e2e budget report", () => {
       "| 93% | 14.0s of 15.0s | `waivers.spec.ts:40` | the counter › seats a walk-in |",
     );
     expect(formatBudgetReport([])).toContain("None on this shard.");
+  });
+
+  it("reads the results file whether or not --share is given", () => {
+    expect(parseArgs(["e2e-durations/results.json"]).file).toBe("e2e-durations/results.json");
+    expect(parseArgs(["results.json", "--share", "0.4"])).toEqual({
+      file: "results.json",
+      share: 0.4,
+    });
+    expect(parseArgs(["--share", "0.4", "results.json"])).toEqual({
+      file: "results.json",
+      share: 0.4,
+    });
   });
 });

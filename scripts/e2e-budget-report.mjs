@@ -87,11 +87,18 @@ export function formatBudgetReport(close, { share = DEFAULT_SHARE } = {}) {
   ].join("\n");
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
-  const args = process.argv.slice(2);
+/** The command line: the results file, and `--share <n>` when given. */
+export function parseArgs(args) {
   const shareAt = args.indexOf("--share");
   const share = shareAt === -1 ? DEFAULT_SHARE : Number(args[shareAt + 1]);
-  const file = args.find((arg, index) => !arg.startsWith("--") && index !== shareAt + 1);
+  const file = args.find(
+    (arg, index) => !arg.startsWith("--") && (shareAt === -1 || index !== shareAt + 1),
+  );
+  return { file, share };
+}
+
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  const { file, share } = parseArgs(process.argv.slice(2));
   if (!file || !Number.isFinite(share)) {
     console.error("Usage: node scripts/e2e-budget-report.mjs <results.json> [--share 0.5]");
     process.exit(1);
