@@ -238,6 +238,25 @@ export async function getShopPersonName(
 }
 
 /**
+ * The record a merged-away person now points at, or null when this person is
+ * the kept record (or not this shop's). A form opened before a merge posts the
+ * old id; the action sends the staffer to the kept record instead of writing
+ * to a pointer row nobody can see.
+ */
+export async function getMergedIntoPersonId(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ mergedInto: people.mergedIntoPersonId })
+    .from(people)
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+    .limit(1);
+  return row?.mergedInto ?? null;
+}
+
+/**
  * The shop's live person at this address, or null. Case-insensitive on both
  * sides to mirror the `lower(email)` unique index (`people_shop_email_unique`),
  * so a caller need not normalise first. The one copy: `inviteStaffMember`
@@ -259,4 +278,24 @@ export async function selectActivePersonByEmail(tx: DbExecutor, shopId: string, 
     // record merged away meanwhile is not the one a new booking attaches to.
     .for("key share");
   return row ?? null;
+}
+
+/**
+ * Who holds a role in a shop, looked up by role rather than a hardcoded seed
+ * email — works on any seeded demo tenant (the canonical fixture or a minted
+ * one). Shared by the landing page's pre-entry role picker and the in-app
+ * role switcher (`switchDemoRoleAction` in `src/app/actions/demo.ts`).
+ */
+export async function demoRoleEmail(
+  db: DbExecutor,
+  shopId: string,
+  role: "owner" | "instructor" | "divemaster" | "captain",
+): Promise<string | null> {
+  const matches = await db
+    .select({ email: people.email })
+    .from(people)
+    .innerJoin(personRoles, eq(people.id, personRoles.personId))
+    .where(and(eq(people.shopId, shopId), eq(personRoles.role, role)))
+    .limit(1);
+  return matches[0]?.email ?? null;
 }

@@ -32,7 +32,7 @@ import { visitMilestone } from "@/lib/visit-milestones";
 /**
  * Everything `AfterState` (`src/app/ready/[token]/_components/AfterState.tsx`)
  * renders, assembled by {@link buildAfterStateProps} below. It lives beside its
- * one assembler so `src/lib` never reaches up into a route for its shape.
+ * one assembler so this module never reaches up into a route for its shape.
  */
 export type AfterStateProps = {
   t: DiverTranslator;
@@ -434,7 +434,7 @@ function wordNextDive(
  * board is empty, which renders the bare "See what's next" link rather than an
  * invented sentence.
  */
-export async function nextPublicDeparture(
+async function nextPublicDeparture(
   db: AppDb,
   shopId: string,
   locale: string,

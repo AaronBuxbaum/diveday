@@ -1,9 +1,6 @@
 import { and, asc, count, desc, eq, gt, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { nowDate, nowMs } from "@/lib/clock";
-import {
-  type PromotionProvider,
-  promotionProviderFromEnvironment,
-} from "@/lib/payments/promotions";
+import type { PromotionProvider } from "@/lib/payments/promotions";
 import {
   isPromoRedeemable,
   isValidPromoDiscountAmountCents,
@@ -24,6 +21,7 @@ import {
   tripLastMinutePromos,
 } from "./schema";
 import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
+import { promotionProviderFromEnvironment } from "./stripe-providers";
 
 /**
  * Shop-wide promo codes (docs ADR 20260729-shop-promo-codes). Same

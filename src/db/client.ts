@@ -9,7 +9,6 @@ import { getDbPoolConfig } from "@/lib/db-pool-config";
 import { queryTimingLogger } from "@/lib/observability/query-timing";
 import { withExplicitSslMode } from "./connection-string";
 import { acquireDataDirLock } from "./data-dir-lock";
-import { refreshPgliteDemo, seedProductionDb, takeSeedLock } from "./dev-bootstrap";
 
 // drizzle 1.0 moved relational config out of the driver `schema` option
 // (into `defineRelations`); we build queries through `.select()/.from()`, which
@@ -42,6 +41,22 @@ export function getDb(): Promise<AppDb> {
     throw error;
   });
   return globalForDb.divedayDbPromise;
+}
+
+/**
+ * The demo bootstrap, loaded when a database is first opened rather than when
+ * this module is. `client.ts` is imported by every route that touches the
+ * database, and the bootstrap's graph reaches the seed, the demo keeper and
+ * through them most of `src/db` — which imports `getDb` back from here. A
+ * static edge put this module, the one that owns boot order, in a 26-file
+ * import cycle with the Stripe providers and the trips modules
+ * (`src/db/import-cycles.test.ts`); a dynamic one runs after this module has
+ * finished evaluating, so the cycle cannot decide evaluation order. It also
+ * keeps the bootstrap out of the module closure of every route that never
+ * opens a cold database.
+ */
+function loadBootstrap() {
+  return import("./dev-bootstrap");
 }
 
 /**
@@ -79,6 +94,7 @@ async function init(): Promise<AppDb> {
     // the driver classes differ only in how they execute over the wire.
     const db = drizzleNodePostgres({ client: pool, logger: queryTimingLogger }) as unknown as AppDb;
     try {
+      const { seedProductionDb, takeSeedLock } = await loadBootstrap();
       await seedProductionDb(db, {
         lock: async (tx) => {
           await takeSeedLock(tx);
@@ -146,6 +162,7 @@ export async function openLocalDb(
     // The fast-path skip and the transactional atomicity are the same as the
     // Postgres branch above, and both still earn their keep across dev-server
     // restarts against a persisted `.pglite`.
+    const { refreshPgliteDemo, seedProductionDb } = await loadBootstrap();
     await seedProductionDb(db);
     await refreshPgliteDemo(db, databaseUrl);
     return db;

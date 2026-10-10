@@ -15,7 +15,7 @@ import {
   syncDemoStripeAccount,
   upsertShopStripeAccount,
 } from "./stripe-accounts";
-import { stripeKeySourceFromEnvironment } from "./stripe-key-source";
+import { stripeKeySourceFromEnvironment } from "./stripe-providers";
 
 async function shopContext() {
   return seededShopContext();

@@ -1,6 +1,5 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
@@ -33,6 +32,7 @@ import {
   unreviewNitroxCertification,
 } from "@/db/nitrox";
 import { addDiverNote, deleteDiverNote } from "@/db/operations";
+import { getMergedIntoPersonId, getShopPersonName } from "@/db/people";
 import {
   type CardSighting,
   type CertificationReviewRefusal,
@@ -49,7 +49,7 @@ import {
   unreviewSpecialtyCertification,
 } from "@/db/readiness";
 import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
-import { certificationAgency, certificationLevel, diveSpecialty, people } from "@/db/schema";
+import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
 import { sendStaffReply } from "@/db/staff-reply";
 import {
@@ -376,12 +376,7 @@ async function isLiveStaff(db: AppDb, shopId: string, personId: string): Promise
 }
 
 async function liveStaffName(db: AppDb, shopId: string, personId: string) {
-  const [staff] = await db
-    .select({ fullName: people.fullName })
-    .from(people)
-    .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
-    .limit(1);
-  return staff?.fullName ?? "staff";
+  return (await getShopPersonName(db, shopId, personId)) ?? "staff";
 }
 
 /**
@@ -412,13 +407,9 @@ async function requireDiverActionContext(
   // the old id. Every write below would land on a deleted pointer row the
   // staffer can no longer see, so it lands nowhere: the staffer is sent to the
   // kept record, told nothing was saved, and makes the change there.
-  const [row] = await db
-    .select({ mergedInto: people.mergedIntoPersonId })
-    .from(people)
-    .where(and(eq(people.id, personId), eq(people.shopId, staff.user.shopId)))
-    .limit(1);
-  if (row?.mergedInto) {
-    const kept = shopPath(shopSlug, "divers", row.mergedInto);
+  const mergedInto = await getMergedIntoPersonId(db, staff.user.shopId, personId);
+  if (mergedInto) {
+    const kept = shopPath(shopSlug, "divers", mergedInto);
     revalidateAndRedirect(kept, noticeUrl(kept, "merged-record-moved"));
   }
   return { base, db, personId, staff };

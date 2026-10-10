@@ -21,7 +21,7 @@ import {
   trips,
 } from "./schema";
 import { courseCrewCountsByTrip, NO_SUPERVISION } from "./today";
-import { listStaff, type StaffPerson } from "./trips";
+import { listStaff, type StaffPerson } from "./trips-crew";
 import { liveTrip } from "./trips-live";
 import { bookedDiversCount } from "./trips-queries";
 

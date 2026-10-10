@@ -1,7 +1,7 @@
 import type { AppDb } from "./client";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
 import { listTripPrepDivers } from "./rental-fit";
-import { getTripWithBooked } from "./trips";
+import { getTripWithBooked } from "./trips-record";
 
 /**
  * **The five reads the trip page's Overview and Guests both need**, read once

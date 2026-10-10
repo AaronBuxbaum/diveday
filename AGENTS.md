@@ -100,7 +100,7 @@ when you open the file.
 | A dive site's briefing — what a diver reads, and which field writes it | `dive-sites/_components/SiteFields.tsx` writes it, `_components/TripDayPlan.tsx` reads it; the field guide is `src/lib/dive-site-field-guide.ts` + `src/i18n/marine-life-labels.ts` |
 | Starting content a shop copies, and species it picks | `src/content/dive-site-templates.ts`, `src/content/course-templates.ts` (copied, then the shop's); `src/db/marine-life-catalog.ts` (DiveDay's words, photos under `public/marine-life/`, added with `node scripts/fetch-marine-life-photo.mjs`) |
 | Domain logic (framework-free) | `src/lib/` — capacity in `trips.ts`, dates in `format.ts` |
-| Feature modules | `src/features/<feature>/` — `index.ts` is the whole public surface; `calendar-sync`, `backup-export`, `integrations` |
+| Feature modules | `src/features/<feature>/` — `index.ts` is the whole public surface; `calendar-sync`, `backup-export`, `integrations`, `recap-after-state` |
 | Outbound integrations a shop connects for itself (Shopify, QuickBooks, Xero, Zapier) | `src/features/integrations/`; rows in `src/db/integrations.ts` + `src/db/integration-events.ts`; staff at `src/app/shop/[shopSlug]/settings/integrations`; callbacks under `src/app/api/integrations/` |
 | Staff calendar subscriptions (iCalendar feeds) | `src/features/calendar-sync/` + `src/app/calendar/[token]/route.ts`; staff UI at `src/app/shop/[shopSlug]/settings/calendar/` |
 | Auth: session, gates, edge check | `src/lib/auth.ts` / `auth-secret.ts` / `authz.ts` + `session.ts`; edge layer `src/proxy.ts` |
@@ -170,7 +170,9 @@ One line each, with what enforces it; the full statement and its incident:
 - **Safety-critical surfaces** (manifests, roll call, cert gating, medical flags) get boring code,
   adversarial tests and a `dive-domain-expert` review; **security-sensitive changes** (auth, tokens,
   personal or medical data, export/import) a `security-reviewer` review.
-- **`app → features → lib/db`, one way; routes stay thin** (`pnpm check:architecture`).
+- **`app → features → lib/db`, one way; routes stay thin**: `src/lib` takes only types from
+  `src/db`, `src/app` never imports `drizzle-orm`, the trips modules go through `@/db/trips`
+  (`pnpm check:architecture`).
 - **Tests travel with behavior**: a bug fix starts with a failing regression test; every important
   flow gets an `e2e/` spec and every important surface a capture in `e2e/visual.spec.ts`
   (`pnpm check:route-coverage`).

@@ -36,7 +36,7 @@
 import { and, asc, eq, lt } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
-import { type CustomerProvider, customerProviderFromEnvironment } from "@/lib/payments/customers";
+import type { CustomerProvider } from "@/lib/payments/customers";
 import { ERASURE_FAILURE_DETAIL } from "@/lib/payments/erasure-failure";
 import type { AppDb, DbExecutor } from "./client";
 import { idempotencyKeyFor } from "./payment-operations";
@@ -46,6 +46,7 @@ import {
   processorErasureObligations,
   shopStripeAccounts,
 } from "./schema";
+import { customerProviderFromEnvironment } from "./stripe-providers";
 
 /**
  * How many delete attempts a `stripe_customer` obligation gets from the

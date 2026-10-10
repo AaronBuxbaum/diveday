@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { auditBaseline, collectViolations } from "./check-architecture.mjs";
+import { auditBaseline, collectViolations, importsOf } from "./check-architecture.mjs";
 
 // ---------------------------------------------------------------------------
 // Throwaway trees shaped like the repo, because the thing under test is
@@ -64,6 +64,72 @@ describe("dependency direction", () => {
       "src/lib/format.ts": 'import path from "node:path";\nimport "./polyfill";\n',
     });
     expect(flat(await collectViolations(root))).toEqual([]);
+  });
+});
+
+describe("the seams", () => {
+  it("reads which imports are type-only, across lines", () => {
+    const source = [
+      'import type { A } from "@/db/a";',
+      'import { type B, type C } from "@/db/b";',
+      'import { type D, e } from "@/db/d";',
+      "import {\n  type F,\n  g,\n} from '@/db/f';",
+      'export type { H } from "@/db/h";',
+      'export { i } from "@/db/i";',
+      'import "@/db/side-effect";',
+      'const j = await import("@/db/j");',
+    ].join("\n");
+    expect(importsOf(source)).toEqual([
+      { specifier: "@/db/a", typeOnly: true },
+      { specifier: "@/db/b", typeOnly: true },
+      { specifier: "@/db/d", typeOnly: false },
+      { specifier: "@/db/f", typeOnly: false },
+      { specifier: "@/db/h", typeOnly: true },
+      { specifier: "@/db/i", typeOnly: false },
+      { specifier: "@/db/side-effect", typeOnly: false },
+      { specifier: "@/db/j", typeOnly: false },
+    ]);
+  });
+
+  it("lets src/lib name a db type and refuses a db value", async () => {
+    const root = await fixture({
+      "src/lib/shape.ts": 'import type { AppDb } from "@/db/client";\n',
+      "src/lib/loader.ts": 'import { getDb } from "@/db/client";\n',
+      "src/lib/lazy.ts": 'const m = await import("../db/recap");\n',
+      "src/lib/loader.test.ts": 'import { createTestDb } from "@/db/client";\n',
+    });
+    expect(flat(await collectViolations(root)).sort()).toEqual([
+      expect.stringContaining("src/lib/lazy.ts: value-imports ../db/recap"),
+      expect.stringContaining("src/lib/loader.ts: value-imports @/db/client"),
+    ]);
+  });
+
+  it("refuses drizzle-orm under src/app, outside its tests and e2e fixture routes", async () => {
+    const root = await fixture({
+      "src/app/shop/actions.ts": 'import { eq } from "drizzle-orm";\n',
+      "src/app/shop/types.ts": 'import type { SQL } from "drizzle-orm/sql";\n',
+      "src/app/shop/actions.test.ts": 'import { eq } from "drizzle-orm";\n',
+      "src/app/api/test/seed/route.ts": 'import { eq } from "drizzle-orm";\n',
+      "src/db/reads.ts": 'import { eq } from "drizzle-orm";\n',
+    });
+    expect(flat(await collectViolations(root)).sort()).toEqual([
+      expect.stringContaining("src/app/shop/actions.ts: imports drizzle-orm"),
+      expect.stringContaining("src/app/shop/types.ts: imports drizzle-orm/sql"),
+    ]);
+  });
+
+  it("sends everything outside src/db through the trips barrel", async () => {
+    const root = await fixture({
+      "src/app/trip/page.tsx": 'import { getTripOverview } from "@/db/trips-overview";\n',
+      "src/components/Roster.tsx": 'import type { TripGuests } from "@/db/trips-guests";\n',
+      "src/app/trip/ok.tsx": 'import { getTripOverview } from "@/db/trips";\n',
+      "src/db/today.ts": 'import { listStaff } from "./trips-crew";\n',
+      "src/app/trip/other.tsx": 'import { x } from "@/db/trip-promos";\n',
+    });
+    expect(flat(await collectViolations(root)).sort()).toEqual([
+      expect.stringContaining("src/app/trip/page.tsx: imports @/db/trips-overview"),
+      expect.stringContaining("src/components/Roster.tsx: imports @/db/trips-guests"),
+    ]);
   });
 });
 

@@ -7,7 +7,7 @@ import {
   type NotificationProvider,
   publicAppUrl,
 } from "@/lib/notifications";
-import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
+import type { CheckoutProvider } from "@/lib/payments/checkout";
 import {
   markCheckoutExpiredBySessionId,
   markCheckoutPaidBySessionId,
@@ -27,6 +27,7 @@ import {
   shops,
   trips,
 } from "./schema";
+import { checkoutProviderFromEnvironment } from "./stripe-providers";
 import { liveTrip } from "./trips-live";
 
 /** One cron tick's worth of work — keeps a growing backlog from starving the other jobs on the same daily run. */

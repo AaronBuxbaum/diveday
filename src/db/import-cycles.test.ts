@@ -12,14 +12,24 @@ import { describe, expect, it } from "vitest";
  * order an accident of which file a route happened to import first, and makes
  * every db module look like a dependency of every other one.
  *
- * The bootstrap now lives in `./dev-bootstrap` and the helpers in
- * `./query-helpers`. This walks the runtime import edges between `src/db`
- * modules (static, re-export and dynamic `import()`; type-only imports are
- * erased by the compiler and cannot affect evaluation order, so they are not
- * edges) and fails if any path from `client.ts` leads back to it.
+ * The helpers moved to `./query-helpers` and the bootstrap to
+ * `./dev-bootstrap`, but the cycle came back at 26 files through a door this
+ * test did not watch: it walked only `src/db`, and the way back ran through
+ * `src/lib/payments/` (a provider built on the db-backed Stripe key source).
+ * So this walks every module under `src/`, resolving `@/` like the compiler.
+ *
+ * An edge is a **static** runtime import: `import`, `export … from`, a bare
+ * `import "…"`. Type-only imports are erased by the compiler, and a dynamic
+ * `import()` runs after the importing module has finished evaluating, so
+ * neither can decide evaluation order. That is why `client.ts` loads the
+ * bootstrap with `import()` when it first opens a database, and why the second
+ * test below holds the bootstrap's graph out of `client.ts`'s static closure:
+ * a production `getDb()` must not evaluate the seed, the demo keeper, the
+ * Stripe account reads or the trips modules.
  */
 
 const DB_DIR = path.resolve(__dirname);
+const SRC_DIR = path.resolve(__dirname, "..");
 
 function listSources(dir: string): string[] {
   const out: string[] = [];
@@ -33,15 +43,20 @@ function listSources(dir: string): string[] {
 
 function resolveSpecifier(from: string, specifier: string): string | undefined {
   let base: string;
-  if (specifier === "@/db" || specifier.startsWith("@/db/")) {
-    base = path.join(DB_DIR, specifier.slice("@/db".length));
+  if (specifier.startsWith("@/")) {
+    base = path.join(SRC_DIR, specifier.slice("@/".length));
   } else if (specifier.startsWith(".")) {
     base = path.resolve(path.dirname(from), specifier);
   } else {
     return undefined;
   }
-  for (const candidate of [`${base}.ts`, `${base}.tsx`, path.join(base, "index.ts")]) {
-    if (candidate.startsWith(DB_DIR) && existsSync(candidate)) return candidate;
+  for (const candidate of [
+    `${base}.ts`,
+    `${base}.tsx`,
+    path.join(base, "index.ts"),
+    path.join(base, "index.tsx"),
+  ]) {
+    if (candidate.startsWith(SRC_DIR) && existsSync(candidate)) return candidate;
   }
   return undefined;
 }
@@ -66,15 +81,12 @@ function runtimeSpecifiers(source: string): string[] {
   for (const match of source.matchAll(/(?:^|\n)\s*import\s+["']([^"']+)["']/g)) {
     specifiers.push(match[1]);
   }
-  for (const match of source.matchAll(/\bimport\(\s*["']([^"']+)["']\s*\)/g)) {
-    specifiers.push(match[1]);
-  }
   return specifiers;
 }
 
 function buildGraph(): Map<string, string[]> {
   const graph = new Map<string, string[]>();
-  for (const file of listSources(DB_DIR)) {
+  for (const file of listSources(SRC_DIR)) {
     const source = readFileSync(file, "utf8");
     const edges = runtimeSpecifiers(source)
       .map((specifier) => resolveSpecifier(file, specifier))
@@ -82,6 +94,20 @@ function buildGraph(): Map<string, string[]> {
     graph.set(file, [...new Set(edges)]);
   }
   return graph;
+}
+
+/** Every module reachable from `start` along the graph's edges, `start` included. */
+function closureOf(graph: Map<string, string[]>, start: string): Set<string> {
+  const seen = new Set([start]);
+  const queue = [start];
+  for (let next = queue.pop(); next !== undefined; next = queue.pop()) {
+    for (const target of graph.get(next) ?? []) {
+      if (seen.has(target)) continue;
+      seen.add(target);
+      queue.push(target);
+    }
+  }
+  return seen;
 }
 
 /** One path from `start` back to `start`, or undefined when there is none. */
@@ -104,7 +130,7 @@ function findCycleThrough(graph: Map<string, string[]>, start: string): string[]
 }
 
 describe("src/db import graph", () => {
-  it("parses the import forms that create a runtime edge, and skips type-only ones", () => {
+  it("parses the import forms that decide evaluation order, and skips type-only and dynamic ones", () => {
     const source = [
       `import { a } from "./a";`,
       `import type { B } from "./b";`,
@@ -117,7 +143,7 @@ describe("src/db import graph", () => {
       `import {\n  multi,\n  line,\n} from "@/db/multi";`,
     ].join("\n");
     expect(runtimeSpecifiers(source).sort()).toEqual(
-      ["./a", "./e", "./g", "./side-effect", "./seed", "@/db/multi"].sort(),
+      ["./a", "./e", "./g", "./side-effect", "@/db/multi"].sort(),
     );
   });
 
@@ -142,5 +168,19 @@ describe("src/db import graph", () => {
     expect(graph.has(client)).toBe(true);
     const cycle = findCycleThrough(graph, client)?.map((file) => path.relative(DB_DIR, file));
     expect(cycle, `client.ts is in an import cycle: ${cycle?.join(" -> ")}`).toBeUndefined();
+  });
+
+  it("keeps the demo bootstrap's graph out of what loading client.ts evaluates", () => {
+    const graph = buildGraph();
+    const closure = closureOf(graph, path.join(DB_DIR, "client.ts"));
+    const loaded = [
+      "dev-bootstrap.ts",
+      "demo-refresh.ts",
+      "seed.ts",
+      "stripe-accounts.ts",
+      "stripe-providers.ts",
+      "trips.ts",
+    ].filter((file) => closure.has(path.join(DB_DIR, file)));
+    expect(loaded).toEqual([]);
   });
 });

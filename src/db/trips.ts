@@ -19,9 +19,13 @@
  * | `./trips-prep.ts` | the trip-prep page's one read: crew, gear and every diver's rental fit; the screen a gear pick passes |
  * | `./trips-roster.ts` | who is on it: bookings, wait list, contacts |
  * | `./trips-queries.ts` | reading the board: schedule lists, aggregates, calendar feeds |
+ * | `./trips-guests.ts` | everything the trip's Guests page reads, in one call |
+ * | `./trips-overview.ts` | everything the trip's Overview reads, in one call |
+ * | `./trips-shared-reads.ts` | the five reads Overview and Guests both need, read once |
  *
- * Two siblings are not here yet: `./trips-guests.ts` and `./trips-overview.ts`
- * are still imported directly by the trip pages that read them.
+ * Nothing outside `src/db` imports a `trips-*` sibling directly
+ * (`check:architecture`); the db siblings import each other by file so the
+ * barrel never sits in a cycle.
  *
  * Adding a function to a sibling does not publish it — name it here too. That
  * is deliberate: `trips-create.ts` in particular also exports the
@@ -61,6 +65,12 @@ export {
   type TripCrewOutcome,
   tripCrewByTrip,
 } from "./trips-crew";
+export {
+  getTripGuests,
+  type TripGuests,
+  type TripGuestsFilters,
+  type TripGuestsShop,
+} from "./trips-guests";
 export { liveTrip } from "./trips-live";
 export {
   cancelDeparturesBelowMinimum,
@@ -71,6 +81,7 @@ export {
   reinstateTripClearingMinimum,
   type SweptDeparture,
 } from "./trips-minimum";
+export { getTripOverview, type TripOverview, type TripOverviewShop } from "./trips-overview";
 export {
   type GearPick,
   getTripPrep,
@@ -81,6 +92,7 @@ export {
 export {
   type CourseSessionScope,
   countShopTrips,
+  heldSeatCounts,
   listShopDayDepartures,
   listTripIdsInOfflineManifestWindow,
   listUpcomingSessionsForCourse,
@@ -159,3 +171,4 @@ export {
   setSeriesRepeat,
   updateSeriesCadence,
 } from "./trips-series";
+export { loadTripSharedReads, type TripSharedReads } from "./trips-shared-reads";

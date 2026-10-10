@@ -7,6 +7,7 @@ import { RecapWaitingCard } from "@/components/RecapWaitingCard";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getRecapPageData, getRecapPageState, type RecapSite } from "@/db/recap";
+import { buildAfterStateProps } from "@/features/recap-after-state";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale, requestTranslator } from "@/i18n/request";
@@ -15,7 +16,6 @@ import { buddyReferralId } from "@/lib/buddy-tokens";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicSchedulePath } from "@/lib/public-routes";
-import { buildAfterStateProps } from "@/lib/recap-after-state";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { openGraphSite } from "@/lib/site-metadata";
 import {
