@@ -528,6 +528,7 @@
     "earlierRefusal": "A physician did not clear this diver on {date} (earlier waiver).",
     "viewRefusedRecord": "View signed record",
     "referralUnresolved": "Re-signed after a referral, with no physician clearance on file ({date}). Record one, or ask.",
+    "viewReferralRecord": "View the referral",
     "openClearanceDocument": "Open the physician’s evaluation"
   },
   "details": {

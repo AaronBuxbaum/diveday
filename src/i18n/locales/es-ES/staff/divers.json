@@ -528,6 +528,7 @@
     "earlierRefusal": "Un médico no autorizó a esta persona el {date} (exención anterior).",
     "viewRefusedRecord": "Ver registro firmado",
     "referralUnresolved": "Firmada de nuevo tras una derivación médica: no consta autorización de un médico ({date}). Regístrala o pregunta.",
+    "viewReferralRecord": "Ver la derivación",
     "openClearanceDocument": "Abrir la evaluación médica"
   },
   "details": {

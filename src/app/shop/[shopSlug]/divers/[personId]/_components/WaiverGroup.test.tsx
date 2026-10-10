@@ -284,6 +284,45 @@ describe("the waiver group", () => {
   });
 
   /**
+   * **The override stands, and the warning links back** (Aaron, 2026-10-09,
+   * issue #2195, amending H-98): a clean release that replaced an unresolved
+   * referral clears the diver, and the record's warning opens the referral.
+   */
+  it("links the unanswered referral's warning to the referral itself", () => {
+    renderCard(
+      diver({
+        email: "priya@dive.day",
+        waiver: {
+          state: "current",
+          signedAt: new Date("2026-07-21T15:00:00.000Z"),
+          expiresAt: new Date("2027-07-21T15:00:00.000Z"),
+          medical: {
+            at: new Date("2026-07-21T15:00:00.000Z"),
+            source: "digital",
+            overriddenReferralAt: new Date("2026-06-02T15:00:00.000Z"),
+            overriddenReferral: {
+              recordId: "w-referred",
+              personId: "p-1",
+              at: new Date("2026-06-02T15:00:00.000Z"),
+            },
+            overriddenRefusal: null,
+            clearance: null,
+          },
+        } as DiverProfile["waiver"],
+      }),
+    );
+
+    const group = screen.getByTestId("diver-file-group-waiver");
+    expect(
+      within(group).getByText(/Re-signed after a referral, with no physician clearance on file/),
+    ).toBeInTheDocument();
+    expect(within(group).getByRole("link", { name: "View the referral" })).toHaveAttribute(
+      "href",
+      expect.stringMatching(/\/divers\/[^/]+\/waivers\/w-referred$/),
+    );
+  });
+
+  /**
    * **A physician refused an earlier release, and a clean new one cleared the
    * diver anyway** (Aaron, 2026-10-07, issue #2158). Allowed; the door says so
    * in warning ink, and the refused record is one tap away.

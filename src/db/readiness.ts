@@ -17,7 +17,7 @@ import {
   unreviewedCardState,
 } from "@/lib/readiness";
 import { isUuid } from "@/lib/uuid";
-import { effectiveWaiverForBooking, overriddenReferralAt, overriddenRefusal } from "@/lib/waivers";
+import { effectiveWaiverForBooking, overriddenReferral, overriddenRefusal } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import {
   type CourseSeatInTraining,
@@ -1654,6 +1654,10 @@ export async function listTripsReadiness(
       currentTemplateVersion: currentTemplateGeneration,
       now,
     });
+    const referral = overriddenReferral(
+      effectiveWaiver,
+      signedWaiversByPerson.get(row.person.id) ?? [],
+    );
 
     const requiredCourseForms = courseFormsByTrip.get(tripId);
     const courseForms = requiredCourseForms
@@ -1686,10 +1690,10 @@ export async function listTripsReadiness(
       // holds both halves — the governing record and the diver's whole signed
       // history. Deriving it a second time downstream from one of the two would
       // be a second answer to a safety question (issue #1282).
-      overriddenReferralAt: overriddenReferralAt(
-        effectiveWaiver,
-        signedWaiversByPerson.get(row.person.id) ?? [],
-      ),
+      overriddenReferralAt: referral?.at ?? null,
+      // The referral itself, so the roster and the manifest can link the
+      // warning to it (issue #2195, amending H-98).
+      overriddenReferral: referral,
       // The physician's "no" a clean new release stands over (issue #2158):
       // the seat boards, and every surface warns with a link to the refusal.
       overriddenRefusal: overriddenRefusal(

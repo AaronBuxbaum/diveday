@@ -2291,13 +2291,24 @@ describe("physician medical clearance", () => {
       currentTemplateVersion: template?.materialGeneration ?? null,
       now: later,
     });
-    // Cleared — the reproduction, deliberately unchanged. Refusing it would
-    // strand a diver who mis-tapped question 3 until a doctor writes a letter,
-    // which is its own failure mode and a call for a person to make.
+    // Cleared — the reproduction, kept by decision (Aaron, 2026-10-09, issue
+    // #2195, amending H-98). Refusing it would strand a diver who mis-tapped
+    // question 3 until a doctor writes a letter.
     expect(status.state).toBe("current");
     // And the standing says what it stood over, so the diver's record and the
-    // boat's manifest can both say so.
-    expect(status).toMatchObject({ medical: { overriddenReferralAt: expect.any(Date) } });
+    // boat's manifest can both say so, and link to the referral itself.
+    const [referral] = await db
+      .select({ id: waiverRecords.id })
+      .from(waiverRecords)
+      .where(
+        and(eq(waiverRecords.personId, person.id), eq(waiverRecords.status, "medical_review")),
+      );
+    expect(status).toMatchObject({
+      medical: {
+        overriddenReferralAt: expect.any(Date),
+        overriddenReferral: { recordId: referral?.id, personId: person.id },
+      },
+    });
   });
 
   it("leaves the signed evidence verifiable — a clearance is not a tamper", async () => {

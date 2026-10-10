@@ -1477,6 +1477,57 @@ describe("an earlier physician refusal under a cleared release", () => {
   });
 });
 
+/**
+ * **A clean release over a referral no physician answered: the seat clears,
+ * and the row warns with a link back** (Aaron, 2026-10-09, issue #2195,
+ * amending H-98). The same shape as the refusal above.
+ */
+describe("an unanswered referral under a cleared release", () => {
+  const referredRow = (status: "ready" | "blocked" = "ready") =>
+    ({
+      ...readinessRow(status),
+      overriddenReferralAt: new Date("2026-08-01T15:00:00Z"),
+      overriddenReferral: {
+        recordId: "w-referred",
+        personId: "p-r",
+        at: new Date("2026-08-01T15:00:00Z"),
+      },
+    }) as unknown as ReadinessByBooking extends Map<string, infer V> ? V : never;
+
+  it("warns in the open on a Ready row, with a link to the referral", () => {
+    renderRoster({
+      ...fixtures,
+      roster: [entry("r", "Noor Haddad")],
+      readiness: new Map([["r", referredRow()]]) as ReadinessByBooking,
+      waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
+    });
+
+    // Ready, not blocked: the override stands.
+    expect(screen.getByRole("heading", { name: /^Ready/ })).toBeVisible();
+    const line = screen.getByText(/Re-signed after a referral on/);
+    expect(line).toBeVisible();
+    expect(line.textContent).toMatch(/Aug\s1, with no physician clearance on file/);
+    const link = within(line.closest("li") as HTMLElement).getByRole("link", {
+      name: "View the referral",
+    });
+    expect(link).toHaveAttribute("href", "/shop/blue-mantis/divers/p-r/waivers/w-referred");
+  });
+
+  it("says nothing on a held seat: the referral is the matched person's history", () => {
+    const held = entry("r", "Noor Haddad", { identityBookedAs: "Noor H." });
+    (held.booking as { identityUnconfirmedAt: Date | null }).identityUnconfirmedAt = new Date(
+      "2026-08-20T15:00:00Z",
+    );
+    renderRoster({
+      ...fixtures,
+      roster: [held],
+      readiness: new Map([["r", referredRow("blocked")]]) as ReadinessByBooking,
+      waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
+    });
+    expect(screen.queryByText(/Re-signed after a referral on/)).toBeNull();
+  });
+});
+
 describe("certifying a student from a course session's roster (issue #2059)", () => {
   /** One per student row; every one of them opens the same way. */
   function awardSelects() {

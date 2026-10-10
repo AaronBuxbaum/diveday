@@ -11,6 +11,7 @@ import {
   medicalWaiverMark,
   medicalWarningDays,
   needsMedicalReview,
+  overriddenReferral,
   overriddenReferralAt,
   overriddenRefusal,
   shopWaiverStatus,
@@ -157,6 +158,7 @@ describe("medical waiver mark", () => {
       at: signedAt,
       source: "digital",
       overriddenReferralAt: null,
+      overriddenReferral: null,
       overriddenRefusal: null,
       clearance: null,
       guardian: null,
@@ -177,6 +179,7 @@ describe("medical waiver mark", () => {
       at: signedAt,
       source: "paper",
       overriddenReferralAt: null,
+      overriddenReferral: null,
       overriddenRefusal: null,
       clearance: null,
       guardian: null,
@@ -193,6 +196,7 @@ describe("medical waiver mark", () => {
       at: signedAt,
       source: "imported",
       overriddenReferralAt: null,
+      overriddenReferral: null,
       overriddenRefusal: null,
       clearance: null,
       guardian: null,
@@ -220,6 +224,7 @@ describe("medical waiver mark", () => {
       at: completedAt,
       source: "digital",
       overriddenReferralAt: null,
+      overriddenReferral: null,
       overriddenRefusal: null,
       clearance: null,
       guardian: null,
@@ -627,6 +632,7 @@ describe("physician clearance", () => {
       at: clearedAt,
       source: "cleared",
       overriddenReferralAt: null,
+      overriddenReferral: null,
       overriddenRefusal: null,
       // The record the clearance hangs on, and whether the physician's
       // evaluation itself is stored against it (issue #1283). The URL is
@@ -819,8 +825,10 @@ describe("overriddenRefusal", () => {
  * to a physician can simply be sent a fresh link, answer "no" to everything,
  * and board — with no doctor anywhere in it.
  *
- * These pin the reproduction (it still clears, deliberately: whether to refuse
- * it is a human call) and the mark that now makes it visible.
+ * These pin the reproduction and the mark that makes it visible. It still
+ * clears by decision: the owner kept the override (Aaron, 2026-10-09, issue
+ * #2195, amending H-98), matching what a clean release does after a
+ * physician's "no", and every surface warns with a link back to the referral.
  */
 describe("a referral a later clean signature stood over", () => {
   const referral = () =>
@@ -846,10 +854,10 @@ describe("a referral a later clean signature stood over", () => {
       completedAt: new Date(SIGN_NOW.getTime() - 60_000),
     });
 
-  it("still clears the diver — the reproduction, unchanged on purpose", () => {
+  it("still clears the diver — the reproduction, kept by decision", () => {
     // Refusing this would strand a diver who mis-tapped question 3 until a
-    // doctor writes a letter, which is its own failure mode and Aaron's call
-    // (H-01/H-03). What changes is that nobody has to notice it by accident.
+    // doctor writes a letter. The owner ruled it stands (issue #2195); what
+    // changes is that nobody has to notice it by accident.
     expect(
       shopWaiverStatus({
         personSignedWaivers: [referral(), reSigned()],
@@ -879,6 +887,19 @@ describe("a referral a later clean signature stood over", () => {
       state: "current",
       medical: { source: "digital", overriddenReferralAt: referral().signedAt },
     });
+  });
+
+  it("names the referral's own record, so the warning can link to it (issue #2195)", () => {
+    expect(overriddenReferral(reSigned(), [referral(), reSigned()])).toEqual({
+      recordId: "referral",
+      personId: "person-1",
+      at: referral().signedAt,
+    });
+    expect(medicalWaiverMark(reSigned(), [referral(), reSigned()])).toMatchObject({
+      overriddenReferralAt: referral().signedAt,
+      overriddenReferral: { recordId: "referral", personId: "person-1" },
+    });
+    expect(overriddenReferral(reSigned(), [reSigned()])).toBeNull();
   });
 
   it("says nothing when the referral is the one that was cleared", () => {
@@ -939,6 +960,7 @@ describe("medicalWarningDays", () => {
     at: new Date("2026-07-01T15:00:00.000Z"),
     source: "digital",
     overriddenReferralAt: null,
+    overriddenReferral: null,
     overriddenRefusal: null,
     clearance: null,
     guardian: null,

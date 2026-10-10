@@ -535,6 +535,16 @@ export function RosterRow({
   const earlierRefusal = showsPersonDetail
     ? (readinessByBooking.get(booking.id)?.overriddenRefusal ?? null)
     : null;
+  /**
+   * **A clean release stood over a referral no physician answered, and the
+   * row says so the same way** (Aaron, 2026-10-09, issue #2195, amending
+   * H-98): the override stands, and the warning links back to the referral.
+   * Never alongside the refusal line for one record (`overriddenReferral`
+   * leaves refusals out), and withheld on a held seat for the same reason.
+   */
+  const earlierReferral = showsPersonDetail
+    ? (readinessByBooking.get(booking.id)?.overriddenReferral ?? null)
+    : null;
   // What withholding dropped is still said to exist, never which: the
   // manifest's rule (dive-domain review 2026-10-06).
   const moreHoldsBehindConfirmation =
@@ -571,6 +581,25 @@ export function RosterRow({
                 className={linkAction}
               >
                 {t("trips.roster.viewSignedRecord")}
+              </Link>
+            ),
+          },
+        ]
+      : []),
+    ...(earlierReferral
+      ? [
+          {
+            key: "earlier-referral",
+            text: t("trips.roster.referralUnresolved", {
+              date: formatShortDate(earlierReferral.at, locale, shopTimezone),
+            }),
+            tone: "warning" as const,
+            actions: (
+              <Link
+                href={shopPath(shopSlug, "divers", person.id, "waivers", earlierReferral.recordId)}
+                className={linkAction}
+              >
+                {t("trips.roster.viewReferral")}
               </Link>
             ),
           },

@@ -121,6 +121,7 @@
   "medicalEarlierRefusalChip": "Rechazo médico previo",
   "medicalReferralUnresolved": "Firmada de nuevo tras una derivación médica sin autorización de un médico registrada (derivada el {date})",
   "medicalReferralUnresolvedChip": "Derivación sin autorizar",
+  "medicalReferralLink": "Ver la derivación",
   "resolveBlockersLink": "Resolver bloqueos en Buceadores →",
   "addNoteSummary": "Añadir una nota",
   "rollCallRecordedByPlain": "{label} {date} por {name}",

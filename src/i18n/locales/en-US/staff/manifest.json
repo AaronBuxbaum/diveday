@@ -121,6 +121,7 @@
   "medicalEarlierRefusalChip": "Physician said no before",
   "medicalReferralUnresolved": "Re-signed after a referral with no physician clearance on file (referred {date})",
   "medicalReferralUnresolvedChip": "Referral not cleared",
+  "medicalReferralLink": "View the referral",
   "resolveBlockersLink": "Resolve blockers on Guests →",
   "addNoteSummary": "Add a note",
   "rollCallRecordedByPlain": "{label} {date} by {name}",

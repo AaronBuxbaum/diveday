@@ -1162,6 +1162,7 @@ describe("offline manifest policy", () => {
       at: new Date("2026-07-01T15:00:00.000Z"),
       source: "digital",
       overriddenReferralAt: null,
+      overriddenReferral: null,
       overriddenRefusal: null,
       clearance: { recordId: "clearance-record-secret", documentOnFile: true },
       guardian: null,
