@@ -145,7 +145,9 @@ describe("diverBlockerAction", () => {
       "blue-reef",
       NOW,
     );
-    expect(result?.detail).toBe("Record match not confirmed. Reminders wait until it is.");
+    expect(result?.detail).toBe(
+      "Booking matched on a guess. Confirm who this is before the waiver goes out.",
+    );
   });
 
   it("says it of a boat's worth of held seats too", () => {
@@ -158,7 +160,7 @@ describe("diverBlockerAction", () => {
       NOW,
     );
     expect(rows.map((row) => row.subject)).toEqual([
-      "2 record matches not confirmed. Reminders wait until they are.",
+      "2 bookings matched on a guess. Confirm who each one is before the waivers go out.",
     ]);
   });
 

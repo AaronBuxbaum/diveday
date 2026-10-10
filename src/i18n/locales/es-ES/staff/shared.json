@@ -545,7 +545,7 @@
     "reasonSameName": "Hay más de un buceador llamado {name}. Confirma que es la ficha correcta.",
     "contactOnFile": "En la ficha de {name}:",
     "noContactOnFile": "No consta correo ni teléfono de {name}.",
-    "remindersHeld": "Los recordatorios esperan a que confirmes quién es.",
+    "remindersHeld": "Los recordatorios y la exención esperan a que confirmes quién es.",
     "same": "Misma persona",
     "sameAria": "Misma persona que {name}",
     "different": "Otra persona",

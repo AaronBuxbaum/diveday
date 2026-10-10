@@ -2718,8 +2718,12 @@ new domain concept, define it here in the same PR.
   goes through a side-by-side **merge preview** (`divers/[personId]/merge/[survivorId]`): both
   records' particulars, what each holds, and a choice wherever they disagree (name, date of birth,
   email, phone, emergency contact as one pair, rental sizes as one profile), the kept record's value
-  preselected. A departure both records sit on refuses the merge until staff move the seat, and so
-  does a seat on a departure that is out right now ("Merge after the boat is back"). Two different
+  preselected. Two *live* seats on one departure refuse the merge until staff cancel or move one,
+  and so does a live seat on the record merged away beside a cancelled one on the record kept
+  (keep the other record instead); a cancelled seat on the record merged away does not refuse, it
+  becomes a **seat left behind** (issue #2177). A seat on a departure that is out right now refuses
+  too ("Merge after the boat is back"). On the departure both records shared, the merged-away
+  record's duplicate wait-list entry or invitation is dropped and the kept record's stands. Two different
   dates of birth, one date missing where only the name matches, cards or signed releases on both
   records, releases signed under names that do not match, or a medical answer still waiting on (or
   declined by) a physician mean the two may be **two people**, and the merge runs only after the
@@ -2729,6 +2733,13 @@ new domain concept, define it here in the same PR.
   record merged away is deleted with a pointer to the one kept (`people.merged_into_person_id`), so
   its old links land on the kept record, and the kept record's trail says who merged which name
   into it (`diver_merged`).
+- **Seat left behind** — a **cancelled** seat that stays on the record **merged away**, because the
+  record kept holds its own seat on the same departure and `bookings` allows one seat per diver per
+  departure (`assessMerge`, `src/db/diver-merge.ts`; issue #2177). Only the booking row stays: its
+  pointer and the departure log are untouched, while the release, order and notes tied to it move to
+  the kept record with the rest of the diver's file (their `booking_id` still names the seat). Only
+  the seat's own `cancelled` status qualifies; a live seat is never left behind, on a deleted
+  departure or anywhere else.
 - **Remove vs. erase (a diver)** — two different operations, deliberately not the same button.
   **Removing** a diver is the reversible archive action every entity has
   ([20260719-crud-archive-semantics](../architecture/decisions/20260719-crud-archive-semantics.md)):
