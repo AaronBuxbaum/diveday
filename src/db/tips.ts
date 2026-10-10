@@ -2,11 +2,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { majorToMinor, type ShopCurrency, toShopCurrency } from "@/lib/money";
-import {
-  type CheckoutProvider,
-  checkoutProviderFromEnvironment,
-  stripeLineDescription,
-} from "@/lib/payments/checkout";
+import { type CheckoutProvider, stripeLineDescription } from "@/lib/payments/checkout";
 import type { AppDb, DbExecutor } from "./client";
 import {
   idempotencyKeyFor,
@@ -16,6 +12,7 @@ import {
 } from "./payment-operations";
 import { bookings, people, shops, type Tip, tips } from "./schema";
 import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
+import { checkoutProviderFromEnvironment } from "./stripe-providers";
 
 export type StartTipInput = {
   bookingId: string;

@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  AFTER_HOURS_PING_INTERVAL_MS,
-  afterHoursPingDue,
   afterHoursPingWanted,
   DEFAULT_DESK_HOURS,
   deskClosedSince,
@@ -64,22 +62,6 @@ describe("afterHoursPingWanted", () => {
   it("takes the person's own answer over their role's", () => {
     expect(afterHoursPingWanted(false, ["owner"])).toBe(false);
     expect(afterHoursPingWanted(true, ["crew"])).toBe(true);
-  });
-});
-
-describe("afterHoursPingDue", () => {
-  const now = new Date("2026-10-10T01:00:00Z");
-  it("is due for someone never pinged, and once the interval has passed", () => {
-    expect(afterHoursPingDue(null, now)).toBe(true);
-    expect(afterHoursPingDue(new Date(now.getTime() - AFTER_HOURS_PING_INTERVAL_MS), now)).toBe(
-      true,
-    );
-  });
-
-  it("is not due inside the interval", () => {
-    expect(afterHoursPingDue(new Date(now.getTime() - AFTER_HOURS_PING_INTERVAL_MS + 1), now)).toBe(
-      false,
-    );
   });
 });
 

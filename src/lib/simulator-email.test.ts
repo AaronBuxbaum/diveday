@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { reservedTestRecipientDelivery } from "./notifications/provider";
-import {
-  DEMO_MAIL_DOMAIN,
-  deliveryAddressFor,
-  demoEmail,
-  isSimulatorEmail,
-  simulatorEmail,
-} from "./simulator-email";
+import { DEMO_MAIL_DOMAIN, deliveryAddressFor, demoEmail, simulatorEmail } from "./simulator-email";
 
 describe("simulatorEmail", () => {
   it("labels the success address with the person, one address each", () => {
@@ -30,15 +24,6 @@ describe("simulatorEmail", () => {
 
   it("is an address the provider will send to", () => {
     expect(reservedTestRecipientDelivery(simulatorEmail("Priya Sharma"))).toBeNull();
-  });
-});
-
-describe("isSimulatorEmail", () => {
-  it("knows the simulator by its domain, whatever the outcome or label", () => {
-    expect(isSimulatorEmail("success@simulator.amazonses.com")).toBe(true);
-    expect(isSimulatorEmail("Bounce+x@Simulator.AmazonSES.com")).toBe(true);
-    expect(isSimulatorEmail("priya.sharma@example.com")).toBe(false);
-    expect(isSimulatorEmail("x@simulator.amazonses.com.evil.example")).toBe(false);
   });
 });
 

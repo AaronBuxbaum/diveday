@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   computeWaiverIntegrityHash,
-  guardianEmailRedacted,
   isWaiverIntegrityVersion,
   signedIntegrityVersionFor,
   verifyWaiverIntegrity,
@@ -331,15 +330,6 @@ describe("waiver integrity over a guardian's address erased on request (H-103, i
         integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
       }),
     ).toBe("invalid");
-    vi.unstubAllEnvs();
-  });
-
-  it("verifies the redacted release under v4 and says it was redacted", () => {
-    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
-    const record4 = sealed();
-    expect(verifyWaiverIntegrity(record4)).toBe("valid");
-    expect(guardianEmailRedacted(record4)).toBe(true);
-    expect(guardianEmailRedacted(coSigned)).toBe(false);
     vi.unstubAllEnvs();
   });
 

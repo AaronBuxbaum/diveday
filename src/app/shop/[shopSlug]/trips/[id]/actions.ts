@@ -1,6 +1,5 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -17,6 +16,7 @@ import {
   bookingDiverName,
   cancelBooking,
   confirmBookingIdentity,
+  getShopBookingTripId,
   restoreBooking,
   setBookingParticipantType,
   setBookingPickupDetails,
@@ -31,6 +31,7 @@ import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { sendNotification } from "@/db/notifications";
 import { addInternalNote, deleteInternalNote, recordTripActivity } from "@/db/operations";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
+import { getShopPersonName } from "@/db/people";
 import {
   courseCertifiesOnTrip,
   getTripRequirements,
@@ -43,7 +44,7 @@ import {
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
 import { applyPaidRentalKindsToFit } from "@/db/rental-fit";
 import type { PaymentStatus } from "@/db/schema";
-import { bookings, diveSpecialty, people } from "@/db/schema";
+import { diveSpecialty } from "@/db/schema";
 import { recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
 import { getShopCurrency } from "@/db/stripe-accounts";
@@ -1883,20 +1884,16 @@ export async function updateTripCrewAction(
     // call this), so the trip's activity log — read from the Trip surface —
     // stays the single record of who touched the crew and when, regardless of
     // which surface they used.
-    const [person] = await db
-      .select({ fullName: people.fullName })
-      .from(people)
-      .where(and(eq(people.id, change.personId), eq(people.shopId, s.user.shopId)))
-      .limit(1);
-    if (person) {
+    const crewName = await getShopPersonName(db, s.user.shopId, change.personId);
+    if (crewName !== null) {
       await recordTripActivity(db, {
         shopId: s.user.shopId,
         tripId,
         actorPersonId: s.user.personId,
         entry:
           change.operation === "assign"
-            ? { code: "crew_assigned", crew: person.fullName }
-            : { code: "crew_removed", crew: person.fullName },
+            ? { code: "crew_assigned", crew: crewName }
+            : { code: "crew_removed", crew: crewName },
       });
     }
     revalidatePath(shopPath(shopSlug));
@@ -1983,14 +1980,10 @@ export async function recordPaperCourseFormAction(
   const formId = uuidParam(String(formData.get("formId") ?? ""));
   if (!bookingId || !formId) redirect(noticeUrl(back, "course-form-unavailable"));
   const dbi = await getDb();
-  const [seat] = await dbi
-    .select({ tripId: bookings.tripId })
-    .from(bookings)
-    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, s.user.shopId)))
-    .limit(1);
   // The row posts its own booking; one from another departure is not this
   // roster's to record against.
-  if (seat?.tripId !== tripId) redirect(noticeUrl(back, "course-form-unavailable"));
+  if ((await getShopBookingTripId(dbi, s.user.shopId, bookingId)) !== tripId)
+    redirect(noticeUrl(back, "course-form-unavailable"));
   const guardianName = String(formData.get("guardianName") ?? "").trim();
   const guardianRelationship = String(formData.get("guardianRelationship") ?? "").trim();
   const recorded = await recordPaperCourseForm(dbi, {

@@ -41,7 +41,7 @@ import {
   trips,
 } from "./schema";
 import {
-  getCurrentWaiverTemplate,
+  getCurrentWaiverGeneration,
   getDiverWaiverChannelStates,
   getDiverWaiverRequestStatus,
   listSignedWaiversByPerson,
@@ -769,7 +769,7 @@ export async function getDiverProfile(
     // fact about the person and the shop — read here, alongside their cards and
     // sizes, rather than reconstructed per booking by whoever needs it.
     listSignedWaiversByPerson(db, shopId, [personId]),
-    getCurrentWaiverTemplate(db, shopId),
+    getCurrentWaiverGeneration(db, shopId),
     getDiverWaiverRequestStatus(db, shopId, personId),
     getDiverWaiverChannelStates(db, shopId, personId),
     // The shop's zone, for the guardian rule: a minor's solo signature reads as

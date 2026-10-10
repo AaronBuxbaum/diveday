@@ -246,15 +246,6 @@ export function buildDiverChecklist(
 }
 
 /**
- * The one thing to do next, if anything is on the diver. Drives the "what's
- * next" line in confirmations and the diver page's headline. Returns null when
- * everything left is the shop's to finish (or nothing is left at all).
- */
-export function nextDiverStep(items: readonly DiverChecklistItem[]): DiverChecklistItem | null {
-  return items.find((item) => item.state === "action") ?? null;
-}
-
-/**
  * Only the codes a diver can act on before the dock — a "waiting" blocker
  * (verification, medical review) is the shop's to finish, so it never appears
  * here as a to-do the diver can't complete. A code, never a phrase: the

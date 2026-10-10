@@ -1,13 +1,11 @@
 "use server";
 
 import { APIError } from "better-auth/api";
-import { and, eq } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import type { DbExecutor } from "@/db/client";
 import { getDb } from "@/db/client";
-import { people, personRoles } from "@/db/schema";
+import { demoRoleEmail } from "@/db/people";
 import { createDemoShop, resetDemoSchedule } from "@/db/seed";
 import { getShopById, getShopBySlug } from "@/db/shops";
 import { auth, getAuth } from "@/lib/auth";
@@ -63,26 +61,6 @@ function requestedDemoRole(formData?: FormData): DemoRoleId {
   return typeof raw === "string" && ENTERABLE_DEMO_ROLES.has(raw as DemoRoleId)
     ? (raw as DemoRoleId)
     : "owner";
-}
-
-/**
- * Who holds a role in a shop, looked up by role rather than a hardcoded seed
- * email — works on any seeded demo tenant (the canonical fixture or a minted
- * one). Shared by the landing page's pre-entry role picker and the in-app
- * role switcher (`switchDemoRoleAction` below).
- */
-async function findDemoRoleEmail(
-  db: DbExecutor,
-  shopId: string,
-  role: "owner" | "instructor" | "divemaster" | "captain",
-): Promise<string | null> {
-  const matches = await db
-    .select({ email: people.email })
-    .from(people)
-    .innerJoin(personRoles, eq(people.id, personRoles.personId))
-    .where(and(eq(people.shopId, shopId), eq(personRoles.role, role)))
-    .limit(1);
-  return matches[0]?.email ?? null;
 }
 
 /**
@@ -154,7 +132,7 @@ export async function enterDemoAction(formData?: FormData) {
     // Every minted demo seeds exactly one instructor, divemaster, and captain
     // (src/db/seed.ts), so this always resolves in practice; the owner
     // fallback just means a picker click can never dead-end even if that changes.
-    targetEmail = (shop ? await findDemoRoleEmail(db, shop.id, role) : null) ?? ownerEmail;
+    targetEmail = (shop ? await demoRoleEmail(db, shop.id, role) : null) ?? ownerEmail;
   }
 
   try {
@@ -223,7 +201,7 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
       | "instructor"
       | "divemaster"
       | "captain";
-    const targetEmail = await findDemoRoleEmail(db, shop.id, lookupRole);
+    const targetEmail = await demoRoleEmail(db, shop.id, lookupRole);
 
     if (!targetEmail) {
       // No seeded person holds this role in this shop — no-op back to the shop

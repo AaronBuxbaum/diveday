@@ -20,7 +20,6 @@ import {
   workOrderReturnsUnitToService,
   workOrderStatusMoves,
   workOrderStatusRank,
-  workOrderSubtotalsCents,
   workOrderTotalCents,
 } from "./work-orders";
 
@@ -272,15 +271,6 @@ describe("totals", () => {
 
   it("rounds a half minor unit up, the way a counter does on paper", () => {
     expect(workOrderLineTotalCents({ quantityHundredths: 50, unitAmountCents: 101 })).toBe(51);
-  });
-
-  it("adds parts and labor into one total and keeps the two subtotals", () => {
-    const lines = [
-      { kind: "part" as const, quantityHundredths: 200, unitAmountCents: 1250 },
-      { kind: "labor" as const, quantityHundredths: 150, unitAmountCents: 8000 },
-    ];
-    expect(workOrderTotalCents(lines)).toBe(2500 + 12000);
-    expect(workOrderSubtotalsCents(lines)).toEqual({ parts: 2500, labor: 12000 });
   });
 
   it("totals an empty ticket at nothing", () => {

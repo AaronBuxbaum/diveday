@@ -72,6 +72,7 @@ import { getShopById, getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
+import { buildAfterStateProps } from "@/features/recap-after-state";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import {
@@ -105,7 +106,6 @@ import {
 } from "@/lib/public-routes";
 import { combineCertRequirements, type ReadinessBlockerCode } from "@/lib/readiness";
 import { buildDiverChecklist, type DiverChecklistItem } from "@/lib/readiness-summary";
-import { buildAfterStateProps } from "@/lib/recap-after-state";
 import { signRecapToken } from "@/lib/recap-links";
 import { nitroxAvailableOn, nitroxCardWanted } from "@/lib/rentals";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";

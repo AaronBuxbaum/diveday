@@ -20,9 +20,7 @@ import {
 import { listBoats } from "@/db/boats";
 import { listTripLenses } from "@/db/trip-lenses";
 import { latestTripStage } from "@/db/trip-stages";
-import { getTripGuests } from "@/db/trips-guests";
-import { getTripOverview } from "@/db/trips-overview";
-import { loadTripSharedReads } from "@/db/trips-shared-reads";
+import { getTripGuests, getTripOverview, loadTripSharedReads } from "@/db/trips";
 import { overRatioPulseKey, overRatioWarningText } from "@/i18n/crew-gap-labels";
 import { languageNameIn } from "@/i18n/language-labels";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";

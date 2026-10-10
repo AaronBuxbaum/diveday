@@ -19,6 +19,7 @@ import {
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
 import type { RecapPageData } from "@/db/recap";
+import type { AfterStateProps } from "@/features/recap-after-state";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
@@ -28,7 +29,6 @@ import { cachedFormatter } from "@/lib/intl-cache";
 import { capturePhoto } from "@/lib/marine-life-tiles";
 import { currencySymbol, minorToMajor, type ShopCurrency } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
-import type { AfterStateProps } from "@/lib/recap-after-state";
 import { MAX_REVIEW_COMMENT_LENGTH, REVIEW_RATINGS } from "@/lib/reviews";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";

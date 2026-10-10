@@ -15,7 +15,7 @@ import {
   syncDemoStripeAccount,
   upsertShopStripeAccount,
 } from "./stripe-accounts";
-import { stripeKeySourceFromEnvironment } from "./stripe-key-source";
+import { stripeKeySourceFromEnvironment } from "./stripe-providers";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

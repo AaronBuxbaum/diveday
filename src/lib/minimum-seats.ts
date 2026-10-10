@@ -102,16 +102,6 @@ export function minimumSeatsState(
   };
 }
 
-/** Whether a shop-entered decision window is one this app will store. */
-export function isValidDecisionHours(hours: number): boolean {
-  return Number.isInteger(hours) && hours >= MIN_DECISION_HOURS && hours <= MAX_DECISION_HOURS;
-}
-
-/** Whether a shop-entered minimum is one this app will store. */
-export function isValidMinimumBookings(minimum: number): boolean {
-  return Number.isInteger(minimum) && minimum >= 1 && minimum <= MAX_MINIMUM_BOOKINGS;
-}
-
 /**
  * **The sweep's cadence, hourly.** The deadline is printed on the booking page
  * to the minute ("we'll confirm by Thu 14 Aug, 7:30 AM"), and an hourly pass

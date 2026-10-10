@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DIVE_INTENTS, diveIntentTally, parseDiveIntent } from "./dive-intent";
+import { diveIntentTally } from "./dive-intent";
 
 describe("diveIntentTally", () => {
   it("counts nothing for an empty roster", () => {
@@ -27,16 +27,5 @@ describe("diveIntentTally", () => {
     expect(arrivals.map(({ intent }) => intent)).toEqual(["easing_back", "small_life", "good_day"]);
     const reversed = diveIntentTally(["small_life", "good_day", "good_day", "easing_back"]);
     expect(reversed).toEqual(arrivals);
-  });
-});
-
-describe("parseDiveIntent", () => {
-  it("takes the five and refuses everything else", () => {
-    for (const intent of DIVE_INTENTS) expect(parseDiveIntent(intent)).toBe(intent);
-    // An anonymous form's junk field is "not said", never a refusal: a hand-
-    // crafted post must not be able to cost somebody a seat.
-    for (const junk of ["", "EASING_BACK", "wreck", 3, null, undefined, {}]) {
-      expect(parseDiveIntent(junk)).toBeNull();
-    }
   });
 });

@@ -22,7 +22,6 @@ import { majorToMinor } from "@/lib/money";
 import {
   type InvoiceCustomerAddress,
   type InvoicingProvider,
-  invoicingProviderFromEnvironment,
   isUsableInvoiceCustomerAddress,
 } from "@/lib/payments/invoicing";
 import { canPersonManageOrders, loadActiveStaffRoles } from "./authz";
@@ -67,6 +66,7 @@ import {
   getShopStripeAccount,
   getShopTaxEnabled,
 } from "./stripe-accounts";
+import { invoicingProviderFromEnvironment } from "./stripe-providers";
 
 export type NewOrderLineItem = {
   kind: OrderLineItemKind;

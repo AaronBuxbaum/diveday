@@ -1294,6 +1294,20 @@ async function persistDeclaration(
   });
 }
 
+/** The departure one of this shop's bookings sits on, or null when it is not the shop's. */
+export async function getShopBookingTripId(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .limit(1);
+  return row?.tripId ?? null;
+}
+
 /**
  * A booking on a specific trip, with its person — for the confirmation
  * panel, which must render from the database, never from URL params.

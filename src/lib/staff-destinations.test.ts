@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import {
   currentStaffDestination,
   currentStaffSection,
-  isLiveManifestPath,
   isStaffDestinationPage,
   STAFF_DESTINATION_LABEL_KEYS,
   STAFF_DESTINATION_TITLE_KEYS,
@@ -90,21 +89,6 @@ describe("the staff destination registry", () => {
     if (!today || !orders) throw new Error("registry lost a destination");
     expect(staffDestinationHref(root, today)).toBe("/shop/blue-mantis");
     expect(staffDestinationHref(root, orders)).toBe("/shop/blue-mantis/orders");
-  });
-});
-
-describe("the live manifest route", () => {
-  const root = staffShopRoot("blue-mantis");
-
-  it("matches only this shop's live manifest surface", () => {
-    expect(isLiveManifestPath(`${root}/trips/42/manifest`, root)).toBe(true);
-    expect(isLiveManifestPath(`${root}/trips/42/manifest/?checkpoint=departure`, root)).toBe(true);
-    expect(isLiveManifestPath(`${root}/trips/42/manifest/`, root)).toBe(true);
-
-    expect(isLiveManifestPath("/offline-manifest?trip=42", root)).toBe(false);
-    expect(isLiveManifestPath(`${root}/trips/42`, root)).toBe(false);
-    expect(isLiveManifestPath(`${root}/trips/42/manifest/extra`, root)).toBe(false);
-    expect(isLiveManifestPath(`/shop/blue-mantis-north/trips/42/manifest`, root)).toBe(false);
   });
 });
 

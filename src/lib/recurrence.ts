@@ -34,7 +34,6 @@ import {
   calendarDaysBetween,
   shiftCalendarDate,
 } from "./calendar-date";
-import type { WallTime } from "./zoned";
 
 /**
  * Still one frequency: a weekday set plus a week interval expresses daily,
@@ -244,23 +243,6 @@ function firesOn(cadence: SeriesCadence, date: CalendarDate): boolean {
   if (!weekdaySetHas(cadence.pattern.weekdays, calendarDateWeekday(date))) return false;
   const weekIndex = Math.floor(calendarDaysBetween(weekStart(cadence.anchorDate), date) / 7);
   return weekIndex % cadence.pattern.intervalWeeks === 0;
-}
-
-/**
- * Advance a wall-clock date by whole days, rolling months and years over
- * correctly. Pure calendar arithmetic on the date parts — no timezone is
- * involved, so `Date.UTC` is only a convenient integer calendar here, never an
- * instant. Hour and minute are preserved exactly.
- */
-export function addDaysToWall(wall: WallTime, days: number): WallTime {
-  const shifted = new Date(Date.UTC(wall.year, wall.month - 1, wall.day + days));
-  return {
-    year: shifted.getUTCFullYear(),
-    month: shifted.getUTCMonth() + 1,
-    day: shifted.getUTCDate(),
-    hour: wall.hour,
-    minute: wall.minute,
-  };
 }
 
 /**

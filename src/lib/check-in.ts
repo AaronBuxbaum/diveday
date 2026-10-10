@@ -99,25 +99,6 @@ export function counterIsClear(seats: readonly CounterSeat[]): boolean {
 }
 
 /**
- * **Is "First visit" worth a row's height on this screen?**
- *
- * The marker is a fact a staffer can be warmer for, not a state anybody has to
- * act on, and its whole value is that it singles somebody out. On a shop's
- * first season every diver in the queue is a first visit — so it rendered on
- * every row, at exactly the length of queue where the counter's promise is a
- * name and one tap, and marked nobody. A line that would apply to everyone
- * present distinguishes nothing, and AGENTS.md deletes a sentence that does not
- * change what the reader would do.
- *
- * Judged across the **whole visible queue**, the same scope as the ambiguous-name
- * rule the counter already applies to emails: a staffer reads down the page, and
- * "everyone on this screen" is the set the word is being weighed against.
- */
-export function firstVisitMarksAnException(seats: readonly { firstVisit: boolean }[]): boolean {
-  return seats.some((seat) => !seat.firstVisit) && seats.some((seat) => seat.firstVisit);
-}
-
-/**
  * **The instrument's three counts, in one pass, guaranteed disjoint.**
  *
  * `here + cantBoard + toCome === expected`, always — which is the property the

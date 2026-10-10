@@ -5,7 +5,6 @@ import type {
   PaymentStatus,
   SpecialtyCertification,
   TripRequirement,
-  WaiverRecord,
 } from "@/db/schema";
 import { checkMinimumAge } from "./age";
 import type { CalendarDate } from "./calendar-date";
@@ -18,7 +17,7 @@ import {
 } from "./course-forms";
 import { guardianSignatureMissing } from "./guardian";
 import { isDiver, type ParticipantType } from "./participant-types";
-import { waiverState } from "./waivers";
+import { type WaiverStateFields, waiverState } from "./waivers";
 
 /**
  * Payment states that clear the "ready to board" payment gate.
@@ -85,6 +84,7 @@ export type {
   CertificationLevel,
   RequirableCertificationLevel,
 } from "./certification-levels";
+
 export { REQUIRABLE_CERTIFICATION_LEVELS } from "./certification-levels";
 
 const levelRank: Record<CertificationLevel, number> = {
@@ -414,7 +414,7 @@ export type ReadinessInput = {
   requirement: TripRequirement | null;
   /** The primary dive site's inherent gate, composed with the trip's own. */
   siteRequirement?: SiteCertRequirement | null;
-  waiver: WaiverRecord | null;
+  waiver: WaiverStateFields | null;
   certifications: readonly Certification[];
   /**
    * Courses this diver is booked on that certify a level and finish before

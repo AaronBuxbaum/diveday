@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { getDb } from "@/db/client";
-import { getTripOverview, type TripOverviewShop } from "@/db/trips-overview";
+import { getTripOverview, type TripOverviewShop } from "@/db/trips";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";

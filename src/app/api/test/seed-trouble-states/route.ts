@@ -37,8 +37,7 @@ import {
 } from "@/db/schema";
 import { seatDiver } from "@/db/seat-diver";
 import { getShopBySlug } from "@/db/shops";
-import { moveTrip, setTripParticipantTerms } from "@/db/trips";
-import { heldSeatCounts } from "@/db/trips-queries";
+import { heldSeatCounts, moveTrip, setTripParticipantTerms } from "@/db/trips";
 import { completeWaiver, issueWaiverRequest, recordWaiverDelivery } from "@/db/waivers";
 import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";

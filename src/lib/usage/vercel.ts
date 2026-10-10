@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { periodBounds, type UsageSample } from "@/lib/cost-guardrails";
 import {
@@ -90,8 +91,8 @@ export async function fetchVercelSpend(options: ProbeOptions = {}): Promise<Verc
     // Date-only, per the endpoint's ISO-8601 `from`/`to`. `end` is the
     // exclusive start of next month, so the last day of this one is included
     // without ever reaching into a period we are not asking about.
-    from: start.toISOString().slice(0, 10),
-    to: new Date(end.getTime() - 1).toISOString().slice(0, 10),
+    from: calendarDateInTimezone(start, "UTC"),
+    to: calendarDateInTimezone(new Date(end.getTime() - 1), "UTC"),
   });
 
   let response: Response;

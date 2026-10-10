@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ProviderEmailStatus } from "./events";
+import { type ProviderEmailStatus, timestampFrom } from "./events";
 
 /**
  * SMS delivery receipts from AWS SNS (docs ADR 20260802-sms-delivery-receipts).
@@ -93,16 +93,6 @@ export function parseSmsDeliveryEvent(record: string, now: Date): SmsDeliveryEve
     // "Message has been accepted by phone", which is noise on a row whose
     // status already says delivered.
     detail: status === "failed" ? (receipt.data.delivery?.providerResponse?.trim() ?? null) : null,
-    occurredAt: timestampFrom(receipt.data.notification.timestamp, now),
+    occurredAt: timestampFrom([receipt.data.notification.timestamp], now),
   };
-}
-
-/**
- * CloudWatch writes an ISO-8601 stamp; anything unparseable falls back to now
- * so a row always has a time, matching `parseSesEmailEvent`.
- */
-function timestampFrom(timestamp: string | undefined, fallback: Date): Date {
-  if (!timestamp) return fallback;
-  const parsed = new Date(timestamp);
-  return Number.isNaN(parsed.getTime()) ? fallback : parsed;
 }

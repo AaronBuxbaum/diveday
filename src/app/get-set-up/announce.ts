@@ -4,6 +4,7 @@ import type { SetupRequest } from "@/db/schema";
 import { issueSetupLink } from "@/db/setup-links";
 import { trackEvent } from "@/lib/analytics";
 import { eventSource } from "@/lib/funnel";
+import { log } from "@/lib/log";
 import { notify, publicAppUrl } from "@/lib/notifications";
 import { ONBOARDING_EMAIL } from "@/lib/platform-mail";
 import { setupLinkPath } from "@/lib/setup-links";
@@ -35,7 +36,7 @@ export async function announceSetupRequest(request: SetupRequest): Promise<void>
     // off the database can never widen what the event vocabulary accepts.
     await trackEvent({ name: "setup_requested", source: eventSource(request.source) });
   } catch (error) {
-    console.error("announceSetupRequest: setup_requested event failed", error);
+    log("setup_request.event_failed", "warn", { errorCode: errorCodeOf(error) });
   }
 
   const link = await mintSetupLink(request);
@@ -66,7 +67,7 @@ export async function announceSetupRequest(request: SetupRequest): Promise<void>
       console.info(`announceSetupRequest: setup link for ${request.shopName}: ${link.url}`);
     }
   } catch (error) {
-    console.error("announceSetupRequest: onboarding mail failed", error);
+    log("setup_request.mail_failed", "error", { errorCode: errorCodeOf(error) });
   }
 }
 
@@ -88,9 +89,17 @@ async function mintSetupLink(
       expiresAt: issued.expiresAt,
     };
   } catch (error) {
-    console.error("announceSetupRequest: setup link failed", error);
+    log("setup_request.link_failed", "error", { errorCode: errorCodeOf(error) });
     return null;
   }
+}
+
+/**
+ * The thrown value's class name and nothing else: an SES rejection's message
+ * names the recipient, so the message never reaches a log line.
+ */
+function errorCodeOf(error: unknown): string {
+  return error instanceof Error ? error.name : "unknown_error";
 }
 
 function currentSystemOf(value: string): SetupCurrentSystem {

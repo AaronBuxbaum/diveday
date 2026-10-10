@@ -10,7 +10,7 @@
 // wait -- and they use Node's own `timeout` option instead, which kills the
 // direct child. That is enough for every call site in this repo: each one is
 // either a leaf binary (`git`, `aws`, `gh`, `cdk`) or a wrapper whose orphaned
-// grandchild is harmless (`pnpm exec vercel` finishes one HTTP call; a `next
+// grandchild is harmless (`pnpm dlx vercel` (scripts/vercel-cli.mjs) finishes one HTTP call; a `next
 // build` on a Vercel builder dies with the container). The property that
 // matters is that the *script* stops waiting.
 //

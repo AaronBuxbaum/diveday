@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { invoicingProviderFromEnvironment } from "./invoicing";
+import { invoicingProviderFromEnvironment } from "@/db/stripe-providers";
 
 /** The `stripe_api.request_threw` lines a case wrote, parsed. */
 function threwLines(spy: { mock: { calls: unknown[][] } }): Array<Record<string, unknown>> {

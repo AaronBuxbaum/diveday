@@ -1,4 +1,4 @@
-import type { MedicalAnswers, WaiverRecord } from "@/db/schema";
+import type { MedicalAnswers, WaiverRecord as StoredWaiverRecord } from "@/db/schema";
 import { type CalendarDate, calendarDateInTimezone, isValidCalendarDate } from "./calendar-date";
 import { nowDate } from "./clock";
 import {
@@ -8,6 +8,27 @@ import {
   guardianSignatureOf,
 } from "./guardian";
 import { flaggedMedicalPrompts, needsPhysicianReview } from "./medical";
+
+/**
+ * **A waiver record as a status decision reads it**: every column but the
+ * release text, the unsigned draft, the bearer link and the seal
+ * (`WAIVER_STATE_COLUMNS`, src/db/waiver-record-columns.ts). Every rule in
+ * this file decides from status, signature and clearance stamps, so each takes
+ * this narrower shape: a roster or readiness pass can hand over the light row,
+ * and a whole stored record still fits.
+ */
+export type WaiverStateFields = Omit<
+  StoredWaiverRecord,
+  | "templateBody"
+  | "draftSignerName"
+  | "draftMedicalAnswers"
+  | "draftGuardian"
+  | "tokenHash"
+  | "tokenSealed"
+  | "integrityHash"
+>;
+
+type WaiverRecord = WaiverStateFields;
 
 export const WAIVER_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 

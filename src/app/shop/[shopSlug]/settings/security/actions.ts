@@ -1,6 +1,5 @@
 "use server";
 
-import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -14,7 +13,7 @@ import {
   revokeAllAccountSessions,
   verifyAccountSecondFactor,
 } from "@/db/account-security";
-import { userAccounts } from "@/db/schema";
+import { getAccountIdForPerson } from "@/db/user-accounts";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -46,13 +45,10 @@ async function secondFactorAttemptAllowed(accountId: string): Promise<boolean> {
 
 async function securityContext(shopSlug: string) {
   const surface = await requireShopSurface(shopSlug);
-  const [account] = await surface.db
-    .select({ id: userAccounts.id })
-    .from(userAccounts)
-    .where(eq(userAccounts.personId, surface.session.user.personId))
-    .limit(1);
-  if (!account) redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "security-invalid"));
-  return { ...surface, accountId: account.id };
+  const accountId = await getAccountIdForPerson(surface.db, surface.session.user.personId);
+  if (!accountId)
+    redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "security-invalid"));
+  return { ...surface, accountId };
 }
 
 export async function beginTotpEnrollmentAction(shopSlug: string) {

@@ -5,15 +5,8 @@ import { log } from "@/lib/log";
 import { isDiver, type ParticipantType } from "@/lib/participant-types";
 import { parsePassThroughFee, passThroughTotalCents } from "@/lib/pass-through-fee";
 import { capturedPaymentStatuses } from "@/lib/payment-source";
-import {
-  type CheckoutProvider,
-  checkoutProviderFromEnvironment,
-  stripeLineDescription,
-} from "@/lib/payments/checkout";
-import {
-  type PromotionProvider,
-  promotionProviderFromEnvironment,
-} from "@/lib/payments/promotions";
+import { type CheckoutProvider, stripeLineDescription } from "@/lib/payments/checkout";
+import type { PromotionProvider } from "@/lib/payments/promotions";
 import { allocateSettledTotal } from "@/lib/payments/settlement";
 import { discountOffCents, type PromoDiscount, promoDiscountOf } from "@/lib/promo-codes";
 import type { AppDb, DbExecutor } from "./client";
@@ -45,6 +38,10 @@ import {
   getShopStripeAccount,
   getShopTaxEnabled,
 } from "./stripe-accounts";
+import {
+  checkoutProviderFromEnvironment,
+  promotionProviderFromEnvironment,
+} from "./stripe-providers";
 import { liveTrip } from "./trips-live";
 
 export type StartCheckoutInput = {
