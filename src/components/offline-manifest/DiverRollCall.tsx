@@ -348,20 +348,6 @@ function OfflineDiverRow({
               ))}
             </ul>
           ) : null}
-          {expired ? null : (
-            <OfflineRollCallException
-              // Closes an opened panel when the crew moves to the next count.
-              key={checkpoint}
-              subject={{ bookingId: diver.bookingId }}
-              subjectKey={diver.bookingId}
-              name={diver.fullName}
-              state={state}
-              rowState={rowState}
-              isDeparture={isDeparture}
-              isCrew={false}
-              controls={controls}
-            />
-          )}
         </div>
         {expired ? (
           // `sm:py-1.5` centres the sentence's first 20px line on the name
@@ -412,6 +398,23 @@ function OfflineDiverRow({
           </div>
         )}
       </div>
+      {/* Under the whole row rather than the name's column, so its controls
+        take the row's width on a phone: in the column beside the circle a
+        "Mark not back aboard" wrapped to two lines. */}
+      {expired ? null : (
+        <OfflineRollCallException
+          // Closes an opened panel when the crew moves to the next count.
+          key={checkpoint}
+          subject={{ bookingId: diver.bookingId }}
+          subjectKey={diver.bookingId}
+          name={diver.fullName}
+          state={state}
+          rowState={rowState}
+          isDeparture={isDeparture}
+          isCrew={false}
+          controls={controls}
+        />
+      )}
     </li>
   );
 }

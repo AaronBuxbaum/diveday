@@ -157,19 +157,6 @@ export function OfflineCrewRollCall({
                     {member.state?.note ? (
                       <p className="mt-1 text-sm">{member.state.note}</p>
                     ) : null}
-                    {expired || !crewPersonId ? null : (
-                      <OfflineRollCallException
-                        key={checkpoint}
-                        subject={{ crewPersonId }}
-                        subjectKey={crewPersonId}
-                        name={member.fullName}
-                        state={member.state}
-                        rowState={crewRowState}
-                        isDeparture={isDeparture}
-                        isCrew
-                        controls={controls}
-                      />
-                    )}
                   </div>
                   {expired || !crewPersonId ? null : (
                     <div className="flex shrink-0 ps-3">
@@ -196,6 +183,20 @@ export function OfflineCrewRollCall({
                     </div>
                   )}
                 </div>
+                {/* Under the whole row, at its width, as on the diver rows. */}
+                {expired || !crewPersonId ? null : (
+                  <OfflineRollCallException
+                    key={checkpoint}
+                    subject={{ crewPersonId }}
+                    subjectKey={crewPersonId}
+                    name={member.fullName}
+                    state={member.state}
+                    rowState={crewRowState}
+                    isDeparture={isDeparture}
+                    isCrew
+                    controls={controls}
+                  />
+                )}
               </li>
             );
           })}
