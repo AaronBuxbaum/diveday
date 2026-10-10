@@ -171,6 +171,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const { launch, signInOnce, waitPastTheSkeleton } = await import("./capture-session.mjs");
   const { default: sharp } = await import("sharp");
+  const { OFFLINE_SETTLED_SELECTOR } = await import("./screenshot-guards.mjs");
   const ledger = JSON.parse(fs.readFileSync("scripts/route-coverage.json", "utf8"));
   const routes = ledgerRoutes(ledger);
   const shotsDir = path.join(args.out, "contact-sheet");
@@ -205,6 +206,11 @@ async function main() {
           if (response?.status() === 404) continue;
           await waitPastTheSkeleton(page, next.pathname);
           if ((await page.locator(NOT_FOUND_MARKER).count()) > 0) continue;
+          // The offline viewer opens on "Opening…" while it reads the device's
+          // store; it marks the page once that read has settled (#2235).
+          if (next.pathname === "/offline-manifest") {
+            await page.waitForSelector(OFFLINE_SETTLED_SELECTOR, { state: "attached" });
+          }
           ok = true;
         } catch (error) {
           const why = String(error?.message ?? error).split("\n")[0];
@@ -228,6 +234,9 @@ async function main() {
         const route = pathname && routeFor(routes, pathname);
         if (route && !filled.has(route) && dynamicCount(route) > 0) filled.set(route, pathname);
       }
+      // Next's dev badge sits on every tile's corner otherwise; it is the dev
+      // server's chrome, not the page's.
+      await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
       const file = path.join(shotsDir, `${String(captured.length).padStart(3, "0")}.png`);
       await page.screenshot({ path: file, caret: "initial" });
       captured.push({ ...next, title: await page.title(), file });
