@@ -161,7 +161,7 @@ test.describe("per-trip crew role", () => {
     // (the DOM changes, no action fires), so wait for the marker first.
     // The crew row opens itself while the boat has nobody on it and settles
     // once it does, so every visit after the first assign takes a tap.
-    await openTripAboutRow(page, "about-crew");
+    await openTripAboutRow(page, "Boat & crew");
     await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Assign crew").selectOption({ label: "Keiko Tanaka" });
     await expect(page.getByRole("button", { name: "Unassign Keiko Tanaka" })).toBeVisible();
@@ -172,7 +172,7 @@ test.describe("per-trip crew role", () => {
 
     // It is a write, not a client-side toggle: the ratio reads this column.
     await page.reload();
-    await openTripAboutRow(page, "about-crew");
+    await openTripAboutRow(page, "Boat & crew");
     await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("captain");
 
     // And "not specified" is reachable again — it is the honest default, not a
@@ -184,7 +184,7 @@ test.describe("per-trip crew role", () => {
     // the old role back — the captain step above already waits the same way.
     await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("");
     await page.reload();
-    await openTripAboutRow(page, "about-crew");
+    await openTripAboutRow(page, "Boat & crew");
     await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("");
   });
 });

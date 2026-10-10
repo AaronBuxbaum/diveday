@@ -120,6 +120,13 @@ describe("Trip About panel", () => {
     expect(container.querySelector("details#details")).toHaveAttribute("open");
     expect(screen.getByText("Details editor")).toBeVisible();
   });
+
+  it("names an editable row's disclosure by the row's label, so it is found by name", () => {
+    render(<TripAboutSection {...props} />);
+    const row = screen.getByRole("group", { name: "The plan" });
+    expect(row.tagName).toBe("DETAILS");
+    expect(row.id).toBe("details");
+  });
 });
 
 describe("TripMoreDisclosure", () => {
@@ -154,5 +161,14 @@ describe("TripMoreDisclosure", () => {
     const more = container.querySelector("details#about-more > summary");
     expect(more).not.toBeNull();
     expect(more?.className).not.toMatch(/focus-ring|outline/);
+  });
+
+  it("is named by its label", () => {
+    render(
+      <TripMoreDisclosure label="More for this departure">
+        <span>Cancel departure</span>
+      </TripMoreDisclosure>,
+    );
+    expect(screen.getByRole("group", { name: "More for this departure" }).tagName).toBe("DETAILS");
   });
 });

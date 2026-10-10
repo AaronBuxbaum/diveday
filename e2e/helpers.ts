@@ -352,7 +352,7 @@ export async function openTripAbout(page: Page): Promise<Locator> {
  */
 export async function openTripMore(page: Page): Promise<Locator> {
   await openTripAbout(page);
-  const list = page.locator("details#about-more");
+  const list = page.getByRole("group", { name: "More for this departure" });
   if ((await list.getAttribute("open")) === null) {
     await list.locator(":scope > summary").click();
   }
@@ -362,29 +362,16 @@ export async function openTripMore(page: Page): Promise<Locator> {
 
 /**
  * Open one About row's editor — the departure's crew, its price, the days it
- * runs. A row opens itself only while its subject has open work, so a settled
- * one (a boat with crew on it) takes a tap. Opens the panel itself first.
+ * runs — found by the row's label, which its `<details>` carries as its name.
+ * A row opens itself only while its subject has open work, so a settled one
+ * (a boat with crew on it) takes a tap. Opens the panel itself first.
  */
-export async function openTripAboutRow(page: Page, id: string): Promise<Locator> {
+export async function openTripAboutRow(page: Page, label: string): Promise<Locator> {
   await openTripAbout(page);
-  const row = page.locator(`details#${id}`);
+  const row = page.getByRole("group", { name: label, exact: true });
   await expect(row).toBeVisible();
   await openIfClosed(row);
   return row;
-}
-
-/** Navigate to the create-diver form from an add-diver section or panel. */
-export async function openHandEntry(container: Locator): Promise<void> {
-  const addLink = container.getByRole("link", { name: /Add (diver|to wait list)/i });
-  if ((await addLink.count()) > 0) {
-    await addLink.click();
-    await container.page().waitForURL(/\/divers\/new/);
-    return;
-  }
-  const details = container.locator("details#hand-entry");
-  if ((await details.count()) > 0 && (await details.getAttribute("open")) === null) {
-    await details.locator("summary").click();
-  }
 }
 
 /**
