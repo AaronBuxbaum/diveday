@@ -2,7 +2,7 @@ import { and, eq, inArray, like } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeEmail } from "@/test/fakes";
 import {
   callDayBlowout,
@@ -21,6 +21,10 @@ import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-ac
 import { createTrip, upcomingTripsWithCounts } from "./trips";
 import { changeTripCrew, listStaff } from "./trips-crew";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const fileCtx = fileScopedShopContext();
+
 const ORIGIN = "https://diveday.example";
 const HOUR = 60 * 60 * 1_000;
 
@@ -35,8 +39,14 @@ type Ctx = Awaited<ReturnType<typeof context>>;
  * seeded Blue Mantis world (whose upcoming schedule provides the rebooking
  * candidates), plus the seeded owner as the staff member making the call.
  */
-async function context(divers: { fullName: string; email?: string }[] = []) {
-  const { db, shop } = await seededShopContext();
+async function context(
+  divers: { fullName: string; email?: string }[] = [],
+  { fresh = false }: { fresh?: boolean } = {},
+) {
+  // `fresh`: a database of its own, for the one test whose subject is two calls
+  // racing — under the file's transaction each call's own transaction would be
+  // an interleaved savepoint on one handle, which is not the thing under test.
+  const { db, shop } = fresh ? await seededShopContext() : fileCtx;
   const now = nowDate();
   const trip = await createTrip(db, {
     shopId: shop.id,
@@ -242,10 +252,13 @@ describe("callTripBlowout — failure semantics (resume, never re-send)", () => 
   });
 
   it("two concurrent calls claim each diver once — nobody is double-messaged", async () => {
-    const ctx = await context([
-      { fullName: "Ada Storm", email: "ada.storm@example.com" },
-      { fullName: "Ben Gale", email: "ben.gale@example.com" },
-    ]);
+    const ctx = await context(
+      [
+        { fullName: "Ada Storm", email: "ada.storm@example.com" },
+        { fullName: "Ben Gale", email: "ben.gale@example.com" },
+      ],
+      { fresh: true },
+    );
     const email = fakeEmail();
     const [first, second] = await Promise.all([
       callTripBlowout(ctx.db, callInput(ctx, email.provider)),
@@ -296,7 +309,7 @@ describe("callTripBlowout — failure semantics (resume, never re-send)", () => 
 
 describe("callTripBlowout — what the message says", () => {
   it("filters each diver's alternatives through trip admission (Diego never sees the Advanced wall)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = fileCtx;
     const now = nowDate();
     const trip = await createTrip(db, {
       shopId: shop.id,

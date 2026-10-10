@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { fakeCheckout, fakePromotions } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
@@ -22,12 +22,16 @@ import {
 } from "./stripe-accounts";
 import { upcomingTripsWithCounts, updateTrip } from "./trips";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 const OTHER_SHOP_ID = "00000000-0000-0000-0000-000000000000";
 const NOW = new Date("2026-07-29T12:00:00.000Z");
 
 /** A connected, charges-enabled shop — the precondition for holding any code at all. */
 async function promoContext(options: { connected?: boolean } = {}) {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   if (options.connected !== false) {
     await upsertShopStripeAccount(db, shop.id, "acct_test");
     await setShopStripeAccountStatus(db, "acct_test", {

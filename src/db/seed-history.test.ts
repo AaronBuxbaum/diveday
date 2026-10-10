@@ -1,11 +1,15 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { getTripManifest } from "./manifests";
 import { getMonthlyReport } from "./reporting";
 import { tripRequirements, trips as tripsTable } from "./schema";
 import { resetDemoSchedule } from "./seed";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * The demo is a teaching surface: whatever it shows, a shop learns is normal.
@@ -21,7 +25,7 @@ describe("seeded history manifests", () => {
   const HISTORY_DESCRIPTION = "Sailed. Kept in the log for the shop's monthly numbers.";
 
   it("never shows a boarded diver beside a blocked readiness result", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await resetDemoSchedule(db, shop.id, { history: true });
 
     const history = await db
@@ -55,7 +59,7 @@ describe("seeded history manifests", () => {
     // carried-forward default is what every later checkpoint shows. It is the
     // only place in the demo (and therefore in the visual fleet) where that
     // state is exercised at all.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await resetDemoSchedule(db, shop.id, { history: true });
 
     const history = await db
@@ -90,7 +94,7 @@ describe("seeded history manifests", () => {
    * report rather than on the column.
    */
   it("reports the tax it collected, without moving net revenue", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await resetDemoSchedule(db, shop.id, { history: true });
 
     // A wide window over the whole back-fill, so this does not depend on which
