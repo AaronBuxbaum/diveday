@@ -43,6 +43,20 @@ const WITHHELD = [
   pin(ORDER_LINE_ITEMS_CSV, "description"),
 ];
 
+/**
+ * Every diver file's header, in full. A column that widens from `shop` to
+ * `both` is a decision about what a diver's self-serve bundle carries, so it
+ * shows up here as a visible diff rather than passing because it was not one
+ * of the ten columns pinned above.
+ */
+describe("the diver bundle's headers", () => {
+  it("are exactly the columns decided for the diver", () => {
+    expect(
+      Object.fromEntries(DIVER_EXPORT_FILES.map((file) => [file.file, file.header])),
+    ).toMatchSnapshot();
+  });
+});
+
 describe("a table both bundles write", () => {
   it.each(WITHHELD)("keeps %s's %s out of the diver's file", (_file, column, shop, diver) => {
     expect(shop).toContain(column);

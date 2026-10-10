@@ -5,7 +5,7 @@ import { personNamesMatch } from "@/lib/person-name";
 import type { DbExecutor } from "./client";
 import { storedPhone } from "./person-phone";
 import { isUniqueConstraintViolation } from "./query-helpers";
-import { bookings, people, personRoles } from "./schema";
+import { bookings, people, personRoles, shops } from "./schema";
 
 export type FindOrCreatePersonInput = {
   shopId: string;
@@ -284,7 +284,9 @@ export async function selectActivePersonByEmail(tx: DbExecutor, shopId: string, 
  * Who holds a role in a shop, looked up by role rather than a hardcoded seed
  * email — works on any seeded demo tenant (the canonical fixture or a minted
  * one). Shared by the landing page's pre-entry role picker and the in-app
- * role switcher (`switchDemoRoleAction` in `src/app/actions/demo.ts`).
+ * role switcher (`switchDemoRoleAction` in `src/app/actions/demo.ts`). Demo
+ * shops only: the query refuses a real tenant itself, so the password-free
+ * sign-in it feeds can never be pointed at one.
  */
 export async function demoRoleEmail(
   db: DbExecutor,
@@ -295,7 +297,8 @@ export async function demoRoleEmail(
     .select({ email: people.email })
     .from(people)
     .innerJoin(personRoles, eq(people.id, personRoles.personId))
-    .where(and(eq(people.shopId, shopId), eq(personRoles.role, role)))
+    .innerJoin(shops, eq(shops.id, people.shopId))
+    .where(and(eq(people.shopId, shopId), eq(shops.isDemo, true), eq(personRoles.role, role)))
     .limit(1);
   return matches[0]?.email ?? null;
 }
