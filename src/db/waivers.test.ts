@@ -14,7 +14,7 @@ import {
   WAIVER_SIGNATURE_VALIDITY_MS,
   waiverState,
 } from "@/lib/waivers";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
 import {
@@ -59,6 +59,12 @@ import {
   WAIVER_INTEGRITY_PAGE_SIZE,
 } from "./waivers";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`). Two tests hydrate their own: the
+// concurrent-saves race (racing calls must not be interleaved savepoints of one
+// transaction) and the shared-instant tie on `created_at`.
+const fileCtx = fileScopedShopContext();
+
 const now = new Date("2026-07-18T12:00:00.000Z");
 
 afterEach(() => {
@@ -70,8 +76,8 @@ const medicalReferralAnswers = {
   responses: { ...clearAnswers.responses, q3: true },
 };
 
-async function waiverContext() {
-  const { db, shop } = await seededShopContext();
+async function waiverContext({ fresh = false } = {}) {
+  const { db, shop } = fresh ? await seededShopContext() : fileCtx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const trip = trips.find((row) => row.title === "Two-Tank Reef — Molasses & French");
   if (!trip) throw new Error("demo trip missing");
@@ -525,7 +531,7 @@ describe("waiver records (in-memory PGlite)", () => {
   });
 
   it("gives concurrent saves distinct, gapless versions instead of colliding (CR-015)", async () => {
-    const { db, shop, template } = await waiverContext();
+    const { db, shop, template } = await waiverContext({ fresh: true });
     const seeded = template.version;
 
     const [a, b, c] = await Promise.all([
@@ -675,7 +681,15 @@ describe("listWaiverIntegrityAudit signature evidence (task 155)", () => {
     expect(entry).not.toHaveProperty("tokenHash");
 
     // A clean signature (no medical flag) carries an empty summary, not a hole.
-    const { db: db2, shop: shop2, booking: booking2, person: person2 } = await waiverContext();
+    // Its own database: the same seeded booking would already hold the first link.
+    const {
+      db: db2,
+      shop: shop2,
+      booking: booking2,
+      person: person2,
+    } = await waiverContext({
+      fresh: true,
+    });
     const cleanIssued = await issueWaiverRequest(db2, {
       shopId: shop2.id,
       bookingId: booking2.id,
