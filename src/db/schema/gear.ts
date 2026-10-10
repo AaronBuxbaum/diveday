@@ -102,14 +102,7 @@ export const rentalFitProfiles = pgTable(
      * Two kinds, not one "hood & gloves" (H-102, issue #1816): a warm-water
      * diver takes gloves and no hood, a quarry diver takes both in different
      * thicknesses, and one checkbox with one size could say neither.
-     *
-     * `rents_hood_gloves`, the one kind they replace, has no reader or writer
-     * left and stays only for the deploy: the release still serving while
-     * this migration runs selects it, so it is the contract half of an
-     * expand/contract pair and is dropped by the next migration (H-49 waives
-     * the backfill, not the deploy window).
      */
-    rentsHoodGloves: boolean("rents_hood_gloves").notNull().default(false),
     rentsHood: boolean("rents_hood").notNull().default(false),
     rentsGloves: boolean("rents_gloves").notNull().default(false),
     rentsTorch: boolean("rents_torch").notNull().default(false),
