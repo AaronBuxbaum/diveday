@@ -117,6 +117,23 @@ export function geometrySummaryLine(items) {
 // becomes unfindable, and the thread starts growing one comment per push.
 export const COMMENT_MARKER = "<!-- diveday:visual-summary -->";
 
+// The commit a comment reported on, machine-readable, so the next run can find
+// the previous head and compare *sets* rather than counts (issue #1928). The
+// prose carries the sha too, but parsing prose is how a delta quietly breaks.
+// A comment without this line (every one posted before it existed) reads as
+// "no previous head", exactly like a branch's first report.
+export const COMMIT_MARKER_PATTERN = /<!-- diveday:visual-commit: ([0-9a-f]{7,40}) -->/;
+
+export function commitMarker(commit) {
+  return `<!-- diveday:visual-commit: ${commit} -->`;
+}
+
+/** The commit a previous summary comment reported on, or `null`. */
+export function previousCommitFromComment(body) {
+  if (typeof body !== "string") return null;
+  return COMMIT_MARKER_PATTERN.exec(body)?.[1] ?? null;
+}
+
 // How many item names one category may list before the comment truncates.
 // AGENTS.md forbids a silent cap, so `formatPrComment` always states how many
 // it dropped.
@@ -344,20 +361,81 @@ function itemSection(title, items, limit) {
   return lines;
 }
 
+/** Every surface that moved in one run: changed, new or deleted. */
+function movedSet(summary) {
+  return new Set([...summary.changed, ...summary.added, ...summary.deleted]);
+}
+
+/**
+ * The set difference between this head's moved surfaces and the previous
+ * head's, or `null` when there is nothing honest to compare (issue #1928).
+ *
+ * Counts invite arithmetic: on #1922 "165 changed" became "164 changed" while
+ * four surfaces left and three entered, one of them a nondeterministic capture
+ * that would have become the next baseline. Only names catch that, and only the
+ * *whole* sets do: the previous comment lists ten names per category, so the
+ * previous set comes from that commit's `out.json`, never from the comment.
+ *
+ * `null` — no section — for: no previous head; the same commit again (a
+ * re-run); a previous report that could not be read; and either run having
+ * compared nothing, where "left the changed set" would read as surfaces that
+ * stopped moving when nothing was looked at.
+ */
+export function changedSetDelta({ commit, summary, previousCommit, previousSummary }) {
+  if (!previousCommit || !previousSummary) return null;
+  if (previousCommit === commit) return null;
+  if (!comparedAnything(summary) || !comparedAnything(previousSummary)) return null;
+  const now = movedSet(summary);
+  const before = movedSet(previousSummary);
+  return {
+    previousCommit,
+    entered: [...now].filter((name) => !before.has(name)).sort(),
+    left: [...before].filter((name) => !now.has(name)).sort(),
+  };
+}
+
+function deltaSection(delta, limit) {
+  if (!delta) return [];
+  const since = `\`${delta.previousCommit.slice(0, 7)}\``;
+  if (delta.entered.length === 0 && delta.left.length === 0) {
+    return [`**Since ${since}:** the same surfaces moved; none entered or left the set.`, ""];
+  }
+  return [
+    `**Since ${since}**, the last head this comment reported on: compare these names, not the counts.`,
+    "",
+    ...itemSection(
+      "Entered the changed set (changed, new or deleted now, not then)",
+      delta.entered,
+      limit,
+    ),
+    ...itemSection("Left the changed set (moved then, not now)", delta.left, limit),
+  ];
+}
+
 /**
  * Renders the sticky PR comment. Never throws, never blocks: the wording states
  * outright that this check is informational, because the enforcement of
  * "account for every pixel" is human review, not a red build
  * (ADR 20260802-visual-diff-pr-comment).
  */
-export function formatPrComment({ commit, bucket, summary, note = "", limit = ITEM_LIST_LIMIT }) {
+export function formatPrComment({
+  commit,
+  bucket,
+  summary,
+  note = "",
+  delta = null,
+  limit = ITEM_LIST_LIMIT,
+}) {
   const short = commit.slice(0, 7);
   const lines = [
     COMMENT_MARKER,
+    commitMarker(commit),
     `### ${verdictHeadline(summary)}`,
     "",
     verdictBody(summary, { commit, bucket }),
     "",
+    // Above the table, so the set comparison is read before the totals.
+    ...deltaSection(delta, limit),
   ];
 
   if (summary.verdict !== "no-report") {

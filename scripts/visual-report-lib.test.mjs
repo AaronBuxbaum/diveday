@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   BLIND_VERDICTS,
   COMMENT_MARKER,
+  changedSetDelta,
   comparedAnything,
   countsLine,
   fetchFromBucket,
@@ -12,6 +13,7 @@ import {
   geometrySummaryLine,
   itemRows,
   PNG_SIGNATURE,
+  previousCommitFromComment,
   readPngSize,
   summarizeReport,
   verdictHeadline,
@@ -458,5 +460,117 @@ describe("geometrySummaryLine", () => {
   it("returns null when nothing changed, so the caller omits the line", () => {
     expect(geometrySummaryLine([])).toBeNull();
     expect(geometrySummaryLine([{ kind: "passed", sizes: {} }])).toBeNull();
+  });
+});
+
+/**
+ * Successive heads compared as sets, not counts (issue #1928). On #1922 the
+ * count fell by one while four surfaces left and three entered.
+ */
+describe("the changed-set delta between heads", () => {
+  const PREVIOUS = "bc025e9aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const passed = items("still", 5);
+  const before = summarizeReport(
+    outJson({ failed: ["a.png", "b.png", "renamed-dark.png"], deleted: [], passed }),
+  );
+  const now = summarizeReport(
+    outJson({ failed: ["a.png", "b.png", "banner.png"], deleted: ["renamed-dark.png"], passed }),
+  );
+  const delta = (summary, previousSummary, previousCommit = PREVIOUS, commit = COMMIT) =>
+    changedSetDelta({ commit, summary, previousCommit, previousSummary });
+
+  it("names what entered and what left, across changed, new and deleted", () => {
+    const renamed = summarizeReport(
+      outJson({ failed: ["a.png", "banner.png"], added: ["renamed-new.png"], passed }),
+    );
+    expect(delta(renamed, before)).toEqual({
+      previousCommit: PREVIOUS,
+      entered: ["banner.png", "renamed-new.png"],
+      left: ["b.png", "renamed-dark.png"],
+    });
+  });
+
+  it("sees churn the counts hide: three changed then, three changed now", () => {
+    const churned = summarizeReport(outJson({ failed: ["a.png", "c.png", "d.png"], passed }));
+    expect(churned.changed.length).toBe(before.changed.length);
+    expect(delta(churned, before)).toMatchObject({
+      entered: ["c.png", "d.png"],
+      left: ["b.png", "renamed-dark.png"],
+    });
+  });
+
+  it("keeps a surface that only moved between categories out of both lists", () => {
+    // renamed-dark.png was changed and is now deleted: still moved, still listed
+    // in its category below, and neither entered nor left.
+    expect(delta(now, before)).toMatchObject({ entered: ["banner.png"], left: [] });
+  });
+
+  it("has no delta on a branch's first report", () => {
+    expect(delta(now, null, null)).toBeNull();
+  });
+
+  it("has no delta for a comment posted before the commit line existed", () => {
+    expect(
+      previousCommitFromComment(`${COMMENT_MARKER}\n### Visual regression — 3 changed`),
+    ).toBeNull();
+    expect(previousCommitFromComment(undefined)).toBeNull();
+    expect(delta(now, before, previousCommitFromComment("no marker here"))).toBeNull();
+  });
+
+  it("has no delta on a re-run of the same commit", () => {
+    expect(delta(now, before, COMMIT)).toBeNull();
+  });
+
+  it("has no delta when either run compared nothing", () => {
+    expect(delta(summarizeReport(null), before)).toBeNull();
+    expect(delta(now, summarizeReport(null))).toBeNull();
+    const blind = summarizeReport(outJson({ added: items("x", 3), expected: [] }));
+    expect(blind.verdict).toBe("no-baseline");
+    expect(delta(blind, before)).toBeNull();
+    expect(delta(now, blind)).toBeNull();
+  });
+
+  it("writes its own commit where the next run can read it back", () => {
+    expect(previousCommitFromComment(comment(outJson({ failed: ["a.png"], passed })))).toBe(COMMIT);
+  });
+
+  it("renders the delta above the counts table", () => {
+    const body = formatPrComment({
+      commit: COMMIT,
+      bucket: BUCKET,
+      summary: now,
+      delta: delta(now, before),
+    });
+    expect(body).toContain("**Since `bc025e9`**");
+    expect(body).toContain(
+      "**Entered the changed set (changed, new or deleted now, not then)** (1)",
+    );
+    expect(body).not.toContain("Left the changed set");
+    expect(body.indexOf("Entered the changed set")).toBeLessThan(body.indexOf("| Changed |"));
+  });
+
+  it("says so in one line when the same surfaces moved", () => {
+    const body = formatPrComment({
+      commit: COMMIT,
+      bucket: BUCKET,
+      summary: before,
+      delta: delta(before, before),
+    });
+    expect(body).toContain("the same surfaces moved; none entered or left the set");
+  });
+
+  it("adds nothing without a delta, so the per-head report is unchanged", () => {
+    expect(comment(outJson({ failed: ["a.png"], passed }))).not.toContain("Since `");
+  });
+
+  it("truncates a long delta list and says how many it dropped", () => {
+    const many = summarizeReport(outJson({ failed: items("moved", 14), passed }));
+    const body = formatPrComment({
+      commit: COMMIT,
+      bucket: BUCKET,
+      summary: many,
+      delta: delta(many, summarizeReport(outJson({ failed: ["a.png"], passed }))),
+    });
+    expect(body).toContain("…and **4** more not listed here");
   });
 });

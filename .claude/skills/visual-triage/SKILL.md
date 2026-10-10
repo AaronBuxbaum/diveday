@@ -55,7 +55,36 @@ apart from yours by looking.
 **On a stacked pull request, read that comment on every layer.** A layer's baseline is its fork
 point from `main`, like any branch's (`scripts/reg-suit-keys.mjs`, ADR
 20260919-stack-ci-cancels-superseded-layers), so its diff carries every surface the layers below it
-changed as well as its own. Name the layer each inherited diff came from before approving it.
+changed as well as its own. Name the layer each inherited diff came from before approving it. That
+is the decided key, not a fallback: do not try to point reg-suit at the layer below.
+
+To see one layer's own slice, compare its captures to the layer below's instead of to a baseline:
+
+```bash
+pnpm visual:layers --from <layer-below-head> --to <this-layer-head> --download
+```
+
+It reads each commit's published `actual/` captures by ETag over HTTP `HEAD` (no image downloads,
+about a minute for the suite), lists the ones whose bytes differ, and with `--download` fetches both
+images of each into `.reg-report/layers/` and states the geometry change or the pixel count, largest
+channel delta and box. On #1948, layer 4 of four, the report said 336 changed and the layer had
+moved 4. Both commits must have published captures (every layer runs CI, ADR
+20261003-every-stack-layer-runs-ci); it says so when one did not. A reading aid, never a gate.
+
+**Across pushes, compare names, not counts.** The sticky comment lists what *entered* and *left*
+the changed set since the head it last reported on, computed from both commits' `out.json`. To do it
+by hand between two heads, as sets (`comm` needs both sides sorted; `-13` is what entered, `-23`
+what left):
+
+```bash
+pnpm visual:report --commit <old> && pnpm visual:report --commit <new>
+moved() { grep -E '^## .+ \((changed|new|deleted)\)$' ".reg-report/$1/REPORT.md" | sed -E 's/^## //; s/ \([a-z]+\)$//' | sort; }
+comm -13 <(moved <old>) <(moved <new>)   # entered the changed set
+comm -23 <(moved <old>) <(moved <new>)   # left it
+```
+
+A count that falls by one can hide four leaving and three entering; one of those three on #1922 was
+a nondeterministic capture that would have become the next baseline.
 
 ## Fetching the report as an agent
 
