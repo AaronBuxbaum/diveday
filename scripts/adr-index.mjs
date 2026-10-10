@@ -45,7 +45,7 @@ export function adrSummary(filename, contents, known = new Set()) {
   return { id, title, status, supersededBy };
 }
 
-const cell = (text) => text.replace(/\|/g, "\\|");
+const cell = (text) => text.replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
 
 /** The table, header included, one line per ADR. */
 export function indexTable(summaries) {

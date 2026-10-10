@@ -89,9 +89,12 @@ export function reviewsNeeded(files) {
 
 /** The body's "Reviews launched" section, HTML comments removed; null when there is none. */
 export function reviewsSection(body) {
-  const text = String(body ?? "")
-    .replace(/\r\n/g, "\n")
-    .replace(/<!--[\s\S]*?-->/g, "");
+  let text = String(body ?? "").replace(/\r\n/g, "\n");
+  // Strip until no comment is left: a comment whose removal exposes another is not a comment.
+  for (let before = ""; before !== text; ) {
+    before = text;
+    text = text.replace(/<!--[\s\S]*?-->/g, "");
+  }
   const match = text.match(/^##\s+Reviews[^\n]*\n([\s\S]*?)(?=^##\s|(?![\s\S]))/m);
   return match ? match[1] : null;
 }
