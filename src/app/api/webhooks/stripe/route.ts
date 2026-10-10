@@ -150,7 +150,9 @@ async function recordSessionPaymentIntent(
       });
     }
   } catch (error) {
-    logOutcome("payment_intent_record_failed", { error: String(error) });
+    logOutcome("payment_intent_record_failed", {
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
   }
 }
 
@@ -191,7 +193,9 @@ async function recordSessionCustomer(
       });
     }
   } catch (error) {
-    logOutcome("customer_record_failed", { error: String(error) });
+    logOutcome("customer_record_failed", {
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
   }
 }
 

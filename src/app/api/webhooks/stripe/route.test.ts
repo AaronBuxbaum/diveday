@@ -1077,6 +1077,35 @@ describe("POST /api/webhooks/stripe — structured logging", () => {
       }),
     );
   });
+
+  // Issue #2239: a thrown error's own text can carry a customer email or a
+  // request body fragment, so the log names its class and never its message.
+  it.each([
+    ["customer_record_failed", () => vi.mocked(recordCheckoutStripeCustomer)],
+    ["payment_intent_record_failed", () => vi.mocked(recordCheckoutPaymentIntent)],
+  ])("logs %s by error class, never the thrown message", async (outcome, recorder) => {
+    recorder().mockRejectedValue(new TypeError("duplicate key for nora@example.com"));
+    await post({
+      id: "evt_log_err",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_123",
+          payment_status: "paid",
+          customer: "cus_diver",
+          payment_intent: "pi_1",
+        },
+      },
+    });
+
+    const lines = loggedLines(vi.mocked(console.log).mock.calls);
+    expect(lines).toContainEqual(
+      expect.objectContaining({ eventId: "evt_log_err", outcome, errorCode: "TypeError" }),
+    );
+    const written = JSON.stringify(lines);
+    expect(written).not.toContain("nora@example.com");
+    expect(written).not.toContain("duplicate key");
+  });
 });
 
 // PAY-M1: the claim is committed independently of the handler, so before this

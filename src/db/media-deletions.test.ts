@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import {
   listPendingMediaDeletions,
@@ -9,7 +9,7 @@ import {
   retryMediaDeletion,
   retryPendingMediaDeletions,
 } from "./media-deletions";
-import { mediaDeletionAttempts, shops } from "./schema";
+import { diveSites, mediaDeletionAttempts, shops } from "./schema";
 
 const ok = async () => ({ ok: true as const });
 const failing = async () => ({ ok: false as const, error: "blob delete failed: 500" });
@@ -302,5 +302,72 @@ describe("retryPendingMediaDeletions (bounded orphan cleanup)", () => {
     const result = await retryPendingMediaDeletions(db, 50, await dbNowPlus(db, 1000), failing);
     expect(result).toEqual({ attempted: 1, succeeded: 0 });
     expect(await listPendingMediaDeletions(db, shop.id, await dbNowPlus(db, 1000))).toHaveLength(1);
+  });
+});
+
+// Issue #2193: the edit page reads a dive-site photo's holders before it queues
+// the delete, so a copy or an import that lands a row naming the photo after
+// that read must still keep it. The worker asks again just before deleting.
+describe("a dive-site photo a site still holds", () => {
+  const url = "https://diveday-media.s3.us-east-1.amazonaws.com/dive-sites/kept.jpg";
+
+  it("survives the nightly retry when a site picked it up after the delete was queued", async () => {
+    const { db, shop } = ctx;
+    await queueAndAttemptMediaDeletion(
+      db,
+      { shopId: shop.id, kind: "dive_site_photo", url },
+      failing,
+    );
+    await db.insert(diveSites).values({
+      shopId: shop.id,
+      name: "Copy",
+      slug: "copy-2193",
+      imageUrls: [url],
+      deletedAt: new Date("2026-01-01T00:00:00.000Z"),
+    });
+
+    const deleteFn = vi.fn(ok);
+    const result = await retryPendingMediaDeletions(db, 50, await dbNowPlus(db, 1000), deleteFn);
+    expect(deleteFn).not.toHaveBeenCalled();
+    expect(result.succeeded).toBe(0);
+    expect(
+      await db.select().from(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.url, url)),
+    ).toEqual([]);
+  });
+
+  it("is never deleted on the immediate attempt or an owner's retry while a site holds it", async () => {
+    const { db, shop } = ctx;
+    await db.insert(diveSites).values({
+      shopId: shop.id,
+      name: "Holder",
+      slug: "holder-2193",
+      routeImageUrl: url,
+    });
+    const deleteFn = vi.fn(ok);
+    await queueAndAttemptMediaDeletion(
+      db,
+      { shopId: shop.id, kind: "dive_site_photo", url },
+      deleteFn,
+    );
+    expect(deleteFn).not.toHaveBeenCalled();
+
+    const [attempt] = await db
+      .insert(mediaDeletionAttempts)
+      .values({ shopId: shop.id, kind: "dive_site_photo", url, status: "failed" })
+      .returning();
+    if (!attempt) throw new Error("attempt insert failed");
+    expect(await retryMediaDeletion(db, shop.id, attempt.id, deleteFn)).toBe(false);
+    expect(deleteFn).not.toHaveBeenCalled();
+  });
+
+  it("is still deleted once no site holds it", async () => {
+    const { db, shop } = ctx;
+    const deleteFn = vi.fn(ok);
+    await queueAndAttemptMediaDeletion(
+      db,
+      { shopId: shop.id, kind: "dive_site_photo", url },
+      deleteFn,
+    );
+    expect(deleteFn).toHaveBeenCalledWith(url);
   });
 });

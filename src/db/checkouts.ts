@@ -1025,6 +1025,18 @@ export async function recordCheckoutPaymentIntent(
   return updated !== undefined;
 }
 
+function logPaidDisqualified(
+  checkout: Pick<BookingCheckout, "shopId" | "id" | "stripeSessionId">,
+  localStatus: string,
+): void {
+  log("checkout.paid_disqualified", "error", {
+    shopId: checkout.shopId,
+    checkoutId: checkout.id,
+    stripeSessionId: checkout.stripeSessionId,
+    localStatus,
+  });
+}
+
 /**
  * Mark a checkout paid from Stripe's own evidence and cascade every covered
  * booking through the shared payment gate, both in one transaction so a
@@ -1053,11 +1065,17 @@ export async function markCheckoutPaidBySessionId(
   settledTaxCents?: number | null,
 ): Promise<BookingCheckout | null> {
   return db.transaction(async (tx) => {
+    // Locked (issue #2219): every writer that expires a pending checkout does
+    // so in its own transaction (`setBookingParticipantType`, a reschedule, a
+    // cancellation). Reading the status under the row's lock serializes this
+    // decision against them, so an expiry that commits first is the status
+    // checked below rather than one this completion silently overwrites.
     const [checkout] = await tx
       .select()
       .from(bookingCheckouts)
       .where(eq(bookingCheckouts.stripeSessionId, stripeSessionId))
-      .limit(1);
+      .limit(1)
+      .for("update");
     if (!checkout) return null;
     // Defense-in-depth (security review finding): a Stripe session id is
     // already globally unique across every connected account, so this
@@ -1092,12 +1110,7 @@ export async function markCheckoutPaidBySessionId(
     // run (checkout marked completed, but the payment write below never
     // landed) still needs to fall through and repair it below.
     if (checkout.status !== "pending" && checkout.status !== "completed") {
-      log("checkout.paid_disqualified", "error", {
-        shopId: checkout.shopId,
-        checkoutId: checkout.id,
-        stripeSessionId: checkout.stripeSessionId,
-        localStatus: checkout.status,
-      });
+      logPaidDisqualified(checkout, checkout.status);
       return null;
     }
 
@@ -1179,10 +1192,16 @@ export async function markCheckoutPaidBySessionId(
                 settledTotalCents: settledCents,
                 taxCents,
               })
-              .where(eq(bookingCheckouts.id, checkout.id))
+              // Belt to the lock's braces: only a still-pending row completes.
+              .where(
+                and(eq(bookingCheckouts.id, checkout.id), eq(bookingCheckouts.status, "pending")),
+              )
               .returning()
           )[0] ?? null);
-    if (!updated) return null;
+    if (!updated) {
+      if (checkout.status === "pending") logPaidDisqualified(checkout, "no_longer_pending");
+      return null;
+    }
 
     const linked = await tx
       .select({

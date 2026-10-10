@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { openSecret } from "@/lib/secret-box";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import type { AppDb, DbExecutor } from "./client";
@@ -10,7 +11,10 @@ import {
   connectShopWhatsAppAccount,
   disconnectShopWhatsAppAccount,
   getShopWhatsAppAccount,
+  getShopWhatsAppRegistration,
   markShopWhatsAppVerified,
+  PARKED_REGISTRATION_STALE_MS,
+  SETUP_INCOMPLETE_TEMPLATE,
   shopIdForWhatsAppWaba,
   whatsAppProviderForAccount,
   whatsAppProvidersForShops,
@@ -327,6 +331,75 @@ describe("claimWhatsAppWaba", () => {
     );
     expect(again.status).toBe("claimed");
     expect(registered).toEqual([shop.id, shop.id]);
+  });
+
+  // Issue #2194: a Connect abandoned after Meta's register call leaves a parked
+  // row nobody can see, and it must not hold the WABA against another shop forever.
+  async function parkedAt(db: AppDb, shopId: string, ageMs: number) {
+    const parked = await connectShopWhatsAppAccount(
+      db,
+      {
+        ...connectInput(shopId, { wabaId: "waba_race" }),
+        templateName: SETUP_INCOMPLETE_TEMPLATE,
+        registrationPin: "123456",
+        now: new Date(nowDate().getTime() - ageMs),
+      },
+      { key },
+    );
+    if (parked.status !== "connected") throw new Error("parked row not stored");
+  }
+
+  it("lets another shop claim a WABA held only by a stale parked row", async () => {
+    const { db, shop } = await seededShopContext();
+    const sibling = await siblingShop(db, "sibling-shop-stale-park");
+    await parkedAt(db, sibling.id, PARKED_REGISTRATION_STALE_MS + 60_000);
+
+    const registered: string[] = [];
+    const claim = await claimWhatsAppWaba(
+      db,
+      { shopId: shop.id, wabaId: "waba_race" },
+      signupWork(shop.id, registered),
+    );
+    expect(claim.status).toBe("claimed");
+    expect(registered).toEqual([shop.id]);
+    expect(await shopIdForWhatsAppWaba(db, "waba_race")).toBe(shop.id);
+    expect(await getShopWhatsAppRegistration(db, sibling.id)).toBeNull();
+  });
+
+  it("still refuses another shop while a parked row is fresh", async () => {
+    const { db, shop } = await seededShopContext();
+    const sibling = await siblingShop(db, "sibling-shop-fresh-park");
+    await parkedAt(db, sibling.id, PARKED_REGISTRATION_STALE_MS - 60_000);
+
+    const registered: string[] = [];
+    const claim = await claimWhatsAppWaba(
+      db,
+      { shopId: shop.id, wabaId: "waba_race" },
+      signupWork(shop.id, registered),
+    );
+    expect(claim.status).toBe("held_elsewhere");
+    expect(registered).toEqual([]);
+    expect(await getShopWhatsAppRegistration(db, sibling.id)).not.toBeNull();
+  });
+
+  it("never releases a connected row, however old", async () => {
+    const { db, shop } = await seededShopContext();
+    const sibling = await siblingShop(db, "sibling-shop-old-connected");
+    await connectShopWhatsAppAccount(
+      db,
+      {
+        ...connectInput(sibling.id, { wabaId: "waba_race" }),
+        now: new Date(nowDate().getTime() - 10 * PARKED_REGISTRATION_STALE_MS),
+      },
+      { key },
+    );
+
+    const claim = await claimWhatsAppWaba(
+      db,
+      { shopId: shop.id, wabaId: "waba_race" },
+      signupWork(shop.id, []),
+    );
+    expect(claim.status).toBe("held_elsewhere");
   });
 
   it("leaves no row and no lock behind when the work throws", async () => {
