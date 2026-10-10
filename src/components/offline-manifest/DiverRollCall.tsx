@@ -392,8 +392,10 @@ function OfflineDiverRow({
               />
             ) : (
               // Blocked at the dock: the act that clears them is ashore, so
-              // the ring is drawn and not tappable, as on the live page.
-              <RollCallMark state="held" />
+              // the mark is drawn and not tappable, as on the live page. It
+              // still draws what was recorded — aboard or ashore before the
+              // held ring — so it never contradicts the pill (review of #1840).
+              <RollCallMark state={rollCallMarkState(rowState, { blockedAtDock: true })} />
             )}
           </div>
         )}

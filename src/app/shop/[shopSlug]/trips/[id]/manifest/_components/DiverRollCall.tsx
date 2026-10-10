@@ -688,7 +688,9 @@ export function DiverRollCall({
                         t={t}
                       />
                     ) : (
-                      <RollCallMark state="held" />
+                      // No tap, but still what was recorded: aboard or
+                      // ashore before the held ring (review of #1840).
+                      <RollCallMark state={rollCallMarkState(rowState, { blockedAtDock: true })} />
                     )
                   }
                   trigger={

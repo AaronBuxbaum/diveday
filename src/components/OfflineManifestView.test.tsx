@@ -936,6 +936,50 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     expect(await screen.findByRole("button", { name: "Mark boarded" })).toBeInTheDocument();
   });
 
+  // Review of #1840: the circle takes the tap away from a blocked diver at the
+  // dock, never the fact. Boarded-and-blocked drew the empty dashed ring
+  // beside a "Boarded" pill.
+  for (const [status, drawn] of [
+    ["boarded", "aboard"],
+    ["not_boarded", "ashore"],
+  ] as const) {
+    it(`draws a blocked diver recorded ${status} at the dock as ${drawn}, with no tap`, async () => {
+      searchParams = new URLSearchParams({ trip: "trip-1" });
+      vi.mocked(loadOfflineManifest).mockResolvedValue(
+        richEnvelope(
+          "trip-1",
+          { readiness: "blocked" },
+          {
+            events: [
+              {
+                clientEventId: `evt-${status}`,
+                snapshotId: "snap-trip-1",
+                snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
+                tripId: "trip-1",
+                bookingId: "diver-priya",
+                checkpoint: "departure",
+                status,
+                occurredAt: new Date(FROZEN_MS).toISOString(),
+                syncStatus: "pending",
+              },
+            ],
+          },
+        ),
+      );
+      vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+      render(<OfflineManifestView />);
+      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+      const row = document.getElementById("offline-roll-call-diver-priya") as HTMLElement;
+      expect(row.querySelector("[data-mark-state]")?.getAttribute("data-mark-state")).toBe(drawn);
+      const onTheRow = Array.from(row.querySelectorAll("button")).filter(
+        (button) => !button.closest("details"),
+      );
+      expect(onTheRow).toEqual([]);
+    });
+  }
+
   it("invariant 2: recording boarded after a numbered dive for a not-ready diver succeeds as a pure headcount", async () => {
     searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
     const saved = richEnvelope("trip-1", { readiness: "blocked" });
