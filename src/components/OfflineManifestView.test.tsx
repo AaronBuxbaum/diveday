@@ -1316,6 +1316,53 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       expect(within(sighting).getByRole("textbox")).toBeInTheDocument();
     });
 
+    // Review of #1840: the panel closes when the checkpoint changes, and the
+    // draft typed into it must not leak. It waits in the box, rides no mark
+    // the rule refuses a sentence on (her own, at the dock), and goes with
+    // her next mark that the rule allows one on.
+    it("sends a sentence left in a closed panel only with that diver's next allowed mark", async () => {
+      searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+      const saved = richEnvelope("trip-1");
+      vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+      vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+      vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
+
+      render(<OfflineManifestView />);
+      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      const priya = () => document.getElementById("offline-roll-call-diver-priya") as HTMLElement;
+      const nav = () => screen.getByRole("navigation", { name: "Roll-call checkpoint" });
+
+      fireEvent.change(within(priya()).getByRole("textbox"), {
+        target: { value: "Last seen surfacing north of the mooring" },
+      });
+      // Away to the dock, where the panel closes and no sentence is allowed.
+      fireEvent.click(within(nav()).getAllByRole("button")[0] as HTMLElement);
+      await waitFor(() => expect(priya().querySelector("details[open]")).toBeNull());
+      // Her own mark at the dock, where the rule allows no sentence.
+      fireEvent.click(within(priya()).getByRole("button", { name: "Mark boarded" }));
+      await waitFor(() => expect(appendOfflineRollCall).toHaveBeenCalledTimes(1));
+      expect(vi.mocked(appendOfflineRollCall).mock.calls[0]?.[1]).toMatchObject({
+        bookingId: "diver-priya",
+        checkpoint: "departure",
+        status: "boarded",
+      });
+      expect(vi.mocked(appendOfflineRollCall).mock.calls[0]?.[1].note).toBeUndefined();
+
+      // Back after the dive: the draft is still Priya's, and goes with her mark.
+      fireEvent.click(within(nav()).getByRole("button", { name: "After dive 1" }));
+      expect(within(priya()).getByRole("textbox")).toHaveValue(
+        "Last seen surfacing north of the mooring",
+      );
+      fireEvent.click(within(priya()).getByRole("button", { name: "Mark not back aboard" }));
+      await waitFor(() => expect(appendOfflineRollCall).toHaveBeenCalledTimes(2));
+      expect(vi.mocked(appendOfflineRollCall).mock.calls[1]?.[1]).toMatchObject({
+        bookingId: "diver-priya",
+        checkpoint: "after_dive_1",
+        status: "not_boarded",
+        note: "Last seen surfacing north of the mooring",
+      });
+    });
+
     it("draws a missing diver's mark on the row, and gives it no tap", async () => {
       searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
       vi.mocked(loadOfflineManifest).mockResolvedValue(missingAfterDive());
