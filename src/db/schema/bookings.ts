@@ -172,13 +172,12 @@ export const bookings = pgTable(
      * the one door that clears a certification block without a card, and the
      * crew at the rail should be able to see it was used. Every writer that
      * makes a seat states what it sold, so a snorkeler inserted by a path that
-     * forgot cannot read as "booked as diver". The default is only the expand
-     * half of expand/contract: the release this column lands in still serves
-     * the previous code's inserts, which cannot name it, and a NOT NULL column
-     * with no default fails every one of them (`pnpm check:migrations`). It is
-     * dropped in the next release (the contract half, issue #2222).
+     * forgot cannot read as "booked as diver". No default, so an insert that
+     * forgets it fails to compile: the `diver` default was only the expand half
+     * of expand/contract, for the one release whose predecessor's inserts could
+     * not name it, and was dropped once that release served (issue #2222).
      */
-    bookedAs: participantType("booked_as").notNull().default("diver"),
+    bookedAs: participantType("booked_as").notNull(),
     conditionsBriefedAt: timestamp("conditions_briefed_at", { withTimezone: true }),
     /**
      * **The diver answered "Anything changed?" for this seat** (ADR
