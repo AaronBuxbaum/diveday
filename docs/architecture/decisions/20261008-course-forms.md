@@ -163,7 +163,9 @@ switch.
 - Form records carry the release's integrity seal (issue #2266): `integrity_hash` and
   `integrity_version` over the signed evidence, version 2 after erasure, re-sealed only over a
   record whose seal verified the moment before (`src/lib/course-form-integrity.ts`). `person_id`
-  is outside it and the booking inside, so a diver merge's plain repoint leaves the seal valid.
+  is inside it, so a diver merge moves the records through `refileCourseFormRecords`, which
+  re-seals only a record that verified before the move. Records signed before the seal shipped
+  read `unsealed`; there is no backfill.
   The shop export checks every seal as it writes `course_form_records.csv` (`integrity_check`).
 - The prep page's sign step offers the forms door whenever the enrollment owes a form, whatever
   the switch says, so warn-only still has a way in besides the direct link the send delivers.

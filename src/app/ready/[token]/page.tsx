@@ -1153,6 +1153,10 @@ export default async function DiverReadinessPage({
     const carriedFacts =
       data.rentalFit?.fitStatedAt != null && data.rentalFit.fitStatedAt < data.bookingCreatedAt;
 
+    // Asked whatever `COURSE_FORMS_BLOCK_BOARDING` says: warn-only raises no blocker (#2266).
+    const courseFormsOwed = data.trip.course
+      ? ((await getCourseFormsForBooking(db, shop.id, bookingId))?.outstanding.length ?? 0) > 0
+      : false;
     const spine = buildThreadSteps({
       checklist: items,
       // Money is owed, or money has settled. The receipt matters on its own:
@@ -1164,6 +1168,7 @@ export default async function DiverReadinessPage({
       carriedFacts,
       carriedFactsConfirmed: data.carriedFactsConfirmedAt != null,
       participantType: data.participantType,
+      courseFormsOwed,
     });
 
     /** "Everyone's set — see you at the dock." The rule is `partyIsAllSet`'s. */
@@ -1177,11 +1182,6 @@ export default async function DiverReadinessPage({
     /** A money figure in the currency it was actually charged in, never today's shop setting. */
     const money = (cents: number, currency: string) => formatMoneyCents(cents, currency, locale);
     const packageDivesLeft = await countSpendableDives(db, shop.id, data.person.id);
-    // The forms door's own question, asked whatever `COURSE_FORMS_BLOCK_BOARDING`
-    // says: warn-only raises no blocker to open it (issue #2266).
-    const courseFormsOwed = data.trip.course
-      ? ((await getCourseFormsForBooking(db, shop.id, bookingId))?.outstanding.length ?? 0) > 0
-      : false;
     const { paidLine, depositBalanceLine } = payStepLines(
       t,
       money,

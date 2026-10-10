@@ -15,12 +15,14 @@ import { type IntegrityValue, integrityDigest } from "@/lib/waiver-integrity";
  *   same set minus the two names erasure destroys, plus who erased it and
  *   when, so an erased record reads as erased rather than as tampered.
  *
- * **`person_id` is deliberately outside both.** A diver merge repoints it to
- * the record the shop kept, by a plain repoint, as it does for every table
- * that names the diver. The booking is inside, and a booking stays a booking
- * through a merge, so the seal still says whose enrollment this signature
- * counts for. Sealing `person_id` would need the release's version 3 (who
- * moved it, from where, when) for nothing a booking does not already pin.
+ * **`person_id` is inside both**, with the booking. A diver merge moves a
+ * record to the kept diver through `refileCourseFormRecords`
+ * (`src/db/course-forms.ts`), which re-seals it only when it verified the
+ * moment before, as a guardian's completion does. Re-matching a held seat to
+ * a new diver (`splitBookingIdentity`, `src/db/bookings.ts`) changes
+ * `bookings.person_id` and leaves form records where they are, still sealed
+ * over the diver who signed them: a held seat cannot sign a course form
+ * (H-13), so there is nothing on it to move.
  *
  * A record verifies against the version it declares, never a guess, and a
  * version this build does not know reads as `invalid`.
@@ -51,6 +53,7 @@ function survivingFacts(record: SealableRecord): { [key: string]: IntegrityValue
     id: record.id,
     shopId: record.shopId,
     bookingId: record.bookingId,
+    personId: record.personId,
     formId: record.formId,
     formVersionId: record.formVersionId,
     formTitle: record.formTitle,

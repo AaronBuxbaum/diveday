@@ -3,6 +3,7 @@ import { isStaff } from "@/lib/authz";
 import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
+  COURSE_FORM_INTEGRITY_VERSION_ERASED,
   COURSE_FORM_INTEGRITY_VERSION_SIGNED,
   courseFormSeal,
   verifyCourseFormIntegrity,
@@ -1040,7 +1041,10 @@ async function insertRecord(
         eq(courseFormRecords.shopId, input.shopId),
       ),
     )
-    .limit(1);
+    .limit(1)
+    // Locked: the seal check below and the write after it must see one row,
+    // never one an erasure or a merge rewrote in between.
+    .for("update");
   if (!standing) throw new Error("course form record conflict without a standing row");
   // **The guardian's half, once.** A minor who signed before the shop knew
   // their date of birth signed alone; the record stands, and the guardian who
@@ -1334,4 +1338,44 @@ export async function courseUpcomingEnrollment(
     students: new Set(rows.map((row) => row.bookingId)).size,
     sessions: new Set(rows.map((row) => row.tripId)).size,
   };
+}
+
+/**
+ * **Refiles a diver's signed course forms under the record a merge keeps**,
+ * keeping every honest seal honest (issue #2266). `person_id` is inside the
+ * seal, so a bare repoint would make every valid record read as tampered.
+ * Each record's seal is checked before the move, under a row lock: one that
+ * verified is re-sealed at its own version over the new owner; an unsealed
+ * record moves unsealed and one already failing moves still failing, so a
+ * merge never launders an earlier edit. The move itself is the merge's own
+ * record (`people.merged_into_person_id` and the `diver_merged` event), not a
+ * field inside this seal.
+ */
+export async function refileCourseFormRecords(
+  tx: DbExecutor,
+  input: { shopId: string; fromPersonId: string; toPersonId: string },
+): Promise<void> {
+  const records = await tx
+    .select()
+    .from(courseFormRecords)
+    .where(
+      and(
+        eq(courseFormRecords.shopId, input.shopId),
+        eq(courseFormRecords.personId, input.fromPersonId),
+      ),
+    )
+    .for("update");
+  for (const record of records) {
+    const version = record.integrityVersion;
+    const reseal =
+      verifyCourseFormIntegrity(record) === "valid" &&
+      (version === COURSE_FORM_INTEGRITY_VERSION_SIGNED ||
+        version === COURSE_FORM_INTEGRITY_VERSION_ERASED)
+        ? courseFormSeal({ ...record, personId: input.toPersonId }, version)
+        : {};
+    await tx
+      .update(courseFormRecords)
+      .set({ personId: input.toPersonId, ...reseal })
+      .where(and(eq(courseFormRecords.id, record.id), eq(courseFormRecords.shopId, input.shopId)));
+  }
 }

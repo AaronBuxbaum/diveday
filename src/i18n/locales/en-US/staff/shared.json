@@ -457,8 +457,8 @@
     "ownKit": "Own kit",
     "needsStaffFit": "Needs staff fit at check-in",
     "needsStaffFitWithNote": "Needs staff fit — {note}",
-    "drysuitCardMissing": "In a drysuit with no drysuit certification on file. This is not a block: check what they hold, or plan an orientation before the first dive.",
-    "drysuitCardUnconfirmed": "In a drysuit, and the drysuit certification on file is not confirmed. This is not a block: confirm the certification on their record, or plan an orientation before the first dive."
+    "drysuitCardMissing": "Dives dry with no drysuit certification on file. Not a block: ask about their drysuit experience, or plan an orientation before the first dive.",
+    "drysuitCardUnconfirmed": "Dives dry, and their drysuit certification is not confirmed. Not a block: confirm it on their record, or plan an orientation before the first dive."
   },
   "rollCallCheckpoint": {
     "departure": "Before departure",

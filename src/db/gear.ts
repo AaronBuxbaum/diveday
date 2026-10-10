@@ -1119,6 +1119,10 @@ export async function releaseGearReservation(
  * (dive-domain review, 2026-08-20). Checked-out units deliberately stay —
  * they are physically with someone, and the register's overdue chase is the
  * honest path home for those.
+ *
+ * Like every automatic release (this one's trip-level twin, and a move onto
+ * dates the unit is taken for), it stamps `released_at` and leaves
+ * `released_by_person_id` null: the system let go, not a person (issue #2258).
  */
 export async function releaseUnclaimedGearReservations(
   db: DbExecutor,

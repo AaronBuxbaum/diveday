@@ -785,6 +785,37 @@ describe("course forms — export, erasure and merge parity (in-memory PGlite)",
     expect(verifyCourseFormIntegrity(after)).toBe("invalid");
   });
 
+  it("never launders a tampered record through a merge (issue #2266)", async () => {
+    const ctx = await signedSeat();
+    await ctx.db
+      .update(courseFormRecords)
+      .set({ formTitle: "Something else" })
+      .where(eq(courseFormRecords.id, ctx.recordId));
+    const [survivor] = await ctx.db
+      .insert(people)
+      .values({ shopId: ctx.shop.id, fullName: ctx.seat.fullName, dateOfBirth: "1990-04-02" })
+      .returning();
+    if (!survivor) throw new Error("survivor insert failed");
+    await ctx.db.insert(personRoles).values({ personId: survivor.id, role: "diver" });
+    const preview = await getDiverMergePreview(ctx.db, ctx.shop.id, ctx.seat.personId, survivor.id);
+    const merged = await mergeDiverRecords({
+      db: ctx.db,
+      shopId: ctx.shop.id,
+      personId: ctx.seat.personId,
+      survivorId: survivor.id,
+      actorPersonId: ctx.owner.id,
+      acknowledged: preview?.acknowledgement,
+    });
+    expect(merged.ok).toBe(true);
+    const [record] = await ctx.db
+      .select()
+      .from(courseFormRecords)
+      .where(eq(courseFormRecords.id, ctx.recordId));
+    if (!record) throw new Error("record expected");
+    expect(record.personId).toBe(survivor.id);
+    expect(verifyCourseFormIntegrity(record)).toBe("invalid");
+  });
+
   it("loses the signer's name on erasure and keeps the fact of the signature", async () => {
     const ctx = await signedSeat();
 
@@ -837,10 +868,11 @@ describe("course forms — export, erasure and merge parity (in-memory PGlite)",
       .from(courseFormRecords)
       .where(eq(courseFormRecords.id, ctx.recordId));
     expect(record?.personId).toBe(survivor.id);
-    // The seal is over the booking, which a merge does not change, so the
-    // record the shop kept still verifies (issue #2266).
+    // `person_id` is inside the seal, and the merge re-sealed the record over
+    // the diver it now belongs to (issue #2266); a bare repoint would not.
     if (!record) throw new Error("record expected");
     expect(verifyCourseFormIntegrity(record)).toBe("valid");
+    expect(verifyCourseFormIntegrity({ ...record, personId: ctx.seat.personId })).toBe("invalid");
     // Still satisfied: the booking and the record moved together.
     const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.seat.bookingId);
     expect(readiness?.blockers.map((blocker) => blocker.code)).not.toContain(

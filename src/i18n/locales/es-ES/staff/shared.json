@@ -457,8 +457,8 @@
     "ownKit": "Trae su propio equipo",
     "needsStaffFit": "Necesita ajuste del personal en el check-in",
     "needsStaffFitWithNote": "Necesita ajuste del personal — {note}",
-    "drysuitCardMissing": "Bucea con traje seco y no hay certificación de traje seco en su ficha. No es un bloqueo: verifica qué titulación consta o programa una orientación antes de la primera inmersión.",
-    "drysuitCardUnconfirmed": "Bucea con traje seco y su certificación de traje seco está sin confirmar. No es un bloqueo: confirma la certificación en su ficha o programa una orientación antes de la primera inmersión."
+    "drysuitCardMissing": "Bucea con traje seco y no hay certificación de traje seco en su ficha. No es un bloqueo: pregunta por su experiencia con traje seco o programa una orientación antes de la primera inmersión.",
+    "drysuitCardUnconfirmed": "Bucea con traje seco y su certificación de traje seco está sin confirmar. No es un bloqueo: confírmala en su ficha o programa una orientación antes de la primera inmersión."
   },
   "rollCallCheckpoint": {
     "departure": "Antes de zarpar",
