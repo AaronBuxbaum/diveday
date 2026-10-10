@@ -19,10 +19,18 @@ import type { SettingsShop } from "../groups/kit";
 export function RentalItemsForm({
   shop,
   t,
+  droppedFits = 0,
   className = "",
 }: {
   shop: SettingsShop;
   t: StaffTranslator;
+  /**
+   * Divers whose fit still asks for a piece this catalog no longer offers
+   * (`countFitsAskingForDroppedItems`, issue #1792). Said beside the catalog
+   * so the standing answers are visible; nothing here clears them. Silent at
+   * zero.
+   */
+  droppedFits?: number;
   className?: string;
 }) {
   const offeredKinds = new Set(toRentableKinds(shop.rentalItems));
@@ -43,6 +51,11 @@ export function RentalItemsForm({
           ))}
         </div>
       </fieldset>
+      {droppedFits > 0 ? (
+        <p className="mt-3 text-sm text-muted">
+          {t("settings.main.rentals.droppedFits", { count: droppedFits })}
+        </p>
+      ) : null}
       <SubmitButton
         pendingLabel={t("settings.main.rentals.submitting")}
         className={buttonClass({ variant: "secondary", className: "mt-3" })}

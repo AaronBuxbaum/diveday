@@ -1,7 +1,8 @@
 import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { rentalFitLine } from "@/lib/dive-prep";
-import { NOTHING_RENTED, rentalFitCompleteness } from "@/lib/rentals";
+import { NOTHING_RENTED, RENTABLE_ITEMS, rentalFitCompleteness } from "@/lib/rentals";
 import { fileScopedShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
@@ -9,6 +10,7 @@ import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
 import {
   applyPaidRentalKindsToFit,
   confirmRentalFitSize,
+  countFitsAskingForDroppedItems,
   fitConfirmationForDiver,
   getRentalFit,
   listTripPrepDivers,
@@ -1144,5 +1146,82 @@ describe("rental fit completeness over a stored profile", () => {
     expect(rentalFitCompleteness(await getRentalFit(db, shopId, personId))).toEqual({
       state: "not_recorded",
     });
+  });
+});
+
+/**
+ * **The count the rental-catalog page shows** (issue #1792, H-78): divers
+ * whose fit still asks for a piece the shop has dropped. Visible, never
+ * cleared, so it only ever reads.
+ */
+describe("countFitsAskingForDroppedItems", () => {
+  const everything = RENTABLE_ITEMS.map((item) => item.kind);
+  const withoutDrysuitOrTorch = everything.filter((kind) => kind !== "drysuit" && kind !== "torch");
+
+  async function fitFor(fullName: string, overrides: Partial<Parameters<typeof saveRentalFit>[1]>) {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, fullName);
+    await saveRentalFit(db, { ...baseFitInput(shopId, personId), ...overrides });
+    return personId;
+  }
+
+  it("counts each diver whose fit asks for a dropped piece, once", async () => {
+    const { db, shopId } = await context();
+    await setShopRentalItems(db, shopId, everything);
+    const before = await countFitsAskingForDroppedItems(db, shopId, withoutDrysuitOrTorch);
+
+    await fitFor("Dana Dry", {
+      rentsWetsuit: false,
+      rentsDrysuit: true,
+      drysuitSize: "ML",
+      rentsTorch: true,
+    });
+    await fitFor("Wendy Wet", {});
+
+    // Dana asks for two dropped pieces and counts once; Wendy asks for none.
+    expect(await countFitsAskingForDroppedItems(db, shopId, withoutDrysuitOrTorch)).toBe(
+      before + 1,
+    );
+  });
+
+  it("is zero when the shop still rents everything", async () => {
+    const { db, shopId } = await context();
+    await setShopRentalItems(db, shopId, everything);
+    await fitFor("Dana Dry", {
+      rentsWetsuit: false,
+      rentsDrysuit: true,
+      drysuitSize: "ML",
+    });
+    expect(await countFitsAskingForDroppedItems(db, shopId, everything)).toBe(0);
+  });
+
+  it("does not count a deleted person, and erases nothing", async () => {
+    const { db, shopId } = await context();
+    await setShopRentalItems(db, shopId, everything);
+    const before = await countFitsAskingForDroppedItems(db, shopId, withoutDrysuitOrTorch);
+    const personId = await fitFor("Gone Gary", { rentsTorch: true });
+    expect(await countFitsAskingForDroppedItems(db, shopId, withoutDrysuitOrTorch)).toBe(
+      before + 1,
+    );
+    await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, personId));
+    expect(await countFitsAskingForDroppedItems(db, shopId, withoutDrysuitOrTorch)).toBe(before);
+    const [fit] = await db
+      .select({ rentsTorch: rentalFitProfiles.rentsTorch })
+      .from(rentalFitProfiles)
+      .where(eq(rentalFitProfiles.personId, personId));
+    expect(fit?.rentsTorch).toBe(true);
+  });
+
+  it("never counts another shop's divers", async () => {
+    const { db, shopId } = await context();
+    await setShopRentalItems(db, shopId, everything);
+    await fitFor("Dana Dry", { rentsTorch: true });
+    expect(
+      await countFitsAskingForDroppedItems(
+        db,
+        "00000000-0000-4000-8000-000000000000",
+        withoutDrysuitOrTorch,
+      ),
+    ).toBe(0);
   });
 });

@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, ne } from "drizzle-orm";
+import { and, asc, count, eq, isNull, ne, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { PrepDiver } from "@/lib/dive-prep";
 import { seatName } from "@/lib/held-seat";
@@ -705,4 +705,39 @@ export async function rentalFitByBooking(db: AppDb, shopId: string, tripId: stri
   return new Map(
     rows.map((row) => [row.bookingId, row.identityUnconfirmedAt === null ? row.fit : null]),
   );
+}
+
+/**
+ * **How many divers' fits still ask for a piece this shop no longer rents**
+ * (issue #1792, ruled under H-78): the visibility half, never the clearing
+ * half. A fit is the diver's answer, and a catalog edit does not erase it
+ * (`flagUpdates` above), so the rental-catalog settings page says how many of
+ * those answers are standing instead of letting them pile up unseen.
+ *
+ * Counts the `rents_*` flag, the part of a fit that reaches a packing line
+ * (marked "no longer rented" there, `PrepPiece.notOffered`). One diver counts
+ * once however many dropped pieces their fit asks for. Deleted people are not
+ * counted; nothing here writes.
+ */
+export async function countFitsAskingForDroppedItems(
+  db: AppDb,
+  shopId: string,
+  rentalItems: readonly string[],
+): Promise<number> {
+  const offered = new Set<string>(toRentableKinds(rentalItems));
+  const dropped = RENTABLE_ITEMS.filter((item) => !offered.has(item.kind));
+  if (dropped.length === 0) return 0;
+  const [row] = await db
+    .select({ value: count() })
+    .from(rentalFitProfiles)
+    .innerJoin(people, eq(people.id, rentalFitProfiles.personId))
+    .where(
+      and(
+        eq(rentalFitProfiles.shopId, shopId),
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        or(...dropped.map((item) => eq(rentalFitProfiles[item.field], true))),
+      ),
+    );
+  return row?.value ?? 0;
 }

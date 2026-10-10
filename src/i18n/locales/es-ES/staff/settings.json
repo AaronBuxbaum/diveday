@@ -291,7 +291,8 @@
       "detail": "Marca lo que alquilas. Lo que no marques desaparece del formulario de equipo y de la lista de preparación.",
       "legend": "Equipo y servicios de alquiler",
       "submit": "Guardar catálogo de alquiler",
-      "submitting": "Guardando…"
+      "submitting": "Guardando…",
+      "droppedFits": "{count, plural, one {El ajuste de alquiler de # buceador aún pide equipo que ya no alquilas.} other {Los ajustes de alquiler de # buceadores aún piden equipo que ya no alquilas.}}"
     },
     "rentalPricing": {
       "heading": "Precios de alquiler",

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { canPersonManageRentalSettings } from "@/db/authz";
+import { getDb } from "@/db/client";
+import { countFitsAskingForDroppedItems } from "@/db/rental-fit";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
@@ -16,7 +18,8 @@ export const metadata: Metadata = { title: "What we rent — DiveDay" };
 
 /**
  * What the shop rents: the catalogue as a grid of pills, one save. Unticked
- * kinds drop off the kit form and the prep list.
+ * kinds drop off the kit form; a diver whose fit still asks for one is counted
+ * under the pills (issue #1792), never cleared.
  *
  * A row on the settings hub until #1854: a form this long is a page wearing a
  * disclosure, so the hub lists it as a door and this is what the door opens.
@@ -36,7 +39,10 @@ export default async function RentalItemsSettingsPage({
     allow: canPersonManageRentalSettings,
     refusal: { notice: "settings-not-authorized" },
   });
-  const locale = await requestLocale(shop.defaultLocale);
+  const [locale, droppedFits] = await Promise.all([
+    requestLocale(shop.defaultLocale),
+    countFitsAskingForDroppedItems(await getDb(), shop.id, shop.rentalItems),
+  ]);
   const t = staffTranslator(locale);
 
   return (
@@ -47,7 +53,7 @@ export default async function RentalItemsSettingsPage({
       description={t("settings.main.rentals.detail")}
       banner={noticeFromParam(notice, rentalItemsNoticeMessages(t))}
     >
-      <RentalItemsForm shop={shop} t={t} />
+      <RentalItemsForm shop={shop} t={t} droppedFits={droppedFits} />
     </SettingsEditorPage>
   );
 }
