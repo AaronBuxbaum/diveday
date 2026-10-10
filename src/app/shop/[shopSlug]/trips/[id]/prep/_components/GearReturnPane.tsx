@@ -2,7 +2,7 @@
 
 import { type ReactNode, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field } from "@/components/ui/form";
+import { ChoiceFieldset, ChoiceRow, controlClass, Field } from "@/components/ui/form";
 
 /**
  * **One diver's rental set, coming home** (issue #1186, delight report D26).
@@ -120,15 +120,19 @@ export function GearReturnPane({
             />
           </Field>
           {bench && bench.units.length > 0 ? (
-            <fieldset className="flex flex-col gap-1">
-              <legend className="text-sm font-medium">{bench.legend}</legend>
+            <ChoiceFieldset legend={bench.legend} bodyClassName="flex flex-col gap-1">
               {bench.units.map((unit) => (
-                <label key={unit.id} className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" name="pull" value={unit.id} />
+                <ChoiceRow
+                  key={unit.id}
+                  type="checkbox"
+                  name="pull"
+                  value={unit.id}
+                  className="text-sm"
+                >
                   {unit.label}
-                </label>
+                </ChoiceRow>
               ))}
-            </fieldset>
+            </ChoiceFieldset>
           ) : null}
           <div>
             <button
