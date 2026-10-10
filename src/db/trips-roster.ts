@@ -49,12 +49,22 @@ export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: s
  * answer the same way every time — and it was immune to a name edit, which
  * this key is not: correcting a walk-up's name re-orders that diver inside
  * their own tie group, so a sheet printed at 06:40 and the screen at 06:55 can
- * put a different body at 05. That trade is deliberate and bounded to one
- * party-sized block, and the number was **already** a position rather than an
- * identity — a cancellation or a resold released seat re-numbers everything
- * below it. What the order is stable against is a re-read and a fresh seed of
- * the same data. See the glossary's *Roll-call order* and issue #1759. The
- * uuid is arbitrary, it is
+ * put a different body at 05.
+ *
+ * **That re-numbering is the accepted cost, by ruling — do not re-raise it.**
+ * The product owner decided it on 2026-09-16 (H-81,
+ * `docs/product/human-decisions/H-81-tiebreaker-user-visible-list-get.md`;
+ * issue #1759): keep the name, add no `bookings.seq`. A name-ordered rail is the
+ * one a second caller can check in a single pass down the list; a monotonic
+ * column would buy immunity to a rename at the price of a number no human can
+ * predict or explain. The cost is bounded to one party-sized block, and the
+ * number was **already** a position rather than an identity — a cancellation
+ * or a resold released seat re-numbers everything below it, so a sequence that
+ * closed only the rename case would make the number look like an identity it
+ * is not. What the order is stable against is a re-read and a fresh seed of the
+ * same data; `trips-roster.test.ts` pins the rename case as the behavior, so a
+ * change to it is a change to the ruling. See the glossary's *Roll-call order*.
+ * The old uuid is arbitrary, it is
  * different in every freshly seeded database, and it is unexplainable to the
  * person reading the list. The index of this array **is** the rail numbering:
  * `DiverRollCall.tsx` and the departure log both render
