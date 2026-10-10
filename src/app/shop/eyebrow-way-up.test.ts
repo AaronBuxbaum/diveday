@@ -38,9 +38,11 @@ const SHOP_DIR = join(dirname(fileURLToPath(import.meta.url)), "[shopSlug]");
  *
  * `TripPageHeader` counts because it renders an `EyebrowBackLink` itself and
  * takes the label as a prop — the four trip surfaces are the case that named
- * the rule, and they satisfy it through that one component.
+ * the rule, and they satisfy it through that one component. `SettingsEditorPage`
+ * counts the same way: the five one-setting editors under Settings share it,
+ * and it renders `ShopPageHeader` with the eyebrow linking back to the hub.
  */
-const WAY_UP_MARKERS = ["eyebrowHref", "EyebrowBackLink", "TripPageHeader"];
+const WAY_UP_MARKERS = ["eyebrowHref", "EyebrowBackLink", "TripPageHeader", "SettingsEditorPage"];
 
 /**
  * Routes below depth 1 with no eyebrow link, and the reason each is right.
