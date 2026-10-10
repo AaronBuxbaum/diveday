@@ -1291,6 +1291,31 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       );
     });
 
+    // Review of #1840: inside the panel the retraction and the sighting are
+    // opposite acts, and a slip from one onto the other must not write
+    // "aboard". The retraction comes first, the sighting below a rule in a
+    // group of its own, never the next button down.
+    it("puts the retraction first and the sighting apart from it, below a rule", async () => {
+      searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+      vi.mocked(loadOfflineManifest).mockResolvedValue(missingAfterDive());
+      vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+      render(<OfflineManifestView />);
+      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+      const retract = screen.getByRole("button", { name: "Not back aboard" });
+      const confirm = screen.getByRole("button", { name: "Confirm Priya Shah is aboard" });
+      expect(
+        retract.compareDocumentPosition(confirm) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      const sighting = confirm.closest("[data-roll-call-sighting]") as HTMLElement;
+      expect(sighting).not.toBeNull();
+      expect(sighting.contains(retract)).toBe(false);
+      expect(sighting).toHaveClass("border-t");
+      // The sentence for the sighting rides the sighting, not the retraction.
+      expect(within(sighting).getByRole("textbox")).toBeInTheDocument();
+    });
+
     it("draws a missing diver's mark on the row, and gives it no tap", async () => {
       searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
       vi.mocked(loadOfflineManifest).mockResolvedValue(missingAfterDive());

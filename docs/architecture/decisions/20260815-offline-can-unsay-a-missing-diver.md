@@ -119,3 +119,11 @@ Taking the mark back off is now the same two gestures, open the panel and re-tap
 not one. That is the live manifest's cost since slice 5a, and it keeps this record's rule:
 retracting a mark is never harder than making one, because making it costs the same two. Decision 2
 (`cleared`, and only over this device's own statement) is unchanged.
+
+Inside the opened panel the two ways out of a missing mark are opposite acts and are drawn apart.
+The retraction comes first: "Not back aboard" again, which says nobody should have raised the mark,
+with its undo sentence under it. The sighting comes second, below a rule, in a group of its own with
+the box for its sentence: "Confirm Maya is aboard", which says someone can see her aboard. A slip
+from the retraction lands on the rule or the sentence box, never on the sighting, so the panel
+cannot turn a mis-tap into a sighting nobody made. That is the same failure decision 1's separate
+confirmation control guarded against.

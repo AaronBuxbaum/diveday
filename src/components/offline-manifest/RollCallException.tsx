@@ -78,11 +78,11 @@ export function OfflineRollCallException({
         </span>
       </summary>
       <div className="mb-1 grid gap-3 rounded-inset border border-border/70 bg-surface-sunken/50 p-3 text-base font-normal text-foreground">
-        {/* The box only where the next act can take a sentence: while
-          nothing is recorded (the exception is about to raise the alarm)
-          or while one stands (either control here retracts it). Never at
-          the dock, where "not boarded" means "never left". */}
-        {isDeparture || !(state === undefined || missing) ? null : (
+        {/* The sentence for the alarm about to be raised: after a dive,
+          while nothing is recorded. Never at the dock, where "not boarded"
+          means "never left". Once the alarm stands, the box moves to the
+          sighting below — the positive act worth describing. */}
+        {isDeparture || state !== undefined ? null : (
           <OfflineRollCallNote
             subjectId={subjectKey}
             label={t("manifest.rollCallNoteLabel")}
@@ -90,22 +90,6 @@ export function OfflineRollCallException({
             onChange={(next) => setNoteDrafts((drafts) => ({ ...drafts, [subjectKey]: next }))}
           />
         )}
-        {missing ? (
-          <button
-            type="button"
-            disabled={busy}
-            aria-busy={busy}
-            // A positive sighting, never a retraction: "I have eyes on
-            // her, she's aboard", named on the control so it cannot be
-            // read as a generic "Confirm".
-            onClick={() => record(subject, { status: "boarded" }, state)}
-            className={`${OFFLINE_BOAT_TARGET_CLASS} border border-success bg-success-tint text-success-strong`}
-          >
-            {busy
-              ? t("shared.offlineManifest.single.saving")
-              : t("shared.offlineManifest.single.confirmAboard", { name })}
-          </button>
-        ) : null}
         <button
           type="button"
           disabled={busy}
@@ -179,6 +163,39 @@ export function OfflineRollCallException({
               ? t("manifest.tapToUndoNotBackAboard")
               : t("shared.offlineManifest.single.markedElsewhere")}
           </p>
+        ) : null}
+        {/* **The sighting, apart from the retraction** (review of #1840).
+          Both take a missing mark off, and they say opposite things: the
+          retraction above says "nobody should have said it", this says "I
+          can see them aboard". A slip from one onto the other must never
+          write a sighting nobody made, so this is not the next button down:
+          it comes second, below a rule, in a group of its own, with the
+          sentence that describes it. */}
+        {missing ? (
+          <div data-roll-call-sighting className="mt-2 grid gap-3 border-t border-border pt-4">
+            {isDeparture ? null : (
+              <OfflineRollCallNote
+                subjectId={subjectKey}
+                label={t("manifest.rollCallNoteLabel")}
+                value={noteDrafts[subjectKey] ?? ""}
+                onChange={(next) => setNoteDrafts((drafts) => ({ ...drafts, [subjectKey]: next }))}
+              />
+            )}
+            <button
+              type="button"
+              disabled={busy}
+              aria-busy={busy}
+              // A positive sighting, never a retraction: "I have eyes on
+              // her, she's aboard", named on the control so it cannot be
+              // read as a generic "Confirm".
+              onClick={() => record(subject, { status: "boarded" }, state)}
+              className={`${OFFLINE_BOAT_TARGET_CLASS} border border-success bg-success-tint text-success-strong`}
+            >
+              {busy
+                ? t("shared.offlineManifest.single.saving")
+                : t("shared.offlineManifest.single.confirmAboard", { name })}
+            </button>
+          </div>
         ) : null}
       </div>
     </details>
