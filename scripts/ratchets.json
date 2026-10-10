@@ -194,7 +194,7 @@
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx#TripManifestPage": 918,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 1043,
     "src/app/shop/[shopSlug]/trips/[id]/prep/_components/PrepBody.tsx#PrepBody": 1331,
-    "src/app/waivers/[token]/page.tsx#WaiverPage": 1033,
+    "src/app/waivers/[token]/page.tsx#WaiverPage": 792,
     "src/components/BookingPartyFields.tsx#BookingPartyFields": 416,
     "src/components/DateRequestForm.tsx#DateRequestForm": 418,
     "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 537,
@@ -288,7 +288,7 @@
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1134,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1185,
-    "src/app/waivers/[token]/page.tsx": 1404
+    "src/app/waivers/[token]/page.tsx": 917
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

@@ -25,6 +25,8 @@ import { diverTranslator } from "@/i18n/messages";
  */
 
 const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+/** The two signing doors, which moved out of the page into the route's `actions.ts`. */
+const ACTIONS = readFileSync(join(__dirname, "actions.ts"), "utf8");
 
 function positionOf(marker: string): number {
   return SOURCE.indexOf(marker);
@@ -38,7 +40,7 @@ describe("the waiver's pacing", () => {
   it("puts the rail under the header and above everything it paces", () => {
     const rail = positionOf("<WaiverPacing");
     const release = positionOf("data-waiver-template-body");
-    const form = positionOf("<form action={completeAction}");
+    const form = positionOf("<form action={completeWaiverAction.bind(null, token)}");
     for (const marker of [rail, release, form]) expect(marker).toBeGreaterThan(-1);
     expect(rail).toBeLessThan(release);
     expect(release).toBeLessThan(form);
@@ -70,7 +72,9 @@ describe("the waiver's pacing", () => {
     // earlier moment: `signed: true` appears once in this file, inside the
     // completed branch.
     expect(countOf("signed: true")).toBe(1);
-    expect(positionOf("signed: true")).toBeLessThan(positionOf("<form action={completeAction}"));
+    expect(positionOf("signed: true")).toBeLessThan(
+      positionOf("<form action={completeWaiverAction.bind(null, token)}"),
+    );
   });
 
   it("does not close Medical on a record the shop is still holding", () => {
@@ -170,7 +174,7 @@ describe("one primary", () => {
     // A `<button formAction>` inside the same form, not a link to a GET route:
     // demoting the affordance must not demote the mechanism, or a diver on a
     // dead connection loses the answers they came back to finish.
-    expect(SOURCE).toContain("formAction={saveDraftAction}");
+    expect(SOURCE).toContain("formAction={saveWaiverDraftAction.bind(null, token)}");
     expect(SOURCE).toContain("formNoValidate");
   });
 
@@ -233,13 +237,14 @@ describe("the emergency contact's two boxes", () => {
   it("refuses a half-filled pair rather than sending half of it to a writer", () => {
     // Both submits read the pair through the one rule, and the complete path
     // refuses on it alongside the medical answers and the signature.
-    expect(countOf("refusedContactField(submittedContact)")).toBe(2);
-    expect(SOURCE).toContain(
+    const actionsCount = (marker: string) => ACTIONS.split(marker).length - 1;
+    expect(actionsCount("refusedContactField(submittedContact)")).toBe(2);
+    expect(ACTIONS).toContain(
       "if (!parsed.success || !answers || (guardian && !guardian.success) || refusedContact) {",
     );
     // Every write of the contact — the draft save, the signature, and the
     // re-save after a refused signature — is gated on a complete pair.
-    expect(countOf('submittedContact?.kind === "pair"')).toBe(3);
+    expect(actionsCount('submittedContact?.kind === "pair"')).toBe(3);
   });
 
   it("puts the refusal on the empty box, which is where the reader is sent", () => {
@@ -250,7 +255,9 @@ describe("the emergency contact's two boxes", () => {
     expect(SOURCE).toContain('id="emergencyContactName"');
     expect(SOURCE).toContain('id="emergencyContactPhone"');
     // One sentence for both boxes: the fix is the same either way.
-    expect(countOf('textKey: "waiver.errorContactPair"')).toBe(2);
+    // The field map lives beside the doors that refuse on it (`waiver-fields.ts`).
+    const fields = readFileSync(join(__dirname, "waiver-fields.ts"), "utf8");
+    expect(fields.split('textKey: "waiver.errorContactPair"').length - 1).toBe(2);
   });
 
   it("sets the number on file whole, never split at a hyphen", () => {
@@ -320,7 +327,7 @@ describe("what this slice was forbidden to touch", () => {
       "name_mismatch",
       "invalid_medical",
     ]) {
-      expect(SOURCE).toContain(guard);
+      expect(ACTIONS).toContain(guard);
     }
   });
 
@@ -329,7 +336,9 @@ describe("what this slice was forbidden to touch", () => {
     // 20260827-the-divers-thread, decision 6). The page a diver is still
     // filling in celebrates nothing.
     expect(countOf("<EarnedMoment")).toBe(1);
-    expect(positionOf("<EarnedMoment")).toBeLessThan(positionOf("<form action={completeAction}"));
+    expect(positionOf("<EarnedMoment")).toBeLessThan(
+      positionOf("<form action={completeWaiverAction.bind(null, token)}"),
+    );
   });
 });
 
@@ -356,12 +365,12 @@ describe("a held seat's release", () => {
  */
 describe("the diver's own locale", () => {
   it("is recorded only after the draft or the signature is taken", () => {
-    const draft = SOURCE.slice(positionOf("async function saveDraftAction"));
+    const draft = ACTIONS.slice(ACTIONS.indexOf("export async function saveWaiverDraftAction"));
     expect(draft.indexOf("if (savedDraft) {")).toBeGreaterThan(-1);
     expect(draft.indexOf("recordDiverOwnLocale(")).toBeGreaterThan(
       draft.indexOf("const savedDraft = await saveWaiverDraft("),
     );
-    const complete = SOURCE.slice(positionOf("async function completeAction"));
+    const complete = ACTIONS.slice(ACTIONS.indexOf("export async function completeWaiverAction"));
     expect(complete.indexOf("recordDiverOwnLocale(")).toBeGreaterThan(
       complete.indexOf("if (!outcome.ok) {"),
     );
