@@ -168,6 +168,45 @@ describe("an empty departure on the departure page", () => {
   });
 });
 
+/**
+ * Issue #2213. The crew loads one snorkel vest per snorkeler seat, said in the
+ * rental kit section; a snorkel-only boat is not an empty one.
+ */
+describe("snorkel vests", () => {
+  function withSeats(types: ("diver" | "snorkeler" | "rider")[]): TripPrep {
+    const prep = prepFor();
+    prep.checklist = buildDivePrepChecklist({
+      divers: types.map((participantType, index) => ({
+        bookingId: `b${index}`,
+        personId: `p${index}`,
+        fullName: `Seat ${index}`,
+        fit: null,
+        participantType,
+        wantsNitrox: false,
+        hasVerifiedNitroxCard: false,
+        lastDivedBand: null,
+      })),
+      plannedDives: 2,
+    });
+    return prep;
+  }
+
+  it("says how many vests to load on a mixed boat, one per snorkeler", () => {
+    const { container } = renderPrep(withSeats(["diver", "snorkeler", "snorkeler", "rider"]));
+    expect(within(container).getByText("2 snorkel vests, one per snorkeler")).toBeTruthy();
+  });
+
+  it("draws the prep for a snorkel-only boat rather than an empty state", () => {
+    const { container } = renderPrep(withSeats(["snorkeler"]));
+    expect(within(container).getByText("1 snorkel vest, one per snorkeler")).toBeTruthy();
+  });
+
+  it("says nothing of vests on a boat with no snorkelers", () => {
+    const { container } = renderPrep(withSeats(["diver", "rider"]));
+    expect(within(container).queryByText(/snorkel vest/)).toBeNull();
+  });
+});
+
 const STATED = new Date("2026-09-01T00:00:00Z");
 
 /** A stated fit that rents nothing until an override says it does. */

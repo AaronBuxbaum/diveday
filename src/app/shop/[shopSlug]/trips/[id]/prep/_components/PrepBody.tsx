@@ -416,7 +416,9 @@ export function PrepBody({
 
   return (
     <>
-      {checklist.diverCount === 0 && checklist.crewCount === 0 ? (
+      {/* A snorkel-only boat still loads vests and surface kit, so only a
+          boat with nobody in the water is empty. */}
+      {checklist.diverCount === 0 && checklist.crewCount === 0 && checklist.snorkelVests === 0 ? (
         emptyState
       ) : (
         <div className={className}>
@@ -798,6 +800,14 @@ export function PrepBody({
                   />
                 ) : null}
               </div>
+              {/* The boat's own vests, one per snorkeler seat (issue #2213):
+                  not a rental, so it waits on no fit and is said even when
+                  nothing else is pulled. */}
+              {checklist.snorkelVests > 0 ? (
+                <p className="mt-2 text-sm font-medium">
+                  {t("tripPrep.snorkelVests", { count: checklist.snorkelVests })}
+                </p>
+              ) : null}
               {checklist.lines.length === 0 ? (
                 // A section inside a larger page, so h3. Two honest readings of
                 // the same empty table — a genuine nothing-to-do, or fits that

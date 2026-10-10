@@ -333,6 +333,12 @@ export type NitroxBlocker = {
 export type DivePrepChecklist = {
   diveCount: number;
   diverCount: number;
+  /**
+   * Snorkel vests to load: one per snorkeler seat (issue #2213). Free and
+   * always on, so it waits on no fit and no catalog, and a held seat counts
+   * too. Divers wear a BCD and riders stay aboard, so neither takes one.
+   */
+  snorkelVests: number;
   /** Divemasters and instructors assigned to the trip who dive it and need their own tanks. */
   crewCount: number;
   tanks: TankPlan;
@@ -984,6 +990,7 @@ export function buildDivePrepChecklist(input: {
   return {
     diveCount,
     diverCount,
+    snorkelVests: inWater.filter((diver) => diver.participantType === "snorkeler").length,
     crewCount,
     tanks: {
       total: (diverCount + crewCount) * diveCount,
