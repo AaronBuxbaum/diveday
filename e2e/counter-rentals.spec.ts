@@ -122,7 +122,10 @@ test.describe("staff", () => {
     // The Rentals list says the same about the holder's waiver (H-108).
     await page.goto("/shop/blue-mantis/gear?view=rentals");
     const rentals = page.getByRole("region", { name: "Rentals" });
-    await expect(rentals.getByText("Waiver: Not signed")).toBeVisible();
+    // Scoped to the holder: other unsigned renters may share the list.
+    await expect(
+      rentals.getByRole("list", { name: CUSTOMER }).getByText("Waiver: Not signed").first(),
+    ).toBeVisible();
   });
 
   test("reads the free units again as the dates change, with no button", async ({ page }) => {
