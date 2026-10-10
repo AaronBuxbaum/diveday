@@ -378,6 +378,9 @@ test.describe("contact import — payment and receipt history", () => {
     // pointer on the receipt landed on the diver's record (#1989).
     const receipt = history.getByRole("link", { name: "Receipt REC-1001" });
     await expect(receipt).toBeVisible();
+    // `elementFromPoint` answers only inside the viewport, and this table is
+    // at the foot of the page.
+    await receipt.scrollIntoViewIfNeeded();
     const hit = await receipt.evaluate((link) => {
       const box = link.getBoundingClientRect();
       const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
