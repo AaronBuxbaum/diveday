@@ -4355,6 +4355,17 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staffing", scheme);
       });
 
+      // The pager off the current week, which is the only state that draws
+      // "This week" beside the arrows (#1982): at 390 the row wraps and the
+      // link takes a line of its own at `md`. The board photographs its own
+      // pager in this state (`schedule-builder-asked`); nothing photographed
+      // the staffing week's until this.
+      test(`the staffing week pages off the current week (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/staffing?week=2026-07-27");
+        await page.getByRole("link", { name: "This week" }).waitFor();
+        await capture(page, "staffing-week-next", scheme);
+      });
+
       /**
        * A second, louder day: a departure the shop *had* crewed and no longer
        * has, rendering in its own day cell with the warning word and the
