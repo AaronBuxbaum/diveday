@@ -28,12 +28,11 @@ Before every push:
 6. **`pnpm test:changed`**: the tests your diff reaches through the import graph, which is the only
    local run that reaches a coverage guard in a file you never touched. After a schema edit it
    selects the whole suite; step 3's four guards stand in for it then.
-7. **One validated push per round.** Commit as often as you like; push when the checklist above is
-   green for the round's work, once. Each push to a branch cancels the CI run of the push before
-   it: 9 of the last 25 CI runs on 2026-10-10 were cancelled that way, about 70 runner-minutes each
-   against a 20-job concurrency cap. Two pushes are right only when the first is the
-   `unpushed-work` hook saving work before a turn ends, or when you push to learn what only CI can
-   answer and say so in the PR.
+7. **One validated push per round.** Commit as often as you like; push once, when the checklist
+   is green for the round's work, because each push cancels the CI run of the one before it
+   (the measurement is in [verifying.md](../../../docs/agents/verifying.md#one-validated-push-per-round)).
+   A second push is right only when the `unpushed-work` hook is saving work before a turn ends,
+   or when you push to learn what only CI can answer and say so in the PR.
 
 CI runs anything whole: `pnpm check`, the whole unit suite, `next build`, the whole e2e suite and
 the visual run. The shell guard refuses the bare local forms. When you do read a `pnpm check` log,
@@ -108,7 +107,7 @@ uncertified diver, a nitrox request with no verified card).
 
 ## 5. File what you're leaving behind
 
-Before you report done, empty your head into GitHub issues (at most ten per run) — one issue per item, labelled
+Before you report done, empty your head into GitHub issues — one issue per item, labelled
 `needs-triage` (see [docs/agents/issue-tracker.md](../../../docs/agents/issue-tracker.md)'s "Filing
 a follow-up" section):
 

@@ -270,8 +270,8 @@ comment saying what would un-park it, so the next reader does not re-triage it f
 ### Rules
 
 - **At most 10 per run.** A run (a session, a backlog sweep, one container's life) files at most ten
-  `needs-triage` issues. Backlog sweeps filed 54 in three bursts on 2026-10-09 and 2026-10-10 and none
-  was triaged: a queue written faster than anyone reads it is no memory. Past ten, do the most
+  `needs-triage` issues. Backlog sweeps filed 54 in three bursts on 2026-10-09 and 2026-10-10, and none
+  had been triaged a day later: a queue written faster than anyone reads it is no memory. Past ten, do the most
   valuable of what is left, fold related notes into one issue, or name what you did not file in the
   hand-off. `scripts/file-follow-up.mjs` counts its filings in a gitignored `.claude/.follow-up-log`
   and refuses the eleventh in twelve hours unless `--over-quota "<why>"` says why it cannot wait; an

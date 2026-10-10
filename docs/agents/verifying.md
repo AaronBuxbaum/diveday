@@ -6,9 +6,8 @@ line between the two.
 ## Run locally: anything you can scope to the change
 
 The list is the **verify** skill's checklist ([SKILL.md](../../.claude/skills/verify/SKILL.md)),
-and only there: the guard you touched, lint, typecheck, the focused test, one e2e spec, looking at
-the UI, and `pnpm test:changed` before a push. Everything it names is scoped to your diff, which is
-the whole test for "local". The sections below are why each line is on it, and why the rest is not.
+and only there. Everything on it is scoped to your diff, which is the whole test for "local"; the
+sections below are why each line is on it, and why the rest is not.
 
 ## The unit suite's projects
 

@@ -125,8 +125,8 @@ fetch, and the session-start hook fetches `main` and `claude/*` (with `--prune`,
 drops out) for that reason. Two designs were weighed and refused. A committed `.claude/stack.json`
 that each PR updates is one more shared file every layer edits, stale the moment a layer merges and
 a conflict on every rebase — the problem it would exist to remove. A `STACK` block in each PR body
-read live cannot be read from a hook at all: `gh` and repo-scoped REST are refused in cloud
-sessions, so only the MCP tools see PR bodies.
+read live would put a GitHub call on every prompt, and a hook cannot count on one: `gh`'s GraphQL
+is refused in cloud sessions and `gh` is not signed in everywhere a session runs.
 
 What git cannot say is intent: which branch you *mean* to cut next, and the paths you mean to own.
 Those stay where they were — the draft PR body's position line below and the issue's claim.

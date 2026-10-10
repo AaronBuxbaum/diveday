@@ -258,9 +258,7 @@ message).
   `gh pr list --author '@me' --state open` immediately before writing the summary is the whole fix,
   and the same command tells you whether anything of yours is red.
 - **Anything you notice and do not do** becomes a `needs-triage` issue written for a reader with
-  none of your context — not a line in the closing message. **At most ten per run**: past that, fold
-  related notes into one issue or name what you did not file in the hand-off; `file-follow-up.mjs`
-  refuses the eleventh without `--over-quota "<why>"`
-  ([issue-tracker.md](../../../docs/agents/issue-tracker.md)'s Rules).
+  none of your context — not a line in the closing message. **At most ten per run**
+  ([issue-tracker.md](../../../docs/agents/issue-tracker.md)'s Rules say what to do past ten).
 - **A failing or flaky test is part of the work**, even when it is not yours and even when it is
   green on the rerun. Root-cause it; never widen a timeout to make it pass.
