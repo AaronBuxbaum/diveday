@@ -211,6 +211,13 @@ Measured on 2026-09-02 across the three files converted so far (`trips-queries`,
 The 38 database-backed files under `src/db` carried 849 of 988 test-seconds in a measured CI shard,
 so this is most of the unit suite's cost.
 
+On 2026-10-10 the 76 heaviest files still hydrating per test were converted (code review
+2026-10-10, finding 6). The ten heaviest, each run alone on one loaded machine before and after:
+3,480s of wall-clock down to 833s — `waivers` 447s to 96s, `checkouts` 501s to 90s, `manifests`
+549s to 106s, `orders` 477s to 60s, `notifications` 354s to 44s, `reporting` 337s to 57s,
+`executed-dives` 252s to 80s, `courses` 221s to 91s, `stripe/route.replay` 170s to 57s, and `seed`
+172s to 152s (most of `seed` is the reset and seeding it tests, on unseeded databases).
+
 **The rollback is the whole mechanism**, so a *test* that needs a committed database, or its own
 transaction semantics, takes its own `seededShopContext()` while the rest of its file shares the
 file's. The exception is made per test, not per file: a file's setup helper takes
