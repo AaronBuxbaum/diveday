@@ -160,9 +160,12 @@ switch.
 - Editing a form's text sends every student on a session not yet started back to sign, and the
   editor says how many before the save. There is no "non-material edit" choice yet; the release has
   one (issue #790) and forms could take the same one later.
-- Form records carry no integrity seal yet. The release's records do. Both are follow-ups, filed as
-  issues, not gaps in this decision.
-- When the switch is at warn-only, the prep page offers forms only through the sign step's blocker.
-  The direct link that the send delivers still works.
+- Form records carry the release's integrity seal (issue #2266): `integrity_hash` and
+  `integrity_version` over the signed evidence, version 2 after erasure, re-sealed only over a
+  record whose seal verified the moment before (`src/lib/course-form-integrity.ts`). `person_id`
+  is outside it and the booking inside, so a diver merge's plain repoint leaves the seal valid.
+  The shop export checks every seal as it writes `course_form_records.csv` (`integrity_check`).
+- The prep page's sign step offers the forms door whenever the enrollment owes a form, whatever
+  the switch says, so warn-only still has a way in besides the direct link the send delivers.
 - Training dives that ride a regular charter, and handing one device round a family to sign, are
   not modelled here; both are filed as a follow-up.

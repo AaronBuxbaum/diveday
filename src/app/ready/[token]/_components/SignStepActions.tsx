@@ -22,15 +22,24 @@ import { signWaiverFromReady } from "../actions";
  * The release's code is read off every blocker the diver can act on in this
  * step rather than only its headline: a course form owed beside an unsigned
  * release must not hide the release's button (ADR 20261008-course-forms).
+ *
+ * **The forms door opens on what is owed, not only on what blocks** (issue
+ * #2266). With `COURSE_FORMS_BLOCK_BOARDING` at warn-only, readiness never
+ * raises `course_form_unsigned`, and the door drawn only from that blocker
+ * left the send's direct link as the one way in. `courseFormsOwed` is the
+ * enrollment's own outstanding list, read whatever the switch says.
  */
 export function SignStepActions({
   token,
   item,
+  courseFormsOwed,
   actionButton,
   t,
 }: {
   token: string;
   item: DiverChecklistItem | undefined;
+  /** This enrollment still owes a course form, blocking or not. */
+  courseFormsOwed: boolean;
   actionButton: string;
   t: DiverTranslator;
 }) {
@@ -42,10 +51,12 @@ export function SignStepActions({
         code === "waiver_expired" ||
         code === "guardian_signature_missing",
     );
-  const formsOwed = (item?.actionable ?? []).some(
-    (blocker) =>
-      blocker.code === "course_form_unsigned" || blocker.code === "course_form_guardian_missing",
-  );
+  const formsOwed =
+    courseFormsOwed ||
+    (item?.actionable ?? []).some(
+      (blocker) =>
+        blocker.code === "course_form_unsigned" || blocker.code === "course_form_guardian_missing",
+    );
   if (!waiverCode && !formsOwed) return null;
   return (
     <div className="flex flex-wrap items-center gap-3">

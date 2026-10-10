@@ -61,6 +61,7 @@ import {
 } from "@/db/booking-capabilities";
 import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import { getCourseFormsForBooking } from "@/db/course-forms";
 import { countSpendableDives } from "@/db/dive-packages";
 import { departureRollCallForBooking } from "@/db/manifests";
 import { getBookingPayment } from "@/db/payments";
@@ -1176,6 +1177,11 @@ export default async function DiverReadinessPage({
     /** A money figure in the currency it was actually charged in, never today's shop setting. */
     const money = (cents: number, currency: string) => formatMoneyCents(cents, currency, locale);
     const packageDivesLeft = await countSpendableDives(db, shop.id, data.person.id);
+    // The forms door's own question, asked whatever `COURSE_FORMS_BLOCK_BOARDING`
+    // says: warn-only raises no blocker to open it (issue #2266).
+    const courseFormsOwed = data.trip.course
+      ? ((await getCourseFormsForBooking(db, shop.id, bookingId))?.outstanding.length ?? 0) > 0
+      : false;
     const { paidLine, depositBalanceLine } = payStepLines(
       t,
       money,
@@ -1271,7 +1277,13 @@ export default async function DiverReadinessPage({
       switch (step.id) {
         case "sign":
           return (
-            <SignStepActions token={token} item={step.item} actionButton={actionButton} t={t} />
+            <SignStepActions
+              token={token}
+              item={step.item}
+              courseFormsOwed={courseFormsOwed}
+              actionButton={actionButton}
+              t={t}
+            />
           );
         case "certification":
           if (!step.item) return null;

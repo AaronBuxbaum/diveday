@@ -1,4 +1,5 @@
 import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { verifyCourseFormIntegrity } from "@/lib/course-form-integrity";
 import { EXPORT_FILE_NOTES } from "@/lib/export";
 import { WEEKDAY_EXPORT_CODES, weekdaysIn } from "@/lib/recurrence";
 import type { ShopExportContext } from "./export";
@@ -2014,6 +2015,11 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "guardian_signed_at",
       "anonymized_at",
       "anonymized_by_person_id",
+      // The seal and, beside it, what it says at the moment of export
+      // (issue #2266): `valid`, `invalid` or `unsealed`.
+      "integrity_hash",
+      "integrity_version",
+      "integrity_check",
       "created_at",
       "form_body",
     ],
@@ -2044,6 +2050,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.guardianSignedAt,
         row.anonymizedAt,
         row.anonymizedByPersonId,
+        row.integrityHash,
+        row.integrityVersion,
+        verifyCourseFormIntegrity(row),
         row.createdAt,
         row.formBody,
       ]),

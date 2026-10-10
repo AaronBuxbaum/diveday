@@ -3,6 +3,11 @@ import { isStaff } from "@/lib/authz";
 import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
+  COURSE_FORM_INTEGRITY_VERSION_SIGNED,
+  courseFormSeal,
+  verifyCourseFormIntegrity,
+} from "@/lib/course-form-integrity";
+import {
   type CourseFormContext,
   type CourseFormGap,
   type CourseFormSignature,
@@ -1015,10 +1020,18 @@ async function insertRecord(
     .onConflictDoNothing({
       target: [courseFormRecords.bookingId, courseFormRecords.formVersionId],
     })
-    .returning({ id: courseFormRecords.id });
-  if (record) return { ok: true, recordId: record.id, alreadySigned: false };
+    .returning();
+  if (record) {
+    // Sealed in the transaction that wrote the evidence (issue #2266), over
+    // the row as stored, the way the release seals its own.
+    await tx
+      .update(courseFormRecords)
+      .set(courseFormSeal(record, COURSE_FORM_INTEGRITY_VERSION_SIGNED))
+      .where(eq(courseFormRecords.id, record.id));
+    return { ok: true, recordId: record.id, alreadySigned: false };
+  }
   const [standing] = await tx
-    .select({ id: courseFormRecords.id, guardianSignedAt: courseFormRecords.guardianSignedAt })
+    .select()
     .from(courseFormRecords)
     .where(
       and(
@@ -1033,13 +1046,23 @@ async function insertRecord(
   // their date of birth signed alone; the record stands, and the guardian who
   // signs now completes it. Written only into a record with no guardian, so
   // a signature already on file is never overwritten.
+  //
+  // The seal moves with it only when it verified the moment before, so
+  // completing a record can never launder an edit made to it earlier: a
+  // record that read `invalid` keeps reading `invalid`.
   if (input.guardian && standing.guardianSignedAt === null) {
-    await tx
+    const sealHeld = verifyCourseFormIntegrity(standing) === "valid";
+    const [completed] = await tx
       .update(courseFormRecords)
       .set(guardianColumns)
-      .where(
-        and(eq(courseFormRecords.id, standing.id), isNull(courseFormRecords.guardianSignedAt)),
-      );
+      .where(and(eq(courseFormRecords.id, standing.id), isNull(courseFormRecords.guardianSignedAt)))
+      .returning();
+    if (completed && sealHeld) {
+      await tx
+        .update(courseFormRecords)
+        .set(courseFormSeal(completed, COURSE_FORM_INTEGRITY_VERSION_SIGNED))
+        .where(eq(courseFormRecords.id, completed.id));
+    }
   }
   return { ok: true, recordId: standing.id, alreadySigned: true };
 }

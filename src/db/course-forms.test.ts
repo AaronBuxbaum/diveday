@@ -7,6 +7,7 @@ import {
   shiftCalendarDateMonths,
 } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { verifyCourseFormIntegrity } from "@/lib/course-form-integrity";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
@@ -679,6 +680,111 @@ describe("course forms — export, erasure and merge parity (in-memory PGlite)",
     expect(versions?.rows.map((row) => row[1])).toContain(ctx.form.id);
   });
 
+  it("seals the signed record, reads an edit made after as invalid, and says so on export (issue #2266)", async () => {
+    const ctx = await signedSeat();
+    const stored = async () => {
+      const [row] = await ctx.db
+        .select()
+        .from(courseFormRecords)
+        .where(eq(courseFormRecords.id, ctx.recordId));
+      if (!row) throw new Error("record expected");
+      return row;
+    };
+    const exportedCheck = async () => {
+      const shop = await loadShopExportBundleInput(ctx.db, ctx.shop.id);
+      const file = shop?.tables.find((table) => table.file === "course_form_records.csv");
+      const column = file?.header.indexOf("integrity_check") ?? -1;
+      expect(column).toBeGreaterThan(-1);
+      return file?.rows.find((row) => row[0] === ctx.recordId)?.[column];
+    };
+
+    const sealed = await stored();
+    expect(sealed.integrityVersion).toBe(1);
+    expect(sealed.integrityHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(verifyCourseFormIntegrity(sealed)).toBe("valid");
+    expect(await exportedCheck()).toBe("valid");
+
+    // Somebody with write access swaps the words after the fact.
+    await ctx.db
+      .update(courseFormRecords)
+      .set({ formBody: `${BODY} And the shop may keep the deposit.` })
+      .where(eq(courseFormRecords.id, ctx.recordId));
+    expect(verifyCourseFormIntegrity(await stored())).toBe("invalid");
+    expect(await exportedCheck()).toBe("invalid");
+
+    // And a quiet change of when, or by whom, is caught the same way.
+    await ctx.db
+      .update(courseFormRecords)
+      .set({ formBody: BODY, signedName: "Someone Else" })
+      .where(eq(courseFormRecords.id, ctx.recordId));
+    expect(verifyCourseFormIntegrity(await stored())).toBe("invalid");
+    await ctx.db
+      .update(courseFormRecords)
+      .set({ signedName: sealed.signedName, signedAt: new Date(sealed.signedAt.getTime() - 1000) })
+      .where(eq(courseFormRecords.id, ctx.recordId));
+    expect(verifyCourseFormIntegrity(await stored())).toBe("invalid");
+    await ctx.db
+      .update(courseFormRecords)
+      .set({ signedAt: sealed.signedAt })
+      .where(eq(courseFormRecords.id, ctx.recordId));
+    expect(verifyCourseFormIntegrity(await stored())).toBe("valid");
+
+    // A seal with no hash, or a version this build does not know, is never "valid".
+    await ctx.db
+      .update(courseFormRecords)
+      .set({ integrityVersion: 9 })
+      .where(eq(courseFormRecords.id, ctx.recordId));
+    expect(verifyCourseFormIntegrity(await stored())).toBe("invalid");
+    await expect(
+      ctx.db
+        .update(courseFormRecords)
+        .set({ integrityHash: null })
+        .where(eq(courseFormRecords.id, ctx.recordId)),
+    ).rejects.toThrow();
+  });
+
+  it("re-seals an erased record as version 2, and never launders an earlier edit (issue #2266)", async () => {
+    const ctx = await signedSeat();
+    const erased = await anonymizeDiver(ctx.db, {
+      shopId: ctx.shop.id,
+      personId: ctx.seat.personId,
+      actorPersonId: ctx.owner.id,
+    });
+    expect(erased.ok).toBe(true);
+    const [record] = await ctx.db
+      .select()
+      .from(courseFormRecords)
+      .where(eq(courseFormRecords.id, ctx.recordId));
+    if (!record) throw new Error("record expected");
+    expect(record.integrityVersion).toBe(2);
+    expect(verifyCourseFormIntegrity(record)).toBe("valid");
+    // A name put back on an erased record is not the record that was sealed.
+    expect(verifyCourseFormIntegrity({ ...record, signedName: ctx.seat.fullName })).toBe("invalid");
+
+    // A record edited before the erasure stays invalid through it.
+    const tampered = await signedSeat();
+    await tampered.db
+      .update(courseFormRecords)
+      .set({ formTitle: "Something else" })
+      .where(eq(courseFormRecords.id, tampered.recordId));
+    expect(
+      (
+        await anonymizeDiver(tampered.db, {
+          shopId: tampered.shop.id,
+          personId: tampered.seat.personId,
+          actorPersonId: tampered.owner.id,
+        })
+      ).ok,
+    ).toBe(true);
+    const [after] = await tampered.db
+      .select()
+      .from(courseFormRecords)
+      .where(eq(courseFormRecords.id, tampered.recordId));
+    if (!after) throw new Error("record expected");
+    expect(after.integrityVersion).toBe(1);
+    expect(verifyCourseFormIntegrity(after)).toBe("invalid");
+  });
+
   it("loses the signer's name on erasure and keeps the fact of the signature", async () => {
     const ctx = await signedSeat();
 
@@ -727,10 +833,14 @@ describe("course forms — export, erasure and merge parity (in-memory PGlite)",
     expect(merged.ok ? merged.survivorId : merged.reason).toBe(survivor.id);
 
     const [record] = await ctx.db
-      .select({ personId: courseFormRecords.personId })
+      .select()
       .from(courseFormRecords)
       .where(eq(courseFormRecords.id, ctx.recordId));
     expect(record?.personId).toBe(survivor.id);
+    // The seal is over the booking, which a merge does not change, so the
+    // record the shop kept still verifies (issue #2266).
+    if (!record) throw new Error("record expected");
+    expect(verifyCourseFormIntegrity(record)).toBe("valid");
     // Still satisfied: the booking and the record moved together.
     const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.seat.bookingId);
     expect(readiness?.blockers.map((blocker) => blocker.code)).not.toContain(
@@ -960,6 +1070,10 @@ describe("course forms — a minor's guardian, and a paper copy's own rules (in-
       .from(courseFormRecords)
       .where(eq(courseFormRecords.bookingId, ctx.seat.bookingId));
     expect(record).toMatchObject({ signedName: ctx.seat.fullName, guardianName: "Rosa Guardian" });
+    // The guardian's half is inside the seal, re-minted when it was written.
+    if (!record) throw new Error("record expected");
+    expect(verifyCourseFormIntegrity(record)).toBe("valid");
+    expect(verifyCourseFormIntegrity({ ...record, guardianName: null })).toBe("invalid");
   });
 
   it("refuses a paper record on a held seat, without the paper-copy tick, or dated after today", async () => {

@@ -152,8 +152,10 @@ export const DIVER_HISTORY_TABLES = [
   "orders",
   "waiver_records",
   // A signed course form, on the booking that moves with it (ADR
-  // 20261008-course-forms). No seal, so the plain repoint below carries it;
-  // its unique key is per booking, so the two sides cannot collide.
+  // 20261008-course-forms). Its seal is over the booking, not the person
+  // (`src/lib/course-form-integrity.ts`), so the plain repoint below carries
+  // it and it still verifies; its unique key is per booking, so the two sides
+  // cannot collide.
   "course_form_records",
   "certifications",
   "specialty_certifications",
