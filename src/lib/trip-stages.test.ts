@@ -6,7 +6,6 @@ import {
   STAGE_SENTENCE_KEYS,
   STAGE_TAP_KEYS,
   STAGE_WORD_KEYS,
-  stageTone,
   TRIP_STAGES,
   type TripStageReading,
 } from "./trip-stages";
@@ -85,13 +84,6 @@ describe("the five stages", () => {
       ...Object.values(STAGE_SENTENCE_KEYS),
     ].join(" ");
     expect(keys.toLowerCase()).not.toContain("unknown");
-  });
-
-  it("gives the success tone to home and to nothing else", () => {
-    expect(stageTone("home")).toBe("success");
-    for (const stage of TRIP_STAGES.filter((s) => s !== "home")) {
-      expect(stageTone(stage)).toBe("primary");
-    }
   });
 });
 

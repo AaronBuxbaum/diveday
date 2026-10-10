@@ -2,7 +2,6 @@ import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import {
-  guardianEmailRedacted,
   verifyWaiverIntegrity,
   WAIVER_INTEGRITY_VERSION_ERASED,
   WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED,
@@ -116,7 +115,7 @@ describe("eraseGuardianEmail", () => {
     expect(after.guardianEmailErasedByPersonId).toBe(owner);
     expect(after.integrityVersion).toBe(WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED);
     expect(verifyWaiverIntegrity(after)).toBe("valid");
-    expect(guardianEmailRedacted(after)).toBe(true);
+    expect(after.guardianEmailErasedAt).not.toBeNull();
     // Everything that was not the guardian's address is exactly as signed.
     expect(after).toMatchObject({
       signedName: before.signedName,

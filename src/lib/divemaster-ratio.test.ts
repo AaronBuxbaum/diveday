@@ -3,7 +3,6 @@ import { courseCrewGap } from "./course-ratios";
 import { countInWaterCrew } from "./crew-roles";
 import {
   DEFAULT_DIVERS_PER_DIVEMASTER,
-  divemasterRatioCapacity,
   divemasterRatioGap,
   divemastersNeeded,
   inWaterDivemasterCount,
@@ -23,11 +22,6 @@ describe("how many divemasters a target wants", () => {
     // Negative is not a head count, but a caller subtracting its way to one
     // must not be handed a negative crew to roster.
     expect(divemastersNeeded(-3, 6)).toBe(0);
-  });
-
-  it("reports what a rostered crew covers", () => {
-    expect(divemasterRatioCapacity(2, 6)).toBe(12);
-    expect(divemasterRatioCapacity(0, 6)).toBe(0);
   });
 });
 

@@ -1,5 +1,4 @@
 import type { ReadinessResult } from "./readiness";
-import type { WaiverState } from "./waivers";
 
 /**
  * The two predicates the trip roster's filter chips count with.
@@ -28,19 +27,4 @@ import type { WaiverState } from "./waivers";
  */
 export function rosterRowIsBlocked(readiness: ReadinessResult | undefined): boolean {
   return readiness?.status === "blocked";
-}
-
-/**
- * Does this booking have a waiver a staffer can still send or resend?
- *
- * The "Needs waiver" chip used to ask `waiverState !== "complete"`, which
- * counts a `medical_review` diver — someone whose waiver *is* signed and is
- * waiting on a human to read a medical answer. There is nothing to send them,
- * the bulk send button already excludes them (no checkbox is offered), and the
- * count therefore promised work that the surface refused to let anyone do. This
- * is the bulk button's definition, which is the honest one: a waiver is
- * "needed" when sending one would actually do something.
- */
-export function rosterRowNeedsWaiver(state: WaiverState): boolean {
-  return state === "not_sent" || state === "awaiting_signature" || state === "expired";
 }

@@ -188,16 +188,6 @@ export function workOrderTotalCents(
   return lines.reduce((sum, line) => sum + workOrderLineTotalCents(line), 0);
 }
 
-/** Parts and labor subtotals, for a ticket that wants to show its working. */
-export function workOrderSubtotalsCents(
-  lines: readonly { kind: "part" | "labor"; quantityHundredths: number; unitAmountCents: number }[],
-): { parts: number; labor: number } {
-  return {
-    parts: workOrderTotalCents(lines.filter((line) => line.kind === "part")),
-    labor: workOrderTotalCents(lines.filter((line) => line.kind === "labor")),
-  };
-}
-
 /**
  * A typed quantity ("2", "1.5", "0.75") as hundredths, or `null` when it is
  * not a quantity at all. Two decimal places is the resolution the column

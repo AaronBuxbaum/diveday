@@ -26,10 +26,6 @@ export function resolveE2EBasePort(explicitValue: string | undefined, cwd: strin
     : defaultE2EBasePort(cwd);
 }
 
-export function e2ePortBlock(basePort: number, workerCount: number): number[] {
-  return Array.from({ length: workerCount }, (_, workerIndex) => basePort + workerIndex);
-}
-
 export const E2E_WORKER_PORT_STRIDE = WORKER_PORT_STRIDE;
 export const E2E_DEFAULT_BASE_PORT_MIN = DEFAULT_BASE_PORT;
 export const E2E_EPHEMERAL_PORT_START = EPHEMERAL_PORT_START;

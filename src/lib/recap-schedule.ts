@@ -46,26 +46,3 @@ export function unpauseRecapAutoSendAt(
   const unpauseSendAt = unpausedAt.getTime() + RECAP_UNPAUSE_DELAY_MS;
   return new Date(Math.max(originalSendAt, unpauseSendAt));
 }
-
-/**
- * Determines whether automatic recap sending is due for a departure:
- * - false if paused
- * - false if no scheduled return time (`endsAt` is null)
- * - true if `now` >= `recapAutoSendAt(endsAt, autoSendAt)`
- */
-export function recapAutoSendIsDue({
-  endsAt,
-  autoSendAt,
-  paused = false,
-  now,
-}: {
-  endsAt: Date | null | undefined;
-  autoSendAt?: Date | null;
-  paused?: boolean;
-  now: Date;
-}): boolean {
-  if (paused) return false;
-  const target = recapAutoSendAt(endsAt, autoSendAt);
-  if (!target) return false;
-  return now.getTime() >= target.getTime();
-}

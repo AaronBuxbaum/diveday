@@ -22,7 +22,6 @@ import {
   reservationPhase,
   serviceConcernClearingKinds,
   serviceConcernStillOpen,
-  suggestNextDueOn,
   tripReservationWindow,
 } from "./gear";
 
@@ -57,12 +56,6 @@ describe("gear kind coverage", () => {
     expect(GEAR_SERVICE_KINDS_FOR.flares).toEqual(["expiry", "note"]);
   });
 
-  it("suggests no date for a clock whose date is printed on the packet", () => {
-    for (const clock of ["aed_pads", "aed_battery", "expiry"] as const) {
-      expect(suggestNextDueOn(clock, "2026-10-09")).toBeNull();
-    }
-  });
-
   it("splits a combined rental-fit answer into independently reservable units", () => {
     expect(gearAssignmentNeeds({ kind: "mask_fins", size: "M" })).toEqual([
       { kind: "mask", size: null },
@@ -85,19 +78,6 @@ describe("shiftCalendarDateMonths", () => {
 
   it("rolls years over", () => {
     expect(shiftCalendarDateMonths("2026-11-20", 3)).toBe("2027-02-20");
-  });
-});
-
-describe("suggestNextDueOn", () => {
-  it("suggests the conventional interval per clock", () => {
-    expect(suggestNextDueOn("service", "2026-08-20")).toBe("2027-08-20");
-    expect(suggestNextDueOn("visual_inspection", "2026-08-20")).toBe("2027-08-20");
-    expect(suggestNextDueOn("o2_clean", "2026-08-20")).toBe("2027-08-20");
-    expect(suggestNextDueOn("hydro_test", "2026-08-20")).toBe("2031-08-20");
-  });
-
-  it("suggests nothing for a condition note — it has no clock", () => {
-    expect(suggestNextDueOn("note", "2026-08-20")).toBeNull();
   });
 });
 

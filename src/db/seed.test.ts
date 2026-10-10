@@ -2,7 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { reservedTestRecipientDelivery } from "@/lib/notifications/provider";
-import { DEMO_MAIL_DOMAIN, deliveryAddressFor, isSimulatorEmail } from "@/lib/simulator-email";
+import { DEMO_MAIL_DOMAIN, deliveryAddressFor, SES_SIMULATOR_DOMAIN } from "@/lib/simulator-email";
 import { seededShopContext, unseededTestDb } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { issueBookingCapability } from "./booking-capabilities";
@@ -655,7 +655,7 @@ describe("seeded addresses", () => {
       // ...and where SES actually sends it.
       // The demo shop's sends say so (`NotificationSender.demoShop`, asserted below).
       const delivered = deliveryAddressFor(email, { demoShop: true });
-      expect(isSimulatorEmail(delivered), email).toBe(true);
+      expect(delivered.toLowerCase().endsWith(`@${SES_SIMULATOR_DOMAIN}`), email).toBe(true);
       expect(reservedTestRecipientDelivery(delivered), email).toBeNull();
     }
     expect((await shopSenderFor(db, shop.id))?.demoShop).toBe(true);

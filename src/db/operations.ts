@@ -294,22 +294,6 @@ export async function listBookingNotes(db: AppDb, shopId: string, tripId: string
     .orderBy(asc(internalNotes.createdAt));
 }
 
-/** Notes written on the diver record, oldest first. */
-export async function listDiverNotes(db: AppDb, shopId: string, personId: string) {
-  return db
-    .select({ note: internalNotes, authorName: people.fullName })
-    .from(internalNotes)
-    .innerJoin(people, eq(people.id, internalNotes.createdByPersonId))
-    .where(
-      and(
-        eq(internalNotes.shopId, shopId),
-        eq(internalNotes.personId, personId),
-        isNull(internalNotes.bookingId),
-      ),
-    )
-    .orderBy(asc(internalNotes.createdAt));
-}
-
 /**
  * Every staff note about one diver, in one chronological record.
  *

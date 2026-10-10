@@ -136,10 +136,3 @@ export function dayProfileRows({
   });
   return rows;
 }
-
-/** Whether a day profile states a figure worth rendering at all. */
-export function dayProfileHasFacts(rows: readonly DayProfileRow[]): boolean {
-  return rows.some((row) =>
-    row.kind === "dive" ? row.bottomTimeMinutes !== null : row.minutes > 0,
-  );
-}

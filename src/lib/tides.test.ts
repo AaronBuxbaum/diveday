@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_DOCK_DAY_RHYTHM } from "./diver-planning";
 import {
   diveArrivalAt,
-  isTidePreference,
   isTideStationId,
   SLACK_WINDOW_MINUTES,
   type TidePrediction,
@@ -145,12 +144,5 @@ describe("the two shape checks", () => {
     expect(isTideStationId("872358")).toBe(false);
     expect(isTideStationId("8723583a")).toBe(false);
     expect(isTideStationId("")).toBe(false);
-  });
-
-  it("knows the four preferences", () => {
-    expect(isTidePreference("slack")).toBe(true);
-    expect(isTidePreference("any")).toBe(true);
-    expect(isTidePreference("spring")).toBe(false);
-    expect(isTidePreference(null)).toBe(false);
   });
 });

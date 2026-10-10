@@ -341,23 +341,6 @@ export async function siteSightings(
 }
 
 /**
- * One site's answer.
- *
- * The same read as `siteSightings` with one id in it, exported under its own
- * name because a public dive-site page is the obvious second reader and should
- * not have to know the batched shape — or, worse, write its own version of the
- * denominator rule.
- */
-export async function siteSightingSummary(
-  db: DbExecutor,
-  shopId: string,
-  diveSiteId: string,
-  now: Date = nowDate(),
-): Promise<SiteSightings | null> {
-  return (await siteSightings(db, shopId, [diveSiteId], now)).get(diveSiteId) ?? null;
-}
-
-/**
  * Every species this shop has picked, on any of its sites, most-used first.
  *
  * The middle rung of the crew's chip row (`seenChipSlugs`): a two-tank day

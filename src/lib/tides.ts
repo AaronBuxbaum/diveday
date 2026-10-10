@@ -36,10 +36,6 @@ export type TidePhase = (typeof TIDE_PHASES)[number];
 export const TIDE_PREFERENCES = ["any", "slack", "flood", "ebb"] as const;
 export type TidePreference = (typeof TIDE_PREFERENCES)[number];
 
-export function isTidePreference(value: unknown): value is TidePreference {
-  return typeof value === "string" && (TIDE_PREFERENCES as readonly string[]).includes(value);
-}
-
 /**
  * NOAA CO-OPS station ids are seven digits (8723583 is Carysfort Reef). A
  * subordinate station's id looks identical to a harmonic one's, and both

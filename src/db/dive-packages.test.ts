@@ -16,7 +16,7 @@ import {
   listDivePackages,
   listPackagesOnSale,
   listSpendableEntitlements,
-  releaseEntitlementForBooking,
+  releaseEntitlementsForBooking,
   shopSellsPackages,
   spendableDivesForTrip,
 } from "./dive-packages";
@@ -192,7 +192,7 @@ describe("selling and spending a package", () => {
 
     // Undoing a link, never crediting an amount — so it cannot round, drift, or
     // give back more than it took.
-    const released = await releaseEntitlementForBooking(db, shop.id, booking.id);
+    const [released] = await releaseEntitlementsForBooking(db, shop.id, booking.id);
     expect(released?.id).toBe(consumed?.id);
     expect(await countSpendableDives(db, shop.id, person.id)).toBe(10);
   });
@@ -237,7 +237,7 @@ describe("selling and spending a package", () => {
 
   it("releases nothing for a booking that consumed nothing", async () => {
     const { db, shop, booking } = await sold();
-    expect(await releaseEntitlementForBooking(db, shop.id, booking.id)).toBeNull();
+    expect(await releaseEntitlementsForBooking(db, shop.id, booking.id)).toEqual([]);
   });
 
   it("stops counting a dive once it has lapsed", async () => {

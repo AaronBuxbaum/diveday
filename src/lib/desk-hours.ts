@@ -74,13 +74,6 @@ export function afterHoursPingWanted(choice: boolean | null, roles: readonly Rol
   return choice ?? (roles.includes("owner") || roles.includes("manager"));
 }
 
-/** Whether a person last pinged at `lastPingedAt` may be pinged again at `now`. */
-export function afterHoursPingDue(lastPingedAt: Date | null, now: Date): boolean {
-  return (
-    lastPingedAt === null || now.getTime() - lastPingedAt.getTime() >= AFTER_HOURS_PING_INTERVAL_MS
-  );
-}
-
 /** `"HH:MM"` as a time input submits it, to minutes after midnight. */
 export function parseDeskTime(value: unknown): number | null {
   if (typeof value !== "string") return null;

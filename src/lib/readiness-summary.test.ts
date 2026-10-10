@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { TripRequirement } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import type { ReadinessResult } from "./readiness";
-import { buildDiverChecklist, nextDiverStep, reminderReadiness } from "./readiness-summary";
+import { buildDiverChecklist, reminderReadiness } from "./readiness-summary";
 
 function requirement(overrides: Partial<TripRequirement> = {}): TripRequirement {
   return {
@@ -61,7 +61,6 @@ describe("buildDiverChecklist", () => {
     expect(waiver?.state).toBe("action");
     expect(waiver?.detailCode).toBe("waiver_expired");
     expect(waiver?.code).toBe("waiver_expired");
-    expect(nextDiverStep(items)?.category).toBe("waiver");
   });
 
   it("names an expired waiver in pre-trip reminders, like a never-signed one", () => {
@@ -117,7 +116,7 @@ describe("buildDiverChecklist", () => {
     });
     const waiver = items.find((item) => item.category === "waiver");
     expect(waiver?.state).toBe("waiting");
-    expect(nextDiverStep(items)).toBeNull();
+    expect(items.some((item) => item.state === "action")).toBe(false);
   });
 
   it("lets a diver action outrank a shop-waiting blocker in the same category", () => {
@@ -143,7 +142,6 @@ describe("buildDiverChecklist", () => {
     const cert = items.find((item) => item.category === "certification");
     expect(cert).toBeDefined();
     expect(cert?.state).toBe("action");
-    expect(nextDiverStep(items)?.category).toBe("certification");
   });
 
   it("tells a diver short several cards that it's more than one thing", () => {
@@ -242,20 +240,6 @@ describe("buildDiverChecklist", () => {
     });
     expect(items).toHaveLength(1);
     expect(items[0]?.detailCode).toBe("identity_unconfirmed");
-  });
-});
-
-describe("nextDiverStep", () => {
-  it("returns the first item that is on the diver", () => {
-    const items = buildDiverChecklist(requirement(), {
-      status: "blocked",
-      blockers: [{ code: "payment_due" }],
-    });
-    expect(nextDiverStep(items)?.category).toBe("payment");
-  });
-
-  it("returns null when everything is done or on the shop", () => {
-    expect(nextDiverStep(buildDiverChecklist(requirement(), ready))).toBeNull();
   });
 });
 

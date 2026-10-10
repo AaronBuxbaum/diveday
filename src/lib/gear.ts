@@ -17,7 +17,6 @@ import {
   type CalendarDate,
   calendarDateInTimezone,
   calendarDaysBetween,
-  shiftCalendarDateMonths,
 } from "./calendar-date";
 import type { RentalItemKind } from "./dive-prep";
 
@@ -290,16 +289,6 @@ const LIFE_SUPPORT_KINDS: ReadonlySet<GearItemKind> = new Set([
  */
 export function gearKindIsLifeSupport(kind: GearItemKind): boolean {
   return LIFE_SUPPORT_KINDS.has(kind);
-}
-
-/** The service-form suggestion: the conventional next deadline for this clock. */
-export function suggestNextDueOn(
-  kind: GearServiceKind,
-  servicedOn: CalendarDate,
-): CalendarDate | null {
-  const months = GEAR_SERVICE_INTERVAL_MONTHS[kind];
-  if (months === null) return null;
-  return shiftCalendarDateMonths(servicedOn, months);
 }
 
 /**
@@ -666,11 +655,6 @@ export function groupUnitsForSize<T extends { label: string; size: string | null
  */
 export const GEAR_RETURN_OUTCOMES = ["all_good", "fit_adjusted", "service_concern"] as const;
 export type GearReturnOutcome = (typeof GEAR_RETURN_OUTCOMES)[number];
-
-/** The one outcome that asks for words before it will be written. */
-export function gearReturnOutcomeNeedsNote(outcome: string): boolean {
-  return outcome === "service_concern";
-}
 
 /**
  * **The care that answers a service concern on a unit of this kind.**

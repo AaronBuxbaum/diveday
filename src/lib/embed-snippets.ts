@@ -44,10 +44,6 @@ export type EmbedKind = (typeof EMBED_KINDS)[number];
 export const PLATFORMS = ["html", "wordpress", "squarespace", "wix"] as const;
 export type Platform = (typeof PLATFORMS)[number];
 
-export function isEmbedKind(value: unknown): value is EmbedKind {
-  return typeof value === "string" && (EMBED_KINDS as readonly string[]).includes(value);
-}
-
 /**
  * The framed kinds that `show` means something to: one departure, or one
  * course out of the catalogue (issue #1284). `grid` and `calendar` are the

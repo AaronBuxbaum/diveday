@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  CREW_NOTICE_SETTLE_MS,
-  CREW_NOTICE_URGENT_MS,
   type CrewNoticeRow,
-  crewNoticesSettled,
-  crewNoticeUrgent,
   netCrewNotices,
 } from "./crew-notices";
 
@@ -109,36 +105,5 @@ describe("netCrewNotices", () => {
 
   it("returns nothing for nothing", () => {
     expect(netCrewNotices([])).toEqual([]);
-  });
-});
-
-describe("crewNoticeUrgent", () => {
-  const now = new Date("2026-10-09T12:00:00Z");
-
-  it("sends at once for a departure leaving inside the next day", () => {
-    expect(crewNoticeUrgent(new Date(now.getTime() + CREW_NOTICE_URGENT_MS), now)).toBe(true);
-    expect(crewNoticeUrgent(new Date(now.getTime() + 60_000), now)).toBe(true);
-  });
-
-  it("leaves a later departure to the hourly pass", () => {
-    expect(crewNoticeUrgent(new Date(now.getTime() + CREW_NOTICE_URGENT_MS + 1), now)).toBe(false);
-  });
-
-  it("is urgent for a departure that has already started, so it is settled and recorded", () => {
-    expect(crewNoticeUrgent(new Date(now.getTime() - 60_000), now)).toBe(true);
-  });
-});
-
-describe("crewNoticesSettled", () => {
-  const now = new Date("2026-10-09T12:00:00Z");
-
-  it("waits while the newest change is younger than the settle window", () => {
-    const newest = new Date(now.getTime() - CREW_NOTICE_SETTLE_MS + 1);
-    expect(crewNoticesSettled(newest, now)).toBe(false);
-  });
-
-  it("is due once the person's crew has been still for the whole window", () => {
-    const newest = new Date(now.getTime() - CREW_NOTICE_SETTLE_MS);
-    expect(crewNoticesSettled(newest, now)).toBe(true);
   });
 });
