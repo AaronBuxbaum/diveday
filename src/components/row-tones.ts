@@ -80,6 +80,26 @@ export const ROLL_CALL_ROW_TONE = {
 } as const satisfies Record<RollCallRecordedTone | "awaiting" | "blocked", string>;
 
 /**
+ * **A roll-call row's fill**, from its recorded tone and whether readiness
+ * blocks the diver where the row is being called. The live and offline rows
+ * both read this, so they cannot disagree on it.
+ *
+ * Aboard over a block wears the blocked tone, not the boarded green (review
+ * of #1840): the count calls it out as "blocked person aboard" in the danger
+ * the rows wear (`HeadCount`), and a calm green row under that line is the
+ * row telling the captain the opposite. The mark in the row still draws
+ * aboard; the fill is the exception, the circle the fact.
+ */
+export function rollCallRowTone(
+  recordedTone: RollCallRecordedTone | null,
+  blockedAtDock: boolean,
+): string {
+  if (recordedTone === "boarded" && blockedAtDock) return ROLL_CALL_ROW_TONE.blocked;
+  if (recordedTone) return ROLL_CALL_ROW_TONE[recordedTone];
+  return blockedAtDock ? ROLL_CALL_ROW_TONE.blocked : ROLL_CALL_ROW_TONE.awaiting;
+}
+
+/**
  * **The hairline between two roll-call rows, drawn inside the row.**
  *
  * Every tone above sets the row's `border-*` colour for its 4px stripe, and

@@ -1,6 +1,6 @@
 import { RollCallMark } from "@/components/RollCallMark";
 import { RollCallMarkTap, rollCallMarkState } from "@/components/RollCallMarkTap";
-import { ROLL_CALL_ROW_TONE } from "@/components/row-tones";
+import { rollCallRowTone } from "@/components/row-tones";
 import { Badge } from "@/components/ui/badge";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
@@ -88,12 +88,10 @@ function OfflineDiverRow({
   const rowState = rollCallRowState(checkpoint, state);
   const missing = rowState.notBackAboard;
   const recordedTone = rollCallRecordedTone(rowState);
-  // Untouched: the same rule the live page uses — at the dock a
-  // diver readiness has not cleared is blocked, and readiness is the
-  // thing to fix before boarding; everywhere else nothing has been
-  // said yet.
-  const untouchedTone =
-    ready || !isDeparture ? ROLL_CALL_ROW_TONE.awaiting : ROLL_CALL_ROW_TONE.blocked;
+  // The live page's rule for the fill, from the one helper both read: at the
+  // dock a diver readiness has not cleared is blocked, and aboard over that
+  // block keeps the blocked tone rather than the boarded green.
+  const blockedAtDock = !ready && isDeparture;
   // Same condition the live page passes as `showBoardControl`: divers
   // only board at departure once readiness clears them, so a blocked
   // diver's circle is a drawn held ring with no tap.
@@ -119,9 +117,10 @@ function OfflineDiverRow({
       // checkpoint panel, which this page does not have: nothing
       // on this surface is sticky or fixed (the grid's own note
       // below turns on the same fact).
-      className={`scroll-mt-24 border-l-4 p-4 sm:p-5 ${
-        recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : untouchedTone
-      }`}
+      className={`scroll-mt-24 border-l-4 p-4 sm:p-5 ${rollCallRowTone(
+        recordedTone,
+        blockedAtDock,
+      )}`}
     >
       {/* **A name and a mark** at rest, as on the live roll call: the
         circle on the trailing edge is the row's one tap (#1840), and the

@@ -503,6 +503,21 @@ describe("a blocked diver's mark at the dock", () => {
     expect(markOf(container)).toBe("ashore");
   });
 
+  // The row says it too (review of #1840): aboard over a block is the
+  // count's loud line ("1 blocked person aboard", HeadCount), so the row
+  // wears the blocked tone, not the calm boarded green. The circle still
+  // draws aboard — the tone is the exception, the mark is the fact.
+  it("wears the blocked tone on a blocked diver recorded aboard", () => {
+    const { container } = renderList({
+      checkpoint: "departure",
+      divers: [diver({ readiness: blocked, rollCall: boardedAt() })],
+    });
+    const row = container.querySelector("li[id^='diver-row-']") as HTMLElement;
+    expect(row.className).toContain("border-danger");
+    expect(row.className).not.toContain("bg-success/20");
+    expect(markOf(container)).toBe("aboard");
+  });
+
   it("draws held only while nothing is recorded", () => {
     const { container } = renderList({
       checkpoint: "departure",
