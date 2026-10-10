@@ -31,25 +31,39 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const HANDLED = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".jsonc", ".css"]);
 
 /**
- * Whether `command` runs `git commit`, and with `-a`/`--all`. A commit inside a compound
- * command (`git add x && git commit -m …`) counts; `git commit` named inside a quoted message
- * of some other command does not, because each segment must *start* with it.
+ * Whether `command` runs `git commit`, with `-a`/`--all`, and in which directory. A commit
+ * inside a compound command (`git add x && git commit -m …`) counts; `git commit` named inside a
+ * quoted message of some other command does not, because each segment must *start* with it.
+ * `dir` follows a preceding `cd <dir>` segment and `git -C <dir>`, resolved against `cwd`; it is
+ * null when either names something a shell would expand (`$VAR`, `~`, quotes), which this hook
+ * does not guess at.
  */
-export function commitIn(command) {
+export function commitIn(command, cwd = process.cwd()) {
   if (typeof command !== "string") return null;
+  let dir = cwd;
+  const resolve = (target) =>
+    dir === null || /[$`'"~*]/.test(target) ? null : path.resolve(dir, target);
   for (const segment of command.split(/&&|\|\||;|\n/)) {
     const words = segment.trim().split(/\s+/);
+    if (words[0] === "cd") {
+      dir = words[1] ? resolve(words[1]) : null;
+      continue;
+    }
     let i = 0;
     while (/^[A-Z_][A-Z0-9_]*=/.test(words[i] ?? "")) i++;
     if (words[i] !== "git") continue;
     i++;
-    while (words[i] === "-C" || words[i] === "-c") i += 2;
+    let gitDir = dir;
+    while (words[i] === "-C" || words[i] === "-c") {
+      if (words[i] === "-C") gitDir = words[i + 1] ? resolve(words[i + 1]) : null;
+      i += 2;
+    }
     if (words[i] !== "commit") continue;
     const flags = words.slice(i + 1).filter((word) => word.startsWith("-"));
     const all = flags.some(
       (flag) => flag === "--all" || (/^-[a-zA-Z]+$/.test(flag) && flag.includes("a")),
     );
-    return { all };
+    return { all, dir: gitDir };
   }
   return null;
 }
@@ -87,10 +101,16 @@ async function main() {
   for await (const chunk of process.stdin) payload += chunk;
   const parsed = JSON.parse(payload);
   if (parsed.tool_name !== "Bash") return;
-  const commit = commitIn(parsed.tool_input?.command);
-  if (!commit) return;
+  const commit = commitIn(
+    parsed.tool_input?.command,
+    parsed.cwd ?? process.env.CLAUDE_PROJECT_DIR ?? ROOT,
+  );
+  if (!commit?.dir) return;
 
-  const cwd = process.env.CLAUDE_PROJECT_DIR ?? parsed.cwd ?? ROOT;
+  // The commit's own checkout: a worktree's files are formatted in that worktree, from its top,
+  // because `git diff --name-only` names paths from there.
+  const cwd = gitList(commit.dir, ["rev-parse", "--show-toplevel"])?.[0]?.trim();
+  if (!cwd) return;
   const biome = path.join(cwd, "node_modules/.bin/biome");
   if (!existsSync(biome)) return;
 

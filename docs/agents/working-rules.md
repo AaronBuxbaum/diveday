@@ -10,22 +10,18 @@ in AGENTS.md's one-liner in the same commit.
 | Command | What |
 | --- | --- |
 | `pnpm dev` | dev server at localhost:3000, supervised by `scripts/dev-server.mjs`. Wait for its **`dev: serving … — warmed in Ns`**; Next's `✓ Ready` lands ~26s earlier and means only "listening". The supervisor restarts an OOM-bound `next dev` before the kernel does and says so. One dev server per *checkout*: the lock is `.next/dev/lock`, so `--port` does not buy a second (ADR 20260903-the-dev-server-is-supervised; the **run** skill) |
-| `pnpm task:context <area>` | bounded paths, invariants, and validation for a task |
+| `pnpm task:context <area>` | bounded paths, invariants, and validation for a task; with no area, the list of areas |
+| `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`, `pnpm test:changed`, `pnpm e2e <spec>`, `pnpm check` | the pre-commit and pre-push checklist, and which of them CI runs instead, is the **verify** skill; the reasoning is [verifying.md](verifying.md) |
+| `pnpm agent:doctor` | Node against `.nvmrc`, `gh`, the GitHub MCP, `origin/main`'s age, `node_modules`, stray processes and the stack, each with its fix; the session-start block carries its two-line summary |
+| `node scripts/stack-map.mjs` | the stack HEAD is in — layers bottom to top, the top, other tips, merged sub-branches, each layer's paths — derived from remote refs (`--json` for a machine); the per-prompt line carries the position |
 | `pnpm check:env` / `pnpm env:manual` | the two structural facts about configuration, and the one file a human edits — see `.claude/rules/infra.md` |
 | `pnpm check:repo` | 46 static guards over the repository, spawned concurrently so one run reports every failure rather than the first. Each guard names itself and prints the offending line; the ones whose *why* is not obvious from that message are written up in [docs/agents/repo-checks.md](repo-checks.md) |
 | `pnpm check:follow-ups` | every open `needs-triage` issue is still actionable cold. The one guard that calls `gh`, so it is not in `check:repo`: it runs daily in `.github/workflows/follow-ups.yml`, and locally reports **SKIPPED** when `gh` cannot answer ([docs/agents/issue-tracker.md](issue-tracker.md)'s "Filing a follow-up") |
-| `pnpm check` | repository safeguards + lint + typecheck + unit tests, concurrently and fail-slow (`scripts/check-all.mjs`) — **the bar, and CI is where you clear it**. Locally, run its four halves: `pnpm check:repo`, `pnpm lint`, `pnpm typecheck`, `pnpm test:changed` ([docs/agents/verifying.md](verifying.md)) |
 | `pnpm check:context-budget` | the words every session loads before it reads any code — this file, `CLAUDE.md`, any unscoped `.claude/rules/*.md`, and every skill's and reviewer agent's `description:` line — ratcheted (`--write` banks a fall, `--absorb "<why>"` records a deliberate rise), plus a 240-word cap on any single line. The fix for red is never to compress the prose: move the long half into `docs/` or a path-scoped rule and leave a pointer |
 | `pnpm check:copy` / `check:domain-strings` / `check:tokens` / `check:architecture` / `check:type-ramp` / `check:voice` / `check:locale` / `check:e2e-hygiene` / `check:route-coverage` / `check:critical-text` / `check:closing-keywords` / `check:rental-fit-caps` | the individual guards, each also inside `check:repo`; the ratcheted ones share `--report <path>` / `--write` / `--absorb`. What each refuses is in the path-scoped rule for the files it reads and in [docs/agents/repo-checks.md](repo-checks.md) |
-| session hooks (`.claude/settings.json`) | `scripts/session-context.mjs` (checkout state at start, one line per prompt, the reminders a compaction drops), `scripts/guard-bash.mjs` and `scripts/guard-read.mjs` (`PreToolUse` refusals that name the correct form), `scripts/format-touched.mjs` (Biome over the file just edited), `scripts/explain-failure.mjs` (a written answer attached to a known failure), and three `Stop` hooks — `scripts/stray-processes.mjs`, `scripts/unfinished-promises.mjs`, `scripts/unpushed-work.mjs`. All fail open. Each one's reasoning and escape hatch: [docs/agents/session-hooks.md](session-hooks.md) |
+| session hooks (`.claude/settings.json`) | `scripts/session-context.mjs` (checkout state at start, one line per prompt, the reminders a compaction drops), `scripts/guard-bash.mjs` and `scripts/guard-read.mjs` (`PreToolUse` refusals that name the correct form), `scripts/format-touched.mjs` (Biome over the file just edited), `scripts/guard-commit-format.mjs` (Biome over the staged files before a commit), `scripts/explain-failure.mjs` (a written answer attached to a known failure), and three `Stop` hooks — `scripts/stray-processes.mjs`, `scripts/unfinished-promises.mjs`, `scripts/unpushed-work.mjs`. All fail open. Each one's reasoning and escape hatch: [docs/agents/session-hooks.md](session-hooks.md) |
 | `pnpm gates` | report (never a gate): ages of human decisions, every `in-progress` claim checked against `git` (**live** / **stale** / **unverifiable**), and every open `needs-triage` issue oldest first. Nothing it reports is an agent's to close ([docs/agents/issue-tracker.md](issue-tracker.md)) |
 | `pnpm agent:health` | report (never a gate): what the agent environment costs and covers — always-loaded context by file, the path-scoped rules and what each costs when it loads, visual and axe coverage of routes, guards with no test beside them, and the hooks wired into the session lifecycle |
-| `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
-| `pnpm typecheck` | tsc |
-| `pnpm test <file> --reporter=dot` | focused Vitest run with low-noise success output |
-| `pnpm test:changed` | the tests your diff reaches through the import graph — the pre-push net that catches a coverage guard living in a file you never touched. A `src/db/schema.ts` edit widens it to the whole suite; name the three guards by path instead ([docs/agents/verifying.md](verifying.md)) |
-| `pnpm e2e <spec> --reporter=line` | build, then run one Playwright spec — focused because the **whole** suite belongs to CI. What the per-test reset does and does not restore, and why a test that writes shop settings takes a `privateShop`: `.claude/rules/e2e.md` |
-| `pnpm e2e:run <spec> --reporter=line` | fast-iteration path: build once with `pnpm e2e:build`, then reuse it |
 | `pnpm build` | production build |
 | `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema.ts` (the **schema-change** skill) |
 | `pnpm db:reset` | clear the dev PGlite database; next `pnpm dev` re-migrates and re-seeds. **Refuses while a dev server is running**, naming the pid (ADR 20260903-one-process-per-pglite-directory) |
@@ -34,7 +30,7 @@ in AGENTS.md's one-liner in the same commit.
 
 Never put a literal `--` before args to a `pnpm` script (`pnpm test -- <file>`): pnpm forwards it,
 `vitest`/`playwright` see their own `--` and silently drop every flag after it, and the full suite
-runs. Pass args directly: `pnpm test <file> --reporter=dot`. The shell guard refuses the bare form.
+runs. Pass args directly. The shell guard refuses the bare form.
 
 ## Parallel work
 
@@ -43,11 +39,10 @@ runs. Pass args directly: `pnpm test <file> --reporter=dot`. The shell guard ref
   branch and the count of uncommitted paths (a hook prints it); read it before anything that
   touches shared working-tree state. The shell guard refuses a wholesale discard (`git reset
   --hard`, `git checkout .`, `git clean -f`) while the tree is dirty.
-- **Claim the issue before you start.** Add the `in-progress` label and post a `## Claim` comment
-  naming your branch, worktree, start time, and owned paths — see
-  [docs/agents/issue-tracker.md](issue-tracker.md)'s "Claiming an issue". A draft PR
-  starts too late: a session that has begun and not yet pushed has no footprint at all. Clear the
-  label when you finish or stop.
+- **Claim the issue before you start**, the way
+  [docs/agents/issue-tracker.md](issue-tracker.md)'s "Claiming an issue" says. A draft PR starts
+  too late: a session that has begun and not yet pushed has no footprint at all. Clear the label
+  when you finish or stop; a claim nothing backs expires on the daily follow-ups run.
 - Before starting non-trivial work, read the open PRs **and** `pnpm gates`' "Claimed — in flight"
   section. Overlap with your plan → pick a different slice or coordinate in that thread. A claim
   reported **stale** is a dead session, not a reservation — take the work and clear the claim.
@@ -87,16 +82,14 @@ runs. Pass args directly: `pnpm test <file> --reporter=dot`. The shell guard ref
   against `api.github.com` is the same failure wearing a different hat — repo-scoped REST is
   refused here, and an empty response reads as green
   ([docs/agents/verifying.md](verifying.md)).
-- **Verify before commit, and let CI run anything whole.** Targeted checks are yours — the one
-  guard you touched, `pnpm test <file>`, `pnpm typecheck`, `pnpm lint`, one focused
-  `pnpm e2e <spec>`, and **before you push** `pnpm test:changed`, the only one that reaches a
-  coverage guard living in a file you did not edit. The **whole** unit suite, `next build`, the
-  whole e2e suite and the visual run go to CI: push and read the result. Open the PR before it is
-  green when that is the fastest way to learn what is broken, say in the body what you ran and what
-  you did not, and work what comes back — a red PR you are driving is fine, a red PR you have
-  stopped driving is not. Never report unverified work as done, and *look at* UI you changed
-  (screenshots, light only unless the work is colour), the one thing CI cannot answer
-  ([docs/agents/verifying.md](verifying.md)).
+- **Verify before commit, and let CI run anything whole.** The checklist is the **verify** skill,
+  and nowhere else; the line between what you run and what CI runs, and why, is
+  [docs/agents/verifying.md](verifying.md). Push once per round, when the checklist is green: each
+  push cancels the CI run of the one before. Open the PR before it is green when that is the
+  fastest way to learn what is broken, say in the body what you ran and what you did not, and work
+  what comes back — a red PR you are driving is fine, a red PR you have stopped driving is not.
+  Never report unverified work as done, and *look at* UI you changed, the one thing CI cannot
+  answer.
 - **A thought you don't act on goes in the tracker, not in your closing message.** An idea left
   undone, a question only a human can answer, a risk noticed in passing, a cleanup deliberately
   scoped out: a GitHub issue labelled `needs-triage`
@@ -125,8 +118,10 @@ runs. Pass args directly: `pnpm test <file> --reporter=dot`. The shell guard ref
   automatically right: these tools do not know this repository's rules.
 - **New runtime dependency → ADR.** New domain concept → glossary. Invalidated doc → fix in the
   same PR.
-- **Safety-critical surfaces** (manifests, roll call, cert gating, medical flags) get boring code,
-  failure-path and adversarial tests, and a `dive-domain-expert` review.
+- **Safety-critical surfaces** (manifests, roll call, readiness, cert gating, medical flags,
+  erasure) get boring code, failure-path and adversarial tests, and a `dive-domain-expert` review,
+  named in the PR body's "Reviews launched" section, which CI reads
+  ([repo-checks.md](repo-checks.md#pr-body)).
 - **Security-sensitive changes** (auth/authz, token flows, rows holding personal or medical data,
   export/import) get a `security-reviewer` review before merge.
 - **Layout**: domain logic in `src/lib/` or a feature module; routes in `src/app/` stay thin; e2e

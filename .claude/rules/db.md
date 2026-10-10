@@ -41,9 +41,8 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
 ## Rules
 
 - **Change the schema through the schema-change skill**: `pnpm db:generate --name`, then before
-  you push run the four coverage guards by path:
-  `pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/db/retention.test.ts --reporter=dot`
-  ([verifying.md](../../docs/agents/verifying.md)). Never hand-edit `drizzle/`; regenerate.
+  you push run the four coverage guards by path (the **verify** skill's checklist, step 3). Never
+  hand-edit `drizzle/`; regenerate.
 - **There is no legacy**: drop what nothing writes, delete code that only tolerates old rows, write
   no backfill or dual-read for pre-pilot data (H-49). It does not relax the destructive-migration
   guard (`-- diveday:allow-destructive <rule> <table>.<column>: <why>`) or H-02's retention and

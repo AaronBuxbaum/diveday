@@ -734,7 +734,10 @@ describe("assembleEveningClose", () => {
  */
 describe("the glossary's close-out entry", () => {
   const entry = async () => {
-    const glossary = await readFile(path.join(process.cwd(), "docs/product/glossary/operations.md"), "utf8");
+    const glossary = await readFile(
+      path.join(process.cwd(), "docs/product/glossary/operations.md"),
+      "utf8",
+    );
     const block = glossary.split(/^- \*\*/m).find((part) => part.startsWith("Close-out**"));
     expect(block, "docs/product/glossary/operations.md has no **Close-out** entry").toBeDefined();
     return block ?? "";
