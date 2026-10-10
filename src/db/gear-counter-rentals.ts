@@ -837,7 +837,13 @@ export async function counterRentalWaiverStandings(
     db
       .select({ id: people.id, dateOfBirth: people.dateOfBirth })
       .from(people)
-      .where(and(eq(people.shopId, input.shopId), inArray(people.id, personIds))),
+      .where(
+        and(
+          eq(people.shopId, input.shopId),
+          inArray(people.id, personIds),
+          isNull(people.deletedAt),
+        ),
+      ),
     listSignedWaiversByPerson(db, input.shopId, personIds),
     getCurrentWaiverTemplate(db, input.shopId),
   ]);

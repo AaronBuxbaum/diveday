@@ -115,8 +115,9 @@ new domain concept, define it here in the same PR.
   18 m) and a spreadsheet cell is not a card sighting (H-23,
   ADR 20260725-import-specialty-cards). One thing imports `pending` rather than `verified`: a card
   the source file's own status column marks unverified.
-- **Confirm to clear** — the display state of an imported specialty card no staffer has confirmed
-  yet: on file, `verified`, and still holding its gate. One fact, two tones. On the card's own row
+- **Confirm to clear** — the display state of an imported specialty or nitrox card no staffer has
+  confirmed yet: on file, `verified`, and still holding its gate (for nitrox, the fill). One fact,
+  two tones. On the card's own row
   inside the diver's file the badge reads “certified · confirm to clear” in a **neutral** tone: a
   prompt, answered by one tap beside it. Every summary of that unfinished work — the closed
   Certification records door, the status ledger, the home's station, the held-card status — wears
