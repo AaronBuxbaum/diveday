@@ -57,6 +57,7 @@ import {
   readMedicalAnswers,
 } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";
@@ -383,6 +384,7 @@ export default async function WaiverPage({
   }>;
 }) {
   await connection();
+  reportRenderQueries("/waivers/[token]", after);
   const { token } = await params;
   // `at` is the refusal's own nonce, minted by the actions below on every
   // refused submit. It exists so a *repeat* of the identical refusal (same

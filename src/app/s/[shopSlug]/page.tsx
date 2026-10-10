@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
+import { after as afterResponse, connection } from "next/server";
 import { Suspense } from "react";
 import { submitInquiryAction } from "@/app/actions/inquiry";
 import { DateRequestForm } from "@/components/DateRequestForm";
@@ -51,6 +51,7 @@ import {
 import { cachedListFormat } from "@/lib/intl-cache";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
+import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { offSeason } from "@/lib/off-season";
 import {
   publicAvailabilityPath,
@@ -175,6 +176,7 @@ export default async function SchedulePage({
   }>;
 }) {
   await connection(); // schedule is live data — render per request, not at build
+  reportRenderQueries("/s/[shopSlug]", afterResponse);
   const { shopSlug } = await params;
   const { month, after, back, embed, hasSpace, tripType, canDive, hideAbove, credit, lens } =
     await searchParams;

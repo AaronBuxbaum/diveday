@@ -37,6 +37,8 @@ import {
   MUTATION_DURATION_SIGNAL,
   mutationDurationFilterPattern,
   queryConstructIdFor,
+  RENDER_DB_QUERIES_SIGNAL,
+  renderDbQueriesFilterPatternFor,
   SAVED_LOG_QUERIES,
   WEB_VITAL_SIGNALS,
   webVitalAlarmNameFor,
@@ -1642,6 +1644,23 @@ exports.handler = async (event) => {
       period: cdk.Duration.hours(1),
     });
 
+    // What a server render cost: statements sent and wall time, each one
+    // undimensioned metric for the reason the mutation filter above gives --
+    // a `Route` dimension would bill one metric per route template, over a
+    // hundred of them. The per-route ranking is the "Heaviest renders by
+    // route" widget below, reading the same lines.
+    const renderCostMetrics = RENDER_DB_QUERIES_SIGNAL.metrics.map((signal) =>
+      new logs.MetricFilter(this, `${signal.metricName}Filter`, {
+        logGroup: appLogGroup,
+        metricNamespace: METRIC_NAMESPACE,
+        metricName: signal.metricName,
+        filterPattern: logs.FilterPattern.literal(renderDbQueriesFilterPatternFor(signal)),
+        metricValue: `$.${signal.field}`,
+      })
+        .metric({ statistic: "p95", period: cdk.Duration.hours(1) })
+        .with({ label: signal.title }),
+    );
+
     // Amazon CloudWatch RUM: the session, geography, and device context the
     // metrics above cannot answer. The browser reaches it through a Cognito
     // identity pool, because `PutRumEvents` has to be callable by a visitor who
@@ -1774,6 +1793,15 @@ exports.handler = async (event) => {
         width: 24,
         height: 6,
       }),
+      new cloudwatch.GraphWidget({
+        title: "Server render cost (p95)",
+        // Statements on the left, milliseconds on the right: two units that
+        // would flatten each other on one axis.
+        left: renderCostMetrics.slice(0, 1),
+        right: renderCostMetrics.slice(1),
+        width: 24,
+        height: 6,
+      }),
     );
     observabilityDashboard.addWidgets(
       new cloudwatch.LogQueryWidget({
@@ -1794,9 +1822,23 @@ exports.handler = async (event) => {
         logGroupNames: [APP_LOG_GROUP_NAME],
         queryLines: [
           "fields @timestamp, action, durationMs",
-          '| filter event = "mutation_duration.reported" and ispresent(durationMs)',
+          // No leading pipe: the widget joins these lines with one.
+          'filter event = "mutation_duration.reported" and ispresent(durationMs)',
           "stats pct(durationMs, 75) as durationP75, count(*) as mutations by action",
           "sort durationP75 desc",
+          "limit 40",
+        ],
+        width: 24,
+        height: 9,
+      }),
+      new cloudwatch.LogQueryWidget({
+        title: "Heaviest renders by route (p95)",
+        logGroupNames: [APP_LOG_GROUP_NAME],
+        queryLines: [
+          "fields route, queries, ms",
+          `filter event = "${RENDER_DB_QUERIES_SIGNAL.event}"`,
+          "stats pct(queries, 95) as queriesP95, pct(ms, 95) as msP95, count(*) as renders by route",
+          "sort msP95 desc",
           "limit 40",
         ],
         width: 24,
