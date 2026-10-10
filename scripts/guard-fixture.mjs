@@ -1,11 +1,10 @@
-import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-import { SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const SCRIPTS = path.dirname(fileURLToPath(import.meta.url));
 
@@ -32,10 +31,10 @@ export function runGuard(script, files) {
       mkdirSync(path.dirname(target), { recursive: true });
       writeFileSync(target, contents);
     }
-    const result = spawnSync(process.execPath, [path.join(SCRIPTS, script)], {
+    const result = runBounded(process.execPath, [path.join(SCRIPTS, script)], {
       cwd: dir,
       encoding: "utf8",
-      timeout: SUBPROCESS_TIMEOUTS.nodeScript,
+      timeoutMs: SUBPROCESS_TIMEOUTS.nodeScript,
     });
     if (result.error) throw result.error;
     return { status: result.status, stdout: result.stdout, stderr: result.stderr };
