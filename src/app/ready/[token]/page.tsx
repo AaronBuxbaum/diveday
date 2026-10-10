@@ -903,7 +903,7 @@ export default async function DiverReadinessPage({
         timeZone={detail.shop.timezone}
         namespaces={["recap", "common", "booking", "reviews", "trip"]}
       >
-        <AfterState {...after} />
+        <AfterState context={after} />
       </DiverIntlProvider>
     );
   }
