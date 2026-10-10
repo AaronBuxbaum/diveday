@@ -172,8 +172,8 @@ automatically instead — see
 [ADR 20260811-ci-deploy-full-wizard](../architecture/decisions/20260811-ci-deploy-full-wizard.md) —
 once the required-reviewer approval on `infra-deploy` has already gated the run. SES DNS defaults to
 the `dive.day` Vercel zone; set `VERCEL_DNS_ZONE=example.com` for a different authoritative zone. The
-Vercel CLI is pinned in this repository's dev dependencies and is invoked with `pnpm exec vercel`,
-never downloaded ad hoc.
+Vercel CLI is pinned to one exact version in `scripts/vercel-cli.mjs` and run with `pnpm dlx`, never
+a floating version and never a dev dependency (its own tree carried most of `pnpm audit`'s advisories).
 
 Each of `.env.local`, `.env.vercel`, and `.env.github` is rendered fresh on every deploy, from
 exactly two sources: the `diveday/env` credentials document CloudFormation just produced, and
