@@ -197,15 +197,17 @@ export function SeatDiverPanel({
           candidates.length > 0 ? (
             <>
               <PersonCandidateList
+                context={{
+                  candidates,
+                  tripId,
+                  seatAction: seatExistingDiverAction.bind(null, surface, shopSlug),
+                  personHref,
+                  addLabel: copy.addLabel,
+                  pendingLabel: copy.adding,
+                  addPersonAriaLabel: copy.addPersonAriaLabel,
+                  noEmailOnFile: copy.noEmailOnFile,
+                }}
                 className="mt-4"
-                candidates={candidates}
-                tripId={tripId}
-                seatAction={seatExistingDiverAction.bind(null, surface, shopSlug)}
-                personHref={personHref}
-                addLabel={copy.addLabel}
-                pendingLabel={copy.adding}
-                addPersonAriaLabel={copy.addPersonAriaLabel}
-                noEmailOnFile={copy.noEmailOnFile}
               />
               <p className="rise-in mt-3 text-sm text-muted">
                 {copy.addDiverPrompt ? fill(copy.addDiverPrompt, { query }) : "Not listed?"}{" "}

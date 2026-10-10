@@ -199,36 +199,37 @@ export function AddDiverSection({
             candidates.length > 0 ? (
               <>
                 <PersonCandidateList
-                  candidates={candidates}
-                  tripId={tripId}
-                  seatAction={addExistingDiverAction}
-                  inviteAction={inviteAction}
-                  personHref={(personId) => `/shop/${shopSlug}/divers/${personId}`}
+                  context={{
+                    candidates,
+                    tripId,
+                    seatAction: addExistingDiverAction,
+                    inviteAction,
+                    personHref: (personId) => `/shop/${shopSlug}/divers/${personId}`,
+                    // "Same as last time": the fit already on file carries onto the
+                    // trip, so staff confirm rather than re-enter.
+                    extraLine: ({ rentalFit }) => (
+                      <p className="mt-0.5 text-xs text-muted">
+                        {rentalFit
+                          ? t("trips.addDiver.rentalFitOnFile", {
+                              fit: rentalFitLineText(
+                                t,
+                                locale,
+                                rentalFitLine(rentalFit, shopRentalItems),
+                              ),
+                            })
+                          : t("trips.addDiver.noRentalFitYet")}
+                      </p>
+                    ),
+                    inviteLabel: t("trips.invitations.directInvite"),
+                    invitePendingLabel: t("trips.invitations.directInviting"),
+                    invitePersonAriaLabel: (name) =>
+                      t("trips.invitations.directInviteAria", { name }),
+                    addLabel: t("trips.addDiver.addToTrip"),
+                    pendingLabel: t("seatDiver.adding"),
+                    addPersonAriaLabel: (name) => t("trips.addDiver.addPersonAriaLabel", { name }),
+                    noEmailOnFile: t("trips.addDiver.noEmailOnFile"),
+                  }}
                   rowClassName="bg-surface"
-                  // "Same as last time": the fit already on file carries onto the
-                  // trip, so staff confirm rather than re-enter.
-                  extraLine={({ rentalFit }) => (
-                    <p className="mt-0.5 text-xs text-muted">
-                      {rentalFit
-                        ? t("trips.addDiver.rentalFitOnFile", {
-                            fit: rentalFitLineText(
-                              t,
-                              locale,
-                              rentalFitLine(rentalFit, shopRentalItems),
-                            ),
-                          })
-                        : t("trips.addDiver.noRentalFitYet")}
-                    </p>
-                  )}
-                  inviteLabel={t("trips.invitations.directInvite")}
-                  invitePendingLabel={t("trips.invitations.directInviting")}
-                  invitePersonAriaLabel={(name) =>
-                    t("trips.invitations.directInviteAria", { name })
-                  }
-                  addLabel={t("trips.addDiver.addToTrip")}
-                  pendingLabel={t("seatDiver.adding")}
-                  addPersonAriaLabel={(name) => t("trips.addDiver.addPersonAriaLabel", { name })}
-                  noEmailOnFile={t("trips.addDiver.noEmailOnFile")}
                 />
                 {/* The match list can miss the person at the desk (another Sam);
                   the doors for someone new stay one tap away under it. */}

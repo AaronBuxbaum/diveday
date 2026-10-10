@@ -5,44 +5,8 @@ import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import type { BookableDiver } from "@/db/divers";
 
-/**
- * The returning-diver picker's result rows: name, the one contact line, and a
- * one-tap seat button per row.
- *
- * Shared so the three doors cannot drift on the row's shape or its accessible
- * name (each button repeats the same visible label, so every one carries a
- * per-person `aria-label`). What legitimately differs between doors is passed
- * in: whether the name links to the diver's record, an extra line under the
- * contact line (the Guests tab's "rental fit on file"), and the row's surface
- * tone.
- *
- * **The row is a `LedgerRow`** (ADR 20260827-the-shops-shelves, slice 9g, in
- * the grammar of ADR 20260827-clearwater-surface-language, decision 2). It was
- * a `rounded-xl` box on a sunken fill, one per person, stacked with a gap —
- * container-shaped chrome around a list of names that floats above nothing,
- * and the reason a person read as one kind of object here and another on every
- * other people surface (`src/components/person/rows.tsx`, slice 8a). Hairlines
- * instead. Nothing about the flow, the actions or their labels moves;
- * `rowClassName` survives for a caller that genuinely wants a fill behind the
- * row, and now defaults to none.
- */
-export function PersonCandidateList({
-  candidates,
-  tripId,
-  seatAction,
-  inviteAction,
-  personHref,
-  extraLine,
-  addLabel,
-  pendingLabel,
-  addPersonAriaLabel,
-  inviteLabel,
-  invitePendingLabel,
-  invitePersonAriaLabel,
-  noEmailOnFile,
-  rowClassName = "",
-  className = "",
-}: {
+/** Who the list offers, what seating or inviting one does, and the words for both. */
+export type PersonCandidateContext = {
   candidates: BookableDiver[];
   /**
    * Submitted as a hidden field rather than bound into the action: seating a
@@ -65,9 +29,53 @@ export function PersonCandidateList({
   invitePendingLabel?: string;
   invitePersonAriaLabel?: (name: string) => string;
   noEmailOnFile: string;
+};
+
+/**
+ * The returning-diver picker's result rows: name, the one contact line, and a
+ * one-tap seat button per row.
+ *
+ * Shared so the three doors cannot drift on the row's shape or its accessible
+ * name (each button repeats the same visible label, so every one carries a
+ * per-person `aria-label`). What legitimately differs between doors is passed
+ * in: whether the name links to the diver's record, an extra line under the
+ * contact line (the Guests tab's "rental fit on file"), and the row's surface
+ * tone.
+ *
+ * **The row is a `LedgerRow`** (ADR 20260827-the-shops-shelves, slice 9g, in
+ * the grammar of ADR 20260827-clearwater-surface-language, decision 2). It was
+ * a `rounded-xl` box on a sunken fill, one per person, stacked with a gap —
+ * container-shaped chrome around a list of names that floats above nothing,
+ * and the reason a person read as one kind of object here and another on every
+ * other people surface (`src/components/person/rows.tsx`, slice 8a). Hairlines
+ * instead. Nothing about the flow, the actions or their labels moves;
+ * `rowClassName` survives for a caller that genuinely wants a fill behind the
+ * row, and now defaults to none.
+ */
+export function PersonCandidateList({
+  context,
+  rowClassName = "",
+  className = "",
+}: {
+  context: PersonCandidateContext;
   rowClassName?: string;
   className?: string;
 }) {
+  const {
+    candidates,
+    tripId,
+    seatAction,
+    inviteAction,
+    personHref,
+    extraLine,
+    addLabel,
+    pendingLabel,
+    addPersonAriaLabel,
+    inviteLabel,
+    invitePendingLabel,
+    invitePersonAriaLabel,
+    noEmailOnFile,
+  } = context;
   return (
     <ul className={className || undefined}>
       {candidates.map((candidate) => {
