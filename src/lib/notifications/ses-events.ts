@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ProviderEmailStatus } from "./events";
+import { type ProviderEmailStatus, timestampFrom } from "./events";
 import { SES_SHOP_TAG } from "./ses-tags";
 
 /**
@@ -96,15 +96,6 @@ function recipientOf(data: z.infer<typeof sesEventDataSchema>): string | null {
 function shopIdOf(data: z.infer<typeof sesEventDataSchema>): string | null {
   const parsed = shopIdSchema.safeParse(data.mail.tags?.[SES_SHOP_TAG]?.[0]);
   return parsed.success ? parsed.data : null;
-}
-
-function timestampFrom(candidates: readonly (string | undefined)[], fallback: Date): Date {
-  for (const candidate of candidates) {
-    if (!candidate) continue;
-    const parsed = new Date(candidate);
-    if (!Number.isNaN(parsed.getTime())) return parsed;
-  }
-  return fallback;
 }
 
 function sesEventDetail(data: z.infer<typeof sesEventDataSchema>): string | null {

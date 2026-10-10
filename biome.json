@@ -21,6 +21,9 @@
       "correctness": {
         "noUnusedVariables": "error",
         "noUnusedImports": "error"
+      },
+      "a11y": {
+        "useButtonType": "error"
       }
     },
     "domains": {

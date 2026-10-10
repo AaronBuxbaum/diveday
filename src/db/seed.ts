@@ -9,6 +9,7 @@ import { demoEmail } from "@/lib/simulator-email";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
+import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   accountSecurity,
   accountSessions,
@@ -580,20 +581,6 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
  * away.
  */
 
-/** Postgres `unique_violation` — the only insert failure here that a retry fixes. */
-const PG_UNIQUE_VIOLATION = "23505";
-
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    // node-postgres and PGlite both surface the SQLSTATE on `code`; the driver
-    // wraps it, so check the cause too rather than only the outermost error.
-    ((error as { code?: unknown }).code === PG_UNIQUE_VIOLATION ||
-      isUniqueViolation((error as { cause?: unknown }).cause))
-  );
-}
-
 /**
  * How many names to try before giving up. Each attempt draws from
  * {@link DEMO_NAME_COMBINATIONS} against a live population bounded by
@@ -697,7 +684,7 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false
       if (!shop) throw new Error("createDemoShop: failed to insert shop");
       return { shop, identity };
     } catch (error) {
-      if (!isUniqueViolation(error)) throw error;
+      if (!isUniqueConstraintViolation(error)) throw error;
       lastError = error;
     }
   }

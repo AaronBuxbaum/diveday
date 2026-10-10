@@ -1,8 +1,9 @@
 import { and, eq } from "drizzle-orm";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import { bookings, certifications, people, personRoles, type trips, waiverRecords } from "./schema";
-import { at } from "./seed-clock";
+import { at, DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { reviewedBy } from "./seed-review";
 
 /** Two fictitious divers used only to train on the medical-review states. */
@@ -212,7 +213,7 @@ async function seedHeldDiver(
   // The refusal is dated after the disclosure it answers, exactly as
   // `recordMedicalEvaluation` requires of a real one: a letter written before
   // the diver disclosed cannot have answered them.
-  const evaluatedOn = at(-1, 12).toISOString().slice(0, 10);
+  const evaluatedOn = calendarDateInTimezone(at(-1, 12), DEMO_SHOP_TIMEZONE);
   const declined = diverSpec.outcome === "not_cleared";
   await db.insert(waiverRecords).values({
     // Pinned on the canonical demo shop, `defaultRandom()` everywhere else. See

@@ -2,7 +2,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
 import type { DiverLocale } from "@/i18n/settings";
-import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
+import { type CalendarDate, calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { COURSE_INQUIRY_EXPERIENCE_KEYS, type CourseInquiryExperience } from "@/lib/course-inquiry";
 import { type CourseLearningMaterial, isLearningMaterialLink } from "@/lib/courses";
 import type { DemoRoleId } from "@/lib/demo-roles";
@@ -1242,7 +1242,7 @@ export function setupRequestAlertEmail(input: SetupRequestAlertEmailInput): Noti
         text: `Setup link: ${input.setupUrl}`,
         note: `It opens the sign-up form for one shop, once${
           input.setupUrlExpiresAt
-            ? `, until ${input.setupUrlExpiresAt.toISOString().slice(0, 10)} (UTC)`
+            ? `, until ${calendarDateInTimezone(input.setupUrlExpiresAt, "UTC")} (UTC)`
             : ""
         }. Send it only to someone you have spoken to.`,
       }

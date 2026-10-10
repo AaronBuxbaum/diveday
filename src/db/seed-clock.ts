@@ -1,3 +1,4 @@
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { DAY_MS, nowDate, nowMs } from "@/lib/clock";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 
@@ -44,7 +45,7 @@ export function at(daysFromNow: number, hour: number, minute = 0): Date {
  * `calendarDateInTimezone` first.
  */
 export function dateAt(daysFromNow: number): string {
-  return new Date(nowMs() + daysFromNow * DAY_MS).toISOString().slice(0, 10);
+  return calendarDateInTimezone(new Date(nowMs() + daysFromNow * DAY_MS), "UTC");
 }
 
 /**

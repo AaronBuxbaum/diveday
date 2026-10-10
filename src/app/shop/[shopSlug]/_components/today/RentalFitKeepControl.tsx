@@ -1,5 +1,3 @@
-"use client";
-
 import { keepRentalFitAction } from "@/app/shop/[shopSlug]/actions";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
