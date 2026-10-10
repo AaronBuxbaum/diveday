@@ -1423,6 +1423,8 @@ new domain concept, define it here in the same PR.
   rents surface kit only (mask and fins, wetsuit, boots, hood and gloves, camera), and pays the
   departure's snorkeler price (`trips.snorkeler_price_cents`). The public form offers a snorkeler
   seat only where the shop has named that price; zero means free, and no price means not sold.
+  The trip prep list counts one snorkel vest per snorkeler seat, the boat's own and never a rental
+  (`DivePrepChecklist.snorkelVests`).
 - **Rider** — a participant who stays on the boat: a partner, a parent, a photographer. Needs no
   card, rents nothing, and pays the departure's rider price (`trips.rider_price_cents`) under the
   same rule as a snorkeler's. A rider is still a body aboard and is counted at roll call.
