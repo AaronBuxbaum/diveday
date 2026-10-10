@@ -63,3 +63,4 @@ sweep that produced it, not a follow-up.
 
 The last two are the strongest argument for the register: both were drafted as issues and **killed by
 measuring**. Without a written home, the next sweep spends the same afternoon reaching the same answer.
+| The primary button keeps a resting `shadow-sm` while every panel at rest is flat | It is the one sanctioned resting shadow (#1231): a button is not a panel, and the lift is what keeps the section's one obvious action obvious on an otherwise flat surface. No other variant may acquire one | [ADR 20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md#1-elevation-is-earned), under "1. Elevation is earned"; `buttonClass()` in `src/components/ui/button.ts` |
