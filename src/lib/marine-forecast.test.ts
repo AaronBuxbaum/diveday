@@ -180,6 +180,55 @@ describe("fetchAutomatedMarineForecast", () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
+  /**
+   * **One request per site, not per departure.** The provider answers ten days
+   * of hourly values in one response, so a morning with three boats to one
+   * site at three different hours asks once — and three callers arriving
+   * together (Today's queue reads every departure's forecast at once) share
+   * the one request in flight rather than racing three.
+   */
+  it("asks each provider once per site, whatever the hour and however many callers arrive together", async () => {
+    const fetcher = vi.fn().mockImplementation((url: string) =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify(
+            new URL(url).hostname === "marine-api.open-meteo.com"
+              ? { hourly: { time: [1_784_422_800, 1_784_426_400], wave_height: [0.4, 1.2] } }
+              : {
+                  hourly: { time: [1_784_422_800, 1_784_426_400], wind_speed_10m: [8, 24] },
+                },
+          ),
+        ),
+      ),
+    );
+    const point = { latitude: 24.5, longitude: -81.8 };
+
+    const [early, late, againEarly] = await Promise.all([
+      fetchAutomatedMarineForecast(point, new Date(1_784_422_800_000), fetcher),
+      fetchAutomatedMarineForecast(point, new Date(1_784_426_400_000), fetcher),
+      fetchAutomatedMarineForecast(point, new Date(1_784_422_800_000), fetcher),
+    ]);
+
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    // Each departure still reads its own hour from the shared response.
+    expect(early?.surface?.waveHeightMeters).toBe(0.4);
+    expect(early?.wind?.speedKnots).toBe(8);
+    expect(late?.surface?.waveHeightMeters).toBe(1.2);
+    expect(late?.wind?.speedKnots).toBe(24);
+    expect(againEarly).toEqual(early);
+  });
+
+  it("asks again after a failed request instead of remembering the failure", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response("unavailable", { status: 503 }));
+    const point = { latitude: 24.6, longitude: -81.7 };
+    const startsAt = new Date(1_784_422_800_000);
+
+    await fetchAutomatedMarineForecast(point, startsAt, fetcher);
+    await fetchAutomatedMarineForecast(point, startsAt, fetcher);
+
+    expect(fetcher).toHaveBeenCalledTimes(4);
+  });
+
   it("returns null when both providers fail", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response("unavailable", { status: 503 }));
 

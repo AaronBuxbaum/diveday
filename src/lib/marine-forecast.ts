@@ -198,22 +198,29 @@ export type AutomatedMarineForecast = {
 
 const AUTOMATED_FORECAST_CACHE_TTL_MS = 5 * 60 * 1_000;
 const AUTOMATED_FORECAST_CACHE_MAX_ENTRIES = 256;
-type CachedForecast = { expiresAt: number; value: AutomatedMarineForecast };
-const forecastCaches = new WeakMap<Fetcher, Map<string, CachedForecast>>();
 
-function forecastCacheFor(fetcher: Fetcher) {
-  const existing = forecastCaches.get(fetcher);
+/** Both providers' answers for one site, parsed; either may be missing. */
+type ProviderPayloads = { marine: MarineResponse | null; weather: WeatherResponse | null };
+type CachedPayloads = { expiresAt: number; value: Promise<ProviderPayloads | null> };
+const payloadCaches = new WeakMap<Fetcher, Map<string, CachedPayloads>>();
+
+function payloadCacheFor(fetcher: Fetcher) {
+  const existing = payloadCaches.get(fetcher);
   if (existing) return existing;
-  const created = new Map<string, CachedForecast>();
-  forecastCaches.set(fetcher, created);
+  const created = new Map<string, CachedPayloads>();
+  payloadCaches.set(fetcher, created);
   return created;
 }
 
-function forecastCacheKey(point: ForecastPoint, startsAt: Date) {
-  // The provider publishes hourly values. Rounding the departure to that same
-  // granularity lets several trips at one site share one provider response
-  // without making a forecast for a different hour look current.
-  return `${point.latitude}:${point.longitude}:${Math.floor(startsAt.getTime() / 3_600_000)}`;
+/**
+ * **Keyed by site alone.** Each provider answers the whole ten-day hourly
+ * series in one response, so every departure to one site — three boats at three
+ * hours on one morning — reads its own hour from the same answer. The entry is
+ * the promise itself, so callers arriving together (Today reads every
+ * departure's forecast at once) share the one request in flight.
+ */
+function payloadCacheKey(point: ForecastPoint) {
+  return `${point.latitude}:${point.longitude}`;
 }
 
 export type CrewPrediction = {
@@ -320,28 +327,41 @@ function surfaceConditions(
 }
 
 /**
- * Returns a planning forecast without persisting it to a trip. A short-lived
- * in-process cache avoids asking Open-Meteo twice for the same site/hour while
- * keeping the automatic fallback separate from the crew's dated, published
- * briefing.
+ * Both providers' answers for one site: from the five-minute in-process cache
+ * when one is there or in flight, otherwise one request to each. A failure is
+ * never remembered — the entry leaves as soon as it resolves to nothing, so the
+ * next render asks again.
  */
-export async function fetchAutomatedMarineForecast(
+function providerPayloads(
   point: ForecastPoint,
-  startsAt: Date,
-  fetcher: Fetcher = fetch,
-): Promise<AutomatedMarineForecast | null> {
-  // Browser tests exercise our full Next/database stack, but must not wait on or depend on a
-  // third-party forecast. Passing an explicit fetcher still exercises the adapter in unit tests.
-  if (process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" && fetcher === fetch) return null;
-
-  const cache = forecastCacheFor(fetcher);
-  const key = forecastCacheKey(point, startsAt);
+  fetcher: Fetcher,
+): Promise<ProviderPayloads | null> {
+  const cache = payloadCacheFor(fetcher);
+  const key = payloadCacheKey(point);
   const cached = cache.get(key);
   if (cached) {
     if (cached.expiresAt > nowMs()) return cached.value;
     cache.delete(key);
   }
+  if (cache.size >= AUTOMATED_FORECAST_CACHE_MAX_ENTRIES) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey) cache.delete(oldestKey);
+  }
+  const entry: CachedPayloads = {
+    expiresAt: nowMs() + AUTOMATED_FORECAST_CACHE_TTL_MS,
+    value: requestProviderPayloads(point, fetcher),
+  };
+  cache.set(key, entry);
+  void entry.value.then((payloads) => {
+    if (!payloads && cache.get(key) === entry) cache.delete(key);
+  });
+  return entry.value;
+}
 
+async function requestProviderPayloads(
+  point: ForecastPoint,
+  fetcher: Fetcher,
+): Promise<ProviderPayloads | null> {
   const marineParams = new URLSearchParams({
     latitude: String(point.latitude),
     longitude: String(point.longitude),
@@ -373,88 +393,109 @@ export async function fetchAutomatedMarineForecast(
       }).catch(() => null),
     ]);
 
-    const marinePayload = marineRes?.ok ? ((await marineRes.json()) as MarineResponse) : null;
-    const weatherPayload = weatherRes?.ok ? ((await weatherRes.json()) as WeatherResponse) : null;
-
-    if (!marinePayload?.hourly && !weatherPayload?.hourly) return null;
-
-    const hourlyTimes = marinePayload?.hourly?.time ?? weatherPayload?.hourly?.time;
-    const index = closestForecastIndex(hourlyTimes, startsAt);
-    if (index === null) return null;
-    const unixTime = numberAt(hourlyTimes, index);
-    if (unixTime === null) return null;
-
-    let temperature: number | null = null;
-    let surface: AutomatedSurfaceConditions | null = null;
-    let current: AutomatedCurrent | null = null;
-
-    if (marinePayload?.hourly) {
-      temperature = numberAt(marinePayload.hourly.sea_surface_temperature, index);
-      surface = surfaceConditions(
-        numberAt(marinePayload.hourly.wave_height, index),
-        numberAt(marinePayload.hourly.wave_period, index),
-        numberAt(marinePayload.hourly.wave_direction, index),
-      );
-      const currentVel = numberAt(marinePayload.hourly.ocean_current_velocity, index);
-      const currentDir = numberAt(marinePayload.hourly.ocean_current_direction, index);
-      if (currentVel !== null) {
-        const currentKnots = Math.round(currentVel * 0.54 * 10) / 10;
-        current = {
-          velocityKnots: currentKnots,
-          direction: currentDir === null ? null : cardinalDirection(currentDir),
-        };
-      }
-    }
-
-    let wind: AutomatedWind | null = null;
-    let sun: AutomatedSun | null = null;
-
-    if (weatherPayload?.hourly) {
-      const windSpeed = numberAt(weatherPayload.hourly.wind_speed_10m, index);
-      const windGusts = numberAt(weatherPayload.hourly.wind_gusts_10m, index);
-      const windDir = numberAt(weatherPayload.hourly.wind_direction_10m, index);
-      if (windSpeed !== null) {
-        wind = {
-          speedKnots: Math.round(windSpeed),
-          gustsKnots: windGusts === null ? null : Math.round(windGusts),
-          direction: windDir === null ? null : cardinalDirection(windDir),
-        };
-      }
-    }
-
-    if (weatherPayload?.daily) {
-      const dailyTimes = weatherPayload.daily.time;
-      const dailyIndex = closestForecastIndex(dailyTimes, startsAt);
-      if (dailyIndex !== null) {
-        const sunriseTime = numberAt(weatherPayload.daily.sunrise, dailyIndex);
-        const sunsetTime = numberAt(weatherPayload.daily.sunset, dailyIndex);
-        if (sunriseTime !== null || sunsetTime !== null) {
-          sun = {
-            sunrise: sunriseTime !== null ? new Date(sunriseTime * 1_000) : null,
-            sunset: sunsetTime !== null ? new Date(sunsetTime * 1_000) : null,
-          };
-        }
-      }
-    }
-
-    if (temperature === null && surface === null && wind === null && current === null) return null;
-
-    const forecast: AutomatedMarineForecast = {
-      waterTemperatureC: temperature === null ? null : Math.round(temperature),
-      surface,
-      wind,
-      current,
-      sun,
-      source: "Open-Meteo marine forecast",
-      validAt: new Date(unixTime * 1_000),
-    };
-    if (cache.size >= AUTOMATED_FORECAST_CACHE_MAX_ENTRIES) {
-      const oldestKey = cache.keys().next().value;
-      if (oldestKey) cache.delete(oldestKey);
-    }
-    cache.set(key, { expiresAt: nowMs() + AUTOMATED_FORECAST_CACHE_TTL_MS, value: forecast });
-    return forecast;
+    const [marine, weather] = await Promise.all([
+      marineRes?.ok ? (marineRes.json() as Promise<MarineResponse>).catch(() => null) : null,
+      weatherRes?.ok ? (weatherRes.json() as Promise<WeatherResponse>).catch(() => null) : null,
+    ]);
+    if (!marine?.hourly && !weather?.hourly) return null;
+    return { marine, weather };
   } catch {
     return null;
   }
+}
+
+/**
+ * Returns a planning forecast without persisting it to a trip. A short-lived
+ * in-process cache avoids asking Open-Meteo twice for the same site while
+ * keeping the automatic fallback separate from the crew's dated, published
+ * briefing.
+ */
+export async function fetchAutomatedMarineForecast(
+  point: ForecastPoint,
+  startsAt: Date,
+  fetcher: Fetcher = fetch,
+): Promise<AutomatedMarineForecast | null> {
+  // Browser tests exercise our full Next/database stack, but must not wait on or depend on a
+  // third-party forecast. Passing an explicit fetcher still exercises the adapter in unit tests.
+  if (process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" && fetcher === fetch) return null;
+
+  const payloads = await providerPayloads(point, fetcher);
+  return payloads ? forecastAt(payloads, startsAt) : null;
+}
+
+/** The departure's own hour, read out of both providers' answers for its site. */
+function forecastAt(
+  { marine: marinePayload, weather: weatherPayload }: ProviderPayloads,
+  startsAt: Date,
+): AutomatedMarineForecast | null {
+  const hourlyTimes = marinePayload?.hourly?.time ?? weatherPayload?.hourly?.time;
+  const index = closestForecastIndex(hourlyTimes, startsAt);
+  if (index === null) return null;
+  const unixTime = numberAt(hourlyTimes, index);
+  if (unixTime === null) return null;
+
+  let temperature: number | null = null;
+  let surface: AutomatedSurfaceConditions | null = null;
+  let current: AutomatedCurrent | null = null;
+
+  if (marinePayload?.hourly) {
+    temperature = numberAt(marinePayload.hourly.sea_surface_temperature, index);
+    surface = surfaceConditions(
+      numberAt(marinePayload.hourly.wave_height, index),
+      numberAt(marinePayload.hourly.wave_period, index),
+      numberAt(marinePayload.hourly.wave_direction, index),
+    );
+    const currentVel = numberAt(marinePayload.hourly.ocean_current_velocity, index);
+    const currentDir = numberAt(marinePayload.hourly.ocean_current_direction, index);
+    if (currentVel !== null) {
+      const currentKnots = Math.round(currentVel * 0.54 * 10) / 10;
+      current = {
+        velocityKnots: currentKnots,
+        direction: currentDir === null ? null : cardinalDirection(currentDir),
+      };
+    }
+  }
+
+  let wind: AutomatedWind | null = null;
+  let sun: AutomatedSun | null = null;
+
+  if (weatherPayload?.hourly) {
+    const windSpeed = numberAt(weatherPayload.hourly.wind_speed_10m, index);
+    const windGusts = numberAt(weatherPayload.hourly.wind_gusts_10m, index);
+    const windDir = numberAt(weatherPayload.hourly.wind_direction_10m, index);
+    if (windSpeed !== null) {
+      wind = {
+        speedKnots: Math.round(windSpeed),
+        gustsKnots: windGusts === null ? null : Math.round(windGusts),
+        direction: windDir === null ? null : cardinalDirection(windDir),
+      };
+    }
+  }
+
+  if (weatherPayload?.daily) {
+    const dailyTimes = weatherPayload.daily.time;
+    const dailyIndex = closestForecastIndex(dailyTimes, startsAt);
+    if (dailyIndex !== null) {
+      const sunriseTime = numberAt(weatherPayload.daily.sunrise, dailyIndex);
+      const sunsetTime = numberAt(weatherPayload.daily.sunset, dailyIndex);
+      if (sunriseTime !== null || sunsetTime !== null) {
+        sun = {
+          sunrise: sunriseTime !== null ? new Date(sunriseTime * 1_000) : null,
+          sunset: sunsetTime !== null ? new Date(sunsetTime * 1_000) : null,
+        };
+      }
+    }
+  }
+
+  if (temperature === null && surface === null && wind === null && current === null) return null;
+
+  return {
+    waterTemperatureC: temperature === null ? null : Math.round(temperature),
+    surface,
+    wind,
+    current,
+    sun,
+    source: "Open-Meteo marine forecast",
+    validAt: new Date(unixTime * 1_000),
+  };
 }
