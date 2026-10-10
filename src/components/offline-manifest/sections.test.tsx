@@ -91,8 +91,6 @@ function controls(): OfflineTripControls {
     busyBooking: null,
     busyChecklistItem: null,
     busyArrival: null,
-    confirmAboardFor: null,
-    setConfirmAboardFor: vi.fn(),
     noteDrafts: {},
     setNoteDrafts: vi.fn(),
     record: vi.fn(async () => {}),

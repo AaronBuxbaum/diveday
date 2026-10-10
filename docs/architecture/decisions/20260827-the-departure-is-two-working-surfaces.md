@@ -96,7 +96,9 @@ and reflows its roster rows. The live Manifest owns the phone viewport: its staf
 phone header are hidden so the roll-call instrument gets the whole screen. The deferred
 /offline-manifest route keeps the staff shell and inherits the shared control styling until it has
 its own surface slice. Its roll-call exception controls already follow decision 4: "Mark not back
-aboard" stays neutral there until somebody records it, as it does on the live page (issue #2107). The complete cross-page contract is [ADR
+aboard" stays neutral there until somebody records it, as it does on the live page (issue #2107).
+Its roll call follows decision 3 too since #1840: one circle per person on the row, the same
+control as the live page's, and the exception a deliberate tap away in a closed panel. The complete cross-page contract is [ADR
 20260830-responsive-surface-consistency](20260830-responsive-surface-consistency.md) and its
 [responsive surface review](../../design/20260830-responsive-surface-review.md).
 

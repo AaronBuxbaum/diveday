@@ -104,3 +104,18 @@ Escape hatch: dropping `cleared` again would mean the same additive change in re
 member in the sync route, the collapse in the reader) plus deciding what a stored `cleared` event on
 a device means — which is why the reader treats an unknown-to-it status conservatively rather than
 optimistically. Removing the confirmation is a single state variable.
+
+## Amendment 2026-10-10 (#1840): the confirmation is the person's panel
+
+The offline roll call now draws the live one's grammar: one circle per person on the row
+(`RollCallMarkTap`, shared with the live manifest), and the exception in a closed panel under the
+name (`OfflineRollCallException`). Decision 1's armed second tap and its `confirmAboardFor` state
+are gone, because the panel does their job and more: opening it is the deliberate first gesture,
+"Confirm Maya is aboard" inside it is the second, and the two are different controls at different
+coordinates, so a double-tap or a bounce on the summary only opens and closes it. A row recorded
+not back aboard draws a static mark with no tap.
+
+Taking the mark back off is now the same two gestures, open the panel and re-tap "Not back aboard",
+not one. That is the live manifest's cost since slice 5a, and it keeps this record's rule:
+retracting a mark is never harder than making one, because making it costs the same two. Decision 2
+(`cleared`, and only over this device's own statement) is unchanged.

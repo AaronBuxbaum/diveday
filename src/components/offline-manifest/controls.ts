@@ -10,7 +10,7 @@ import type { OfflineStatement } from "./shared";
 /**
  * **What the offline manifest's sections can do**, and the device state they
  * read while doing it: the words, the status line, which row is saving, the
- * armed "aboard" confirmation, the per-row note drafts, and the three taps
+ * per-row note drafts, and the three taps
  * that queue an event on this device. Held by `OfflineManifestView`; every
  * section reads the same object, so a tap means the same thing wherever it is.
  */
@@ -24,9 +24,6 @@ export type OfflineTripControls = {
   busyBooking: string | null;
   busyChecklistItem: string | null;
   busyArrival: string | null;
-  /** The row whose "aboard" tap is waiting on its confirmation. */
-  confirmAboardFor: string | null;
-  setConfirmAboardFor: Dispatch<SetStateAction<string | null>>;
   noteDrafts: Record<string, string>;
   setNoteDrafts: Dispatch<SetStateAction<Record<string, string>>>;
   record: (

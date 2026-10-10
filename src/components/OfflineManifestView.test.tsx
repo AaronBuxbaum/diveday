@@ -15,6 +15,7 @@ import {
 import type { OfflineManifestEnvelope, OfflineManifestPayload } from "@/lib/offline-manifests";
 import { TEST_FROZEN_CLOCK } from "@/test/frozen-clock";
 import { OfflineManifestView } from "./OfflineManifestView";
+import { ROLL_CALL_MARK_BUTTON_CLASS } from "./RollCallMarkTap";
 
 // nowDate() (read by isOfflineManifestExpired/offlineManifestFreshness, both
 // imported for real below) resolves to TEST_FROZEN_CLOCK under vitest, not
@@ -1137,11 +1138,11 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
 
   /*
    * ADR 20260815-offline-can-unsay-a-missing-diver. Two rules on the one row
-   * that can silence an alarm, and they pull in opposite directions on
-   * purpose: putting somebody back aboard over a stated "not back aboard" is
-   * the only two-tap act on this surface, and taking the mark off is still one
-   * tap — and is now recorded as a retraction rather than as a sighting nobody
-   * made.
+   * that can silence an alarm, and they cost the same on purpose: putting
+   * somebody back aboard over a stated "not back aboard" and taking the mark
+   * off are both in the person's panel, a deliberate tap away from the list
+   * (#1840) — and taking it off is recorded as a retraction rather than as a
+   * sighting nobody made.
    */
   describe("a missing diver can be unsaid, and asserting them aboard cannot be a slip", () => {
     /** Priya, recorded not back aboard after dive 1 on this device. */
@@ -1167,7 +1168,60 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       );
     }
 
-    it("takes two taps to claim a missing diver is aboard, and names her on the second", async () => {
+    /**
+     * **The regression this exists for** (#1840, ADR
+     * 20260827-the-departure-is-two-working-surfaces decision 3): a
+     * destructive roll-call claim is never one tap from the list. Every row,
+     * diver and crew, at the dock and after a dive, missing or not, carries at
+     * most one tap of its own — the affirmative circle — and every exception
+     * lives in a closed panel. The offline copy drew "Mark not back aboard"
+     * under every name until this.
+     */
+    it("never puts an exception within one tap of the list, at any checkpoint", async () => {
+      const AFFIRMATIVE = new Set([
+        "Mark boarded",
+        "Boarded — tap again to undo",
+        "Mark aboard",
+        "Aboard — tap again to undo",
+      ]);
+      const nameOf = (button: HTMLButtonElement) =>
+        button.getAttribute("aria-label") ?? button.textContent ?? "";
+      for (const [checkpoint, saved] of [
+        ["departure", richEnvelope("trip-1", { crewCalled: true })],
+        ["after_dive_1", richEnvelope("trip-1", { crewCalled: true })],
+        ["after_dive_1", missingAfterDive()],
+      ] as const) {
+        cleanup();
+        searchParams = new URLSearchParams({ trip: "trip-1", checkpoint });
+        vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+        vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+        render(<OfflineManifestView />);
+        await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+        const rows = Array.from(
+          document.querySelectorAll<HTMLElement>(
+            "#offline-roll-call > li, #offline-crew-roll-call > li",
+          ),
+        );
+        expect(rows.length, checkpoint).toBeGreaterThan(2);
+        for (const row of rows) {
+          const onTheRow = Array.from(row.querySelectorAll("button")).filter(
+            (button) => !button.closest("details"),
+          );
+          expect(onTheRow.length, row.id).toBeLessThanOrEqual(1);
+          for (const button of onTheRow) expect(AFFIRMATIVE).toContain(nameOf(button));
+          for (const button of Array.from(row.querySelectorAll("button"))) {
+            if (AFFIRMATIVE.has(nameOf(button))) continue;
+            const panel = button.closest<HTMLDetailsElement>("details[data-roll-call-exception]");
+            expect(panel, nameOf(button)).not.toBeNull();
+            expect(panel?.open, nameOf(button)).toBe(false);
+          }
+        }
+        expect(appendOfflineRollCall).not.toHaveBeenCalled();
+      }
+    });
+
+    it("puts claiming a missing diver is aboard in her panel, and names her on it", async () => {
       searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
       const saved = missingAfterDive();
       vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
@@ -1177,10 +1231,11 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       render(<OfflineManifestView />);
       await screen.findByRole("heading", { name: "Two-Tank Reef" });
 
-      fireEvent.click(screen.getByRole("button", { name: "Mark boarded" }));
-      // Nothing queued yet: the first tap only arms the confirmation.
+      const confirm = screen.getByRole("button", { name: "Confirm Priya Shah is aboard" });
+      const panel = confirm.closest("details[data-roll-call-exception]") as HTMLDetailsElement;
+      expect(panel.open).toBe(false);
+      fireEvent.click(within(panel).getByText("Change this result"));
       expect(appendOfflineRollCall).not.toHaveBeenCalled();
-      const confirm = await screen.findByRole("button", { name: "Confirm Priya Shah is aboard" });
 
       fireEvent.click(confirm);
       await waitFor(() =>
@@ -1192,7 +1247,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       );
     });
 
-    it("lets the crew back out of that confirmation without touching the mark", async () => {
+    it("draws a missing diver's mark on the row, and gives it no tap", async () => {
       searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
       vi.mocked(loadOfflineManifest).mockResolvedValue(missingAfterDive());
       vi.mocked(syncOfflineManifest).mockResolvedValue(null);
@@ -1200,10 +1255,11 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       render(<OfflineManifestView />);
       await screen.findByRole("heading", { name: "Two-Tank Reef" });
 
-      fireEvent.click(screen.getByRole("button", { name: "Mark boarded" }));
-      fireEvent.click(await screen.findByRole("button", { name: "Keep “not back aboard”" }));
-      expect(await screen.findByRole("button", { name: "Mark boarded" })).toBeInTheDocument();
-      expect(appendOfflineRollCall).not.toHaveBeenCalled();
+      // The loudest row the product has does not turn green from the list.
+      expect(screen.queryByRole("button", { name: "Mark boarded" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Boarded — tap again to undo" }),
+      ).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Not back aboard" })).toBeInTheDocument();
     });
 
@@ -1417,8 +1473,8 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       );
     });
 
-    // The crew half of the two-tap gate — the people most reliably in the water.
-    it("takes two taps to claim a missing crew member is aboard", async () => {
+    // The crew half of the same gate — the people most reliably in the water.
+    it("puts claiming a missing crew member is aboard in their panel", async () => {
       searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
       const saved = richEnvelope(
         "trip-1",
@@ -1449,9 +1505,10 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       if (!crewList) throw new Error("crew list missing");
       const crew = within(crewList);
 
-      fireEvent.click(crew.getByRole("button", { name: "Mark aboard" }));
-      expect(appendOfflineRollCall).not.toHaveBeenCalled();
-      fireEvent.click(await crew.findByRole("button", { name: /Confirm .* is aboard/ }));
+      expect(crew.queryByRole("button", { name: "Mark aboard" })).not.toBeInTheDocument();
+      const confirm = crew.getByRole("button", { name: /Confirm .* is aboard/ });
+      expect(confirm.closest("details[data-roll-call-exception]")).not.toBeNull();
+      fireEvent.click(confirm);
       await waitFor(() =>
         expect(appendOfflineRollCall).toHaveBeenCalledWith("trip-1", {
           crewPersonId: "crew-dana",
@@ -2446,11 +2503,11 @@ describe("the row grammar the live manifest already reads", () => {
     ).toBeTruthy();
   });
 
-  it("drops the box off the exception control while boarding is still on offer", async () => {
-    // Most people board, so an unrecorded "Mark not boarded" beside a live
-    // "Mark boarded" is the exception at less than equal weight — no border,
-    // no fill, full dock-sized target (design principle 8, and the rule
-    // RollCallControls already applies on the live page).
+  it("draws the unrecorded exception as the live page does, in its panel", async () => {
+    // Demoted by where it is — behind the person's panel (#1840) — not by
+    // losing its box: inside the panel it is the plain bordered control the
+    // live `RollCallExceptionControl` draws, a full dock-sized target in
+    // foreground ink.
     vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));
 
     render(<OfflineManifestView />);
@@ -2458,11 +2515,10 @@ describe("the row grammar the live manifest already reads", () => {
 
     const exception = screen.getAllByRole("button", { name: "Mark not boarded" })[0];
     if (!exception) throw new Error("no exception control");
-    expect(borderUtilities(exception.className)).toEqual([]);
-    // Demoted by losing its box, never its legibility: no `text-muted` on the
-    // surface with the harshest viewing conditions.
+    expect(exception.closest("details[data-roll-call-exception]")).not.toBeNull();
+    expect(borderUtilities(exception.className)).toContain("border-border-strong");
     expect(exception.className).not.toContain("text-muted");
-    // Still the full boat-sized target.
+    expect(exception.className).not.toContain("danger");
     expect(exception.className).toContain("min-h-14");
   });
 
@@ -3124,15 +3180,17 @@ describe("OfflineManifestView — one column, one text edge", () => {
     );
   });
 
-  // K-542: the affirmative control had no hover beside a negative that did.
-  it("gives the unrecorded board control a hover, on the diver rows and the crew rows", async () => {
+  // #1840: the circle a crew member learned on the live roll call, not a
+  // labelled box of the offline copy's own.
+  it("draws the board control as the live page's circle, on the diver rows and the crew rows", async () => {
     await renderTrip(richEnvelope("trip-1"));
-    expect(within(priyaRow()).getByRole("button", { name: "Mark boarded" })).toHaveClass(
-      "hover:bg-primary-tint",
-    );
-    expect(within(crewList()).getAllByRole("button", { name: "Mark aboard" })[0]).toHaveClass(
-      "hover:bg-primary-tint",
-    );
+    for (const control of [
+      within(priyaRow()).getByRole("button", { name: "Mark boarded" }),
+      ...within(crewList()).getAllByRole("button", { name: "Mark aboard" }),
+    ]) {
+      expect(control.className).toBe(ROLL_CALL_MARK_BUTTON_CLASS);
+      expect(control.textContent).toBe("");
+    }
   });
 
   // K-594: Spanish paragraphs ended on one word, and "Diego / Alvarez" split.
