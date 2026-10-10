@@ -49,6 +49,23 @@ const DIVER_SIZED_ITEM_KEYS: Record<RentalFitItem, DiverMessageKey> = {
 /** The recall sentence's three facts, or nothing. Assembled by the page from `fitConfirmation`. */
 export type FitRecall = { staffFullName: string; item: RentalFitItem; size: string };
 
+/**
+ * **D14's recall line**, or nothing. Never an inference: the staffer's name,
+ * the piece they kept and the size the shop is holding must all be on file,
+ * and the size is read off the fit's own column rather than composed here. It
+ * claims nothing about the gear that actually went out.
+ */
+export function fitRecallFrom(data: {
+  fitConfirmation: { staffFullName: string; item: RentalFitItem } | null;
+  rentalFit: Parameters<typeof sizeForRentalItem>[0];
+}): FitRecall | null {
+  const confirmation = data.fitConfirmation;
+  if (!confirmation) return null;
+  const size = sizeForRentalItem(data.rentalFit, confirmation.item);
+  if (!size) return null;
+  return { staffFullName: confirmation.staffFullName, item: confirmation.item, size };
+}
+
 function FactRow({
   label,
   value,

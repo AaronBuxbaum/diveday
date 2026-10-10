@@ -6,7 +6,7 @@ import { HeldAfterDiveCard, NoShowCard } from "@/app/ready/[token]/_components/A
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
 import { CarriedPreparation } from "@/app/ready/[token]/_components/CarriedPreparation";
-import { ChangedFacts, type FitRecall } from "@/app/ready/[token]/_components/ChangedFacts";
+import { ChangedFacts, fitRecallFrom } from "@/app/ready/[token]/_components/ChangedFacts";
 import { CourseMaterials } from "@/app/ready/[token]/_components/CourseMaterials";
 import {
   CANCEL_PREVIEW_KEY,
@@ -107,7 +107,7 @@ import { combineCertRequirements, type ReadinessBlockerCode } from "@/lib/readin
 import { buildDiverChecklist, type DiverChecklistItem } from "@/lib/readiness-summary";
 import { buildAfterStateProps } from "@/lib/recap-after-state";
 import { signRecapToken } from "@/lib/recap-links";
-import { nitroxAvailableOn, nitroxCardWanted, sizeForRentalItem } from "@/lib/rentals";
+import { nitroxAvailableOn, nitroxCardWanted } from "@/lib/rentals";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
   buildThreadSteps,
@@ -1255,19 +1255,7 @@ export default async function DiverReadinessPage({
       />
     );
 
-    /**
-     * **D14's recall line**, or nothing. Never an inference: the staffer's name,
-     * the piece they kept and the size the shop is holding must all be on file,
-     * and the size is read off the fit's own column rather than composed here. It
-     * claims nothing about the gear that actually went out.
-     */
-    const fitRecall: FitRecall | null = (() => {
-      const confirmation = data.fitConfirmation;
-      if (!confirmation) return null;
-      const size = sizeForRentalItem(data.rentalFit, confirmation.item);
-      if (!size) return null;
-      return { staffFullName: confirmation.staffFullName, item: confirmation.item, size };
-    })();
+    const fitRecall = fitRecallFrom(data);
 
     const stepBody = (step: ThreadStep): React.ReactNode => {
       const primary = step.id === spine.current;
