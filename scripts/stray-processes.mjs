@@ -50,6 +50,7 @@
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { recordRefusal } from "./hook-log.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 /**
@@ -276,7 +277,7 @@ export function summarizeCommand(command) {
   return text.length > 160 ? `${text.slice(0, 157)}...` : text;
 }
 
-function main() {
+function main(payload = {}) {
   const args = new Set(process.argv.slice(2));
   const listOnly = args.has("--list");
   const kill = args.has("--kill");
@@ -363,6 +364,7 @@ function main() {
 
   // stderr + exit 2 is what feeds this back to the agent rather than burying it
   // in a transcript nobody opens.
+  recordRefusal("stray-processes", lines[0], { session: payload.session_id });
   process.stderr.write(`${lines.join("\n")}\n`);
   return 2;
 }
@@ -397,5 +399,5 @@ async function readHookPayload() {
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
   const payload = await readHookPayload();
-  process.exit(payload.stop_hook_active ? 0 : main());
+  process.exit(payload.stop_hook_active ? 0 : main(payload));
 }
