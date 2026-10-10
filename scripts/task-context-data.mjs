@@ -1,12 +1,12 @@
-// Data for `pnpm task:context <area>`. Paths listed under `docs` must exist —
-// `pnpm check:agents` enforces it; `code`/`tests` entries may be planned.
+// Data for `pnpm task:context <area>`. Every path under `docs`, `code` and `tests` must exist —
+// `pnpm check:agents` enforces it.
 
 export const shared = {
   avoid: ["pnpm-lock.yaml", "drizzle/", ".next/", "playwright-report/", "test-results/"],
   rules: [
     "Read tests before implementation when determining intended behavior.",
     "Keep routes thin; put framework-free domain rules in src/lib or the feature module.",
-    "Run the narrowest useful test while iterating, then pnpm check before commit.",
+    "Run the narrowest useful test while iterating; before commit and push, the verify skill's checklist.",
     "Update docs in the same change when behavior, architecture, or domain language changes.",
   ],
 };
@@ -37,8 +37,8 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/db/bookings.test.ts --reporter=dot",
-      "pnpm check",
-      "pnpm e2e --reporter=line",
+      "pnpm check:repo && pnpm lint && pnpm typecheck",
+      "pnpm e2e <the spec for the flow you changed> --reporter=line",
     ],
   },
   certifications: {
@@ -65,8 +65,8 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/lib/readiness.test.ts src/db/readiness.test.ts --reporter=dot",
-      "pnpm check",
-      "pnpm e2e --reporter=line",
+      "pnpm check:repo && pnpm lint && pnpm typecheck",
+      "pnpm e2e <the spec for the flow you changed> --reporter=line",
     ],
   },
   "rental-fit": {
@@ -93,7 +93,7 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/lib/dive-prep.test.ts --reporter=dot",
-      "pnpm check",
+      "pnpm check:repo && pnpm lint && pnpm typecheck",
       "pnpm e2e e2e/nitrox.spec.ts --reporter=line",
     ],
   },
@@ -131,7 +131,7 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/lib/gear.test.ts src/db/gear.test.ts src/db/gear-reservations.postgres.test.ts --reporter=dot",
-      "pnpm check",
+      "pnpm check:repo && pnpm lint && pnpm typecheck",
       "pnpm e2e e2e/gear.spec.ts --reporter=line",
     ],
   },
@@ -180,8 +180,8 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/db/readiness.test.ts src/db/manifests.test.ts src/lib/manifests.test.ts src/lib/offline-manifests.test.ts src/db/buddy-pairs.test.ts --reporter=dot",
-      "pnpm check",
-      "pnpm e2e --reporter=line",
+      "pnpm check:repo && pnpm lint && pnpm typecheck",
+      "pnpm e2e <the spec for the flow you changed> --reporter=line",
     ],
   },
   nitrox: {
@@ -211,7 +211,7 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/db/nitrox.test.ts src/lib/dive-prep.test.ts --reporter=dot",
-      "pnpm check",
+      "pnpm check:repo && pnpm lint && pnpm typecheck",
       "pnpm e2e e2e/nitrox.spec.ts --reporter=line",
     ],
   },
@@ -243,7 +243,7 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/lib/courses.test.ts src/db/courses.test.ts --reporter=dot",
-      "pnpm check",
+      "pnpm check:repo && pnpm lint && pnpm typecheck",
       "pnpm e2e e2e/courses.spec.ts --reporter=line",
     ],
   },
@@ -269,7 +269,10 @@ export const areas = {
       "A diver who is already clear produces no action.",
       "An action acts in place or points at the record where the work happens — never a dead end.",
     ],
-    validate: ["pnpm test src/lib/today.test.ts src/db/today.test.ts --reporter=dot", "pnpm check"],
+    validate: [
+      "pnpm test src/lib/today.test.ts src/db/today.test.ts --reporter=dot",
+      "pnpm check:repo && pnpm lint && pnpm typecheck",
+    ],
   },
   design: {
     goal: "Deliver a calm, clear, accessible interface that follows DiveDay's semantic design system.",
@@ -346,7 +349,7 @@ export const areas = {
       "pnpm test src/db --reporter=dot",
       "pnpm typecheck",
       "pnpm db:generate",
-      "pnpm check",
+      "pnpm check:repo && pnpm lint && pnpm typecheck",
     ],
   },
   bookings: {
@@ -378,8 +381,8 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/db/bookings.test.ts src/db/seat-diver.test.ts --reporter=dot",
-      "pnpm check",
-      "pnpm e2e --reporter=line",
+      "pnpm check:repo && pnpm lint && pnpm typecheck",
+      "pnpm e2e <the spec for the flow you changed> --reporter=line",
     ],
   },
   auth: {
@@ -454,7 +457,7 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/lib/payments/checkout.test.ts src/lib/payments/connect.test.ts src/lib/payments/invoicing.test.ts src/lib/payments/promotions.test.ts src/lib/payments/webhook.test.ts src/db/orders.test.ts src/db/payments.test.ts src/db/checkouts.test.ts src/db/refunds.test.ts src/db/stripe-accounts.test.ts --reporter=dot",
-      "pnpm check",
+      "pnpm check:repo && pnpm lint && pnpm typecheck",
       "pnpm e2e e2e/orders-demo.spec.ts e2e/refunds.spec.ts --reporter=line",
     ],
   },
@@ -528,7 +531,7 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/lib/notifications src/lib/secret-box.test.ts src/db/notifications.test.ts src/db/whatsapp-accounts.test.ts --reporter=dot",
-      "pnpm check",
+      "pnpm check:repo && pnpm lint && pnpm typecheck",
     ],
   },
   reviews: {
@@ -568,7 +571,7 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/lib/reviews.test.ts src/lib/promo-codes.test.ts src/db/reviews.test.ts src/db/shop-promos.test.ts src/db/trip-promos.test.ts --reporter=dot",
-      "pnpm check",
+      "pnpm check:repo && pnpm lint && pnpm typecheck",
       "pnpm e2e e2e/reviews.spec.ts e2e/promo-codes.spec.ts --reporter=line",
     ],
   },
@@ -607,8 +610,246 @@ export const areas = {
     ],
     validate: [
       "pnpm test src/db/export.test.ts src/db/import.test.ts --reporter=dot",
-      "pnpm check",
+      "pnpm check:repo && pnpm lint && pnpm typecheck",
       "pnpm e2e e2e/export.spec.ts e2e/import.spec.ts --reporter=line",
+    ],
+  },
+  schedule: {
+    goal: "Change how departures are created, moved, copied, removed or repeated without a second door for creating a trip or a roll that undoes a staffer's delete.",
+    docs: [
+      "docs/product/glossary/operations.md",
+      "docs/architecture/decisions/20260719-recurring-trip-series.md",
+      "docs/architecture/decisions/20260810-open-ended-recurring-trips.md",
+    ],
+    code: [
+      "src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx",
+      "src/app/shop/[shopSlug]/schedule/board/actions.ts",
+      "src/db/trips-schedule.ts",
+      "src/db/trips-series.ts",
+      "src/lib/recurrence.ts",
+      "src/app/api/cron/trip-series/",
+    ],
+    tests: [
+      "src/lib/recurrence.test.ts",
+      "src/db/trips-schedule.test.ts",
+      "src/db/trips-series.test.ts",
+      "e2e/schedule-builder.spec.ts",
+      "e2e/trip-series.spec.ts",
+    ],
+    invariants: [
+      "The schedule builder is the one place a trip is created; mutations go through src/db/trips-schedule.ts via the @/db/trips barrel.",
+      "Occurrence dates come from the pure seriesOccurrenceDates in the shop's wall-clock time, so the local departure time holds across a daylight-saving change.",
+      "Filling the window is idempotent: creation, the trip page and the nightly cron are the same rollSeriesForward call.",
+      "A deleted instance writes a trip_series_skips row in the same transaction, so the nightly roll never re-creates a departure staff removed.",
+      "An instance is an ordinary trip once created; series_id is provenance, never a live link that rewrites siblings.",
+    ],
+    validate: [
+      "pnpm test src/lib/recurrence.test.ts src/db/trips-schedule.test.ts src/db/trips-series.test.ts --reporter=dot",
+      "pnpm e2e e2e/schedule-builder.spec.ts --reporter=line",
+    ],
+  },
+  boats: {
+    goal: "Extend the boat registry and boat-safety records without turning a label into a resource lock or moving capacity off the trip.",
+    docs: [
+      "docs/product/glossary/operations.md",
+      "docs/architecture/decisions/20260804-boat-resource-model.md",
+      "docs/architecture/decisions/20261009-crew-hear-about-their-boats.md",
+      "docs/architecture/boat-resource-model-dossier.md",
+    ],
+    code: [
+      "src/lib/boats.ts",
+      "src/db/boats.ts",
+      "src/lib/boat-safety.ts",
+      "src/db/boat-safety.ts",
+      "src/i18n/boat-safety-labels.ts",
+      "src/app/shop/[shopSlug]/settings/boats",
+    ],
+    tests: [
+      "src/lib/boats.test.ts",
+      "src/db/boats.test.ts",
+      "src/lib/boat-safety.test.ts",
+      "src/db/boat-safety.test.ts",
+      "e2e/boat-safety.spec.ts",
+    ],
+    invariants: [
+      "A boat is an optional, tenant-scoped label; trips.boat_id never reserves anything and null means the shop has not said.",
+      "Capacity stays authoritative on the trip; max_passengers is the vessel's ceiling and default_capacity only prefills.",
+      "Exclusivity (a buyout) is sale-withdrawal on the existing money rails, never a lock.",
+      "Every boat migration is expand-only; rollback is rolling the code back.",
+    ],
+    validate: [
+      "pnpm test src/lib/boats.test.ts src/db/boats.test.ts src/lib/boat-safety.test.ts src/db/boat-safety.test.ts --reporter=dot",
+      "pnpm e2e e2e/boat-safety.spec.ts --reporter=line",
+    ],
+  },
+  "dive-sites": {
+    goal: "Change a dive site's record, briefing or the catalog a shop copies from without putting words on a diver's briefing that the shop did not write.",
+    docs: [
+      "docs/product/glossary/operations.md",
+      "docs/architecture/decisions/20260718-dive-site-library.md",
+      "docs/architecture/decisions/20260813-dive-site-briefings-are-the-shops-own-words.md",
+      "docs/architecture/decisions/20260813-dive-site-difficulty-is-a-code.md",
+      "docs/architecture/decisions/20260806-dive-site-catalog-is-a-view.md",
+    ],
+    code: [
+      "src/lib/dive-sites.ts",
+      "src/db/dive-sites.ts",
+      "src/lib/dive-site-difficulty.ts",
+      "src/lib/dive-site-field-guide.ts",
+      "src/i18n/dive-site-labels.ts",
+      "src/content/dive-site-templates.ts",
+      "src/db/marine-life-catalog.ts",
+      "src/app/shop/[shopSlug]/dive-sites",
+      "src/app/s/[shopSlug]/sites",
+    ],
+    tests: [
+      "src/lib/dive-sites.test.ts",
+      "src/db/dive-sites.test.ts",
+      "src/lib/dive-site-field-guide.test.ts",
+      "e2e/dive-sites.spec.ts",
+      "e2e/dive-site-pages.spec.ts",
+    ],
+    invariants: [
+      "Every sentence a diver reads on a briefing comes off the shop's own row; the staff form (SiteFields.tsx) can write all of them, and TripDayPlan.tsx reads them.",
+      "Difficulty is a code (dive_sites.difficulty_level) with a translated label, never stored prose.",
+      "Templates and the marine-life catalog are copied, then the shop's; nothing re-syncs over a shop's edit without asking.",
+      "The catalog is a view of the library page (?view=catalog), not a second route tree.",
+    ],
+    validate: [
+      "pnpm test src/lib/dive-sites.test.ts src/db/dive-sites.test.ts src/lib/dive-site-field-guide.test.ts --reporter=dot",
+      "pnpm e2e e2e/dive-sites.spec.ts --reporter=line",
+    ],
+  },
+  integrations: {
+    goal: "Add or change an outbound integration (Shopify, QuickBooks, Xero, Zapier, webhooks) without a provider's latency or failure reaching a staffer's button or another shop's data.",
+    docs: [
+      "src/features/integrations/README.md",
+      "docs/architecture/decisions/20260815-outbound-integration-webhooks-and-zapier.md",
+      "docs/architecture/decisions/20260919-integration-delivery-is-write-driven.md",
+    ],
+    code: [
+      "src/features/integrations/",
+      "src/db/integrations.ts",
+      "src/db/integration-events.ts",
+      "src/app/shop/[shopSlug]/settings/integrations",
+      "src/app/api/integrations/",
+      "src/app/api/cron/integrations/",
+    ],
+    tests: [
+      "src/features/integrations/dispatcher.test.ts",
+      "src/features/integrations/dispatch-on-write.test.ts",
+      "src/db/integrations.test.ts",
+      "src/db/integration-events.test.ts",
+      "e2e/integrations.spec.ts",
+    ],
+    invariants: [
+      "src/features/integrations/index.ts is the module's whole public surface (app -> features -> lib/db).",
+      "Delivery is drained after the response (after()), never awaited inline: a provider's latency never reaches a staff action or a Stripe webhook.",
+      "Webhooks are HMAC-SHA256 signed per shop; never the bearer-token digest scheme.",
+      "Every row and event is tenant-scoped; a connection's credentials are security-sensitive (security-reviewer).",
+    ],
+    validate: [
+      "pnpm test src/features/integrations/dispatcher.test.ts src/db/integrations.test.ts --reporter=dot",
+      "pnpm e2e e2e/integrations.spec.ts --reporter=line",
+    ],
+  },
+  "offline-manifests": {
+    goal: "Change what a boat's phone keeps and replays offline without letting a stale copy or a late sync overrule what the dock recorded.",
+    docs: [
+      "docs/product/glossary/operations.md",
+      "docs/architecture/decisions/20260718-offline-manifest-snapshots.md",
+      "docs/architecture/decisions/20260726-shopwide-offline-manifest-priming.md",
+      "docs/architecture/decisions/20260815-an-offline-retraction-names-its-target.md",
+      "docs/architecture/decisions/20260907-the-counter-survives-offline.md",
+    ],
+    code: [
+      "src/lib/offline-manifests.ts",
+      "src/lib/offline-manifest-store.ts",
+      "src/lib/offline-events.ts",
+      "src/app/offline-manifest",
+      "src/worker/manifest-sw.ts",
+      "src/app/api/offline-manifests/",
+      "src/components/OfflineManifestView.tsx",
+    ],
+    tests: [
+      "src/lib/offline-manifests.test.ts",
+      "src/lib/offline-manifest-store.test.ts",
+      "src/worker/manifest-sw.test.ts",
+      "src/components/OfflineManifestView.test.tsx",
+      "e2e/manifest.spec.ts",
+    ],
+    invariants: [
+      "Safety-critical: roll call and the manifest get a dive-domain-expert review (AGENTS.md Hard rules).",
+      "Offline copies are encrypted, freshness-labelled and expiring, and never an editable roster.",
+      "Every tap that changes a seat writes an event row, live ones included; an idempotent repeat writes nothing.",
+      "Sync replays events by client_event_id; live readiness is rechecked and newer server history wins.",
+      "A copy kept past retention only for an unsynced event is labelled expired, not merely stale.",
+    ],
+    validate: [
+      "pnpm test src/lib/offline-manifests.test.ts src/lib/offline-manifest-store.test.ts src/worker/manifest-sw.test.ts --reporter=dot",
+      "pnpm e2e e2e/manifest.spec.ts --reporter=line",
+    ],
+  },
+  "setup-links": {
+    goal: "Change how a new shop is invited and created without a standing secret, a token in a URL after a bounce, or a page that says which way a link failed.",
+    docs: ["docs/architecture/decisions/20261009-single-use-setup-links.md"],
+    code: [
+      "src/db/setup-links.ts",
+      "src/lib/setup-links.ts",
+      "src/lib/setup-requests.ts",
+      "src/app/onboard/",
+      "e2e/setup-link.ts",
+    ],
+    tests: [
+      "src/db/setup-links.test.ts",
+      "src/lib/setup-links.test.ts",
+      "src/app/onboard/actions.test.ts",
+      "e2e/onboard.spec.ts",
+      "e2e/setup-request.spec.ts",
+    ],
+    invariants: [
+      "Security-sensitive: a setup link is a bearer token (security-reviewer).",
+      "One link per set-up request, minted by the founder; stored only as a SHA-256 hash; expires after SETUP_LINK_TTL_MS.",
+      "The link is spent inside the transaction that creates the shop, by a conditional update, so two racing submissions create one shop.",
+      "A bounce carries the token in an HttpOnly, SameSite=Strict cookie scoped to /onboard, never in a URL.",
+      "Unknown, spent, expired and mistyped links all draw the same closed door.",
+    ],
+    validate: [
+      "pnpm test src/db/setup-links.test.ts src/lib/setup-links.test.ts src/app/onboard/actions.test.ts --reporter=dot",
+      "pnpm e2e e2e/onboard.spec.ts --reporter=line",
+    ],
+  },
+  "work-orders": {
+    goal: "Change the service bench (tickets, the Work done record, follow-up) without a ticket writing a clock it did not earn.",
+    docs: [
+      "docs/product/glossary/rental-fit-and-prep.md",
+      "docs/architecture/decisions/20261008-gear-work-orders.md",
+      "docs/architecture/decisions/20261008-work-order-follow-up.md",
+    ],
+    code: [
+      "src/lib/work-orders.ts",
+      "src/db/work-orders.ts",
+      "src/lib/work-order-follow-up.ts",
+      "src/db/work-order-follow-up.ts",
+      "src/i18n/work-order-labels.ts",
+      "src/app/shop/[shopSlug]/gear/work-orders",
+    ],
+    tests: [
+      "src/lib/work-orders.test.ts",
+      "src/db/work-orders.test.ts",
+      "src/db/work-order-follow-up.test.ts",
+      "e2e/work-orders.spec.ts",
+    ],
+    invariants: [
+      "Every work-order table carries shop_id and is in both the shop and the diver export.",
+      "A ticket number is the shop's next from 1, allocated under a lock on the shop row, never reused.",
+      "picked_up is terminal; a ticket that comes back is a new ticket. Events append to work_order_events in bigserial order.",
+      "The Work done record is the only path from a ticket to a gear clock; a failed check writes nothing.",
+      "A shop unit returns to service only when every check passed and one answers a concern on that kind of unit.",
+    ],
+    validate: [
+      "pnpm test src/lib/work-orders.test.ts src/db/work-orders.test.ts src/db/work-order-follow-up.test.ts --reporter=dot",
+      "pnpm e2e e2e/work-orders.spec.ts --reporter=line",
     ],
   },
 };
