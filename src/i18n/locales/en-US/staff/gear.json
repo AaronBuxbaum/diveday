@@ -278,7 +278,8 @@
     "returnFitAdjusted": "Fit adjusted",
     "returnServiceConcern": "Service concern",
     "returnNoteLabel": "What to tell the technician",
-    "returnNotePlaceholder": "Torn strap, second stage free-flowed"
+    "returnNotePlaceholder": "Torn strap, second stage free-flowed",
+    "returnPullToBench": "Pull for service"
   },
   "ticket": {
     "eyebrow": "Rental",

@@ -1024,6 +1024,18 @@ export async function checkOutTripGearSet(
  * The service concern's note is required for the same reason it is required on
  * the single-unit path, and refused before anything is written, so a set is
  * never half-closed on a refusal.
+ *
+ * **Pulling a unit to the bench is a second, opt-in act in the same
+ * transaction** (issue #2205). With a service concern, `pullGearItemIds` names
+ * the units the staffer ticked, and each goes to `needs_service` through
+ * {@link setGearItemStatus} with the concern's note as its service note — the
+ * status the register, the picker and `reserveGearUnit` already respect. It is
+ * never automatic (a scratched mask and a free-flowing regulator are both
+ * concerns), it still writes no `gear_service_events` row (the
+ * `gearReturnOutcome` schema comment), and it only reaches units this return
+ * actually closed: an id from anywhere else is ignored, as is a unit already
+ * off the wall, whose technician's note is not overwritten. Ignored entirely
+ * for any other outcome.
  */
 export async function returnTripGearSet(
   db: AppDb,
@@ -1032,25 +1044,53 @@ export async function returnTripGearSet(
     bookingId: string;
     outcome: GearReturnOutcome;
     note?: string;
+    pullGearItemIds?: readonly string[];
   },
 ): Promise<GearReservationActionOutcome> {
   const note = optional(input.note);
   if (input.outcome === "service_concern" && !note) {
     return { ok: false, reason: "concern_needs_words" };
   }
-  const returned = await db
-    .update(gearReservations)
-    .set({ returnedAt: nowDate(), returnNote: note, returnOutcome: input.outcome })
-    .where(
-      and(
-        eq(gearReservations.shopId, input.shopId),
-        eq(gearReservations.bookingId, input.bookingId),
-        isNotNull(gearReservations.checkedOutAt),
-        openGearReservation(),
-      ),
-    )
-    .returning({ id: gearReservations.id });
-  return returned.length > 0 ? { ok: true } : { ok: false, reason: "not_found" };
+  const pull =
+    input.outcome === "service_concern" ? new Set(input.pullGearItemIds ?? []) : new Set<string>();
+  return db.transaction(async (tx) => {
+    const returned = await tx
+      .update(gearReservations)
+      .set({ returnedAt: nowDate(), returnNote: note, returnOutcome: input.outcome })
+      .where(
+        and(
+          eq(gearReservations.shopId, input.shopId),
+          eq(gearReservations.bookingId, input.bookingId),
+          isNotNull(gearReservations.checkedOutAt),
+          openGearReservation(),
+        ),
+      )
+      .returning({ id: gearReservations.id, gearItemId: gearReservations.gearItemId });
+    if (returned.length === 0) return { ok: false, reason: "not_found" } as const;
+    const toPull = returned.map((row) => row.gearItemId).filter((id) => pull.has(id));
+    if (toPull.length > 0) {
+      const onTheWall = await tx
+        .select({ id: gearItems.id })
+        .from(gearItems)
+        .where(
+          and(
+            eq(gearItems.shopId, input.shopId),
+            inArray(gearItems.id, toPull),
+            eq(gearItems.status, "in_service"),
+            liveGearItem(),
+          ),
+        );
+      for (const unit of onTheWall) {
+        await setGearItemStatus(tx, {
+          shopId: input.shopId,
+          gearItemId: unit.id,
+          status: "needs_service",
+          serviceNote: note ?? undefined,
+        });
+      }
+    }
+    return { ok: true } as const;
+  });
 }
 
 /**

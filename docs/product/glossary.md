@@ -2213,7 +2213,10 @@ new domain concept, define it here in the same PR.
   inspection, hydro test or O2 clean for a tank, and never a note for either. A soft good (a
   wetsuit, a mask, fins) has no service and no check to write, so a dated note is its clearing
   event, because a note is the only record those units ever get. A return with no outcome (the
-  register's quick Return) says nothing, and leaves an earlier concern standing. A regulator is
+  register's quick Return) says nothing, and leaves an earlier concern standing. A concern on a
+  departure's set return can also **pull the unit for service** in the same act (issue #2205): one
+  unticked box per unit, shown only once the concern is open, which moves a ticked unit to
+  `needs_service` with the concern as its note. Never automatic, and still no service event. A regulator is
   never proposed for a diver who asked for nitrox, because the register cannot yet say which
   regulators are O2-clean. One unit is never proposed twice. Every pick, one row or "Assign all",
   goes through `assignGearUnit` or `confirmProposedGearUnits`, and each is re-read against what

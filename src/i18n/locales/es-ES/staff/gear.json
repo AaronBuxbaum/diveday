@@ -278,7 +278,8 @@
     "returnFitAdjusted": "Talla ajustada",
     "returnServiceConcern": "Revisar equipo",
     "returnNoteLabel": "Qué contarle al técnico",
-    "returnNotePlaceholder": "Correa rota, la segunda etapa se disparó"
+    "returnNotePlaceholder": "Correa rota, la segunda etapa se disparó",
+    "returnPullToBench": "Enviar a mantenimiento"
   },
   "ticket": {
     "eyebrow": "Alquiler",

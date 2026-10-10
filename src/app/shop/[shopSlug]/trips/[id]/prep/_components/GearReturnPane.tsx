@@ -37,15 +37,23 @@ import { controlClass, Field } from "@/components/ui/form";
  * asks the one question wherever a set comes home. `children` is anything else
  * that set's return asks beside the outcome (a counter rental's dive count),
  * posted with whichever answer is tapped.
+ *
+ * **`bench` offers to pull units to Needs service with the concern** (issue
+ * #2205): one checkbox per unit in the set, every one unticked, and only once
+ * the concern is open. Never automatic — a scratched mask and a free-flowing
+ * regulator are both concerns, and auto-pulling every one would turn the flag
+ * into a pager nobody trusts. Absent, the pane asks nothing extra.
  */
 export function GearReturnPane({
   fields,
   action,
   labels,
+  bench,
   children,
 }: {
   fields: Record<string, string>;
   children?: ReactNode;
+  bench?: { legend: string; units: { id: string; label: string }[] };
   action: (formData: FormData) => Promise<void>;
   labels: {
     allGood: string;
@@ -111,6 +119,17 @@ export function GearReturnPane({
               className={controlClass}
             />
           </Field>
+          {bench && bench.units.length > 0 ? (
+            <fieldset className="flex flex-col gap-1">
+              <legend className="text-sm font-medium">{bench.legend}</legend>
+              {bench.units.map((unit) => (
+                <label key={unit.id} className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" name="pull" value={unit.id} />
+                  {unit.label}
+                </label>
+              ))}
+            </fieldset>
+          ) : null}
           <div>
             <button
               type="submit"

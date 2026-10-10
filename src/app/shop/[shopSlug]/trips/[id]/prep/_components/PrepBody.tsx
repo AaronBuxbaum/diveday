@@ -1218,6 +1218,15 @@ export function PrepBody({
                               noteLabel: t("gear.prep.returnNoteLabel"),
                               notePlaceholder: t("gear.prep.returnNotePlaceholder"),
                             }}
+                            bench={{
+                              legend: t("gear.prep.returnPullToBench"),
+                              units: assigned
+                                .filter((assignment) => assignment.checkedOutAt !== null)
+                                .map((assignment) => ({
+                                  id: assignment.gearItemId,
+                                  label: assignment.label,
+                                })),
+                            }}
                           />
                         ) : null}
                         {/* **No new reservations on a departure that is not
