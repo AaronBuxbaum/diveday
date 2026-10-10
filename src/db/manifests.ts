@@ -29,6 +29,7 @@ import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
 import { listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
+import { listTripGearAssignments } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
@@ -840,6 +841,7 @@ export async function getTripManifests(
     readinessRows,
     certified,
     fitByBooking,
+    gearByBooking,
     crew,
     crewRollCalls,
     buddyTeams,
@@ -852,6 +854,10 @@ export async function getTripManifests(
     listTripReadiness(db, shopId, tripId),
     verifiedNitroxPersonIds(db, shopId),
     rentalFitByBooking(db, shopId, tripId),
+    // The units each booking holds on the register, so a piece it already
+    // holds is not marked "no longer rented" on the rail (issue #1811). The
+    // same read the Gear tab's prep list hands the same rule.
+    listTripGearAssignments(db, shopId, tripId),
     listTripCrew(db, shopId, tripId),
     listLatestCrewRollCalls(db, shopId, tripId),
     listTripBuddyTeams(db, shopId, tripId),
@@ -987,6 +993,7 @@ export async function getTripManifests(
         fitByBooking.get(booking.id) ?? null,
         shop.rentalItems,
         booking.participantType,
+        (gearByBooking.get(booking.id) ?? []).map((assignment) => assignment.kind),
       ),
       nitroxRequested: booking.wantsNitrox && certified.has(person.id),
       medicalWaiver: medicalByBooking.get(booking.id) ?? null,

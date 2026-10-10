@@ -2054,7 +2054,12 @@ new domain concept, define it here in the same PR.
   marked on every surface that reads the fit, not only the trip prep list — the roll call, the
   offline manifest snapshot, the seat-a-diver list and the diver record's own fit summary all say
   it now (issue #1804), because two surfaces describing one departure differently is worse than
-  either sentence. The offline snapshot freezes that fact with everything else it holds, so a shop
+  either sentence. **A piece this booking already holds is not marked** (issue #1811, H-78): a
+  live reservation of that kind on the gear register means a unit is on its peg with the diver's
+  name against it, so the prep list and the manifest rail read it as an ordinary piece. The rule is
+  one place, `rentalFitLine`/`buildDivePrepChecklist` handed the booking's held register kinds;
+  mask & fins counts as held only when both units are, and a paid rental line with no unit behind
+  it keeps the mark, because money taken is a refund conversation the mark starts. The offline snapshot freezes that fact with everything else it holds, so a shop
   that re-adds the piece after a snapshot is taken carries the old mark onto the boat until the
   next one. No *other* line changes with it: the weighting, the fin sizing and the drysuit-card
   advisory are not about the rental at all. They follow **Dives dry** below, which the catalog

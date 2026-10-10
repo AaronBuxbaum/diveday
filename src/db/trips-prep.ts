@@ -143,8 +143,14 @@ export async function getTripPrep(
     )
     .map((entry) => entry.person.fullName);
 
+  // The register kinds each booking holds a live reservation for: a piece it
+  // already holds is not marked as one the shop no longer rents (issue #1811).
+  // The rule is the domain's (`rentalFitLine`); this only hands it the facts.
+  const heldGearKinds = (bookingId: string) =>
+    (assignmentsByBooking.get(bookingId) ?? []).map((assignment) => assignment.kind);
+
   const checklist = buildDivePrepChecklist({
-    divers,
+    divers: divers.map((diver) => ({ ...diver, heldGearKinds: heldGearKinds(diver.bookingId) })),
     plannedDives: trip.plannedDives,
     divingCrew,
     // The shop's own catalog, so "this diver is missing a size" is only ever
@@ -195,7 +201,12 @@ export async function getTripPrep(
       // The shop's own catalog, the same one the checklist above reads: a kind
       // the shop dropped must not send the picker hunting for a unit nobody is
       // handing over (`rentalFitLine`, src/lib/dive-prep.ts).
-      const line = rentalFitLine(diver.fit, shop.rentalItems);
+      const line = rentalFitLine(
+        diver.fit,
+        shop.rentalItems,
+        undefined,
+        heldGearKinds(diver.bookingId),
+      );
       const inDrysuit =
         line.state === "rents" && line.items.some((item) => item.kind === "drysuit");
       const assigned = (assignmentsByBooking.get(diver.bookingId) ?? []).map((assignment) => ({

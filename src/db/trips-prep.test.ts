@@ -536,6 +536,75 @@ describe("getTripPrep", () => {
       expect(updated?.wanted.map((item) => item.kind)).not.toContain("mask");
     });
   });
+
+  /**
+   * **A piece this booking already holds is not "no longer rented"** (issue
+   * #1811, H-78). The shop drops a kind from its catalog after a unit of it
+   * was reserved to one diver: that diver's packing piece and fit line carry
+   * no mark, and a diver on the same boat holding none still does.
+   */
+  describe("a dropped kind this booking already holds", () => {
+    it("clears the mark for the holder and keeps it for the diver who holds none", async () => {
+      const ctx = await context();
+      const before = await prepFor(ctx);
+      const kind = "regulator";
+      const wanting = before.assignmentRows.filter((row) =>
+        row.wanted.some((need) => need.kind === kind),
+      );
+      const [holder, other] = wanting;
+      if (!holder || !other) throw new Error("seeded trip needs two divers wanting a regulator");
+      const unit = before.freeByKind.get(kind)?.[0];
+      if (!unit) throw new Error("seeded shop has no free regulator");
+      const window = tripReservationWindow(before.trip, ctx.shop.timezone);
+      const reserved = await reserveGearUnit(ctx.db, {
+        shopId: ctx.shop.id,
+        gearItemId: unit.id,
+        bookingId: holder.diver.bookingId,
+        tripId: ctx.tripId,
+        reservedFrom: window.from,
+        reservedUntil: window.until,
+        screen: SETUP_PICK,
+      });
+      if (!reserved.ok) throw new Error(`reservation failed: ${reserved.reason}`);
+
+      const dropped = {
+        ...ctx.shop,
+        rentalItems: ctx.shop.rentalItems.filter((item) => item !== kind),
+      };
+      const prep = await getTripPrep(ctx.db, dropped, ctx.tripId);
+      const piece = (bookingId: string) =>
+        prep?.checklist.diverLines
+          .find((row) => row.bookingId === bookingId)
+          ?.items.find((item) => item.kind === kind);
+      expect(piece(holder.diver.bookingId)?.notOffered).toBe(false);
+      expect(piece(other.diver.bookingId)?.notOffered).toBe(true);
+      const lines = prep?.checklist.lines.filter((line) => line.kind === kind) ?? [];
+      expect(lines.find((line) => !line.notOffered)?.divers).toContain(holder.diver.fullName);
+      expect(lines.find((line) => line.notOffered)?.divers).toContain(other.diver.fullName);
+      expect(lines.find((line) => line.notOffered)?.divers).not.toContain(holder.diver.fullName);
+    });
+
+    it("keeps the mark once the reservation is released", async () => {
+      const ctx = await context();
+      const row = await reserveOneUnit(ctx);
+      const [held] = row.assigned;
+      if (!held) throw new Error("no unit reserved");
+      await ctx.db
+        .update(gearReservations)
+        .set({ releasedAt: nowDate() })
+        .where(eq(gearReservations.id, held.reservationId));
+      const kind = held.kind === "mask" || held.kind === "fins" ? "mask_fins" : held.kind;
+      const prep = await getTripPrep(
+        ctx.db,
+        { ...ctx.shop, rentalItems: ctx.shop.rentalItems.filter((item) => item !== kind) },
+        ctx.tripId,
+      );
+      const piece = prep?.checklist.diverLines
+        .find((line) => line.bookingId === row.diver.bookingId)
+        ?.items.find((item) => item.kind === kind);
+      expect(piece?.notOffered).toBe(true);
+    });
+  });
 });
 
 /**
