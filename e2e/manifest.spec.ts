@@ -749,7 +749,7 @@ test("a checkpoint with every diver counted stays open until the crew are called
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Not boarded ☑️" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Roll call complete" })).toHaveCount(0);
-  await expect(page.getByText(/1 diver is not back aboard/)).toBeVisible();
+  await expect(page.getByText(/1 person is not back aboard/)).toBeVisible();
   // Read back on the row, so a second crew member arriving at the alarm does
   // not type the same sentence again.
   await expect(

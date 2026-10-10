@@ -1149,7 +1149,7 @@ describe("the evening reading", () => {
       evening: evening([closed({ tripId: "t1", booked: 1, sailed: 0 })]),
     });
 
-    expect(screen.getByText("No divers were aboard.")).toBeInTheDocument();
+    expect(screen.getByText("Nobody was aboard.")).toBeInTheDocument();
     expect(screen.queryByText("0 of 0 back")).toBeNull();
   });
 
