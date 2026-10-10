@@ -105,7 +105,9 @@ describe("the count the server ships", () => {
     );
     expect(html).toContain("2 of 3 done");
     expect(html).toContain(`${PRIMARY.length} of ${PRIMARY.length} answered`);
-    expect(html.match(/checked/g) ?? []).toHaveLength(PRIMARY.length);
+    // The attribute, not the word: a chosen pill's own classes name
+    // `input:checked` (#2170), and they are on every pill, answered or not.
+    expect(html.match(/ checked=""/g) ?? []).toHaveLength(PRIMARY.length);
   });
 
   it("does not claim the medical step over a Box the draft left open", () => {

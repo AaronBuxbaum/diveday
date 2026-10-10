@@ -865,15 +865,18 @@ export function ChoiceRow({
  * a diver tabbing into an unanswered medical question landed on "Yes" with a
  * primary ring round the whole pill, which can read as already answered.
  *
- * So the chosen pill takes a primary border and the primary tint, a fill and
- * an edge, which an outline never is: focused is a ring outside the border,
- * chosen is the pill itself changing, and a pill that is both wears both. The
- * hover's sunken fill steps aside on a chosen pill so the tint holds under
- * the pointer. The native dot stays, and under forced colours, where the
- * browser repaints borders and drops the tint, it is still the record of the
- * answer, as it was before.
+ * So the chosen pill changes itself, which an outline never does: a 2px
+ * primary edge (the 1px border plus a 1px inset ring, so nothing moves), the
+ * primary tint, and a semibold label, the one cue that needs no colour at
+ * all. Focused is a ring outside the border, chosen is the pill, and a pill
+ * that is both wears both. A 1px edge and a pale tint were not enough on
+ * their own (review of #2170). The hover's sunken fill steps aside on a
+ * chosen pill so the tint holds under the pointer. The native dot stays, and
+ * under forced colours, where the browser repaints borders and drops the
+ * tint and the ring, it and the weight still record the answer.
  */
-const CHOICE_PILL_CHOSEN = "has-[input:checked]:border-primary has-[input:checked]:bg-primary-tint";
+const CHOICE_PILL_CHOSEN =
+  "has-[input:checked]:border-primary has-[input:checked]:inset-ring has-[input:checked]:inset-ring-primary has-[input:checked]:bg-primary-tint has-[input:checked]:font-semibold";
 const CHOICE_PILL_HOVER = "not-has-[input:checked]:hover:bg-surface-sunken";
 
 export function ChoicePill({

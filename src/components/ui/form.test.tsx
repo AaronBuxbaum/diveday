@@ -513,8 +513,8 @@ describe("ChoicePill and ChoiceRow", () => {
 
   /**
    * **Chosen and focused never look alike** (#2170). The ring a focused
-   * radio's pill wears is an outline; the chosen look is the pill's own edge
-   * and fill, hung on the pill holding a *checked* input. A keyboard landing
+   * radio's pill wears is an outline; the chosen look is the pill's own 2px
+   * edge, fill and heavier label, hung on the pill holding a *checked* input. A keyboard landing
    * on an unanswered "Yes" focuses it without checking it, so that pill must
    * not match what the chosen look reads, and the answered "No" must.
    */
@@ -538,13 +538,23 @@ describe("ChoicePill and ChoiceRow", () => {
     expect(yes).toHaveFocus();
     expect(yes).not.toBeChecked();
 
-    const chosen = ["has-[input:checked]:border-primary", "has-[input:checked]:bg-primary-tint"];
+    // A 2px edge without moving a pixel (the 1px border plus a 1px inset
+    // ring), the tint, and a heavier label: answered reads with no colour.
+    const chosen = [
+      "has-[input:checked]:border-primary",
+      "has-[input:checked]:inset-ring",
+      "has-[input:checked]:inset-ring-primary",
+      "has-[input:checked]:bg-primary-tint",
+      "has-[input:checked]:font-semibold",
+    ];
     for (const box of [yes, no, screen.getByRole("checkbox", { name: "Captain" })]) {
       const pill = box.closest("label");
       expect(pill).toHaveClass(...chosen);
-      // The chosen look is not an outline: that is the focus ring's.
+      // The chosen look is inside the pill, never an outline round it: the
+      // outline is the focus ring's.
       for (const token of pill?.className.split(/\s+/) ?? []) {
-        if (token.startsWith("has-[input:checked]")) expect(token).not.toMatch(/outline|ring/);
+        if (token.startsWith("has-[input:checked]"))
+          expect(token).not.toMatch(/outline|focus-ring|:ring/);
       }
     }
     // What the variant reads: the pill holds a checked input.
