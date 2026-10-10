@@ -424,7 +424,9 @@ Settled 2026-10-06 by the product owner (issue #2098), after the dive-domain rev
 copy. The staff Boat tab said **equipos de buceo**, which a Latin American crew reads as *dive gear*
 — the same words a rental page uses for the kit — and the public pages said **equipos de compañeros**.
 **Pareja de buceo** is what a divemaster says on the dock for two people diving together, and it
-names a team of three too: the word is about who looks after whom, not a head count.
+names a trio, and a divemaster's group, too: the word is about who looks after whom, not a head
+count. The incident export says so in its roster description, because a reader outside the shop
+takes pareja to mean two.
 
 | English | Spanish |
 | --- | --- |

@@ -67,7 +67,7 @@
   "ownerOnlyNotice": "Solo un propietario puede generar el registro de una salida. Todo lo que recoge (recuento, cronología, estado de cada buceador) está en el manifiesto de esa salida.",
   "recordedByName": "Registrado por {name}",
   "resultRecordedBy": "{date}\u00a0· {name}",
-  "rosterDescription": "Cada reserva activa con su resultado en cada control. “Pendiente de recuento” significa que no se registró resultado: una ausencia se declara, nunca se deja en blanco. La pareja de buceo es la agrupación registrada para esta salida, no por inmersión; un espacio en blanco no afirma que alguien buceara solo.",
+  "rosterDescription": "Cada reserva activa con su resultado en cada control. “Pendiente de recuento” significa que no se registró resultado: una ausencia se declara, nunca se deja en blanco. La pareja de buceo es la agrupación registrada para esta salida, no por inmersión; una pareja de buceo puede tener más de dos integrantes (un trío, o un guía con su grupo); un espacio en blanco no afirma que alguien buceara solo.",
   "rosterHeading": "Buceadores y pase de lista",
   "shopTimeLabel": "Todas las horas son locales del centro ({timezone})",
   "summaryAwaiting": "Sin resultado registrado",

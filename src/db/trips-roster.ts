@@ -50,6 +50,14 @@ export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: s
  * this key is not: correcting a walk-up's name re-orders that diver inside
  * their own tie group, so a sheet printed at 06:40 and the screen at 06:55 can
  * put a different body at 05.
+ * The old uuid is arbitrary, it is
+ * different in every freshly seeded database, and it is unexplainable to the
+ * person reading the list. The index of this array **is** the rail numbering:
+ * `DiverRollCall.tsx` and the departure log both render
+ * `String(index + 1).padStart(2, "0")` straight off it. "01" deciding itself
+ * by coin flip per seed is how six unchanged visual captures came to need a
+ * hand review on every pull request (issue #1720, reproduced on #1739), and it
+ * is the same defect `arrival-provenance.ts` was reviewed for on 2026-09-11.
  *
  * **That re-numbering is the accepted cost, by ruling — do not re-raise it.**
  * The product owner decided it on 2026-09-16 (H-81,
@@ -64,14 +72,6 @@ export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: s
  * is not. What the order is stable against is a re-read and a fresh seed of the
  * same data; `trips-roster.test.ts` pins the rename case as the behavior, so a
  * change to it is a change to the ruling. See the glossary's *Roll-call order*.
- * The old uuid is arbitrary, it is
- * different in every freshly seeded database, and it is unexplainable to the
- * person reading the list. The index of this array **is** the rail numbering:
- * `DiverRollCall.tsx` and the departure log both render
- * `String(index + 1).padStart(2, "0")` straight off it. "01" deciding itself
- * by coin flip per seed is how six unchanged visual captures came to need a
- * hand review on every pull request (issue #1720, reproduced on #1739), and it
- * is the same defect `arrival-provenance.ts` was reviewed for on 2026-09-11.
  *
  * ADR 20260815-roll-call-order-is-a-property-of-the-data already says of the
  * key that was here: "**Order by `id`** — `defaultRandom()`, so arbitrary,
