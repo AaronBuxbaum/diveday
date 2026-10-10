@@ -43,6 +43,7 @@ import { ACTIONABLE_PROVIDER_STATUSES, type ProviderEmailStatus } from "@/lib/no
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
+import { findCourtesyEmailRecipientByAddress } from "./courtesy-email";
 import {
   bookings,
   courses,
@@ -51,7 +52,9 @@ import {
   notificationSendQueue,
   people,
   shops,
+  tripInvitations,
   trips,
+  tripWaitlistEntries,
   waiverDeliveries,
   waiverRecords,
 } from "./schema";
@@ -618,6 +621,76 @@ function drainableStatus() {
   );
 }
 
+/**
+ * Whether a queued courtesy message's recipient has opted out of courtesy
+ * email since it was first sent (issue #2132).
+ *
+ * Every courtesy kind checks `people.courtesyEmailOptOutAt` before its first
+ * send, and only then. A send that failed retryably sits in the queue for up to
+ * a day, and a diver who unsubscribes through another email meanwhile must not
+ * receive this one when the drain retries it. So the drain asks again here, for
+ * the courtesy kinds and nothing else: service mail (confirmations, waivers,
+ * password resets) is never governed by the opt-out.
+ *
+ * The person is resolved the way each kind's own sender resolved them: through
+ * the wait-list entry, the booking or the invitation the payload names, and for
+ * a checkout reminder through the address, which is the only handle a party
+ * checkout has (`findCourtesyEmailRecipientByAddress`). Each lookup is scoped to
+ * the payload's shop.
+ */
+async function courtesyRecipientOptedOut(db: AppDb, notification: Notification): Promise<boolean> {
+  const optOutAt = { at: people.courtesyEmailOptOutAt };
+  let rows: { at: Date | null }[];
+  switch (notification.kind) {
+    case "waitlist_invite":
+      rows = await db
+        .select(optOutAt)
+        .from(tripWaitlistEntries)
+        .innerJoin(people, eq(people.id, tripWaitlistEntries.personId))
+        .where(
+          and(
+            eq(tripWaitlistEntries.id, notification.waitlistEntryId),
+            eq(tripWaitlistEntries.shopId, notification.shopId),
+          ),
+        )
+        .limit(1);
+      break;
+    case "trip_recap":
+      rows = await db
+        .select(optOutAt)
+        .from(bookings)
+        .innerJoin(people, eq(people.id, bookings.personId))
+        .where(
+          and(eq(bookings.id, notification.bookingId), eq(bookings.shopId, notification.shopId)),
+        )
+        .limit(1);
+      break;
+    case "direct_trip_invitation":
+      rows = await db
+        .select(optOutAt)
+        .from(tripInvitations)
+        .innerJoin(people, eq(people.id, tripInvitations.personId))
+        .where(
+          and(
+            eq(tripInvitations.id, notification.invitationId),
+            eq(tripInvitations.shopId, notification.shopId),
+          ),
+        )
+        .limit(1);
+      break;
+    case "checkout_recovery": {
+      const recipient = await findCourtesyEmailRecipientByAddress(db, {
+        shopId: notification.shopId,
+        email: notification.to,
+      });
+      return recipient?.optedOut ?? false;
+    }
+    default:
+      return false;
+  }
+  return Boolean(rows[0]?.at);
+}
+
 /** Drain durable transient failures; safe for overlapping cron invocations. */
 export async function drainNotificationRetries(
   db: AppDb,
@@ -831,6 +904,32 @@ export async function drainNotificationRetries(
     }
 
     const notification = reviveQueuedNotification(opened);
+    if (await courtesyRecipientOptedOut(db, notification)) {
+      // Finished, so it drops its handles like every other finished write. Not
+      // a `send_abandoned` loss: the diver asked for exactly this.
+      await db
+        .update(notificationSendQueue)
+        .set({
+          status: "failed",
+          payloadSealed: null,
+          recipientEmail: null,
+          subjectEmail: null,
+          subjectPhone: null,
+          bookingId: null,
+          lockedUntil: null,
+          httpStatus: null,
+          errorCode: "opted_out",
+          lastError: null,
+          updatedAt: nowDate(),
+        })
+        .where(eq(notificationSendQueue.id, claimed.id));
+      log("notification.retry_dropped_opted_out", "info", {
+        shopId: claimed.shopId,
+        kind: notification.kind,
+      });
+      summary.failed += 1;
+      continue;
+    }
     let delivery: NotificationDelivery;
     try {
       delivery = await notify(await withShopSender(db, notification, senders), provider);
