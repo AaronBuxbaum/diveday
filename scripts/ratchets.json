@@ -163,7 +163,7 @@
     "//": "English strings returned from src/lib or src/db, per file. Written by `node scripts/check-domain-strings.mjs --write`. This number may only go down — see scripts/check-domain-strings.mjs."
   },
   "function-length": {
-    "//": "Line counts of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 400 lines, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write` (or check-function-length.mjs). Each number may only go down — see scripts/check-page-length.mjs.",
+    "//": "Line counts of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 400 lines, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "src/app/api/test/seed-trouble-states/route.ts#POST": 405,
     "src/app/api/webhooks/stripe/route.ts#POST": 501,
     "src/app/ready/[token]/_components/AfterState.tsx#AfterState": 485,
@@ -188,12 +188,10 @@
     "src/app/shop/[shopSlug]/staffing/page.tsx#StaffingPage": 454,
     "src/app/shop/[shopSlug]/trips/[id]/_components/CrewSection.tsx#CrewSection": 442,
     "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 502,
-    "src/app/shop/[shopSlug]/trips/[id]/_components/RosterRow.tsx#RosterRow": 1218,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 516,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.tsx#DiverRollCall": 755,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx#TripManifestPage": 918,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 1043,
-    "src/app/shop/[shopSlug]/trips/[id]/prep/_components/PrepBody.tsx#PrepBody": 1331,
     "src/app/waivers/[token]/page.tsx#WaiverPage": 792,
     "src/components/BookingPartyFields.tsx#BookingPartyFields": 416,
     "src/components/DateRequestForm.tsx#DateRequestForm": 418,
