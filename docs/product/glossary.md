@@ -707,6 +707,15 @@ new domain concept, define it here in the same PR.
   timezone" of a UTC column, so the scan over-fetches and the caller filters by shop-local date.
   Twenty-six hours is what a local day can span either side of any instant inside it, plus slack
   for a daylight-saving transition. Never a readiness lens.
+- **Counter self-registration** — the shop's QR door at `/s/<slug>/register`: a walk-in puts
+  themselves on file **before any booking exists** (issue #1236). The shop prints the QR from
+  Settings (`/shop/<slug>/print/counter-card`) and stands it on the counter. The form writes a
+  person, a **self-declared certification** and their rental sizes, matched to a returning diver
+  by email as the importer does, and the shop's ordinary person-scoped waiver goes to the contact
+  they gave; sign-once holds. There is no diver account and no second waiver flow. **The visitor is
+  told nothing about themselves**: one success sentence whether they were created or found, sent a
+  waiver or already on file, cleared or referred to a physician, so nobody can type an address and
+  learn who dives with the shop (`src/lib/self-registration.ts`). The page is never indexed.
 - **Arrivals window** — the counter's narrower lens on the operational horizon: departures from six
   hours ago through the next thirty-six. The backwards reach is the one deliberate asymmetry (a
   diver still walks up to the desk for a boat that already sailed); forwards it never outruns the
@@ -1030,6 +1039,13 @@ new domain concept, define it here in the same PR.
   temperature, visibility, surface state) belong to the charter that sailed, not to the reef.
   A shop's library is at Dive sites; DiveDay's published starting points are the **common-site
   catalog**, and importing one makes an independent copy the shop then owns.
+- **Diver moment** — a caption, usually with a photo, that an earlier diver brought back from one
+  **dive site** (`dive_site_moments`). The caption is the diver's own line. Moments are
+  **staff-moderated and opt-in**: a row shows nowhere until the shop publishes it
+  (`is_published`). No surface writes one yet: today only the demo seed does, and the shop export
+  carries them. Published moments with a photo show as one strip on a public trip page, deduplicated
+  by site and capped at four (`dayMomentsFor`), and on the site's own public page. Marketing copy
+  calls them "moments from divers".
 - **Dive briefing** — what a diver reads (and the crew says) about **one tank on one dated trip**:
   the `trip_dives` row, rendered from the site's saved notes plus whatever the crew wrote for that
   particular dive. There is one briefing per *planned dive*, so a two-tank trip always has two —
@@ -1168,6 +1184,14 @@ new domain concept, define it here in the same PR.
   booking's id and nothing else**. A booking id is not a capability — the counter resolves it inside
   its own shop — so a pass left on a boat seat hands a finder nothing. It carries the diver's name
   and no readiness, waiver or medical state.
+- **Trip packet** — the browser-print document for one departure (`/shop/<slug>/trips/<id>/print`,
+  `TripPacket`): three sections, each on its own sheet — the **dive plan** in words, the **manifest**
+  (the roster in roll-call order with each person's emergency contact, the shop's **emergency
+  reference**, the missing-diver procedure and the ruled kit blanks), and the morning **packing
+  list**. It is a document, not the live tabs stacked: no control reaches the sheet
+  (`e2e/trips.spec.ts` counts them under print emulation). The day's paper prints the same block
+  once per departure. Not the **departure log**, which reports what was recorded after the boat
+  is back.
 - **Pre-departure checklist** — a shop-authored, ordered list of lines a crew confirms once before
   a boat leaves the dock (emergency oxygen, life jackets, a fire extinguisher — whatever the shop's
   own flag state and vessel class require). DiveDay writes none of the content; a shop types its
@@ -1320,9 +1344,13 @@ new domain concept, define it here in the same PR.
   string until the shop writes it, and nothing on this card links, dials, escalates, or opens an
   incident. It is a laminated card retyped, priced at zero words of DiveDay's own.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded,
-  not boarded, or cleared, including the time and who recorded it. It carries **no free text**: the
-  note field was removed in 2026-08, which also means a roll call records *that* a diver did not
-  come back and never *what happened to them*. Its newest event is the current state;
+  not boarded, or cleared, including the time and who recorded it. **After a dive it may carry a
+  short note** (up to `ROLL_CALL_NOTE_MAX`, 300 characters) when the mark raises a "not back
+  aboard" or unsays one that stands, so the shop can record *what happened* to a diver who did not
+  come back, not only *that* they did not; an ordinary "came back" tap and every mark at the dock
+  carry none (`rollCallNoteAllowed` in `src/lib/roll-call.ts`;
+  [20260828-a-missing-diver-gets-a-sentence](../architecture/decisions/20260828-a-missing-diver-gets-a-sentence.md)).
+  The printed manifest and the saved offline copy carry the note. Its newest event is the current state;
   older events remain evidence of what the crew recorded. **Cleared** is an undo: staff tapped the
   current status again to correct a mistake, and the diver returns to awaiting. It is stored as its
   own event so the correction stays in the audit trail rather than deleting history. **Cleared is
@@ -1355,6 +1383,13 @@ new domain concept, define it here in the same PR.
   server would refuse is a control that lies. It is not a state anything is stored as — the row is
   simply *awaiting* with a readiness blocker (see **Readiness**), drawn so a captain can tell at a
   glance which empty circles are theirs to close.
+- **Touch guard** — the roll call's refusal of a press made with more than one finger on the glass
+  (`src/components/roll-call-touch-guard.ts`). A wet palm or a sheet of spray lands as several
+  contacts at once, where a deliberate thumb is one, so a roll-call press made while more than one
+  touch was down, at any point in that gesture, does not submit. Touch only: a mouse, a pen or a
+  key is never refused. It covers the live roll call's buttons and every mark on the offline
+  manifest. It is **not a water lock** (ADR 20261001-logbook cut the lock that once sat in front of
+  the aboard mark) and **not part of Boat mode**: it is always on, whatever the palette.
 - **Crew roll-call event** — the crew half of a head count: a named staff member said one **assigned crew
   member** is aboard, not aboard, or cleared, at one checkpoint. Same append-only history, same
   supersession, and the same two meanings of "not boarded" as a diver's roll-call event; the subject
@@ -1455,7 +1490,7 @@ new domain concept, define it here in the same PR.
   and never as an instructor, whatever the roster says. One definition, `countInWaterCrew` in `src/lib/crew-roles.ts`, shared by the
   booking gate, the trip page, the Today queue, and — through Today's own reader — the shift
   roster's crew-gap count.
-- **Roll-call checkpoint** — one independent head count: before departure or after a numbered dive.
+- **Roll-call checkpoint** — one independent roll call: before departure or after a numbered dive.
   A two-tank charter has three checkpoints. Each checkpoint is re-verified against the bodies on the
   boat; a **boarded** result never carries into the next. **"Not boarded" means two opposite
   things depending on where it is recorded**, and they must never be treated — or worded — alike:
@@ -1515,7 +1550,7 @@ new domain concept, define it here in the same PR.
   aboard" that a non-rejected source states — silently demoting a missing diver to "awaiting" is the
   one direction that takes an alarm off the screen — while it still may never resurrect a superseded
   "aboard", which is the stale optimism reconciliation exists to overrule.
-- **Boat mode** — the high-contrast palette (navy and safety yellow, Atkinson Hyperlegible) for reading a screen on deck (ADR 20261001-logbook, decision 6). By day it is light, white ground and navy ink, because sun washes a dark screen out; with the device in its dark scheme it is Night Dive, navy ground and white ink (H-97). The roll call always wears it; anyone can put the rest of a device in it from the staff identity menu (`src/lib/boat-mode.ts`). A manual switch only: there is no light sensor, water lock or glare skin.
+- **Boat mode** — the high-contrast palette (navy and safety yellow, Atkinson Hyperlegible) for reading a screen on deck (ADR 20261001-logbook, decision 6). By day it is light, white ground and navy ink, because sun washes a dark screen out; with the device in its dark scheme it is Night Dive, navy ground and white ink (H-97). The roll call always wears it; anyone can put the rest of a device in it from the staff identity menu (`src/lib/boat-mode.ts`). A manual switch only: there is no light sensor, water lock or glare skin. The roll call's **touch guard** is separate from it and always on.
 - **Boarding** — the fast pre-departure pass: get every ready diver aboard before the boat leaves,
   waiver/cert/payment confirmed at a glance. It is not a separate surface — it is the **Manifest's**
   "Before departure" checkpoint, where readiness pills and a resolve-blockers link show alongside the

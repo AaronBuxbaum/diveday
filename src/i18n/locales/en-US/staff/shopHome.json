@@ -156,7 +156,7 @@
     "close": {
       "back": "{back} of {sailed} back",
       "backBy": "{back} of {sailed} back by {time}",
-      "closedBy": "head count closed by {name}",
+      "closedBy": "last roll call closed by {name}",
       "backSouls": "{divers, plural, one {# passenger} other {# passengers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back",
       "backSoulsBy": "{divers, plural, one {# passenger} other {# passengers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back by {time}",
       "openSeats": {

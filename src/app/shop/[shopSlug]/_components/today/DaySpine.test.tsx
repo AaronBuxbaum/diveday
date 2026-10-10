@@ -1234,7 +1234,7 @@ describe("the evening reading", () => {
   /**
    * **A settled station's facts hang beside its mark** (pixel-craft class 3,
    * K-593). The status, the count and who closed it were three flex siblings
-   * of the mark, so at 390 "head count closed by Sal Moretti" wrapped back
+   * of the mark, so at 390 "last roll call closed by Sal Moretti" wrapped back
    * under the check glyph (x 38) rather than under "All home" (x 65). They
    * are one text block beside the mark now; every word of them still renders.
    */
@@ -1249,7 +1249,7 @@ describe("the evening reading", () => {
     const block = label.parentElement;
     expect(block?.querySelector("svg")).toBeNull();
     expect(block).toContainElement(screen.getByText(/, 10 back by /));
-    expect(block).toContainElement(screen.getByText("head count closed by Sal Moretti"));
+    expect(block).toContainElement(screen.getByText("last roll call closed by Sal Moretti"));
     expect(block?.parentElement?.querySelector("svg path")).not.toBeNull();
   });
 
@@ -1484,7 +1484,7 @@ describe("the evening reading", () => {
 
     expect(screen.getByText("All home")).toBeInTheDocument();
     expect(screen.getByText(/10 passengers and 2 crew out, 12 back by/)).toBeInTheDocument();
-    expect(screen.getByText("head count closed by Keiko Tanaka")).toBeInTheDocument();
+    expect(screen.getByText("last roll call closed by Keiko Tanaka")).toBeInTheDocument();
   });
 
   it("marks the day's homecoming once, and only when every count closed clean", () => {

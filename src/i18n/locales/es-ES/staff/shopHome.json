@@ -156,7 +156,7 @@
     "close": {
       "back": "{back} de {sailed} de vuelta",
       "backBy": "{back} de {sailed} de vuelta a las {time}",
-      "closedBy": "lista cerrada por {name}",
+      "closedBy": "último pase de lista cerrado por {name}",
       "backSouls": "salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}",
       "backSoulsBy": "salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back} a las {time}",
       "openSeats": {
