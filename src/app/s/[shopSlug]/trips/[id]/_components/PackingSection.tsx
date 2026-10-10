@@ -387,7 +387,7 @@ export function PackingSection({
                             <span className="font-semibold tabular-nums text-foreground text-sm leading-6 sm:w-20 sm:shrink-0">
                               {/* `formatTime` builds the identical formatter,
                                   and building it here instead is the ~12x tax
-                                  `check:intl-cache` exists to stop — once per
+                                  `scripts/lint-rules/intlCache.grit` exists to stop — once per
                                   entry, on the app's most-visited public page
                                   (issue #799). */}
                               {formatTime(entry.at, locale, shop.timezone)}

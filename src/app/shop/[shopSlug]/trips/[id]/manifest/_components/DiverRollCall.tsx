@@ -389,7 +389,7 @@ export function DiverRollCall({
 
           No "Shop time: Eastern Daylight Time" beside the heading. Every time
           on this page is already the shop's own — that is the app's rule
-          everywhere (`shops.timezone`, `pnpm check:timezone`), not a property
+          everywhere (`shops.timezone`, `scripts/lint-rules/timezone.grit`), not a property
           of this screen — and a crew reading a roll call at their own dock has
           no second zone to confuse it with.
           No standing caption under it either. "After a dive, 'not back aboard'
