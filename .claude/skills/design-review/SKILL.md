@@ -17,6 +17,11 @@ takes; CI's visual run still captures both schemes.
 
 ## Procedure
 
+0. **For a top-down review, start with the contact sheet.** Against a running `pnpm dev`,
+   `node scripts/contact-sheet.mjs` photographs every route the demo shop has at phone width and
+   tiles them into `screenshots/contact-sheet.jpg`, naming the routes it could not reach. Read it
+   for inconsistency between surfaces before reviewing any one of them. A review of one change
+   skips this step.
 1. Read `docs/design/principles.md` (the principles **and** the checklist), and
    [`docs/design/pixel-craft.md`](../../../docs/design/pixel-craft.md) — the rubric the pixel pass
    (step 5) grades against.
