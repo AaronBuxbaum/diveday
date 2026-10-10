@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
+import { z } from "zod";
 import { issueAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
 import { createFirstDay } from "@/db/first-day";
@@ -18,6 +19,7 @@ import { nowDate } from "@/lib/clock";
 import { shopDefaultsForTimeZone } from "@/lib/curated-defaults";
 import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { parseFirstDayFields } from "@/lib/first-day";
+import { parseForm } from "@/lib/form-parse";
 import { log } from "@/lib/log";
 import { publicAppUrl } from "@/lib/notifications";
 import { onboardSchema } from "@/lib/onboarding";
@@ -32,6 +34,23 @@ import {
   SETUP_LINK_PARAM,
 } from "@/lib/setup-links";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
+
+/**
+ * The fields read before the schema is (issue #2233): the setup link, judged
+ * by its shape, the two first-day fields, judged by `parseFirstDayFields`, and
+ * the ones a bounce echoes. `unknown`, because each of those judges takes
+ * whatever a crafted post put in the box and is the one place that decides;
+ * this envelope never refuses.
+ */
+const onboardEnvelope = z.object({
+  [SETUP_LINK_PARAM]: z.unknown().optional(),
+  boat: z.unknown().optional(),
+  departure: z.unknown().optional(),
+  shopName: z.unknown().optional(),
+  shopSlug: z.unknown().optional(),
+  timezone: z.unknown().optional(),
+  ownerName: z.unknown().optional(),
+});
 
 export async function onboardAction(formData: FormData) {
   // Non-secret fields only — never the password — echoed back so a bounce to
@@ -48,7 +67,9 @@ export async function onboardAction(formData: FormData) {
   // 43 base64url characters never reaches a `Location:` header or the
   // database. The page re-reads whatever comes back and shows the form only
   // for a link that is still open.
-  const setupToken = formData.get(SETUP_LINK_PARAM);
+  const envelope = parseForm(onboardEnvelope, formData);
+  const raw: z.infer<typeof onboardEnvelope> = envelope.ok ? envelope.data : {};
+  const setupToken = raw[SETUP_LINK_PARAM];
   const tokenShaped = isSetupLinkTokenShape(setupToken);
   // The form's two optional first-day fields, judged by the one module that
   // judges them: a bounded name and an `HH:MM`. Junk in either loses that
@@ -61,8 +82,8 @@ export async function onboardAction(formData: FormData) {
   // POST put in the box. Echoing the *parsed* value means the header can only
   // ever carry a name inside `MAX_FIRST_DAY_NAME` and an `HH:MM`.
   const firstDay = parseFirstDayFields({
-    boat: formData.get("boat"),
-    departure: formData.get("departure"),
+    boat: raw.boat,
+    departure: raw.departure,
   });
   // Annotated so TypeScript treats the call as never-returning (control-flow
   // analysis only honours that on an explicitly typed const).
@@ -81,7 +102,7 @@ export async function onboardAction(formData: FormData) {
     });
     const params = new URLSearchParams({ error: message });
     for (const field of PRESERVED_FIELDS) {
-      const value = formData.get(field);
+      const value = raw[field];
       if (typeof value === "string" && value) params.set(field, value);
     }
     // `OnboardPage` reads these back under the same names the form posts.
@@ -103,14 +124,13 @@ export async function onboardAction(formData: FormData) {
   // bytes are what make that moot, not this.)
   if (!tokenShaped) redirect("/onboard");
 
-  const rawData = Object.fromEntries(formData.entries());
-  const parsed = onboardSchema.safeParse(rawData);
+  const parsed = parseForm(onboardSchema, formData);
 
-  if (!parsed.success) {
+  if (!parsed.ok) {
     // `onboardSchema`'s `.min()`/`.regex()`/`.refine()` messages are codes,
     // not sentences (src/lib/onboarding.ts) — Zod wants a message at
     // schema-definition time, before any request-scoped locale is known.
-    const firstError = parsed.error.issues[0]?.message || "invalid_input";
+    const firstError = parsed.messages[0] || "invalid_input";
     return await backToForm(firstError);
   }
 
