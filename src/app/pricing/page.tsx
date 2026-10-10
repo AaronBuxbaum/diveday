@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
+import { ScreenDoor } from "@/app/_components/ScreenDoor";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingSectionMotion } from "@/components/MarketingReveal";
 import { ExportBundleFallback } from "@/components/MarketingScreenFallbacks";
@@ -409,12 +410,28 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.pricing.dataExit.title")}
               </h2>
-              <p className="mt-5 text-lg leading-8 text-muted">
-                {t("marketing.pricing.dataExit.body")}
-              </p>
-              <p className="mt-4 leading-7 text-muted">
-                {t("marketing.pricing.dataExit.securityNote")}
-              </p>
+              {/* The builder's notes, each read off one row of the drawing
+                  beside them (docs/design/brand.md, "The builder's note"),
+                  ending in the one door into the demo as the owner, who is
+                  the role that downloads the export (issue #1955). The door
+                  is link-weight, so this band holds no primary and the
+                  page's two pairs stay its only ones. */}
+              <MarginNotes
+                className="mt-6"
+                notes={[
+                  t("marketing.pricing.dataExit.note1"),
+                  t("marketing.pricing.dataExit.note2"),
+                  t("marketing.pricing.dataExit.note3"),
+                  t("marketing.pricing.dataExit.note4"),
+                  t("marketing.pricing.dataExit.securityNote"),
+                ]}
+              />
+              <ScreenDoor
+                locale={locale}
+                demoRole="owner"
+                source="pricing-export"
+                label={t("marketing.pricing.dataExit.door")}
+              />
             </div>
             <MarketingMockup label={t("marketing.pricing.dataExit.mockupLabel")}>
               <ExportBundleFallback locale={locale} />

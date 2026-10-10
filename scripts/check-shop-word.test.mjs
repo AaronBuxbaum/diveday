@@ -282,9 +282,9 @@ describe("the words the es-ES README settled", () => {
   describe("check-in is el check-in (issue #2098)", () => {
     it("refuses registro de llegada and llegada y registro", () => {
       expect(rules({ k: "Registro de llegada" })).toEqual(["check-in"]);
-      expect(rules({ k: "control de certificaciones, registro de llegada y el manifiesto" })).toEqual(
-        ["check-in"],
-      );
+      expect(
+        rules({ k: "control de certificaciones, registro de llegada y el manifiesto" }),
+      ).toEqual(["check-in"]);
       expect(rules({ k: "Llegada y registro" }, STAFF)).toEqual(["check-in"]);
     });
 

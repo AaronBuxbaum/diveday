@@ -3413,8 +3413,12 @@
       "dataExit": {
         "eyebrow": "Tus registros",
         "title": "Una exportación completa cuando la necesites.",
-        "body": "Buceadores, reservas, exenciones firmadas e historial de pagos en CSV documentados, y cada foto guardada como archivo. Un ZIP, descargado desde Ajustes cualquier día, incluido el primero de la prueba.",
-        "securityNote": "Lo que se queda fuera de los registros de tu centro son las credenciales: contraseñas y claves push de los dispositivos, que ningún otro sistema podría usar.",
+        "note1": "“Descargar exportación” te da un ZIP con los CSV y las fotos guardadas, incluso el primer día de la prueba.",
+        "note2": "contacts.csv tiene una fila por persona, con el formato que espera el importador de otro sistema.",
+        "note3": "waiver_records.csv guarda el hash de integridad de cada exención y el texto exacto que firmó el buceador.",
+        "note4": "Cada archivo muestra su número de filas, para compararlo con los totales de tu propio sistema.",
+        "securityNote": "“Lo que no se incluye, a propósito:” nombra las credenciales que quedan fuera de los registros de tu centro: contraseñas y claves push.",
+        "door": "Abre la demo como propietario →",
         "mockupLabel": "La pantalla Exportar datos de DiveDay, con los archivos del paquete, el número de filas de cada uno y las credenciales de cuenta que siguen protegidas"
       },
       "faqTitle": "Las preguntas que los dueños hacen primero.",
