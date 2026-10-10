@@ -411,6 +411,24 @@ export function budgetIsUnreachable(futileRestarts) {
 }
 
 /**
+ * What the hard-limit branch does with one reading (issue #2148): `"under"`
+ * the mark, `"restart"` because restarting this server can bring the cgroup
+ * back under it, or `"elsewhere"` because it cannot.
+ *
+ * The mark is measured cgroup-wide, because that is what the kernel's kill is
+ * measured against, so most of the pressure can belong to other processes. On
+ * 2026-10-06 sibling sessions held 12.5 GB of a 13.6 GB container and this
+ * branch restarted a 260 MB server 27 times in a few minutes: each restart
+ * killed a server that was still booting, and none could free what was not
+ * ours. A restart frees at most this tree's RSS, so when the cgroup would still
+ * be over the mark without it, the restart is refused.
+ */
+export function hardLimitVerdict({ pressure, hardLimit, ownRss }) {
+  if (!hardLimit || pressure < hardLimit) return "under";
+  return pressure - ownRss < hardLimit ? "restart" : "elsewhere";
+}
+
+/**
  * Output that means "this will fail identically next time", so there is nothing
  * to retry. Next's own message for it is already complete — it names the
  * holding pid, its port, and the command to stop it — and the lock is per
@@ -879,6 +897,13 @@ async function main(argv = process.argv.slice(2)) {
   let activeBudget = budget;
   let futileRestarts = 0;
   let lastBudgetRestartAt = 0;
+  // The hard limit's own give-up, on the same rule as the budget's: restarts
+  // that come straight back over the mark mean the mark is not this server's
+  // to meet. Cleared to null then, and the kernel is left to act.
+  let activeHardLimit = hardLimit;
+  let futileHardRestarts = 0;
+  let lastHardRestartAt = 0;
+  let saidPressureIsElsewhere = false;
 
   const killTree = (signal) => {
     if (!child) return;
@@ -968,15 +993,36 @@ async function main(argv = process.argv.slice(2)) {
           // measured against — the server's own tree can be well under budget
           // while a test run beside it takes the container over.
           const pressure = cgroupAnonBytes(readFileSync) ?? rss;
-          if (hardLimit && pressure >= hardLimit) {
-            const busy = Date.now() - lastRequestAt < IDLE_MS;
-            const elsewhere = pressure - rss;
-            say(
-              `restarting now: ${formatMb(pressure)} of anonymous memory against a ${formatMb(hardLimit)} mark, past which the kernel kills the largest process outright — ${formatMb(rss)} of it this server${elsewhere > 256 * MB ? `, ${formatMb(elsewhere)} something else in this session` : ""}. ${busy ? "Whatever request was in flight is lost — that is the trade, and the alternative is losing the server with no message at all." : "Nothing was in flight."} The next page is a warm compile.`,
+          const verdict = hardLimitVerdict({ pressure, hardLimit: activeHardLimit, ownRss: rss });
+          if (verdict === "under") saidPressureIsElsewhere = false;
+          if (verdict === "elsewhere") {
+            if (!saidPressureIsElsewhere) {
+              saidPressureIsElsewhere = true;
+              say(
+                `not restarting: ${formatMb(pressure)} of anonymous memory against a ${formatMb(activeHardLimit)} mark, but only ${formatMb(rss)} of it is this server and ${formatMb(pressure - rss)} is something else in this session. A restart cannot bring that under the mark, so the server keeps running; if the kernel acts, it picks the largest process.`,
+              );
+            }
+          } else if (verdict === "restart") {
+            futileHardRestarts = countFutileRestart(
+              futileHardRestarts,
+              lastHardRestartAt > 0 ? Date.now() - lastHardRestartAt : null,
             );
-            warmController.abort();
-            restart();
-            return;
+            lastHardRestartAt = Date.now();
+            if (budgetIsUnreachable(futileHardRestarts)) {
+              say(
+                `giving up on the ${formatMb(activeHardLimit)} mark: ${MAX_FUTILE_RESTARTS} restarts in a row came straight back above it (${formatMb(pressure)} now, ${formatMb(rss)} of it this server), so restarting is not what brings it down. The server keeps running without the hard limit; the idle budget still applies.`,
+              );
+              activeHardLimit = null;
+            } else {
+              const busy = Date.now() - lastRequestAt < IDLE_MS;
+              const elsewhere = pressure - rss;
+              say(
+                `restarting now: ${formatMb(pressure)} of anonymous memory against a ${formatMb(activeHardLimit)} mark, past which the kernel kills the largest process outright — ${formatMb(rss)} of it this server${elsewhere > 256 * MB ? `, ${formatMb(elsewhere)} something else in this session` : ""}. ${busy ? "Whatever request was in flight is lost — that is the trade, and the alternative is losing the server with no message at all." : "Nothing was in flight."} The next page is a warm compile.`,
+              );
+              warmController.abort();
+              restart();
+              return;
+            }
           }
 
           if (rss < activeBudget) {

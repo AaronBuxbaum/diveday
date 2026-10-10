@@ -1257,6 +1257,10 @@ export type EmailDeliveryIssueInput = {
   trip: { id: string; startsAt: Date; label: string };
 };
 
+function compareCodeUnits(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 /**
  * **Emails that failed for several people are one row** (Aaron, 2026-10-05).
  * Batched by what was sent and why it did not arrive — a waiver link and a
@@ -1284,7 +1288,16 @@ export function collapseEmailDeliveries(
 
   const actions: TodayAction[] = [];
   for (const [key, batch] of batches) {
-    const sorted = [...batch].sort((a, b) => a.trip.startsAt.getTime() - b.trip.startsAt.getTime());
+    // Departure, then its label, then the ids, so a batch over two boats at the
+    // same minute points at the same one whatever order it arrived in (issue
+    // #2176). Code-unit comparison: the key is a tiebreak, not a reading order.
+    const sorted = [...batch].sort(
+      (a, b) =>
+        a.trip.startsAt.getTime() - b.trip.startsAt.getTime() ||
+        compareCodeUnits(a.trip.label, b.trip.label) ||
+        compareCodeUnits(a.trip.id, b.trip.id) ||
+        compareCodeUnits(a.bookingId, b.bookingId),
+    );
     const first = sorted[0];
     if (!first) continue;
     const { isWaiver, status } = first;

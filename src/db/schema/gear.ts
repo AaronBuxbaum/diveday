@@ -102,14 +102,7 @@ export const rentalFitProfiles = pgTable(
      * Two kinds, not one "hood & gloves" (H-102, issue #1816): a warm-water
      * diver takes gloves and no hood, a quarry diver takes both in different
      * thicknesses, and one checkbox with one size could say neither.
-     *
-     * `rents_hood_gloves`, the one kind they replace, has no reader or writer
-     * left and stays only for the deploy: the release still serving while
-     * this migration runs selects it, so it is the contract half of an
-     * expand/contract pair and is dropped by the next migration (H-49 waives
-     * the backfill, not the deploy window).
      */
-    rentsHoodGloves: boolean("rents_hood_gloves").notNull().default(false),
     rentsHood: boolean("rents_hood").notNull().default(false),
     rentsGloves: boolean("rents_gloves").notNull().default(false),
     rentsTorch: boolean("rents_torch").notNull().default(false),
@@ -379,6 +372,18 @@ export const gearItems = pgTable(
      * The shop's own tag, exactly as written on the unit ("BCD #14",
      * "AL80-023"). Unique per shop because the tag is how a wet hand finds
      * the row — two units sharing a tag is a labeling bug worth refusing.
+     *
+     * **`COLLATE "und-x-icu"` in the database**, set by
+     * `drizzle/20261010081009_site-gear-course-collation` — the same treatment
+     * `people.full_name` has (see its comment in `core.ts`). The type here is
+     * plain `text` because drizzle-orm's pg-core has no way to say it, and a
+     * later `pnpm db:generate` will not take it back off.
+     *
+     * On the column so that every `orderBy` over it inherits it with no query
+     * edit: the gear register puts "Ángel" beside "Ana"
+     * rather than after "Zoe", on PGlite and on a real server alike.
+     * Deterministic, so the per-shop unique index stays byte equality.
+     * `src/db/name-collation.test.ts` proves it.
      */
     label: text("label").notNull(),
     /** Optional; mirrors the fit profile's free-text sizes ("M", "10", "3mm L"). */
@@ -524,7 +529,9 @@ export const gearServiceEvents = pgTable(
  * overlapping inclusive date ranges, so two staff racing each other cannot
  * both win (ADR 20260815-minimal-gear-register). `returned_at` closes the
  * reservation and frees the window; `checked_out_at` records the handover so
- * "reserved" and "actually out the door" stay distinguishable.
+ * "reserved" and "actually out the door" stay distinguishable; `released_at`
+ * lets go of a hold that never left the counter. The constraint's WHERE skips
+ * returned and released rows alike, so neither ever blocks a new hold.
  */
 export const gearReservations = pgTable(
   "gear_reservations",
@@ -581,6 +588,24 @@ export const gearReservations = pgTable(
      * clock like gear that rode a boat.
      */
     divesLogged: integer("dives_logged"),
+    /**
+     * **When a hold that never left the counter was let go** (issue #2258).
+     * Releasing stamps the row instead of deleting it (ADR
+     * 20260820-every-delete-is-soft), so the record that a unit was held for
+     * someone survives a disputed no-show charge. A released row is closed
+     * like a returned one: no open-reservation read sees it, and the
+     * `gear_reservations_no_overlap` exclusion constraint ignores it, so it
+     * never blocks a new hold. Never set beside `checked_out_at` or
+     * `returned_at` (`gear_reservations_release_never_left`): a unit that went
+     * out comes home through a return. Not restorable; hold the unit again.
+     */
+    releasedAt: timestamp("released_at", { withTimezone: true }),
+    /**
+     * Who let it go, when a person did. Null when the system did: a cancelled
+     * booking letting go of what it never collected, a departure cancelled or
+     * moved onto dates the unit is taken for. Attribution only.
+     */
+    releasedByPersonId: uuid("released_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -593,6 +618,10 @@ export const gearReservations = pgTable(
     check(
       "gear_reservations_dives_logged",
       sql`${table.divesLogged} is null or (${table.divesLogged} >= 0 and ${table.divesLogged} <= 200)`,
+    ),
+    check(
+      "gear_reservations_release_never_left",
+      sql`${table.releasedAt} is null or (${table.checkedOutAt} is null and ${table.returnedAt} is null)`,
     ),
     check(
       "gear_reservations_one_holder",

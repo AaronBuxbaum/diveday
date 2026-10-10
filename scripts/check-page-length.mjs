@@ -1,7 +1,8 @@
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 /**
  * A route stays thin: no `page.tsx` under `src/app` grows past {@link PAGE_LINE_LIMIT} lines.
@@ -16,8 +17,8 @@ import { pathToFileURL } from "node:url";
  * ### Why a ratchet rather than a flat gate
  *
  * The same shape as `scripts/check-copy.mjs` and `check-type-ramp.mjs`: the per-file line count
- * of every page already over the limit sits in `scripts/page-length-baseline.json` and may only
- * fall. A page over the limit that is not in the baseline fails; a page in it that grew fails;
+ * of every page already over the limit sits in `scripts/ratchets.json` (its `page-length` section,
+ * read and written through `scripts/ratchet.mjs` like every other ratchet) and may only fall. A page over the limit that is not in the baseline fails; a page in it that grew fails;
  * a page in it that shrank fails until the baseline is lowered in the same change
  * (`--write`), so the number tracks reality instead of drifting into a stale allowlist. A page
  * that drops to the limit or below leaves the baseline for good. `--absorb "<why>"` records a
@@ -28,7 +29,7 @@ import { pathToFileURL } from "node:url";
  */
 
 const ROOT = process.cwd();
-const BASELINE_PATH = "scripts/page-length-baseline.json";
+const GUARD = "page-length";
 export const PAGE_LINE_LIMIT = 400;
 const GUARDED_ROOT = "src/app";
 
@@ -87,11 +88,6 @@ export function nextBaseline(counts, limit = PAGE_LINE_LIMIT) {
   );
 }
 
-/** Entries a `--write` would raise or add — refused unless absorbed. */
-export function growthAgainst(next, baseline) {
-  return Object.entries(next).filter(([file, lines]) => lines > (baseline[file] ?? 0));
-}
-
 async function walk(relativeDirectory) {
   let entries;
   try {
@@ -123,51 +119,23 @@ async function main() {
     process.exit(0);
   }
 
-  let raw = {};
-  let baselineExists = true;
-  try {
-    raw = JSON.parse(await readFile(path.join(ROOT, BASELINE_PATH), "utf8"));
-  } catch (error) {
-    if (error?.code !== "ENOENT") throw error;
-    baselineExists = false;
-  }
-  const baseline = Object.fromEntries(Object.entries(raw).filter(([key]) => !key.startsWith("//")));
-
-  const absorbIndex = process.argv.indexOf("--absorb");
-  const absorbing = absorbIndex !== -1;
-  if (process.argv.includes("--write") || absorbing) {
-    const next = nextBaseline(counts);
-    const grew = baselineExists ? growthAgainst(next, baseline) : [];
-    if (grew.length > 0) {
-      const reason = process.argv[absorbIndex + 1];
-      if (!absorbing || !reason || reason.startsWith("--")) {
-        console.error("Refusing to write a baseline that grows. A route only gets thinner:");
-        for (const [file, lines] of grew) {
-          console.error(`- ${file}: ${baseline[file] ?? `new at ${PAGE_LINE_LIMIT}+`} → ${lines}`);
-        }
-        console.error(
-          'If this growth arrived in a merge, `--absorb "<why>"` records it with its reason.',
-        );
-        process.exit(1);
-      }
-      console.warn(`Absorbing page growth (${reason}):`);
-      for (const [file, lines] of grew) {
-        console.warn(`- ${file}: ${baseline[file] ?? "new"} → ${lines}`);
-      }
-    }
-    const document = {
-      "//": `Line counts of the page.tsx files still over ${PAGE_LINE_LIMIT} lines. Written by \`node scripts/check-page-length.mjs --write\`. Each number may only go down — see scripts/check-page-length.mjs.`,
-      ...(absorbing && grew.length > 0
-        ? { "// absorbed": process.argv[absorbIndex + 1] }
-        : raw["// absorbed"]
-          ? { "// absorbed": raw["// absorbed"] }
-          : {}),
-      ...next,
-    };
-    await writeFile(path.join(ROOT, BASELINE_PATH), `${JSON.stringify(document, null, 2)}\n`);
-    const total = Object.keys(next).length;
-    console.log(`page-length: baseline written — ${total} pages over ${PAGE_LINE_LIMIT} lines`);
-    process.exit(0);
+  const { counts: baseline, exists } = await readCounts(ROOT, GUARD);
+  const { write, absorb } = ratchetFlags();
+  if (write || absorb !== null) {
+    process.exit(
+      await bankCounts({
+        root: ROOT,
+        guard: GUARD,
+        counts: nextBaseline(counts),
+        allowed: baseline,
+        exists,
+        note: `Line counts of the page.tsx files still over ${PAGE_LINE_LIMIT} lines. Written by \`node scripts/check-page-length.mjs --write\`. Each number may only go down — see scripts/check-page-length.mjs.`,
+        refusal:
+          "A route only gets thinner — move a section into _components/, a query into src/db",
+        absorb,
+        summary: (files) => `${files} pages over ${PAGE_LINE_LIMIT} lines`,
+      }),
+    );
   }
 
   const violations = comparePageLengths(counts, baseline);

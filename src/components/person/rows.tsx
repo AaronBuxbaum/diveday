@@ -30,7 +30,7 @@ import type { CertificationCardRowState } from "@/lib/certification-cards";
  * - **These rows compose no copy and format no value.** `date`, `meta` and a
  *   money `label` arrive pre-formatted, locale- and timezone-aware, from the
  *   caller — no row here constructs an `Intl` formatter, which is also what
- *   keeps `pnpm check:timezone` honest about the surface that renders them.
+ *   keeps `scripts/lint-rules/timezone.grit` honest about the surface that renders them.
  *   The only words a row reaches for itself are the ones a *state* implies,
  *   and those come from the shared tables in `src/i18n/card-labels.ts` and
  *   `src/i18n/waiver-labels.ts` — never a second mapping local to this file.

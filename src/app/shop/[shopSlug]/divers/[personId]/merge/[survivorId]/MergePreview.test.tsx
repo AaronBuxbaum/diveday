@@ -122,6 +122,7 @@ describe("the merge preview", () => {
             tripId: "33333333-3333-4333-8333-333333333333",
             title: "Two-Tank Reef",
             startsAt: new Date("2026-10-10T12:00:00.000Z"),
+            keptSeatOver: false,
           },
         ],
       }),
@@ -132,6 +133,27 @@ describe("the merge preview", () => {
       "/shop/blue-mantis/trips/33333333-3333-4333-8333-333333333333",
     );
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("never asks staff to resolve a seat that is already cancelled (issue #2177)", () => {
+    renderPreview(
+      preview({
+        refusal: "booking_conflict",
+        sharedDepartures: [
+          {
+            tripId: "33333333-3333-4333-8333-333333333333",
+            title: "Two-Tank Reef",
+            startsAt: new Date("2026-10-10T12:00:00.000Z"),
+            keptSeatOver: true,
+          },
+        ],
+      }),
+    );
+    expect(screen.queryByText(/Both records hold a seat/)).toBeNull();
+    expect(screen.getByText(/The kept record’s seat on this departure is canceled/)).toBeVisible();
+    expect(screen.getByRole("link", { name: /Two-Tank Reef/ })).toBeVisible();
+    // The way out is the swap the page already offers.
+    expect(screen.getByRole("link", { name: "Keep Maya Rivera instead" })).toBeVisible();
   });
 
   it("asks for a required acknowledgement when the two may be two people", () => {

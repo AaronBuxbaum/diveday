@@ -17,11 +17,13 @@ import {
 import { trackEvent } from "@/lib/analytics";
 import { authSecret } from "@/lib/auth-secret";
 import type { Role } from "@/lib/authz";
+import { nowMs } from "@/lib/clock";
 import { verifyCredentials } from "@/lib/credentials";
 import { log } from "@/lib/log";
 import { APP_ORIGIN, publicAppUrl } from "@/lib/notifications/app-url";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
+import { readSessionCookieCache } from "@/lib/session-cookie-cache";
 
 /**
  * Our own credentials chokepoint as a better-auth plugin, rather than
@@ -268,34 +270,108 @@ export type DiveDaySession = {
   };
 };
 
+type SessionSnapshot = {
+  id: string;
+  shopId: string;
+  shopSlug: string;
+  roles: readonly string[];
+};
+
 /**
- * Kept the same name and shape as the old next-auth `auth()` export so
- * `src/lib/session.ts`'s `requireStaffSession()` and every test that mocks
- * `@/lib/auth` need no changes — only where the fields come from changed
- * (a better-auth session row, not a JWT).
+ * Whether a session read has to write a cookie back (issue #2263). Two
+ * reasons, and nothing else:
+ *
+ * - **the sliding refresh is due**, better-auth's own rule
+ *   (`expiresAt - expiresIn + updateAge <= now`): the read that refreshes
+ *   pushes the row's expiry out and re-sets the session cookie, so a staffer
+ *   who keeps working stays signed in;
+ * - **the cookie cache is cold or says something else** than the live row (a
+ *   different token, shop or roles): the edge proxy reads that cache for its
+ *   convenience redirects (`src/proxy.ts`), so a read warms it back up rather
+ *   than leaving it cold for good.
+ *
+ * `now` is the app clock. In production that is the wall clock better-auth
+ * reads; under the e2e harness's frozen instant (in the past) no refresh is
+ * ever due, which a run lasting minutes against a seven-day session never
+ * needs.
+ *
+ * Every other read writes nothing. A cookie written from a server action is a
+ * mutation to Next: the response says `x-action-revalidated`, and the client
+ * router drops its cache, refreshes the route and re-prefetches every visible
+ * link, after a read that changed nothing.
  */
-async function readSession(): Promise<DiveDaySession | null> {
-  const instance = await getAuth();
-  // The edge proxy may use the short-lived cookie cache for routing, but the
-  // server-side security decision must consult the session row every time so
-  // "sign out everywhere" and per-device revocation take effect immediately.
-  const result = await instance.api.getSession({
-    headers: await nextHeaders(),
-    query: { disableCookieCache: true },
+export function sessionCookieWriteDue(input: {
+  now: number;
+  expiresAt: Date;
+  expiresInSec: number;
+  updateAgeSec: number;
+  live: SessionSnapshot;
+  cached: SessionSnapshot | null;
+}): boolean {
+  const refreshDue =
+    input.expiresAt.getTime() - input.expiresInSec * 1000 + input.updateAgeSec * 1000 <= input.now;
+  if (refreshDue) return true;
+  const { live, cached } = input;
+  if (!cached) return true;
+  return (
+    cached.id !== live.id ||
+    cached.shopId !== live.shopId ||
+    cached.shopSlug !== live.shopSlug ||
+    cached.roles.length !== live.roles.length ||
+    cached.roles.some((role, index) => role !== live.roles[index])
+  );
+}
+
+type RawSession = SessionSnapshot & {
+  expiresAt: Date;
+  personId: string;
+  roles: Role[];
+  name: string;
+};
+
+/**
+ * The session read itself, over one better-auth instance and one request's
+ * headers. Exported for its test; everything else calls {@link auth}.
+ *
+ * The server-side security decision consults the session row every time
+ * (`disableCookieCache`), so "sign out everywhere" and per-device revocation
+ * take effect immediately; the cookie cache only ever decides whether to
+ * *write*. The first read asks better-auth to write nothing
+ * (`disableRefresh`, which returns before any cookie is set); a second read,
+ * better-auth's ordinary one, runs only when {@link sessionCookieWriteDue}
+ * says a write is owed, and its answer is the one returned.
+ */
+export async function readSessionFrom(
+  instance: DiveDayAuth,
+  headers: Headers,
+  now: number = nowMs(),
+): Promise<DiveDaySession | null> {
+  const quiet = await instance.api.getSession({
+    headers,
+    query: { disableCookieCache: true, disableRefresh: true },
   });
+  if (!quiet) return null;
+  const { sessionConfig } = await instance.$context;
+  const cache = await readSessionCookieCache(headers);
+  const cached = cache?.session as unknown as SessionSnapshot | undefined;
+  const live = quiet.session as unknown as RawSession;
+  const result = sessionCookieWriteDue({
+    now,
+    expiresAt: new Date(live.expiresAt),
+    expiresInSec: sessionConfig.expiresIn,
+    updateAgeSec: sessionConfig.updateAge,
+    live,
+    cached: cached ?? null,
+  })
+    ? await instance.api.getSession({ headers, query: { disableCookieCache: true } })
+    : quiet;
   if (!result) return null;
-  const session = result.session as unknown as {
-    personId: string;
-    shopId: string;
-    shopSlug: string;
-    roles: Role[];
-    name: string;
-  };
+  const session = result.session as unknown as RawSession;
   return {
     user: {
       personId: session.personId,
       userAccountId: result.user.id,
-      sessionId: (result.session as { id?: string }).id,
+      sessionId: session.id,
       shopId: session.shopId,
       shopSlug: session.shopSlug,
       roles: session.roles,
@@ -303,6 +379,16 @@ async function readSession(): Promise<DiveDaySession | null> {
       email: result.user.email,
     },
   };
+}
+
+/**
+ * Kept the same name and shape as the old next-auth `auth()` export so
+ * `src/lib/session.ts`'s `requireStaffSession()` and every test that mocks
+ * `@/lib/auth` need no changes — only where the fields come from changed
+ * (a better-auth session row, not a JWT).
+ */
+async function readSession(): Promise<DiveDaySession | null> {
+  return readSessionFrom(await getAuth(), new Headers(await nextHeaders()));
 }
 
 /**

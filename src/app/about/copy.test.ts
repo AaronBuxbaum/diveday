@@ -5,7 +5,7 @@ import type { DiverLocale } from "@/i18n/settings";
 /**
  * **`/about` speaks as the company, and tells the Lonergan story within its
  * limits** (docs/product/marketing.md, "Biography is a claim like any other";
- * the 2026-10-07 rewrite is H-99 in docs/product/human-decisions.md).
+ * the 2026-10-07 rewrite is H-99 in docs/product/human-decisions/README.md).
  *
  * The page opens on why DiveDay exists: Tom and Eileen Lonergan, left behind
  * on the Great Barrier Reef in January 1998. Only what the public record holds

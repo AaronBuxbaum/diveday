@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   BRITISH_SPELLINGS,
+  ENCRYPTION_ALLOWLIST,
   findTells,
   housePhrases,
   metadataStrings,
@@ -133,6 +134,69 @@ describe("the word rules", () => {
  * user sees — issue #1367, after PR #1365 spent a full CI round on one
  * character.
  */
+describe("implementation words on a public page (issue #2104)", () => {
+  const publicRules = (value, locale = "en-US", key = "marketing.featurePages.boat.body") =>
+    findTells(value, locale, key).map((hit) => hit.rule);
+
+  it.each([
+    ["en-US", "Roll calls sync when the phone reconnects."],
+    ["en-US", "Everything is synced to the office."],
+    ["en-US", "The manifest synchronizes overnight."],
+    ["en-US", "Manifests are cached on the phone."],
+    ["en-US", "The cache holds two days."],
+    ["en-US", "The roll call is fail-closed."],
+    ["en-US", "It fails closed, by design. Fail closed."],
+    ["en-US", "An offline-first manifest."],
+    ["es-ES", "Los pases de lista se sincronizan al volver la señal."],
+    ["es-ES", "La sincronización ocurre de noche."],
+    ["es-ES", "Los manifiestos quedan en caché en el teléfono."],
+    ["es-ES", "La caché guarda dos días."],
+  ])("refuses an implementation word (%s): %s", (locale, value) => {
+    expect(publicRules(value, locale)).toContain("implementation");
+  });
+
+  it.each([
+    ["en-US", "Every manifest is encrypted on the phone."],
+    ["en-US", "We encrypt it."],
+    ["es-ES", "Cada manifiesto va cifrado en el teléfono."],
+    ["es-ES", "Los datos están encriptados."],
+  ])("refuses encrypted outside the privacy keys (%s): %s", (locale, value) => {
+    expect(publicRules(value, locale)).toContain("encryption");
+  });
+
+  it("leaves the privacy page's allowlisted keys their encrypted, with a reason each", () => {
+    for (const [key, reason] of ENCRYPTION_ALLOWLIST) {
+      expect(reason.length).toBeGreaterThan(10);
+      expect(publicRules("It is stored encrypted on that phone.", "en-US", key)).toEqual([]);
+      expect(publicRules("Se guarda cifrada en ese teléfono.", "es-ES", key)).toEqual([]);
+    }
+  });
+
+  it("still refuses sync on an allowlisted privacy key", () => {
+    const [key] = [...ENCRYPTION_ALLOWLIST.keys()];
+    expect(publicRules("It is encrypted and syncs later.", "en-US", key)).toEqual([
+      "implementation",
+    ]);
+  });
+
+  it("leaves API, database and webhooks alone, which the switching guides need", () => {
+    expect(
+      publicRules("FareHarbor’s API is partner-gated; no webhooks, and the database stays theirs."),
+    ).toEqual([]);
+  });
+
+  it("leaves words that only look like it alone", () => {
+    expect(publicRules("A cachet of trust.")).toEqual([]);
+    expect(publicRules("La cifra que pagas no cambia.", "es-ES")).toEqual([]);
+    expect(publicRules("Descifra la tabla de mareas.", "es-ES")).toEqual([]);
+  });
+
+  it("leaves a staff screen alone, which may name its calendar sync", () => {
+    expect(rules("Calendar sync")).toEqual([]);
+    expect(findTells("Sincronizar calendario", "es-ES", "settings.calendar.title")).toEqual([]);
+  });
+});
+
 describe("the house apostrophe", () => {
   it("catches a straight apostrophe in prose", () => {
     expect(rules("That doesn't save.")).toContain("apostrophe");

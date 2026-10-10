@@ -252,7 +252,11 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   // After a dive the offline copy words this control the same way the live
   // manifest does — "not back aboard", never a settled "Not boarded ☑️" (DOM-H3).
   await expect(page.getByRole("button", { name: "Mark not boarded" })).toHaveCount(0);
-  await diverList.getByRole("button", { name: "Mark not back aboard" }).first().click();
+  // The claim is a deliberate second step (#1840): open the row's "Not back
+  // aboard?" disclosure, then mark.
+  const diverRow = diverList.getByRole("listitem").first();
+  await diverRow.getByText("Not back aboard?", { exact: true }).click();
+  await diverRow.getByRole("button", { name: "Mark not back aboard" }).click();
   // Two live regions exist here (the action message and the connectivity
   // badge); scope to the one carrying the sync message.
   await expect(
@@ -749,7 +753,7 @@ test("a checkpoint with every diver counted stays open until the crew are called
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Not boarded ☑️" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Roll call complete" })).toHaveCount(0);
-  await expect(page.getByText(/1 diver is not back aboard/)).toBeVisible();
+  await expect(page.getByText(/1 person is not back aboard/)).toBeVisible();
   // Read back on the row, so a second crew member arriving at the alarm does
   // not type the same sentence again.
   await expect(

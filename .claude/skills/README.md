@@ -60,6 +60,10 @@ reviewers inherit it.
   not it opens the file, which is why `pnpm check:context-budget` counts them alongside AGENTS.md
   and refuses a silent rise. Specific about the trigger, then short; the body is where the length
   belongs, because the body is loaded on purpose.
+- A skill linked in from `.agents/skills/` is upstream's text, pinned by `skills-lock.json`, and a
+  sync overwrites it. The few lines changed locally are listed in `VENDORED_SKILL_OVERRIDES`
+  (`scripts/agent-layer.mjs`) with the wording that replaced them; after a sync, `pnpm check:agents`
+  names each one the sync brought back, and the fix is to re-apply that wording.
 - `pnpm check:agents` (part of `check:repo`/`check`) fails on drift: a skill missing from this
   index, an index entry with no skill, frontmatter whose name doesn't match its directory or with
   no description, an unmentioned reviewer agent, a `task:context` area pointing at a doc that

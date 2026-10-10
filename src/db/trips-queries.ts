@@ -120,7 +120,8 @@ export async function upcomingTripsWithCounts(
       ),
     )
     .groupBy(trips.id, courses.id, diveSites.id)
-    .orderBy(asc(trips.startsAt));
+    // The paged board's own order, so the two never disagree over same-minute boats.
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
 
   return rows.map(({ trip, course, diveSite, booked, bookedDivers }) => ({
     ...trip,
@@ -388,7 +389,7 @@ export async function boatCertifiedPassengers(
 
 /**
  * The schedule page's list, one keyset page at a time (ordered by departure,
- * then id for a stable tiebreak). `upcomingTripsWithCounts` stays for callers
+ * then title, then id for a stable tiebreak). `upcomingTripsWithCounts` stays for callers
  * that genuinely need every upcoming trip in memory; the page never should —
  * a busy shop's board grows without bound.
  *
@@ -449,15 +450,17 @@ export async function pagedUpcomingTripsWithCounts(
         afterDate && after && !Number.isNaN(afterDate.getTime())
           ? or(
               gt(trips.startsAt, afterDate),
-              and(eq(trips.startsAt, afterDate), gt(trips.id, after[1])),
+              and(eq(trips.startsAt, afterDate), gt(trips.title, after[1])),
+              and(eq(trips.startsAt, afterDate), eq(trips.title, after[1]), gt(trips.id, after[2])),
             )
           : undefined,
       ),
     )
     .groupBy(trips.id, courses.id, diveSites.id)
     .having(hasSpaceHaving(options.hasSpace))
-    // diveday:allow-time-id-order: the keyset cursor is the (startsAt, id) pair (`src/db/cursor.ts`), so a title key here would skip or repeat rows across pages until the cursor carries it too.
-    .orderBy(asc(trips.startsAt), asc(trips.id))
+    // The keyset cursor carries all three keys (`src/db/cursor.ts`, issue
+    // #2175), so the filter above resumes exactly after the last row shown.
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id))
     .limit(limit + 1);
 
   const page = rows.slice(0, limit).map(({ trip, course, diveSite, booked, bookedDivers }) => ({
@@ -471,7 +474,9 @@ export async function pagedUpcomingTripsWithCounts(
   return {
     trips: page,
     nextCursor:
-      rows.length > limit && last ? encodeCursor(last.startsAt.toISOString(), last.id) : null,
+      rows.length > limit && last
+        ? encodeCursor(last.startsAt.toISOString(), last.title, last.id)
+        : null,
   };
 }
 

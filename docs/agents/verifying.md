@@ -15,6 +15,12 @@ line between the two.
   `pnpm e2e:build`
 - `node scripts/screenshot.mjs <path…>` against a running `pnpm dev` — looking at UI you changed
   is not optional and has no CI substitute
+- `node scripts/contact-sheet.mjs` against a running `pnpm dev` — every route in
+  `scripts/route-coverage.json`, signed in as the demo owner for `/shop/**`, at phone width in
+  light, tiled with captions into `screenshots/contact-sheet.jpg` (under the canvas guard's cap).
+  Ids and tokens are filled from links on pages it already visited; routes it could not reach or
+  capture are listed. `--budget` (60 page loads by default) keeps one run under the supervisor's
+  restart threshold
 
 ## The unit suite's projects
 

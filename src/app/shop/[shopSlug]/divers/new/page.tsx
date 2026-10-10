@@ -20,6 +20,7 @@ import { discardFormDraft, readFormDraft } from "@/db/form-drafts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
+import { parseForm } from "@/lib/form-parse";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -31,6 +32,13 @@ import {
 } from "@/lib/person-fields";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+
+const newDiverContextForm = z.object({
+  surface: z.string().optional(),
+  tripId: z.string().optional(),
+  waitlist: z.string().optional(),
+  force: z.string().optional(),
+});
 
 export const instant = true;
 
@@ -160,18 +168,22 @@ export default async function NewDiverPage({
     "use server";
     const staff = await requireStaffSession();
     const activeDb = await getDb();
-    const parsed = diverSchema.safeParse(Object.fromEntries(formData));
-    const activeSurface = formData.get("surface") as SeatSurfaceId | null;
-    const activeTripId = formData.get("tripId") ? String(formData.get("tripId")) : null;
-    const activeWaitlist = formData.get("waitlist") === "true";
-    const force = formData.get("force") === "true";
+    const parsed = parseForm(diverSchema, formData);
+    // Where the form was opened from; a context that does not read as strings
+    // is no context, and the diver's own fields decide the rest.
+    const opened = parseForm(newDiverContextForm, formData);
+    const context = opened.ok ? opened.data : {};
+    const activeSurface = (context.surface ?? null) as SeatSurfaceId | null;
+    const activeTripId = context.tripId ? context.tripId : null;
+    const activeWaitlist = context.waitlist === "true";
+    const force = context.force === "true";
 
     const buildNewDiverUrl = (extraParams: Record<string, string>) => {
       const search = new URLSearchParams(extraParams);
       return `${shopPath(staff.user.shopSlug, "divers", "new")}?${search.toString()}`;
     };
 
-    if (!parsed.success) {
+    if (!parsed.ok) {
       const search: Record<string, string> = { notice: "invalid" };
       if (activeSurface) search.surface = activeSurface;
       if (activeTripId) search.tripId = activeTripId;

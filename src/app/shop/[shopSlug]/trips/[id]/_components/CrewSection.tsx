@@ -227,7 +227,7 @@ export function CrewSection({
       // Swallowing one turned a refusal into "That didn't save", so the
       // navigation happened *and* the row claimed a transport error. Measured
       // on the check-in queue's twin of this catch (issue #819); this is the
-      // same shape `scripts/check-redirect-in-try.mjs` refuses on the server.
+      // same shape `scripts/lint-rules/redirectInTry.grit` refuses on the server.
       unstable_rethrow(error);
       setAssignRefusal({ code: "refused", name: person.fullName });
     }

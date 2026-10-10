@@ -1,0 +1,3 @@
+-- Contract half of H-102 (issue #2184): rents_hood and rents_gloves replaced this column in #2183, merged and deployed from main on 2026-10-07; since then nothing reads or writes it.
+-- diveday:allow-destructive drop-column rental_fit_profiles.rents_hood_gloves: pre-pilot, no users, H-49 — the previous release never reads or writes the value, but its whole-row select() and returning() on rental_fit_profiles name the column, so a rental-fit read or save on that release fails for the minutes of the deploy window, and nobody is served by it
+ALTER TABLE "rental_fit_profiles" DROP COLUMN "rents_hood_gloves";

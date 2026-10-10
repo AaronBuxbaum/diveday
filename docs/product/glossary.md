@@ -707,6 +707,15 @@ new domain concept, define it here in the same PR.
   timezone" of a UTC column, so the scan over-fetches and the caller filters by shop-local date.
   Twenty-six hours is what a local day can span either side of any instant inside it, plus slack
   for a daylight-saving transition. Never a readiness lens.
+- **Counter self-registration** — the shop's QR door at `/s/<slug>/register`: a walk-in puts
+  themselves on file **before any booking exists** (issue #1236). The shop prints the QR from
+  Settings (`/shop/<slug>/print/counter-card`) and stands it on the counter. The form writes a
+  person, a **self-declared certification** and their rental sizes, matched to a returning diver
+  by email as the importer does, and the shop's ordinary person-scoped waiver goes to the contact
+  they gave; sign-once holds. There is no diver account and no second waiver flow. **The visitor is
+  told nothing about themselves**: one success sentence whether they were created or found, sent a
+  waiver or already on file, cleared or referred to a physician, so nobody can type an address and
+  learn who dives with the shop (`src/lib/self-registration.ts`). The page is never indexed.
 - **Arrivals window** — the counter's narrower lens on the operational horizon: departures from six
   hours ago through the next thirty-six. The backwards reach is the one deliberate asymmetry (a
   diver still walks up to the desk for a boat that already sailed); forwards it never outruns the
@@ -1030,6 +1039,13 @@ new domain concept, define it here in the same PR.
   temperature, visibility, surface state) belong to the charter that sailed, not to the reef.
   A shop's library is at Dive sites; DiveDay's published starting points are the **common-site
   catalog**, and importing one makes an independent copy the shop then owns.
+- **Diver moment** — a caption, usually with a photo, that an earlier diver brought back from one
+  **dive site** (`dive_site_moments`). The caption is the diver's own line. Moments are
+  **staff-moderated and opt-in**: a row shows nowhere until the shop publishes it
+  (`is_published`). No surface writes one yet: today only the demo seed does, and the shop export
+  carries them. Published moments with a photo show as one strip on a public trip page, deduplicated
+  by site and capped at four (`dayMomentsFor`), and on the site's own public page. Marketing copy
+  calls them "moments from divers".
 - **Dive briefing** — what a diver reads (and the crew says) about **one tank on one dated trip**:
   the `trip_dives` row, rendered from the site's saved notes plus whatever the crew wrote for that
   particular dive. There is one briefing per *planned dive*, so a two-tank trip always has two —
@@ -1168,6 +1184,14 @@ new domain concept, define it here in the same PR.
   booking's id and nothing else**. A booking id is not a capability — the counter resolves it inside
   its own shop — so a pass left on a boat seat hands a finder nothing. It carries the diver's name
   and no readiness, waiver or medical state.
+- **Trip packet** — the browser-print document for one departure (`/shop/<slug>/trips/<id>/print`,
+  `TripPacket`): three sections, each on its own sheet — the **dive plan** in words, the **manifest**
+  (the roster in roll-call order with each person's emergency contact, the shop's **emergency
+  reference**, the missing-diver procedure and the ruled kit blanks), and the morning **packing
+  list**. It is a document, not the live tabs stacked: no control reaches the sheet
+  (`e2e/trips.spec.ts` counts them under print emulation). The day's paper prints the same block
+  once per departure. Not the **departure log**, which reports what was recorded after the boat
+  is back.
 - **Pre-departure checklist** — a shop-authored, ordered list of lines a crew confirms once before
   a boat leaves the dock (emergency oxygen, life jackets, a fire extinguisher — whatever the shop's
   own flag state and vessel class require). DiveDay writes none of the content; a shop types its
@@ -1320,9 +1344,13 @@ new domain concept, define it here in the same PR.
   string until the shop writes it, and nothing on this card links, dials, escalates, or opens an
   incident. It is a laminated card retyped, priced at zero words of DiveDay's own.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded,
-  not boarded, or cleared, including the time and who recorded it. It carries **no free text**: the
-  note field was removed in 2026-08, which also means a roll call records *that* a diver did not
-  come back and never *what happened to them*. Its newest event is the current state;
+  not boarded, or cleared, including the time and who recorded it. **After a dive it may carry a
+  short note** (up to `ROLL_CALL_NOTE_MAX`, 300 characters) when the mark raises a "not back
+  aboard" or unsays one that stands, so the shop can record *what happened* to a diver who did not
+  come back, not only *that* they did not; an ordinary "came back" tap and every mark at the dock
+  carry none (`rollCallNoteAllowed` in `src/lib/roll-call.ts`;
+  [20260828-a-missing-diver-gets-a-sentence](../architecture/decisions/20260828-a-missing-diver-gets-a-sentence.md)).
+  The printed manifest and the saved offline copy carry the note. Its newest event is the current state;
   older events remain evidence of what the crew recorded. **Cleared** is an undo: staff tapped the
   current status again to correct a mistake, and the diver returns to awaiting. It is stored as its
   own event so the correction stays in the audit trail rather than deleting history. **Cleared is
@@ -1355,6 +1383,13 @@ new domain concept, define it here in the same PR.
   server would refuse is a control that lies. It is not a state anything is stored as — the row is
   simply *awaiting* with a readiness blocker (see **Readiness**), drawn so a captain can tell at a
   glance which empty circles are theirs to close.
+- **Touch guard** — the roll call's refusal of a press made with more than one finger on the glass
+  (`src/components/roll-call-touch-guard.ts`). A wet palm or a sheet of spray lands as several
+  contacts at once, where a deliberate thumb is one, so a roll-call press made while more than one
+  touch was down, at any point in that gesture, does not submit. Touch only: a mouse, a pen or a
+  key is never refused. It covers the live roll call's buttons and every mark on the offline
+  manifest. It is **not a water lock** (ADR 20261001-logbook cut the lock that once sat in front of
+  the aboard mark) and **not part of Boat mode**: it is always on, whatever the palette.
 - **Crew roll-call event** — the crew half of a head count: a named staff member said one **assigned crew
   member** is aboard, not aboard, or cleared, at one checkpoint. Same append-only history, same
   supersession, and the same two meanings of "not boarded" as a diver's roll-call event; the subject
@@ -1423,6 +1458,8 @@ new domain concept, define it here in the same PR.
   rents surface kit only (mask and fins, wetsuit, boots, hood and gloves, camera), and pays the
   departure's snorkeler price (`trips.snorkeler_price_cents`). The public form offers a snorkeler
   seat only where the shop has named that price; zero means free, and no price means not sold.
+  The trip prep list counts one snorkel vest per snorkeler seat, the boat's own and never a rental
+  (`DivePrepChecklist.snorkelVests`).
 - **Rider** — a participant who stays on the boat: a partner, a parent, a photographer. Needs no
   card, rents nothing, and pays the departure's rider price (`trips.rider_price_cents`) under the
   same rule as a snorkeler's. A rider is still a body aboard and is counted at roll call.
@@ -1455,7 +1492,7 @@ new domain concept, define it here in the same PR.
   and never as an instructor, whatever the roster says. One definition, `countInWaterCrew` in `src/lib/crew-roles.ts`, shared by the
   booking gate, the trip page, the Today queue, and — through Today's own reader — the shift
   roster's crew-gap count.
-- **Roll-call checkpoint** — one independent head count: before departure or after a numbered dive.
+- **Roll-call checkpoint** — one independent roll call: before departure or after a numbered dive.
   A two-tank charter has three checkpoints. Each checkpoint is re-verified against the bodies on the
   boat; a **boarded** result never carries into the next. **"Not boarded" means two opposite
   things depending on where it is recorded**, and they must never be treated — or worded — alike:
@@ -1515,7 +1552,7 @@ new domain concept, define it here in the same PR.
   aboard" that a non-rejected source states — silently demoting a missing diver to "awaiting" is the
   one direction that takes an alarm off the screen — while it still may never resurrect a superseded
   "aboard", which is the stale optimism reconciliation exists to overrule.
-- **Boat mode** — the high-contrast palette (navy and safety yellow, Atkinson Hyperlegible) for reading a screen on deck (ADR 20261001-logbook, decision 6). By day it is light, white ground and navy ink, because sun washes a dark screen out; with the device in its dark scheme it is Night Dive, navy ground and white ink (H-97). The roll call always wears it; anyone can put the rest of a device in it from the staff identity menu (`src/lib/boat-mode.ts`). A manual switch only: there is no light sensor, water lock or glare skin.
+- **Boat mode** — the high-contrast palette (navy and safety yellow, Atkinson Hyperlegible) for reading a screen on deck (ADR 20261001-logbook, decision 6). By day it is light, white ground and navy ink, because sun washes a dark screen out; with the device in its dark scheme it is Night Dive, navy ground and white ink (H-97). The roll call always wears it; anyone can put the rest of a device in it from the staff identity menu (`src/lib/boat-mode.ts`). A manual switch only: there is no light sensor, water lock or glare skin. The roll call's **touch guard** is separate from it and always on.
 - **Boarding** — the fast pre-departure pass: get every ready diver aboard before the boat leaves,
   waiver/cert/payment confirmed at a glance. It is not a separate surface — it is the **Manifest's**
   "Before departure" checkpoint, where readiness pills and a resolve-blockers link show alongside the
@@ -1837,21 +1874,22 @@ new domain concept, define it here in the same PR.
   the 06:40 tap. No sweep exists and none is coming: `markBookingNoShow` (`src/db/no-show.ts`) is
   the only writer of that status, it is one staffer's deliberate tap on one seat, and check-in
   refuses anything but a `booked` seat — so the sighting is always the older statement, and the
-  escape only ever let 06:40 beat 07:15. **The cancellations have escapes, and the three readers
-  carry different ones.** A cancelled departure the crew logged dives on is a dive day to the
-  fly-safe reader (`peopleWhoDivedBefore`, `src/db/executed-dives.ts`) and to the counter's
-  name-match prompt (`SimilarDiver.lastDiveDayAt`, `src/db/divers.ts`) — but not to the recap's own
-  count (`getRecapPageData`, `src/db/recap.ts`), which still reads a plain non-`scheduled` departure
-  as disqualifying. The gap is deliberate: the two that widened answer a staffer who can see the
-  person and can shake their head, while this count tells the diver "your 3rd dive day" with nobody
-  there to correct it and feeds `visitMilestone`'s exact equality, where a day that moves skips a
-  stamp permanently rather than blurring it. **The fly-safe reader has a second, wider escape:
-  the roll call outranks a later desk word** (issue #1836). A standing roll-call result meaning the
-  person sailed counts the day even when the booking or the departure was marked `cancelled`
-  afterwards, logged dives or not, because both cancel doors check neither the clock nor the roll
-  call and being wrong there hands a two-day diver the single-day flying wait. The name-match prompt
-  deliberately makes the opposite trade and would rather ask. Putting all three behind one predicate
-  is issue #1694, and these two may legitimately keep disagreeing.
+  escape only ever let 06:40 beat 07:15. **The rule is one predicate**, `diveDay()` in
+  `src/db/dive-days.ts` (issue #1694, ruled H-84), and every reader applies it; the recap's own count
+  (`getRecapPageData`, `src/db/recap.ts`), the counter's name-match prompt
+  (`SimilarDiver.lastDiveDayAt`, `src/db/divers.ts`) call `diveDay()` whole, and the fly-safe
+  reader (`peopleWhoDivedBefore`, `src/db/executed-dives.ts`) calls its halves apart. **A cancelled departure the crew logged a
+  live dive on is a dive day** to all three: a logged dive is affirmative evidence that beats a
+  status changed afterwards for a refund or a blow-out called after the first tank, so the count
+  that feeds `visitMilestone`'s exact equality can never refuse a day the counter names. **The
+  fly-safe reader alone has a second, wider escape: the roll call outranks a later desk word**
+  (issue #1836). It calls the rule's two halves apart (`seatCanBeDiveDay`, which nothing outranks,
+  and `deskCountsDiveDay`), so a standing roll-call result meaning the person sailed counts the day
+  even when the booking or the departure was marked `cancelled` afterwards, logged dives or not,
+  because both cancel doors check neither the clock nor the roll call and being wrong there hands a
+  two-day diver the single-day flying wait. The name-match prompt and the recap deliberately make
+  the opposite trade. Not the **Dive day (north star)**: that one is a shop's day, counted by roll
+  call for the founder metrics, and never a diver's history.
 - **Milestone stamp** — the drawn double-ring roundel beside the dive record, on the dive days
   `src/lib/visit-milestones.ts` names and no others: the 1st, 10th, 25th, 50th and 100th. Exact
   equality, not "at least", so a miscounted day does not blur a milestone — it skips it permanently.
@@ -1919,7 +1957,7 @@ new domain concept, define it here in the same PR.
   [20260802-whatsapp-embedded-signup](../architecture/decisions/20260802-whatsapp-embedded-signup.md).
 - **Set-up request** — a shop asking to be set up, sent from the public form at `/get-set-up` (every "Get set up" button opens it). One `setup_requests` row with the shop's answers, the contact's details and the funnel tag of the page that sent them; the founder opens the shop by hand from it ([ADR 20261007-setup-request-form](../architecture/decisions/20261007-setup-request-form.md)). Not a booking inquiry, which is a diver asking a shop.
 - **Setup link** — the single-use link that opens the sign-up form at `/onboard` for one shop. Minted for each set-up request and sent only to the founder in that request's onboarding mail; it expires after two weeks and is spent by the shop it creates. Stored as a hash in `shop_setup_links` ([ADR 20261009-single-use-setup-links](../architecture/decisions/20261009-single-use-setup-links.md)). Not a staff invite, which brings a person into a shop that already exists.
-- **Dive day (north star)** — one real shop's local calendar day on which at least one diver was boarded at a departure roll call. Counted per week, it is the north star in [rollout.md](rollout.md#metrics--the-scoreboard). Two boats out on one Saturday is one dive day ([ADR 20261007-founder-metrics](../architecture/decisions/20261007-founder-metrics.md)).
+- **Dive day (north star)** — one real shop's local calendar day on which at least one diver was boarded at a departure roll call. Counted per week, it is the north star in [rollout.md](rollout.md#metrics--the-scoreboard). Two boats out on one Saturday is one dive day ([ADR 20261007-founder-metrics](../architecture/decisions/20261007-founder-metrics.md)) Not the diver's **Dive day**, the unit of one diver's history with a shop that `diveDay()` counts from bookings.
 - **Activation milestone** — a first-time step a real shop has taken: created, first departure, first public booking, first diver-signed waiver, first roll call, and (once billing exists) first paid month. Stored once each in `shop_milestones`. A shop is **stalled** when its newest step is 7 or more days old and the next is missing; the founder digest names a stall once.
 - **Demo mode** — a shop flagged `isDemo` gets the Demo Playground banner, its role switcher, and a
   "Reset demo data" affordance scoped to that one tenant. "Try the live demo" **mints a fresh
@@ -2227,7 +2265,8 @@ new domain concept, define it here in the same PR.
   from, so dropping them arrives a BCD short with nothing to fit them from — but the **size** comes
   off, reading "fit at check-in", and they're named in their own "fit these divers at check-in"
   section, along with the sizes they asked for — the captain doing the fit can't edit the profile
-  and needs somewhere to start. Pieces with no size column are untouched by the flag; so are weights (lead is bulk stock, never a size to be short of, and usual weighting is
+  and needs somewhere to start. On the Gear tab a flagged diver still gets a picker for each piece, opened
+  empty and never proposed, so their unit is still reserved through the register. Pieces with no size column are untouched by the flag; so are weights (lead is bulk stock, never a size to be short of, and usual weighting is
   the fit's most safety-relevant number) and tanks, since gas is never sized. Distinct from both "own kit" and "not asked yet" on
   a roster/manifest line, and sticky: editing sizes never clears it, only an explicit resolve does.
   See [20260724-gear-fit-fallback](../architecture/decisions/20260724-gear-fit-fallback.md).
@@ -2680,8 +2719,12 @@ new domain concept, define it here in the same PR.
   goes through a side-by-side **merge preview** (`divers/[personId]/merge/[survivorId]`): both
   records' particulars, what each holds, and a choice wherever they disagree (name, date of birth,
   email, phone, emergency contact as one pair, rental sizes as one profile), the kept record's value
-  preselected. A departure both records sit on refuses the merge until staff move the seat, and so
-  does a seat on a departure that is out right now ("Merge after the boat is back"). Two different
+  preselected. Two *live* seats on one departure refuse the merge until staff cancel or move one,
+  and so does a live seat on the record merged away beside a cancelled one on the record kept
+  (keep the other record instead); a cancelled seat on the record merged away does not refuse, it
+  becomes a **seat left behind** (issue #2177). A seat on a departure that is out right now refuses
+  too ("Merge after the boat is back"). On the departure both records shared, the merged-away
+  record's duplicate wait-list entry or invitation is dropped and the kept record's stands. Two different
   dates of birth, one date missing where only the name matches, cards or signed releases on both
   records, releases signed under names that do not match, or a medical answer still waiting on (or
   declined by) a physician mean the two may be **two people**, and the merge runs only after the
@@ -2691,6 +2734,13 @@ new domain concept, define it here in the same PR.
   record merged away is deleted with a pointer to the one kept (`people.merged_into_person_id`), so
   its old links land on the kept record, and the kept record's trail says who merged which name
   into it (`diver_merged`).
+- **Seat left behind** — a **cancelled** seat that stays on the record **merged away**, because the
+  record kept holds its own seat on the same departure and `bookings` allows one seat per diver per
+  departure (`assessMerge`, `src/db/diver-merge.ts`; issue #2177). Only the booking row stays: its
+  pointer and the departure log are untouched, while the release, order and notes tied to it move to
+  the kept record with the rest of the diver's file (their `booking_id` still names the seat). Only
+  the seat's own `cancelled` status qualifies; a live seat is never left behind, on a deleted
+  departure or anywhere else.
 - **Remove vs. erase (a diver)** — two different operations, deliberately not the same button.
   **Removing** a diver is the reversible archive action every entity has
   ([20260719-crud-archive-semantics](../architecture/decisions/20260719-crud-archive-semantics.md)):

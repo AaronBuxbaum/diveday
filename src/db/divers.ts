@@ -20,6 +20,7 @@ import { nowDate } from "@/lib/clock";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
+import { diveDay } from "./dive-days";
 import { listOrdersForPerson } from "./orders";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { listPersonBookingPayments } from "./payments";
@@ -30,7 +31,6 @@ import {
   bookings,
   certifications,
   courses,
-  executedDives,
   nitroxCertifications,
   people,
   personRoles,
@@ -40,13 +40,33 @@ import {
   specialtyCertifications,
   trips,
 } from "./schema";
-import { liveTrip } from "./trips-live";
 import {
   getCurrentWaiverTemplate,
   getDiverWaiverChannelStates,
   getDiverWaiverRequestStatus,
   listSignedWaiversByPerson,
 } from "./waivers";
+
+/**
+ * The live person in this shop who owns an email, or null. The email is the
+ * identity key (people_shop_email_unique), so this is how a caller that was
+ * refused a second row finds the first: matched case-insensitively against
+ * the stored lower-case form, and never a removed person.
+ */
+export async function findLiveDiverIdByEmail(
+  db: AppDb,
+  shopId: string,
+  email: string,
+): Promise<string | null> {
+  const key = email.trim().toLowerCase();
+  if (!key) return null;
+  const [row] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.shopId, shopId), eq(people.email, key), isNull(people.deletedAt)))
+    .limit(1);
+  return row?.id ?? null;
+}
 
 export type NewDiver = {
   shopId: string;
@@ -73,16 +93,7 @@ export async function createDiver(db: AppDb, input: NewDiver) {
   // stored form: a person whose only name is their number reads better as
   // "+1 305 555 0110" than as "+13055550110", and the name is not a key.
   const fullName = input.fullName?.trim() || email || typed || "Unnamed diver";
-  if (email) {
-    const [existing] = await db
-      .select({ id: people.id })
-      .from(people)
-      .where(
-        and(eq(people.shopId, input.shopId), eq(people.email, email), isNull(people.deletedAt)),
-      )
-      .limit(1);
-    if (existing) return null;
-  }
+  if (email && (await findLiveDiverIdByEmail(db, input.shopId, email))) return null;
 
   try {
     return await db.transaction(async (tx) => {
@@ -824,35 +835,15 @@ export type SimilarDiver = {
    * The most recent departure this diver was actually on, or null when this
    * shop has no dive day on file for them.
    *
-   * **The same evidence rule `peopleWhoDivedBefore` uses**
-   * (src/db/executed-dives.ts): a non-cancelled, non-`no_show` booking, on a
-   * live departure the shop still says ran, that has already left — plus that
-   * reader's one escape, a blown-out departure the crew logged dives on. The
-   * two may not disagree about what a dive day is: one of them would then be
-   * telling a staffer something the other refuses.
-   *
-   * **A released seat is not a dive day here either** (`dive-domain-expert`,
-   * 2026-09-11). Both readers used to let a standing desk sighting outrank a
-   * `no_show`, against a close-of-day sweep that does not exist; the only
-   * writer of that status is one staffer's deliberate tap, always later than
-   * the check-in it overwrites, so the escape told the next staffer this
-   * person dived here on a morning the shop's own record says they never came
-   * — and that is the fact the counter's identity question turns on. The full
-   * argument sits on the `no_show` clause in `peopleWhoDivedBefore`.
-   *
-   * What still differs between the three readers is the *trip-status* leg: the
-   * recap's dive-day count (`getRecapPageData`, src/db/recap.ts) takes a plain
-   * non-`scheduled` departure as disqualifying, with no escape for a crew-logged dive. That gap is
-   * affordable in this direction only. This prompt asks *who is standing at
-   * the counter*, and it asks a staffer who can see them, so naming a day they
-   * do not recognise costs a shake of the head while withholding one costs the
-   * match — and a duplicate record is what later hides a certification or a
-   * signed waiver from a roster. The recap tells the diver "your 3rd dive day"
-   * with nobody there to correct it, and feeds `visitMilestone`'s exact
-   * equality on {1, 10, 25, 50, 100}, where a day that moves does not blur a
-   * stamp but skips it permanently. Putting all four behind one predicate is
-   * issue #1694; it is a change to what a diver's keepsake counts, not a
-   * tidy-up, which is why it is not done here.
+   * **A dive day is `diveDay()`** (`src/db/dive-days.ts`, issue #1694): a
+   * booking that is neither cancelled nor `no_show`, on a live departure the
+   * shop still says ran or the crew logged a dive on, that has already left.
+   * The recap's count reads the same predicate, so this prompt never names a
+   * day the diver's own recap refuses to count. A `no_show` has no escape
+   * (`dive-domain-expert`, 2026-09-11); the argument is on
+   * `seatCanBeDiveDay`. The fly-safe reader alone widens the rule, letting a
+   * roll-call boarding outrank a later cancellation; this prompt would rather
+   * ask the staffer, who can see the person, than assume.
    *
    * **Whether a null says anything on screen is not this reader's call**: it
    * speaks when a sibling candidate has a day and is silent when they all
@@ -910,16 +901,6 @@ export async function findSimilarDivers(
     .select({ personId: bookings.personId, lastDiveDayAt: max(trips.startsAt) })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
-    // Only so a logged dive can speak for a departure the shop later marked
-    // something other than `scheduled` — see the trip-status clause below.
-    .leftJoin(
-      executedDives,
-      and(
-        eq(executedDives.tripId, trips.id),
-        eq(executedDives.shopId, shopId),
-        isNull(executedDives.deletedAt),
-      ),
-    )
     .where(
       and(
         // Both tables scoped, not only the one this read starts from: this
@@ -927,16 +908,9 @@ export async function findSimilarDivers(
         eq(bookings.shopId, shopId),
         eq(trips.shopId, shopId),
         inArray(bookings.personId, ids),
-        // The four clauses below are `peopleWhoDivedBefore`'s dive-day rule
-        // (`src/db/executed-dives.ts`), which is where each one is argued and
-        // where a change to any of them belongs. Restated as a query rather
-        // than shared because that reader answers "has this person dived
-        // before" per person and this one needs the day itself; the rule may
-        // not drift apart, and `SimilarDiver.lastDiveDayAt` says why.
-        ne(bookings.status, "cancelled"),
-        ne(bookings.status, "no_show"),
-        or(eq(trips.status, "scheduled"), isNotNull(executedDives.id)),
-        liveTrip(),
+        // The one dive-day rule (`src/db/dive-days.ts`), shared with the
+        // recap's count and the fly-safe advisory.
+        diveDay(),
         lt(trips.startsAt, now),
       ),
     )

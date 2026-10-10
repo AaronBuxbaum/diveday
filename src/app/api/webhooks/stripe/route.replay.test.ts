@@ -23,7 +23,7 @@ import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
  * is exactly a sequence of committed deliveries — but it can NOT exercise two
  * transactions genuinely racing on the same row (`FOR UPDATE` contention,
  * claim upsert races). Those concurrency guards need real multi-connection
- * Postgres, which is HD-19's CI job (docs/product/human-decisions.md), a
+ * Postgres, which is HD-19's CI job (docs/product/human-decisions/README.md), a
  * human spend decision outside this suite's scope. Do not mistake green here
  * for race coverage.
  */

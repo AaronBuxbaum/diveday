@@ -211,7 +211,7 @@ describe("the merge preview", () => {
     const f = await fixtures();
     await f.db
       .insert(bookings)
-      .values({ shopId: f.shop.id, tripId: f.trip.id, personId: f.source.id });
+      .values({ shopId: f.shop.id, tripId: f.trip.id, bookedAs: "diver", personId: f.source.id });
     await signedRelease(f.db, f.shop.id, f.source.id, "Maya Rivera", true);
     await f.db.insert(rentalFitProfiles).values([
       { shopId: f.shop.id, personId: f.source.id, bcdSize: "M", finSize: "M" },
@@ -237,18 +237,59 @@ describe("the merge preview", () => {
     expect(preview?.warnings).toEqual([]);
   });
 
-  it("names every departure both records sit on, and refuses even when one seat is cancelled", async () => {
+  it("names every departure both records hold a live seat on", async () => {
     const f = await fixtures();
     await f.db.insert(bookings).values([
-      { shopId: f.shop.id, tripId: f.trip.id, personId: f.source.id },
-      { shopId: f.shop.id, tripId: f.trip.id, personId: f.survivor.id, status: "cancelled" },
+      { shopId: f.shop.id, tripId: f.trip.id, bookedAs: "diver", personId: f.source.id },
+      { shopId: f.shop.id, tripId: f.trip.id, bookedAs: "diver", personId: f.survivor.id },
     ]);
     const preview = await getDiverMergePreview(f.db, f.shop.id, f.source.id, f.survivor.id);
     expect(preview?.refusal).toBe("booking_conflict");
     expect(preview?.sharedDepartures).toEqual([
-      expect.objectContaining({ tripId: f.trip.id, title: f.trip.title }),
+      expect.objectContaining({ tripId: f.trip.id, title: f.trip.title, keptSeatOver: false }),
     ]);
     expect(await merge(f)).toEqual({ ok: false, reason: "booking_conflict" });
+  });
+
+  it("says when the kept record's seat is the cancelled one, so the fix is keeping the other", async () => {
+    const f = await fixtures();
+    await f.db.insert(bookings).values([
+      { shopId: f.shop.id, tripId: f.trip.id, bookedAs: "diver", personId: f.source.id },
+      {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        bookedAs: "diver",
+        personId: f.survivor.id,
+        status: "cancelled",
+      },
+    ]);
+    const preview = await getDiverMergePreview(f.db, f.shop.id, f.source.id, f.survivor.id);
+    expect(preview?.refusal).toBe("booking_conflict");
+    expect(preview?.sharedDepartures).toEqual([
+      expect.objectContaining({ tripId: f.trip.id, keptSeatOver: true }),
+    ]);
+    // The other way round, nothing refuses.
+    const flipped = await getDiverMergePreview(f.db, f.shop.id, f.survivor.id, f.source.id);
+    expect(flipped?.refusal).toBeNull();
+  });
+
+  it("does not count a cancelled seat it leaves behind as moving (issue #2177)", async () => {
+    const f = await fixtures();
+    const before = await getDiverMergePreview(f.db, f.shop.id, f.source.id, f.survivor.id);
+    await f.db.insert(bookings).values([
+      {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        bookedAs: "diver",
+        personId: f.source.id,
+        status: "cancelled",
+      },
+      { shopId: f.shop.id, tripId: f.trip.id, bookedAs: "diver", personId: f.survivor.id },
+    ]);
+    const preview = await getDiverMergePreview(f.db, f.shop.id, f.source.id, f.survivor.id);
+    expect(preview?.refusal).toBeNull();
+    expect(preview?.sharedDepartures).toEqual([]);
+    expect(preview?.source.counts.bookings).toBe(before?.source.counts.bookings);
   });
 
   it("warns when the birth dates differ or releases were signed under different names", async () => {
@@ -319,7 +360,7 @@ describe("the merge preview", () => {
       .where(eq(trips.id, f.trip.id));
     await f.db
       .insert(bookings)
-      .values({ shopId: f.shop.id, tripId: f.trip.id, personId: f.survivor.id });
+      .values({ shopId: f.shop.id, tripId: f.trip.id, bookedAs: "diver", personId: f.survivor.id });
     const preview = await getDiverMergePreview(f.db, f.shop.id, f.source.id, f.survivor.id);
     expect(preview?.refusal).toBe("departure_underway");
     expect(await merge(f)).toEqual({ ok: false, reason: "departure_underway" });
@@ -502,7 +543,7 @@ describe("two people's legal records", () => {
       .where(eq(trips.id, f.trip.id));
     const [seat] = await f.db
       .insert(bookings)
-      .values({ shopId: f.shop.id, tripId: f.trip.id, personId: child.id })
+      .values({ shopId: f.shop.id, tripId: f.trip.id, bookedAs: "diver", personId: child.id })
       .returning({ id: bookings.id });
     if (!seat) throw new Error("booking insert failed");
     const yesterday = new Date(nowDate().getTime() - 24 * HOUR);

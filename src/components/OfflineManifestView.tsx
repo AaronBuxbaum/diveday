@@ -133,6 +133,17 @@ export function OfflineManifestView() {
   //    branch is chosen by an ordinary client render instead of by error
   //    recovery.
   const [storeRead, setStoreRead] = useState(false);
+  // A marker for the tools that photograph this page (`scripts/screenshot.mjs`,
+  // issue #2235): set on the document once the store has been read, so a
+  // capture waits for the real branch rather than the "Opening…" one below.
+  // It changes nothing anyone sees.
+  useEffect(() => {
+    if (!storeRead) return;
+    document.documentElement.dataset.offlineSettled = "";
+    return () => {
+      delete document.documentElement.dataset.offlineSettled;
+    };
+  }, [storeRead]);
   /**
    * Unsynced roll call this device threw away at the retention ceiling
    * (`OFFLINE_MANIFEST_PENDING_GRACE_MS`). Read from storage rather than
@@ -146,21 +157,6 @@ export function OfflineManifestView() {
   // Its own busy key, like the checklist's: a counter tap must never appear to
   // disable a diver's roll-call row, and vice versa.
   const [busyArrival, setBusyArrival] = useState<string | null>(null);
-  /**
-   * The one row whose "aboard" control is currently asking to be confirmed —
-   * a booking id or a crew person id, never more than one at a time (ADR
-   * 20260815-offline-can-unsay-a-missing-diver).
-   *
-   * Only a row that reads **not back aboard** ever enters this state. Asserting
-   * somebody is back on the boat over a stated missing-diver mark is the one
-   * tap on this surface that turns the loudest row the product has into green,
-   * and the two controls stack full-width and adjacent on a phone held in a wet
-   * hand on a rolling deck. The second tap names the person — a generic "Are
-   * you sure?" is the dialog people learn to dismiss without reading — and
-   * everything else on this screen stays one tap, including taking the mark
-   * back off, which must never be the harder direction.
-   */
-  const [confirmAboardFor, setConfirmAboardFor] = useState<string | null>(null);
   /**
    * What the crew is typing about a person who is unaccounted for, keyed by the
    * booking or person id the row is about (ADR
@@ -642,10 +638,6 @@ export function OfflineManifestView() {
      */
     standing?: Pick<OfflineRollCallResult, "state" | "implied">,
   ) {
-    // Whatever this tap turns out to be, no confirmation is left armed behind
-    // it — including the refusals below, which end the act just as finally as a
-    // write does.
-    setConfirmAboardFor(null);
     if (expired) {
       setMessage(t("shared.offlineManifest.single.record.expiredCannotRecord"));
       return;
@@ -799,8 +791,6 @@ export function OfflineManifestView() {
     busyBooking,
     busyChecklistItem,
     busyArrival,
-    confirmAboardFor,
-    setConfirmAboardFor,
     noteDrafts,
     setNoteDrafts,
     record,
@@ -878,13 +868,7 @@ export function OfflineManifestView() {
             <button
               key={value}
               type="button"
-              onClick={() => {
-                // A pending confirmation belongs to the row *and the checkpoint*
-                // it was raised on; carrying it across would leave a "Confirm
-                // Maya is aboard" armed on a different head count.
-                setConfirmAboardFor(null);
-                setCheckpoint(value);
-              }}
+              onClick={() => setCheckpoint(value)}
               className={buttonClass({
                 variant: value === checkpoint ? "primary" : "secondary",
                 size: "boat",

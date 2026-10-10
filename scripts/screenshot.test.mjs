@@ -20,7 +20,8 @@ import { describe, expect, it } from "vitest";
  * selector is still handed across the boundary rather than closed over.
  */
 describe("the skeleton wait", () => {
-  const source = readFileSync(path.join(process.cwd(), "scripts/screenshot.mjs"), "utf8");
+  // Shared with scripts/contact-sheet.mjs since issue #1885.
+  const source = readFileSync(path.join(process.cwd(), "scripts/capture-session.mjs"), "utf8");
   // Bounded to this one call. The file has a second `waitForFunction` whose
   // predicate genuinely takes no argument — it reads `document.title`, a
   // browser global that exists on the far side — and that one is correct.
@@ -53,12 +54,17 @@ describe("the skeleton wait", () => {
  * printed. Sessions read that as "rate-limited, wait it out", and waited.
  */
 describe("the staff sign-in", () => {
-  const source = readFileSync(path.join(process.cwd(), "scripts/screenshot.mjs"), "utf8");
+  // The sign-in itself lives in scripts/capture-session.mjs, shared with the
+  // contact sheet since issue #1885; screenshot.mjs calls it once per run.
+  const source = readFileSync(path.join(process.cwd(), "scripts/capture-session.mjs"), "utf8");
+  const script = readFileSync(path.join(process.cwd(), "scripts/screenshot.mjs"), "utf8");
 
   it("submits the form once per run and hands the session to every context as storage state", () => {
     expect(source.match(/getByRole\("button", \{ name: "Sign in" \}\)/g)).toHaveLength(1);
+    expect(script).not.toMatch(/name: "Sign in"/);
+    expect(script.match(/await signInOnce\(/g)).toHaveLength(1);
     // The capture contexts take the minted session rather than earning their own.
-    const captureContext = source.slice(source.indexOf("reducedMotion:"));
+    const captureContext = script.slice(script.indexOf("reducedMotion:"));
     expect(captureContext).toMatch(/storageState,/);
   });
 

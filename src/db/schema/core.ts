@@ -714,16 +714,19 @@ export const people = pgTable(
      */
     crewPublicName: text("crew_public_name"),
     /**
-     * Set once this person self-serves out of courtesy email — wait-list
-     * openings (`waitlist_invite`) and post-trip recaps (`trip_recap`), the two
-     * kinds that ask something of the diver's attention beyond their own
-     * booking rather than confirm or protect it (docs features/story-backlog.md "Leo —
+     * Set once this person self-serves out of courtesy email — every kind
+     * that asks something of the diver's attention beyond their own booking
+     * rather than confirming or protecting it: wait-list openings, post-trip
+     * recaps, checkout reminders and cold staff invitations. The list itself
+     * lives on `issuePersonCourtesyEmailUnsubscribeToken` in
+     * `src/db/courtesy-email.ts` (docs features/story-backlog.md "Leo —
      * self-serve email unsubscribe"). Deliberately narrower than
      * `lastMinuteListEntries.unsubscribedAt`: that column opts a person out of
-     * a *list they joined*, this one opts a person out of two notification
-     * *kinds* everyone is eligible for, so it can't reuse the same row. Never
-     * suppresses booking confirmations, waiver requests, trip reminders, or a
-     * conditions hold — those stay mandatory regardless of this flag.
+     * a *list they joined*, this one opts a person out of the courtesy
+     * notification *kinds* everyone is eligible for, so it can't reuse the
+     * same row. Never suppresses booking confirmations, waiver requests, trip
+     * reminders, or a conditions hold — those stay mandatory regardless of
+     * this flag.
      */
     courtesyEmailOptOutAt: timestamp("courtesy_email_opt_out_at", { withTimezone: true }),
     /** Keeps history intact while removing a person from active shop workspaces. */

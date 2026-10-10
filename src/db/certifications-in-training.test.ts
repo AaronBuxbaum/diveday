@@ -175,7 +175,7 @@ describe("a fun dive after the course that certifies for it", () => {
   });
 
   it("leaves the course prerequisite as it was: Advanced still asks for a certified Open Water card", async () => {
-    // H-08's course baseline (human-decisions.md, "Course admission") is the
+    // H-08's course baseline (human-decisions/README.md, "Course admission") is the
     // owner's rule; enrolling in Open Water does not stand in for the card.
     const { db, shop } = ctx;
     const start = BASE() + 10 * DAY;

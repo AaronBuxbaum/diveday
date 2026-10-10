@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, isNull, lt, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS } from "@/lib/fly-safe";
@@ -6,6 +6,7 @@ import { PLAN_CHANGE_NOTE_MAX, type PlanChangeReason } from "@/lib/plan-change";
 import { standingResultMeansSailed } from "@/lib/roll-call";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
+import { deskCountsDiveDay, seatCanBeDiveDay } from "./dive-days";
 import { isMarineLifeSlug } from "./marine-life-catalog";
 import {
   bookings,
@@ -121,11 +122,13 @@ export async function listExecutedDives(db: DbExecutor, shopId: string, tripId: 
  * diver the single-day figure, which is the failure this reader exists to
  * prevent.
  *
- * This deliberately makes the opposite trade from the counter's identity
- * prompt in `src/db/divers.ts`, which would rather ask a human than assume.
- * That reader decides whether to *interrupt* someone; this one decides how long
- * a diver waits before flying. Anyone unifying the "did this person dive"
- * readers (issue #1694) should keep them able to disagree.
+ * The dive-day rule itself is shared (`src/db/dive-days.ts`, issue #1694):
+ * this reader calls its two halves apart so the roll call can outrank the
+ * desk's, and that escape is the only way it may disagree with the others.
+ * It deliberately makes the opposite trade from the counter's identity prompt
+ * in `src/db/divers.ts`, which would rather ask a human than assume. That
+ * reader decides whether to *interrupt* someone; this one decides how long a
+ * diver waits before flying.
  */
 export async function peopleWhoDivedBefore(
   db: DbExecutor,
@@ -157,22 +160,12 @@ export async function peopleWhoDivedBefore(
       bookingId: bookings.id,
       tripId: trips.id,
       startsAt: trips.startsAt,
-      bookingStatus: bookings.status,
-      tripStatus: trips.status,
-      loggedDiveId: executedDives.id,
+      // The desk's words on this seat (`deskCountsDiveDay`), which only this
+      // reader lets the roll call outrank; see `sailedByRollCall`.
+      deskCounts: sql<boolean>`${deskCountsDiveDay()}`,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
-    // Only to let a logged dive speak for a departure the shop later marked
-    // something other than `scheduled`: see `deskSaysItRan`.
-    .leftJoin(
-      executedDives,
-      and(
-        eq(executedDives.tripId, trips.id),
-        eq(executedDives.shopId, shopId),
-        isNull(executedDives.deletedAt),
-      ),
-    )
     .where(
       and(
         // Both tables scoped, not only the one this read starts from: a
@@ -181,29 +174,14 @@ export async function peopleWhoDivedBefore(
         eq(bookings.shopId, shopId),
         eq(trips.shopId, shopId),
         inArray(bookings.personId, [...personIds]),
-        // **A no-show excludes, with no escape**, the roll call included
-        // (issue #1558, settled the other way by a `dive-domain-expert` review
-        // on 2026-09-11). This clause used to let a standing tokenless
-        // `arrived` row outrank the status slot, on the reasoning that a
-        // close-of-day sweep would otherwise erase the fact that a staffer
-        // stood in front of this diver at 06:40. There is no such sweep and
-        // there never was: `markBookingNoShow` (`src/db/no-show.ts`) is the
-        // only writer of `no_show`, it is one staffer's deliberate tap on one
-        // seat, and `checkInBooking` refuses anything but a `booked` seat — so
-        // the sighting is *always* older than the mark. The escape could only
-        // ever let an earlier human statement beat a later human correction,
-        // which is the opposite of the newest-row-wins rule the arrival trail
-        // is built on. A boarding needs no escape either: both roll-call
-        // writers reclaim a `no_show` seat to `booked` when they record one.
-        //
+        // The half of the one dive-day rule nothing outranks
+        // (`src/db/dive-days.ts`, issue #1694): a `no_show` is never a dive
+        // day, the roll call included, and a deleted departure is not a day.
         // `cancelled` is the opposite case and is *not* filtered here. A
         // cancellation is a re-papering of the sale — it can land days later,
         // on a seat somebody really did board — and says nothing about the
         // dock, so the roll call is asked about it below.
-        ne(bookings.status, "no_show"),
-        // A deleted departure is off the board, and here that reads as a row
-        // staff say should not exist rather than a day to count.
-        liveTrip(),
+        seatCanBeDiveDay(),
         gte(trips.startsAt, new Date(departureStartsAt.getTime() - slack)),
         lt(trips.startsAt, new Date(departureStartsAt.getTime() + slack)),
       ),
@@ -211,8 +189,7 @@ export async function peopleWhoDivedBefore(
 
   const dived = new Set<string>();
   // Seats whose day only the desk's status words strike, kept to ask the roll
-  // call about. Keyed by booking, so a departure with several logged dives (a
-  // joined row each) is asked about once.
+  // call about, keyed by booking.
   const contested = new Map<string, ContestedSeat>();
   for (const row of rows) {
     // Any departure that already sailed, from the first day of the window
@@ -223,7 +200,7 @@ export async function peopleWhoDivedBefore(
     // departure's dives and would otherwise read a two-boat day as a single.
     if (row.startsAt.getTime() >= departureStartsAt.getTime()) continue;
     if (calendarDateInTimezone(row.startsAt, timeZone) < firstDay) continue;
-    if (deskSaysItRan(row)) dived.add(row.personId);
+    if (row.deskCounts) dived.add(row.personId);
     else contested.set(row.bookingId, { personId: row.personId, tripId: row.tripId });
   }
   for (const [bookingId, seat] of contested) {
@@ -236,28 +213,6 @@ export async function peopleWhoDivedBefore(
 }
 
 type ContestedSeat = { personId: string; tripId: string };
-
-/**
- * What the status columns alone say about a seat on a departure.
- *
- * A cancelled booking, or a departure marked something other than `scheduled`
- * with no live dive log on it, reads as "did not dive" here — and that is only
- * the desk's answer, which the roll call outranks (`sailedByRollCall`).
- *
- * A logged dive speaks for a departure the shop later marked `cancelled`: it is
- * affirmative evidence that people went in the water and beats a status column
- * changed afterwards for a refund or a re-papered charter. It does not speak
- * for a cancelled *booking*: the boat diving says nothing about whether this
- * seat was on it.
- */
-function deskSaysItRan(row: {
-  bookingStatus: string;
-  tripStatus: string;
-  loggedDiveId: string | null;
-}): boolean {
-  if (row.bookingStatus === "cancelled") return false;
-  return row.tripStatus === "scheduled" || row.loggedDiveId !== null;
-}
 
 /**
  * Which people a standing roll-call result puts at sea on their contested

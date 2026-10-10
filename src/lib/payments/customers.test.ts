@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { customerProviderFromEnvironment } from "./customers";
+import { ERASURE_FAILURE_DETAIL } from "./erasure-failure";
 
 function providerWith(env: Record<string, string | undefined>, fetchImpl: unknown) {
   return customerProviderFromEnvironment(env, fetchImpl as typeof fetch);
@@ -107,12 +108,13 @@ describe("stripe customer provider", () => {
     });
   });
 
-  it("turns a network throw into a failure, never an exception at the caller", async () => {
-    const fetchImpl = vi.fn().mockRejectedValue(new Error("ECONNRESET"));
+  it("turns a network throw into a fixed failure, never the thrown text or an exception", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockRejectedValue(new TypeError("fetch failed: email=nora@example.com"));
     const provider = providerWith(CONFIGURED, fetchImpl);
-    expect(await provider.deleteCustomer("acct_1", "cus_1", "key")).toEqual({
-      status: "failed",
-      error: "ECONNRESET",
-    });
+    const result = await provider.deleteCustomer("acct_1", "cus_1", "key");
+    expect(result).toEqual({ status: "failed", error: ERASURE_FAILURE_DETAIL.unanswered });
+    expect(JSON.stringify(result)).not.toContain("nora@example.com");
   });
 });

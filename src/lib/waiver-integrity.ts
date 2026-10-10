@@ -3,7 +3,7 @@ import type { WaiverRecord } from "@/db/schema";
 
 export type WaiverIntegrityState = "valid" | "invalid" | "unsealed";
 
-type IntegrityValue =
+export type IntegrityValue =
   | string
   | number
   | boolean
@@ -263,13 +263,22 @@ function integritySecret(): string {
   );
 }
 
+/**
+ * The keyed digest every signed-evidence seal is made of: the release's here,
+ * and a course form record's (`src/lib/course-form-integrity.ts`). One key and
+ * one canonical serialization, so the two cannot drift apart; each field set
+ * carries its own domain-separating key so a digest of one kind can never
+ * verify as the other.
+ */
+export function integrityDigest(value: IntegrityValue): string {
+  return createHmac("sha256", integritySecret()).update(stable(value)).digest("hex");
+}
+
 export function computeWaiverIntegrityHash(
   record: WaiverRecord,
   version: WaiverIntegrityVersion = WAIVER_INTEGRITY_VERSION_SIGNED,
 ): string {
-  return createHmac("sha256", integritySecret())
-    .update(stable(waiverIntegrityMetadata(record, version)))
-    .digest("hex");
+  return integrityDigest(waiverIntegrityMetadata(record, version));
 }
 
 export function verifyWaiverIntegrity(record: WaiverRecord): WaiverIntegrityState {

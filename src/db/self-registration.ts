@@ -3,7 +3,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { CourtesyProviders } from "@/lib/notifications/courtesy";
 import { NOTHING_RENTED } from "@/lib/rentals";
-import type { SelfDeclaredLevel } from "@/lib/self-registration";
+import type { SelfDeclaredAgency, SelfDeclaredLevel } from "@/lib/self-registration";
 import type { AppDb } from "./client";
 import { findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
@@ -62,7 +62,7 @@ export type SelfRegistrationInput = {
   email: string | null;
   phone?: string;
   certification?: {
-    agency: "padi" | "ssi" | "naui" | "sdi" | "raid" | "bsac" | "cmas" | "other";
+    agency: SelfDeclaredAgency;
     level: SelfDeclaredLevel;
     identifier?: string;
   };

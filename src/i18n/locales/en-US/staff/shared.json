@@ -379,15 +379,15 @@
       "rentalFit": "Rental fit",
       "nitroxRequestedSuffix": "· Nitrox requested",
       "saving": "Saving…",
-      "boardedDone": "Boarded",
       "markBoarded": "Mark boarded",
       "notBoardedDone": "Not boarded",
       "markNotBoarded": "Mark not boarded",
       "notBackAboardActive": "Not back aboard",
       "markNotBackAboard": "Mark not back aboard",
+      "exceptionSummaryDeparture": "Not boarding?",
+      "exceptionSummaryAfterDive": "Not back aboard?",
+      "exceptionSummaryRecorded": "Change this result",
       "confirmAboard": "Confirm {name} is aboard",
-      "confirmAboardHint": "Tap again to record that you can see {name} and they are back on the boat.",
-      "confirmAboardCancel": "Keep “not back aboard”",
       "markedElsewhere": "Recorded on another device or on the live manifest. Undo it there, not here.",
       "openLiveManifest": "Open live manifest",
       "record": {
@@ -457,8 +457,8 @@
     "ownKit": "Own kit",
     "needsStaffFit": "Needs staff fit at check-in",
     "needsStaffFitWithNote": "Needs staff fit — {note}",
-    "drysuitCardMissing": "In a drysuit with no drysuit certification on file. This is not a block: check what they hold, or plan an orientation before the first dive.",
-    "drysuitCardUnconfirmed": "In a drysuit, and the drysuit certification on file is not confirmed. This is not a block: confirm the certification on their record, or plan an orientation before the first dive."
+    "drysuitCardMissing": "Dives dry with no drysuit certification on file. Not a block: ask about their drysuit experience, or plan an orientation before the first dive.",
+    "drysuitCardUnconfirmed": "Dives dry, and their drysuit certification is not confirmed. Not a block: confirm it on their record, or plan an orientation before the first dive."
   },
   "rollCallCheckpoint": {
     "departure": "Before departure",
@@ -545,6 +545,7 @@
     "reasonSameName": "More than one diver is named {name}. Confirm this is the right record.",
     "contactOnFile": "On file for {name}:",
     "noContactOnFile": "No email or phone on file for {name}.",
+    "remindersHeld": "Reminders and the waiver wait until you confirm who this is.",
     "same": "Same person",
     "sameAria": "Same person as {name}",
     "different": "Different person",

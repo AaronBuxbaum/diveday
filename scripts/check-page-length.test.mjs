@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   comparePageLengths,
   countLines,
-  growthAgainst,
   nextBaseline,
   PAGE_LINE_LIMIT,
 } from "./check-page-length.mjs";
@@ -60,18 +59,5 @@ describe("writing the baseline", () => {
       ["src/app/c/page.tsx", 400],
     ]);
     expect(Object.keys(nextBaseline(counts))).toEqual(["src/app/a/page.tsx", "src/app/b/page.tsx"]);
-  });
-
-  it("names a rise and a newcomer as growth, and a fall as none", () => {
-    const baseline = { "src/app/a/page.tsx": 450, "src/app/b/page.tsx": 600 };
-    const next = {
-      "src/app/a/page.tsx": 460,
-      "src/app/b/page.tsx": 500,
-      "src/app/c/page.tsx": 401,
-    };
-    expect(growthAgainst(next, baseline).map(([file]) => file)).toEqual([
-      "src/app/a/page.tsx",
-      "src/app/c/page.tsx",
-    ]);
   });
 });

@@ -757,6 +757,21 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     expect(screen.queryByText(/Pilar Vega/)).toBeNull();
   });
 
+  // Issue #2124: `sendDueReminders` holds a held seat's readiness reminders
+  // until staff confirm who it is, so the row says so beside the way to ask.
+  it("says the held seat's reminders wait on the confirm", () => {
+    renderRoster({
+      roster: [matched],
+      readiness: unconfirmed,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+
+    expect(screen.getByTestId("identity-contact")).toHaveTextContent(
+      "Reminders and the waiver wait until you confirm who this is.",
+    );
+  });
+
   it("says so when the record has no email or phone to ask", () => {
     renderRoster({
       roster: [{ ...matched, person: { ...matched.person, email: null } } as RosterEntry],
@@ -919,7 +934,7 @@ describe("a diver in a drysuit with no drysuit card", () => {
 
     expect(
       screen.getByText(
-        "In a drysuit with no drysuit certification on file. This is not a block: check what they hold, or plan an orientation before the first dive.",
+        "Dives dry with no drysuit certification on file. Not a block: ask about their drysuit experience, or plan an orientation before the first dive.",
       ),
     ).toBeInTheDocument();
     // The advisory is not a blocker, so the seat is still cleared.
@@ -937,7 +952,7 @@ describe("a diver in a drysuit with no drysuit card", () => {
       rentalFit: drysuitFit(false, true),
     });
 
-    expect(screen.getByText(/^In a drysuit with no drysuit certification on file/)).toBeVisible();
+    expect(screen.getByText(/^Dives dry with no drysuit certification on file/)).toBeVisible();
   });
 
   it("says nothing when the diver holds the card", () => {

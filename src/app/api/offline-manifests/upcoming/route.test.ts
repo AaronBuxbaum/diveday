@@ -253,12 +253,14 @@ describe("GET /api/offline-manifests/upcoming", () => {
 
   /**
    * F4, security review of this PR. The gate used to read the roles baked into
-   * the JWT at sign-in, and no `maxAge` is set on the session
-   * (src/lib/auth.config.ts) so NextAuth's 30-day default applies. `/api/**` is
-   * excluded from the edge gate (src/proxy.ts ~112), so this handler is the only
-   * wall — which meant a staffer removed from the shop kept pulling its entire
-   * 48-hour board, diver names and emergency contacts and medical/readiness
-   * blockers, from any device they were still signed in on, for up to a month.
+   * the JWT at sign-in, and the session it came from lasted thirty days
+   * (NextAuth's default, before the move to Better Auth; src/lib/auth.ts sets
+   * no `expiresIn` now, so the default is seven days, renewed while in use).
+   * `/api/**` is excluded from the edge gate (src/proxy.ts ~112), so this
+   * handler is the only wall — which meant a staffer removed from the shop kept
+   * pulling its entire 48-hour board, diver names and emergency contacts and
+   * medical/readiness blockers, from any device they were still signed in on,
+   * for up to a month.
    */
   describe("live roles, not the ones the token was stamped with", () => {
     it("refuses a caller whose person_roles rows are gone, token still saying owner", async () => {

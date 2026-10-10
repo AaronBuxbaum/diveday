@@ -32,6 +32,7 @@ import { calendarDateWeekday, isValidCalendarDate } from "@/lib/calendar-date";
 import { tideWindowsForDeparture } from "@/lib/departure-tides";
 import { parseDockDayRhythm } from "@/lib/diver-planning";
 import { formatWallTime } from "@/lib/forgiving-fields";
+import { parseForm } from "@/lib/form-parse";
 import { formatTime } from "@/lib/format";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { minorToMajor } from "@/lib/money";
@@ -52,6 +53,8 @@ import { uuidParam } from "@/lib/uuid";
 import type { PatternDeparture } from "@/lib/weekday-pattern";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import type { BuilderPattern, BuilderTideWindowInput } from "./_components/ScheduleBuilder";
+
+const removeDepartureForm = z.object({ tripId: z.uuid() });
 
 /* -------------------------------------------------------------------------- *
  * The schedule builder
@@ -859,13 +862,13 @@ export async function duplicateDepartureAction(shopSlug: string, formData: FormD
 export async function removeDepartureAction(shopSlug: string, formData: FormData) {
   const back = boardPath(shopSlug);
   const { session, db, shop } = await requireBoardAuthor(shopSlug);
-  const tripId = z.uuid().safeParse(formData.get("tripId"));
-  if (!tripId.success) {
+  const tripId = parseForm(removeDepartureForm, formData);
+  if (!tripId.ok) {
     await trackEvent({ name: "schedule_builder_action", action: "remove", outcome: "invalid" });
     redirect(`${back}?builder=invalid`);
   }
 
-  const outcome = await deleteTrip(db, shop.id, tripId.data);
+  const outcome = await deleteTrip(db, shop.id, tripId.data.tripId);
   if (!outcome.ok) {
     await trackEvent({
       name: "schedule_builder_action",
@@ -878,7 +881,7 @@ export async function removeDepartureAction(shopSlug: string, formData: FormData
   await recordShopActivity(db, {
     shopId: shop.id,
     actorPersonId: session.user.personId,
-    write: { code: "departure_deleted", tripId: tripId.data },
+    write: { code: "departure_deleted", tripId: tripId.data.tripId },
   });
   revalidateAndRedirect(back, `${back}?builder=removed`);
 }

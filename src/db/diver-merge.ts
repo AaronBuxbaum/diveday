@@ -23,6 +23,7 @@ import {
 import { normalizePersonName, personNamesMatch } from "@/lib/person-name";
 import { hasReturned } from "@/lib/trips";
 import { isStandingRefusal, isUnresolvedMedicalHold } from "@/lib/waivers";
+import { refileCourseFormRecords } from "./course-forms";
 import { liveTrip } from "./trips-live";
 import { refileWaiverRecords } from "./waiver-refile";
 
@@ -134,6 +135,16 @@ export type DiverMergeResult =
  */
 const SINGLETON_PER_PERSON_TABLES = ["rental_fit_profiles", "last_minute_list_entries"] as const;
 
+/**
+ * Tables unique on `(trip_id, person_id)` besides `bookings`. Both records on
+ * one departure's wait list, or both invited to it, would collide on the
+ * repoint; the kept record's row stands and the merged-away duplicate goes,
+ * as `SINGLETON_PER_PERSON_TABLES` does per person. Now reachable, because a
+ * cancelled seat no longer refuses a merge on a departure both records share
+ * (issue #2177).
+ */
+const ONE_PER_DEPARTURE_PER_PERSON_TABLES = ["trip_waitlist_entries", "trip_invitations"] as const;
+
 export const DIVER_HISTORY_TABLES = [
   "course_inquiries",
   // What the bench told this diver about their own gear (ADR
@@ -152,8 +163,10 @@ export const DIVER_HISTORY_TABLES = [
   "orders",
   "waiver_records",
   // A signed course form, on the booking that moves with it (ADR
-  // 20261008-course-forms). No seal, so the plain repoint below carries it;
-  // its unique key is per booking, so the two sides cannot collide.
+  // 20261008-course-forms). `person_id` is inside its seal, so it moves
+  // through `refileCourseFormRecords`, which re-seals only a record that
+  // verified before the move; its unique key is per booking, so the two
+  // sides cannot collide.
   "course_form_records",
   "certifications",
   "specialty_certifications",
@@ -271,6 +284,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "executed_dives.recorded_by_person_id": "who logged the dive",
   "customer_gear_items.deleted_by_person_id": "who removed the piece from the record",
   "gear_items.deleted_by_person_id": "who retired the unit",
+  "gear_reservations.released_by_person_id": "who let go of the hold",
   "gear_service_events.recorded_by_person_id": "who serviced the unit",
   "internal_notes.created_by_person_id": "who wrote the note",
   "marine_life_requests.requested_by_person_id": "which staffer asked for the species",
@@ -545,12 +559,29 @@ function oldestDate(left: Date | null, right: Date | null): Date | null {
 type PersonRow = typeof people.$inferSelect;
 
 /** A departure both records hold a seat on, cancelled or not. */
-export type DiverMergeSharedDeparture = { tripId: string; title: string; startsAt: Date };
+export type DiverMergeSharedDeparture = {
+  tripId: string;
+  title: string;
+  startsAt: Date;
+  /**
+   * The kept record's seat here is cancelled, and the merged-away
+   * record's is live. Nothing on the departure needs resolving: keeping the
+   * other record instead leaves the cancelled seat behind (issue #2177).
+   */
+  keptSeatOver: boolean;
+};
 
 type MergeAssessment =
   | { ok: false; reason: DiverMergeRefusal; sharedDepartures: DiverMergeSharedDeparture[] }
   | {
       ok: true;
+      /**
+       * The merged-away record's seats that stay on it: each is cancelled, on a
+       * departure the kept record
+       * also holds a seat on, so the `(trip_id, person_id)` key has no room for
+       * it under the kept record (issue #2177).
+       */
+      seatsLeftBehind: string[];
       warnings: DiverMergeWarning[];
       /** The distinct names in play when a release is on file: signed names and both records' names. */
       releaseNames: string[];
@@ -664,32 +695,62 @@ async function assessMerge(
     return refuse("staff_record");
   }
 
-  // The unique `(trip_id, person_id)` booking key makes a shared trip a
-  // safety decision, not a generic data collision. Refuse it explicitly even
-  // when one of the two seats is cancelled or the departure was deleted: both
-  // records are still evidence about the same departure, and silently choosing
-  // one would rewrite the booking history. Staff resolve it on the departure
-  // first; the preview names each one so they know where to go.
+  // The unique `(trip_id, person_id)` booking key makes a shared departure a
+  // safety decision, not a generic data collision: two *live* seats on one
+  // boat usually mean two people, and silently choosing one would rewrite who
+  // was aboard. Staff resolve that on the departure first; the preview names
+  // each one so they know where to go.
+  //
+  // A *cancelled* seat is not that (issue #2177). Nothing can resolve it any further (a cancelled
+  // booking cannot be removed), so refusing on it blocked the merge forever.
+  // The merged-away record's over seat simply stays on that record, keeping
+  // its pointer and the departure log intact, and the kept record's seat is
+  // untouched. The one shape that still refuses is a live seat on the
+  // merged-away record beside an over seat on the kept one: the key has room
+  // for one seat, and the live seat must not be left on a removed record.
+  // Merged the other way round, that same pair is the first shape and merges.
+  //
+  // Fail closed: only the seat's own `cancelled` status makes it over. A seat
+  // on a deleted departure still counts as live here — `deleteTrip` refuses a
+  // departure with bookings today, but this check does not lean on that.
   const bookingRows = await db
-    .select({ personId: bookings.personId, tripId: bookings.tripId })
+    .select({
+      id: bookings.id,
+      personId: bookings.personId,
+      tripId: bookings.tripId,
+      status: bookings.status,
+    })
     .from(bookings)
     .where(and(eq(bookings.shopId, shopId), inArray(bookings.personId, ids)));
-  const tripOwners = new Map<string, Set<string>>();
+  const seatIsOver = (row: (typeof bookingRows)[number]) => row.status === "cancelled";
+  const seatsByTrip = new Map<
+    string,
+    { source?: (typeof bookingRows)[number]; survivor?: (typeof bookingRows)[number] }
+  >();
   for (const row of bookingRows) {
-    const owners = tripOwners.get(row.tripId) ?? new Set<string>();
-    owners.add(row.personId);
-    tripOwners.set(row.tripId, owners);
+    const pair = seatsByTrip.get(row.tripId) ?? {};
+    if (row.personId === source.id) pair.source = row;
+    else pair.survivor = row;
+    seatsByTrip.set(row.tripId, pair);
   }
-  const sharedTripIds = [...tripOwners.entries()]
-    .filter(([, owners]) => owners.size > 1)
-    .map(([tripId]) => tripId);
-  if (sharedTripIds.length > 0) {
-    const sharedDepartures = await db
+  const seatsLeftBehind: string[] = [];
+  const conflicts = new Map<string, boolean>();
+  for (const [tripId, pair] of seatsByTrip) {
+    if (!pair.source || !pair.survivor) continue;
+    if (seatIsOver(pair.source)) seatsLeftBehind.push(pair.source.id);
+    else conflicts.set(tripId, seatIsOver(pair.survivor));
+  }
+  if (conflicts.size > 0) {
+    const departures = await db
       .select({ tripId: trips.id, title: trips.title, startsAt: trips.startsAt })
       .from(trips)
-      // diveday:allow-deleted-trips: a seat on a deleted departure still refuses the merge, so the preview names it too
-      .where(and(eq(trips.shopId, shopId), inArray(trips.id, sharedTripIds)))
+      // diveday:allow-deleted-trips: the ids come from the seats above, and a live seat's departure is named whatever its state
+      .where(and(eq(trips.shopId, shopId), inArray(trips.id, [...conflicts.keys()])))
       .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
+    const sharedDepartures = departures.map((departure) => ({
+      ...departure,
+      keptSeatOver: conflicts.get(departure.tripId) === true,
+    }));
     return refuse("booking_conflict", sharedDepartures);
   }
 
@@ -782,7 +843,7 @@ async function assessMerge(
     note(source.fullName);
   }
   if (releaseNames.length > 1) warnings.push("releases_under_different_names");
-  return { ok: true, warnings, releaseNames };
+  return { ok: true, seatsLeftBehind, warnings, releaseNames };
 }
 
 /** The sizes half of a rental fit profile: what the preview compares and shows. */
@@ -1011,6 +1072,8 @@ export async function getDiverMergePreview(
   if (!assessment.ok && assessment.reason === "staff_record") return null;
   const sourceSide = await mergeSide(db, shopId, source);
   const survivorSide = await mergeSide(db, shopId, survivor);
+  // "What moves" counts what moves: a seat left behind stays where it is.
+  if (assessment.ok) sourceSide.counts.bookings -= assessment.seatsLeftBehind.length;
   return {
     source: sourceSide,
     survivor: survivorSide,
@@ -1194,6 +1257,13 @@ export async function mergeDiverRecords(input: {
         );
       }
 
+      for (const tableName of ONE_PER_DEPARTURE_PER_PERSON_TABLES) {
+        const table = sql.raw(quotedTable(tableName));
+        await tx.execute(
+          sql`delete from ${table} where "shop_id" = ${input.shopId} and "person_id" = ${source.id} and "trip_id" in (select "trip_id" from ${table} where "shop_id" = ${input.shopId} and "person_id" = ${survivor.id})`,
+        );
+      }
+
       // Releases through the one path that keeps their seals honest: a bare
       // repoint would make every sealed release read as tampered, `person_id`
       // being inside the seal. An erased release stays on the record it was
@@ -1205,10 +1275,27 @@ export async function mergeDiverRecords(input: {
         toPersonId: survivor.id,
         actorPersonId: input.actorPersonId,
       });
+      // Course forms the same way, for the same reason (issue #2266).
+      await refileCourseFormRecords(tx, {
+        shopId: input.shopId,
+        fromPersonId: source.id,
+        toPersonId: survivor.id,
+      });
       for (const tableName of DIVER_HISTORY_TABLES) {
-        if (tableName === "waiver_records") continue;
+        if (tableName === "waiver_records" || tableName === "course_form_records") continue;
+        // A seat that is already over, on a departure the kept record also
+        // sits on, stays on this record (`assessMerge`, issue #2177). Only the
+        // seat: what hangs off it (its release, order, notes) is the person's
+        // and follows them like everything else.
+        const leftBehind =
+          tableName === "bookings" && assessment.seatsLeftBehind.length > 0
+            ? sql` and "id" not in (${sql.join(
+                assessment.seatsLeftBehind.map((id) => sql`${id}`),
+                sql`, `,
+              )})`
+            : sql``;
         await tx.execute(
-          sql`update ${sql.raw(quotedTable(tableName))} set "person_id" = ${survivor.id} where "shop_id" = ${input.shopId} and "person_id" = ${source.id}`,
+          sql`update ${sql.raw(quotedTable(tableName))} set "person_id" = ${survivor.id} where "shop_id" = ${input.shopId} and "person_id" = ${source.id}${leftBehind}`,
         );
       }
 

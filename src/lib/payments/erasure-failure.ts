@@ -16,6 +16,11 @@ export const ERASURE_FAILURE_DETAIL = {
   notConfigured: "stripe not configured",
   /** Stripe answered 2xx without the deleted-object envelope. */
   notConfirmed: "stripe did not report the customer deleted",
+  /**
+   * The request never got an answer (a network throw). Fixed rather than the
+   * error's own text, which can carry a request fragment (issue #2239).
+   */
+  unanswered: "stripe request did not complete",
 } as const;
 
 export type ErasureFailure = "account_not_owned" | "refused" | "unreachable" | "not_confirmed";
@@ -36,6 +41,7 @@ export function erasureFailureOf(lastError: string | null): ErasureFailure | nul
   if (!lastError) return null;
   if (lastError === ERASURE_FAILURE_DETAIL.accountNotOwned) return "account_not_owned";
   if (lastError === ERASURE_FAILURE_DETAIL.notConfigured) return "unreachable";
+  if (lastError === ERASURE_FAILURE_DETAIL.unanswered) return "unreachable";
   if (lastError === ERASURE_FAILURE_DETAIL.notConfirmed) return "not_confirmed";
   const status = HTTP_STATUS.exec(lastError);
   if (!status) return "unreachable";

@@ -25,7 +25,7 @@ quietly in production (decided 2026-10-07, issue #2244). Previews are not asked.
 `drizzle/` SQL against `DATABASE_URL_UNPOOLED` (Neon's direct connection — DDL over a
 transaction-mode pooler is unreliable), falling back to `DATABASE_URL`.
 
-Five consequences follow, and every one of them is load-bearing:
+Seven consequences follow, and every one of them is load-bearing:
 
 | Fact | Consequence |
 | --- | --- |
@@ -34,6 +34,7 @@ Five consequences follow, and every one of them is load-bearing:
 | Preview deploys skip migrations entirely (`VERCEL_ENV !== "production"`) | **There is no rehearsal surface.** A preview runs new code against the *old* production schema, or against nothing |
 | CI rehearses migrations against a real Postgres before merge — the `real-postgres` job in `.github/workflows/ci.yml` (see [Rehearsal](#what-ci-rehearses-and-what-it-still-doesnt)) | **The deploy is no longer the first time the SQL meets a real server.** It is still the first time it meets *production data* |
 | A destructive statement is refused before `db:migrate` runs — see [the guard](#the-guard-that-enforces-it) | **Expand/contract is enforced, not merely written.** The rule below is a mechanism now; what it does *not* cover is listed there |
+| `pnpm build` type-checks the commit again, although CI's `typecheck` job already did (`experimental.useTypeScriptCli` in `next.config.ts`) | **The duplication is deliberate** (#1377, decided 2026-09-10: keep it). It is the last gate between a merge that somehow bypassed CI and production; the artifact is byte-identical either way, and the second run buys only the refusal, at a fraction of the cold compile. The full reasoning, and what would reopen it, is the comment above that flag |
 | `drizzle/` holds a squashed baseline plus the forward-only folders added since (`migration.sql` + `snapshot.json` each), with no down migrations anywhere | **Rollback is always forward.** There is no `drizzle-kit down`. "Revert the migration" is not a thing that exists here. The baseline's folder *name* is load-bearing — see ADR 20260904-squash-migration-baseline before renaming it |
 
 Put together: an unsafe migration is applied by the same command that builds the code, with no way to

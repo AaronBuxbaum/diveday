@@ -29,6 +29,7 @@
   "yesterday": "ayer",
   "daysAgo": "hace {count, plural, one {# día} other {# días}}",
   "rentalKitHeading": "Equipo de alquiler",
+  "snorkelVests": "{count, plural, one {# chaleco de snorkel} other {# chalecos de snorkel}}, uno por cada persona que hace snorkel",
   "groupLabel": "Agrupar por",
   "groupByItem": "Por artículo",
   "groupByDiver": "Por buceador",

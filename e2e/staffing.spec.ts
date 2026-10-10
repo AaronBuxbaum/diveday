@@ -360,3 +360,99 @@ test.describe("schedule views", () => {
     await page.waitForURL(/\/schedule\/board\?week=2026-08-03$/);
   });
 });
+
+/**
+ * **Approving a divemaster onto an intro session that is over its ratio**
+ * (issue #1676; the behaviour is #1339's). An intro cap is
+ * instructor-to-student, so a divemaster aboard adds no seats — and three
+ * things say so only in that state: the sentence beside Approve, the
+ * approval's own notice, and the asker's own line on the departure. The
+ * layers below pin each; this walks them in a browser.
+ *
+ * The state is the trouble-states route's opt-in `introOverRatio` switch,
+ * never the demo seed: a permanently short-handed demo would move Today and
+ * every capture that reads it. `crew_assignment_requests` is reset-owned, so
+ * the ask and its approval are cleared before the next test.
+ */
+test.describe("approving a divemaster onto an intro session over its ratio", () => {
+  signedInAsOwner();
+
+  /**
+   * The session's own cell: the smallest visible box holding both its title and
+   * `marker`. Ancestors come first in document order, so the last match is the
+   * cell itself, never the week around it or another departure's cell.
+   */
+  function sessionCell(page: Page, title: string, marker: string) {
+    return page
+      .locator("div, li")
+      .filter({ visible: true })
+      .filter({ hasText: title })
+      .filter({ hasText: marker })
+      .last();
+  }
+
+  test("the approver is told it adds no seats, and so is the divemaster who asked", async ({
+    page,
+    request,
+    browser,
+    workerBaseURL,
+    staffStorageState,
+  }) => {
+    test.setTimeout(60_000);
+    const seeded = await request.post("/api/test/seed-trouble-states?introOverRatio=1");
+    expect(seeded.ok()).toBe(true);
+    const { introOverRatio } = (await seeded.json()) as {
+      introOverRatio?: { tripId: string; title: string; asker: string; date: string };
+    };
+    if (!introOverRatio) throw new Error("seed-trouble-states found no intro session to crowd");
+    const { title, asker, date } = introOverRatio;
+    // The week the session sits in, whichever week the frozen clock is in.
+    const sessionWeek = `${STAFFING}?week=${date}`;
+    const asked = `${asker} asked`;
+    const ownLineText = "You add no seats to this session. Only another instructor does.";
+
+    const divemasterContext = await browser.newContext({
+      baseURL: workerBaseURL,
+      storageState: await staffStorageState("divemaster"),
+    });
+    try {
+      const divemaster = makeActivitySafe(await divemasterContext.newPage());
+
+      // The asker, before anybody answers: their ask stands, and the line
+      // telling them it closes nothing stays on the departure after it.
+      await divemaster.goto(sessionWeek);
+      await divemaster.getByRole("heading", { level: 1, name: "Schedule" }).waitFor();
+      const askerCell = sessionCell(divemaster, title, asked);
+      await expect(askerCell.getByText(asked, { exact: true })).toBeVisible();
+      await expect(askerCell.getByText(ownLineText)).toBeVisible();
+
+      // The owner: the sentence sits beside Approve, and the approval says the
+      // session is still over its ratio rather than the plain success.
+      await page.goto(sessionWeek);
+      await page.getByRole("heading", { level: 1, name: "Schedule" }).waitFor();
+      const ownerCell = sessionCell(page, title, asked);
+      await expect(ownerCell.getByText(asked, { exact: true })).toBeVisible();
+      await expect(
+        ownerCell.getByText(
+          "Approving this one adds no seats to this session. Only an instructor does.",
+        ),
+      ).toBeVisible();
+      await ownerCell.getByRole("button", { name: "Approve" }).click();
+      await expect(
+        page.getByText(
+          "Approved, and they’re on the crew. The session is still over its ratio: only an instructor adds seats.",
+        ),
+      ).toBeVisible();
+
+      // The asker again, now on the crew: the session is no less over its
+      // ratio, so their line is still there.
+      await divemaster.reload();
+      await divemaster.getByRole("heading", { level: 1, name: "Schedule" }).waitFor();
+      await expect(
+        sessionCell(divemaster, title, ownLineText).getByText(ownLineText),
+      ).toBeVisible();
+    } finally {
+      await divemasterContext.close();
+    }
+  });
+});

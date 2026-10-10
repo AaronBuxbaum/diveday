@@ -33,9 +33,9 @@ import { pathToFileURL } from "node:url";
  * forty-odd copies of the same sentence. Tests are skipped too: a test's own
  * query is not a list anyone is shown.
  *
- * A JavaScript comparator that ties on a timestamp (`src/lib/staffing-week.ts`'s
- * `byStart`) has the same failure and no mechanical signature this rule can
- * read; it is left to review.
+ * A JavaScript comparator that ties on a timestamp has the same failure and no
+ * mechanical signature this rule can read; it is left to review
+ * (`src/lib/staffing-week.ts`'s `byStart` was one, issue #2176).
  *
  * ## Saying "nobody reads this order"
  *

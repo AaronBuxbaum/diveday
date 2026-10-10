@@ -368,6 +368,19 @@ jobs:
           path: playwright-report/
           if-no-files-found: ignore
           retention-days: 7
+      # Every run, green or red: which tests ran close to their own budget on
+      # this shard (issue #1906). A run that passes is where the next flake is
+      # still a number rather than a red shard.
+      - name: e2e budgets
+        if: always()
+        run: node scripts/e2e-budget-report.mjs e2e-durations/results.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: e2e-durations-${{ matrix.shard }}
+          path: e2e-durations/
+          if-no-files-found: ignore
+          retention-days: 14
 
   visual:
     name: Visual capture shard ${{ matrix.shard }}/8

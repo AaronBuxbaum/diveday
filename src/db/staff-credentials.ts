@@ -50,7 +50,7 @@ export async function listStaffCredentials(db: DbExecutor, shopId: string) {
  * A person absent from the map has nothing recorded, which is not a lapse.
  *
  * Read only by the supervision claim. The booking gate and the crew editor's
- * refusals never call this (H-59, docs/product/human-decisions.md).
+ * refusals never call this (H-59, docs/product/human-decisions/README.md).
  */
 export async function ratingCredentialsByPerson(
   db: DbExecutor,

@@ -32,10 +32,12 @@ import process from "node:process";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import {
   COMMENT_MARKER,
+  changedSetDelta,
   comparedAnything,
   DEFAULT_BUCKET,
   fetchFromBucket,
   formatPrComment,
+  previousCommitFromComment,
   summarizeReport,
 } from "./visual-report-lib.mjs";
 
@@ -118,6 +120,29 @@ function writeStepOutput(key, value) {
   }
 }
 
+/**
+ * The previous head's summary, read from its own `out.json` — never from the
+ * comment, whose lists are truncated to ten names (issue #1928). Any failure
+ * (no sha, a 404, a bad parse, a network error) is `null`: the delta section is
+ * dropped, and the comment it would have sat in still posts.
+ */
+async function previousSummary(bucket, previousCommit) {
+  if (!previousCommit) return null;
+  try {
+    const fetched = await fetchFromBucket(bucket, `${previousCommit}/out.json`, {});
+    if (!fetched.ok) {
+      console.warn(
+        `visual-pr-comment: no out.json for the previous head ${previousCommit} (${fetched.status}); no delta section.`,
+      );
+      return null;
+    }
+    return summarizeReport(JSON.parse(fetched.body.toString("utf8")));
+  } catch (err) {
+    console.warn(`visual-pr-comment: could not read the previous head's report — ${err.message}`);
+    return null;
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const bucket = args.bucket || process.env.REG_SUIT_S3_BUCKET_NAME || DEFAULT_BUCKET;
@@ -158,7 +183,28 @@ async function main() {
   // Set by scripts/wait-for-baseline.mjs when it substituted an older baseline
   // for one that was never published; empty on the ordinary path.
   const note = process.env.REG_BASELINE_NOTE || "";
-  const body = formatPrComment({ commit, bucket, summary, note });
+
+  // The comment this run will edit names the head it last reported on, which is
+  // the only way to say what *entered* and *left* the changed set since then.
+  const hasPrContext = Boolean(pr && repo && token);
+  let existing = null;
+  if (hasPrContext) {
+    existing = await findStickyComment(repo, pr, token).catch((err) => {
+      console.warn(`visual-pr-comment: could not read the existing comment — ${err.message}`);
+      return undefined;
+    });
+  }
+  const previousCommit = previousCommitFromComment(existing?.body);
+  const delta = changedSetDelta({
+    commit,
+    summary,
+    previousCommit,
+    previousSummary:
+      previousCommit && previousCommit !== commit
+        ? await previousSummary(bucket, previousCommit)
+        : null,
+  });
+  const body = formatPrComment({ commit, bucket, summary, note, delta });
 
   // The job summary is the one destination that works for every event,
   // including a push to main, where there is no PR to comment on.
@@ -168,7 +214,7 @@ async function main() {
   console.log(body);
 
   if (args.dryRun) return;
-  if (!pr || !repo || !token) {
+  if (!hasPrContext) {
     console.log(
       "visual-pr-comment: no pull request context (or no token) — summary printed above only. " +
         "This is the normal path for a push to main.",
@@ -176,7 +222,9 @@ async function main() {
     return;
   }
 
-  const existing = await findStickyComment(repo, pr, token);
+  // `undefined` means the early read failed; try once more and let a second
+  // failure reach the catch-all, as it always has.
+  if (existing === undefined) existing = await findStickyComment(repo, pr, token);
   if (existing) {
     await api(`/repos/${repo}/issues/comments/${existing.id}`, {
       token,

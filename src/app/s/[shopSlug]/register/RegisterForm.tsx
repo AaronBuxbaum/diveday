@@ -9,31 +9,14 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { DIVER_CERT_LEVEL_KEYS } from "@/i18n/next-dive-labels";
+import { DIVER_CERTIFICATION_AGENCY_KEYS } from "@/i18n/readiness-labels";
 import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import {
+  SELF_DECLARED_AGENCIES,
   SELF_DECLARED_LEVELS,
   SELF_REGISTRATION_DONE,
   type SelfRegistrationFormState,
 } from "@/lib/self-registration";
-
-/**
- * The agencies this form offers, in the spelling `certifications.agency` holds.
- * A subset of `common.certification.agencies` — the ones the enum accepts — so
- * a diver never picks a name the write would then have to drop.
- */
-const AGENCIES = [
-  "common.certification.agencies.padi",
-  "common.certification.agencies.ssi",
-  "common.certification.agencies.naui",
-  "common.certification.agencies.sdi",
-  "common.certification.agencies.raid",
-  "common.certification.agencies.bsac",
-  "common.certification.agencies.cmas",
-  "common.certification.agencies.other",
-] as const;
-
-/** The enum value each of those keys stands for, in the column's own spelling. */
-const AGENCY_VALUES = ["padi", "ssi", "naui", "sdi", "raid", "bsac", "cmas", "other"] as const;
 
 /**
  * **The counter's QR, as a form** (issue #1236).
@@ -131,9 +114,9 @@ export function RegisterForm({
           <Field label={t("register.agencyLabel")} htmlFor="agency">
             <select id="agency" name="agency" defaultValue="" className={controlClass}>
               <option value="">{t("register.agencyNone")}</option>
-              {AGENCY_VALUES.map((agency, index) => (
+              {SELF_DECLARED_AGENCIES.map((agency) => (
                 <option key={agency} value={agency}>
-                  {t(AGENCIES[index])}
+                  {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
                 </option>
               ))}
             </select>

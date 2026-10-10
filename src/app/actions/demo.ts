@@ -212,7 +212,7 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
     // throwing, and the `catch` above sorts throws by shape (`instanceof
     // APIError`): a redirect written inside was a refusal handed to error
     // handling that never asked for it. One edit to that catch and the diver
-    // preview would have gone nowhere, silently (scripts/check-redirect-in-try.mjs).
+    // preview would have gone nowhere, silently (scripts/lint-rules/redirectInTry.grit).
     redirect(publicSchedulePath(shopSlug));
   } else {
     // Look the target person up by their role *within this shop* rather than by

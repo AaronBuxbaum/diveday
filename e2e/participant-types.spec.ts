@@ -66,7 +66,7 @@ test("a snorkeler books from the public page and is on the manifest and the roll
   await expect(page.getByLabel("Joining as")).toHaveCount(0);
 
   await page.goto(tripUrl);
-  const terms = await openTripAboutRow(page, "participant-terms");
+  const terms = await openTripAboutRow(page, "Snorkelers and riders");
   await terms.getByLabel("Snorkeler price").fill("45");
   await terms.getByRole("button", { name: "Save" }).click();
   await expect(terms.locator("summary")).toContainText(/Snorkeler \$45/);

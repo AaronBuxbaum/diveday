@@ -70,9 +70,9 @@ trip-row lock, never as a pre-check.
   home or cancelled, and joining the dive is refused from the departure time on (not the selling
   grace of `hasSailed`). Leaving it stays open between dives.
 - **The original type is kept.** `bookings.booked_as` records the type the seat was booked as and
-  never changes. Every writer states it; the column's default of diver is only the expand half of
-  expand/contract, kept for the one release in which the previous code's inserts cannot name it, and
-  dropped in the next (issue #2222). A seat whose type moved
+  never changes. Every writer states it, and the column has no default, so an insert that forgets it
+  fails to compile. A default of diver was the expand half of expand/contract, kept for the one
+  release in which the previous code's inserts could not name it, and dropped in the next (issue #2222). A seat whose type moved
   since it was sold carries a warning-tone note on the roster, the live roll call and the offline
   copy, either way: "Snorkeling, booked as diver" for a seat that left the dive, and "Diving, booked
   as snorkeler" for one that joined it, possibly past a missing card. The same transaction writes a

@@ -374,6 +374,7 @@
       "diver-medical-not-cleared",
       "diver-profile",
       "diver-profile-deleted",
+      "diver-profile-erase-refused",
       "diver-profile-imported",
       "diver-profile-not-certified",
       "diver-profile-paper-waiver",
@@ -549,13 +550,7 @@
       "tax.spec.ts",
       "whatsapp-settings.spec.ts"
     ],
-    "visual": [
-      "settings-address",
-      "settings-data-unfinished",
-      "settings-payments",
-      "settings-profile",
-      "settings-tax"
-    ],
+    "visual": ["settings-address", "settings-data-unfinished", "settings-payments", "settings-tax"],
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings/billing": {
@@ -566,6 +561,31 @@
   "/shop/[shopSlug]/settings/boats": {
     "e2e": ["boat-safety.spec.ts", "settings-editor-pages.spec.ts"],
     "visual": ["settings-boats"],
+    "a11y": []
+  },
+  "/shop/[shopSlug]/settings/rentals": {
+    "e2e": ["nitrox.spec.ts", "role-permissions.spec.ts", "settings-editor-pages.spec.ts"],
+    "visual": ["prep-no-nitrox", "settings-rentals"],
+    "a11y": []
+  },
+  "/shop/[shopSlug]/settings/rental-prices": {
+    "e2e": ["currency.spec.ts", "nitrox.spec.ts", "settings-editor-pages.spec.ts"],
+    "visual": ["settings-rental-prices"],
+    "a11y": []
+  },
+  "/shop/[shopSlug]/settings/emergency-reference": {
+    "e2e": ["settings-editor-pages.spec.ts"],
+    "visual": ["manifest-emergency-empty", "settings-emergency"],
+    "a11y": []
+  },
+  "/shop/[shopSlug]/settings/dock-day": {
+    "e2e": ["dock-day-rhythm.spec.ts", "settings-editor-pages.spec.ts"],
+    "visual": ["settings-dock-day-rhythm"],
+    "a11y": []
+  },
+  "/shop/[shopSlug]/settings/profile": {
+    "e2e": ["settings-editor-pages.spec.ts", "settings-findability.spec.ts"],
+    "visual": ["settings-profile"],
     "a11y": []
   },
   "/shop/[shopSlug]/settings/trip-tags": {

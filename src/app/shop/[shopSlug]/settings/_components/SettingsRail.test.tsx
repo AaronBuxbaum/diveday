@@ -103,11 +103,10 @@ describe("the map covers the whole hub", () => {
   });
 
   it("keeps every fragment that other surfaces already link to", () => {
-    // The pane scrolls; the ids do not move. These five are the anchors the
+    // The pane scrolls; the ids do not move. These four are the anchors the
     // rest of the app spells out in `/settings#…` links, and a rename here
     // would be a dead deep link nothing else would notice.
     expect(settingsSectionFragment("contact")).toBe("contact");
-    expect(settingsSectionFragment("profile")).toBe("profile");
     expect(settingsSectionFragment("units")).toBe("units");
     expect(settingsSectionFragment("reviewLink")).toBe("review-link");
     expect(settingsSectionFragment("searchListing")).toBe("search-listing");
@@ -120,7 +119,7 @@ describe("the selection model", () => {
       currentSettingsRailRowId(SETTINGS_RAIL_ROWS, {
         pathname: `${BASE}/settings/team`,
         basePath: BASE,
-        sectionId: "profile",
+        sectionId: "contact",
       }),
     ).toBe("team");
   });

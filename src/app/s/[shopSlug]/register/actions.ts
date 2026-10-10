@@ -14,6 +14,7 @@ import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
 import {
   hasContactPath,
+  SELF_DECLARED_AGENCIES,
   SELF_DECLARED_LEVELS,
   SELF_REGISTRATION_DONE,
   type SelfRegistrationFormState,
@@ -24,7 +25,7 @@ const registrationSchema = z.object({
   fullName: z.string().trim().min(1).max(120),
   email: z.email().max(200).optional(),
   phone: z.string().trim().max(30).optional(),
-  agency: z.enum(["padi", "ssi", "naui", "sdi", "raid", "bsac", "cmas", "other"]).optional(),
+  agency: z.enum(SELF_DECLARED_AGENCIES).optional(),
   level: z.enum(SELF_DECLARED_LEVELS).optional(),
   identifier: z.string().trim().max(120).optional(),
   // The fit forms' own cap, imported rather than restated: these three sizes

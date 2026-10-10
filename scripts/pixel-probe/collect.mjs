@@ -128,11 +128,41 @@ export function collectGeometry(options) {
   // past the line's end: there only the runs of ink are measured, word by
   // word, until the lines this keeps are full.
   const MAX_LINES = 24;
+  // An element hidden by the `sr-only` recipe, or inside one, has no text a
+  // person sees (issue #1992): its text Range still reports full unclipped
+  // rects, so measuring them invented lines running out of their boxes. The
+  // same three spellings `textBounds` in states.mjs skips — Tailwind's
+  // `clip-path: inset(50%)`, the older `clip: rect(0 0 0 0)`, and a 1×1 box
+  // that clips — answered once per element and remembered for its subtree.
+  // No overflow clipping is applied here: these are an element's own direct
+  // text lines, so nothing stands between the text and the measured box, and
+  // the overflow checks read exactly the text that runs past a clip.
+  const hiddenCache = new Map();
+  const visuallyHidden = (element) => {
+    if (!element || element === document.body) return false;
+    if (hiddenCache.has(element)) return hiddenCache.get(element);
+    const style = getComputedStyle(element);
+    let hidden = false;
+    if (/^rect\((\s*0(px)?\s*,?){4}\)$/.test(style.clip)) hidden = true;
+    else if (/^inset\(\s*50%\s*\)$/.test(style.clipPath)) hidden = true;
+    else if (style.overflowX !== "visible" && style.overflowY !== "visible") {
+      const rect = element.getBoundingClientRect();
+      // jsdom has no layout and measures everything 0×0; a 1×1 test there
+      // would hide every clipping box, so it needs a box that rendered.
+      hidden = rect.width <= 1 && rect.height <= 1 && element.getClientRects().length > 0;
+    }
+    if (!hidden) hidden = visuallyHidden(element.parentElement);
+    hiddenCache.set(element, hidden);
+    return hidden;
+  };
   const textLinesOf = (element, preserved) => {
     const lines = [];
+    let hidden = null;
     const range = document.createRange();
     for (const node of element.childNodes) {
       if (node.nodeType !== 3) continue;
+      if (hidden === null) hidden = visuallyHidden(element);
+      if (hidden) break;
       if (lines.length > MAX_LINES) break;
       const data = node.data;
       const runs = [];

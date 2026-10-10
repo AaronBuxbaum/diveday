@@ -472,6 +472,62 @@ describe("asserting aboard over a missing mark is never the cheap direction", ()
 });
 
 /**
+ * **A blocked diver's mark still says what was recorded** (review of #1840).
+ * Readiness takes the tap away at the dock, but it must not take the fact
+ * away: a diver blocked *and* recorded aboard drew the empty dashed "held"
+ * ring while the pill beside it said Boarded — the rail's one picture of
+ * where a person is, saying nobody had called them.
+ */
+describe("a blocked diver's mark at the dock", () => {
+  const blocked = {
+    status: "blocked",
+    blockers: [{ code: "certification_missing" }],
+  } as TripManifest["divers"][number]["readiness"];
+  const markOf = (container: HTMLElement) =>
+    container.querySelector("[data-mark-state]")?.getAttribute("data-mark-state");
+
+  it("draws aboard for a blocked diver recorded aboard, with no tap", () => {
+    const { container } = renderList({
+      checkpoint: "departure",
+      divers: [diver({ readiness: blocked, rollCall: boardedAt() })],
+    });
+    expect(markOf(container)).toBe("aboard");
+    expect(screen.queryByRole("button", { name: /Boarded|Mark boarded/ })).not.toBeInTheDocument();
+  });
+
+  it("draws ashore for a blocked diver recorded not boarded", () => {
+    const { container } = renderList({
+      checkpoint: "departure",
+      divers: [diver({ readiness: blocked, rollCall: notBackAt() })],
+    });
+    expect(markOf(container)).toBe("ashore");
+  });
+
+  // The row says it too (review of #1840): aboard over a block is the
+  // count's loud line ("1 blocked person aboard", HeadCount), so the row
+  // wears the blocked tone, not the calm boarded green. The circle still
+  // draws aboard — the tone is the exception, the mark is the fact.
+  it("wears the blocked tone on a blocked diver recorded aboard", () => {
+    const { container } = renderList({
+      checkpoint: "departure",
+      divers: [diver({ readiness: blocked, rollCall: boardedAt() })],
+    });
+    const row = container.querySelector("li[id^='diver-row-']") as HTMLElement;
+    expect(row.className).toContain("border-danger");
+    expect(row.className).not.toContain("bg-success/20");
+    expect(markOf(container)).toBe("aboard");
+  });
+
+  it("draws held only while nothing is recorded", () => {
+    const { container } = renderList({
+      checkpoint: "departure",
+      divers: [diver({ readiness: blocked })],
+    });
+    expect(markOf(container)).toBe("held");
+  });
+});
+
+/**
  * **A diver boarding over a physician's earlier "no" says so on the row**
  * (H-98; dive-domain review of #2096). A clean new release clears the diver,
  * and the warning used to live only in the person sheet, one tap away from
@@ -575,6 +631,74 @@ describe("the earlier-refusal capsule", () => {
  * **A release standing over a referral nobody answered gets a row capsule
  * too** (dive-domain review of #2163), ranked just after the earlier refusal.
  */
+/**
+ * **A diver aboard while blocked reads "Blocked", not their buddy's absence**
+ * (dive-domain review of the manifest-blocked-aboard capture). At the dock,
+ * `separated_dock` is a heads-up about a teammate still to gather; the
+ * readiness blocker is about *this* body, aboard a boat it is not cleared
+ * for, and the head count above already says so. Only a split team after a
+ * dive outranks the blocker.
+ */
+describe("a blocked diver marked aboard at the dock", () => {
+  const blocked: TripManifest["divers"][number]["readiness"] = {
+    status: "blocked",
+    blockers: [{ code: "certification_missing" }],
+  };
+  const SEPARATED_AT_DOCK = t("shared.buddyTeam.separatedDock");
+
+  function onScreen(text: string) {
+    return screen
+      .queryAllByText(text)
+      .filter((element) => !element.closest(".hidden.print\\:block"));
+  }
+
+  it("says Blocked over a teammate still ashore", () => {
+    renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          readiness: blocked,
+          rollCall: boardedAt(),
+          buddyAlert: "separated_dock",
+          buddyTeam: { teamId: "t-1", others: [] },
+        }),
+      ],
+    });
+    expect(onScreen("Blocked").length).toBeGreaterThan(0);
+    expect(onScreen(SEPARATED_AT_DOCK)).toHaveLength(0);
+  });
+
+  it("keeps the buddy heads-up for a cleared diver", () => {
+    renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          rollCall: boardedAt(),
+          buddyAlert: "separated_dock",
+          buddyTeam: { teamId: "t-1", others: [] },
+        }),
+      ],
+    });
+    expect(onScreen(SEPARATED_AT_DOCK).length).toBeGreaterThan(0);
+  });
+
+  it("still yields to a team that did not come back after a dive", () => {
+    renderList({
+      divers: [
+        diver({
+          readiness: blocked,
+          boardedEarlier: false,
+          rollCall: boardedAt(),
+          buddyAlert: "separated_after_dive",
+          buddyTeam: { teamId: "t-1", others: [] },
+        }),
+      ],
+    });
+    expect(onScreen("Someone unaccounted for").length).toBeGreaterThan(0);
+    expect(onScreen("Blocked")).toHaveLength(0);
+  });
+});
+
 describe("the unresolved-referral capsule", () => {
   const referred = {
     at: new Date("2026-09-01T12:00:00.000Z"),

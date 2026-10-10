@@ -15,6 +15,7 @@ import {
   discardAbandonedDevState,
   formatMb,
   hardLimitBytes,
+  hardLimitVerdict,
   lineSplitter,
   localPortFromLine,
   markDevStateClean,
@@ -342,6 +343,49 @@ describe("localPortFromLine", () => {
 
   it("is null for any other line", () => {
     expect(localPortFromLine("✓ Ready in 407ms")).toBeNull();
+  });
+});
+
+describe("hardLimitVerdict (issue #2148)", () => {
+  const MB = 1024 * 1024;
+  const hardLimit = 10_944 * MB;
+
+  it("restarts when this server's share can bring the cgroup under the mark", () => {
+    expect(hardLimitVerdict({ pressure: 11_500 * MB, hardLimit, ownRss: 9_000 * MB })).toBe(
+      "restart",
+    );
+  });
+
+  it("refuses the restart when the pressure belongs to other processes", () => {
+    // The incident: 12,784 MB against a 10,944 MB mark, 272 MB of it this
+    // server. Restarting it 27 times could never free 12.5 GB.
+    expect(hardLimitVerdict({ pressure: 12_784 * MB, hardLimit, ownRss: 272 * MB })).toBe(
+      "elsewhere",
+    );
+  });
+
+  it("refuses at the edge, where freeing everything we hold still lands on the mark", () => {
+    expect(hardLimitVerdict({ pressure: 11_944 * MB, hardLimit, ownRss: 1_000 * MB })).toBe(
+      "elsewhere",
+    );
+    expect(hardLimitVerdict({ pressure: 11_943 * MB, hardLimit, ownRss: 1_000 * MB })).toBe(
+      "restart",
+    );
+  });
+
+  it("is under below the mark, and with no mark at all", () => {
+    expect(hardLimitVerdict({ pressure: 4_000 * MB, hardLimit, ownRss: 3_000 * MB })).toBe("under");
+    expect(hardLimitVerdict({ pressure: 99_000 * MB, hardLimit: null, ownRss: 1 })).toBe("under");
+  });
+
+  it("gives up on the mark after the same three quick restarts the budget does", () => {
+    // Restarts that come straight back over the mark count with the budget's
+    // own rule, so a repeat stops instead of looping.
+    let futile = 0;
+    for (const sinceLast of [null, 8_000, 9_000, 7_000]) {
+      futile = countFutileRestart(futile, sinceLast);
+    }
+    expect(budgetIsUnreachable(futile)).toBe(true);
   });
 });
 

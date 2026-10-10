@@ -19,19 +19,31 @@ export default function StaffCoursesLoading() {
         <div className="mt-8 space-y-8">
           {[0, 1].map((group) => (
             <div key={group}>
-              <div className="h-3 w-16 rounded bg-surface-sunken" />
+              {/* The group's small-caps label: a 16px line, the bar inside it. */}
+              <div className="flex h-4 items-center">
+                <div className="h-3 w-16 rounded bg-surface-sunken" />
+              </div>
               <div className="mt-2">
                 {[0, 1, 2].map((row) => (
+                  // The loaded row at 390 and 1280 alike (#1993, measured):
+                  // `py-3` around the name's 24px line and the 20px line
+                  // under it, 2px apart, so 71px with its rule; its one
+                  // 44px act sits in the row's `-my-2` and adds nothing. A
+                  // course whose content needs a warning line is taller, and
+                  // only that row moves.
                   <div
                     key={row}
-                    className={`flex min-h-12 items-center gap-3 py-3 ${ledgerRowBoxClass}`}
+                    className={`flex min-h-13 items-center gap-3 py-3 ${ledgerRowBoxClass}`}
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="h-4 w-52 max-w-full rounded bg-surface-sunken" />
-                      <div className="mt-2 h-3 w-64 max-w-full rounded bg-surface-sunken" />
+                      <div className="flex h-6 items-center">
+                        <div className="h-4 w-52 max-w-full rounded bg-surface-sunken" />
+                      </div>
+                      <div className="mt-0.5 flex h-5 items-center">
+                        <div className="h-3 w-64 max-w-full rounded bg-surface-sunken" />
+                      </div>
                     </div>
-                    <div className="h-8 w-20 shrink-0 rounded-lg bg-surface-sunken" />
-                    <div className="h-8 w-16 shrink-0 rounded-lg bg-surface-sunken" />
+                    <div className="-my-2 h-11 w-21 shrink-0 rounded-lg bg-surface-sunken" />
                   </div>
                 ))}
               </div>

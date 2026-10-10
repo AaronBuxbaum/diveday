@@ -48,11 +48,31 @@ describe("parseForm", () => {
           ["rotating", "yes"],
         ]),
       ),
-    ).toEqual({ ok: false, fields: ["scope", "rotating"] });
+    ).toMatchObject({ ok: false, fields: ["scope", "rotating"] });
   });
 
   it("refuses a required field the form left out", () => {
-    expect(parseForm(schema, form([]))).toEqual({ ok: false, fields: ["scope"] });
+    expect(parseForm(schema, form([]))).toMatchObject({ ok: false, fields: ["scope"] });
+  });
+
+  it("hands back a schema's own messages in issue order, for one whose messages are codes", () => {
+    const coded = z.object({
+      name: z.string().min(2, "name_too_short"),
+      slug: z.string().regex(/^[a-z]+$/, "slug_invalid"),
+    });
+    expect(
+      parseForm(
+        coded,
+        form([
+          ["name", "a"],
+          ["slug", "NO"],
+        ]),
+      ),
+    ).toEqual({
+      ok: false,
+      fields: ["name", "slug"],
+      messages: ["name_too_short", "slug_invalid"],
+    });
   });
 
   it("reads a repeated field as an array a schema can ask for", () => {

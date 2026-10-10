@@ -5,7 +5,7 @@ type CertificationAgency = (typeof CERTIFICATION_AGENCIES)[number];
 /**
  * **Where a staffer checks a card with the agency that issued it.**
  *
- * H-10 (docs/product/human-decisions.md) dropped agency API integration because
+ * H-10 (docs/product/human-decisions/README.md) dropped agency API integration because
  * no agency offers one: a shop looks the diver up in the agency's own portal
  * and marks the card sighted. This registry is the shortcut to that portal and
  * nothing more. The staff UI renders each entry as a plain link that opens the

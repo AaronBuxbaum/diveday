@@ -4,6 +4,7 @@ import {
   type RollCallButtonCopy,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
 import { RollCallMark, type RollCallMarkState } from "@/components/RollCallMark";
+import { ROLL_CALL_MARK_BUTTON_CLASS, rollCallMarkState } from "@/components/RollCallMarkTap";
 import { ROLL_CALL_ROW_TONE, rollCallRuleClass } from "@/components/row-tones";
 import { buttonClass } from "@/components/ui/button";
 import { StatusMark } from "@/components/ui/StatusMark";
@@ -12,7 +13,6 @@ import {
   ROLL_CALL_NOTE_MAX,
   type RollCallCheckpoint,
   type RollCallRecord,
-  type RollCallRowState,
   rollCallRowState,
 } from "@/lib/manifests";
 
@@ -65,27 +65,12 @@ export const BOAT_TARGET_CLASS = buttonClass({
 });
 
 /**
- * The affirmative tap itself: a bare 56px circle, no box, no label text. The
- * `RollCallMark` inside it is the drawn state and the button's accessible name
- * is the words, so nothing is carried by colour alone (decision 5).
- *
- * **Drawn round, tapped square — the whole column.** A browser clips an
- * element's hit area to its border radius, so the round button (K-44, for a
- * round focus ring) stopped taking a tap in the 56px square's corners, about a
- * fifth of what had been its target, and a thumb landing there met the
- * column's bare padding. This is the one-tap-per-person control, worked
- * one-handed on a pitching deck. A square stretched `::after` takes the tap
- * for the button over the whole mark column: `-inset-y-2.5` and `-inset-x-3`
- * are that column's `py-2.5 ps-3 pe-3` on both rows (the roll-call tests hold
- * the two together). It paints nothing, and radius is not inherited, so the
- * ring stays a circle.
+ * The affirmative tap's circle, shared with the offline copy's roll call
+ * (`src/components/RollCallMarkTap.tsx`, #1840), where its drawing and hit
+ * area are explained. One class, so the two manifests cannot drift apart on
+ * the control a crew member learns at the rail.
  */
-const MARK_BUTTON_CLASS = buttonClass({
-  variant: "bare",
-  size: "mark",
-  busy: true,
-  className: "relative after:absolute after:-inset-x-3 after:-inset-y-2.5",
-});
+const MARK_BUTTON_CLASS = ROLL_CALL_MARK_BUTTON_CLASS;
 
 /**
  * What one roll-call record means at one checkpoint, and the fill a recorded
@@ -243,20 +228,11 @@ export const ROW_DISCLOSURE_PANEL_CLASS =
   "rounded-inset border border-border/70 bg-surface-sunken/50 p-3";
 
 /**
- * Which drawn mark a row wears, from the same row state every other reader
- * derives. `held` is dock-only by construction: readiness gates boarding at
- * the dock and never after a dive, so a blocked diver mid-count is an ordinary
- * "to call" like anyone else.
+ * Which drawn mark a row wears — in `src/components/RollCallMarkTap.tsx` now,
+ * because the offline copy derives it too (#1840). Re-exported here, where
+ * every roll-call consumer on this page already looks.
  */
-export function rollCallMarkState(
-  state: RollCallRowState,
-  { blockedAtDock = false }: { blockedAtDock?: boolean } = {},
-): RollCallMarkState {
-  if (state.notBackAboard) return "notBack";
-  if (state.boarded) return "aboard";
-  if (state.recordedNotBoarded || state.impliedNotBoarded) return "ashore";
-  return blockedAtDock ? "held" : "toCall";
-}
+export { rollCallMarkState };
 
 /**
  * The one tap a roll-call row carries at rest.

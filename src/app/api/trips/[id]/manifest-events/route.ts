@@ -139,14 +139,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { id: tripId } = await params;
   const db = await getDb();
 
-  // The gate that decides: live roles, re-read on every subscribe. No `maxAge`
-  // is set on the session (src/lib/auth.config.ts), so NextAuth's 30-day default
-  // applies — a staffer removed from this shop this morning still carries
-  // `captain` in their token for a month, and `/api/**` is outside the edge gate
-  // (src/proxy.ts), so this handler is the only wall. `loadActiveStaffRoles`
-  // exists for that window (ADR 20260724-role-authorization): it is null for a
-  // deleted person, a disabled account, or someone who was never this shop's,
-  // and the roles it does return are the `person_roles` of right now.
+  // The gate that decides: live roles, re-read on every subscribe. The session
+  // sets no `expiresIn` (src/lib/auth.ts), so Better Auth's seven-day default
+  // applies, renewed while it is in use — a staffer removed from this shop this
+  // morning can still carry `captain` in their session for days, and `/api/**`
+  // is outside the edge gate (src/proxy.ts), so this handler is the only wall.
+  // `loadActiveStaffRoles` exists for that window (ADR
+  // 20260724-role-authorization): it is null for a deleted person, a disabled
+  // account, or someone who was never this shop's, and the roles it does return
+  // are the `person_roles` of right now.
   //
   // Before the trip lookup, unlike the sibling offline-manifest routes, and for
   // a reason that does not apply here: those sequence the live check after a

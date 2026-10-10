@@ -21,6 +21,7 @@ import {
   notificationSendQueue,
   people,
   shops,
+  tripInvitations,
   waiverRecords,
   waiverTemplates,
 } from "./schema";
@@ -530,6 +531,152 @@ describe("notification delivery status", () => {
  * that catches a field lifted out of the blob later — exactly what
  * `recipient_email` and `booking_id` are.
  */
+// Issue #2132: the courtesy opt-out is checked before a courtesy message's
+// first send, so the drain must ask again before it retries one.
+describe("a courtesy message waiting in the retry queue", () => {
+  const SCHEDULE = {
+    locale: "en-US" as const,
+    diverName: "Nora Quinn",
+    tripTitle: "Two-Tank Reef",
+    startsAt: new Date("2026-08-01T12:00:00.000Z"),
+    endsAt: new Date("2026-08-01T15:00:00.000Z"),
+    timezone: "America/New_York",
+  };
+
+  /** Fails the first send retryably, then would deliver anything it is handed. */
+  function flakyProvider() {
+    const sent: string[] = [];
+    let calls = 0;
+    const provider: NotificationProvider = {
+      async send(notification) {
+        calls += 1;
+        if (calls === 1) return { status: "failed", retryable: true, errorCode: "throttled" };
+        sent.push(notification.kind);
+        return { status: "sent", providerMessageId: `msg-${calls}` };
+      },
+    };
+    return { provider, sent };
+  }
+
+  async function personOf(db: Awaited<ReturnType<typeof seededBooking>>["db"], bookingId: string) {
+    const [row] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    if (!row) throw new Error("booking missing");
+    return row.personId;
+  }
+
+  async function queueThenOptOut(
+    context: Awaited<ReturnType<typeof seededBooking>>,
+    notification: Notification,
+    provider: NotificationProvider,
+  ) {
+    const { db, shop, booking } = context;
+    await expect(sendNotification(db, notification, provider)).resolves.toMatchObject({
+      status: "failed",
+      retryable: true,
+    });
+    await db
+      .update(people)
+      .set({ courtesyEmailOptOutAt: new Date("2026-07-20T00:00:00.000Z") })
+      .where(eq(people.id, await personOf(db, booking.bookingId)));
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0) })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+  }
+
+  it("drops a cold invitation whose recipient opted out after it was queued", async () => {
+    const context = await seededBooking();
+    const { db, shop, trip, booking } = context;
+    const personId = await personOf(db, booking.bookingId);
+    const [invitation] = await db
+      .insert(tripInvitations)
+      .values({
+        shopId: shop.id,
+        tripId: trip.id,
+        source: "direct",
+        personId,
+        createdByPersonId: personId,
+      })
+      .returning();
+    if (!invitation) throw new Error("invitation insert failed");
+    const { provider, sent } = flakyProvider();
+    await queueThenOptOut(
+      context,
+      {
+        ...SCHEDULE,
+        kind: "direct_trip_invitation",
+        invitationId: invitation.id,
+        shopId: shop.id,
+        to: "nora@example.com",
+        shopName: shop.name,
+        bookingUrl: "https://diveday.test/s/blue-mantis/trips/x",
+        invitedAt: new Date("2026-07-19T00:00:00.000Z"),
+        unsubscribeUrl: "https://diveday.test/unsubscribe/x",
+      },
+      provider,
+    );
+
+    await expect(drainNotificationRetries(db, { provider })).resolves.toMatchObject({
+      scanned: 1,
+      sent: 0,
+      failed: 1,
+    });
+    expect(sent).toEqual([]);
+    await expect(
+      db.select().from(notificationSendQueue).where(eq(notificationSendQueue.shopId, shop.id)),
+    ).resolves.toMatchObject([
+      { status: "failed", errorCode: "opted_out", payloadSealed: null, recipientEmail: null },
+    ]);
+  });
+
+  it("drops a checkout reminder to an address whose person opted out", async () => {
+    const context = await seededBooking();
+    const { db, shop } = context;
+    const { provider, sent } = flakyProvider();
+    await queueThenOptOut(
+      context,
+      {
+        ...SCHEDULE,
+        kind: "checkout_recovery",
+        checkoutId: crypto.randomUUID(),
+        shopId: shop.id,
+        to: "NORA@example.com",
+        shopName: shop.name,
+        checkoutUrl: "https://checkout.stripe.com/c/pay/cs_1",
+        unsubscribeUrl: "https://diveday.test/unsubscribe/x",
+      },
+      provider,
+    );
+
+    await drainNotificationRetries(db, { provider });
+    expect(sent).toEqual([]);
+  });
+
+  it("still retries service mail to a person who opted out of courtesy email", async () => {
+    const context = await seededBooking();
+    const { db, shop, booking } = context;
+    const { provider, sent } = flakyProvider();
+    await queueThenOptOut(
+      context,
+      {
+        ...SCHEDULE,
+        kind: "booking_confirmation",
+        bookingId: booking.bookingId,
+        shopId: shop.id,
+        to: "nora@example.com",
+        shopName: shop.name,
+      },
+      provider,
+    );
+
+    await expect(drainNotificationRetries(db, { provider })).resolves.toMatchObject({ sent: 1 });
+    expect(sent).toEqual(["booking_confirmation"]);
+  });
+});
+
 describe("what the retry queue is allowed to hold", () => {
   const TOKEN = "b3f1c0de-secret-bearer-token-nobody-may-read";
 

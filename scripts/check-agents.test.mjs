@@ -8,6 +8,7 @@ import {
   guardCountProblems,
   linkedSkillProblems,
   spawnedGuardCount,
+  vendoredSkillProblems,
 } from "./agent-layer.mjs";
 import { findLaunchProblems, packageManagerIn } from "./mcp-launch-guard.mjs";
 
@@ -181,5 +182,21 @@ describe("skills linked in from .agents/skills", () => {
     expect(problems).toHaveLength(2);
     expect(problems[0]).toContain(".claude/skills/stray is linked in");
     expect(problems[1]).toContain('"orphan" is locked');
+  });
+});
+
+describe("local overrides of vendored skills", () => {
+  it("passes a skill that carries the local wording", () => {
+    expect(vendoredSkillProblems({ triage: "read the Agent skills section of CLAUDE.md" })).toEqual(
+      [],
+    );
+  });
+
+  it("refuses a skill a sync gave back the upstream setup command", () => {
+    const problems = vendoredSkillProblems({
+      "to-spec": "If not, tell the user to run `/setup-matt-pocock-skills`.",
+    });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain(".agents/skills/to-spec/SKILL.md");
   });
 });

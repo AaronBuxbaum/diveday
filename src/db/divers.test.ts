@@ -14,6 +14,7 @@ import type { AppDb } from "./client";
 import {
   createDiver,
   deleteDiver,
+  findLiveDiverIdByEmail,
   findSimilarDivers,
   getDiverProfile,
   listBookableDivers,
@@ -92,6 +93,35 @@ describe("person-first diver records", () => {
     expect(byPhone?.fullName).toBe("+1 305 555 0188");
     // The *name* keeps the typed spacing; the phone column does not (below).
     expect(byPhone?.phone).toBe("+13055550188");
+  });
+
+  /**
+   * **The email finds the person it belongs to** (issue #2234): the lookup the
+   * staff search's "Add diver" falls back on when `createDiver` refuses a second
+   * row. It matches whatever case was typed, stays inside the shop, and never
+   * hands back a removed person, whose email no longer names anyone here.
+   */
+  it("finds the live diver who owns an email, and nobody else", async () => {
+    const { db, shop } = ctx;
+    const owner = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Email Owner",
+      email: "owner-2234@example.com",
+    });
+    expect(owner).not.toBeNull();
+    expect(await findLiveDiverIdByEmail(db, shop.id, "  Owner-2234@Example.com ")).toBe(owner?.id);
+    expect(await findLiveDiverIdByEmail(db, shop.id, "nobody-2234@example.com")).toBeNull();
+    expect(await findLiveDiverIdByEmail(db, shop.id, "   ")).toBeNull();
+
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Shop 2234", slug: "other-shop-2234", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!other) throw new Error("shop insert failed");
+    expect(await findLiveDiverIdByEmail(db, other.id, "owner-2234@example.com")).toBeNull();
+
+    expect(await deleteDiver(db, shop.id, owner?.id ?? "")).toBe(true);
+    expect(await findLiveDiverIdByEmail(db, shop.id, "owner-2234@example.com")).toBeNull();
   });
 
   /**
@@ -2693,15 +2723,13 @@ describe("findSimilarDivers name similarity and exact matching", () => {
  * not an answer — the name is what the staffer just typed, which is why every
  * candidate is on the list. The day the shop last had that person on a boat is
  * what makes "is this the same Nadia who dived yesterday?" answerable, and it
- * is the same day `peopleWhoDivedBefore` counts, so the counter and the
- * fly-safe reader cannot disagree about what a dive day is.
+ * is the day `diveDay()` counts (`src/db/dive-days.ts`, issue #1694), the rule
+ * the recap's own count reads too, so the counter can never name a day the
+ * diver's keepsake refuses.
  *
- * That rule includes both of the fly-safe reader's escapes, which is what makes
- * this the widest of the three readers of "did this person dive" — the recap's
- * count is narrower on purpose, and
- * `SimilarDiver.lastDiveDayAt` argues why (issue #1694). The two cases below
- * are the escapes; without them the counter goes quiet on exactly the days a
- * shop's own records disagree with the status column.
+ * The cases below pin the rule's edges; without the logged-dive escape the
+ * counter goes quiet on exactly the days a shop's own records disagree with
+ * the status column.
  */
 describe("findSimilarDivers last dive day", () => {
   const HOUR_MS = 60 * 60 * 1000;

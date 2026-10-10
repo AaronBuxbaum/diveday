@@ -165,7 +165,7 @@ describe("SiteFields — the tide station echo (issue #1468)", () => {
     renderFields(FAR, "meters", "es-ES");
     expect(
       screen.getByText(
-        "Esa estación está a 81 km de las coordenadas de este sitio, así que el cambio de marea que predice puede llegar aquí hasta una hora antes o después. Comprueba que es la que querías.",
+        "Esa estación está a 81 km de las coordenadas de este sitio, así que el cambio de marea que predice puede llegar aquí hasta una hora antes o después. Verifica que es la que querías.",
       ),
     ).toBeInTheDocument();
   });

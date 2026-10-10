@@ -3,6 +3,7 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { ReadinessBar } from "@/components/ui/ProgressBar";
 import { INLINE_LINE_BOX } from "@/components/ui/StatusMark";
 import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
@@ -92,8 +93,6 @@ export function DayStation({
   const blocked = Math.min(station.blocked, station.booked);
   const ready = station.booked - blocked;
   const open = Math.max(0, station.capacity - station.booked);
-  const share = (count: number) =>
-    station.capacity > 0 ? `${Math.min(100, (count / station.capacity) * 100)}%` : "0%";
   // **The crew's names are the desktop's**: on a phone the card is the time,
   // the boat and the bar, and who is crewing is one tap away on the departure
   // (and on Schedule's Crew view). Their names ran the line onto a second row.
@@ -184,15 +183,9 @@ export function DayStation({
 
       {/* **The readiness bar.** Ready, then blocked, then the open seats, as
           one bar the boat's capacity wide; the words under it are the
-          accessible reading, so the bar itself is decoration. */}
-      <div
-        aria-hidden="true"
-        data-readiness-bar
-        className="mt-4 flex h-2 overflow-hidden rounded-full bg-surface-sunken"
-      >
-        <span className="bg-success" style={{ width: share(ready) }} />
-        <span className="bg-danger" style={{ width: share(blocked) }} />
-      </div>
+          accessible reading, so the bar itself is decoration. The arrival
+          desk draws the same bar (`ReadinessBar`, #2100). */}
+      <ReadinessBar className="mt-4" ready={ready} blocked={blocked} of={station.capacity} />
       <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tabular-nums">
         <span>{t("shopHome.spine.readyCount", { ready, booked: station.booked })}</span>
         {blocked > 0 ? (

@@ -90,7 +90,7 @@ export function RowActionForm({
         // opposite.
         //
         // This is the client-side face of what
-        // `scripts/check-redirect-in-try.mjs` refuses on the server.
+        // `scripts/lint-rules/redirectInTry.grit` refuses on the server.
         unstable_rethrow(error);
         // What is left is the transport failing, which is the case this exists
         // for: the tap did not send.

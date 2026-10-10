@@ -4,7 +4,6 @@ import {
   acceptAgeAttestation,
   e2eNow,
   openDiverFileGroup,
-  openSettingsRow,
   openThreadStep,
   openTripTab,
 } from "./helpers";
@@ -150,8 +149,7 @@ test.describe("a shop that stops filling nitrox", () => {
     // The diver's own readiness page, which is where they came back to.
     const bookingUrl = anon.url();
 
-    await page.goto(`/shop/${SHOP}/settings`);
-    await openSettingsRow(page, "What we rent");
+    await page.goto(`/shop/${SHOP}/settings/rentals`);
     await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
     await page.getByRole("button", { name: "Save rental catalog" }).click();
     await expect(page.getByText("Rental catalog saved.")).toBeVisible();
@@ -195,8 +193,7 @@ test.describe("a shop that stops filling nitrox", () => {
   }) => {
     test.setTimeout(60_000);
     const SHOP = privateShop.slug;
-    await page.goto(`/shop/${SHOP}/settings`);
-    await openSettingsRow(page, "What we rent");
+    await page.goto(`/shop/${SHOP}/settings/rentals`);
     await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
     await page.getByRole("button", { name: "Save rental catalog" }).click();
     await expect(page.getByText("Rental catalog saved.")).toBeVisible();
@@ -250,20 +247,21 @@ test("a freshly onboarded shop starts without nitrox, and turning it on unlocks 
   await page.getByRole("button", { name: "Create shop & start trial" }).click();
   await expect(page).toHaveURL(new RegExp(`/shop/${slug}`));
 
-  await page.goto(`/shop/${slug}/settings`);
-  await openSettingsRow(page, "What we rent");
-  const nitroxCheckbox = page.getByRole("checkbox", { name: "Nitrox fills" });
-  await expect(nitroxCheckbox).not.toBeChecked();
   // Most shops don't fill nitrox: no price field to fill in until it's ticked.
   // The box a person types in carries `data-draft-for`; the `name` is on the
-  // hidden control that submits the figure (ADR 20260906-before-you-ask).
+  // hidden control that submits the figure (ADR 20260906-before-you-ask). The
+  // catalogue and the prices are two pages of their own (#1854).
+  await page.goto(`/shop/${slug}/settings/rental-prices`);
+  await expect(page.getByRole("heading", { level: 1, name: "Rental prices" })).toBeVisible();
   await expect(page.locator('input[data-draft-for="nitroxPrice"]')).toHaveCount(0);
 
+  await page.goto(`/shop/${slug}/settings/rentals`);
+  const nitroxCheckbox = page.getByRole("checkbox", { name: "Nitrox fills" });
+  await expect(nitroxCheckbox).not.toBeChecked();
   await nitroxCheckbox.check();
   await page.getByRole("button", { name: "Save rental catalog" }).click();
   await expect(page.getByText("Rental catalog saved.")).toBeVisible();
-  // The price boxes wait behind their own row.
-  await openSettingsRow(page, "Rental prices");
+  await page.goto(`/shop/${slug}/settings/rental-prices`);
   await expect(page.locator('input[data-draft-for="nitroxPrice"]')).toHaveCount(1);
 });
 

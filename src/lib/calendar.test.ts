@@ -6,6 +6,7 @@ import {
   isoDate,
   monthKey,
   monthLabel,
+  monthsNewestFirst,
   parseMonthKey,
 } from "./calendar";
 
@@ -55,6 +56,24 @@ describe("monthLabel", () => {
   it("renders a human month and year", () => {
     expect(monthLabel({ year: 2026, month: 7 })).toBe("July 2026");
     expect(monthLabel({ year: 2026, month: 1 })).toBe("January 2026");
+  });
+});
+
+describe("monthsNewestFirst", () => {
+  it("lists every month from the latest back to the earliest, across a year", () => {
+    expect(monthsNewestFirst({ year: 2025, month: 11 }, { year: 2026, month: 2 })).toEqual([
+      { year: 2026, month: 2 },
+      { year: 2026, month: 1 },
+      { year: 2025, month: 12 },
+      { year: 2025, month: 11 },
+    ]);
+  });
+
+  it("is one month when the two are the same, and none when they cross", () => {
+    expect(monthsNewestFirst({ year: 2026, month: 7 }, { year: 2026, month: 7 })).toEqual([
+      { year: 2026, month: 7 },
+    ]);
+    expect(monthsNewestFirst({ year: 2026, month: 8 }, { year: 2026, month: 7 })).toEqual([]);
   });
 });
 

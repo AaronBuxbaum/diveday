@@ -5,6 +5,7 @@ import type {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
 import { type PrivateNoteAction, PrivateNoteForm } from "@/components/PrivateNoteForm";
 import { RollCallMark } from "@/components/RollCallMark";
+import { rollCallRowTone } from "@/components/row-tones";
 import { Badge } from "@/components/ui/badge";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
@@ -40,7 +41,6 @@ import { PersonSheet, type PersonTrailEntry } from "./PersonSheet";
 import { personTrailWithCurrentRecord } from "./person-trail";
 import {
   ROLL_CALL_ROW_CLASS,
-  ROLL_CALL_ROW_TONE,
   ROW_DISCLOSURE_PANEL_CLASS,
   ROW_DISCLOSURE_SUMMARY_CLASS,
   RollCallBackAboardControl,
@@ -389,7 +389,7 @@ export function DiverRollCall({
 
           No "Shop time: Eastern Daylight Time" beside the heading. Every time
           on this page is already the shop's own — that is the app's rule
-          everywhere (`shops.timezone`, `pnpm check:timezone`), not a property
+          everywhere (`shops.timezone`, `scripts/lint-rules/timezone.grit`), not a property
           of this screen — and a crew reading a roll call at their own dock has
           no second zone to confuse it with.
           No standing caption under it either. "After a dive, 'not back aboard'
@@ -492,9 +492,6 @@ export function DiverRollCall({
           const recordedTone = rollCallRecordedTone(rowState);
           const blockedAtDock =
             !ready && (isDeparture || (diver.boardedEarlier === false && !rowState.notBackAboard));
-          const untouchedTone = blockedAtDock
-            ? ROLL_CALL_ROW_TONE.blocked
-            : ROLL_CALL_ROW_TONE.awaiting;
           // Every row is a jump target — the count panel's chips link to any
           // uncalled person — so every row carries the scroll margin that keeps
           // its name clear of the sticky panel. Shared with the crew rows.
@@ -516,7 +513,8 @@ export function DiverRollCall({
           // rows do the same, for the same reason (`src/components/ui/table.tsx`).
           // `ROLL_CALL_ROW_CLASS` carries it, with the card's corner on paper.
           const rowClass = `${ROLL_CALL_ROW_CLASS} ${alarmed ? "order-first print:order-none" : ""} ${rollCallScrollMargin(isDeparture)} ${
-            recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : untouchedTone
+            // Aboard over a block wears the blocked tone (`rollCallRowTone`).
+            rollCallRowTone(recordedTone, blockedAtDock)
           }`;
           // The hairline above this row, in each of the two orders. On screen
           // the first row is the first alarmed one when there is any; on paper
@@ -534,7 +532,8 @@ export function DiverRollCall({
           // 20260827-the-departure-is-two-working-surfaces, decision 1). A row
           // at rest is a name and a mark; the expected state is quiet. This is
           // the priority when a diver is several things at once, loudest first
-          // — a split buddy team outranks a desk blocker outranks a physician's
+          // — a team that did not come back after a dive outranks a desk
+          // blocker outranks a split buddy team at the dock outranks a physician's
           // earlier "no" outranks the crew's duty of care to a minor outranks
           // an advisory outranks a birthday. Everything not chosen here still
           // reaches the reader: it is in the panel one tap away, and
@@ -556,32 +555,47 @@ export function DiverRollCall({
           // else: no birthday, minor or advisory word beside someone in the
           // water (DD9). A split buddy team still shows — it is part of the
           // search. Paper keeps every fact (the block below).
-          const capsuleKind = diver.buddyAlert
+          //
+          // **A blocker outranks `separated_dock`** (dive-domain review of the
+          // manifest-blocked-aboard capture): at the dock a teammate still
+          // ashore is a heads-up, while a blocked diver aboard is this body on
+          // a boat it is not cleared for. The row read "Someone not aboard"
+          // under a head count saying "1 blocked person aboard".
+          const splitAfterDive = diver.buddyAlert === "separated_after_dive";
+          const capsuleKind = splitAfterDive
             ? "buddy"
             : alarmed
               ? null
               : blockedAtDock
                 ? "blocked"
-                : earlierRefusal
-                  ? "refusal"
-                  : referralUnresolved
-                    ? "referral"
-                    : diver.minor && diver.age !== null && diver.age !== undefined
-                      ? "minor"
-                      : diver.depthAdvisory?.status === "exceeds"
-                        ? "depth"
-                        : diver.birthday
-                          ? "birthday"
-                          : null;
-          const capsule =
+                : diver.buddyAlert
+                  ? "buddy"
+                  : earlierRefusal
+                    ? "refusal"
+                    : referralUnresolved
+                      ? "referral"
+                      : diver.minor && diver.age !== null && diver.age !== undefined
+                        ? "minor"
+                        : diver.depthAdvisory?.status === "exceeds"
+                          ? "depth"
+                          : diver.birthday
+                            ? "birthday"
+                            : null;
+          const buddyCapsule =
             diver.buddyAlert && diver.buddyTeam ? (
-              <Badge tone={diver.buddyAlert === "separated_after_dive" ? "danger" : "warning"}>
+              <Badge tone={splitAfterDive ? "danger" : "warning"}>
                 {buddyAlertText(t, diver.buddyAlert)}
               </Badge>
+            ) : null;
+          const capsule =
+            splitAfterDive && buddyCapsule ? (
+              buddyCapsule
             ) : alarmed ? null : blockedAtDock ? (
               <Badge tone={readinessStatusTone(diverStatus)}>
                 {readinessStatusText(t, diverStatus)}
               </Badge>
+            ) : buddyCapsule ? (
+              buddyCapsule
             ) : earlierRefusal ? (
               <Badge tone="warning">{t("manifest.medicalEarlierRefusalChip")}</Badge>
             ) : referralUnresolved ? (
@@ -688,7 +702,9 @@ export function DiverRollCall({
                         t={t}
                       />
                     ) : (
-                      <RollCallMark state="held" />
+                      // No tap, but still what was recorded: aboard or
+                      // ashore before the held ring (review of #1840).
+                      <RollCallMark state={rollCallMarkState(rowState, { blockedAtDock: true })} />
                     )
                   }
                   trigger={

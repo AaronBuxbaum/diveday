@@ -137,6 +137,33 @@ describe("diverBlockerAction", () => {
     expect(result?.detail).toBe("Medical answer needs a doctor’s sign-off.");
   });
 
+  // Issue #2124: a held seat gets no readiness reminder until staff confirm who
+  // it is (`sendDueReminders`), so the row says so — the desk can phone ahead.
+  it("says a held seat's reminders wait on the confirm", () => {
+    const result = diverBlockerAction(
+      { ...input, blockers: [blocker("identity_unconfirmed")] },
+      "blue-reef",
+      NOW,
+    );
+    expect(result?.detail).toBe(
+      "Booking matched on a guess. Confirm who this is before the waiver goes out.",
+    );
+  });
+
+  it("says it of a boat's worth of held seats too", () => {
+    const rows = collapseDiverActions(
+      [
+        { ...input, blockers: [blocker("identity_unconfirmed")] },
+        { ...input, bookingId: "b2", personId: "p2", blockers: [blocker("identity_unconfirmed")] },
+      ],
+      "blue-reef",
+      NOW,
+    );
+    expect(rows.map((row) => row.subject)).toEqual([
+      "2 bookings matched on a guess. Confirm who each one is before the waivers go out.",
+    ]);
+  });
+
   it("says a cert gap without the levels, which the record carries", () => {
     const result = diverBlockerAction(
       {
@@ -1299,6 +1326,19 @@ describe("collapseEmailDeliveries", () => {
     expect(row?.actionLabel).toBe("Resend confirmation");
     expect(row?.resend).toEqual({ bookingIds: ["b-Ana Ruiz"] });
     expect(row?.href).toBe("/shop/blue-reef/trips/t1#booking-b-Ana Ruiz");
+  });
+
+  it("points a batch over two same-minute boats at the same one, whatever order they arrive in (issue #2176)", () => {
+    const at = hoursFromNow(3);
+    const pair = [
+      issue("Ana", { trip: { id: "t2", startsAt: at, label: "Wreck Trek · 8:00 AM" } }),
+      issue("Ben", { trip: { id: "t1", startsAt: at, label: "Reef Drift · 8:00 AM" } }),
+    ];
+    for (const order of [pair, [...pair].reverse()]) {
+      const [row] = collapseEmailDeliveries(order, "blue-reef", NOW);
+      expect(row?.href).toBe("/shop/blue-reef/trips/t1");
+      expect(row?.resend).toEqual({ bookingIds: ["b-Ben", "b-Ana"] });
+    }
   });
 
   it("batches failures for several people into one row that resends them all", () => {

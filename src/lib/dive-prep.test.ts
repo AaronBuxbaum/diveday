@@ -6,6 +6,7 @@ import {
   type PrepDiver,
   type RentalFit,
   rentalFitLine,
+  staffFitPieces,
 } from "./dive-prep";
 
 const fullFit: RentalFit = {
@@ -1075,6 +1076,28 @@ describe("rentalFitLine", () => {
   });
 });
 
+/** Issue #2208: the pieces the Gear tab still offers a picker for, sizes blanked. */
+describe("staffFitPieces", () => {
+  const flaggedAt = new Date("2026-07-24T12:00:00Z");
+
+  it("names every piece a flagged diver rents, with no size to pull", () => {
+    expect(staffFitPieces({ ...fullFit, needsStaffFitAt: flaggedAt })).toEqual([
+      { kind: "bcd", size: null },
+      { kind: "regulator", size: null },
+      { kind: "wetsuit", size: null },
+      { kind: "boots", size: null },
+      { kind: "mask_fins", size: null },
+      // Lead keeps its number: the flag never blanks it (`rentedItems`).
+      { kind: "weights", size: "6 kg" },
+    ]);
+  });
+
+  it("is empty for a fit with no flag, or no fit at all", () => {
+    expect(staffFitPieces(fullFit)).toEqual([]);
+    expect(staffFitPieces(null)).toEqual([]);
+  });
+});
+
 /**
  * **A fit is counted per item, not per row** (glossary — *Complete rental fit*).
  *
@@ -1703,6 +1726,53 @@ describe("participant types on the packing list (ADR 20261007-participant-types)
       ["Dee Diver", ["bcd"]],
       ["Sam Snorkel", ["wetsuit"]],
     ]);
+  });
+});
+
+/**
+ * Issue #2213. One snorkel vest per snorkeler seat, free and always on: it
+ * does not wait on a fit, the catalog, or the shop's own kit. Divers wear a
+ * BCD and riders stay aboard, so neither is counted.
+ */
+describe("snorkel vests on the packing list", () => {
+  it("counts one vest per snorkeler on a mixed boat, none for divers or riders", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({ bookingId: "b1", fullName: "Dee Diver" }),
+        diver({ bookingId: "b2", fullName: "Dan Diver", fit: null }),
+        diver({ bookingId: "b3", fullName: "Sol Snorkel", participantType: "snorkeler" }),
+        // A snorkeler with no fit on file, and one in their own kit, still
+        // take a vest: it is the boat's, not a rental.
+        diver({
+          bookingId: "b4",
+          fullName: "Sam Snorkel",
+          participantType: "snorkeler",
+          fit: null,
+        }),
+        diver({
+          bookingId: "b5",
+          fullName: "Sue Snorkel",
+          participantType: "snorkeler",
+          identityHeld: true,
+        }),
+        diver({ bookingId: "b6", fullName: "Ray Rider", participantType: "rider" }),
+      ],
+      plannedDives: 2,
+      offeredKinds: ["bcd"],
+    });
+    expect(checklist.snorkelVests).toBe(3);
+    expect(checklist.diverCount).toBe(2);
+  });
+
+  it("counts none on a boat with no snorkelers", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({ bookingId: "b1", fullName: "Dee Diver" }),
+        diver({ bookingId: "b2", fullName: "Ray Rider", participantType: "rider" }),
+      ],
+      plannedDives: 1,
+    });
+    expect(checklist.snorkelVests).toBe(0);
   });
 });
 

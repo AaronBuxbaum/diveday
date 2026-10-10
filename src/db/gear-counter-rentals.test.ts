@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
 import { createBooking } from "./bookings";
@@ -390,15 +390,27 @@ describe("createCounterRental", () => {
     expect([...(await openServiceConcerns(db, shop.id, [bcd, reg]))]).toEqual([
       flagged?.gearItemId,
     ]);
-    // Never collected: the release frees it.
-    expect(await releaseGearReservation(db, { shopId: shop.id, reservationId: second })).toEqual({
-      ok: true,
-    });
+    // Never collected: the release frees it, with a stamp rather than a delete.
+    const desk = await staffer(db, shop.id);
+    expect(
+      await releaseGearReservation(db, {
+        shopId: shop.id,
+        reservationId: second,
+        releasedByPersonId: desk.id,
+      }),
+    ).toEqual({ ok: true });
     const open = await db
       .select()
       .from(gearReservations)
-      .where(and(eq(gearReservations.shopId, shop.id), isNull(gearReservations.returnedAt)));
+      .where(
+        and(
+          eq(gearReservations.shopId, shop.id),
+          isNull(gearReservations.returnedAt),
+          isNull(gearReservations.releasedAt),
+        ),
+      );
     expect(open).toEqual([]);
+    expect((await heldBy(db, ana.id)).map((row) => row.id).sort()).toEqual([first, second].sort());
   });
 });
 
@@ -699,25 +711,71 @@ describe("the whole rental in one act", () => {
 
   it("releases only what never left, and refuses another shop's ticket", async () => {
     const { db, shop, rental, other } = await twoUnitRental();
+    const desk = await staffer(db, shop.id);
     const rival = await insertShop(db, "rival-release");
-    const foreign = { shopId: rival.id, ticketId: rental.ticketId };
+    const foreign = { shopId: rival.id, ticketId: rental.ticketId, releasedByPersonId: desk.id };
     expect(await releaseCounterRental(db, foreign)).toEqual({ ok: false, reason: "not_found" });
     expect(await checkOutCounterRental(db, foreign)).toEqual({ ok: false, reason: "not_found" });
-    expect(await releaseCounterRental(db, { shopId: shop.id, ticketId: rental.ticketId })).toEqual({
-      ok: true,
-    });
+    const release = { shopId: shop.id, ticketId: rental.ticketId, releasedByPersonId: desk.id };
+    expect(await releaseCounterRental(db, release)).toEqual({ ok: true });
     expect(await getCounterRentalTicket(db, shop.id, rental.ticketId)).toBeNull();
     expect(await getCounterRentalTicket(db, shop.id, other.ticketId)).not.toBeNull();
+    // Stamped, not deleted (issue #2258): the record of the hold survives, and
+    // a second release finds nothing left to let go.
+    const kept = await db
+      .select()
+      .from(gearReservations)
+      .where(inArray(gearReservations.id, [...rental.reservationIds]));
+    expect(kept).toHaveLength(rental.reservationIds.length);
+    for (const row of kept) {
+      expect(row.releasedAt).toBeInstanceOf(Date);
+      expect(row.releasedByPersonId).toBe(desk.id);
+    }
+    expect(await releaseCounterRental(db, release)).toEqual({ ok: false, reason: "not_found" });
+  });
+
+  it("frees a released counter rental's units for the same window (issue #2258)", async () => {
+    const { db, shop, rental } = await twoUnitRental();
+    const desk = await staffer(db, shop.id);
+    const [first] = rental.reservationIds;
+    if (!first) throw new Error("reservation expected");
+    const [held] = await db
+      .select({ gearItemId: gearReservations.gearItemId, personId: gearReservations.personId })
+      .from(gearReservations)
+      .where(eq(gearReservations.id, first));
+    if (!held?.personId) throw new Error("held unit expected");
+    expect(
+      await releaseCounterRental(db, {
+        shopId: shop.id,
+        ticketId: rental.ticketId,
+        releasedByPersonId: desk.id,
+      }),
+    ).toEqual({ ok: true });
+    // The same person can take the same unit for the same day again.
+    const again = await createCounterRental(db, {
+      shopId: shop.id,
+      personId: held.personId,
+      gearItemIds: [held.gearItemId],
+      reservedFrom: TODAY,
+      reservedUntil: TODAY,
+      todayLocal: TODAY,
+    });
+    expect(again.ok).toBe(true);
   });
 
   it("keeps a unit already out when the rest is released", async () => {
     const { db, shop, rental } = await twoUnitRental();
+    const desk = await staffer(db, shop.id);
     const [first] = rental.reservationIds;
     if (!first) throw new Error("reservation expected");
     await checkOutGearReservation(db, { shopId: shop.id, reservationId: first });
-    expect(await releaseCounterRental(db, { shopId: shop.id, ticketId: first })).toEqual({
-      ok: true,
-    });
+    expect(
+      await releaseCounterRental(db, {
+        shopId: shop.id,
+        ticketId: first,
+        releasedByPersonId: desk.id,
+      }),
+    ).toEqual({ ok: true });
     const after = await getCounterRentalTicket(db, shop.id, first);
     expect(after?.units.map((row) => row.reservationId)).toEqual([first]);
   });
@@ -1075,7 +1133,14 @@ describe("releasing an invoiced rental", () => {
       reservationIds: rental.reservationIds,
       orderId: order.id,
     });
-    expect(await releaseCounterRental(db, { shopId: shop.id, ticketId: rental.ticketId })).toEqual({
+    const desk = await staffer(db, shop.id);
+    expect(
+      await releaseCounterRental(db, {
+        shopId: shop.id,
+        ticketId: rental.ticketId,
+        releasedByPersonId: desk.id,
+      }),
+    ).toEqual({
       ok: false,
       reason: "invoiced",
     });

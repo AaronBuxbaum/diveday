@@ -94,7 +94,7 @@ export default function StaffingLoading() {
               <div className="h-4 w-32 rounded bg-surface-sunken" />
               <div className="mt-2">
                 {[0, 1, 2].map((row) => (
-                  <div key={row} className={`py-2 ${ledgerRowBoxClass}`}>
+                  <div key={row} className={`min-h-13 py-2 ${ledgerRowBoxClass}`}>
                     <div className="flex h-5 items-center">
                       <div className="h-4 w-28 rounded bg-surface-sunken" />
                     </div>

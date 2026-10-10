@@ -1,4 +1,6 @@
-import { ROLL_CALL_ROW_TONE } from "@/components/row-tones";
+import { RollCallMark } from "@/components/RollCallMark";
+import { RollCallMarkTap, rollCallMarkState } from "@/components/RollCallMarkTap";
+import { rollCallRowTone } from "@/components/row-tones";
 import { Badge } from "@/components/ui/badge";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
@@ -11,11 +13,10 @@ import { isHeldSeat } from "@/lib/held-seat";
 import { rollCallLabel, rollCallRecordedTone, rollCallRowState } from "@/lib/manifests";
 import { joinedDiving, leftDiving } from "@/lib/participant-types";
 import type { OfflineTripControls } from "./controls";
+import { OfflineRollCallException } from "./RollCallException";
 import {
-  OFFLINE_BOAT_TARGET_CLASS,
+  OFFLINE_DISCLOSURE_SUMMARY_CLASS,
   OfflineBuddyTeamChip,
-  OfflineRollCallNote,
-  OfflineStatusLabel,
   offlineRollCallRowId,
   reTap,
 } from "./shared";
@@ -23,7 +24,7 @@ import type { OfflineTripView } from "./trip-view";
 
 /**
  * The diver roll call at this checkpoint — one row per diver, each with its
- * board and exception controls.
+ * one tap and its exception panel (#1840).
  */
 export function OfflineDiverRollCall({
   view,
@@ -56,8 +57,8 @@ export function OfflineDiverRollCall({
 }
 
 /**
- * One diver's roll-call row: their state at this checkpoint, the board and
- * exception controls, and the sentence a missing diver gets.
+ * One diver's roll-call row: their state at this checkpoint, the circle that
+ * boards them, and the panel holding the exception and its sentence.
  */
 function OfflineDiverRow({
   diver,
@@ -72,16 +73,7 @@ function OfflineDiverRow({
   controls: OfflineTripControls;
 }) {
   const { checkpoint, isDeparture, expired } = view;
-  const {
-    t,
-    locale,
-    busyBooking,
-    confirmAboardFor,
-    setConfirmAboardFor,
-    noteDrafts,
-    setNoteDrafts,
-    record,
-  } = controls;
+  const { t, locale, busyBooking, record } = controls;
   // The one answer the head count above this row was built from
   // (`offlineTripView`); a second call here could drift from it.
   const state = view.localStates[index];
@@ -94,22 +86,15 @@ function OfflineDiverRow({
   // nobody had called yet amber with a ring — the two marks reserved
   // for "left ashore" and "did not come back".
   const rowState = rollCallRowState(checkpoint, state);
-  // Recorded here at this checkpoint, either way round — a
-  // carried-forward dock result is not undoable and gets the
-  // "Mark…" wording, same as the live manifest.
-  const recordedNotBoarded = rowState.recordedNotBoarded;
   const missing = rowState.notBackAboard;
   const recordedTone = rollCallRecordedTone(rowState);
-  // Untouched: the same rule the live page uses — at the dock a
-  // diver readiness has not cleared is blocked, and readiness is the
-  // thing to fix before boarding; everywhere else nothing has been
-  // said yet.
-  const untouchedTone =
-    ready || !isDeparture ? ROLL_CALL_ROW_TONE.awaiting : ROLL_CALL_ROW_TONE.blocked;
+  // The live page's rule for the fill, from the one helper both read: at the
+  // dock a diver readiness has not cleared is blocked, and aboard over that
+  // block keeps the blocked tone rather than the boarded green.
+  const blockedAtDock = !ready && isDeparture;
   // Same condition the live page passes as `showBoardControl`: divers
-  // only board at departure once readiness clears them. Named, because
-  // the exception control's weight now reads it too — it is what
-  // decides whether that control is the row's *only* one.
+  // only board at departure once readiness clears them, so a blocked
+  // diver's circle is a drawn held ring with no tap.
   const showBoardControl = ready || !isDeparture;
   // The live roll call's two medical warnings (issue #2163), dates only. A
   // held seat never carries them, and the facts block below says why instead.
@@ -132,12 +117,24 @@ function OfflineDiverRow({
       // checkpoint panel, which this page does not have: nothing
       // on this surface is sticky or fixed (the grid's own note
       // below turns on the same fact).
-      className={`scroll-mt-24 border-l-4 p-4 sm:p-5 ${
-        recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : untouchedTone
-      }`}
+      className={`scroll-mt-24 border-l-4 p-4 sm:p-5 ${rollCallRowTone(
+        recordedTone,
+        blockedAtDock,
+      )}`}
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+      {/* **A name and a mark** at rest, as on the live roll call: the
+        circle on the trailing edge is the row's one tap (#1840), and the
+        exception sits a deliberate tap away in the panel under the name.
+        An expired copy has no tap, so its sentence takes the column and
+        stacks under the name on a phone. */}
+      <div
+        className={
+          expired
+            ? "flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+            : "flex items-start gap-3"
+        }
+      >
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             {/* **The first line takes the boat buttons' height,
               through the chip's wrapper** (`sm:h-14`), so the
@@ -276,7 +273,7 @@ function OfflineDiverRow({
             issue #2163), so the summary says "& medical" exactly when
             one of them is on the row. */}
           <details className="group/offlinefacts mt-2 max-w-xl">
-            <summary className="group/summary -mx-2 flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-base font-medium text-muted select-none transition-colors hover:bg-surface-sunken/70 hover:text-primary focus-visible:focus-ring-inset [&::-webkit-details-marker]:hidden">
+            <summary className={OFFLINE_DISCLOSURE_SUMMARY_CLASS}>
               <DisclosureCaret className="group-open/offlinefacts:rotate-90" />
               <span className="group-hover/summary:underline">
                 {t(
@@ -351,236 +348,74 @@ function OfflineDiverRow({
             </ul>
           ) : null}
         </div>
-        <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-          {expired ? (
-            // `sm:py-1.5` centres the sentence's first 20px line on
-            // the name line's 32px beside it, which keeps the
-            // chip's height on an expired copy (above).
-            <p className="text-sm font-semibold text-danger sm:py-1.5">
-              {t("shared.offlineManifest.single.record.expiredRecordOnLive")}
-            </p>
-          ) : (
-            <>
-              {showBoardControl ? (
-                <button
-                  type="button"
-                  disabled={busyBooking === diver.bookingId}
-                  onClick={() => {
-                    // **The one act on this surface that takes two
-                    // taps, and the second one is somewhere else.**
-                    // Over a stated "not back aboard", "Mark aboard"
-                    // is a positive sighting — "I have eyes on her,
-                    // she's aboard" — and it turns the loudest row
-                    // the product has green from a full-width button
-                    // directly beneath the one that raised it. So the
-                    // first tap arms, and this control becomes the
-                    // *safe* choice while the confirmation waits
-                    // below, at different coordinates: a double-tap
-                    // or a bounce on a wet screen — the exact failure
-                    // this exists for — then lands on "keep the
-                    // mark", never on the claim (dive-domain review,
-                    // 2026-08-15).
-                    if (missing && confirmAboardFor !== diver.bookingId) {
-                      setConfirmAboardFor(diver.bookingId);
-                      return;
-                    }
-                    if (missing) {
-                      setConfirmAboardFor(null);
-                      return;
-                    }
-                    void record(
-                      { bookingId: diver.bookingId },
-                      // Re-tapping a settled "Boarded" mark retracts
-                      // it, exactly as the live control does: a
-                      // sighting recorded against the wrong row is
-                      // taken back as a retraction, not restated as
-                      // its opposite. Only ever **this device's own**
-                      // statement — see `OfflineRollCallResult.local`.
-                      reTap(state, state?.state === "boarded", "boarded"),
-                      state,
-                    );
-                  }}
-                  aria-busy={busyBooking === diver.bookingId}
-                  // The live page's exact two faces (RollCallControls):
-                  // primary-bordered while unrecorded, success outline
-                  // once boarded. A captain alternates between these
-                  // two surfaces mid-morning, and the same control
-                  // must not change costume between them — including
-                  // the settled control's undo-bearing accessible
-                  // name (PR #607 review), reusing the live page's
-                  // own key since the visible text is identical.
-                  aria-label={
-                    state?.state === "boarded" && !(missing && confirmAboardFor === diver.bookingId)
-                      ? t("manifest.boardedCheckAriaLabel")
-                      : undefined
-                  }
-                  className={`${OFFLINE_BOAT_TARGET_CLASS} ${
-                    missing && confirmAboardFor === diver.bookingId
-                      ? "border border-border-strong bg-surface-sunken"
-                      : state?.state === "boarded"
-                        ? "border border-success bg-success/15 text-success"
-                        : "border border-primary bg-surface text-primary hover:bg-primary-tint"
-                  }`}
-                >
-                  {busyBooking === diver.bookingId ? (
-                    t("shared.offlineManifest.single.saving")
-                  ) : missing && confirmAboardFor === diver.bookingId ? (
-                    t("shared.offlineManifest.single.confirmAboardCancel")
-                  ) : state?.state === "boarded" ? (
-                    <OfflineStatusLabel variant="success">
-                      {t("shared.offlineManifest.single.boardedDone")}
-                    </OfflineStatusLabel>
-                  ) : (
-                    t("shared.offlineManifest.single.markBoarded")
-                  )}
-                </button>
-              ) : null}
-              <button
-                type="button"
-                disabled={busyBooking === diver.bookingId}
-                onClick={() =>
-                  record(
+        {expired ? (
+          // `sm:py-1.5` centres the sentence's first 20px line on the name
+          // line's 32px beside it, which keeps the chip's height on an
+          // expired copy (above).
+          <p className="text-sm font-semibold text-danger sm:py-1.5">
+            {t("shared.offlineManifest.single.record.expiredRecordOnLive")}
+          </p>
+        ) : (
+          // The mark column: `ps-3` is the gap the circle's square hit area
+          // reaches across (`ROLL_CALL_MARK_BUTTON_CLASS`), so a tap that
+          // misses the circle lands on it and never on the name's disclosure.
+          <div className="flex shrink-0 ps-3">
+            {missing ? (
+              // Recorded not back aboard: no tap on the row. Both ways out
+              // are in the panel, at the same cost (ADR
+              // 20260815-offline-can-unsay-a-missing-diver). The state is in
+              // words on the row's pill, so the mark stays drawn only.
+              <RollCallMark state="notBack" />
+            ) : showBoardControl ? (
+              <RollCallMarkTap
+                state={rollCallMarkState(rowState)}
+                // The live page's own names, the settled one undo-bearing
+                // (PR #607 review): a captain alternates between the two
+                // surfaces mid-morning.
+                label={
+                  state?.state === "boarded"
+                    ? t("manifest.boardedCheckAriaLabel")
+                    : t("shared.offlineManifest.single.markBoarded")
+                }
+                busy={busyBooking === diver.bookingId}
+                onTap={() =>
+                  void record(
                     { bookingId: diver.bookingId },
-                    // Re-tap is the undo, the same as on the live
-                    // manifest: it queues a **retraction**, so a
-                    // mis-tapped "not back aboard" comes off as one
-                    // rather than through "Mark aboard", which would
-                    // write a sighting nobody made into a record an
-                    // insurer may one day read.
-                    //
-                    // Only over a statement **this device queued**
-                    // (`state.local`), and it says which one
-                    // (`state.clientEventId`). Aiming a retraction at
-                    // a snapshot result could take another crew
-                    // member's missing-diver mark off the boat on the
-                    // strength of a copy up to a fortnight old
-                    // (security review, 2026-08-15); naming the
-                    // target is what stops the same thing happening to
-                    // a statement of this device's own that a second
-                    // device has superseded since it synced (ADR
-                    // 20260815-an-offline-retraction-names-its-target).
-                    reTap(state, recordedNotBoarded, "not_boarded"),
+                    // Re-tapping a settled "Boarded" mark retracts it, as the
+                    // live control does — only ever **this device's own**
+                    // statement (`OfflineRollCallResult.local`).
+                    reTap(state, state?.state === "boarded", "boarded"),
                     state,
                   )
                 }
-                aria-busy={busyBooking === diver.bookingId}
-                // The exception control, at the live page's weights
-                // and by the live page's rules (RollCallControls):
-                // most people board, so while nothing is recorded and
-                // the board button is on offer this drops its border
-                // and fill — the exception at less than equal weight
-                // (principle 8), still a full dock-sized target, and
-                // still foreground ink, because marking a no-show is
-                // routine on the surface with the harshest viewing
-                // conditions. It takes the box back the moment it
-                // matters: when it is the row's only control (a
-                // blocked diver at the dock), or when it carries the
-                // recorded state. After a dive it stays neutral too
-                // until somebody records a person not back aboard:
-                // an alarm is earned by a recorded fact, never by the
-                // absence of one (decision 4 of ADR
-                // 20260827-the-departure-is-two-working-surfaces), and
-                // the live page draws it the same way (issue #2107).
-                //
-                // Only the departure settled state gets the undo-bearing
-                // accessible name — after a dive, "not back aboard"
-                // already carries its own visible undo sentence
-                // below, and duplicating it here would say it twice.
-                aria-label={
-                  recordedNotBoarded && isDeparture
-                    ? t("manifest.notBoardedCheckAriaLabel")
-                    : undefined
-                }
-                className={
-                  missing
-                    ? `${OFFLINE_BOAT_TARGET_CLASS} border border-danger bg-danger/15 text-danger`
-                    : recordedNotBoarded
-                      ? `${OFFLINE_BOAT_TARGET_CLASS} border border-border-strong bg-surface-sunken`
-                      : showBoardControl
-                        ? `${OFFLINE_BOAT_TARGET_CLASS} hover:bg-surface-sunken`
-                        : `${OFFLINE_BOAT_TARGET_CLASS} border border-border hover:bg-surface-sunken`
-                }
-              >
-                {/* No done-check after a dive: a "Not boarded" mark beside a
-                  diver still in the water is the string this whole
-                  change exists to delete (DOM-H3). */}
-                {busyBooking === diver.bookingId ? (
-                  t("shared.offlineManifest.single.saving")
-                ) : recordedNotBoarded ? (
-                  isDeparture ? (
-                    <OfflineStatusLabel variant="checked">
-                      {t("shared.offlineManifest.single.notBoardedDone")}
-                    </OfflineStatusLabel>
-                  ) : (
-                    <OfflineStatusLabel variant="danger">
-                      {t("shared.offlineManifest.single.notBackAboardActive")}
-                    </OfflineStatusLabel>
-                  )
-                ) : isDeparture ? (
-                  t("shared.offlineManifest.single.markNotBoarded")
-                ) : (
-                  t("shared.offlineManifest.single.markNotBackAboard")
-                )}
-              </button>
-              {/* The box only where the row's next act can take a
-                sentence: while nothing is recorded (the exception
-                control is about to raise the alarm) or while one
-                stands (either control retracts it). On a settled
-                "aboard" row there is nothing to observe, and a box
-                there would offer a sentence the rule then drops. */}
-              {isDeparture || !(state === undefined || missing) ? null : (
-                <OfflineRollCallNote
-                  subjectId={diver.bookingId}
-                  label={t("manifest.rollCallNoteLabel")}
-                  value={noteDrafts[diver.bookingId] ?? ""}
-                  onChange={(next) =>
-                    setNoteDrafts((drafts) => ({ ...drafts, [diver.bookingId]: next }))
-                  }
-                />
-              )}
-              {/* Same one line the crew rows carry, on the same
-                terms: the loudest mark on the page states how it
-                comes back off, and while a confirmation is armed
-                it states what the next tap would claim instead. */}
-              {rowState.recordedHere && missing ? (
-                <div className="flex w-full flex-col gap-2">
-                  <p className="text-sm text-muted">
-                    {confirmAboardFor === diver.bookingId
-                      ? t("shared.offlineManifest.single.confirmAboardHint", {
-                          name: diver.fullName,
-                        })
-                      : state?.local
-                        ? t("manifest.tapToUndoNotBackAboard")
-                        : t("shared.offlineManifest.single.markedElsewhere")}
-                  </p>
-                  {confirmAboardFor === diver.bookingId ? (
-                    <button
-                      type="button"
-                      disabled={busyBooking === diver.bookingId}
-                      onClick={() =>
-                        record(
-                          { bookingId: diver.bookingId },
-                          // A positive sighting, never a retraction:
-                          // this control asserts the diver is aboard
-                          // over a stated "not back aboard".
-                          { status: "boarded" },
-                          state,
-                        )
-                      }
-                      aria-busy={busyBooking === diver.bookingId}
-                      className={`${OFFLINE_BOAT_TARGET_CLASS} border border-warning bg-warning/15 font-bold`}
-                    >
-                      {t("shared.offlineManifest.single.confirmAboard", {
-                        name: diver.fullName,
-                      })}
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-            </>
-          )}
-        </div>
+              />
+            ) : (
+              // Blocked at the dock: the act that clears them is ashore, so
+              // the mark is drawn and not tappable, as on the live page. It
+              // still draws what was recorded — aboard or ashore before the
+              // held ring — so it never contradicts the pill (review of #1840).
+              <RollCallMark state={rollCallMarkState(rowState, { blockedAtDock: true })} />
+            )}
+          </div>
+        )}
       </div>
+      {/* Under the whole row rather than the name's column, so its controls
+        take the row's width on a phone: in the column beside the circle a
+        "Mark not back aboard" wrapped to two lines. */}
+      {expired ? null : (
+        <OfflineRollCallException
+          // Closes an opened panel when the crew moves to the next count.
+          key={checkpoint}
+          subject={{ bookingId: diver.bookingId }}
+          subjectKey={diver.bookingId}
+          name={diver.fullName}
+          state={state}
+          rowState={rowState}
+          isDeparture={isDeparture}
+          isCrew={false}
+          controls={controls}
+        />
+      )}
     </li>
   );
 }

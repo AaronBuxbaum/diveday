@@ -93,3 +93,47 @@ export function ProgressBar({
     </div>
   );
 }
+
+/**
+ * **Readiness as one bar: ready, then blocked, then the rest of the track.**
+ *
+ * Today's departure card and the arrival desk drew the same reading two ways:
+ * Today hand-rolled an 8px flex track with saturated spans sized by inline
+ * widths, and the desk used `ProgressBar` at 5px with softened tints — and the
+ * marketing drawing copied the first (#2100). One drawing now, at the height
+ * and tint Aaron chose on 2026-10-06: 8px, `bg-success` and `bg-danger` at
+ * full strength, because the bar is read at a glance on a phone at the dock.
+ * The gap after the two bands is the bare track on both surfaces.
+ *
+ * `of` is what the track stands for, and it is the caller's: the boat's
+ * capacity on Today (the gap is the open seats), everyone expected at the
+ * desk (the gap is who has yet to walk up). Decorative, like its parent:
+ * every count it draws is already in the words beside it, so it is
+ * `aria-hidden`.
+ */
+export function ReadinessBar({
+  ready,
+  blocked,
+  of,
+  className = "",
+}: {
+  ready: number;
+  blocked: number;
+  /** The whole track: capacity, or everyone expected. A track of 0 draws empty. */
+  of: number;
+  /** Spacing only; the height and tints are this component's. */
+  className?: string;
+}) {
+  const share = (count: number) => (of > 0 ? count / of : 0);
+  return (
+    <ProgressBar
+      aria-hidden="true"
+      data-readiness-bar=""
+      className={`h-2 ${className}`.trim()}
+      segments={[
+        { key: "ready", fraction: share(ready), className: "bg-success" },
+        { key: "blocked", fraction: share(blocked), className: "bg-danger" },
+      ]}
+    />
+  );
+}

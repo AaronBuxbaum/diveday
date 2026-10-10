@@ -317,3 +317,38 @@ describe("RowLink focus", () => {
     expect(link.closest("tr")).toHaveClass("relative");
   });
 });
+
+/**
+ * **A clipping cell bounds its `RowLink` overlay; `clip={false}` lets it reach
+ * the row** (issue #1989). The overlay is `absolute`, and CSS clips an
+ * absolute box only by an `overflow` ancestor at or inside its containing
+ * block. With every `Td` static that block was the `tr`, so the cell's
+ * `overflow-hidden` clipped nothing and the overlay covered the Orders index's
+ * receipt link in the next cell. A clipping cell that holds a `RowLink` is
+ * positioned, so the overlay stops at the cell; any other cell stays static,
+ * so a popover inside one is not newly clipped.
+ */
+describe("RowLink's reach", () => {
+  it("positions a clipping cell that holds the link, and leaves an opted-out cell static", () => {
+    render(
+      <Table>
+        <TBody>
+          <Tr>
+            <Td>
+              <RowLink href="/shop/blue-mantis/divers/p-1">Grace Mensah</RowLink>
+            </Td>
+            <Td clip={false}>
+              <RowLink href="/shop/blue-mantis/divers/p-2">Ade Bello</RowLink>
+            </Td>
+          </Tr>
+        </TBody>
+      </Table>,
+    );
+    const clipped = screen.getByRole("link", { name: "Grace Mensah" });
+    expect(clipped).toHaveAttribute("data-row-link");
+    expect(clipped.closest("td")).toHaveClass("overflow-hidden", "has-[>[data-row-link]]:relative");
+    const rowWide = screen.getByRole("link", { name: "Ade Bello" }).closest("td");
+    expect(rowWide).not.toHaveClass("overflow-hidden");
+    expect(rowWide?.className).not.toContain("relative");
+  });
+});

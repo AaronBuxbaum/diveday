@@ -1,3 +1,5 @@
+import type { CertificationAgency } from "@/db/schema";
+import { CERTIFICATION_AGENCIES } from "./certification-options";
 import { homeNumberingArea, toE164 } from "./phone";
 
 /**
@@ -41,6 +43,29 @@ export const SELF_DECLARED_LEVELS = [
 ] as const;
 
 export type SelfDeclaredLevel = (typeof SELF_DECLARED_LEVELS)[number];
+
+/**
+ * Agencies whose cards a walk-up diver may not name as their own (issue #2130).
+ *
+ * The form offers every agency a diver might name for their own card: a diver
+ * holding a TDI, IANTD or GUE card used to have to pick "Other" and wait for a
+ * staffer to fix it. NSS-CDS and NACD are left out because they certify cave
+ * divers only, so nobody walks up with one as the card they dive on; offering
+ * them would be noise. Staff still record either on the diver record, and the
+ * importer still reads them.
+ */
+const NO_ENTRY_LEVEL_CARD = ["nss_cds", "nacd"] as const satisfies readonly CertificationAgency[];
+
+/**
+ * The agencies the walk-up form offers, in the order the enum lists them, so
+ * the form and the action that parses it read one list.
+ */
+export const SELF_DECLARED_AGENCIES = CERTIFICATION_AGENCIES.filter(
+  (agency): agency is SelfDeclaredAgency =>
+    !(NO_ENTRY_LEVEL_CARD as readonly string[]).includes(agency),
+) as unknown as readonly [SelfDeclaredAgency, ...SelfDeclaredAgency[]];
+
+export type SelfDeclaredAgency = Exclude<CertificationAgency, (typeof NO_ENTRY_LEVEL_CARD)[number]>;
 
 /**
  * The one success state, and the only one a visitor may distinguish.

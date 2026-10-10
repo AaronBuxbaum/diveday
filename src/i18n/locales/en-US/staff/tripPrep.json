@@ -29,6 +29,7 @@
   "yesterday": "yesterday",
   "daysAgo": "{count, plural, one {# day} other {# days}} ago",
   "rentalKitHeading": "Rental kit",
+  "snorkelVests": "{count, plural, one {# snorkel vest} other {# snorkel vests}}, one per snorkeler",
   "groupLabel": "Group by",
   "groupByItem": "By item",
   "groupByDiver": "By diver",

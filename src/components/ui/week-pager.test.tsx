@@ -28,6 +28,25 @@ describe("WeekPager", () => {
     expect(screen.getByRole("link", { name: "This week" })).toHaveClass("whitespace-nowrap");
   });
 
+  it("draws the way back at the arrows' height and type, one size per row", () => {
+    // The arrows are `icon` (48px, 16px type); the link was `sm` (44px, 14px)
+    // beside them (#1982). It is `md` now, which only fits at 390 because the
+    // row above wraps as whole units.
+    render(
+      <WeekPager
+        rangeLabel="Aug 24 – 30, 2026"
+        previousHref="/a"
+        nextHref="/b"
+        thisWeekHref="/c"
+        words={words}
+      />,
+    );
+    const thisWeek = screen.getByRole("link", { name: "This week" });
+    expect(thisWeek).toHaveClass("min-h-12", "text-base");
+    expect(thisWeek).not.toHaveClass("text-sm");
+    expect(screen.getByRole("link", { name: "Previous week" })).toHaveClass("min-h-12");
+  });
+
   it("leaves the way back out while the current week is already on screen", () => {
     render(
       <WeekPager

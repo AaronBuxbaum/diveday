@@ -29,7 +29,7 @@ import { getTripOverview } from "./trips-overview";
  * the trip page — reads each rostered professional's recorded ratings, and the
  * money and roster paths keep the roster's claim, because H-59 closed new-sale
  * and new-assignment refusal on a locally recorded renewal date
- * (docs/product/human-decisions.md). Both halves are asserted here, against
+ * (docs/product/human-decisions/README.md). Both halves are asserted here, against
  * the boundaries that decide them: the departure's own shop-local day, a
  * rating with no date, and two instructors with one lapsed.
  *

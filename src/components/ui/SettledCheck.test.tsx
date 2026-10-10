@@ -89,13 +89,13 @@ describe("SettledCheck", () => {
     const { container } = render(
       <SettledCheck settled label="All home" labelClassName="font-medium">
         <span>8 of 8 back by 8:30 AM</span>
-        <span>head count closed by Sal Moretti</span>
+        <span>last roll call closed by Sal Moretti</span>
       </SettledCheck>,
     );
     const glyph = mark(container);
     const label = screen.getByText("All home");
     const block = label.parentElement;
-    expect(block).toBe(screen.getByText("head count closed by Sal Moretti").parentElement);
+    expect(block).toBe(screen.getByText("last roll call closed by Sal Moretti").parentElement);
     expect(block).toHaveClass("min-w-0");
     expect(block?.contains(glyph)).toBe(false);
     // The block and the mark are the two halves of one row that starts at the

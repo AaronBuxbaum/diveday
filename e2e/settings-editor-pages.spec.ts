@@ -35,6 +35,12 @@ test("the hub's list editors are doors, and each opens its own page", async ({
   for (const [name, segment] of [
     ["Boats", "boats"],
     ["Trip tags", "trip-tags"],
+    // Forms of six to a dozen fields, pages of their own since #1854.
+    ["What we rent", "rentals"],
+    ["Rental prices", "rental-prices"],
+    ["Emergency reference", "emergency-reference"],
+    ["Dock-day rhythm", "dock-day"],
+    ["Shop profile & branding", "profile"],
   ] as const) {
     await expect(main.getByRole("link", { name, exact: true })).toHaveAttribute(
       "href",
@@ -45,6 +51,35 @@ test("the hub's list editors are doors, and each opens its own page", async ({
   // And the hub is a directory: none of the editors' controls is on it.
   await expect(main.getByRole("button", { name: "Add a boat" })).toHaveCount(0);
   await expect(main.getByRole("button", { name: "Add package" })).toHaveCount(0);
+  for (const save of [
+    "Save rental catalog",
+    "Save rental prices",
+    "Save emergency reference",
+    "Save dock-day rhythm",
+    "Save profile",
+  ]) {
+    await expect(main.getByRole("button", { name: save })).toHaveCount(0);
+  }
+});
+
+test("the emergency reference saves on its own page, and the save lands back on it", async ({
+  page,
+  privateShop,
+}) => {
+  test.setTimeout(60_000);
+  const SHOP = privateShop.slug;
+  await page.goto(`/shop/${SHOP}/settings/emergency-reference`);
+  await expect(page.getByRole("heading", { level: 1, name: "Emergency reference" })).toBeVisible();
+  await page.getByLabel("Vessel", { exact: true }).fill("Second Wind, white hull, blue canopy");
+  await page.getByRole("button", { name: "Save emergency reference" }).click();
+
+  // Asserted on the banner and the heading, not the URL, for the reason the
+  // boats test above gives (`FlashParams`).
+  await expect(page.getByText("Emergency reference saved.")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Emergency reference" })).toBeVisible();
+  await expect(page.getByLabel("Vessel", { exact: true })).toHaveValue(
+    "Second Wind, white hull, blue canopy",
+  );
 });
 
 test("a hull is added on its own page, and the save lands back on it", async ({

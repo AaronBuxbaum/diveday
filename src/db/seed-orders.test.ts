@@ -71,7 +71,7 @@ describe("seeded order states", () => {
   it("dates them inside the index's default window, so they need no 'show all'", async () => {
     const { db, shop } = await seededShopContext({ history: true });
     // Through the clock, like the seed that dated these rows: a direct
-    // wall-clock read drifts past the frozen instant (`check:clock`).
+    // wall-clock read drifts past the frozen instant (`scripts/lint-rules/clock.grit`).
     const from = new Date(nowMs() - ORDER_DEFAULT_RANGE_DAYS * 24 * 60 * 60 * 1000);
     const standalone = (await db.select().from(orders).where(eq(orders.shopId, shop.id))).filter(
       (order) => order.bookingId === null,

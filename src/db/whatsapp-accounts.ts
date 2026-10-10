@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { CourtesyProvider } from "@/lib/notifications/courtesy";
@@ -335,6 +335,18 @@ async function tryTransactionLock(tx: DbExecutor, key: string): Promise<boolean>
  * the caller redirect afterwards. Do the code exchange *before* calling this:
  * it changes nothing at Meta, so it needs no lock and no open transaction.
  */
+/**
+ * **How long a parked row may hold a WABA against another shop** (issue #2194).
+ *
+ * A parked row ({@link SETUP_INCOMPLETE_TEMPLATE}) claims its WABA exactly as a
+ * connected one does, and nobody can see it: the shop that abandoned the
+ * Connect has no connected account to disconnect. Past this age, measured from
+ * its `updated_at` (every Connect attempt rewrites it), another shop's claim on
+ * the same WABA deletes it inside {@link claimWhatsAppWaba}. A week keeps the
+ * PIN for a shop that is still finishing its own setup.
+ */
+export const PARKED_REGISTRATION_STALE_MS = 7 * 24 * 60 * 60 * 1000;
+
 export async function claimWhatsAppWaba<T>(
   db: AppDb,
   input: { shopId: string; wabaId: string },
@@ -344,6 +356,29 @@ export async function claimWhatsAppWaba<T>(
     for (const bound of CLAIM_BOUNDS) await tx.execute(bound);
     if (!(await tryTransactionLock(tx, `whatsapp-shop:${input.shopId}`))) return { status: "busy" };
     if (!(await tryTransactionLock(tx, `whatsapp-waba:${input.wabaId}`))) return { status: "busy" };
+    // Under the WABA lock, so no other Connect can be finishing that row now.
+    const released = await tx
+      .delete(shopWhatsappAccounts)
+      .where(
+        and(
+          eq(shopWhatsappAccounts.wabaId, input.wabaId),
+          ne(shopWhatsappAccounts.shopId, input.shopId),
+          eq(shopWhatsappAccounts.templateName, SETUP_INCOMPLETE_TEMPLATE),
+          isNull(shopWhatsappAccounts.verifiedAt),
+          lt(
+            shopWhatsappAccounts.updatedAt,
+            new Date(nowDate().getTime() - PARKED_REGISTRATION_STALE_MS),
+          ),
+        ),
+      )
+      .returning({ shopId: shopWhatsappAccounts.shopId });
+    for (const row of released) {
+      // Ids only, never the WABA — the same posture as the webhook route.
+      log("whatsapp_account.stale_parked_released", "warn", {
+        shopId: row.shopId,
+        claimingShopId: input.shopId,
+      });
+    }
     const holder = await shopIdForWhatsAppWaba(tx, input.wabaId);
     if (holder && holder !== input.shopId) return { status: "held_elsewhere" };
     return { status: "claimed", value: await work(tx) };

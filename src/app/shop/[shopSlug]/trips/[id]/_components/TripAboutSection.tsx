@@ -49,7 +49,12 @@ function AboutRow({ row }: { row: TripAboutRow }) {
     );
   }
   return (
-    <AboutRowDetails id={row.id} open={row.editorOpen} className="group/row scroll-mt-24">
+    <AboutRowDetails
+      id={row.id}
+      label={row.label}
+      open={row.editorOpen}
+      className="group/row scroll-mt-24"
+    >
       {/* The summary is the row's hover fill and spans the row, rule to rule:
           the room around the label is the grid's (`ROW_GRID`), so the fill
           clears the words by 8px on both sides (the probe measured 0px against
@@ -169,7 +174,12 @@ export function TripMoreDisclosure({
   children: ReactNode;
 }) {
   return (
-    <details id="about-more" open={open} className="group/more border-t border-border">
+    <details
+      id="about-more"
+      aria-label={label}
+      open={open}
+      className="group/more border-t border-border"
+    >
       <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground">
         <span>{label}</span>
         <DisclosureCaret direction="down" className="size-4 group-open/more:rotate-180" />

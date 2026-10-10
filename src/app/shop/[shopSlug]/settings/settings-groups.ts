@@ -41,7 +41,9 @@ export type SettingsGroupSpec = (typeof SETTINGS_GROUPS)[number];
  *
  * **A row whose editor is a list, or more than about three fields, is not on
  * this list — it has a page.** Boats, trip tags and dive packages each opened
- * onto a run of forms with a Save and a Delete on every line. The
+ * onto a run of forms with a Save and a Delete on every line; what the shop
+ * rents, its rental prices, the emergency reference, the dock-day rhythm and
+ * the shop profile were forms of six to a dozen fields (#1854). The
  * hub is a directory, and a directory row states an answer and opens the form
  * that changes it (ADR 20260827-clearwater-surface-language, decision 6). Those
  * are `route` rows below and `SettingsDoorRow`s on the hub (dive packages has
@@ -56,7 +58,6 @@ export const SECTION_IDS = [
   "timezone",
   "season",
   "contact",
-  "profile",
   "shopPhotos",
   "address",
   "reviewLink",
@@ -65,13 +66,9 @@ export const SECTION_IDS = [
   "packing",
   "counterCard",
   "certCheck",
-  "dockCall",
   "units",
   "crewSchedule",
   "divingOptions",
-  "emergency",
-  "rentals",
-  "rentalPricing",
   "rentalTerms",
   "tax",
   "passThrough",
@@ -97,8 +94,6 @@ const SECTION_FRAGMENTS: Partial<Record<SectionId, string>> = {
   searchListing: "search-listing",
   divingOptions: "diving-options",
   crewSchedule: "crew-schedule",
-  dockCall: "dock-call",
-  rentalPricing: "rental-pricing",
   rentalTerms: "rental-terms",
   passThrough: "pass-through",
   dateRequests: "date-requests",
@@ -241,13 +236,13 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     id: "emergency",
     labelKey: "settings.main.emergency.heading",
     group: "boats-sites",
-    target: { kind: "section", id: "emergency" },
+    target: { kind: "route", path: "/settings/emergency-reference" },
   },
   {
     id: "dockCall",
     labelKey: "settings.main.dockCall.heading",
     group: "boats-sites",
-    target: { kind: "section", id: "dockCall" },
+    target: { kind: "route", path: "/settings/dock-day" },
   },
   {
     id: "tripTags",
@@ -284,14 +279,14 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     id: "rentals",
     labelKey: "settings.main.rentals.heading",
     group: "rental-gear",
-    target: { kind: "section", id: "rentals" },
+    target: { kind: "route", path: "/settings/rentals" },
     gate: "payments",
   },
   {
     id: "rentalPricing",
     labelKey: "settings.main.rentalPricing.heading",
     group: "rental-gear",
-    target: { kind: "section", id: "rentalPricing" },
+    target: { kind: "route", path: "/settings/rental-prices" },
     gate: "payments",
   },
   {
@@ -359,7 +354,7 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     id: "profile",
     labelKey: "settings.main.profile.heading",
     group: "website",
-    target: { kind: "section", id: "profile" },
+    target: { kind: "route", path: "/settings/profile" },
   },
   {
     id: "shopPhotos",

@@ -336,9 +336,86 @@ export function findNoticeCodes(contents) {
   return found;
 }
 
+/**
+ * The top-level keys of the object literal whose `{` is at `open`, with the
+ * offset of each and the text of its value. A spread, a computed key and a
+ * method are skipped rather than guessed at; an unbalanced literal answers
+ * `null`, the same trade `callArguments` makes.
+ */
+function objectEntries(contents, open) {
+  const chunks = callArguments(contents, open + 1);
+  if (!chunks) return null;
+  const entries = [];
+  for (const chunk of chunks) {
+    const match = /^\s*(?:(["'])([^"'\n]*)\1|([A-Za-z_$][\w$]*))\s*:/.exec(chunk.text);
+    if (!match) continue;
+    entries.push({
+      key: match[2] ?? match[3],
+      index: chunk.index + match[0].search(/\S/),
+      value: chunk.text.slice(match[0].length),
+    });
+  }
+  return entries;
+}
+
+/** `const NAME = {`, `const NAME: Record<…> = {` and `… = {` with `satisfies` after. */
+const OBJECT_DECLARATION = /\b(?:const|let)\s+(\w+)\s*(?::[^=]*)?=\s*\{/g;
+
+/** A value shaped like a notice definition: an object with a `tone` and a `key`. */
+const isNoticeDefinition = (value) =>
+  /^\s*\{/.test(value) && /\btone\s*:/.test(value) && /\bkey\s*:/.test(value);
+
+/**
+ * The keys of every notice map in one file — the destination half of the pair
+ * (issue #1845). The emitter half is spelled by `noticeUrl`, which writes every
+ * code kebab; a map keyed any other way (`"import-no_gear_column"`) matches
+ * nothing, and the page renders no banner at all, which is the failure this
+ * guard exists for. It had shipped in two importers.
+ *
+ * A map is found two ways. Exactly: the identifier passed as the second
+ * argument of `noticeFromParam(…)`, resolved to its object literal in the same
+ * file. By shape, for a map read some other way: an object literal declared
+ * with a `NoticeTone` or `FormNotice` type whose every value is an object with
+ * a `tone` and a `key`. The type is part of the shape because `{ tone, key }`
+ * alone is also a badge: the blow-out page's `MESSAGE_BADGE` is keyed by a
+ * delivery status (`no_email`) in a `BadgeTone`, and is not a notice map. Never
+ * by key spelling, which is the whole trap: `src/lib/today.ts`,
+ * `src/i18n/card-labels.ts` and several more hold domain-enum maps keyed in
+ * snake_case on purpose. A map declared in another file, or built at runtime,
+ * is out of reach of a per-file scan and goes unjudged.
+ */
+export function findNoticeMapKeys(contents) {
+  const passed = new Set();
+  for (const match of contents.matchAll(/\bnoticeFromParam\s*\(/g)) {
+    const args = callArguments(contents, match.index + match[0].length);
+    const name = /^\s*(\w+)\s*$/.exec(args?.[1]?.text ?? "");
+    if (name) passed.add(name[1]);
+  }
+  const found = [];
+  for (const match of contents.matchAll(OBJECT_DECLARATION)) {
+    const entries = objectEntries(contents, match.index + match[0].length - 1);
+    if (!entries || entries.length === 0) continue;
+    const typedAsNotice = /\b(?:NoticeTone|FormNotice)\b/.test(match[0]);
+    const isMap =
+      passed.has(match[1]) ||
+      (typedAsNotice && entries.every((entry) => isNoticeDefinition(entry.value)));
+    if (!isMap) continue;
+    for (const entry of entries) {
+      found.push({
+        code: entry.key,
+        line: lineAt(contents, entry.index),
+        shape: `${match[1]}["${entry.key}"] (a notice map key)`,
+      });
+    }
+  }
+  return found;
+}
+
 /** The codes in one file that are not in the one canonical spelling. */
 export function findNoticeCodeViolations(contents) {
-  return findNoticeCodes(contents).filter(({ code }) => !NOTICE_CODE_PATTERN.test(code));
+  return [...findNoticeCodes(contents), ...findNoticeMapKeys(contents)].filter(
+    ({ code }) => !NOTICE_CODE_PATTERN.test(code),
+  );
 }
 
 // Imported by the test, which must not run the scan or exit the process.

@@ -47,7 +47,7 @@ const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
  * small-framed diver as "this shop has nothing for me".
  *
  * The grid is the owner's call and is open as **H-76** in
- * `docs/product/human-decisions.md`, which carries the two questions this list
+ * `docs/product/human-decisions/README.md`, which carries the two questions this list
  * cannot answer for itself: the short cut is missing where the tall one is not,
  * and a diver may not know their drysuit size at all. This list ships
  * provisionally. Only this array depends on the answer — the column is `text`
@@ -70,7 +70,7 @@ const DRYSUIT_SIZES = ["XS", "S", "M", "MT", "L", "LT", "XL", "XLT", "XXL"];
  * 9"). Silent data loss, and the crew find out at the dock.
  *
  * Off-grid values are sanctioned rather than accidental: H-76
- * (`docs/product/human-decisions.md`) says `MS`, `ML`, `LS` and `MLT` are real
+ * (`docs/product/human-decisions/README.md`) says `MS`, `ML`, `LS` and `MLT` are real
  * sizes a shop that stocks one records staff-side, where the field is free
  * text. Offering the stored value as an option makes it visible, selected, and
  * preserved by any save that does not deliberately change it.

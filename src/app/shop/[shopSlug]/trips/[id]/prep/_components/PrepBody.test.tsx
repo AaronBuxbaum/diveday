@@ -168,6 +168,45 @@ describe("an empty departure on the departure page", () => {
   });
 });
 
+/**
+ * Issue #2213. The crew loads one snorkel vest per snorkeler seat, said in the
+ * rental kit section; a snorkel-only boat is not an empty one.
+ */
+describe("snorkel vests", () => {
+  function withSeats(types: ("diver" | "snorkeler" | "rider")[]): TripPrep {
+    const prep = prepFor();
+    prep.checklist = buildDivePrepChecklist({
+      divers: types.map((participantType, index) => ({
+        bookingId: `b${index}`,
+        personId: `p${index}`,
+        fullName: `Seat ${index}`,
+        fit: null,
+        participantType,
+        wantsNitrox: false,
+        hasVerifiedNitroxCard: false,
+        lastDivedBand: null,
+      })),
+      plannedDives: 2,
+    });
+    return prep;
+  }
+
+  it("says how many vests to load on a mixed boat, one per snorkeler", () => {
+    const { container } = renderPrep(withSeats(["diver", "snorkeler", "snorkeler", "rider"]));
+    expect(within(container).getByText("2 snorkel vests, one per snorkeler")).toBeTruthy();
+  });
+
+  it("draws the prep for a snorkel-only boat rather than an empty state", () => {
+    const { container } = renderPrep(withSeats(["snorkeler"]));
+    expect(within(container).getByText("1 snorkel vest, one per snorkeler")).toBeTruthy();
+  });
+
+  it("says nothing of vests on a boat with no snorkelers", () => {
+    const { container } = renderPrep(withSeats(["diver", "rider"]));
+    expect(within(container).queryByText(/snorkel vest/)).toBeNull();
+  });
+});
+
 const STATED = new Date("2026-09-01T00:00:00Z");
 
 /** A stated fit that rents nothing until an override says it does. */
@@ -286,6 +325,7 @@ function everyPanelPrep(): TripPrep {
         ] as never,
         wanted: [],
         handedOver: false,
+        needsStaffFit: null,
         counterHeld: [],
       },
     ],
@@ -385,6 +425,7 @@ describe("proposed units on the Gear tab", () => {
           assigned: [] as never,
           wanted: [{ kind: "bcd", size: "L" }],
           handedOver: false,
+          needsStaffFit: null,
           counterHeld: [],
         },
         {
@@ -392,6 +433,7 @@ describe("proposed units on the Gear tab", () => {
           assigned: [] as never,
           wanted: [{ kind: "bcd", size: "XL" }],
           handedOver: false,
+          needsStaffFit: null,
           counterHeld: [],
         },
       ],
@@ -455,6 +497,68 @@ describe("proposed units on the Gear tab", () => {
 });
 
 /**
+ * **A diver flagged for a staff fit keeps their pickers** (issue #2208). The
+ * row says the diver needs a staff fit, offers a picker for each piece opened
+ * on the placeholder, and proposes nothing.
+ */
+describe("a diver flagged for a staff fit on the Gear tab", () => {
+  function flaggedPrep(): TripPrep {
+    const base = prepFor();
+    const unit = {
+      id: "r1",
+      kind: "regulator" as const,
+      label: "Reg #1",
+      size: null,
+      serviceState: { state: "no_clock" } as GearServiceState,
+      serviceConcern: false,
+    };
+    return {
+      ...base,
+      gearFleetTotal: 1,
+      loadOut: { units: 0, divers: 1, stillToPick: 1, serviceFlagged: 0 },
+      freeByKind: new Map([["regulator", [unit]]]),
+      assignmentRows: [
+        {
+          diver: { bookingId: "b1", fullName: "Carmen Ruiz" } as never,
+          assigned: [] as never,
+          wanted: [{ kind: "regulator", size: null, sizeIsAStart: true }],
+          needsStaffFit: { note: "No XL BCD left" },
+          handedOver: false,
+          counterHeld: [],
+        },
+      ],
+      proposals: new Map(),
+    };
+  }
+
+  it("says the diver needs a staff fit and opens each picker on the placeholder", () => {
+    const { container } = renderPrep(flaggedPrep());
+    expect(
+      within(container).getByText(
+        t("shared.rentalFit.needsStaffFitWithNote", { note: "No XL BCD left" }),
+      ),
+    ).toBeTruthy();
+    const [picker, ...others] = within(container).getAllByRole("combobox");
+    expect(others).toHaveLength(0);
+    expect((picker as HTMLSelectElement).value).toBe("");
+    expect(within(container).getByRole("option", { name: "Reg #1" })).toBeTruthy();
+    expect(within(container).queryByText(/^Proposed:/)).toBeNull();
+    expect(within(container).queryByRole("button", { name: /proposed/ })).toBeNull();
+  });
+
+  it("says nothing of the kind on a row with no flag", () => {
+    const prep = flaggedPrep();
+    const [row] = prep.assignmentRows;
+    if (!row) throw new Error("a row expected");
+    const { container } = renderPrep({
+      ...prep,
+      assignmentRows: [{ ...row, needsStaffFit: null }],
+    });
+    expect(within(container).queryByText(/Needs staff fit/)).toBeNull();
+  });
+});
+
+/**
  * **An assigned unit keeps its care labels** (second dive-domain review of the
  * proposals). The picker said "service concern" or "service overdue" in the
  * option; the assigned line says it too, in the same words, and the cart line
@@ -493,6 +597,7 @@ describe("an assigned unit that needs care", () => {
           ] as never,
           wanted: [],
           handedOver: false,
+          needsStaffFit: null,
           counterHeld: [],
         },
       ],

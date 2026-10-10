@@ -43,6 +43,7 @@ next-env.d.ts
 
 # playwright
 /test-results/
+/e2e-durations/
 /playwright-report/
 /e2e/screenshots/
 
@@ -67,6 +68,8 @@ next-env.d.ts
 # scripts/screenshot.mjs is the kept tool that makes writing one unnecessary;
 # its output lands here.
 /.shots*.mjs
+# Gallery pages built by scripts/publish-canvas.mjs; build output, never committed.
+/canvas-build/
 /screenshots/
 
 # Built by scripts/build-service-worker.mjs from src/worker/manifest-sw.ts.

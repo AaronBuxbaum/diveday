@@ -13,6 +13,7 @@ import {
 } from "./bookings";
 import { formBuddyTeam } from "./buddy-pairs";
 import type { AppDb } from "./client";
+import { openGearReservation } from "./gear";
 import { getTripManifest, recordRollCall } from "./manifests";
 import { setBookingNitrox } from "./nitrox";
 import { setBookingPayment } from "./payments";
@@ -712,15 +713,21 @@ describe("what a type change leaves behind", () => {
       .select({ kind: gearItems.kind })
       .from(gearReservations)
       .innerJoin(gearItems, eq(gearItems.id, gearReservations.gearItemId))
-      .where(eq(gearReservations.bookingId, diver.bookingId));
+      .where(and(eq(gearReservations.bookingId, diver.bookingId), openGearReservation()));
     expect(kept.map((row) => row.kind)).toEqual(["mask"]);
 
     expect(await change(db, ids, diver.bookingId, "rider")).toMatchObject({ ok: true });
     const none = await db
       .select()
       .from(gearReservations)
-      .where(eq(gearReservations.bookingId, diver.bookingId));
+      .where(and(eq(gearReservations.bookingId, diver.bookingId), openGearReservation()));
     expect(none).toHaveLength(0);
+    // Let go with a stamp, not deleted (issue #2258): both holds are still on record.
+    const all = await db
+      .select()
+      .from(gearReservations)
+      .where(eq(gearReservations.bookingId, diver.bookingId));
+    expect(all).toHaveLength(2);
   });
 
   it("says a paid rider who starts diving owes the difference, and collects nothing", async () => {

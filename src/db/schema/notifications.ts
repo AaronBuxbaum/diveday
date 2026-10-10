@@ -53,8 +53,11 @@ export const lastMinuteListUnsubscribeTokens = pgTable(
 
 /**
  * A diver-facing, self-serve bearer link to opt one person out of courtesy
- * email — `waitlist_invite` and `trip_recap`, the two kinds `people.courtesyEmailOptOutAt`
- * governs (docs features/story-backlog.md "Leo — self-serve email unsubscribe"). Same
+ * email, every courtesy kind `people.courtesyEmailOptOutAt` governs: wait-list
+ * openings, post-trip recaps, checkout reminders and cold staff invitations, as
+ * listed on `issuePersonCourtesyEmailUnsubscribeToken` in
+ * `src/db/courtesy-email.ts` (docs features/story-backlog.md "Leo — self-serve
+ * email unsubscribe"). Same
  * shape and reasoning as `lastMinuteListUnsubscribeTokens`: a fresh token per
  * send rather than one stable token per person, never expires, and consuming
  * it is an idempotent write (only ever sets `courtesyEmailOptOutAt`) — kept as

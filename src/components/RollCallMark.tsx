@@ -136,6 +136,10 @@ export function RollCallMark({ state }: { state: RollCallMarkState }) {
     <span
       className={`grid size-14 shrink-0 place-items-center rounded-full ${MARK_CLASS[state]}`}
       aria-hidden="true"
+      // Which of the five a row is drawing, for a test to read without
+      // decoding a fill: the mark is the one thing at the rail that says
+      // where a person is, so what it draws is pinned, not inferred.
+      data-mark-state={state}
     >
       <MarkGlyph state={state} />
     </span>

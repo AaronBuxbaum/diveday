@@ -60,17 +60,17 @@ export async function GET(request: Request) {
     return Response.json(EMPTY_RESULTS, { headers: NO_STORE });
   }
 
-  // The gate that decides: live roles, re-read on every keystroke's request. No
-  // `maxAge` is set on the session (src/lib/auth.config.ts), so NextAuth's
-  // 30-day default applies — a staffer removed from this shop this morning still
-  // carries `captain` in their token for a month, and `/api/**` is outside the
-  // edge gate (src/proxy.ts), so this handler is the only wall.
-  // `loadActiveStaffRoles` exists for that window (ADR 20260724-role-
-  // authorization): it is null for a deleted person, a disabled account, or
-  // someone who was never this shop's, and the roles it does return are the
-  // `person_roles` of right now. What it is holding shut is every diver, trip,
-  // dive site, course and order name in the shop, reachable one substring at a
-  // time — `searchShop` below is still under it.
+  // The gate that decides: live roles, re-read on every keystroke's request.
+  // The session sets no `expiresIn` (src/lib/auth.ts), so Better Auth's
+  // seven-day default applies, renewed while it is in use — a staffer removed
+  // from this shop this morning can still carry `captain` in their session for
+  // days, and `/api/**` is outside the edge gate (src/proxy.ts), so this
+  // handler is the only wall. `loadActiveStaffRoles` exists for that window
+  // (ADR 20260724-role-authorization): it is null for a deleted person, a
+  // disabled account, or someone who was never this shop's, and the roles it
+  // does return are the `person_roles` of right now. What it is holding shut is
+  // every diver, trip, dive site, course and order name in the shop, reachable
+  // one substring at a time — `searchShop` below is still under it.
   const roles = await loadActiveStaffRoles(db, shop.id, session.user.personId);
   if (!roles || !isStaff(roles)) {
     return Response.json({ error: "authentication_required" }, { status: 401, headers: NO_STORE });

@@ -25,6 +25,13 @@ import { clientIp } from "@/lib/request-ip";
 import { parseReviewRating } from "@/lib/reviews";
 import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
 
+/** A photo's caption; the photos themselves are read with `getAll` below. */
+const captionForm = z.object({ caption: z.string().default("") });
+/** A review: the rating is narrowed by `parseReviewRating`, the comment by the writer. */
+const reviewForm = z.object({ rating: z.string().optional(), comment: z.string().default("") });
+/** A pulse's note; its categories are read with `getAll` below. */
+const pulseNoteForm = z.object({ note: z.string().default("") });
+
 /** The tip form: a preset radio, and an "Other" box that wins when filled. */
 const tipForm = z.object({
   customAmount: z.string().default(""),
@@ -75,7 +82,8 @@ export async function uploadRecapPhotoAction(token: string, formData: FormData) 
     .filter((entry): entry is File => entry instanceof File && entry.size > 0)
     .slice(0, MAX_RECAP_PHOTOS_PER_BOOKING);
   if (files.length === 0) redirect(`${back}?photo=none`);
-  const caption = String(formData.get("caption") ?? "");
+  const captionParse = parseForm(captionForm, formData);
+  const caption = captionParse.ok ? captionParse.data.caption : "";
   const db = await getDb();
   // The recap link is the diver's own, and this is a form they just submitted
   // from their own device — first-hand evidence of the language they read
@@ -249,7 +257,9 @@ export async function submitReviewAction(token: string, formData: FormData) {
     redirect(`${back}?review=error`);
   }
 
-  const rating = parseReviewRating(formData.get("rating"));
+  const review = parseForm(reviewForm, formData);
+  if (!review.ok) redirect(`${back}?review=error`);
+  const rating = parseReviewRating(review.data.rating ?? null);
   if (rating === null) redirect(`${back}?review=error`);
   if (!(await isRecapOpen(await getDb(), bookingId))) redirect(`${back}?review=did_not_dive`);
 
@@ -264,9 +274,7 @@ export async function submitReviewAction(token: string, formData: FormData) {
   const outcome = await submitTripReview(await getDb(), {
     bookingId,
     rating,
-    // `normalizeReviewComment` refuses a non-string, but keep the File case
-    // from reaching it as a type error at all.
-    comment: String(formData.get("comment") ?? ""),
+    comment: review.data.comment,
   }).catch(() => null);
   // A no-show/cancelled booking gets its own truthful notice — "pick a
   // rating and try again" is a lie when the real problem is there was no
@@ -323,6 +331,7 @@ export async function submitRecapPulseAction(token: string, formData: FormData) 
   // form carries is dropped rather than refused, so a stale tab posting a
   // retired code still saves the codes it got right.
   const categories = parseRecapPulseCategories(formData.getAll("category"));
+  const noteParse = parseForm(pulseNoteForm, formData);
   if (!(await isRecapOpen(await getDb(), bookingId))) redirect(`${back}?pulse=error`);
 
   // Same first-hand signal the review and the photo upload record (docs ADR
@@ -336,9 +345,9 @@ export async function submitRecapPulseAction(token: string, formData: FormData) 
   const outcome = await submitRecapPulse(await getDb(), {
     bookingId,
     categories,
-    // `String`, so a crafted multipart part cannot arrive as a File — the
-    // writer trims and caps it, and stores null rather than an empty string.
-    note: String(formData.get("note") ?? ""),
+    // A crafted multipart part that is a File reads as no note — the writer
+    // trims and caps it, and stores null rather than an empty string.
+    note: noteParse.ok ? noteParse.data.note : "",
   }).catch(() => null);
   // Each refusal keeps its own word. "That didn't send, try again" is a lie
   // when the booking never sailed or when nothing was chosen, and both would

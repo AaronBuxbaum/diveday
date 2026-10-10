@@ -21,6 +21,10 @@ describe("erasureFailureOf", () => {
     expect(erasureFailureOf(ERASURE_FAILURE_DETAIL.notConfigured)).toBe("unreachable");
   });
 
+  it("reads a request that never got an answer as Stripe not answering", () => {
+    expect(erasureFailureOf(ERASURE_FAILURE_DETAIL.unanswered)).toBe("unreachable");
+  });
+
   it.each(["HTTP 400: resource_missing", "HTTP 401", "HTTP 403: account_invalid"])(
     "reads %s as Stripe refusing",
     (detail) => {

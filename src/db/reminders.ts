@@ -390,7 +390,9 @@ export async function sendDueReminders(
     // booker is the diver record the seat was matched to, the address on that
     // record may be somebody else's, and a reminder would hand them this
     // seat's link. The cadence re-arms the moment the hold clears, because no
-    // delivery row is written for it.
+    // delivery row is written for it. Staff are told on the roster's held-seat
+    // row and Today's identity row ("Reminders wait…", issue #2124), so the
+    // desk can confirm ahead of the day.
     if (row.booking.identityUnconfirmedAt) {
       summary.identityHeld += 1;
       continue;

@@ -5,7 +5,12 @@
 
 import { describe, expect, it } from "vitest";
 
-import { findNoticeCodes, findNoticeCodeViolations, noticeSinks } from "./check-notice-codes.mjs";
+import {
+  findNoticeCodes,
+  findNoticeCodeViolations,
+  findNoticeMapKeys,
+  noticeSinks,
+} from "./check-notice-codes.mjs";
 
 /**
  * The rule is only worth having if it sees all three shapes a notice code is
@@ -254,5 +259,90 @@ describe("a page-local helper that forwards to noticeUrl", () => {
 
   it("exposes the sinks it found, so the rule is inspectable", () => {
     expect([...noticeSinks(whatsAppShape)]).toEqual([["done", 1]]);
+  });
+});
+
+/**
+ * The destination half (issue #1845). `noticeUrl` writes every code kebab, so a
+ * map keyed `"import-no_gear_column"` matches nothing and the page renders no
+ * banner at all. Both importers shipped exactly that.
+ */
+describe("a notice map's keys", () => {
+  const mapKeys = (source) => findNoticeMapKeys(source).map((found) => found.code);
+
+  const gearImportShape = [
+    "const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {",
+    '  "import-no_gear_column": { tone: "danger", key: "settings.gearImport.noGearColumn" },',
+    '  imported: { tone: "success", key: "settings.gearImport.imported" },',
+    "};",
+    "export default function Page({ notice }: { notice?: string }) {",
+    "  const banner = noticeFromParam(notice, NOTICES);",
+    "}",
+  ].join("\n");
+
+  it("refuses a snake_case key in a map read through noticeFromParam", () => {
+    expect(refused(gearImportShape)).toEqual(["import-no_gear_column"]);
+  });
+
+  it("reads every top-level key, quoted or bare, and names its line", () => {
+    expect(findNoticeMapKeys(gearImportShape)).toEqual([
+      expect.objectContaining({ code: "import-no_gear_column", line: 2 }),
+      expect.objectContaining({ code: "imported", line: 3 }),
+    ]);
+  });
+
+  it("finds a map passed to noticeFromParam whatever its values look like", () => {
+    const source = [
+      "const RESCUE_NOTICES = {",
+      '  sent_again: "ready.rescue.sentAgain",',
+      "};",
+      "const notice = noticeFromParam(sent, RESCUE_NOTICES);",
+    ].join("\n");
+    expect(refused(source)).toEqual(["sent_again"]);
+  });
+
+  it("finds a notice-typed map by its shape when nothing passes it to noticeFromParam", () => {
+    const source = [
+      "const DESK_NOTICES = {",
+      '  "walkin_saved": { tone: "success", key: "trips.notices.walkinSaved" },',
+      "} satisfies Record<string, { tone: NoticeTone; key: StaffMessageKey }>;",
+      "const OTHER: Record<string, FormNotice> = {",
+      '  crew_saved: { tone: "success", key: "trips.notices.crewSaved", form: "crew" },',
+      "};",
+    ].join("\n");
+    // The `satisfies` form carries its type after the literal, out of the
+    // declaration's reach, so only the annotated one is judged by shape.
+    expect(refused(source)).toEqual(["crew_saved"]);
+  });
+
+  it("leaves a badge map alone, which has the same shape and is keyed by a status", () => {
+    const source = [
+      "const MESSAGE_BADGE: Record<Status, { tone: BadgeTone; key: StaffMessageKey }> = {",
+      '  no_email: { tone: "neutral", key: "blowout.record.messageNoEmail" },',
+      "};",
+    ].join("\n");
+    expect(mapKeys(source)).toEqual([]);
+  });
+
+  it("leaves a domain-enum map alone, whatever its keys are spelled", () => {
+    const source = [
+      "const REASON_LABEL: Record<Reason, StaffMessageKey> = {",
+      '  not_checked_in: "today.reasons.notCheckedIn",',
+      '  medical_hold: "today.reasons.medicalHold",',
+      "};",
+    ].join("\n");
+    expect(mapKeys(source)).toEqual([]);
+  });
+
+  it("skips a spread and a computed key rather than guessing at them", () => {
+    const source = [
+      "const NOTICES: Record<string, FormNotice> = {",
+      "  ...SHARED_NOTICES,",
+      '  [dynamicKey]: { tone: "danger", key: "x.y" },',
+      '  saved: { tone: "success", key: "x.saved" },',
+      "};",
+      "noticeFromParam(notice, NOTICES);",
+    ].join("\n");
+    expect(mapKeys(source)).toEqual(["saved"]);
   });
 });

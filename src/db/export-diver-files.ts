@@ -475,7 +475,7 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
         row.expiresAt,
         row.createdAt,
       ]),
-    note: "Waiver evidence this diver signed. Medical answers are withheld pending a legal review of subject-access scope (docs/product/human-decisions.md).",
+    note: "Waiver evidence this diver signed. Medical answers are withheld pending a legal review of subject-access scope.",
   },
   {
     file: "course_form_records.csv",
@@ -592,6 +592,7 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
       "reserved_until",
       "checked_out_at",
       "returned_at",
+      "released_at",
       "created_at",
     ],
     rows: ({ gearReservationRows, gearItemLabel }) =>
@@ -604,6 +605,7 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
         row.reservedUntil,
         row.checkedOutAt,
         row.returnedAt,
+        row.releasedAt,
         row.createdAt,
       ]),
     note: "Rental gear reserved for this diver's own seats.",

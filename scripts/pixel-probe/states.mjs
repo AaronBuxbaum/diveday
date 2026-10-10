@@ -94,6 +94,70 @@ function measureElementState() {
     return null;
   };
   const selfArea = Math.max(1, this.offsetWidth * this.offsetHeight);
+  // Text a person cannot see is not text a fill has to make room for (issue
+  // #1992). `checkVisibility()` passes an `sr-only` span — the recipe hides it
+  // by clipping its paint, not by `display` or `visibility` — and its text
+  // Range still reports the full unclipped rects, so a button carrying its
+  // state as an sr-only word read as text running past the fill. Three
+  // spellings of the recipe: Tailwind's (`clip-path: inset(50%)` on a 1×1
+  // `overflow: hidden` box, which is the one this app ships), the older
+  // `clip: rect(0 0 0 0)`, and a bare 1×1 box that clips.
+  const visuallyHidden = (element) => {
+    const style = getComputedStyle(element);
+    if (/^rect\((\s*0(px)?\s*,?){4}\)$/.test(style.clip)) return true;
+    if (/^inset\(\s*50%\s*\)$/.test(style.clipPath)) return true;
+    if (style.overflowX === "visible" || style.overflowY === "visible") return false;
+    const rect = element.getBoundingClientRect();
+    return rect.width <= 1 && rect.height <= 1;
+  };
+  const hiddenUpTo = (element, root) => {
+    for (let cursor = element; cursor; cursor = cursor.parentElement) {
+      if (visuallyHidden(cursor)) return true;
+      if (cursor === root) return false;
+    }
+    return false;
+  };
+  // The part of a text rect that shows: each clipping ancestor between the
+  // text and the measured root trims it to its padding box. Not every
+  // ancestor clips: an `overflow` box clips an absolutely positioned
+  // descendant only when it is that descendant's containing block or above
+  // it, so past an `absolute` element the walk skips ancestors until the one
+  // that establishes its containing block, and past a `fixed` one until a
+  // transform, filter or paint containment does — the same containing-block
+  // rule #1989 is about. Over-clipping here would invent a new wrong reading.
+  const establishesFor = (style, escaping) => {
+    const transformed =
+      style.transform !== "none" ||
+      style.filter !== "none" ||
+      style.perspective !== "none" ||
+      /paint|layout|strict|content/.test(style.contain || "");
+    return escaping === "fixed" ? transformed : transformed || style.position !== "static";
+  };
+  const clipBoxFor = (element, root) => {
+    let left = Number.NEGATIVE_INFINITY;
+    let top = Number.NEGATIVE_INFINITY;
+    let right = Number.POSITIVE_INFINITY;
+    let bottom = Number.POSITIVE_INFINITY;
+    let escaping = null;
+    for (let cursor = element; cursor && cursor !== root; cursor = cursor.parentElement) {
+      const style = getComputedStyle(cursor);
+      if (escaping && establishesFor(style, escaping)) escaping = null;
+      if (!escaping) {
+        const rect = cursor.getBoundingClientRect();
+        if (style.overflowX !== "visible") {
+          left = Math.max(left, rect.left + num(style.borderLeftWidth));
+          right = Math.min(right, rect.right - num(style.borderRightWidth));
+        }
+        if (style.overflowY !== "visible") {
+          top = Math.max(top, rect.top + num(style.borderTopWidth));
+          bottom = Math.min(bottom, rect.bottom - num(style.borderBottomWidth));
+        }
+      }
+      if (style.position === "fixed") escaping = "fixed";
+      else if (style.position === "absolute" && escaping !== "fixed") escaping = "absolute";
+    }
+    return { left, top, right, bottom };
+  };
   const textBounds = (root) => {
     const rect = root.getBoundingClientRect();
     if (rect.width * rect.height > selfArea * 6) return null;
@@ -111,17 +175,30 @@ function measureElementState() {
       if (parent && typeof parent.checkVisibility === "function" && !parent.checkVisibility()) {
         continue;
       }
+      if (parent && hiddenUpTo(parent, root)) continue;
+      const clip = parent
+        ? clipBoxFor(parent, root)
+        : {
+            left: Number.NEGATIVE_INFINITY,
+            top: Number.NEGATIVE_INFINITY,
+            right: Number.POSITIVE_INFINITY,
+            bottom: Number.POSITIVE_INFINITY,
+          };
       let end = data.length;
       while (end > start && /\s/.test(data[end - 1])) end -= 1;
       const range = document.createRange();
       range.setStart(node, start);
       range.setEnd(node, end);
       for (const part of range.getClientRects()) {
-        if (part.width < 0.5 || part.height < 0.5) continue;
-        x1 = Math.min(x1, part.left + sx);
-        y1 = Math.min(y1, part.top + sy);
-        x2 = Math.max(x2, part.right + sx);
-        y2 = Math.max(y2, part.bottom + sy);
+        const left = Math.max(part.left, clip.left);
+        const top = Math.max(part.top, clip.top);
+        const right = Math.min(part.right, clip.right);
+        const bottom = Math.min(part.bottom, clip.bottom);
+        if (right - left < 0.5 || bottom - top < 0.5) continue;
+        x1 = Math.min(x1, left + sx);
+        y1 = Math.min(y1, top + sy);
+        x2 = Math.max(x2, right + sx);
+        y2 = Math.max(y2, bottom + sy);
       }
       seen += 1;
     }

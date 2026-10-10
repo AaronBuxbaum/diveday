@@ -19,6 +19,7 @@ import type { AppDb } from "./client";
 import {
   type GearReservationActionOutcome,
   latestServiceClocks,
+  openGearReservation,
   openServiceConcerns,
 } from "./gear";
 import { violatesExclusionConstraint } from "./query-helpers";
@@ -249,7 +250,7 @@ export async function counterRentalsHeldDuring(
         eq(gearReservations.shopId, shopId),
         isNull(gearReservations.bookingId),
         inArray(gearReservations.personId, [...personIds]),
-        isNull(gearReservations.returnedAt),
+        openGearReservation(),
         lte(gearReservations.reservedFrom, window.until),
         gte(gearReservations.reservedUntil, window.from),
       ),
@@ -494,6 +495,7 @@ export async function linkCounterRentalOrder(
         eq(gearReservations.personId, order.personId),
         isNull(gearReservations.bookingId),
         isNull(gearReservations.orderId),
+        isNull(gearReservations.releasedAt),
       ),
     )
     .returning({ id: gearReservations.id });
@@ -534,7 +536,7 @@ export async function checkOutCounterRental(
       and(
         sameCounterRental(input.shopId, input.ticketId),
         isNull(gearReservations.checkedOutAt),
-        isNull(gearReservations.returnedAt),
+        openGearReservation(),
       ),
     )
     .returning({ id: gearReservations.id });
@@ -574,7 +576,7 @@ export async function returnCounterRental(
       and(
         sameCounterRental(input.shopId, input.ticketId),
         isNotNull(gearReservations.checkedOutAt),
-        isNull(gearReservations.returnedAt),
+        openGearReservation(),
       ),
     )
     .returning({ id: gearReservations.id });
@@ -587,30 +589,39 @@ export async function returnCounterRental(
  * release would erase the only record of who has them, and the return is the
  * honest close (`releaseGearReservation`'s rule, for the set).
  *
- * **Not once it is invoiced.** A release deletes the rows, and the rows are
- * the ticket the invoice links back to; letting go of a billed rental would
- * leave an invoice for gear the record says never left. The invoice is voided
- * first, on the order, by the people who may touch money.
+ * **A release is a stamp, never a delete** (issue #2258): `released_at` and
+ * who did it, so the record that the units were held for this person survives
+ * a disputed no-show charge, while the window frees at once.
+ *
+ * **Not once it is invoiced.** A released rental drops off the ticket the
+ * invoice links back to; letting go of a billed rental would leave an invoice
+ * for gear the ticket no longer shows. The invoice is voided first, on the
+ * order, by the people who may touch money.
  */
 export async function releaseCounterRental(
   db: AppDb,
-  input: { shopId: string; ticketId: string },
+  input: { shopId: string; ticketId: string; releasedByPersonId: string },
 ): Promise<GearReservationActionOutcome | { ok: false; reason: "invoiced" }> {
   const [invoiced] = await db
     .select({ id: gearReservations.id })
     .from(gearReservations)
     .where(
-      and(sameCounterRental(input.shopId, input.ticketId), isNotNull(gearReservations.orderId)),
+      and(
+        sameCounterRental(input.shopId, input.ticketId),
+        isNotNull(gearReservations.orderId),
+        isNull(gearReservations.releasedAt),
+      ),
     )
     .limit(1);
   if (invoiced) return { ok: false, reason: "invoiced" };
   const released = await db
-    .delete(gearReservations)
+    .update(gearReservations)
+    .set({ releasedAt: nowDate(), releasedByPersonId: input.releasedByPersonId })
     .where(
       and(
         sameCounterRental(input.shopId, input.ticketId),
         isNull(gearReservations.checkedOutAt),
-        isNull(gearReservations.returnedAt),
+        openGearReservation(),
       ),
     )
     .returning({ id: gearReservations.id });
@@ -758,7 +769,7 @@ async function counterRentalRows(
         eq(gearReservations.personId, filter.personId),
         isNull(gearReservations.bookingId),
         filter.sameRentalAs ? sameCounterRental(shopId, filter.sameRentalAs) : undefined,
-        filter.openOnly ? isNull(gearReservations.returnedAt) : undefined,
+        filter.openOnly ? openGearReservation() : isNull(gearReservations.releasedAt),
       ),
     )
     .orderBy(

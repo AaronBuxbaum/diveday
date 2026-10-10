@@ -546,7 +546,7 @@ export async function getDayCloseout(
  * **Who closed each head count, and when** — the two facts a settled station
  * says about itself beyond its numbers (ADR
  * 20260827-clearwater-surface-language, decision 4; the Evening artboard's
- * "back by 10:26 AM · head count closed by Keiko").
+ * "back by 10:26 AM · last roll call closed by Keiko").
  *
  * The latest roll-call event on the trip *is* the moment the count closed:
  * these rows are append-only and a count is closed by its last mark. So this

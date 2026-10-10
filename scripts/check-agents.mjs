@@ -11,6 +11,7 @@ import {
   guardCountProblems,
   linkedSkillProblems,
   spawnedGuardCount,
+  vendoredSkillProblems,
 } from "./agent-layer.mjs";
 import { listDirs } from "./check-context-budget.mjs";
 import { findLaunchProblems } from "./mcp-launch-guard.mjs";
@@ -80,6 +81,13 @@ const locked = Object.keys(
   JSON.parse(await readFile(path.join(ROOT, "skills-lock.json"), "utf8")).skills ?? {},
 );
 problems.push(...linkedSkillProblems([...linkedSkills], locked));
+const vendored = {};
+for (const name of linkedSkills)
+  vendored[name] = await readFile(
+    path.join(ROOT, ".agents/skills", name, "SKILL.md"),
+    "utf8",
+  ).catch(() => "");
+problems.push(...vendoredSkillProblems(vendored));
 
 // 3. Reviewer agents: filename matches frontmatter, and the skill index mentions each.
 const agentFiles = (await readdir(path.join(ROOT, ".claude/agents"))).filter((f) =>

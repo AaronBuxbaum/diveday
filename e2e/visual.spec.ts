@@ -3700,7 +3700,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Returns").fill("12:30");
         await page.getByRole("button", { name: "Put it on the board" }).click();
         await page.waitForURL(new RegExp(`/shop/${unique}\\?created=`));
-        await page.getByRole("heading", { name: /your shop is bookable/ }).waitFor();
+        await page.getByRole("heading", { name: "Your shop is bookable." }).waitFor();
         await capture(page, "today-first-bookable", scheme);
 
         // The orientation's *other* form, on the same shop rather than a
@@ -4353,6 +4353,17 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/staffing");
         await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
         await capture(page, "staffing", scheme);
+      });
+
+      // The pager off the current week, which is the only state that draws
+      // "This week" beside the arrows (#1982): at 390 the row wraps and the
+      // link takes a line of its own at `md`. The board photographs its own
+      // pager in this state (`schedule-builder-asked`); nothing photographed
+      // the staffing week's until this.
+      test(`the staffing week pages off the current week (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/staffing?week=2026-07-27");
+        await page.getByRole("link", { name: "This week" }).waitFor();
+        await capture(page, "staffing-week-next", scheme);
       });
 
       /**
@@ -5315,6 +5326,32 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The erase control refusing a typed name** (issue #1985): the one
+       * state where someone reads this control hardest, and the one no baseline
+       * had looked at. The refusal renders under the box, and the button has to
+       * stand level with the box rather than drop to the error's line. Reached
+       * directly — a wrong name is refused by the real action, so nothing is
+       * seeded and nothing is erased.
+       */
+      test(`the erase control's refused name renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openDiverProfile(page, "Felix", "Felix Grant");
+        const record = page.url().split("?")[0] ?? "";
+        await page.getByText("Delete Felix Grant").click();
+        await page.getByRole("button", { name: "Delete diver" }).click();
+        await page.getByText("Diver deleted.").waitFor();
+        await page.goto(record);
+        await page.getByText("Erase Felix Grant’s personal data").click();
+        await page.getByLabel("Type Felix Grant to confirm").fill("Felix Gr");
+        await page.getByRole("button", { name: "Erase personal data" }).click();
+        // The refusal on the box itself, so the shot never lands mid-redirect.
+        await page.getByRole("alert").filter({ hasText: "nothing was erased" }).waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "diver-profile-erase-refused", scheme);
+      });
+
+      /**
        * The waiver card with its paper attestation open — the one state on this
        * record that no baseline had ever looked at, because it used to live
        * behind a `<details>` that only opens on a click.
@@ -5740,6 +5777,49 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **A crew member another boat also claims, said once** (issue #2217,
+       * PR #2202). At the dock the Boat tab says the instruction once above
+       * the crew list and each clashing row reads only "Also rostered on …
+       * at these hours." Through `?crewClash=1`, the one door into the state
+       * the roster refuses to write.
+       */
+      test(`a manifest names a crew member rostered on another boat (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?crewClash=1");
+        expect(seeded.ok()).toBe(true);
+        const { crewClash } = (await seeded.json()) as { crewClash?: { tripId: string } };
+        if (!crewClash) throw new Error("seed-trouble-states found no two departures to clash");
+        await page.goto(`/shop/blue-mantis/trips/${crewClash.tripId}/manifest`);
+        // The destination's own words, not a timing guess.
+        await page
+          .getByText(/^Also rostered on /)
+          .first()
+          .waitFor();
+        await offlineCopySaved(page);
+        await capture(page, "manifest-crew-clash", scheme);
+      });
+
+      /**
+       * **A blocked diver the crew marked aboard** (issue #2217, PR #2202):
+       * the head count's "1 blocked person aboard" line at the dock. Through
+       * `?blockedAboard=1`, which boards a diver the app was happy to board
+       * and then supersedes their release — the order it happens in a shop,
+       * since the boarding gate refuses the other.
+       */
+      test(`a manifest counts a blocked diver aboard (${scheme})`, async ({ page, request }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?blockedAboard=1");
+        expect(seeded.ok()).toBe(true);
+        const { blockedAboard } = (await seeded.json()) as { blockedAboard?: { tripId: string } };
+        if (!blockedAboard) throw new Error("seed-trouble-states boarded nobody to block");
+        await page.goto(`/shop/blue-mantis/trips/${blockedAboard.tripId}/manifest`);
+        await page.getByText("1 blocked person aboard").first().waitFor();
+        await offlineCopySaved(page);
+        await capture(page, "manifest-blocked-aboard", scheme);
+      });
+
+      /**
        * **The same manifest with one seat released** (#1209,
        * `dive-domain-expert` review 20260911).
        *
@@ -5938,6 +6018,43 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
         await page.getByRole("heading", { name: "Rental assignments" }).waitFor();
         await capture(page, "prep-assignments", scheme);
+      });
+
+      /**
+       * **Each reason an assigned unit needs a look** (issue #2221, PR
+       * #2209): "Needs service" with its note, a service clock run out, a
+       * return flagged as a concern, and a clock coming due — one unit each,
+       * assigned to four divers on today's reef boat. Through
+       * `?unitsNeedingCare=1`, never the demo seed: the calm capture above is
+       * what the demo shows.
+       */
+      test(`the prep page says why an assigned unit needs a look (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?unitsNeedingCare=1");
+        expect(seeded.ok()).toBe(true);
+        const { unitsNeedingCare } = (await seeded.json()) as {
+          unitsNeedingCare?: { tripId: string };
+        };
+        if (!unitsNeedingCare) throw new Error("seed-trouble-states assigned no units to flag");
+        await page.goto(`/shop/blue-mantis/trips/${unitsNeedingCare.tripId}/prep`);
+        await page.getByRole("heading", { name: "Rental assignments" }).waitFor();
+        // The labels themselves, not the heading: a capture on the right route
+        // in the calm state catches nothing.
+        await expect(
+          page
+            .getByText(/Inflator sticks/)
+            .filter({ visible: true })
+            .first(),
+        ).toBeVisible();
+        await expect(
+          page
+            .getByText(/service overdue/)
+            .filter({ visible: true })
+            .first(),
+        ).toBeVisible();
+        await capture(page, "prep-assignments-need-care", scheme);
       });
 
       /**
@@ -6249,14 +6366,30 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "offline-manifest-removed-other-shop", scheme);
       });
 
-      // Shop settings, where staff set the rental catalog and its prices.
+      // The settings hub, the directory every shop setting hangs off.
       test(`shop settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Rental prices" }).waitFor();
+        await page.getByRole("heading", { name: "Rental terms" }).waitFor();
         // One row open in the capture, so the baseline shows the disclosure's
-        // open-form treatment as well as the at-rest directory.
-        await openSettingsRow(page, "Rental prices");
+        // open-form treatment as well as the at-rest directory. Rental prices
+        // used to be the open one; it is a page of its own now (#1854).
+        await openSettingsRow(page, "Rental terms");
         await capture(page, "settings-payments", scheme);
+      });
+
+      /**
+       * What the shop rents and what it charges for it, each on a page of its
+       * own since #1854: a grid of catalogue pills, and a price box per offered
+       * item. Hub rows until then, open in `settings-payments`.
+       */
+      test(`the rental pages render true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/rentals");
+        await page.getByRole("heading", { level: 1, name: "What we rent" }).waitFor();
+        await page.getByRole("button", { name: "Save rental catalog" }).waitFor();
+        await capture(page, "settings-rentals", scheme);
+        await page.goto("/shop/blue-mantis/settings/rental-prices");
+        await page.getByRole("heading", { level: 1, name: "Rental prices" }).waitFor();
+        await capture(page, "settings-rental-prices", scheme);
       });
 
       /**
@@ -6314,9 +6447,9 @@ for (const scheme of ["light", "dark"] as const) {
        * stops matching shows up as pixels here.
        */
       test(`the dock-day rhythm card renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Dock-day rhythm" }).waitFor();
-        await openSettingsRow(page, "Dock-day rhythm");
+        // A page of its own since #1854.
+        await page.goto("/shop/blue-mantis/settings/dock-day");
+        await page.getByRole("heading", { level: 1, name: "Dock-day rhythm" }).waitFor();
         await page.getByLabel("Surface interval between dives").waitFor();
         await capture(page, "settings-dock-day-rhythm", scheme);
       });
@@ -6339,9 +6472,9 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the emergency reference card renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Emergency reference" }).waitFor();
-        await openSettingsRow(page, "Emergency reference");
+        // A page of its own since #1854.
+        await page.goto("/shop/blue-mantis/settings/emergency-reference");
+        await page.getByRole("heading", { level: 1, name: "Emergency reference" }).waitFor();
         await page.getByRole("button", { name: "Save emergency reference" }).waitFor();
         await capture(page, "settings-emergency", scheme);
       });
@@ -8540,8 +8673,7 @@ for (const scheme of ["light", "dark"] as const) {
     }) => {
       // Settings → clear → manifest → the saved copy, in one flow.
       test.setTimeout(FLOW_TIMEOUT_MS);
-      await page.goto(`/shop/${privateShop.slug}/settings`);
-      await openSettingsRow(page, "Emergency reference");
+      await page.goto(`/shop/${privateShop.slug}/settings/emergency-reference`);
       // Cleared through the shop's own form, which is how a shop would arrive
       // in this state — not by writing the column behind the app's back.
       const filled = page.locator(
@@ -8555,7 +8687,7 @@ for (const scheme of ["light", "dark"] as const) {
       for (const field of await filled.all()) await field.fill("");
       await page.locator('textarea[name="emergencyPlan"]').fill("");
       await page.getByRole("button", { name: "Save emergency reference" }).click();
-      // The row comes back open with its saved notice — the destination's own
+      // The page comes back with its saved notice — the destination's own
       // render, not a timing guess.
       await page.getByText("Emergency reference saved.").waitFor();
 
@@ -8667,11 +8799,10 @@ for (const scheme of ["light", "dark"] as const) {
       // The mint and the live sign-in the fixture pays for, then one settings
       // round-trip and board → trip → Prep before the capture.
       test.setTimeout(FLOW_TIMEOUT_MS);
-      await page.goto(`/shop/${privateShop.slug}/settings`);
-      await openSettingsRow(page, "What we rent");
+      await page.goto(`/shop/${privateShop.slug}/settings/rentals`);
       await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
       await page.getByRole("button", { name: "Save rental catalog" }).click();
-      // The row comes back open with its saved notice — the destination's own
+      // The page comes back with its saved notice — the destination's own
       // render, not a timing guess.
       await page.getByText("Rental catalog saved.").waitFor();
 
@@ -8714,8 +8845,8 @@ for (const scheme of ["light", "dark"] as const) {
       page,
       privateShop,
     }) => {
-      await page.goto(`/shop/${privateShop.slug}/settings`);
-      await openSettingsRow(page, "Shop profile & branding");
+      // A page of its own since #1854.
+      await page.goto(`/shop/${privateShop.slug}/settings/profile`);
       await page.getByRole("button", { name: "Save profile" }).waitFor();
       // The stored photos' own boxes: a mint that lost its brand fails here,
       // rather than photographing the empty row under this name.

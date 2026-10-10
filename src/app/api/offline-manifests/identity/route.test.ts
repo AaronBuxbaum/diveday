@@ -252,10 +252,11 @@ describe("GET /api/offline-manifests/identity", () => {
 
   /**
    * F4, security review of this PR. The gate above used to read the roles baked
-   * into the JWT at sign-in, and no `maxAge` is set on the session
-   * (src/lib/auth.config.ts) so NextAuth's 30-day default applies — a staffer
-   * removed from the shop kept answering this route's question for a month from
-   * any device they were still signed in on.
+   * into the JWT at sign-in, and the session it came from lasted thirty days
+   * (NextAuth's default, before the move to Better Auth; src/lib/auth.ts sets
+   * no `expiresIn` now, so the default is seven days, renewed while in use) — a
+   * staffer removed from the shop kept answering this route's question for a
+   * month from any device they were still signed in on.
    *
    * The disclosure *here* is one slug the caller's own token already carries, so
    * these cases are about the gate, not the leak: this route and `/upcoming`

@@ -2793,10 +2793,10 @@
         "item3": "Un pase de lista que no marca a bordo en el muelle a un buceador bloqueado, con cada motivo y lo que falta resolver en la fila",
         "item4": "Equipos de compañeros, y en el pase de lista en vivo un aviso en la fila de cada compañero cuando alguien se marca como que no volvió a bordo",
         "item5": "El mismo pase de lista en cada teléfono de la tripulación con señal, a medida que cambia",
-        "item6": "Modo barco en el pase de lista (alto contraste para una pantalla a pleno sol), y una presión con la palma mojada o una salpicadura no cuenta como toque",
+        "item6": "Modo barco en el pase de lista (alto contraste para una pantalla a pleno sol), y una presión con la palma mojada o una cortina de agua sobre el cristal no cuenta como toque",
         "item7": "Toques de etapa, del embarque al puerto, que se ven en el enlace de la salida de cada buceador",
         "item8": "Una lista de verificación previa a la salida, escrita con las palabras de la tripulación",
-        "item9": "Un paquete impreso de la salida: el plan de inmersión con su pase de lista, el manifiesto con la tarjeta de emergencia que completas tú y la lista de equipo",
+        "item9": "Un paquete impreso de la salida: el plan de inmersión, el manifiesto con su pase de lista y la tarjeta de emergencia que completas tú, y la lista de equipo",
         "item10": "Una bitácora de salida con los hechos registrados del día, y un código para cotejar la impresión con el registro"
       },
       "diveSites": {
@@ -2939,7 +2939,7 @@
           },
           "item4": {
             "title": "Un manifiesto con pase de lista que sobrevive al muelle",
-            "detail": "Botones grandes de Embarcado / No embarcado para manos mojadas, un pase de lista después de cada inmersión, y un manifiesto que la tripulación guarda en el teléfono para que siga funcionando cuando la señal se cae en la rampa."
+            "detail": "Un círculo grande por nombre para un pulgar mojado, un pase de lista después de cada inmersión, y un manifiesto que la tripulación guarda en el teléfono para que siga funcionando cuando la señal se cae en la rampa."
           },
           "item5": {
             "title": "Tallas de alquiler y la lista de carga de la salida",
@@ -3309,7 +3309,7 @@
       "rules": {
         "survivesDock": {
           "title": "El pase de lista funciona sin señal.",
-          "body": "Abre DiveDay en un teléfono de la tripulación mientras todavía hay señal y guarda una copia de los manifiestos de las próximas salidas, así que el pase de lista corre desde esa copia cuando el puerto ya quedó atrás. Los botones tienen el tamaño de un pulgar mojado, y una salpicadura en la pantalla no cuenta como toque."
+          "body": "Abre DiveDay en un teléfono de la tripulación mientras todavía hay señal y guarda una copia de los manifiestos de las próximas salidas, así que el pase de lista corre desde esa copia cuando el puerto ya quedó atrás. Los botones tienen el tamaño de un pulgar mojado. Una cortina de agua o una palma mojada sobre el cristal toca en varios puntos a la vez, y el pase de lista lo ignora."
         },
         "noSilentPasses": {
           "title": "Un hueco en el registro aparece en el mostrador, no en el barco.",
@@ -3547,7 +3547,7 @@
         "exportTerm": "Exportación",
         "exportBody": "Un centro puede descargar sus registros de DiveDay en un solo ZIP, desde sus propios ajustes, cualquier día, sin pedírnoslo y sin tarifa. Es el mismo paquete con el que se hacen nuestras propias copias de seguridad. Algunas tablas internas quedan fuera (mecánica de reintentos de entrega, registros de dispositivos, las credenciales selladas del destino de copia del propio centro), y nada de lo que queda fuera es el registro de un buceador.",
         "diverCopyTerm": "La copia propia de un buceador",
-        "diverCopyBody": "Un buceador puede pedirle a un centro una copia de lo que tiene sobre él, y el personal puede descargarla desde la propia página del buceador en un solo ZIP: sus reservas, certificaciones, exenciones, pagos y reseñas en ese centro, nunca las de otro buceador. Las respuestas médicas firmadas quedan fuera por ahora, a la espera de una decisión registrada en docs/product/human-decisions.md.",
+        "diverCopyBody": "Un buceador puede pedirle a un centro una copia de lo que tiene sobre él, y el personal puede descargarla desde la propia página del buceador en un solo ZIP: sus reservas, certificaciones, exenciones, pagos y reseñas en ese centro, nunca las de otro buceador. Las respuestas médicas firmadas quedan fuera por ahora, a la espera de una decisión.",
         "erasureTerm": "Borrado",
         "erasureBody": "Un centro puede borrar el registro de un buceador. Cuando ese registro llegó a un procesador de pagos, el borrado se sigue como pendiente hasta que se salda, en vez de darlo por hecho en nuestro propio borde. Un objeto de cliente lo borra DiveDay y lo confirma. Una factura que el procesador ya emitió es una solicitud que una persona debe presentar, y el centro la ve ahí hasta que lo hace."
       },
@@ -3820,7 +3820,7 @@
         "faq1Q": "¿Y si dos teléfonos de la tripulación cuentan a la vez?",
         "faq1A": "Con señal, los dos ven el mismo pase de lista a medida que cambia, y un toque que el registro ya dejó atrás se rechaza en lugar de sobrescribirlo. Sin cobertura, cada teléfono ve solo sus propios toques hasta reconectarse, así que pasa cada lista en un solo teléfono.",
         "faq2Q": "¿Podemos imprimir el manifiesto?",
-        "faq2A": "Sí. El paquete de la salida imprime el plan de inmersión con su pase de lista, el manifiesto con la tarjeta de emergencia que completas tú (tu cámara hiperbárica más cercana, DAN, la autoridad marítima) y la lista de equipo.",
+        "faq2A": "Sí. El paquete de la salida imprime el plan de inmersión, el manifiesto con su pase de lista y la tarjeta de emergencia que completas tú (tu cámara hiperbárica más cercana, DAN, la autoridad marítima), y la lista de equipo.",
         "faq3Q": "¿Qué ve un buceador mientras estamos afuera?",
         "faq3A": "Su propio enlace de la salida muestra una línea sobre el barco cada vez que la tripulación toca una etapa: embarcando, en el sitio, en superficie, de regreso y de vuelta en el muelle.",
         "closeTitle": "Pasa lista en el barco de la demo como su capitán.",

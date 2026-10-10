@@ -290,7 +290,9 @@ export async function attemptProcessorErasures(
       log("anonymize.processor_erasure_attempt_threw", "error", {
         shopId: obligation.shopId,
         obligationId: obligation.id,
-        reason: error instanceof Error ? error.message : "unknown",
+        // The class, never the message: a thrown text can carry a request
+        // fragment or an address (issue #2239).
+        errorCode: error instanceof Error ? error.name : "unknown_error",
       });
     }
   }

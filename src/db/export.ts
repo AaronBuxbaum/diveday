@@ -665,7 +665,7 @@ export type ShopExportContext = NonNullable<Awaited<ReturnType<typeof loadShopEx
  * comment on that column doesn't apply the other way: whether a subject access
  * request should receive the diver's own medical answers is a real question,
  * not an engineering default, and it belongs with H-01/H-03's legal review —
- * see `docs/product/human-decisions.md`. Every other column of a diver's own
+ * see `docs/product/human-decisions/README.md`. Every other column of a diver's own
  * signed evidence (status, signature, timestamps, template text) ships now.
  * The same hold extends to `photoUrls`: an imported record's
  * `importSourceMedicalDocumentUrl` (a re-stored scan of the same medical

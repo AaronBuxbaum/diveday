@@ -36,12 +36,12 @@ export default function manifest(): MetadataRoute.Manifest {
     // DiveDay and taps the icon was landing on "Run the whole dive day" and
     // "Start a trial" — the one answer that helps nobody who has already
     // installed it. `/shop` is an existing entry point rather than a new
-    // surface: `src/lib/auth.config.ts` redirects a signed-in staff member from
-    // it to their own shop, and bounces anyone else to sign-in, which returns
-    // here afterwards. So an installed launch lands on the shop's own day, and
-    // the shop layout's auto-save is what keeps this device's offline copy
-    // current — which is exactly what the empty offline-manifest screen tells
-    // a crew member to go and do.
+    // surface: `src/proxy.ts` redirects a signed-in staff member from it to
+    // their own shop, and bounces a signed-out visitor to sign-in, which
+    // returns here afterwards. So an installed launch lands on the shop's own
+    // day, and the shop layout's auto-save is what keeps this device's offline
+    // copy current — which is exactly what the empty offline-manifest screen
+    // tells a crew member to go and do.
     start_url: "/shop",
     display: "standalone",
     // The light ground, `--background` — the colour the splash screen paints

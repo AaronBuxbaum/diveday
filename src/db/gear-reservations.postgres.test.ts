@@ -5,8 +5,13 @@ import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
-import { createGearItem, reserveGearUnit } from "./gear";
-import { gearReservations, shops, trips } from "./schema";
+import {
+  createGearItem,
+  openGearReservation,
+  releaseGearReservation,
+  reserveGearUnit,
+} from "./gear";
+import { gearReservations, people, shops, trips } from "./schema";
 
 /** A setup reservation: a hand pick whose staffer already said "Assign anyway". */
 const SETUP_PICK = { proposed: false, assignAnyway: true } as const;
@@ -92,9 +97,65 @@ async function openReservations(db: AppDb, gearItemId: string): Promise<number> 
   const [row] = await db
     .select({ held: count(gearReservations.id) })
     .from(gearReservations)
-    .where(and(eq(gearReservations.gearItemId, gearItemId), isNull(gearReservations.returnedAt)));
+    .where(and(eq(gearReservations.gearItemId, gearItemId), openGearReservation()));
   return row?.held ?? 0;
 }
+
+describePostgres("a released hold on real Postgres (issue #2258)", () => {
+  it("frees the window for the next holder while an open overlap stays refused", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, gearItemId, bookingIds } = await unitWithRivals(pg.db, 3);
+    const [first, second, third] = bookingIds;
+    if (!first || !second || !third) throw new Error("three bookings expected");
+    const window = { reservedFrom: "2026-09-01", reservedUntil: "2026-09-02" } as const;
+    const held = await reserveGearUnit(pg.db, {
+      shopId,
+      gearItemId,
+      bookingId: first,
+      ...window,
+      screen: SETUP_PICK,
+    });
+    if (!held.ok) throw new Error("first hold refused");
+    const [staff] = await pg.db
+      .insert(people)
+      .values({ shopId, fullName: "Kai Desk" })
+      .returning({ id: people.id });
+    if (!staff) throw new Error("staff insert failed");
+
+    expect(
+      await releaseGearReservation(pg.db, {
+        shopId,
+        reservationId: held.reservation.id,
+        releasedByPersonId: staff.id,
+      }),
+    ).toEqual({ ok: true });
+    // The row is kept, stamped, and the constraint's WHERE no longer sees it.
+    const [kept] = await pg.db
+      .select({ releasedAt: gearReservations.releasedAt })
+      .from(gearReservations)
+      .where(eq(gearReservations.id, held.reservation.id));
+    expect(kept?.releasedAt).toBeInstanceOf(Date);
+    expect(
+      await reserveGearUnit(pg.db, {
+        shopId,
+        gearItemId,
+        bookingId: second,
+        ...window,
+        screen: SETUP_PICK,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(
+      await reserveGearUnit(pg.db, {
+        shopId,
+        gearItemId,
+        bookingId: third,
+        ...window,
+        screen: SETUP_PICK,
+      }),
+    ).toEqual({ ok: false, reason: "unit_unavailable" });
+    expect(await openReservations(pg.db, gearItemId)).toBe(1);
+  });
+});
 
 describePostgres("reserveGearUnit under real concurrency", () => {
   it("hands the unit to exactly one of two staff assigning it at the same instant", async () => {

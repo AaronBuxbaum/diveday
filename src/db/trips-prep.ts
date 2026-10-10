@@ -6,6 +6,7 @@ import {
   buildHotelPickupList,
   type HotelPickupRun,
   rentalFitLine,
+  staffFitPieces,
 } from "@/lib/dive-prep";
 import {
   type GearAssignmentNeed,
@@ -75,6 +76,12 @@ export type TripPrep = {
      */
     assigned: (TripGearAssignment & { serviceState: GearServiceState; serviceConcern: boolean })[];
     wanted: GearAssignmentNeed[];
+    /**
+     * The diver's fit is flagged **Needs staff fit**, with the flag's note:
+     * every piece in `wanted` is then a person's call, and the row says why.
+     * Null for every other fit.
+     */
+    needsStaffFit: { note: string | null } | null;
     /** Every unit on this row has left the counter — the whole set is out. */
     handedOver: boolean;
     /**
@@ -200,9 +207,15 @@ export async function getTripPrep(
       // of (glossary, "Needs staff fit"). Kinds the fleet doesn't track at all
       // stay off too — no point offering a wetsuit picker to a shop that only
       // tags its regulators.
+      // A diver flagged for a staff fit still gets a picker for every piece
+      // their fit asks for, each one a person's call, so the unit is reserved
+      // through the register while nothing is proposed for it (issue #2208;
+      // the glossary's "Gear proposal" rules out proposing for a flagged
+      // diver). Dropping the row instead sent their regulator out on paper.
+      const flaggedForFit = line.state === "needs_staff_fit";
       const wanted =
-        line.state === "rents"
-          ? line.items
+        line.state === "rents" || flaggedForFit
+          ? (flaggedForFit ? staffFitPieces(diver.fit, shop.rentalItems) : line.items)
               // A piece the catalog no longer offers still gets a picker.
               // Filtering it out was the obvious reading of issue #1804 and
               // the wrong one (`dive-domain-expert`, 2026-09-13):
@@ -218,8 +231,11 @@ export async function getTripPrep(
                   // A drysuit diver's fins carry a shoe size that is a
                   // starting point, never the pull (`rentalFitLine`), and
                   // their gloves are wet or dry, still to settle. Neither
-                  // is DiveDay's to propose.
-                  item.drysuitFinFit || (need.kind === "gloves" && inDrysuit)
+                  // is DiveDay's to propose, and nothing on a flagged
+                  // diver's row is.
+                  flaggedForFit ||
+                  ("drysuitFinFit" in item && item.drysuitFinFit) ||
+                  (need.kind === "gloves" && inDrysuit)
                     ? { ...need, sizeIsAStart: true as const }
                     : need,
                 ),
@@ -239,6 +255,7 @@ export async function getTripPrep(
         diver,
         assigned,
         wanted,
+        needsStaffFit: line.state === "needs_staff_fit" ? { note: line.note } : null,
         handedOver:
           assigned.length > 0 && assigned.every((assignment) => assignment.checkedOutAt !== null),
         counterHeld: counterHeld.get(diver.personId) ?? [],

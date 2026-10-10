@@ -6,6 +6,7 @@ import {
   isManagedStorageUrl,
 } from "@/lib/storage";
 import type { AppDb, DbExecutor } from "./client";
+import { diveSitePhotoStillHeld } from "./dive-site-photos";
 import { type MediaDeletionAttempt, type MediaDeletionKind, mediaDeletionAttempts } from "./schema";
 
 /** Injectable so tests can assert both delete outcomes without a real Blob token. */
@@ -75,6 +76,35 @@ export async function resolveMediaDeletion(
 }
 
 /**
+ * Delete one queued object, unless a dive site still holds it.
+ *
+ * The one path every caller's storage delete goes through, so the holder check
+ * covers them all (issue #2193): the edit page decides a dive-site photo is
+ * free *before* it queues the delete, and a copy or an import committing a row
+ * that names the photo after that read would otherwise lose it. A held photo's
+ * row is dropped rather than resolved: nothing is owed any more, and a row
+ * left `failed` would ask an owner to retry a delete that must not happen.
+ */
+async function attemptMediaDeletion(
+  db: AppDb,
+  attempt: MediaDeletionAttempt,
+  deleteFn: DeleteFn,
+): Promise<boolean> {
+  if (attempt.kind === "dive_site_photo" && (await diveSitePhotoStillHeld(db, attempt.url))) {
+    // Machinery, not a record anyone points at: the decision it held was withdrawn.
+    await db.delete(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.id, attempt.id));
+    return false;
+  }
+  const result = await deleteFn(attempt.url);
+  await resolveMediaDeletion(
+    db,
+    attempt.id,
+    result.ok ? { status: "succeeded" } : { status: "failed", error: result.error },
+  );
+  return result.ok;
+}
+
+/**
  * Queue a delete and attempt it immediately — the common case is a single
  * round trip, with the durable row as the fallback if the process dies mid
  * attempt or the provider call itself fails. Callers (course photo
@@ -89,12 +119,7 @@ export async function queueAndAttemptMediaDeletion(
 ): Promise<void> {
   const attempt = await queueMediaDeletion(db, input);
   if (!attempt) return;
-  const result = await deleteFn(attempt.url);
-  await resolveMediaDeletion(
-    db,
-    attempt.id,
-    result.ok ? { status: "succeeded" } : { status: "failed", error: result.error },
-  );
+  await attemptMediaDeletion(db, attempt, deleteFn);
 }
 
 /**
@@ -148,13 +173,7 @@ export async function retryMediaDeletion(
     .from(mediaDeletionAttempts)
     .where(and(eq(mediaDeletionAttempts.id, attemptId), eq(mediaDeletionAttempts.shopId, shopId)));
   if (!attempt || attempt.status === "succeeded") return false;
-  const result = await deleteFn(attempt.url);
-  await resolveMediaDeletion(
-    db,
-    attempt.id,
-    result.ok ? { status: "succeeded" } : { status: "failed", error: result.error },
-  );
-  return result.ok;
+  return attemptMediaDeletion(db, attempt, deleteFn);
 }
 
 /**
@@ -179,13 +198,7 @@ export async function retryPendingMediaDeletions(
     .limit(limit);
   let succeeded = 0;
   for (const row of rows) {
-    const result = await deleteFn(row.url);
-    await resolveMediaDeletion(
-      db,
-      row.id,
-      result.ok ? { status: "succeeded" } : { status: "failed", error: result.error },
-    );
-    if (result.ok) succeeded++;
+    if (await attemptMediaDeletion(db, row, deleteFn)) succeeded++;
   }
   return { attempted: rows.length, succeeded };
 }

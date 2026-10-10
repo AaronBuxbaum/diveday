@@ -90,9 +90,10 @@ export async function generateMetadata({
 }
 
 /**
- * The public course page. Auth-exempt in src/lib/auth.config.ts, which matches
- * exactly this one segment under /courses/ — the staff catalog above it and the
- * editor below it stay gated.
+ * The public course page, ungated like everything under /s/. Its old staff-side
+ * address redirects here (`LEGACY_PUBLIC_SHOP_REDIRECTS` in
+ * src/lib/public-routes.ts), matching exactly this one segment under /courses/
+ * — the staff catalog above it and the editor below it stay gated.
  */
 export default async function CoursePage({
   params,

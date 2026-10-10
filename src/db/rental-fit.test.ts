@@ -212,8 +212,6 @@ describe("saveRentalFit / getRentalFit", () => {
     expect(fetched).toMatchObject({ rentsHood: false, rentsGloves: true, gloveSize: "L" });
     expect(fetched?.hoodSize).toBeNull();
     expect(toDiverRentalFit(fetched)).toMatchObject({ rentsGloves: true, gloveSize: "L" });
-    // The kind they replace is never written.
-    expect(fetched?.rentsHoodGloves).toBe(false);
 
     // A shop that stops renting hoods leaves the diver's hood answer standing.
     await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsHood: true, hoodSize: "M" });

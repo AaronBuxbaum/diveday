@@ -333,20 +333,25 @@ export function UnsavedChangesNote({
   countSentences: readonly string[];
 }) {
   const { dirty, restored } = useContext(DirtyContext);
-  // Called above the early return, and from a component that is mounted from
-  // the first paint: the listener has to be attached before the keystroke that
-  // flips `dirty`, not one render after it.
+  // Called first, and from a component that is mounted from the first paint:
+  // the listener has to be attached before the keystroke that flips `dirty`,
+  // not one render after it. That fixes *detection* only.
   const dirtySections = useDirtySections(sections);
-  if (!dirty) return null;
   const named =
     dirtySections.length === 1
       ? sections.find((section) => section.id === dirtySections[0])?.unsavedSentence
       : dirtySections.length > 1
         ? countSentences[dirtySections.length - 1]
         : undefined;
+  const sentence = !dirty ? "" : restored ? restoredLabel : (named ?? unsavedLabel);
+  // *Announcement* needs the region itself in the page before its text changes:
+  // one inserted already carrying its first sentence is often not read at all.
+  // So the `<p>` is always rendered and only its text moves. While silent it is
+  // `absolute` and empty, which takes no room in the action row and keeps it in
+  // the accessibility tree (`display: none` would drop it).
   return (
-    <p className="text-sm font-medium text-muted" aria-live="polite">
-      {restored ? restoredLabel : (named ?? unsavedLabel)}
+    <p className="text-sm font-medium text-muted empty:absolute" aria-live="polite">
+      {sentence}
     </p>
   );
 }

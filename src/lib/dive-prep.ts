@@ -333,6 +333,12 @@ export type NitroxBlocker = {
 export type DivePrepChecklist = {
   diveCount: number;
   diverCount: number;
+  /**
+   * Snorkel vests to load: one per snorkeler seat (issue #2213). Free and
+   * always on, so it waits on no fit and no catalog, and a held seat counts
+   * too. Divers wear a BCD and riders stay aboard, so neither takes one.
+   */
+  snorkelVests: number;
   /** Divemasters and instructors assigned to the trip who dive it and need their own tanks. */
   crewCount: number;
   tanks: TankPlan;
@@ -984,6 +990,7 @@ export function buildDivePrepChecklist(input: {
   return {
     diveCount,
     diverCount,
+    snorkelVests: inWater.filter((diver) => diver.participantType === "snorkeler").length,
     crewCount,
     tanks: {
       total: (diverCount + crewCount) * diveCount,
@@ -1056,6 +1063,28 @@ export type RentalFitLine =
         notOffered?: true;
       }[];
     };
+
+/**
+ * The pieces a diver flagged **Needs staff fit** still rents, each with the
+ * size blanked exactly as the packing list blanks it (`rentedItems`), for the
+ * Gear tab's pickers (issue #2208). Empty for a fit with no flag.
+ *
+ * {@link rentalFitLine} says nothing about these pieces on purpose: the flag
+ * is the one line the rail reads. But the diver still needs a regulator, a
+ * mask, a computer, and the only door that reserves a tagged unit is the
+ * Gear tab's picker. Without one the unit goes out on paper and the register
+ * says "On the wall" while it is on the boat.
+ */
+export function staffFitPieces(
+  fit: RentalFit | null,
+  offeredKinds?: readonly string[],
+): { kind: RentalItemKind; size: string | null }[] {
+  if (!fit || !fitIsStated(fit) || !fit.needsStaffFitAt) return [];
+  return rentedItems(fit, catalogScope(offeredKinds)).map((item) => ({
+    kind: item.kind,
+    size: item.size,
+  }));
+}
 
 /**
  * `offeredKinds` is the shop's catalog, and it is optional for the same reason

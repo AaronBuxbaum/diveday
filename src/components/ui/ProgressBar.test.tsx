@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { ProgressBar } from "./ProgressBar";
+import { ProgressBar, ReadinessBar } from "./ProgressBar";
 
 afterEach(cleanup);
 
@@ -111,5 +111,31 @@ describe("ProgressBar", () => {
     );
     expect(container.firstElementChild).toHaveAttribute("aria-hidden", "true");
     expect(container.querySelector("[role=progressbar]")).toBeNull();
+  });
+});
+
+describe("ReadinessBar", () => {
+  /**
+   * **One readiness bar, at one height and tint** (#2100). Today hand-rolled
+   * an 8px saturated bar and the arrival desk drew `ProgressBar` at 5px with
+   * softened tints; the call (2026-10-06) was 8px and full strength, for a
+   * glance on a phone at the dock. This pins the one drawing both now use.
+   */
+  it("draws ready then blocked at 8px in full tints, over the bare track", () => {
+    const { container } = render(<ReadinessBar ready={7} blocked={2} of={12} className="mt-3" />);
+    const bar = container.firstElementChild;
+    expect(bar).toHaveAttribute("aria-hidden", "true");
+    expect(bar).toHaveAttribute("data-readiness-bar");
+    expect(bar).toHaveClass("h-2", "mt-3", "bg-surface-sunken");
+    const [blocked, ready] = sheets(container);
+    expect(ready?.className).toMatch(/\bbg-success(?!\/)/);
+    expect(blocked?.className).toMatch(/\bbg-danger(?!\/)/);
+    expect(ready?.transform).toBe("scaleX(0.5833)");
+    expect(blocked?.transform).toBe("scaleX(0.75)");
+  });
+
+  it("draws an empty track when there is nothing to count against", () => {
+    const { container } = render(<ReadinessBar ready={0} blocked={0} of={0} />);
+    expect(sheets(container)).toHaveLength(0);
   });
 });

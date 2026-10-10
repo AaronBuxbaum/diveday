@@ -1,5 +1,5 @@
 import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { diveSites } from "./schema";
 
 type PhotoColumns = {
@@ -113,30 +113,51 @@ export async function diveSitePhotosNoOtherSiteHolds(
 ): Promise<string[]> {
   const wanted = new Set<string>(owned);
   if (wanted.size === 0) return [];
-  const list = sql`array[${sql.join(
-    [...wanted].map((url) => sql`${url}`),
-    sql`, `,
-  )}]::text[]`;
-  // Narrowed in SQL to the rows naming one of `urls`, so a save reads the
-  // handful of sites sharing a photo rather than every site on the platform.
-  // `landmarks` is guarded to an array first: `jsonb_array_elements` raises on
-  // anything else, and one malformed row anywhere must not fail every save.
   const others = await db
     .select(photoColumns)
     .from(diveSites)
-    .where(
-      and(
-        ne(diveSites.id, siteId),
-        or(
-          inArray(diveSites.satelliteImageUrl, [...wanted]),
-          inArray(diveSites.routeImageUrl, [...wanted]),
-          sql`${diveSites.imageUrls} ?| ${list}`,
-          sql`exists (select 1 from jsonb_array_elements(case when jsonb_typeof(${diveSites.landmarks}) = 'array' then ${diveSites.landmarks} else '[]'::jsonb end) as landmark where jsonb_typeof(landmark) = 'object' and landmark->>'photoUrl' = any(${list}))`,
-        ),
-      ),
-    );
+    .where(and(ne(diveSites.id, siteId), namesAnyPhoto([...wanted])));
   const held = new Set(others.flatMap(photoUrlsOf).filter((url) => wanted.has(url)));
   return [...wanted].filter((url) => !held.has(url));
+}
+
+/**
+ * The dive-site rows naming one of `urls` in any photo field. Narrowed in SQL
+ * so a caller reads the handful of sites sharing a photo rather than every site
+ * on the platform. `landmarks` is guarded to an array first:
+ * `jsonb_array_elements` raises on anything else, and one malformed row
+ * anywhere must not fail every save.
+ */
+function namesAnyPhoto(urls: readonly string[]) {
+  const list = sql`array[${sql.join(
+    urls.map((url) => sql`${url}`),
+    sql`, `,
+  )}]::text[]`;
+  return or(
+    inArray(diveSites.satelliteImageUrl, [...urls]),
+    inArray(diveSites.routeImageUrl, [...urls]),
+    sql`${diveSites.imageUrls} ?| ${list}`,
+    sql`exists (select 1 from jsonb_array_elements(case when jsonb_typeof(${diveSites.landmarks}) = 'array' then ${diveSites.landmarks} else '[]'::jsonb end) as landmark where jsonb_typeof(landmark) = 'object' and landmark->>'photoUrl' = any(${list}))`,
+  );
+}
+
+/**
+ * **Whether any dive site still holds `url`, asked just before storage deletes
+ * it** (issue #2193). The media-deletion worker's last word: a copy or an
+ * import that committed a row naming the photo after the edit page read its
+ * holders (step two above) would otherwise lose its picture.
+ *
+ * Every site counts, deleted ones included (a restore brings them back), and
+ * in any shop for the reason step two reads across shops: deleting an object
+ * another row still shows breaks that row. The answer is one boolean about a
+ * URL the caller already queued, so nothing about another shop leaves here.
+ */
+export async function diveSitePhotoStillHeld(db: DbExecutor, url: string): Promise<boolean> {
+  const rows = await db
+    .select(photoColumns)
+    .from(diveSites)
+    .where(namesAnyPhoto([url]));
+  return rows.some((row) => photoUrlsOf(row).includes(url));
 }
 
 /**
