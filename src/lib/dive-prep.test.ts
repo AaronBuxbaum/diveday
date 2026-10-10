@@ -6,6 +6,7 @@ import {
   type PrepDiver,
   type RentalFit,
   rentalFitLine,
+  staffFitPieces,
 } from "./dive-prep";
 
 const fullFit: RentalFit = {
@@ -1072,6 +1073,28 @@ describe("rentalFitLine", () => {
     expect(
       rentalFitLine({ ...fullFit, needsStaffFitAt: flaggedAt, needsStaffFitNote: "No L BCD" }),
     ).toEqual({ state: "needs_staff_fit", note: "No L BCD" });
+  });
+});
+
+/** Issue #2208: the pieces the Gear tab still offers a picker for, sizes blanked. */
+describe("staffFitPieces", () => {
+  const flaggedAt = new Date("2026-07-24T12:00:00Z");
+
+  it("names every piece a flagged diver rents, with no size to pull", () => {
+    expect(staffFitPieces({ ...fullFit, needsStaffFitAt: flaggedAt })).toEqual([
+      { kind: "bcd", size: null },
+      { kind: "regulator", size: null },
+      { kind: "wetsuit", size: null },
+      { kind: "boots", size: null },
+      { kind: "mask_fins", size: null },
+      // Lead keeps its number: the flag never blanks it (`rentedItems`).
+      { kind: "weights", size: "6 kg" },
+    ]);
+  });
+
+  it("is empty for a fit with no flag, or no fit at all", () => {
+    expect(staffFitPieces(fullFit)).toEqual([]);
+    expect(staffFitPieces(null)).toEqual([]);
   });
 });
 

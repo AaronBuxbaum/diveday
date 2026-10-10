@@ -286,6 +286,7 @@ function everyPanelPrep(): TripPrep {
         ] as never,
         wanted: [],
         handedOver: false,
+        needsStaffFit: null,
         counterHeld: [],
       },
     ],
@@ -385,6 +386,7 @@ describe("proposed units on the Gear tab", () => {
           assigned: [] as never,
           wanted: [{ kind: "bcd", size: "L" }],
           handedOver: false,
+          needsStaffFit: null,
           counterHeld: [],
         },
         {
@@ -392,6 +394,7 @@ describe("proposed units on the Gear tab", () => {
           assigned: [] as never,
           wanted: [{ kind: "bcd", size: "XL" }],
           handedOver: false,
+          needsStaffFit: null,
           counterHeld: [],
         },
       ],
@@ -455,6 +458,68 @@ describe("proposed units on the Gear tab", () => {
 });
 
 /**
+ * **A diver flagged for a staff fit keeps their pickers** (issue #2208). The
+ * row says the diver needs a staff fit, offers a picker for each piece opened
+ * on the placeholder, and proposes nothing.
+ */
+describe("a diver flagged for a staff fit on the Gear tab", () => {
+  function flaggedPrep(): TripPrep {
+    const base = prepFor();
+    const unit = {
+      id: "r1",
+      kind: "regulator" as const,
+      label: "Reg #1",
+      size: null,
+      serviceState: { state: "no_clock" } as GearServiceState,
+      serviceConcern: false,
+    };
+    return {
+      ...base,
+      gearFleetTotal: 1,
+      loadOut: { units: 0, divers: 1, stillToPick: 1, serviceFlagged: 0 },
+      freeByKind: new Map([["regulator", [unit]]]),
+      assignmentRows: [
+        {
+          diver: { bookingId: "b1", fullName: "Carmen Ruiz" } as never,
+          assigned: [] as never,
+          wanted: [{ kind: "regulator", size: null, sizeIsAStart: true }],
+          needsStaffFit: { note: "No XL BCD left" },
+          handedOver: false,
+          counterHeld: [],
+        },
+      ],
+      proposals: new Map(),
+    };
+  }
+
+  it("says the diver needs a staff fit and opens each picker on the placeholder", () => {
+    const { container } = renderPrep(flaggedPrep());
+    expect(
+      within(container).getByText(
+        t("shared.rentalFit.needsStaffFitWithNote", { note: "No XL BCD left" }),
+      ),
+    ).toBeTruthy();
+    const [picker, ...others] = within(container).getAllByRole("combobox");
+    expect(others).toHaveLength(0);
+    expect((picker as HTMLSelectElement).value).toBe("");
+    expect(within(container).getByRole("option", { name: "Reg #1" })).toBeTruthy();
+    expect(within(container).queryByText(/^Proposed:/)).toBeNull();
+    expect(within(container).queryByRole("button", { name: /proposed/ })).toBeNull();
+  });
+
+  it("says nothing of the kind on a row with no flag", () => {
+    const prep = flaggedPrep();
+    const [row] = prep.assignmentRows;
+    if (!row) throw new Error("a row expected");
+    const { container } = renderPrep({
+      ...prep,
+      assignmentRows: [{ ...row, needsStaffFit: null }],
+    });
+    expect(within(container).queryByText(/Needs staff fit/)).toBeNull();
+  });
+});
+
+/**
  * **An assigned unit keeps its care labels** (second dive-domain review of the
  * proposals). The picker said "service concern" or "service overdue" in the
  * option; the assigned line says it too, in the same words, and the cart line
@@ -493,6 +558,7 @@ describe("an assigned unit that needs care", () => {
           ] as never,
           wanted: [],
           handedOver: false,
+          needsStaffFit: null,
           counterHeld: [],
         },
       ],

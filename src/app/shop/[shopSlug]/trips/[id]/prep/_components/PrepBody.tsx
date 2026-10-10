@@ -13,7 +13,7 @@ import { FIGURE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripPrep } from "@/db/trips";
 import { gearItemKindLabel, gearStatusLabel } from "@/i18n/gear-labels";
 import { diveRecencyText } from "@/i18n/readiness-labels";
-import { rentalItemLabel, statedSizesText } from "@/i18n/rental-labels";
+import { rentalFitLineText, rentalItemLabel, statedSizesText } from "@/i18n/rental-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import {
@@ -1061,14 +1061,15 @@ export function PrepBody({
                   className: "mt-3 divide-y divide-border overflow-hidden print:overflow-visible",
                 })}
               >
-                {assignmentRows.map(({ diver, assigned, wanted, handedOver, counterHeld }) => (
-                  <li
-                    key={diver.bookingId}
-                    className={`px-4 py-3 sm:px-5${assigned.length > 0 ? "" : " print:hidden"}`}
-                  >
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                      <p className="font-medium">{diver.fullName}</p>
-                      {/* The slip's door, and only once there is something to
+                {assignmentRows.map(
+                  ({ diver, assigned, wanted, needsStaffFit, handedOver, counterHeld }) => (
+                    <li
+                      key={diver.bookingId}
+                      className={`px-4 py-3 sm:px-5${assigned.length > 0 ? "" : " print:hidden"}`}
+                    >
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                        <p className="font-medium">{diver.fullName}</p>
+                        {/* The slip's door, and only once there is something to
                           put on it — a ticket listing nothing is a wrong slip,
                           not a short one. Hidden on paper: the departure packet
                           is already printing this diver's units.
@@ -1080,123 +1081,133 @@ export function PrepBody({
                           as the name starts on it. The box then reaches into
                           the row's padding of a card that clips, so its ring
                           is drawn inside. */}
-                      {assigned.length > 0 ? (
-                        <Link
-                          href={shopPath(
-                            shopSlug,
-                            "trips",
-                            tripId,
-                            "prep",
-                            "ticket",
-                            diver.bookingId,
-                          )}
-                          className={buttonClass({
-                            variant: "ghost",
-                            size: "sm",
-                            flush: true,
-                            className: "-my-2.5 focus-visible:focus-ring-inset print:hidden",
-                          })}
-                        >
-                          {t("gear.prep.ticketDoor")}
-                        </Link>
-                      ) : null}
-                    </div>
-                    {/* Already carrying the shop's kit off a counter rental:
-                        said, so nobody packs a second set. Counts stay put. */}
-                    {counterHeld.length > 0 ? (
-                      <p className="mt-1 text-sm text-warning-strong">
-                        {t("counterRentals.trip.held", {
-                          units: cachedListFormat(locale, {
-                            style: "long",
-                            type: "conjunction",
-                          }).format(counterHeld.map((held) => held.label)),
-                          date: formatCalendarDate(
-                            counterHeld
-                              .map((held) => held.until)
-                              .sort()
-                              .at(-1) ?? "",
-                            locale,
-                          ),
-                        })}
-                      </p>
-                    ) : null}
-                    <dl className="mt-1.5 flex flex-col gap-2 text-sm">
-                      {assigned.map((assignment) => (
-                        <div key={assignment.reservationId} className={kitLineClass}>
-                          <dt className="text-muted">
-                            {assignment.size
-                              ? t("gear.prep.kindWithSize", {
-                                  kindLabel: gearItemKindLabel(t, assignment.kind),
-                                  size: assignment.size,
-                                })
-                              : gearItemKindLabel(t, assignment.kind)}
-                          </dt>
-                          <dd className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                            <span className="font-mono font-medium">{assignment.label}</span>
-                            {careLine(assignment) ? (
-                              <span className="font-medium text-warning-strong">
-                                {careLine(assignment)}
-                              </span>
-                            ) : null}
-                            {assignment.checkedOutAt ? (
-                              <span className="text-muted">{t("gear.prep.outLabel")}</span>
-                            ) : (
-                              <form action={releaseGearUnitAction} className="print:hidden">
-                                <input type="hidden" name="tripId" value={tripId} />
-                                <input
-                                  type="hidden"
-                                  name="reservationId"
-                                  value={assignment.reservationId}
-                                />
-                                <SubmitButton
-                                  pendingLabel={t("gear.unit.where.releasing")}
-                                  className={buttonClass({ variant: "ghost", size: "sm" })}
-                                >
-                                  {t("gear.unit.where.release")}
-                                </SubmitButton>
-                              </form>
+                        {assigned.length > 0 ? (
+                          <Link
+                            href={shopPath(
+                              shopSlug,
+                              "trips",
+                              tripId,
+                              "prep",
+                              "ticket",
+                              diver.bookingId,
                             )}
-                          </dd>
-                        </div>
-                      ))}
-                      {/* **The set goes out in one act too** (issue #1185,
+                            className={buttonClass({
+                              variant: "ghost",
+                              size: "sm",
+                              flush: true,
+                              className: "-my-2.5 focus-visible:focus-ring-inset print:hidden",
+                            })}
+                          >
+                            {t("gear.prep.ticketDoor")}
+                          </Link>
+                        ) : null}
+                      </div>
+                      {/* Flagged for a staff fit (issue #2208): the row keeps a
+                        picker for every piece, proposes none, and says why. */}
+                      {needsStaffFit ? (
+                        <p className="mt-1 text-sm font-medium text-warning-strong">
+                          {rentalFitLineText(t, locale, {
+                            state: "needs_staff_fit",
+                            note: needsStaffFit.note,
+                          })}
+                        </p>
+                      ) : null}
+                      {/* Already carrying the shop's kit off a counter rental:
+                        said, so nobody packs a second set. Counts stay put. */}
+                      {counterHeld.length > 0 ? (
+                        <p className="mt-1 text-sm text-warning-strong">
+                          {t("counterRentals.trip.held", {
+                            units: cachedListFormat(locale, {
+                              style: "long",
+                              type: "conjunction",
+                            }).format(counterHeld.map((held) => held.label)),
+                            date: formatCalendarDate(
+                              counterHeld
+                                .map((held) => held.until)
+                                .sort()
+                                .at(-1) ?? "",
+                              locale,
+                            ),
+                          })}
+                        </p>
+                      ) : null}
+                      <dl className="mt-1.5 flex flex-col gap-2 text-sm">
+                        {assigned.map((assignment) => (
+                          <div key={assignment.reservationId} className={kitLineClass}>
+                            <dt className="text-muted">
+                              {assignment.size
+                                ? t("gear.prep.kindWithSize", {
+                                    kindLabel: gearItemKindLabel(t, assignment.kind),
+                                    size: assignment.size,
+                                  })
+                                : gearItemKindLabel(t, assignment.kind)}
+                            </dt>
+                            <dd className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                              <span className="font-mono font-medium">{assignment.label}</span>
+                              {careLine(assignment) ? (
+                                <span className="font-medium text-warning-strong">
+                                  {careLine(assignment)}
+                                </span>
+                              ) : null}
+                              {assignment.checkedOutAt ? (
+                                <span className="text-muted">{t("gear.prep.outLabel")}</span>
+                              ) : (
+                                <form action={releaseGearUnitAction} className="print:hidden">
+                                  <input type="hidden" name="tripId" value={tripId} />
+                                  <input
+                                    type="hidden"
+                                    name="reservationId"
+                                    value={assignment.reservationId}
+                                  />
+                                  <SubmitButton
+                                    pendingLabel={t("gear.unit.where.releasing")}
+                                    className={buttonClass({ variant: "ghost", size: "sm" })}
+                                  >
+                                    {t("gear.unit.where.release")}
+                                  </SubmitButton>
+                                </form>
+                              )}
+                            </dd>
+                          </div>
+                        ))}
+                        {/* **The set goes out in one act too** (issue #1185,
                           D25) — the mirror of the return pane below it. One
                           deliberate hand-over per diver, offered only while
                           there is something still on the wall to hand across:
                           a set already out has nothing to give, and a set with
                           nothing assigned is not a set. */}
-                      {assigned.length > 0 && !handedOver ? (
-                        <form action={checkOutTripGearSetAction} className="print:hidden">
-                          <input type="hidden" name="tripId" value={tripId} />
-                          <input type="hidden" name="bookingId" value={diver.bookingId} />
-                          <SubmitButton
-                            pendingLabel={t("gear.prep.handingOver")}
-                            className={buttonClass({ variant: "secondary", size: "sm" })}
-                          >
-                            {t("gear.prep.handOver")}
-                          </SubmitButton>
-                        </form>
-                      ) : null}
-                      {/* **The set comes home in one act** (issue #1186, D26).
+                        {assigned.length > 0 && !handedOver ? (
+                          <form action={checkOutTripGearSetAction} className="print:hidden">
+                            <input type="hidden" name="tripId" value={tripId} />
+                            <input type="hidden" name="bookingId" value={diver.bookingId} />
+                            <SubmitButton
+                              pendingLabel={t("gear.prep.handingOver")}
+                              className={buttonClass({ variant: "secondary", size: "sm" })}
+                            >
+                              {t("gear.prep.handOver")}
+                            </SubmitButton>
+                          </form>
+                        ) : null}
+                        {/* **The set comes home in one act** (issue #1186, D26).
                           Only when something is actually out: a diver whose
                           units are still on the wall has nothing to return, and
                           a pane offering to close a set that never left would
                           be the paperwork this replaces rather than the removal
                           of it. */}
-                      {assigned.some((assignment) => assignment.checkedOutAt !== null) ? (
-                        <GearReturnPane
-                          fields={{ tripId, bookingId: diver.bookingId }}
-                          action={returnTripGearSetAction}
-                          labels={{
-                            allGood: t("gear.prep.returnAllGood"),
-                            fitAdjusted: t("gear.prep.returnFitAdjusted"),
-                            serviceConcern: t("gear.prep.returnServiceConcern"),
-                            noteLabel: t("gear.prep.returnNoteLabel"),
-                            notePlaceholder: t("gear.prep.returnNotePlaceholder"),
-                          }}
-                        />
-                      ) : null}
-                      {/* **No new reservations on a departure that is not
+                        {assigned.some((assignment) => assignment.checkedOutAt !== null) ? (
+                          <GearReturnPane
+                            fields={{ tripId, bookingId: diver.bookingId }}
+                            action={returnTripGearSetAction}
+                            labels={{
+                              allGood: t("gear.prep.returnAllGood"),
+                              fitAdjusted: t("gear.prep.returnFitAdjusted"),
+                              serviceConcern: t("gear.prep.returnServiceConcern"),
+                              noteLabel: t("gear.prep.returnNoteLabel"),
+                              notePlaceholder: t("gear.prep.returnNotePlaceholder"),
+                            }}
+                          />
+                        ) : null}
+                        {/* **No new reservations on a departure that is not
                           going.** A reservation holds an exclusion window over
                           the unit, so picking a drysuit for a blown-out boat
                           takes it off the boat that is sailing — and there is
@@ -1204,154 +1215,157 @@ export function PrepBody({
                           half: what is already reserved, what is already out,
                           and the two controls that undo them (dive-domain
                           review 20260920). */}
-                      {cancelled
-                        ? null
-                        : wanted.map((item) => {
-                            const kindLabel = gearItemKindLabel(t, item.kind);
-                            const pieceLabel = item.size
-                              ? t("gear.prep.kindWithSize", { kindLabel, size: item.size })
-                              : kindLabel;
-                            // Exactly this diver's size in its own band, everything
-                            // else free in a second — the boundary the old flat
-                            // ranked list could only imply.
-                            const { exact, rest } = groupUnitsForSize(
-                              freeByKind.get(item.kind) ?? [],
-                              item.size,
-                            );
-                            const selectId = `assign-${diver.bookingId}-${item.kind}`;
-                            // Preselect only an exact size match: defaulting an XS
-                            // onto an L diver made a wrong reservation one tap
-                            // away, and defaulting the same unit into every picker
-                            // of a kind invited the somebody-got-it-first refusal.
-                            // Anything else opens on a placeholder the form refuses
-                            // to submit.
-                            //
-                            // A row with a proposal says so in words and holds
-                            // its picker behind Change (`ProposedUnit`); one
-                            // without opens on the placeholder, because the
-                            // exact units it could have preselected are the
-                            // ones proposed to the divers above it.
-                            const proposal = proposals.get(proposalKey(diver.bookingId, item.kind));
-                            const preselect = "";
-                            const optionsFor = (units: typeof exact) =>
-                              units.map((option) => ({ id: option.id, label: unitLine(option) }));
-                            // **Nothing falls between the bands.** The first band
-                            // is headed by the size it matches, so it can only
-                            // exist where there is a size to name — and a unit
-                            // sorted into it without one would otherwise be in
-                            // neither band and reachable from no picker, which on
-                            // this page means a staffer cannot assign a unit that
-                            // is genuinely free. `groupUnitsForSize` does not
-                            // produce that pair today; this makes it structural
-                            // rather than something the next reader has to trace.
-                            const named = exact.length > 0 && item.size ? item.size : null;
-                            const exactBand = named ? exact : [];
-                            const restBand = named ? rest : [...exact, ...rest];
-                            const groups = [
-                              named
-                                ? {
-                                    key: "exact",
-                                    label: t("gear.prep.groupExactSize", { size: named }),
-                                    options: optionsFor(exactBand),
-                                  }
-                                : null,
-                              restBand.length > 0
-                                ? {
-                                    key: "rest",
-                                    label: t(
-                                      named ? "gear.prep.groupOtherSizes" : "gear.prep.groupFree",
-                                    ),
-                                    options: optionsFor(restBand),
-                                  }
-                                : null,
-                            ].filter((group) => group !== null);
-                            // One sentence per refusal a pick can come back
-                            // with, the same for a hand pick and a proposal.
-                            const pickRefusals = {
-                              unit_unavailable: t("gear.prep.notice.unitUnavailable"),
-                              unit_out_of_service: t("gear.prep.notice.unitOutOfService"),
-                              not_wanted: t("gear.prep.notice.notWanted"),
-                              already_holds_kind: t("gear.prep.notice.alreadyHoldsKind", {
-                                kindLabel,
-                              }),
-                              identity_held: t("gear.prep.notice.identityHeld"),
-                              needs_care: t("gear.prep.notice.unitNeedsCare"),
-                            };
-                            const picker = (
-                              <RentalUnitPicker
-                                id={selectId}
-                                tripId={tripId}
-                                bookingId={diver.bookingId}
-                                defaultValue={preselect}
-                                assign={assignGearUnit}
-                                groups={groups}
-                                copy={{
-                                  pickUnit: t("gear.prep.pickUnit"),
-                                  assigning: t("gear.prep.assigning"),
-                                  refusals: pickRefusals,
-                                  refusalFallback: t("gear.prep.notice.assignFailed"),
-                                  needsCareConfirm: t("gear.prep.notice.unitNeedsCare"),
-                                  assignAnyway: t("gear.prep.assignAnyway"),
-                                }}
-                              />
-                            );
-                            return (
-                              <div key={item.kind} className={`${kitLineClass} print:hidden`}>
-                                <dt className="text-muted sm:pt-2">
-                                  {groups.length === 0 ? (
-                                    pieceLabel
-                                  ) : (
-                                    <label htmlFor={selectId}>{pieceLabel}</label>
-                                  )}
-                                </dt>
-                                <dd>
-                                  {groups.length === 0 ? (
-                                    <span className="text-muted">
-                                      {t("gear.prep.noneFree", { kindLabel })}
-                                    </span>
-                                  ) : (
-                                    // The width lives on a wrapper: `controlClass`
-                                    // carries w-full, and a competing width utility
-                                    // on the same element loses alphabetically.
-                                    <div className="w-full min-w-44 sm:max-w-64">
-                                      {/* **No "Assign" beside it.** The pick is the
+                        {cancelled
+                          ? null
+                          : wanted.map((item) => {
+                              const kindLabel = gearItemKindLabel(t, item.kind);
+                              const pieceLabel = item.size
+                                ? t("gear.prep.kindWithSize", { kindLabel, size: item.size })
+                                : kindLabel;
+                              // Exactly this diver's size in its own band, everything
+                              // else free in a second — the boundary the old flat
+                              // ranked list could only imply.
+                              const { exact, rest } = groupUnitsForSize(
+                                freeByKind.get(item.kind) ?? [],
+                                item.size,
+                              );
+                              const selectId = `assign-${diver.bookingId}-${item.kind}`;
+                              // Preselect only an exact size match: defaulting an XS
+                              // onto an L diver made a wrong reservation one tap
+                              // away, and defaulting the same unit into every picker
+                              // of a kind invited the somebody-got-it-first refusal.
+                              // Anything else opens on a placeholder the form refuses
+                              // to submit.
+                              //
+                              // A row with a proposal says so in words and holds
+                              // its picker behind Change (`ProposedUnit`); one
+                              // without opens on the placeholder, because the
+                              // exact units it could have preselected are the
+                              // ones proposed to the divers above it.
+                              const proposal = proposals.get(
+                                proposalKey(diver.bookingId, item.kind),
+                              );
+                              const preselect = "";
+                              const optionsFor = (units: typeof exact) =>
+                                units.map((option) => ({ id: option.id, label: unitLine(option) }));
+                              // **Nothing falls between the bands.** The first band
+                              // is headed by the size it matches, so it can only
+                              // exist where there is a size to name — and a unit
+                              // sorted into it without one would otherwise be in
+                              // neither band and reachable from no picker, which on
+                              // this page means a staffer cannot assign a unit that
+                              // is genuinely free. `groupUnitsForSize` does not
+                              // produce that pair today; this makes it structural
+                              // rather than something the next reader has to trace.
+                              const named = exact.length > 0 && item.size ? item.size : null;
+                              const exactBand = named ? exact : [];
+                              const restBand = named ? rest : [...exact, ...rest];
+                              const groups = [
+                                named
+                                  ? {
+                                      key: "exact",
+                                      label: t("gear.prep.groupExactSize", { size: named }),
+                                      options: optionsFor(exactBand),
+                                    }
+                                  : null,
+                                restBand.length > 0
+                                  ? {
+                                      key: "rest",
+                                      label: t(
+                                        named ? "gear.prep.groupOtherSizes" : "gear.prep.groupFree",
+                                      ),
+                                      options: optionsFor(restBand),
+                                    }
+                                  : null,
+                              ].filter((group) => group !== null);
+                              // One sentence per refusal a pick can come back
+                              // with, the same for a hand pick and a proposal.
+                              const pickRefusals = {
+                                unit_unavailable: t("gear.prep.notice.unitUnavailable"),
+                                unit_out_of_service: t("gear.prep.notice.unitOutOfService"),
+                                not_wanted: t("gear.prep.notice.notWanted"),
+                                already_holds_kind: t("gear.prep.notice.alreadyHoldsKind", {
+                                  kindLabel,
+                                }),
+                                identity_held: t("gear.prep.notice.identityHeld"),
+                                needs_care: t("gear.prep.notice.unitNeedsCare"),
+                              };
+                              const picker = (
+                                <RentalUnitPicker
+                                  id={selectId}
+                                  tripId={tripId}
+                                  bookingId={diver.bookingId}
+                                  defaultValue={preselect}
+                                  assign={assignGearUnit}
+                                  groups={groups}
+                                  copy={{
+                                    pickUnit: t("gear.prep.pickUnit"),
+                                    assigning: t("gear.prep.assigning"),
+                                    refusals: pickRefusals,
+                                    refusalFallback: t("gear.prep.notice.assignFailed"),
+                                    needsCareConfirm: t("gear.prep.notice.unitNeedsCare"),
+                                    assignAnyway: t("gear.prep.assignAnyway"),
+                                  }}
+                                />
+                              );
+                              return (
+                                <div key={item.kind} className={`${kitLineClass} print:hidden`}>
+                                  <dt className="text-muted sm:pt-2">
+                                    {groups.length === 0 ? (
+                                      pieceLabel
+                                    ) : (
+                                      <label htmlFor={selectId}>{pieceLabel}</label>
+                                    )}
+                                  </dt>
+                                  <dd>
+                                    {groups.length === 0 ? (
+                                      <span className="text-muted">
+                                        {t("gear.prep.noneFree", { kindLabel })}
+                                      </span>
+                                    ) : (
+                                      // The width lives on a wrapper: `controlClass`
+                                      // carries w-full, and a competing width utility
+                                      // on the same element loses alphabetically.
+                                      <div className="w-full min-w-44 sm:max-w-64">
+                                        {/* **No "Assign" beside it.** The pick is the
                                       act; a second tap to confirm it is an
                                       "Edit" button once per row, twenty-one
                                       times on a seeded departure (issue #802).
                                       The refusal the exclusion constraint can
                                       still answer with lands on this row, and
                                       reverts it. */}
-                                      {proposal ? (
-                                        <ProposedUnit
-                                          tripId={tripId}
-                                          bookingId={diver.bookingId}
-                                          gearItemId={proposal.id}
-                                          assign={assignGearUnit}
-                                          copy={{
-                                            proposed: t("gear.prep.proposal.unit", {
-                                              unit: unitLine(proposal),
-                                            }),
-                                            assign: t("gear.prep.proposal.assign"),
-                                            assigning: t("gear.prep.assigning"),
-                                            change: t("gear.prep.proposal.change"),
-                                            refusals: pickRefusals,
-                                            refusalFallback: t("gear.prep.notice.assignFailed"),
-                                          }}
-                                        >
-                                          {picker}
-                                        </ProposedUnit>
-                                      ) : (
-                                        picker
-                                      )}
-                                    </div>
-                                  )}
-                                </dd>
-                              </div>
-                            );
-                          })}
-                    </dl>
-                  </li>
-                ))}
+                                        {proposal ? (
+                                          <ProposedUnit
+                                            tripId={tripId}
+                                            bookingId={diver.bookingId}
+                                            gearItemId={proposal.id}
+                                            assign={assignGearUnit}
+                                            copy={{
+                                              proposed: t("gear.prep.proposal.unit", {
+                                                unit: unitLine(proposal),
+                                              }),
+                                              assign: t("gear.prep.proposal.assign"),
+                                              assigning: t("gear.prep.assigning"),
+                                              change: t("gear.prep.proposal.change"),
+                                              refusals: pickRefusals,
+                                              refusalFallback: t("gear.prep.notice.assignFailed"),
+                                            }}
+                                          >
+                                            {picker}
+                                          </ProposedUnit>
+                                        ) : (
+                                          picker
+                                        )}
+                                      </div>
+                                    )}
+                                  </dd>
+                                </div>
+                              );
+                            })}
+                      </dl>
+                    </li>
+                  ),
+                )}
               </ul>
             </section>
           ) : null}

@@ -1058,6 +1058,28 @@ export type RentalFitLine =
     };
 
 /**
+ * The pieces a diver flagged **Needs staff fit** still rents, each with the
+ * size blanked exactly as the packing list blanks it (`rentedItems`), for the
+ * Gear tab's pickers (issue #2208). Empty for a fit with no flag.
+ *
+ * {@link rentalFitLine} says nothing about these pieces on purpose: the flag
+ * is the one line the rail reads. But the diver still needs a regulator, a
+ * mask, a computer, and the only door that reserves a tagged unit is the
+ * Gear tab's picker. Without one the unit goes out on paper and the register
+ * says "On the wall" while it is on the boat.
+ */
+export function staffFitPieces(
+  fit: RentalFit | null,
+  offeredKinds?: readonly string[],
+): { kind: RentalItemKind; size: string | null }[] {
+  if (!fit || !fitIsStated(fit) || !fit.needsStaffFitAt) return [];
+  return rentedItems(fit, catalogScope(offeredKinds)).map((item) => ({
+    kind: item.kind,
+    size: item.size,
+  }));
+}
+
+/**
  * `offeredKinds` is the shop's catalog, and it is optional for the same reason
  * it is optional on {@link buildDivePrepChecklist}: a caller with none to hand
  * sees every piece the fit asks for. A caller that **has** one should pass it,
