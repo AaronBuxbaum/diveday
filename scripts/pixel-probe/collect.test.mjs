@@ -136,6 +136,24 @@ describe("collectGeometry, rebuilt from its own source", () => {
     expect(byCls("normal").text[0]).toEqual([0, 0, 100, 20]);
   });
 
+  it("measures no lines for text hidden by the sr-only recipe, or inside it (#1992)", () => {
+    // The diver record's "Email waiver" button carries its delivery state as
+    // an sr-only word. Its Range reports full rects, so it read as text.
+    const window = freshWindow(
+      `<button class="btn">Email waiver <span class="tw" style="position:absolute;overflow-x:hidden;overflow-y:hidden;clip-path:inset(50%)">Didn’t go out</span></button>
+       <span class="old" style="position:absolute;clip:rect(0px, 0px, 0px, 0px)"><b class="deep">Sent</b></span>`,
+    );
+    window.Range.prototype.getClientRects = function layout() {
+      return [new window.DOMRect(0, 0, (this.endOffset - this.startOffset) * 10, 20)];
+    };
+    const snapshot = inWindow(window, collectGeometry)({});
+    const byCls = (cls) => snapshot.elements.find((el) => el.cls === cls);
+    expect(byCls("btn").text).toEqual([[0, 0, 120, 20]]);
+    expect(byCls("tw").text).toEqual([]);
+    expect(byCls("old").text).toEqual([]);
+    expect(byCls("deep").text).toEqual([]);
+  });
+
   it("puts back the one style it lifts", () => {
     const window = freshWindow(html);
     window.document.body.style.overflowX = "clip";
@@ -168,6 +186,57 @@ describe("the state pass's page-side helpers, rebuilt from their own source", ()
     } catch (error) {
       expect(String(error)).toMatch(/SyntaxError|not a valid selector|focus-visible/);
     }
+  });
+
+  /**
+   * A page with layout enough for `textBounds`: every character 10px wide from
+   * its parent's `data-x`, and each element's box from its `data-box`.
+   */
+  function laidOut(html) {
+    const window = freshWindow(html);
+    window.Range.prototype.getClientRects = function layout() {
+      const x = Number(this.startContainer.parentElement.dataset.x || 0);
+      return [new window.DOMRect(x, 0, (this.endOffset - this.startOffset) * 10, 20)];
+    };
+    window.Element.prototype.getBoundingClientRect = function box() {
+      const [x, y, w, h] = (this.dataset.box || "0,0,0,0").split(",").map(Number);
+      return new window.DOMRect(x, y, w, h);
+    };
+    return window;
+  }
+  const textOf = (window, selector) => {
+    const measure = inWindow(window, states.measureElementState);
+    return measure.call(window.document.querySelector(selector)).rel[0].text;
+  };
+  const CLIPS = "overflow-x:hidden;overflow-y:hidden";
+
+  it("measure no text a person cannot see around a hovered control (#1992)", () => {
+    // "Email" at 0–50; the sr-only word, unclipped, would run to 260.
+    const window = laidOut(
+      `<button class="btn">Email<span data-x="100" style="position:absolute;${CLIPS};clip-path:inset(50%)">Didn’t go out</span><span data-x="200" style="position:absolute;clip:rect(0px,0px,0px,0px)"><b>Sent</b></span></button>`,
+    );
+    expect(textOf(window, ".btn")).toEqual([0, 0, 50, 20]);
+  });
+
+  it("measure clipped text only as far as it shows", () => {
+    const window = laidOut(
+      `<button class="btn"><span data-box="0,0,40,20" style="${CLIPS}">Truncated label</span></button>`,
+    );
+    expect(textOf(window, ".btn")).toEqual([0, 0, 40, 20]);
+  });
+
+  it("let an absolutely positioned label escape a clip that is not its containing block", () => {
+    // A static clipping box does not clip an absolute descendant whose
+    // containing block is further out, so clipping here would invent a cut.
+    const label = `<span style="position:absolute">Floating label</span>`;
+    const escapes = laidOut(
+      `<button class="btn"><div data-box="0,0,40,20" style="${CLIPS}">${label}</div></button>`,
+    );
+    expect(textOf(escapes, ".btn")).toEqual([0, 0, 140, 20]);
+    const contained = laidOut(
+      `<button class="btn"><div data-box="0,0,40,20" style="position:relative;${CLIPS}">${label}</div></button>`,
+    );
+    expect(textOf(contained, ".btn")).toEqual([0, 0, 40, 20]);
   });
 
   it("flatten and chain an element's ancestors the same way", () => {
