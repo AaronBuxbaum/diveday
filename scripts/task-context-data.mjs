@@ -290,7 +290,12 @@ export const areas = {
       "Include empty, loading, validation, error, and success states.",
       "Keep touch targets and focus states accessible.",
     ],
-    validate: ["pnpm lint", "pnpm typecheck", "pnpm visual", "pnpm e2e --reporter=line"],
+    validate: [
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm visual",
+      "pnpm e2e <the spec for the flow you changed> --reporter=line",
+    ],
   },
   "brand-voice": {
     goal: "Create consistent DiveDay brand, voice, visual, merch, and vendor collateral from the current identity.",
@@ -408,7 +413,11 @@ export const areas = {
       "Server actions and queries enforce authorization independently of route gating.",
       "Dev credentials never become production behavior.",
     ],
-    validate: ["pnpm test src/lib --reporter=dot", "pnpm typecheck", "pnpm e2e --reporter=line"],
+    validate: [
+      "pnpm test src/lib --reporter=dot",
+      "pnpm typecheck",
+      "pnpm e2e <the spec for the flow you changed> --reporter=line",
+    ],
   },
   payments: {
     goal: "Extend Stripe Connect checkout, orders, invoicing, and refunds without breaking idempotency or currency/tenant guarantees. Security-sensitive (AGENTS.md Hard rules) — changes need a security-reviewer pass before merge.",
