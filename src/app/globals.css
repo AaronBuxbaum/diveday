@@ -695,11 +695,23 @@ body {
   }
 }
 
-input,
-select,
-textarea {
-  color: var(--foreground);
-  accent-color: var(--primary);
+/*
+ * **The element defaults below are in `@layer base`, like the focus ring
+ * further down and for the same reason** (#1990): an unlayered declaration
+ * beats every Tailwind utility whatever its specificity, so a rule written
+ * here bare silently overrode any `text-*`, `accent-*` or `placeholder:`
+ * utility on the same element. In the base layer each is the default a
+ * utility can still change. The one rule that must not lose to a utility,
+ * the closed select's arrow strip, stays outside and says why.
+ * `unlayered-rules.test.ts` refuses a new bare-element rule out here.
+ */
+@layer base {
+  input,
+  select,
+  textarea {
+    color: var(--foreground);
+    accent-color: var(--primary);
+  }
 }
 
 /*
@@ -717,6 +729,11 @@ textarea {
  * which would have meant hard-coding a hex per skin and re-hard-coding it for
  * dark and boat mode. `padding-inline-end` reserves the strip it
  * occupies so a long option label never runs under it.
+ *
+ * **Unlayered on purpose**, the one element rule here that is: every select
+ * wears `controlClass`'s `px-3`, and in `@layer base` that utility would win
+ * the end padding back and option text would run under the arrow on every
+ * select in the app. Out here this rule beats it (#1990).
  *
  * Multi-selects and sized list boxes render as an open list, not a closed
  * box, and have no indicator to replace.
@@ -741,53 +758,51 @@ select:not([multiple]):not([size]):dir(rtl) {
     left 1.25rem center;
 }
 
-input::placeholder,
-textarea::placeholder {
-  color: color-mix(in srgb, var(--muted) 78%, transparent);
-}
+@layer base {
+  input::placeholder,
+  textarea::placeholder {
+    color: color-mix(in srgb, var(--muted) 78%, transparent);
+  }
 
-/*
- * The same colour for an empty date, month, time or date-and-time box's mask
- * (`mm/dd/yyyy`, `--:-- --`), which no `::placeholder` reaches: it drew in
- * the input's own ink and read as a filled answer (the pixel probe,
- * schedule-off-season). `DateInput` marks the box `data-empty` while it holds
- * no value. A rule of its own, not a third selector above: a browser that
- * does not know the pseudo-element drops the whole rule it sits in.
- *
- * Not while the box has focus. Its value stays "" until every segment is
- * filled, so a person typing "09" into an empty box would see their own
- * digits in the placeholder's grey and read it as not taking the input.
- */
-input[data-empty]:not(:focus)::-webkit-datetime-edit {
-  color: color-mix(in srgb, var(--muted) 78%, transparent);
-}
+  /*
+   * The same colour for an empty date, month, time or date-and-time box's mask
+   * (`mm/dd/yyyy`, `--:-- --`), which no `::placeholder` reaches: it drew in
+   * the input's own ink and read as a filled answer (the pixel probe,
+   * schedule-off-season). `DateInput` marks the box `data-empty` while it holds
+   * no value. A rule of its own, not a third selector above: a browser that
+   * does not know the pseudo-element drops the whole rule it sits in.
+   *
+   * Not while the box has focus. Its value stays "" until every segment is
+   * filled, so a person typing "09" into an empty box would see their own
+   * digits in the placeholder's grey and read it as not taking the input.
+   */
+  input[data-empty]:not(:focus)::-webkit-datetime-edit {
+    color: color-mix(in srgb, var(--muted) 78%, transparent);
+  }
 
-/*
- * **A date or time box is as wide and as tall as the text box above it, on
- * an iPhone too.** iOS Safari draws a temporal input with its own native
- * appearance: a minimum width from its widest possible value, which a grid
- * cell's `min-width: auto` then honours, and its own inner padding on top of
- * ours. The course editor's Day 1 start and end times ran past the card's
- * right edge and stood taller than the title box over them (Aaron's phone,
- * 2026-10-05). `appearance: none` hands the box to `controlClass`, and
- * `min-width: 0` lets the column decide its width. Without the native
- * appearance iOS centres the value and collapses an empty one to nothing, so
- * the value starts where every other answer starts and keeps a line's height.
- */
-input:is([type="date"], [type="time"], [type="month"], [type="datetime-local"]) {
-  -webkit-appearance: none;
-  appearance: none;
-  min-width: 0;
-}
+  /*
+   * **A date or time box is as wide and as tall as the text box above it, on
+   * an iPhone too.** iOS Safari draws a temporal input with its own native
+   * appearance: a minimum width from its widest possible value, which a grid
+   * cell's `min-width: auto` then honours, and its own inner padding on top of
+   * ours. The course editor's Day 1 start and end times ran past the card's
+   * right edge and stood taller than the title box over them (Aaron's phone,
+   * 2026-10-05). `appearance: none` hands the box to `controlClass`, and
+   * `min-width: 0` lets the column decide its width. Without the native
+   * appearance iOS centres the value and collapses an empty one to nothing, so
+   * the value starts where every other answer starts and keeps a line's height.
+   */
+  input:is([type="date"], [type="time"], [type="month"], [type="datetime-local"]) {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+  }
 
-input::-webkit-date-and-time-value {
-  min-height: 1lh;
-  margin: 0;
-  text-align: start;
-}
-
-summary {
-  user-select: none;
+  input::-webkit-date-and-time-value {
+    min-height: 1lh;
+    margin: 0;
+    text-align: start;
+  }
 }
 
 /*
@@ -807,6 +822,10 @@ summary {
  * and a utility below can still move. `focus-ring.test.ts` holds both halves.
  */
 @layer base {
+  summary {
+    user-select: none;
+  }
+
   :where(a, button, input, select, textarea, summary):focus-visible {
     outline: 3px solid var(--focus-ring);
     outline-offset: 2px;
@@ -899,13 +918,15 @@ summary {
  * The app draws its own press feedback (`active:` fills, the focus ring above)
  * on the surfaces that want one, so nothing is lost by turning the UA's off.
  */
-button,
-a,
-summary,
-input,
-select,
-textarea {
-  -webkit-tap-highlight-color: transparent;
+@layer base {
+  button,
+  a,
+  summary,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
 }
 
 /*
