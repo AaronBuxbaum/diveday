@@ -116,9 +116,14 @@ new domain concept, define it here in the same PR.
   ADR 20260725-import-specialty-cards). One thing imports `pending` rather than `verified`: a card
   the source file's own status column marks unverified.
 - **Confirm to clear** — the display state of an imported specialty card no staffer has confirmed
-  yet: on file, `verified`, and still holding its gate. Shown as “certified · confirm to clear” in a
-  warning tone rather than the plain green “certified” a hand-verified card gets, so the two are never
-  read as the same thing at a busy desk.
+  yet: on file, `verified`, and still holding its gate. One fact, two tones. On the card's own row
+  inside the diver's file the badge reads “certified · confirm to clear” in a **neutral** tone: a
+  prompt, answered by one tap beside it. Every summary of that unfinished work — the closed
+  Certification records door, the status ledger, the home's station, the held-card status — wears
+  the **warning** tone, because a summary is where a staffer decides whether to open the file at
+  all. Neither looks like a hand-verified card, so the two are never read as the same thing at a
+  busy desk. Only `src/lib/readiness.ts` decides who boards; the tones carry no gate
+  (`src/i18n/card-labels.test.ts` keeps this entry and the code in step).
 - **Shop-issued certification** — a level card **this shop's own instructor certified**, from a per-
   student tap on a course session's own roster (issue #717), never automatic. It lands `verified`
   immediately (`issued_by_shop_at` set, alongside `issued_from_trip_id` naming the session and
