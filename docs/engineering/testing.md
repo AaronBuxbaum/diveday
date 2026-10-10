@@ -211,24 +211,32 @@ Measured on 2026-09-02 across the three files converted so far (`trips-queries`,
 The 38 database-backed files under `src/db` carried 849 of 988 test-seconds in a measured CI shard,
 so this is most of the unit suite's cost.
 
-**The rollback is the whole mechanism**, so a file whose tests need a *committed* database, or their
-own transaction semantics, stays on `seededShopContext()`. Four cases, the last of which is the
-surprising one:
+**The rollback is the whole mechanism**, so a *test* that needs a committed database, or its own
+transaction semantics, takes its own `seededShopContext()` while the rest of its file shares the
+file's. The exception is made per test, not per file: a file's setup helper takes
+`{ fresh = false }` and returns `fresh ? await seededShopContext() : ctx`, and the one test that
+needs it calls `context({ fresh: true })`, with the reason in a comment beside `ctx`. Four cases,
+the last of which is the surprising one:
 
 - **A test that opens its own transaction** gets a savepoint instead of a top-level one — and the
-  outer transaction has already frozen `now()`. `src/db/manifests.test.ts` declines for exactly this:
-  its same-transaction, same-timestamp tie-break tests would still pass and prove less.
-- **`FOR UPDATE` and the concurrency races.** Two statements inside one transaction cannot contend,
-  so the race would pass without proving anything.
-- **Money and replay paths.** Written against a fresh database on purpose.
+  outer transaction has already frozen `now()`. `src/db/manifests.test.ts`'s same-transaction,
+  same-timestamp tie-break tests would still pass and prove less, and so would any test that needs
+  `created_at` to advance between two writes (`src/db/tips.test.ts`'s "most recently started"), or
+  forces a `created_at` tie on purpose (`src/db/waivers.test.ts`).
+- **Concurrency races** (`Promise.all` of two calls that each write). Inside one transaction their
+  nested transactions become interleaved savepoints on one connection, so the race proves nothing
+  and can fail for reasons of its own.
+- **A test that builds its fixture twice** and so collides with itself on a unique key
+  (`src/db/diver-merge-preview.test.ts`).
 - **A test that provokes a database error and keeps querying.** Postgres aborts the *whole*
   transaction on a failed statement (`current transaction is aborted, commands ignored until end of
-  transaction block`, 25P02), so every line after an expected `.rejects.toThrow()` fails too. In
-  autocommit only the failing statement fails. `src/db/divers.test.ts`'s erasure test takes its own
-  `seededShopContext()` for this one reason while the other 29 tests in the file share the file's.
+  transaction block`, 25P02), so every line after an expected `.rejects.toThrow()` fails too — or
+  worse, a second expected refusal passes for the wrong reason. In autocommit only the failing
+  statement fails. `src/db/divers.test.ts`'s erasure test and `src/db/shop-subscriptions.test.ts`'s
+  two "another shop holds this Stripe id" tests take their own for this reason.
 
-The rule, short: **read-heavy files that commit nothing.** A file that declines says so in a comment
-where it declines, naming which of the four applies.
+A file whose tests mock `getDb` or hydrate an *unseeded* database (`unseededTestDb()`, for the seed
+itself) keeps those tests as they are; the rest of the file still shares one.
 
 ### When a db-backed test suddenly takes twelve times as long
 
