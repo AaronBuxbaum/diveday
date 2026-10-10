@@ -2796,7 +2796,7 @@
         "item6": "Boat mode on the roll call (high contrast for a screen in full sun), and a press with a wet palm or spray doesn’t count as a tap",
         "item7": "Stage taps from boarding to home, shown on each diver’s own trip link",
         "item8": "A pre-departure checklist in the crew’s own words",
-        "item9": "A printed trip packet: the dive plan with its roll call, the manifest with the emergency card you fill in, and the packing list",
+        "item9": "A printed trip packet: the dive plan, the manifest with its roll call and the emergency card you fill in, and the packing list",
         "item10": "A departure log of the day’s recorded facts, with a code to check a printout against the record"
       },
       "diveSites": {
@@ -3309,7 +3309,7 @@
       "rules": {
         "survivesDock": {
           "title": "The roll call runs with no signal.",
-          "body": "Open DiveDay on a crew phone while there is still signal and it keeps a copy of the manifests for the trips ahead, so the roll call runs from that copy once the harbor is behind you. The buttons are sized for a wet thumb, and a splash across the screen does not count as a tap."
+          "body": "Open DiveDay on a crew phone while there is still signal and it keeps a copy of the manifests for the trips ahead, so the roll call runs from that copy once the harbor is behind you. The buttons are sized for a wet thumb. Spray or a wet palm on the glass lands as several touches at once, and the roll call ignores it."
         },
         "noSilentPasses": {
           "title": "Gaps in a diver’s record show up at the desk, not on the boat.",
@@ -3820,7 +3820,7 @@
         "faq1Q": "What if two crew phones are counting at once?",
         "faq1A": "With signal, both see the same roll call as it changes, and a tap the record has already moved past is refused rather than written over. Out of range, each phone sees only its own taps until it reconnects, so call each checkpoint on one phone.",
         "faq2Q": "Can we print the manifest?",
-        "faq2A": "Yes. The trip packet prints the dive plan with its roll call, the manifest with the emergency card you fill in (your nearest chamber, DAN, the coast guard), and the packing list.",
+        "faq2A": "Yes. The trip packet prints the dive plan, the manifest with its roll call and the emergency card you fill in (your nearest chamber, DAN, the coast guard), and the packing list.",
         "faq3Q": "What does a diver see while we’re out?",
         "faq3A": "Their own trip link shows a line about the boat each time the crew taps a stage: boarding, out at the site, on the surface, heading in and back at the dock.",
         "closeTitle": "Call the roll on the demo boat as its captain.",

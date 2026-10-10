@@ -2793,10 +2793,10 @@
         "item3": "Un pase de lista que no marca a bordo en el muelle a un buceador bloqueado, con cada motivo y lo que falta resolver en la fila",
         "item4": "Equipos de compañeros, y en el pase de lista en vivo un aviso en la fila de cada compañero cuando alguien se marca como que no volvió a bordo",
         "item5": "El mismo pase de lista en cada teléfono de la tripulación con señal, a medida que cambia",
-        "item6": "Modo barco en el pase de lista (alto contraste para una pantalla a pleno sol), y una presión con la palma mojada o una salpicadura no cuenta como toque",
+        "item6": "Modo barco en el pase de lista (alto contraste para una pantalla a pleno sol), y una presión con la palma mojada o una cortina de agua sobre el cristal no cuenta como toque",
         "item7": "Toques de etapa, del embarque al puerto, que se ven en el enlace de la salida de cada buceador",
         "item8": "Una lista de verificación previa a la salida, escrita con las palabras de la tripulación",
-        "item9": "Un paquete impreso de la salida: el plan de inmersión con su pase de lista, el manifiesto con la tarjeta de emergencia que completas tú y la lista de equipo",
+        "item9": "Un paquete impreso de la salida: el plan de inmersión, el manifiesto con su pase de lista y la tarjeta de emergencia que completas tú, y la lista de equipo",
         "item10": "Una bitácora de salida con los hechos registrados del día, y un código para cotejar la impresión con el registro"
       },
       "diveSites": {
@@ -3309,7 +3309,7 @@
       "rules": {
         "survivesDock": {
           "title": "El pase de lista funciona sin señal.",
-          "body": "Abre DiveDay en un teléfono de la tripulación mientras todavía hay señal y guarda una copia de los manifiestos de las próximas salidas, así que el pase de lista corre desde esa copia cuando el puerto ya quedó atrás. Los botones tienen el tamaño de un pulgar mojado, y una salpicadura en la pantalla no cuenta como toque."
+          "body": "Abre DiveDay en un teléfono de la tripulación mientras todavía hay señal y guarda una copia de los manifiestos de las próximas salidas, así que el pase de lista corre desde esa copia cuando el puerto ya quedó atrás. Los botones tienen el tamaño de un pulgar mojado. Una cortina de agua o una palma mojada sobre el cristal toca en varios puntos a la vez, y el pase de lista lo ignora."
         },
         "noSilentPasses": {
           "title": "Un hueco en el registro aparece en el mostrador, no en el barco.",
@@ -3820,7 +3820,7 @@
         "faq1Q": "¿Y si dos teléfonos de la tripulación cuentan a la vez?",
         "faq1A": "Con señal, los dos ven el mismo pase de lista a medida que cambia, y un toque que el registro ya dejó atrás se rechaza en lugar de sobrescribirlo. Sin cobertura, cada teléfono ve solo sus propios toques hasta reconectarse, así que pasa cada lista en un solo teléfono.",
         "faq2Q": "¿Podemos imprimir el manifiesto?",
-        "faq2A": "Sí. El paquete de la salida imprime el plan de inmersión con su pase de lista, el manifiesto con la tarjeta de emergencia que completas tú (tu cámara hiperbárica más cercana, DAN, la autoridad marítima) y la lista de equipo.",
+        "faq2A": "Sí. El paquete de la salida imprime el plan de inmersión, el manifiesto con su pase de lista y la tarjeta de emergencia que completas tú (tu cámara hiperbárica más cercana, DAN, la autoridad marítima), y la lista de equipo.",
         "faq3Q": "¿Qué ve un buceador mientras estamos afuera?",
         "faq3A": "Su propio enlace de la salida muestra una línea sobre el barco cada vez que la tripulación toca una etapa: embarcando, en el sitio, en superficie, de regreso y de vuelta en el muelle.",
         "closeTitle": "Pasa lista en el barco de la demo como su capitán.",
