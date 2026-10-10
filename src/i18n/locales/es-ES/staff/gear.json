@@ -150,6 +150,7 @@
     "importCellTooLong": "Uno de los valores de ese archivo pasa de 2.000 caracteres, así que no se leyó nada.",
     "imported": "Se importaron {events} eventos de mantenimiento en {units} unidades nuevas y {assignments} asignaciones históricas. Se dejaron {skipped} eventos duplicados y {assignmentSkipped} asignaciones sin cambios.",
     "returnedSet": "De vuelta en la estantería.",
+    "returnedSetPulled": "De vuelta. Enviado a mantenimiento.",
     "concernNeedsWords": "Para revisar un equipo hace falta una línea que diga qué pasó, para que el técnico pueda actuar.",
     "nothingOut": "De ese conjunto no hay nada fuera.",
     "nothingToHandOver": "Ese conjunto ya está fuera."

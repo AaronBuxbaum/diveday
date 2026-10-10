@@ -304,7 +304,10 @@ export async function returnTripGearSetAction(formData: FormData) {
     noticeUrl(
       landing,
       outcome.ok
-        ? "gear-returned-set"
+        ? // "Back on the wall" would be wrong about a unit just pulled for service.
+          parsed.data.outcome === "service_concern" && pullGearItemIds.length > 0
+          ? "gear-returned-set-pulled"
+          : "gear-returned-set"
         : outcome.reason === "not_found"
           ? "gear-nothing-out"
           : RESERVATION_ACTION_NOTICE[outcome.reason],

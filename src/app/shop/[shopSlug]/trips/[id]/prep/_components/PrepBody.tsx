@@ -49,6 +49,7 @@ const GEAR_NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> =
   "gear-not-found": { tone: "danger", key: "gear.notice.notFound" },
   "gear-already-returned": { tone: "warning", key: "gear.notice.alreadyReturned" },
   "gear-returned-set": { tone: "success", key: "gear.notice.returnedSet" },
+  "gear-returned-set-pulled": { tone: "success", key: "gear.notice.returnedSetPulled" },
   "gear-handed-over": { tone: "success", key: "gear.prep.notice.handedOver" },
   "gear-nothing-to-hand-over": { tone: "warning", key: "gear.notice.nothingToHandOver" },
   "gear-concern-needs-words": { tone: "warning", key: "gear.notice.concernNeedsWords" },
