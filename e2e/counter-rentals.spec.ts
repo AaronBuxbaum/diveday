@@ -91,6 +91,12 @@ test.describe("staff", () => {
       page.locator("#rental-ticket").getByText("Received by", { exact: true }),
     ).toBeVisible();
 
+    // Priya has signed nothing here: the ticket says so and offers the link,
+    // and the rental went out anyway (issue #2261, H-108: informs, never
+    // gates). Hand over below is the proof it did not wait.
+    await expect(page.getByText("Waiver: Not signed")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Send waiver" })).toBeVisible();
+
     await page.getByRole("button", { name: "Hand over" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Handed over." })).toBeVisible();
     await page.getByRole("button", { name: "All good" }).click();
@@ -112,6 +118,11 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/gear");
     await expect(page.getByRole("heading", { level: 2, name: /^Out/ })).toBeVisible();
     await expect(page.getByText(CUSTOMER).first()).toBeVisible();
+
+    // The Rentals list says the same about the holder's waiver (H-108).
+    await page.goto("/shop/blue-mantis/gear?view=rentals");
+    const rentals = page.getByRole("region", { name: "Rentals" });
+    await expect(rentals.getByText("Waiver: Not signed")).toBeVisible();
   });
 
   test("reads the free units again as the dates change, with no button", async ({ page }) => {

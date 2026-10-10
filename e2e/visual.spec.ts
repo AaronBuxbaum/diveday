@@ -7822,7 +7822,9 @@ for (const scheme of ["light", "dark"] as const) {
 
       // The ticket the person walks off with: who, the tags, the back-by
       // date, and on screen the acts. Rented here rather than seeded so the
-      // capture is the ticket a counter lands on, notice and all.
+      // capture is the ticket a counter lands on, notice and all. Priya has
+      // signed nothing at blue-mantis, so the frame also holds the unsigned
+      // waiver line and its Send waiver (issue #2261, H-108).
       test(`a counter rental's ticket renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
         await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
@@ -7841,6 +7843,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Rent out", exact: true }).click();
         await page.getByRole("status").filter({ hasText: "Payment recorded." }).waitFor();
         await page.getByRole("button", { name: "Hand over" }).waitFor();
+        await page.getByText("Waiver: Not signed").waitFor();
         await capture(page, "counter-rental-ticket", scheme);
       });
 

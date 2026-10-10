@@ -26,6 +26,7 @@ import {
   listDeletedGearItems,
   listGearServiceDueRows,
 } from "@/db/gear";
+import { counterRentalWaiverStandings } from "@/db/gear-counter-rentals";
 import { countGearRentalHolders, listGearRentals } from "@/db/gear-rentals";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
@@ -162,6 +163,18 @@ export default async function GearRegisterPage({
         ? listGearRentals(db, shop.id, { todayLocal, page: wantedPage })
         : Promise.resolve(null),
     ]);
+  // Where each counter-rental holder on this page stands with the release
+  // (issue #2261, H-108): said on their counter rows, never a gate. A trip
+  // rental's waiver is the booking's readiness, said on the departure.
+  const counterWaivers = rentalsPage
+    ? await counterRentalWaiverStandings(db, {
+        shopId: shop.id,
+        timezone: shop.timezone,
+        personIds: rentalsPage.rows
+          .filter((holder) => holder.rentals.some((rental) => !rental.bookingId))
+          .map((holder) => holder.personId),
+      })
+    : new Map();
   const fleetTotal = [...countsByKind.values()].reduce((sum, value) => sum + value, 0);
   // A view with nothing in it is not a view: an empty Deleted list falls back
   // to the fleet rather than rendering a heading over nothing. A shop that has
@@ -345,6 +358,7 @@ export default async function GearRegisterPage({
             ) : showRentals && rentalsPage ? (
               <GearRentalsList
                 page={rentalsPage}
+                counterWaivers={counterWaivers}
                 shopSlug={shopSlug}
                 t={t}
                 locale={locale}

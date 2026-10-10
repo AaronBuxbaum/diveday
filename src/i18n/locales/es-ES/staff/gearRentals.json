@@ -3,6 +3,8 @@
   "title": "Alquileres",
   "counter": "Alquiler en mostrador",
   "ticketFor": "Boleta de alquiler de {name}",
+  "waiver": "Exención: {standing}",
+  "sendWaiver": "Enviar exención",
   "pagination": {
     "total": "{count, plural, one {# persona} other {# personas}}"
   }

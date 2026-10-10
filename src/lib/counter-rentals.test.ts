@@ -10,6 +10,7 @@ import {
   counterRentalDays,
   counterRentalLineCents,
   counterRentalSetCents,
+  counterRentalWaiverFlag,
   isLifeSupportKind,
 } from "./counter-rentals";
 import type { RentalPricing } from "./rentals";
@@ -224,5 +225,23 @@ describe("the set price", () => {
       ),
     ).toBe(null);
     expect(counterRentalSetCents(PRICING, [], ["bcd"], 1)).toBe(null);
+  });
+});
+
+/**
+ * **The counter's waiver line** (issue #2261, H-108): informs, never gates.
+ * Only a current signature says nothing; a link is offered only where another
+ * link is the fix.
+ */
+describe("counterRentalWaiverFlag", () => {
+  it.each([
+    ["current", null],
+    ["none", { offerLink: true }],
+    ["expired", { offerLink: true }],
+    ["guardian_missing", { offerLink: true }],
+    ["medical_review", { offerLink: false }],
+    ["medical_not_cleared", { offerLink: false }],
+  ] as const)("reads %s as %o", (state, expected) => {
+    expect(counterRentalWaiverFlag(state)).toEqual(expected);
   });
 });

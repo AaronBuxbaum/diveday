@@ -9,10 +9,13 @@ import type { GearRentalMoney, GearRentalsPage, GearRentalUnit } from "@/db/gear
 import { gearItemKindLabel, gearPhaseLabel } from "@/i18n/gear-labels";
 import { ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { waiverRowStateText, waiverRowStateTone } from "@/i18n/waiver-labels";
+import { counterRentalWaiverFlag } from "@/lib/counter-rentals";
 import { formatCalendarDateRange } from "@/lib/format";
 import type { GearRental, OpenRentalPhase } from "@/lib/gear-rentals";
 import { rentalPhaseLapsed } from "@/lib/gear-rentals";
 import { shopPath } from "@/lib/staff-notices";
+import type { ShopWaiverStatus } from "@/lib/waivers";
 import {
   PAYMENT_STATUS_KEYS,
   PAYMENT_STATUS_TONES,
@@ -36,17 +39,24 @@ import {
  * booking's order, else its payment row, else nothing at all — nothing is owed
  * until something is raised.
  *
+ * A counter rental also says where its holder stands with the shop's release
+ * when that is anything short of signed (issue #2261, H-108): a word on the
+ * row, never a gate, and the ticket door beside it is where the link is sent.
+ *
  * A Server Component that takes its words as props, so it renders in a jsdom
  * test without the database behind it.
  */
 export function GearRentalsList({
   page,
+  counterWaivers,
   shopSlug,
   t,
   locale,
   pageHref,
 }: {
   page: GearRentalsPage;
+  /** Each counter-rental holder's waiver standing (`counterRentalWaiverStandings`). */
+  counterWaivers?: ReadonlyMap<string, ShopWaiverStatus["state"]>;
   shopSlug: string;
   t: StaffTranslator;
   locale: string;
@@ -75,6 +85,7 @@ export function GearRentalsList({
                 <RentalRow
                   key={rental.key}
                   rental={rental}
+                  waiver={rental.bookingId ? undefined : counterWaivers?.get(holder.personId)}
                   holderName={holder.name}
                   shopSlug={shopSlug}
                   t={t}
@@ -98,12 +109,14 @@ export function GearRentalsList({
 
 function RentalRow({
   rental,
+  waiver,
   holderName,
   shopSlug,
   t,
   locale,
 }: {
   rental: GearRental<GearRentalUnit>;
+  waiver?: ShopWaiverStatus["state"];
   holderName: string;
   shopSlug: string;
   t: StaffTranslator;
@@ -168,6 +181,7 @@ function RentalRow({
           </span>
           <PhaseWord phase={rental.phase} t={t} />
           {money ? <MoneyWord money={money} t={t} /> : null}
+          {waiver && counterRentalWaiverFlag(waiver) ? <WaiverWord state={waiver} t={t} /> : null}
         </p>
         <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
           {rental.units.map((unit) => (
@@ -218,5 +232,25 @@ function MoneyWord({ money, t }: { money: GearRentalMoney; t: StaffTranslator })
     <Badge tone={tone} size="sm">
       {t(key)}
     </Badge>
+  );
+}
+
+/**
+ * The holder's release, when it is short of signed — the same word the diver
+ * record uses (`waiverRowStateText`), in the warning ink and drawn mark the
+ * lapsed phases wear, or danger for a medical hold.
+ */
+function WaiverWord({ state, t }: { state: ShopWaiverStatus["state"]; t: StaffTranslator }) {
+  return (
+    <span
+      className={`inline-flex items-baseline gap-1.5 font-medium ${
+        waiverRowStateTone(state) === "danger" ? "text-danger" : "text-warning-strong"
+      }`}
+    >
+      <span className="flex h-lh shrink-0 items-center self-start">
+        <DiveDayIcon name="warning" className="size-4 shrink-0" />
+      </span>
+      <span>{t("gearRentals.waiver", { standing: waiverRowStateText(t, state) })}</span>
+    </span>
   );
 }

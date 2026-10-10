@@ -1,5 +1,6 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { counterRentalWaiverFlag } from "@/lib/counter-rentals";
 import { unseededTestDb } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
@@ -26,6 +27,7 @@ import {
   checkOutCounterRental,
   counterRentalsHeldDuring,
   counterRentalTicketIdForOrder,
+  counterRentalWaiverStandings,
   createCounterRental,
   getCounterRentalTicket,
   linkCounterRentalOrder,
@@ -46,6 +48,7 @@ import {
   userAccounts,
 } from "./schema";
 import { createTrip } from "./trips-create";
+import { recordInPersonWaiver, saveWaiverTemplate } from "./waivers";
 
 /** A setup reservation: a hand pick whose staffer already said "Assign anyway". */
 const SETUP_PICK = { proposed: false, assignAnyway: true } as const;
@@ -1182,5 +1185,86 @@ describe("counter rentals over a departure's window", () => {
         })
       ).size,
     ).toBe(0);
+  });
+});
+
+/**
+ * **The person's waiver at the counter** (issue #2261, H-108): the ticket and
+ * the Rentals list say where the release stands, and the rental never waits
+ * on it. Read off the person, because a release is signed once and belongs to
+ * them, not to a booking.
+ */
+describe("counterRentalWaiverStandings", () => {
+  async function staffer(db: AppDb, shopId: string) {
+    const [row] = await db.insert(people).values({ shopId, fullName: "Desk Staffer" }).returning();
+    if (!row) throw new Error("staff insert failed");
+    await db.insert(personRoles).values({ personId: row.id, role: "owner" });
+    await db.insert(userAccounts).values({
+      personId: row.id,
+      email: `desk.${row.id.slice(0, 8)}@example.com`,
+      hashedPassword: "x",
+      status: "active",
+    });
+    return row;
+  }
+
+  it("says a never-signed person has no waiver, and the rental goes out anyway", async () => {
+    const { db, shop } = await rentalShop();
+    await saveWaiverTemplate(db, { shopId: shop.id, title: "Release", body: "The terms." });
+    const ana = await person(db, shop.id, "Ana Walk-In");
+    const reg = await unit(db, shop.id, "Reg #1", "regulator");
+
+    // Life support, no waiver: informs, never gates.
+    rented(
+      await createCounterRental(db, {
+        shopId: shop.id,
+        personId: ana.id,
+        gearItemIds: [reg.id],
+        reservedFrom: TODAY,
+        reservedUntil: TODAY,
+        todayLocal: TODAY,
+      }),
+    );
+    const standings = await counterRentalWaiverStandings(db, {
+      shopId: shop.id,
+      timezone: shop.timezone,
+      personIds: [ana.id],
+    });
+    expect(standings.get(ana.id)).toBe("none");
+    expect(counterRentalWaiverFlag("none")).toEqual({ offerLink: true });
+  });
+
+  it("reads a release the person signed, with no booking anywhere", async () => {
+    const { db, shop } = await rentalShop();
+    await saveWaiverTemplate(db, { shopId: shop.id, title: "Release", body: "The terms." });
+    const ana = await person(db, shop.id, "Ana Walk-In");
+    const desk = await staffer(db, shop.id);
+    const signed = await recordInPersonWaiver(db, {
+      shopId: shop.id,
+      subject: { personId: ana.id },
+      recordedByPersonId: desk.id,
+      medicalAttested: true,
+    });
+    expect(signed).toMatchObject({ ok: true });
+
+    const standings = await counterRentalWaiverStandings(db, {
+      shopId: shop.id,
+      timezone: shop.timezone,
+      personIds: [ana.id],
+    });
+    expect(standings.get(ana.id)).toBe("current");
+    expect(counterRentalWaiverFlag("current")).toBeNull();
+  });
+
+  it("answers nothing for another shop's person", async () => {
+    const { db, shop } = await rentalShop();
+    const other = await insertShop(db, "other-counter");
+    const stranger = await person(db, other.id, "Somebody Else");
+    const standings = await counterRentalWaiverStandings(db, {
+      shopId: shop.id,
+      timezone: shop.timezone,
+      personIds: [stranger.id],
+    });
+    expect(standings.has(stranger.id)).toBe(false);
   });
 });

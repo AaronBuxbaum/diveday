@@ -9,6 +9,7 @@ import {
   type RentableItemKind,
   type RentalPricing,
 } from "./rentals";
+import type { ShopWaiverStatus } from "./waivers";
 
 /**
  * **A counter rental** — units from the register lent to a person who is not
@@ -240,4 +241,39 @@ export function isOneCoreSet(
     coreKinds.length > 0 &&
     coreKinds.every((core) => pickedKinds.filter((kind) => kind === core).length === 1)
   );
+}
+
+/**
+ * **What a counter rental says about the person's waiver** (issue #2261,
+ * decided by Aaron 2026-10-09, H-108): it informs and never blocks.
+ *
+ * The shop-wide release is the person's (`shopWaiverStatus`, src/lib/waivers.ts),
+ * so a person who signed on any booking, or on a link sent from their record,
+ * is covered here too. Anything short of a current signature is said on the
+ * ticket and the Rentals list in the release's own word (`shopWaiverStatusText`),
+ * so "Not signed" never reads two ways on two screens.
+ *
+ * - `null` — a current signature; the ticket says nothing.
+ * - `offerLink: true` — never signed, lapsed, or a minor's solo signature: the
+ *   fix is the person's waiver link, offered beside the word.
+ * - `offerLink: false` — a medical hold or a refusal: another link fixes
+ *   nothing, the review does (the diver record's own rule).
+ *
+ * Nothing here gates `createCounterRental`; the life-support gate stays the
+ * card (`counterRentalCardRefusal`).
+ */
+export function counterRentalWaiverFlag(
+  state: ShopWaiverStatus["state"],
+): { offerLink: boolean } | null {
+  switch (state) {
+    case "current":
+      return null;
+    case "none":
+    case "expired":
+    case "guardian_missing":
+      return { offerLink: true };
+    case "medical_review":
+    case "medical_not_cleared":
+      return { offerLink: false };
+  }
 }

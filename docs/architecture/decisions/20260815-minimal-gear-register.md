@@ -417,11 +417,14 @@ the counter nobody does, and the unit is gone for days.
   analysis, no nitrox card check); a shop filling a counter tank with nitrox records it outside
   DiveDay. A nitrox fill on a counter rental is future work, and it will need the nitrox card and
   the analysis record the boat side keeps.
-- **The waiver is not re-checked at the counter. This is a known gap.** The one shop-wide waiver
-  is signed per booking (CR-015), and a counter rental has no booking, so there is nothing for the
-  counter to read. A person renting gear who has never booked a boat may have signed nothing.
-  Closing it needs a waiver that belongs to the person rather than the booking, which CR-015
-  does not have yet.
+- **The counter says the person's waiver, and never waits on it** (H-108, issue #2261; this
+  bullet called it a known gap until 2026-10-10). The one shop-wide waiver (CR-015) is signed once
+  and belongs to the person, whichever booking or person-scoped link it was signed on, so the
+  counter reads the same `shopWaiverStatus` the diver record does
+  (`counterRentalWaiverStandings`). The ticket and the Rentals list say the standing when it is
+  short of signed, and the ticket offers the person's waiver link where a link is the fix; a
+  medical hold is said with no link. Screen only, and `createCounterRental` never reads it: the
+  life-support gate stays the verified card.
 
 ## Amendment 2026-10-08 (second) — rental tickets carry the shop's terms and a "Received by" line
 

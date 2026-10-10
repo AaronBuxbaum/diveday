@@ -2188,8 +2188,9 @@ new domain concept, define it here in the same PR.
   anybody. **The service screen** refuses a life-support unit whose service clock is overdue as of
   the window's last day or that has an open service concern, and lends a flagged soft-goods unit
   only with its own "Lend anyway": the one place a **service clock** gates. Counter tanks are air
-  only; a nitrox fill is not modelled. The waiver is not re-checked at the counter, a known gap:
-  the one shop-wide waiver is signed per booking (CR-015) and a counter rental has no booking.
+  only; a nitrox fill is not modelled. **The waiver informs and never gates** (H-108): the
+  release is the person's, so the ticket and the Rentals list say its standing when it is short of
+  signed ("Waiver: Not signed"), and the ticket offers the person's waiver link.
   Trip-scoped reads (prep, manifests) never count one; a departure's Gear tab names the units a
   booked diver holds on one over its window. ADR 20260815-minimal-gear-register, amendment
   2026-10-08.
