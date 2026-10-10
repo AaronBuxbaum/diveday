@@ -176,14 +176,15 @@ export async function POST(request: Request) {
   }
   const db = await getDb();
 
-  // The gate that decides: live roles, re-read on every request. No `maxAge` is
-  // set on the session (src/lib/auth.config.ts), so NextAuth's 30-day default
-  // applies — a staffer removed from this shop this morning still carries
-  // `captain` in their token for a month, and `/api/**` is outside the edge gate
-  // (src/proxy.ts), so this handler is the only wall. `loadActiveStaffRoles`
-  // exists for that window (ADR 20260724-role-authorization): it is null for a
-  // deleted person, a disabled account, or someone who was never this shop's,
-  // and the roles it does return are the `person_roles` of right now.
+  // The gate that decides: live roles, re-read on every request. The session
+  // sets no `expiresIn` (src/lib/auth.ts), so Better Auth's seven-day default
+  // applies, renewed while it is in use — a staffer removed from this shop this
+  // morning can still carry `captain` in their session for days, and `/api/**`
+  // is outside the edge gate (src/proxy.ts), so this handler is the only wall.
+  // `loadActiveStaffRoles` exists for that window (ADR
+  // 20260724-role-authorization): it is null for a deleted person, a disabled
+  // account, or someone who was never this shop's, and the roles it does return
+  // are the `person_roles` of right now.
   //
   // `recordRollCall` does re-check staff-ness inside its own transaction, but it
   // is a weaker check by design — it joins `person_roles` and stops there, so a

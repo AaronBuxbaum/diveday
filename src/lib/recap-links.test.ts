@@ -67,8 +67,9 @@ describe("recap tokens", () => {
 
   it("rejects a token minted under the old raw-AUTH_SECRET scheme (pre purpose-separation)", () => {
     // The pre-fix scheme: HMAC directly with the session-JWT secret over
-    // "recap:<bookingId>" — no HKDF derivation, no issued-at. AUTH_SECRET's
-    // dev fallback is "diveday-dev-secret-not-for-production" (auth.config.ts).
+    // "recap:<bookingId>" — no HKDF derivation, no issued-at. AUTH_SECRET's dev
+    // fallback is "diveday-dev-secret-not-for-production"
+    // (src/lib/auth-secret.ts).
     const payload = Buffer.from(`recap:${BOOKING}`, "utf8").toString("base64url");
     const signature = createHmac("sha256", "diveday-dev-secret-not-for-production")
       .update(payload)

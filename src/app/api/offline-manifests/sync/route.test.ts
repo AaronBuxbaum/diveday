@@ -564,12 +564,14 @@ describe("POST /api/offline-manifests/sync", () => {
 
   /**
    * The write side of the same window `/api/offline-manifests/identity` and
-   * `/upcoming` closed (78ba3c4). The gate used to read the roles baked into the
-   * JWT at sign-in, and no `maxAge` is set on the session
-   * (src/lib/auth.config.ts) so NextAuth's 30-day default applies. `/api/**` is
-   * excluded from the edge gate (src/proxy.ts), so this handler is the only wall
-   * — which meant a staffer removed from the shop could keep *writing* roll call
-   * for up to a month, from any device they were still signed in on.
+   * `/upcoming` closed (78ba3c4). The gate used to read the roles baked into
+   * the JWT at sign-in, and the session it came from lasted thirty days
+   * (NextAuth's default, before the move to Better Auth; src/lib/auth.ts sets
+   * no `expiresIn` now, so the default is seven days, renewed while in use).
+   * `/api/**` is excluded from the edge gate (src/proxy.ts), so this handler is
+   * the only wall — which meant a staffer removed from the shop could keep
+   * *writing* roll call for up to a month, from any device they were still
+   * signed in on.
    *
    * Roll call is the record of who came back from a dive. The read routes leaked
    * a board; this one accepts entries into the log a shop would reach for after

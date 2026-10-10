@@ -44,9 +44,9 @@ describe("the web app manifest", () => {
 
   it("opens somewhere useful to somebody who has installed it", () => {
     // Not "/", which is the B2B marketing homepage — "Run the whole dive day",
-    // "Start a trial". `/shop` is an existing entry point: `auth.config.ts`
+    // "Start a trial". `/shop` is an existing entry point: `src/proxy.ts`
     // redirects a signed-in staff member from it to their own shop and bounces
-    // anyone else to sign-in.
+    // a signed-out visitor to sign-in.
     expect(manifest().start_url).toBe("/shop");
     expect(manifest().start_url).not.toBe("/");
   });

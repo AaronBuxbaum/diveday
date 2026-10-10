@@ -73,14 +73,14 @@ test.describe("a disabled staff account loses its live session", () => {
     await page.getByRole("button", { name: "Disable Sal Moretti" }).click();
     await expect(page.getByText("Account disabled. They can no longer sign in.")).toBeVisible();
 
-    // Same still-stale cookie, visited directly at the sign-in page this
-    // time. The edge `authorized()` callback (src/lib/auth.config.ts) still
-    // sees an `isStaff`-shaped JWT here — it has no database access and
-    // cannot know the account was disabled — so its ordinary "already signed
-    // in" shortcut would otherwise bounce this straight back to
-    // `/shop/<slug>`, which `requireStaffSession()` would immediately refuse
-    // again. Landing on the real sign-in form, once, is what proves that
-    // loop is broken rather than merely not-yet-observed.
+    // Same still-stale cookie, visited directly at the sign-in page this time.
+    // The edge gate (src/proxy.ts) still reads an `isStaff` session from its
+    // cookie cache here — it has no database access and cannot know the account
+    // was disabled — so its ordinary "already signed in" shortcut would
+    // otherwise bounce this straight back to `/shop/<slug>`, which
+    // `requireStaffSession()` would immediately refuse again. Landing on the
+    // real sign-in form, once, is what proves that loop is broken rather than
+    // merely not-yet-observed.
     await captainPage.goto("/sign-in?session=ended");
     await expect(captainPage).toHaveURL(/\/sign-in\?session=ended$/);
     await expect(captainPage.getByRole("heading", { name: "Welcome back" })).toBeVisible();
