@@ -255,7 +255,8 @@
       "lists": "Lists and invitations"
     },
     "nothingToMove": "Nothing on file yet.",
-    "bookingConflict": "Both records hold a seat on the same departure, which usually means two people. If they really are one diver, move the extra seat to another departure first.",
+    "bookingConflict": "Both records hold a seat on the same departure, which usually means two people. If they really are one diver, cancel the extra seat or move it to another departure first.",
+    "keptSeatCancelled": "The kept record’s seat on this departure is cancelled and the other record’s isn’t. Keep the other record instead.",
     "birthDateMinorHint": "The date you keep decides which releases need a parent or guardian’s signature.",
     "openMedicalHold": "A medical answer on this record still needs a physician’s sign-off.",
     "declinedClearance": "A physician declined to clear a medical answer on this record.",

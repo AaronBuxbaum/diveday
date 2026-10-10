@@ -277,21 +277,40 @@ export function MergePreview({
 
   let refusal: ReactNode = null;
   if (preview.refusal === "booking_conflict") {
+    const departureList = (departures: typeof preview.sharedDepartures) => (
+      <ul className="mt-2 grid gap-1">
+        {departures.map((departure) => (
+          <li key={departure.tripId}>
+            <Link
+              href={shopPath(shopSlug, "trips", departure.tripId)}
+              className="font-semibold text-primary hover:underline"
+            >
+              {departure.title} · {formatDateTimeTz(departure.startsAt, locale, timeZone)}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    );
+    // Two live seats are resolved on the departure. A cancelled seat on the
+    // kept record cannot be resolved any further, so that departure never asks
+    // for it: keeping the other record leaves the cancelled seat behind
+    // (issue #2177), and the swap link below does exactly that.
+    const bothLive = preview.sharedDepartures.filter((departure) => !departure.keptSeatOver);
+    const keptOver = preview.sharedDepartures.filter((departure) => departure.keptSeatOver);
     refusal = (
-      <div className="text-sm text-danger">
-        <p className="font-medium">{t("divers.mergePreview.bookingConflict")}</p>
-        <ul className="mt-2 grid gap-1">
-          {preview.sharedDepartures.map((departure) => (
-            <li key={departure.tripId}>
-              <Link
-                href={shopPath(shopSlug, "trips", departure.tripId)}
-                className="font-semibold text-primary hover:underline"
-              >
-                {departure.title} · {formatDateTimeTz(departure.startsAt, locale, timeZone)}
-              </Link>
-            </li>
-          ))}
-        </ul>
+      <div className="grid gap-3 text-sm text-danger">
+        {bothLive.length > 0 ? (
+          <div>
+            <p className="font-medium">{t("divers.mergePreview.bookingConflict")}</p>
+            {departureList(bothLive)}
+          </div>
+        ) : null}
+        {keptOver.length > 0 ? (
+          <div>
+            <p className="font-medium">{t("divers.mergePreview.keptSeatCancelled")}</p>
+            {departureList(keptOver)}
+          </div>
+        ) : null}
       </div>
     );
   } else if (preview.refusal) {
