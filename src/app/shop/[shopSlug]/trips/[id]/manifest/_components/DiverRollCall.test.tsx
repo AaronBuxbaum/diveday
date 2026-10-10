@@ -580,9 +580,8 @@ describe("the earlier-refusal capsule", () => {
  * (dive-domain review of the manifest-blocked-aboard capture). At the dock,
  * `separated_dock` is a heads-up about a teammate still to gather; the
  * readiness blocker is about *this* body, aboard a boat it is not cleared
- * for, and the head count above already says so in danger. The row has to
- * agree with that count: its capsule and its fill. Only a recorded "did not
- * come back" after a dive outranks the blocker.
+ * for, and the head count above already says so. Only a split team after a
+ * dive outranks the blocker.
  */
 describe("a blocked diver marked aboard at the dock", () => {
   const blocked: TripManifest["divers"][number]["readiness"] = {
@@ -591,20 +590,14 @@ describe("a blocked diver marked aboard at the dock", () => {
   };
   const SEPARATED_AT_DOCK = t("shared.buddyTeam.separatedDock");
 
-  function rowClass(container: HTMLElement) {
-    return (
-      container.querySelector("#diver-row-00000000-0000-4000-8000-000000000001")?.className ?? ""
-    );
-  }
-
   function onScreen(text: string) {
     return screen
       .queryAllByText(text)
       .filter((element) => !element.closest(".hidden.print\\:block"));
   }
 
-  it("says Blocked over a teammate still ashore, in the blocked fill", () => {
-    const { container } = renderList({
+  it("says Blocked over a teammate still ashore", () => {
+    renderList({
       checkpoint: "departure",
       divers: [
         diver({
@@ -617,21 +610,10 @@ describe("a blocked diver marked aboard at the dock", () => {
     });
     expect(onScreen("Blocked").length).toBeGreaterThan(0);
     expect(onScreen(SEPARATED_AT_DOCK)).toHaveLength(0);
-    expect(rowClass(container)).toContain("bg-danger/5");
-    expect(rowClass(container)).not.toContain("bg-success");
   });
 
-  it("wears the blocked fill when aboard with no buddy team at all", () => {
-    const { container } = renderList({
-      checkpoint: "departure",
-      divers: [diver({ readiness: blocked, rollCall: boardedAt() })],
-    });
-    expect(onScreen("Blocked").length).toBeGreaterThan(0);
-    expect(rowClass(container)).toContain("bg-danger/5");
-  });
-
-  it("keeps the aboard fill for a cleared diver, with the buddy heads-up", () => {
-    const { container } = renderList({
+  it("keeps the buddy heads-up for a cleared diver", () => {
+    renderList({
       checkpoint: "departure",
       divers: [
         diver({
@@ -642,7 +624,6 @@ describe("a blocked diver marked aboard at the dock", () => {
       ],
     });
     expect(onScreen(SEPARATED_AT_DOCK).length).toBeGreaterThan(0);
-    expect(rowClass(container)).toContain("bg-success");
   });
 
   it("still yields to a team that did not come back after a dive", () => {

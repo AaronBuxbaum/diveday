@@ -515,19 +515,8 @@ export function DiverRollCall({
           // reads is a defect (dive-domain review 20260828). The printed table
           // rows do the same, for the same reason (`src/components/ui/table.tsx`).
           // `ROLL_CALL_ROW_CLASS` carries it, with the card's corner on paper.
-          // **Aboard while blocked wears the blocked fill, not the aboard
-          // green** (dive-domain review of the manifest-blocked-aboard
-          // capture). The head count says "blocked person aboard" in danger,
-          // "in the danger the rows wear"; a green row under it reassured over
-          // the one body that needs a decision. Left ashore stays amber: that
-          // blocker is settled.
-          const blockedAboard = blockedAtDock && rowState.boarded;
           const rowClass = `${ROLL_CALL_ROW_CLASS} ${alarmed ? "order-first print:order-none" : ""} ${rollCallScrollMargin(isDeparture)} ${
-            blockedAboard
-              ? ROLL_CALL_ROW_TONE.blocked
-              : recordedTone
-                ? ROLL_CALL_ROW_TONE[recordedTone]
-                : untouchedTone
+            recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : untouchedTone
           }`;
           // The hairline above this row, in each of the two orders. On screen
           // the first row is the first alarmed one when there is any; on paper
@@ -569,54 +558,57 @@ export function DiverRollCall({
           // water (DD9). A split buddy team still shows — it is part of the
           // search. Paper keeps every fact (the block below).
           //
-          // **The blocker outranks `separated_dock`** (dive-domain review of the
-          // manifest-blocked-aboard capture). At the dock a teammate still
-          // ashore is a heads-up; a blocked diver aboard is this body on a boat
-          // it is not cleared for, and the row read "Someone not aboard" under a
-          // head count saying "1 blocked person aboard". Only the after-dive
-          // alarm outranks it. One chain decides; the badge below only renders
-          // what it chose, so the two cannot disagree again.
-          const buddyAlert = diver.buddyAlert && diver.buddyTeam ? diver.buddyAlert : null;
-          const capsuleKind =
-            buddyAlert === "separated_after_dive"
-              ? "buddy"
-              : alarmed
-                ? null
-                : blockedAtDock
-                  ? "blocked"
-                  : buddyAlert
-                    ? "buddy"
-                    : earlierRefusal
-                      ? "refusal"
-                      : referralUnresolved
-                        ? "referral"
-                        : diver.minor && diver.age !== null && diver.age !== undefined
-                          ? "minor"
-                          : diver.depthAdvisory?.status === "exceeds"
-                            ? "depth"
-                            : diver.birthday
-                              ? "birthday"
-                              : null;
-          const capsule =
-            capsuleKind === "buddy" && buddyAlert ? (
-              <Badge tone={buddyAlert === "separated_after_dive" ? "danger" : "warning"}>
-                {buddyAlertText(t, buddyAlert)}
+          // **A blocker outranks `separated_dock`** (dive-domain review of the
+          // manifest-blocked-aboard capture): at the dock a teammate still
+          // ashore is a heads-up, while a blocked diver aboard is this body on
+          // a boat it is not cleared for. The row read "Someone not aboard"
+          // under a head count saying "1 blocked person aboard".
+          const splitAfterDive = diver.buddyAlert === "separated_after_dive";
+          const capsuleKind = splitAfterDive
+            ? "buddy"
+            : alarmed
+              ? null
+              : blockedAtDock
+                ? "blocked"
+                : diver.buddyAlert
+                  ? "buddy"
+                  : earlierRefusal
+                    ? "refusal"
+                    : referralUnresolved
+                      ? "referral"
+                      : diver.minor && diver.age !== null && diver.age !== undefined
+                        ? "minor"
+                        : diver.depthAdvisory?.status === "exceeds"
+                          ? "depth"
+                          : diver.birthday
+                            ? "birthday"
+                            : null;
+          const buddyCapsule =
+            diver.buddyAlert && diver.buddyTeam ? (
+              <Badge tone={splitAfterDive ? "danger" : "warning"}>
+                {buddyAlertText(t, diver.buddyAlert)}
               </Badge>
-            ) : capsuleKind === "blocked" ? (
+            ) : null;
+          const capsule =
+            splitAfterDive && buddyCapsule ? (
+              buddyCapsule
+            ) : alarmed ? null : blockedAtDock ? (
               <Badge tone={readinessStatusTone(diverStatus)}>
                 {readinessStatusText(t, diverStatus)}
               </Badge>
-            ) : capsuleKind === "refusal" ? (
+            ) : buddyCapsule ? (
+              buddyCapsule
+            ) : earlierRefusal ? (
               <Badge tone="warning">{t("manifest.medicalEarlierRefusalChip")}</Badge>
-            ) : capsuleKind === "referral" ? (
+            ) : referralUnresolved ? (
               <Badge tone="warning">{t("manifest.medicalReferralUnresolvedChip")}</Badge>
-            ) : capsuleKind === "minor" && diver.age !== null && diver.age !== undefined ? (
+            ) : diver.minor && diver.age !== null && diver.age !== undefined ? (
               <Badge tone="warning" tabularNums>
                 {t("manifest.minorAge", { age: diver.age })}
               </Badge>
-            ) : capsuleKind === "depth" ? (
+            ) : diver.depthAdvisory?.status === "exceeds" ? (
               <Badge tone="warning">{t("manifest.depthChip")}</Badge>
-            ) : capsuleKind === "birthday" && diver.birthday ? (
+            ) : diver.birthday ? (
               <Badge tone="primary">{birthdayCalloutText(t, diver.birthday)}</Badge>
             ) : null;
           // **Snorkeler or rider, in words** (ADR 20261007-participant-types).
