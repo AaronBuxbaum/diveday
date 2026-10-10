@@ -981,11 +981,13 @@ For `e2e/`; the rules themselves are in `.claude/rules/e2e.md`.
 - **A panel that only renders when something has gone wrong** is photographed through
   `/api/test/seed-trouble-states`, never by seeding the failure into the demo shop. Add the state to
   `src/app/api/test/seed-trouble-states/route.ts` and a capture beside the surface's calm one.
-- **Route coverage**: every `src/app/**/page.tsx` route is listed in `scripts/route-coverage.json`
-  with the specs and `e2e/visual.spec.ts` captures that cover it, or a written `exempt` reason. The
-  lists are hand-maintained (a spec usually *clicks* its way to a route); `--write` rewrites only
-  mechanical facts, `--absorb` records a merge-in loss, `--report` prints the table. The `a11y`
-  column is what `pnpm agent:health` reads for the axe share.
+- **Route coverage**: every `src/app/**/page.tsx` route has a spec and an `e2e/visual.spec.ts`
+  capture, or a written `exempt` reason. Coverage is derived from the path literals in `e2e/`
+  (a spec that names the route's URL covers it; a capture after that URL inside one `test(`
+  photographs it; an `expectNoA11yViolations` spec scans it), and `scripts/route-coverage.json`
+  holds only the exceptions — specs and captures that reach a route by clicks, and exemptions.
+  `--write` prunes the file back to them, `--absorb` records a merge-in loss, `--report` prints the
+  table. `loadCoverage` is the computed ledger `pnpm agent:health` reads for the axe share.
 - **Fixtures**: prefer `staffContext.newPage()` and the exported fixtures; `pnpm check:e2e-fixtures`
   flags a hand-built context.
 - **The clock is frozen at the harness boundary** (`TEST_FROZEN_CLOCK`); never stabilise a capture
