@@ -205,26 +205,11 @@ export function AfterState({
     .filter((group) => group.cards.length > 0);
   const firstName = diverName.trim().split(/\s+/)[0] || t("recap.namelessFallback");
   const greeting = t("thread.afterGreeting", { name: firstName });
-  // `noticeFromParam`, never a bare `REVIEW_NOTICES[params.review]` — all
-  // three params are attacker-supplied and a bare lookup walks the prototype
-  // (src/lib/staff-notices.ts).
-  const reviewNotice = noticeFromParam(params.review, REVIEW_NOTICES);
-  const photoNotice = noticeFromParam(params.photo, PHOTO_NOTICES);
-  const tipNotice = noticeFromParam(params.tip, TIP_NOTICES);
-
-  /**
-   * One review ask, not two: the "share it on Google too" door only lights up
-   * right after an on-page submission went through, and while it is lit the
-   * form's own submit steps back to secondary. One spelling of that state, so
-   * the two can never disagree about which is the page's primary.
-   *
-   * **Every rating, never only the good ones** (issue #2095). Offering the
-   * public review link only to a diver who rated 4–5★ is review gating, which
-   * Google's review policy forbids; a one-star diver gets the same door.
-   */
-  const justSubmittedReview =
-    (params.review === "published" || params.review === "pending") && ownReview !== null;
-  const externalReviewUrl = justSubmittedReview ? shop.reviewUrl : null;
+  const { reviewNotice, photoNotice, tipNotice, externalReviewUrl } = afterNotices(
+    params,
+    ownReview,
+    shop.reviewUrl,
+  );
 
   /**
    * **The last coral this thread spends** (decision 6). The moment is "you're
@@ -645,6 +630,36 @@ export function AfterState({
       </footer>
     </main>
   );
+}
+
+/**
+ * What the after-dive page says about the form the diver just sent, read from its own redirect.
+ *
+ * `noticeFromParam`, never a bare `REVIEW_NOTICES[params.review]` — all three params are
+ * attacker-supplied and a bare lookup walks the prototype (src/lib/staff-notices.ts).
+ *
+ * One review ask, not two: the "share it on Google too" door only lights up right after an
+ * on-page submission went through, and while it is lit the form's own submit steps back to
+ * secondary. One spelling of that state, so the two can never disagree about which is the
+ * page's primary.
+ *
+ * **Every rating, never only the good ones** (issue #2095). Offering the public review link only
+ * to a diver who rated 4–5★ is review gating, which Google's review policy forbids; a one-star
+ * diver gets the same door.
+ */
+function afterNotices(
+  params: AfterStateProps["params"],
+  ownReview: AfterStateProps["ownReview"],
+  reviewUrl: AfterStateProps["shop"]["reviewUrl"],
+) {
+  const justSubmittedReview =
+    (params.review === "published" || params.review === "pending") && ownReview !== null;
+  return {
+    reviewNotice: noticeFromParam(params.review, REVIEW_NOTICES),
+    photoNotice: noticeFromParam(params.photo, PHOTO_NOTICES),
+    tipNotice: noticeFromParam(params.tip, TIP_NOTICES),
+    externalReviewUrl: justSubmittedReview ? reviewUrl : null,
+  };
 }
 
 /**
