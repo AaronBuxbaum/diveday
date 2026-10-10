@@ -1,8 +1,8 @@
 import { randomBytes } from "node:crypto";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { describePostgres, postgresTestDb } from "@/test/postgres";
-import { people, shops } from "./schema";
+import { courses, diveSites, gearItems, people, shops } from "./schema";
 
 /**
  * **The committed `people.full_name` collation, against a real server.**
@@ -54,5 +54,51 @@ describePostgres("people.full_name on a real Postgres server", () => {
       .orderBy(asc(people.fullName));
 
     expect(rows.map((row) => row.fullName)).toEqual(ICU_ORDER);
+  });
+
+  it("sorts dive sites, gear tags and courses by ICU order too (issue #1708)", async () => {
+    const pg = await postgresTestDb();
+    const db = pg.db;
+
+    const suffix = randomBytes(4).toString("hex");
+    const [shop] = await db
+      .insert(shops)
+      .values({
+        name: `Collation Lists ${suffix}`,
+        slug: `collation-lists-${suffix}`,
+        timezone: "America/New_York",
+      })
+      .returning();
+    if (!shop) throw new Error("shop insert returned no row");
+
+    await db
+      .insert(diveSites)
+      .values(NAMES.map((name, at) => ({ shopId: shop.id, name, slug: `site-${at}` })));
+    await db
+      .insert(gearItems)
+      .values(NAMES.map((label) => ({ shopId: shop.id, kind: "bcd" as const, label })));
+    await db
+      .insert(courses)
+      .values(NAMES.map((title, at) => ({ shopId: shop.id, title, slug: `course-${at}` })));
+
+    const sites = await db
+      .select({ name: diveSites.name })
+      .from(diveSites)
+      .where(eq(diveSites.shopId, shop.id))
+      .orderBy(asc(diveSites.name));
+    const gear = await db
+      .select({ label: gearItems.label })
+      .from(gearItems)
+      .where(eq(gearItems.shopId, shop.id))
+      .orderBy(asc(gearItems.label));
+    const roster = await db
+      .select({ title: courses.title })
+      .from(courses)
+      .where(eq(courses.shopId, shop.id))
+      .orderBy(asc(courses.title));
+
+    expect(sites.map((row) => row.name)).toEqual(ICU_ORDER);
+    expect(gear.map((row) => row.label)).toEqual(ICU_ORDER);
+    expect(roster.map((row) => row.title)).toEqual(ICU_ORDER);
   });
 });

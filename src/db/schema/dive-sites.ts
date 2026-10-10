@@ -77,6 +77,19 @@ export const diveSites = pgTable(
     sourceTemplateVersion: integer("source_template_version"),
     /** The last template pull's prior managed fields, for a one-time undo. */
     templateUpdateUndo: jsonb("template_update_undo").$type<DiveSiteTemplateUndo>(),
+    /**
+     * **`COLLATE "und-x-icu"` in the database**, set by
+     * `drizzle/20261010081009_site-gear-course-collation` — the same treatment
+     * `people.full_name` has (see its comment in `core.ts`). The type here is
+     * plain `text` because drizzle-orm's pg-core has no way to say it, and a
+     * later `pnpm db:generate` will not take it back off.
+     *
+     * On the column so that every `orderBy` over it inherits it with no query
+     * edit: the dive-site library and every site picker puts "Ángel" beside "Ana"
+     * rather than after "Zoe", on PGlite and on a real server alike.
+     * Deterministic, so the per-shop unique index stays byte equality.
+     * `src/db/name-collation.test.ts` proves it.
+     */
     name: text("name").notNull(),
     /**
      * The site's public URL segment — `/s/<shop>/sites/molasses-reef` (N-48).

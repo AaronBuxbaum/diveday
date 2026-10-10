@@ -2,7 +2,7 @@
 import { and, asc, eq, ilike, inArray, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { people } from "./schema";
+import { courses, diveSites, gearItems, people } from "./schema";
 
 /**
  * **`people.full_name` carries its own ICU collation**, so a name-ordered list
@@ -61,6 +61,105 @@ describe("people.full_name ordering (PGlite, the engine the suite runs on)", () 
       .orderBy(asc(people.fullName));
 
     expect(rows.map((row) => row.fullName)).toEqual(ICU_ORDER);
+  });
+});
+
+/**
+ * **The three other columns a list is ordered by** carry the same collation
+ * (`drizzle/20261010081009_site-gear-course-collation`, issue #1708): the
+ * dive-site library, the gear register and the course roster. Each assertion
+ * is a bare `orderBy` for the same reason as above.
+ */
+describe("dive_sites.name, gear_items.label and courses.title ordering (PGlite)", () => {
+  const slug = (name: string, at: number) =>
+    `${name
+      .normalize("NFD")
+      .replace(/[^a-z]/gi, "")
+      .toLowerCase()}-${at}`;
+
+  it("orders dive sites by ICU order from a query that names no collation", async () => {
+    const inserted = await ctx.db
+      .insert(diveSites)
+      .values(
+        NAMES.map((name, at) => ({ shopId: ctx.shop.id, name, slug: slug(`site-${name}`, at) })),
+      )
+      .returning({ id: diveSites.id });
+    const rows = await ctx.db
+      .select({ name: diveSites.name })
+      .from(diveSites)
+      .where(
+        inArray(
+          diveSites.id,
+          inserted.map((row) => row.id),
+        ),
+      )
+      .orderBy(asc(diveSites.name));
+    expect(rows.map((row) => row.name)).toEqual(ICU_ORDER);
+  });
+
+  it("orders gear tags by ICU order from a query that names no collation", async () => {
+    const inserted = await ctx.db
+      .insert(gearItems)
+      .values(NAMES.map((label) => ({ shopId: ctx.shop.id, kind: "bcd" as const, label })))
+      .returning({ id: gearItems.id });
+    const rows = await ctx.db
+      .select({ label: gearItems.label })
+      .from(gearItems)
+      .where(
+        inArray(
+          gearItems.id,
+          inserted.map((row) => row.id),
+        ),
+      )
+      .orderBy(asc(gearItems.label));
+    expect(rows.map((row) => row.label)).toEqual(ICU_ORDER);
+  });
+
+  it("orders courses by ICU order from a query that names no collation", async () => {
+    const inserted = await ctx.db
+      .insert(courses)
+      .values(
+        NAMES.map((title, at) => ({
+          shopId: ctx.shop.id,
+          title,
+          slug: slug(`course-${title}`, at),
+        })),
+      )
+      .returning({ id: courses.id });
+    const rows = await ctx.db
+      .select({ title: courses.title })
+      .from(courses)
+      .where(
+        inArray(
+          courses.id,
+          inserted.map((row) => row.id),
+        ),
+      )
+      .orderBy(asc(courses.title));
+    expect(rows.map((row) => row.title)).toEqual(ICU_ORDER);
+  });
+
+  it("keeps equality byte-exact on all three: the collation is deterministic", async () => {
+    const rows = await ctx.db.execute<{
+      col: string;
+      collname: string;
+      collisdeterministic: boolean;
+    }>(sql`
+      select a.attrelid::regclass::text || '.' || a.attname as col, c.collname, c.collisdeterministic
+        from pg_attribute a
+        join pg_collation c on c.oid = a.attcollation
+       where (a.attrelid, a.attname) in (
+               ('dive_sites'::regclass, 'name'),
+               ('gear_items'::regclass, 'label'),
+               ('courses'::regclass, 'title')
+             )
+       order by 1
+    `);
+    expect(resultRows(rows)).toEqual([
+      { col: "courses.title", collname: "und-x-icu", collisdeterministic: true },
+      { col: "dive_sites.name", collname: "und-x-icu", collisdeterministic: true },
+      { col: "gear_items.label", collname: "und-x-icu", collisdeterministic: true },
+    ]);
   });
 });
 

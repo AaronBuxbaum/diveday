@@ -38,6 +38,19 @@ export const courses = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
+    /**
+     * **`COLLATE "und-x-icu"` in the database**, set by
+     * `drizzle/20261010081009_site-gear-course-collation` — the same treatment
+     * `people.full_name` has (see its comment in `core.ts`). The type here is
+     * plain `text` because drizzle-orm's pg-core has no way to say it, and a
+     * later `pnpm db:generate` will not take it back off.
+     *
+     * On the column so that every `orderBy` over it inherits it with no query
+     * edit: the course roster and the public course list puts "Ángel" beside "Ana"
+     * rather than after "Zoe", on PGlite and on a real server alike.
+     * Deterministic, so the per-shop unique index stays byte equality.
+     * `src/db/name-collation.test.ts` proves it.
+     */
     title: text("title").notNull(),
     agency: text("agency").notNull().default("padi"),
     /** Short internal blurb shown in staff lists and pickers; not the marketing copy. */
