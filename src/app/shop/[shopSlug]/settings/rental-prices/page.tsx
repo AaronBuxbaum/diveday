@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
+import { canPersonManageRentalSettings } from "@/db/authz";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { RentalPricingForm } from "../_components/editors/RentalEditors";
-import {
-  canPersonManageRentalSettings,
-  SettingsEditorPage,
-} from "../_components/SettingsEditorPage";
+import { SettingsEditorPage } from "../_components/SettingsEditorPage";
 import { rentalPricingNoticeMessages } from "../sub-page-notices";
 
 // See the sibling settings sub-pages (ADR 20260804-instant-navigation).

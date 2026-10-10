@@ -367,6 +367,43 @@ describe("every settings mutation refuses the daily crew", () => {
     expect(after?.dockCallMinutes).toBe(before?.dockCallMinutes);
   });
 
+  /**
+   * The four editors that left the hub for pages of their own (#1854) keep
+   * their gates: a captain's hand-made post is refused, and the stored row
+   * is what proves it, not the notice — each setter writes whatever it is
+   * handed.
+   */
+  it("refuses a captain's emergency reference, rental catalog, rental prices and profile", async () => {
+    const { db, shop, captain } = await context();
+    signIn(shop, captain);
+    const before = await getShopById(db, shop.id);
+    const refused = `/shop/${shop.slug}/settings?notice=not-authorized`;
+
+    const emergency = new FormData();
+    emergency.set("emergencyVessel", "Somebody else's boat");
+    emergency.set("emergencyLabel-0", "Chamber");
+    emergency.set("emergencyPhone-0", "+1 555 0100");
+    expect(await redirectedTo(() => saveEmergencyReferenceAction(emergency))).toBe(refused);
+
+    const items = new FormData();
+    items.set("drysuit", "on");
+    expect(await redirectedTo(() => saveRentalItemsAction(items))).toBe(refused);
+
+    const prices = new FormData();
+    prices.set("setPrice", "1");
+    expect(await redirectedTo(() => saveRentalPricingAction(prices))).toBe(refused);
+
+    const profile = new FormData();
+    profile.set("tagline", "Written by the captain");
+    expect(await redirectedTo(() => saveProfileAction(profile))).toBe(refused);
+
+    const after = await getShopById(db, shop.id);
+    expect(after?.emergencyReference).toEqual(before?.emergencyReference);
+    expect(after?.rentalItems).toEqual(before?.rentalItems);
+    expect(after?.rentalPricing).toEqual(before?.rentalPricing);
+    expect(after?.tagline).toEqual(before?.tagline);
+  });
+
   it("still lets an owner through every one of them", async () => {
     const { db, shop, owner } = await context();
     signIn(shop, owner);
@@ -396,8 +433,8 @@ describe("every settings mutation refuses the daily crew", () => {
     expect(await redirectedTo(() => saveRentalItemsAction(new FormData()))).toBe(
       `${page("rentals")}rentals-saved`,
     );
-    expect(await redirectedTo(() => saveRentalPricingAction(new FormData()))).toMatch(
-      new RegExp(`^${page("rental-prices").replace("?", "\\?")}rental-prices-`),
+    expect(await redirectedTo(() => saveRentalPricingAction(new FormData()))).toBe(
+      `${page("rental-prices")}rental-prices-saved`,
     );
     const profile = new FormData();
     profile.set("brandColor", "not a colour");

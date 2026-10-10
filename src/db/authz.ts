@@ -171,6 +171,20 @@ export const canPersonManageWaiverTemplates = (db: DbExecutor, shopId: string, p
 export const canPersonManageShopSettings = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManageShopSettings);
 
+/**
+ * The rental editors' gate (#1854): shop settings *and* payment settings, the
+ * two the hub asked before drawing the Rental gear group at all and the two
+ * their actions re-check (`settingsBlock`, `paymentSettingsBlock`). One live
+ * read, both predicates over the same roles.
+ */
+export const canPersonManageRentalSettings = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(
+    db,
+    shopId,
+    personId,
+    (roles) => canManageShopSettings(roles) && canManagePaymentSettings(roles),
+  );
+
 export const canPersonDeleteDiver = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canDeleteDiver);
 

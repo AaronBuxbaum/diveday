@@ -817,7 +817,6 @@ export async function saveProfileAction(formData: FormData) {
   }
 
   revalidatePath(`/s/${session.user.shopSlug}`);
-  revalidatePath(page);
   revalidateAndRedirect(page, noticeUrl(page, "profile-saved"));
 }
 
