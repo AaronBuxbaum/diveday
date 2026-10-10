@@ -3,7 +3,13 @@ import path from "node:path";
 import process from "node:process";
 
 import { chromium } from "@playwright/test";
-import { MIN_MAIN_TEXT, SKELETON_SELECTOR } from "./screenshot-guards.mjs";
+import {
+  MIN_MAIN_TEXT,
+  OFFLINE_COPY_SAVED,
+  OFFLINE_SETTLED_SELECTOR,
+  offlineManifestPlan,
+  SKELETON_SELECTOR,
+} from "./screenshot-guards.mjs";
 
 /**
  * Look at a page you just changed, without writing a throwaway driver.
@@ -195,7 +201,9 @@ async function launch() {
   }
 }
 
-const needsStaffSession = paths.some((p) => p.startsWith("/shop"));
+const needsStaffSession = paths.some(
+  (p) => p.startsWith("/shop") || Boolean(offlineManifestPlan(p)?.seedPath),
+);
 
 /**
  * The pixel probe's bound, for a dev server rather than the visual spec's
@@ -364,6 +372,14 @@ async function openAndSettle(page, target) {
       // for the document title, the same settled-document signal the a11y
       // spec gates on.
       await page.waitForFunction(() => document.title.length > 0);
+      // The offline manifest's "Opening…" state passes the skeleton rules, so
+      // it is waited past by its own marker (issue #2235).
+      if (offlineManifestPlan(target)) {
+        await page.waitForSelector(OFFLINE_SETTLED_SELECTOR, {
+          state: "attached",
+          timeout: SKELETON_TIMEOUT_MS,
+        });
+      }
       await waitPastTheSkeleton(page, target);
       return;
     } catch (error) {
@@ -507,6 +523,17 @@ try {
       page.setDefaultTimeout(LOCATOR_TIMEOUT_MS);
 
       for (const target of paths) {
+        // A fresh context has no saved copy for the offline manifest to show:
+        // open the trip's staff manifest first, which saves one, and wait for
+        // it to say so.
+        const seedPath = offlineManifestPlan(target)?.seedPath;
+        if (seedPath) {
+          await openAndSettle(page, seedPath);
+          await page
+            .getByText(OFFLINE_COPY_SAVED)
+            .first()
+            .waitFor({ timeout: SKELETON_TIMEOUT_MS });
+        }
         await openAndSettle(page, target);
         // Filesystem-safe name: drop any query/fragment, then collapse every
         // non-alphanumeric run to a dash — `/shop/x/today?view=departures`
