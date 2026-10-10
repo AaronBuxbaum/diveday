@@ -1,4 +1,4 @@
-import { ProgressBar } from "@/components/ui/ProgressBar";
+import { ReadinessBar } from "@/components/ui/ProgressBar";
 import { CounterClearedLine } from "./CounterClearedLine";
 
 /**
@@ -7,7 +7,7 @@ import { CounterClearedLine } from "./CounterClearedLine";
  * The counter used to answer "how many are still to come?" by making a
  * staffer read a list and subtract. The instrument answers it before the list:
  * a figure at display scale, the two remainders as quiet tabular text beside
- * it, and a 5px meter under both. Everything here is derived from the focused
+ * it, and an 8px meter under both (`ReadinessBar`, the bar Today draws). Everything here is derived from the focused
  * departure's own rows — nothing is stored, and nothing on this block is a
  * control.
  *
@@ -66,18 +66,9 @@ export function CounterInstrument({
         <p className="text-base text-muted tabular-nums">{figure}</p>
         {remainder ? <p className="text-sm text-muted tabular-nums">{remainder}</p> : null}
       </div>
-      <ProgressBar
-        aria-hidden="true"
-        className="mt-3 h-[5px]"
-        segments={[
-          { key: "here", fraction: expected > 0 ? here / expected : 0, className: "bg-success/70" },
-          {
-            key: "blocked",
-            fraction: expected > 0 ? cantBoard / expected : 0,
-            className: "bg-danger/60",
-          },
-        ]}
-      />
+      {/* Today's bar, at Today's 8px and full tints (#2100): one reading of
+          readiness, drawn one way wherever a staffer meets it. */}
+      <ReadinessBar className="mt-3" ready={here} blocked={cantBoard} of={expected} />
       {/* Mounted whether or not the boat is clear, so the line can tell the tap
           that earned it from a page that simply loaded complete. */}
       <CounterClearedLine cleared={cleared}>{clearedLabel}</CounterClearedLine>

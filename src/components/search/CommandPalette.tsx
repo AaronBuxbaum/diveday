@@ -647,7 +647,7 @@ export function CommandPalette({
                   // leaves inside it, so the clip's curve never reaches it).
                   // The field paints no fill, so the radius shapes the ring
                   // and nothing else.
-                  className="w-full rounded-t-panel border-b border-border bg-transparent px-5 py-4 text-base placeholder:text-muted focus-visible:focus-ring-inset"
+                  className="w-full rounded-t-panel border-b border-border bg-transparent px-5 py-4 text-base focus-visible:focus-ring-inset"
                 />
                 {/* `pb-2` inside the scroll box, not on the panel: the last
                     row now ends on its own padding rather than being sliced

@@ -30,12 +30,7 @@ import { AccountGroup } from "./_components/groups/AccountGroup";
 import { BoatsSitesGroup } from "./_components/groups/BoatsSitesGroup";
 import { BookingsGroup } from "./_components/groups/BookingsGroup";
 import { DataGroup } from "./_components/groups/DataGroup";
-import {
-  BOATS_SITES_GROUP,
-  DATA_GROUP,
-  SettingsGroup,
-  type SettingsView,
-} from "./_components/groups/kit";
+import { DATA_GROUP, SettingsGroup, type SettingsView } from "./_components/groups/kit";
 import { MessagesGroup } from "./_components/groups/MessagesGroup";
 import { MoneyGroup } from "./_components/groups/MoneyGroup";
 import { RentalsGroup } from "./_components/groups/RentalsGroup";
@@ -62,9 +57,6 @@ function noticeMessages(
     "season-saved": { tone: "success", text: t("settings.main.notice.seasonSaved") },
     "season-invalid": { tone: "danger", text: t("settings.main.notice.seasonInvalid") },
     "timezone-invalid": { tone: "danger", text: t("settings.main.notice.timezoneInvalid") },
-    "dock-saved": { tone: "success", text: t("settings.main.notice.dockSaved") },
-    "emergency-saved": { tone: "success", text: t("settings.main.notice.emergencySaved") },
-    "dock-invalid": { tone: "danger", text: t("settings.main.notice.dockInvalid") },
     "package-saved": { tone: "success", text: t("settings.main.notice.packageSaved") },
     "package-deleted": { tone: "success", text: t("settings.main.notice.packageDeleted") },
     "package-invalid": { tone: "danger", text: t("settings.main.notice.packageInvalid") },
@@ -74,12 +66,6 @@ function noticeMessages(
     "tax-invalid": { tone: "danger", text: t("settings.main.notice.taxInvalid") },
     "pass-through-saved": { tone: "success", text: t("settings.main.notice.passThroughSaved") },
     "pass-through-invalid": { tone: "danger", text: t("settings.main.notice.passThroughInvalid") },
-    "rentals-saved": { tone: "success", text: t("settings.main.notice.rentalsSaved") },
-    "rental-prices-saved": { tone: "success", text: t("settings.main.notice.rentalPricesSaved") },
-    "rental-prices-invalid": {
-      tone: "danger",
-      text: t("settings.main.notice.rentalPricesInvalid"),
-    },
     "rental-terms-saved": { tone: "success", text: t("settings.main.notice.rentalTermsSaved") },
     "rental-terms-invalid": {
       tone: "danger",
@@ -91,8 +77,6 @@ function noticeMessages(
       text: t("settings.main.notice.contactConfirmationSent"),
     },
     "contact-invalid": { tone: "danger", text: t("settings.main.notice.contactInvalid") },
-    "profile-saved": { tone: "success", text: t("settings.main.notice.profileSaved") },
-    "profile-invalid": { tone: "danger", text: t("settings.main.notice.profileInvalid") },
     "shop-photos-saved": { tone: "success", text: t("settings.main.notice.shopPhotosSaved") },
     "shop-photos-invalid": {
       tone: "danger",
@@ -176,7 +160,7 @@ export { SECTION_IDS, SETTINGS_GROUPS, SettingsGroup };
  * **The settings hub** — one component per group in `settings-groups.ts`
  * (`_components/groups/`), composed here. The hub reads what more than one group
  * needs once (the shop, the gates, the Stripe account); a group that needs a read
- * of its own (Boats & sites, Data) makes it itself under its own `<Suspense>`.
+ * of its own (Data) makes it itself under its own `<Suspense>`.
  */
 export default async function SettingsPage({
   params,
@@ -274,13 +258,7 @@ export default async function SettingsPage({
 
         {canManageTeam ? <TeamGroup view={view} canManageTeam={canManageTeam} /> : null}
 
-        <Suspense
-          fallback={
-            <GroupFallback group={BOATS_SITES_GROUP} label={t(BOATS_SITES_GROUP.labelKey)} />
-          }
-        >
-          <BoatsSitesGroup view={view} db={db} />
-        </Suspense>
+        <BoatsSitesGroup view={view} />
 
         <BookingsGroup view={view} canManageWaivers={canManageWaivers} />
 

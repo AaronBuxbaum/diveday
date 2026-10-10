@@ -45,7 +45,6 @@
   "crewAwaiting": "{count, plural, one {# crew member still to call.} other {# crew members still to call.}}",
   "crewHeading": "Crew",
   "crewMarkAboard": "Mark aboard",
-  "crewAboardCheck": "Aboard",
   "crewAboardCheckAriaLabel": "Aboard — tap again to undo",
   "crewMarkNotAboard": "Mark not aboard",
   "crewNotAboardCheck": "Not aboard",

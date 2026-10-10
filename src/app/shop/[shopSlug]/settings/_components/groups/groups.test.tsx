@@ -62,7 +62,7 @@ describe("each settings group renders as its own component", () => {
         addressLookupEnabled: false,
       }),
       TeamGroup({ view, canManageTeam: true }),
-      await BoatsSitesGroup({ view, db }),
+      BoatsSitesGroup({ view }),
       BookingsGroup({ view, canManageWaivers: true }),
       RentalsGroup({ view }),
       MoneyGroup({ view, canPayments: true, account: null, connectConfigured: false }),
@@ -75,12 +75,11 @@ describe("each settings group renders as its own component", () => {
     expect(rendered.map((group) => group.id)).toEqual(SETTINGS_GROUPS.map((group) => group.id));
     expect(rendered[0]?.rows).toEqual(["timezone", "season", "units", "contact", "address"]);
     expect(rendered[1]?.rows).toEqual(["crewSchedule"]);
-    expect(rendered[2]?.rows).toEqual(["divingOptions", "emergency", "dockCall"]);
-    expect(rendered[4]?.rows).toEqual(["rentals", "rentalPricing", "rentalTerms"]);
+    expect(rendered[2]?.rows).toEqual(["divingOptions"]);
+    expect(rendered[4]?.rows).toEqual(["rentalTerms"]);
     expect(rendered[5]?.rows).toEqual(["tax", "passThrough", "tips", "stripe"]);
     expect(rendered[6]?.rows).toEqual(["reviews", "reviewLink", "deskHours"]);
     expect(rendered[7]?.rows).toEqual([
-      "profile",
       "shopPhotos",
       "searchListing",
       "dateRequests",

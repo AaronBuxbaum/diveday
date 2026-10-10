@@ -383,13 +383,15 @@ export function ShopPageHeaderSkeleton({
    * the title, `gap-5` down, each grown to the row at `md`'s 48px — part of
    * its height, so the skeleton draws them there (K-86: 68px of drop on
    * Reviews and a dive site's page without). From `sm` they sit beside the
-   * title and add nothing, so the bars are phone-only.
+   * title, so the bars are phone-only — but a 48px door beside a 44px title
+   * line is what the header's height is there, so the skeleton holds that
+   * 48px floor from `sm` (#1993: the course roster landed 4px low at 1280).
    */
   actions?: boolean | number;
 }) {
   const actionRows = actions === true ? 1 : actions === false ? 0 : actions;
   return (
-    <div className="mb-8">
+    <div className={actionRows > 0 ? "mb-8 sm:min-h-12" : "mb-8"}>
       {brand ? (
         <div className="mb-5">
           <SkeletonLineBars lines={brand} height="h-6" width="w-80 max-w-full" />

@@ -31,6 +31,47 @@ export function boatNoticeMessages(t: StaffTranslator): NoticeMessages {
   };
 }
 
+/** `/settings/rentals` — `saveRentalItemsAction`. */
+export function rentalItemsNoticeMessages(t: StaffTranslator): NoticeMessages {
+  return {
+    "rentals-saved": { tone: "success", text: t("settings.main.notice.rentalsSaved") },
+  };
+}
+
+/** `/settings/rental-prices` — `saveRentalPricingAction`. */
+export function rentalPricingNoticeMessages(t: StaffTranslator): NoticeMessages {
+  return {
+    "rental-prices-saved": { tone: "success", text: t("settings.main.notice.rentalPricesSaved") },
+    "rental-prices-invalid": {
+      tone: "danger",
+      text: t("settings.main.notice.rentalPricesInvalid"),
+    },
+  };
+}
+
+/** `/settings/emergency-reference` — `saveEmergencyReferenceAction`. */
+export function emergencyReferenceNoticeMessages(t: StaffTranslator): NoticeMessages {
+  return {
+    "emergency-saved": { tone: "success", text: t("settings.main.notice.emergencySaved") },
+  };
+}
+
+/** `/settings/dock-day` — `saveDockDayRhythmAction`. */
+export function dockDayNoticeMessages(t: StaffTranslator): NoticeMessages {
+  return {
+    "dock-saved": { tone: "success", text: t("settings.main.notice.dockSaved") },
+    "dock-invalid": { tone: "danger", text: t("settings.main.notice.dockInvalid") },
+  };
+}
+
+/** `/settings/profile` — `saveProfileAction`. */
+export function profileNoticeMessages(t: StaffTranslator): NoticeMessages {
+  return {
+    "profile-saved": { tone: "success", text: t("settings.main.notice.profileSaved") },
+    "profile-invalid": { tone: "danger", text: t("settings.main.notice.profileInvalid") },
+  };
+}
+
 /** `/settings/trip-tags` — the three `TripLens` actions. */
 export function lensNoticeMessages(t: StaffTranslator): NoticeMessages {
   return {

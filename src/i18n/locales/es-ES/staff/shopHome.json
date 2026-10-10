@@ -4,9 +4,9 @@
     "series": "“{title}” ya está en el calendario con {count, plural, one {# salida programada} other {# salidas programadas}}."
   },
   "firstBookable": {
-    "heading": "“{title}” ya está en el calendario y tu centro ya acepta reservas.",
-    "headingSeries": "“{title}” ya está en el calendario con {count, plural, one {# salida programada} other {# salidas programadas}}, y tu centro ya acepta reservas.",
-    "body": "Este enlace es tu calendario público, la página desde la que reservan los buceadores. Ponlo en tu web, tus redes sociales y donde te encuentren los buceadores.",
+    "heading": "Tu centro ya acepta reservas.",
+    "body": "“{title}” ya está en el calendario. Este enlace es tu calendario público, la página desde la que reservan los buceadores. Ponlo en tu web, tus redes sociales y donde te encuentren los buceadores.",
+    "bodySeries": "“{title}” ya está en el calendario con {count, plural, one {# salida programada} other {# salidas programadas}}. Este enlace es tu calendario público, la página desde la que reservan los buceadores. Ponlo en tu web, tus redes sociales y donde te encuentren los buceadores.",
     "linkLabel": "Tu enlace de reservas",
     "viewAsDiver": "Míralo como lo verán tus buceadores"
   },

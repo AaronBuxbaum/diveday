@@ -28,8 +28,10 @@ includes(
 const palette = read("src/components/search/CommandPalette.tsx");
 // Matched on the field's own class string rather than through `<input`: a JSX
 // attribute may carry a `>` inside an arrow function, so a tag-bounded regex
-// finds nothing and passes for the wrong reason.
-if (!/"[^"]*\btext-base\b[^"]*placeholder:text-muted[^"]*"/.test(palette)) {
+// finds nothing and passes for the wrong reason. The string is the one with
+// the field's inset focus ring; it carried `placeholder:text-muted` until
+// #1990 made that the element default in `@layer base`.
+if (!/"[^"]*\bpx-5 py-4 text-base\b[^"]*focus-ring-inset[^"]*"/.test(palette)) {
   failures.push("the search field must remain 16px");
 }
 

@@ -4,9 +4,9 @@
     "series": "“{title}” is on the board with {count, plural, one {# trip} other {# trips}} scheduled."
   },
   "firstBookable": {
-    "heading": "“{title}” is on the board, and your shop is bookable.",
-    "headingSeries": "“{title}” is on the board with {count, plural, one {# trip} other {# trips}} scheduled, and your shop is bookable.",
-    "body": "This link is your public schedule, the page divers book from. Put it on your website, your socials, and wherever divers find you.",
+    "heading": "Your shop is bookable.",
+    "body": "“{title}” is on the board. This link is your public schedule, the page divers book from. Put it on your website, your socials, and wherever divers find you.",
+    "bodySeries": "“{title}” is on the board with {count, plural, one {# trip} other {# trips}} scheduled. This link is your public schedule, the page divers book from. Put it on your website, your socials, and wherever divers find you.",
     "linkLabel": "Your booking link",
     "viewAsDiver": "See it the way your divers will"
   },

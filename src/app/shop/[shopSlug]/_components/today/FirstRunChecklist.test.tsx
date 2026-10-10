@@ -293,7 +293,7 @@ describe("one primary, and the rest are the rows themselves", () => {
     // chevron, beside the chevron `LedgerRow` draws for any row with an
     // `href` — a second affordance for the tap the row already is.
     for (const [name, href] of [
-      ["Set up profile", "/shop/blue-mantis/settings#profile"],
+      ["Set up profile", "/shop/blue-mantis/settings/profile"],
       ["Check units", "/shop/blue-mantis/settings#units"],
       ["Add a dive site", "/shop/blue-mantis/dive-sites"],
       ["Schedule a trip", "/shop/blue-mantis/schedule/board?add=1"],

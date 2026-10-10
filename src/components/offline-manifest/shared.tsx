@@ -83,6 +83,15 @@ export function offlineRollCallRowId(bookingId: string): string {
   return `offline-roll-call-${bookingId}`;
 }
 
+/**
+ * The summary line of a row's disclosure on the offline roll call — the
+ * "Contact & gear" facts and the exception (#1840) alike, so the two
+ * disclosures under one name are one shape: a 44px line in muted ink with its
+ * own caret, the live manifest's "one tap away" tier.
+ */
+export const OFFLINE_DISCLOSURE_SUMMARY_CLASS =
+  "group/summary -mx-2 flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-base font-medium text-muted select-none transition-colors hover:bg-surface-sunken/70 hover:text-primary focus-visible:focus-ring-inset [&::-webkit-details-marker]:hidden";
+
 export function OfflineStatusLabel({
   variant,
   children,

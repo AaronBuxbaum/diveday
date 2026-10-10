@@ -40,7 +40,9 @@ export function WeekPager({
   return (
     // `flex-wrap`, with the range and the way back each `whitespace-nowrap`:
     // at 390 the row could not wrap, so both shrank and broke inside
-    // themselves ("This / week"). Now the link drops to a line of its own.
+    // themselves ("This / week"). Now the link drops to a line of its own,
+    // which is what lets it stand at `md`, level with the 48px `icon` arrows
+    // and at their 16px type: one size per row (#1982).
     <div className={`flex flex-wrap items-center gap-2 ${className}`.trim()}>
       <Link
         href={previousHref}
@@ -72,7 +74,7 @@ export function WeekPager({
           scroll={false}
           className={buttonClass({
             variant: "link",
-            size: "sm",
+            size: "md",
             className: "whitespace-nowrap print:hidden",
           })}
         >

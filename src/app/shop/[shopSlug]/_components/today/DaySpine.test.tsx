@@ -276,12 +276,15 @@ describe("a station owns its departure's facts", () => {
     const { container } = renderSpine({ departures: [departure({ blocked: 3 })] });
     const bar = container.querySelector("[data-readiness-bar]");
     expect(bar?.getAttribute("aria-hidden")).toBe("true");
-    const [ready, blocked] = [...(bar?.children ?? [])] as HTMLElement[];
-    // 7 ready and 3 blocked of 12 seats; the rest of the bar is the open seats.
+    // `ReadinessBar` (#2100): `ProgressBar`'s layers, widest first, each scaled
+    // to its cumulative share. 7 ready and 3 blocked of 12 seats; the rest of
+    // the bar is the open seats.
+    expect(bar).toHaveClass("h-2");
+    const [blocked, ready] = [...(bar?.children ?? [])] as HTMLElement[];
     expect(ready?.className).toContain("bg-success");
-    expect(ready?.style.width).toBe(`${(7 / 12) * 100}%`);
+    expect(ready?.style.transform).toBe(`scaleX(${Math.round((7 / 12) * 1e4) / 1e4})`);
     expect(blocked?.className).toContain("bg-danger");
-    expect(blocked?.style.width).toBe("25%");
+    expect(blocked?.style.transform).toBe(`scaleX(${Math.round((10 / 12) * 1e4) / 1e4})`);
   });
 
   it("wears the departure's stage as a pill, and none when the reader has no phase", () => {

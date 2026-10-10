@@ -45,7 +45,6 @@
   "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}}",
   "crewHeading": "Tripulación",
   "crewMarkAboard": "Marcar a bordo",
-  "crewAboardCheck": "A bordo",
   "crewAboardCheckAriaLabel": "A bordo — toca de nuevo para deshacer",
   "crewMarkNotAboard": "Marcar no embarcado",
   "crewNotAboardCheck": "No embarcado",

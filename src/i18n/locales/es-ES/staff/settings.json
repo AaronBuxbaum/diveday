@@ -23,7 +23,7 @@
       "profileSaved": "Perfil y marca del centro guardados.",
       "profileInvalid": "Revisa el lema, la descripción y el archivo del logotipo.",
       "shopPhotosSaved": "Fotos del centro guardadas.",
-      "shopPhotosInvalid": "Esas fotos no se guardaron. Usa JPG, PNG, WebP o HEIC de menos de {maxMb}\u00a0MB, y no pases de {max} en total.",
+      "shopPhotosInvalid": "Esas fotos no se guardaron. Usa JPG, PNG, WebP o HEIC de menos de {maxMb} MB, y no pases de {max} en total.",
       "addressSaved": "Dirección del centro guardada.",
       "addressRemoved": "Dirección del centro quitada.",
       "addressInvalid": "No se pudo guardar esa dirección. Busca otra vez y elige tu centro en la lista.",
@@ -120,8 +120,6 @@
       "logo": "Logotipo del centro",
       "logoHint": "PNG, JPG o WebP. Se recomienda una imagen cuadrada.",
       "removeLogo": "Eliminar logotipo actual",
-      "logoSet": "Logotipo subido",
-      "descriptionSet": "Descripción configurada",
       "submitting": "Guardando…",
       "submit": "Guardar perfil",
       "brandColor": "Color de marca",
@@ -137,7 +135,6 @@
       "establishedYear": "Abierto desde (año)",
       "badges": "Insignias",
       "badgesHint": "Se muestran en tus páginas públicas como declaración propia.",
-      "badgesSet": "{count, plural, one {# insignia} other {# insignias}}",
       "badgeLabels": {
         "padi_5_star": "Centro de buceo PADI 5 estrellas",
         "padi_idc": "Centro de desarrollo de instructores PADI",
@@ -223,7 +220,6 @@
       "description": "Todos estos números están en minutos.",
       "submit": "Guardar el ritmo del día",
       "submitting": "Guardando…",
-      "value": "Llegar {count} min antes",
       "dockCallLabel": "Llegar antes de la salida",
       "dockCallDescription": "Con cuánta antelación se pide a los buceadores estar en el muelle.",
       "gearSetupLabel": "Montaje del equipo antes de la salida",
@@ -295,8 +291,7 @@
       "detail": "Marca lo que alquilas. Lo que no marques desaparece del formulario de equipo y de la lista de preparación.",
       "legend": "Equipo y servicios de alquiler",
       "submit": "Guardar catálogo de alquiler",
-      "submitting": "Guardando…",
-      "value": "{count, plural, one {# artículo ofrecido} other {# artículos ofrecidos}}"
+      "submitting": "Guardando…"
     },
     "rentalPricing": {
       "heading": "Precios de alquiler",
@@ -307,8 +302,7 @@
       "nitroxLabel": "Nitrox",
       "nitroxHint": "(por inmersión)",
       "submit": "Guardar precios de alquiler",
-      "submitting": "Guardando…",
-      "value": "Equipo completo {price}"
+      "submitting": "Guardando…"
     },
     "rentalTerms": {
       "heading": "Condiciones de alquiler",
@@ -485,8 +479,6 @@
     },
     "emergency": {
       "heading": "Referencia de emergencia",
-      "value": "{count, plural, one {# número} other {# números}} que la tripulación puede ver sin conexión",
-      "empty": "Sin registrar",
       "intro": "Aparecen en la lista de pasajeros, también sin conexión. DiveDay nunca los rellena, porque la cámara hiperbárica más cercana y la línea correcta dependen de dónde bucees.",
       "lineLabel": "Qué es {n}",
       "lineExamples": "Cámara hiperbárica, línea de accidentes de buceo, guardacostas…",
@@ -709,7 +701,7 @@
       },
       "waiverDocuments": {
         "what": "Documentos de exención / médicos",
-        "detail": "Se descargan una vez desde la URL de tu archivo y se guardan para auditoría. Imágenes y PDF de hasta 5\u00a0MB."
+        "detail": "Se descargan una vez desde la URL de tu archivo y se guardan para auditoría. Imágenes y PDF de hasta 5 MB."
       },
       "role": {
         "what": "Rol",
@@ -905,7 +897,7 @@
       "notOwnerOrManager": "Importar contactos está limitado al propietario o gerente del centro.",
       "csvRequired": "Elige un archivo CSV para importar.",
       "noImportableRows": "No se pudo importar ninguna fila. A todas les faltaba un nombre o estaban duplicadas.",
-      "fileTooLarge": "El archivo es demasiado grande. El límite es {limitMb}\u00a0MB.",
+      "fileTooLarge": "El archivo es demasiado grande. El límite es {limitMb} MB.",
       "fileEmpty": "El archivo está vacío.",
       "tooManyColumns": "Demasiadas columnas ({count}). El límite es {limit}.",
       "tooManyRows": "Demasiadas filas ({count}). El límite es {limit} por importación, así que divide el archivo e impórtalo en lotes.",

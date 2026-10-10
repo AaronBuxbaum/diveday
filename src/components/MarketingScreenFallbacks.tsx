@@ -1,7 +1,9 @@
 import { RollCallMark } from "@/components/RollCallMark";
 import { ROLL_CALL_ROW_TONE, rollCallRuleClass } from "@/components/row-tones";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass, LedgerRow } from "@/components/ui/ledger";
+import { ReadinessBar } from "@/components/ui/ProgressBar";
+import { StatusMark } from "@/components/ui/StatusMark";
 import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
@@ -270,13 +272,9 @@ export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) 
           <h3 className="mt-1 text-sm font-semibold">{t("fallback.tripName")}</h3>
           {/* i18n-exempt: sample site, boat and crew used only in marketing mockups */}
           <p className="text-xs text-muted">French Reef · Mantis II · Keiko Tanaka</p>
-          <div
-            aria-hidden="true"
-            className="mt-3 flex h-2 overflow-hidden rounded-full bg-surface-sunken"
-          >
-            <span className="bg-success" style={{ width: "58%" }} />
-            <span className="bg-danger" style={{ width: "17%" }} />
-          </div>
+          {/* Today's own bar (`ReadinessBar`): 7 ready and 2 blocked of a
+              twelve-seat boat, the three open seats the bare track. */}
+          <ReadinessBar className="mt-3" ready={7} blocked={2} of={12} />
           <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums">
             <span>{t("fallback.readyCount")}</span>
             <span className="font-medium text-danger">{t("fallback.blockedCount")}</span>
@@ -284,25 +282,36 @@ export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) 
           </p>
         </div>
         <p className={`mt-5 ${groupLabelClass()}`}>{t("fallback.needsYou")}</p>
-        <div className="mt-2 divide-y divide-border border-y border-border">
+        {/* Drawn as `DaySpine`'s `SpineRow` draws them: a stacked
+            `LedgerRow` with the warning `StatusMark`, one word of kind, the
+            person and the sentence, the boat on a quiet line under it, and
+            the row's one fix. Only the type is the mock's smaller scale. */}
+        <ul className="mt-2">
           {rows.map((row) => (
-            <div key={row.name} className="flex items-center gap-3 py-2.5">
-              <DiveDayIcon name="warning" className="size-4 shrink-0 text-warning" />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-warning-strong">{row.kind}</p>
-                <p className="text-sm">
-                  <span className="font-semibold">{row.name}</span> · {row.detail}
-                </p>
-                <p className="text-xs text-muted">{t("fallback.tripLine")}</p>
-              </div>
-              {row.action ? (
-                <button type="button" disabled className={`shrink-0 px-3 ${MOCK_SECONDARY_BUTTON}`}>
-                  {row.action}
-                </button>
-              ) : null}
-            </div>
+            <LedgerRow
+              key={row.name}
+              stacked
+              leading={<StatusMark variant="warning" size="md" className="text-warning-strong" />}
+              kind={{ word: row.kind, tone: "warning" }}
+              trailing={
+                row.action ? (
+                  <button type="button" disabled className={`px-3 ${MOCK_SECONDARY_BUTTON}`}>
+                    {row.action}
+                  </button>
+                ) : undefined
+              }
+            >
+              <p className="min-w-0 text-sm leading-snug">
+                <span className="font-medium">{row.name}</span>
+                <span aria-hidden="true" className="text-muted">
+                  {" · "}
+                </span>
+                {row.detail}
+                <span className="block text-xs text-muted">{t("fallback.tripLine")}</span>
+              </p>
+            </LedgerRow>
           ))}
-        </div>
+        </ul>
       </div>
     </div>
   );

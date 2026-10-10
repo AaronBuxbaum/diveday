@@ -5,6 +5,7 @@ import type {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
 import { type PrivateNoteAction, PrivateNoteForm } from "@/components/PrivateNoteForm";
 import { RollCallMark } from "@/components/RollCallMark";
+import { rollCallRowTone } from "@/components/row-tones";
 import { Badge } from "@/components/ui/badge";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
@@ -40,7 +41,6 @@ import { PersonSheet, type PersonTrailEntry } from "./PersonSheet";
 import { personTrailWithCurrentRecord } from "./person-trail";
 import {
   ROLL_CALL_ROW_CLASS,
-  ROLL_CALL_ROW_TONE,
   ROW_DISCLOSURE_PANEL_CLASS,
   ROW_DISCLOSURE_SUMMARY_CLASS,
   RollCallBackAboardControl,
@@ -492,9 +492,6 @@ export function DiverRollCall({
           const recordedTone = rollCallRecordedTone(rowState);
           const blockedAtDock =
             !ready && (isDeparture || (diver.boardedEarlier === false && !rowState.notBackAboard));
-          const untouchedTone = blockedAtDock
-            ? ROLL_CALL_ROW_TONE.blocked
-            : ROLL_CALL_ROW_TONE.awaiting;
           // Every row is a jump target — the count panel's chips link to any
           // uncalled person — so every row carries the scroll margin that keeps
           // its name clear of the sticky panel. Shared with the crew rows.
@@ -516,7 +513,8 @@ export function DiverRollCall({
           // rows do the same, for the same reason (`src/components/ui/table.tsx`).
           // `ROLL_CALL_ROW_CLASS` carries it, with the card's corner on paper.
           const rowClass = `${ROLL_CALL_ROW_CLASS} ${alarmed ? "order-first print:order-none" : ""} ${rollCallScrollMargin(isDeparture)} ${
-            recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : untouchedTone
+            // Aboard over a block wears the blocked tone (`rollCallRowTone`).
+            rollCallRowTone(recordedTone, blockedAtDock)
           }`;
           // The hairline above this row, in each of the two orders. On screen
           // the first row is the first alarmed one when there is any; on paper
@@ -704,7 +702,9 @@ export function DiverRollCall({
                         t={t}
                       />
                     ) : (
-                      <RollCallMark state="held" />
+                      // No tap, but still what was recorded: aboard or
+                      // ashore before the held ring (review of #1840).
+                      <RollCallMark state={rollCallMarkState(rowState, { blockedAtDock: true })} />
                     )
                   }
                   trigger={

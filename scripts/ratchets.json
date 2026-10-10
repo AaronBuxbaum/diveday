@@ -226,7 +226,7 @@
     "src/app/shop/[shopSlug]/orders/page.tsx": 824,
     "src/app/shop/[shopSlug]/page.tsx": 1052,
     "src/app/shop/[shopSlug]/promos/page.tsx": 608,
-    "src/app/shop/[shopSlug]/reports/page.tsx": 687,
+    "src/app/shop/[shopSlug]/reports/page.tsx": 686,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 466,
     "src/app/shop/[shopSlug]/schedule/board/page.tsx": 1003,
     "src/app/shop/[shopSlug]/settings/import/page.tsx": 508,

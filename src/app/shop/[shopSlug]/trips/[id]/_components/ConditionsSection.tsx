@@ -224,7 +224,7 @@ export function ConditionsSection({
             type="checkbox"
             name="conditionsHold"
             defaultChecked={trip.conditionsHold}
-            className="mt-1 size-5 accent-current"
+            className="mt-1 size-5"
           />
           <span>
             <span className="font-semibold">{t("trips.conditions.holdLabel")}</span>

@@ -27,6 +27,7 @@ import {
   type MonthRef,
   monthKey,
   monthLabel,
+  monthsNewestFirst,
   parseMonthKey,
 } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
@@ -540,16 +541,11 @@ export default async function ReportsPage({
       <ReportRangeTabs shopSlug={shopSlug} range="month" t={t} className="mb-6" />
 
       {/*
-        Month navigator — plain server-rendered links, and between them one
-        month box that applies on change (`MonthJump`; UX audit item 22, which
-        retired its "Go" button). The arrows walk neighbouring months; the box
-        exists because they are useless for a far one. `<input type="month">`
-        submits exactly the `YYYY-MM` shape `parseMonthKey` already reads.
-
-        One size across the row: the arrows are `icon`, 48px squares, level
-        with the 48px month box. The box's width is on a wrapper (`w-44`),
-        because `controlClass` carries `w-full`; 176px still shows "September
-        2026", the longest month name.
+        Month navigator — server-rendered arrows for neighbouring months, and
+        between them a list that applies on change for a far one (`MonthJump`,
+        UX audit item 22): the shop's first month to this one or the month on
+        screen, newest first, in the shop's language (#1983). The arrows are
+        48px `icon` squares, level with the 48px select.
       */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 className={SECTION_TITLE_CLASS}>
@@ -579,7 +575,10 @@ export default async function ReportsPage({
           )}
           <MonthJump
             value={monthKey(current)}
-            min={monthKey(floorMonth)}
+            months={monthsNewestFirst(
+              floorMonth,
+              compareMonths(current, thisMonth) > 0 ? current : thisMonth,
+            ).map((month) => ({ value: monthKey(month), label: monthLabel(month, locale) }))}
             label={t("reports.monthPicker.label")}
           />
           {nextMonthKey ? (

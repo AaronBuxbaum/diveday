@@ -61,6 +61,20 @@ export function clampMonth(ref: MonthRef, min?: MonthRef | null, max?: MonthRef 
   return ref;
 }
 
+/**
+ * Every month from `latest` back to `earliest`, newest first, both included:
+ * the reports page's month list, where the month a staffer most often wants
+ * is the one they are in or just closed. Empty when `earliest` is after
+ * `latest`.
+ */
+export function monthsNewestFirst(earliest: MonthRef, latest: MonthRef): MonthRef[] {
+  const months: MonthRef[] = [];
+  for (let month = latest; compareMonths(month, earliest) >= 0; month = addMonths(month, -1)) {
+    months.push(month);
+  }
+  return months;
+}
+
 /** "July 2026" for the month rail and report headings. */
 export function monthLabel(ref: MonthRef, locale = "en-US"): string {
   return cachedFormatter("dt", Intl.DateTimeFormat, locale, {

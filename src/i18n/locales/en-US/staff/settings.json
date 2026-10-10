@@ -23,7 +23,7 @@
       "profileSaved": "Shop profile and branding saved.",
       "profileInvalid": "Check your tagline, description, and logo file.",
       "shopPhotosSaved": "Shop photos saved.",
-      "shopPhotosInvalid": "Those photos didn’t save. Use JPG, PNG, WebP, or HEIC under {maxMb}\u00a0MB, and keep to {max} in all.",
+      "shopPhotosInvalid": "Those photos didn’t save. Use JPG, PNG, WebP, or HEIC under {maxMb} MB, and keep to {max} in all.",
       "addressSaved": "Shop address saved.",
       "addressRemoved": "Shop address removed.",
       "addressInvalid": "That address couldn’t be saved. Search again and pick your shop from the list.",
@@ -120,8 +120,6 @@
       "logo": "Shop logo",
       "logoHint": "PNG, JPG, or WebP. Square image recommended.",
       "removeLogo": "Remove current logo",
-      "logoSet": "Logo uploaded",
-      "descriptionSet": "Description set",
       "submitting": "Saving…",
       "submit": "Save profile",
       "brandColor": "Brand color",
@@ -137,7 +135,6 @@
       "establishedYear": "Open since (year)",
       "badges": "Badges",
       "badgesHint": "Shown on your public pages as your own statement.",
-      "badgesSet": "{count, plural, one {# badge} other {# badges}}",
       "badgeLabels": {
         "padi_5_star": "PADI 5 Star Dive Center",
         "padi_idc": "PADI Instructor Development Center",
@@ -223,7 +220,6 @@
       "description": "Every number here is in minutes.",
       "submit": "Save dock-day rhythm",
       "submitting": "Saving…",
-      "value": "Arrive {count} min before",
       "dockCallLabel": "Arrive before departure",
       "dockCallDescription": "How early divers are asked to be at the dock.",
       "gearSetupLabel": "Gear set-up before departure",
@@ -295,8 +291,7 @@
       "detail": "Tick what you rent. Anything unticked drops off the kit form and the prep list.",
       "legend": "Rentable gear and services",
       "submit": "Save rental catalog",
-      "submitting": "Saving…",
-      "value": "{count, plural, one {# item offered} other {# items offered}}"
+      "submitting": "Saving…"
     },
     "rentalPricing": {
       "heading": "Rental prices",
@@ -307,8 +302,7 @@
       "nitroxLabel": "Nitrox",
       "nitroxHint": "(per dive)",
       "submit": "Save rental prices",
-      "submitting": "Saving…",
-      "value": "Full set {price}"
+      "submitting": "Saving…"
     },
     "rentalTerms": {
       "heading": "Rental terms",
@@ -485,8 +479,6 @@
     },
     "emergency": {
       "heading": "Emergency reference",
-      "value": "{count, plural, one {# number} other {# numbers}} the crew can reach offline",
-      "empty": "Nothing recorded",
       "intro": "These ride on the boat manifest, including offline. DiveDay never fills them in, because the nearest chamber and the right hotline depend on where you dive.",
       "lineLabel": "What it is {n}",
       "lineExamples": "Chamber, dive-accident hotline, coast guard…",
@@ -709,7 +701,7 @@
       },
       "waiverDocuments": {
         "what": "Waiver / medical documents",
-        "detail": "Fetched once from your file’s URL and kept for audit. Images and PDFs up to 5\u00a0MB."
+        "detail": "Fetched once from your file’s URL and kept for audit. Images and PDFs up to 5 MB."
       },
       "role": {
         "what": "Role",
@@ -905,7 +897,7 @@
       "notOwnerOrManager": "Importing contacts is limited to the shop’s owner or manager.",
       "csvRequired": "Choose a CSV file to import.",
       "noImportableRows": "No rows could be imported. Every row was missing a name or duplicated.",
-      "fileTooLarge": "The file is too large. The limit is {limitMb}\u00a0MB.",
+      "fileTooLarge": "The file is too large. The limit is {limitMb} MB.",
       "fileEmpty": "The file is empty.",
       "tooManyColumns": "Too many columns ({count}). The limit is {limit}.",
       "tooManyRows": "Too many rows ({count}). The limit is {limit} per import, so split the file and import it in batches.",
