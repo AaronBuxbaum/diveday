@@ -128,6 +128,8 @@ export type RosterRows = {
    * none (issue #1789): the evidence line in the armed "Same person" confirm.
    */
   heldSeatLastDiveDay?: ReadonlyMap<string, Date | null>;
+  /** Per seat, the unspent package dives its diver could put toward this trip (issue #1697). */
+  packageDivesByBooking?: ReadonlyMap<string, number>;
   /**
    * The booking a staffer just acted on (`?bid=`), if any — a saved contact,
    * an updated payment. Acting on a row can move what they touched into the

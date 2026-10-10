@@ -504,6 +504,8 @@
     "paymentSourceOnline": "Paid online · Stripe",
     "paymentSourcePackage": "Paid with a dive package",
     "paymentSourceWaived": "Waived — no charge",
+    "packageDivesUnused": "{count, plural, one {Has # unused package dive for this trip} other {Has # unused package dives for this trip}}",
+    "packageDivesUnusedHeld": "{name} has unused package dives. Confirm who this is before taking payment.",
     "paymentUnpaid": "Unpaid",
     "paymentUpdate": "Update",
     "paymentUpdating": "Updating…",

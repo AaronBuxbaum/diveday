@@ -154,6 +154,7 @@ export function RosterRow({
     courseMaterialsDoneByPerson,
     sameNameHeldSeats,
     heldSeatLastDiveDay,
+    packageDivesByBooking,
     keepOpenBookingId,
     namesakeRefusedBookingId,
     participantTypeCertBookingId,
@@ -703,6 +704,25 @@ export function RosterRow({
    * seat into its own record. Like the medical hold, it is a decision about
    * who may board, so it does not wait behind the row's mark.
    */
+  /**
+   * **Unspent package dives, said before anyone takes the fare** (issue
+   * #1697, H-79: the fare stands). A seat booked while the diver held a
+   * covering dive spent it at booking; this line is for the seats that did
+   * not, chiefly one held on an unconfirmed identity, where coverage waits for
+   * "Same person" (`settleConfirmedPackageCoverage`) and cash taken first
+   * would stand beside a package still holding every dive. A held seat names
+   * no count: the dives are the matched person's, and the row says only that
+   * confirming comes first. A snorkeler's or rider's seat spends no dives.
+   */
+  const packageDives = isDiver(booking.participantType)
+    ? (packageDivesByBooking?.get(booking.id) ?? 0)
+    : 0;
+  const packageNote =
+    packageDives === 0
+      ? null
+      : identityUnconfirmed
+        ? t("trips.roster.packageDivesUnusedHeld", { name: person.fullName })
+        : t("trips.roster.packageDivesUnused", { count: packageDives });
   const sameNameSeats = sameNameHeldSeats?.get(booking.id) ?? [];
   /**
    * **The one fact the attestation turns on** (issue #1789, H-79): the
@@ -1000,6 +1020,7 @@ export function RosterRow({
               mayWriteOffPayment ? PAYMENT_STATUSES_ALL : PAYMENT_STATUSES_RECORDING_ONLY
             }
             sourceNote={paymentSource}
+            packageNote={packageNote}
             refundNote={
               refundEligible && cancellationDeadline
                 ? t("trips.roster.refundEligibleUntil", {

@@ -15,6 +15,7 @@ import { sameNameHeldSeats as findSameNameHeldSeats } from "./bookings";
 import type { AppDb } from "./client";
 import { type CourseMaterialsDone, courseMaterialsDoneByPerson } from "./course-materials";
 import { courseNextStepsByBooking } from "./course-next-step";
+import { spendableDivesForTrip } from "./dive-packages";
 import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "./divers";
 import { listLastMinuteList } from "./last-minute-list";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
@@ -148,6 +149,20 @@ export async function getTripGuests(
       .map(({ booking }) => [booking.id, heldLastDiveDays.get(booking.personId) ?? null] as const),
   );
 
+  // Unspent package dives this departure could take, per seat, so the payment
+  // control says so before anyone takes a fare (issue #1697, H-79).
+  const packageDivesByPerson = await spendableDivesForTrip(
+    db,
+    shop.id,
+    [...new Set(roster.map(({ booking }) => booking.personId))],
+    { courseId: trip.courseId },
+  );
+  const packageDivesByBooking = new Map<string, number>();
+  for (const { booking } of roster) {
+    const dives = packageDivesByPerson.get(booking.personId);
+    if (dives) packageDivesByBooking.set(booking.id, dives);
+  }
+
   // Keep the three staff-note entry points one system: a diver-record note is
   // visible on Guests for the same booking, just as it is on Manifest. It is
   // edited on the diver record, the canonical scope, so this roster does not
@@ -267,6 +282,11 @@ export async function getTripGuests(
      * when there is none (issue #1789). Only held seats have an entry.
      */
     heldSeatLastDiveDay,
+    /**
+     * Per seat, the unspent package dives its diver could put toward this
+     * departure; seats with none are absent (issue #1697).
+     */
+    packageDivesByBooking,
     /**
      * A split on this departure must take a date of birth: it is a course
      * with a minimum age, which reads the new record's date (issue #2081). A
