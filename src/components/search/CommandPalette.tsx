@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { DiveDayIcon, StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { GroupLabel } from "@/components/ui/ledger";
-import { useDialog } from "@/components/useDialog";
+import { useDialogBehaviour } from "@/components/ui/useDialogBehaviour";
 import type { SearchResults } from "@/db/search";
 import type { GearItemStatus } from "@/lib/gear";
 import { motionMs } from "@/lib/motion";
@@ -174,7 +174,7 @@ export function CommandPalette({
   // together. Restrained on purpose (docs/design/principles.md §5): a short
   // scale-and-fade, the same pair every other menu on the page uses, so the
   // palette reads as a layer arriving rather than a dialog performing.
-  const { mounted, closing } = useDialog({
+  const { mounted, closing, dialogProps } = useDialogBehaviour({
     open,
     onClose: () => setOpen(false),
     containerRef: dialogRef,
@@ -609,9 +609,8 @@ export function CommandPalette({
               <div
                 ref={dialogRef}
                 role="dialog"
-                aria-modal="true"
+                {...dialogProps}
                 aria-label={copy.dialogAriaLabel}
-                tabIndex={-1}
                 className={`w-full max-w-xl overflow-hidden rounded-panel border border-border bg-surface shadow-2xl outline-none ${closing ? "animate-scale-out" : "animate-scale-in"}`}
               >
                 {/* Counts, not the full result list — a screen reader user
