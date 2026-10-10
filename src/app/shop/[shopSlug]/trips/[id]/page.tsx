@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
+import { Suspense } from "react";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
@@ -56,7 +57,7 @@ import { uuidParam } from "@/lib/uuid";
 import { buildArrivalDesk } from "./_arrivals/arrival-desk";
 import { DESK_NOTICES } from "./_arrivals/notices";
 import { BlowoutDoors } from "./_components/BlowoutDoors";
-import { ConditionsSection } from "./_components/ConditionsSection";
+import { ConditionsOutlookSlot, ConditionsSection } from "./_components/ConditionsSection";
 import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
 import { courseRosterActions } from "./_components/course-roster-actions";
@@ -413,6 +414,9 @@ export default async function ManageTripPage({
       ]
     : [];
 
+  // **Details is its own tab**, and a save on it lands back on it.
+  const showDetails =
+    view === "details" || Boolean(tripNotice && DETAILS_FORMS.has(tripNotice.form));
   const siteWithForecast = tripDiveList.find(
     ({ diveSite }) =>
       diveSite && diveSite.forecastLatitude !== null && diveSite.forecastLongitude !== null,
@@ -426,55 +430,61 @@ export default async function ManageTripPage({
           longitude: siteWithForecast.forecastLongitude,
         }
       : null;
+  // **Started, never awaited here** (code review 2026-10-10, item 1): the
+  // marine outlook and the tide each wait on a provider outside DiveDay, up to
+  // four seconds, so the conditions panel streams them in inside its own
+  // `<Suspense>` and nothing else on the page waits for them. Neither rejects
+  // (`fetchAutomatedMarineForecast` answers null on any failure, the tide seam
+  // answers nothing). Only the Details tab draws the panel, so only it asks.
   const automatedForecast =
-    forecastPoint && shouldShowAutomatedForecast(trip.startsAt)
-      ? await fetchAutomatedMarineForecast(forecastPoint, trip.startsAt)
-      : null;
+    showDetails && forecastPoint && shouldShowAutomatedForecast(trip.startsAt)
+      ? fetchAutomatedMarineForecast(forecastPoint, trip.startsAt)
+      : Promise.resolve(null);
   // One sentence per stationed site, read at the boat's own arrival there
   // (ADR 20260907-noaa-tide-predictions). Empty on most departures.
   const rhythm = parseDockDayRhythm(shop);
-  const tideWindows = rhythm
-    ? await tideWindowsForDeparture({
-        startsAt: trip.startsAt,
-        plannedDives: trip.plannedDives,
-        diveMode: trip.diveMode,
-        dives: tripDiveList.map(({ dive, diveSite }) => ({
-          diveNumber: dive.diveNumber,
-          travelMinutes: dive.travelMinutes,
-          site: diveSite
-            ? {
-                name: diveSite.name,
-                tideStationId: diveSite.tideStationId,
-                tidePreference: diveSite.tidePreference,
-                expectedBottomTimeMinutes: diveSite.expectedBottomTimeMinutes,
-              }
-            : null,
-        })),
-        rhythm,
-        timeZone: shop.timezone,
-        scheduleDayCount: scheduleDays.length,
-      })
-    : [];
+  const tideWindows =
+    showDetails && rhythm
+      ? tideWindowsForDeparture({
+          startsAt: trip.startsAt,
+          plannedDives: trip.plannedDives,
+          diveMode: trip.diveMode,
+          dives: tripDiveList.map(({ dive, diveSite }) => ({
+            diveNumber: dive.diveNumber,
+            travelMinutes: dive.travelMinutes,
+            site: diveSite
+              ? {
+                  name: diveSite.name,
+                  tideStationId: diveSite.tideStationId,
+                  tidePreference: diveSite.tidePreference,
+                  expectedBottomTimeMinutes: diveSite.expectedBottomTimeMinutes,
+                }
+              : null,
+          })),
+          rhythm,
+          timeZone: shop.timezone,
+          scheduleDayCount: scheduleDays.length,
+        })
+      : Promise.resolve([]);
   // A site dived twice reads its water once (`oneWindowPerSite`).
-  const tideLines = oneWindowPerSite(tideWindows).map((entry) => ({
-    site: entry.siteName,
-    text: staffTideWindowText(
-      t,
-      entry.window,
-      entry.preference,
-      formatTime(entry.window.nearestTurn.at, locale, shop.timezone),
-    ),
-    station: entry.stationLabel ? staffTideStationText(t, entry.stationLabel) : null,
-  }));
+  const tideLines = tideWindows.then((windows) =>
+    oneWindowPerSite(windows).map((entry) => ({
+      site: entry.siteName,
+      text: staffTideWindowText(
+        t,
+        entry.window,
+        entry.preference,
+        formatTime(entry.window.nearestTurn.at, locale, shop.timezone),
+      ),
+      station: entry.stationLabel ? staffTideStationText(t, entry.stationLabel) : null,
+    })),
+  );
 
   const rootPageNotice =
     tripNotice && !DETAILS_FORMS.has(tripNotice.form) && !ROSTER_FORMS.has(tripNotice.form)
       ? tripNotice
       : undefined;
   const rosterPageNotice = tripNotice && tripNotice.form === "roster" ? tripNotice : undefined;
-  // **Details is its own tab**, and a save on it lands back on it.
-  const showDetails =
-    view === "details" || Boolean(tripNotice && DETAILS_FORMS.has(tripNotice.form));
   const now = nowDate();
   const acceptsDivers = acceptsNewDivers(trip, now);
   const phase = tripPhaseOf({
@@ -852,8 +862,18 @@ export default async function ManageTripPage({
                       timezone={shop.timezone}
                       temperatureUnit={temperatureUnitFor(shop)}
                       depthUnit={shop.depthUnit}
-                      automatedForecast={automatedForecast}
-                      tideLines={tideLines}
+                      outlook={
+                        <Suspense fallback={null}>
+                          <ConditionsOutlookSlot
+                            locale={locale}
+                            timezone={shop.timezone}
+                            temperatureUnit={temperatureUnitFor(shop)}
+                            depthUnit={shop.depthUnit}
+                            automatedForecast={automatedForecast}
+                            tideLines={tideLines}
+                          />
+                        </Suspense>
+                      }
                     />
                   ),
                 },

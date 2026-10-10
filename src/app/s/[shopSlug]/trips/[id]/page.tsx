@@ -273,10 +273,14 @@ export default async function TripDetailPage({
     trip.diveSite.forecastLongitude !== null
       ? { latitude: trip.diveSite.forecastLatitude, longitude: trip.diveSite.forecastLongitude }
       : null;
+  // **Started, never awaited here** (code review 2026-10-10, item 1): the
+  // outlook waits on Open-Meteo, up to four seconds, so the conditions line
+  // streams it in inside its own `<Suspense>` and the booking form never waits
+  // for it. It never rejects: any provider failure answers null.
   const automatedForecast =
     !crewPrediction && forecastPoint && shouldShowAutomatedForecast(trip.startsAt)
-      ? await fetchAutomatedMarineForecast(forecastPoint, trip.startsAt)
-      : null;
+      ? fetchAutomatedMarineForecast(forecastPoint, trip.startsAt)
+      : Promise.resolve(null);
   // The embed's short confirmation renders only from a verified `confirm`
   // capability — never from a raw booking id in the URL (design principle 6:
   // trustworthy by inspection; CR-003). A guessed/leaked booking UUID alone is

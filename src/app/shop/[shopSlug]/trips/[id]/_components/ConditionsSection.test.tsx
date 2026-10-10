@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { INSET_NOTE_CLASS } from "@/components/ui/card";
 import type { AutomatedMarineForecast } from "@/lib/marine-forecast";
-import { ConditionsSection } from "./ConditionsSection";
+import { ConditionsOutlook, ConditionsOutlookSlot, ConditionsSection } from "./ConditionsSection";
 import type { Trip } from "./types";
 
 afterEach(cleanup);
@@ -44,7 +44,15 @@ function renderSection(trip: Trip, automatedForecast: AutomatedMarineForecast | 
       timezone="America/New_York"
       temperatureUnit="celsius"
       depthUnit="meters"
-      automatedForecast={automatedForecast}
+      outlook={
+        <ConditionsOutlook
+          locale="en-US"
+          timezone="America/New_York"
+          temperatureUnit="celsius"
+          depthUnit="meters"
+          automatedForecast={automatedForecast}
+        />
+      }
     />,
   );
 }
@@ -129,8 +137,16 @@ describe("ConditionsSection — whose tide", () => {
         timezone="America/New_York"
         temperatureUnit="celsius"
         depthUnit="meters"
-        automatedForecast={null}
-        tideLines={[{ site: "Molasses Reef", text: TIDE, station }]}
+        outlook={
+          <ConditionsOutlook
+            locale="en-US"
+            timezone="America/New_York"
+            temperatureUnit="celsius"
+            depthUnit="meters"
+            automatedForecast={null}
+            tideLines={[{ site: "Molasses Reef", text: TIDE, station }]}
+          />
+        }
       />,
     );
   }
@@ -151,5 +167,27 @@ describe("ConditionsSection — whose tide", () => {
     expect(screen.getByText("Molasses Reef")).toBeInTheDocument();
     expect(screen.getByText(TIDE, { exact: false })).toBeInTheDocument();
     expect(screen.queryByText(/Carysfort/)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * **The page streams the outlook in** (code review 2026-10-10, item 1): it
+ * hands the slot the provider calls still in flight, and the slot renders the
+ * same outlook once both have answered.
+ */
+describe("ConditionsOutlookSlot", () => {
+  it("renders the outlook and the tide once the provider calls answer", async () => {
+    const element = await ConditionsOutlookSlot({
+      locale: "en-US",
+      timezone: "America/New_York",
+      temperatureUnit: "celsius",
+      depthUnit: "meters",
+      automatedForecast: Promise.resolve(forecast()),
+      tideLines: Promise.resolve([{ site: "Molasses Reef", text: "Slack at noon." }]),
+    });
+    render(element);
+
+    expect(screen.getByText("Water 27 °C")).toBeInTheDocument();
+    expect(screen.getByText("Molasses Reef")).toBeInTheDocument();
   });
 });

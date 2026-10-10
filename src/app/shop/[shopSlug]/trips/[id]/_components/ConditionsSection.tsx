@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_CLASS } from "@/components/ui/card";
@@ -30,8 +31,7 @@ export function ConditionsSection({
   timezone,
   temperatureUnit,
   depthUnit,
-  automatedForecast,
-  tideLines,
+  outlook,
 }: {
   saveAction: (formData: FormData) => void;
   /** This form's own outcome, rendered beside its Publish button. */
@@ -44,17 +44,12 @@ export function ConditionsSection({
   /** The shop's own units — the crew type in these; storage stays Celsius and metres. */
   temperatureUnit: TemperatureUnit;
   depthUnit: DepthUnit;
-  automatedForecast?: AutomatedMarineForecast | null;
   /**
-   * The tide at each stationed site, already worded in the reader's language
-   * with the time in the shop's zone (`src/i18n/tide-labels.ts`). Empty for
-   * a departure whose sites name no NOAA station, which is most of them.
-   *
-   * `station` is whose water it is, already worded — absent when the station
-   * lookup answered nothing, which leaves the sentence exactly as it was
-   * (issue #1732).
+   * The automated outlook and the tide (`ConditionsOutlook`), streamed in by
+   * the page inside its own `<Suspense>` so the provider calls behind them
+   * never hold the page.
    */
-  tideLines?: { site: string; text: string; station?: string | null }[];
+  outlook?: ReactNode;
 }) {
   const t = staffTranslator(locale);
   // The unit belongs in the label, not as a hint beside it: a crew member
@@ -67,19 +62,6 @@ export function ConditionsSection({
   );
   const depthUnitLabel = t(depthUnit === "feet" ? "shared.depth.feet" : "shared.depth.meters");
   const published = hasCrewPrediction(trip);
-  /**
-   * Whether the marine model said anything at all. Every reading it can carry,
-   * not the three it used to be asked about — a forecast holding only water
-   * temperature is still a forecast.
-   */
-  const hasAutomatedOutlook = Boolean(
-    automatedForecast &&
-      (automatedForecast.waterTemperatureC !== null ||
-        automatedForecast.surface ||
-        automatedForecast.wind ||
-        automatedForecast.current ||
-        automatedForecast.sun),
-  );
   // The published read, said back as facts — what a crew member checks at a
   // glance without opening the form. Each piece renders only when recorded.
   const publishedFacts = [
@@ -125,6 +107,152 @@ export function ConditionsSection({
       ) : (
         <p className="text-sm text-muted">{t("trips.conditions.description")}</p>
       )}
+      {/* The model's read and the tide: a slot, because both come from a
+          provider outside DiveDay and the page streams them in rather than
+          holding the form behind them (`ConditionsOutlook` below). */}
+      {outlook}
+      <form action={saveAction} className="mt-3 flex flex-col gap-5">
+        <label className="flex min-h-11 max-w-2xl items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3">
+          <input
+            id="conditions-hold"
+            type="checkbox"
+            name="conditionsHold"
+            defaultChecked={trip.conditionsHold}
+            className="mt-1 size-5"
+          />
+          <span>
+            <span className="font-semibold">{t("trips.conditions.holdLabel")}</span>
+            <span className="mt-0.5 block text-sm text-muted">
+              {t("trips.conditions.holdDescription")}
+            </span>
+          </span>
+        </label>
+        <FieldGrid columns={1} className="max-w-2xl">
+          <Field label={t("trips.conditions.overviewLabel")}>
+            <textarea
+              name="conditionsSummary"
+              rows={2}
+              maxLength={600}
+              defaultValue={trip.conditionsSummary ?? ""}
+              placeholder={t("trips.conditions.overviewPlaceholder")}
+              className={textareaClassFor(2)}
+            />
+          </Field>
+        </FieldGrid>
+        <FieldGrid columns={3}>
+          <Field label={t("trips.conditions.waterTempLabel", { unit: temperatureUnitLabel })}>
+            <input
+              name="waterTemperature"
+              type="number"
+              min={minEnteredTemperature(temperatureUnit)}
+              max={maxEnteredTemperature(temperatureUnit)}
+              defaultValue={
+                trip.waterTemperatureC === null
+                  ? ""
+                  : temperatureInUnit(trip.waterTemperatureC, temperatureUnit)
+              }
+              className={controlClass}
+            />
+          </Field>
+          <Field label={t("trips.conditions.visibilityLabel", { unit: depthUnitLabel })}>
+            <input
+              name="visibility"
+              type="number"
+              min={0}
+              max={maxEnteredVisibility(depthUnit)}
+              defaultValue={
+                trip.visibilityMeters === null ? "" : depthInUnit(trip.visibilityMeters, depthUnit)
+              }
+              className={controlClass}
+            />
+          </Field>
+          <Field label={t("trips.conditions.surfaceNotesLabel")}>
+            <input
+              name="surfaceConditions"
+              maxLength={300}
+              defaultValue={trip.surfaceConditions ?? ""}
+              placeholder={t("trips.conditions.surfaceNotesPlaceholder")}
+              className={controlClass}
+            />
+          </Field>
+        </FieldGrid>
+        <div className="flex flex-wrap items-center gap-3">
+          <SubmitButton pendingLabel={t("trips.conditions.publishing")} className={buttonClass()}>
+            {t("trips.conditions.publish")}
+          </SubmitButton>
+          <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
+        </div>
+      </form>
+      {published ? (
+        <form action={clearAction} className="mt-1">
+          {/* The rare escape hatch, not a second action of equal weight:
+                link-weight beside the section's one primary (principle 8). */}
+          <SubmitButton
+            pendingLabel={t("trips.conditions.clearing")}
+            className={buttonClass({ variant: "link" })}
+          >
+            {t("trips.conditions.returnToAutomated")}
+          </SubmitButton>
+        </form>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * **The model's read and the tide** beside the crew's conditions form. Both
+ * come from providers outside DiveDay (Open-Meteo, NOAA) with a four-second
+ * bound each, so the trip page renders this inside its own `<Suspense>` and
+ * the form, the roster and everything else paint without waiting on them
+ * (code review 2026-10-10, item 1). Informs; gates nothing.
+ */
+export function ConditionsOutlook({
+  locale,
+  timezone,
+  temperatureUnit,
+  depthUnit,
+  automatedForecast,
+  tideLines,
+}: {
+  locale: string;
+  /** The shop's zone — sunrise and sunset read in it. */
+  timezone: string;
+  temperatureUnit: TemperatureUnit;
+  depthUnit: DepthUnit;
+  automatedForecast?: AutomatedMarineForecast | null;
+  /**
+   * The tide at each stationed site, already worded in the reader's language
+   * with the time in the shop's zone (`src/i18n/tide-labels.ts`). Empty for
+   * a departure whose sites name no NOAA station, which is most of them.
+   *
+   * `station` is whose water it is, already worded — absent when the station
+   * lookup answered nothing, which leaves the sentence exactly as it was
+   * (issue #1732).
+   */
+  tideLines?: { site: string; text: string; station?: string | null }[];
+}) {
+  const t = staffTranslator(locale);
+  const temperatureUnitLabel = t(
+    temperatureUnit === "fahrenheit"
+      ? "shared.temperature.fahrenheit"
+      : "shared.temperature.celsius",
+  );
+  const depthUnitLabel = t(depthUnit === "feet" ? "shared.depth.feet" : "shared.depth.meters");
+  /**
+   * Whether the marine model said anything at all. Every reading it can carry,
+   * not the three it used to be asked about — a forecast holding only water
+   * temperature is still a forecast.
+   */
+  const hasAutomatedOutlook = Boolean(
+    automatedForecast &&
+      (automatedForecast.waterTemperatureC !== null ||
+        automatedForecast.surface ||
+        automatedForecast.wind ||
+        automatedForecast.current ||
+        automatedForecast.sun),
+  );
+  return (
+    <>
       {/* **The model's read, whether or not the crew has published theirs.**
           This block used to render only when the forecast carried wind,
           current or sun — so a model answering with the two readings the crew
@@ -217,90 +345,19 @@ export function ConditionsSection({
           ))}
         </ul>
       ) : null}
-      <form action={saveAction} className="mt-3 flex flex-col gap-5">
-        <label className="flex min-h-11 max-w-2xl items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3">
-          <input
-            id="conditions-hold"
-            type="checkbox"
-            name="conditionsHold"
-            defaultChecked={trip.conditionsHold}
-            className="mt-1 size-5"
-          />
-          <span>
-            <span className="font-semibold">{t("trips.conditions.holdLabel")}</span>
-            <span className="mt-0.5 block text-sm text-muted">
-              {t("trips.conditions.holdDescription")}
-            </span>
-          </span>
-        </label>
-        <FieldGrid columns={1} className="max-w-2xl">
-          <Field label={t("trips.conditions.overviewLabel")}>
-            <textarea
-              name="conditionsSummary"
-              rows={2}
-              maxLength={600}
-              defaultValue={trip.conditionsSummary ?? ""}
-              placeholder={t("trips.conditions.overviewPlaceholder")}
-              className={textareaClassFor(2)}
-            />
-          </Field>
-        </FieldGrid>
-        <FieldGrid columns={3}>
-          <Field label={t("trips.conditions.waterTempLabel", { unit: temperatureUnitLabel })}>
-            <input
-              name="waterTemperature"
-              type="number"
-              min={minEnteredTemperature(temperatureUnit)}
-              max={maxEnteredTemperature(temperatureUnit)}
-              defaultValue={
-                trip.waterTemperatureC === null
-                  ? ""
-                  : temperatureInUnit(trip.waterTemperatureC, temperatureUnit)
-              }
-              className={controlClass}
-            />
-          </Field>
-          <Field label={t("trips.conditions.visibilityLabel", { unit: depthUnitLabel })}>
-            <input
-              name="visibility"
-              type="number"
-              min={0}
-              max={maxEnteredVisibility(depthUnit)}
-              defaultValue={
-                trip.visibilityMeters === null ? "" : depthInUnit(trip.visibilityMeters, depthUnit)
-              }
-              className={controlClass}
-            />
-          </Field>
-          <Field label={t("trips.conditions.surfaceNotesLabel")}>
-            <input
-              name="surfaceConditions"
-              maxLength={300}
-              defaultValue={trip.surfaceConditions ?? ""}
-              placeholder={t("trips.conditions.surfaceNotesPlaceholder")}
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-        <div className="flex flex-wrap items-center gap-3">
-          <SubmitButton pendingLabel={t("trips.conditions.publishing")} className={buttonClass()}>
-            {t("trips.conditions.publish")}
-          </SubmitButton>
-          <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
-        </div>
-      </form>
-      {published ? (
-        <form action={clearAction} className="mt-1">
-          {/* The rare escape hatch, not a second action of equal weight:
-                link-weight beside the section's one primary (principle 8). */}
-          <SubmitButton
-            pendingLabel={t("trips.conditions.clearing")}
-            className={buttonClass({ variant: "link" })}
-          >
-            {t("trips.conditions.returnToAutomated")}
-          </SubmitButton>
-        </form>
-      ) : null}
-    </div>
+    </>
   );
+}
+
+/** {@link ConditionsOutlook}, once the page's provider calls have answered. */
+export async function ConditionsOutlookSlot({
+  automatedForecast,
+  tideLines,
+  ...rest
+}: Omit<Parameters<typeof ConditionsOutlook>[0], "automatedForecast" | "tideLines"> & {
+  automatedForecast: Promise<AutomatedMarineForecast | null>;
+  tideLines: Promise<{ site: string; text: string; station?: string | null }[]>;
+}) {
+  const [forecast, lines] = await Promise.all([automatedForecast, tideLines]);
+  return <ConditionsOutlook {...rest} automatedForecast={forecast} tideLines={lines} />;
 }
