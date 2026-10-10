@@ -193,6 +193,14 @@ describe("the words the es-ES README settled", () => {
       expect(rules({ k: "La tripulación comprobará tu tarjeta" })).toEqual(["check"]);
     });
 
+    it("refuses the stem-changed forms, accent included", () => {
+      expect(rules({ k: "Comprueba la hora de recogida" })).toEqual(["check"]);
+      expect(rules({ k: "Yo compruebo el manifiesto" })).toEqual(["check"]);
+      expect(rules({ k: "Ellos comprueban las tarjetas" })).toEqual(["check"]);
+      expect(rules({ k: "Compruébalo:" })).toEqual(["check"]);
+      expect(rules({ k: "compruebe la imagen" })).toEqual(["check"]);
+    });
+
     it("accepts verificar and revisar, which split the two meanings", () => {
       expect(rules({ k: "Lista de verificación previa a la salida" })).toEqual([]);
       expect(rules({ k: "Revisa la lista antes de salir" })).toEqual([]);

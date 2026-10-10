@@ -21,7 +21,7 @@
       "contactConfirmationSent": "Datos de contacto guardados. Abre el correo de confirmación que enviamos a esa dirección para que lleguen allí las respuestas de los buceadores.",
       "contactInvalid": "Usa una dirección de correo completa, o vacía el campo para quitarla de tus páginas públicas.",
       "profileSaved": "Perfil y marca del centro guardados.",
-      "profileInvalid": "Comprueba el lema, la descripción y el archivo del logotipo.",
+      "profileInvalid": "Revisa el lema, la descripción y el archivo del logotipo.",
       "shopPhotosSaved": "Fotos del centro guardadas.",
       "shopPhotosInvalid": "Esas fotos no se guardaron. Usa JPG, PNG, WebP o HEIC de menos de {maxMb}\u00a0MB, y no pases de {max} en total.",
       "addressSaved": "Dirección del centro guardada.",
