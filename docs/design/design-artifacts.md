@@ -261,6 +261,14 @@ revised; `--extract` recovers sources from a published canvas whose files were l
 plain HTML with inline styles, so they render standalone in any browser — which is also how to
 screenshot them for review without the editor.
 
+**When the `/design` skill is absent** (no `seed-canvas.mjs` on disk, which is every session working
+from this repository alone), publish the canvas as a gallery instead:
+`node scripts/publish-canvas.mjs docs/design/canvases/<dir>` writes `canvas-build/<dir>/index.html`
+(gitignored) with every board in `canvas.json`'s order under a sticky nav, each marker-delimited
+stylesheet block once, each board scaled to fit the viewport, and the canvas's images beside it.
+Publish that page with its images. It is a reading copy, not an editor payload: the artboards stay
+the source, and a session that has the skill re-seeds from them to the same URL.
+
 `pnpm check:design-canvases` (inside `pnpm check:repo`) holds the mechanical half of this document:
 every canvas directory has a README, that README names an ADR that exists and carries a status word,
 the artboards are named correctly, and no build output has been committed.
