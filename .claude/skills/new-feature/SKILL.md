@@ -7,8 +7,8 @@ description: Build a product feature end to end, from docs to a verified, review
 
 The full loop. Details live in `docs/engineering/workflow.md` — this is the executable order.
 
-1. **Context** — read `docs/product/features/roadmap.md` (right milestone?), `docs/product/glossary.md`
-   (domain terms), and skim relevant ADRs. Touching Next.js APIs → read the matching guide in
+1. **Context** — read `docs/product/features/roadmap.md` (right milestone?), the glossary
+   (`docs/product/glossary.md` indexes the domain files under `docs/product/glossary/`), and skim relevant ADRs. Touching Next.js APIs → read the matching guide in
    `node_modules/next/dist/docs/` first.
 2. **Slice** — define the smallest vertical slice a user could see working. State it in one
    sentence before coding. If the slice forces a deferred decision (database, auth…), stop and

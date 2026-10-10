@@ -18,11 +18,11 @@ describe("confirm to clear: the row badge is a prompt, every summary is a warnin
   });
 
   it("is the rule the glossary's entry states", async () => {
-    const glossary = await readFile(path.join(process.cwd(), "docs/product/glossary.md"), "utf8");
+    const glossary = await readFile(path.join(process.cwd(), "docs/product/glossary/certification.md"), "utf8");
     const entry = glossary
       .split(/^- \*\*/m)
       .find((block) => block.startsWith("Confirm to clear**"));
-    expect(entry, "docs/product/glossary.md has no **Confirm to clear** entry").toBeDefined();
+    expect(entry, "docs/product/glossary/certification.md has no **Confirm to clear** entry").toBeDefined();
     const text = (entry ?? "").replace(/\s+/g, " ");
     expect(text).toMatch(/card's own row[^.]*\*\*neutral\*\* tone/);
     expect(text).toMatch(/Every summary[^.]*\*\*warning\*\* tone/);

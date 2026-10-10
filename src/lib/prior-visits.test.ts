@@ -101,9 +101,9 @@ describe("priorVisitStanding", () => {
  */
 describe("the glossary's dive-day entry", () => {
   const entry = async () => {
-    const glossary = await readFile(path.join(process.cwd(), "docs/product/glossary.md"), "utf8");
+    const glossary = await readFile(path.join(process.cwd(), "docs/product/glossary/operations.md"), "utf8");
     const block = glossary.split(/^- \*\*/m).find((part) => part.startsWith("Dive day**"));
-    expect(block, "docs/product/glossary.md has no **Dive day** entry").toBeDefined();
+    expect(block, "docs/product/glossary/operations.md has no **Dive day** entry").toBeDefined();
     return block ?? "";
   };
 
