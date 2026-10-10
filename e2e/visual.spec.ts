@@ -5740,6 +5740,49 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **A crew member another boat also claims, said once** (issue #2217,
+       * PR #2202). At the dock the Boat tab says the instruction once above
+       * the crew list and each clashing row reads only "Also rostered on …
+       * at these hours." Through `?crewClash=1`, the one door into the state
+       * the roster refuses to write.
+       */
+      test(`a manifest names a crew member rostered on another boat (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?crewClash=1");
+        expect(seeded.ok()).toBe(true);
+        const { crewClash } = (await seeded.json()) as { crewClash?: { tripId: string } };
+        if (!crewClash) throw new Error("seed-trouble-states found no two departures to clash");
+        await page.goto(`/shop/blue-mantis/trips/${crewClash.tripId}/manifest`);
+        // The destination's own words, not a timing guess.
+        await page
+          .getByText(/^Also rostered on /)
+          .first()
+          .waitFor();
+        await offlineCopySaved(page);
+        await capture(page, "manifest-crew-clash", scheme);
+      });
+
+      /**
+       * **A blocked diver the crew marked aboard** (issue #2217, PR #2202):
+       * the head count's "1 blocked person aboard" line at the dock. Through
+       * `?blockedAboard=1`, which boards a diver the app was happy to board
+       * and then supersedes their release — the order it happens in a shop,
+       * since the boarding gate refuses the other.
+       */
+      test(`a manifest counts a blocked diver aboard (${scheme})`, async ({ page, request }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?blockedAboard=1");
+        expect(seeded.ok()).toBe(true);
+        const { blockedAboard } = (await seeded.json()) as { blockedAboard?: { tripId: string } };
+        if (!blockedAboard) throw new Error("seed-trouble-states boarded nobody to block");
+        await page.goto(`/shop/blue-mantis/trips/${blockedAboard.tripId}/manifest`);
+        await page.getByText("1 blocked person aboard").first().waitFor();
+        await offlineCopySaved(page);
+        await capture(page, "manifest-blocked-aboard", scheme);
+      });
+
+      /**
        * **The same manifest with one seat released** (#1209,
        * `dive-domain-expert` review 20260911).
        *
@@ -5938,6 +5981,43 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
         await page.getByRole("heading", { name: "Rental assignments" }).waitFor();
         await capture(page, "prep-assignments", scheme);
+      });
+
+      /**
+       * **Each reason an assigned unit needs a look** (issue #2221, PR
+       * #2209): "Needs service" with its note, a service clock run out, a
+       * return flagged as a concern, and a clock coming due — one unit each,
+       * assigned to four divers on today's reef boat. Through
+       * `?unitsNeedingCare=1`, never the demo seed: the calm capture above is
+       * what the demo shows.
+       */
+      test(`the prep page says why an assigned unit needs a look (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?unitsNeedingCare=1");
+        expect(seeded.ok()).toBe(true);
+        const { unitsNeedingCare } = (await seeded.json()) as {
+          unitsNeedingCare?: { tripId: string };
+        };
+        if (!unitsNeedingCare) throw new Error("seed-trouble-states assigned no units to flag");
+        await page.goto(`/shop/blue-mantis/trips/${unitsNeedingCare.tripId}/prep`);
+        await page.getByRole("heading", { name: "Rental assignments" }).waitFor();
+        // The labels themselves, not the heading: a capture on the right route
+        // in the calm state catches nothing.
+        await expect(
+          page
+            .getByText(/Inflator sticks/)
+            .filter({ visible: true })
+            .first(),
+        ).toBeVisible();
+        await expect(
+          page
+            .getByText(/service overdue/)
+            .filter({ visible: true })
+            .first(),
+        ).toBeVisible();
+        await capture(page, "prep-assignments-need-care", scheme);
       });
 
       /**

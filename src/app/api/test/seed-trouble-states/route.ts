@@ -1,7 +1,8 @@
-import { and, eq, gte, inArray, isNull, ne } from "drizzle-orm";
+import { and, count, eq, gt, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
-import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
+import { requestCrewAssignment } from "@/db/crew-requests";
+import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { createDiveSite } from "@/db/dive-sites";
 import { createGearItem, recordGearService } from "@/db/gear";
 import { recordRollCall } from "@/db/manifests";
@@ -42,7 +43,9 @@ import { completeWaiver, issueWaiverRequest, recordWaiverDelivery } from "@/db/w
 import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import { courseRatioCapacity, INTRO_COURSE_RATIO } from "@/lib/course-ratios";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { tripReservationWindow } from "@/lib/gear";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { MAX_SUPPRESSED_SHARE_FOR_RATING } from "@/lib/reviews";
 
@@ -321,9 +324,12 @@ export async function POST(request: Request) {
   // nav badges, the close-out and every blocked count read too, so seeding it
   // unconditionally moved nine unrelated captures. A capture that wants it asks
   // for it.
-  if (new URL(request.url).searchParams.get("blockedAboard") === "1") {
-    await boardADiverThenBlockThem(db, shop.id, now);
-  }
+  // The departure it boarded is returned, so the manifest capture addresses
+  // the boat whose head count carries the line (issue #2217).
+  const blockedAboard =
+    new URL(request.url).searchParams.get("blockedAboard") === "1"
+      ? await boardADiverThenBlockThem(db, shop.id, now)
+      : null;
 
   // Opt-in: three confirmations that bounced are a row on Today, and every
   // other Today capture would have paid for it.
@@ -357,6 +363,23 @@ export async function POST(request: Request) {
   if (new URL(request.url).searchParams.get("crewGap") === "1") {
     await unstaffTomorrowsDeparture(db, shop.id, now);
   }
+
+  // Opt-in: four units on the reef boat's Gear tab that each need a look are
+  // four warnings on that departure and on the register, and the demo's own
+  // assignments must stay calm. The capture that wants them asks (issue #2221).
+  const unitsNeedingCare =
+    new URL(request.url).searchParams.get("unitsNeedingCare") === "1"
+      ? await flagFourUnitsOnTheReefBoat(db, shop.id, actor.id, now, shop.timezone)
+      : null;
+
+  // Opt-in, beside `crewGap` and for its reason: an intro session left short of
+  // an instructor is a gap on the staffing week, Today and the trip record,
+  // and the demo must not stand permanently short-handed. The one spec that
+  // walks approving a divemaster onto it asks for it (issue #1676).
+  const introOverRatio =
+    new URL(request.url).searchParams.get("introOverRatio") === "1"
+      ? await askForAnIntroSessionPastItsRatio(db, shop.id, actor.id, now)
+      : null;
 
   // Opt-in for the first reason again — it changes a diver's readiness — and
   // it is the one state here a caller needs an answer back from: the row it
@@ -451,6 +474,9 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     ...(boatSafety ? { boatSafety } : {}),
+    ...(introOverRatio ? { introOverRatio } : {}),
+    ...(unitsNeedingCare ? { unitsNeedingCare } : {}),
+    ...(blockedAboard ? { blockedAboard } : {}),
     ...(runningLate ? { runningLate } : {}),
     ...(blockedMinor ? { blockedMinor } : {}),
     ...(crewClash ? { crewClash } : {}),
@@ -1186,6 +1212,231 @@ async function unstaffTomorrowsDeparture(
 }
 
 /**
+ * **Every reason the Gear tab gives for an assigned unit needing a look**
+ * (issue #2221, PR #2209), one unit each, assigned to four divers on today's
+ * reef boat: "Needs service" with the staffer's note, a service clock run
+ * out, a return flagged as a concern nobody has answered, and a clock coming
+ * due inside `GEAR_SERVICE_DUE_SOON_DAYS`.
+ *
+ * The reef boat rather than the wreck trip the demo assigns units on
+ * (`seed-gear.ts`), because this route cancels that departure above to owe a
+ * refund on it; a Gear tab photographed on a cancelled trip shows the wrong
+ * page. The four units are the wreck trip's, reserved for the reef boat's own
+ * window, which does not overlap it.
+ *
+ * Written straight to the rows, because each state is a fact about the unit's
+ * past (a service date, a return) rather than an act the tab offers. The
+ * concern is a counter rental returned two days ago with `service_concern`
+ * and a note, which is how the register learns of one; nothing has serviced
+ * the suit since, so `serviceConcernStillOpen` holds.
+ */
+async function flagFourUnitsOnTheReefBoat(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  actorPersonId: string,
+  now: Date,
+  timezone: string,
+): Promise<{ tripId: string } | null> {
+  const [reef] = await db
+    .select({ id: trips.id, startsAt: trips.startsAt, endsAt: trips.endsAt })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.title, REEF_TRIP_TITLE),
+        eq(trips.status, "scheduled"),
+        isNull(trips.deletedAt),
+        gte(trips.startsAt, now),
+      ),
+    )
+    .orderBy(trips.startsAt)
+    .limit(1);
+  if (!reef) return null;
+  // By the diver's name, so the same four hold the same units every run.
+  const seats = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(and(eq(bookings.tripId, reef.id), eq(bookings.status, "booked")))
+    .orderBy(people.fullName)
+    .limit(4);
+  const units = new Map(
+    (
+      await db
+        .select({ id: gearItems.id, label: gearItems.label })
+        .from(gearItems)
+        .where(
+          and(
+            eq(gearItems.shopId, shopId),
+            inArray(gearItems.label, ["BCD #2", "Reg #1", "3mm #1", "BCD #5"]),
+          ),
+        )
+    ).map((unit) => [unit.label, unit.id]),
+  );
+  const needsService = units.get("BCD #2");
+  const overdue = units.get("Reg #1");
+  const concern = units.get("3mm #1");
+  const dueSoon = units.get("BCD #5");
+  if (!needsService || !overdue || !concern || !dueSoon || seats.length < 4) return null;
+  const today = calendarDateInTimezone(now, timezone);
+  const window = tripReservationWindow(reef, timezone);
+  await db.insert(gearReservations).values(
+    [needsService, overdue, concern, dueSoon].map((gearItemId, index) => ({
+      shopId,
+      gearItemId,
+      bookingId: seats[index]?.id,
+      reservedFrom: window.from,
+      reservedUntil: window.until,
+    })),
+  );
+
+  await db
+    .update(gearItems)
+    .set({ status: "needs_service", serviceNote: "Inflator sticks; strip and clean." })
+    .where(eq(gearItems.id, needsService));
+  await db
+    .update(gearServiceEvents)
+    .set({ nextDueOn: shiftCalendarDate(today, -6) })
+    .where(and(eq(gearServiceEvents.gearItemId, overdue), eq(gearServiceEvents.kind, "service")));
+  await db
+    .update(gearServiceEvents)
+    .set({ nextDueOn: shiftCalendarDate(today, 10) })
+    .where(and(eq(gearServiceEvents.gearItemId, dueSoon), eq(gearServiceEvents.kind, "service")));
+  await db.insert(gearReservations).values({
+    shopId,
+    gearItemId: concern,
+    personId: actorPersonId,
+    reservedFrom: shiftCalendarDate(today, -4),
+    reservedUntil: shiftCalendarDate(today, -3),
+    checkedOutAt: new Date(now.getTime() - 4 * 24 * HOUR_MS),
+    returnedAt: new Date(now.getTime() - 2 * 24 * HOUR_MS),
+    returnOutcome: "service_concern",
+    returnNote: "Seam opening at the left knee.",
+  });
+  return { tripId: reef.id };
+}
+
+/**
+ * **An intro session past its ratio, with a divemaster asking to work it**
+ * (issue #1676, the second half of #1339). The Discover Scuba session is
+ * crewed by one instructor and booked one past what one instructor may take
+ * on an intro dive; the demo divemaster has asked for it.
+ *
+ * A divemaster aboard adds no seats there — the intro cap is instructor-to-
+ * student (`INTRO_COURSE_RATIO`, no assistant bonus) — which is what the
+ * sentence beside Approve, the approval's own notice and the asker's own line
+ * on the staffing week each say. Nothing else reaches all three at once.
+ *
+ * Reached through the real doors where one exists: both instructors are put
+ * on the session first so the booking transaction's ratio admits the seats
+ * (`seatDiver` would refuse a fourth student to one instructor, rightly), and
+ * the ask is `requestCrewAssignment`. Then the second instructor comes
+ * straight off the assignment rows, as `unstaffTomorrowsDeparture` does:
+ * `setTripCrew` refuses to leave a course session short of its ratio, and
+ * that is precisely the state being walked.
+ */
+const INTRO_SESSION_TITLE = "Discover Scuba — Pool & Reef";
+
+async function askForAnIntroSessionPastItsRatio(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  actorPersonId: string,
+  now: Date,
+): Promise<{ tripId: string; title: string; asker: string } | null> {
+  const [session] = await db
+    .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt, endsAt: trips.endsAt })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.title, INTRO_SESSION_TITLE),
+        eq(trips.status, "scheduled"),
+        isNull(trips.deletedAt),
+        gte(trips.startsAt, now),
+      ),
+    )
+    .orderBy(trips.startsAt)
+    .limit(1);
+  if (!session) return null;
+
+  const instructors = await db
+    .select({ id: people.id })
+    .from(people)
+    .innerJoin(personRoles, eq(people.id, personRoles.personId))
+    .where(
+      and(eq(people.shopId, shopId), eq(personRoles.role, "instructor"), isNull(people.deletedAt)),
+    )
+    .orderBy(people.fullName);
+  const [asker] = await db
+    .select({ id: people.id, fullName: people.fullName })
+    .from(people)
+    .where(and(eq(people.shopId, shopId), eq(people.email, DEV_STAFF_LOGINS.divemaster.email)))
+    .limit(1);
+  const [kept, relief] = instructors;
+  if (!kept || !relief || !asker) return null;
+
+  await db.delete(tripAssignments).where(eq(tripAssignments.tripId, session.id));
+  await db.insert(tripAssignments).values([
+    { tripId: session.id, personId: kept.id },
+    { tripId: session.id, personId: relief.id },
+  ]);
+
+  // One past what a single instructor may take on an intro dive.
+  const pastTheCap = courseRatioCapacity(INTRO_COURSE_RATIO, 1, 0) + 1;
+  const [{ booked }] = await db
+    .select({ booked: count(bookings.id) })
+    .from(bookings)
+    .where(and(eq(bookings.tripId, session.id), ne(bookings.status, "cancelled")));
+  for (let seat = booked; seat < pastTheCap; seat += 1) {
+    const seated = await seatDiver(db, {
+      shopId,
+      tripId: session.id,
+      actorPersonId,
+      diver: { fullName: `Intro Guest ${seat + 1}` },
+      entry: "walk_in",
+      refusals: "coarse",
+    });
+    if (!seated.ok) return null;
+  }
+
+  await db
+    .delete(tripAssignments)
+    .where(and(eq(tripAssignments.tripId, session.id), eq(tripAssignments.personId, relief.id)));
+
+  // The asker is free those hours. The demo has the divemaster offshore on the
+  // long-range day that overlaps this session, so approving would have been
+  // refused as a crew clash — the ordinary "assignment was refused" notice,
+  // not the state being walked. Off that boat, straight off the rows.
+  const overlapping = await db
+    .select({ tripId: tripAssignments.tripId })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .where(
+      and(
+        eq(tripAssignments.personId, asker.id),
+        ne(trips.id, session.id),
+        lt(trips.startsAt, session.endsAt),
+        gt(trips.endsAt, session.startsAt),
+      ),
+    );
+  for (const row of overlapping) {
+    await db
+      .delete(tripAssignments)
+      .where(and(eq(tripAssignments.tripId, row.tripId), eq(tripAssignments.personId, asker.id)));
+  }
+
+  const asked = await requestCrewAssignment(db, {
+    shopId,
+    tripId: session.id,
+    personId: asker.id,
+    actorPersonId: asker.id,
+    now,
+  });
+  if (!asked.ok) return null;
+  return { tripId: session.id, title: session.title, asker: asker.fullName };
+}
+
+/**
  * **A full boat whose crew nobody has counted** — the state where somebody may
  * still be on the dock, or in the water, and every diver-shaped signal on the
  * page says the day is going perfectly.
@@ -1308,7 +1559,7 @@ async function boardADiverThenBlockThem(
   db: Awaited<ReturnType<typeof getDb>>,
   shopId: string,
   now: Date,
-): Promise<void> {
+): Promise<{ tripId: string } | null> {
   // The next departure's roster, ordered **by the diver's name** — whoever the
   // app will let aboard, chosen the same way every run.
   //
@@ -1344,7 +1595,7 @@ async function boardADiverThenBlockThem(
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
     .where(and(eq(people.shopId, shopId), inArray(personRoles.role, [...STAFF_ROLES])))
     .limit(1);
-  if (!crew) return;
+  if (!crew) return null;
 
   for (const booking of candidates) {
     const boarded = await recordRollCall(db, {
@@ -1368,8 +1619,9 @@ async function boardADiverThenBlockThem(
           isNull(waiverRecords.supersededAt),
         ),
       );
-    return;
+    return { tripId: booking.tripId };
   }
+  return null;
 }
 
 /**
