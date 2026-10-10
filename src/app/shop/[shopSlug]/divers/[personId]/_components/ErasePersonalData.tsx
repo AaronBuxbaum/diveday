@@ -63,9 +63,16 @@ export function ErasePersonalData({
         <p className="mt-2 max-w-2xl text-sm font-medium text-danger">
           {t("divers.erase.noUndoNote")}
         </p>
+        {/* A grid, not `flex items-end`: the refused name renders under the
+            box inside the `Field`, and `items-end` dropped the button to the
+            bottom of that line (issue #1985). The `Field` takes two rows of
+            its own (caption, then box with the refusal under it), and from
+            `sm` the button stands in the box's row, aligned to its top, so it
+            is level with the box in every state. On a phone it stacks under
+            the box, as the wrapping row did. */}
         <form
           action={erasePersonAction.bind(null, shopSlug, personId)}
-          className="mt-4 flex flex-wrap items-end gap-3"
+          className="mt-4 grid justify-start gap-x-3 gap-y-3 sm:grid-cols-[auto_auto]"
         >
           <Field
             label={t("divers.erase.confirmLabel", { name: diver.person.fullName })}
@@ -84,13 +91,13 @@ export function ErasePersonalData({
           </Field>
           <SubmitButton
             pendingLabel={t("divers.erase.erasing")}
-            className={buttonClass({ variant: "danger-solid" })}
+            className={`${buttonClass({ variant: "danger-solid" })} justify-self-start self-start sm:col-start-2 sm:row-start-2`}
           >
             {t("divers.erase.eraseDiver")}
           </SubmitButton>
           {/* The name mismatch already renders on the box above; anything else
               this section can say lands here, beside the button. */}
-          {status?.field ? null : <DiverFormStatus status={status} />}
+          {status?.field ? null : <DiverFormStatus status={status} className="sm:col-span-2" />}
         </form>
       </DangerDisclosure>
       {status?.field ? <FieldErrorFocus key={status.text} field={status.field} /> : null}

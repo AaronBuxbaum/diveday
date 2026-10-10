@@ -5315,6 +5315,32 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The erase control refusing a typed name** (issue #1985): the one
+       * state where someone reads this control hardest, and the one no baseline
+       * had looked at. The refusal renders under the box, and the button has to
+       * stand level with the box rather than drop to the error's line. Reached
+       * directly — a wrong name is refused by the real action, so nothing is
+       * seeded and nothing is erased.
+       */
+      test(`the erase control's refused name renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openDiverProfile(page, "Felix", "Felix Grant");
+        const record = page.url().split("?")[0] ?? "";
+        await page.getByText("Delete Felix Grant").click();
+        await page.getByRole("button", { name: "Delete diver" }).click();
+        await page.getByText("Diver deleted.").waitFor();
+        await page.goto(record);
+        await page.getByText("Erase Felix Grant’s personal data").click();
+        await page.getByLabel("Type Felix Grant to confirm").fill("Felix Gr");
+        await page.getByRole("button", { name: "Erase personal data" }).click();
+        // The refusal on the box itself, so the shot never lands mid-redirect.
+        await page.getByRole("alert").filter({ hasText: "nothing was erased" }).waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "diver-profile-erase-refused", scheme);
+      });
+
+      /**
        * The waiver card with its paper attestation open — the one state on this
        * record that no baseline had ever looked at, because it used to live
        * behind a `<details>` that only opens on a click.

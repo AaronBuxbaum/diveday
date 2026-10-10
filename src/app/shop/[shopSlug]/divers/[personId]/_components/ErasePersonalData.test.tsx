@@ -67,4 +67,40 @@ describe("ErasePersonalData", () => {
     );
     expect(container.querySelector("details")).toHaveAttribute("open");
   });
+
+  /**
+   * **A refused name keeps the button level with the box** (issue #1985). The
+   * row was `flex items-end`, and the refusal renders under the box inside the
+   * `Field`, so the button dropped to the bottom of the error line in exactly
+   * the state someone reads hardest. The row is a grid whose two rows are the
+   * Field's own (caption, then box with the refusal under it); from `sm` the
+   * button sits in the box's row, aligned to its top. jsdom lays nothing out,
+   * so this pins the tracks, not the pixels.
+   */
+  it("keeps the erase button in the box's row when the name is refused", () => {
+    render(
+      <ErasePersonalData
+        diver={diver}
+        shopSlug="blue-mantis"
+        personId="person-1"
+        locale="en-US"
+        status={{
+          form: "erase",
+          tone: "danger",
+          text: "Type the name exactly.",
+          field: "erase-confirm-name",
+        }}
+      />,
+    );
+    const box = screen.getByPlaceholderText("Mira Castellanos");
+    expect(box).toHaveAttribute("aria-invalid", "true");
+    const row = box.closest("form");
+    expect(row).toHaveClass("grid", "sm:grid-cols-[auto_auto]");
+    expect(row).not.toHaveClass("flex", "items-end");
+    const erase = screen.getByRole("button", { name: "Erase personal data" });
+    expect(erase).toHaveClass("sm:row-start-2", "sm:col-start-2", "self-start");
+    // The refusal stays on the box, not in a banner beside the button.
+    expect(screen.getByRole("alert")).toHaveTextContent("Type the name exactly.");
+    expect(box.getAttribute("aria-describedby")).toContain(screen.getByRole("alert").id);
+  });
 });
