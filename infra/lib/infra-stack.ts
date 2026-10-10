@@ -2316,7 +2316,7 @@ exports.handler = async (event) => {
         why: "Vercel runs the app; CDK runs the infrastructure. Neither deploy pipeline can write to the other, so a local CLI authenticated to both is the narrow hand-off point. The target file excludes workstation and CI credentials before Vercel sees it.",
         run: [
           "node scripts/import-vercel-env.mjs .env.vercel production",
-          "pnpm exec vercel --prod --archive=tgz",
+          "pnpm dlx vercel@62.5.0 --prod --archive=tgz",
         ],
         store:
           ".env.vercel (gitignored) is the full Vercel target file, generated from the completed .env.local. The importer supplies every nonblank entry to Vercel Production; it deliberately excludes APP_SECRET_SEED and every REG_SUIT_* value. The generic deployer credential is not a dotenv value at all.",
@@ -2438,7 +2438,7 @@ exports.handler = async (event) => {
         when: "once per sending domain, and again whenever SES_REGION changes",
         why: "Authoritative DNS for dive.day is Vercel, not Route53 -- this stack has no hosted zone to write into. Adding one would mean replicating the live mail records and replacing Vercel's apex ALIAS with anycast A records Vercel owns and rotates.",
         run: [
-          "For each name/value pair in SesDkimRecords: pnpm exec vercel dns add dive.day <name-without-.dive.day> CNAME <value>.",
+          "For each name/value pair in SesDkimRecords: pnpm dlx vercel@62.5.0 dns add dive.day <name-without-.dive.day> CNAME <value>.",
         ],
         store:
           "Vercel DNS for dive.day. The CLI creates the three CNAME records on the SES identity subdomain.",
@@ -2454,9 +2454,9 @@ exports.handler = async (event) => {
         when: "once per sending domain, and again whenever SES_REGION changes",
         why: "Same reason as the DKIM records: the zone is at Vercel.",
         run: [
-          "pnpm exec vercel dns rm <the existing mail.ses MX, if one names another region>",
-          `pnpm exec vercel dns add dive.day mail.ses MX feedback-smtp.${SES_REGION}.amazonses.com 10`,
-          "pnpm exec vercel dns add dive.day mail.ses TXT 'v=spf1 include:amazonses.com ~all'",
+          "pnpm dlx vercel@62.5.0 dns rm <the existing mail.ses MX, if one names another region>",
+          `pnpm dlx vercel@62.5.0 dns add dive.day mail.ses MX feedback-smtp.${SES_REGION}.amazonses.com 10`,
+          "pnpm dlx vercel@62.5.0 dns add dive.day mail.ses TXT 'v=spf1 include:amazonses.com ~all'",
         ],
         store:
           "Vercel -> dive.day -> DNS, on the MAIL FROM subdomain. Exactly one MX record -- SES fails the setup outright if the subdomain has several, which is why a region move is a delete-then-add rather than an add.",
@@ -2473,7 +2473,7 @@ exports.handler = async (event) => {
         why: "No provider hands you this one, which is why it is the SES record most likely to be missing. It is also the record that counts: DMARC reads the From domain's own policy and only walks up to the organizational domain when there isn't one, so ses.dive.day's record -- not dive.day's -- is what every booking confirmation is judged by. dive.day's _dmarc is a CNAME to the mail provider's shared record (p=reject, with the provider's own ruf) and is not ours to edit.",
         run: [
           "Set dmarcReportEmail in cdk.json to the mailbox that will read the reports, then run pnpm infra:deploy -- the post-deploy wizard publishes this record and leaves an existing one alone.",
-          "By hand instead: pnpm exec vercel dns add dive.day _dmarc.ses TXT 'v=DMARC1; p=none; rua=mailto:aaron@dive.day'",
+          "By hand instead: pnpm dlx vercel@62.5.0 dns add dive.day _dmarc.ses TXT 'v=DMARC1; p=none; rua=mailto:aaron@dive.day'",
         ],
         store:
           "Vercel -> dive.day -> DNS, on the _dmarc.ses subname. Any dive.day mailbox a person actually reads will do as the rua address; a reporting address in the same organizational domain as the reported domain needs no authorization record at the destination, which an external one would.",
@@ -2491,7 +2491,7 @@ exports.handler = async (event) => {
         when: "once per sending domain, after the first deploy that created the diveday-inbound rule set",
         why: "Same reason as the DKIM records: the zone is at Vercel. Without the MX record a diver's reply to reply+<token>@inbound.ses.dive.day bounces at their own mail server before SES ever sees it.",
         run: [
-          "pnpm exec vercel dns add dive.day inbound.ses MX inbound-smtp.<region>.amazonses.com 10",
+          "pnpm dlx vercel@62.5.0 dns add dive.day inbound.ses MX inbound-smtp.<region>.amazonses.com 10",
         ],
         store:
           "Vercel -> dive.day -> DNS, on the inbound subdomain (the SesInboundMxRecord output spells it out for the deployed region).",
@@ -2506,8 +2506,8 @@ exports.handler = async (event) => {
         run: [
           "aws acm request-certificate --region us-east-1 --domain-name media.dive.day --validation-method DNS --query CertificateArn  # the region is not a typo and is not PRIMARY_REGION",
           "aws acm describe-certificate --region us-east-1 --certificate-arn <arn> --query 'Certificate.DomainValidationOptions[0].ResourceRecord'",
-          "pnpm exec vercel dns add dive.day <the _acme name, without .dive.day> CNAME <the value>",
-          "pnpm exec vercel dns add dive.day media CNAME <MediaDistributionDomain from the stack outputs>",
+          "pnpm dlx vercel@62.5.0 dns add dive.day <the _acme name, without .dive.day> CNAME <the value>",
+          "pnpm dlx vercel@62.5.0 dns add dive.day media CNAME <MediaDistributionDomain from the stack outputs>",
           "Set mediaDomainName and mediaCertificateArn in cdk.json, in a pull request, then pnpm infra:deploy.",
         ],
         produces:
