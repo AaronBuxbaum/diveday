@@ -68,7 +68,9 @@ export async function announceDemoEntry(input: {
   try {
     await recordDemoEntry(await getDb(), { source, role });
   } catch (error) {
-    console.error("announceDemoEntry: demo entry row failed", error);
+    log("demo.entry_row_failed", "error", {
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
   }
 
   try {

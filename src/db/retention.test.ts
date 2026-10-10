@@ -7,6 +7,7 @@ import { setBookingPayment } from "./payments";
 import { pruneExpiredRecords } from "./retention";
 import * as schema from "./schema";
 import {
+  accountSessions,
   accountTokens,
   activityEvents,
   bookingPaymentEvents,
@@ -229,6 +230,46 @@ describe("pruneExpiredRecords", () => {
     expect(remaining.map((row) => row.tokenHash).sort()).toEqual([
       "hash-recently-dead",
       "hash-still-live",
+    ]);
+  });
+
+  // A session carries its device's IP address and user agent. It ages out on
+  // its own expiry, which every use slides forward, so a session still honoured
+  // is never eligible however long ago it was created.
+  it("prunes only long-expired sessions, with their IP and user agent, never a live one", async () => {
+    const { db, shop, owner } = await retentionContext();
+    if (!owner) throw new Error("seeded user account missing");
+    const window = RETENTION_DAYS.account_sessions;
+    const session = (token: string, expiresAt: Date) => ({
+      userAccountId: owner.id,
+      personId: owner.personId,
+      shopId: shop.id,
+      shopSlug: shop.slug,
+      roles: ["owner"],
+      name: "Retention session",
+      token,
+      expiresAt,
+      ipAddress: "203.0.113.7",
+      userAgent: "Retention/1.0",
+      createdAt: daysAgo(window * 10),
+    });
+    await db
+      .insert(accountSessions)
+      .values([
+        session("session-long-dead", daysAgo(window + 1)),
+        session("session-recently-dead", daysAgo(window - 1)),
+        session("session-still-live", new Date(NOW.getTime() + 60 * 60 * 1000)),
+      ]);
+
+    const summary = await pruneExpiredRecords(db, { now: NOW });
+    expect(outcomeFor(summary, "account_sessions").deleted).toBe(1);
+    const remaining = await db
+      .select({ token: accountSessions.token })
+      .from(accountSessions)
+      .where(eq(accountSessions.name, "Retention session"));
+    expect(remaining.map((row) => row.token).sort()).toEqual([
+      "session-recently-dead",
+      "session-still-live",
     ]);
   });
 
@@ -552,12 +593,11 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "shop_promo_redemptions",
   // Credentials that live and die with the thing they open: revoked, spent, or
   // deleted with their parent. The token tables that are *not* here
-  // (`account_tokens`, `shop_contact_email_confirmation_tokens`,
+  // (`account_tokens`, `account_sessions`, `shop_contact_email_confirmation_tokens`,
   // `integration_oauth_states`, `booking_capabilities`) are the ones whose
   // already-dead rows are kept on purpose for an incident review — which is
   // what a window is for, and why they have one.
   "user_accounts",
-  "account_sessions",
   "account_security",
   "account_step_ups",
   "auth_provider_accounts",
