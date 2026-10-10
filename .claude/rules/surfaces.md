@@ -64,7 +64,7 @@ longer form of every row are in [docs/agents/repo-checks.md](../../docs/agents/r
   (`src/i18n/provider-coverage.test.ts`). Waiver and medical wording stays English (H-01, H-03).
 - **Every sentence earns its place, or it is deleted**: the **copy-restraint** skill; an
   accessibility trade goes in [docs/design/accessibility-tradeoffs.md](../../docs/design/accessibility-tradeoffs.md).
-- **Delete says Delete**: soft-delete-vocabulary guard (ADR 20260820-every-delete-is-soft).
+- **Delete says Delete**: the `softDelete` lint rule (ADR 20260820-every-delete-is-soft).
 - **A trouble state is photographed through `/api/test/seed-trouble-states`**, never seeded into
   the demo shop.
 - **Look at what you changed**: `node scripts/screenshot.mjs`, the **design-review** skill, an

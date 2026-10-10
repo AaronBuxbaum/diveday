@@ -39,7 +39,7 @@ provider-specific folders are adapters and must not introduce unique requirement
 | `pnpm test:changed` | before you push: the tests your diff reaches. After a `src/db/schema/` edit, run the schema guards by path instead |
 | `pnpm typecheck` | tsc |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
-| `pnpm check:repo` | 46 static guards, concurrently; each names itself and the offending line. The *why* of each: [docs/agents/repo-checks.md](docs/agents/repo-checks.md) |
+| `pnpm check:repo` | 45 static guards, concurrently; each names itself and the offending line. The *why* of each: [docs/agents/repo-checks.md](docs/agents/repo-checks.md) |
 | `pnpm e2e <spec> --reporter=line` | build, then one Playwright spec; `pnpm e2e:run <spec>` reuses a `pnpm e2e:build` |
 | `pnpm db:generate` | a Drizzle migration after editing `src/db/schema/` (the **schema-change** skill) |
 | `node scripts/screenshot.mjs <path…>` | phone and desktop PNGs of a page against a running `pnpm dev` |

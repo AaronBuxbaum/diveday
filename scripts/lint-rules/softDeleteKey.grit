@@ -1,0 +1,10 @@
+// A message key never names a delete anything else: the key is what the next author reads
+// before writing the string under it. Key names are shared across locales, so one English list
+// holds them all. Scoped in biome.json to src/i18n/locales; why, and the value lists per locale,
+// are in docs/agents/repo-checks.md ("Now Biome rules", softDelete).
+language json
+
+JsonMember(name=$name) where {
+  $name <: r"(?is)\".*(?:archiv|unarchiv|deactivat|retir(?:e|ing|ed)|soft[-_]?delete).*\"",
+  register_diagnostic(span=$name, message="softDelete: this key names a delete something else; the word is delete, never archive or retire (ADR 20260820-every-delete-is-soft).", severity="error")
+}

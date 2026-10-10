@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 46 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 45 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, infra-ASCII, CI-change-detection and Node-version safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, live-trip-read, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, infra-ASCII, CI-change-detection and Node-version safeguards.
 
 ## The guards worth reading about
 
@@ -59,10 +59,6 @@ The notice-code one (`scripts/check-notice-codes.mjs`) holds every literal staff
 ### scroll-preservation
 
 The scroll-preservation one (`scripts/check-scroll-preservation.mjs`) enforces two invariants under one theme, "a same-page tap must never silently send the reader back to the top of the page or force a hard reload" (docs/design/forms-and-controls.md). First, `PreserveFormScroll` renders from `src/app/layout.tsx`, the root layout, and from exactly that one file — it used to be mounted separately in the staff shop shell, the public shop shell, and the trip-prep "ready" route, and any new bearer-token or account-lifecycle route silently got no scroll preservation until someone remembered to add it there too; reset-password, claim, invite, recap, unsubscribe, and verify all had exactly this gap. A second mount anywhere is that duplication creeping back, and a missing root mount is the whole mechanism gone. Second, no file under `src/` renders a JSX `href` of the bare fragment `#` or a `javascript:` pseudo-protocol — neither is inert the way it looks: a keyboard Enter still activates the anchor, and `#` under `target="_top"` is a real navigation. The booking-confirmation readiness link fell back to exactly this shape whenever no capability token had been minted, styled inert with `aria-disabled`/`pointer-events-none` under `target="_top"` — a mouse click was blocked, but a keyboard Enter replaced the shop's own top-level page with a dead fragment at the moment a diver had just paid; a review caught it before it shipped, and `EmbedBookedNotice.test.tsx` now pins the destination is always real. Both cases want a real `<button type="button">` or a real destination `href` instead; a line that must legitimately keep either shape says `diveday:allow-scroll-preservation: <why>`.
-
-### soft-delete-vocabulary
-
-The soft-delete-vocabulary one (`scripts/check-soft-delete.mjs`) refuses Archive/Unarchive/Deactivate/soft-delete in any message **key or value** under `src/i18n/locales/` — the bundles are the one door user-facing words come through, since `check:copy` already refuses hard-coded copy in a component. 49 strings were in that state until 2026-08-20, each trailed by a sentence explaining which history survived, and the vocabulary drifted back twice on its own because it is what the storage model is called in the code (`archiveCertification`, `waiver_templates.archived_at` — internal names stay out of scope, deliberately: nobody reads them — they were brought into line by hand on 2026-08-20 anyway). Each locale states its own word list and one with none is a **failure**, not a pass: Spanish `archivo` is the ordinary word for a *file*, so only `archivar`/`archivando`/`desarchivar` are refused there (ADR 20260820-every-delete-is-soft).
 
 ### bundle-reach
 
@@ -402,7 +398,7 @@ It keeps its three outcomes. Exit 0 is clean, exit 1 is a malformed issue, and e
 
 ## Now Biome rules
 
-Four guards that were one syntactic pattern each are rules in `pnpm lint` now: a GritQL plugin in `scripts/lint-rules/<rule>.grit`, scoped and exempted by an `overrides` entry in `biome.json`, and tested through that real config by `scripts/lint-rules/lint-rules.test.mjs`. A rule reads the syntax tree, so a comment or a string that only *mentions* the call is no longer refused; nothing else moved. That was checked before the guards were deleted: each old guard and its rule ran over every `.ts`/`.tsx` under `src/` with scopes and exemptions lifted, then over a copy with the refused shapes and their look-alikes injected into every `try` body, `catch` body and function in the tree (from 722 refused lines for `timezone` to 4,733 for `redirectInTry`), and the two sets of refused lines were identical apart from the twelve comment lines `clock` used to count. `pnpm lint:rules` runs these rules alone.
+Five guards that were one syntactic pattern each are rules in `pnpm lint` now: a GritQL plugin in `scripts/lint-rules/<rule>.grit`, scoped and exempted by an `overrides` entry in `biome.json`, and tested through that real config by `scripts/lint-rules/lint-rules.test.mjs`. A rule reads the syntax tree, so a comment or a string that only *mentions* the call is no longer refused; nothing else moved. That was checked before the guards were deleted: each old guard and its rule ran over every `.ts`/`.tsx` under `src/` with scopes and exemptions lifted, then over a copy with the refused shapes and their look-alikes injected into every `try` body, `catch` body and function in the tree (from 722 refused lines for `timezone` to 4,733 for `redirectInTry`), and the two sets of refused lines were identical apart from the twelve comment lines `clock` used to count. `pnpm lint:rules` runs these rules alone.
 
 The escape hatch is Biome's own, and its reason is required: `// biome-ignore lint/plugin/<rule>: <why>` on the line above. One with nothing after the rule name is itself an error, so the hatch cannot be taken silently. A file-wide exemption is a negated glob in the rule's `biome.json` override, with its reason in this section.
 
@@ -421,6 +417,10 @@ Refuses `new Intl.DateTimeFormat(…)` and the three `toLocale*String` calls who
 ### redirectInTry
 
 Refuses a call that unwinds the render — `redirect`, `permanentRedirect`, `notFound`, `forbidden`, `unauthorized`, this repo's `revalidateAndRedirect`, `requireStaffSession` and `requireShopSurface`, and any function the same file declares `: never` or `: Promise<never>` — written inside a `try` body (callbacks nested in it included), or with `.catch(…)` chained straight onto it, anywhere in `src/` outside tests. These throw a sentinel the framework turns into a 307/404/403/401, so a `try` around one catches the refusal itself and the page below the gate renders for someone the gate said no to: a tenant-isolation bug, since `requireShopSurface`'s whole contract is that every refusal throws. `catch { redirect(…) }` is a refusal decided by the failure and is correct; so is a redirect after the `try`. Tests are exempt because asserting a helper throws means catching the sentinel. The guard this replaced was a 439-line lexical masker that had to fail loudly when it lost its footing; Biome parses the file, and one that does not parse fails lint. Not covered, stated rather than implied: a `return` inside `finally`, which lint already refuses.
+
+### softDelete
+
+Refuses a delete called anything else in the message bundles under `src/i18n/locales/` — the one door user-facing words come through, since `check:copy` already refuses hard-coded copy in a component. Four plugins, one diagnostic prefix: `softDeleteKey.grit` holds every **key name** in every locale to archive/unarchive/deactivate/retire/soft-delete (a key named `archiveSite` is what the next author reads before writing the string under it); `softDeleteEnUs.grit` and `softDeleteEsEs.grit` hold each locale's **values** to its own word list; `softDeleteLocale.grit` fails every bundle in a locale with neither, so a third language states its own list rather than passing by default. 49 strings were in that state until 2026-08-20, each trailed by a sentence explaining which history survived, and the vocabulary drifted back twice on its own because it is what the storage model is called in the code (`archiveCertification`, `waiver_templates.archived_at`; internal names stay out of scope, deliberately: nobody reads them). So the English list also refuses the reassurance — "off your active lists", "history is kept", "kept for records" (issue #779) — and "Retire", which the ADR bans by name. A bare "remove" is **not** refused: it is the right word about sixty times, for taking something out of a collection it belongs to, and no pattern can tell those from a delete wearing it. Spanish names only the unambiguous action forms (`archivar`, `archivando`, `desarchivar`, `retirar`, `retirado`, and the reassurance), because `archivo` is the ordinary word for a *file*. JSON has no comment for a `biome-ignore`, so an exception is a `not` clause in the locale's plugin naming the exact string, with its reason beside it; there are none. Before the guard (`scripts/check-soft-delete.mjs`) was deleted, it and these plugins ran over 5,190 entries built from every seventh real string in both locales with a banned or look-alike word spliced into each, and refused the same ones (ADR 20260820-every-delete-is-soft).
 
 ### Source-text guards written as tests (the `guards` Vitest project)
 
@@ -1090,7 +1090,7 @@ For `src/i18n/`; the rules themselves are in `.claude/rules/i18n.md`.
   render identically and no reader notices; Playwright matches them as different strings and every
   e2e spec hard-codes its English, which is what made this worth a guard (issue #1367).
 - **Vocabulary the guards refuse**: Archive/Unarchive/Deactivate/soft-delete in any key or value
-  (`scripts/check-soft-delete.mjs`, ADR 20260820-every-delete-is-soft; each locale states its own
+  (the `softDelete` Biome rule, ADR 20260820-every-delete-is-soft; each locale states its own
   word list); "shop" where the entity word is decided otherwise (`scripts/check-shop-word.mjs`);
   ICU plurals that do not cover every category (`scripts/check-icu-plurals.mjs`).
 - **Words that are DiveDay's, not a shop's**: the marine-life field guide (`marineLife.*` in

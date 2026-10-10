@@ -1,0 +1,10 @@
+// A bundle in a locale with no softDelete word list fails rather than passing by default: a new
+// language states the delete-vocabulary forms that are unambiguous in it, as a
+// softDelete<Locale>.grit beside this one with its own biome.json override, and is then added
+// to the negated globs of the override that applies this rule. See docs/agents/repo-checks.md.
+language json
+
+JsonObjectValue() as $bundle where {
+  $bundle <: not within JsonMember(),
+  register_diagnostic(span=$bundle, message="softDelete: this locale has no word list; add scripts/lint-rules/softDelete<Locale>.grit naming the delete-vocabulary forms that are unambiguous in it, and its biome.json override.", severity="error")
+}
