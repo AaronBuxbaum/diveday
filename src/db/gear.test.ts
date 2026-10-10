@@ -37,7 +37,7 @@ import {
   updateGearItem,
 } from "./gear";
 import { saveRentalFit } from "./rental-fit";
-import { bookings, gearReservations, gearServiceEvents, shops, trips } from "./schema";
+import { bookings, gearReservations, gearServiceEvents, people, shops, trips } from "./schema";
 import { moveTrip, setTripStatus } from "./trips";
 import { createTrip } from "./trips-create";
 
@@ -84,6 +84,25 @@ async function rivalShop(db: AppDb) {
  * assertion about exactly the rows each test wrote — and doubles as proof
  * the readers are shop-scoped.
  */
+/** A staffer to attribute a release to (`released_by_person_id`, issue #2258). */
+async function deskStaffer(db: AppDb, shopId: string): Promise<string> {
+  const [row] = await db
+    .insert(people)
+    .values({ shopId, fullName: "Kai Desk" })
+    .returning({ id: people.id });
+  if (!row) throw new Error("staff insert failed");
+  return row.id;
+}
+
+/** One reservation row as stored, released or not. */
+async function storedReservation(db: AppDb, reservationId: string) {
+  const [row] = await db
+    .select()
+    .from(gearReservations)
+    .where(eq(gearReservations.id, reservationId));
+  return row ?? null;
+}
+
 async function gearShopContext(source: { db: AppDb } = ctx) {
   const { db } = source;
   const [shop] = await db
@@ -1066,6 +1085,14 @@ describe("gear reservations", () => {
     // The wetsuit went back on the wall with the seat; the checked-out BCD is
     // physically with someone, and the overdue chase is its honest way home.
     expect(remaining.map((row) => row.label)).toEqual(["BCD #40"]);
+    // Let go with a stamp, not a delete, and by nobody: the system did it.
+    const kept = await db
+      .select()
+      .from(gearReservations)
+      .where(eq(gearReservations.gearItemId, unclaimed.id));
+    expect(kept).toHaveLength(1);
+    expect(kept[0]?.releasedAt).toBeInstanceOf(Date);
+    expect(kept[0]?.releasedByPersonId).toBeNull();
   });
 
   it("a canceled departure frees its counter pile, keeps what's out, and touches no other trip", async () => {
@@ -1125,6 +1152,7 @@ describe("gear reservations", () => {
 
   it("walks reserve → check out → return, and release only while still on the counter", async () => {
     const { db, shop } = await gearShopContext();
+    const releasedByPersonId = await deskStaffer(db, shop.id);
     const bcd = mustCreate(
       await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #11" }),
     );
@@ -1151,7 +1179,9 @@ describe("gear reservations", () => {
       reason: "already_checked_out",
     });
     // Out the door: releasing would erase the only record of who has it.
-    expect(await releaseGearReservation(db, { shopId: shop.id, reservationId })).toEqual({
+    expect(
+      await releaseGearReservation(db, { shopId: shop.id, reservationId, releasedByPersonId }),
+    ).toEqual({
       ok: false,
       reason: "already_checked_out",
     });
@@ -1169,12 +1199,16 @@ describe("gear reservations", () => {
       screen: SETUP_PICK,
     });
     if (!again.ok) throw new Error("re-reserve failed");
-    expect(
-      await releaseGearReservation(db, { shopId: shop.id, reservationId: again.reservation.id }),
-    ).toEqual({ ok: true });
-    expect(
-      await releaseGearReservation(db, { shopId: shop.id, reservationId: again.reservation.id }),
-    ).toEqual({ ok: false, reason: "not_found" });
+    const releaseAgain = {
+      shopId: shop.id,
+      reservationId: again.reservation.id,
+      releasedByPersonId,
+    };
+    expect(await releaseGearReservation(db, releaseAgain)).toEqual({ ok: true });
+    expect(await releaseGearReservation(db, releaseAgain)).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
 
     // A unit marked returned without ever being checked out (the counter
     // correcting a row) refuses a release by naming that state — not the
@@ -1198,8 +1232,107 @@ describe("gear reservations", () => {
       await releaseGearReservation(db, {
         shopId: shop.id,
         reservationId: returnedOnly.reservation.id,
+        releasedByPersonId,
       }),
     ).toEqual({ ok: false, reason: "already_returned" });
+  });
+
+  it("releases a hold with a stamp, keeps the row, and never lets it block a new hold (issue #2258)", async () => {
+    const { db, shop } = await gearShopContext();
+    const releasedByPersonId = await deskStaffer(db, shop.id);
+    const bcd = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #12", size: "M" }),
+    );
+    const maya = await shopBooking(db, shop.id, "Maya Reyes");
+    const lena = await shopBooking(db, shop.id, "Lena Ortiz");
+    const window = { reservedFrom: "2026-09-01", reservedUntil: "2026-09-02" } as const;
+    const held = await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: bcd.id,
+      bookingId: maya.bookingId,
+      ...window,
+      screen: SETUP_PICK,
+    });
+    if (!held.ok) throw new Error("reserve failed");
+    const reservationId = held.reservation.id;
+
+    expect(
+      await releaseGearReservation(db, { shopId: shop.id, reservationId, releasedByPersonId }),
+    ).toEqual({ ok: true });
+
+    // The record that the unit was held for Maya survives the release.
+    const stored = await storedReservation(db, reservationId);
+    expect(stored).toMatchObject({ bookingId: maya.bookingId, releasedByPersonId });
+    expect(stored?.releasedAt).toBeInstanceOf(Date);
+    expect(stored?.checkedOutAt).toBeNull();
+    expect(stored?.returnedAt).toBeNull();
+
+    // …and is gone to every open-reservation reader.
+    expect((await listTripGearAssignments(db, shop.id, maya.trip.id)).get(maya.bookingId)).toBe(
+      undefined,
+    );
+    expect(
+      (
+        await listAvailableGearUnits(db, shop.id, {
+          from: window.reservedFrom,
+          until: window.reservedUntil,
+          todayLocal: window.reservedFrom,
+        })
+      ).map((unit) => unit.id),
+    ).toContain(bcd.id);
+    expect((await getGearItemDetail(db, shop.id, bcd.id))?.reservations).toEqual([]);
+
+    // A released hold is not an open one: no act reaches it again.
+    const sameRow = { shopId: shop.id, reservationId };
+    expect(await checkOutGearReservation(db, sameRow)).toEqual({ ok: false, reason: "not_found" });
+    expect(await returnGearReservation(db, sameRow)).toEqual({ ok: false, reason: "not_found" });
+
+    // The exclusion constraint ignores it: the same unit, the same window, a
+    // different diver, and then the same diver again.
+    const lenaHold = await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: bcd.id,
+      bookingId: lena.bookingId,
+      ...window,
+      screen: SETUP_PICK,
+    });
+    expect(lenaHold.ok).toBe(true);
+    // …while an open overlap is still refused, so the rule is intact.
+    expect(
+      await reserveGearUnit(db, {
+        shopId: shop.id,
+        gearItemId: bcd.id,
+        bookingId: maya.bookingId,
+        ...window,
+        screen: SETUP_PICK,
+      }),
+    ).toEqual({ ok: false, reason: "unit_unavailable" });
+  });
+
+  it("refuses at the database a release stamp on a unit that left the counter (issue #2258)", async () => {
+    const { db, shop } = await gearShopContext();
+    const bcd = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #13" }),
+    );
+    const maya = await shopBooking(db, shop.id, "Maya Reyes");
+    const held = await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: bcd.id,
+      bookingId: maya.bookingId,
+      reservedFrom: "2026-09-01",
+      reservedUntil: "2026-09-02",
+      screen: SETUP_PICK,
+    });
+    if (!held.ok) throw new Error("reserve failed");
+    await checkOutGearReservation(db, { shopId: shop.id, reservationId: held.reservation.id });
+    // A raw write past the writer's own guard: the check still holds the line,
+    // because a released out unit would erase the only record of who has it.
+    await expect(
+      db
+        .update(gearReservations)
+        .set({ releasedAt: nowDate() })
+        .where(eq(gearReservations.id, held.reservation.id)),
+    ).rejects.toThrow();
   });
 });
 
@@ -1691,15 +1824,19 @@ describe("a departure that moves takes its gear with it", () => {
     const moved = await moveTrip(db, shop.id, maya.trip.id, new Date("2026-09-08T12:00:00Z"));
     expect(moved).toMatchObject({ ok: true, gearReleased: 1 });
 
-    // Maya's is gone; Jonah's — which was there first and is not moving — is
-    // untouched. The count is what the board turns into a sentence, and the
-    // reason the release is not silent.
+    // Maya's is let go, on its old dates and by nobody (the move did it);
+    // Jonah's — which was there first and is not moving — is untouched. The
+    // count is what the board turns into a sentence, and the reason the
+    // release is not silent.
     const rows = await db
       .select()
       .from(gearReservations)
       .where(eq(gearReservations.gearItemId, tank.id));
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.bookingId).toBe(jonah.bookingId);
+    const open = rows.filter((row) => row.releasedAt === null);
+    expect(open.map((row) => row.bookingId)).toEqual([jonah.bookingId]);
+    const released = rows.filter((row) => row.releasedAt !== null);
+    expect(released.map((row) => row.bookingId)).toEqual([maya.bookingId]);
+    expect(released[0]?.releasedByPersonId).toBeNull();
 
     // The move itself still happened — one gear collision must not veto a
     // schedule edit the crew has already agreed with a customer.

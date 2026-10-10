@@ -92,6 +92,18 @@ function optional(value: string | undefined) {
 const liveGearItem = () => isNull(gearItems.deletedAt);
 
 /**
+ * **A hold still standing**: neither home (`returned_at`) nor let go
+ * (`released_at`, issue #2258). Releasing stamps the row instead of deleting
+ * it (ADR 20260820-every-delete-is-soft), so every read and write that means
+ * "the open reservations" carries this, exactly the WHERE of the
+ * `gear_reservations_no_overlap` exclusion constraint. A reader of returned
+ * rows (`returned_at is not null`) already skips a released one, which the
+ * `gear_reservations_release_never_left` check keeps unreturned.
+ */
+export const openGearReservation = () =>
+  and(isNull(gearReservations.returnedAt), isNull(gearReservations.releasedAt));
+
+/**
  * Who holds a reservation, as one person id for either holder shape (the
  * `gear_reservations_one_holder` check): the booking's diver for a seat, the
  * row's own `person_id` for a counter rental. A reader that answers "what's
@@ -313,7 +325,7 @@ export async function deleteGearItem(
         and(
           eq(gearReservations.shopId, input.shopId),
           eq(gearReservations.gearItemId, input.gearItemId),
-          isNull(gearReservations.returnedAt),
+          openGearReservation(),
           or(
             // Out the door now, whatever its window says…
             isNotNull(gearReservations.checkedOutAt),
@@ -858,7 +870,7 @@ async function screenPickUnderLock(
         and(
           eq(gearReservations.shopId, input.shopId),
           eq(gearReservations.bookingId, input.bookingId),
-          isNull(gearReservations.returnedAt),
+          openGearReservation(),
           eq(gearItems.kind, input.unit.kind),
           liveGearItem(),
         ),
@@ -905,7 +917,7 @@ export async function checkOutGearReservation(
       and(
         eq(gearReservations.id, input.reservationId),
         eq(gearReservations.shopId, input.shopId),
-        isNull(gearReservations.returnedAt),
+        openGearReservation(),
         isNull(gearReservations.checkedOutAt),
       ),
     )
@@ -951,7 +963,7 @@ export async function returnGearReservation(
       and(
         eq(gearReservations.id, input.reservationId),
         eq(gearReservations.shopId, input.shopId),
-        isNull(gearReservations.returnedAt),
+        openGearReservation(),
       ),
     )
     .returning({ id: gearReservations.id });
@@ -988,7 +1000,7 @@ export async function checkOutTripGearSet(
         eq(gearReservations.shopId, input.shopId),
         eq(gearReservations.bookingId, input.bookingId),
         isNull(gearReservations.checkedOutAt),
-        isNull(gearReservations.returnedAt),
+        openGearReservation(),
       ),
     )
     .returning({ id: gearReservations.id });
@@ -1034,7 +1046,7 @@ export async function returnTripGearSet(
         eq(gearReservations.shopId, input.shopId),
         eq(gearReservations.bookingId, input.bookingId),
         isNotNull(gearReservations.checkedOutAt),
-        isNull(gearReservations.returnedAt),
+        openGearReservation(),
       ),
     )
     .returning({ id: gearReservations.id });
@@ -1045,34 +1057,39 @@ export async function returnTripGearSet(
  * Un-assign a unit that never left the counter. Once it has been checked out
  * the honest close is a return — releasing an out unit would erase the only
  * record of who has it.
+ *
+ * **A stamp, never a delete** (issue #2258): `released_at` and who did it, so
+ * the record that the unit was held survives (a disputed no-show charge is
+ * the case), while {@link openGearReservation} and the exclusion constraint
+ * both stop seeing the row and the window frees at once. A released hold is
+ * not restorable; the unit is simply held again.
  */
 export async function releaseGearReservation(
   db: AppDb,
-  input: { shopId: string; reservationId: string },
+  input: { shopId: string; reservationId: string; releasedByPersonId: string },
 ): Promise<GearReservationActionOutcome> {
-  const [deleted] = await db
-    .delete(gearReservations)
+  const [released] = await db
+    .update(gearReservations)
+    .set({ releasedAt: nowDate(), releasedByPersonId: input.releasedByPersonId })
     .where(
       and(
         eq(gearReservations.id, input.reservationId),
         eq(gearReservations.shopId, input.shopId),
         isNull(gearReservations.checkedOutAt),
-        isNull(gearReservations.returnedAt),
+        openGearReservation(),
       ),
     )
     .returning({ id: gearReservations.id, bookingId: gearReservations.bookingId });
-  if (deleted) {
+  if (released) {
     // The same handoff line the reservation wrote: a unit taken back off a
     // diver is as much a change to what they are carrying as one assigned
-    // (#1187). Read after the delete because the row is gone by then and the
-    // booking is the only thing left to resolve the departure from — and only
-    // when there is one: a bookingless counter rental belongs to no departure
-    // and so is nobody's handoff.
-    const [booking] = deleted.bookingId
+    // (#1187). Only when there is a booking: a bookingless counter rental
+    // belongs to no departure and so is nobody's handoff.
+    const [booking] = released.bookingId
       ? await db
           .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
           .from(bookings)
-          .where(and(eq(bookings.id, deleted.bookingId), eq(bookings.shopId, input.shopId)))
+          .where(and(eq(bookings.id, released.bookingId), eq(bookings.shopId, input.shopId)))
           .limit(1)
       : [];
     if (booking) {
@@ -1117,25 +1134,31 @@ export async function releaseUnclaimedGearReservations(
   },
 ): Promise<void> {
   if (input.kinds?.length === 0) return;
-  await db.delete(gearReservations).where(
-    and(
-      eq(gearReservations.shopId, input.shopId),
-      eq(gearReservations.bookingId, input.bookingId),
-      isNull(gearReservations.checkedOutAt),
-      isNull(gearReservations.returnedAt),
-      input.kinds
-        ? inArray(
-            gearReservations.gearItemId,
-            db
-              .select({ id: gearItems.id })
-              .from(gearItems)
-              .where(
-                and(eq(gearItems.shopId, input.shopId), inArray(gearItems.kind, [...input.kinds])),
-              ),
-          )
-        : undefined,
-    ),
-  );
+  await db
+    .update(gearReservations)
+    .set({ releasedAt: nowDate() })
+    .where(
+      and(
+        eq(gearReservations.shopId, input.shopId),
+        eq(gearReservations.bookingId, input.bookingId),
+        isNull(gearReservations.checkedOutAt),
+        openGearReservation(),
+        input.kinds
+          ? inArray(
+              gearReservations.gearItemId,
+              db
+                .select({ id: gearItems.id })
+                .from(gearItems)
+                .where(
+                  and(
+                    eq(gearItems.shopId, input.shopId),
+                    inArray(gearItems.kind, [...input.kinds]),
+                  ),
+                ),
+            )
+          : undefined,
+      ),
+    );
 }
 
 /**
@@ -1154,22 +1177,25 @@ export async function releaseUnclaimedGearReservationsForTrips(
   input: { shopId: string; tripIds: readonly string[] },
 ): Promise<void> {
   if (input.tripIds.length === 0) return;
-  await db.delete(gearReservations).where(
-    and(
-      eq(gearReservations.shopId, input.shopId),
-      isNull(gearReservations.checkedOutAt),
-      isNull(gearReservations.returnedAt),
-      inArray(
-        gearReservations.bookingId,
-        db
-          .select({ id: bookings.id })
-          .from(bookings)
-          .where(
-            and(eq(bookings.shopId, input.shopId), inArray(bookings.tripId, [...input.tripIds])),
-          ),
+  await db
+    .update(gearReservations)
+    .set({ releasedAt: nowDate() })
+    .where(
+      and(
+        eq(gearReservations.shopId, input.shopId),
+        isNull(gearReservations.checkedOutAt),
+        openGearReservation(),
+        inArray(
+          gearReservations.bookingId,
+          db
+            .select({ id: bookings.id })
+            .from(bookings)
+            .where(
+              and(eq(bookings.shopId, input.shopId), inArray(bookings.tripId, [...input.tripIds])),
+            ),
+        ),
       ),
-    ),
-  );
+    );
 }
 
 /**
@@ -1214,7 +1240,7 @@ export async function rewindowTripGearReservations(
         eq(gearReservations.shopId, input.shopId),
         eq(bookings.tripId, input.tripId),
         isNull(gearReservations.checkedOutAt),
-        isNull(gearReservations.returnedAt),
+        openGearReservation(),
       ),
     )
     .orderBy(asc(gearReservations.id));
@@ -1234,7 +1260,10 @@ export async function rewindowTripGearReservations(
       moved += 1;
     } catch (error) {
       if (!violatesExclusionConstraint(error, "gear_reservations_no_overlap")) throw error;
-      await tx.delete(gearReservations).where(eq(gearReservations.id, reservation.id));
+      await tx
+        .update(gearReservations)
+        .set({ releasedAt: nowDate() })
+        .where(eq(gearReservations.id, reservation.id));
       released += 1;
     }
   }
@@ -1267,7 +1296,7 @@ export async function countOpenTripGearReservations(
         eq(gearReservations.shopId, shopId),
         eq(bookings.tripId, tripId),
         isNull(gearReservations.checkedOutAt),
-        isNull(gearReservations.returnedAt),
+        openGearReservation(),
       ),
     );
   return counted?.total ?? 0;
@@ -1284,7 +1313,12 @@ async function reservationStamps(
     })
     .from(gearReservations)
     .where(
-      and(eq(gearReservations.id, input.reservationId), eq(gearReservations.shopId, input.shopId)),
+      and(
+        eq(gearReservations.id, input.reservationId),
+        eq(gearReservations.shopId, input.shopId),
+        // A released hold is gone to every action, as it was when the release deleted it.
+        isNull(gearReservations.releasedAt),
+      ),
     )
     .limit(1);
   return row ?? null;
@@ -1446,7 +1480,7 @@ export async function gearRegisterGroups(
     .where(
       and(
         eq(gearReservations.shopId, shopId),
-        isNull(gearReservations.returnedAt),
+        openGearReservation(),
         lte(gearReservations.reservedFrom, options.todayLocal),
         liveGearItem(),
       ),
@@ -1609,7 +1643,7 @@ async function listOpenReservations(
       and(
         eq(gearReservations.shopId, shopId),
         inArray(gearReservations.gearItemId, [...gearItemIds]),
-        isNull(gearReservations.returnedAt),
+        openGearReservation(),
       ),
     )
     .orderBy(asc(gearReservations.reservedFrom));
@@ -1790,7 +1824,14 @@ async function listItemReservationHistory(
     // future mismatched row from ever rendering another tenant's name here.
     .innerJoin(people, and(eq(people.id, reservationHolder()), eq(people.shopId, shopId)))
     .leftJoin(trips, eq(trips.id, bookings.tripId))
-    .where(and(eq(gearReservations.shopId, shopId), eq(gearReservations.gearItemId, gearItemId)))
+    .where(
+      and(
+        eq(gearReservations.shopId, shopId),
+        eq(gearReservations.gearItemId, gearItemId),
+        // A hold let go never became a rental (issue #2258).
+        isNull(gearReservations.releasedAt),
+      ),
+    )
     .orderBy(desc(gearReservations.reservedFrom), desc(gearReservations.createdAt))
     .limit(20);
   return rows;
@@ -1942,7 +1983,7 @@ export async function listAvailableGearUnits(
             .where(
               and(
                 eq(gearReservations.gearItemId, gearItems.id),
-                isNull(gearReservations.returnedAt),
+                openGearReservation(),
                 or(
                   // The asked-for window is spoken for…
                   and(
@@ -2046,7 +2087,7 @@ export async function listTripGearAssignments(
       and(
         eq(gearReservations.shopId, shopId),
         eq(bookings.tripId, tripId),
-        isNull(gearReservations.returnedAt),
+        openGearReservation(),
         liveGearItem(),
       ),
     )
@@ -2293,7 +2334,7 @@ async function listReturnRows(
       .where(
         and(
           eq(gearReservations.shopId, shopId),
-          isNull(gearReservations.returnedAt),
+          openGearReservation(),
           liveGearItem(),
           windowFilter,
         ),

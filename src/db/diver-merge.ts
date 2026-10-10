@@ -271,6 +271,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "executed_dives.recorded_by_person_id": "who logged the dive",
   "customer_gear_items.deleted_by_person_id": "who removed the piece from the record",
   "gear_items.deleted_by_person_id": "who retired the unit",
+  "gear_reservations.released_by_person_id": "who let go of the hold",
   "gear_service_events.recorded_by_person_id": "who serviced the unit",
   "internal_notes.created_by_person_id": "who wrote the note",
   "marine_life_requests.requested_by_person_id": "which staffer asked for the species",

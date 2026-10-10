@@ -529,7 +529,9 @@ export const gearServiceEvents = pgTable(
  * overlapping inclusive date ranges, so two staff racing each other cannot
  * both win (ADR 20260815-minimal-gear-register). `returned_at` closes the
  * reservation and frees the window; `checked_out_at` records the handover so
- * "reserved" and "actually out the door" stay distinguishable.
+ * "reserved" and "actually out the door" stay distinguishable; `released_at`
+ * lets go of a hold that never left the counter. The constraint's WHERE skips
+ * returned and released rows alike, so neither ever blocks a new hold.
  */
 export const gearReservations = pgTable(
   "gear_reservations",
@@ -586,6 +588,24 @@ export const gearReservations = pgTable(
      * clock like gear that rode a boat.
      */
     divesLogged: integer("dives_logged"),
+    /**
+     * **When a hold that never left the counter was let go** (issue #2258).
+     * Releasing stamps the row instead of deleting it (ADR
+     * 20260820-every-delete-is-soft), so the record that a unit was held for
+     * someone survives a disputed no-show charge. A released row is closed
+     * like a returned one: no open-reservation read sees it, and the
+     * `gear_reservations_no_overlap` exclusion constraint ignores it, so it
+     * never blocks a new hold. Never set beside `checked_out_at` or
+     * `returned_at` (`gear_reservations_release_never_left`): a unit that went
+     * out comes home through a return. Not restorable; hold the unit again.
+     */
+    releasedAt: timestamp("released_at", { withTimezone: true }),
+    /**
+     * Who let it go, when a person did. Null when the system did: a cancelled
+     * booking letting go of what it never collected, a departure cancelled or
+     * moved onto dates the unit is taken for. Attribution only.
+     */
+    releasedByPersonId: uuid("released_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -598,6 +618,10 @@ export const gearReservations = pgTable(
     check(
       "gear_reservations_dives_logged",
       sql`${table.divesLogged} is null or (${table.divesLogged} >= 0 and ${table.divesLogged} <= 200)`,
+    ),
+    check(
+      "gear_reservations_release_never_left",
+      sql`${table.releasedAt} is null or (${table.checkedOutAt} is null and ${table.returnedAt} is null)`,
     ),
     check(
       "gear_reservations_one_holder",

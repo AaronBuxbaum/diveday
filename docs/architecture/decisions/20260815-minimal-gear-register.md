@@ -371,7 +371,8 @@ amendment records what was built on it and the calls the build made.
   nothing else can say which invoice billed a rental, and the order page needs its way back to
   the ticket. It is written only by `linkCounterRentalOrder`, which refuses a booking-held row
   and an order for a different person, and while it is set the rental cannot be released (a
-  release deletes the rows the invoice points at; the invoice is voided first, on the order).
+  released rental drops off the ticket the invoice points at; the invoice is voided first, on the
+  order).
   `gear_reservations.dives_logged`, nullable, 0 to 200: the dives the person said they did,
   asked at the return and optional.
 - **The ticket** (`/shop/[shopSlug]/gear/rentals/[ticketId]`) prints like the trip slip, with
@@ -463,3 +464,14 @@ register units, not a second inventory:
   departure's boat is one line above the checklist, and an expired clock on any safety kit, aboard
   or ashore, is Today's owner row `boat_safety_expired` in place of the register's own bench row
   for that unit. Informs, never gates, like every other service clock here.
+
+## Amendment 2026-10-10 — a release is a stamp, not a delete
+
+Issue #2258. `gear_reservations.released_at` and `released_by_person_id` (null when the system let
+go: a cancelled booking or departure, or a move onto dates the unit is taken for) keep the record
+that a unit was held, which a shop needs when a counter-rental customer disputes a no-show charge
+(ADR 20260820-every-delete-is-soft). The `gear_reservations_no_overlap` WHERE is now `returned_at
+is null and released_at is null`, so a released hold never blocks a new one, and every
+open-reservation read carries the same pair (`openGearReservation` in `src/db/gear.ts`). A release
+stamp is refused on a unit that left the counter (`gear_reservations_release_never_left`), and a
+released hold is not restorable: the unit is held again.

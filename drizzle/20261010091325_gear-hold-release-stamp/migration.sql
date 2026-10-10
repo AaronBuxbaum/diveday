@@ -1,0 +1,8 @@
+ALTER TABLE "gear_reservations" ADD COLUMN "released_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "gear_reservations" ADD COLUMN "released_by_person_id" uuid;--> statement-breakpoint
+ALTER TABLE "gear_reservations" ADD CONSTRAINT "gear_reservations_released_by_person_id_people_id_fkey" FOREIGN KEY ("released_by_person_id") REFERENCES "people"("id");--> statement-breakpoint
+ALTER TABLE "gear_reservations" ADD CONSTRAINT "gear_reservations_release_never_left" CHECK ("released_at" is null or ("checked_out_at" is null and "returned_at" is null));--> statement-breakpoint
+-- Issue #2258: releasing a hold that never left the counter now stamps released_at instead of deleting the row (ADR 20260820-every-delete-is-soft). The double-booking guard (ADR 20260815-minimal-gear-register) must keep ignoring a closed row, so it is re-added with released rows skipped exactly as returned rows are. Hand-added, like the original: drizzle-kit cannot express an EXCLUDE constraint.
+-- diveday:allow-destructive drop-constraint gear_reservations.gear_reservations_no_overlap: re-added one statement later as the same constraint with a WHERE that also skips released rows; the previous release never writes released_at, so every row it writes or reads is judged exactly as before
+ALTER TABLE "gear_reservations" DROP CONSTRAINT "gear_reservations_no_overlap";--> statement-breakpoint
+ALTER TABLE "gear_reservations" ADD CONSTRAINT "gear_reservations_no_overlap" EXCLUDE USING gist ("gear_item_id" WITH =, daterange("reserved_from", "reserved_until", '[]') WITH &&) WHERE ("returned_at" IS NULL AND "released_at" IS NULL);
