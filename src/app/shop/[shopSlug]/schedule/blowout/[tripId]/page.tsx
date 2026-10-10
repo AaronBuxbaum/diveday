@@ -274,9 +274,11 @@ export default async function BlowoutPage({
                 // their word on the row's line, not under it. A `Tr`, because
                 // the name's `RowLink` overlay positions against its
                 // `relative`: the name is the row's one door, and it was a
-                // 17–37px target (K-322).
+                // 17–37px target (K-322). `clip={false}` keeps that overlay
+                // row-wide (a clipping cell bounds it to itself, #1989), and
+                // `break-words` wraps the name the dropped clip no longer cuts.
                 <Tr key={diver.id}>
-                  <Td align="baseline">
+                  <Td clip={false} align="baseline" className="break-words">
                     <RowLink
                       href={shopPath(shopSlug, "divers", diver.personId)}
                       className="font-medium text-foreground hover:text-primary hover:underline"

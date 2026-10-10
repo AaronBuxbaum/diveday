@@ -314,27 +314,26 @@ export function Tr({ className = "", children, ...rest }: React.ComponentPropsWi
  * were shipping an 18px word — 34 of them on the gear register, tapped
  * one-handed at the wall (issue #786).
  *
- * **`min-h-11` is the guarantee, and the overlay is not.** The pattern this was
- * lifted from (`DiverList`) is described in its own comment as stretching the
- * link across the whole `<tr>` via `after:inset-0` — and it does not, because
- * `Td` carries `overflow-hidden`, which clips the pseudo-element to the cell. I
- * probed it: a point at the far edge of a divers row does not land on the row's
- * link. That table passes the 44px floor for an unrelated reason — its link
- * wraps a `size-10` avatar, so the box is 44px tall by content.
+ * **`min-h-11` is the guarantee; the overlay widens it to the cell.** The
+ * link's `after:absolute after:inset-0` stretches over whatever its containing
+ * block is, and CSS clips an absolute box only by an `overflow` ancestor at or
+ * inside that block — never by one sitting *between* the box and it. While
+ * every `Td` was static the block was `Tr`, so the cell's `overflow-hidden`
+ * clipped nothing: the overlay covered the whole row, and on the Orders index
+ * a click on the imported row's receipt link, in another cell, opened the
+ * diver instead (#1989; this comment used to claim the cell clipped it).
  *
- * So the height is stated rather than inherited from whatever the cell happens
- * to contain, and the overlay is kept for what it actually does: make the whole
- * *cell* the target instead of the word inside it, which on a phone is the
- * difference between a 50px word and a 200px column. Removing `overflow-hidden`
- * to win the rest of the row is a change to every table in the app and belongs
- * on its own.
+ * So a clipping `Td` that holds a `RowLink` as a direct child is `relative`
+ * (`data-row-link` is what it looks for): the overlay is then the *cell*, and
+ * the cell's clip bounds it — on a phone the difference between a 50px word and
+ * a 200px column, without taking the row's other links. Only cells holding the
+ * link are positioned, so a popover in any other cell is not newly clipped.
  *
  * **The focus ring is on the overlay, not the text**, so it traces the target a
  * pointer actually has, and `focus-ring-inset` draws it wholly inside the
- * overlay's own edge, where no clip flush with that edge can cut it. (A browser
- * lab drew the overlay, and its ring, across the whole row rather than the
- * cell, the cell's `overflow-hidden` notwithstanding; #1989 checks that in the
- * app.) The link's own ring is off, so focus is drawn once: until the global
+ * overlay's own edge, where no clip flush with that edge can cut it, and so
+ * the ring is as wide as the target: the cell, or with `clip={false}` the row.
+ * The link's own ring is off, so focus is drawn once: until the global
  * ring moved into `@layer base` it overrode that `outline-none` and the text
  * wore a second ring. The pixel probe reads only the element's own outline, so
  * it calls this `focus-invisible` — settled in
@@ -342,8 +341,8 @@ export function Tr({ className = "", children, ...rest }: React.ComponentPropsWi
  * the outline guard in `src/app/focus-ring.test.ts`.
  *
  * **To win the whole row**, the cell holding this says `clip={false}` — see
- * `Td`, which carries the two conditions that come with it. The dive-site
- * library is the first table to take it.
+ * `Td`, which carries the two conditions that come with it. Trip prep's
+ * packing list and the blowout record take it: each row has one destination.
  */
 export function RowLink({
   href,
@@ -361,6 +360,7 @@ export function RowLink({
     <Link
       href={href}
       onClick={onClick}
+      data-row-link=""
       className={`${tapTargetLinkClass} after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none focus-visible:after:focus-ring-inset ${className}`.trim()}
     >
       {children}
@@ -398,15 +398,14 @@ export function Td({
    * **Let this cell's `RowLink` overlay reach the rest of the row.**
    *
    * `overflow-hidden` is the default because `table-layout: fixed` lets a long
-   * unbreakable token bleed sideways into the next column. It also clips
-   * `RowLink`'s `after:inset-0` — which is why that component's own doc says
-   * the overlay makes the whole *cell* the target and not the row, and calls
-   * winning the rest of the row "a change to every table in the app" that
-   * "belongs on its own". This is that change, opted into one cell at a time
-   * rather than taken from every table at once.
+   * unbreakable token bleed sideways into the next column. A clipping cell that
+   * holds a `RowLink` is also `relative`, so the link's `after:inset-0` overlay
+   * is the cell and the clip bounds it — see `RowLink`. (Without `relative` the
+   * clip did nothing: the overlay's containing block was the `Tr`, outside the
+   * cell, #1989.)
    *
-   * The overlay positions against `Tr`'s `relative`, so dropping the clip on
-   * the cell that holds the link stretches it across the full row. Two
+   * With `clip={false}` the cell stays static, so the overlay positions
+   * against `Tr`'s `relative` and stretches across the full row. Two
    * conditions, both the caller's to meet:
    *
    * - **The row has exactly one destination.** The overlay covers every other
@@ -421,7 +420,7 @@ export function Td({
 }) {
   return (
     <td
-      className={`${clip ? "overflow-hidden" : ""} bg-clip-padding ${CELL_ALIGN[align]} ${pad ? CELL_PAD : ""} ${
+      className={`${clip ? "overflow-hidden has-[>[data-row-link]]:relative" : ""} bg-clip-padding ${CELL_ALIGN[align]} ${pad ? CELL_PAD : ""} ${
         numeric ? "text-right whitespace-nowrap tabular-nums" : ""
       } ${muted ? "text-muted" : ""} ${hideBelow ? HIDE_BELOW[hideBelow] : ""} ${className}`
         .replace(/\s+/g, " ")

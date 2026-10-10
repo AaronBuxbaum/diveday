@@ -961,9 +961,12 @@ export function PrepBody({
                         // pads and hands (44 − 20) / 2 into the cell's `py-3`,
                         // so the name keeps the kit's first line, the row its
                         // height, and a wrapped name its second line clear of
-                        // the dive-recency note under it.
+                        // the dive-recency note under it. `clip={false}` keeps
+                        // that overlay row-wide (a clipping cell bounds it to
+                        // itself, #1989); `break-words` wraps a long name the
+                        // dropped clip no longer cuts.
                         <Tr key={line.bookingId}>
-                          <Td className="font-medium">
+                          <Td clip={false} className="font-medium break-words">
                             <RowLink
                               href={`/shop/${shopSlug}/divers/${line.personId}`}
                               className="py-3 -my-3 hover:text-primary hover:underline"
