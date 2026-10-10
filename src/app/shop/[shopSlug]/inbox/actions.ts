@@ -1,6 +1,7 @@
 "use server";
 
 import { notFound } from "next/navigation";
+import { z } from "zod";
 import { loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
 import {
@@ -8,10 +9,14 @@ import {
   markInboundAnswered,
   reopenInboundMessage,
 } from "@/db/inbound-messages";
+import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+
+/** A row's "⋯" posts its message id, and Done/Reopen says which (issue #2233). */
+const messageForm = z.object({ messageId: z.string().default(""), done: z.string().optional() });
 
 /**
  * **Delete a message from a sender nobody on the roster holds** (issue #1506;
@@ -65,7 +70,8 @@ export async function deleteInboxMessageAction(formData: FormData): Promise<void
   // its own: a string that is not an id names no row, which is the same thing
   // a wrong-tenant or already-deleted id means, and the staffer's next move is
   // identical either way.
-  const messageId = uuidParam(String(formData.get("messageId") ?? ""));
+  const parsed = parseForm(messageForm, formData);
+  const messageId = parsed.ok ? uuidParam(parsed.data.messageId) : null;
   if (!messageId) revalidateAndRedirect(inbox, noticeUrl(inbox, "gone"));
 
   const deleted = await deleteStrangerInboundMessage(db, session.user.shopId, messageId);
@@ -92,10 +98,11 @@ export async function setInboxMessageDoneAction(formData: FormData): Promise<voi
   const db = await getDb();
   if (!(await loadActiveStaffRoles(db, session.user.shopId, session.user.personId))) notFound();
 
-  const messageId = uuidParam(String(formData.get("messageId") ?? ""));
-  if (!messageId) revalidateAndRedirect(inbox, noticeUrl(inbox, "gone"));
+  const parsed = parseForm(messageForm, formData);
+  const messageId = parsed.ok ? uuidParam(parsed.data.messageId) : null;
+  if (!parsed.ok || !messageId) revalidateAndRedirect(inbox, noticeUrl(inbox, "gone"));
 
-  const done = formData.get("done") !== "false";
+  const done = parsed.data.done !== "false";
   const changed = done
     ? await markInboundAnswered(db, session.user.shopId, messageId)
     : await reopenInboundMessage(db, session.user.shopId, messageId);

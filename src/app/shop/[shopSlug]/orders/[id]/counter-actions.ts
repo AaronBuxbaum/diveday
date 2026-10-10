@@ -6,7 +6,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { uuidParam } from "@/lib/uuid";
+import { postedOrderId } from "./order-form";
 
 /**
  * Void an order paid at the counter, to correct a mistake (ADR
@@ -17,7 +17,7 @@ import { uuidParam } from "@/lib/uuid";
  */
 export async function voidCounterAction(formData: FormData) {
   const session = await requireStaffSession();
-  const orderId = uuidParam(String(formData.get("orderId") ?? "")) ?? "";
+  const orderId = postedOrderId(formData);
   const db = await getDb();
   const back = shopPath(session.user.shopSlug, "orders", orderId);
   if (!(await hasRequiredStepUp(db, session, "money"))) {

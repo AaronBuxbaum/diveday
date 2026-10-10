@@ -4,7 +4,7 @@ import { DAY_MS, HOUR_MS, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
-import { bookings, courses, people, staffShifts, tripAssignments } from "./schema";
+import { bookings, courses, people, personRoles, staffShifts, tripAssignments } from "./schema";
 import { createStaffShift, crewShiftCoverage, getStaffingView } from "./staffing";
 import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "./trips";
 
@@ -426,6 +426,42 @@ describe("staffing view", () => {
    * pass means the title key is doing the work rather than the rows happening
    * to arrive sorted.
    */
+  /**
+   * Two crew sharing a name (issue #2176). The staff list ordered by the name
+   * alone, so namesakes came back in whatever order the server returned them
+   * and their rows traded places on the staffing week between loads; their
+   * roles, read off the same join, likewise. Four namesakes, inserted against
+   * id order, so a pass means the id key is doing the work: by chance the
+   * odds are one in twenty-four.
+   */
+  it("orders crew who share a name by id, and each person's roles most senior first", async () => {
+    const { db, shop } = ctx;
+    const inserted = await db
+      .insert(people)
+      .values(
+        [0, 1, 2, 3].map((n) => ({
+          shopId: shop.id,
+          fullName: "Zz Namesake",
+          email: `staffing-namesake-${n}@example.com`,
+        })),
+      )
+      .returning({ id: people.id });
+    const ids = inserted.map((row) => row.id);
+    const againstIdOrder = [...ids].sort().reverse();
+    for (const personId of againstIdOrder) {
+      await db.insert(personRoles).values([
+        { personId, role: "divemaster" },
+        { personId, role: "instructor" },
+      ]);
+    }
+
+    const view = await getStaffingView(db, shop.id, new Date(nowMs()), new Date(nowMs() + DAY_MS));
+    const namesakes = view.staff.filter((entry) => entry.person.fullName === "Zz Namesake");
+    expect(namesakes.map((entry) => entry.person.id)).toEqual([...ids].sort());
+    // The role enum's own order (owner, manager, instructor, divemaster, …).
+    for (const entry of namesakes) expect(entry.roles).toEqual(["instructor", "divemaster"]);
+  });
+
   it("orders departures sharing a start time by title, not by arrival", async () => {
     const { db, shop } = ctx;
     const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);

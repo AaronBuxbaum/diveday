@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { canPersonReadPrivateRecapPulse } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { markRecapPulseAddressed } from "@/db/recap-pulses";
@@ -12,6 +13,7 @@ import {
   setReviewStandout,
   setReviewsPublished,
 } from "@/db/reviews";
+import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -35,6 +37,21 @@ import { isUuid } from "@/lib/uuid";
  * every query, so a form replayed against another shop's review id still
  * changes nothing.
  * -------------------------------------------------------------------------- */
+
+/**
+ * One review's controls, as posted. Every field but the id is optional, and a
+ * reason or note the form did not send reads as absent (issue #2233).
+ */
+const reviewRowForm = z.object({
+  reviewId: z.string().default(""),
+  intent: z.string().optional(),
+  standout: z.string().optional(),
+  publish: z.string().optional(),
+  reason: z.string().optional(),
+  reasonNote: z.string().default(""),
+});
+
+const pulseForm = z.object({ pulseId: z.string().default("") });
 
 /** What a tap on one review's controls did. `null` is "nothing yet". */
 export type ReviewActionResult =
@@ -87,11 +104,14 @@ export async function reviewRowAction(
   // an ordinary string being spliced into a path, and every segment it builds
   // is escaped (src/lib/staff-notices.ts).
   const reviews = shopPath(session.user.shopSlug, "reviews");
-  const reviewId = String(formData.get("reviewId") ?? "");
+  const parsed = parseForm(reviewRowForm, formData);
+  if (!parsed.ok) return { ok: false, reviewId: "", reason: "error" };
+  const form = parsed.data;
+  const { reviewId } = form;
   if (!isUuid(reviewId)) return { ok: false, reviewId, reason: "error" };
 
-  if (formData.get("intent") === "standout") {
-    const standout = formData.get("standout") === "true";
+  if (form.intent === "standout") {
+    const standout = form.standout === "true";
     const outcome = await setReviewStandout(await getDb(), session.user.shopId, reviewId, standout);
     if (outcome !== true) return { ok: false, reviewId, reason: "error" };
     revalidatePath(reviews);
@@ -110,11 +130,11 @@ export async function reviewRowAction(
    * renders a land-then-undo `<UndoToast>` whose Undo posts straight back to
    * this action (docs/design/principles.md #7).
    */
-  const publish = formData.get("publish") === "true";
+  const publish = form.publish === "true";
   const outcome = await setReviewPublished(await getDb(), session.user.shopId, reviewId, publish, {
     recordedByPersonId: session.user.personId,
-    reason: parseReviewModerationReason(formData.get("reason")),
-    reasonNote: String(formData.get("reasonNote") ?? ""),
+    reason: parseReviewModerationReason(form.reason),
+    reasonNote: form.reasonNote,
   });
   if (outcome === "reason_required") return { ok: false, reviewId, reason: "reason-required" };
   if (outcome === "note_required") return { ok: false, reviewId, reason: "note-required" };
@@ -128,10 +148,8 @@ export async function reviewRowAction(
 }
 
 /** A posted value narrowed to a real reason code, or null — never a coerced one. */
-function parseReviewModerationReason(
-  value: FormDataEntryValue | null,
-): ReviewModerationReason | null {
-  const candidate = typeof value === "string" ? value : "";
+function parseReviewModerationReason(value: string | undefined): ReviewModerationReason | null {
+  const candidate = value ?? "";
   return REVIEW_MODERATION_REASONS.includes(candidate as ReviewModerationReason)
     ? (candidate as ReviewModerationReason)
     : null;
@@ -208,7 +226,9 @@ export async function markPulseAddressedAction(formData: FormData) {
   if (!(await canPersonReadPrivateRecapPulse(db, session.user.shopId, session.user.personId))) {
     redirect(noticeUrl(reviews, "pulse-not-authorized"));
   }
-  const pulseId = String(formData.get("pulseId") ?? "");
+  const parsed = parseForm(pulseForm, formData);
+  if (!parsed.ok) redirect(noticeUrl(reviews, "error"));
+  const { pulseId } = parsed.data;
   const marked = await markRecapPulseAddressed(
     db,
     session.user.shopId,

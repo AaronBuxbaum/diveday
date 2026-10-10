@@ -104,6 +104,8 @@ export function qualifyingAlternatives(input: BlowoutOfferInput): string[] {
   const alreadyBooked = new Set(input.diver.bookedTripIds);
   const type = input.diver.participantType ?? "diver";
 
+  // Soonest first, then id, so a cap falling between two same-minute
+  // departures keeps the same one whatever order they arrived in (#2176).
   return input.candidates
     .filter((candidate) => {
       if (candidate.id === input.cancelledTripId) return false;
@@ -127,7 +129,10 @@ export function qualifyingAlternatives(input: BlowoutOfferInput): string[] {
         participantType: type,
       }).admitted;
     })
-    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+    .sort(
+      (a, b) =>
+        a.startsAt.getTime() - b.startsAt.getTime() || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+    )
     .slice(0, maxOffers)
     .map((candidate) => candidate.id);
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import { fitAdjustedReturnTeaching } from "@/db/gear";
 import { updateHelpRequestStatus } from "@/db/help-requests";
@@ -17,6 +18,7 @@ import {
   unpauseTripRecapAutoSend,
 } from "@/db/recap";
 import { confirmRentalFitSize } from "@/db/rental-fit";
+import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -36,6 +38,15 @@ import { uuidParam } from "@/lib/uuid";
  * resolves the tenant from the session, which is what makes them safe to bind
  * anywhere.
  */
+
+/** The evening acts' forms, read through one parser (issue #2233). */
+const recapNoteForm = z.object({ recapShoutout: z.string().default("") });
+const photoForm = z.object({ photoId: z.string().default("") });
+const crewPhotoForm = z.object({ crewPhoto: z.instanceof(File).refine((file) => file.size > 0) });
+const recapPauseForm = z.object({
+  tripId: z.string().default(""),
+  paused: z.string().optional(),
+});
 
 /** Where every act below lands: the home, which is now the evening's own page. */
 async function shopHome() {
@@ -73,15 +84,18 @@ export async function saveRecapNoteAction(tripId: string, formData: FormData) {
   if (await hasSentTripRecap(actionDb, staff.user.shopId, tripId)) {
     revalidateAndRedirect(home, noticeUrl(home, "recap-locked", { noted: tripId }));
   }
-  const note = String(formData.get("recapShoutout") ?? "").slice(0, 400);
+  const parsed = parseForm(recapNoteForm, formData);
+  if (!parsed.ok) revalidateAndRedirect(home, noticeUrl(home, "invalid", { noted: tripId }));
+  const note = parsed.data.recapShoutout.slice(0, 400);
   await setTripRecapShoutout(actionDb, staff.user.shopId, tripId, note);
   revalidateAndRedirect(home, `${home}?noted=${encodeURIComponent(tripId)}`);
 }
 
 export async function deleteRecapPhotoAction(tripId: string, formData: FormData) {
   const { staff, home } = await shopHome();
-  const photoId = String(formData.get("photoId") ?? "");
-  if (!photoId) redirect(home);
+  const parsed = parseForm(photoForm, formData);
+  if (!parsed.ok || !parsed.data.photoId) redirect(home);
+  const { photoId } = parsed.data;
   const db = await getDb();
   if (await hasSentTripRecap(db, staff.user.shopId, tripId)) redirect(home);
   const result = await deleteRecapPhoto(db, staff.user.shopId, photoId);
@@ -105,10 +119,11 @@ export async function uploadCrewRecapPhotoAction(tripId: string, formData: FormD
   if (await hasSentTripRecap(db, staff.user.shopId, tripId)) {
     revalidateAndRedirect(home, noticeUrl(home, "recap-locked", { noted: tripId }));
   }
-  const file = formData.get("crewPhoto");
-  if (!(file instanceof File) || file.size === 0) {
+  const parsed = parseForm(crewPhotoForm, formData);
+  if (!parsed.ok) {
     revalidateAndRedirect(home, noticeUrl(home, "crew-photo-failed", { noted: tripId }));
   }
+  const file = parsed.data.crewPhoto;
   const eligibility = await canAddCrewRecapPhoto(db, {
     shopId: staff.user.shopId,
     tripId,
@@ -149,8 +164,9 @@ export async function uploadCrewRecapPhotoAction(tripId: string, formData: FormD
 
 export async function deleteCrewRecapPhotoAction(tripId: string, formData: FormData) {
   const { staff, home } = await shopHome();
-  const photoId = String(formData.get("photoId") ?? "");
-  if (!photoId) redirect(home);
+  const parsed = parseForm(photoForm, formData);
+  if (!parsed.ok || !parsed.data.photoId) redirect(home);
+  const { photoId } = parsed.data;
   const db = await getDb();
   if (await hasSentTripRecap(db, staff.user.shopId, tripId)) redirect(home);
   const result = await deleteCrewRecapPhoto(db, staff.user.shopId, photoId);
@@ -227,9 +243,10 @@ export async function keepRentalFitAction(reservationId: string) {
 
 export async function toggleRecapAutoSendPauseAction(formData: FormData) {
   const { staff, home } = await shopHome();
-  const tripId = String(formData.get("tripId") ?? "");
-  const paused = formData.get("paused") === "true";
-  if (!tripId) redirect(home);
+  const parsed = parseForm(recapPauseForm, formData);
+  if (!parsed.ok || !parsed.data.tripId) redirect(home);
+  const { tripId } = parsed.data;
+  const paused = parsed.data.paused === "true";
   const db = await getDb();
   if (paused) {
     await pauseTripRecapAutoSend(db, staff.user.shopId, tripId);

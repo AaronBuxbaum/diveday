@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { z } from "zod";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { EntryShell } from "@/components/account/EntryShell";
 import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
@@ -14,6 +15,7 @@ import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { getAuth } from "@/lib/auth";
+import { parseForm } from "@/lib/form-parse";
 import { setUpHref } from "@/lib/funnel";
 import { publicSchedulePath, shopSlugFromStaffUrl } from "@/lib/public-routes";
 
@@ -41,15 +43,25 @@ export async function generateMetadata(): Promise<Metadata> {
 // /api/auth/sign-in/diveday-credentials, if a route ever mounts the handler),
 // so it is the one chokepoint that can't be bypassed. A check here too would
 // double-consume the same budget (CR-013).
+const signInForm = z.object({
+  email: z.string().default(""),
+  password: z.string().default(""),
+  totpCode: z.string().default(""),
+});
+
 async function authenticate(formData: FormData) {
   "use server";
+  // A form that is not three strings is a wrong password, said the same way.
+  const parsed = parseForm(signInForm, formData);
+  if (!parsed.ok) redirect("/sign-in?error=1");
+  const { email, password, totpCode } = parsed.data;
   try {
     const auth = await getAuth();
     await auth.api.signInDiveDayCredentials({
       body: {
-        email: String(formData.get("email") ?? ""),
-        password: String(formData.get("password") ?? ""),
-        totpCode: String(formData.get("totpCode") ?? "").trim() || undefined,
+        email,
+        password,
+        totpCode: totpCode.trim() || undefined,
       },
       headers: await headers(),
     });

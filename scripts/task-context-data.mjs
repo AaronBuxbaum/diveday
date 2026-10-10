@@ -392,6 +392,7 @@ export const areas = {
     code: [
       "src/lib/auth.ts",
       "src/lib/auth-secret.ts",
+      "src/lib/session-cookie-cache.ts",
       "src/lib/embed-routes.ts",
       "src/lib/authz.ts",
       "src/lib/session.ts",

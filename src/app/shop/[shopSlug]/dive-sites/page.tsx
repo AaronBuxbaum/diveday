@@ -23,7 +23,6 @@ import {
   type GlobalDiveSiteTemplateRow,
   getGlobalDiveSiteTemplate,
   groupSiteLibrary,
-  importGlobalDiveSiteTemplate,
   listDiveSitesPage,
   listGlobalDiveSiteTemplates,
 } from "@/db/dive-sites";
@@ -43,6 +42,7 @@ import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { SiteLibraryLedger } from "./_components/SiteLibraryLedger";
+import { importTemplateFromForm } from "./site-forms";
 
 /** `?notice=` codes this page redirects back to itself with. Read through
  * `noticeFromParam`, never a bare `NOTICES[notice]` — the param is
@@ -327,8 +327,7 @@ async function CatalogView({
   async function importAction(formData: FormData) {
     "use server";
     const active = await requireStaffSession();
-    const id = String(formData.get("templateId") ?? "");
-    const site = await importGlobalDiveSiteTemplate(await getDb(), active.user.shopId, id);
+    const site = await importTemplateFromForm(await getDb(), active.user.shopId, formData);
     if (!site) revalidateAndRedirect(back);
     revalidateAndRedirect(back, noticeUrl(`${back}/${site.id}`, "imported"));
   }

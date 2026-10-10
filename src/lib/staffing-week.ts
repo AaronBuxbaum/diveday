@@ -371,8 +371,26 @@ function dayOf(startsAt: Date, timeZone: string, within: Set<CalendarDate>): Cal
   return within.has(date) ? date : null;
 }
 
-function byStart(a: { startsAt: Date }, b: { startsAt: Date }): number {
-  return a.startsAt.getTime() - b.startsAt.getTime();
+/**
+ * What a cell sorts by: when it starts, then the title the reader sees, then
+ * the row's own id (issue #2176). Start time alone left two boats at the same
+ * minute in whatever order they arrived, and a stable sort over an unordered
+ * source is still unordered, so the week traded them between loads. A shift
+ * has no title and falls straight through to its id; a departure's id is its
+ * `tripId`. Code-unit comparison, as `src/db/staffing.ts` does, so the order
+ * cannot vary with the host's collation.
+ */
+type StartOrdered = { startsAt: Date; title?: string; tripId?: string; id?: string };
+
+function byStart(a: StartOrdered, b: StartOrdered): number {
+  const byTime = a.startsAt.getTime() - b.startsAt.getTime();
+  if (byTime !== 0) return byTime;
+  const titleA = a.title ?? "";
+  const titleB = b.title ?? "";
+  if (titleA !== titleB) return titleA < titleB ? -1 : 1;
+  const idA = a.tripId ?? a.id ?? "";
+  const idB = b.tripId ?? b.id ?? "";
+  return idA < idB ? -1 : idA > idB ? 1 : 0;
 }
 
 /**

@@ -27,6 +27,7 @@ import {
 } from "../_components/site-editor-copy";
 import { siteFormErrorMessages } from "../_components/site-form-errors";
 import { siteFormSections, siteFormUnsavedCopy } from "../_components/site-form-sections";
+import { siteFormExtras } from "../site-forms";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -122,7 +123,7 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
       planningNote: { words: planningNoteWords, byPersonId: activeSession.user.personId },
       minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
       requiredSpecialties: specialties.data,
-      requiresNitrox: formData.get("requiresNitrox") === "on",
+      requiresNitrox: siteFormExtras(formData).requiresNitrox,
       difficultyLevel: parsed.difficultyLevel,
       depthRange: parsed.fields.depthRange,
       maxDepthMeters: parsed.maxDepthMeters,

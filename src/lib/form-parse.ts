@@ -10,7 +10,18 @@ import { z } from "zod";
  * the offending fields by name (codes, not sentences — `src/lib` holds no copy),
  * so a caller that marks a field can.
  */
-export type FormParse<T> = { ok: true; data: T } | { ok: false; fields: string[] };
+export type FormParse<T> =
+  | { ok: true; data: T }
+  | {
+      ok: false;
+      fields: string[];
+      /**
+       * The schema's own messages, in issue order. Only meaningful for a schema
+       * whose messages are codes it chose (`onboardSchema`, src/lib/onboarding.ts);
+       * zod's defaults are English sentences and never reach a reader.
+       */
+      messages: string[];
+    };
 
 /**
  * `FormData` as a plain object for a schema to read. A name sent once is its
@@ -44,7 +55,7 @@ export function parseForm<Schema extends z.ZodType>(
       parsed.error.issues.map((issue) => (issue.path.length > 0 ? String(issue.path[0]) : "")),
     ),
   ];
-  return { ok: false, fields };
+  return { ok: false, fields, messages: parsed.error.issues.map((issue) => issue.message) };
 }
 
 /**

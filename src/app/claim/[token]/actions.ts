@@ -8,6 +8,7 @@ import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { claimPartySeat } from "@/db/seat-claims";
 import { requestFirstHandLocale } from "@/i18n/request";
 import { claimLinkPath, readinessLinkPath } from "@/lib/booking-capabilities";
+import { parseForm } from "@/lib/form-parse";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -16,7 +17,8 @@ const claimSchema = z.object({
   // Shared diver person-field bounds (src/lib/person-fields.ts).
   fullName: diverNameSchema,
   email: diverEmailSchema,
-  phone: diverPhoneSchema.optional(),
+  // An empty box is no phone, as it always was: "" reads as absent.
+  phone: z.preprocess((value) => value || undefined, diverPhoneSchema.optional()),
 });
 
 /**
@@ -39,12 +41,8 @@ export async function claimSeatAction(token: string, formData: FormData) {
   ) {
     redirect(`${base}?error=rate`);
   }
-  const parsed = claimSchema.safeParse({
-    fullName: formData.get("fullName"),
-    email: formData.get("email"),
-    phone: formData.get("phone") || undefined,
-  });
-  if (!parsed.success) redirect(`${base}?error=fields`);
+  const parsed = parseForm(claimSchema, formData);
+  if (!parsed.ok) redirect(`${base}?error=fields`);
 
   const db = await getDb();
   const outcome = await claimPartySeat(db, {

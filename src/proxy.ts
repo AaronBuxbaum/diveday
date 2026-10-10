@@ -1,9 +1,8 @@
-import { getCookieCache, getSessionCookie } from "better-auth/cookies";
+import { getSessionCookie } from "better-auth/cookies";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { rememberedPublicRouteLookup } from "@/db/public-route-existence";
-import { authSecret } from "@/lib/auth-secret";
 import { isStaff, type Role } from "@/lib/authz";
 import {
   BUDDY_COOKIE,
@@ -51,6 +50,7 @@ import {
   REFERRAL_COOKIE_MAX_AGE,
   REFERRAL_COOKIE_PATH,
 } from "@/lib/referrals";
+import { readSessionCookieCache } from "@/lib/session-cookie-cache";
 
 const STAFF_PREFIX = "/shop";
 
@@ -106,17 +106,9 @@ type CachedSessionSnapshot = {
 async function authGateResponse(req: NextRequest): Promise<Response | undefined> {
   const { pathname } = req.nextUrl;
   const hasSession = getSessionCookie(req) !== null;
-  const cache = hasSession
-    ? await getCookieCache(req, {
-        secret: authSecret,
-        strategy: "jwe",
-        // Keep the edge reader aligned with buildAuth().advanced.useSecureCookies.
-        // The e2e fleet deliberately uses unprefixed cookies over loopback HTTP;
-        // Better Auth otherwise defaults this cache reader to the production
-        // __Secure- name even though the session cookie itself accepts either.
-        isSecure: process.env.DIVEDAY_E2E !== "1",
-      }).catch(() => null)
-    : null;
+  // The same reader the server-side session read asks whether the cache is
+  // warm (`src/lib/session-cookie-cache.ts`), so the two cannot disagree.
+  const cache = hasSession ? await readSessionCookieCache(req) : null;
   const session = cache?.session as unknown as CachedSessionSnapshot | undefined;
   const roles = session?.roles;
   const shopSlug = session?.shopSlug;

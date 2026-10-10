@@ -227,9 +227,9 @@ export async function getStaffingView(
       // reached the screen, and the staffing week's "Needs crew" cards traded
       // places between loads with nothing underneath them changing.
       //
-      // **Title before id, unlike the schedule board's keyset page**
-      // (`src/db/trips-queries.ts`, departure-then-id because a cursor needs a
-      // unique key). `trips.id` is `defaultRandom()`, so an id tiebreak is
+      // **Title before id**, as the schedule board's keyset page now orders
+      // too (`src/db/trips-queries.ts`, issue #2175). `trips.id` is
+      // `defaultRandom()`, so an id tiebreak is
       // stable within one database and *random across reseeds* — which is
       // exactly the shape the `staffing-week-crew-clash` capture was showing:
       // its fixture starts two trips at 2:30 PM, and they came back one way on
@@ -261,7 +261,10 @@ export async function getStaffingView(
           gt(trips.endsAt, from),
           isNull(people.deletedAt),
         ),
-      ),
+      )
+      // An explicit order rather than the server's row order (issue #2176): the
+      // per-trip crew sets below are filled in this order.
+      .orderBy(asc(people.fullName), asc(people.id)),
   ]);
 
   const shiftsByPerson = new Map<string, (typeof staffShifts.$inferSelect)[]>();
