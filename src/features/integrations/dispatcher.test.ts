@@ -7,8 +7,14 @@ import { enqueueOrderIntegrationEvent } from "@/db/integration-events";
 import { saveShopIntegration } from "@/db/integrations";
 import { integrationDeliveries, orders, shopIntegrations } from "@/db/schema";
 import { nowDate, nowMs } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { dispatchDueIntegrationDeliveries, INTEGRATIONS_CRON_CRONTAB } from "./dispatcher";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`). The overlapping-passes race
+// hydrates its own, so the two passes are not interleaved savepoints of one
+// transaction.
+const historyCtx = fileScopedShopContext({ history: true });
 
 const HOOK = "https://hooks.zapier.com/hooks/catch/123456/abcdef";
 
@@ -59,7 +65,7 @@ async function queueOrderPaid(db: AppDb, shopId: string, key: string, dueAtMs?: 
  */
 describe("dispatchDueIntegrationDeliveries", () => {
   it("delivers a due event and marks the integration healthy", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = historyCtx;
     const integration = await connectZapier(db, shop.id);
     const { delivery } = await queueOrderPaid(db, shop.id, "order:paid:1");
     const fetchImpl = vi.fn(async () => jsonResponse(200));
@@ -83,7 +89,7 @@ describe("dispatchDueIntegrationDeliveries", () => {
   });
 
   it("schedules a retry on a retryable failure and leaves the connection healthy", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = historyCtx;
     const integration = await connectZapier(db, shop.id);
     const { delivery } = await queueOrderPaid(db, shop.id, "order:paid:2");
 
@@ -107,7 +113,7 @@ describe("dispatchDueIntegrationDeliveries", () => {
   });
 
   it("errors the integration on a refusal it will never outgrow", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = historyCtx;
     const integration = await connectZapier(db, shop.id);
     const { delivery } = await queueOrderPaid(db, shop.id, "order:paid:3");
 
@@ -130,7 +136,7 @@ describe("dispatchDueIntegrationDeliveries", () => {
   });
 
   it("stops trying at the attempt ceiling", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = historyCtx;
     await connectZapier(db, shop.id);
     const { delivery } = await queueOrderPaid(db, shop.id, "order:paid:4");
     await db
@@ -179,7 +185,7 @@ describe("dispatchDueIntegrationDeliveries", () => {
   });
 
   it("does not drain a provider the shop disconnected", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = historyCtx;
     await connectZapier(db, shop.id);
     await queueOrderPaid(db, shop.id, "order:paid:6");
     await db
@@ -198,7 +204,7 @@ describe("dispatchDueIntegrationDeliveries", () => {
    * that the row holds no identity, and that the delivery still carries one.
    */
   it("sends the diver's name without ever storing it", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = historyCtx;
     await connectZapier(db, shop.id);
     const { event } = await queueOrderPaid(db, shop.id, "order:paid:7");
 
@@ -263,7 +269,7 @@ describe("the outbox drain's cadence", () => {
 describe("which end of the due set a drain takes", () => {
   /** Two stale deliveries ahead of one written just now, with room for two. */
   async function backlogAheadOfAFreshWrite() {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = historyCtx;
     await connectZapier(db, shop.id);
     const oldest = await queueOrderPaid(db, shop.id, "order:paid:old-1", nowMs() - 600_000);
     const older = await queueOrderPaid(db, shop.id, "order:paid:old-2", nowMs() - 300_000);

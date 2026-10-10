@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { shopContactEmailConfirmationTokens, shops } from "./schema";
 import {
   checkShopContactEmailConfirmation,
@@ -10,10 +10,14 @@ import {
 } from "./shop-contact-email";
 import { setShopContact } from "./shops";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 const at = new Date("2026-09-02T12:00:00.000Z");
 
 async function shopWithAddress(email = "Desk@BlueMantis.dive") {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   await setShopContact(db, shop.id, { contactEmail: email, contactPhone: "" });
   return { db, shop };
 }
@@ -150,7 +154,7 @@ describe("confirming a shop's contact email", () => {
   });
 
   it("is unknown for a token that was never minted", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     expect(
       await checkShopContactEmailConfirmation(db, { token: "not-a-token", now: at }),
     ).toBeNull();

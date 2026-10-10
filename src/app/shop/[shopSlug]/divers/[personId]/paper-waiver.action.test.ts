@@ -12,13 +12,17 @@ import {
   waiverRecords,
 } from "@/db/schema";
 import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * "Mark signed on paper", from the diver's own record.
@@ -78,7 +82,7 @@ async function completedWaivers(db: AppDb, shopId: string, personId: string) {
 }
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
   vi.mocked(requireStaffSession).mockResolvedValue(
