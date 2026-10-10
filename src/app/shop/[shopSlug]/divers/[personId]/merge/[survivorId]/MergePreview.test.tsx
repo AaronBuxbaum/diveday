@@ -150,7 +150,7 @@ describe("the merge preview", () => {
       }),
     );
     expect(screen.queryByText(/Both records hold a seat/)).toBeNull();
-    expect(screen.getByText(/The kept record’s seat on this departure is cancelled/)).toBeVisible();
+    expect(screen.getByText(/The kept record’s seat on this departure is canceled/)).toBeVisible();
     expect(screen.getByRole("link", { name: /Two-Tank Reef/ })).toBeVisible();
     // The way out is the swap the page already offers.
     expect(screen.getByRole("link", { name: "Keep Maya Rivera instead" })).toBeVisible();
