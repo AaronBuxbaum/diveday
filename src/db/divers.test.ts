@@ -2716,6 +2716,34 @@ describe("findSimilarDivers name similarity and exact matching", () => {
     const noMatches = await findSimilarDivers(db, shop.id, "Jane Smith");
     expect(noMatches).toHaveLength(0);
   });
+
+  /**
+   * H-79 (issue #1698): the date of birth is the fact that tells two people
+   * with one name apart, so it rides on every candidate, and a record nobody
+   * has dated stays null rather than inventing one.
+   */
+  it("carries each candidate's date of birth, and null where none is on file", async () => {
+    const { db, shop } = ctx;
+    const dated = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Wilhelmina Oyelaran",
+      email: "w.oyelaran.dated@example.com",
+    });
+    const undated = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Wilhelmina Oyelaran",
+      email: "w.oyelaran.undated@example.com",
+    });
+    if (!dated || !undated) throw new Error("createDiver refused a candidate");
+    // Dated the way a record usually gets one: on the diver record, later.
+    await db.update(people).set({ dateOfBirth: "1984-03-09" }).where(eq(people.id, dated.id));
+
+    const matches = await findSimilarDivers(db, shop.id, "Wilhelmina Oyelaran");
+    const birthDates = new Map(matches.map((match) => [match.id, match.dateOfBirth]));
+
+    expect(birthDates.get(dated.id)).toBe("1984-03-09");
+    expect(birthDates.get(undated.id)).toBeNull();
+  });
 });
 
 /**

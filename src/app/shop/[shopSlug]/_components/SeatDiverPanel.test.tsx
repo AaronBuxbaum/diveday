@@ -33,6 +33,7 @@ const copy: SeatDiverPanelCopy = {
     "Is this the same Nadia Ruis? Picking one reuses that diver’s record, and their certifications and waiver only count once someone confirms it’s the same person.",
   confirmMatchesLastDive: (at) => `Last dive day here: ${at.toISOString().slice(0, 10)}`,
   confirmMatchesNoDiveDay: "No dive days here yet",
+  confirmMatchesBorn: (dateOfBirth) => `Born ${dateOfBirth}`,
 };
 
 const match = (over: Partial<SimilarDiver> = {}): SimilarDiver => ({
@@ -40,6 +41,7 @@ const match = (over: Partial<SimilarDiver> = {}): SimilarDiver => ({
   fullName: "Nadia Ruiz",
   email: null,
   phone: null,
+  dateOfBirth: null,
   lastDiveDayAt: null,
   ...over,
 });
@@ -103,6 +105,29 @@ describe("SeatDiverPanel name-match prompt", () => {
     // nobody's history — neither may raise the flag, or every seat is blocked
     // and the counter learns to tap past it.
     expect(container.querySelectorAll('input[name="fromNameMatch"]')).toHaveLength(1);
+  });
+
+  /**
+   * H-79 (issue #1698): the date of birth is what tells two people with one
+   * name apart. This panel is both the walk-in door and the global add-booking
+   * door, so one pin covers both pages; each page's own formatter is the
+   * `confirmMatchesBorn` it hands in.
+   */
+  it("prints a candidate's date of birth beside the contact line, and nothing where none is on file", () => {
+    renderPanel([
+      match({ email: "nadia@example.test", dateOfBirth: "1984-03-09" }),
+      match({ id: "person-3", fullName: "Nadia Ruiseco", email: "ruiseco@example.test" }),
+    ]);
+
+    expect(screen.getByText("Born 1984-03-09").closest("li")).toHaveTextContent(
+      "Nadia Ruiz(nadia@example.test)Born 1984-03-09",
+    );
+    // The undated record is the common case at this counter: no label, no
+    // empty parenthesis, no stray separator.
+    expect(screen.getByRole("button", { name: "Nadia Ruiseco" }).closest("li")).toHaveTextContent(
+      /^Nadia Ruiseco\(ruiseco@example\.test\)$/,
+    );
+    expect(screen.getAllByText(/^Born /)).toHaveLength(1);
   });
 
   it("carries the last dive day the page dated, and says so where there is none", () => {

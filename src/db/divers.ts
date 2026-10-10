@@ -832,6 +832,20 @@ export type SimilarDiver = {
   email: string | null;
   phone: string | null;
   /**
+   * The person row's own date of birth, as stored (a `YYYY-MM-DD` calendar
+   * date), or null when nobody has put one on file — which is the normal case
+   * for a record the counter created, since the staff create-diver form does
+   * not ask for it.
+   *
+   * **Printed on purpose** (H-79, issue #1698): it is the field that most
+   * reliably tells two people with one name apart, the staffer is already
+   * choosing between two humans, and it is a weaker disclosure than the
+   * emergency contact the manifest prints. The raw date goes no further than
+   * this prompt: roster, manifest and check-in still print only what follows
+   * from it (age, minor, birthday), and the kiosk strips it entirely.
+   */
+  dateOfBirth: string | null;
+  /**
    * The most recent departure this diver was actually on, or null when this
    * shop has no dive day on file for them.
    *
@@ -877,6 +891,7 @@ export async function findSimilarDivers(
       fullName: people.fullName,
       email: people.email,
       phone: people.phone,
+      dateOfBirth: people.dateOfBirth,
     })
     .from(people)
     .innerJoin(personRoles, eq(personRoles.personId, people.id))

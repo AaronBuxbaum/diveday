@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { noDiveDayNeedsSaying } from "./name-match-evidence";
+import { candidateBirthDate, noDiveDayNeedsSaying } from "./name-match-evidence";
 
 /**
  * One rule, three doors (the walk-in panel, the trip's Add-diver section, and
@@ -22,5 +22,25 @@ describe("noDiveDayNeedsSaying", () => {
   it("is quiet for a list with no candidates at all", () => {
     // There is no prompt on screen to bias.
     expect(noDiveDayNeedsSaying([])).toBe(false);
+  });
+});
+
+/**
+ * H-79 (issue #1698). Null is the common case at this prompt, so what matters
+ * most is that a candidate with no usable date prints nothing at all.
+ */
+describe("candidateBirthDate", () => {
+  it("passes a stored calendar date through", () => {
+    expect(candidateBirthDate({ dateOfBirth: "1984-03-09" })).toBe("1984-03-09");
+  });
+
+  it("prints nothing for a record nobody has dated", () => {
+    expect(candidateBirthDate({ dateOfBirth: null })).toBeNull();
+    expect(candidateBirthDate({ dateOfBirth: "" })).toBeNull();
+  });
+
+  it("prints nothing for a value that is not a real day", () => {
+    expect(candidateBirthDate({ dateOfBirth: "1984-02-31" })).toBeNull();
+    expect(candidateBirthDate({ dateOfBirth: "not a date" })).toBeNull();
   });
 });

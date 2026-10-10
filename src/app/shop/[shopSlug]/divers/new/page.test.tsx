@@ -52,6 +52,7 @@ const MATCH = {
   fullName: "Nadia Ruiz",
   email: "nadia@example.com",
   phone: "+529985550100",
+  dateOfBirth: null,
   lastDiveDayAt: null,
 };
 
@@ -159,6 +160,20 @@ describe("NewDiverPage name-match prompt", () => {
     // keys; the sentences themselves are pinned in `i18n/name-match-prompt`.
     expect(screen.getByText("divers.page.confirmMatchesLastDive")).toBeInTheDocument();
     expect(screen.getByText("divers.page.confirmMatchesNoDiveDay")).toBeInTheDocument();
+  });
+
+  it("prints a candidate's date of birth, and nothing where none is on file", async () => {
+    // H-79 (issue #1698). The translator echoes keys here, so the line shows
+    // as its key; the undated sibling must add nothing beside its contact line.
+    await renderPage(seatingArm, [
+      { ...MATCH, dateOfBirth: "1984-03-09" },
+      { ...MATCH, id: "44444444-4444-4444-8444-444444444444", fullName: "Nadia Ruiseco" },
+    ]);
+
+    expect(screen.getAllByText("divers.page.confirmMatchesBorn")).toHaveLength(1);
+    expect(screen.getByText("divers.page.confirmMatchesBorn").closest("li")).toHaveTextContent(
+      MATCH.email,
+    );
   });
 
   it("says nothing about dive days when this shop has one for nobody on the list", async () => {
