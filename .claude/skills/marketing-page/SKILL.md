@@ -69,7 +69,7 @@ written down.
   clipboard, the counter, the boat.
 - No fabricated proof of any kind (testimonials, counts, logos, ratings).
 - Offline wording in captain's words; implementation words (sync, cache, encryption, fail-closed)
-  never appear.
+  never appear. `pnpm check:voice` refuses them; "encrypted" passes only on the privacy keys it names.
 - No engineering-process vocabulary either — "ADR," "requirements," spec, or ticket never appear;
   those are internal artifacts, not something a buyer reads about.
 - Price never restated outside `src/lib/marketing.ts` — prose, JSON-LD, and images included.

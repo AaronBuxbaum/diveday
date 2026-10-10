@@ -242,6 +242,8 @@ carry at least as much weight as the refusals:
   it is what the thing is called, never because it reads well. The hit is reported once per
   phrase, naming the pages.
 
+**Implementation words joined it on 2026-10-10** (issue #2104), on the same public-page strings as the shapes, in both locales: *sync* and *synchronize* in every form, *cache*/*cached*, *fail-closed*, *offline-first*, and the Spanish *sincroniz-* and *caché*/*en caché* (rule `implementation`). The marketing-page skill's checklist already forbade them; the boat manifest feature page shipped a description saying roll calls "sync" when the phone reconnects anyway, and a reviewer caught it by reading. *Encrypted* (Spanish *cifrado*, *encriptado*) is refused the same way (rule `encryption`) except on the keys in `ENCRYPTION_ALLOWLIST`, each with its reason beside it: the privacy page's paragraphs on what a crew phone holds offline, on what the push service is handed, and the Spanish "contraseña cifrada". There it is the fact a reader came for. The allowlist is keyed rather than per page, so a new privacy paragraph has to argue for its word. *API*, *database* and *webhooks* are deliberately not refused: the switching guides use them correctly about the incumbents' products, and a buyer comparing exports asks by those words.
+
 **American spelling joined it on 2026-10-06** (H-95): *colour*, *centre*, *cancelled*, *grey*,
 *enrolment* and the rest of `BRITISH_SPELLINGS` are refused in every English bundle value, in a
 route's metadata, and in every prose literal (a string with a space in it) in a non-test `.ts`/`.tsx`
