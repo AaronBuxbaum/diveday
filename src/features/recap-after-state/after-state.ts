@@ -271,7 +271,17 @@ export async function buildAfterStateProps(input: {
       brandColor: shop.brandColor,
       brandDisplayFont: shop.brandDisplayFont,
     },
-    trip,
+    // Field by field, never `trip` itself: the recap's trip also carries the
+    // server-side-only `id`, `courseId` and `lensId`, and the `Pick` in the
+    // type does not strip them from the object.
+    trip: {
+      title: trip.title,
+      waterTemperatureC: trip.waterTemperatureC,
+      visibilityMeters: trip.visibilityMeters,
+      surfaceConditions: trip.surfaceConditions,
+      boatName: trip.boatName,
+      crew: trip.crew,
+    },
     course: data.course,
     // The postcard's drawing: the first site the day dived, read the way the
     // home spine reads a departure's (`siteMarkFor`), or the sea fan for a
