@@ -54,7 +54,7 @@ test.describe("owner", () => {
     await page.goto("/shop/blue-mantis/reports");
     const box = page.getByLabel("Jump to a month");
     await expect(box).toHaveAttribute("data-hydrated", "true");
-    await box.fill("2026-03");
+    await box.selectOption("2026-03");
 
     await expect(page).toHaveURL(/reports\?month=2026-03$/);
     await expect(page.getByRole("heading", { level: 2, name: "March 2026" })).toBeVisible();
