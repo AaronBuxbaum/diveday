@@ -1271,7 +1271,10 @@ describe("counterRentalWaiverStandings", () => {
   it("answers nothing for a deleted person, so no send is offered that would fail", async () => {
     const { db, shop } = await rentalShop();
     const gone = await person(db, shop.id, "Gone Diver");
-    await db.update(people).set({ deletedAt: new Date() }).where(eq(people.id, gone.id));
+    await db
+      .update(people)
+      .set({ deletedAt: new Date("2026-01-01T00:00:00Z") })
+      .where(eq(people.id, gone.id));
     const standings = await counterRentalWaiverStandings(db, {
       shopId: shop.id,
       timezone: shop.timezone,
