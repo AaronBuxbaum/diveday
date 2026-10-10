@@ -438,6 +438,21 @@ describe("DateRequestForm — four asks at rest", () => {
   });
 
   /**
+   * The disclosure rule (docs/design/forms-and-controls.md, "Required fields",
+   * issue #1867): a folded field is optional by position, so it carries neither
+   * a hint nor a native `required` a closed disclosure could never satisfy.
+   */
+  it("asks nothing of a field behind the disclosure: no hint and no required", () => {
+    const { container } = renderInquiry(vi.fn(), { askInterest: true });
+    const more = container.querySelector("details");
+    expect(more).not.toBeNull();
+    const folded = more?.querySelectorAll("input, select, textarea") ?? [];
+    expect(folded.length).toBe(3);
+    for (const control of folded) expect(control).not.toBeRequired();
+    expect(more?.textContent).not.toMatch(/\((?:optional|required)\)/);
+  });
+
+  /**
    * The three answers a diver almost never has sit behind "More details" —
    * closed at rest, and still part of the form, because a `<details>` hides
    * its content without taking it out of the submission.
