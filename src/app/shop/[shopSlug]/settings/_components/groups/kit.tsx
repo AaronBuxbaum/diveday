@@ -8,8 +8,8 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { requireShopSurface } from "@/lib/session";
 import { type ShopFeature, shopOffers } from "@/lib/shop-features";
 import { noticeRole } from "@/lib/staff-notices";
-import { saveShopFeatureAction } from "../../actions";
 import { SETTINGS_GROUPS, type SectionId } from "../../settings-groups";
+import { saveShopFeatureAction } from "../../shop-actions";
 import { SettingsRow } from "../SettingsRows";
 
 /**

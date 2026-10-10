@@ -23,7 +23,7 @@ import {
   saveSeasonStartAction,
   saveTimezoneAction,
   saveUnitsAction,
-} from "../../actions";
+} from "../../shop-actions";
 import { SettingsRow } from "../SettingsRows";
 import { SectionNotice, SettingsGroup, type SettingsView, SHOP_GROUP } from "./kit";
 

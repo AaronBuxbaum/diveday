@@ -42,25 +42,16 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { revalidatePath } = await import("next/cache");
 const { requireStaffSession } = await import("@/lib/session");
-const {
-  disconnectAction,
-  refreshAction,
-  dischargeProcessorErasureAction,
-  retryMediaDeletionAction,
-  retryProcessorErasureAction,
-  saveAddressAction,
-  saveCrewScheduleAction,
-  saveShopFeatureAction,
-  saveDockDayRhythmAction,
-  saveEmergencyReferenceAction,
-  savePackingAction,
-  saveProfileAction,
-  saveRentalItemsAction,
-  saveRentalPricingAction,
-  saveTaxAction,
-  saveTimezoneAction,
-  saveUnitsAction,
-} = await import("./actions");
+const { saveDockDayRhythmAction, saveEmergencyReferenceAction } = await import("./boat-actions");
+const { savePackingAction } = await import("./booking-actions");
+const { dischargeProcessorErasureAction, retryMediaDeletionAction, retryProcessorErasureAction } =
+  await import("./data-actions");
+const { disconnectAction, refreshAction, saveTaxAction } = await import("./money-actions");
+const { saveRentalItemsAction, saveRentalPricingAction } = await import("./rental-actions");
+const { saveAddressAction, saveShopFeatureAction, saveTimezoneAction, saveUnitsAction } =
+  await import("./shop-actions");
+const { saveCrewScheduleAction } = await import("./team-actions");
+const { saveProfileAction } = await import("./website-actions");
 
 async function context() {
   const { db, shop } = await seededShopContext();
