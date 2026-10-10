@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { HandEntryPrompt } from "@/components/seat-diver/HandEntryPrompt";
+import { NameMatchCandidateFacts } from "@/components/seat-diver/NameMatchCandidateFacts";
 import { PersonCandidateList } from "@/components/seat-diver/PersonCandidateList";
 import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
 import { buttonClass } from "@/components/ui/button";
@@ -8,11 +9,8 @@ import { FormStatus } from "@/components/ui/form";
 import type { BookableDiver, SimilarDiver } from "@/db/divers";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { formatCalendarDate } from "@/lib/calendar-date";
 import { rentalFitLine } from "@/lib/dive-prep";
-import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
-import { formatShortDate } from "@/lib/format";
-import { candidateBirthDate, noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
+import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { newDiverHref } from "@/lib/person-fields";
 import type { FormNotice } from "@/lib/staff-notices";
 
@@ -99,13 +97,6 @@ export function AddDiverSection({
   // A candidate with no dive day says so only when a sibling has one; the rule
   // and the bias it corrects are in `noDiveDayNeedsSaying`.
   const sayNoDiveDay = noDiveDayNeedsSaying(confirmMatches ?? []);
-  // A candidate's date of birth (H-79, issue #1698), or null to print nothing.
-  const bornLine = (match: SimilarDiver) => {
-    const dateOfBirth = candidateBirthDate(match);
-    return dateOfBirth
-      ? t("divers.page.confirmMatchesBorn", { date: formatCalendarDate(dateOfBirth, locale) })
-      : null;
-  };
   const bookNewDiver = newDiverHref(shopSlug, { query, surface: "trip-guests", tripId });
   const walkInNewDiver = newDiverHref(shopSlug, { query, surface: "walk-in", tripId });
   const bookLabel = t("trips.addDiver.addNewDiverAction", { query });
@@ -138,29 +129,14 @@ export function AddDiverSection({
                       {match.fullName}
                     </button>
                   </form>
-                  {match.email || match.phone ? (
-                    <span className="text-muted text-xs ms-1">
-                      (
-                      {[match.email, displayStoredPhoneWhole(match.phone)]
-                        .filter(Boolean)
-                        .join(", ")}
-                      )
-                    </span>
-                  ) : null}
-                  {bornLine(match) ? (
-                    <span className="text-muted text-xs ms-1">{bornLine(match)}</span>
-                  ) : null}
-                  {match.lastDiveDayAt ? (
-                    <span className="text-muted text-xs ms-1">
-                      {t("divers.page.confirmMatchesLastDive", {
-                        date: formatShortDate(match.lastDiveDayAt, locale, timeZone),
-                      })}
-                    </span>
-                  ) : sayNoDiveDay ? (
-                    <span className="text-muted text-xs ms-1">
-                      {t("divers.page.confirmMatchesNoDiveDay")}
-                    </span>
-                  ) : null}
+                  <NameMatchCandidateFacts
+                    match={match}
+                    sayNoDiveDay={sayNoDiveDay}
+                    t={t}
+                    locale={locale}
+                    timeZone={timeZone}
+                    size="xs"
+                  />
                 </li>
               ))}
             </ul>

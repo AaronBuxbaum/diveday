@@ -10,20 +10,19 @@ import { FormDraft } from "@/components/FormDraft";
 import { formDraftCopy } from "@/components/form-draft-copy";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { NameMatchCandidateFacts } from "@/components/seat-diver/NameMatchCandidateFacts";
 import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FieldActions } from "@/components/ui/form";
 import { getDb } from "@/db/client";
-import { createDiver, findSimilarDivers, type SimilarDiver } from "@/db/divers";
+import { createDiver, findSimilarDivers } from "@/db/divers";
 import { discardFormDraft, readFormDraft } from "@/db/form-drafts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { formatCalendarDate } from "@/lib/calendar-date";
-import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { parseForm } from "@/lib/form-parse";
-import { formatShortDate, formatTime } from "@/lib/format";
-import { candidateBirthDate, noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
+import { formatTime } from "@/lib/format";
+import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import {
   blankableDiverEmailSchema,
@@ -120,13 +119,6 @@ export default async function NewDiverPage({
   // A candidate with no dive day says so only when a sibling has one; the rule
   // and the bias it corrects are in `noDiveDayNeedsSaying`.
   const sayNoDiveDay = noDiveDayNeedsSaying(potentialMatches);
-  // A candidate's date of birth (H-79, issue #1698), or null to print nothing.
-  const bornLine = (match: SimilarDiver) => {
-    const dateOfBirth = candidateBirthDate(match);
-    return dateOfBirth
-      ? t("divers.page.confirmMatchesBorn", { date: formatCalendarDate(dateOfBirth, locale) })
-      : null;
-  };
 
   const rawQuery = q?.trim() ?? "";
   const prefill = diverSearchPrefill(rawQuery);
@@ -318,29 +310,14 @@ export default async function NewDiverPage({
                       {match.fullName}
                     </Link>
                   )}
-                  {match.email || match.phone ? (
-                    <span className="text-muted text-sm ms-1">
-                      (
-                      {[match.email, displayStoredPhoneWhole(match.phone)]
-                        .filter(Boolean)
-                        .join(", ")}
-                      )
-                    </span>
-                  ) : null}
-                  {bornLine(match) ? (
-                    <span className="text-muted text-sm ms-1">{bornLine(match)}</span>
-                  ) : null}
-                  {match.lastDiveDayAt ? (
-                    <span className="text-muted text-sm ms-1">
-                      {t("divers.page.confirmMatchesLastDive", {
-                        date: formatShortDate(match.lastDiveDayAt, locale, shop.timezone),
-                      })}
-                    </span>
-                  ) : sayNoDiveDay ? (
-                    <span className="text-muted text-sm ms-1">
-                      {t("divers.page.confirmMatchesNoDiveDay")}
-                    </span>
-                  ) : null}
+                  <NameMatchCandidateFacts
+                    match={match}
+                    sayNoDiveDay={sayNoDiveDay}
+                    t={t}
+                    locale={locale}
+                    timeZone={shop.timezone}
+                    size="sm"
+                  />
                 </li>
               ))}
             </ul>
