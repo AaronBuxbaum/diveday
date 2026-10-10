@@ -35,6 +35,7 @@ import {
 import {
   bookings,
   certifications,
+  executedDives,
   notificationDeliveries,
   people,
   priorVisits,
@@ -212,6 +213,32 @@ describe("getRecapPageData", () => {
     // Their real first dive day, and the one the "First dive day" stamp exists
     // for: `visitMilestone` is exact equality on {1, 10, 25, 50, 100}, so a
     // phantom day does not blur a milestone — it skips it permanently.
+    expect((await getRecapPageData(db, bookingId))?.visitCount).toBe(1);
+
+    // …unless the crew logged a dive on it before the call (H-84, issue
+    // #1694): a logged dive is the same affirmative evidence the counter's
+    // name-match prompt and the fly-safe advisory already trust, so the
+    // diver's own count may not refuse a day the counter names.
+    const [logged] = await db
+      .insert(executedDives)
+      .values({ shopId: shop.id, tripId: other.id, diveNumber: 1 })
+      .returning({ id: executedDives.id });
+    if (!logged) throw new Error("test setup: the logged dive was not written");
+    expect((await getRecapPageData(db, bookingId))?.visitCount).toBe(2);
+
+    // A deleted log speaks for nothing.
+    await db
+      .update(executedDives)
+      .set({ deletedAt: nowDate() })
+      .where(eq(executedDives.id, logged.id));
+    expect((await getRecapPageData(db, bookingId))?.visitCount).toBe(1);
+
+    // And a no-show on that day has no escape, logged dives or not.
+    await db.update(executedDives).set({ deletedAt: null }).where(eq(executedDives.id, logged.id));
+    await db
+      .update(bookings)
+      .set({ status: "no_show" })
+      .where(and(eq(bookings.tripId, other.id), eq(bookings.shopId, shop.id)));
     expect((await getRecapPageData(db, bookingId))?.visitCount).toBe(1);
   });
 

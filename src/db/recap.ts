@@ -31,6 +31,7 @@ import { loadActiveStaffRoles } from "./authz";
 import { getBoatForHistory } from "./boats";
 import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
+import { diveDay } from "./dive-days";
 import { listSiteFieldGuides } from "./dive-sites";
 import { listExecutedDives, peopleWhoDivedBefore } from "./executed-dives";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
@@ -639,20 +640,17 @@ async function loadRecapPageData(
         and(
           eq(bookings.shopId, row.shopId),
           eq(bookings.personId, row.personId),
-          ne(bookings.status, "cancelled"),
-          ne(bookings.status, "no_show"),
-          // **A blown-out departure is not a dive day.** A cancellation
-          // leaves its bookings active by design, so without this the count
-          // includes days nobody dived — and the imported half of the same
-          // merge already refuses exactly that (`priorVisitStanding(...) !==
-          // "did_not_happen"`, below). `visitMilestone` is exact equality on
-          // {1, 10, 25, 50, 100}, so one phantom day does not blur a
-          // milestone, it skips it permanently: a first-timer whose first
-          // trip blew out and who rebooked would reach their real first dive
-          // counted as their second, and never see the "First dive day"
-          // stamp at all.
-          eq(trips.status, "scheduled"),
-          liveTrip(),
+          // **The one dive-day rule** (`src/db/dive-days.ts`, issue #1694),
+          // which the counter's name-match prompt reads too. A blown-out
+          // departure is not a dive day unless the crew logged a dive on it
+          // (H-84): a cancellation leaves its bookings active by design, so a
+          // plain status read counts days nobody dived, and the imported half
+          // of this merge refuses exactly that (`did_not_happen`, below).
+          // `visitMilestone` is exact equality on {1, 10, 25, 50, 100}, so a
+          // day that moves in or out skips a stamp permanently rather than
+          // blurring it: which is why this count may never disagree with the
+          // prompt that names the day to a staffer.
+          diveDay(),
           lte(trips.startsAt, trip.startsAt),
         ),
       ),

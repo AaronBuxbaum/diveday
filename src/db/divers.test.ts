@@ -2693,15 +2693,13 @@ describe("findSimilarDivers name similarity and exact matching", () => {
  * not an answer — the name is what the staffer just typed, which is why every
  * candidate is on the list. The day the shop last had that person on a boat is
  * what makes "is this the same Nadia who dived yesterday?" answerable, and it
- * is the same day `peopleWhoDivedBefore` counts, so the counter and the
- * fly-safe reader cannot disagree about what a dive day is.
+ * is the day `diveDay()` counts (`src/db/dive-days.ts`, issue #1694), the rule
+ * the recap's own count reads too, so the counter can never name a day the
+ * diver's keepsake refuses.
  *
- * That rule includes both of the fly-safe reader's escapes, which is what makes
- * this the widest of the three readers of "did this person dive" — the recap's
- * count is narrower on purpose, and
- * `SimilarDiver.lastDiveDayAt` argues why (issue #1694). The two cases below
- * are the escapes; without them the counter goes quiet on exactly the days a
- * shop's own records disagree with the status column.
+ * The cases below pin the rule's edges; without the logged-dive escape the
+ * counter goes quiet on exactly the days a shop's own records disagree with
+ * the status column.
  */
 describe("findSimilarDivers last dive day", () => {
   const HOUR_MS = 60 * 60 * 1000;

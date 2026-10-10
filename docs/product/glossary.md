@@ -1874,21 +1874,21 @@ new domain concept, define it here in the same PR.
   the 06:40 tap. No sweep exists and none is coming: `markBookingNoShow` (`src/db/no-show.ts`) is
   the only writer of that status, it is one staffer's deliberate tap on one seat, and check-in
   refuses anything but a `booked` seat — so the sighting is always the older statement, and the
-  escape only ever let 06:40 beat 07:15. **The cancellations have escapes, and the three readers
-  carry different ones.** A cancelled departure the crew logged dives on is a dive day to the
-  fly-safe reader (`peopleWhoDivedBefore`, `src/db/executed-dives.ts`) and to the counter's
-  name-match prompt (`SimilarDiver.lastDiveDayAt`, `src/db/divers.ts`) — but not to the recap's own
-  count (`getRecapPageData`, `src/db/recap.ts`), which still reads a plain non-`scheduled` departure
-  as disqualifying. The gap is deliberate: the two that widened answer a staffer who can see the
-  person and can shake their head, while this count tells the diver "your 3rd dive day" with nobody
-  there to correct it and feeds `visitMilestone`'s exact equality, where a day that moves skips a
-  stamp permanently rather than blurring it. **The fly-safe reader has a second, wider escape:
-  the roll call outranks a later desk word** (issue #1836). A standing roll-call result meaning the
-  person sailed counts the day even when the booking or the departure was marked `cancelled`
-  afterwards, logged dives or not, because both cancel doors check neither the clock nor the roll
-  call and being wrong there hands a two-day diver the single-day flying wait. The name-match prompt
-  deliberately makes the opposite trade and would rather ask. Putting all three behind one predicate
-  is issue #1694, and these two may legitimately keep disagreeing.
+  escape only ever let 06:40 beat 07:15. **The rule is one predicate**, `diveDay()` in
+  `src/db/dive-days.ts` (issue #1694, ruled H-84), and every reader calls it: the recap's own count
+  (`getRecapPageData`, `src/db/recap.ts`), the counter's name-match prompt
+  (`SimilarDiver.lastDiveDayAt`, `src/db/divers.ts`) and the fly-safe reader
+  (`peopleWhoDivedBefore`, `src/db/executed-dives.ts`). **A cancelled departure the crew logged a
+  live dive on is a dive day** to all three: a logged dive is affirmative evidence that beats a
+  status changed afterwards for a refund or a blow-out called after the first tank, so the count
+  that feeds `visitMilestone`'s exact equality can never refuse a day the counter names. **The
+  fly-safe reader alone has a second, wider escape: the roll call outranks a later desk word**
+  (issue #1836). It calls the rule's two halves apart (`seatCanBeDiveDay`, which nothing outranks,
+  and `deskCountsDiveDay`), so a standing roll-call result meaning the person sailed counts the day
+  even when the booking or the departure was marked `cancelled` afterwards, logged dives or not,
+  because both cancel doors check neither the clock nor the roll call and being wrong there hands a
+  two-day diver the single-day flying wait. The name-match prompt and the recap deliberately make
+  the opposite trade.
 - **Milestone stamp** — the drawn double-ring roundel beside the dive record, on the dive days
   `src/lib/visit-milestones.ts` names and no others: the 1st, 10th, 25th, 50th and 100th. Exact
   equality, not "at least", so a miscounted day does not blur a milestone — it skips it permanently.
