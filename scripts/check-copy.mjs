@@ -220,6 +220,17 @@ export function looksLikeCopy(raw) {
   if (value.includes(";")) return false;
   // A ternary: `cond ? a : b`.
   if (/\s\?\s/.test(value) && /\s:\s/.test(value)) return false;
+  // The head of a ternary the window cut short: `row.editor ? (` is an arrow
+  // body's condition, and its `:` sits past the next `<` (issue #1864). The
+  // property-access rule below should excuse it and cannot, because its
+  // sentence-punctuation guard reads the ternary's own `? ` as the end of a
+  // question. That guard is load-bearing, so this is a rule of its own rather
+  // than a looser guard: the whole value is a member expression and a `?`, or a
+  // bare identifier, a `?` and the opening parenthesis of the branch. A
+  // sentence has a space before its last word and a member expression has none;
+  // a bare `Why?` with no parenthesis after it is still a question.
+  if (/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)+\s*\?\s*\(?$/.test(value)) return false;
+  if (/^[A-Za-z_$][\w$]*\s*\?\s*\($/.test(value)) return false;
   // Property access or a call — `trip.waiverComplete`, `foo()`.
   if (/[a-z]\.[A-Za-z_$][\w$]*/.test(value) && !/[.!?]\s/.test(value)) return false;
   if (/\w\(\s*\)/.test(value)) return false;
