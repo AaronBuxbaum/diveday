@@ -122,6 +122,7 @@
     "confirmMatchesTitle": "¿Es {name} alguna de estas personas? Al elegir una se reutiliza su ficha, y sus certificaciones y su exención no cuentan hasta que alguien confirme que es la misma persona.",
     "confirmMatchesLastDive": "Último día de buceo aquí: {date}",
     "confirmMatchesNoDiveDay": "Ningún día de buceo aquí todavía",
+    "confirmMatchesBorn": "Fecha de nacimiento: {date}",
     "confirmMatchesSubmit": "Crear nuevo buceador de todos modos"
   },
   "list": {
@@ -527,6 +528,7 @@
     "earlierRefusal": "Un médico no autorizó a esta persona el {date} (exención anterior).",
     "viewRefusedRecord": "Ver registro firmado",
     "referralUnresolved": "Firmada de nuevo tras una derivación médica: no consta autorización de un médico ({date}). Regístrala o pregunta.",
+    "viewReferralRecord": "Ver la derivación",
     "openClearanceDocument": "Abrir la evaluación médica"
   },
   "details": {

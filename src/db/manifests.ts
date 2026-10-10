@@ -898,6 +898,7 @@ export async function getTripManifests(
           ? {
               ...mark,
               overriddenReferralAt: row.overriddenReferralAt,
+              overriddenReferral: row.overriddenReferral,
               overriddenRefusal: row.overriddenRefusal,
             }
           : null,

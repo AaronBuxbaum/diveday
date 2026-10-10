@@ -8,6 +8,7 @@ import { getTripWithBooked } from "@/db/trips";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { arrivalsWindow } from "@/lib/operational-window";
@@ -183,6 +184,8 @@ export default async function WalkInDiverPage({
               date: formatShortDate(at, locale, shop.timezone),
             }),
           confirmMatchesNoDiveDay: t("divers.page.confirmMatchesNoDiveDay"),
+          confirmMatchesBorn: (dateOfBirth) =>
+            t("divers.page.confirmMatchesBorn", { date: formatCalendarDate(dateOfBirth, locale) }),
           confirmMatchesSubmit: t("divers.page.confirmMatchesSubmit"),
         }}
       />

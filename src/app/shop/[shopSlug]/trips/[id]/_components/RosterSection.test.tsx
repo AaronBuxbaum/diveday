@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { buttonClass } from "@/components/ui/button";
@@ -115,6 +115,8 @@ function renderRoster({
   requiresPayment = false,
   arrival,
   sameNameHeldSeats,
+  heldSeatLastDiveDay,
+  packageDivesByBooking,
   splitAsksDateOfBirth,
   certifyDefaultLevel,
 }: {
@@ -129,6 +131,8 @@ function renderRoster({
   requiresPayment?: boolean;
   arrival?: RosterArrival;
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
+  heldSeatLastDiveDay?: ReadonlyMap<string, Date | null>;
+  packageDivesByBooking?: ReadonlyMap<string, number>;
   splitAsksDateOfBirth?: boolean;
   /** Present means this is a course session's roster, with a Certify control. */
   certifyDefaultLevel?: "open_water" | "advanced_open_water" | null;
@@ -160,6 +164,8 @@ function renderRoster({
         nitroxByBooking: new Map() as NitroxByBooking,
         notesByBooking: new Map(),
         sameNameHeldSeats,
+        heldSeatLastDiveDay,
+        packageDivesByBooking,
       }}
       actions={{
         markWaiverInPersonAction: noRefusal,
@@ -568,6 +574,47 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     expect(same).toBeVisible();
     expect(same.closest("details")).toBeNull();
     expect(screen.getByText("Different person")).toBeVisible();
+  });
+
+  /**
+   * **The armed "Same person" carries the fact it turns on** (issue #1789,
+   * H-79): the matched diver's last dive day here, the same line the
+   * name-match prompt showed the staffer when the seat was taken. Said every
+   * time, including "none": this is one question about one person.
+   */
+  describe("the armed confirm's last dive day", () => {
+    const renderHeld = (lastDiveDay: Date | null) =>
+      renderRoster({
+        roster: [matched],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+        heldSeatLastDiveDay: new Map([["u", lastDiveDay]]),
+      });
+    const arm = () =>
+      fireEvent.click(screen.getByRole("button", { name: "Same person as Marisol Vega" }));
+
+    it("names the matched diver's last dive day here, once armed", () => {
+      renderHeld(new Date("2026-08-26T15:00:00Z"));
+      // Not on the row itself: the fact belongs to the deliberate question.
+      expect(screen.queryByText(/Last dive day here/)).toBeNull();
+
+      arm();
+
+      const armed = screen.getByRole("alert");
+      expect(within(armed).getByText("Last dive day here: Wed, Aug 26")).toBeInTheDocument();
+      expect(within(armed).queryByText("No dive days here yet")).toBeNull();
+    });
+
+    it("says there is none for a diver this shop has never had on a boat", () => {
+      renderHeld(null);
+
+      arm();
+
+      const armed = screen.getByRole("alert");
+      expect(within(armed).getByText("No dive days here yet")).toBeInTheDocument();
+      expect(within(armed).queryByText(/Last dive day here/)).toBeNull();
+    });
   });
 
   /**
@@ -1430,6 +1477,57 @@ describe("an earlier physician refusal under a cleared release", () => {
   });
 });
 
+/**
+ * **A clean release over a referral no physician answered: the seat clears,
+ * and the row warns with a link back** (Aaron, 2026-10-09, issue #2195,
+ * amending H-98). The same shape as the refusal above.
+ */
+describe("an unanswered referral under a cleared release", () => {
+  const referredRow = (status: "ready" | "blocked" = "ready") =>
+    ({
+      ...readinessRow(status),
+      overriddenReferralAt: new Date("2026-08-01T15:00:00Z"),
+      overriddenReferral: {
+        recordId: "w-referred",
+        personId: "p-r",
+        at: new Date("2026-08-01T15:00:00Z"),
+      },
+    }) as unknown as ReadinessByBooking extends Map<string, infer V> ? V : never;
+
+  it("warns in the open on a Ready row, with a link to the referral", () => {
+    renderRoster({
+      ...fixtures,
+      roster: [entry("r", "Noor Haddad")],
+      readiness: new Map([["r", referredRow()]]) as ReadinessByBooking,
+      waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
+    });
+
+    // Ready, not blocked: the override stands.
+    expect(screen.getByRole("heading", { name: /^Ready/ })).toBeVisible();
+    const line = screen.getByText(/Re-signed after a referral on/);
+    expect(line).toBeVisible();
+    expect(line.textContent).toMatch(/Aug\s1, with no physician clearance on file/);
+    const link = within(line.closest("li") as HTMLElement).getByRole("link", {
+      name: "View the referral",
+    });
+    expect(link).toHaveAttribute("href", "/shop/blue-mantis/divers/p-r/waivers/w-referred");
+  });
+
+  it("says nothing on a held seat: the referral is the matched person's history", () => {
+    const held = entry("r", "Noor Haddad", { identityBookedAs: "Noor H." });
+    (held.booking as { identityUnconfirmedAt: Date | null }).identityUnconfirmedAt = new Date(
+      "2026-08-20T15:00:00Z",
+    );
+    renderRoster({
+      ...fixtures,
+      roster: [held],
+      readiness: new Map([["r", referredRow("blocked")]]) as ReadinessByBooking,
+      waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
+    });
+    expect(screen.queryByText(/Re-signed after a referral on/)).toBeNull();
+  });
+});
+
 describe("certifying a student from a course session's roster (issue #2059)", () => {
   /** One per student row; every one of them opens the same way. */
   function awardSelects() {
@@ -1464,5 +1562,59 @@ describe("certifying a student from a course session's roster (issue #2059)", ()
     renderRoster({ ...fixtures });
     expect(screen.queryByText("Certify")).toBeNull();
     expect(screen.queryAllByRole("combobox", { name: /^Level/ })).toHaveLength(0);
+  });
+});
+
+/**
+ * **The fare stands, so the package is said first** (H-79, issue #1697). A
+ * fare taken at the desk is never unwound for a package, so the payment
+ * control names the diver's unused dives while there is still money to take.
+ */
+describe("unused package dives on the payment control", () => {
+  const renderSeat = (
+    paymentStatus: "unpaid" | "paid",
+    options: { held?: boolean; dives?: number } = {},
+  ) => {
+    const seat = entry("k", "Rosa Regular");
+    if (options.held) {
+      (seat.booking as { identityUnconfirmedAt: Date | null }).identityUnconfirmedAt = new Date(
+        "2026-10-01T12:00:00Z",
+      );
+    }
+    return renderRoster({
+      roster: [seat],
+      readiness: new Map([
+        ["k", { ...readinessRow("ready"), paymentStatus }],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["k", signedWaiver]]) as WaiverByBooking,
+      requiresPayment: true,
+      packageDivesByBooking: new Map(options.dives === 0 ? [] : [["k", options.dives ?? 4]]),
+    });
+  };
+
+  it("names the count beside an unpaid seat", () => {
+    renderSeat("unpaid");
+    expect(screen.getByTestId("payment-package-note")).toHaveTextContent(
+      "Has 4 unused package dives for this trip",
+    );
+  });
+
+  it("says nothing once the seat is paid: that fare stands", () => {
+    renderSeat("paid");
+    expect(screen.queryByTestId("payment-package-note")).toBeNull();
+  });
+
+  it("says nothing for a diver with no dives this trip could take", () => {
+    renderSeat("unpaid", { dives: 0 });
+    expect(screen.queryByTestId("payment-package-note")).toBeNull();
+  });
+
+  it("on a held seat, sends the desk to the identity question first and names no count", () => {
+    renderSeat("unpaid", { held: true });
+    const note = screen.getByTestId("payment-package-note");
+    expect(note).toHaveTextContent(
+      "Rosa Regular has unused package dives. Confirm who this is before taking payment.",
+    );
+    expect(note).not.toHaveTextContent(/\d/);
   });
 });

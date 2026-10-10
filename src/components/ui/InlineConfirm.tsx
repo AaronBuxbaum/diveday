@@ -38,6 +38,12 @@ type SharedProps = {
 type MessageModeProps = SharedProps & {
   /** Shown once armed — the refund/impact preview plus the "are you sure" line. Its presence is what selects this full shape over the compact one. */
   message: string;
+  /**
+   * A fact to weigh before confirming, printed under the question in muted
+   * ink: the matched diver's last dive day on a held seat's "Same person"
+   * (issue #1789). Optional; absent, nothing is drawn.
+   */
+  evidence?: string;
   cancelLabel: string;
   /**
    * The size the armed block's Cancel is drawn at, which should be the size
@@ -49,6 +55,7 @@ type MessageModeProps = SharedProps & {
 
 type CompactModeProps = SharedProps & {
   message?: undefined;
+  evidence?: undefined;
   cancelLabel?: undefined;
   /** No Cancel to size: the trigger is the whole control. */
   size?: undefined;
@@ -108,6 +115,7 @@ export function InlineConfirm(props: InlineConfirmProps) {
     confirmFields,
     formAction,
     message,
+    evidence,
     cancelLabel,
     size = "sm",
   } = props;
@@ -196,6 +204,7 @@ export function InlineConfirm(props: InlineConfirmProps) {
     return (
       <div className="rise-in rounded-lg border border-border bg-surface-sunken p-4" role="alert">
         <p className="text-sm">{message}</p>
+        {evidence ? <p className="mt-1 text-sm text-muted">{evidence}</p> : null}
         <div className="mt-3 flex flex-wrap gap-3">
           {Object.entries(confirmFields ?? {}).map(([name, value]) => (
             <input key={name} type="hidden" name={name} value={value} />

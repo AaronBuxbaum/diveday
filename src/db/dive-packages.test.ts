@@ -18,6 +18,7 @@ import {
   listSpendableEntitlements,
   releaseEntitlementForBooking,
   shopSellsPackages,
+  spendableDivesForTrip,
 } from "./dive-packages";
 import { setBookingPayment } from "./payments";
 import {
@@ -692,5 +693,48 @@ describe("confirming a name-match seat's identity", () => {
     ).toBe(true);
 
     expect(await countSpendableDives(db, shop.id, personId)).toBe(10);
+  });
+
+  /**
+   * **The fare stands, so the desk is told first** (H-79, issue #1697). The
+   * case above is not unwound; the roster's payment control instead reads
+   * this, so a staffer about to take money for the held seat sees that the
+   * diver it was matched to holds dives this trip could take.
+   */
+  it("tells the payment control about the dives while the seat waits, and stops once spent", async () => {
+    const { db, shop, staffPerson, personId, seat, plannedDives } =
+      await regularSeatedFromThePrompt();
+    const [held] = await db
+      .select({ courseId: tripsTable.courseId })
+      .from(bookings)
+      .innerJoin(tripsTable, eq(tripsTable.id, bookings.tripId))
+      .where(eq(bookings.id, seat.bookingId));
+    if (!held) throw new Error("the held seat vanished");
+
+    const before = await spendableDivesForTrip(db, shop.id, [personId], held);
+    expect(before.get(personId)).toBe(10);
+
+    await confirmBookingIdentity(db, {
+      shopId: shop.id,
+      bookingId: seat.bookingId,
+      actorPersonId: staffPerson.person.id,
+    });
+
+    const after = await spendableDivesForTrip(db, shop.id, [personId], held);
+    expect(after.get(personId)).toBe(10 - plannedDives);
+  });
+
+  it("says nothing of a package whose order was refunded", async () => {
+    const { db, shop, personId, seat } = await regularSeatedFromThePrompt();
+    await db.update(orders).set({ status: "refunded" }).where(eq(orders.personId, personId));
+    const [held] = await db
+      .select({ courseId: tripsTable.courseId })
+      .from(bookings)
+      .innerJoin(tripsTable, eq(tripsTable.id, bookings.tripId))
+      .where(eq(bookings.id, seat.bookingId));
+    if (!held) throw new Error("the held seat vanished");
+
+    const dives = await spendableDivesForTrip(db, shop.id, [personId], held);
+    expect(dives.has(personId)).toBe(false);
   });
 });
