@@ -34,7 +34,14 @@ export function decodeCursor(cursor: string | undefined): [string, string, strin
       // parses into the right *shape* carrying an id no column can hold; the
       // public schedule takes `?after=` from an anonymous visitor, so this is
       // the one place in this file with a caller nobody signed in.
-      isUuid(parsed[2])
+      isUuid(parsed[2]) &&
+      // The other two halves reach Postgres too, as a `timestamptz` and a
+      // `text` parameter, from the same anonymous `?after=`. A NUL in the
+      // title or a date outside what the column holds (an extended-year
+      // `+275760-…`) is a 500 there, not an empty page, so both are page one
+      // here (security review of issue #2175).
+      isStartInRange(parsed[0]) &&
+      isTitleTiebreak(parsed[1])
     ) {
       return [parsed[0], parsed[1], parsed[2]];
     }
@@ -42,4 +49,20 @@ export function decodeCursor(cursor: string | undefined): [string, string, strin
     // Fall through: a mangled cursor is just the first page.
   }
   return null;
+}
+
+/** The longest title a cursor may carry; a departure title is far shorter. */
+const MAX_CURSOR_TITLE = 500;
+// biome-ignore lint/suspicious/noControlCharactersInRegex: matching them is the point.
+const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
+
+function isTitleTiebreak(title: string): boolean {
+  return title.length <= MAX_CURSOR_TITLE && !CONTROL_CHARACTER.test(title);
+}
+
+function isStartInRange(start: string): boolean {
+  const ms = Date.parse(start);
+  if (Number.isNaN(ms)) return false;
+  const year = new Date(ms).getUTCFullYear();
+  return year >= 1970 && year <= 9999;
 }

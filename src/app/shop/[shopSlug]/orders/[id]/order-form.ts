@@ -18,8 +18,15 @@ export function postedOrderId(formData: FormData): string {
   return (parsed.ok && uuidParam(parsed.data.orderId)) || "";
 }
 
-/** The typed refund amount, trimmed; "" means the whole remaining balance. */
-export function postedRefundAmount(formData: FormData): string {
+/**
+ * The typed refund amount, trimmed; "" means the whole remaining balance. A
+ * form that does not read (a repeated field) or a figure that is not a finite
+ * number is `null`, never "": that would turn a malformed request into a full
+ * refund. The caller refuses `null` as an invalid amount.
+ */
+export function postedRefundAmount(formData: FormData): string | null {
   const parsed = parseForm(orderForm, formData);
-  return (parsed.ok ? (parsed.data.amountMajor ?? "") : "").trim();
+  if (!parsed.ok) return null;
+  const typed = (parsed.data.amountMajor ?? "").trim();
+  return typed && !Number.isFinite(Number(typed)) ? null : typed;
 }

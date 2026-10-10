@@ -93,7 +93,8 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
     const specialties = z
       .array(specialtySchema)
       .safeParse(formData.getAll("specialty").map(String));
-    if (!specialties.success) return refuse("invalid");
+    const extras = siteFormExtras(formData);
+    if (!specialties.success || !extras) return refuse("invalid");
     // Uploaded from the staffer's own device straight into first-party
     // storage — there is no pasted URL for a public page to fetch (CR-020).
     const photos = await uploadDiveSitePhotos(formData);
@@ -123,7 +124,7 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
       planningNote: { words: planningNoteWords, byPersonId: activeSession.user.personId },
       minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
       requiredSpecialties: specialties.data,
-      requiresNitrox: siteFormExtras(formData).requiresNitrox,
+      requiresNitrox: extras.requiresNitrox,
       difficultyLevel: parsed.difficultyLevel,
       depthRange: parsed.fields.depthRange,
       maxDepthMeters: parsed.maxDepthMeters,
