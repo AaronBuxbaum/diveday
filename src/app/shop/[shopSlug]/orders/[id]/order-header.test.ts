@@ -1,25 +1,17 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { orders, paymentDisputes, people } from "@/db/schema";
 import { seededShopContext } from "@/test/db";
 import {
   SEEDED_CAPTAIN_EMAIL,
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
 } from "@/test/staff-session";
-
-vi.mock("@/db/client", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/db/client")>();
-  return { ...actual, getDb: vi.fn() };
-});
-
-const { getDb } = await import("@/db/client");
-const { orders, paymentDisputes, people } = await import("@/db/schema");
-const { OrderDisputeBanner, OrderMeta } = await import("./OrderMeta");
+import { loadOrderHeader } from "./order-header";
 
 /** A seeded paid order with an undecided dispute on it. */
 async function disputedOrder() {
   const { db, shop } = await seededShopContext();
-  vi.mocked(getDb).mockResolvedValue(db);
   const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
   if (!person) throw new Error("seeded person missing");
   const [order] = await db
@@ -55,56 +47,39 @@ async function disputedOrder() {
   return { db, shop, order };
 }
 
-describe("OrderDisputeBanner", () => {
+describe("loadOrderHeader's dispute", () => {
   it("shows the dispute to someone who may read the shop's money", async () => {
     const { db, shop, order } = await disputedOrder();
     const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
-    const banner = await OrderDisputeBanner({
-      shop,
+    const { dispute } = await loadOrderHeader(db, {
+      shopId: shop.id,
       orderId: order.id,
-      session: { user: { personId: owner } },
-      locale: "en-US",
+      personId: owner,
     });
-    expect(banner).not.toBeNull();
+    expect(dispute?.amountCents).toBe(5_000);
   });
 
   it("shows nothing to crew, the same gate Today's dispute row keeps", async () => {
     const { db, shop, order } = await disputedOrder();
     const captain = await seededStaffPersonId(db, shop.id, SEEDED_CAPTAIN_EMAIL);
-    const banner = await OrderDisputeBanner({
-      shop,
+    const { dispute } = await loadOrderHeader(db, {
+      shopId: shop.id,
       orderId: order.id,
-      session: { user: { personId: captain } },
-      locale: "en-US",
+      personId: captain,
     });
-    expect(banner).toBeNull();
+    expect(dispute).toBeNull();
   });
 });
 
-describe("OrderMeta", () => {
-  async function metaText(createdBy: { name: string | null; online: boolean }) {
-    const { order, shop } = await disputedOrder();
-    const { renderToStaticMarkup } = await import("react-dom/server");
-    const { staffTranslator } = await import("@/i18n/staff-messages");
-    const element = await OrderMeta({
-      order,
-      personId: order.personId,
-      createdBy,
-      shopSlug: shop.slug,
-      locale: "en-US",
-      timezone: "UTC",
-      t: staffTranslator("en-US"),
+describe("loadOrderHeader's rental ticket", () => {
+  it("is null for an order no counter rental billed", async () => {
+    const { db, shop, order } = await disputedOrder();
+    const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    const { rentalTicketId } = await loadOrderHeader(db, {
+      shopId: shop.id,
+      orderId: order.id,
+      personId: owner,
     });
-    return renderToStaticMarkup(element);
-  }
-
-  it("says a diver's own purchase was bought online, never that they raised it", async () => {
-    const html = await metaText({ name: "Ola Online", online: true });
-    expect(html).toContain("bought online");
-    expect(html).not.toContain("by Ola Online");
-  });
-
-  it("names the staffer who raised an order", async () => {
-    expect(await metaText({ name: "Dana Desk", online: false })).toContain("by Dana Desk");
+    expect(rentalTicketId).toBeNull();
   });
 });
