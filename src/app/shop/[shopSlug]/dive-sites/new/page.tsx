@@ -13,7 +13,6 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
-import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
@@ -28,13 +27,7 @@ import {
 } from "../_components/site-editor-copy";
 import { siteFormErrorMessages } from "../_components/site-form-errors";
 import { siteFormSections, siteFormUnsavedCopy } from "../_components/site-form-sections";
-
-const nitroxForm = z.object({ requiresNitrox: z.string().optional() });
-
-function nitroxChecked(formData: FormData): boolean {
-  const parsed = parseForm(nitroxForm, formData);
-  return parsed.ok && parsed.data.requiresNitrox === "on";
-}
+import { siteFormExtras } from "../site-forms";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -130,7 +123,7 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
       planningNote: { words: planningNoteWords, byPersonId: activeSession.user.personId },
       minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
       requiredSpecialties: specialties.data,
-      requiresNitrox: nitroxChecked(formData),
+      requiresNitrox: siteFormExtras(formData).requiresNitrox,
       difficultyLevel: parsed.difficultyLevel,
       depthRange: parsed.fields.depthRange,
       maxDepthMeters: parsed.maxDepthMeters,

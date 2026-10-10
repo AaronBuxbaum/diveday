@@ -38,7 +38,6 @@ import { parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import type { DiveSiteTemplateUpdateMode } from "@/lib/dive-site-template-sync";
 import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
 import { parseDockDayRhythm } from "@/lib/diver-planning";
-import { parseForm } from "@/lib/form-parse";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
@@ -57,6 +56,7 @@ import {
 } from "../_components/site-editor-copy";
 import { siteFormErrorMessages } from "../_components/site-form-errors";
 import { siteFormSections, siteFormUnsavedCopy } from "../_components/site-form-sections";
+import { siteFormExtras, templatePullMode } from "../site-forms";
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
 // Since the staff shell became synchronous (issue 1446) that holds for a cold,
@@ -65,13 +65,6 @@ import { siteFormSections, siteFormUnsavedCopy } from "../_components/site-form-
 // shell and its own reads are the only ones the reader waits on. See ADR
 // 20260804-instant-navigation.
 import { TEMPLATE_FIELD_KEYS } from "./template-field-keys";
-
-/** The two fields the site form posts beside the ones `parseDiveSiteFields` reads (issue #2233). */
-const siteExtrasForm = z.object({
-  expectedVersion: z.string().default(""),
-  requiresNitrox: z.string().optional(),
-});
-const templatePullForm = z.object({ mode: z.string().optional() });
 
 export const instant = true;
 
@@ -252,9 +245,8 @@ export default async function EditDiveSitePage({
     // is the only thing that writes the field, so a bad one means an old release
     // or a hand-crafted post, and neither is worth a 500 over an input that can
     // only ever tighten the write.
-    const extras = parseForm(siteExtrasForm, formData);
-    const sentVersion = Number.parseInt(extras.ok ? extras.data.expectedVersion : "", 10);
-    const expectedVersion = Number.isNaN(sentVersion) ? null : sentVersion;
+    const extras = siteFormExtras(formData);
+    const { expectedVersion } = extras;
     // **Checked before a single byte is uploaded.** `dive-site-photos.ts` says
     // why in its own words — refusing after storing four photos leaves objects
     // nothing references, and a refusal never gets far enough to persist their
@@ -308,7 +300,7 @@ export default async function EditDiveSitePage({
         },
         minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
         requiredSpecialties: specialties.data,
-        requiresNitrox: extras.ok && extras.data.requiresNitrox === "on",
+        requiresNitrox: extras.requiresNitrox,
         difficultyLevel: parsed.difficultyLevel,
         depthRange: parsed.fields.depthRange,
         maxDepthMeters: parsed.maxDepthMeters,
@@ -364,8 +356,7 @@ export default async function EditDiveSitePage({
   async function pullTemplateAction(formData: FormData) {
     "use server";
     const activeSession = await requireStaffSession();
-    const parsed = parseForm(templatePullForm, formData);
-    const mode = parsed.ok ? parsed.data.mode : undefined;
+    const mode = templatePullMode(formData);
     if (mode !== "preserve-shop-edits" && mode !== "replace-template-copy") {
       revalidateAndRedirect(
         `${back}/${id}`,

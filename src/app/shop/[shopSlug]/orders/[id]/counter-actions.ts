@@ -1,16 +1,12 @@
 "use server";
 
-import { z } from "zod";
 import { getDb } from "@/db/client";
 import { voidCounterOrder } from "@/db/orders";
-import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { uuidParam } from "@/lib/uuid";
-
-const orderForm = z.object({ orderId: z.string().default("") });
+import { postedOrderId } from "./order-form";
 
 /**
  * Void an order paid at the counter, to correct a mistake (ADR
@@ -21,8 +17,7 @@ const orderForm = z.object({ orderId: z.string().default("") });
  */
 export async function voidCounterAction(formData: FormData) {
   const session = await requireStaffSession();
-  const parsed = parseForm(orderForm, formData);
-  const orderId = (parsed.ok && uuidParam(parsed.data.orderId)) || "";
+  const orderId = postedOrderId(formData);
   const db = await getDb();
   const back = shopPath(session.user.shopSlug, "orders", orderId);
   if (!(await hasRequiredStepUp(db, session, "money"))) {
