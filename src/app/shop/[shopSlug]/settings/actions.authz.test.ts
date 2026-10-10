@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { mediaDeletionAttempts, processorErasureObligations } from "@/db/schema";
 import { getShopById } from "@/db/shops";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   demoteOwnerToManager,
   redirectedTo,
@@ -12,6 +12,10 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * The "Units" card saves three settings behind one button, and only two of them
@@ -63,7 +67,7 @@ const {
 } = await import("./actions");
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   return {
     db,

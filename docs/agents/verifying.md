@@ -15,8 +15,8 @@ line between the two.
   `pnpm e2e:build`
 - `node scripts/screenshot.mjs <path…>` against a running `pnpm dev` — looking at UI you changed
   is not optional and has no CI substitute
-- `node scripts/contact-sheet.mjs` against a running `pnpm dev` — every route in
-  `scripts/route-coverage.json`, signed in as the demo owner for `/shop/**`, at phone width in
+- `node scripts/contact-sheet.mjs` against a running `pnpm dev` — every `page.tsx` route,
+  signed in as the demo owner for `/shop/**`, at phone width in
   light, tiled with captions into `screenshots/contact-sheet.jpg` (under the canvas guard's cap).
   Ids and tokens are filled from links on pages it already visited; routes it could not reach or
   capture are listed. `--budget` (60 page loads by default) keeps one run under the supervisor's
@@ -85,12 +85,17 @@ server, a focused spec, and any parallel session sharing the machine.
 
 A change that touches only `docs/`, Markdown or `.claude/` skips the four unit shards along with
 the build and the browser jobs; `Unit tests that read docs` runs the unit files that quote a
-document path instead. The shards are dealt by each file's recorded CI duration when
-`scripts/test-durations.json` exists, and by a source estimate when it does not
-(`src/test/shard-sequencer.ts`). When their finish times drift apart, refresh it from one green
-run: save every shard's `unit-durations-<n>` artifact, or its job log where the artifact download
-is out of reach (the log carries the same map on its `diveday-test-durations:` line), and run
-`node scripts/merge-test-durations.mjs <files…>`.
+document path instead. Every sharded job is dealt by recorded CI durations, with a source estimate
+for what is new since: the unit shards by file from `scripts/test-durations.json`
+(`src/test/shard-sequencer.ts`), the Playwright shards by spec and the visual shards by test from
+`scripts/e2e-durations.json` (`scripts/e2e-shard.mjs`, whose bin weights each shard prints in its
+job summary). Both files refresh themselves: `.github/workflows/durations-refresh.yml` reads the
+newest main run's `unit-durations-<n>`, `e2e-durations-<n>` and `visual-durations-<n>` artifacts
+every Monday, and from its Run workflow button, and opens a pull request when the figures moved. To
+refresh by hand from a container that cannot download artifacts, save each shard's job log (the
+unit shards print a `diveday-test-durations:` line, the browser shards a `diveday-e2e-durations:`
+one) and run `node scripts/merge-test-durations.mjs <logs…>` or
+`node scripts/e2e-durations.mjs merge <logs…>`.
 
 **So the PR is the instrument, not the trophy.** Open it before it is green when that is the
 fastest way to learn what is broken; say so in the body, name what you have and have not run, and

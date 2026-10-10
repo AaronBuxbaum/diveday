@@ -2,7 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   addBuddyTeamMember,
   dissolveBuddyTeam,
@@ -25,13 +25,17 @@ import {
 } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 /**
  * The Benwood reef trip: three booked divers and — unlike today's Molasses
  * boat — no seeded buddy teams, so every test starts from an unteamed roster
  * with an odd count (odd counts are normal, never an error).
  */
 async function buddyContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const tripRows = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const trip = tripRows.find((row) => row.title.startsWith("Two-Tank Reef — Benwood"));
   if (!trip) throw new Error("demo Benwood trip missing");

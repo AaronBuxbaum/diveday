@@ -1,11 +1,15 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createDiver } from "./divers";
 import { rosterFacts } from "./roster-facts";
 import { orders, priorVisits, trips } from "./schema";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * The roster row's four facts (ADR 20260827-people-not-lists, decision 2).
@@ -45,7 +49,7 @@ async function departure(db: AppDb, shopId: string, title: string, startsAt: Dat
 
 describe("rosterFacts", () => {
   it("reads the seat ahead, the visit behind, and nothing for a diver with neither", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const ahead = await diver(db, shop.id, "Roster Ahead");
     const behind = await diver(db, shop.id, "Roster Behind");
     const nobody = await diver(db, shop.id, "Roster Nobody");
@@ -79,7 +83,7 @@ describe("rosterFacts", () => {
    * story uses). Ten minutes past the hour it becomes the visit behind them.
    */
   it("keeps a departure that has just sailed ahead of the diver for an hour", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await diver(db, shop.id, "Roster Buffer");
     const trip = await departure(db, shop.id, "Buffer", new Date("2026-08-27T15:30:00Z"));
     await seat(db, shop.id, trip.id, person.id);
@@ -100,7 +104,7 @@ describe("rosterFacts", () => {
    * moment they take a seat here, they stop being that diver.
    */
   it("marks a diver whose only history was imported, until they hold a seat here", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await diver(db, shop.id, "Roster Imported");
     await db.insert(priorVisits).values({
       shopId: shop.id,
@@ -124,7 +128,7 @@ describe("rosterFacts", () => {
   });
 
   it("raises the open-balance fact only while an invoice stands open", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await diver(db, shop.id, "Roster Owing");
     const [order] = await db
       .insert(orders)
@@ -153,7 +157,7 @@ describe("rosterFacts", () => {
   });
 
   it("answers with an empty map for an empty page, without touching the database", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect((await rosterFacts(db, shop.id, [], { now: NOW })).size).toBe(0);
   });
 
@@ -163,7 +167,7 @@ describe("rosterFacts", () => {
    * booking, invoice or imported visit can never surface on this roster.
    */
   it("never reads another shop's seats, invoices or imported visits", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await diver(db, shop.id, "Roster Isolated");
     const trip = await departure(db, shop.id, "Theirs", new Date("2026-08-26T11:00:00Z"));
     await seat(db, shop.id, trip.id, person.id);

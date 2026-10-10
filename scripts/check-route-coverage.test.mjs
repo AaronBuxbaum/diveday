@@ -6,11 +6,15 @@ import { describe, expect, it } from "vitest";
 import {
   auditLedger,
   collectWorld,
+  deriveCoverage,
+  effectiveLedger,
   LEDGER_PATH,
   ledgerEntries,
   parseCaptureNames,
+  pathLiterals,
   planLedgerWrite,
   routePatternFor,
+  routesForPath,
   serializeLedger,
   summaryLine,
 } from "./check-route-coverage.mjs";
@@ -21,7 +25,14 @@ import {
 // calls in it. Fixtures rather than mocks, because the thing under test is
 // precisely "does the ledger match what is on disk".
 
-async function fixture({ routes = [], specs = [], captures = [], ledger } = {}) {
+async function fixture({
+  routes = [],
+  specs = [],
+  captures = [],
+  ledger,
+  sources = {},
+  visual,
+} = {}) {
   const root = await mkdtemp(path.join(tmpdir(), "route-coverage-"));
   for (const route of routes) {
     const dir = path.join(root, "src/app", route === "/" ? "" : route.slice(1));
@@ -30,10 +41,10 @@ async function fixture({ routes = [], specs = [], captures = [], ledger } = {}) 
   }
   await mkdir(path.join(root, "e2e"), { recursive: true });
   for (const spec of specs) {
-    await writeFile(path.join(root, "e2e", spec), "// a spec\n");
+    await writeFile(path.join(root, "e2e", spec), sources[spec] ?? "// a spec\n");
   }
   const body = captures.map((name) => `      await capture(page, "${name}", scheme);`).join("\n");
-  await writeFile(path.join(root, "e2e/visual.spec.ts"), `${body}\n`);
+  await writeFile(path.join(root, "e2e/visual.spec.ts"), visual ?? `${body}\n`);
   if (ledger !== undefined) {
     await mkdir(path.join(root, "scripts"), { recursive: true });
     await writeFile(path.join(root, LEDGER_PATH), `${JSON.stringify(ledger, null, 2)}\n`);
@@ -117,11 +128,13 @@ describe("auditLedger", () => {
 
   // The failure the whole check exists for: a page ships and nothing anywhere
   // says whether a test ever opens it.
-  it("fails when a route has no ledger entry at all", async () => {
+  it("fails a route no spec reaches and no entry speaks for", async () => {
     const result = await audit({
       routes: [...HEALTHY.routes, "/shop/[shopSlug]/dive-sites/catalog"],
     });
-    expect(messages(result)).toContain("/shop/[shopSlug]/dive-sites/catalog: no entry");
+    expect(messages(result)).toContain(
+      "/shop/[shopSlug]/dive-sites/catalog: no e2e spec and no visual capture",
+    );
     expect(result.stats.uncovered).toBe(1);
   });
 
@@ -273,10 +286,11 @@ describe("auditLedger", () => {
     expect(messages(result)).toContain("entry must be an object");
   });
 
-  it("names a missing ledger rather than silently passing", async () => {
+  it("reads a missing ledger as no exceptions, holding every route to the tree", async () => {
     const root = await fixture({ ...HEALTHY, ledger: undefined });
     const result = auditLedger(await collectWorld(root));
-    expect(messages(result)).toContain("is missing");
+    expect(messages(result)).toContain("/: no e2e spec and no visual capture");
+    expect(result.stats.uncovered).toBe(3);
   });
 
   it("does not read the file's leading `//` note as a route", () => {
@@ -299,15 +313,14 @@ describe("planLedgerWrite (the ratchet)", () => {
     const result = await plan({
       routes: [...HEALTHY.routes, "/shop/[shopSlug]/dive-sites/catalog"],
     });
-    expect(result.next["/shop/[shopSlug]/dive-sites/catalog"]).toEqual({ e2e: [], visual: [] });
-    expect(result.next["/shop/[shopSlug]/dive-sites/catalog"]).not.toHaveProperty("exempt");
-    expect(result.added).toContain("/shop/[shopSlug]/dive-sites/catalog");
+    expect(result.next).not.toHaveProperty("/shop/[shopSlug]/dive-sites/catalog");
     // And the ledger it would write is itself a failing one — the gap is loud.
     const after = auditLedger({
       routes: [...HEALTHY.routes, "/shop/[shopSlug]/dive-sites/catalog"],
       ledger: result.next,
       specs: new Set(HEALTHY.specs),
       captures: new Set(HEALTHY.captures),
+      specSources: new Map(),
     });
     expect(messages(after)).toContain("no e2e spec and no visual capture");
   });
@@ -461,5 +474,113 @@ describe("summaryLine", () => {
     expect(summaryLine({ total: 57, e2e: 54, visual: 48, exempt: 3, uncovered: 0 })).toBe(
       "route-coverage: 57 routes — 54 with an e2e spec, 48 with a visual capture, 3 exempt with a stated reason",
     );
+  });
+});
+
+describe("derived coverage", () => {
+  const ROUTES = [
+    "/",
+    "/s/[shopSlug]",
+    "/s/[shopSlug]/trips/[id]",
+    "/shop/[shopSlug]/gear/[id]",
+    "/shop/[shopSlug]/gear/rentals",
+    "/shop/[shopSlug]/trips/[id]/print",
+  ];
+
+  it("reads quoted paths, interpolations and constant-prefixed templates", () => {
+    const source = [
+      'await page.goto("/s/blue-mantis");',
+      "const tripPath = `/shop/blue-mantis/trips/${trip.id}`;",
+      "await page.goto(`${tripPath}/print?copy=1`);",
+      'expect(page).toHaveURL("/");',
+      'const note = "not/a/path";',
+    ].join("\n");
+    expect(pathLiterals(source).map((literal) => literal.path)).toEqual([
+      "/s/blue-mantis",
+      "/shop/blue-mantis/trips/*",
+      "/shop/blue-mantis/trips/*/print",
+      "/",
+    ]);
+  });
+
+  it("resolves a path to the best-fitting route only, never a dynamic sibling as well", () => {
+    expect(routesForPath(ROUTES, "/shop/blue-mantis/gear/rentals")).toEqual([
+      "/shop/[shopSlug]/gear/rentals",
+    ]);
+    expect(routesForPath(ROUTES, "/shop/blue-mantis/gear/*")).toEqual([
+      "/shop/[shopSlug]/gear/[id]",
+    ]);
+    expect(routesForPath(ROUTES, "/s/blue-mantis/trips/*")).toEqual(["/s/[shopSlug]/trips/[id]"]);
+    expect(routesForPath(ROUTES, "/nowhere")).toEqual([]);
+  });
+
+  it("credits a capture to the last path reached in the same test, and no earlier one", () => {
+    const derived = deriveCoverage({
+      routes: ROUTES,
+      specSources: new Map([
+        [
+          "visual.spec.ts",
+          [
+            'test("storefront", async ({ page }) => {',
+            '  await page.goto("/s/blue-mantis");',
+            '  await capture(page, "storefront");',
+            "});",
+            'test("reached by clicks", async ({ page }) => {',
+            '  await page.getByRole("link").click();',
+            '  await capture(page, "clicked-through");',
+            "});",
+          ].join("\n"),
+        ],
+      ]),
+    });
+    expect([...derived.get("/s/[shopSlug]").visual]).toEqual(["storefront"]);
+    expect([...derived.get("/").visual]).toEqual([]);
+  });
+
+  it("counts an axe scan only from a spec that runs one", () => {
+    const derived = deriveCoverage({
+      routes: ROUTES,
+      specSources: new Map([
+        ["a11y.spec.ts", 'await page.goto("/");\nawait expectNoA11yViolations(page);'],
+        ["booking.spec.ts", 'await page.goto("/s/blue-mantis");'],
+      ]),
+    });
+    expect([...derived.get("/").a11y]).toEqual(["a11y.spec.ts"]);
+    expect([...derived.get("/s/[shopSlug]").e2e]).toEqual(["booking.spec.ts"]);
+    expect([...derived.get("/s/[shopSlug]").a11y]).toEqual([]);
+  });
+
+  it("passes a route the tree covers with no ledger entry at all", async () => {
+    const root = await fixture({
+      routes: ["/s/[shopSlug]"],
+      specs: ["booking.spec.ts", "visual.spec.ts"],
+      sources: { "booking.spec.ts": 'await page.goto("/s/blue-mantis");' },
+      visual:
+        'test("s", async ({ page }) => {\n  await page.goto("/s/blue-mantis");\n  await capture(page, "storefront");\n});\n',
+      ledger: { "//": "note" },
+    });
+    const world = await collectWorld(root);
+    expect(auditLedger(world).violations).toEqual([]);
+    expect(effectiveLedger(world)["/s/[shopSlug]"]).toEqual({
+      e2e: ["booking.spec.ts", "visual.spec.ts"],
+      visual: ["storefront"],
+    });
+  });
+
+  it("prunes a hand-written column the tree now covers, and keeps the gaps", async () => {
+    const root = await fixture({
+      routes: ["/s/[shopSlug]"],
+      specs: ["booking.spec.ts", "visual.spec.ts"],
+      captures: ["storefront"],
+      sources: { "booking.spec.ts": 'await page.goto("/s/blue-mantis");' },
+      ledger: {
+        "//": "note",
+        "/s/[shopSlug]": { e2e: ["booking.spec.ts"], visual: ["storefront"] },
+      },
+    });
+    const result = planLedgerWrite(await collectWorld(root));
+    // The spec is a literal visit now; the capture is still reached some other way.
+    expect(result.next).toEqual({ "/s/[shopSlug]": { visual: ["storefront"] } });
+    expect(result.derivedNames).toEqual(['/s/[shopSlug]: e2e "booking.spec.ts"']);
   });
 });

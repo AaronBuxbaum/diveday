@@ -4,7 +4,7 @@ import { shiftCalendarDate } from "@/lib/calendar-date";
 import { HOUR_MS, nowMs } from "@/lib/clock";
 import { lastDayOfDeparture } from "@/lib/crew-roles";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createBooking, tripCourseCrewCounts } from "./bookings";
 import type { AppDb } from "./client";
 import {
@@ -19,6 +19,10 @@ import { getStaffingView } from "./staffing";
 import { courseCrewCountsByTrip, getTodayWork } from "./today";
 import { createTrip } from "./trips";
 import { getTripOverview } from "./trips-overview";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * Issue #1853: an expired instructor rating still counted toward the course
@@ -135,7 +139,7 @@ async function countsFor(db: AppDb, shopId: string, tripId: string) {
 
 describe("the supervision count reads recorded ratings (issue #1853)", () => {
   it("counts a rating renewing on the departure's own day, and not one that renewed the day before", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const keiko = await instructor(db, shop.id, "Keiko Tanaka");
     const trip = await session(db, shop.id, [keiko]);
     const divesOn = lastDayOfDeparture(trip.endsAt, shop.timezone);
@@ -161,7 +165,7 @@ describe("the supervision count reads recorded ratings (issue #1853)", () => {
   });
 
   it("reads the departure's day in the shop's zone, not in UTC", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const keiko = await instructor(db, shop.id, "Keiko Tanaka");
     // An evening session: 18:00–22:00 in the shop's zone, which ends on the
     // *next* UTC day for any shop west of Greenwich (the demo shop is New
@@ -178,7 +182,7 @@ describe("the supervision count reads recorded ratings (issue #1853)", () => {
   });
 
   it("counts a rating lapsing between the booking and the dive as lapsed for the dive", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const keiko = await instructor(db, shop.id, "Keiko Tanaka");
     const trip = await session(db, shop.id, [keiko]);
     // Current today, when the seat is sold; gone a week before the session.
@@ -189,7 +193,7 @@ describe("the supervision count reads recorded ratings (issue #1853)", () => {
   });
 
   it("counts an instructor with no renewal date recorded, or nothing recorded at all", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const undated = await instructor(db, shop.id, "Undated Instructor");
     const unrecorded = await instructor(db, shop.id, "Unrecorded Instructor");
     await rating(db, shop.id, undated, null);
@@ -204,7 +208,7 @@ describe("the supervision count reads recorded ratings (issue #1853)", () => {
   });
 
   it("counts two instructors with one lapsed as one, and names the lapsed one", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const current = await instructor(db, shop.id, "Ana Current");
     const lapsed = await instructor(db, shop.id, "Bo Lapsed");
     const trip = await session(db, shop.id, [current, lapsed]);
@@ -221,7 +225,7 @@ describe("the supervision count reads recorded ratings (issue #1853)", () => {
   });
 
   it("ignores a deleted rating, and another shop's", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const keiko = await instructor(db, shop.id, "Keiko Tanaka");
     const trip = await session(db, shop.id, [keiko]);
     const divesOn = lastDayOfDeparture(trip.endsAt, shop.timezone);
@@ -237,7 +241,7 @@ describe("the supervision count reads recorded ratings (issue #1853)", () => {
 
 describe("the surfaces that state the claim say why (issue #1853)", () => {
   it("puts the lapse on the staffing week's gap, beside the code it opened", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const keiko = await instructor(db, shop.id, "Keiko Tanaka");
     const trip = await session(db, shop.id, [keiko]);
     await seat(db, shop.id, trip.id, 4);
@@ -262,7 +266,7 @@ describe("the surfaces that state the claim say why (issue #1853)", () => {
   });
 
   it("leaves a staffing gap a lapse did not touch unexplained", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const keiko = await instructor(db, shop.id, "Keiko Tanaka");
     const trip = await session(db, shop.id, [keiko]);
     // Over the Open Water cap with a current instructor: an ordinary gap.
@@ -286,7 +290,7 @@ describe("the surfaces that state the claim say why (issue #1853)", () => {
   });
 
   it("names the lapsed instructor on Today's row instead of saying nobody is assigned", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const keiko = await instructor(db, shop.id, "Keiko Tanaka");
     const backup = await instructor(db, shop.id, "Divemaster Dee");
     await db.delete(personRoles).where(eq(personRoles.personId, backup));
@@ -312,7 +316,7 @@ describe("the surfaces that state the claim say why (issue #1853)", () => {
   });
 
   it("names the lapsed instructor in the trip page's crew panel", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const keiko = await instructor(db, shop.id, "Keiko Tanaka");
     const trip = await session(db, shop.id, [keiko]);
     await seat(db, shop.id, trip.id, 2);
@@ -341,7 +345,7 @@ describe("a lapse is said only where it opened the gap", () => {
     shiftCalendarDate(lastDayOfDeparture(trip.endsAt, timeZone), -1);
 
   it("still says no instructor is assigned when nobody rostered one, whoever else lapsed", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const bea = await divemaster(db, shop.id, "Bea Lapsed");
     const cal = await divemaster(db, shop.id, "Cal Current");
     const startsAt = new Date(nowMs() + 3 * HOUR_MS);
@@ -373,7 +377,7 @@ describe("a lapse is said only where it opened the gap", () => {
   });
 
   it("counts a lapsed divemaster out of a fun dive's crew, everywhere the target is read", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const bea = await divemaster(db, shop.id, "Bea Lapsed");
     const startsAt = new Date(nowMs() + 3 * HOUR_MS);
     const trip = await session(
@@ -408,7 +412,7 @@ describe("a lapse is said only where it opened the gap", () => {
   });
 
   it("puts a fun dive under the shop's target when one of its two divemasters lapsed", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const bea = await divemaster(db, shop.id, "Bea Lapsed");
     const cal = await divemaster(db, shop.id, "Cal Current");
     const startsAt = new Date(nowMs() + 3 * HOUR_MS);
@@ -430,7 +434,7 @@ describe("a lapse is said only where it opened the gap", () => {
   });
 
   it("does not name a lapse beside a target the roster was already short of", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const bea = await divemaster(db, shop.id, "Bea Lapsed");
     const cal = await divemaster(db, shop.id, "Cal Current");
     const startsAt = new Date(nowMs() + 3 * HOUR_MS);
@@ -459,7 +463,7 @@ describe("a lapse is said only where it opened the gap", () => {
  */
 describe("selling and seating keep the roster's claim (H-59)", () => {
   it("still sells a seat on a session whose only instructor's rating lapsed", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const keiko = await instructor(db, shop.id, "Keiko Tanaka");
     const trip = await session(db, shop.id, [keiko]);
     await rating(

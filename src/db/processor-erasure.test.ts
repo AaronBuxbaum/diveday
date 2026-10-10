@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { setLogSink } from "@/lib/log";
 import type { CustomerProvider, DeleteCustomerResult } from "@/lib/payments/customers";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import {
   attemptProcessorErasure,
@@ -17,6 +17,10 @@ import {
 } from "./processor-erasure";
 import { people, processorErasureObligations, shopStripeAccounts, shops } from "./schema";
 import { upsertShopStripeAccount } from "./stripe-accounts";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /** A provider that answers the same way every time and counts its calls. */
 function providerReturning(result: DeleteCustomerResult): CustomerProvider & {
@@ -56,7 +60,7 @@ async function personIdByName(db: AppDb, shopId: string, fullName: string) {
  * ever attempted against an account that still maps to the obligation's shop.
  */
 async function twoShops() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const ownerId = await personIdByName(db, shop.id, "Dana Reyes");
   await upsertShopStripeAccount(db, shop.id, "acct_test");
   const [otherShop] = await db

@@ -12,7 +12,7 @@ import process from "node:process";
 import { describe, expect, it } from "vitest";
 import { CAPABILITY_ROUTE_PREFIXES } from "../../src/lib/capability-urls";
 import { findIssueProblems } from "../check-follow-ups.mjs";
-import routeCoverage from "../route-coverage.json" with { type: "json" };
+import { collectRoutes } from "../check-route-coverage.mjs";
 import {
   COMMENTS_PER_RUN,
   carriesFingerprint,
@@ -519,12 +519,12 @@ describe("the persona registry", () => {
     expect(plan).toHaveLength(3);
   });
 
-  it("every walked path resolves to a route the app actually has", () => {
-    const routes = Object.keys(routeCoverage).filter((route) => !route.startsWith("//"));
+  it("every walked path resolves to a route the app actually has", async () => {
+    const routes = await collectRoutes(process.cwd());
     for (const visit of walkPlan()) {
       expect(
         sourceFileForPath(visit.path, routes, () => true),
-        `${visit.path} matches no route in scripts/route-coverage.json`,
+        `${visit.path} matches no src/app/**/page.tsx route`,
       ).not.toBeNull();
     }
   });

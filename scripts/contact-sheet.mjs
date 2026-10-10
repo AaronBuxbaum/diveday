@@ -9,8 +9,9 @@
  * when the machine has room.
  *
  * `scripts/screenshot.mjs` photographs the paths you name; this one finds them.
- * The inventory is not a crawl: `scripts/route-coverage.json` already lists
- * every `page.tsx` route, written mechanically, so a new route appears on the
+ * The inventory is not a crawl: the route ledger (`loadCoverage` in
+ * scripts/check-route-coverage.mjs) already lists every `page.tsx` route,
+ * computed from the tree, so a new route appears on the
  * sheet without anyone remembering to add it. What a ledger cannot know is a
  * live id or token, so dynamic segments (`[id]`, `[personId]`, `[token]`) are
  * filled from the links on the pages already visited: the first link whose
@@ -35,6 +36,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { loadCoverage } from "./check-route-coverage.mjs";
 
 /** `check:design-canvases` refuses any canvas file of 400,000 bytes or more. */
 export const MAX_SHEET_BYTES = 390_000;
@@ -172,8 +174,7 @@ async function main() {
   const { launch, signInOnce, waitPastTheSkeleton } = await import("./capture-session.mjs");
   const { default: sharp } = await import("sharp");
   const { OFFLINE_SETTLED_SELECTOR } = await import("./screenshot-guards.mjs");
-  const ledger = JSON.parse(fs.readFileSync("scripts/route-coverage.json", "utf8"));
-  const routes = ledgerRoutes(ledger);
+  const routes = ledgerRoutes(await loadCoverage(process.cwd()));
   const shotsDir = path.join(args.out, "contact-sheet");
   fs.mkdirSync(shotsDir, { recursive: true });
 

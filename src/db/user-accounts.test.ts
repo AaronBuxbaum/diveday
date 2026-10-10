@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { people, shops, userAccounts } from "./schema";
@@ -10,6 +10,10 @@ import {
   getAccountIdForPerson,
   isOrientationDismissed,
 } from "./user-accounts";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 async function seededPersonId(db: AppDb, email: string): Promise<string> {
   const [account] = await db
@@ -23,13 +27,13 @@ async function seededPersonId(db: AppDb, email: string): Promise<string> {
 
 describe("orientation dismissal (in-memory PGlite)", () => {
   it("starts undismissed for a freshly seeded account", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const personId = await seededPersonId(db, DEV_STAFF_LOGINS.owner.email);
     expect(await isOrientationDismissed(db, personId)).toBe(false);
   });
 
   it("dismissing records the timestamp and reads back as dismissed", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const personId = await seededPersonId(db, DEV_STAFF_LOGINS.captain.email);
     expect(await isOrientationDismissed(db, personId)).toBe(false);
 
@@ -38,7 +42,7 @@ describe("orientation dismissal (in-memory PGlite)", () => {
   });
 
   it("is scoped per account — dismissing one person's card leaves another's showing", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const captainId = await seededPersonId(db, DEV_STAFF_LOGINS.captain.email);
     const instructorId = await seededPersonId(db, DEV_STAFF_LOGINS.instructor.email);
 
@@ -49,14 +53,14 @@ describe("orientation dismissal (in-memory PGlite)", () => {
   });
 
   it("an unknown person id reads as not dismissed rather than throwing", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     expect(await isOrientationDismissed(db, "00000000-0000-0000-0000-000000000000")).toBe(false);
   });
 });
 
 describe("the account a person signs in with (in-memory PGlite)", () => {
   it("resolves a staff person to their one account", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const personId = await seededPersonId(db, DEV_STAFF_LOGINS.owner.email);
     const [account] = await db
       .select({ id: userAccounts.id })
@@ -66,7 +70,7 @@ describe("the account a person signs in with (in-memory PGlite)", () => {
   });
 
   it("is null for a person with no account", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     expect(await getAccountIdForPerson(db, "00000000-0000-0000-0000-000000000000")).toBeNull();
   });
 });
@@ -78,7 +82,7 @@ describe("account-lifecycle mail language (docs ADR 20260731-per-person-notifica
     // signal from their own booking/waiver request; a staff member's row could
     // only have picked one up by accident, and this join is the place that
     // would silently launder it into their inbox.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const personId = await seededPersonId(db, DEV_STAFF_LOGINS.owner.email);
     await db.update(shops).set({ defaultLocale: "es-ES" }).where(eq(shops.id, shop.id));
     await db.update(people).set({ locale: "en-US" }).where(eq(people.id, personId));

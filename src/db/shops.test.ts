@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { temperatureUnitFor } from "@/lib/temperature-units";
-import { seededShopContext, seededTestDb, unseededTestDb } from "@/test/db";
+import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
 import { courses, divePackages, shops, trips } from "./schema";
 import {
@@ -17,9 +17,13 @@ import {
 } from "./shops";
 import { createTrip } from "./trips";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 describe("shop queries (in-memory PGlite)", () => {
   it("seeds a shop retrievable by slug", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     const shop = await getShopBySlug(db, "blue-mantis");
     expect(shop?.name).toBe("Blue Mantis Divers");
     expect(shop?.timezone).toBe("America/New_York");
@@ -28,7 +32,7 @@ describe("shop queries (in-memory PGlite)", () => {
 
 describe("setShopAddress", () => {
   it("sets all five fields", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const after = await setShopAddress(db, shop.id, {
       addressStreet: "123 Reef Rd",
       addressLocality: "Key Largo",
@@ -44,7 +48,7 @@ describe("setShopAddress", () => {
   });
 
   it("clears a field back to null on an empty string, independently of the others", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await setShopAddress(db, shop.id, {
       addressStreet: "123 Reef Rd",
       addressLocality: "Key Largo",
@@ -65,7 +69,7 @@ describe("setShopAddress", () => {
   });
 
   it("leaves an unfilled address as all null", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     const [freshShop] = await db
       .insert(shops)
       .values({ name: "Plain Shop", slug: "plain-shop-address", timezone: "America/New_York" })
@@ -78,7 +82,7 @@ describe("setShopAddress", () => {
 
 describe("setShopTemperatureUnit", () => {
   it("defaults a brand-new shop to Celsius", async () => {
-    const db = await seededTestDb();
+    const db = ctx.db;
     const [freshShop] = await db
       .insert(shops)
       .values({ name: "Plain Shop", slug: "plain-shop-temperature", timezone: "America/New_York" })
@@ -89,7 +93,7 @@ describe("setShopTemperatureUnit", () => {
   });
 
   it("stores the shop's chosen unit and reads it back", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const after = await setShopTemperatureUnit(db, shop.id, "fahrenheit");
     expect(after?.temperatureUnit).toBe("fahrenheit");
     expect(temperatureUnitFor(await getShopBySlug(db, shop.slug))).toBe("fahrenheit");
@@ -98,7 +102,7 @@ describe("setShopTemperatureUnit", () => {
   it("is independent of the depth unit — a shop can read feet and Celsius", async () => {
     // The combination the pre-column derivation could not express, and the
     // reason this is its own setting rather than a reading of `depth_unit`.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await setShopDepthUnit(db, shop.id, "feet");
     const after = await getShopBySlug(db, shop.slug);
     expect(after?.depthUnit).toBe("feet");
@@ -106,7 +110,7 @@ describe("setShopTemperatureUnit", () => {
   });
 
   it("moves no stored water temperature when the unit flips", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await db
       .select({ id: trips.id })
       .from(trips)
@@ -131,7 +135,7 @@ describe("setShopTemperatureUnit", () => {
  */
 describe("listShopsForSitemap", () => {
   async function shopWithNoDepartures(slug: string, isDemo = false) {
-    const db = await seededTestDb();
+    const db = ctx.db;
     const [shop] = await db
       .insert(shops)
       .values({ name: `Shop ${slug}`, slug, timezone: "America/New_York", isDemo })
@@ -140,7 +144,7 @@ describe("listShopsForSitemap", () => {
     return { db, shop };
   }
 
-  async function scheduleADeparture(db: Awaited<ReturnType<typeof seededTestDb>>, shopId: string) {
+  async function scheduleADeparture(db: AppDb, shopId: string) {
     await createTrip(db, {
       shopId,
       title: "First Charter",

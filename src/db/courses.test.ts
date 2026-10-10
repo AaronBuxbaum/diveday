@@ -9,7 +9,7 @@ import {
 } from "@/content/course-templates";
 import { nowDate, nowMs } from "@/lib/clock";
 import { canonicalAgency, courseSlug } from "@/lib/courses";
-import { seededShopContext, unseededTestDb } from "@/test/db";
+import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import {
@@ -44,6 +44,10 @@ import {
   upcomingTripsWithCounts,
 } from "./trips";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 /**
  * The seeded demo has a real instructor calendar. Keep synthetic course
  * sessions outside it so these tests exercise course admission rules, not the
@@ -59,7 +63,7 @@ import {
 const OPEN_TEST_SESSION_OFFSET_MS = 180 * 24 * 60 * 60 * 1000;
 
 async function courseContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const sessions = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const discover = sessions.find((session) => session.course?.title === "Discover Scuba Diving");
   if (!discover) throw new Error("discover session missing");
@@ -112,7 +116,7 @@ async function listCourses(db: AppDb, shopId: string) {
 
 describe("course catalog and sessions (in-memory PGlite)", () => {
   it("seeds every published course template into the catalog, under its own name", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const catalog = await listActiveCourses(db, shop.id);
 
     // The demo keeps one legacy SSI Nitrox row that predates the published
@@ -923,7 +927,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
   });
 
   it("schedules an entry-level course session with no cert gate, and an ordinary trip with one", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // Open to uncertified divers — that is the point of the course, and the
     // session must not inherit the shop's default Open Water gate.
     const discover = await createCourse(db, {
@@ -983,7 +987,7 @@ const emptyContent = {
 
 describe("pagedCourses pagination (in-memory PGlite)", () => {
   it("pages by number and never repeats or skips a course", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const all = await listCourses(db, shop.id);
     expect(all.length).toBeGreaterThan(0);
@@ -1006,7 +1010,7 @@ describe("pagedCourses pagination (in-memory PGlite)", () => {
   });
 
   it("goes back a page as well as forward", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const second = await pagedCourses(db, shop.id, { page: 2, limit: 3 });
     expect(second.page).toBe(2);
     const back = await pagedCourses(db, shop.id, { page: second.page - 1, limit: 3 });
@@ -1017,7 +1021,7 @@ describe("pagedCourses pagination (in-memory PGlite)", () => {
   });
 
   it("clamps a nonsensical or out-of-range page rather than showing an empty roster", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const first = await pagedCourses(db, shop.id, { page: 1, limit: 3 });
     for (const requested of [0, -3, Number.NaN]) {
       const clamped = await pagedCourses(db, shop.id, { page: requested, limit: 3 });
@@ -1042,7 +1046,7 @@ function rankOf(level: string | null): number {
 
 describe("progression order (in-memory PGlite)", () => {
   it("reads the catalog the way a shop teaches it, not alphabetically", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const all = await listCourses(db, shop.id);
     expect(all.length).toBeGreaterThan(4);
 
@@ -1082,7 +1086,7 @@ describe("progression order (in-memory PGlite)", () => {
   });
 
   it("puts a taster ahead of the certification it leads into, at the same rung", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // One agency's entry rung: the sort is agency-major, so PADI's tasters and
     // SSI's entry certifications interleave in the full list by design.
     const entry = (await listCourses(db, shop.id)).filter(
@@ -1096,14 +1100,14 @@ describe("progression order (in-memory PGlite)", () => {
   });
 
   it("orders the session picker the same way as the roster", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const active = await listActiveCourses(db, shop.id);
     const roster = (await listCourses(db, shop.id)).filter((course) => course.isActive);
     expect(active.map((course) => course.id)).toEqual(roster.map((course) => course.id));
   });
 
   it("keeps a newly added course in its own place with no second edit", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const created = await createCourse(db, {
       shopId: shop.id,
       title: "Zebra Wreck Specialty",
@@ -1123,7 +1127,7 @@ describe("progression order (in-memory PGlite)", () => {
 
 describe("agency groups (in-memory PGlite)", () => {
   it("orders the roster agency-major, so a group cannot interleave across a page", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // Slice 9g of ADR 20260827-the-shops-shelves: the `?agency=` tabs retired
     // for agency *groups* in one ledger, and grouping composes with the Pager
     // only if the query sorts group-major. If it did not, page 2 would open a
@@ -1141,7 +1145,7 @@ describe("agency groups (in-memory PGlite)", () => {
   });
 
   it("keeps progression order inside each agency's run", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { courses: rows } = await pagedCourses(db, shop.id, { limit: 1000 });
     for (const agency of new Set(rows.map((course) => canonicalAgency(course.agency)))) {
       const ranks = rows
@@ -1152,7 +1156,7 @@ describe("agency groups (in-memory PGlite)", () => {
   });
 
   it("groups an agency nobody hard-coded — a CSV import can carry any of them", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await createCourse(db, {
       shopId: shop.id,
       title: "BSAC Ocean Diver",
@@ -1163,7 +1167,7 @@ describe("agency groups (in-memory PGlite)", () => {
   });
 
   it("sorts the imported spellings of one agency into a single run", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await db.insert(courses).values([
       {
         shopId: shop.id,
@@ -1192,7 +1196,7 @@ describe("agency groups (in-memory PGlite)", () => {
 
 describe("course content and public pages (in-memory PGlite)", () => {
   it("saves the marketing page without touching pricing, the cert gate, or the agency age", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const course = await createCourse(db, {
       shopId: shop.id,
       title: "Cavern Diver",
@@ -1234,7 +1238,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
    * the FAQ — not one field (issue #820).
    */
   it("refuses a save whose generation has moved on", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [course] = await listCourses(db, shop.id);
     if (!course) throw new Error("expected a seeded course");
     const asBothTabsSawIt = course.rowVersion;
@@ -1270,7 +1274,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
    * succeed on real Postgres. `NOT NULL DEFAULT 0` makes the case ordinary.
    */
   it("protects a course that has never been saved", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [course] = await listCourses(db, shop.id);
     if (!course) throw new Error("expected a seeded course");
     expect(course.rowVersion).toBe(0);
@@ -1301,7 +1305,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
    * releases overlap.
    */
   it("allows a save that carries no generation, because the page may predate the column", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [course] = await listCourses(db, shop.id);
     if (!course) throw new Error("expected a seeded course");
     await updateCourseContent(db, shop.id, course.id, { ...emptyContent, summary: "First" });
@@ -1315,7 +1319,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
   it("says `missing` rather than `conflict` for another shop's course", async () => {
     // Different words for different situations: a generation that moved is
     // somebody else's edit; a row that is not there is not this shop's.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [course] = await listCourses(db, shop.id);
     if (!course) throw new Error("expected a seeded course");
     expect(
@@ -1330,7 +1334,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
     // position, so nothing in the round trip could tell a shifted caption from
     // a correct one. Now the pairing survives the database because it *is* the
     // row — a caption cannot arrive under a different photo than it left under.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const course = await createCourse(db, { shopId: shop.id, title: "Cavern Diver" });
     if (!course) throw new Error("course not created");
 
@@ -1359,7 +1363,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
     // nothing but `gallery_photos` and the two old columns are not merely
     // unwritten but absent — a re-added write would fail here rather than
     // quietly resurrect the parallel-array shape.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const course = await createCourse(db, { shopId: shop.id, title: "Cavern Diver" });
     if (!course) throw new Error("course not created");
 
@@ -1390,7 +1394,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
   });
 
   it("clears the gallery to an empty list rather than a null", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const course = await createCourse(db, {
       shopId: shop.id,
       title: "Cavern Diver",
@@ -1404,7 +1408,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
   });
 
   it("hides a course from scheduling without deleting it — staff can still find and reshow it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const course = await createCourse(db, { shopId: shop.id, title: "Cavern Diver" });
     if (!course) throw new Error("course not created");
 
@@ -1421,7 +1425,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
   });
 
   it("finds a course by its public slug, scoped to the shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // A title the seeded catalog does not already carry, so this exercises
     // slug minting rather than colliding with the shop's own course list.
     const course = await createCourse(db, { shopId: shop.id, title: "Cavern Diver" });
@@ -1561,7 +1565,7 @@ describe("hasActiveCourses", () => {
 
 describe("course template updates", () => {
   it("merges a newer template while preserving shop prose and operational fields", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const course = await getCourseBySlug(db, shop.id, "open-water-diver");
     const template = getCourseTemplate("open-water-diver");
     if (!course || !template) throw new Error("seeded course template fixture missing");
@@ -1614,7 +1618,7 @@ describe("course template updates", () => {
   });
 
   it("cannot pull a course through another shop's tenant scope", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const course = await getCourseBySlug(db, shop.id, "open-water-diver");
     if (!course) throw new Error("seeded course missing");
     expect(
@@ -1630,7 +1634,7 @@ describe("course template updates", () => {
   });
 
   it("stores a private-session price without hiding the course definition", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const course = await createCourse(db, {
       shopId: shop.id,
       title: "Private Navigation",

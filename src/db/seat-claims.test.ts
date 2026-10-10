@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import type { CertificationLevel } from "@/lib/readiness";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { issueBookingCapability, verifyBookingCapability } from "./booking-capabilities";
 import { cancelBooking, createBookingParty } from "./bookings";
 import type { AppDb } from "./client";
@@ -30,8 +30,12 @@ import {
 import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "./trips";
 import { issueWaiverRequest } from "./waivers";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 async function seededContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const tripRows = await upcomingTripsWithCounts(db, shop.id);
   const open = tripRows.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
   if (!open) throw new Error("expected seeded trip missing");
