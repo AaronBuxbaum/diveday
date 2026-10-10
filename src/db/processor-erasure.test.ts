@@ -1,10 +1,10 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { setLogSink } from "@/lib/log";
 import type { CustomerProvider, DeleteCustomerResult } from "@/lib/payments/customers";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import { setLogSink } from "@/lib/log";
 import {
   attemptProcessorErasure,
   attemptProcessorErasures,
