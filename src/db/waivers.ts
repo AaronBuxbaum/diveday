@@ -73,6 +73,7 @@ export {
   issueWaiverRequest,
 } from "./waivers-requests";
 export {
+  getCurrentWaiverGeneration,
   getCurrentWaiverTemplate,
   listWaiverTemplateHistory,
   type SaveWaiverTemplateInput,

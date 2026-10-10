@@ -55,6 +55,26 @@ export async function getCurrentWaiverTemplate(db: DbExecutor, shopId: string) {
   return template ?? null;
 }
 
+/**
+ * The current release's material generation alone — what every readiness pass
+ * compares a signature against (`isCompletedWaiverCurrent`). The same row
+ * {@link getCurrentWaiverTemplate} reads, without its body: a roster, a
+ * handoff or a counter rental never shows the release text, and reading it on
+ * every pass is the widest column in the shop's waiver tables for nothing.
+ */
+export async function getCurrentWaiverGeneration(
+  db: DbExecutor,
+  shopId: string,
+): Promise<{ materialGeneration: number } | null> {
+  const [template] = await db
+    .select({ materialGeneration: waiverTemplates.materialGeneration })
+    .from(waiverTemplates)
+    .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.deletedAt)))
+    .orderBy(desc(waiverTemplates.createdAt))
+    .limit(1);
+  return template ?? null;
+}
+
 /** The full version history, newest first, for a read-only audit trail. */
 export async function listWaiverTemplateHistory(db: DbExecutor, shopId: string) {
   return db

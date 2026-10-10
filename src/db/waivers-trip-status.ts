@@ -5,6 +5,7 @@
 import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { bookings, people, waiverRecords } from "./schema";
+import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
 
 /**
  * Staff roster view: only the current record joins each active booking. The
@@ -48,7 +49,7 @@ export async function listTripWaiverStatuses(db: DbExecutor, shopId: string, tri
 export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tripIds: string[]) {
   if (tripIds.length === 0) return [];
   return db
-    .select({ booking: bookings, person: people, waiver: waiverRecords })
+    .select({ booking: bookings, person: people, waiver: WAIVER_STATE_COLUMNS })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .leftJoin(

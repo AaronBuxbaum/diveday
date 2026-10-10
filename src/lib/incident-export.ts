@@ -1,10 +1,5 @@
 import { createHash } from "node:crypto";
-import type {
-  Certification,
-  NitroxCertification,
-  SpecialtyCertification,
-  WaiverRecord,
-} from "@/db/schema";
+import type { Certification, NitroxCertification, SpecialtyCertification } from "@/db/schema";
 import type { DepthUnit } from "./depth-units";
 import { withholdHeldSeatParticulars } from "./held-seat";
 import {
@@ -15,7 +10,7 @@ import {
 } from "./manifests";
 import { countParticipants, type ParticipantCounts } from "./participant-types";
 import { isUnsightedSelfDeclaration } from "./readiness";
-import { type WaiverState, waiverState } from "./waivers";
+import { type WaiverState, type WaiverStateFields, waiverState } from "./waivers";
 
 /**
  * Incident-ready export: one departure's recorded safety evidence, assembled
@@ -410,7 +405,7 @@ export type IncidentDiverEvidenceInput = {
   specialtyCertifications: readonly (SpecialtyCertification & { reviewedByName?: string | null })[];
   nitroxCertifications: readonly (NitroxCertification & { reviewedByName?: string | null })[];
   /** The governing record after the sign-once rule (`effectiveWaiverForBooking`), or null. */
-  waiver: WaiverRecord | null;
+  waiver: WaiverStateFields | null;
   /** The staff member who attested the governing paper waiver, if any. */
   waiverRecordedByName?: string | null;
   /** The staff member who recorded a physician's clearance on the governing record, if any. */
@@ -520,7 +515,7 @@ function certificationEvidence(input: IncidentDiverEvidenceInput): IncidentCerti
 }
 
 function waiverStatus(
-  record: WaiverRecord | null,
+  record: WaiverStateFields | null,
   now: Date,
   recordedByName: string | null | undefined,
   medicalClearedByName: string | null | undefined,
@@ -580,7 +575,7 @@ function waiverStatus(
 }
 
 /** A physician answered this record, either way. The evidence columns hang off this, not off the verdict. */
-function answered(record: WaiverRecord): boolean {
+function answered(record: WaiverStateFields): boolean {
   return Boolean(record.medicalClearedAt || record.medicalClearanceDeclinedAt);
 }
 

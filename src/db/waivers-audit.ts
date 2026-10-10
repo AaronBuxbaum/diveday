@@ -11,6 +11,7 @@ import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import type { DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { bookings, people, trips, waiverRecords } from "./schema";
+import { WAIVER_STATE_COLUMNS, type WaiverStateRecord } from "./waiver-record-columns";
 
 /** How many audit rows the Signatures tab shows per page. */
 export const WAIVER_INTEGRITY_PAGE_SIZE = PAGE_SIZE.list;
@@ -298,11 +299,11 @@ export async function listSignedWaiversByPerson(
   db: DbExecutor,
   shopId: string,
   personIds: string[],
-): Promise<Map<string, (typeof waiverRecords.$inferSelect)[]>> {
-  const byPerson = new Map<string, (typeof waiverRecords.$inferSelect)[]>();
+): Promise<Map<string, WaiverStateRecord[]>> {
+  const byPerson = new Map<string, WaiverStateRecord[]>();
   if (personIds.length === 0) return byPerson;
   const rows = await db
-    .select({ record: waiverRecords })
+    .select({ record: WAIVER_STATE_COLUMNS })
     .from(waiverRecords)
     .leftJoin(
       bookings,

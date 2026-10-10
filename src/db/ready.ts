@@ -31,7 +31,7 @@ import {
 import { bookings, certifications, people, shops } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getTripWithBooked } from "./trips";
-import { getCurrentWaiverTemplate, listSignedWaiversByPerson } from "./waivers";
+import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
 import { welcomeCueInputsByBooking } from "./welcome-cues";
 
 /**
@@ -492,7 +492,7 @@ export async function carriedPreparationForDiver(
         ),
       ),
     listSignedWaiversByPerson(db, input.shopId, [input.personId]),
-    getCurrentWaiverTemplate(db, input.shopId),
+    getCurrentWaiverGeneration(db, input.shopId),
     // The guardian rule (src/lib/guardian.ts): a minor's solo signature is not
     // a release that was kept, so it must not be told to a stranded family as one.
     db
