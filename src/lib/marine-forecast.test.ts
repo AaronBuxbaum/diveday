@@ -170,7 +170,9 @@ describe("fetchAutomatedMarineForecast", () => {
           ),
         );
       }
-      return Promise.resolve(new Response("unavailable", { status: 503 }));
+      return Promise.resolve(
+        new Response(JSON.stringify({ hourly: { time: [1_784_422_800], wind_speed_10m: [9] } })),
+      );
     });
     const point = { latitude: 25.12, longitude: -80.3 };
     const startsAt = new Date(1_784_422_800_000);
@@ -229,6 +231,32 @@ describe("fetchAutomatedMarineForecast", () => {
     await fetchAutomatedMarineForecast(point, startsAt, fetcher);
 
     expect(fetcher).toHaveBeenCalledTimes(4);
+  });
+
+  it("asks again after half an answer instead of remembering the missing wind", async () => {
+    const marineBody = JSON.stringify({ hourly: { time: [1_784_422_800], wave_height: [0.4] } });
+    const weatherBody = JSON.stringify({
+      hourly: { time: [1_784_422_800], wind_speed_10m: [18], wind_gusts_10m: [24] },
+    });
+    let call = 0;
+    const fetcher = vi.fn(async (input: string | URL | Request) => {
+      call += 1;
+      const url = String(input);
+      if (url.includes("marine-api")) return new Response(marineBody, { status: 200 });
+      // The weather host is down for the first pair only.
+      return call <= 2
+        ? new Response("unavailable", { status: 503 })
+        : new Response(weatherBody, { status: 200 });
+    });
+    const point = { latitude: 24.6, longitude: -81.7 };
+    const startsAt = new Date(1_784_422_800_000);
+
+    const first = await fetchAutomatedMarineForecast(point, startsAt, fetcher);
+    const second = await fetchAutomatedMarineForecast(point, startsAt, fetcher);
+
+    expect(first?.wind).toBeNull();
+    expect(fetcher).toHaveBeenCalledTimes(4);
+    expect(second?.wind?.speedKnots).not.toBeNull();
   });
 
   it("returns null when both providers fail", async () => {

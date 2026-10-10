@@ -329,8 +329,11 @@ function surfaceConditions(
 /**
  * Both providers' answers for one site: from the five-minute in-process cache
  * when one is there or in flight, otherwise one request to each. A failure is
- * never remembered — the entry leaves as soon as it resolves to nothing, so the
- * next render asks again.
+ * never remembered, and neither is half an answer: an entry where either
+ * provider came back empty leaves as soon as it resolves, so the caller that
+ * asked gets what there is and the next render asks again. The wind lives in
+ * the weather half, so a remembered half answer would silence the high-wind
+ * row for every departure to the site for five minutes.
  */
 function providerPayloads(
   point: ForecastPoint,
@@ -353,7 +356,8 @@ function providerPayloads(
   };
   cache.set(key, entry);
   void entry.value.then((payloads) => {
-    if (!payloads && cache.get(key) === entry) cache.delete(key);
+    const whole = payloads?.marine && payloads?.weather;
+    if (!whole && cache.get(key) === entry) cache.delete(key);
   });
   return entry.value;
 }
