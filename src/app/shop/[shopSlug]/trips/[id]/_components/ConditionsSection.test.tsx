@@ -1,9 +1,15 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
+import { Suspense } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { INSET_NOTE_CLASS } from "@/components/ui/card";
 import type { AutomatedMarineForecast } from "@/lib/marine-forecast";
-import { ConditionsOutlook, ConditionsOutlookSlot, ConditionsSection } from "./ConditionsSection";
+import {
+  ConditionsOutlook,
+  ConditionsOutlookOnceAnswered,
+  ConditionsOutlookSlot,
+  ConditionsSection,
+} from "./ConditionsSection";
 import type { Trip } from "./types";
 
 afterEach(cleanup);
@@ -176,8 +182,21 @@ describe("ConditionsSection — whose tide", () => {
  * same outlook once both have answered.
  */
 describe("ConditionsOutlookSlot", () => {
+  it("holds the outlook inside its own Suspense boundary", () => {
+    const element = ConditionsOutlookSlot({
+      locale: "en-US",
+      timezone: "America/New_York",
+      temperatureUnit: "celsius",
+      depthUnit: "meters",
+      automatedForecast: new Promise(() => {}),
+      tideLines: new Promise(() => {}),
+    });
+
+    expect(element.type).toBe(Suspense);
+  });
+
   it("renders the outlook and the tide once the provider calls answer", async () => {
-    const element = await ConditionsOutlookSlot({
+    const element = await ConditionsOutlookOnceAnswered({
       locale: "en-US",
       timezone: "America/New_York",
       temperatureUnit: "celsius",

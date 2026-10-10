@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { nowDate } from "./clock";
 import {
   AUTOMATED_FORECAST_WINDOW_DAYS,
+  automatedForecastForDeparture,
   fetchAutomatedMarineForecast,
   hasCrewPrediction,
   isHighWind,
@@ -330,5 +332,41 @@ describe("isHighWind", () => {
 
   it("returns true when gusts are high even if sustained is below threshold", () => {
     expect(isHighWind({ speedKnots: 18, gustsKnots: 27, direction: "e" })).toBe(true);
+  });
+});
+
+describe("automatedForecastForDeparture", () => {
+  const pinned = { forecastLatitude: 24.95, forecastLongitude: -80.45 };
+  const tomorrow = () => new Date(nowDate().getTime() + 24 * 60 * 60 * 1000);
+
+  it("answers null, without asking anybody, for a site with no pin or no site at all", async () => {
+    const spy = vi.spyOn(globalThis, "fetch");
+    try {
+      await expect(automatedForecastForDeparture(null, tomorrow())).resolves.toBeNull();
+      await expect(
+        automatedForecastForDeparture(
+          { forecastLatitude: 24.95, forecastLongitude: null },
+          tomorrow(),
+        ),
+      ).resolves.toBeNull();
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("answers null outside the forecast window, without asking anybody", async () => {
+    const spy = vi.spyOn(globalThis, "fetch");
+    try {
+      const past = new Date(nowDate().getTime() - 60 * 60 * 1000);
+      const tooFar = new Date(
+        nowDate().getTime() + (AUTOMATED_FORECAST_WINDOW_DAYS + 1) * 24 * 60 * 60 * 1000,
+      );
+      await expect(automatedForecastForDeparture(pinned, past)).resolves.toBeNull();
+      await expect(automatedForecastForDeparture(pinned, tooFar)).resolves.toBeNull();
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

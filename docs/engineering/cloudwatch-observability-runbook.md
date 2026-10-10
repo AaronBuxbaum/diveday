@@ -161,8 +161,9 @@ write one `render.db_queries` line after their response has gone: the route temp
 of database statements the render sent (`queries`), and the wall time from its first statement to
 the end of the response (`ms`). `ms` is not time inside the database; read it beside `queries`, and
 a page whose `ms` moves while its `queries` stays flat is waiting on something else. The line is
-armed by `reportRenderQueries` (`src/lib/observability/query-timing.ts`); a page that does not arm
-its own name is reported under its layout's fallback, `/shop/**` or `/s/**`.
+armed by `reportRenderQueries` (`src/lib/observability/query-timing.ts`), which a public or token
+page calls through `await connectionForRoute("<route>")` in place of `await connection()`; a page
+that does not arm its own name is reported under its layout's fallback, `/shop/**` or `/s/**`.
 
 Where to read it:
 

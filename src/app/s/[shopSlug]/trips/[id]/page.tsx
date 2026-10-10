@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { after, connection } from "next/server";
 import { FlashParams } from "@/components/FlashParams";
 import { JsonLd } from "@/components/JsonLd";
 import { PhoneFootBar } from "@/components/PhoneFootBar";
@@ -48,15 +47,11 @@ import { checkoutSeatTerms } from "@/lib/deposits";
 import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
 import { formatDateTimeTz, formatDayParts, formatShortDate, formatTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
-import {
-  fetchAutomatedMarineForecast,
-  hasCrewPrediction,
-  shouldShowAutomatedForecast,
-} from "@/lib/marine-forecast";
+import { automatedForecastForDeparture, hasCrewPrediction } from "@/lib/marine-forecast";
 import { minimumSeatsState } from "@/lib/minimum-seats";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
-import { reportRenderQueries } from "@/lib/observability/query-timing";
+import { connectionForRoute } from "@/lib/observability/render-connection";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import { combineCertRequirements } from "@/lib/readiness";
@@ -154,8 +149,7 @@ export default async function TripDetailPage({
     handoff?: string | string[];
   }>;
 }) {
-  await connection();
-  reportRenderQueries("/s/[shopSlug]/trips/[id]", after);
+  await connectionForRoute("/s/[shopSlug]/trips/[id]");
   const { shopSlug, id: tripId } = await params;
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
@@ -269,20 +263,10 @@ export default async function TripDetailPage({
       : cachedListFormat(locale, { style: "long", type: "conjunction" }).format(crewLanguageNames);
   const changeEvents = await listTripChangeEvents(db, shop.id, tripId);
   const crewPrediction = hasCrewPrediction(trip);
-  const forecastPoint =
-    trip.diveSite &&
-    trip.diveSite.forecastLatitude !== null &&
-    trip.diveSite.forecastLongitude !== null
-      ? { latitude: trip.diveSite.forecastLatitude, longitude: trip.diveSite.forecastLongitude }
-      : null;
-  // **Started, never awaited here** (code review 2026-10-10, item 1): the
-  // outlook waits on Open-Meteo, up to four seconds, so the conditions line
-  // streams it in inside its own `<Suspense>` and the booking form never waits
-  // for it. It never rejects: any provider failure answers null.
-  const automatedForecast =
-    !crewPrediction && forecastPoint && shouldShowAutomatedForecast(trip.startsAt)
-      ? fetchAutomatedMarineForecast(forecastPoint, trip.startsAt)
-      : Promise.resolve(null);
+  // Started, never awaited: ConditionsLine streams it in its own `<Suspense>`.
+  const automatedForecast = crewPrediction
+    ? Promise.resolve(null)
+    : automatedForecastForDeparture(trip.diveSite, trip.startsAt);
   // The embed's short confirmation renders only from a verified `confirm`
   // capability — never from a raw booking id in the URL (design principle 6:
   // trustworthy by inspection; CR-003). A guessed/leaked booking UUID alone is

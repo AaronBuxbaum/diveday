@@ -423,6 +423,26 @@ export async function fetchAutomatedMarineForecast(
   return payloads ? forecastAt(payloads, startsAt) : null;
 }
 
+/** A dive site as far as the outlook cares: its pinned coordinates, when there are any. */
+export type ForecastSite = { forecastLatitude: number | null; forecastLongitude: number | null };
+
+/**
+ * The automated outlook for a departure from `site`: null when the site has no pin, when the
+ * departure is outside the forecast window, or on any provider failure. It never rejects, so a
+ * page can start it without awaiting and stream the answer in behind a `<Suspense>`.
+ */
+export function automatedForecastForDeparture(
+  site: ForecastSite | null | undefined,
+  startsAt: Date,
+): Promise<AutomatedMarineForecast | null> {
+  if (!site || site.forecastLatitude === null || site.forecastLongitude === null) {
+    return Promise.resolve(null);
+  }
+  if (!shouldShowAutomatedForecast(startsAt)) return Promise.resolve(null);
+  const point = { latitude: site.forecastLatitude, longitude: site.forecastLongitude };
+  return fetchAutomatedMarineForecast(point, startsAt).catch(() => null);
+}
+
 /** The departure's own hour, read out of both providers' answers for its site. */
 function forecastAt(
   { marine: marinePayload, weather: weatherPayload }: ProviderPayloads,

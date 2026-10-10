@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { after, connection } from "next/server";
+import { after } from "next/server";
 import { z } from "zod";
 import { DiveSitesPeek } from "@/components/DiveSitesPeek";
 import { EarnedMoment } from "@/components/EarnedMoment";
@@ -57,7 +57,7 @@ import {
   readMedicalAnswers,
 } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { reportRenderQueries } from "@/lib/observability/query-timing";
+import { connectionForRoute } from "@/lib/observability/render-connection";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";
@@ -383,14 +383,12 @@ export default async function WaiverPage({
     at?: string;
   }>;
 }) {
-  await connection();
-  reportRenderQueries("/waivers/[token]", after);
+  await connectionForRoute("/waivers/[token]");
   const { token } = await params;
-  // `at` is the refusal's own nonce, minted by the actions below on every
-  // refused submit. It exists so a *repeat* of the identical refusal (same
-  // wrong name twice) still remounts `FieldErrorFocus` and re-runs the
-  // scroll-and-ring — without it the second attempt renders an unchanged tree
-  // and the effect never fires again (see FieldErrorFocus's own docstring).
+  // `at` is the refusal's own nonce, minted by the actions below on every refused submit. It
+  // exists so a *repeat* of the identical refusal (same wrong name twice) still remounts
+  // `FieldErrorFocus` and re-runs the scroll-and-ring — without it the second attempt renders an
+  // unchanged tree and the effect never fires again (see FieldErrorFocus's own docstring).
   const { saved, error, field, sent, at } = await searchParams;
   // `Object.hasOwn`, not `in` — `field` is attacker-supplied and `in` walks
   // the prototype chain (`?field=toString` would mint a fieldError whose

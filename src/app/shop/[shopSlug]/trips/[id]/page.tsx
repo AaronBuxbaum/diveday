@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
-import { Suspense } from "react";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
@@ -38,11 +37,7 @@ import { parseDockDayRhythm } from "@/lib/diver-planning";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { formatMoneyCents, formatShortDate, formatTime, weekdayNames } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
-import {
-  fetchAutomatedMarineForecast,
-  hasCrewPrediction,
-  shouldShowAutomatedForecast,
-} from "@/lib/marine-forecast";
+import { automatedForecastForDeparture, hasCrewPrediction } from "@/lib/marine-forecast";
 import { toShopCurrency } from "@/lib/money";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { publicTripPath } from "@/lib/public-routes";
@@ -421,25 +416,12 @@ export default async function ManageTripPage({
     ({ diveSite }) =>
       diveSite && diveSite.forecastLatitude !== null && diveSite.forecastLongitude !== null,
   )?.diveSite;
-  const forecastPoint =
-    siteWithForecast &&
-    siteWithForecast.forecastLatitude !== null &&
-    siteWithForecast.forecastLongitude !== null
-      ? {
-          latitude: siteWithForecast.forecastLatitude,
-          longitude: siteWithForecast.forecastLongitude,
-        }
-      : null;
-  // **Started, never awaited here** (code review 2026-10-10, item 1): the
-  // marine outlook and the tide each wait on a provider outside DiveDay, up to
-  // four seconds, so the conditions panel streams them in inside its own
-  // `<Suspense>` and nothing else on the page waits for them. Neither rejects
-  // (`fetchAutomatedMarineForecast` answers null on any failure, the tide seam
-  // answers nothing). Only the Details tab draws the panel, so only it asks.
-  const automatedForecast =
-    showDetails && forecastPoint && shouldShowAutomatedForecast(trip.startsAt)
-      ? fetchAutomatedMarineForecast(forecastPoint, trip.startsAt)
-      : Promise.resolve(null);
+  // **Started, never awaited here** (code review 2026-10-10, item 1): the outlook and the tide
+  // each wait on a provider outside DiveDay, up to four seconds, so the conditions panel streams
+  // them in behind its own `<Suspense>`. Neither rejects. Only the Details tab draws the panel.
+  const automatedForecast = showDetails
+    ? automatedForecastForDeparture(siteWithForecast, trip.startsAt)
+    : Promise.resolve(null);
   // One sentence per stationed site, read at the boat's own arrival there
   // (ADR 20260907-noaa-tide-predictions). Empty on most departures.
   const rhythm = parseDockDayRhythm(shop);
@@ -863,16 +845,14 @@ export default async function ManageTripPage({
                       temperatureUnit={temperatureUnitFor(shop)}
                       depthUnit={shop.depthUnit}
                       outlook={
-                        <Suspense fallback={null}>
-                          <ConditionsOutlookSlot
-                            locale={locale}
-                            timezone={shop.timezone}
-                            temperatureUnit={temperatureUnitFor(shop)}
-                            depthUnit={shop.depthUnit}
-                            automatedForecast={automatedForecast}
-                            tideLines={tideLines}
-                          />
-                        </Suspense>
+                        <ConditionsOutlookSlot
+                          locale={locale}
+                          timezone={shop.timezone}
+                          temperatureUnit={temperatureUnitFor(shop)}
+                          depthUnit={shop.depthUnit}
+                          automatedForecast={automatedForecast}
+                          tideLines={tideLines}
+                        />
                       }
                     />
                   ),

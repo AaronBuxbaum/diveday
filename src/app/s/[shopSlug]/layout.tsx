@@ -1,10 +1,9 @@
-import { after, connection } from "next/server";
 import { Suspense } from "react";
 import { ErrorBoundaryIntlProvider } from "@/i18n/ErrorBoundaryIntlProvider";
 import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-messages";
 import { diverTranslator } from "@/i18n/messages";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { reportRenderQueries } from "@/lib/observability/query-timing";
+import { connectionForRoute } from "@/lib/observability/render-connection";
 import { PublicShopMainContent } from "./_components/PublicShopMainContent";
 import {
   PublicShopBrand,
@@ -107,7 +106,6 @@ export default function PublicShopLayout({
  * above) and the count only means anything for a render that served a request.
  */
 async function PublicRenderCost() {
-  await connection();
-  reportRenderQueries("/s/**", after, { fallback: true });
+  await connectionForRoute("/s/**", { fallback: true });
   return null;
 }

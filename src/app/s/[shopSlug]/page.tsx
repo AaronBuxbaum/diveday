@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { after as afterResponse, connection } from "next/server";
 import { Suspense } from "react";
 import { submitInquiryAction } from "@/app/actions/inquiry";
 import { DateRequestForm } from "@/components/DateRequestForm";
@@ -17,15 +16,12 @@ import { ITEM_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typograph
 import { listBoats } from "@/db/boats";
 import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
-import { tripRequirementSummaries } from "@/db/readiness";
 import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { listTripLenses } from "@/db/trip-lenses";
 import {
-  countShopTrips,
   nextSessionStartByCourse,
   pagedUpcomingTripsWithCounts,
-  tripDiveSiteSummaries,
   upcomingScheduleRange,
 } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
@@ -51,7 +47,7 @@ import {
 import { cachedListFormat } from "@/lib/intl-cache";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
-import { reportRenderQueries } from "@/lib/observability/query-timing";
+import { connectionForRoute } from "@/lib/observability/render-connection";
 import { offSeason } from "@/lib/off-season";
 import {
   publicAvailabilityPath,
@@ -83,6 +79,7 @@ import { OffSeasonPanel } from "./_components/OffSeasonPanel";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
 import { ShopPhotoStrip } from "./_components/ShopPhotoStrip";
+import { everHadDepartureRead, listedDepartureSummaries } from "./_components/schedule-reads";
 import {
   WEEK_LEDGER_FOLLOWER_CLASS,
   WeekLedger,
@@ -175,8 +172,7 @@ export default async function SchedulePage({
     lens?: string;
   }>;
 }) {
-  await connection(); // schedule is live data — render per request, not at build
-  reportRenderQueries("/s/[shopSlug]", afterResponse);
+  await connectionForRoute("/s/[shopSlug]"); // live data — render per request, not at build
   const { shopSlug } = await params;
   const { month, after, back, embed, hasSpace, tripType, canDive, hideAbove, credit, lens } =
     await searchParams;
@@ -246,51 +242,42 @@ export default async function SchedulePage({
     return { monthStart, monthEnd };
   };
 
-  // When the diver has explicitly paged to a month on the rail, bound the
-  // trip list to that month — the label above the list and the list itself
-  // must never disagree.
+  // When the diver has explicitly paged to a month on the rail, bound the trip list to that month —
+  // the label above the list and the list itself must never disagree.
   const explicitMonth = parseMonthKey(month);
   const listMonthBounds = explicitMonth ? monthBoundsUtc(explicitMonth) : null;
 
   /**
-   * **The shop's trip tags** — ADR
-   * 20260904-reef-all-the-way-down, decision 2 (issue #1162).
+   * **The shop's trip tags** — ADR 20260904-reef-all-the-way-down, decision 2 (issue #1162).
    *
-   * Read inside the batch below, and the list query waits on it only when the
-   * URL names a lens: the narrowing happens in SQL inside `upcomingTripScope`,
-   * so the keyset pages stay honest, and it needs the resolved lens id. With no
-   * `?lens=` (every first visit) the list starts beside it. Never in the frame —
-   * `FilterChips` renders a `<nav>` landmark and `?embed=1` promises the host
+   * Read inside the batch below, and the list query waits on it only when the URL names a lens: the
+   * narrowing happens in SQL inside `upcomingTripScope`, so the keyset pages stay honest, and it
+   * needs the resolved lens id. With no `?lens=` (every first visit) the list starts beside it.
+   * Never in the frame — `FilterChips` renders a `<nav>` landmark and `?embed=1` promises the host
    * page zero navigation landmarks.
    *
-   * An unknown or malformed `?lens=` resolves to null and renders the whole
-   * board with "Every departure" current, which is what a link shared before
-   * the shop deleted a word should do.
+   * An unknown or malformed `?lens=` resolves to null and renders the whole board with "Every
+   * departure" current, which is what a link shared before the shop deleted a word should do.
    */
   const lensesRead = isEmbed ? Promise.resolve([]) : listTripLenses(db, shop.id);
   const activeLensRead = lens
     ? lensesRead.then((rows) => resolveLens(lens, rows))
     : Promise.resolve(null);
 
-  // The published-review *list* still streams in separately (below, via
-  // <ScheduleReviewsSection>) — it is the slower, independent read the shell
-  // and trip list never needed to wait behind (docs task 119 follow-up:
-  // streaming the schedule).
+  // The published-review *list* still streams in separately (below, via <ScheduleReviewsSection>) —
+  // it is the slower, independent read the shell and trip list never needed to wait behind (docs
+  // task 119 follow-up: streaming the schedule).
   //
-  // The **aggregate** joined this batch when the shopfront landed: it is one
-  // row, and it is now part of the identity band at the very top of the page
-  // (ADR 20260827-clearwater-surface-language, decision 8), where streaming it
-  // separately would either pop a rating line in under the shop's name or cost
-  // a reserved gap on every shop that has no reviews at all. It is handed down
-  // to the reviews section rather than read twice.
+  // The **aggregate** joined this batch when the shopfront landed: it is one row, and it is now
+  // part of the identity band at the very top of the page (ADR
+  // 20260827-clearwater-surface-language, decision 8), where streaming it separately would either
+  // pop a rating line in under the shop's name or cost a reserved gap on every shop that has no
+  // reviews at all. It is handed down to the reviews section rather than read twice.
   //
-  // Both, and the courses shelf, stand down inside the frame: `?embed=1`
-  // renders neither the hero nor the shelves.
+  // Both, and the courses shelf, stand down inside the frame: `?embed=1` renders neither the hero
+  // nor the shelves.
   //
-  // **One batch, its dependents chained inside it** (code review 2026-10-10,
-  // item 24): the lenses, the shop-ever-sailed count (only when nothing is
-  // ahead) and each departure's sites and requirements (which need only the
-  // listed trip ids) used to be four more round trips one after another.
+  // **One batch, its dependents chained inside it** (code review 2026-10-10, item 24).
   const upcomingRead = activeLensRead.then((activeLens) =>
     pagedUpcomingTripsWithCounts(db, shop.id, {
       cursor: after,
@@ -318,50 +305,25 @@ export default async function SchedulePage({
     activeLensRead,
     rangeRead,
     upcomingRead,
-    // A shop that switched reviews off shows no stars anywhere, not an
-    // empty rating (ADR 20261005-optional-shop-features).
+    // A shop that switched reviews off shows no stars anywhere, not an empty rating (ADR
+    // 20261005-optional-shop-features).
     isEmbed || !shop.reviewsEnabled ? EMPTY_REVIEW_AGGREGATE : getShopReviewAggregate(db, shop.id),
     isEmbed ? [] : listActiveCourses(db, shop.id),
-    // The fleet, for the storefront's boats section (Harbor). Not in the
-    // widget: an embed is the list-first window and names no hulls.
+    // The fleet, for the storefront's boats section (Harbor). Not in the widget: an embed is the
+    // list-first window and names no hulls.
     isEmbed ? [] : listBoats(db, shop.id),
-    /**
-     * **Has this shop ever run a departure** — which is not what `hasUpcoming`
-     * asks.
-     *
-     * `upcomingScheduleRange` is scheduled, public, and ahead of now, so it
-     * goes false for a shop between seasons with three hundred departures
-     * behind it, and for one whose whole board is currently private. The deal
-     * list below stands down on that signal, and standing it down for those
-     * two shops is backwards: an off-season visitor is exactly the person
-     * worth telling when a boat needs to fill seats at a discount. The count
-     * only runs in the rare case the cheap signal already says no.
-     */
-    rangeRead.then(
-      async (scheduled) => scheduled.first !== null || (await countShopTrips(db, shop.id)) > 0,
+    rangeRead.then((scheduled) => everHadDepartureRead(db, shop.id, scheduled.first !== null)),
+    upcomingRead.then(({ trips: listed }) =>
+      listedDepartureSummaries(
+        db,
+        shop.id,
+        listed.map((trip) => trip.id),
+      ),
     ),
-    upcomingRead.then(({ trips: listed }) => {
-      const ids = listed.map((trip) => trip.id);
-      return Promise.all([
-        // Where each departure on this page actually goes. One read for the
-        // page, not one per card — and read off the *dives* rather than
-        // `trips.dive_site_id` (dive one's site, copied onto the trip row), so
-        // a two-site day names both and a day whose open tank is the first one
-        // still names the site it visits.
-        tripDiveSiteSummaries(db, shop.id, ids),
-        // What each departure asks of anybody — the trip's own gate folded
-        // with every site it visits, one read for the page. A property of the
-        // *trip*, so it is safe on an anonymous page: it says nothing about
-        // any reader, and the map holds only the departures that demand
-        // something (issue #695).
-        tripRequirementSummaries(db, shop.id, ids),
-      ]);
-    }),
   ]);
-  // The view a diver has built — month, embed mode, the lens, and every list
-  // filter — must survive every link that re-renders this page. A pager or
-  // month arrow that drops `hasSpace` quietly hands back the full unfiltered
-  // list with the checkbox reset, with nothing saying why.
+  // The view a diver has built — month, embed mode, the lens, and every list filter — must survive
+  // every link that re-renders this page. A pager or month arrow that drops `hasSpace` quietly
+  // hands back the full unfiltered list with the checkbox reset, with nothing saying why.
   const withViewParams = (params: URLSearchParams) => {
     if (month) params.set("month", month);
     if (isEmbed) params.set("embed", "1");

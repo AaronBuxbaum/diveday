@@ -180,7 +180,7 @@ describe("the log-signal registry", () => {
 
   /**
    * The render-cost event is written through a constant, not a literal
-   * `log("…")` call, so the emitted-codes sweep above cannot see it. This pins
+   * `log("...")` call, so the emitted-codes sweep above cannot see it. This pins
    * the constant itself: rename it in `query-timing.ts` and the two filters
    * would count zero forever.
    */

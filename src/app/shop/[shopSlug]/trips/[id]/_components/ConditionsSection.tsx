@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_CLASS } from "@/components/ui/card";
@@ -349,15 +349,32 @@ export function ConditionsOutlook({
   );
 }
 
+type ConditionsOutlookSlotProps = Omit<
+  Parameters<typeof ConditionsOutlook>[0],
+  "automatedForecast" | "tideLines"
+> & {
+  automatedForecast: Promise<AutomatedMarineForecast | null>;
+  tideLines: Promise<{ site: string; text: string; station?: string | null }[]>;
+};
+
+/**
+ * {@link ConditionsOutlook} behind its own `<Suspense>`: the page hands it the provider calls
+ * still in flight, and nothing else on the page waits for them (code review 2026-10-10, item 1).
+ */
+export function ConditionsOutlookSlot(props: ConditionsOutlookSlotProps) {
+  return (
+    <Suspense fallback={null}>
+      <ConditionsOutlookOnceAnswered {...props} />
+    </Suspense>
+  );
+}
+
 /** {@link ConditionsOutlook}, once the page's provider calls have answered. */
-export async function ConditionsOutlookSlot({
+export async function ConditionsOutlookOnceAnswered({
   automatedForecast,
   tideLines,
   ...rest
-}: Omit<Parameters<typeof ConditionsOutlook>[0], "automatedForecast" | "tideLines"> & {
-  automatedForecast: Promise<AutomatedMarineForecast | null>;
-  tideLines: Promise<{ site: string; text: string; station?: string | null }[]>;
-}) {
+}: ConditionsOutlookSlotProps) {
   const [forecast, lines] = await Promise.all([automatedForecast, tideLines]);
   return <ConditionsOutlook {...rest} automatedForecast={forecast} tideLines={lines} />;
 }

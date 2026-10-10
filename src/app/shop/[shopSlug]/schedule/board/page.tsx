@@ -8,11 +8,9 @@ import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats, listBoatsForHistory } from "@/db/boats";
 import { listDateRequestsByIds, listDateRequestsForCalendarDates } from "@/db/course-inquiries";
-import { listActiveCourses } from "@/db/courses";
-import { listDiveSites } from "@/db/dive-sites";
 import { readFormDraft } from "@/db/form-drafts";
 import { openAfterDiveRollCalls } from "@/db/today";
-import { tripCrewByTrip, upcomingScheduleRange, weekBoard } from "@/db/trips";
+import { upcomingScheduleRange, weekBoard } from "@/db/trips";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -50,6 +48,7 @@ import {
 import { weekSeatTally } from "@/lib/week-seats";
 import { toDateInputValue, toTimeInputValue, utcToWallTime } from "@/lib/zoned";
 import { ScheduleViews } from "../_components/ScheduleViews";
+import { requestedCourseAndSite, weekCrewRead } from "./_components/board-reads";
 import {
   type BuilderCopy,
   type BuilderInitialCourse,
@@ -168,10 +167,8 @@ export default async function ScheduleBoardPage({
   // inside a panel that is closed by default, so they load when it opens
   // (`loadBuilderOptionsAction`).
   //
-  // **One wave** (code review 2026-10-10, item 25): every read the board makes
-  // is here, and the two that need another's answer — the week's crew needs
-  // the week's ids, the request rows need the configure gate — are chained
-  // onto it inside the batch rather than awaited one at a time after it.
+  // **One wave** (code review 2026-10-10, item 25): the week's crew and the request rows are
+  // chained onto the reads they need inside the batch, not awaited one at a time after it.
   const canConfigureRead = canPersonConfigureTrips(db, shop.id, session.user.personId);
   const weekRead = weekBoard(db, shop.id, weekStartIso, tz, now);
   const [
@@ -184,88 +181,56 @@ export default async function ScheduleBoardPage({
     weekAsks,
     boatsEverOwned,
     crewByTrip,
-    requestedCourse,
-    requestedSite,
+    { requestedCourse, requestedSite },
     requestRows,
   ] = await Promise.all([
-    // The reader's own half-typed add panel, if they left one in the last day
-    // (ADR 20260906-before-you-ask, decision 3).
+    // The reader's own half-typed add panel, if they left one in the last day (ADR
+    // 20260906-before-you-ask, decision 3).
     readFormDraft(db, shop.id, session.user.personId, "add_departure", now),
     upcomingScheduleRange(db, shop.id, now),
     canConfigureRead,
     // Departures that already came back with a head count still open (DOM-H3).
-    // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips
-    // whose `startsAt` is still ahead of `now` — so this is its own backwards
-    // query, and one batched query for every such boat rather than a per-trip
-    // roll-call lookup.
+    // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips whose `startsAt` is
+    // still ahead of `now` — so this is its own backwards query, and one batched query for every
+    // such boat rather than a per-trip roll-call lookup.
     //
-    // Read at every cursor page, not only the first, because the **week** also
-    // needs it and the week has no cursor: it is addressed by `?week=`, so a
-    // board sitting on `?after=` still draws a grid, and gating the read on
-    // the stream's pager is what made the loudest thing the board can say
-    // disappear at desktop. The stream's own placement is unchanged — those
-    // rows lead page one and are not repeated on top of every later page
-    // (`streamRollCalls` below).
+    // Read at every cursor page, not only the first, because the **week** also needs it and the
+    // week has no cursor: it is addressed by `?week=`, so a board sitting on `?after=` still draws
+    // a grid, and gating the read on the stream's pager is what made the loudest thing the board
+    // can say disappear at desktop. The stream's own placement is unchanged — those rows lead page
+    // one and are not repeated on top of every later page (`streamRollCalls` below).
     openAfterDiveRollCalls(db, shop.id, now),
     listBoats(db, shop.id),
-    // A second, bounded reading of the same departures — one week, not a
-    // cursor page — for the `xl` grid (ADR 20260827-clearwater-surface-language,
-    // decision 5). It reaches backwards, which the stream never does: a week
-    // that has already half-happened is most of what "what does my week look
-    // like" means.
+    // A second, bounded reading of the same departures — one week, not a cursor page — for the `xl`
+    // grid (ADR 20260827-clearwater-surface-language, decision 5). It reaches backwards, which the
+    // stream never does: a week that has already half-happened is most of what "what does my week
+    // look like" means.
     weekRead,
-    // **The days somebody asked for** (ADR 20260919-one-idea, slice 23f —
-    // "a request is a day someone asked for, drawn as a ghost on the week").
-    // Bounded to the week for the same reason everything else here is: Tide
-    // files a thing under the hour it happens at, and a lead for a day three
-    // weeks out is that week's business. `/shop/<slug>/requests` stays the
-    // unbounded reading of the same rows.
+    // **The days somebody asked for** (ADR 20260919-one-idea, slice 23f — "a request is a day
+    // someone asked for, drawn as a ghost on the week"). Bounded to the week for the same reason
+    // everything else here is: Tide files a thing under the hour it happens at, and a lead for a
+    // day three weeks out is that week's business. `/shop/<slug>/requests` stays the unbounded
+    // reading of the same rows.
     listDateRequestsForCalendarDates(db, shop.id, weekDates(weekStartIso)),
-    // **Names come from every hull the shop has ever had, not just the live
-    // ones.** A departure that sailed on a boat the shop has since deleted must
-    // still say which vessel — that is the whole reason deleting one is a stamp
-    // rather than a delete (ADR 20260820-every-delete-is-soft). `shopBoats`
-    // stays live: it is the picker and the fleet count, and a deleted hull is
-    // not a boat this shop has.
+    // **Names come from every hull the shop has ever had, not just the live ones.** A departure
+    // that sailed on a boat the shop has since deleted must still say which vessel — that is the
+    // whole reason deleting one is a stamp rather than a delete (ADR
+    // 20260820-every-delete-is-soft). `shopBoats` stays live: it is the picker and the fleet count,
+    // and a deleted hull is not a boat this shop has.
     listBoatsForHistory(db, shop.id),
-    // **Who is crewing the week the board is drawing.** Depends on the ids the
-    // week read produced, so it is chained onto that read. One reading, so one
-    // list: this used to union the stream's cursor page with the week's ids,
-    // and the two never agreed about which departures were on the board
-    // (#1923). A shop that keeps no crew schedule prints no crew line, so it
-    // reads none.
-    shop.crewScheduleEnabled
-      ? weekRead.then((week) =>
-          tripCrewByTrip(
-            db,
-            shop.id,
-            Object.values(week.days).flatMap((entries) => entries.map((entry) => entry.tripId)),
-          ),
-        )
-      : new Map<string, Array<{ id: string; name: string }>>(),
-    // A course the catalogue sent us here to schedule. One list read, and only
-    // on the rare navigation that names a course — scoped to the session's own
-    // shop, so a `?course=` from another tenant simply resolves to nothing.
-    course
-      ? listActiveCourses(db, shop.id).then((rows) => rows.find((row) => row.id === course) ?? null)
-      : null,
-    // A dive site the library sent us here to schedule.
-    site
-      ? listDiveSites(db, shop.id).then((rows) => rows.find((row) => row.id === site) ?? null)
-      : null,
-    // Read for whoever can open the board, since 2026-09-16 (issue #1679). This
-    // carried the same `canPersonViewShopReports` check as `/requests`, on the
-    // written ground that it was "the same live report gate that protects
-    // /requests" — and that page is ungated now, so the check protected nothing
-    // and only broke the day group's one act: a captain tapping "Add departure"
-    // got a builder with no requests block and no explanation. `shop.id` is
-    // still the scope (`listDateRequestsByIds`), so a shareable URL still cannot
-    // pull another tenant's lead.
+    weekCrewRead(db, shop, weekRead),
+    requestedCourseAndSite(db, shop.id, { course, site }),
+    // Read for whoever can open the board, since 2026-09-16 (issue #1679). This carried the same
+    // `canPersonViewShopReports` check as `/requests`, on the written ground that it was "the same
+    // live report gate that protects /requests" — and that page is ungated now, so the check
+    // protected nothing and only broke the day group's one act: a captain tapping "Add departure"
+    // got a builder with no requests block and no explanation. `shop.id` is still the scope
+    // (`listDateRequestsByIds`), so a shareable URL still cannot pull another tenant's lead.
     //
-    // Read only for a reader the add panel renders for: the plan is drawn inside
-    // it and nowhere else, so for anyone else these rows were loaded and shown
-    // to nobody. `/requests` no longer offers them the link (issue #1831); a
-    // hand-typed `?requests=` from a captain now reads nothing either.
+    // Read only for a reader the add panel renders for: the plan is drawn inside it and nowhere
+    // else, so for anyone else these rows were loaded and shown to nobody. `/requests` no longer
+    // offers them the link (issue #1831); a hand-typed `?requests=` from a captain now reads
+    // nothing either.
     requestIds.length > 0
       ? canConfigureRead.then((allowed) =>
           allowed ? listDateRequestsByIds(db, shop.id, requestIds) : [],
