@@ -38,7 +38,7 @@
   "progressAriaLabel": "Roll-call progress",
   "ofTotalAboard": "of {total, plural, one {# diver} other {# divers}} aboard",
   "allAccountedFor": "Everyone’s accounted for, divers and crew. Ready for the next check.",
-  "notBackAboardOpen": "{count, plural, one {# diver is not back aboard.} other {# divers are not back aboard.}} This checkpoint stays open until they’re counted.",
+  "notBackAboardOpen": "{count, plural, one {# person is not back aboard.} other {# people are not back aboard.}} This checkpoint stays open until they’re counted.",
   "crewNoneAssignedYet": "Nobody is on this trip’s crew yet. Add the people who sailed to close this checkpoint.",
   "crewNoneAboard": "Everyone aboard is counted, and every crew member on this trip is marked ashore, so nobody aboard is on the crew list. Add whoever sailed.",
   "crewNotBackAboard": "{count, plural, one {# crew member is not back aboard.} other {# crew members are not back aboard.}} This checkpoint stays open.",

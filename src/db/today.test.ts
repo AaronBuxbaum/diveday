@@ -2230,7 +2230,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       expect(row?.kind).toBe("roll_call_unfinished");
       expect(row?.urgency).toBe("imminent");
       expect(row?.dueAt?.getTime()).toBe(trip.endsAt.getTime());
-      expect(row?.detail).toContain("1 of 3 divers");
+      expect(row?.detail).toContain("1 of 3 people");
       expect(row?.href).toBe(
         `/shop/${shop.slug}/trips/${trip.id}/manifest?checkpoint=after_dive_1`,
       );
@@ -2300,7 +2300,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       });
 
       const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-      expect(rollCallRow(work, trip.id, "after_dive_uncounted")?.detail).toContain("1 of 2 divers");
+      expect(rollCallRow(work, trip.id, "after_dive_uncounted")?.detail).toContain("1 of 2 people");
     });
 
     it("alarms on the second dive of a two-dive trip whose first dive is complete", async () => {
@@ -2417,7 +2417,7 @@ describe("unclosed roll call (DOM-H3)", () => {
 
       const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
       const row = rollCallRow(work, trip.id, "after_dive_uncounted");
-      expect(row?.detail).toContain("4 of 4 divers");
+      expect(row?.detail).toContain("4 of 4 people");
       expect(row?.urgency).toBe("imminent");
     });
   });
@@ -2465,7 +2465,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       const row = rollCallRow(work, trip.id, "after_dive_uncounted");
       expect(row?.urgency).toBe("imminent");
       expect(row?.detail).toContain("Boat is out");
-      expect(row?.detail).toContain("1 of 3 divers");
+      expect(row?.detail).toContain("1 of 3 people");
     });
 
     it("raises a missing diver while the boat is still on the site", async () => {
@@ -2896,7 +2896,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       const row = rollCallRow(work, trip.id, "departure_uncounted");
       expect(row?.kind).toBe("roll_call_departure_open");
       expect(row?.urgency).toBe("now");
-      expect(row?.detail).toContain("2 of 4 divers");
+      expect(row?.detail).toContain("2 of 4 people");
       // Its own words, never the after-dive ones: nobody here was ever
       // unaccounted for after a dive.
       expect(row?.detail).toMatch(/dock count/i);
@@ -2944,6 +2944,62 @@ describe("unclosed roll call (DOM-H3)", () => {
       expect(row?.detail).toContain("No roll call recorded");
       expect(row?.detail).not.toContain("not back aboard");
       expect(row?.href).toBe(`/shop/${shop.slug}/trips/${trip.id}/manifest?checkpoint=departure`);
+    });
+
+    /**
+     * Issue #2251. The roll call counts every seat aboard, snorkelers and
+     * riders included (ADR 20261007-participant-types), so its sentences say
+     * people: a rider not accounted for is not "a diver not back aboard".
+     */
+    it("says people, not divers, when the count covers a snorkeler and a rider", async () => {
+      const { db, shop } = ctx;
+      const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+        endedHoursAgo: 2,
+        divers: 3,
+      });
+      const [diverSeat, snorkelerSeat, riderSeat] = bookingIds;
+      if (!diverSeat || !snorkelerSeat || !riderSeat) throw new Error("three seats expected");
+      await db
+        .update(bookingsTable)
+        .set({ participantType: "snorkeler" })
+        .where(eq(bookingsTable.id, snorkelerSeat));
+      await db
+        .update(bookingsTable)
+        .set({ participantType: "rider" })
+        .where(eq(bookingsTable.id, riderSeat));
+      await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
+      await db.insert(rollCallEventsTable).values(
+        bookingIds.map((bookingId) => ({
+          shopId: shop.id,
+          tripId: trip.id,
+          bookingId,
+          recordedByPersonId: staffId,
+          status: bookingId === riderSeat ? ("not_boarded" as const) : ("boarded" as const),
+          checkpoint: "after_dive_1",
+          source: "live" as const,
+          occurredAt: new Date(nowMs() - 3 * HOUR),
+        })),
+      );
+
+      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const [row] = rollCallRows(work, trip.id);
+      expect(row?.kind).toBe("roll_call_missing_diver");
+      expect(row?.detail).toMatch(/^1 of 3 people is not back aboard after dive 1\./);
+    });
+
+    it("counts people on a mixed boat with no roll call at all", async () => {
+      const { db, shop } = ctx;
+      const { trip, bookingIds } = await returnedTrip(db, shop.id, { endedHoursAgo: 2, divers: 2 });
+      const [, riderSeat] = bookingIds;
+      if (!riderSeat) throw new Error("two seats expected");
+      await db
+        .update(bookingsTable)
+        .set({ participantType: "rider" })
+        .where(eq(bookingsTable.id, riderSeat));
+
+      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const [row] = rollCallRows(work, trip.id);
+      expect(row?.detail).toBe("No roll call recorded for 2 people.");
     });
 
     it("stops chasing the dock count once the trip is older than the lookback", async () => {
@@ -3002,7 +3058,7 @@ describe("unclosed roll call (DOM-H3)", () => {
 
       const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
       expect(rollCallRow(work, newest.id, "after_dive_uncounted")?.detail).toContain(
-        "3 of 3 divers",
+        "3 of 3 people",
       );
     });
 

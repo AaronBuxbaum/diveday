@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -12,7 +12,7 @@ import {
   reserveGearUnit,
   setGearItemStatus,
 } from "./gear";
-import { gearItems, gearReservations, gearServiceEvents } from "./schema";
+import { gearItems, gearReservations, gearServiceEvents, rentalFitProfiles } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 import { listStaff, setTripCrew } from "./trips-crew";
 import { getTripPrep, screenGearPicks } from "./trips-prep";
@@ -455,6 +455,49 @@ describe("getTripPrep", () => {
         );
         expect(updated?.handedOver).toBe(true);
       });
+    });
+
+    /**
+     * Issue #2208. A diver flagged **Needs staff fit** still needs a regulator,
+     * a mask, a computer: the Gear tab keeps a picker for every piece their fit
+     * asks for, so the unit is reserved through the register rather than going
+     * out on paper. Every piece is a person's call, so nothing is proposed, and
+     * the row still says the diver needs a staff fit.
+     */
+    it("keeps pickers, and proposes nothing, for a diver flagged for a staff fit", async () => {
+      const ctx = await context();
+      const before = await prepFor(ctx);
+      const row = before.assignmentRows.find(
+        (entry) => entry.assigned.length === 0 && entry.wanted.length > 0,
+      );
+      if (!row) throw new Error("seeded trip has no unassigned diver wanting a unit");
+      const wantedKinds = row.wanted.map((need) => need.kind);
+      await ctx.db
+        .update(rentalFitProfiles)
+        .set({ needsStaffFitAt: nowDate(), needsStaffFitNote: "No XL BCD left" })
+        .where(
+          and(
+            eq(rentalFitProfiles.shopId, ctx.shop.id),
+            eq(rentalFitProfiles.personId, row.diver.personId),
+          ),
+        );
+
+      const after = await prepFor(ctx);
+      const flagged = after.assignmentRows.find(
+        (entry) => entry.diver.bookingId === row.diver.bookingId,
+      );
+      expect(flagged, "the flagged diver's row was dropped").toBeDefined();
+      expect(flagged?.needsStaffFit).toEqual({ note: "No XL BCD left" });
+      expect(flagged?.wanted.map((need) => need.kind).sort()).toEqual([...wantedKinds].sort());
+      for (const need of flagged?.wanted ?? []) {
+        expect(need.sizeIsAStart, need.kind).toBe(true);
+        expect(after.proposals.has(proposalKey(row.diver.bookingId, need.kind))).toBe(false);
+      }
+      // A diver with no flag says nothing of the kind.
+      const unflagged = after.assignmentRows.find(
+        (entry) => entry.diver.bookingId !== row.diver.bookingId,
+      );
+      if (unflagged) expect(unflagged.needsStaffFit).toBeNull();
     });
 
     it("keeps fins wanted after the mask unit is reserved", async () => {
