@@ -55,14 +55,9 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const {
-  deletePersonAction,
-  eraseGuardianEmailAction,
-  erasePersonAction,
-  mergeDiverAction,
-  replyToDiverAction,
-  savePersonAction,
-} = await import("./actions");
+const { replyToDiverAction, savePersonAction } = await import("./details-actions");
+const { deletePersonAction, eraseGuardianEmailAction, erasePersonAction, mergeDiverAction } =
+  await import("./record-actions");
 const { mergeDiverRecords } = await import("@/db/diver-merge");
 
 /**

@@ -6,7 +6,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { DiverDetailsGroup } from "./DiverDetailsGroup";
 import type { DiverProfile } from "./shared";
 
-vi.mock("../actions", () => ({ savePersonAction: vi.fn() }));
+vi.mock("../details-actions", () => ({ savePersonAction: vi.fn() }));
 
 afterEach(cleanup);
 

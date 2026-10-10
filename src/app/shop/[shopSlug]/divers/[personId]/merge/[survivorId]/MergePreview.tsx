@@ -27,7 +27,7 @@ import { formatDateTimeTz } from "@/lib/format";
 import { normalizePersonName } from "@/lib/person-name";
 import { shopPath } from "@/lib/staff-notices";
 import { DiverFormStatus, type DiverNotice } from "../../_components/NoticeBanner";
-import { mergeDiverAction } from "../../actions";
+import { mergeDiverAction } from "../../record-actions";
 
 const FIELD_KEYS: Record<DiverMergeField, StaffMessageKey> = {
   fullName: "divers.mergePreview.fields.fullName",

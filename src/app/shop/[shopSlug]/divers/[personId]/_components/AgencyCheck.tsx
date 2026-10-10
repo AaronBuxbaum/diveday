@@ -6,7 +6,7 @@ import { UndoToast } from "@/components/UndoToast";
 import { FormStatus } from "@/components/ui/form";
 import { requestAgencyPage, useCertCheckExtension } from "@/components/useCertCheckExtension";
 import type { AgencyCheckQuery } from "@/lib/agency-check";
-import type { AgencyCheckResult } from "../actions";
+import type { AgencyCheckResult } from "../card-actions";
 
 /** Every word this control renders, translated on the server with the agency's name in it. */
 export type AgencyCheckCopy = {

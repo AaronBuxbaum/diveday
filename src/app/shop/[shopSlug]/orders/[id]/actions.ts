@@ -34,7 +34,7 @@ async function isDemoShop(db: Awaited<ReturnType<typeof getDb>>, shopId: string)
  * own `not_found` refusal belongs two lines later — the same failure the
  * dynamic-segment guard (`scripts/check-uuid-segments.mjs`) exists to stop on
  * routes, on a surface that moves money. The sibling refund door in
- * `divers/[personId]/actions.ts` already did this; here the money action was
+ * diver record (`divers/[personId]/`) already did this; here the money action was
  * the outlier (issue #699 security review).
  */
 export async function refreshAction(formData: FormData) {

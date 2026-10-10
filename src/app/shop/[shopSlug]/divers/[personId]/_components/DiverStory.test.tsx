@@ -1,11 +1,9 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { DiverStory, type DiverStoryActs } from "./DiverStory";
 import type { DiverProfile, Shop } from "./shared";
-
-vi.mock("../actions", () => ({}));
 
 afterEach(cleanup);
 

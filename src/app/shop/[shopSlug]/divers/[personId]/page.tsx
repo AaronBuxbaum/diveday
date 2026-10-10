@@ -46,7 +46,8 @@ import { WorkOrdersGroup } from "./_components/WorkOrdersGroup";
 import { loadDiverGear } from "./_lib/gear-load";
 import { canRaiseInvoiceFor } from "./_lib/invoice-door";
 import { diverStatusRows } from "./_lib/status-load";
-import { restoreCardAction, restoreDiverNoteAction } from "./actions";
+import { restoreCardAction } from "./card-actions";
+import { restoreDiverNoteAction } from "./note-actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.

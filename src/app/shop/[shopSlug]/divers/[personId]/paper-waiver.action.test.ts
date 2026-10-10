@@ -45,7 +45,7 @@ vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { markWaiverInPersonAction } = await import("./actions");
+const { markWaiverInPersonAction } = await import("./waiver-actions");
 
 /** A seeded person who owes a signature — exactly who this control is for. */
 async function diverOwingASignature(db: AppDb, shopId: string): Promise<string> {

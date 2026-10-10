@@ -19,7 +19,7 @@ import {
   SUIT_KINDS,
 } from "@/lib/rentals";
 import { shopPath } from "@/lib/staff-notices";
-import { saveProfileAction, setNeedsStaffFitAction } from "../actions";
+import { saveProfileAction, setNeedsStaffFitAction } from "../fit-actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import { RentalFitFields, type RentalFitSize, type RentalFitSuit } from "./RentalFitFields";

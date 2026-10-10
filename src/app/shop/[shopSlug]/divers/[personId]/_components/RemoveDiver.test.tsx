@@ -7,7 +7,7 @@ import type { DiverProfile } from "./shared";
 
 // The confirm posts a server action, and with it the whole Next server
 // runtime. This suite is about how the disclosure is drawn.
-vi.mock("../actions", () => ({ deletePersonAction: vi.fn() }));
+vi.mock("../record-actions", () => ({ deletePersonAction: vi.fn() }));
 
 afterEach(cleanup);
 

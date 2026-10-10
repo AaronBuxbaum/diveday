@@ -28,7 +28,7 @@ import {
   markCertifiedAction,
   reviewAction,
   reviewSpecialtyAction,
-} from "../actions";
+} from "../card-actions";
 import { AgencyCheckLink } from "./AgencyCheckLink";
 import { CardSightingForm } from "./CardSightingForm";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";

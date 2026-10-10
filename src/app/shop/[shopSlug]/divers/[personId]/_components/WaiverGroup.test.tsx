@@ -9,7 +9,7 @@ import { WaiverGroup } from "./WaiverGroup";
 // Both server actions this group reaches for drag better-auth (and with it the
 // whole Next server runtime) in behind them; this suite is about which controls
 // the group offers, so they are stubbed rather than booted.
-vi.mock("../actions", () => ({
+vi.mock("../waiver-actions", () => ({
   markWaiverInPersonAction: vi.fn(),
   recordMedicalClearanceAction: vi.fn(),
 }));

@@ -7,7 +7,7 @@ import { InsetGroup } from "@/components/ui/ledger";
 import type { listDiverRecordNotes } from "@/db/operations";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
-import { addDiverNoteAction, deleteDiverNoteAction } from "../actions";
+import { addDiverNoteAction, deleteDiverNoteAction } from "../note-actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 
