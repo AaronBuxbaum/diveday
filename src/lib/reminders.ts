@@ -41,17 +41,17 @@ export const TRIP_REMINDER_CADENCES: readonly ReminderCadence[] = [
  * so changing its cadence would silently move a retry window this ticket has
  * no business touching.
  *
- * `:00`, the same minute as the recap and minimum-seats passes, and
- * deliberately so. Spreading the hourly passes across `:00`/`:10`/`:20` cost
- * more than it bought: a serverless Postgres compute sleeps after five idle
- * minutes, so three passes ten minutes apart is three separate wake-ups an
- * hour where one shared minute is one, and the compute is billed for the time
- * it spends awake rather than for the queries it answers. Nothing here needs
- * the stagger — each pass reads its own rows and none contends with another —
- * and the concurrency is four small function invocations against a pooled
- * endpoint.
+ * `:01`, one minute after the minimum-seats sweep, with every hourly pass
+ * inside the hour's first five minutes. Spreading them across
+ * `:00`/`:10`/`:20` cost more than it bought: a serverless Postgres compute
+ * sleeps after five idle minutes, so three passes ten minutes apart is three
+ * separate wake-ups an hour where five consecutive minutes are one. Six passes
+ * on one minute, though, is six cold functions opening pools against the
+ * pooler at once at the top of every hour; a minute apart, the database still
+ * wakes once and the connections arrive in turn (code review 2026-10-10,
+ * item 11, Aaron's call).
  */
-export const TRIP_REMINDER_CRON_CRONTAB = "0 * * * *";
+export const TRIP_REMINDER_CRON_CRONTAB = "1 * * * *";
 
 /** The widest lead time any cadence needs — how far ahead a scan must look. */
 export const MAX_REMINDER_LEAD_HOURS = TRIP_REMINDER_CADENCES.reduce(

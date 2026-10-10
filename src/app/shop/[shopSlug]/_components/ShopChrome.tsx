@@ -14,7 +14,7 @@ import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { countGearItems } from "@/db/gear";
 import { people, personRoles } from "@/db/schema";
-import { getShopBySlug } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops-cached";
 import { countBlockedDiversNextBoatDay, todayNextDepartureTripId } from "@/db/today";
 import { countWorkOrders } from "@/db/work-orders";
 import { diverTranslator } from "@/i18n/messages";
@@ -80,7 +80,12 @@ const loadShopChrome = cache(async (shopSlug: string) => {
   // together instead of serially, and nothing else is read until the two
   // refusals below have run — so the gate's correctness does not depend on
   // where a later line happens to sit in this file.
-  const [shop, session] = await Promise.all([getShopBySlug(db, shopSlug), auth()]);
+  //
+  // `shopBySlugCached`, the per-request memo every other reader of the shop by
+  // its slug shares (`src/db/shops-cached.ts`), so a page beside the chrome
+  // that asks for the same slug in the same pass costs no second read (code
+  // review 2026-10-10, item 26).
+  const [shop, session] = await Promise.all([shopBySlugCached(shopSlug), auth()]);
 
   // INVARIANT: staff chrome and counts are scoped to the session's own shop —
   // a mismatched slug renders nothing of the other tenant.
