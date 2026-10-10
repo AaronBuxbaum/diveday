@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  type CrewNoticeRow,
-  netCrewNotices,
-} from "./crew-notices";
+import { type CrewNoticeRow, netCrewNotices } from "./crew-notices";
 
 const A = "trip-a";
 const B = "trip-b";

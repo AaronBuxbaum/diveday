@@ -13,11 +13,7 @@
  * never here — these rules only *word* and *rank* what the rows already say.
  */
 
-import {
-  type CalendarDate,
-  calendarDateInTimezone,
-  calendarDaysBetween,
-} from "./calendar-date";
+import { type CalendarDate, calendarDateInTimezone, calendarDaysBetween } from "./calendar-date";
 import type { RentalItemKind } from "./dive-prep";
 
 /**
