@@ -128,7 +128,7 @@ describe("a dive-site editor's loading header", () => {
     // Above the title bar, the eyebrow and nothing else.
     const bars = [...(pulse?.querySelectorAll("div") ?? [])];
     const title = bars.findIndex((bar) => bar.classList.contains("h-11"));
-    expect(bars.slice(0, title).filter((bar) => /\bh-\d/.test(bar.className))).toEqual([
+    expect(bars.slice(0, title).filter((bar) => /(^|\s)h-\d/.test(bar.className))).toEqual([
       header?.firstElementChild,
     ]);
     expect(header?.firstElementChild).toHaveClass("h-4");
