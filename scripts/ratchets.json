@@ -196,7 +196,6 @@
     "src/components/BookingPartyFields.tsx#BookingPartyFields": 416,
     "src/components/DateRequestForm.tsx#DateRequestForm": 418,
     "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 537,
-    "src/components/OfflineManifestView.tsx#OfflineManifestView": 1083,
     "src/components/search/CommandPalette.tsx#CommandPalette": 658,
     "src/db/anonymize.ts#scrub": 1549,
     "src/db/bookings.ts#createBookingRecord": 470,
