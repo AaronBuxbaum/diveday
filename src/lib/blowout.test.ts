@@ -187,6 +187,18 @@ describe("qualifyingAlternatives — ordering and cap", () => {
     );
   });
 
+  it("breaks a same-minute tie on id, so the cap keeps the same departure whatever order they arrive in (issue #2176)", () => {
+    const pair = [
+      candidate({ id: "00000000-0000-4000-8000-00000000000b" }),
+      candidate({ id: "00000000-0000-4000-8000-00000000000a" }),
+    ];
+    for (const order of [pair, [...pair].reverse()]) {
+      expect(offers(order, openWaterDiver(), { maxOffers: 1 })).toEqual([
+        "00000000-0000-4000-8000-00000000000a",
+      ]);
+    }
+  });
+
   it("honors a caller-supplied cap and horizon", () => {
     const trips = [1, 2, 3].map((day) => candidate({ startsAt: daysFromNow(day) }));
     expect(offers(trips, openWaterDiver(), { maxOffers: 1 })).toEqual([trips[0].id]);

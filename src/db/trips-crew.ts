@@ -71,7 +71,10 @@ export async function listStaff(db: AppDb, shopId: string) {
     .from(people)
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
     .where(and(eq(people.shopId, shopId), inArray(personRoles.role, [...STAFF_ROLES])))
-    .orderBy(asc(people.fullName));
+    // Name, then id so two namesakes keep their places between loads, then the
+    // role enum's own order (most senior first) so each person's roles do too
+    // (issue #2176).
+    .orderBy(asc(people.fullName), asc(people.id), asc(personRoles.role));
   const byId = new Map<string, { person: StaffPerson; roles: string[] }>();
   for (const { person, role } of rows) {
     const entry = byId.get(person.id) ?? { person, roles: [] };

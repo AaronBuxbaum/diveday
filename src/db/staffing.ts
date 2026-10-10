@@ -261,7 +261,10 @@ export async function getStaffingView(
           gt(trips.endsAt, from),
           isNull(people.deletedAt),
         ),
-      ),
+      )
+      // An explicit order rather than the server's row order (issue #2176): the
+      // per-trip crew sets below are filled in this order.
+      .orderBy(asc(people.fullName), asc(people.id)),
   ]);
 
   const shiftsByPerson = new Map<string, (typeof staffShifts.$inferSelect)[]>();

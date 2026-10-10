@@ -345,6 +345,59 @@ describe("staffWeek", () => {
       week.people[0]?.days.find((day) => day.date === THURSDAY)?.shifts.map((s) => s.id),
     ).toEqual(["morning", "afternoon"]);
   });
+
+  /**
+   * Two boats at 8:00 AM (issue #2176). Start time alone left them in whatever
+   * order they arrived, so the week traded them between loads; the title the
+   * reader sees decides, then the id when two departures share a name. Each
+   * case runs both arrival orders and expects one answer.
+   */
+  it("orders same-minute departures and gaps by title, then id, whatever order they arrive in", () => {
+    const meeting = {
+      startsAt: new Date("2026-08-27T12:00:00.000Z"),
+      endsAt: new Date("2026-08-27T16:00:00.000Z"),
+    };
+    const crewing = [
+      { tripId: "trip-b", title: "Wreck Trek", meetings: [meeting] },
+      { tripId: "trip-z", title: "Reef Run", meetings: [meeting] },
+      { tripId: "trip-a", title: "Wreck Trek", meetings: [meeting] },
+    ];
+    const gaps: WeekGap[] = crewing.map((trip) => ({
+      ...trip,
+      tripId: `gap-${trip.tripId}`,
+      gap: "uncrewed_departure",
+    }));
+    for (const order of [crewing, [...crewing].reverse()]) {
+      const gapOrder = order === crewing ? gaps : [...gaps].reverse();
+      const week = build({ people: [person({ crewingTrips: order })], gaps: gapOrder });
+      expect(
+        week.people[0]?.days.find((day) => day.date === THURSDAY)?.crewing.map((t) => t.tripId),
+      ).toEqual(["trip-z", "trip-a", "trip-b"]);
+      expect(week.gapDays.find((day) => day.date === THURSDAY)?.gaps.map((g) => g.tripId)).toEqual([
+        "gap-trip-z",
+        "gap-trip-a",
+        "gap-trip-b",
+      ]);
+    }
+  });
+
+  it("orders same-minute shifts by id, whatever order they arrive in", () => {
+    const shift = (id: string) => ({
+      id,
+      startsAt: new Date("2026-08-27T12:00:00.000Z"),
+      endsAt: new Date("2026-08-27T16:00:00.000Z"),
+      note: null,
+    });
+    for (const shifts of [
+      [shift("b"), shift("a")],
+      [shift("a"), shift("b")],
+    ]) {
+      const week = build({ people: [person({ shifts })] });
+      expect(
+        week.people[0]?.days.find((day) => day.date === THURSDAY)?.shifts.map((s) => s.id),
+      ).toEqual(["a", "b"]);
+    }
+  });
 });
 
 /**
