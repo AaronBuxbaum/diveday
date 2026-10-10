@@ -4,8 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 import type { CustomerProvider, DeleteCustomerResult } from "@/lib/payments/customers";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
+import { setLogSink } from "@/lib/log";
 import {
   attemptProcessorErasure,
+  attemptProcessorErasures,
   dischargeProcessorErasure,
   listOwedProcessorErasures,
   MAX_AUTOMATIC_DELETE_ATTEMPTS,
@@ -225,6 +227,38 @@ describe("attempting the Stripe customer delete", () => {
       lastError: "HTTP 401: account_invalid",
     });
     expect(await listOwedProcessorErasures(db, shop.id)).toHaveLength(1);
+  });
+
+  it("logs a throw by its class, never its message, and moves on (issue #2239)", async () => {
+    const { db, shop, ownerId } = await twoShops();
+    const obligations = await recordProcessorErasureObligations(db, {
+      shopId: shop.id,
+      personId: ownerId,
+      targets: [CUSTOMER("cus_throws")],
+    });
+    const provider: CustomerProvider = {
+      deleteCustomer: vi.fn().mockRejectedValue(new TypeError("bad row for nora@example.com")),
+    };
+    const lines: string[] = [];
+    setLogSink((line) => lines.push(line));
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect(await attemptProcessorErasures(db, obligations, provider)).toEqual({
+        discharged: 0,
+        stillOwed: 1,
+      });
+    } finally {
+      setLogSink(null);
+      quiet.mockRestore();
+    }
+    const logged = lines.map((line) => JSON.parse(line));
+    expect(logged).toContainEqual(
+      expect.objectContaining({
+        event: "anonymize.processor_erasure_attempt_threw",
+        errorCode: "TypeError",
+      }),
+    );
+    expect(lines.join("\n")).not.toContain("nora@example.com");
   });
 
   it("does not discharge a row when Stripe is not configured at all", async () => {

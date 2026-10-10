@@ -118,11 +118,10 @@ export function stripeCustomerProvider(
         return body.success
           ? { status: "deleted" }
           : { status: "failed", error: ERASURE_FAILURE_DETAIL.notConfirmed };
-      } catch (error) {
-        return {
-          status: "failed",
-          error: error instanceof Error ? error.message : "network error",
-        };
+      } catch {
+        // Never the thrown text: a network error's message can carry a
+        // request fragment, and this lands in a ledger column (issue #2239).
+        return { status: "failed", error: ERASURE_FAILURE_DETAIL.unanswered };
       }
     },
   };
