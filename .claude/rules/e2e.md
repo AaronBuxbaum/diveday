@@ -33,8 +33,9 @@ red run. Each rule names what enforces it; the reasoning and the incidents are i
   `?filter=` in the spec.
 - **A trouble state is photographed through `src/app/api/test/seed-trouble-states/route.ts`**,
   never seeded into the demo shop.
-- **Every route is in `scripts/route-coverage.json`** with its specs and captures, or a written
-  `exempt` reason: `pnpm check:route-coverage`.
+- **Every route has a spec and a capture**, derived from the path literals in `e2e/`, or a hand
+  entry in `scripts/route-coverage.json` (click-reached coverage, or a written `exempt` reason):
+  `pnpm check:route-coverage`.
 - **Fixtures**: `staffContext.newPage()` and the exported fixtures (`pnpm check:e2e-fixtures`).
 - **The clock is frozen at the harness** (`TEST_FROZEN_CLOCK`); never mask moving text.
 - **Visual baselines live in S3 by commit**, rendered on CI's Linux runners (ADR

@@ -1,0 +1,9 @@
+// An es-ES message never calls a delete something else. Only the unambiguous action forms are
+// refused: `archivo` is the ordinary Spanish word for a file. Scoped in biome.json to
+// src/i18n/locales/es-ES; see docs/agents/repo-checks.md ("Now Biome rules", softDelete).
+language json
+
+JsonStringValue() as $value where {
+  $value <: r"(?is)\".*(?:desarchiv|archivar|archivand|retirar|retirad|(?:de|en|fuera de) (?:tus|sus|las) listas? activas?|historial se conserva|se conserva para (?:los )?registros).*\"",
+  register_diagnostic(span=$value, message="softDelete: this string calls a delete something else, or reassures about the history it keeps; the words are Eliminar and Restaurar (ADR 20260820-every-delete-is-soft).", severity="error")
+}

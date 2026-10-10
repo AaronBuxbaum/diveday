@@ -21,14 +21,15 @@
  * `reportRefusedQuery` in `src/proxy.ts`. The number lives in one place; this
  * is the pointer to it.
  *
- * This registry currently declares 17 metrics (11 log signals + 5 web vitals
- * + the mutation-duration metric, which is one metric *permanently* because its
- * filter carries no dimension -- see `MUTATION_DURATION_SIGNAL`) and 14 alarms (8 + the 3 alarmed vitals + the
+ * This registry currently declares 19 metrics (11 log signals + 5 web vitals
+ * + the mutation-duration metric + the two render-cost metrics, each one metric
+ * *permanently* because its filter carries no dimension -- see
+ * `MUTATION_DURATION_SIGNAL` and `RENDER_DB_QUERIES_SIGNAL`) and 14 alarms (8 + the 3 alarmed vitals + the
  * 2 SES reputation rates, which alarm on metrics AWS publishes for free, + the
  * external uptime alarm in `UPTIME_TARGETS`, which alarms on a Route 53 metric
  * AWS publishes for the price of the health check itself), so it
- * sits 7 metrics and 4 alarms over the free allowance at about $2.50/month once
- * every metric receives data (7 x $0.30 + 4 x $0.10), plus $2.75/month for the
+ * sits 9 metrics and 4 alarms over the free allowance at about $3.10/month once
+ * every metric receives data (9 x $0.30 + 4 x $0.10), plus $2.75/month for the
  * health check the last of those watches. A counted signal without an
  * alarm costs $0.30/month; an alarmed one costs $0.40/month. Those are the real
  * numbers to weigh, not zero and not the free-tier cliff it looks like from the
@@ -450,6 +451,42 @@ export function mutationDurationFilterPattern(): string {
   return `{ $.event = "${MUTATION_DURATION_SIGNAL.event}" && $.${MUTATION_DURATION_SIGNAL.field} = * }`;
 }
 
+/**
+ * What a server render cost, as **two aggregate metrics**: the statements it
+ * sent and the wall time from its first statement to the response's end
+ * (`render.db_queries`, written once per render pass by `reportRenderQueries`
+ * in `src/lib/observability/query-timing.ts`; that file says exactly what `ms`
+ * measures and what it does not).
+ *
+ * Undimensioned for the same reason as `MUTATION_DURATION_SIGNAL`: a `Route`
+ * dimension bills one custom metric per route template, and the app has over a
+ * hundred. The metrics are the app-wide p95 trend; the per-route ranking is
+ * the "Heaviest renders by route" query and dashboard widget, which group the
+ * same lines by `route` for the price of a scan (code review 2026-10-10, item 3).
+ */
+export const RENDER_DB_QUERIES_SIGNAL = {
+  event: "render.db_queries",
+  metrics: [
+    {
+      metricName: "RenderDbQueries",
+      title: "Statements per server render (p95)",
+      field: "queries",
+    },
+    {
+      metricName: "RenderDbMs",
+      title: "Server render, first statement to response end (p95, ms)",
+      field: "ms",
+    },
+  ],
+} as const;
+
+export type RenderDbQueriesMetric = (typeof RENDER_DB_QUERIES_SIGNAL.metrics)[number];
+
+/** Matches a `render.db_queries` line that carries this figure. */
+export function renderDbQueriesFilterPatternFor(metric: RenderDbQueriesMetric): string {
+  return `{ $.event = "${RENDER_DB_QUERIES_SIGNAL.event}" && $.${metric.field} = * }`;
+}
+
 /** Matches a `web_vital.reported` line that actually carries this figure. */
 export function webVitalFilterPatternFor(signal: WebVitalSignal): string {
   return `{ $.event = "web_vital.reported" && $.${signal.field} = * }`;
@@ -689,9 +726,20 @@ export const SAVED_LOG_QUERIES: readonly SavedLogQuery[] = [
     queryString: [
       "fields @timestamp, action, durationMs",
       '| filter event = "mutation_duration.reported" and ispresent(durationMs)',
-      "stats pct(durationMs, 75) as durationP75, count(*) as mutations by action",
-      "sort durationP75 desc",
-      "limit 40",
+      "| stats pct(durationMs, 75) as durationP75, count(*) as mutations by action",
+      "| sort durationP75 desc",
+      "| limit 40",
+    ].join("\n"),
+  },
+  {
+    name: "DiveDay/Heaviest renders by route",
+    why: "Which pages send the most statements and take longest to render on the server, by route -- the per-route breakdown behind the two render-cost metrics.",
+    queryString: [
+      "fields route, queries, ms",
+      '| filter event = "render.db_queries"',
+      "| stats pct(queries, 95) as queriesP95, pct(ms, 95) as msP95, count(*) as renders by route",
+      "| sort msP95 desc",
+      "| limit 40",
     ].join("\n"),
   },
   {

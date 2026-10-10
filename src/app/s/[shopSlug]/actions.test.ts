@@ -1,6 +1,10 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * **"Can't find your link?" is an anonymous capability-minting endpoint**
@@ -57,7 +61,7 @@ function formWithEmail(email: string): FormData {
 }
 
 async function shopWithBooking() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [trip] = await upcomingTripsWithCounts(db, shop.id);
   if (!trip) throw new Error("expected a seeded trip");
   const outcome = await createBooking(db, {

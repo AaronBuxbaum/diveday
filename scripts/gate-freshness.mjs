@@ -59,6 +59,7 @@ import {
   WAITING_LABEL,
 } from "./check-follow-ups.mjs";
 import { ageClaims, IN_PROGRESS_LABEL, readGitFacts } from "./claims.mjs";
+import { MAX_CLAIM_DAYS } from "./expire-claims.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -480,18 +481,23 @@ function printClaims(entries, { verifiable }) {
   }
   const idWidth = Math.max(4, ...entries.map((entry) => entry.id.length)) + 2;
   console.log(
-    `  ${pad("id", idWidth)}${pad("state", 15)}${pad("branch", 40)}${padStart("age", 5)}`,
+    `  ${pad("id", idWidth)}${pad("state", 15)}${pad("branch", 40)}${padStart("claimed", 9)}`,
   );
   for (const entry of entries) {
     const branch = entry.claim ? truncate(entry.claim.branch, 38) : "—";
-    const age = entry.verdict.days === null ? "—" : `${entry.verdict.days}d`;
+    const age = entry.verdict.days === null ? "—" : `${entry.verdict.days}d ago`;
     console.log(
-      `  ${pad(entry.id, idWidth)}${pad(entry.verdict.state, 15)}${pad(branch, 40)}${padStart(age, 5)}`,
+      `  ${pad(entry.id, idWidth)}${pad(entry.verdict.state, 15)}${pad(branch, 40)}${padStart(age, 9)}`,
     );
     console.log(`       ${truncate(entry.title, 92)}`);
     console.log(`       ${entry.verdict.reason}`);
     const owned = entry.claim ? [...entry.claim.owns, ...entry.claim.alsoTouches] : [];
     if (owned.length > 0) console.log(`       owns ${truncate(owned.join(" "), 86)}`);
+    if ((entry.verdict.days ?? 0) > MAX_CLAIM_DAYS) {
+      console.log(
+        `       past the ${MAX_CLAIM_DAYS}-day expiry: the daily follow-ups run drops it unless an open PR has its branch`,
+      );
+    }
   }
   const stale = entries.filter((entry) => entry.verdict.state !== "live");
   if (stale.length > 0) {

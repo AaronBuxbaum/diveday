@@ -8,7 +8,7 @@ import {
 } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { verifyCourseFormIntegrity } from "@/lib/course-form-integrity";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
 import {
@@ -44,12 +44,16 @@ import {
 } from "./schema";
 import { listStaff } from "./trips";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const fileCtx = fileScopedShopContext();
+
 const BODY =
   "I understand the course's in-water sessions follow the instructor's plan, and I will tell the instructor before any session if anything about my health changes.";
 
 /** A seeded upcoming course session with a live seat on it, and a staffer. */
 async function courseContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = fileCtx;
   const now = nowDate();
   const [seat] = await db
     .select({
@@ -107,7 +111,7 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
   const AGENCY_TITLE = "Agency course release";
 
   it("sets up the seeded Open Water course's forms by title, empty, and asks nobody to sign them", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = fileCtx;
     const openWater = await getCourseBySlug(db, shop.id, "open-water-diver");
     const template = getCourseTemplate("open-water-diver");
     if (!openWater || !template) throw new Error("seeded Open Water missing");
@@ -228,7 +232,7 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
 
   /** Seeded Open Water, with an older template baseline so a sync has something to pull. */
   async function openWaterBehindItsTemplate(baselineForms: string[] | undefined) {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = fileCtx;
     const openWater = await getCourseBySlug(db, shop.id, "open-water-diver");
     const template = getCourseTemplate("open-water-diver");
     if (!openWater || !template) throw new Error("seeded Open Water missing");

@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
 import { createDiver } from "./divers";
@@ -46,6 +46,10 @@ import {
   workOrderBoard,
 } from "./work-orders";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 const TODAY = "2026-10-08";
 
 /**
@@ -55,7 +59,7 @@ const TODAY = "2026-10-08";
  * rows the test wrote, and doubles as proof the readers are shop-scoped.
  */
 async function workOrderShopContext() {
-  const { db } = await seededShopContext();
+  const { db } = ctx;
   const [shop] = await db
     .insert(shops)
     .values({ name: "Work Order Divers", slug: "work-order-test", timezone: "America/New_York" })

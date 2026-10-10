@@ -1,0 +1,100 @@
+name: Durations refresh
+
+# The four unit shards, the four Playwright shards and the eight visual shards
+# are dealt by each file's or test's recorded CI duration
+# (`scripts/test-durations.json` for src/test/shard-sequencer.ts,
+# `scripts/e2e-durations.json` for scripts/e2e-shard.mjs). Those files are
+# committed so every shard computes the same deal, which means they go stale
+# by hand: the unit file was refreshed on 2026-10-09 and the shards already
+# spread 49% on 10-10 (code review 2026-10-10, finding 6). Every CI run
+# already uploads what it measured, so this folds the newest main run's
+# measurements back in once a week and opens a pull request when they moved.
+#
+# Needs the repository setting "Allow GitHub Actions to create and approve
+# pull requests" (Settings → Actions → General); without it the last step
+# fails with a 403 and says so. A pull request opened with the workflow token
+# starts no CI of its own (GitHub's rule against recursive runs), which is
+# acceptable for a data file the next push to it, or its merge, checks.
+on:
+  schedule:
+    # Mondays 05:00 UTC, an hour ahead of follow-ups.yml.
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: durations-refresh
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    name: Fold the latest main run's durations into the committed files
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BRANCH: automation/durations-refresh
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      # The newest successful push run on main that ran the shards: a
+      # docs-only main run skips them and uploads nothing, so it is passed
+      # over rather than read as "every file vanished".
+      - name: Find the run to read
+        id: run
+        run: |
+          for id in $(gh run list --workflow ci.yml --branch main --event push --status success --limit 20 --json databaseId --jq '.[].databaseId'); do
+            names=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${id}/artifacts?per_page=100" --jq '.artifacts[] | select(.expired | not) | .name')
+            if [ "$(grep -c '^unit-durations-' <<<"$names")" -eq 4 ]; then
+              echo "id=${id}" >> "$GITHUB_OUTPUT"
+              echo "Reading run ${id}."
+              exit 0
+            fi
+          done
+          echo "::error::No successful main run in the last 20 carries all four unit-durations artifacts."
+          exit 1
+      - name: Download its measurements
+        run: |
+          gh run download "${{ steps.run.outputs.id }}" -p 'unit-durations-*' -D artifacts/unit
+          gh run download "${{ steps.run.outputs.id }}" -p 'e2e-durations-*' -D artifacts/e2e || true
+          gh run download "${{ steps.run.outputs.id }}" -p 'visual-durations-*' -D artifacts/visual || true
+      # A suite is folded only when every one of its shards reported: a
+      # partial set would drop the missing shard's items back to their
+      # estimate and make the next deal worse, not better.
+      - name: Merge
+        run: |
+          shopt -s nullglob
+          node scripts/merge-test-durations.mjs artifacts/unit/*/*.json
+          functional=(artifacts/e2e/*/functional-*.json)
+          visual=(artifacts/visual/*/visual-*.json)
+          inputs=()
+          if [ "${#functional[@]}" -eq 4 ]; then inputs+=("${functional[@]}"); else echo "::warning::${#functional[@]} of 4 Playwright shards recorded durations; keeping the committed functional figures."; fi
+          if [ "${#visual[@]}" -eq 8 ]; then inputs+=("${visual[@]}"); else echo "::warning::${#visual[@]} of 8 visual shards recorded durations; keeping the committed visual figures."; fi
+          if [ "${#inputs[@]}" -gt 0 ]; then node scripts/e2e-durations.mjs merge "${inputs[@]}"; fi
+          git diff --stat -- scripts/test-durations.json scripts/e2e-durations.json
+      - name: Open or update the pull request
+        run: |
+          if git diff --quiet -- scripts/test-durations.json scripts/e2e-durations.json; then
+            echo "Nothing moved; no pull request."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add scripts/test-durations.json scripts/e2e-durations.json
+          git commit -m "Refresh the recorded shard durations from CI run ${{ steps.run.outputs.id }}"
+          git push --force origin "$BRANCH"
+          body="Folds the durations CI run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ steps.run.outputs.id }} recorded into \`scripts/test-durations.json\` and \`scripts/e2e-durations.json\`, which the unit, Playwright and visual shards are dealt by. Opened by .github/workflows/durations-refresh.yml; nothing here is hand-written."
+          if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            gh pr edit "$BRANCH" --body "$body"
+          else
+            gh pr create --base main --head "$BRANCH" --title "Refresh the recorded shard durations" --body "$body"
+          fi

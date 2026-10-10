@@ -109,10 +109,10 @@ export function minimumSeatsState(
  * states its window in. A nightly pass would make it true to within about a
  * day (ADR 20260813-minimum-head-count-departures).
  *
- * `:00` rather than the `:20` it shipped with, sharing the minute with the
- * recap and trip-reminder passes. The stagger was protecting nothing — each
- * hourly pass reads its own rows — and it cost three separate database
- * wake-ups an hour instead of one, which on a compute that sleeps after five
+ * `:00` rather than the `:20` it shipped with, inside the five minutes the
+ * recap and trip-reminder passes share. The twenty-minute stagger was
+ * protecting nothing — each hourly pass reads its own rows — and it cost three
+ * separate database wake-ups an hour instead of one, which on a compute that sleeps after five
  * idle minutes and bills for the time it is awake is the whole difference
  * between a duty cycle set by the clock and one set by use. Moving it forward
  * twenty minutes also narrows the worst-case lag behind a deadline rather than
@@ -121,4 +121,7 @@ export function minimumSeatsState(
  * Mirrors `vercel.json`, and `src/lib/cron-schedule.test.ts` fails if the two
  * drift.
  */
+// Still `:00`, first of the hourly passes now staggered across `:00`–`:04`
+// (code review 2026-10-10, item 11): the deadline this sweep keeps is printed
+// on the booking page, so it keeps the minute closest to it.
 export const MINIMUM_SEATS_CRON_CRONTAB = "0 * * * *";

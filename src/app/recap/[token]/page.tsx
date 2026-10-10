@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { connection } from "next/server";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { RecapWaitingCard } from "@/components/RecapWaitingCard";
@@ -15,6 +14,7 @@ import { BUDDY_PARAM } from "@/lib/buddy-links";
 import { buddyReferralId } from "@/lib/buddy-tokens";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { publicAppUrl } from "@/lib/notifications";
+import { connectionForRoute } from "@/lib/observability/render-connection";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { openGraphSite } from "@/lib/site-metadata";
@@ -110,7 +110,7 @@ export default async function DiveRecapPage({
     pulse?: string;
   }>;
 }) {
-  await connection();
+  await connectionForRoute("/recap/[token]");
   const { token } = await params;
   const { photo, tip, review, pulse } = await searchParams;
   // A dead link resolves no shop, so there is no `shops.default_locale` to fall

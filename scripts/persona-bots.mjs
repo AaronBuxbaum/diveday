@@ -3,8 +3,8 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
-
 import { findIssueProblems, LABEL, listIssuesByLabel } from "./check-follow-ups.mjs";
+import { collectRoutes } from "./check-route-coverage.mjs";
 import {
   classify,
   planRun,
@@ -229,7 +229,7 @@ const complete =
   typeof report.planned === "number" &&
   report.walked === report.planned;
 
-const routes = routePatterns(root);
+const routes = await routePatterns(root);
 const plan = planRun({ classes, openIssues: openIssues ?? [], closedIssues: closedIssues ?? [] });
 
 /** Every class rendered, and every body put through the guard before anything is filed. */
@@ -324,13 +324,10 @@ for (const entry of plan.comment) {
   }
 }
 
-/** The route patterns `scripts/route-coverage.json` knows, for naming the page a finding is on. */
-function routePatterns(repoRoot) {
+/** Every `page.tsx` route pattern under src/app, for naming the page a finding is on. */
+async function routePatterns(repoRoot) {
   try {
-    const coverage = JSON.parse(
-      readFileSync(path.join(repoRoot, "scripts/route-coverage.json"), "utf8"),
-    );
-    return Object.keys(coverage).filter((route) => !route.startsWith("//"));
+    return await collectRoutes(repoRoot);
   } catch {
     return [];
   }

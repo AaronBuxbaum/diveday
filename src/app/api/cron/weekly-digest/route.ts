@@ -2,14 +2,16 @@ import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { sendDueWeeklyDigests } from "@/db/weekly-digest";
+import { nowDate } from "@/lib/clock";
+import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
-import { WEEKLY_DIGEST_CRON_CRONTAB } from "@/lib/weekly-digest";
+import { WEEKLY_DIGEST_CRON_CRONTAB, weeklyDigestMayBeDueSomewhere } from "@/lib/weekly-digest";
 
 /** A Monday morning can fall due for many shops in one pass. */
 export const maxDuration = 300;
 
-/** Its own monitor: a weekly promise on an hourly cadence, unlike any other pass. */
+/** Its own monitor: a weekly promise on an hourly cadence, Sunday to Tuesday UTC. */
 const CRON_MONITOR_SLUG =
   process.env.SENTRY_WEEKLY_DIGEST_CRON_MONITOR_SLUG || "diveday-weekly-digest";
 const CRON_MONITOR_CONFIG = {
@@ -27,19 +29,26 @@ const CRON_MONITOR_CONFIG = {
  * the shops whose own calendar says it is Monday inside the sending hours, and
  * the per-person, per-week claim in `weekly_digest_sends` makes every later
  * pass that day, and any re-run, a no-op.
+ *
+ * Scheduled Sunday to Tuesday UTC only, and an hour of those three days that
+ * is outside every zone's Monday sending hours checks in and stops before the
+ * database (`weeklyDigestMayBeDueSomewhere`): no shop can be due, so there is
+ * nothing to read.
  */
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return NextResponse.json({ error: "not_configured" }, { status: 503 });
-  if (request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return new NextResponse(null, { status: 401 });
-  }
+  // The shared constant-time check every cron route uses (src/lib/cron-auth.ts).
+  const refused = requireCronSecret(request);
+  if (refused) return refused;
 
   const checkInId = Sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
     CRON_MONITOR_CONFIG,
   );
   try {
+    if (!weeklyDigestMayBeDueSomewhere(nowDate())) {
+      Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
+      return NextResponse.json({ skipped: "no_shop_in_its_monday" });
+    }
     const summary = await sendDueWeeklyDigests(await getDb());
     log("cron_weekly_digest.scan_complete", "info", summary);
     Sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });

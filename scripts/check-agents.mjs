@@ -150,6 +150,31 @@ for (const token of routePathTokens) {
   }
 }
 
+// 5a. Reviewer agents run with `omitClaudeMd: true` and read `AGENTS.subagent.md` instead: the
+// route map's review-relevant rows and the hard rules. It misroutes the same way AGENTS.md does
+// when a path in it is renamed away, and an agent that skips CLAUDE.md without pointing at it
+// reviews with no map at all.
+const subagentMd = await readFile(path.join(ROOT, "AGENTS.subagent.md"), "utf8").catch(() => null);
+if (subagentMd === null) {
+  problems.push("AGENTS.subagent.md: missing — the reviewer agents read it in place of AGENTS.md");
+} else {
+  for (const token of repoPathTokens(subagentMd)) {
+    try {
+      await access(path.join(ROOT, token));
+    } catch {
+      problems.push(`AGENTS.subagent.md: path "${token}" does not exist`);
+    }
+  }
+}
+for (const file of agentFiles) {
+  const contents = await readFile(path.join(ROOT, ".claude/agents", file), "utf8");
+  const head = contents.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
+  if (/^omitClaudeMd:\s*true\s*$/m.test(head) && !contents.includes("AGENTS.subagent.md"))
+    problems.push(
+      `.claude/agents/${file}: omitClaudeMd is set but the body never points at AGENTS.subagent.md`,
+    );
+}
+
 // 5b. The path-scoped rules carry the other half of the route map — the rows that only matter
 // under one directory moved there so a session that never touches it never pays for them — and
 // misroute exactly as badly when a path they name is renamed away. Every rules file needs
@@ -268,6 +293,7 @@ for (const { event, command } of hookCommands) {
 for (const script of [
   "guard-bash.mjs",
   "guard-read.mjs",
+  "guard-commit-format.mjs",
   "format-touched.mjs",
   "session-context.mjs",
   "explain-failure.mjs",
@@ -290,8 +316,11 @@ const checkRepoSource = await readFile(path.join(ROOT, "scripts/check-repo.mjs")
 // `check-follow-ups.mjs` reads the live tracker, and inside check:repo one malformed issue
 // turned every open pull request red (#2036). It still has to run somewhere, so its
 // workflow must name it.
+// `check-pr-body.mjs` is the other kind of elsewhere: it reads a pull request's body, which no
+// branch contains, so CI's safeguards job hands it the body from the event.
 const SCHEDULED_GUARDS = {
   "check-follow-ups.mjs": [".github/workflows/follow-ups.yml", "pnpm check:follow-ups"],
+  "check-pr-body.mjs": [".github/workflows/ci.yml", "node scripts/check-pr-body.mjs"],
 };
 for (const [file, [workflow, command]] of Object.entries(SCHEDULED_GUARDS)) {
   const source = await readFile(path.join(ROOT, workflow), "utf8").catch(() => "");
@@ -299,7 +328,7 @@ for (const [file, [workflow, command]] of Object.entries(SCHEDULED_GUARDS)) {
     problems.push(`${workflow}: must run \`${command}\` — ${file} runs nowhere else`);
   if (checkRepoSource.includes(`"${file}"`))
     problems.push(
-      `scripts/check-repo.mjs: ${file} reads the network and runs in ${workflow}, not per branch`,
+      `scripts/check-repo.mjs: ${file} reads what no branch contains and runs in ${workflow}, not per branch`,
     );
 }
 const checkScripts = (await readdir(path.join(ROOT, "scripts"))).filter(

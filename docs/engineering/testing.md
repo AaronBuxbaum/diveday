@@ -140,11 +140,13 @@ tree is also what ADR 20260730-pinned-browser-visual-determinism assumes.
 
 ## The route coverage ledger
 
-`scripts/route-coverage.json` lists every `src/app/**/page.tsx` route and the tests that cover it:
-the `e2e/*.spec.ts` files that drive a flow landing there, and the `e2e/visual.spec.ts` captures
-that photograph it. `pnpm check:route-coverage` (part of `pnpm check:repo`) keeps that list honest
-against the tree — every route present, no stale entries, every named spec file and capture name
-real, and a written `exempt` reason for any route that has neither.
+`pnpm check:route-coverage` (part of `pnpm check:repo`) holds every `src/app/**/page.tsx` route to
+the bar: an `e2e/*.spec.ts` file that drives a flow landing there and an `e2e/visual.spec.ts` capture
+that photographs it, or a written `exempt` reason for the half it lacks. Most of that coverage is
+derived from the tree every run — a spec whose source holds a path literal resolving to the route
+covers it, and a capture shot after the last such literal inside one `test(` photographs it.
+`scripts/route-coverage.json` holds only what no literal shows: the specs and captures that reach a
+route by clicks, and the exemptions.
 
 It exists because a page with no test is silent by construction: it produces no failure for anyone
 to notice. A 2026-08-03 evaluation of the test system found three staff pages that had shipped with
@@ -153,24 +155,24 @@ neither an e2e spec nor a visual capture — `/shop/[shopSlug]/orders/new`,
 covered and the ledger holds no exemptions; closing a future one means writing the spec and
 deleting the exemption in the same change.
 
-The coverage lists are hand-maintained, deliberately. A spec usually reaches a route by *clicking*
-— `e2e/waivers.spec.ts` gets to `/waivers/[token]` by pressing "Send waiver" and following the link
-out of a toast — and no grep sees that. A guess would either invent coverage or demand exemptions
-for well-covered routes, and the second failure is how a gate becomes a rubber stamp. What is
-mechanical (which routes, specs, and captures exist) is re-derived every run.
+The hand-written half is the part no string shows. A spec sometimes reaches a route by *clicking* —
+`e2e/waivers.spec.ts` gets to `/waivers/[token]` by pressing "Send waiver" and following the link out
+of a toast — and guessing those would invent coverage, so they are named by hand. Everything a spec
+reaches by URL needs no edit: the ledger used to list every route's specs by hand, and it was the
+file every feature layer of a stack conflicted on.
 
 ```bash
 node scripts/check-route-coverage.mjs            # the gate
-node scripts/check-route-coverage.mjs --report   # per-route table: ok / GAP / EXEMPT
-node scripts/check-route-coverage.mjs --write    # regenerate the mechanical facts
+node scripts/check-route-coverage.mjs --report   # per-route table, derived and hand-written: ok / GAP / EXEMPT
+node scripts/check-route-coverage.mjs --write    # prune the file back to its exceptions
 ```
 
-`--write` is a ratchet, like `scripts/check-copy.mjs`. It adds an entry for a new route (empty, and
-without an exemption — so the check goes red until someone writes a test or types a reason), drops
-an entry for a deleted route, and banks a closed gap by removing an exemption the route has
-outgrown. It will never add an exemption or remove a spec or capture from a route's lists; if a
-listed spec or capture has vanished it refuses and says so, and `--absorb` is the loud escape hatch
-for the one honest case — a merge from a branch that deleted it.
+`--write` is a ratchet, like `scripts/check-copy.mjs`. It drops an entry for a deleted route, drops
+hand-written names from a column the tree now covers for that route, and banks a closed gap by
+removing an exemption the route has outgrown. It never writes an entry for a new route and never
+adds an exemption — an uncovered route stays red until someone writes a test or types a reason — and
+if a hand-named spec or capture has vanished it refuses and says so; `--absorb` is the loud escape
+hatch for the one honest case, a merge from a branch that deleted it.
 
 ## The test database is a snapshot, not a boot
 
@@ -209,24 +211,39 @@ Measured on 2026-09-02 across the three files converted so far (`trips-queries`,
 The 38 database-backed files under `src/db` carried 849 of 988 test-seconds in a measured CI shard,
 so this is most of the unit suite's cost.
 
-**The rollback is the whole mechanism**, so a file whose tests need a *committed* database, or their
-own transaction semantics, stays on `seededShopContext()`. Four cases, the last of which is the
-surprising one:
+On 2026-10-10 the 76 heaviest files still hydrating per test were converted (code review
+2026-10-10, finding 6). The ten heaviest, each run alone on one loaded machine before and after:
+3,480s of wall-clock down to 833s — `waivers` 447s to 96s, `checkouts` 501s to 90s, `manifests`
+549s to 106s, `orders` 477s to 60s, `notifications` 354s to 44s, `reporting` 337s to 57s,
+`executed-dives` 252s to 80s, `courses` 221s to 91s, `stripe/route.replay` 170s to 57s, and `seed`
+172s to 152s (most of `seed` is the reset and seeding it tests, on unseeded databases).
+
+**The rollback is the whole mechanism**, so a *test* that needs a committed database, or its own
+transaction semantics, takes its own `seededShopContext()` while the rest of its file shares the
+file's. The exception is made per test, not per file: a file's setup helper takes
+`{ fresh = false }` and returns `fresh ? await seededShopContext() : ctx`, and the one test that
+needs it calls `context({ fresh: true })`, with the reason in a comment beside `ctx`. Four cases,
+the last of which is the surprising one:
 
 - **A test that opens its own transaction** gets a savepoint instead of a top-level one — and the
-  outer transaction has already frozen `now()`. `src/db/manifests.test.ts` declines for exactly this:
-  its same-transaction, same-timestamp tie-break tests would still pass and prove less.
-- **`FOR UPDATE` and the concurrency races.** Two statements inside one transaction cannot contend,
-  so the race would pass without proving anything.
-- **Money and replay paths.** Written against a fresh database on purpose.
+  outer transaction has already frozen `now()`. `src/db/manifests.test.ts`'s same-transaction,
+  same-timestamp tie-break tests would still pass and prove less, and so would any test that needs
+  `created_at` to advance between two writes (`src/db/tips.test.ts`'s "most recently started"), or
+  forces a `created_at` tie on purpose (`src/db/waivers.test.ts`).
+- **Concurrency races** (`Promise.all` of two calls that each write). Inside one transaction their
+  nested transactions become interleaved savepoints on one connection, so the race proves nothing
+  and can fail for reasons of its own.
+- **A test that builds its fixture twice** and so collides with itself on a unique key
+  (`src/db/diver-merge-preview.test.ts`).
 - **A test that provokes a database error and keeps querying.** Postgres aborts the *whole*
   transaction on a failed statement (`current transaction is aborted, commands ignored until end of
-  transaction block`, 25P02), so every line after an expected `.rejects.toThrow()` fails too. In
-  autocommit only the failing statement fails. `src/db/divers.test.ts`'s erasure test takes its own
-  `seededShopContext()` for this one reason while the other 29 tests in the file share the file's.
+  transaction block`, 25P02), so every line after an expected `.rejects.toThrow()` fails too — or
+  worse, a second expected refusal passes for the wrong reason. In autocommit only the failing
+  statement fails. `src/db/divers.test.ts`'s erasure test and `src/db/shop-subscriptions.test.ts`'s
+  two "another shop holds this Stripe id" tests take their own for this reason.
 
-The rule, short: **read-heavy files that commit nothing.** A file that declines says so in a comment
-where it declines, naming which of the four applies.
+A file whose tests mock `getDb` or hydrate an *unseeded* database (`unseededTestDb()`, for the seed
+itself) keeps those tests as they are; the rest of the file still shares one.
 
 ### When a db-backed test suddenly takes twelve times as long
 
@@ -478,6 +495,7 @@ see `src/lib/offline-manifest-store.test.ts`. E2E: add `e2e/flow.spec.ts`, impor
 from `./fixtures` (not `@playwright/test`) so it gets the per-worker server and per-test reset; the
 config builds and boots the server fleet itself.
 
-Whichever routes the new e2e spec or visual capture reaches, add its name to those routes' entries
-in `scripts/route-coverage.json` — the same change, not a follow-up. If it closes a gap, delete
-that route's `exempt` line while you are there.
+A new e2e spec or visual capture that reaches its routes by URL is credited to them with no edit. One
+that reaches a route only by clicks names itself on that route's entry in
+`scripts/route-coverage.json` — the same change, not a follow-up. If it closes a gap, delete that
+route's `exempt` line while you are there (`--write` does).

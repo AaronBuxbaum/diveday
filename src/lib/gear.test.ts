@@ -407,11 +407,17 @@ describe("gearRegisterGroup", () => {
  */
 describe("the glossary's register-group entry", () => {
   it("defines all three groups and says the Overdue group takes both lapsed phases", async () => {
-    const glossary = await readFile(path.join(process.cwd(), "docs/product/glossary.md"), "utf8");
+    const glossary = await readFile(
+      path.join(process.cwd(), "docs/product/glossary/rental-fit-and-prep.md"),
+      "utf8",
+    );
     const entry = glossary
       .split(/^- \*\*/m)
       .find((block) => block.startsWith("Gear register groups**"));
-    expect(entry, "docs/product/glossary.md has no **Gear register groups** entry").toBeDefined();
+    expect(
+      entry,
+      "docs/product/glossary/rental-fit-and-prep.md has no **Gear register groups** entry",
+    ).toBeDefined();
     const text = entry ?? "";
     for (const group of ["**Out**", "**Overdue**", "**On the wall**"]) {
       expect(text).toContain(group);
@@ -422,7 +428,10 @@ describe("the glossary's register-group entry", () => {
   });
 
   it("sends a reader of the narrow phase words on to the group that widens them", async () => {
-    const glossary = await readFile(path.join(process.cwd(), "docs/product/glossary.md"), "utf8");
+    const glossary = await readFile(
+      path.join(process.cwd(), "docs/product/glossary/rental-fit-and-prep.md"),
+      "utf8",
+    );
     const reservation = glossary
       .split(/^- \*\*/m)
       .find((block) => block.startsWith("Gear reservation**"));

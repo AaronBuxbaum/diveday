@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { reservedTestRecipientDelivery } from "@/lib/notifications/provider";
 import { DEMO_MAIL_DOMAIN, deliveryAddressFor, SES_SIMULATOR_DOMAIN } from "@/lib/simulator-email";
-import { seededShopContext, unseededTestDb } from "@/test/db";
+import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
@@ -41,9 +41,13 @@ import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { joinTripWaitlist } from "./waitlist";
 import { getCurrentWaiverTemplate, listWaiverTemplateHistory, saveWaiverTemplate } from "./waivers";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 describe("resetDemoSchedule", () => {
   it("can restore the full history used by the browser demo", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     await resetDemoSchedule(db, shop.id, { history: true });
 
@@ -56,7 +60,7 @@ describe("resetDemoSchedule", () => {
   });
 
   it("restores the seeded schedule after the playground is churned", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const before = await upcomingTripsWithCounts(db, shop.id);
 
     // Simulate a prospective customer poking around: book a walk-up onto an
@@ -88,7 +92,7 @@ describe("resetDemoSchedule", () => {
   });
 
   it("clears wait-list entries so a churned playground resets cleanly", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
 
     // A wait-list entry references its trip; before the reset cleared it, that
@@ -129,7 +133,7 @@ describe("resetDemoSchedule", () => {
    * `courses`, and `gear-fit-and-age` rather than pointing at its own cause.
    */
   it("clears last-minute unsubscribe tokens instead of FK-violating on their entries", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: seeded shop has no people");
     const [entry] = await db
@@ -161,7 +165,7 @@ describe("resetDemoSchedule", () => {
    * FK-violates and aborts the reset mid-run.
    */
   it("clears courtesy-email unsubscribe tokens instead of FK-violating on their person", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: seeded shop has no people");
     await db.insert(personCourtesyEmailUnsubscribeTokens).values({
@@ -187,7 +191,7 @@ describe("resetDemoSchedule", () => {
     // those surfaces for a screenshot — neither is schedule/booking data, so
     // without this both leaked across specs in the same worker, making
     // assertions like "the review link starts absent" order-dependent.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await db
       .update(shops)
       .set({ reviewUrl: "https://g.page/r/leaked/review" })
@@ -211,7 +215,7 @@ describe("resetDemoSchedule", () => {
   });
 
   it("puts a boat's certificate and paper dates back to never recorded, so a lapsed insurance date from one capture never stands on the next manifest", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await db
       .update(boats)
       .set({
@@ -247,7 +251,7 @@ describe("resetDemoSchedule", () => {
     // (src/db/seed-waiver-versions.ts), and a reset that restored a bare
     // version 1 would silently empty the template history the demo exists to
     // show.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const before = await getCurrentWaiverTemplate(db, shop.id);
     const seededHistory = await listWaiverTemplateHistory(db, shop.id);
     expect(before?.version).toBe(seededHistory.length);
@@ -275,7 +279,7 @@ describe("resetDemoSchedule", () => {
     // switches REEF10 off leaves the next spec in the same worker with a
     // diver-facing promo box that refuses the very code the seed promises —
     // and a code some test minted outlives the test that minted it.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const seeded = await getShopPromoByCode(db, shop.id, "REEF10");
     if (!seeded) throw new Error("seeded REEF10 promo code missing");
     expect(seeded.status).toBe("active");
@@ -331,7 +335,7 @@ describe("resetDemoSchedule", () => {
   });
 
   it("purges a staff member invited mid-test, not just non-staff churn (was the flakiest screenshot in the visual suite: settings/team leaking a test-invited instructor)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const before = await listStaff(db, shop.id);
 
     const invite = await inviteStaffMember(db, {
@@ -358,7 +362,7 @@ describe("resetDemoSchedule", () => {
   });
 
   it("deletes a booking's tip instead of FK-violating on the booking it references (Codex finding — resetDemoSchedule has its own child-first list, separate from deleteDemoShopCascade's)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
     if (!open) throw new Error("expected open trip missing");
@@ -385,7 +389,7 @@ describe("resetDemoSchedule", () => {
   });
 
   it("clears issued booking capabilities so a churned playground resets cleanly", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
     if (!open) throw new Error("expected open trip missing");
@@ -422,7 +426,7 @@ describe("resetDemoSchedule", () => {
   });
 
   it("clears checkout and payment-intent rows so a churned playground resets cleanly", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
     if (!open) throw new Error("expected open trip missing");
@@ -485,7 +489,7 @@ describe("resetDemoSchedule", () => {
   });
 
   it("clears non-staff logins so a churned playground resets cleanly", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
     if (!open) throw new Error("expected open trip missing");
@@ -548,7 +552,7 @@ describe("resetDemoSchedule", () => {
   });
 
   it("keeps staff and their logins intact so the demo session survives", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const staffBefore = await listStaff(db, shop.id);
     const accountsBefore = await db.select().from(userAccounts);
 
@@ -563,7 +567,7 @@ describe("resetDemoSchedule", () => {
   });
 
   it("leaves no orphaned bookings, customers, or roles after reset", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await resetDemoSchedule(db, shop.id);
 
     // Every remaining booking points at a live trip and person (no dangling rows).
@@ -628,7 +632,7 @@ describe("seedIfEmpty (CR-010)", () => {
 
 describe("seeded addresses", () => {
   it("read like a person's to staff, and deliver to the SES mailbox simulator, never to a domain the provider refuses", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await resetDemoSchedule(db, shop.id, { history: true });
 
     const staffIds = new Set(

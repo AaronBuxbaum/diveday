@@ -8,18 +8,18 @@
 // `/shop/[shopSlug]/dive-sites/catalog`, and `/shop/[shopSlug]/staffing`. A page
 // with no coverage is silent by construction; it produces no failure to notice.
 //
-// So the coverage is written down. `scripts/route-coverage.json` names, for every
-// `page.tsx` under `src/app`, which specs exercise it and which visual captures
-// photograph it — and, for a route that genuinely warrants less, an `exempt`
-// reason a human had to type. The check keeps that ledger honest against the tree:
+// So the coverage is checked against the tree. For every `page.tsx` under
+// `src/app`, the check works out which specs exercise it and which visual
+// captures photograph it, and a route that genuinely warrants less carries an
+// `exempt` reason a human had to type:
 //
-//   - every route has an entry, and every entry still names a real route;
-//   - every spec file listed exists under `e2e/`;
-//   - every capture name listed appears as `capture(page, "<name>"` in
-//     `e2e/visual.spec.ts`;
-//   - **every route has both a spec and a capture, or a written reason.**
+//   - every route has both a spec and a capture, or a written reason;
+//   - every hand-written entry still names a real route;
+//   - every spec file it names exists under `e2e/`;
+//   - every capture name it names appears as `capture(page, "<name>"` in
+//     `e2e/visual.spec.ts`.
 //
-// That last one used to read "a route with *neither* carries a written reason",
+// That first one used to read "a route with *neither* carries a written reason",
 // which left a fourth state the ledger tolerated in silence: a spec, no capture,
 // no exemption. Three routes were in it (issue #727) — the add-diver form the
 // front desk fills in most often, the long dive-site form, and `/invite/[token]`,
@@ -31,29 +31,39 @@
 // *surface* gets a capture — so a route that has one and not the other is a
 // decision, and this is where it gets written down.
 //
-// ## Why the coverage lists are hand-maintained
+// ## Derived coverage, and the exceptions written by hand
 //
-// This deliberately does NOT try to derive "spec X covers route Y" automatically.
-// A spec covers a route when it drives a flow that *lands* there, which is mostly
-// clicks: `e2e/waivers.spec.ts` reaches `/waivers/[token]` by pressing "Send
-// waiver" and following the link out of a toast, and `e2e/visual.spec.ts` reaches
-// four trip surfaces through the trip nav. No grep sees that, and a grep that
-// guessed would either invent coverage (the dangerous direction) or demand
-// exemptions for routes that are in fact well covered (the direction that teaches
-// sessions to rubber-stamp exemptions). Both failures are worse than typing the
-// spec name.
+// The ledger used to list every route's specs and captures by hand, so every
+// new page touched `scripts/route-coverage.json` — 18 of 322 commits in three
+// days, the one file every feature layer of a stack conflicted on (code review
+// 2026-10-10, finding 10). Most of that list is mechanical: a spec that visits
+// `/shop/blue-mantis/staffing` says so in a string. So the coverage is derived:
 //
-// What *is* mechanical — which routes exist, which spec files exist, which
-// captures exist — is derived every run, so the hand-written half can never drift
-// into fiction.
+//   - **a spec covers a route** when its source holds a path literal that
+//     resolves to it (`"/shop/blue-mantis/staffing"`, `` `/s/${SHOP}/trips/${id}` ``,
+//     or `` `${tripPath}/print` `` where `tripPath` is a path constant in the same
+//     file). A `${…}` segment matches a dynamic segment; a literal one prefers a
+//     static route over a dynamic sibling (`/gear/rentals` over `/gear/[id]`);
+//   - **a capture photographs a route** when the last path literal before its
+//     `capture(page, …)` call, inside the same `test(`, resolves to it;
+//   - **a spec scans a route** (`a11y`) when it covers the route and calls
+//     `expectNoA11yViolations`.
+//
+// What no string shows is a route reached by clicks: `e2e/waivers.spec.ts`
+// reaches `/waivers/[token]` by pressing "Send waiver" and following a toast.
+// Guessing those would invent coverage, so they stay in the ledger by hand —
+// a `reached` entry naming the specs and captures that land there — beside the
+// `exempt` reasons. Nothing else lives in the file; a new route a spec visits
+// by URL needs no edit at all.
 //
 // ## The ratchet (mirrors scripts/check-copy.mjs)
 //
-// `--write` regenerates only those mechanical facts. It adds an entry for a new
-// route, drops an entry for a deleted one, and banks a closed gap by removing an
-// `exempt` that the route no longer needs. It will never ADD an exemption and
-// never REMOVE a spec or capture from a route's lists: both of those weaken the
-// gate, so both stay deliberate hand edits that show up in review. If a listed
+// `--write` keeps the file to its exceptions. It drops an entry for a deleted
+// route, drops a hand-written name the derivation now finds by itself, and banks
+// a closed gap by removing an `exempt` that the route no longer needs. It will
+// never ADD an exemption and never REMOVE a name whose spec or capture vanished:
+// both of those weaken the gate, so both stay deliberate hand edits that show up
+// in review. If a listed
 // spec, capture or a11y scan has genuinely vanished, `--write` refuses and says
 // so; `--absorb` is the loud escape hatch for the one case that is not new debt
 // — a merge from a branch that deleted the spec.
@@ -83,7 +93,7 @@ export const VISUAL_SPEC = "e2e/visual.spec.ts";
 export const LEDGER_PATH = "scripts/route-coverage.json";
 
 export const LEDGER_NOTE =
-  "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `a11y` names the specs that run an axe scan on it, `exempt` states why a route warrants less than both. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose — see scripts/check-route-coverage.mjs.";
+  "Only what scripts/check-route-coverage.mjs cannot derive from the tree. A route's specs, captures and a11y scans are read from the path literals in e2e/ (see that script); an entry here adds `e2e` specs and `visual` captures that reach the route by clicks a literal cannot show, `a11y` scans likewise, or an `exempt` reason saying why the route warrants less than both. `node scripts/check-route-coverage.mjs --write` prunes it; it never adds an exemption.";
 
 // `a11y` is deliberately its own column rather than being read out of `e2e`.
 // "a spec navigates through this route" and "an axe scan runs on it" are
@@ -184,6 +194,17 @@ export async function readLedger(root) {
   }
 }
 
+/** Every spec's source, by file name — what the derivation reads. */
+export async function collectSpecSources(root, specs) {
+  const sources = new Map();
+  await Promise.all(
+    [...specs].map(async (spec) => {
+      sources.set(spec, await readFile(path.join(root, E2E_DIR, spec), "utf8"));
+    }),
+  );
+  return sources;
+}
+
 /** Everything the audit and the writer reason over, read from one directory. */
 export async function collectWorld(root) {
   const [routes, specs, captures, ledger] = await Promise.all([
@@ -192,7 +213,153 @@ export async function collectWorld(root) {
     collectCaptureNames(root),
     readLedger(root),
   ]);
-  return { routes, specs, captures, ledger };
+  const specSources = await collectSpecSources(root, specs);
+  return { routes, specs, captures, ledger, specSources };
+}
+
+// ---------------------------------------------------------------------------
+// The derivation — pure, exported for the unit test.
+
+/** A quoted path: `"/a/b"`, `'/a'` or `` `/a/${b}` ``, `${…}` allowed anywhere inside. */
+const PATH_LITERAL = /(["'`])(\/(?:[^"'`\s\\$]|\$\{[^}]*\}|\$(?!\{))*)\1/g;
+/** `const tripPath = `/shop/x/trips/${id}`` — a path constant a later template may start from. */
+const PATH_CONSTANT =
+  /\b(?:const|let)\s+(\w+)\s*=\s*(["'`])(\/(?:[^"'`\s\\$]|\$\{[^}]*\}|\$(?!\{))*)\2/g;
+/** `` `${tripPath}/print` `` — a template that starts from a constant. */
+const CONSTANT_PREFIXED = /`\$\{(\w+)\}((?:[^`\s\\$]|\$\{[^}]*\}|\$(?!\{))*)`/g;
+/** A `test(` declaration, which bounds the captures a path literal can be credited with. */
+const TEST_START = /^\s*test(?:\.(?:only|skip|fixme|fail))?\s*\(/gm;
+/** The call that makes a spec an accessibility scan rather than a visit. */
+const A11Y_SCAN = /\bexpectNoA11yViolations\s*\(/;
+
+/** A path literal reduced to its route shape: `${…}` becomes `*`, query and hash dropped. */
+function pathShape(text) {
+  const bare = text.replace(/\$\{[^}]*\}/g, "*").split(/[?#]/)[0];
+  if (bare !== "/" && !/^\/[a-z*[]/.test(bare)) return null;
+  return bare.length > 1 ? bare.replace(/\/$/, "") : bare;
+}
+
+/** Every path literal in a source, with where it starts. */
+export function pathLiterals(source) {
+  const found = [];
+  const constants = new Map();
+  for (const match of source.matchAll(PATH_CONSTANT)) constants.set(match[1], match[3]);
+  for (const match of source.matchAll(CONSTANT_PREFIXED)) {
+    const base = constants.get(match[1]);
+    const shape = base === undefined ? null : pathShape(base + match[2]);
+    if (shape) found.push({ path: shape, index: match.index });
+  }
+  for (const match of source.matchAll(PATH_LITERAL)) {
+    const shape = pathShape(match[2]);
+    if (shape) found.push({ path: shape, index: match.index });
+  }
+  return found.sort((a, b) => a.index - b.index);
+}
+
+/**
+ * The routes a path shape resolves to — the best-fitting ones only.
+ *
+ * Segments must line up one to one. A literal segment fits a static segment
+ * of the same name or any dynamic one; a `*` (an interpolation) fits anything.
+ * Among the fits, the one with the fewest mismatched kinds wins — a literal
+ * landing on a dynamic segment, or a `*` landing on a static one — so
+ * `/shop/x/gear/rentals` is the rentals page and `/shop/x/gear/${id}` the unit
+ * page, never both.
+ */
+export function routesForPath(routes, shape) {
+  const segments = shape === "/" ? [] : shape.slice(1).split("/");
+  let best = [];
+  let bestScore = Number.POSITIVE_INFINITY;
+  for (const route of routes) {
+    const parts = route === "/" ? [] : route.slice(1).split("/");
+    if (parts.length !== segments.length) continue;
+    let score = 0;
+    let fits = true;
+    for (const [i, part] of parts.entries()) {
+      const dynamic = part.startsWith("[");
+      const wild = segments[i].includes("*");
+      if (!dynamic && !wild && part !== segments[i]) {
+        fits = false;
+        break;
+      }
+      if (dynamic !== wild) score += 1;
+    }
+    if (!fits) continue;
+    if (score < bestScore) {
+      best = [route];
+      bestScore = score;
+    } else if (score === bestScore) best.push(route);
+  }
+  return best;
+}
+
+/**
+ * What the tree says on its own: for every route, the specs whose source
+ * reaches it, the captures shot after reaching it within one test, and the
+ * scans run on it.
+ */
+export function deriveCoverage({ routes, specSources = new Map() }) {
+  const derived = new Map(
+    routes.map((route) => [route, { e2e: new Set(), visual: new Set(), a11y: new Set() }]),
+  );
+  for (const [spec, source] of specSources) {
+    const scans = A11Y_SCAN.test(source);
+    for (const { path: shape } of pathLiterals(source)) {
+      for (const route of routesForPath(routes, shape)) {
+        derived.get(route).e2e.add(spec);
+        if (scans) derived.get(route).a11y.add(spec);
+      }
+    }
+  }
+  const visual = specSources.get(path.basename(VISUAL_SPEC));
+  if (visual !== undefined) {
+    const events = [
+      ...[...visual.matchAll(TEST_START)].map((match) => ({ kind: "test", index: match.index })),
+      ...pathLiterals(visual).map((literal) => ({ kind: "path", ...literal })),
+      ...[...visual.matchAll(/\b(?:capture|capturePrint)\(\s*page\s*,\s*["'`]([^"'`]+)["'`]/g)].map(
+        (match) => ({ kind: "capture", name: match[1], index: match.index }),
+      ),
+    ].sort((a, b) => a.index - b.index);
+    let last = null;
+    for (const event of events) {
+      if (event.kind === "test") last = null;
+      else if (event.kind === "path") last = event.path;
+      else if (last !== null) {
+        for (const route of routesForPath(routes, last)) derived.get(route).visual.add(event.name);
+      }
+    }
+  }
+  return derived;
+}
+
+/**
+ * The whole ledger as consumers read it — every route, its derived and
+ * hand-written specs, captures and scans together, and its exemption — the
+ * shape `scripts/route-coverage.json` held when every line of it was typed.
+ */
+export function effectiveLedger(world) {
+  const entries = ledgerEntries(world.ledger);
+  const derived = deriveCoverage(world);
+  const ledger = {};
+  for (const route of world.routes) {
+    const hand = entries[route];
+    const handEntry = hand && typeof hand === "object" && !Array.isArray(hand) ? hand : {};
+    const merged = (key) =>
+      [...new Set([...derived.get(route)[key], ...list(handEntry[key])])].sort();
+    const entry = { e2e: merged("e2e"), visual: merged("visual") };
+    const a11y = merged("a11y");
+    if (a11y.length > 0) entry.a11y = a11y;
+    if (typeof handEntry.exempt === "string" && handEntry.exempt.trim() !== "") {
+      entry.exempt = handEntry.exempt;
+    }
+    ledger[route] = entry;
+  }
+  return ledger;
+}
+
+/** {@link effectiveLedger} for the tree at `root` — what other scripts import. */
+export async function loadCoverage(root) {
+  return effectiveLedger(await collectWorld(root));
 }
 
 /** The ledger's route entries, with the human-facing `//` note filtered out. */
@@ -226,40 +393,21 @@ function normalizeEntry(entry) {
  * Never throws on a malformed entry: a broken shape is itself a violation with a
  * message, because a check that crashes teaches nothing.
  */
-export function auditLedger({ routes, ledger, specs, captures }) {
+export function auditLedger(world) {
+  const { routes, ledger, specs, captures } = world;
   const violations = [];
-  if (ledger === null || ledger === undefined) {
-    return {
-      violations: [
-        `${LEDGER_PATH} is missing. Create it with \`node scripts/check-route-coverage.mjs --write\`, then fill in the coverage by hand.`,
-      ],
-      stats: {
-        total: routes.length,
-        e2e: 0,
-        visual: 0,
-        a11y: 0,
-        exempt: 0,
-        uncovered: routes.length,
-      },
-    };
-  }
-
+  // A missing ledger is an empty one: nothing written by hand, every route
+  // held to what the tree shows.
   const entries = ledgerEntries(ledger);
+  const derived = deriveCoverage(world);
   const known = new Set(routes);
   const stats = { total: routes.length, e2e: 0, visual: 0, a11y: 0, exempt: 0, uncovered: 0 };
 
   for (const route of routes) {
-    const entry = entries[route];
-    if (entry === undefined) {
-      violations.push(
-        `${route}: no entry in ${LEDGER_PATH}. Add one naming the specs and captures that cover it (\`node scripts/check-route-coverage.mjs --write\` stubs it), or state why it needs neither.`,
-      );
-      stats.uncovered += 1;
-      continue;
-    }
+    const entry = entries[route] ?? {};
     if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
       violations.push(
-        `${route}: entry must be an object of { e2e: [], visual: [], exempt? }, got ${Array.isArray(entry) ? "an array" : typeof entry}.`,
+        `${route}: entry must be an object of { e2e?: [], visual?: [], a11y?: [], exempt? }, got ${Array.isArray(entry) ? "an array" : entry === null ? "null" : typeof entry}.`,
       );
       continue;
     }
@@ -308,9 +456,13 @@ export function auditLedger({ routes, ledger, specs, captures }) {
       }
     }
 
-    if (e2eNames.length > 0) stats.e2e += 1;
-    if (visualNames.length > 0) stats.visual += 1;
-    if (a11yNames.length > 0) stats.a11y += 1;
+    // Coverage is what the tree shows plus what the entry adds by hand.
+    const { e2e: seenE2e, visual: seenVisual, a11y: seenA11y } = derived.get(route);
+    const coveredE2e = seenE2e.size > 0 || e2eNames.length > 0;
+    const coveredVisual = seenVisual.size > 0 || visualNames.length > 0;
+    if (coveredE2e) stats.e2e += 1;
+    if (coveredVisual) stats.visual += 1;
+    if (seenA11y.size > 0 || a11yNames.length > 0) stats.a11y += 1;
     const exempt = typeof entry.exempt === "string" && entry.exempt.trim() !== "";
 
     // **Both, or a written reason.** This used to pass on *either* — so a route
@@ -320,7 +472,7 @@ export function auditLedger({ routes, ledger, specs, captures }) {
     // the first screen a new hire ever sees. That fourth state is the one the
     // `exempt` field was invented to make impossible, so it is a failure now:
     // a gap has to be a decision somebody wrote down.
-    if (e2eNames.length > 0 && visualNames.length > 0) {
+    if (coveredE2e && coveredVisual) {
       if (exempt) {
         violations.push(
           `${route}: covered now, but still carries an \`exempt\` reason. Bank the closed gap — \`node scripts/check-route-coverage.mjs --write\` removes it.`,
@@ -335,13 +487,13 @@ export function auditLedger({ routes, ledger, specs, captures }) {
     }
     stats.uncovered += 1;
     const missing =
-      e2eNames.length === 0 && visualNames.length === 0
+      !coveredE2e && !coveredVisual
         ? "no e2e spec and no visual capture"
-        : e2eNames.length === 0
+        : !coveredE2e
           ? "no e2e spec"
           : "no visual capture";
     violations.push(
-      `${route}: ${missing}. Every important flow gets an e2e spec and every important surface gets a capture (AGENTS.md) — add the missing one, or write an \`exempt\` reason saying why this route needs neither.`,
+      `${route}: ${missing}. Every important flow gets an e2e spec and every important surface gets a capture (AGENTS.md) — add the missing one, or write an \`exempt\` reason saying why this route needs neither. A spec or capture that reaches it only by clicks, which no path literal shows, is named by hand in ${LEDGER_PATH}.`,
     );
   }
 
@@ -362,72 +514,80 @@ export function auditLedger({ routes, ledger, specs, captures }) {
 /**
  * What `--write` would put on disk, and every reason it should refuse first.
  *
- * The ratchet only turns one way. Adding a route entry, dropping a deleted
- * route's entry, and removing an `exempt` a route has outgrown all leave the gate
- * at least as strong. Dropping a spec or capture from a route's list does not, so
+ * The file holds only exceptions, and the ratchet only turns one way. Dropping
+ * a deleted route's entry, dropping hand-written names from a column the
+ * derivation already covers for that route, and removing an `exempt` a route has outgrown all leave the gate at
+ * least as strong. Dropping a name whose spec or capture vanished does not, so
  * it is a refusal rather than a silent rewrite — `--absorb` accepts it loudly.
+ * A new route gets no entry: what the tree shows of it is the whole claim, and
+ * the audit fails it until a spec or a written reason arrives.
  */
-export function planLedgerWrite({ routes, ledger, specs, captures }) {
+export function planLedgerWrite(world) {
+  const { routes, ledger, specs, captures } = world;
   const entries = ledgerEntries(ledger);
+  const derived = deriveCoverage(world);
   const next = {};
-  const added = [];
   const removedRoutes = [];
   const bankedExemptions = [];
+  const derivedNames = [];
   const drops = [];
 
   for (const route of routes) {
     const existing = entries[route];
-    if (existing === undefined || existing === null || typeof existing !== "object") {
-      // A new route starts with nothing claimed and — deliberately — no
-      // exemption. The check fails until a human either writes a spec or types
-      // the reason it needs none.
-      next[route] = { e2e: [], visual: [] };
-      added.push(route);
-      continue;
-    }
-
+    if (existing === undefined || existing === null || typeof existing !== "object") continue;
     const entry = normalizeEntry(existing);
-    const keptE2e = entry.e2e.filter((spec) => specs.has(spec));
-    const keptVisual = entry.visual.filter((name) => captures.has(name));
+    const seen = derived.get(route);
+    const keep = (key, exists, label) => {
+      const kept = [];
+      for (const name of entry[key] ?? []) {
+        if (!exists(name)) drops.push(`${route}: ${label(name)}`);
+        // The tree already shows this column for the route, so the gate no
+        // longer rests on the hand-written name — the file keeps only gaps.
+        else if (seen[key].size > 0) derivedNames.push(`${route}: ${key} "${name}"`);
+        else kept.push(name);
+      }
+      return kept;
+    };
+    const keptE2e = keep(
+      "e2e",
+      (spec) => specs.has(spec),
+      (spec) => `e2e "${spec}" no longer exists under ${E2E_DIR}/`,
+    );
+    const keptVisual = keep(
+      "visual",
+      (name) => captures.has(name),
+      (name) => `visual capture "${name}" is no longer shot`,
+    );
     // `a11y` names specs too, so a vanished scan is a coverage drop like any
-    // other. It was neither filtered nor carried through before, which is the
-    // sharper half of the same omission: the column simply did not survive a
-    // `--write` at all.
-    const keptA11y = (entry.a11y ?? []).filter((spec) => specs.has(spec));
-    for (const spec of entry.e2e) {
-      if (!specs.has(spec))
-        drops.push(`${route}: e2e "${spec}" no longer exists under ${E2E_DIR}/`);
-    }
-    for (const name of entry.visual) {
-      if (!captures.has(name)) drops.push(`${route}: visual capture "${name}" is no longer shot`);
-    }
-    for (const spec of entry.a11y ?? []) {
-      if (!specs.has(spec))
-        drops.push(`${route}: a11y spec "${spec}" no longer exists under ${E2E_DIR}/`);
-    }
+    // other (issue #1362: the column once did not survive a `--write` at all).
+    const keptA11y = keep(
+      "a11y",
+      (spec) => specs.has(spec),
+      (spec) => `a11y spec "${spec}" no longer exists under ${E2E_DIR}/`,
+    );
 
-    const written = { e2e: keptE2e, visual: keptVisual };
+    const written = {};
+    if (keptE2e.length > 0) written.e2e = keptE2e;
+    if (keptVisual.length > 0) written.visual = keptVisual;
     if (keptA11y.length > 0) written.a11y = keptA11y;
     if (entry.exempt !== undefined) {
-      // **The same condition the audit banks on, which is `&&`, not `||`.**
-      // The audit calls a route covered only when it has both a spec and a
-      // capture; this asked for either, so a route exempt from exactly one half
-      // lost the paragraph explaining why — and then failed the audit for the
-      // half it was exempt from, with the reason deleted. Exactly one route is
-      // in that state and it is the one whose exemption is hardest to re-derive:
-      // /shop/[shopSlug]/settings/security has an e2e spec and an argued reason
-      // for having no capture.
-      if (keptE2e.length > 0 && keptVisual.length > 0) bankedExemptions.push(route);
+      // **The same condition the audit banks on, which is `&&`, not `||`**
+      // (issue #1362): a route exempt from exactly one half keeps the paragraph
+      // explaining why — /shop/[shopSlug]/settings/security has an e2e spec and
+      // an argued reason for having no capture.
+      const coveredE2e = seen.e2e.size > 0 || entry.e2e.some((spec) => specs.has(spec));
+      const coveredVisual = seen.visual.size > 0 || entry.visual.some((name) => captures.has(name));
+      if (coveredE2e && coveredVisual) bankedExemptions.push(route);
       else written.exempt = entry.exempt;
     }
-    next[route] = written;
+    if (Object.keys(written).length > 0) next[route] = written;
   }
 
   for (const route of Object.keys(entries)) {
     if (!routes.includes(route)) removedRoutes.push(route);
   }
 
-  return { next, added, removedRoutes, bankedExemptions, drops };
+  return { next, removedRoutes, bankedExemptions, derivedNames, drops };
 }
 
 /**
@@ -485,18 +645,20 @@ export function summaryLine(stats) {
 
 async function main() {
   const world = await collectWorld(ROOT);
-  const { routes, specs, captures, ledger } = world;
+  const { routes } = world;
 
   if (process.argv.includes("--report")) {
-    const entries = ledgerEntries(ledger);
+    const effective = effectiveLedger(world);
     for (const route of routes) {
-      const entry = entries[route] ?? {};
-      const e2e = list(entry.e2e);
-      const visual = list(entry.visual);
-      const mark = entry.exempt ? "EXEMPT" : e2e.length + visual.length > 0 ? "ok" : "GAP";
+      const entry = effective[route];
+      const mark = entry.exempt
+        ? "EXEMPT"
+        : entry.e2e.length + entry.visual.length > 0
+          ? "ok"
+          : "GAP";
       console.log(`${mark.padEnd(6)} ${route}`);
-      if (e2e.length > 0) console.log(`         e2e:    ${e2e.join(", ")}`);
-      if (visual.length > 0) console.log(`         visual: ${visual.join(", ")}`);
+      if (entry.e2e.length > 0) console.log(`         e2e:    ${entry.e2e.join(", ")}`);
+      if (entry.visual.length > 0) console.log(`         visual: ${entry.visual.join(", ")}`);
       if (entry.exempt) console.log(`         exempt: ${entry.exempt}`);
     }
     console.log(`\n${summaryLine(auditLedger(world).stats)}`);
@@ -505,7 +667,7 @@ async function main() {
 
   const absorbing = process.argv.includes("--absorb");
   if (process.argv.includes("--write") || absorbing) {
-    const plan = planLedgerWrite({ routes, ledger, specs, captures });
+    const plan = planLedgerWrite(world);
     if (plan.drops.length > 0 && !absorbing) {
       console.error(
         "Refusing to write a ledger that drops coverage. The ratchet only turns one way:",
@@ -521,18 +683,14 @@ async function main() {
       for (const drop of plan.drops) console.warn(`- ${drop}`);
     }
     await writeFile(path.join(ROOT, LEDGER_PATH), serializeLedger(plan.next));
-    console.log(`route-coverage: ledger written — ${routes.length} routes`);
-    for (const route of plan.added) {
-      console.log(`- ${route}: new route, stubbed with no coverage — name its specs and captures`);
-    }
+    console.log(
+      `route-coverage: ledger written — ${Object.keys(plan.next).length} hand-written entries for ${routes.length} routes`,
+    );
     for (const route of plan.removedRoutes) console.log(`- ${route}: route gone, entry removed`);
+    for (const name of plan.derivedNames)
+      console.log(`- ${name}: covered by the tree now, hand entry removed`);
     for (const route of plan.bankedExemptions) {
       console.log(`- ${route}: covered now — exemption banked and removed`);
-    }
-    if (plan.added.length > 0) {
-      console.log(
-        "No exemption was added for any of the above: `--write` never writes one. If a route truly needs neither an e2e spec nor a capture, type the reason into the ledger by hand.",
-      );
     }
     process.exit(0);
   }

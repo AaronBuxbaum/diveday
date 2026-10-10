@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
   cancelBooking,
   confirmBookingIdentity,
@@ -33,8 +33,12 @@ import {
 import { upsertShopStripeAccount } from "./stripe-accounts";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const fileCtx = fileScopedShopContext();
+
 async function packageContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = fileCtx;
   const [person] = await db
     .select({ id: people.id })
     .from(people)
@@ -280,7 +284,7 @@ describe("selling and spending a package", () => {
  */
 describe("booking a departure with a package", () => {
   async function diverHoldingDives(scope: "all" | "fun_dives" = "all") {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = fileCtx;
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("seed has no staff");
     const pkg = await createDivePackage(db, {
@@ -393,7 +397,7 @@ describe("booking a departure with a package", () => {
   it("changes nothing for a shop that sells no packages", async () => {
     // Opt-in by presence: the whole feature is invisible until a shop defines
     // its first package, and a booking must pay the ordinary way.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = fileCtx;
     const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
     const trip = trips.find((row) => row.title.startsWith("Two-Tank Reef — Molasses"));
     if (!trip) throw new Error("demo reef trip missing");
@@ -433,7 +437,7 @@ describe("booking a departure with a package", () => {
  */
 describe("a booking made under an unconfirmed identity", () => {
   it("never spends the matched diver's dives", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = fileCtx;
     const [staffPerson] = await listStaff(db, shop.id);
     if (!staffPerson) throw new Error("seed has no staff");
     const pkg = await createDivePackage(db, {
@@ -533,7 +537,7 @@ describe("a booking made under an unconfirmed identity", () => {
  */
 describe("confirming a name-match seat's identity", () => {
   async function regularSeatedFromThePrompt() {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = fileCtx;
     const [staffPerson] = await listStaff(db, shop.id);
     if (!staffPerson) throw new Error("seed has no staff");
     const pkg = await createDivePackage(db, {

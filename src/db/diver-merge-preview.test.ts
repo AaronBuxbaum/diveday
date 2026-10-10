@@ -2,7 +2,7 @@ import { and, eq, gt } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { guardianSignatureMissing } from "@/lib/guardian";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import {
   getDiverMergePreview,
@@ -24,14 +24,22 @@ import {
   waiverTemplates,
 } from "./schema";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 /**
  * The staffer's half of a merge: the side-by-side they read first, the winner
  * they pick for each field the two records disagree on, and the pause when the
  * two records might be two people. `diver-merge.test.ts` holds the moving half.
  */
 
-async function fixtures() {
-  const { db, shop } = await seededShopContext();
+async function fixtures({ fresh = false }: { fresh?: boolean } = {}) {
+  // `fresh`: a database of its own — for the test whose subject is two merges
+  // started together (under the file's transaction their own transactions
+  // would be interleaved savepoints on one handle), and for one that builds
+  // the fixture twice.
+  const { db, shop } = fresh ? await seededShopContext() : ctx;
   const [owner] = await db
     .select({ id: people.id, fullName: people.fullName })
     .from(people)
@@ -180,7 +188,7 @@ describe("likely duplicates", () => {
   });
 
   it("offers the same name and birth date, and never a namesake born on another day", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const rows = await db
       .insert(people)
       .values([
@@ -609,7 +617,9 @@ describe("two people's legal records", () => {
       ["source", true],
       ["survivor", false],
     ] as const) {
-      const f = await fixtures();
+      // Two fixture sets in one test: each pass mints the same two people, so
+      // each takes a database of its own.
+      const f = await fixtures({ fresh: true });
       await f.db
         .update(people)
         .set({ dateOfBirth: "2012-05-01" })
@@ -680,7 +690,7 @@ describe("adversarial merges", () => {
   });
 
   it("lets exactly one of two opposite merges started together win", async () => {
-    const f = await fixtures();
+    const f = await fixtures({ fresh: true });
     const outcomes = await Promise.all([
       merge(f),
       merge(f, { personId: f.survivor.id, survivorId: f.source.id }),

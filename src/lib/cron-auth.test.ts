@@ -63,3 +63,23 @@ describe("requireCronSecret", () => {
     expect(requireCronSecret(request(`Bearer ${SECRET}`), SECRET)).toBeNull();
   });
 });
+
+describe("every cron route", () => {
+  // Two routes once compared the bearer header with `!==` and leaked the secret's
+  // length through timing; the shared gate is the one place that comparison lives.
+  it("is gated by requireCronSecret, never a hand-rolled header compare", async () => {
+    const { readdirSync, readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const root = join(process.cwd(), "src/app/api/cron");
+    const routes = readdirSync(root, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => join(root, entry.name, "route.ts"));
+
+    expect(routes.length).toBeGreaterThan(0);
+    for (const route of routes) {
+      const source = readFileSync(route, "utf8");
+      expect(source, route).toMatch(/requireCronSecret\(/);
+      expect(source, route).not.toMatch(/authorization[^\n]*[!=]==/i);
+    }
+  });
+});

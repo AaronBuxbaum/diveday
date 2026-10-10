@@ -15,7 +15,12 @@ import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { findIssueProblems } from "./check-follow-ups.mjs";
-import { parseFileArgs, renderFollowUpBody } from "./file-follow-up.mjs";
+import {
+  FOLLOW_UP_QUOTA,
+  filedInWindow,
+  parseFileArgs,
+  renderFollowUpBody,
+} from "./file-follow-up.mjs";
 
 const root = path.join(import.meta.dirname, "..");
 
@@ -119,6 +124,21 @@ describe("parseFileArgs", () => {
   it("refuses two flags both reading stdin", () => {
     const both = complete.map((item) => (item === "why.md" || item === "prompt.md" ? "-" : item));
     expect(parseFileArgs(both).error).toMatch(/only one flag can read stdin/);
+  });
+});
+
+describe("the filing quota", () => {
+  const now = new Date("2026-10-10T12:00:00Z");
+  const hoursAgo = (h) => new Date(now.getTime() - h * 3_600_000).toISOString();
+
+  it("counts only this window's filings, so a new run starts with its quota", () => {
+    const stamps = [hoursAgo(1), hoursAgo(11.5), hoursAgo(13), "not a date"];
+    expect(filedInWindow(stamps, now)).toBe(2);
+    expect(FOLLOW_UP_QUOTA).toBe(10);
+  });
+
+  it("accepts --over-quota as a value flag", () => {
+    expect(parseFileArgs(["--over-quota"]).error).toMatch(/needs a value/);
   });
 });
 

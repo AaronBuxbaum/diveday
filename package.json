@@ -57,7 +57,6 @@
     "check:route-coverage": "node scripts/check-route-coverage.mjs",
     "check:loading-skeletons": "node scripts/check-loading-skeletons.mjs",
     "check:notice-codes": "node scripts/check-notice-codes.mjs",
-    "check:soft-delete": "node scripts/check-soft-delete.mjs",
     "check:rental-fit-caps": "node scripts/check-rental-fit-caps.mjs",
     "check:exit-curves": "node scripts/check-exit-curves.mjs",
     "check:text": "node scripts/check-source-text.mjs",
@@ -89,6 +88,7 @@
     "brand:icons": "tsx scripts/render-brand-icons.tsx",
     "check:context-budget": "node scripts/check-context-budget.mjs",
     "agent:health": "node scripts/agent-health.mjs",
+    "agent:doctor": "node scripts/agent-doctor.mjs",
     "simulate:day": "node scripts/simulate-day.mjs",
     "persona:bots": "node scripts/persona-bots.mjs"
   },

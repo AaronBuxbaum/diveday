@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { seededShopContext, unseededTestDb } from "@/test/db";
+import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createGearItem, deleteGearItem, reserveGearUnit } from "./gear";
@@ -7,6 +7,10 @@ import { createCounterRental, linkCounterRentalOrder } from "./gear-counter-rent
 import { countGearRentalHolders, listGearRentals } from "./gear-rentals";
 import { bookingPayments, gearReservations, orders, people, shops } from "./schema";
 import { createTrip } from "./trips-create";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /** A setup reservation: a hand pick whose staffer already said "Assign anyway". */
 const SETUP_PICK = { proposed: false, assignAnyway: true } as const;
@@ -19,7 +23,7 @@ const TODAY = "2026-10-08";
  * shop also proves the reader is shop-scoped.
  */
 async function rentalShop() {
-  const { db } = await seededShopContext();
+  const { db } = ctx;
   const [shop] = await db
     .insert(shops)
     .values({ name: "Rental Test Divers", slug: "rental-test", timezone: "America/New_York" })

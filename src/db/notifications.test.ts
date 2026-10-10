@@ -1,8 +1,9 @@
 import { and, asc, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { AppDb } from "@/db/client";
 import { nowMs } from "@/lib/clock";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import {
   applyProviderEmailEvent,
@@ -27,8 +28,12 @@ import {
 } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 async function seededBooking() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [trip] = await upcomingTripsWithCounts(db, shop.id);
   if (!trip) throw new Error("demo trip missing");
   const booking = await createBooking(db, {
@@ -718,7 +723,7 @@ describe("what the retry queue is allowed to hold", () => {
   it.each(["email_verification", "password_reset_request", "staff_invite"])(
     "stores no part of the token anywhere on the row (%s)",
     async (kind) => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       await sendNotification(db, linkBearing(shop.id, kind), failsRetryably);
 
       const [row] = await db
@@ -744,7 +749,7 @@ describe("what the retry queue is allowed to hold", () => {
     // drain would mail the copy *after* the erasure. Nothing downstream reads
     // this message, so it is dropped instead (`dive-domain-expert` and
     // `security-reviewer`, issue #1453).
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const delivery = await sendNotification(
       db,
       {
@@ -784,7 +789,7 @@ describe("what the retry queue is allowed to hold", () => {
     // deleting either `notificationSubjectEmail`/`notificationSubjectPhone`
     // call from the insert broke nothing in the suite (`security-reviewer`,
     // issue #1298).
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await sendNotification(
       db,
       {
@@ -834,7 +839,7 @@ describe("what the retry queue is allowed to hold", () => {
   });
 
   it("still delivers the working link a sealed retry was queued with", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await sendNotification(db, linkBearing(shop.id, "email_verification"), failsRetryably);
     await db
       .update(notificationSendQueue)
@@ -859,7 +864,7 @@ describe("what the retry queue is allowed to hold", () => {
   });
 
   it("parks a payload it cannot open instead of losing it quietly", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
     // What a rotated key, or a tampered value, looks like from here: AES-GCM
     // authenticates, so this fails to open rather than decrypting to garbage.
@@ -899,7 +904,7 @@ describe("what the retry queue is allowed to hold", () => {
   });
 
   it("drains a parked row once the key that opens it is back", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
     const [queued] = await db
       .select()
@@ -961,7 +966,7 @@ describe("what the retry queue is allowed to hold", () => {
   });
 
   it("gives a recovered row its whole transient budget, not what the fortnight left of it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
     const [queued] = await db
       .select()
@@ -1039,7 +1044,7 @@ describe("what the retry queue is allowed to hold", () => {
   });
 
   it("stops re-offering a parked row once its fortnight of passes is up", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
     // A key that is never coming back. The bound is what keeps that from
     // costing an UPDATE a day forever. The row below is what the pass that
@@ -1081,7 +1086,7 @@ describe("what the retry queue is allowed to hold", () => {
   });
 
   it("empties the row on the park that spends its last attempt", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
     // One recovery pass short of the bound, so the pass below is the last one
     // `drainableStatus()` will ever offer this row.
@@ -1134,7 +1139,7 @@ describe("what the retry queue is allowed to hold", () => {
   it.each(["missing_payload", "temporary_failure"])(
     "never re-offers a failed row parked under any other code (%s)",
     async (errorCode) => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       await sendNotification(db, linkBearing(shop.id, "email_verification"), failsRetryably);
       // The boundary the widening must not cross. Every other terminal write
       // in the drain has already dropped the payload, so a `failed` row with
@@ -1157,7 +1162,7 @@ describe("what the retry queue is allowed to hold", () => {
   );
 
   it("hands back a row a dead worker left claimed", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await sendNotification(db, linkBearing(shop.id, "email_verification"), failsRetryably);
     // The state a worker that died between claiming a row and writing its
     // outcome leaves behind. Nothing used to move it back: the candidate query
@@ -1190,7 +1195,7 @@ describe("what the retry queue is allowed to hold", () => {
   });
 
   it("leaves a lock that has not yet lapsed alone", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await sendNotification(db, linkBearing(shop.id, "email_verification"), failsRetryably);
     // A live worker still holds this one. Reclaiming it here would send the
     // same notification twice.
@@ -1209,7 +1214,7 @@ describe("what the retry queue is allowed to hold", () => {
   });
 
   it("touches nothing at all when there is no key to open anything with", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await sendNotification(db, linkBearing(shop.id, "password_reset_request"), failsRetryably);
     await db
       .update(notificationSendQueue)
@@ -1245,7 +1250,7 @@ describe("what the retry queue is allowed to hold", () => {
   });
 
   it("keeps no personal data on a row that has reached a terminal state", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await sendNotification(db, linkBearing(shop.id, "email_verification"), failsRetryably);
     await db
       .update(notificationSendQueue)
@@ -1277,7 +1282,7 @@ describe("what the retry queue is allowed to hold", () => {
   });
 
   it("does not race a worker whose lock lapsed a moment ago", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await sendNotification(db, linkBearing(shop.id, "email_verification"), failsRetryably);
     // One minute past its lock: far more likely mid-send than dead, and the
     // cost of guessing wrong is the diver receiving the same message twice.
@@ -1334,7 +1339,7 @@ describe("what the retry queue is allowed to hold", () => {
       expect(raw).not.toContain("Ola Roe");
     }
 
-    async function dueNow(db: Awaited<ReturnType<typeof seededShopContext>>["db"], shopId: string) {
+    async function dueNow(db: AppDb, shopId: string) {
       await db
         .update(notificationSendQueue)
         .set({ nextAttemptAt: new Date(0) })
@@ -1344,7 +1349,7 @@ describe("what the retry queue is allowed to hold", () => {
     it.each(["password_reset_request", "staff_invite", "email_verification"])(
       "says a %s gave up once its retries are spent",
       async (kind) => {
-        const { db, shop } = await seededShopContext();
+        const { db, shop } = ctx;
         await sendNotification(db, linkBearing(shop.id, kind), failsRetryably);
         // Two passes already spent, so the next claim is the window's third
         // and last.
@@ -1391,7 +1396,7 @@ describe("what the retry queue is allowed to hold", () => {
     );
 
     it("names a queue write that threw by the error's name, never its message", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       // A driver's message can quote the bound parameters, which include the
       // recipient's address.
       vi.spyOn(db, "insert").mockImplementationOnce(() => {
@@ -1414,7 +1419,7 @@ describe("what the retry queue is allowed to hold", () => {
     });
 
     it("says so when a retry is refused outright", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
       await dueNow(db, shop.id);
 
@@ -1436,7 +1441,7 @@ describe("what the retry queue is allowed to hold", () => {
     });
 
     it("says nothing when the retry goes out, or is only re-queued", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       await sendNotification(db, linkBearing(shop.id, "password_reset_request"), failsRetryably);
       await dueNow(db, shop.id);
       await drainNotificationRetries(db, { provider: failsRetryably });
@@ -1454,7 +1459,7 @@ describe("what the retry queue is allowed to hold", () => {
     });
 
     it("warns on the first unreadable park, while the key can still be put back", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
       // A well-formed but wrong key looks like this from the drain: a key is
       // set, so `queue_seal_unavailable` never fires, and the value will not
@@ -1487,7 +1492,7 @@ describe("what the retry queue is allowed to hold", () => {
     });
 
     it("calls the park that spends the fortnight a loss", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
       await db
         .update(notificationSendQueue)
@@ -1511,7 +1516,7 @@ describe("what the retry queue is allowed to hold", () => {
     });
 
     it("says so when a first failure cannot be queued, and answers the caller as before", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
 
       const delivery = await sendNotification(
@@ -1539,7 +1544,7 @@ describe("what the retry queue is allowed to hold", () => {
     });
 
     it("says so for a batch member that cannot be queued", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
 
       const deliveries = await sendNotificationBatch(

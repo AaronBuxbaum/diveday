@@ -6,7 +6,7 @@ import {
   getShopSubscription,
   recordShopCheckoutSession,
 } from "@/db/shop-subscriptions";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   demoteOwnerToManager,
   redirectedTo,
@@ -15,6 +15,10 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const fileCtx = fileScopedShopContext();
 
 /**
  * The two doors out to Stripe, run for real against a seeded database with the
@@ -46,7 +50,7 @@ function stripeAnswers(body: unknown) {
 }
 
 async function context({ demo = false } = {}) {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = fileCtx;
   if (!demo) await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
   vi.mocked(getDb).mockResolvedValue(db);
   const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);

@@ -87,6 +87,20 @@ jobs:
       # this job runs on every pull request, docs-only included, so a guard over
       # a document still answers to a docs-only change.
       - run: pnpm exec vitest run --project guards --reporter=dot
+      # The body names the reviewer agents a safety-critical or security-sensitive diff needs
+      # (scripts/check-pr-body.mjs; docs/agents/repo-checks.md#pr-body). The body is read live
+      # so an edit counts on a re-run; without `pull-requests: read` that read fails and the
+      # event's copy is used. Passed through env and a file, never interpolated into the script.
+      - name: Pull request body names its reviews
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          gh pr view "$PR_NUMBER" --json body --jq .body > "$RUNNER_TEMP/pr-body.md" 2>/dev/null || printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
+          node scripts/check-pr-body.mjs --body-file "$RUNNER_TEMP/pr-body.md" --base "origin/$BASE_REF"
 
   lint:
     name: Lint
@@ -140,17 +154,24 @@ jobs:
       - uses: ./.github/actions/setup
       # The migrated + demo-seeded PGlite snapshots every db-backed test
       # hydrates from (src/test/db-template.ts). Vitest's global setup builds
-      # them when its own fingerprint of `drizzle/` + `src/db/` + the frozen
-      # clock has no match on disk — initdb, 186 migrations and the seed, twice
-      # — which on a fresh runner is every shard, every run. The key here names
-      # the same inputs (a superset: it also hashes the tests under `src/db`, so
-      # a test-only change misses and rebuilds, which is harmless), and the
-      # snapshot carries its own fingerprint, so a stale restore is rebuilt
-      # rather than trusted.
-      - uses: actions/cache@v6
+      # them when its own fingerprint (`inputsFingerprint`: every non-test file
+      # under `drizzle/` and `src/db/`, plus the frozen clock) has no match on
+      # disk — initdb, the migrations and the seed, three variants — which on a
+      # fresh runner is every shard, every run. The key hashes those same
+      # inputs, and the lockfile for the PGlite build that wrote the bytes.
+      # It used to hash all of `src/db/**`, tests included, so any pull request
+      # that touched a db test missed the cache and paid the build in every
+      # shard. The snapshot carries its own fingerprint, so a stale restore is
+      # rebuilt rather than trusted.
+      #
+      # Restore here, save once below from shard 1 only: four shards saving
+      # the same key raced, and three logged "Unable to reserve cache" on
+      # every miss.
+      - id: pglite-template
+        uses: actions/cache/restore@v6
         with:
           path: node_modules/.cache/diveday
-          key: ${{ runner.os }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
       # Not `pnpm test -- ...`: pnpm/npm insert a literal `--` before forwarded
       # args when the target script is itself a bare command (`vitest run`),
       # so the underlying CLI sees `vitest run -- --reporter=dot --shard=…`
@@ -160,10 +181,10 @@ jobs:
       # The second reporter records each file's wall time into the artifact
       # below and prints the same map as one `diveday-test-durations:` log
       # line. That is what `scripts/test-durations.json` (the sequencer's
-      # input, src/test/shard-sequencer.ts) is refreshed from: pass every
-      # shard of one green run — the four artifacts, or the four job logs where
-      # the artifact download is out of reach — to
-      # `node scripts/merge-test-durations.mjs`.
+      # input, src/test/shard-sequencer.ts) is refreshed from, weekly by
+      # durations-refresh.yml; by hand, pass every shard of one green run —
+      # the four artifacts, or the four job logs where the artifact download
+      # is out of reach — to `node scripts/merge-test-durations.mjs`.
       #
       # `--project '!guards'`: the source-text guards (src/test/projects.ts)
       # run once, in `repo-safeguards`, instead of a quarter of them in each
@@ -179,6 +200,11 @@ jobs:
           path: test-durations/
           if-no-files-found: ignore
           retention-days: 30
+      - uses: actions/cache/save@v6
+        if: ${{ !cancelled() && matrix.shard == 1 && steps.pglite-template.outputs.cache-hit != 'true' }}
+        with:
+          path: node_modules/.cache/diveday
+          key: ${{ steps.pglite-template.outputs.cache-primary-key }}
 
   unit-tests-docs:
     name: Unit tests that read docs
@@ -204,10 +230,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - uses: actions/cache@v6
+      # Restore only: the same key as `unit-tests`, which is the job that saves it.
+      - uses: actions/cache/restore@v6
         with:
           path: node_modules/.cache/diveday
-          key: ${{ runner.os }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
       - name: Run the unit files that read a document
         run: |
           mapfile -t files < <(git grep -lE "[\"'\`](\./)?(docs/|\.claude/|AGENTS\.md|CLAUDE\.md|README)|[\"'\`](docs|\.claude)[\"'\`]|\.md[\"'\`]" -- \
@@ -303,25 +330,33 @@ jobs:
       # the green main run of 2026-08-31 the four took 4:09, 4:58, 4:38 and
       # 7:39 with 124 or 125 tests each.
       #
-      # `scripts/e2e-shard.mjs` deals the spec files by estimated cost instead,
-      # heaviest onto the emptiest bin, and prints this shard's list. It reads
-      # the tree and never runs it, so all four jobs compute the identical deal
-      # from their own checkouts — the property that matters, since a deal two
-      # jobs disagreed about would run a spec twice or, worse, not at all.
-      # `scripts/e2e-shard.test.mjs` pins that every spec lands in exactly one
-      # bin.
+      # `scripts/e2e-shard.mjs` deals the spec files by cost instead, heaviest
+      # onto the emptiest bin, and prints this shard's list. A spec's cost is
+      # what it last took on CI (`scripts/e2e-durations.json`, refreshed weekly
+      # by durations-refresh.yml from the `e2e-durations-<n>` artifacts below),
+      # and a source estimate scaled onto those milliseconds for a spec added
+      # since. It reads only committed files, so all four jobs compute the
+      # identical deal from their own checkouts — the property that matters,
+      # since a deal two jobs disagreed about would run a spec twice or, worse,
+      # not at all. `scripts/e2e-shard.test.mjs` pins that every spec lands in
+      # exactly one bin.
       #
       # The script does its own recursive walk, matching
       # playwright.config.ts's discovery under testDir (./e2e) — the reason the
       # `globstar` loop this replaces existed, since a flat e2e/*.spec.ts glob
       # silently skips a spec in a subdirectory while it still runs locally.
       #
-      # `--explain` writes the whole deal, all four bins with their weights, to
-      # the job log on stderr — which is where to look first when one shard is
-      # slow again.
+      # `--explain` writes the whole deal to the job log on stderr, and
+      # `--summary` every bin's weight to the job summary — which is where to
+      # look first when one shard is slow again. An empty list is refused
+      # here: `playwright test` with no file arguments runs every spec.
       - name: Run non-visual Playwright tests
         run: |
-          mapfile -t spec_files < <(node scripts/e2e-shard.mjs --shard=${{ matrix.shard }}/4 --explain)
+          mapfile -t spec_files < <(node scripts/e2e-shard.mjs --shard=${{ matrix.shard }}/4 --explain --summary="$GITHUB_STEP_SUMMARY")
+          if [ "${#spec_files[@]}" -eq 0 ]; then
+            echo "::error::scripts/e2e-shard.mjs dealt this shard nothing; refusing to run every spec instead."
+            exit 1
+          fi
           echo "shard ${{ matrix.shard }}/4: ${#spec_files[@]} specs"
           pnpm exec playwright test "${spec_files[@]}"
         # e2e/servers.ts's default (cpus/2, 2 workers on this runner's 4
@@ -374,6 +409,12 @@ jobs:
       - name: e2e budgets
         if: always()
         run: node scripts/e2e-budget-report.mjs e2e-durations/results.json >> "$GITHUB_STEP_SUMMARY"
+      # This shard's per-spec durations, as a file in the artifact below and as
+      # one `diveday-e2e-durations:` log line — the input
+      # `scripts/e2e-durations.mjs merge` folds into scripts/e2e-durations.json.
+      - name: Record e2e durations
+        if: always()
+        run: node scripts/e2e-durations.mjs record e2e-durations/results.json --kind=functional --out=e2e-durations/functional-${{ matrix.shard }}.json
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -398,13 +439,15 @@ jobs:
     # rerun — should not. Expected: the slowest shard ~8-8.5 minutes instead
     # of ~15, for four more runners' fixed cost (~8 runner minutes) per run.
     #
-    # Playwright's own `--shard` is fine here, unlike for the spec files
-    # above: there is one spec file, `fullyParallel` makes every test its own
-    # group, and nothing in it is serial, so eight contiguous slices of ~31
-    # tests is a correct split. It is not a weighted one — the back half of
-    # the file ran ~1.5x the front half in the four-way split — so if one
-    # shard drifts back over ten minutes, weight the split rather than adding
-    # shards.
+    # Dealt by test, not by Playwright's index `--shard`: there is one spec
+    # file, `fullyParallel` makes every test its own group, and nothing in it
+    # is serial, so any split is correct — but an equal-count one is not an
+    # even one. On run 4553 (2026-10-10) the eight slices of ~68 tests took
+    # 287-529s, and reg-suit waits for the slowest. `scripts/e2e-shard.mjs
+    # --visual` deals the tests Playwright lists by their recorded durations
+    # (`scripts/e2e-durations.json`, refreshed weekly from the
+    # `visual-durations-<n>` artifacts below), and each shard runs its own
+    # list with `--test-list`.
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -451,10 +494,25 @@ jobs:
       # `--last-failed` reruns only this shard's failed tests (Playwright's
       # .last-run.json holds only them), so no --shard on the rerun — resharding
       # a filtered set could silently drop tests.
+      # Every shard lists the same tests from the same tree and deals them the
+      # same way, so the eight lists partition the suite (the deal's own test,
+      # scripts/e2e-shard.test.mjs, pins exactly-once). The job summary carries
+      # every bin's weight.
+      - name: Deal the visual captures
+        run: |
+          pnpm exec playwright test e2e/visual.spec.ts --list --reporter=json > visual-list.json
+          node scripts/e2e-shard.mjs --visual=visual-list.json --shard=${{ matrix.shard }}/8 --explain --summary="$GITHUB_STEP_SUMMARY" > visual-tests.txt
+          echo "shard ${{ matrix.shard }}/8: $(wc -l < visual-tests.txt) tests"
       - name: Capture visual regression screenshots
         run: |
           set -o pipefail
-          if pnpm exec playwright test e2e/visual.spec.ts --shard=${{ matrix.shard }}/8 2>&1 | tee capture.log; then
+          status=0
+          pnpm exec playwright test e2e/visual.spec.ts --test-list visual-tests.txt 2>&1 | tee capture.log || status=$?
+          # Recorded from the first attempt, which ran the whole list; a
+          # `--last-failed` rerun below rewrites the report with only its few.
+          node scripts/e2e-durations.mjs record e2e-durations/results.json --kind=visual --out=e2e-durations/visual-${{ matrix.shard }}.json \
+            || echo "::warning::Could not record this shard's visual durations; the next refresh will miss them."
+          if [ "$status" -eq 0 ]; then
             exit 0
           fi
           if grep -q "wedged, not slow" capture.log; then
@@ -477,6 +535,13 @@ jobs:
           # that test's sequential captures, not something this env var
           # addresses.
           E2E_WORKERS: "1"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: visual-durations-${{ matrix.shard }}
+          path: e2e-durations/visual-${{ matrix.shard }}.json
+          if-no-files-found: ignore
+          retention-days: 30
       - uses: actions/upload-artifact@v7
         with:
           name: visual-screenshots-${{ matrix.shard }}

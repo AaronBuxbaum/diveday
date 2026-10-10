@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { connection } from "next/server";
 import { Suspense } from "react";
 import { HeldAfterDiveCard, NoShowCard } from "@/app/ready/[token]/_components/AfterDiveDoors";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
@@ -97,6 +96,7 @@ import {
 } from "@/lib/format";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
+import { connectionForRoute } from "@/lib/observability/render-connection";
 import { seatRentalItems } from "@/lib/participant-types";
 import {
   publicSchedulePath,
@@ -640,7 +640,7 @@ export default async function DiverReadinessPage({
     sent?: string;
   }>;
 }) {
-  await connection();
+  await connectionForRoute("/ready/[token]");
   const { token } = await params;
   const { saved, error, pay, cancelled, booked, sent } = await searchParams;
   // A seat was taken in the request that redirected here — this page is the
