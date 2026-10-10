@@ -1437,6 +1437,80 @@ describe("full-shop export dataset", () => {
     expect(bookingsTable.rows.map((row) => row[nameIndex])).toEqual(["Alpha Nord", "Zulu Mbeki"]);
   });
 
+  /**
+   * **`buddy_pairs.csv` is a file a person reads too** (H-81, issue #1795).
+   * The old clause was `asc(created_at), asc(pair_id)`, and every member row of
+   * a team shares its `pair_id`, so two teams formed in one instant fell
+   * through to whatever Postgres returned. Now: each team's rows together,
+   * teams by formation time, then by their members' names, `pair_id` last.
+   *
+   * The team whose members sort first is handed the **higher** `pair_id`, and
+   * the later-formed team the lower one with the earliest name, so neither the
+   * old key nor a name-only key gives the right answer.
+   */
+  it("orders buddy_pairs.csv by team, then the members' names, never by a random pair id", async () => {
+    const { db } = ctx;
+    const [shop] = await db
+      .insert(shops)
+      .values({ name: "Buddy Order Divers", slug: "buddy-order", timezone: "America/New_York" })
+      .returning();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Two-Tank Reef",
+      startsAt: new Date("2026-08-01T13:00:00.000Z"),
+      endsAt: new Date("2026-08-01T17:00:00.000Z"),
+      capacity: 12,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("test trip insert failed");
+    const [staffer] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Rita Moreno" })
+      .returning();
+    const seat = async (fullName: string) => {
+      const [person] = await db.insert(people).values({ shopId: shop.id, fullName }).returning();
+      const [booking] = await db
+        .insert(bookings)
+        .values({ bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: person.id })
+        .returning();
+      return booking.id;
+    };
+
+    const together = new Date("2026-07-21T13:30:00.000Z");
+    const later = new Date("2026-07-21T14:00:00.000Z");
+    const member = (pairId: string, bookingId: string, createdAt: Date) => ({
+      shopId: shop.id,
+      tripId: trip.id,
+      pairId,
+      bookingId,
+      pairedByPersonId: staffer.id,
+      createdAt,
+    });
+    await db.insert(schema.buddyPairMembers).values([
+      // Formed together; Bea + Yuki sorts after Ana + Zoe on the first name.
+      member("00000000-0000-4000-8000-000000000001", await seat("Yuki Sato"), together),
+      member("00000000-0000-4000-8000-000000000001", await seat("Bea Lund"), together),
+      member("00000000-0000-4000-8000-000000000009", await seat("Zoe Adler"), together),
+      member("00000000-0000-4000-8000-000000000009", await seat("Ana Ruiz"), together),
+      // Formed later, so it comes last despite the earliest name of all.
+      member("00000000-0000-4000-8000-000000000000", await seat("Aaron Lee"), later),
+      member("00000000-0000-4000-8000-000000000000", await seat("Mia Cho"), later),
+    ]);
+
+    const input = await loadShopExportBundleInput(db, shop.id);
+    if (!input) throw new Error("shop failed to load");
+    const buddyTable = table(input, "buddy_pairs.csv");
+    const nameIndex = buddyTable.header.indexOf("person_name");
+    expect(buddyTable.rows.map((row) => row[nameIndex])).toEqual([
+      "Ana Ruiz",
+      "Zoe Adler",
+      "Bea Lund",
+      "Yuki Sato",
+      "Aaron Lee",
+      "Mia Cho",
+    ]);
+  });
+
   it("returns null for an unknown shop instead of an empty bundle", async () => {
     const { db } = ctx;
     expect(await loadShopExportBundleInput(db, "00000000-0000-0000-0000-000000000000")).toBeNull();

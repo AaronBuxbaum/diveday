@@ -17,10 +17,16 @@
  * hands what it read to those lists. `export-bundle.snapshot.test.ts` pins the
  * output so a change to that wiring cannot move a cell unnoticed.
  *
- * Its `orderBy(createdAt, id)` clauses are exempt from the time-id-order
- * guard (`scripts/check-time-id-order.mjs`, issue #1762): a CSV's row order is
- * not something a person reads as meaningful, and stability within one
- * database is all an export needs, which the id gives it.
+ * **What row order a file owes, written once (H-81, issue #1795).** A CSV a
+ * shop reads or diffs gets an order a person can predict: `bookings.csv` (by
+ * seat time, then the diver's name) and `buddy_pairs.csv` (by team, then the
+ * team's members' names), in both bundles. Every other file exists to carry the
+ * shop's data somewhere else and be re-imported, so its order promises nothing
+ * beyond being stable within one database — which is why its
+ * `orderBy(createdAt, id)` clauses are exempt from the time-id-order guard
+ * (`scripts/check-time-id-order.mjs`, issue #1762): the id is unique, so the
+ * order is total, merely arbitrary across databases. A file that moves to the
+ * "a person reads it" side gets its key here and a sentence at its clause.
  */
 
 import { and, asc, count, eq, getTableColumns, inArray, isNull, or } from "drizzle-orm";
@@ -34,6 +40,7 @@ import {
   type ExportBundleInput,
 } from "@/lib/export";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
+import { sortBuddyMemberRowsByTeam } from "./buddy-pairs";
 import type { AppDb, AppTransaction } from "./client";
 import { DIVER_EXPORT_FILES } from "./export-diver-files";
 import { SHOP_EXPORT_FILES } from "./export-shop-files";
@@ -372,7 +379,19 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const crewRollCallRows = await readShopScoped(tx, "rollCallCrewEvents", shopId);
 
-  const buddyPairRows = await readShopScoped(tx, "buddyPairMembers", shopId);
+  // **`buddy_pairs.csv` is a file a person reads** (H-81, issue #1795): teams
+  // in the panel's order — formation time, then the members' names, then
+  // `pair_id` last — each team's rows together. The name is the one the file
+  // prints in `person_name`. The old `asc(created_at), asc(pair_id)` was not an
+  // order at all: every member of a team shares its `pair_id`, so the tie fell
+  // through to whatever Postgres returned.
+  const buddyPairRows = sortBuddyMemberRowsByTeam(
+    await readShopScoped(tx, "buddyPairMembers", shopId),
+    (row) => {
+      const memberId = row.bookingId ? bookingPerson.get(row.bookingId) : row.crewPersonId;
+      return (memberId ? personName.get(memberId) : undefined) ?? "";
+    },
+  );
 
   const certificationRows = await readShopScoped(tx, "certifications", shopId);
 
@@ -810,9 +829,21 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
   // Either this diver's own seat, or — if they are also a staff member —
   // a team they were recorded as crewing. Two rows can never collide: a
   // member row is one or the other, never both.
+  //
+  // **Ordered by the departure, not by the team's members** (H-81, issue
+  // #1795). The shop bundle orders teams by their members' names; here every
+  // row is this diver's own membership, one per team, and the file names no
+  // other member — so ordering by the others' names would read them only to
+  // leak their order. What the diver can predict is the boat, as in
+  // `bookings.csv` above: when the team was formed, then the departure's own
+  // clock and title, then `pair_id`, with the row's own id as the last
+  // resort. `trips` is joined only to order by: `trip_id` is a non-null
+  // reference and a deleted departure's row is still there, so the inner
+  // join drops nothing.
   const buddyPairRows = await tx
-    .select()
+    .select(getTableColumns(buddyPairMembers))
     .from(buddyPairMembers)
+    .innerJoin(trips, eq(trips.id, buddyPairMembers.tripId))
     .where(
       and(
         eq(buddyPairMembers.shopId, shopId),
@@ -822,7 +853,13 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
         ),
       ),
     )
-    .orderBy(asc(buddyPairMembers.createdAt), asc(buddyPairMembers.pairId));
+    .orderBy(
+      asc(buddyPairMembers.createdAt),
+      asc(trips.startsAt),
+      asc(trips.title),
+      asc(buddyPairMembers.pairId),
+      asc(buddyPairMembers.id),
+    );
 
   const notificationRows = await readBookingScoped(
     tx,

@@ -820,6 +820,50 @@ function teamNameKey(team: TripBuddyTeam): string {
   return team.members.map((member) => member.fullName).join("\u0000");
 }
 
+/**
+ * Flat member rows (one per member, as `buddy_pairs.csv` writes them) put in
+ * the panel's team order: each team's rows together, teams by formation time,
+ * then by their members' names, then by `pair_id` as the last resort (H-81,
+ * issue #1795). Inside a team, members by name, then by the row's own id.
+ *
+ * Formation time here is the team's earliest member row. The panel reads the
+ * `formed` event instead (issue #1796), but the two agree for every team
+ * nobody added to, and a CSV row has no event to carry.
+ *
+ * `memberName` is whatever name the file prints for that row, so the order a
+ * reader sees is the order of the column they read.
+ */
+export function sortBuddyMemberRowsByTeam<
+  T extends { id: string; pairId: string; createdAt: Date },
+>(rows: readonly T[], memberName: (row: T) => string): T[] {
+  const teams = new Map<string, { pairId: string; formedAt: number; members: T[] }>();
+  for (const row of rows) {
+    const team = teams.get(row.pairId) ?? {
+      pairId: row.pairId,
+      formedAt: row.createdAt.getTime(),
+      members: [],
+    };
+    team.formedAt = Math.min(team.formedAt, row.createdAt.getTime());
+    team.members.push(row);
+    teams.set(row.pairId, team);
+  }
+  const sorted = [...teams.values()].map((team) => {
+    const members = [...team.members].sort((a, b) => {
+      const byName = memberName(a).localeCompare(memberName(b));
+      return byName !== 0 ? byName : a.id.localeCompare(b.id);
+    });
+    // `\u0000` between names, as `teamNameKey` above: no name contains it.
+    return { ...team, members, nameKey: members.map(memberName).join("\u0000") };
+  });
+  sorted.sort((left, right) => {
+    const byFormed = left.formedAt - right.formedAt;
+    if (byFormed !== 0) return byFormed;
+    const byMembers = left.nameKey.localeCompare(right.nameKey);
+    return byMembers !== 0 ? byMembers : left.pairId.localeCompare(right.pairId);
+  });
+  return sorted.flatMap((team) => team.members);
+}
+
 /** One entry of the append-only pairing trail, oldest first. */
 export type TripBuddyTeamEvent = {
   teamId: string;
