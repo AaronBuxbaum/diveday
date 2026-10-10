@@ -96,6 +96,16 @@ Next's own per-request log line; there is no other in-flight signal.
 The **hard limit** — 80% of the ceiling — means "the kernel is about to take it", and it interrupts
 whatever is running, saying whether anything actually was.
 
+The hard limit is measured cgroup-wide, because that is what the kernel's kill is measured against,
+so most of what it sees can belong to other processes. On 2026-10-06, with sibling sessions holding
+12.5 GB of a 13.6 GB container, it restarted a 260 MB server 27 times in a few minutes, each time
+killing a server still booting (issue #2148). So a hard-limit restart now happens only when this
+server's own RSS could bring the cgroup back under the mark (`hardLimitVerdict`); otherwise the
+supervisor says once that the pressure is elsewhere and leaves the server running. And restarts
+that come straight back over the mark count towards giving up on the same rule as the budget's
+(three inside a minute of each other), after which the hard limit is off for the session and the
+idle budget still applies.
+
 The gap between them is not theoretical, and getting it wrong was the first version of this ADR.
 Capturing two staff pages through `scripts/screenshot.mjs` — light and dark, phone and desktop, the
 ordinary matrix a session runs to look at its own work — was measured peaking at **12,880 MB**, and
