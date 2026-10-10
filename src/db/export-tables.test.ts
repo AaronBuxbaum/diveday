@@ -76,12 +76,13 @@ describe("the export read list", () => {
     expect(await readBookingScoped(noQuery, "bookingPayments", shop.id, [])).toEqual([]);
   });
 
-  it("declares a total order for every table except the two the loader reorders", () => {
+  it("declares a total order for every table except the three the loader reorders", () => {
     const unordered = Object.entries(EXPORT_TABLES as Record<string, ExportTableRead>)
       .filter(([, entry]) => entry.order.length === 0)
       .map(([key]) => key)
       .sort();
-    expect(unordered).toEqual(["bookingPayments", "tripRequirements"]);
+    // `buddyPairMembers` is put in team order after the read (issue #1795).
+    expect(unordered).toEqual(["bookingPayments", "buddyPairMembers", "tripRequirements"]);
   });
 
   it("builds a bundle's files in list order, each from its own row builder", () => {

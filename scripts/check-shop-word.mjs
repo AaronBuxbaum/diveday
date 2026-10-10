@@ -48,7 +48,9 @@ const isStaffBundle = (relative) => relative.includes(`${path.sep}staff${path.se
  * Every settled decision this file can enforce mechanically.
  *
  * `scope` narrows a rule to some bundles; omitted, it covers every bundle in
- * `LOCALES`. `says` is printed verbatim under a failure, so it names the right
+ * `LOCALES`. `keys` narrows it to strings whose key path matches, for a word
+ * that is only wrong in one subject (`equipo` in a buddy-team string). One `id`
+ * may have several rules, one per shape of the same mistake. `says` is printed verbatim under a failure, so it names the right
  * word rather than only the wrong one — a guard that reports "this is wrong"
  * and stops there gets satisfied by a synonym nobody chose either.
  */
@@ -191,6 +193,46 @@ const RULES = [
     pattern: /\blistados? del? barcos?\b/i,
     says: 'the boat manifest is "el manifiesto" (masculine), as on every staff screen. "El listado" is a departure’s roster, which is a different list',
   },
+  {
+    id: "buddy-team",
+    // README's pareja section — settled 2026-10-06 by the product owner (issue
+    // #2098). The staff Boat tab said "Equipos de buceo", which a Latin
+    // American crew reads as dive gear, and the public pages said "equipos de
+    // compañeros".
+    //
+    // Scoped to `staff/` for the gear-shaped phrase, because in diver.json
+    // "alquiler de equipo de buceo" is the rental page and is right. Nothing
+    // in the staff bundles calls gear that; it says "equipo de alquiler".
+    pattern: /\bequipos? de buceo\b/i,
+    scope: isStaffBundle,
+    says: 'a buddy team is "una pareja de buceo" (feminine) — "equipo de buceo" reads as dive gear. The staff team stays "el equipo", gear stays "equipo de alquiler"',
+  },
+  {
+    id: "buddy-team",
+    // The marketing phrase, in any bundle: it can only mean a buddy team.
+    pattern: /\bequipos? de compa[nñ]eros?\b/i,
+    says: 'a buddy team is "una pareja de buceo" (feminine), on the public pages as on the Boat tab',
+  },
+  {
+    id: "buddy-team",
+    // The bare word in a string whose key is about buddy teams — "Equipo 01",
+    // "Deshacer equipo", "Equipo: {names}". `keys` reads the key path, which is
+    // the one place the bundle says what the string is about; the staff team
+    // and gear keys never say "buddy".
+    pattern: /\bequipos?\b/i,
+    keys: /buddy/i,
+    says: 'in a buddy-team string the word is "pareja" ("Pareja 01", "Deshacer pareja") — "equipo" is the staff team or the gear',
+  },
+  {
+    id: "check-in",
+    // README's check-in section — settled 2026-10-06 in the same sitting
+    // (issue #2098). The noun is "el check-in", which the staff bundles
+    // already said ten times to "registro de llegada"'s four. Only the two
+    // noun phrases are refused: "Registrar" and "Registrado" stay as the
+    // verb on the tap and the pill, and "registro" alone is a record.
+    pattern: /\bregistros? de llegadas?\b|\bllegada y registro\b/i,
+    says: 'check-in is "el check-in" (the feature, the phase, "Llegada y check-in"); the tap on a row stays "Registrar"',
+  },
 ];
 
 /**
@@ -216,9 +258,12 @@ export function findSettledTerms(bundle, { relative = "" } = {}) {
     }
     if (typeof node !== "string") return;
     strings += 1;
+    const reported = new Set();
     for (const rule of rules) {
-      if (!rule.pattern.test(node)) continue;
+      if (rule.keys && !rule.keys.test(keyPath)) continue;
+      if (reported.has(rule.id) || !rule.pattern.test(node)) continue;
       if (allowed.has(`${relative}:${keyPath}:${rule.id}`)) continue;
+      reported.add(rule.id);
       violations.push({ keyPath, text: node, rule: rule.id, says: rule.says });
     }
   };
@@ -267,7 +312,7 @@ async function main() {
   }
 
   console.log(
-    `shop-word: ${checked} Spanish strings keep the ${RULES.length} words the es-ES README settled`,
+    `shop-word: ${checked} Spanish strings keep the ${new Set(RULES.map((rule) => rule.id)).size} words the es-ES README settled`,
   );
 }
 

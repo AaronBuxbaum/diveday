@@ -229,6 +229,50 @@ describe("getTripRoster", () => {
     expect(roster.map((row) => row.person.fullName)).toEqual(["Zoe Adler", "Ángel Ferrer"]);
   });
 
+  /**
+   * **The accepted cost, pinned** (H-81, issue #1759). Filling in a walk-up's
+   * real name re-orders that diver inside their own same-instant group, so a
+   * sheet printed before the edit and the screen after it disagree about which
+   * body is which line. The owner ruled that this is the price of a
+   * name-ordered rail and that no monotonic seat number is added. This test
+   * fails if someone swaps the name for a sequence without revisiting that
+   * ruling.
+   */
+  it("re-orders a renamed diver inside their own tie group, as ruled", async () => {
+    const { db, shop } = ctx;
+    const [trip] = await twoTrips(db, shop.id);
+    const seatedAt = nowDate();
+    const ours = new Set<string>();
+    const ids = new Map<string, string>();
+
+    for (const name of ["Chidi Okafor", "Zoe Adler", "Unnamed diver"]) {
+      const person = await makeDiver(db, shop.id, { name });
+      ours.add(person.id);
+      ids.set(name, person.id);
+      await db.insert(bookings).values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: trip,
+        personId: person.id,
+        createdAt: seatedAt,
+      });
+    }
+
+    const namesOnBoard = async () =>
+      (await getTripRoster(db, shop.id, trip))
+        .filter((row) => ours.has(row.person.id))
+        .map((row) => row.person.fullName);
+
+    expect(await namesOnBoard()).toEqual(["Chidi Okafor", "Unnamed diver", "Zoe Adler"]);
+
+    // The desk puts the real name on the walk-up after the sheet is printed.
+    const walkUp = ids.get("Unnamed diver");
+    if (!walkUp) throw new Error("walk-up not seated");
+    await db.update(people).set({ fullName: "Ana Ruiz" }).where(eq(people.id, walkUp));
+
+    expect(await namesOnBoard()).toEqual(["Ana Ruiz", "Chidi Okafor", "Zoe Adler"]);
+  });
+
   it("answers nothing for another shop's id, even with a real trip id", async () => {
     const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);

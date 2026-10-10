@@ -3413,8 +3413,12 @@
       "dataExit": {
         "eyebrow": "Your records",
         "title": "What happens to my records if I leave?",
-        "body": "Divers, bookings, signed waivers and payment history as documented CSVs, and every stored photo as a file. One ZIP, downloaded from Settings on any day, the first day of a trial included.",
-        "securityNote": "What is held back from your shop’s records is credentials: passwords and device push keys, which no other system could use.",
+        "note1": "“Download export” hands over one ZIP of CSVs and stored photos, the first day of a trial included.",
+        "note2": "contacts.csv is one flat row per person, the shape another system’s import wizard expects.",
+        "note3": "waiver_records.csv keeps each integrity hash and the exact text the diver signed.",
+        "note4": "Each file shows its row count, to check against the counts in your own system.",
+        "securityNote": "“Not included, on purpose:” names the credentials held back from your shop’s records: passwords and push keys.",
+        "door": "Open the demo as the owner →",
         "mockupLabel": "The Data export screen in DiveDay, listing the bundle’s files with a row count for each and the account credentials that stay protected"
       },
       "faqTitle": "The questions owners ask first.",

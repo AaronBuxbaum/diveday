@@ -193,6 +193,6 @@
     "placeholder": "Nombre, teléfono, correo o ID de reserva",
     "none": "Nadie de los que llegan coincide con “{query}”.",
     "resultsFor": "Buceadores que llegan y coinciden con “{query}”",
-    "open": "Abrir el registro de {trip} para {name}"
+    "open": "Abrir el check-in de {trip} para {name}"
   }
 }

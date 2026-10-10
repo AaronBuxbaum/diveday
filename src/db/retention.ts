@@ -11,6 +11,7 @@ import type { AppDb } from "./client";
 import {
   accountTokens,
   activityEvents,
+  bookingCapabilities,
   bookingPaymentEvents,
   crewNotices,
   demoEntries,
@@ -48,8 +49,9 @@ import {
  *   with its own table code and the pass carries on, the same shape the daily
  *   reminders tick uses for its scans.
  * - **Age-based only.** No arm ever consults state a human could still be
- *   acting on. The only conditional arm is `account_tokens`, which measures
- *   from each token's own `expires_at` so a live credential is never eligible
+ *   acting on. The token arms (`account_tokens`,
+ *   `shop_contact_email_confirmation_tokens`, `booking_capabilities`) measure
+ *   from each token's own `expires_at`, so a live credential is never eligible
  *   at any age.
  */
 export type PruneOutcome = {
@@ -254,6 +256,23 @@ export async function pruneExpiredRecords(
         db
           .delete(shopContactEmailConfirmationTokens)
           .where(inArray(shopContactEmailConfirmationTokens.id, ids)),
+    ),
+  );
+
+  // Booking links (H-82, issue #1726), on the same clock as the two token
+  // arms above. `expires_at` only, never `revoked_at`: a revoked link can still
+  // be inside its own life, and an unexpired row is never eligible whatever
+  // else is true of it.
+  outcomes.push(
+    await pruneBatch(
+      "booking_capabilities",
+      () =>
+        db
+          .select({ id: bookingCapabilities.id })
+          .from(bookingCapabilities)
+          .where(lt(bookingCapabilities.expiresAt, cutoff("booking_capabilities")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(bookingCapabilities).where(inArray(bookingCapabilities.id, ids)),
     ),
   );
 
