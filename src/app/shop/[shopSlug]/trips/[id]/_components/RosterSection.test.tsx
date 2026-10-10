@@ -757,6 +757,21 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     expect(screen.queryByText(/Pilar Vega/)).toBeNull();
   });
 
+  // Issue #2124: `sendDueReminders` holds a held seat's readiness reminders
+  // until staff confirm who it is, so the row says so beside the way to ask.
+  it("says the held seat's reminders wait on the confirm", () => {
+    renderRoster({
+      roster: [matched],
+      readiness: unconfirmed,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+
+    expect(screen.getByTestId("identity-contact")).toHaveTextContent(
+      "Reminders wait until you confirm who this is.",
+    );
+  });
+
   it("says so when the record has no email or phone to ask", () => {
     renderRoster({
       roster: [{ ...matched, person: { ...matched.person, email: null } } as RosterEntry],
