@@ -17,6 +17,7 @@ import {
   findLiveDiverIdByEmail,
   findSimilarDivers,
   getDiverProfile,
+  lastDiveDaysHere,
   listBookableDivers,
   listDiverSummaries,
   restoreDiver,
@@ -2968,5 +2969,57 @@ describe("findSimilarDivers last dive day", () => {
     await db.insert(executedDives).values({ shopId: shop.id, tripId: trip.id, diveNumber: 1 });
 
     expect(await lastDiveDayOf(db, shop.id, person.id)).toEqual(trip.startsAt);
+  });
+
+  /**
+   * A held seat's "Same person" confirm reads the same fact (issue #1789),
+   * minus the departure the seat sits on: that seat is the claim being
+   * checked, so it can never be the evidence for it.
+   */
+  it("leaves out the departure a held seat is asking about", async () => {
+    const { db, shop } = ctx;
+    const person = await candidate(db, shop.id);
+    const earlier = await sailedSeat(
+      db,
+      shop.id,
+      person.id,
+      "Last week",
+      new Date(nowMs() - 7 * 24 * HOUR_MS),
+    );
+    const thisOne = await sailedSeat(
+      db,
+      shop.id,
+      person.id,
+      "This morning",
+      new Date(nowMs() - 2 * HOUR_MS),
+    );
+
+    const everything = await lastDiveDaysHere(db, shop.id, [person.id]);
+    const exceptThisOne = await lastDiveDaysHere(db, shop.id, [person.id], {
+      exceptTripId: thisOne.id,
+    });
+    const onlyThisOne = await lastDiveDaysHere(db, shop.id, [person.id], {
+      exceptTripId: earlier.id,
+    });
+
+    expect(everything.get(person.id)).toEqual(thisOne.startsAt);
+    expect(exceptThisOne.get(person.id)).toEqual(earlier.startsAt);
+    expect(onlyThisOne.get(person.id)).toEqual(thisOne.startsAt);
+  });
+
+  it("has no entry for a person whose only seat is the one being asked about", async () => {
+    const { db, shop } = ctx;
+    const person = await candidate(db, shop.id);
+    const thisOne = await sailedSeat(
+      db,
+      shop.id,
+      person.id,
+      "This morning",
+      new Date(nowMs() - 2 * HOUR_MS),
+    );
+
+    const days = await lastDiveDaysHere(db, shop.id, [person.id], { exceptTripId: thisOne.id });
+
+    expect(days.has(person.id)).toBe(false);
   });
 });

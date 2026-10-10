@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { buttonClass } from "@/components/ui/button";
@@ -115,6 +115,7 @@ function renderRoster({
   requiresPayment = false,
   arrival,
   sameNameHeldSeats,
+  heldSeatLastDiveDay,
   splitAsksDateOfBirth,
   certifyDefaultLevel,
 }: {
@@ -129,6 +130,7 @@ function renderRoster({
   requiresPayment?: boolean;
   arrival?: RosterArrival;
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
+  heldSeatLastDiveDay?: ReadonlyMap<string, Date | null>;
   splitAsksDateOfBirth?: boolean;
   /** Present means this is a course session's roster, with a Certify control. */
   certifyDefaultLevel?: "open_water" | "advanced_open_water" | null;
@@ -160,6 +162,7 @@ function renderRoster({
         nitroxByBooking: new Map() as NitroxByBooking,
         notesByBooking: new Map(),
         sameNameHeldSeats,
+        heldSeatLastDiveDay,
       }}
       actions={{
         markWaiverInPersonAction: noRefusal,
@@ -568,6 +571,47 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     expect(same).toBeVisible();
     expect(same.closest("details")).toBeNull();
     expect(screen.getByText("Different person")).toBeVisible();
+  });
+
+  /**
+   * **The armed "Same person" carries the fact it turns on** (issue #1789,
+   * H-79): the matched diver's last dive day here, the same line the
+   * name-match prompt showed the staffer when the seat was taken. Said every
+   * time, including "none": this is one question about one person.
+   */
+  describe("the armed confirm's last dive day", () => {
+    const renderHeld = (lastDiveDay: Date | null) =>
+      renderRoster({
+        roster: [matched],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+        heldSeatLastDiveDay: new Map([["u", lastDiveDay]]),
+      });
+    const arm = () =>
+      fireEvent.click(screen.getByRole("button", { name: "Same person as Marisol Vega" }));
+
+    it("names the matched diver's last dive day here, once armed", () => {
+      renderHeld(new Date("2026-08-26T15:00:00Z"));
+      // Not on the row itself: the fact belongs to the deliberate question.
+      expect(screen.queryByText(/Last dive day here/)).toBeNull();
+
+      arm();
+
+      const armed = screen.getByRole("alert");
+      expect(within(armed).getByText("Last dive day here: Wed, Aug 26")).toBeInTheDocument();
+      expect(within(armed).queryByText("No dive days here yet")).toBeNull();
+    });
+
+    it("says there is none for a diver this shop has never had on a boat", () => {
+      renderHeld(null);
+
+      arm();
+
+      const armed = screen.getByRole("alert");
+      expect(within(armed).getByText("No dive days here yet")).toBeInTheDocument();
+      expect(within(armed).queryByText(/Last dive day here/)).toBeNull();
+    });
   });
 
   /**

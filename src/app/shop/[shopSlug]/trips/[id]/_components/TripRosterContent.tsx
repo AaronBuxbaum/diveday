@@ -240,6 +240,7 @@ export function TripRosterContent({
           elearningQueryByBooking: guests.elearningQueryByBooking,
           courseMaterialsDoneByPerson: guests.courseMaterialsDoneByPerson,
           sameNameHeldSeats: guests.sameNameHeldSeats,
+          heldSeatLastDiveDay: guests.heldSeatLastDiveDay,
           keepOpenBookingId,
           namesakeRefusedBookingId,
           participantTypeCertBookingId,

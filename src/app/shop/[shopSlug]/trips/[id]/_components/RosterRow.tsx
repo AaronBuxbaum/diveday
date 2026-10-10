@@ -153,6 +153,7 @@ export function RosterRow({
     elearningQueryByBooking,
     courseMaterialsDoneByPerson,
     sameNameHeldSeats,
+    heldSeatLastDiveDay,
     keepOpenBookingId,
     namesakeRefusedBookingId,
     participantTypeCertBookingId,
@@ -703,6 +704,28 @@ export function RosterRow({
    * who may board, so it does not wait behind the row's mark.
    */
   const sameNameSeats = sameNameHeldSeats?.get(booking.id) ?? [];
+  /**
+   * **The one fact the attestation turns on** (issue #1789, H-79): the
+   * matched diver's last dive day at this shop, beside the question. It is the
+   * line the name-match prompt showed the same staffer at the same desk when
+   * the seat was taken, about the same person, so it widens no disclosure
+   * gate; nothing else from the matched record joins it here.
+   *
+   * "No dive days here yet" is said every time, unlike the name-match
+   * prompt's sibling rule (`noDiveDayNeedsSaying`), which goes quiet when
+   * every candidate lacks a day. That rule compares a list; this is one
+   * deliberate question about one person, and for a walk-in who has never
+   * been here the blank is itself the answer.
+   */
+  const heldSeatLastDive = identityUnconfirmed ? heldSeatLastDiveDay?.get(booking.id) : undefined;
+  const heldSeatEvidence =
+    heldSeatLastDive === undefined
+      ? undefined
+      : heldSeatLastDive
+        ? t("divers.page.confirmMatchesLastDive", {
+            date: formatShortDate(heldSeatLastDive, locale, shopTimezone),
+          })
+        : t("divers.page.confirmMatchesNoDiveDay");
   const paidGear = identityUnconfirmed
     ? toRentableKinds(booking.paidRentalKinds ?? []).filter(
         (kind): kind is RentableItemKind => kind !== "nitrox",
@@ -758,6 +781,7 @@ export function RosterRow({
             triggerLabel={t("shared.identityCheck.same")}
             ariaLabel={t("shared.identityCheck.sameAria", { name: person.fullName })}
             message={t("trips.roster.confirmIdentityMessage", { name: person.fullName })}
+            evidence={heldSeatEvidence}
             confirmLabel={t("trips.roster.identityConfirmButton")}
             cancelLabel={t("trips.roster.neverMind")}
             pendingLabel={t("trips.roster.confirming")}

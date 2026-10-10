@@ -15,7 +15,7 @@ import { sameNameHeldSeats as findSameNameHeldSeats } from "./bookings";
 import type { AppDb } from "./client";
 import { type CourseMaterialsDone, courseMaterialsDoneByPerson } from "./course-materials";
 import { courseNextStepsByBooking } from "./course-next-step";
-import { findSimilarDivers, listBookableDivers } from "./divers";
+import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "./divers";
 import { listLastMinuteList } from "./last-minute-list";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
@@ -132,6 +132,22 @@ export async function getTripGuests(
       })),
   );
 
+  // The fact a held seat's "Same person" confirm is weighed against: the
+  // matched diver's last dive day at this shop, the line the name-match prompt
+  // already showed this staffer at the seating (issue #1789). Not this
+  // departure's: the seat on it is the claim, not evidence for it.
+  const heldPersonIds = roster
+    .filter(({ booking }) => booking.identityUnconfirmedAt)
+    .map(({ booking }) => booking.personId);
+  const heldLastDiveDays = await lastDiveDaysHere(db, shop.id, heldPersonIds, {
+    exceptTripId: tripId,
+  });
+  const heldSeatLastDiveDay = new Map<string, Date | null>(
+    roster
+      .filter(({ booking }) => booking.identityUnconfirmedAt)
+      .map(({ booking }) => [booking.id, heldLastDiveDays.get(booking.personId) ?? null] as const),
+  );
+
   // Keep the three staff-note entry points one system: a diver-record note is
   // visible on Guests for the same booking, just as it is on Manifest. It is
   // edited on the diver record, the canonical scope, so this roster does not
@@ -246,6 +262,11 @@ export async function getTripGuests(
     notesByBooking,
     courseNextStepByBooking,
     sameNameHeldSeats,
+    /**
+     * Per held seat, the matched diver's last dive day at this shop, or null
+     * when there is none (issue #1789). Only held seats have an entry.
+     */
+    heldSeatLastDiveDay,
     /**
      * A split on this departure must take a date of birth: it is a course
      * with a minimum age, which reads the new record's date (issue #2081). A

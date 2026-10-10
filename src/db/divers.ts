@@ -910,8 +910,37 @@ export async function findSimilarDivers(
     .limit(5);
   if (candidates.length === 0) return [];
 
-  const now = nowDate();
-  const ids = candidates.map((candidate) => candidate.id);
+  const lastDiveDay = await lastDiveDaysHere(
+    db,
+    shopId,
+    candidates.map((candidate) => candidate.id),
+  );
+  return candidates.map((candidate) => ({
+    ...candidate,
+    lastDiveDayAt: lastDiveDay.get(candidate.id) ?? null,
+  }));
+}
+
+/**
+ * The last dive day this shop can put behind each person, in one grouped read:
+ * the evidence line on the counter's name-match prompt (`SimilarDiver`) and on
+ * a held seat's "Same person" confirm (issue #1789), so the two can never
+ * disagree about one person at one desk.
+ *
+ * A person this shop has no dive day for is absent from the map.
+ *
+ * `exceptTripId` leaves one departure out: a held seat asks about the person it
+ * was matched to, and the departure it sits on is the claim being checked, not
+ * evidence for it.
+ */
+export async function lastDiveDaysHere(
+  db: AppDb,
+  shopId: string,
+  personIds: readonly string[],
+  options: { exceptTripId?: string; now?: Date } = {},
+): Promise<Map<string, Date>> {
+  if (personIds.length === 0) return new Map();
+  const now = options.now ?? nowDate();
   const dived = await db
     .select({ personId: bookings.personId, lastDiveDayAt: max(trips.startsAt) })
     .from(bookings)
@@ -922,18 +951,19 @@ export async function findSimilarDivers(
         // answer must not be reachable from another shop's row by any path.
         eq(bookings.shopId, shopId),
         eq(trips.shopId, shopId),
-        inArray(bookings.personId, ids),
+        inArray(bookings.personId, [...personIds]),
         // The one dive-day rule (`src/db/dive-days.ts`), shared with the
         // recap's count and the fly-safe advisory.
         diveDay(),
         lt(trips.startsAt, now),
+        options.exceptTripId ? ne(trips.id, options.exceptTripId) : undefined,
       ),
     )
     .groupBy(bookings.personId);
 
-  const lastDiveDay = new Map(dived.map((row) => [row.personId, row.lastDiveDayAt]));
-  return candidates.map((candidate) => ({
-    ...candidate,
-    lastDiveDayAt: lastDiveDay.get(candidate.id) ?? null,
-  }));
+  const lastDiveDay = new Map<string, Date>();
+  for (const row of dived) {
+    if (row.lastDiveDayAt) lastDiveDay.set(row.personId, row.lastDiveDayAt);
+  }
+  return lastDiveDay;
 }
