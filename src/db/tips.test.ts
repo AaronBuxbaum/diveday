@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeCheckout, recordingCheckout } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { bookings, tips } from "./schema";
@@ -18,8 +18,15 @@ import {
 } from "./tips";
 import { upcomingTripsWithCounts } from "./trips";
 
-async function tipContext() {
-  const { db, shop } = await seededShopContext();
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
+async function tipContext({ fresh = false }: { fresh?: boolean } = {}) {
+  // `fresh`: a database of its own, for the test that orders two tips by when
+  // they started — `created_at` is Postgres's transaction time, and inside the
+  // file's one transaction both would carry the same instant.
+  const { db, shop } = fresh ? await seededShopContext() : ctx;
   await upsertShopStripeAccount(db, shop.id, "acct_test");
   await setShopStripeAccountStatus(db, "acct_test", {
     chargesEnabled: true,
@@ -94,7 +101,7 @@ describe("startTipCheckout", () => {
   });
 
   it("refuses when the shop has no connected, charges-enabled Stripe account", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
     const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -228,7 +235,7 @@ describe("startTipCheckout", () => {
 
 describe("getLatestTipForBooking", () => {
   it("returns the most recently started tip, not the first one", async () => {
-    const { db, shop, bookingId } = await tipContext();
+    const { db, shop, bookingId } = await tipContext({ fresh: true });
     const provider = fakeCheckout();
     const first = await startTipCheckout(db, tipInput(bookingId, 500), provider);
     if (!first.ok) throw new Error("expected ok");

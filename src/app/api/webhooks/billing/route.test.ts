@@ -5,7 +5,11 @@ import type { AppDb } from "@/db/client";
 import { shops, stripeWebhookEvents } from "@/db/schema";
 import { ensureShopBillingCustomer, getShopSubscription } from "@/db/shop-subscriptions";
 import { nowDate, nowMs } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -75,7 +79,7 @@ let db: AppDb;
 let shopId: string;
 
 beforeEach(async () => {
-  const context = await seededShopContext();
+  const context = ctx;
   db = context.db;
   shopId = context.shop.id;
   await ensureShopBillingCustomer(db, shopId, "cus_a");

@@ -13,7 +13,7 @@ import {
   trips,
 } from "@/db/schema";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_CAPTAIN_EMAIL,
@@ -21,6 +21,10 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * Two different gates live in this file, and the line between them is the point:
@@ -124,7 +128,7 @@ async function paidBookingId(db: AppDb, shopId: string, tripId: string): Promise
 }
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   activeSurface = { db, shop };
   return {

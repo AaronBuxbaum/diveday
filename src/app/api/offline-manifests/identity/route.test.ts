@@ -4,8 +4,12 @@ import type { AppDb } from "@/db/client";
 import { people, personRoles, shops, userAccounts } from "@/db/schema";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_CAPTAIN_EMAIL, seededStaffPersonId } from "@/test/staff-session";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -42,7 +46,7 @@ const sessionFor = (
  * the shop has, so nothing here quietly depends on being an owner.
  */
 async function staffContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const personId = await seededStaffPersonId(db, shop.id, SEEDED_CAPTAIN_EMAIL);
   return { db, shop, personId };
 }
@@ -183,7 +187,7 @@ describe("GET /api/offline-manifests/identity", () => {
     // every saved roster whose shop differs from this answer. A tampered or
     // stale `shopSlug` claim on the session must not reach the response — the
     // slug is read from the row `shopId` points at.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [otherShop] = await db
       .insert(shops)
       .values({ name: "Reef Runners", slug: "reef-runners", timezone: "America/New_York" })

@@ -7,7 +7,7 @@ import type {
   CreateInvoiceResult,
   InvoicingProvider,
 } from "@/lib/payments/invoicing";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { fakeCourtesy, fakeEmail, fakeSms } from "@/test/fakes";
 import {
   SEEDED_CAPTAIN_EMAIL,
@@ -39,12 +39,16 @@ import {
   setWorkOrderStatus,
 } from "./work-orders";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 // The suite's frozen clock is 2026-07-21T13:30Z: 09:30 in New York, inside
 // every shop's daytime window, and "today" on the shop's own calendar.
 const TODAY = "2026-07-21";
 
 async function context() {
-  const { db, shop: demo } = await seededShopContext();
+  const { db, shop: demo } = ctx;
   const [shop] = await db
     .insert(shops)
     .values({ name: "Bench Divers", slug: "bench-follow-up", timezone: "America/New_York" })

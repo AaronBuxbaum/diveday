@@ -46,7 +46,6 @@
   "scripts/check-route-coverage.test.mjs": 190,
   "scripts/check-scroll-preservation.test.mjs": 80,
   "scripts/check-shop-word.test.mjs": 59,
-  "scripts/check-soft-delete.test.mjs": 52,
   "scripts/check-time-id-order.test.mjs": 56,
   "scripts/check-tinted-ink.test.mjs": 52,
   "scripts/check-tokens.test.mjs": 74,

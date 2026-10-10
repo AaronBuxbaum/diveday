@@ -49,7 +49,7 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
   erasure promises. It expires when Aaron says the first pilot shop has real divers.
 - **Every delete is soft**: `deleted_at`, a partial index over live rows, `deleted_at is null` in
   every live read (ADR 20260820-every-delete-is-soft). On screen the word is still "Delete"
-  (soft-delete-vocabulary guard); a publish toggle is "Hidden". The exceptions are legal erasure
+  (the `softDelete` lint rule); a publish toggle is "Hidden". The exceptions are legal erasure
   (`people.anonymized_at`) and machinery nobody pointed at.
 - **Every read of `trips` carries `liveTrip()`** or says `diveday:allow-deleted-trips: <why>`:
   live-trip-read guard (`scripts/check-live-trips.mjs`).

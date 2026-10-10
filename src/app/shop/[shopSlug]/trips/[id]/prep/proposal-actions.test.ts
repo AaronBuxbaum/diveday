@@ -10,8 +10,12 @@ import { createTrip } from "@/db/trips-create";
 import { getTripPrep } from "@/db/trips-prep";
 import { nowDate } from "@/lib/clock";
 import { gearKindIsLifeSupport, tripReservationWindow } from "@/lib/gear";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { staffSession } from "@/test/staff-session";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * **"Assign all" against a real database**, with only the session, the cache
@@ -46,7 +50,7 @@ afterEach(() => {
 const PREP_PATH = (shopSlug: string, tripId: string) => `/shop/${shopSlug}/trips/${tripId}/prep`;
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   vi.mocked(requireStaffSession).mockResolvedValue(
     staffSession({

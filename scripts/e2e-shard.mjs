@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readdir, readFile } from "node:fs/promises";
+import { appendFile, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
@@ -25,22 +25,38 @@ import { pathToFileURL } from "node:url";
  * sequencer extension point, so the same deal is computed here and the file
  * list is passed to `playwright test` explicitly, with no `--shard` at all.
  *
- * ## Why a static estimate
+ * ## Recorded durations first, the estimate for what is new
  *
- * It reads the source and never runs it, so every shard computes the identical
- * partition from the same tree. That is the property that matters more than
- * accuracy: a deal that disagreed between shards would run a spec twice, or
- * not at all, and the second failure is silent. Nothing is recorded between
- * runs and nothing is fetched — the same tree always deals the same way.
+ * Every shard computes the identical partition from the same tree — the
+ * property that matters more than accuracy, since a deal two jobs disagreed
+ * about would run a spec twice or not at all, and the second failure is
+ * silent. So the weights come only from committed files: a spec weighs what it
+ * last took on CI, read from `scripts/e2e-durations.json` (refreshed weekly by
+ * `.github/workflows/durations-refresh.yml` from the `e2e-durations-<n>` and
+ * `visual-durations-<n>` artifacts, `scripts/e2e-durations.mjs`), and a spec
+ * that file does not name yet weighs its source estimate scaled into
+ * milliseconds by the ratio the recorded specs show — the same rule as the
+ * unit sequencer's `weigh` (src/test/shard-sequencer.ts). The estimate alone
+ * left the four shards at 477-668s on run 4553 (2026-10-10).
  *
- * The weights only have to be right *relative to each other*.
+ * ## The visual captures
+ *
+ * `e2e/visual.spec.ts` is one file of ~550 tests, so it is dealt by *test*
+ * rather than by file: `--visual=<list.json>` reads Playwright's own
+ * `--list --reporter=json` output (so every shard sees the same test list
+ * Playwright will run) and prints this shard's tests as `--test-list` lines.
+ * Playwright's index `--shard` cut it into eight equal-count slices that ran
+ * 287-529s on the same run. A capture with no recorded duration weighs the
+ * mean of the recorded ones — a source estimate (captures per test, the
+ * budget, the seeding calls) was tried against that run's eight shard times
+ * and none of them correlated, so the mean is the honest prior.
  */
 
 const SPEC_ROOT = "e2e";
 
 /**
- * Captured by the visual pipeline, never by this job — `visual.spec.ts` has its
- * own four shards and its own baseline plumbing.
+ * Never a functional spec — `visual.spec.ts` is dealt by test onto its own
+ * eight shards (`--visual`) and has its own baseline plumbing.
  */
 export const EXCLUDED_SPECS = ["e2e/visual.spec.ts"];
 
@@ -158,16 +174,172 @@ export async function listSpecs(root = process.cwd()) {
   return found.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
-/** The full deal: `count` bins of spec paths, computed from the tree at `root`. */
-export async function dealSpecs(count, root = process.cwd()) {
+/** Where the recorded durations live, relative to the repository root. */
+export const DURATIONS_FILE = "scripts/e2e-durations.json";
+
+/**
+ * The committed durations, `{ functional, visual }`, each a map of key →
+ * milliseconds. A missing or unreadable file is not an error: the estimate
+ * alone still produces a valid partition, just a less even one.
+ */
+export async function readDurations(root = process.cwd()) {
+  try {
+    const parsed = JSON.parse(await readFile(path.join(root, DURATIONS_FILE), "utf8"));
+    return {
+      functional: durationMap(parsed?.functional),
+      visual: durationMap(parsed?.visual),
+    };
+  } catch {
+    return { functional: {}, visual: {} };
+  }
+}
+
+function durationMap(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value).filter(([, ms]) => isDuration(ms)));
+}
+
+function isDuration(value) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+/**
+ * Weighs each item by its recorded duration when there is one, and by its
+ * estimate scaled into milliseconds when there is not. The scale is recorded
+ * milliseconds over estimated units across the items that have both, so a new
+ * spec lands on the same axis as its neighbours. With nothing recorded the
+ * scale is 1 and this is exactly the estimate.
+ */
+export function weigh(items, durations) {
+  let recorded = 0;
+  let estimated = 0;
+  for (const { key, estimate } of items) {
+    if (isDuration(durations[key])) {
+      recorded += durations[key];
+      estimated += estimate;
+    }
+  }
+  const scale = recorded > 0 && estimated > 0 ? recorded / estimated : 1;
+  return items.map(({ item, key, estimate }) => ({
+    item,
+    weight: isDuration(durations[key]) ? durations[key] : estimate * scale,
+  }));
+}
+
+/**
+ * The full deal: `count` bins of spec paths, computed from the tree at `root`
+ * and the committed functional durations (or the ones passed in).
+ */
+export async function dealSpecs(count, root = process.cwd(), durations) {
   const specs = await listSpecs(root);
-  const weighted = await Promise.all(
+  const recorded = durations ?? (await readDurations(root)).functional;
+  const estimated = await Promise.all(
     specs.map(async (spec) => ({
       item: spec,
-      weight: estimateCost(await readSource(path.join(root, spec))),
+      key: spec,
+      estimate: estimateCost(await readSource(path.join(root, spec))),
     })),
   );
-  return partition(weighted, count);
+  return partition(weigh(estimated, recorded), count);
+}
+
+/**
+ * Playwright's `--test-list` line for one test: its file, relative to the
+ * config's `rootDir`, then every title down to the test's own, joined by `›`.
+ * The same string keys the test's recorded duration.
+ *
+ * Playwright splits each line on `›` and trims every piece, so a title that
+ * carries a `›` or starts or ends with a space cannot be named in a test list.
+ * Refused here, loudly: the alternative is a test no shard ever selects — a
+ * green run over a capture that never ran.
+ */
+export function testListLine(file, titles) {
+  for (const title of titles) {
+    if (title.includes("›") || title !== title.trim() || title === "") {
+      throw new Error(
+        `e2e-shard: the test title ${JSON.stringify(title)} in ${file} cannot be named in a Playwright --test-list (no "›", no leading or trailing space). Rename it.`,
+      );
+    }
+  }
+  return [file, ...titles].join(" › ");
+}
+
+/**
+ * Every test in a `playwright test --list --reporter=json` report, as
+ * `--test-list` lines, in the report's own order. One line per test *per
+ * project* would need the project prefix; this suite has one project, and a
+ * second is refused rather than silently dealt twice.
+ */
+export function listedTests(report) {
+  const projects = new Set();
+  const lines = [];
+  function walk(suite, titles, file) {
+    for (const spec of suite.specs ?? []) {
+      for (const test of spec.tests ?? []) projects.add(test.projectName ?? "");
+      lines.push(testListLine(file, [...titles, spec.title]));
+    }
+    for (const child of suite.suites ?? []) walk(child, [...titles, child.title], file);
+  }
+  for (const suite of report?.suites ?? []) walk({ ...suite, specs: suite.specs }, [], suite.file);
+  if (projects.size > 1) {
+    throw new Error(
+      `e2e-shard: the visual list spans ${projects.size} projects (${[...projects].join(", ")}); deal one project per run.`,
+    );
+  }
+  if (new Set(lines).size !== lines.length) {
+    throw new Error(
+      "e2e-shard: two visual tests share one title path; a --test-list cannot tell them apart.",
+    );
+  }
+  return lines;
+}
+
+/**
+ * The visual deal: `count` bins of `--test-list` lines. A test with a
+ * recorded duration weighs it; one without weighs the mean of the recorded
+ * ones (1 when nothing is recorded, which deals by count).
+ */
+export function dealVisualTests(report, count, durations = {}) {
+  const lines = listedTests(report);
+  const known = lines.map((line) => durations[line]).filter(isDuration);
+  const prior = known.length > 0 ? known.reduce((sum, ms) => sum + ms, 0) / known.length : 1;
+  return partition(
+    lines.map((line) => ({
+      item: line,
+      weight: isDuration(durations[line]) ? durations[line] : prior,
+    })),
+    count,
+  );
+}
+
+/**
+ * The deal as a Markdown table for the job summary: every bin's weight, its
+ * size, and how far it sits from the heaviest — the number to read first when
+ * one shard is slow again.
+ */
+export function summarizeBins(bins, { title, shard, unit = "ms", recordedShare }) {
+  const loads = bins.map((bin) => bin.load);
+  const max = Math.max(...loads);
+  const min = Math.min(...loads);
+  const spread = max > 0 ? (max - min) / max : 0;
+  const seconds = (load) =>
+    unit === "ms" ? `${(load / 1000).toFixed(1)}s` : `${Math.round(load)}`;
+  const rows = bins.map(
+    (bin, index) =>
+      `| ${index + 1 === shard ? `**${index + 1}**` : index + 1} | ${seconds(bin.load)} | ${bin.items.length} |`,
+  );
+  const share =
+    recordedShare === undefined ? "" : ` · ${Math.round(recordedShare * 100)}% of items recorded`;
+  return [
+    `### ${title}`,
+    "",
+    `Spread ${(spread * 100).toFixed(1)}% between the lightest and heaviest bin${share}.`,
+    "",
+    "| Shard | Weight | Items |",
+    "| --- | --- | --- |",
+    ...rows,
+    "",
+  ].join("\n");
 }
 
 async function readSource(file) {
@@ -182,33 +354,74 @@ async function readSource(file) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const shardArg = args.find((arg) => arg.startsWith("--shard="));
+  const option = (name) => args.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3);
+  const shardArg = option("shard");
   if (!shardArg) {
-    console.error("usage: node scripts/e2e-shard.mjs --shard=<index>/<count> [--explain]");
+    console.error(
+      "usage: node scripts/e2e-shard.mjs --shard=<index>/<count> [--visual=<playwright --list json>] [--explain] [--summary=<file>]",
+    );
     process.exit(2);
   }
-  const [index, count] = shardArg.slice("--shard=".length).split("/").map(Number);
+  const [index, count] = shardArg.split("/").map(Number);
   if (!Number.isInteger(index) || !Number.isInteger(count) || index < 1 || index > count) {
     console.error(`e2e-shard: --shard must be <index>/<count> with 1 <= index <= count`);
     process.exit(2);
   }
 
-  const bins = await dealSpecs(count);
+  const durations = await readDurations();
+  const visualList = option("visual");
+  let bins;
+  let recordedShare;
+  if (visualList) {
+    const report = JSON.parse(await readFile(visualList, "utf8"));
+    bins = dealVisualTests(report, count, durations.visual);
+    const items = bins.flatMap((bin) => bin.items);
+    recordedShare =
+      items.filter((line) => isDuration(durations.visual[line])).length / items.length;
+  } else {
+    bins = await dealSpecs(count, process.cwd(), durations.functional);
+    const items = bins.flatMap((bin) => bin.items);
+    recordedShare =
+      items.filter((spec) => isDuration(durations.functional[spec])).length / items.length;
+  }
+
+  if (bins[index - 1].items.length === 0) {
+    // An empty shard would pass over nothing; Playwright with no file
+    // arguments would instead run *everything*. Neither is a deal.
+    console.error(`e2e-shard: shard ${index}/${count} drew nothing — fewer items than shards?`);
+    process.exit(1);
+  }
 
   if (args.includes("--explain")) {
     // The whole deal, for reading a slow run afterwards. Stderr, so `--explain`
     // can be added to the workflow command without the listing reaching
     // Playwright's argument list.
     for (const [i, bin] of bins.entries()) {
-      console.error(`shard ${i + 1}/${count}  weight ${bin.load}  ${bin.items.length} specs`);
-      for (const item of bin.items) console.error(`  ${item}`);
+      console.error(
+        `shard ${i + 1}/${count}  weight ${Math.round(bin.load)}  ${bin.items.length} ${visualList ? "tests" : "specs"}`,
+      );
+      if (!visualList) for (const item of bin.items) console.error(`  ${item}`);
     }
   }
 
-  // One path per line: the workflow reads it into a bash array, so a spec path
-  // must never carry a space. Nothing under `e2e/` does, and Playwright would
-  // be the second thing to break if one did.
-  for (const spec of bins[index - 1].items) console.log(spec);
+  const summary = option("summary");
+  if (summary) {
+    const title = visualList
+      ? `Visual capture deal (${count} shards)`
+      : `Playwright deal (${count} shards)`;
+    // Milliseconds once anything is recorded (the estimate is scaled onto
+    // them); bare estimate units before the first refresh.
+    const unit = recordedShare > 0 ? "ms" : "units";
+    await appendFile(
+      summary,
+      `${summarizeBins(bins, { title, shard: index, unit, recordedShare })}\n`,
+    );
+  }
+
+  // One item per line. Spec paths go into a bash array (a spec path must never
+  // carry a space; nothing under `e2e/` does), and visual lines are written to
+  // a file for `playwright test --test-list`.
+  for (const item of bins[index - 1].items) console.log(item);
 }
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) await main();

@@ -7,8 +7,12 @@ import { bookingCapabilities, shops } from "@/db/schema";
 import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
 import { formatTime } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications/app-url";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 const CALLER_IP = "203.0.113.7";
 
@@ -40,7 +44,7 @@ const { GET } = await import("./route");
  * when `/ready` offers them the download.
  */
 async function bookedDiver() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [trip] = await upcomingTripsWithCounts(db, shop.id);
   if (!trip) throw new Error("demo trip missing");
   const [entry] = await getTripRoster(db, shop.id, trip.id);

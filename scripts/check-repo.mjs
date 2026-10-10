@@ -54,7 +54,6 @@ const checks = [
   ["notice-codes", "check-notice-codes.mjs"],
   ["scroll-preservation", "check-scroll-preservation.mjs"],
   ["exit-curves", "check-exit-curves.mjs"],
-  ["soft-delete", "check-soft-delete.mjs"],
   ["shop-word", "check-shop-word.mjs"],
   ["capability-runbook", "check-capability-runbook.mjs"],
   ["rental-fit-caps", "check-rental-fit-caps.mjs"],

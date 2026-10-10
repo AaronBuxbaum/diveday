@@ -16,6 +16,7 @@ import {
 } from "@/db/funnel";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { requireCronSecret } from "@/lib/cron-auth";
 import {
   activationStall,
   countDiveDays,
@@ -69,14 +70,11 @@ const CRON_MONITOR_CONFIG = {
  *
  * Fails closed like every cron here: `CRON_SECRET` is required and presented
  * as a bearer token, checked before anything else, the Sentry check-in
- * included.
+ * included — through the shared constant-time check (`src/lib/cron-auth.ts`).
  */
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return NextResponse.json({ error: "not_configured" }, { status: 503 });
-  if (request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return new NextResponse(null, { status: 401 });
-  }
+  const refused = requireCronSecret(request);
+  if (refused) return refused;
 
   const checkInId = Sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },

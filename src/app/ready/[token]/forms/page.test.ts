@@ -16,7 +16,11 @@ import {
 import { bookings, courseFormRecords, people, shops, trips } from "@/db/schema";
 import { listStaff } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const fileCtx = fileScopedShopContext();
 
 /**
  * **The course-form signing page and its one action, against a real database**
@@ -65,7 +69,7 @@ const BODY =
 
 /** A live course seat with a readiness link, and one or two forms required. */
 async function enrolled(options: { forms?: number; dateOfBirth?: string } = {}) {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = fileCtx;
   vi.mocked(getDb).mockResolvedValue(db);
   const [seat] = await db
     .select({

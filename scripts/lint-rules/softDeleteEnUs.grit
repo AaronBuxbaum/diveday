@@ -1,0 +1,9 @@
+// An en-US message never calls a delete something else, and never explains which history
+// survived it. Scoped in biome.json to src/i18n/locales/en-US; the word list's reasoning, and
+// why a bare "remove" is not on it, are in docs/agents/repo-checks.md ("Now Biome rules").
+language json
+
+JsonStringValue() as $value where {
+  $value <: r"(?is)\".*(?:archiv|unarchiv|deactivat|retir(?:e|ing|ed)|soft[- ]?delete|(?:off|on|from|in) your active lists?\b|history is kept|kept for (?:records|your records)|no longer (?:appears|shows) (?:on|in) your active).*\"",
+  register_diagnostic(span=$value, message="softDelete: this string calls a delete something else, or reassures about the history it keeps; deletion is soft underneath and still says Delete on top, and Restore, never Unarchive (ADR 20260820-every-delete-is-soft).", severity="error")
+}
