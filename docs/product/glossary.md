@@ -2229,7 +2229,8 @@ new domain concept, define it here in the same PR.
   from, so dropping them arrives a BCD short with nothing to fit them from — but the **size** comes
   off, reading "fit at check-in", and they're named in their own "fit these divers at check-in"
   section, along with the sizes they asked for — the captain doing the fit can't edit the profile
-  and needs somewhere to start. Pieces with no size column are untouched by the flag; so are weights (lead is bulk stock, never a size to be short of, and usual weighting is
+  and needs somewhere to start. On the Gear tab a flagged diver still gets a picker for each piece, opened
+  empty and never proposed, so their unit is still reserved through the register. Pieces with no size column are untouched by the flag; so are weights (lead is bulk stock, never a size to be short of, and usual weighting is
   the fit's most safety-relevant number) and tanks, since gas is never sized. Distinct from both "own kit" and "not asked yet" on
   a roster/manifest line, and sticky: editing sizes never clears it, only an explicit resolve does.
   See [20260724-gear-fit-fallback](../architecture/decisions/20260724-gear-fit-fallback.md).

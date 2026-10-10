@@ -25,7 +25,7 @@
       "allHome": "No iba nadie a bordo.",
       "stillOut": "Vuelve a las {time}.",
       "notDeparted": "Zarpa a las {time}.",
-      "missingDiver": "{count, plural, one {# persona quedó marcada como no regresada a bordo tras la inmersión {dive}.} other {# personas quedaron marcadas como no regresadas a bordo tras la inmersión {dive}.}} Localízalos. El recuento se cierra en el manifiesto.",
+      "missingDiver": "{count, plural, one {# persona quedó marcada como no regresada a bordo tras la inmersión {dive}.} other {# personas quedaron marcadas como no regresadas a bordo tras la inmersión {dive}.}} Localízalas. El recuento se cierra en el manifiesto.",
       "missingCrew": "{count, plural, one {# tripulante quedó marcado como no regresado a bordo tras la inmersión {dive}.} other {# tripulantes quedaron marcados como no regresados a bordo tras la inmersión {dive}.}} Localízalos. El recuento se cierra en el manifiesto.",
       "afterDiveUncounted": "{count, plural, one {# persona no tiene resultado tras la inmersión {dive}.} other {# personas no tienen resultado tras la inmersión {dive}.}} El recuento nunca se cerró.",
       "crewUncounted": "{count, plural, one {# tripulante no tiene resultado tras la inmersión {dive}.} other {# tripulantes no tienen resultado tras la inmersión {dive}.}} El recuento nunca se cerró.",

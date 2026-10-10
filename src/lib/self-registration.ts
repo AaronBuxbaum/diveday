@@ -47,12 +47,12 @@ export type SelfDeclaredLevel = (typeof SELF_DECLARED_LEVELS)[number];
 /**
  * Agencies whose cards a walk-up diver may not name as their own (issue #2130).
  *
- * The form asks for the card a diver *starts* with, so it offers every agency
- * that issues an entry-level (Open Water) card: TDI, IANTD and GUE do, and a
- * diver holding one used to have to pick "Other" and wait for a staffer to fix
- * it. NSS-CDS and NACD are left out because they certify cave divers only and
- * issue no entry-level card; offering them would be noise. Staff still record
- * either on the diver record, and the importer still reads them.
+ * The form offers every agency a diver might name for their own card: a diver
+ * holding a TDI, IANTD or GUE card used to have to pick "Other" and wait for a
+ * staffer to fix it. NSS-CDS and NACD are left out because they certify cave
+ * divers only, so nobody walks up with one as the card they dive on; offering
+ * them would be noise. Staff still record either on the diver record, and the
+ * importer still reads them.
  */
 const NO_ENTRY_LEVEL_CARD = ["nss_cds", "nacd"] as const satisfies readonly CertificationAgency[];
 

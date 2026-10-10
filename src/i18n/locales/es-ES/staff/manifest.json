@@ -38,7 +38,7 @@
   "progressAriaLabel": "Progreso del pase de lista",
   "ofTotalAboard": "de {total, plural, one {# buceador} other {# buceadores}} a bordo",
   "allAccountedFor": "Todos contabilizados, buceadores y tripulación. Listo para el siguiente control.",
-  "notBackAboardOpen": "{count, plural, one {# persona no ha regresado a bordo.} other {# personas no han regresado a bordo.}} Este control sigue abierto hasta contabilizarlos.",
+  "notBackAboardOpen": "{count, plural, one {# persona no ha regresado a bordo.} other {# personas no han regresado a bordo.}} Este control sigue abierto hasta contabilizarlas.",
   "crewNoneAssignedYet": "Todavía no hay nadie en la tripulación de esta salida. Añade a quienes navegaron para cerrar este control.",
   "crewNoneAboard": "Todas las personas a bordo están contabilizadas y toda la tripulación de esta salida figura en tierra, así que nadie a bordo está en la lista de tripulación. Añade a quienes navegaron.",
   "crewNotBackAboard": "{count, plural, one {# tripulante no ha vuelto a bordo.} other {# tripulantes no han vuelto a bordo.}} Este control sigue abierto.",

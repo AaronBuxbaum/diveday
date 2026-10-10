@@ -3,13 +3,13 @@ import { CERTIFICATION_AGENCIES } from "./certification-options";
 import { SELF_DECLARED_AGENCIES } from "./self-registration";
 
 describe("SELF_DECLARED_AGENCIES (the walk-up form's agencies)", () => {
-  it("offers every agency that issues an entry-level card, TDI, IANTD and GUE included", () => {
+  it("offers every agency a diver might name for their own card, TDI, IANTD and GUE included", () => {
     expect(SELF_DECLARED_AGENCIES).toEqual(
       expect.arrayContaining(["padi", "ssi", "naui", "sdi", "tdi", "iantd", "gue", "other"]),
     );
   });
 
-  it("leaves out the cave-only agencies, which issue no entry-level card", () => {
+  it("leaves out the cave-only agencies, which no walk-up dives on", () => {
     expect(SELF_DECLARED_AGENCIES).not.toContain("nss_cds");
     expect(SELF_DECLARED_AGENCIES).not.toContain("nacd");
   });
