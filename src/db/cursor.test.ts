@@ -70,6 +70,33 @@ describe("encodeCursor / decodeCursor", () => {
     expect(decodeCursor(badId)).toBeNull();
   });
 
+  it("treats a title carrying a NUL or control character as page one (security review)", () => {
+    for (const title of ["Wreck\u0000Trek", "Wreck\u0007Trek", "Wreck\nTrek"]) {
+      const cursor = Buffer.from(JSON.stringify(["2026-07-24T00:00:00.000Z", title, ID])).toString(
+        "base64url",
+      );
+      expect(decodeCursor(cursor)).toBeNull();
+    }
+  });
+
+  it("treats a title past 500 characters as page one", () => {
+    const at = (title: string) =>
+      Buffer.from(JSON.stringify(["2026-07-24T00:00:00.000Z", title, ID])).toString("base64url");
+    expect(decodeCursor(at("a".repeat(500)))).not.toBeNull();
+    expect(decodeCursor(at("a".repeat(501)))).toBeNull();
+  });
+
+  it("treats a start that is not a date in 1970–9999 as page one", () => {
+    for (const start of ["+275760-09-13T00:00:00.000Z", "1969-12-31T23:59:59.000Z", "nope", ""]) {
+      const cursor = Buffer.from(JSON.stringify([start, "Wreck Trek", ID])).toString("base64url");
+      expect(decodeCursor(cursor)).toBeNull();
+    }
+    const ok = Buffer.from(JSON.stringify(["9999-12-31T00:00:00.000Z", "Wreck Trek", ID])).toString(
+      "base64url",
+    );
+    expect(decodeCursor(ok)).not.toBeNull();
+  });
+
   it("rejects a decoded object instead of an array", () => {
     const notArray = Buffer.from(JSON.stringify({ sortValue: "a", id: "b" }), "utf8").toString(
       "base64url",

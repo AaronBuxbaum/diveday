@@ -173,7 +173,7 @@ async function refundAction(formData: FormData) {
   // person and nothing more. A hand-posted form gets `invalid_amount`.
   const typedAmount = postedRefundAmount(formData);
   const existing = orderId ? await getOrder(db, session.user.shopId, orderId) : null;
-  if (typedAmount && (!existing || !Number.isFinite(Number(typedAmount)))) {
+  if (typedAmount === null || (typedAmount && !existing)) {
     revalidateAndRedirect(back, noticeUrl(back, "refund-invalid-amount"));
     return;
   }

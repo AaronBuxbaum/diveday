@@ -25,7 +25,6 @@ import { clientIp } from "@/lib/request-ip";
 import { parseReviewRating } from "@/lib/reviews";
 import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
 
-/** The tip form: a preset radio, and an "Other" box that wins when filled. */
 /** A photo's caption; the photos themselves are read with `getAll` below. */
 const captionForm = z.object({ caption: z.string().default("") });
 /** A review: the rating is narrowed by `parseReviewRating`, the comment by the writer. */
@@ -33,6 +32,7 @@ const reviewForm = z.object({ rating: z.string().optional(), comment: z.string()
 /** A pulse's note; its categories are read with `getAll` below. */
 const pulseNoteForm = z.object({ note: z.string().default("") });
 
+/** The tip form: a preset radio, and an "Other" box that wins when filled. */
 const tipForm = z.object({
   customAmount: z.string().default(""),
   amount: z.string().optional(),

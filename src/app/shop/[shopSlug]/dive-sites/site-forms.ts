@@ -16,17 +16,19 @@ const siteExtrasForm = z.object({
 /**
  * The two fields the site form posts beside the ones `parseDiveSiteFields`
  * reads: the version the tab last saw (`null` when absent or not a number) and
- * the nitrox box.
+ * the nitrox box. `null` when the form does not read (a repeated field): the
+ * nitrox flag gates who may book the site, so the caller refuses rather than
+ * saving "no nitrox" over the shop's own answer.
  */
-export function siteFormExtras(formData: FormData): {
-  expectedVersion: number | null;
-  requiresNitrox: boolean;
-} {
+export function siteFormExtras(
+  formData: FormData,
+): { expectedVersion: number | null; requiresNitrox: boolean } | null {
   const parsed = parseForm(siteExtrasForm, formData);
-  const sentVersion = Number.parseInt(parsed.ok ? parsed.data.expectedVersion : "", 10);
+  if (!parsed.ok) return null;
+  const sentVersion = Number.parseInt(parsed.data.expectedVersion, 10);
   return {
     expectedVersion: Number.isNaN(sentVersion) ? null : sentVersion,
-    requiresNitrox: parsed.ok && parsed.data.requiresNitrox === "on",
+    requiresNitrox: parsed.data.requiresNitrox === "on",
   };
 }
 

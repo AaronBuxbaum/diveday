@@ -246,14 +246,14 @@ export default async function EditDiveSitePage({
     // or a hand-crafted post, and neither is worth a 500 over an input that can
     // only ever tighten the write.
     const extras = siteFormExtras(formData);
-    const { expectedVersion } = extras;
+    if (!extras) return refuse("invalid");
     // **Checked before a single byte is uploaded.** `dive-site-photos.ts` says
     // why in its own words — refusing after storing four photos leaves objects
     // nothing references, and a refusal never gets far enough to persist their
     // URLs, so they are invisible to the unfinished-deletions panel too. The
     // authoritative check is still the one in the `where` below, which is
     // atomic with the write; this only stops the wasted upload.
-    if (expectedVersion !== null && stored.rowVersion !== expectedVersion) {
+    if (extras.expectedVersion !== null && stored.rowVersion !== extras.expectedVersion) {
       return refuse("conflict");
     }
     // Uploaded from the staffer's own device straight into first-party
@@ -318,7 +318,7 @@ export default async function EditDiveSitePage({
         routeNote: parsed.route.note,
         routeZoom: parsed.route.zoom,
       },
-      { expectedVersion },
+      { expectedVersion: extras.expectedVersion },
     );
     // Somebody else saved the briefing between this page rendering and this
     // post. Refused rather than merged, and `refuse` hands back everything that
