@@ -475,7 +475,7 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
         row.expiresAt,
         row.createdAt,
       ]),
-    note: "Waiver evidence this diver signed. Medical answers are withheld pending a legal review of subject-access scope (docs/product/human-decisions.md).",
+    note: "Waiver evidence this diver signed. Medical answers are withheld pending a legal review of subject-access scope.",
   },
   {
     file: "course_form_records.csv",

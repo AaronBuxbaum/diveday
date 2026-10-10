@@ -362,7 +362,7 @@ export async function inviteStaffMember(
       //
       // Whether one human may hold accounts at two shops at all is the open
       // question behind this refusal, not something to settle here — see H-60
-      // in docs/product/human-decisions.md.
+      // in docs/product/human-decisions/README.md.
       const [crossShopAccount] = await tx
         .select({ id: userAccounts.id })
         .from(userAccounts)

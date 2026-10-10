@@ -46,7 +46,7 @@ questions — read the schema module.
 
 ## Removing something
 
-**There is no legacy data. Delete it** (H-49 in `docs/product/human-decisions.md`, extending H-47).
+**There is no legacy data. Delete it** (H-49 in `docs/product/human-decisions/README.md`, extending H-47).
 DiveDay is pre-pilot: no users, nothing anyone would miss. So when you find a table, column or enum
 value nothing writes any more:
 

@@ -443,7 +443,7 @@ class PartyBookingError extends Error {
  * recorded ratings (`courseCrewCountsByTrip`, src/db/today.ts), so a lapsed
  * instructor stops counting there. This passes no `lapsedRungs`, so the sale
  * gate, the seat cap and the no-show hand-back go on counting them: H-59
- * (docs/product/human-decisions.md) closed new-sale refusal on a locally
+ * (docs/product/human-decisions/README.md) closed new-sale refusal on a locally
  * recorded renewal date, and the 2026-09-16 ruling reopened only the ratio. A
  * shop whose instructor renewed last week and has not updated DiveDay does
  * not lose a sale on Saturday morning; it sees the gap, worded, on the

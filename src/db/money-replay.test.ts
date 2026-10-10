@@ -30,7 +30,7 @@ import { upcomingTripsWithCounts, updateTrip } from "./trips";
  * `startTipCheckout` and the claim upserts in `claimBookingsForCheckout`/
  * `claimStripeWebhookEvent` cannot be exercised under contention on a
  * single-connection database. Proving those under real concurrency needs the
- * real-Postgres CI job (HD-19, docs/product/human-decisions.md) — a human
+ * real-Postgres CI job (HD-19, docs/product/human-decisions/README.md) — a human
  * spend decision, out of scope here. Do not mistake green here for race
  * coverage.
  *

@@ -623,7 +623,7 @@ export function BookSpotSection({
         {/* Self-declared only (task 23) — this checkbox is not persisted and
             does not gate the booking transaction; full enforcement (a birth
             date on file, a hard refusal) is deliberately out of scope, see
-            docs/product/human-decisions.md H-08/H-22. */}
+            docs/product/human-decisions/README.md H-08/H-22. */}
         {trip.course?.minimumAge ? (
           <label className="flex min-h-11 items-start gap-2 border-t border-border pt-4 text-sm">
             <input

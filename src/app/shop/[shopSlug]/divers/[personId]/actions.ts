@@ -1580,7 +1580,7 @@ export async function eraseGuardianEmailAction(
  * **Every live staff role may send as the shop.** Decided by the product owner
  * on 2026-09-10 as an amendment to H-14 (issues #1505/#1518); the argument is
  * decision 9 of that ADR, and the owner's call is H-14 in
- * `docs/product/human-decisions.md`. What it means here is that the argument
+ * `docs/product/human-decisions/README.md`. What it means here is that the argument
  * which opened the inbox to reading extends to writing — there is no narrower
  * gate on sending than there is on looking.
  *
