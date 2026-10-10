@@ -185,7 +185,7 @@ async function reservationAction(
   const input = { shopId: session.user.shopId, reservationId: parsed.data.reservationId };
   const outcome =
     act === "release"
-      ? await releaseGearReservation(db, input)
+      ? await releaseGearReservation(db, { ...input, releasedByPersonId: session.user.personId })
       : act === "check_out"
         ? await checkOutGearReservation(db, input)
         : await returnGearReservation(db, input);

@@ -611,7 +611,6 @@ describe("sizedRentalKindOfGearKind", () => {
     // Not a register kind at all, and the signature takes a plain string so
     // this module never loads the register (ADR 20260815-minimal-gear-register).
     expect(sizedRentalKindOfGearKind("")).toBeNull();
-    expect(sizedRentalKindOfGearKind("hood_gloves")).toBeNull();
   });
 
   it("teaches a hood and gloves their own columns, now that each has a size (H-102)", () => {

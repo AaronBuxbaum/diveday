@@ -112,6 +112,7 @@ export async function releaseGearReservationFromRegisterAction(formData: FormDat
   const outcome = await releaseGearReservation(await getDb(), {
     shopId: session.user.shopId,
     reservationId: parsed.data.reservationId,
+    releasedByPersonId: session.user.personId,
   });
   revalidateAndRedirect(gear, noticeUrl(gear, outcome.ok ? "released" : outcome.reason));
 }

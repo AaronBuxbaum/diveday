@@ -443,3 +443,26 @@ describe("isAfterTheDive", () => {
     }
   });
 });
+
+describe("a course form still owed (issue #2266)", () => {
+  // Warn-only (`COURSE_FORMS_BLOCK_BOARDING = false`) raises no blocker, so
+  // the release's item reads done. The step must not, while its forms door
+  // still asks for a signature.
+  it("keeps the sign step the diver's turn over a signed release", () => {
+    const sign = spine({ courseFormsOwed: true }).steps.find((step) => step.id === "sign");
+    expect(sign?.state).toBe("your_turn");
+  });
+
+  it("leaves a signed release done when nothing is owed", () => {
+    const sign = spine({ courseFormsOwed: false }).steps.find((step) => step.id === "sign");
+    expect(sign?.state).toBe("done");
+  });
+
+  it("never turns a step waiting on the shop into the diver's turn", () => {
+    const sign = spine({
+      courseFormsOwed: true,
+      checklist: [item({ category: "waiver", state: "waiting" })],
+    }).steps.find((step) => step.id === "sign");
+    expect(sign?.state).toBe("with_shop");
+  });
+});

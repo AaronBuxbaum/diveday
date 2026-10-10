@@ -35,6 +35,7 @@ import {
 import {
   bookings,
   certifications,
+  executedDives,
   notificationDeliveries,
   people,
   priorVisits,
@@ -213,6 +214,85 @@ describe("getRecapPageData", () => {
     // for: `visitMilestone` is exact equality on {1, 10, 25, 50, 100}, so a
     // phantom day does not blur a milestone — it skips it permanently.
     expect((await getRecapPageData(db, bookingId))?.visitCount).toBe(1);
+
+    // …unless the crew logged a dive on it before the call (H-84, issue
+    // #1694): a logged dive is the same affirmative evidence the counter's
+    // name-match prompt and the fly-safe advisory already trust, so the
+    // diver's own count may not refuse a day the counter names.
+    const [logged] = await db
+      .insert(executedDives)
+      .values({ shopId: shop.id, tripId: other.id, diveNumber: 1 })
+      .returning({ id: executedDives.id });
+    if (!logged) throw new Error("test setup: the logged dive was not written");
+    expect((await getRecapPageData(db, bookingId))?.visitCount).toBe(2);
+
+    // A deleted log speaks for nothing.
+    await db
+      .update(executedDives)
+      .set({ deletedAt: nowDate() })
+      .where(eq(executedDives.id, logged.id));
+    expect((await getRecapPageData(db, bookingId))?.visitCount).toBe(1);
+
+    // And a no-show on that day has no escape, logged dives or not.
+    await db.update(executedDives).set({ deletedAt: null }).where(eq(executedDives.id, logged.id));
+    await db
+      .update(bookings)
+      .set({ status: "no_show" })
+      .where(and(eq(bookings.tripId, other.id), eq(bookings.shopId, shop.id)));
+    expect((await getRecapPageData(db, bookingId))?.visitCount).toBe(1);
+  });
+
+  it("still counts a day the roll call left them ashore while the seat stayed booked", async () => {
+    // **Pinned as it stands, not as settled** (domain review of issue #1694,
+    // 2026-10-10). `diveDay()` reads the seat's status and the departure's,
+    // never the roll call: a seat the crew recorded `not_boarded` at the dock
+    // and nobody then marked `no_show` is still `booked`, so the day counts.
+    // Only the fly-safe reader consults the roll call, and only to *add* a
+    // day a later desk word struck. If this should change, it changes in
+    // `src/db/dive-days.ts` for every reader at once, and this test with it.
+    const { db, shop, reef, bookingId } = await recapContext();
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("no staff");
+    const dayAfter = new Date(reef.startsAt.getTime() + 24 * 60 * 60 * 1000);
+    const other = await createTrip(db, {
+      shopId: shop.id,
+      title: "Left-Ashore Two-Tank",
+      startsAt: dayAfter,
+      endsAt: new Date(dayAfter.getTime() + 3 * 60 * 60 * 1000),
+      capacity: 12,
+      plannedDives: 2,
+    });
+    if (!other) throw new Error("test setup: the second departure could not be created");
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: other.id,
+        fullName: "Rae Recap",
+        email: "recap-rae@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+    const seat = party.bookings[0]?.bookingId;
+    if (!seat) throw new Error("party booking missing");
+    const dayBefore = new Date(reef.startsAt.getTime() - 24 * 60 * 60 * 1000);
+    await db
+      .update(trips)
+      .set({ startsAt: dayBefore, endsAt: new Date(dayBefore.getTime() + 3 * 60 * 60 * 1000) })
+      .where(eq(trips.id, other.id));
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: other.id,
+      bookingId: seat,
+      recordedByPersonId: staff.person.id,
+      status: "not_boarded",
+      checkpoint: "departure",
+      occurredAt: dayBefore,
+    });
+
+    const [stored] = await db.select().from(bookings).where(eq(bookings.id, seat));
+    expect(stored?.status).toBe("booked");
+    expect((await getRecapPageData(db, bookingId))?.visitCount).toBe(2);
   });
 
   it("hides tipping for a phone-only diver — startTipCheckout has no email to hand Stripe (Codex finding)", async () => {

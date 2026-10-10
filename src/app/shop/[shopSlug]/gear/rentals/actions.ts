@@ -408,6 +408,7 @@ export async function releaseCounterRentalAction(formData: FormData) {
   const outcome = await releaseCounterRental(db, {
     shopId: session.user.shopId,
     ticketId: parsed.data?.ticketId ?? "",
+    releasedByPersonId: session.user.personId,
   });
   const gear = shopPath(session.user.shopSlug, "gear");
   if (!outcome.ok) revalidateAndRedirect(gear, noticeUrl(ticket, outcome.reason));

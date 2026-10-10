@@ -92,6 +92,7 @@ async function reservationsFor(db: AppDb, gearItemId: string) {
       and(
         eq(gearReservations.gearItemId, gearItemId),
         isNull(gearReservations.returnedAt),
+        isNull(gearReservations.releasedAt),
         lte(gearReservations.reservedFrom, tripWindow.until),
         gte(gearReservations.reservedUntil, tripWindow.from),
       ),

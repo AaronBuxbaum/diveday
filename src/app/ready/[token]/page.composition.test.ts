@@ -526,7 +526,7 @@ describe("the sign step's actions", () => {
   const SIGN_STEP = readFileSync(join(__dirname, "_components/SignStepActions.tsx"), "utf8");
 
   it("offers a control for every waiver blocker it calls the reader's to fix", () => {
-    expect(SOURCE).toContain("<SignStepActions token={token} item={step.item}");
+    expect(SOURCE).toMatch(/<SignStepActions\s+token=\{token\}\s+item=\{step\.item\}/);
     for (const code of ["waiver_pending", "waiver_expired", "guardian_signature_missing"]) {
       expect(SIGN_STEP).toContain(`code === "${code}"`);
     }
@@ -535,6 +535,11 @@ describe("the sign step's actions", () => {
   it("offers the course forms' door when a form is owed", () => {
     expect(SIGN_STEP).toContain('blocker.code === "course_form_unsigned"');
     expect(SIGN_STEP).toContain("href={`/ready/${token}/forms`}");
+  });
+
+  it("asks what is owed whatever the boarding switch says (issue #2266)", () => {
+    expect(SOURCE).toContain("courseFormsOwed={courseFormsOwed}");
+    expect(SOURCE).toContain("getCourseFormsForBooking(db, shop.id, bookingId)");
   });
 });
 

@@ -88,13 +88,13 @@ describe("priorVisitStanding", () => {
  * The glossary defines a **dive day** as the unit this merge produces, and its
  * exclusion list read as the whole truth: cancelled, no-show, `did_not_happen`,
  * cancelled departure. One of those has an escape — a blown-out departure the
- * crew logged dives on — and only the fly-safe reader and the counter's
- * name-match prompt carry it, not this count. A `no_show` has none in any of
- * the three: the escape it once had let an earlier desk sighting beat a later
+ * crew logged dives on — and since issue #1694 all three readers carry it
+ * through one predicate, `diveDay()`. A `no_show` has none in any of the
+ * three: the escape it once had let an earlier desk sighting beat a later
  * staffer's release (`dive-domain-expert`, 2026-09-11), and the entry has to
- * say so or the next session reads the older shape as the settled one. A
- * definition that hides a disagreement between three readers sends that session
- * to make them agree by accident.
+ * say so or the next session reads the older shape as the settled one. The
+ * fly-safe reader's roll-call escape is the one way the readers still differ,
+ * and the entry has to say that too, or a session "fixes" it by accident.
  *
  * A text scan, like `src/lib/gear.test.ts`'s register-group entry: it fails
  * when the entry is gone or has lost the distinction, not when the prose moves.
@@ -121,7 +121,7 @@ describe("the glossary's dive-day entry", () => {
     expect(text).toMatch(/no escape in any of the three/);
   });
 
-  it("says which readers apply the escape and which do not", async () => {
+  it("names the one predicate every reader calls, and the one escape only fly-safe takes", async () => {
     const text = await entry();
     for (const reader of [
       "peopleWhoDivedBefore",
@@ -130,8 +130,10 @@ describe("the glossary's dive-day entry", () => {
     ]) {
       expect(text, `the dive-day entry does not name ${reader}`).toContain(reader);
     }
-    // The open issue that would put all three behind one predicate, so a reader
-    // meeting the gap does not have to decide whether it is a bug.
+    expect(text).toContain("diveDay()");
+    expect(text).toContain("src/db/dive-days.ts");
     expect(text).toContain("#1694");
+    // The roll-call escape is the fly-safe reader's alone, and deliberate.
+    expect(text).toContain("#1836");
   });
 });

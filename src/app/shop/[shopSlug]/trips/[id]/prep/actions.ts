@@ -202,6 +202,7 @@ export async function releaseGearUnitAction(formData: FormData) {
   const outcome = await releaseGearReservation(await getDb(), {
     shopId: session.user.shopId,
     reservationId: parsed.data.reservationId,
+    releasedByPersonId: session.user.personId,
   });
   revalidateAndRedirect(
     departure,

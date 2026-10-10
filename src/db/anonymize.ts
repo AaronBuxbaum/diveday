@@ -53,6 +53,11 @@ import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT, redactedUniqueValue } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import {
+  COURSE_FORM_INTEGRITY_VERSION_ERASED,
+  courseFormSeal,
+  verifyCourseFormIntegrity,
+} from "@/lib/course-form-integrity";
 import { log } from "@/lib/log";
 import { type CustomerProvider, customerProviderFromEnvironment } from "@/lib/payments/customers";
 import {
@@ -728,16 +733,37 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // guardian's name are this person's (and a third party's) personal data and
   // go; that a form was signed, which version, how and when, is the shop's
   // record of an act and stays. The form's words are the shop's, not the
-  // diver's, so they stay too. No seal to re-mint: these rows carry none.
-  await tx
-    .update(courseFormRecords)
-    .set({
+  // diver's, so they stay too. The seal is re-minted as version 2 over what
+  // survives, exactly as the release's is, and only over a record whose seal
+  // verified the moment before: erasure must never launder an earlier edit
+  // (issue #2266).
+  const formRecords = await tx
+    .select()
+    .from(courseFormRecords)
+    .where(and(eq(courseFormRecords.shopId, shopId), eq(courseFormRecords.personId, personId)));
+  for (const record of formRecords) {
+    const stripped = {
+      ...record,
       signedName: null,
       guardianName: null,
       anonymizedAt: now,
       anonymizedByPersonId: ctx.actorPersonId,
-    })
-    .where(and(eq(courseFormRecords.shopId, shopId), eq(courseFormRecords.personId, personId)));
+    };
+    const reseal =
+      verifyCourseFormIntegrity(record) === "valid"
+        ? courseFormSeal(stripped, COURSE_FORM_INTEGRITY_VERSION_ERASED)
+        : {};
+    await tx
+      .update(courseFormRecords)
+      .set({
+        signedName: null,
+        guardianName: null,
+        anonymizedAt: now,
+        anonymizedByPersonId: ctx.actorPersonId,
+        ...reseal,
+      })
+      .where(and(eq(courseFormRecords.id, record.id), eq(courseFormRecords.shopId, shopId)));
+  }
 
   // The per-channel mechanics behind the column above (ADR
   // 20260820-waiver-delivery-is-per-channel): one current row per channel, each

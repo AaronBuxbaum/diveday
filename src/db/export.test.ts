@@ -532,10 +532,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // carrying any size is a stated fit and `src/db/import.ts` stamps it — so
     // exporting it would carry an internal flag out and re-derive it anyway.
     "fit_stated_at",
-    // The one kind `rents_hood` and `rents_gloves` replaced (H-102, issue
-    // #1816). Nothing reads or writes it; it stays in the schema only until
-    // the release that still selects it has gone, and is not a fact to carry.
-    "rents_hood_gloves",
   ],
   gear_items: ["shop_id"],
   gear_service_events: ["shop_id"],

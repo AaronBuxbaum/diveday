@@ -151,6 +151,13 @@ export type ThreadStepsInput = {
    * and holds only the optional pickup, note and help questions.
    */
   participantType?: ParticipantType;
+  /**
+   * The enrollment still owes a course form (ADR 20261008-course-forms). With
+   * `COURSE_FORMS_BLOCK_BOARDING` at warn-only no blocker says so, and a sign
+   * step read off the release alone would say done beside a door asking for a
+   * signature (issue #2266). Owed, the step stays the diver's turn.
+   */
+  courseFormsOwed?: boolean;
 };
 
 export function buildThreadSteps(input: ThreadStepsInput): ThreadSpine {
@@ -168,7 +175,14 @@ export function buildThreadSteps(input: ThreadStepsInput): ThreadSpine {
   // waivers off gets a two-step thread rather than a phantom "Sign" that is
   // either a lie when marked done or a permanent hole in the figure when not.
   const waiver = byCategory.get("waiver");
-  if (waiver) steps.push({ id: "sign", state: STATE_FROM_CHECKLIST[waiver.state], item: waiver });
+  if (waiver) {
+    const state = STATE_FROM_CHECKLIST[waiver.state];
+    steps.push({
+      id: "sign",
+      state: state === "done" && input.courseFormsOwed ? "your_turn" : state,
+      item: waiver,
+    });
+  }
 
   // Certification, only where the engine emitted the category — it does so
   // when the trip gates on a card or when a blocker exists, which is already

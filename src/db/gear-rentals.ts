@@ -3,6 +3,7 @@ import type { CalendarDate } from "@/lib/calendar-date";
 import type { GearItemKind } from "@/lib/gear";
 import { type GearRentalHolder, groupGearRentals } from "@/lib/gear-rentals";
 import type { AppDb } from "./client";
+import { openGearReservation } from "./gear";
 import { type OffsetPage, offsetPage } from "./paging";
 import {
   bookingPayments,
@@ -116,7 +117,7 @@ export async function countGearRentalHolders(db: AppDb, shopId: string): Promise
         eq(people.shopId, shopId),
       ),
     )
-    .where(and(eq(gearReservations.shopId, shopId), isNull(gearReservations.returnedAt)));
+    .where(and(eq(gearReservations.shopId, shopId), openGearReservation()));
   return row?.value ?? 0;
 }
 
@@ -172,7 +173,7 @@ async function listOpenRentalUnits(db: AppDb, shopId: string): Promise<GearRenta
       ),
     )
     .leftJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId), liveTrip()))
-    .where(and(eq(gearReservations.shopId, shopId), isNull(gearReservations.returnedAt)))
+    .where(and(eq(gearReservations.shopId, shopId), openGearReservation()))
     .orderBy(asc(gearReservations.reservedUntil), asc(gearItems.kind), asc(gearItems.label));
 
   const bookingIds = [...new Set(rows.flatMap((row) => (row.bookingId ? [row.bookingId] : [])))];

@@ -23,6 +23,7 @@ import {
 import { normalizePersonName, personNamesMatch } from "@/lib/person-name";
 import { hasReturned } from "@/lib/trips";
 import { isStandingRefusal, isUnresolvedMedicalHold } from "@/lib/waivers";
+import { refileCourseFormRecords } from "./course-forms";
 import { liveTrip } from "./trips-live";
 import { refileWaiverRecords } from "./waiver-refile";
 
@@ -162,8 +163,10 @@ export const DIVER_HISTORY_TABLES = [
   "orders",
   "waiver_records",
   // A signed course form, on the booking that moves with it (ADR
-  // 20261008-course-forms). No seal, so the plain repoint below carries it;
-  // its unique key is per booking, so the two sides cannot collide.
+  // 20261008-course-forms). `person_id` is inside its seal, so it moves
+  // through `refileCourseFormRecords`, which re-seals only a record that
+  // verified before the move; its unique key is per booking, so the two
+  // sides cannot collide.
   "course_form_records",
   "certifications",
   "specialty_certifications",
@@ -281,6 +284,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "executed_dives.recorded_by_person_id": "who logged the dive",
   "customer_gear_items.deleted_by_person_id": "who removed the piece from the record",
   "gear_items.deleted_by_person_id": "who retired the unit",
+  "gear_reservations.released_by_person_id": "who let go of the hold",
   "gear_service_events.recorded_by_person_id": "who serviced the unit",
   "internal_notes.created_by_person_id": "who wrote the note",
   "marine_life_requests.requested_by_person_id": "which staffer asked for the species",
@@ -1271,8 +1275,14 @@ export async function mergeDiverRecords(input: {
         toPersonId: survivor.id,
         actorPersonId: input.actorPersonId,
       });
+      // Course forms the same way, for the same reason (issue #2266).
+      await refileCourseFormRecords(tx, {
+        shopId: input.shopId,
+        fromPersonId: source.id,
+        toPersonId: survivor.id,
+      });
       for (const tableName of DIVER_HISTORY_TABLES) {
-        if (tableName === "waiver_records") continue;
+        if (tableName === "waiver_records" || tableName === "course_form_records") continue;
         // A seat that is already over, on a departure the kept record also
         // sits on, stays on this record (`assessMerge`, issue #2177). Only the
         // seat: what hangs off it (its release, order, notes) is the person's

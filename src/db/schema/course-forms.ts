@@ -184,9 +184,28 @@ export const courseFormRecords = pgTable(
     /** Set when erasure stripped the names (ADR 20260802-diver-data-erasure). */
     anonymizedAt: timestamp("anonymized_at", { withTimezone: true }),
     anonymizedByPersonId: uuid("anonymized_by_person_id").references(() => people.id),
+    /**
+     * **The integrity seal over the signed evidence** (issue #2266), the
+     * release's own (`waiver_records.integrity_hash`): an HMAC over the words,
+     * the form version, the booking, who signed, how and when, and a
+     * guardian's co-signature, so an edit made afterwards by anyone with
+     * database access reads as `invalid` rather than as what was signed
+     * (`src/lib/course-form-integrity.ts`). Version 1 is the record as signed;
+     * version 2 is the record after erasure, sealed over what survives it plus
+     * who erased it and when. Written in the transaction that writes the
+     * evidence, and checked on export (`integrity_check` in
+     * `course_form_records.csv`).
+     */
+    integrityHash: text("integrity_hash"),
+    integrityVersion: integer("integrity_version"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    // A seal is a hash and the field set it is over, never one without the other.
+    check(
+      "course_form_records_integrity_whole",
+      sql`(${table.integrityHash} is null) = (${table.integrityVersion} is null)`,
+    ),
     // One signature per enrollment per version: a double submit, or a paper
     // copy recorded while the student signs online, settles on the first.
     uniqueIndex("course_form_records_booking_version_unique").on(
