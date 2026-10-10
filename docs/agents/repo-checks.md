@@ -6,8 +6,8 @@ the offending line. Read the matching section below when you want the reasoning 
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
 shape being refused.
 
-Only the 27 guards whose reasoning is not obvious from their own failure message are
-written up here. The rest say everything they need to say when they go red.
+Only the guards whose reasoning is not obvious from their own failure message are written up
+here. The rest say everything they need to say when they go red.
 
 This is the long-form half of one row in [AGENTS.md](../../AGENTS.md)'s command table, and it lives
 here rather than there because every session loads AGENTS.md in full and almost none of them needs
@@ -1029,8 +1029,8 @@ For `scripts/`, `.claude/` and `.github/`; the rules themselves are in `.claude/
 - **The agent layer is checked** (`scripts/check-agents.mjs`): every skill has frontmatter whose
   `name` matches its directory and a `description` (the only part every session pays for), a skill
   linked in from `.agents/skills/` included; every local skill is in `.claude/skills/README.md` and
-  mentioned in `AGENTS.md`, and every linked one has a `skills-lock.json` entry; every reviewer agent is in
-  the index; every `task:context` path exists; every backticked repo path in `AGENTS.md` and in
+  mentioned in `AGENTS.md`, and every linked one has a `skills-lock.json` entry and keeps the local
+  lines a sync would undo (`VENDORED_SKILL_OVERRIDES`); every reviewer agent is in the index; every `task:context` path exists; every backticked repo path in `AGENTS.md` and in
   `.claude/rules/*.md` exists; every allowlist entry and every hook command in
   `.claude/settings.json` names a real script or package script; nothing in `.mcp.json` launches
   through a package manager.

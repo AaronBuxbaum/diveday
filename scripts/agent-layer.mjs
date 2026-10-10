@@ -67,3 +67,25 @@ export function linkedSkillProblems(linked, locked) {
       );
   return problems;
 }
+
+/**
+ * Lines a vendored skill carries from its upstream pack that are wrong here, each with the
+ * local wording that replaced it. A sync from `skills-lock.json`'s source rewrites the files
+ * under `.agents/skills/` and brings the upstream line back; this refusal is what notices.
+ */
+export const VENDORED_SKILL_OVERRIDES = [
+  {
+    phrase: "/setup-matt-pocock-skills",
+    fix: 'point at the "Agent skills" section of CLAUDE.md and docs/agents/issue-tracker.md instead — this repository has no such command',
+  },
+];
+
+/** Each override a vendored skill has lost, given `{ [name]: SKILL.md contents }`. */
+export function vendoredSkillProblems(contentsByName) {
+  const problems = [];
+  for (const [name, contents] of Object.entries(contentsByName))
+    for (const { phrase, fix } of VENDORED_SKILL_OVERRIDES)
+      if (contents.includes(phrase))
+        problems.push(`.agents/skills/${name}/SKILL.md: names \`${phrase}\`; ${fix}`);
+  return problems;
+}
