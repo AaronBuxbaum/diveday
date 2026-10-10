@@ -3700,7 +3700,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Returns").fill("12:30");
         await page.getByRole("button", { name: "Put it on the board" }).click();
         await page.waitForURL(new RegExp(`/shop/${unique}\\?created=`));
-        await page.getByRole("heading", { name: /your shop is bookable/ }).waitFor();
+        await page.getByRole("heading", { name: "Your shop is bookable." }).waitFor();
         await capture(page, "today-first-bookable", scheme);
 
         // The orientation's *other* form, on the same shop rather than a

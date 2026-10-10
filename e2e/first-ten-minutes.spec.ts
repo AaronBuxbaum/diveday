@@ -84,11 +84,8 @@ test("a brand-new shop is bookable within the four-screen budget, and is shown t
   // hand over the link worth sharing — not a bare "it's on the board".
   await page.waitForURL(new RegExp(`/shop/${unique}\\?created=`));
   arrive("today (bookable + share link)");
-  await expect(
-    page.getByRole("heading", {
-      name: /“Two-Tank Morning Reef” is on the board, and your shop is bookable/,
-    }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your shop is bookable." })).toBeVisible();
+  await expect(page.getByText(/^“Two-Tank Morning Reef” is on the board\. /)).toBeVisible();
   await expect(page.getByText(`/s/${unique}`)).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
 
@@ -143,7 +140,7 @@ test("the second trip does not repeat the bookable moment", async ({ page }) => 
   // lives on Today (ADR 20260806-one-trip-create-form).
   await schedule("First Ever", "08:00", "12:30");
   await page.waitForURL(new RegExp(`/shop/${unique}\\?created=`));
-  await expect(page.getByRole("heading", { name: /your shop is bookable/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your shop is bookable." })).toBeVisible();
 
   // A shop's second trip is routine, not a milestone — it stays on the board it
   // was built on, named in the notice, and repeating the celebration would
@@ -151,7 +148,7 @@ test("the second trip does not repeat the bookable moment", async ({ page }) => 
   await schedule("Afternoon Drift", "14:00", "17:00");
   await page.waitForURL(new RegExp(`/shop/${unique}/schedule/board\\?builder=added`));
   await expect(page.getByText("“Afternoon Drift” is on the board.")).toBeVisible();
-  await expect(page.getByRole("heading", { name: /your shop is bookable/ })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Your shop is bookable." })).toHaveCount(0);
 });
 
 /**

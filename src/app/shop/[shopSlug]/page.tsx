@@ -778,14 +778,16 @@ async function TodayBody({
           scheduleUrl={publicScheduleUrl}
           scheduleHref={publicSchedulePath(shopSlug)}
           copy={{
-            heading:
+            // A short title and the trip in the body (#2174): the whole
+            // sentence as a 24px heading wrapped to three lines at 390.
+            heading: t("shopHome.firstBookable.heading"),
+            body:
               seriesCount > 1
-                ? t("shopHome.firstBookable.headingSeries", {
+                ? t("shopHome.firstBookable.bodySeries", {
                     title: created,
                     count: seriesCount,
                   })
-                : t("shopHome.firstBookable.heading", { title: created }),
-            body: t("shopHome.firstBookable.body"),
+                : t("shopHome.firstBookable.body", { title: created }),
             linkLabel: t("shopHome.firstBookable.linkLabel"),
             copy: t("shopHome.firstRun.scheduleCopy"),
             copied: t("shopHome.firstRun.scheduleCopied"),

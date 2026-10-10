@@ -103,7 +103,8 @@ describe("the shop home's pinned sentences", () => {
     for (const key of [
       "shopHome.spine.quietSentence",
       "shopHome.firstBookable.heading",
-      "shopHome.firstBookable.headingSeries",
+      "shopHome.firstBookable.body",
+      "shopHome.firstBookable.bodySeries",
       "shopHome.demoReset",
       "today.todayQueue.emptyHeading",
       "today.todayQueue.boatsClear",
