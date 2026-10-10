@@ -2,7 +2,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { messageFor } from "@/lib/notifications/render";
-import { dbNow, seededShopContext } from "@/test/db";
+import { dbNow, fileScopedShopContext } from "@/test/db";
 import {
   bookings,
   paymentOperationIntents,
@@ -22,6 +22,10 @@ import {
   turnOffWeeklyDigestByToken,
   type WeeklyDigestShop,
 } from "./weekly-digest";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 const ORIGIN = "https://diveday.example";
 
@@ -52,7 +56,7 @@ async function nextMondayMorning(db: Awaited<ReturnType<typeof seededShopContext
 }
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const digestShop: WeeklyDigestShop = {
     id: shop.id,
     slug: shop.slug,

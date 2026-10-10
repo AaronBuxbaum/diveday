@@ -6,9 +6,13 @@ import { createTrip } from "@/db/trips";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -54,7 +58,7 @@ const staffSession = (
  * with the window it is testing. Dana Reyes is the seeded owner.
  */
 async function staffContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const personId = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
   return { db, shop, personId };
 }
@@ -113,7 +117,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
   });
 
   it("rejects a non-staff caller even with a valid session shape", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue({
       user: {
