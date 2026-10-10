@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AGENCY_VERIFICATION_PAGES, agencyVerificationUrl } from "./agency-verification";
+import { AGENCY_VERIFICATION_PAGES } from "./agency-verification";
 import { CERTIFICATION_AGENCIES } from "./certification-options";
 
 /**
@@ -57,12 +57,5 @@ describe("agency verification pages", () => {
       cmas: "search_portal",
       padi: "member_sign_in",
     });
-  });
-
-  it("answers null for an agency with no lookup, and for other", () => {
-    expect(agencyVerificationUrl("raid")).toBeNull();
-    expect(agencyVerificationUrl("bsac")).toBeNull();
-    expect(agencyVerificationUrl("other")).toBeNull();
-    expect(agencyVerificationUrl("ssi")).toBe("https://my.divessi.com/online_diver_check");
   });
 });

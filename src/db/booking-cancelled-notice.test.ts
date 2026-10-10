@@ -2,12 +2,16 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { notificationIdempotencyKey } from "@/lib/notifications/kinds";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { cancellationMoney, sendBookingCancelledNotice } from "./booking-cancelled-notice";
 import { cancelBooking, createBooking } from "./bookings";
 import { setBookingPayment } from "./payments";
 import { bookings, notificationDeliveries, people } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 const ORIGIN = "https://diveday.example";
 
@@ -21,7 +25,7 @@ function capturingProvider(seen: Notification[]): NotificationProvider {
 }
 
 async function canceledBooking(email: string | null = "nora@example.com") {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [trip] = await upcomingTripsWithCounts(db, shop.id);
   if (!trip) throw new Error("demo trip missing");
   const booking = await createBooking(db, {
@@ -133,7 +137,7 @@ describe("sendBookingCancelledNotice", () => {
   });
 
   it("never tells a diver whose booking is not canceled", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("demo trip missing");
     const booking = await createBooking(db, {
@@ -183,7 +187,7 @@ describe("sendBookingCancelledNotice", () => {
   });
 
   it("never mails a seat that was not booked: a checked-in or no-show row taken off the roster", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("demo trip missing");
     const booking = await createBooking(db, {

@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createNitroxCertification } from "./nitrox";
 import {
   createCertification,
@@ -11,6 +11,10 @@ import {
 } from "./readiness";
 import { type CertificationAgency, certificationAgency, certifications } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * CMAS, RAID, GUE and BSAC are recordable, and recording them changes no gate.
@@ -33,7 +37,7 @@ import { getTripRoster, upcomingTripsWithCounts } from "./trips";
  * agency").
  */
 async function agencyContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");

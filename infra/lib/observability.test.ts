@@ -14,6 +14,8 @@ import {
   MUTATION_DURATION_SIGNAL,
   mutationDurationFilterPattern,
   queryConstructIdFor,
+  RENDER_DB_QUERIES_SIGNAL,
+  renderDbQueriesFilterPatternFor,
   SAVED_LOG_QUERIES,
   SES_REPUTATION_SIGNALS,
   sesReputationAlarmNameFor,
@@ -175,6 +177,37 @@ describe("the log-signal registry", () => {
     );
     expect(MUTATION_DURATION_SIGNAL.metricName).toBe("MutationDuration");
   });
+
+  /**
+   * The render-cost event is written through a constant, not a literal
+   * `log("...")` call, so the emitted-codes sweep above cannot see it. This pins
+   * the constant itself: rename it in `query-timing.ts` and the two filters
+   * would count zero forever.
+   */
+  it("keeps the render-cost metrics tied to the event the server writes", async () => {
+    const source = await readFile(
+      path.join(__dirname, "../../src/lib/observability/query-timing.ts"),
+      "utf8",
+    );
+    expect(source).toContain(`QUERY_TIMING_EVENT = "${RENDER_DB_QUERIES_SIGNAL.event}"`);
+    for (const field of RENDER_DB_QUERIES_SIGNAL.metrics.map((metric) => metric.field)) {
+      expect(source).toMatch(new RegExp(`\\b${field}[:,]`));
+    }
+    expect(RENDER_DB_QUERIES_SIGNAL.metrics.map(renderDbQueriesFilterPatternFor)).toEqual([
+      '{ $.event = "render.db_queries" && $.queries = * }',
+      '{ $.event = "render.db_queries" && $.ms = * }',
+    ]);
+  });
+
+  it("writes every saved query as one valid pipeline", () => {
+    // Each line after the first is a command, and Logs Insights needs the pipe
+    // in front of it; a line without one is a syntax error the console only
+    // reports when somebody finally runs the query.
+    for (const query of SAVED_LOG_QUERIES) {
+      const [, ...commands] = query.queryString.split("\n");
+      for (const command of commands) expect(command, query.name).toMatch(/^\| /);
+    }
+  });
 });
 
 describe("the synthesized observability stack", () => {
@@ -263,7 +296,9 @@ describe("the synthesized observability stack", () => {
 
     // Count signals plus web-vital signals; only the three Core Web Vitals
     // among the latter carry an alarm.
-    expect(filters).toHaveLength(LOG_SIGNALS.length + WEB_VITAL_SIGNALS.length + 1);
+    expect(filters).toHaveLength(
+      LOG_SIGNALS.length + WEB_VITAL_SIGNALS.length + 1 + RENDER_DB_QUERIES_SIGNAL.metrics.length,
+    );
     // The SES reputation alarms and the external uptime alarms are deliberately
     // absent: they are in the email and global stacks, and this count is what
     // would notice either silently reappearing here, where each would read a
@@ -318,6 +353,19 @@ describe("the synthesized observability stack", () => {
     // now refuses it, because the number this registry's header states depends
     // on the metric staying one metric after traffic arrives.
     expect(JSON.stringify(mutationFilter)).not.toContain('"Dimensions"');
+
+    // The render-cost pair, undimensioned for the same reason: a `Route`
+    // dimension is one billed metric per route template.
+    for (const metric of RENDER_DB_QUERIES_SIGNAL.metrics) {
+      const filter = filters.find((candidate) =>
+        candidate.Properties?.MetricTransformations?.some(
+          (transformation) => transformation.MetricName === metric.metricName,
+        ),
+      );
+      expect(filter?.Properties?.FilterPattern).toBe(renderDbQueriesFilterPatternFor(metric));
+      expect(filter?.Properties?.MetricTransformations?.[0]?.MetricValue).toBe(`$.${metric.field}`);
+      expect(JSON.stringify(filter)).not.toContain('"Dimensions"');
+    }
   });
 
   it("alarms on SES's own bounce and complaint rates at AWS's review line", () => {

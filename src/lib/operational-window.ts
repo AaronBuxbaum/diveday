@@ -134,11 +134,6 @@ export function shopDayWindow(now: Date): OperationalWindow {
   };
 }
 
-/** Whether a departure time falls inside a window. Both bounds inclusive. */
-export function withinWindow(window: OperationalWindow, at: Date): boolean {
-  return at.getTime() >= window.from.getTime() && at.getTime() <= window.to.getTime();
-}
-
 /**
  * The containment invariant the three surfaces rest on: anything the counter
  * shows *ahead of now* is inside the operational horizon, so a departure can

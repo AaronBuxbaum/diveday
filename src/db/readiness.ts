@@ -45,7 +45,7 @@ import {
 } from "./schema";
 import { liveTrip } from "./trips-live";
 import {
-  getCurrentWaiverTemplate,
+  getCurrentWaiverGeneration,
   listSignedWaiversByPerson,
   listTripsWaiverStatuses,
 } from "./waivers";
@@ -1513,7 +1513,7 @@ export async function listTripsReadiness(
             ),
           ),
       () => listTripsWaiverStatuses(db, shopId, tripIds),
-      () => getCurrentWaiverTemplate(db, shopId),
+      () => getCurrentWaiverGeneration(db, shopId),
       () =>
         db.select({ timezone: shops.timezone }).from(shops).where(eq(shops.id, shopId)).limit(1),
       () =>

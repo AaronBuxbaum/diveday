@@ -1,0 +1,5 @@
+{
+  "//": "Recorded CI milliseconds the Playwright and visual shards are dealt by (scripts/e2e-shard.mjs): `functional` per spec file, `visual` per test as its --test-list line. Written by `node scripts/e2e-durations.mjs merge`, weekly by .github/workflows/durations-refresh.yml; never edited by hand.",
+  "functional": {},
+  "visual": {}
+}

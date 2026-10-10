@@ -2,12 +2,11 @@ import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import {
-  guardianEmailRedacted,
   verifyWaiverIntegrity,
   WAIVER_INTEGRITY_VERSION_ERASED,
   WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED,
 } from "@/lib/waiver-integrity";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
 import { eraseGuardianEmail, listGuardianEmails } from "./guardian-erasure";
@@ -20,6 +19,10 @@ import {
   issueWaiverRequest,
   saveWaiverDraft,
 } from "./waivers";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * **A guardian's address, erased on its own** (H-103, issue #1673). The
@@ -49,7 +52,7 @@ async function staffWithRole(db: AppDb, shopId: string, role: "owner" | "instruc
 
 async function fixtures() {
   vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const trip = trips.find((row) => row.title === "Two-Tank Reef — Molasses & French");
   if (!trip) throw new Error("demo trip missing");
@@ -116,7 +119,7 @@ describe("eraseGuardianEmail", () => {
     expect(after.guardianEmailErasedByPersonId).toBe(owner);
     expect(after.integrityVersion).toBe(WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED);
     expect(verifyWaiverIntegrity(after)).toBe("valid");
-    expect(guardianEmailRedacted(after)).toBe(true);
+    expect(after.guardianEmailErasedAt).not.toBeNull();
     // Everything that was not the guardian's address is exactly as signed.
     expect(after).toMatchObject({
       signedName: before.signedName,

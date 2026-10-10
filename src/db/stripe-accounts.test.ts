@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { setShopCurrency } from "./shops";
 import {
   canAcceptPayments,
@@ -15,10 +15,14 @@ import {
   syncDemoStripeAccount,
   upsertShopStripeAccount,
 } from "./stripe-accounts";
-import { stripeKeySourceFromEnvironment } from "./stripe-key-source";
+import { stripeKeySourceFromEnvironment } from "./stripe-providers";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 async function shopContext() {
-  return seededShopContext();
+  return ctx;
 }
 
 describe("shop stripe accounts", () => {

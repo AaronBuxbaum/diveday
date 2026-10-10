@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ReadinessResult } from "./readiness";
-import { rosterRowIsBlocked, rosterRowNeedsWaiver } from "./roster-filters";
-import type { WaiverState } from "./waivers";
+import { rosterRowIsBlocked } from "./roster-filters";
 
 const ready: ReadinessResult = { status: "ready", blockers: [] };
 const blocked: ReadinessResult = {
@@ -30,43 +29,6 @@ describe("the roster's blocked chip", () => {
     const queueRule = (readiness: ReadinessResult | undefined) => readiness?.status === "blocked";
     for (const readiness of [ready, blocked, undefined]) {
       expect(rosterRowIsBlocked(readiness)).toBe(queueRule(readiness));
-    }
-  });
-});
-
-describe("the roster's needs-waiver chip", () => {
-  it("counts every state a send or resend would actually act on", () => {
-    expect(rosterRowNeedsWaiver("not_sent")).toBe(true);
-    expect(rosterRowNeedsWaiver("awaiting_signature")).toBe(true);
-    expect(rosterRowNeedsWaiver("expired")).toBe(true);
-  });
-
-  it("does not count a signed waiver", () => {
-    expect(rosterRowNeedsWaiver("complete")).toBe(false);
-  });
-
-  it("does not count a diver in medical review (regression)", () => {
-    // Their waiver *is* signed; it is waiting on a human to read a medical
-    // answer. The bulk send button already excludes them — it offers no
-    // checkbox — so the old `!== "complete"` chip promised work the surface
-    // beside it refused to let anyone do.
-    expect(rosterRowNeedsWaiver("medical_review")).toBe(false);
-  });
-
-  it("matches the bulk send button's own definition on every waiver state", () => {
-    // `WAIVER_CONTROL_KEYS` (RosterSection.tsx) gives `medical_review` and
-    // `complete` a null action and every other state a send/resend. The chip
-    // and the button must never disagree about which divers are sendable.
-    const sendable: Record<WaiverState, boolean> = {
-      not_sent: true,
-      awaiting_signature: true,
-      expired: true,
-      complete: false,
-      medical_review: false,
-      medical_not_cleared: false,
-    };
-    for (const [state, expected] of Object.entries(sendable)) {
-      expect(rosterRowNeedsWaiver(state as WaiverState)).toBe(expected);
     }
   });
 });

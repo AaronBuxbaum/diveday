@@ -5,6 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 import sharp from "sharp";
+import { loadCoverage } from "./check-route-coverage.mjs";
 import { CHECKS, censusNearMisses, clusterKey, settledEntryFor } from "./pixel-probe/analyze.mjs";
 
 /**
@@ -37,7 +38,6 @@ const ROOT = process.cwd();
 const OUT = path.join(ROOT, "e2e", "pixel-probe");
 const CAPTURES = path.join(OUT, "captures");
 const SETTLED = path.join(ROOT, "scripts", "pixel-probe-settled.json");
-const ROUTES = path.join(ROOT, "scripts", "route-coverage.json");
 const SCREENSHOTS = path.join(ROOT, "e2e", "screenshots");
 
 /** The nine audit families (the brief's split), by route pattern. */
@@ -653,7 +653,8 @@ async function main() {
     process.exit(1);
   }
   const settled = readJson(SETTLED, { settled: [] }).settled ?? [];
-  const ledger = readJson(ROUTES, {});
+  // The computed ledger: every route with its derived and hand-written captures.
+  const ledger = await loadCoverage(ROOT);
   const report = buildReport(records, { settled, ledger });
   fs.writeFileSync(path.join(OUT, "REPORT.md"), renderMarkdown(report));
   fs.writeFileSync(

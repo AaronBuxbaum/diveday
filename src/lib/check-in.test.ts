@@ -3,7 +3,6 @@ import {
   counterIsClear,
   counterIsDone,
   counterTally,
-  firstVisitMarksAnException,
   isBlockedAtCounter,
   isNoShowAtCounter,
   isSettledAtCounter,
@@ -75,27 +74,6 @@ describe("counterIsClear", () => {
    */
   it("is false when everyone is here but one of them cannot board", () => {
     expect(counterIsClear([seat("checked_in"), seat("checked_in", "blocked")])).toBe(false);
-  });
-});
-
-describe("firstVisitMarksAnException", () => {
-  /**
-   * The marker's whole value is that it singles somebody out. A shop's first
-   * season makes every diver in the queue a first visit, and the counter
-   * printed the line under all nine names at once — a row taller each, on the
-   * surface whose promise is a name and one tap, marking nobody.
-   */
-  it("is false when every visible diver is a first visit", () => {
-    expect(firstVisitMarksAnException([{ firstVisit: true }, { firstVisit: true }])).toBe(false);
-  });
-
-  it("is true when it separates one diver from another", () => {
-    expect(firstVisitMarksAnException([{ firstVisit: true }, { firstVisit: false }])).toBe(true);
-  });
-
-  it("is false when nobody is a first visit, and on an empty queue", () => {
-    expect(firstVisitMarksAnException([{ firstVisit: false }])).toBe(false);
-    expect(firstVisitMarksAnException([])).toBe(false);
   });
 });
 

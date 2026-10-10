@@ -1,7 +1,34 @@
 {
   "//": "Every ratcheted check:repo guard's counts, keyed by guard. A count may only fall: `node scripts/check-<guard>.mjs --write` banks a fall and refuses a rise; `--absorb \"<why>\"` records a deliberate rise with its reason. Shared code: scripts/ratchet.mjs.",
   "architecture": {
-    "//": "Pre-existing architecture-boundary violations, per file. Written by `node scripts/check-architecture.mjs --write`. This number may only go down — see scripts/check-architecture.mjs."
+    "//": "Pre-existing architecture-boundary violations, per file. Written by `node scripts/check-architecture.mjs --write`. This number may only go down — see scripts/check-architecture.mjs.",
+    "//absorbed": [
+      {
+        "why": "Three new seams (lib to db values, app to drizzle-orm, the trips barrel): what was left after draining the 2026-10-10 review's list",
+        "files": {
+          "src/app/shop/[shopSlug]/_components/ShopChrome.tsx": "0 -> 1",
+          "src/lib/auth.ts": "0 -> 3",
+          "src/lib/credentials.ts": "0 -> 1",
+          "src/lib/dive-declaration.ts": "0 -> 1",
+          "src/lib/dive-site-field-guide.ts": "0 -> 1",
+          "src/lib/dive-site-import.ts": "0 -> 1",
+          "src/lib/dive-site-template-sync.ts": "0 -> 1",
+          "src/lib/security-step-up.ts": "0 -> 2",
+          "src/lib/session.ts": "0 -> 3",
+          "src/lib/usage/alert-ledger.ts": "0 -> 1"
+        }
+      }
+    ],
+    "src/app/shop/[shopSlug]/_components/ShopChrome.tsx": 1,
+    "src/lib/auth.ts": 3,
+    "src/lib/credentials.ts": 1,
+    "src/lib/dive-declaration.ts": 1,
+    "src/lib/dive-site-field-guide.ts": 1,
+    "src/lib/dive-site-import.ts": 1,
+    "src/lib/dive-site-template-sync.ts": 1,
+    "src/lib/security-step-up.ts": 2,
+    "src/lib/session.ts": 3,
+    "src/lib/usage/alert-ledger.ts": 1
   },
   "bundle-reach": {
     "//": "Message-bundle keys no string literal in src/ can reach, per bundle. Written by `node scripts/check-bundle-reach.mjs --write`. This number may only go down — see scripts/check-bundle-reach.mjs. An entry is a list to triage, not a list to delete on sight: some are a hole in the walk.",
@@ -164,14 +191,23 @@
   },
   "function-length": {
     "//": "Line counts of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 400 lines, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
+    "//absorbed": [
+      {
+        "why": "merge of layer 4 (speed layer grew getTodayWork and ManageTripPage; the erasure split shrank scrub)",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": "1043 -> 1047",
+          "src/db/today.ts#getTodayWork": "1438 -> 1453"
+        }
+      }
+    ],
     "src/app/api/test/seed-trouble-states/route.ts#POST": 405,
     "src/app/api/webhooks/stripe/route.ts#POST": 501,
     "src/app/ready/[token]/_components/AfterState.tsx#AfterState": 476,
     "src/app/ready/[token]/page.tsx#DiverReadinessPage": 989,
-    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 1114,
+    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 1101,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 503,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 615,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx#TripDetailPage": 738,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx#TripDetailPage": 732,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": 529,
     "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 705,
     "src/app/shop/[shopSlug]/dive-sites/_components/SiteFields.tsx#SiteFields": 714,
@@ -183,7 +219,7 @@
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 460,
     "src/app/shop/[shopSlug]/reports/page.tsx#ReportsPage": 586,
     "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 786,
-    "src/app/shop/[shopSlug]/schedule/board/page.tsx#ScheduleBoardPage": 905,
+    "src/app/shop/[shopSlug]/schedule/board/page.tsx#ScheduleBoardPage": 890,
     "src/app/shop/[shopSlug]/settings/import/ImportWizard.tsx#ImportWizard": 553,
     "src/app/shop/[shopSlug]/staffing/page.tsx#StaffingPage": 454,
     "src/app/shop/[shopSlug]/trips/[id]/_components/CrewSection.tsx#CrewSection": 442,
@@ -191,13 +227,12 @@
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 516,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.tsx#DiverRollCall": 755,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx#TripManifestPage": 918,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 1043,
-    "src/app/waivers/[token]/page.tsx#WaiverPage": 792,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 1047,
+    "src/app/waivers/[token]/page.tsx#WaiverPage": 791,
     "src/components/BookingPartyFields.tsx#BookingPartyFields": 416,
     "src/components/DateRequestForm.tsx#DateRequestForm": 418,
     "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 537,
     "src/components/search/CommandPalette.tsx#CommandPalette": 658,
-    "src/db/anonymize.ts#scrub": 1549,
     "src/db/bookings.ts#createBookingRecord": 470,
     "src/db/checkouts.ts#startBookingCheckout": 443,
     "src/db/export.ts#loadShopExportContext": 508,
@@ -208,7 +243,7 @@
     "src/db/seed-more-trips.ts#seedMoreTrips": 747,
     "src/db/seed-trips.ts#seedTrips": 582,
     "src/db/seed.ts#resetDemoSchedule": 452,
-    "src/db/today.ts#getTodayWork": 1438,
+    "src/db/today.ts#getTodayWork": 1453,
     "src/lib/import.ts#prepareContactImport": 638
   },
   "locale": {
@@ -262,8 +297,8 @@
     "src/app/page.tsx": 592,
     "src/app/pricing/page.tsx": 468,
     "src/app/ready/[token]/page.tsx": 1614,
-    "src/app/s/[shopSlug]/page.tsx": 1351,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 877,
+    "src/app/s/[shopSlug]/page.tsx": 1336,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 867,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
     "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx": 772,
     "src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx": 406,
@@ -277,15 +312,15 @@
     "src/app/shop/[shopSlug]/promos/page.tsx": 608,
     "src/app/shop/[shopSlug]/reports/page.tsx": 686,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 466,
-    "src/app/shop/[shopSlug]/schedule/board/page.tsx": 1003,
+    "src/app/shop/[shopSlug]/schedule/board/page.tsx": 987,
     "src/app/shop/[shopSlug]/settings/import/page.tsx": 508,
     "src/app/shop/[shopSlug]/settings/integrations/page.tsx": 496,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 873,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 626,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1134,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1185,
-    "src/app/waivers/[token]/page.tsx": 917
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1183,
+    "src/app/waivers/[token]/page.tsx": 916
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

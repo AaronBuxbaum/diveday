@@ -13,13 +13,17 @@ import { DIVE_SITE_LANDMARK_KINDS, type DiveSiteLandmark } from "@/lib/dive-site
 import { MAX_ROUTE_POINTS } from "@/lib/dive-site-route";
 import { buildCsv } from "@/lib/export";
 import { MAX_IMPORT_BYTES, MAX_IMPORT_CELL_LENGTH, MAX_IMPORT_ROWS } from "@/lib/import";
-import { seededShopContext, unseededTestDb } from "@/test/db";
+import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
 import { commitDiveSiteImport } from "./dive-site-import";
 import { diveSitePhotoUrlsHeldByShop } from "./dive-site-photos";
 import { listDiveSiteCreatures, listDiveSites, replaceDiveSiteCreatures } from "./dive-sites";
 import { loadShopExportBundleInput } from "./export";
 import { diveSites, people, shops } from "./schema";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /** One file of the shop's bundle, exactly as the export would hand it over. */
 async function exportedCsv(db: AppDb, shopId: string, file: string): Promise<string> {
@@ -89,7 +93,7 @@ describe("the dive-site importer", () => {
    * disappearing out of somebody's library.
    */
   it("knows every column the export writes, in the order it writes them", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const bundle = await loadShopExportBundleInput(db, shop.id);
     const table = bundle?.tables.find((candidate) => candidate.file === "dive_sites.csv");
     expect(table?.header).toEqual([...DIVE_SITE_IMPORT_COLUMNS]);
@@ -102,7 +106,7 @@ describe("the dive-site importer", () => {
    * renamed.
    */
   it("reads a shop's own bundle back onto the sites it came from", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const before = await listDiveSites(db, shop.id);
     expect(before.length).toBeGreaterThan(0);
 
@@ -150,7 +154,7 @@ describe("the dive-site importer", () => {
    * library must never be written here.
    */
   it("creates the library in a shop the bundle did not come from", async () => {
-    const source = await seededShopContext();
+    const source = ctx;
     const csv = await exportedDiveSitesCsv(source.db, source.shop.id);
     const expected = await listDiveSites(source.db, source.shop.id);
 
@@ -420,7 +424,7 @@ describe("the dive-site importer", () => {
   it("reads every photo a shop's own sites hold, and none of another shop's", async () => {
     vi.stubEnv("MEDIA_PUBLIC_URL_BASE", "https://media.example.com");
     try {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const [other] = await db
         .insert(shops)
         .values({ name: "Other Reef", slug: "other-reef-photos", timezone: "America/New_York" })
@@ -494,7 +498,7 @@ describe("the dive-site importer", () => {
    * scenario the name match exists for.
    */
   it("says nothing was written when the name it matched belongs to a deleted site", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [site] = await listDiveSites(db, shop.id);
     if (!site) throw new Error("expected a seeded dive site");
     await db.update(diveSites).set({ deletedAt: nowDate() }).where(eq(diveSites.id, site.id));
@@ -529,7 +533,7 @@ describe("the dive-site importer", () => {
    * was asked to put back.
    */
   it("matches on the name when the id belongs to nobody here", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [existing] = await listDiveSites(db, shop.id);
     if (!existing) throw new Error("expected a seeded dive site");
     const csv = buildCsv(
@@ -571,7 +575,7 @@ describe("the dive-site importer", () => {
    * anybody asking.
    */
   it("restores a deleted site still deleted", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [site] = await listDiveSites(db, shop.id);
     if (!site) throw new Error("expected a seeded dive site");
     const deletedAt = new Date("2026-08-01T12:00:00.000Z");
@@ -642,14 +646,14 @@ describe("restoring the field guide from dive_site_creatures.csv", () => {
   const SOURCE_ID = "11111111-1111-4111-8111-111111111111";
 
   it("knows every column the export writes, in the order it writes them", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const bundle = await loadShopExportBundleInput(db, shop.id);
     const table = bundle?.tables.find((candidate) => candidate.file === "dive_site_creatures.csv");
     expect(table?.header).toEqual([...DIVE_SITE_CREATURE_IMPORT_COLUMNS]);
   });
 
   it("restores every site's species, in order, into a shop the bundle did not come from", async () => {
-    const source = await seededShopContext();
+    const source = ctx;
     const expected = await guidesByName(source.db, source.shop.id);
     expect([...expected.values()].some((slugs) => slugs.length > 0)).toBe(true);
     const sitesFile = await exportedDiveSitesCsv(source.db, source.shop.id);
@@ -673,7 +677,7 @@ describe("restoring the field guide from dive_site_creatures.csv", () => {
   });
 
   it("leaves a site's guide alone when the upload carries no creatures file", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const before = await guidesByName(db, shop.id);
     const summary = await commitDiveSiteImport(
       db,
@@ -686,7 +690,7 @@ describe("restoring the field guide from dive_site_creatures.csv", () => {
   });
 
   it("skips a row naming a site the file did not place, even one this shop holds", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [held] = await listDiveSites(db, shop.id);
     if (!held) throw new Error("expected a seeded dive site");
     await replaceDiveSiteCreatures(db, shop.id, held.id, ["green-sea-turtle"]);
@@ -714,7 +718,7 @@ describe("restoring the field guide from dive_site_creatures.csv", () => {
   });
 
   it("never writes onto another shop's site, whatever id the file names", async () => {
-    const victim = await seededShopContext();
+    const victim = ctx;
     const [theirs] = await listDiveSites(victim.db, victim.shop.id);
     if (!theirs) throw new Error("expected a seeded dive site");
     const before = await listDiveSiteCreatures(victim.db, victim.shop.id, theirs.id);

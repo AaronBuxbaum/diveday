@@ -9,10 +9,7 @@ import {
 } from "@/lib/last-minute-list";
 import { minorToMajor } from "@/lib/money";
 import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
-import {
-  type PromotionProvider,
-  promotionProviderFromEnvironment,
-} from "@/lib/payments/promotions";
+import type { PromotionProvider } from "@/lib/payments/promotions";
 import {
   isValidPromoDiscountAmountCents,
   type PromoDiscount,
@@ -37,8 +34,10 @@ import {
 import { listCertificationSummaries } from "./self-declared-cards";
 import { getShopById } from "./shops";
 import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
-import { getTripWaitlist, getTripWithBooked } from "./trips";
+import { promotionProviderFromEnvironment } from "./stripe-providers";
 import { liveTrip } from "./trips-live";
+import { getTripWithBooked } from "./trips-record";
+import { getTripWaitlist } from "./trips-roster";
 
 export type SendLastMinuteDealInput = {
   shopId: string;

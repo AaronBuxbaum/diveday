@@ -6,11 +6,10 @@
  * `waiver-actions.ts` — so a one-line fix to a card does not open the whole record's doors.
  * Not a `"use server"` module: nothing here is callable from the client.
  */
-import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { loadActiveStaffRoles } from "@/db/authz";
 import { type AppDb, getDb } from "@/db/client";
-import { people } from "@/db/schema";
+import { getMergedIntoPersonId } from "@/db/people";
 import { isStaff } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -109,13 +108,9 @@ export async function requireDiverActionContext(
   // the old id. Every write below would land on a deleted pointer row the
   // staffer can no longer see, so it lands nowhere: the staffer is sent to the
   // kept record, told nothing was saved, and makes the change there.
-  const [row] = await db
-    .select({ mergedInto: people.mergedIntoPersonId })
-    .from(people)
-    .where(and(eq(people.id, personId), eq(people.shopId, staff.user.shopId)))
-    .limit(1);
-  if (row?.mergedInto) {
-    const kept = shopPath(shopSlug, "divers", row.mergedInto);
+  const mergedInto = await getMergedIntoPersonId(db, staff.user.shopId, personId);
+  if (mergedInto) {
+    const kept = shopPath(shopSlug, "divers", mergedInto);
     revalidateAndRedirect(kept, noticeUrl(kept, "merged-record-moved"));
   }
   return { base, db, personId, staff };

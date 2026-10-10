@@ -1,8 +1,8 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getShopBookingTripId } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { type PaperCourseFormOutcome, recordPaperCourseForm } from "@/db/course-forms";
 import { recordCourseMaterialsDone } from "@/db/course-materials";
@@ -13,7 +13,7 @@ import {
   issueShopNitroxCertification,
   issueShopSpecialtyCertification,
 } from "@/db/readiness";
-import { bookings, diveSpecialty } from "@/db/schema";
+import { diveSpecialty } from "@/db/schema";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface } from "@/lib/session";
@@ -209,14 +209,10 @@ export async function recordPaperCourseFormAction(
   const formId = uuidParam(String(formData.get("formId") ?? ""));
   if (!bookingId || !formId) redirect(noticeUrl(back, "course-form-unavailable"));
   const dbi = await getDb();
-  const [seat] = await dbi
-    .select({ tripId: bookings.tripId })
-    .from(bookings)
-    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, s.user.shopId)))
-    .limit(1);
   // The row posts its own booking; one from another departure is not this
   // roster's to record against.
-  if (seat?.tripId !== tripId) redirect(noticeUrl(back, "course-form-unavailable"));
+  if ((await getShopBookingTripId(dbi, s.user.shopId, bookingId)) !== tripId)
+    redirect(noticeUrl(back, "course-form-unavailable"));
   const guardianName = String(formData.get("guardianName") ?? "").trim();
   const guardianRelationship = String(formData.get("guardianRelationship") ?? "").trim();
   const recorded = await recordPaperCourseForm(dbi, {

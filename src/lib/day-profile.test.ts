@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayProfileHasFacts, dayProfileRows, type PlannedDive } from "./day-profile";
+import { dayProfileRows, type PlannedDive } from "./day-profile";
 import { DEFAULT_DOCK_DAY_RHYTHM, dockDayOffsets } from "./diver-planning";
 
 /**
@@ -46,22 +46,6 @@ describe("dayProfileRows", () => {
     expect(rows.filter((row) => row.kind === "dive").map((row) => row.bottomTimeMinutes)).toEqual([
       30, 45,
     ]);
-  });
-
-  it("leaves a missing time null rather than printing a zero", () => {
-    // A rhythm with no bottom time cannot be written through Settings
-    // (`DOCK_DAY_LIMITS` floors it at 5), so this is an imported or hand-fixed
-    // row. "0 minutes in the water" is worse than saying nothing.
-    const rows = dayProfileRows({
-      dives: [dive(1), dive(2)],
-      rhythm: { ...DEFAULT_DOCK_DAY_RHYTHM, bottomTimeMinutes: 0, surfaceIntervalMinutes: 0 },
-      diveMode: "shore",
-    });
-    expect(rows).toEqual([
-      { kind: "dive", number: 1, siteMaxDepthMeters: null, bottomTimeMinutes: null },
-      { kind: "dive", number: 2, siteMaxDepthMeters: null, bottomTimeMinutes: null },
-    ]);
-    expect(dayProfileHasFacts(rows)).toBe(false);
   });
 
   it("orders the dives itself, so a gap never lands after the wrong one", () => {

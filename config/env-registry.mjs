@@ -37,6 +37,10 @@
  *   through HKDF. Stack-produced by another name.
  * - `manual` -- no system can mint it. A human pastes it from a third-party
  *   console or 1Password. These, and only these, are what `.env.manual` holds.
+ * - `harness` -- the Playwright harness sets it on the servers it starts
+ *   (`playwright.config.ts`, `e2e/servers.ts`). Nobody supplies it, it goes to
+ *   no target, and a deployment carrying it is misconfigured, so these rows
+ *   are `forbiddenInProduction`.
  *
  * There used to be a fourth, `constant`: a non-secret identifier of DiveDay's
  * own, checked in here and carried through Secrets Manager to Vercel on every
@@ -72,12 +76,15 @@
  * `requiredInProduction: true` is the exception: its absence from a production
  * deployment is a security gap, not a feature turned off, so
  * `pnpm check:env` refuses it when run with VERCEL_ENV=production.
+ * `forbiddenInProduction: true` is the mirror image: a value whose *presence*
+ * in production is the gap, refused by the same check.
  */
 
 const LOCAL = ["local"];
 const VERCEL = ["vercel"];
 const LOCAL_AND_VERCEL = ["local", "vercel"];
 const LOCAL_AND_GITHUB = ["local", "github"];
+const NOWHERE = [];
 
 export const ENV_GROUPS = [
   {
@@ -886,6 +893,31 @@ export const ENV_GROUPS = [
       },
     ],
   },
+  {
+    doc: [
+      "The e2e harness's own switches, set by playwright.config.ts on every server it",
+      "starts and never anywhere else. DIVEDAY_E2E=1 re-opens the /api/test/* routes in",
+      "a production runtime; DIVEDAY_E2E_SECRET is the bearer token those routes also",
+      "require (src/lib/e2e-test-routes.ts). Both stay closed while DATABASE_URL is",
+      "set, and `pnpm check:env` fails a production build that carries either one.",
+    ],
+    keys: [
+      {
+        key: "DIVEDAY_E2E",
+        from: "harness",
+        targets: NOWHERE,
+        forbiddenInProduction: true,
+        absent: "the /api/test/* routes are closed in a production runtime",
+      },
+      {
+        key: "DIVEDAY_E2E_SECRET",
+        from: "harness",
+        targets: NOWHERE,
+        forbiddenInProduction: true,
+        absent: "every /api/test/* route refuses, whatever else is set",
+      },
+    ],
+  },
 ];
 
 /** Every entry, flattened, in `.env.example` order. */
@@ -922,6 +954,10 @@ export const isStackProduced = (key) => {
 /** Keys a production deployment must carry; see `requiredInProduction` above. */
 export const keysRequiredInProduction = () =>
   ENV_ENTRIES.filter((entry) => entry.requiredInProduction === true).map((entry) => entry.key);
+
+/** Keys a production deployment must not carry; see `forbiddenInProduction` above. */
+export const keysForbiddenInProduction = () =>
+  ENV_ENTRIES.filter((entry) => entry.forbiddenInProduction === true).map((entry) => entry.key);
 
 /** Whether a target file carries this key at all. */
 export const goesTo = (key, target) => Boolean(byKey.get(key)?.targets.includes(target));

@@ -24,18 +24,15 @@ import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "
 import { listTripPrepDivers } from "./rental-fit";
 import { ratingCredentialsByPerson } from "./staff-credentials";
 import { crewShiftCoverage } from "./staffing";
+import { boatClashes } from "./trips-clashes";
+import { crewClashes, getTripCrewAssignments, listStaff } from "./trips-crew";
 import {
-  boatClashes,
   bookedDiverLanguages,
-  crewClashes,
-  getTripCrewAssignments,
-  getTripSeriesSummary,
   getTripWithBooked,
-  listOffCadenceSeriesTrips,
-  listStaff,
   listTripDives,
   listTripScheduleDays,
-} from "./trips";
+} from "./trips-record";
+import { getTripSeriesSummary, listOffCadenceSeriesTrips } from "./trips-series";
 import type { TripSharedReads } from "./trips-shared-reads";
 
 /**

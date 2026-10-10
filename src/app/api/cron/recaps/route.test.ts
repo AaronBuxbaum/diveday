@@ -61,7 +61,7 @@ describe("GET /api/cron/recaps", () => {
     expect(Sentry.captureCheckIn).toHaveBeenNthCalledWith(
       1,
       { monitorSlug: "diveday-recaps", status: "in_progress" },
-      expect.objectContaining({ schedule: { type: "crontab", value: "0 * * * *" } }),
+      expect.objectContaining({ schedule: { type: "crontab", value: "2 * * * *" } }),
     );
     expect(Sentry.captureCheckIn).toHaveBeenNthCalledWith(2, {
       checkInId: "check-in-id",

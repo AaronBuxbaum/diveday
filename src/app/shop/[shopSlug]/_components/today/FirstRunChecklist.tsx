@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { Copyable } from "@/components/Copyable";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";

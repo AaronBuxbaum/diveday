@@ -17,7 +17,6 @@ import {
 } from "@/lib/notifications/sms";
 import { gearServiceDueText, workOrderReadyText } from "@/lib/notifications/work-order-emails";
 import type { InvoicingProvider } from "@/lib/payments/invoicing";
-import { invoicingProviderFromEnvironment } from "@/lib/payments/invoicing";
 import { maySendNow } from "@/lib/send-window";
 import {
   customerGearDueDates,
@@ -52,6 +51,7 @@ import {
 } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
+import { invoicingProviderFromEnvironment } from "./stripe-providers";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 /**

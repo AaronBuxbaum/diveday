@@ -9,7 +9,7 @@ import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { TripGuests } from "@/db/trips-guests";
+import type { TripGuests } from "@/db/trips";
 import { activityLine } from "@/i18n/activity-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { cancellationDeadline } from "@/lib/deposits";

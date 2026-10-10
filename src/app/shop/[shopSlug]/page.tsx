@@ -297,114 +297,158 @@ async function TodayBody({
   const authNoticeKey = noticeFromParam(notice, AUTH_NOTICES);
 
   const now = nowDate();
-  // The reader's own unfinished forms (ADR 20260906-before-you-ask, decision 3).
-  const spineDrafts: SpineDraft[] = (
-    await listFreshFormDrafts(db, shop.id, session.user.personId, now)
-  ).map((draft) => ({
+  // Real shops only — the demo shop already teaches its own tour via the role switcher banner, and
+  // a dismissal there would be meaningless (every demo visit signs in as a fresh, credential-shared
+  // session).
+  const orientationRole = shop.isDemo ? null : orientationRoleFor(session.user.roles);
+  const season = { month: shop.seasonStartMonth, day: shop.seasonStartDay };
+  // **Two waves, not thirteen phases** (code review 2026-10-10, item 2): this wave needs only the
+  // shop, the reader and the clock; the next needs its answers. A read a later branch may discard
+  // is still started here — each is bounded, and that branch is mostly a first run with no rows.
+  const [
+    freshDrafts,
+    canReadShopMoney,
+    evidence,
+    [arrivalRows, counterOpen],
+    closeout,
+    shopTripCount,
+    stripeAccount,
+    everTakenAnOrder,
+    firstBookingRead,
+    scale,
+    orientationDismissed,
+  ] = await Promise.all([
+    // The reader's own unfinished forms (ADR 20260906-before-you-ask, decision 3).
+    listFreshFormDrafts(db, shop.id, session.user.personId, now),
+    // **Who on this page may read the shop's money**, asked once, of the database (issue #1930,
+    // security review F1).
+    //
+    // Three things here are gated on it: the owed-refund and stuck-payment rows in the Today queue,
+    // the same rows inside the close-out, and the day's takings below. All three read
+    // `canPersonViewShopReports` now; two of them read `canViewShopReports(session.user.roles)`
+    // until this change, and that is the **JWT's** roles — snapshotted once at sign-in and never
+    // re-derived (`src/lib/auth.ts`, `input: false`). A manager demoted to captain this morning
+    // still passes `requireStaffSession` as staff, so the stale claim kept handing them owed-refund
+    // rows naming a diver and an amount for the life of the session. The live read closes that
+    // window, the way export and import already close theirs.
+    //
+    // One extra bounded read — three indexed selects — on every shop-home render, which is the
+    // price of a money gate that revokes.
+    canPersonViewShopReports(db, shop.id, session.user.personId),
+    // One readiness pass for the whole horizon, shared by both shop-day reads below. It costs about
+    // ten queries; running it twice would double the page's entire database bill for one collapsed
+    // disclosure.
+    sharedInHorizonReadiness(db, shop.id, now),
+    Promise.all([
+      arrivalQuery ? listCheckInQueue(db, shop.id, { query: arrivalQuery, now }) : [],
+      arrivalQuery ? true : hasArrivals(db, shop.id, now),
+    ]),
+    // **The day's closing state** (ADR 20260827-clearwater-surface-language, decision 4): how each
+    // of today's boats settled, for the evening stations.
+    getDayCloseout(db, shop.id, shop.timezone, now),
+    // Whether this shop has ever had a departure: the first-run checklist's gate and the
+    // first-bookable moment's count, below. A demo shop sits out of both, so it is never asked.
+    shop.isDemo ? null : countShopTrips(db, shop.id),
+    // The setup ledger's Stripe step and the desk's payments row; a demo shop shows neither.
+    shop.isDemo ? null : getShopStripeAccount(db, shop.id),
+    shop.isDemo ? true : shopHasEverTakenAnOrder(db, shop.id),
+    shop.isDemo ? null : shopFirstBooking(db, shop.id, now),
+    seasonScale(db, shop.id, shop.timezone, seasonStartInstant(now, shop.timezone, season), now),
+    orientationRole === null ? true : isOrientationDismissed(db, session.user.personId),
+  ]);
+  const spineDrafts: SpineDraft[] = freshDrafts.map((draft) => ({
     form: draft.form,
-    // Exhaustive by type rather than a ternary: a fourth draft kind added
-    // without a door here used to resolve, silently, to the diver form — a
-    // "resume" link that opened the wrong page with somebody else's answers in
-    // it.
+    // Exhaustive by type rather than a ternary: a fourth draft kind added without a door here used
+    // to resolve, silently, to the diver form — a "resume" link that opened the wrong page with
+    // somebody else's answers in it.
     href: `/shop/${shopSlug}${FORM_DRAFT_RESUME_SUFFIX[draft.form]}`,
   }));
-  // The lens (20260721-role-aware-landing): a captain or divemaster's Today
-  // filters to boat work and badges the boat they crew; an instructor's leads
-  // with their sessions. It never re-orders the spine — clock order wins.
+  // The lens (20260721-role-aware-landing): a captain or divemaster's Today filters to boat work
+  // and badges the boat they crew; an instructor's leads with their sessions. It never re-orders
+  // the spine — clock order wins.
   const lens = roleLensFor(session.user.roles);
-  // **Who on this page may read the shop's money**, asked once, of the
-  // database (issue #1930, security review F1).
+  const eveningClose = assembleEveningClose(closeout.departures, now);
+  // **The shop's own calendar day**, as the two UTC instants that bracket it. Four readers below
+  // want it — the first-boat-ever question, the day strip's window and ticks, and the day's takings
+  // — and it is the host's day for none of them, so it is computed once here rather than per
+  // caller.
+  const dayBounds = shopDayBounds(now, shop.timezone);
+  // The second wave: the queue (needs the readiness pass and money gate) beside the closing reads.
   //
-  // Three things here are gated on it: the owed-refund and stuck-payment rows
-  // in the Today queue, the same rows inside the close-out, and the day's
-  // takings below. All three read `canPersonViewShopReports` now; two of them
-  // read `canViewShopReports(session.user.roles)` until this change, and that
-  // is the **JWT's** roles — snapshotted once at sign-in and never re-derived
-  // (`src/lib/auth.ts`, `input: false`). A manager demoted to captain this
-  // morning still passes `requireStaffSession` as staff, so the stale claim
-  // kept handing them owed-refund rows naming a diver and an amount for the
-  // life of the session. The live read closes that window, the way export and
-  // import already close theirs.
+  // Tomorrow is read beside today rather than after it, and only as its departure cards
+  // (`getShopDayDepartures`): the jobs behind the disclosure are today's own ranked queue,
+  // re-filed, so a job is counted exactly once wherever its boat happens to sail - and a second
+  // whole queue, read only to keep its departures, was about forty statements thrown away.
   //
-  // One extra bounded read — three indexed selects — on every shop-home
-  // render, which is the price of a money gate that revokes.
-  const canReadShopMoney = await canPersonViewShopReports(db, shop.id, session.user.personId);
-  // One readiness pass for the whole horizon, shared by both shop-day reads
-  // below. It costs about ten queries; running it twice would double the
-  // page's entire database bill for one collapsed disclosure.
-  const evidence = await sharedInHorizonReadiness(db, shop.id, now);
-  // Tomorrow is read beside today rather than after it, and only as its
-  // departure cards (`getShopDayDepartures`): the jobs behind the disclosure
-  // are today's own ranked queue, re-filed, so a job is counted exactly once
-  // wherever its boat happens to sail - and a second whole queue, read only
-  // to keep its departures, was about forty statements thrown away.
-  const [work, tomorrowDepartures] = await Promise.all([
-    getTodayWork(
-      db,
-      shop.id,
-      shopSlug,
-      shop.timezone,
-      now,
-      lens ? session.user.personId : undefined,
-      t,
-      locale,
-      // Stuck Stripe operations and failed photo deletions are owner/manager
-      // chores — same gate as Reports (task 157), read live above.
-      canReadShopMoney,
-      evidence,
-      shopCrewTarget(shop),
-      session.user.roles,
-    ),
-    getShopDayDepartures(db, shop.id, shop.timezone, tomorrowNoon(now, shop.timezone), evidence),
-  ]);
+  // Two bounded reads, and only when there is a day to close over: who made the last roll-call mark
+  // on each settled boat, and whether this staffer may generate a departure's log at all. The log
+  // gate is checked against the database rather than the session's roles so a demotion takes effect
+  // at once, and resolved once here rather than per station.
+  //
+  // **What today made** — the evening's one money reading (issue #1930; ADR 20260919-one-idea,
+  // decision I · Tide: "money is what the day made"). It renders above the closing block and inside
+  // nothing; `DayTakings.tsx` carries the placement and its decision.
+  //
+  // **The month's own derivation, over the day's bounds.** `getMonthlyReport` is window-shaped —
+  // nothing in it is month-specific but its name — and it anchors every figure to `trips.startsAt`,
+  // so the day is the same query with `shopDayBounds` in place of `shopMonthBounds`. That is
+  // deliberate rather than convenient: a second derivation would let tonight's figure and the same
+  // day inside `/reports` disagree, and which of them a shop then believed would be a coin toss.
+  // `reporting.test.ts` pins the two together by summing the days of a month against the month
+  // itself.
+  //
+  // **Gated before it is read.** `canReadShopMoney` is the live role read resolved in the first
+  // wave, so a reader who may not have the number never causes the query that would produce it —
+  // and the whole thing is skipped until the day is closing, so the ordinary morning render pays
+  // nothing for it.
+  const [work, tomorrowDepartures, [headCountCloses, canOpenLog], sailedBefore, dayMonthReport] =
+    await Promise.all([
+      getTodayWork(
+        db,
+        shop.id,
+        shopSlug,
+        shop.timezone,
+        now,
+        lens ? session.user.personId : undefined,
+        t,
+        locale,
+        // Stuck Stripe operations and failed photo deletions are owner/manager chores — same gate
+        // as Reports (task 157), read live above.
+        canReadShopMoney,
+        evidence,
+        shopCrewTarget(shop),
+        session.user.roles,
+      ),
+      getShopDayDepartures(db, shop.id, shop.timezone, tomorrowNoon(now, shop.timezone), evidence),
+      eveningClose.stations.length > 0
+        ? Promise.all([
+            listHeadCountCloses(
+              db,
+              shop.id,
+              eveningClose.stations
+                .filter((station) => station.status === "all_home")
+                .map((station) => station.tripId),
+            ),
+            canPersonExportIncidentRecord(db, shop.id, session.user.personId),
+          ])
+        : ([new Map(), false] as [Map<string, { closedAt: Date; closedBy: string }>, boolean]),
+      // The once-ever wording, asked for only in the moment it could apply.
+      eveningClose.allHome ? shopHasSailedBefore(db, shop.id, dayBounds.from) : true,
+      eveningClose.closing && canReadShopMoney
+        ? getMonthlyReport(db, shop.id, dayBounds.from, dayBounds.to, {
+            currency: shop.currency,
+            timeZone: shop.timezone,
+          })
+        : null,
+    ]);
   const { actions, withheldCount, nextDeparture, crewedTripIds, crewedSessions } = work;
   const spine = assembleDaySpine(work, { departures: tomorrowDepartures, actions: [] });
-  const [arrivalRows, counterOpen] = await Promise.all([
-    arrivalQuery ? listCheckInQueue(db, shop.id, { query: arrivalQuery, now }) : [],
-    arrivalQuery ? true : hasArrivals(db, shop.id, now),
-  ]);
-  // **The day's closing state** (ADR 20260827-clearwater-surface-language,
-  // decision 4): how each of today's boats settled, for the evening stations.
-  const closeout = await getDayCloseout(db, shop.id, shop.timezone, now);
-  const eveningClose = assembleEveningClose(closeout.departures, now);
-  // **The shop's own calendar day**, as the two UTC instants that bracket it.
-  // Four readers below want it — the first-boat-ever question, the day strip's
-  // window and ticks, and the day's takings — and it is the host's day for
-  // none of them, so it is computed once here rather than per caller.
-  const dayBounds = shopDayBounds(now, shop.timezone);
-  // The day's whole board, clock order — the strip's marks and the count under
-  // the date both read it.
+  // The day's whole board, clock order — the strip's marks and the count under the date both read
+  // it.
   const dayDepartures = [...closeout.departures].sort(
     (a, b) => a.startsAt.getTime() - b.startsAt.getTime(),
   );
-  // Two bounded reads, and only when there is a day to close over: who made
-  // the last roll-call mark on each settled boat, and whether this staffer may
-  // generate a departure's log at all. The log gate is checked against the
-  // database rather than the session's roles so a demotion takes effect at
-  // once, and resolved once here rather than per station.
-  const [headCountCloses, canOpenLog]: [
-    Map<string, { closedAt: Date; closedBy: string }>,
-    boolean,
-  ] =
-    eveningClose.stations.length > 0
-      ? await Promise.all([
-          listHeadCountCloses(
-            db,
-            shop.id,
-            eveningClose.stations
-              .filter((station) => station.status === "all_home")
-              .map((station) => station.tripId),
-          ),
-          canPersonExportIncidentRecord(db, shop.id, session.user.personId),
-        ])
-      : [new Map(), false];
-  // The once-ever wording, asked for only in the moment it could apply.
-  const firstBoatEver =
-    eveningClose.allHome && !(await shopHasSailedBefore(db, shop.id, dayBounds.from));
-  // Real shops only — the demo shop already teaches its own tour via the
-  // role switcher banner, and a dismissal there would be meaningless (every
-  // demo visit signs in as a fresh, credential-shared session).
-  const orientationRole = shop.isDemo ? null : orientationRoleFor(session.user.roles);
+  const firstBoatEver = eveningClose.allHome && !sailedBefore;
   async function dismissOrientationAction() {
     "use server";
     const staff = await requireStaffSession();
@@ -413,22 +457,20 @@ async function TodayBody({
   }
   // **First run is "never had a departure", not "none coming up".**
   //
-  // `nextDeparture` is null in three different situations, and only one of them
-  // is a new shop: `getTodayWork` hands it back *only when nothing sails today*
-  // (`src/db/today.ts`), so a shop whose boat left this morning read as
-  // identical to a shop that had never opened. So `!nextDeparture` stays only
-  // as the cheap prefilter it can honestly be — a shop with no trips has none
-  // upcoming — and the count is what decides.
+  // `nextDeparture` is null in three different situations, and only one of them is a new shop:
+  // `getTodayWork` hands it back *only when nothing sails today* (`src/db/today.ts`), so a shop
+  // whose boat left this morning read as identical to a shop that had never opened. So
+  // `!nextDeparture` stays only as the cheap prefilter it can honestly be — a shop with no trips
+  // has none upcoming — and the count is what decides.
   //
-  // **A demo shop is excluded, and that is the right call rather than an
-  // oversight** (the second question in issue #806): a minted demo arrives with
-  // every setup step already done, so the ledger would open on ticked boxes and
-  // a call to action nobody needs.
-  const totalTrips = !shop.isDemo && !nextDeparture ? await countShopTrips(db, shop.id) : null;
-  const showFirstRunChecklist = totalTrips === 0;
-  const [firstRunDiveSites, firstRunStripeAccount] = showFirstRunChecklist
-    ? await Promise.all([listDiveSites(db, shop.id), getShopStripeAccount(db, shop.id)])
-    : [null, null];
+  // **A demo shop is excluded, and that is the right call rather than an oversight** (the second
+  // question in issue #806): a minted demo arrives with every setup step already done, so the
+  // ledger would open on ticked boxes and a call to action nobody needs. Its count is never read
+  // (`shopTripCount` is null for it).
+  const showFirstRunChecklist = !nextDeparture && shopTripCount === 0;
+  // The one read only a first-run shop makes, so the one third wave.
+  const firstRunDiveSites = showFirstRunChecklist ? await listDiveSites(db, shop.id) : null;
+  const firstRunStripeAccount = showFirstRunChecklist ? stripeAccount : null;
   // A first-run shop gets one quiet progress fact, derived from persisted
   // records. The trip and public-link rows are guided actions, not completion
   // states, so they are intentionally excluded from the progress total.
@@ -446,7 +488,7 @@ async function TodayBody({
   // ledger above, and saying it twice on one screen buys nothing.
   const paymentsRowCandidate = !shop.isDemo && !showFirstRunChecklist;
   const [paymentsAccount, hasEverTakenAnOrder] = paymentsRowCandidate
-    ? await Promise.all([getShopStripeAccount(db, shop.id), shopHasEverTakenAnOrder(db, shop.id)])
+    ? [stripeAccount, everTakenAnOrder]
     : [null, true];
   const showPaymentsRow =
     paymentsRowCandidate && !canAcceptPayments(paymentsAccount) && !hasEverTakenAnOrder;
@@ -456,8 +498,7 @@ async function TodayBody({
   // fire: a shop still in first run has no departures and so no bookings, and a
   // demo shop's board arrives seeded, so no booking on it is ever a first —
   // the same reasoning `firstBookableMoment` below makes about departures.
-  const firstBooking =
-    shop.isDemo || showFirstRunChecklist ? null : await shopFirstBooking(db, shop.id, now);
+  const firstBooking = showFirstRunChecklist ? null : firstBookingRead;
   // **One fact of scale, on the day it is true** (ADR
   // 20260904-reef-all-the-way-down, decision 2, Budget rule 3). A read, never
   // a cache: nothing is stored and nothing is acknowledged, so the sentence
@@ -465,19 +506,9 @@ async function TodayBody({
   // reason as the line above — it has no departures to count. The demo shop
   // keeps it: its board is seeded but its divers are real rows, and a count is
   // not a claim about a first.
-  const season = { month: shop.seasonStartMonth, day: shop.seasonStartDay };
   const factOfScale = showFirstRunChecklist
     ? null
-    : factOfScaleFor({
-        seasonStart: season,
-        ...(await seasonScale(
-          db,
-          shop.id,
-          shop.timezone,
-          seasonStartInstant(now, shop.timezone, season),
-          now,
-        )),
-      });
+    : factOfScaleFor({ seasonStart: season, ...scale });
   // The first departure ever landing on the board is the moment this shop
   // became bookable — and the moment the setup ledger above leaves the page.
   // Exactly then, the created notice grows into a share card so the link worth
@@ -486,22 +517,19 @@ async function TodayBody({
   // (1, or the series size). Demo shops sit out — their board is seeded, so no
   // trip there is ever a first.
   const firstBookableMoment =
-    Boolean(created) &&
-    !shop.isDemo &&
-    (totalTrips ?? (await countShopTrips(db, shop.id))) === Math.max(seriesCount, 1);
+    Boolean(created) && !shop.isDemo && shopTripCount === Math.max(seriesCount, 1);
   // **One orientation moment at a time.** The shop's first-bookable card and
   // the role orientation are both "you are new here, look at this", and they
   // used to render one directly beneath the other — a tinted panel with a URL
   // box and a copy button, and then a tip line under it. The bookable card
   // happens once in a shop's life and is the better moment, so it wins and the
   // orientation waits for the next visit (it is dismissed per account, not per
-  // render, so nothing is lost). Placed after `firstBookableMoment` so the
-  // dismissal read is skipped outright on the morning the card is up.
+  // render, so nothing is lost).
   const showOrientation =
     orientationRole !== null &&
     !showFirstRunChecklist &&
     !(Boolean(created) && firstBookableMoment) &&
-    !(await isOrientationDismissed(db, session.user.personId));
+    !orientationDismissed;
   const shareOrigin = showFirstRunChecklist || firstBookableMoment ? publicAppUrl() : null;
   const publicScheduleUrl = shareOrigin
     ? new URL(publicSchedulePath(shopSlug), `${shareOrigin}/`).toString()
@@ -536,36 +564,8 @@ async function TodayBody({
           ? formatTime(nextStation.startsAt, locale, shop.timezone)
           : null,
       });
-  // **What today made** — the evening's one money reading (issue #1930; ADR
-  // 20260919-one-idea, decision I · Tide: "money is what the day made"). It
-  // renders above the closing block and inside nothing; `DayTakings.tsx`
-  // carries the placement and its decision.
-  //
-  // **The month's own derivation, over the day's bounds.** `getMonthlyReport`
-  // is window-shaped — nothing in it is month-specific but its name — and it
-  // anchors every figure to `trips.startsAt`, so the day is the same query
-  // with `shopDayBounds` in place of `shopMonthBounds`. That is deliberate
-  // rather than convenient: a second derivation would let tonight's figure
-  // and the same day inside `/reports` disagree, and which of them a shop
-  // then believed would be a coin toss. `reporting.test.ts` pins the two
-  // together by summing the days of a month against the month itself.
-  //
-  // **Gated before it is read.** `canReadShopMoney` is the live role read
-  // resolved at the top of this page, so a reader who may not have the number
-  // never causes the query that would produce it — and the whole thing is
-  // skipped until the day is closing, so the ordinary morning render pays
-  // nothing for it.
-  const dayTakingsReading =
-    eveningClose.closing && canReadShopMoney
-      ? dayTakings(
-          summarizeMonth(
-            await getMonthlyReport(db, shop.id, dayBounds.from, dayBounds.to, {
-              currency: shop.currency,
-              timeZone: shop.timezone,
-            }),
-          ),
-        )
-      : null;
+  // What today made: the second wave's last read, gated there.
+  const dayTakingsReading = dayMonthReport ? dayTakings(summarizeMonth(dayMonthReport)) : null;
   // The whole page is empty at once, and collapses to a heading, one sentence
   // and the one act available — never a spine of empty groups. Every clause of
   // that rule lives with the spine (`spineIsQuiet`), first-run included: the

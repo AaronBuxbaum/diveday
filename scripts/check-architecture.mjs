@@ -17,7 +17,25 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  *    lib-level layer — may not import shared UI or feature modules either
  *    (review finding ARCH-2: these two roots previously floated under no rule).
  *
- * 2. **Feature modules have a contract.** A `src/features/<feature>/` module
+ * 2. **Three seams the direction table cannot say**, because each is about
+ *    *what kind* of import crosses rather than whether any may:
+ *    - `src/lib` → `src/db` *value* imports. `src/lib` is the framework-free
+ *      domain layer (`.claude/rules/domain.md`): a type from a db module is a
+ *      shape it may name, but a value import puts a query, and through
+ *      `src/db/client.ts` the whole database bootstrap, under a module that
+ *      is supposed to be testable without one. A lib file that needs to read
+ *      is a loader, and a loader lives in `src/db` or a feature module.
+ *    - `src/app` → `drizzle-orm`. A route that builds its own query is a query
+ *      no `src/db` test covers and no tenant-scope reader sees; it becomes a
+ *      named function in `src/db` instead (routes stay thin, AGENTS.md).
+ *    - Anything outside `src/db` → `@/db/trips-*`. The trips modules are
+ *      reached through the `@/db/trips` barrel (AGENTS.md route map), so a
+ *      sibling can be split or merged without a repo-wide edit.
+ *    Test code is exempt from all three (test files, `src/test/`, and the e2e
+ *    fixture routes under `src/app/api/test/`): a test builds and inspects its
+ *    own rows, and that is not a layering decision.
+ *
+ * 3. **Feature modules have a contract.** A `src/features/<feature>/` module
  *    publishes exactly one entry point — its `index.ts` — and documents itself
  *    in a `README.md`. Nothing outside the module may reach past the index.
  *    That is what makes the internals genuinely internal: a file can be split,
@@ -67,6 +85,100 @@ export const forbidden = [
   { root: "src/worker", banned: ["src/app", "src/features", "src/components"] },
   { root: "src/i18n", banned: ["src/app", "src/features", "src/components"] },
 ];
+
+/**
+ * The import seams the forbidden table cannot express (rule 2 above). Each
+ * names the importing roots it watches, the targets it refuses, and whether a
+ * type-only import is let through.
+ */
+export const seams = [
+  {
+    roots: ["src/lib"],
+    refuses: (target) => target !== null && isWithin(target, "src/db"),
+    typeOnlyAllowed: true,
+    message: (file, specifier) =>
+      `${file}: value-imports ${specifier} — src/lib is the framework-free domain layer; a type import is fine, a loader belongs in src/db or a feature module`,
+  },
+  {
+    roots: ["src/app"],
+    refuses: (_target, specifier) => /^drizzle-orm(?:\/|$)/.test(specifier),
+    typeOnlyAllowed: false,
+    message: (file, specifier) =>
+      `${file}: imports ${specifier} — a route never builds its own query; name it in src/db`,
+  },
+  {
+    roots: ["src/app", "src/components", "src/features", "src/lib", "src/worker", "src/i18n"],
+    refuses: (target) =>
+      target !== null && path.dirname(target) === "src/db" && /^trips-/.test(path.basename(target)),
+    typeOnlyAllowed: false,
+    message: (file, specifier) =>
+      `${file}: imports ${specifier} — reach the trips modules through the "@/db/trips" barrel`,
+  },
+];
+
+/**
+ * Test code, exempt from the seams: test files, the shared harness in
+ * `src/test/`, and the e2e fixture routes under `src/app/api/test/`, which
+ * exist to write rows a spec needs and are closed outside the harness
+ * (`src/lib/e2e-test-routes.ts`).
+ */
+const isTestFile = (file) => {
+  const posix = file.replaceAll(path.sep, "/");
+  return (
+    /\.test\.[cm]?[jt]sx?$/.test(posix) ||
+    posix.startsWith("src/test/") ||
+    posix.startsWith("src/app/api/test/")
+  );
+};
+
+/**
+ * Every import in a file with whether it is type-only: `import type …`,
+ * `export type …`, or a braced list in which every name says `type`. Static
+ * statements are read whole from their first line to their `from`, which is
+ * how Biome formats every one of them; a dynamic `import("…")` or a
+ * `require("…")` is always a value.
+ */
+export function importsOf(contents) {
+  const found = [];
+  const lines = contents.split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!/^\s*(?:import|export)\b/.test(lines[index])) continue;
+    let statement = lines[index];
+    while (
+      !/\bfrom\s*["'][^"']+["']/.test(statement) &&
+      !/^\s*import\s*["']/.test(statement) &&
+      !/;\s*$/.test(statement) &&
+      index + 1 < lines.length
+    ) {
+      index += 1;
+      statement += `\n${lines[index]}`;
+    }
+    const from = statement.match(/\bfrom\s*["']([^"']+)["']/);
+    const bare = statement.match(/^\s*import\s*["']([^"']+)["']/);
+    const specifier = from?.[1] ?? bare?.[1];
+    if (!specifier) continue;
+    found.push({ specifier, typeOnly: from ? isTypeOnlyClause(statement) : false });
+  }
+  for (const match of contents.matchAll(/(?:\bimport|\brequire)\s*\(\s*["']([^"']+)["']\s*\)/g)) {
+    found.push({ specifier: match[1], typeOnly: false });
+  }
+  return found;
+}
+
+function isTypeOnlyClause(statement) {
+  const clause = statement
+    .replace(/\bfrom\s*["'][^"']+["'][\s;]*$/, "")
+    .replace(/^\s*(?:import|export)\s+/, "")
+    .trim();
+  if (/^type\b/.test(clause)) return true;
+  const braced = clause.match(/^\{([\s\S]*)\}$/);
+  if (!braced) return false;
+  const names = braced[1]
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+  return names.length > 0 && names.every((name) => /^type\s/.test(name));
+}
 
 async function walk(root, relativeDirectory) {
   const absoluteDirectory = path.join(root, relativeDirectory);
@@ -139,7 +251,23 @@ export async function collectViolations(root = ROOT) {
     }
   }
 
-  // 2. Feature-module contract.
+  // 2. The seams.
+  for (const seam of seams) {
+    for (const seamRoot of seam.roots) {
+      for (const file of await walk(root, seamRoot)) {
+        if (isTestFile(file)) continue;
+        const contents = await readFile(path.join(root, file), "utf8");
+        for (const { specifier, typeOnly } of importsOf(contents)) {
+          if (typeOnly && seam.typeOnlyAllowed) continue;
+          if (seam.refuses(resolveSpecifier(file, specifier), specifier)) {
+            record(file, seam.message(file.replaceAll(path.sep, "/"), specifier));
+          }
+        }
+      }
+    }
+  }
+
+  // 3. Feature-module contract.
   let features = [];
   try {
     features = (await readdir(path.join(root, FEATURES_DIR), { withFileTypes: true }))
@@ -253,7 +381,7 @@ async function main() {
       `Architecture boundary violations:\n${failures.map((item) => `- ${item}`).join("\n")}`,
     );
     console.error(
-      "Domain code must not import from src/app or src/features, src/components and src/i18n must not import from src/app, and a feature module is reachable only through its index.ts. See docs/architecture/decisions/20260730-feature-module-contracts.md.",
+      "Domain code must not import from src/app or src/features, src/components and src/i18n must not import from src/app, a feature module is reachable only through its index.ts, src/lib takes only types from src/db, src/app never imports drizzle-orm, and the trips modules are reached through @/db/trips. See docs/architecture/decisions/20260730-feature-module-contracts.md and the header of scripts/check-architecture.mjs.",
     );
     process.exit(1);
   }

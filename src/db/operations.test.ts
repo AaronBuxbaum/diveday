@@ -11,7 +11,6 @@ import {
   deleteDiverNote,
   deleteInternalNote,
   listBookingNotes,
-  listDiverNotes,
   listDiverNotesForTrip,
   listDiverRecordNotes,
   listTripActivity,
@@ -23,6 +22,12 @@ import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
 const ctx = fileScopedShopContext();
+
+/** The notes written on the diver record itself, not on one of their bookings. */
+async function personScopedNotes(db: AppDb, shopId: string, personId: string) {
+  const notes = await listDiverRecordNotes(db, shopId, personId);
+  return notes.filter((row) => row.note.bookingId === null);
+}
 
 describe("staff-only operational context", () => {
   it("saves a private booking note before boarding and records a plain-language activity event", async () => {
@@ -189,7 +194,7 @@ describe("staff-only operational context", () => {
     });
     if (!note) throw new Error("expected the diver note to be created");
 
-    expect(await listDiverNotes(db, shop.id, rosterEntry.person.id)).toHaveLength(1);
+    expect(await personScopedNotes(db, shop.id, rosterEntry.person.id)).toHaveLength(1);
     expect(await listBookingNotes(db, shop.id, trip.id)).toHaveLength(0);
     expect(await listDiverNotesForTrip(db, shop.id, trip.id)).toEqual([
       expect.objectContaining({
@@ -248,7 +253,7 @@ describe("staff-only operational context", () => {
         actorPersonId: actor.person.id,
       }),
     ).resolves.toEqual({ deleted: true, body: "Remove after the trip." });
-    expect(await listDiverNotes(db, shop.id, rosterEntry.person.id)).toHaveLength(0);
+    expect(await personScopedNotes(db, shop.id, rosterEntry.person.id)).toHaveLength(0);
     expect(
       (await listTripActivity(db, shop.id, trip.id)).some((row) =>
         Object.values(row.params).some((value) => value.includes(note.body)),

@@ -33,6 +33,7 @@ import { readFileSync } from "node:fs";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
+import { recordRefusal } from "./hook-log.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import { isHandoff, lastAssistantText } from "./unfinished-promises.mjs";
 
@@ -93,6 +94,9 @@ function main() {
   if (!shouldBlock({ remote, reentry: false, closing: closingMessage(input), unpushed })) return 0;
 
   const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
+  recordRefusal("unpushed-work", `${unpushed} unpushed commits on ${branch}`, {
+    session: input.session_id,
+  });
   process.stderr.write(`${reasonFor({ unpushed, branch })}\n`);
   return 2;
 }

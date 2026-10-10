@@ -1,6 +1,7 @@
 import { randomInt } from "node:crypto";
 import { z } from "zod";
 import { log } from "@/lib/log";
+import { safeJson } from "@/lib/safe-json";
 import { GRAPH_API_ORIGIN, GRAPH_API_VERSION } from "./whatsapp";
 
 /**
@@ -121,14 +122,6 @@ type GraphFailure = {
   code?: number;
   subcode?: number;
 };
-
-function safeJson(body: string): unknown {
-  try {
-    return JSON.parse(body);
-  } catch {
-    return null;
-  }
-}
 
 const graphErrorSchema = z.object({
   error: z.object({

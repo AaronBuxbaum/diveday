@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { connection } from "next/server";
 import { Suspense } from "react";
 import { HeldAfterDiveCard, NoShowCard } from "@/app/ready/[token]/_components/AfterDiveDoors";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
@@ -73,6 +72,7 @@ import { getShopById, getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
+import { buildAfterStateProps } from "@/features/recap-after-state";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import {
@@ -96,6 +96,7 @@ import {
 } from "@/lib/format";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
+import { connectionForRoute } from "@/lib/observability/render-connection";
 import { seatRentalItems } from "@/lib/participant-types";
 import {
   publicSchedulePath,
@@ -105,7 +106,6 @@ import {
 } from "@/lib/public-routes";
 import { combineCertRequirements, type ReadinessBlockerCode } from "@/lib/readiness";
 import { buildDiverChecklist, type DiverChecklistItem } from "@/lib/readiness-summary";
-import { buildAfterStateProps } from "@/lib/recap-after-state";
 import { signRecapToken } from "@/lib/recap-links";
 import { nitroxAvailableOn, nitroxCardWanted } from "@/lib/rentals";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
@@ -637,7 +637,7 @@ export default async function DiverReadinessPage({
     sent?: string;
   }>;
 }) {
-  await connection();
+  await connectionForRoute("/ready/[token]");
   const { token } = await params;
   const { saved, error, pay, cancelled, booked, sent } = await searchParams;
   // A seat was taken in the request that redirected here — this page is the

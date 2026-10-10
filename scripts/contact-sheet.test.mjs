@@ -1,6 +1,6 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
+import process from "node:process";
 import { describe, expect, it } from "vitest";
+import { loadCoverage } from "./check-route-coverage.mjs";
 
 import {
   internalPath,
@@ -28,11 +28,8 @@ const routes = [
 ];
 
 describe("the inventory", () => {
-  it("comes from the route ledger, with the demo shop's slug in place", () => {
-    const ledger = JSON.parse(
-      readFileSync(path.join(process.cwd(), "scripts/route-coverage.json"), "utf8"),
-    );
-    const listed = ledgerRoutes(ledger);
+  it("comes from the computed route ledger, with the demo shop's slug in place", async () => {
+    const listed = ledgerRoutes(await loadCoverage(process.cwd()));
     expect(listed).toContain("/shop/blue-mantis/trips/[id]/manifest");
     expect(listed).toContain("/s/blue-mantis");
     expect(listed.some((route) => route.includes("[shopSlug]"))).toBe(false);

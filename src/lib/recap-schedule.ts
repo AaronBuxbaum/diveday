@@ -14,8 +14,12 @@ export const RECAP_AUTOMATIC_DELAY_MS = RECAP_AUTOMATIC_DELAY_HOURS * HOUR_MS;
 export const RECAP_UNPAUSE_DELAY_HOURS = 1;
 export const RECAP_UNPAUSE_DELAY_MS = RECAP_UNPAUSE_DELAY_HOURS * HOUR_MS;
 
-/** Dedicated hourly pass — scans for departures due for automatic recap delivery. */
-export const RECAP_CRON_CRONTAB = "0 * * * *";
+/**
+ * Dedicated hourly pass — scans for departures due for automatic recap
+ * delivery. `:02`, inside the five minutes every hourly pass shares (see
+ * `TRIP_REMINDER_CRON_CRONTAB` in `./reminders` for why five and not one).
+ */
+export const RECAP_CRON_CRONTAB = "2 * * * *";
 
 /**
  * Calculates the target automatic recap delivery timestamp:
@@ -45,27 +49,4 @@ export function unpauseRecapAutoSendAt(
   const originalSendAt = endsAt.getTime() + RECAP_AUTOMATIC_DELAY_MS;
   const unpauseSendAt = unpausedAt.getTime() + RECAP_UNPAUSE_DELAY_MS;
   return new Date(Math.max(originalSendAt, unpauseSendAt));
-}
-
-/**
- * Determines whether automatic recap sending is due for a departure:
- * - false if paused
- * - false if no scheduled return time (`endsAt` is null)
- * - true if `now` >= `recapAutoSendAt(endsAt, autoSendAt)`
- */
-export function recapAutoSendIsDue({
-  endsAt,
-  autoSendAt,
-  paused = false,
-  now,
-}: {
-  endsAt: Date | null | undefined;
-  autoSendAt?: Date | null;
-  paused?: boolean;
-  now: Date;
-}): boolean {
-  if (paused) return false;
-  const target = recapAutoSendAt(endsAt, autoSendAt);
-  if (!target) return false;
-  return now.getTime() >= target.getTime();
 }

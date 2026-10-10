@@ -1,6 +1,5 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -28,11 +27,12 @@ import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { sendNotification } from "@/db/notifications";
 import { addInternalNote, deleteInternalNote, recordTripActivity } from "@/db/operations";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
+import { getShopPersonName } from "@/db/people";
 import { getTripRequirements, listTripReadiness, upsertTripRequirements } from "@/db/readiness";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
 import { applyPaidRentalKindsToFit } from "@/db/rental-fit";
 import type { PaymentStatus } from "@/db/schema";
-import { diveSpecialty, people } from "@/db/schema";
+import { diveSpecialty } from "@/db/schema";
 import { recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
 import { getShopCurrency } from "@/db/stripe-accounts";
@@ -1729,20 +1729,16 @@ export async function updateTripCrewAction(
     // call this), so the trip's activity log — read from the Trip surface —
     // stays the single record of who touched the crew and when, regardless of
     // which surface they used.
-    const [person] = await db
-      .select({ fullName: people.fullName })
-      .from(people)
-      .where(and(eq(people.id, change.personId), eq(people.shopId, s.user.shopId)))
-      .limit(1);
-    if (person) {
+    const crewName = await getShopPersonName(db, s.user.shopId, change.personId);
+    if (crewName !== null) {
       await recordTripActivity(db, {
         shopId: s.user.shopId,
         tripId,
         actorPersonId: s.user.personId,
         entry:
           change.operation === "assign"
-            ? { code: "crew_assigned", crew: person.fullName }
-            : { code: "crew_removed", crew: person.fullName },
+            ? { code: "crew_assigned", crew: crewName }
+            : { code: "crew_removed", crew: crewName },
       });
     }
     revalidatePath(shopPath(shopSlug));

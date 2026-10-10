@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { connection } from "next/server";
 import { DiveSitesPeek } from "@/components/DiveSitesPeek";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
@@ -35,6 +34,7 @@ import { telHref } from "@/lib/contact-links";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { medicalProgress, medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
+import { connectionForRoute } from "@/lib/observability/render-connection";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { completeWaiverAction, saveWaiverDraftAction } from "./actions";
 import { MedicalQuestionnaireFields } from "./MedicalQuestionnaireFields";
@@ -136,13 +136,12 @@ export default async function WaiverPage({
     at?: string;
   }>;
 }) {
-  await connection();
+  await connectionForRoute("/waivers/[token]");
   const { token } = await params;
-  // `at` is the refusal's own nonce, minted by the actions below on every
-  // refused submit. It exists so a *repeat* of the identical refusal (same
-  // wrong name twice) still remounts `FieldErrorFocus` and re-runs the
-  // scroll-and-ring — without it the second attempt renders an unchanged tree
-  // and the effect never fires again (see FieldErrorFocus's own docstring).
+  // `at` is the refusal's own nonce, minted by the actions below on every refused submit. It
+  // exists so a *repeat* of the identical refusal (same wrong name twice) still remounts
+  // `FieldErrorFocus` and re-runs the scroll-and-ring — without it the second attempt renders an
+  // unchanged tree and the effect never fires again (see FieldErrorFocus's own docstring).
   const { saved, error, field, sent, at } = await searchParams;
   // `Object.hasOwn`, not `in` — `field` is attacker-supplied and `in` walks
   // the prototype chain (`?field=toString` would mint a fieldError whose

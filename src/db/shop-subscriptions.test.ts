@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { BillingEventEffect } from "@/lib/billing/events";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { shopMilestones, shops } from "./schema";
 import {
@@ -13,6 +13,13 @@ import {
   setShopFreeTerm,
   subscriptionSnapshot,
 } from "./shop-subscriptions";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`). The two tests where another shop
+// already holds the Stripe id hydrate their own: the refusal is a unique
+// violation, which inside the shared transaction would abort it for the
+// reads that follow.
+const ctx = fileScopedShopContext();
 
 const T0 = new Date("2026-10-07T12:00:00.000Z");
 const later = (seconds: number) => new Date(T0.getTime() + seconds * 1000);
@@ -58,7 +65,7 @@ async function otherShop(db: AppDb): Promise<string> {
 
 describe("ensureShopBillingCustomer", () => {
   it("records the customer once and keeps the first one a racing second tap minted", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect(await ensureShopBillingCustomer(db, shop.id, "cus_first")).toBe("cus_first");
     expect(await ensureShopBillingCustomer(db, shop.id, "cus_second")).toBe("cus_first");
     expect((await getShopSubscription(db, shop.id))?.stripeCustomerId).toBe("cus_first");
@@ -75,7 +82,7 @@ describe("ensureShopBillingCustomer", () => {
 
 describe("recordShopCheckoutSession", () => {
   it("records a session only over the one the caller settled", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     expect(
       await recordShopCheckoutSession(db, shop.id, { previous: null, sessionId: "cs_1" }),
@@ -91,7 +98,7 @@ describe("recordShopCheckoutSession", () => {
   });
 
   it("is cleared by its own checkout.session.completed, and only by its own", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     await recordShopCheckoutSession(db, shop.id, { previous: null, sessionId: "cs_new" });
     await applyBillingEffect(db, completed(shop.id, { sessionId: "cs_old" }));
@@ -103,7 +110,7 @@ describe("recordShopCheckoutSession", () => {
 
 describe("holdsLiveSubscription", () => {
   it("counts a linked subscription with no status yet, and an incomplete one, as live", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     expect(holdsLiveSubscription(await getShopSubscription(db, shop.id))).toBe(false);
     await applyBillingEffect(db, completed(shop.id));
@@ -117,7 +124,7 @@ describe("holdsLiveSubscription", () => {
 
 describe("applyBillingEffect", () => {
   it("links the subscription from Checkout, then records Stripe's state", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     expect(
       await applyBillingEffect(
@@ -137,7 +144,7 @@ describe("applyBillingEffect", () => {
   });
 
   it("accepts the subscription event arriving before Checkout's own", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     expect(await applyBillingEffect(db, changed({ status: "trialing" }))).toBe(
       "subscription_updated",
@@ -152,7 +159,7 @@ describe("applyBillingEffect", () => {
   });
 
   it("refuses an older event delivered after a newer one", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     await applyBillingEffect(db, changed({ status: "canceled", occurredAt: later(60) }));
     expect(await applyBillingEffect(db, changed({ status: "active", occurredAt: T0 }))).toBe(
@@ -162,7 +169,7 @@ describe("applyBillingEffect", () => {
   });
 
   it("applies two events Stripe stamped in the same second, in delivery order", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     await applyBillingEffect(db, changed({ status: "trialing" }));
     expect(await applyBillingEffect(db, changed({ status: "active" }))).toBe(
@@ -171,7 +178,7 @@ describe("applyBillingEffect", () => {
   });
 
   it("never lets Checkout's event undo the state a subscription event already wrote", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     // subscription.created lands first, then Checkout, then subscription.updated.
     await applyBillingEffect(db, changed({ status: "trialing", occurredAt: T0 }));
@@ -189,7 +196,7 @@ describe("applyBillingEffect", () => {
   });
 
   it("keeps a subscription ended when a live status shares its second, in either order", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     await applyBillingEffect(db, changed({ status: "canceled", occurredAt: T0 }));
     expect(await applyBillingEffect(db, changed({ status: "active", occurredAt: T0 }))).toBe(
@@ -203,7 +210,7 @@ describe("applyBillingEffect", () => {
   });
 
   it("writes nothing when the event's shop claim names a different shop than the customer's", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const other = await otherShop(db);
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     expect(await applyBillingEffect(db, changed({ shopIdClaim: other }))).toBe("tenant_mismatch");
@@ -218,14 +225,14 @@ describe("applyBillingEffect", () => {
   });
 
   it("answers customer_not_found for a customer DiveDay never minted", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     expect(await applyBillingEffect(db, changed({ customerId: "cus_unknown" }))).toBe(
       "customer_not_found",
     );
   });
 
   it("refuses a second live subscription and keeps the first", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     await applyBillingEffect(db, changed());
     expect(await applyBillingEffect(db, changed({ subscriptionId: "sub_b" }))).toBe(
@@ -241,7 +248,7 @@ describe("applyBillingEffect", () => {
   });
 
   it("adopts a new subscription once the old one ended, and ignores the old one's late events", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     await applyBillingEffect(db, changed({ status: "canceled", occurredAt: later(10) }));
     expect(
@@ -271,7 +278,7 @@ describe("applyBillingEffect", () => {
   });
 
   it("counts only an invoice of the subscription the shop holds", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     const paid = (subscriptionId: string): BillingEventEffect => ({
       kind: "invoice_paid",
@@ -288,7 +295,7 @@ describe("applyBillingEffect", () => {
   });
 
   it("records the first paid month once, and not for a zero invoice", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     await applyBillingEffect(db, completed(shop.id));
     const paid = (amountPaid: number, paidAt: Date): BillingEventEffect => ({
@@ -306,7 +313,7 @@ describe("applyBillingEffect", () => {
   });
 
   it("records the funnel's first_paid_month milestone for a real shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     await applyBillingEffect(db, completed(shop.id));
@@ -325,7 +332,7 @@ describe("applyBillingEffect", () => {
   });
 
   it("passes ignored and malformed events through without a read", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     expect(await applyBillingEffect(db, { kind: "ignored", reason: "unhandled_event_type" })).toBe(
       "ignored",
     );
@@ -335,7 +342,7 @@ describe("applyBillingEffect", () => {
 
 describe("setShopFreeTerm", () => {
   it("grants, moves and withdraws a free term by slug", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect(await setShopFreeTerm(db, { shopSlug: shop.slug, endsOn: "2027-04-01" })).toEqual({
       status: "set",
       shopId: shop.id,
@@ -347,7 +354,7 @@ describe("setShopFreeTerm", () => {
   });
 
   it("keeps the customer it finds and says when Stripe already holds the charge date", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     await applyBillingEffect(db, changed({ status: "trialing" }));
     const outcome = await setShopFreeTerm(db, { shopSlug: shop.slug, endsOn: "2027-04-01" });
@@ -356,7 +363,7 @@ describe("setShopFreeTerm", () => {
   });
 
   it("refuses an unknown shop and an impossible date", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect(await setShopFreeTerm(db, { shopSlug: "no-such-shop", endsOn: "2027-01-01" })).toEqual({
       status: "no_such_shop",
     });

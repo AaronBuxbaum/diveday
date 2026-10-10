@@ -24,3 +24,31 @@ export const ACTIONABLE_PROVIDER_STATUSES = [
   "complained",
   "failed",
 ] as const satisfies readonly ProviderEmailStatus[];
+
+/**
+ * When a provider says an event happened, or `fallback` when it says nothing
+ * usable. The first candidate that reads as an instant wins, so a parser can
+ * list the event-specific timestamp before the envelope's.
+ *
+ * `"iso"` reads an ISO-8601 string (SES, SNS SMS receipts); `"epoch-seconds"`
+ * reads Meta's decimal seconds since the epoch (WhatsApp), where zero or a
+ * negative number is as unusable as garbage. One reader, so the three
+ * delivery-receipt parsers cannot disagree about what a bad timestamp means.
+ */
+export function timestampFrom(
+  candidates: readonly (string | undefined)[],
+  fallback: Date,
+  format: "iso" | "epoch-seconds" = "iso",
+): Date {
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    if (format === "epoch-seconds") {
+      const seconds = Number(candidate);
+      if (Number.isFinite(seconds) && seconds > 0) return new Date(seconds * 1_000);
+      continue;
+    }
+    const parsed = new Date(candidate);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+  return fallback;
+}

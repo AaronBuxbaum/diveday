@@ -21,18 +21,30 @@ concurrency:
   group: follow-ups
   cancel-in-progress: true
 
+# `issues: write` and `pull-requests: read` are for the claim-expiry step: it removes the
+# in-progress label from a dead claim and comments, after reading which branches have open PRs.
 permissions:
   contents: read
-  issues: read
+  issues: write
+  pull-requests: read
 
 jobs:
   follow-ups:
-    name: Every needs-triage issue is actionable cold
+    name: Every needs-triage issue is actionable cold, and no claim is dead
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - run: pnpm check:follow-ups
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # A claim whose branch never reached origin, or one older than a week with no open pull
+      # request, is a dead session: drop its in-progress label and say why on the issue
+      # (scripts/expire-claims.mjs; docs/agents/issue-tracker.md's "Claiming an issue"). Runs
+      # even when the scan above is red, since a malformed issue is no reason to keep a dead claim.
+      - name: Expire stale in-progress claims
+        if: ${{ !cancelled() }}
+        run: node scripts/expire-claims.mjs --apply
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

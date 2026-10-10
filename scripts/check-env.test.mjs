@@ -71,6 +71,24 @@ describe("check-env", () => {
     expect(run.status).toBe(0);
   });
 
+  it("fails production that carries the e2e harness's switches, naming each", () => {
+    const run = checkEnv({
+      VERCEL_ENV: "production",
+      ...UPSTASH,
+      DIVEDAY_E2E: "1",
+      DIVEDAY_E2E_SECRET: "left-over",
+    });
+
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain("production sets DIVEDAY_E2E, DIVEDAY_E2E_SECRET");
+  });
+
+  it("leaves the harness's switches alone outside production", () => {
+    const run = checkEnv({ VERCEL_ENV: "preview", DIVEDAY_E2E: "1", DIVEDAY_E2E_SECRET: "s" });
+
+    expect(run.status).toBe(0);
+  });
+
   it("still refuses a stack-produced key in .env.manual", () => {
     const cwd = workspace();
     writeFileSync(join(cwd, ".env.manual"), "SES_AWS_ACCESS_KEY_ID=AKIA_BY_HAND\n");

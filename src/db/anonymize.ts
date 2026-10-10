@@ -59,7 +59,7 @@ import {
   verifyCourseFormIntegrity,
 } from "@/lib/course-form-integrity";
 import { log } from "@/lib/log";
-import { type CustomerProvider, customerProviderFromEnvironment } from "@/lib/payments/customers";
+import type { CustomerProvider } from "@/lib/payments/customers";
 import {
   computeWaiverIntegrityHash,
   verifyWaiverIntegrity,
@@ -130,6 +130,7 @@ import {
   workOrderLines,
   workOrders,
 } from "./schema";
+import { customerProviderFromEnvironment } from "./stripe-providers";
 
 export type AnonymizeDiverRefusal =
   /** No live person with this id at this shop. */
@@ -557,35 +558,27 @@ function pushSessionTargets(
   }
 }
 
-async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult> {
-  const { shopId, personId, now } = ctx;
-
-  const bookingRows = await tx
-    .select({ id: bookings.id })
-    .from(bookings)
-    .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, personId)));
-  const bookingIds = bookingRows.map((row) => row.id);
-  const owned = bookingIds.length > 0;
-
-  // Every Stripe object this scrub finds standing for the erased diver, raised
-  // as one ledger row apiece at the end of the transaction. Three tables feed
-  // it — `orders`, `tips` and `booking_checkouts` — and they are far apart in
-  // this function, so it accumulates rather than each sweep raising its own
-  // batch: one write, one dedupe, and the obligations land inside the same
-  // transaction as the redactions that made them owed (issue #1621, ADR
-  // 20260803-processor-erasure-obligations).
-  const processorTargets: ProcessorErasureTargetInput[] = [];
-
-  let queued = 0;
-  const retire = async (
+/**
+ * What every sweep reads beside the diver: their bookings on this shop, read
+ * once, and the one way to retire a stored document so the queued count stays
+ * a single number.
+ */
+type ScrubSectionContext = ScrubContext & {
+  bookingIds: string[];
+  /** Whether the diver holds any booking here — the guard on every booking sweep. */
+  owned: boolean;
+  retire: (
     kind: "recap_photo" | "waiver_document" | "payment_receipt",
     url: string | null,
-  ) => {
-    if (!url) return;
-    if (await queueMediaDeletion(tx, { shopId, kind, url })) queued += 1;
-  };
+  ) => Promise<void>;
+};
 
-  // --- people --------------------------------------------------------------
+/** The erasure's "people" sweep. */
+async function scrubPersonRecord(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId, now } = ctx;
   await tx
     .update(people)
     .set({
@@ -651,8 +644,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         isNull(staffCredentials.deletedAt),
       ),
     );
+  return [];
+}
 
-  // --- waiver records: strip, retire the link, re-seal under version 2 ------
+/** The erasure's "waiver records: strip, retire the link, re-seal under version 2" sweep. */
+async function scrubWaiverRecords(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId, now, retire } = ctx;
   const waiverRows = await tx
     .select()
     .from(waiverRecords)
@@ -728,7 +728,33 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     }
   }
 
-  // --- course form records: strip the names, keep the fact -------------------
+  // The per-channel mechanics behind the column above (ADR
+  // 20260820-waiver-delivery-is-per-channel): one current row per channel, each
+  // carrying the provider's own bounce text. Swept by waiver record rather than
+  // by booking — a release is attached to a person, and a diver with no seat
+  // still has one.
+  const waiverRecordIds = waiverRows.map((record) => record.id);
+  if (waiverRecordIds.length > 0) {
+    await tx
+      .update(waiverDeliveries)
+      .set({ detail: null })
+      .where(
+        and(
+          eq(waiverDeliveries.shopId, shopId),
+          inArray(waiverDeliveries.waiverRecordId, waiverRecordIds),
+          isNotNull(waiverDeliveries.detail),
+        ),
+      );
+  }
+  return [];
+}
+
+/** The erasure's "course form records: strip the names, keep the fact" sweep. */
+async function scrubCourseFormRecords(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId, now } = ctx;
   // The release's own rule (ADR 20261008-course-forms): the typed name and a
   // guardian's name are this person's (and a third party's) personal data and
   // go; that a form was signed, which version, how and when, is the shop's
@@ -764,27 +790,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       })
       .where(and(eq(courseFormRecords.id, record.id), eq(courseFormRecords.shopId, shopId)));
   }
+  return [];
+}
 
-  // The per-channel mechanics behind the column above (ADR
-  // 20260820-waiver-delivery-is-per-channel): one current row per channel, each
-  // carrying the provider's own bounce text. Swept by waiver record rather than
-  // by booking — a release is attached to a person, and a diver with no seat
-  // still has one.
-  const waiverRecordIds = waiverRows.map((record) => record.id);
-  if (waiverRecordIds.length > 0) {
-    await tx
-      .update(waiverDeliveries)
-      .set({ detail: null })
-      .where(
-        and(
-          eq(waiverDeliveries.shopId, shopId),
-          inArray(waiverDeliveries.waiverRecordId, waiverRecordIds),
-          isNotNull(waiverDeliveries.detail),
-        ),
-      );
-  }
-
-  // --- certification evidence ---------------------------------------------
+/** The erasure's "certification evidence" sweep. */
+async function scrubCertificationEvidence(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId, now } = ctx;
   // The card *sighting* survives (agency, level, status, when it was reviewed);
   // the diver's agency number does not. Cards are archived at the same time: an
   // erased diver has no future readiness to satisfy, and archiving frees the
@@ -850,8 +864,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       })
       .where(eq(nitroxCertifications.id, card.id));
   }
+  return [];
+}
 
-  // --- rows that are only about the person, and are not evidence -----------
+/** The erasure's "rows that are only about the person, and are not evidence" sweep. */
+async function scrubPersonOnlyRows(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId } = ctx;
   // Deleted outright rather than blanked: a rental fit is body measurement, a
   // wait-list place and a deals subscription are live intentions, and a row of
   // all-nulls preserves nothing worth keeping.
@@ -943,8 +964,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       .returning({ id: internalNotes.id });
     logFuzzyMatch(ctx, "internal_note_name", byName.length);
   }
+  return [];
+}
 
-  // --- standing credentials ------------------------------------------------
+/** The erasure's "standing credentials" sweep. */
+async function scrubStandingCredentials(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId, now } = ctx;
   // A live feed URL is a read credential; revoked rather than deleted so the
   // fact that it was revoked stays on record.
   await tx
@@ -957,8 +985,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         isNull(calendarFeeds.revokedAt),
       ),
     );
+  return [];
+}
 
-  // --- the diver's own login, if they ever had one -------------------------
+/** The erasure's "the diver's own login, if they ever had one" sweep. */
+async function scrubDiverLogin(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { personId } = ctx;
   const [account] = await tx
     .select({ id: userAccounts.id, email: userAccounts.email })
     .from(userAccounts)
@@ -1010,8 +1045,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       })
       .where(eq(userAccounts.id, account.id));
   }
+  return [];
+}
 
-  // --- booking-scoped rows -------------------------------------------------
+/** The erasure's "booking-scoped rows" sweep. */
+async function scrubBookingRows(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId, now, bookingIds, owned, retire } = ctx;
   if (owned) {
     // `welcomeSharedAt` is a consent stamp, not a fact about the seat: the
     // diver said this departure's crew may know it is a first trip or a long
@@ -1157,8 +1199,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       );
     }
   }
+  return [];
+}
 
-  // --- activity events -----------------------------------------------------
+/** The erasure's "activity events" sweep. */
+async function scrubActivityEvents(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId, bookingIds, owned } = ctx;
   // Append-only operational history: the row (who did it, when, on which trip)
   // is the shop's record of its own work and stays; the names it carries go.
   // Since issue #1655 that is a `code` and a `params` payload rather than a
@@ -1229,8 +1278,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       .returning({ id: activityEvents.id });
     logFuzzyMatch(ctx, "activity_event_name", byName.length);
   }
+  return [];
+}
 
-  // --- buddy-team trail ----------------------------------------------------
+/** The erasure's "buddy-team trail" sweep. */
+async function scrubBuddyTrail(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId } = ctx;
   //
   // `buddy_team_events.member_names` is denormalised on purpose — its whole job
   // is to outlive the membership rows a dissolve deletes (ADR
@@ -1275,8 +1331,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       .returning({ id: buddyTeamEvents.id });
     logFuzzyMatch(ctx, "buddy_team_event_name", scrubbed.length);
   }
+  return [];
+}
 
-  // --- reviews -------------------------------------------------------------
+/** The erasure's "reviews" sweep. */
+async function scrubReviews(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId } = ctx;
   // A published review is a public statement attributed to a named diver. The
   // words are theirs and go; the row is unpublished rather than left standing
   // over an erased byline. The shop's public average moves as a result — a real
@@ -1285,8 +1348,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     .update(tripReviews)
     .set({ comment: null, isPublished: false, publishedAt: null, isStandout: false })
     .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.personId, personId)));
+  return [];
+}
 
-  // --- the private word ----------------------------------------------------
+/** The erasure's "the private word" sweep. */
+async function scrubPrivateWord(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId } = ctx;
   // A pulse is free text a diver typed on their phone about their day (ADR
   // 20260904-reef-all-the-way-down, D40). Nothing bounds it to "the gear was
   // bad": it is whatever they wanted this shop to know, under their name.
@@ -1310,8 +1380,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         isNotNull(recapPulses.note),
       ),
     );
+  return [];
+}
 
-  // --- imported history ----------------------------------------------------
+/** The erasure's "imported history" sweep. */
+async function scrubImportedHistory(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId, retire } = ctx;
   // The count of visits is the shop's own history; every label on them came out
   // of the diver's rows in the prior system. `dedupe_key` is NOT NULL and
   // unique per (shop, person), and can embed the source's own reference.
@@ -1397,8 +1474,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       })
       .where(eq(priorGearAssignments.id, assignment.id));
   }
+  return [];
+}
 
-  // --- last-minute deals ---------------------------------------------------
+/** The erasure's "last-minute deals" sweep. */
+async function scrubLastMinuteDeals(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId } = ctx;
   // The key sweep of `trip_last_minute_promo_recipients` is above, with the
   // rest of this diver's addresses. This is its other half: the address sweep
   // beside the key sweep, which every other durable address
@@ -1430,8 +1514,16 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     }
     logFuzzyMatch(ctx, "last_minute_recipient_address", byAddress.length);
   }
+  return [];
+}
 
-  // --- hosted processor pages ----------------------------------------------
+/** The erasure's "hosted processor pages" sweep. */
+async function scrubHostedProcessorPages(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, bookingIds, owned } = ctx;
+  const processorTargets: ProcessorErasureTargetInput[] = [];
   // A Stripe-hosted page is a publicly reachable URL that renders the customer
   // it was minted for, which is why `orders.hosted_invoice_url` and
   // `invoice_pdf_url` are already nulled above. Two more of them sit one table
@@ -1471,8 +1563,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         ),
       );
   }
+  return processorTargets;
+}
 
-  // --- gear register -------------------------------------------------------
+/** The erasure's "gear register" sweep. */
+async function scrubGearRegister(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId, bookingIds, owned } = ctx;
   // Staff prose typed about how a unit came home ("torn strap, needs look"),
   // which is free text about a rental this diver had out. The reservation, its
   // window and its outcome stay: what a unit did and when it came back is the
@@ -1515,8 +1614,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         ),
       );
   }
+  return [];
+}
 
-  // --- the bench -----------------------------------------------------------
+/** The erasure's "the bench" sweep. */
+async function scrubBench(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId } = ctx;
   // Service work orders (ADR 20261008-gear-work-orders). The same call the
   // gear register's return notes above make: what the shop did to a piece of
   // equipment, when, and what it cost is the shop's own service record and
@@ -1580,8 +1686,16 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         ne(workOrders.reportedProblem, REDACTED_TEXT),
       ),
     );
+  return [];
+}
 
-  // --- orders --------------------------------------------------------------
+/** The erasure's "orders" sweep. */
+async function scrubOrders(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId } = ctx;
+  const processorTargets: ProcessorErasureTargetInput[] = [];
   // `stripe_customer_id` and `stripe_invoice_id` are pointers into the shop's
   // own Stripe account (null only on an order paid at the counter) and stay on
   // the row — the local record of which
@@ -1651,8 +1765,16 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       stripeAccountId: row.stripeAccountId,
     });
   }
+  return processorTargets;
+}
 
-  // --- the checkout's own copy of the diver's address ----------------------
+/** The erasure's "the checkout's own copy of the diver's address" sweep. */
+async function scrubCheckoutAddresses(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, bookingIds, owned } = ctx;
+  const processorTargets: ProcessorErasureTargetInput[] = [];
   // `booking_checkouts.customer_email` is the same class of un-normalized PII
   // as the send queue below — a durable address with no `person_id` to sweep
   // on — and it is worse than a stale column. Erasure cancels no booking and
@@ -1796,8 +1918,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       }
     }
   }
+  return processorTargets;
+}
 
-  // --- the un-normalized PII blob -----------------------------------------
+/** The erasure's "the un-normalized PII blob" sweep. */
+async function scrubPiiBlob(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, bookingIds, owned } = ctx;
   // `notification_send_queue.payload_sealed` is a rendered outbound message
   // carrying the recipient's name and address, with no person_id to sweep on.
   // It is a work queue, not evidence (that lives in notification_deliveries),
@@ -1881,8 +2010,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         ),
       );
   }
+  return [];
+}
 
-  // --- unfinished forms ----------------------------------------------------
+/** The erasure's "unfinished forms" sweep. */
+async function scrubUnfinishedForms(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId } = ctx;
   // `form_drafts.fields` is whatever a staffer had typed into a form and not
   // yet submitted, and on a `new_diver` draft that is a person's name, address,
   // phone and emergency contact. `person_id` on the row is the **author**, so
@@ -1958,8 +2094,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       .returning({ id: formDrafts.id });
     logFuzzyMatch(ctx, handle.predicate, dropped.length);
   }
+  return [];
+}
 
-  // --- course inquiries ----------------------------------------------------
+/** The erasure's "course inquiries" sweep. */
+async function scrubCourseInquiries(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId } = ctx;
   // Three statements, strongest handle first. `person_id` is deliberately left
   // in place on every one of them: it points at a row that is itself already
   // erased, so it discloses nothing, and keeping it makes a replayed erasure
@@ -2030,8 +2173,15 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       .returning({ id: courseInquiries.id });
     logFuzzyMatch(ctx, "course_inquiry_phone", byPhone.length);
   }
+  return [];
+}
 
-  // --- the inbox (ADR 20260907-two-way-inbox) -------------------------------
+/** The erasure's "the inbox (ADR 20260907-two-way-inbox)" sweep. */
+async function scrubInbox(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId } = ctx;
   // What the diver wrote is theirs end to end — the words, the subject, and the
   // address they wrote from — and what the shop wrote back names them in the
   // `To:` and usually in the body. Redacted rather than deleted, like the pulse
@@ -2088,6 +2238,65 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     // would leave their address in the one row this sweep had just cleaned.
     .set({ body: REDACTED_TEXT, toAddress: REDACTED_TEXT, sendError: null })
     .where(and(eq(staffReplies.shopId, shopId), eq(staffReplies.personId, personId)));
+  return [];
+}
+
+/**
+ * Every sweep of the erasure, in the order it runs. Each takes the transaction
+ * and the diver's context and hands back the Stripe objects it found standing
+ * for them, which `scrub` raises as one ledger write at the end.
+ */
+const SCRUB_SECTIONS = [
+  scrubPersonRecord,
+  scrubWaiverRecords,
+  scrubCourseFormRecords,
+  scrubCertificationEvidence,
+  scrubPersonOnlyRows,
+  scrubStandingCredentials,
+  scrubDiverLogin,
+  scrubBookingRows,
+  scrubActivityEvents,
+  scrubBuddyTrail,
+  scrubReviews,
+  scrubPrivateWord,
+  scrubImportedHistory,
+  scrubLastMinuteDeals,
+  scrubHostedProcessorPages,
+  scrubGearRegister,
+  scrubBench,
+  scrubOrders,
+  scrubCheckoutAddresses,
+  scrubPiiBlob,
+  scrubUnfinishedForms,
+  scrubCourseInquiries,
+  scrubInbox,
+] as const;
+
+async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult> {
+  const { shopId, personId } = ctx;
+
+  const bookingRows = await tx
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, personId)));
+  const bookingIds = bookingRows.map((row) => row.id);
+
+  let queued = 0;
+  const retire: ScrubSectionContext["retire"] = async (kind, url) => {
+    if (!url) return;
+    if (await queueMediaDeletion(tx, { shopId, kind, url })) queued += 1;
+  };
+  const section: ScrubSectionContext = { ...ctx, bookingIds, owned: bookingIds.length > 0, retire };
+
+  // Every Stripe object this scrub finds standing for the erased diver, raised
+  // as one ledger row apiece at the end of the transaction. Three tables feed
+  // it — `orders`, `tips` and `booking_checkouts` — in sweeps far apart, so
+  // each sweep returns its share and they are raised together: one write, one
+  // dedupe, and the obligations land inside the same transaction as the
+  // redactions that made them owed (issue #1621, ADR
+  // 20260803-processor-erasure-obligations).
+  const processorTargets: ProcessorErasureTargetInput[] = [];
+  for (const sweep of SCRUB_SECTIONS) processorTargets.push(...(await sweep(tx, section)));
 
   // Raised last, so every sweep above has had its say, and still *inside* this
   // transaction — an obligation that only commits if some later step also

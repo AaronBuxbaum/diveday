@@ -20,18 +20,17 @@ import { carryForwardNotBoarded, rollCallCheckpoints } from "@/lib/roll-call";
 import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
+import { listCrewRecapPhotosForTrips, listRecapPhotosForTrips } from "./recap";
 import {
   bookings,
   diveSites,
   executedDives,
   notificationDeliveries,
   people,
-  recapPhotos,
   rollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
   tripDives,
-  tripRecapPhotos,
   trips,
 } from "./schema";
 import { listRollCallGaps } from "./today";
@@ -258,45 +257,16 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     // beside the dock rather than instead of it, because the two words mean
     // opposite things at the two checkpoints ({@link seatSailed}, issue #1704).
     listAfterDiveRollCallByTrip(db, shopId, tripIds),
-    db
-      .select({
-        id: recapPhotos.id,
-        imageUrl: recapPhotos.imageUrl,
-        caption: recapPhotos.caption,
-        diverName: people.fullName,
-        bookingId: recapPhotos.bookingId,
-        tripId: recapPhotos.tripId,
-      })
-      .from(recapPhotos)
-      .innerJoin(bookings, eq(bookings.id, recapPhotos.bookingId))
-      .innerJoin(people, eq(people.id, bookings.personId))
-      .where(
-        and(
-          eq(recapPhotos.shopId, shopId),
-          inArray(
-            recapPhotos.tripId,
-            rows.map((row) => row.id),
-          ),
-        ),
-      )
-      .orderBy(desc(recapPhotos.createdAt)),
-    db
-      .select({
-        id: tripRecapPhotos.id,
-        imageUrl: tripRecapPhotos.imageUrl,
-        tripId: tripRecapPhotos.tripId,
-      })
-      .from(tripRecapPhotos)
-      .where(
-        and(
-          eq(tripRecapPhotos.shopId, shopId),
-          inArray(
-            tripRecapPhotos.tripId,
-            rows.map((row) => row.id),
-          ),
-        ),
-      )
-      .orderBy(desc(tripRecapPhotos.createdAt)),
+    listRecapPhotosForTrips(
+      db,
+      shopId,
+      rows.map((row) => row.id),
+    ),
+    listCrewRecapPhotosForTrips(
+      db,
+      shopId,
+      rows.map((row) => row.id),
+    ),
     db
       .select({
         tripId: bookings.tripId,

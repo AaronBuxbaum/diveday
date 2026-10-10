@@ -1,7 +1,6 @@
 "use server";
 
 import { APIError } from "better-auth/api";
-import { eq } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
@@ -10,20 +9,17 @@ import { issueAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
 import { createFirstDay } from "@/db/first-day";
 import { sendNotification } from "@/db/notifications";
-import { people, personRoles, shops, userAccounts, waiverTemplates } from "@/db/schema";
-import { recordSetupLinkShop, spendSetupLink } from "@/db/setup-links";
+import { createSignedUpShop, type ShopSignupOutcome } from "@/db/shop-signup";
 import { toDiverLocale } from "@/i18n/settings";
 import { verifyAccountLinkPath } from "@/lib/account-tokens";
 import { getAuth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
-import { shopDefaultsForTimeZone } from "@/lib/curated-defaults";
 import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { parseFirstDayFields } from "@/lib/first-day";
 import { parseForm } from "@/lib/form-parse";
 import { log } from "@/lib/log";
 import { publicAppUrl } from "@/lib/notifications";
 import { onboardSchema } from "@/lib/onboarding";
-import { hashPassword } from "@/lib/password-hashing";
 import { alertRecipient } from "@/lib/platform-mail";
 import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -33,7 +29,6 @@ import {
   SETUP_LINK_COOKIE_MAX_AGE_S,
   SETUP_LINK_PARAM,
 } from "@/lib/setup-links";
-import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 
 /**
  * The fields read before the schema is (issue #2233): the setup link, judged
@@ -147,138 +142,18 @@ export async function onboardAction(formData: FormData) {
   if (isDemoAccountEmail(ownerEmail)) return await backToForm("email_reserved");
 
   const db = await getDb();
-  let onboardingError: string | null = null;
-  let newAccountId: string | null = null;
-  let newShopId: string | null = null;
-  let newShopLocale: string | null = null;
-  let createdShop: typeof shops.$inferSelect | null = null;
-
+  let outcome: ShopSignupOutcome;
   try {
-    await db.transaction(async (tx) => {
-      // Spend the link first: the conditional update is the claim, so of two
-      // submissions racing on one link exactly one gets past here, and any
-      // refusal below rolls the spend back with everything else, leaving the
-      // link open for the corrected form.
-      if (!(await spendSetupLink(tx, setupToken))) {
-        onboardingError = "setup_link_closed";
-        tx.rollback();
-        return;
-      }
-
-      // Check if slug is taken
-      const [existingShop] = await tx.select().from(shops).where(eq(shops.slug, shopSlug)).limit(1);
-
-      if (existingShop) {
-        onboardingError = "shop_slug_taken";
-        tx.rollback();
-        return;
-      }
-
-      // Check if email is taken
-      const [existingAccount] = await tx
-        .select()
-        .from(userAccounts)
-        .where(eq(userAccounts.email, ownerEmail.toLowerCase()))
-        .limit(1);
-
-      if (existingAccount) {
-        onboardingError = "email_taken";
-        tx.rollback();
-        return;
-      }
-
-      // Create Shop
-      const [newShop] = await tx
-        .insert(shops)
-        .values({
-          name: shopName,
-          slug: shopSlug,
-          timezone,
-          // **The timezone already answered these.** A shop that just said
-          // `America/Cancun` was created pricing in dollars, and a Florida shop
-          // — where every briefing says 60 ft — was as likely to get metres
-          // (issue #712). Derived, not assumed: the setup checklist asks the
-          // shop to confirm both, because a default nobody looked at is the
-          // same failure with extra steps. A zone outside the curated
-          // shortcuts falls back to today's defaults, unchanged.
-          ...shopDefaultsForTimeZone(timezone),
-          // A real shop is never seeded and is never a demo. Sample/fake data
-          // lives only in a freshly-minted demo shop (createDemoShop), so a shop
-          // that later imports its real roster never has seeded rows mixed in.
-          // See ADR 20260724-per-visitor-demo-shops.
-          isDemo: false,
-          // Explicit rather than the column's DB-side `defaultNow()`: this is
-          // the instant the trial clock in src/lib/trial.ts counts from, read
-          // back and shown to the owner, so it has to be the same clock every
-          // other render uses (src/lib/clock.ts) — under the e2e/visual
-          // harness that's the one frozen instant, not the database engine's
-          // own wall clock, which would otherwise drift the trial-days-left
-          // math on every run.
-          createdAt: nowDate(),
-        })
-        .returning();
-
-      if (!newShop) {
-        throw new Error("Failed to create shop");
-      }
-      newShopId = newShop.id;
-      newShopLocale = newShop.defaultLocale;
-      createdShop = newShop;
-      await recordSetupLinkShop(tx, String(setupToken), newShop.id);
-
-      // Create owner person
-      const [newPerson] = await tx
-        .insert(people)
-        .values({
-          shopId: newShop.id,
-          fullName: ownerName,
-          email: ownerEmail.toLowerCase(),
-          // No placeholder emergency contact: a literal "On file" reads as a real
-          // contact on the manifest and hides the gap. Left null until captured.
-        })
-        .returning();
-
-      if (!newPerson) {
-        throw new Error("Failed to create owner person");
-      }
-
-      // Assign owner & manager roles
-      await tx.insert(personRoles).values([
-        { personId: newPerson.id, role: "owner" },
-        { personId: newPerson.id, role: "manager" },
-      ]);
-
-      const hashedPassword = await hashPassword(ownerPassword);
-
-      // Create user account
-      const [newAccount] = await tx
-        .insert(userAccounts)
-        .values({
-          personId: newPerson.id,
-          email: ownerEmail.toLowerCase(),
-          hashedPassword,
-        })
-        .returning();
-
-      if (!newAccount) {
-        throw new Error("Failed to create user account");
-      }
-      newAccountId = newAccount.id;
-
-      // Every new shop starts clean: just its default waiver, ready for the
-      // owner's own trips and divers. No sample data — that only ever lives in
-      // a demo shop (ADR 20260724-per-visitor-demo-shops).
-      await tx.insert(waiverTemplates).values({
-        shopId: newShop.id,
-        title: DEFAULT_WAIVER_TITLE,
-        version: 1,
-        body: DEFAULT_WAIVER_BODY,
-      });
+    outcome = await createSignedUpShop(db, {
+      setupToken,
+      shopName,
+      shopSlug,
+      timezone,
+      ownerName,
+      ownerEmail,
+      ownerPassword,
     });
   } catch (err) {
-    if (onboardingError) {
-      return await backToForm(onboardingError);
-    }
     // Never surface a raw exception to an unauthenticated visitor — it can
     // carry internal detail (a DB driver error, a stack fragment). The real
     // cause goes to the server log, where the shop's technical owner can see
@@ -288,6 +163,13 @@ export async function onboardAction(formData: FormData) {
     });
     return await backToForm("create_failed");
   }
+  // Outside the try: `backToForm` redirects, and a redirect is a throw the
+  // catch above would otherwise turn into `create_failed`.
+  if (!outcome.ok) return await backToForm(outcome.reason);
+  const createdShop = outcome.shop;
+  const newAccountId = outcome.accountId;
+  const newShopId = createdShop.id;
+  const newShopLocale = createdShop.defaultLocale;
 
   // The first day, if the form was given one: a real hull and a real departure on
   // tomorrow's board, through the schedule's own create path, so the shop's

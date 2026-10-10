@@ -1,6 +1,5 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -13,6 +12,7 @@ import {
   reviewNitroxCertification,
   unreviewNitroxCertification,
 } from "@/db/nitrox";
+import { getShopPersonName } from "@/db/people";
 import {
   type CardSighting,
   type CertificationReviewRefusal,
@@ -28,7 +28,7 @@ import {
   unreviewCertification,
   unreviewSpecialtyCertification,
 } from "@/db/readiness";
-import { certificationAgency, certificationLevel, diveSpecialty, people } from "@/db/schema";
+import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
 import { judgeAgencyPage, PAGE_TEXT_MAX_LENGTH } from "@/lib/agency-check";
 import { isPlausibleCardNumber } from "@/lib/card-number";
@@ -135,12 +135,7 @@ function sightedNumberRefused(formData: FormData): boolean {
 }
 
 async function liveStaffName(db: AppDb, shopId: string, personId: string) {
-  const [staff] = await db
-    .select({ fullName: people.fullName })
-    .from(people)
-    .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
-    .limit(1);
-  return staff?.fullName ?? "staff";
+  return (await getShopPersonName(db, shopId, personId)) ?? "staff";
 }
 
 export async function addCardAction(shopSlug: string, personId: string, formData: FormData) {
