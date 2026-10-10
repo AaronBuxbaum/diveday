@@ -2,7 +2,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { messageFor } from "@/lib/notifications/render";
-import { dbNow, fileScopedShopContext } from "@/test/db";
+import { dbNow, fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
   bookings,
   paymentOperationIntents,

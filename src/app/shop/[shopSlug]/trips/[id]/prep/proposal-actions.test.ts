@@ -10,7 +10,7 @@ import { createTrip } from "@/db/trips-create";
 import { getTripPrep } from "@/db/trips-prep";
 import { nowDate } from "@/lib/clock";
 import { gearKindIsLifeSupport, tripReservationWindow } from "@/lib/gear";
-import { fileScopedShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { staffSession } from "@/test/staff-session";
 
 // One seeded database for the file and a rolled-back transaction per test

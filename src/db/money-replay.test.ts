@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
-import { fileScopedShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeEmail, recordingCheckout } from "@/test/fakes";
 import { createBooking, createBookingParty, selfCancelBooking } from "./bookings";
 import { sendDueCheckoutRecoveries } from "./checkout-recovery";

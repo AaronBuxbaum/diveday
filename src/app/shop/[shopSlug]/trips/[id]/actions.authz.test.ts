@@ -13,7 +13,7 @@ import {
   trips,
 } from "@/db/schema";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { fileScopedShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_CAPTAIN_EMAIL,
