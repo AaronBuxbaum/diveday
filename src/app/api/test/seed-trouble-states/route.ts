@@ -378,7 +378,7 @@ export async function POST(request: Request) {
   // walks approving a divemaster onto it asks for it (issue #1676).
   const introOverRatio =
     new URL(request.url).searchParams.get("introOverRatio") === "1"
-      ? await askForAnIntroSessionPastItsRatio(db, shop.id, actor.id, now)
+      ? await askForAnIntroSessionPastItsRatio(db, shop.id, actor.id, now, shop.timezone)
       : null;
 
   // Opt-in for the first reason again — it changes a diver's readiness — and
@@ -1342,7 +1342,8 @@ async function askForAnIntroSessionPastItsRatio(
   shopId: string,
   actorPersonId: string,
   now: Date,
-): Promise<{ tripId: string; title: string; asker: string } | null> {
+  timezone: string,
+): Promise<{ tripId: string; title: string; asker: string; date: string } | null> {
   const [session] = await db
     .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt, endsAt: trips.endsAt })
     .from(trips)
@@ -1433,7 +1434,14 @@ async function askForAnIntroSessionPastItsRatio(
     now,
   });
   if (!asked.ok) return null;
-  return { tripId: session.id, title: session.title, asker: asker.fullName };
+  // The session's own shop-local day, so a spec opens the staffing week it
+  // sits in (`?week=` takes any date of a week) rather than hoping it is this one.
+  return {
+    tripId: session.id,
+    title: session.title,
+    asker: asker.fullName,
+    date: calendarDateInTimezone(session.startsAt, timezone),
+  };
 }
 
 /**
