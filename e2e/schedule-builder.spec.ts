@@ -83,6 +83,38 @@ test.describe("schedule builder", () => {
   });
 
   /**
+   * **A read-only action writes no cookie, so the page does not refresh
+   * itself** (issue #2263). Every staff action used to re-set the session
+   * cookie cache, and Next answers any cookie written in an action with
+   * `x-action-revalidated`: the router drops its cache, refreshes the route
+   * and re-prefetches every visible link, after a read that changed nothing.
+   *
+   * The first opening may warm a cache that went cold since sign-in, which is
+   * the one write a read still owes (the edge proxy reads that cache), so the
+   * claim is made of the second: the same read again writes nothing at all.
+   */
+  test("opening the move panel twice writes no cookie the second time", async ({ page }) => {
+    const title = "Wreck Trip — Spiegel Grove";
+    const isAction = (response: { request(): { headers(): Record<string, string> } }) =>
+      "next-action" in response.request().headers();
+    await page.goto(BOARD);
+    await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
+
+    const first = page.waitForResponse(isAction);
+    await chooseRowAction(page, "Move", title);
+    await first;
+    await expect(page.getByText("If you move it")).toBeVisible();
+    await page.getByRole("button", { name: "Cancel" }).click();
+
+    const second = page.waitForResponse(isAction);
+    await chooseRowAction(page, "Move", title);
+    const response = await second;
+    await expect(page.getByText("If you move it")).toBeVisible();
+    expect(await response.headerValue("x-action-revalidated")).toBeNull();
+    expect(await response.headerValue("set-cookie")).toBeNull();
+  });
+
+  /**
    * **The two lines in that preview that depend on where the boat is going**
    * (issue #1310): whether the people on it are already on another boat at
    * those hours, and whether any of them said they are away then.
