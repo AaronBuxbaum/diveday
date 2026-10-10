@@ -37,7 +37,8 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  * ratchet also counts every top-level function under {@link FUNCTION_ROOTS} (tests excluded)
  * and banks the ones over {@link FUNCTION_LINE_LIMIT} in the `function-length` section, keyed
  * `<file>#<name>`. Same mechanics: a new one over the limit fails, a banked one may only shrink,
- * a shrink is banked with `--write`, and `--absorb "<why>"` records a rise from a merge.
+ * a shrink is banked with `--write`, and `--absorb "<why>"` records a rise from a merge — all
+ * through this file, which runs both halves (`main(["functions"])` runs the second alone).
  *
  * A function is measured off the formatter's layout rather than a parse: TypeScript 7 no longer
  * exports a parser to JavaScript (see `scripts/check-db-concurrency.mjs`'s header), and Biome
@@ -253,8 +254,9 @@ const HALVES = {
     limit: FUNCTION_LINE_LIMIT,
     measure: measureFunctionsInRoots,
     compare: compareFunctionLengths,
-    note: `Line counts of the top-level functions under ${FUNCTION_ROOTS.join(", ")} still over ${FUNCTION_LINE_LIMIT} lines, keyed <file>#<name>. Written by \`node scripts/check-page-length.mjs --write\` (or check-function-length.mjs). Each number may only go down — see scripts/check-page-length.mjs.`,
-    refusal: "A function only gets shorter — split it along its sections",
+    note: `Line counts of the top-level functions under ${FUNCTION_ROOTS.join(", ")} still over ${FUNCTION_LINE_LIMIT} lines, keyed <file>#<name>. Written by \`node scripts/check-page-length.mjs --write\`. Each number may only go down — see scripts/check-page-length.mjs.`,
+    refusal:
+      'A function only gets shorter — split it along its sections (a rise from a merge is absorbed with `node scripts/check-page-length.mjs --absorb "<why>"`, which banks both halves)',
     noun: "functions",
   },
 };
