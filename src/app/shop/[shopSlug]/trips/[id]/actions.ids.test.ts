@@ -34,13 +34,12 @@ const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
 const {
   addToWaitlistAction,
-  certifyDiverFromRosterAction,
   confirmDiverIdentityAction,
   splitDiverIdentityAction,
   removeBookingAction,
-  saveCourseNextStepAction,
   undoRemoveBookingAction,
 } = await import("./actions");
+const { certifyDiverFromRosterAction, saveCourseNextStepAction } = await import("./course-actions");
 
 const SHOP_SLUG = "reef-life";
 const SHOP_ID = "11111111-1111-4111-8111-111111111111";

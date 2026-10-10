@@ -19,7 +19,7 @@ import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
-import { recordPaperCourseFormAction } from "../actions";
+import { recordPaperCourseFormAction } from "../course-actions";
 import { AddDiverSection } from "./AddDiverSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
