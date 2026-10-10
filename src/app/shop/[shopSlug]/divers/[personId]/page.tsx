@@ -205,7 +205,6 @@ export default async function DiverDetailPage({
     // What this diver wrote and what the shop wrote back, interleaved by time.
     // Shop-scoped from the session like every read here.
     personThread(db, shop.id, personId),
-    // The record's gear half in one entry (`_lib/gear-load.ts`).
     loadDiverGear(db, shop, personId, { removed }),
   ]);
   // `orders/new` refuses outright without a payable account, so the story's
