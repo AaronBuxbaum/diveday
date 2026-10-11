@@ -5,7 +5,7 @@ import { diveSiteSlugFrom } from "@/lib/dive-site-slug";
 import { type MonthlyReport, summarizeMonth } from "@/lib/reporting";
 import { summarizeShopYear } from "@/lib/shop-year";
 import { shiftInstantByCalendarDays, shopDayBounds, shopMonthBounds } from "@/lib/zoned";
-import { seededShopContext, unseededTestDb } from "@/test/db";
+import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
 import {
   canPersonViewShopReports,
@@ -37,6 +37,10 @@ import {
 } from "./schema";
 import { deleteTrip, getTripRoster, listStaff, setTripCrew } from "./trips";
 import { getCurrentWaiverTemplate } from "./waivers";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 type BookingStatus = "booked" | "checked_in" | "cancelled" | "no_show";
 type TripStatus = "scheduled" | "cancelled";
@@ -243,7 +247,7 @@ const JULY_START = new Date("2026-07-01T00:00:00Z");
 
 describe("getMonthlyReport", () => {
   it("separates verified Stripe Tax from net revenue", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await makePerson(db, shop.id, "Taxed Tessa");
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
     const booking = await makeBooking(db, shop.id, trip, diver);
@@ -282,7 +286,7 @@ describe("getMonthlyReport", () => {
   });
 
   it("buckets by departure, excludes cancellations, and sums cumulative collected money", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const divers: string[] = [];
     for (let i = 0; i < 8; i++) divers.push(await makePerson(db, shop.id, `Diver ${i}`));
@@ -369,7 +373,7 @@ describe("getMonthlyReport", () => {
    * and two identical lists in two files is exactly the drift worth pinning.
    */
   it("drops a released seat from fill rate and keeps it on the roster", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 4, "Reef");
     const stayed = await makePerson(db, shop.id, "Nadia Okonkwo");
     const missed = await makePerson(db, shop.id, "Tomas Rivera");
@@ -395,7 +399,7 @@ describe("getMonthlyReport", () => {
    * shop's own revenue read low.
    */
   it("recovers a pass-through fee net of the tax charged on top of it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await makePerson(db, shop.id, "Taxed Tomas");
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
     const booking = await makeBooking(db, shop.id, trip, diver);
@@ -419,7 +423,7 @@ describe("getMonthlyReport", () => {
   });
 
   it("recovers a discounted pass-through fee in proportion, still net of tax", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await makePerson(db, shop.id, "Halved Hana");
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
     const booking = await makeBooking(db, shop.id, trip, diver);
@@ -441,7 +445,7 @@ describe("getMonthlyReport", () => {
     // Rows predating `settled_total_cents` carry no Stripe figure. They must
     // still contribute exactly what they always did — the deposit asked for —
     // rather than dropping out of revenue or reading as zero collected.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await makePerson(db, shop.id, "Historical Hana");
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
     const booking = await makeBooking(db, shop.id, trip, diver);
@@ -453,7 +457,7 @@ describe("getMonthlyReport", () => {
   });
 
   it("counts a waiver signed once as covering that diver's every booking (sign-once)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const divers: string[] = [];
     for (let i = 0; i < 8; i++) divers.push(await makePerson(db, shop.id, `Diver ${i}`));
@@ -494,7 +498,7 @@ describe("getMonthlyReport", () => {
   });
 
   it("keeps an empty trip in the denominator with a zero booking count", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await makeTrip(db, shop.id, new Date("2026-06-12T12:00:00Z"), 12, "Empty June boat");
 
     const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
@@ -510,7 +514,7 @@ describe("getMonthlyReport", () => {
   // the guard softened — the only day the revenue could start disagreeing with
   // the seats.
   it("cannot delete a departure that carries money, so revenue and seats read the same boats", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await makePerson(db, shop.id, "Paid Diver");
     const leaver = await makePerson(db, shop.id, "Cancelled Diver");
     const paidTrip = await makeTrip(db, shop.id, new Date("2026-06-14T12:00:00Z"), 8, "Paid boat");
@@ -540,7 +544,7 @@ describe("getMonthlyReport", () => {
   it("counts an order paid at the counter in the month it was paid, and drops it once void", async () => {
     // A counter rental belongs to no booking, so no departure names it: it is
     // anchored to `paid_at` (ADR 20261009-counter-payments).
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await makePerson(db, shop.id, "Counter Cora");
     const before = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
     const counterOrder = (paidAt: Date, amountPaidCents: number, status: "paid" | "void") => ({
@@ -569,7 +573,7 @@ describe("getMonthlyReport", () => {
   });
 
   it("is scoped to the shop and reports zeroes for a month with no trips", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const report = await getMonthlyReport(
       db,
       shop.id,
@@ -581,7 +585,7 @@ describe("getMonthlyReport", () => {
   });
 
   it("adds only clear, matching-currency imported payments and refunds to net revenue", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await makePerson(db, shop.id, "Imported Rosa");
     const before = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START, {
       currency: "usd",
@@ -644,7 +648,7 @@ describe("getMonthlyReport", () => {
   });
 
   it("excludes a payment/waiver row whose own shop_id doesn't match the trip's shop, even though it joins to that shop's booking (CR-007)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [otherShop] = await db
       .insert(shops)
       .values({ name: "Other Shop", slug: "other-shop-reporting-test", timezone: "UTC" })
@@ -703,7 +707,7 @@ describe("getMonthlyReport", () => {
    */
   describe("tips", () => {
     it("sums settled tips on the month's trips as their own figure, leaving revenue alone", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const diver = await makePerson(db, shop.id, "Tipper Tess");
       const other = await makePerson(db, shop.id, "Tipper Tom");
       const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
@@ -722,7 +726,7 @@ describe("getMonthlyReport", () => {
     });
 
     it("counts only tips Stripe actually settled — a pending or expired session is money nobody has", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const diver = await makePerson(db, shop.id, "Tipper Tess");
       const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
       const booking = await makeBooking(db, shop.id, trip, diver);
@@ -736,7 +740,7 @@ describe("getMonthlyReport", () => {
     });
 
     it("buckets a tip by the trip's departure month, and never counts a canceled boat's", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const diver = await makePerson(db, shop.id, "Tipper Tess");
       const june = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "June reef");
       const may = await makeTrip(db, shop.id, new Date("2026-05-10T12:00:00Z"), 10, "May reef");
@@ -758,7 +762,7 @@ describe("getMonthlyReport", () => {
     });
 
     it("reports zero for a month with no tips rather than leaving the figure absent", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const diver = await makePerson(db, shop.id, "Diver X");
       const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
       await pay(db, shop.id, await makeBooking(db, shop.id, trip, diver), "paid", 18_000);
@@ -769,7 +773,7 @@ describe("getMonthlyReport", () => {
     });
 
     it("never counts a tip row whose own shop_id doesn't match the trip's shop (CR-007)", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const [otherShop] = await db
         .insert(shops)
         .values({ name: "Other Shop", slug: "other-shop-tips-test", timezone: "UTC" })
@@ -807,7 +811,7 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
   }
 
   it("counts referred seats across every partner, and leaves the unattributed out", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
     await referredBooking(db, shop.id, trip, "Referred One", "coral-sands");
     await referredBooking(db, shop.id, trip, "Referred Two", "coral-sands");
@@ -832,7 +836,7 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
    * future field carrying the slug back out would pass a per-field check.
    */
   it("returns no partner slug anywhere in the report", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
     await referredBooking(db, shop.id, trip, "Referred One", "call-555-0100-for-cheaper-dives");
 
@@ -843,7 +847,7 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
   });
 
   it("is zero for the shop that has handed out no partner links", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
     await referredBooking(db, shop.id, trip, "Walked In", null);
 
@@ -859,7 +863,7 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
    * each was fully displaced by an attacker with two bookings per slug.
    */
   it("counts every referred seat however many distinct slugs there are", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 40, "Reef");
     for (let index = 0; index < 14; index++) {
       await referredBooking(db, shop.id, trip, `Filler ${index}`, `partner-${index}`);
@@ -870,7 +874,7 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
   });
 
   it("excludes a canceled seat, on the same basis as every other figure", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
     await referredBooking(db, shop.id, trip, "Still Coming", "coral-sands");
     await referredBooking(db, shop.id, trip, "Called Off", "coral-sands", "cancelled");
@@ -886,7 +890,7 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
     // scope alone carries it — and that is exactly how CR-007 happened. So the
     // hostile row is hung off *this* shop's trip while carrying the other
     // shop's id, which is the inconsistency the rule exists to distrust.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [otherShop] = await db
       .insert(shops)
       .values({ name: "Other Shop", slug: "other-shop-referral-test", timezone: "UTC" })
@@ -909,7 +913,7 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
     // called-off trip's referred seats must not be in the total either. Nothing
     // else pins the trip-status half: `check:live-trips` catches a dropped
     // `liveTrip()`, and nothing catches a dropped `ne(status, "cancelled")`.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
     await referredBooking(db, shop.id, trip, "Aboard A Canceled Boat", "coral-sands");
     await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, trip));
@@ -922,7 +926,7 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
 
 describe("pagedMonthlyReportTrips", () => {
   it("pages by number and never repeats or skips a trip", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     for (let day = 1; day <= 5; day++) {
       await makeTrip(db, shop.id, new Date(`2026-06-0${day}T10:00:00Z`), 4, `Trip ${day}`);
     }
@@ -955,7 +959,7 @@ describe("pagedMonthlyReportTrips", () => {
   });
 
   it("goes back a page as well as forward", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     for (let day = 1; day <= 4; day++) {
       await makeTrip(db, shop.id, new Date(`2026-06-0${day}T10:00:00Z`), 4, `Trip ${day}`);
     }
@@ -975,7 +979,7 @@ describe("pagedMonthlyReportTrips", () => {
   });
 
   it("never truncates summarizeMonth's totals, even when the table page is tiny", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await makePerson(db, shop.id, "Deep Dana");
     for (let day = 1; day <= 4; day++) {
       const tripId = await makeTrip(
@@ -1006,7 +1010,7 @@ describe("pagedMonthlyReportTrips", () => {
   });
 
   it("treats a nonsensical page as the first and one past the end as the last", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await makeTrip(db, shop.id, new Date("2026-06-02T10:00:00Z"), 4, "Trip A");
     await makeTrip(db, shop.id, new Date("2026-06-03T10:00:00Z"), 4, "Trip B");
 
@@ -1034,7 +1038,7 @@ describe("pagedMonthlyReportTrips", () => {
 
 describe("earliestReportedTripStart", () => {
   it("returns the oldest scheduled departure, ignoring canceled ones", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // Older than anything the demo seed lays down, so it is unambiguously the
     // floor whatever the seeded history happens to contain.
     const oldest = new Date("2019-03-04T09:00:00Z");
@@ -1045,7 +1049,7 @@ describe("earliestReportedTripStart", () => {
   });
 
   it("is shop-scoped, and null for a shop that has never scheduled a trip", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [other] = await db
       .insert(shops)
       // A unique suffix, not a time read: `shops.slug` is unique and this
@@ -1061,7 +1065,7 @@ describe("earliestReportedTripStart", () => {
 
 describe("earliestImportedFinancialHistoryDate", () => {
   it("uses the same eligible source-history boundary as the revenue aggregate", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await makePerson(db, shop.id, "Earliest Import");
     await addImportedFinancialHistory(db, {
       shopId: shop.id,
@@ -1121,7 +1125,7 @@ describe("canPersonViewShopReports", () => {
   }
 
   it("admits an active owner or manager and refuses the daily crew", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await makeStaff(db, shop.id, "owner");
     const manager = await makeStaff(db, shop.id, "manager");
     const captain = await makeStaff(db, shop.id, "captain");
@@ -1132,7 +1136,7 @@ describe("canPersonViewShopReports", () => {
   });
 
   it("refuses a demoted, disabled, deleted, or wrong-shop owner (closes the JWT window)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const disabled = await makeStaff(db, shop.id, "owner", { status: "disabled" });
     const deleted = await makeStaff(db, shop.id, "owner", { deleted: true });
     const owner = await makeStaff(db, shop.id, "owner");
@@ -1160,7 +1164,7 @@ describe("canPersonViewShopReports", () => {
  */
 describe("monthly revenue after a partial refund", () => {
   it("counts what the shop kept, not the whole charge and not zero", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await makePerson(db, shop.id, "Partly Paula");
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
     const booking = await makeBooking(db, shop.id, trip, diver);
@@ -1172,7 +1176,7 @@ describe("monthly revenue after a partial refund", () => {
   });
 
   it("still drops a fully refunded seat to nothing", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await makePerson(db, shop.id, "Refunded Rafa");
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
     const booking = await makeBooking(db, shop.id, trip, diver);
@@ -1185,7 +1189,7 @@ describe("monthly revenue after a partial refund", () => {
 
 describe("crewCountsByTrip (issue #700 — crew load, never a cost)", () => {
   it("counts distinct crew assigned per trip, batched across every trip in one query", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const staff = await listStaff(db, shop.id);
     const [first, second] = staff;
     if (!first || !second) throw new Error("seeded shop needs at least two staff members");
@@ -1205,12 +1209,12 @@ describe("crewCountsByTrip (issue #700 — crew load, never a cost)", () => {
   });
 
   it("returns nothing for a trip ids list that is empty, without a query", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect(await crewCountsByTrip(db, shop.id, [])).toEqual(new Map());
   });
 
   it("never counts a genuinely different shop's crew against this trip id (CR-007)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [otherShop] = await db
       .insert(shops)
       .values({ name: "Other Shop", slug: "other-shop-crew-count-test", timezone: "UTC" })
@@ -1468,7 +1472,7 @@ describe("a day is the month's own derivation, over narrower bounds", () => {
   const ON_THE_STROKE = new Date("2026-06-15T04:00:00Z");
 
   async function juneShop() {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await db.update(shops).set({ timezone: TZ }).where(eq(shops.id, shop.id));
     const diver = await makePerson(db, shop.id, "Windowed Wanda");
 

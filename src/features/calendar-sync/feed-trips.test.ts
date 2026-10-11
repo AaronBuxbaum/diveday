@@ -2,11 +2,15 @@ import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { bookings, people, tripAssignments, tripScheduleDays, trips } from "@/db/schema";
 import { listStaff, upcomingTripsWithCounts } from "@/db/trips";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { FEED_FUTURE_DAYS, FEED_PAST_DAYS, listFeedTrips } from "./feed-trips";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const staff = await listStaff(db, shop.id);
   const member = staff.find((entry) => entry.roles.includes("owner"));
   if (!member) throw new Error("seeded shop has no owner");

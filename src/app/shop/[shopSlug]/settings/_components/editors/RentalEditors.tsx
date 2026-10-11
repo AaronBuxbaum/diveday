@@ -6,7 +6,7 @@ import { catalogItemLabel, rentableItemLabel } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { toShopCurrency } from "@/lib/money";
 import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
-import { saveRentalItemsAction, saveRentalPricingAction } from "../../actions";
+import { saveRentalItemsAction, saveRentalPricingAction } from "../../rental-actions";
 import type { SettingsShop } from "../groups/kit";
 
 /**

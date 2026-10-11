@@ -4,7 +4,7 @@ import type { AppDb } from "@/db/client";
 import { people, personRoles, userAccounts } from "@/db/schema";
 import { listShopStaff } from "@/db/staff-accounts";
 import type { Role } from "@/lib/authz";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_CAPTAIN_EMAIL,
@@ -12,6 +12,10 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * Team management is the gate over the gates: whoever can edit roles here can
@@ -79,7 +83,7 @@ function rolesForm(personId: string, roles: Role[], extra: Record<string, string
 }
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   return {
     db,

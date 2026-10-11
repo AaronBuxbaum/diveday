@@ -4,7 +4,7 @@ import { DangerDisclosure } from "@/components/ui/disclosure";
 import { controlClass, Field } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { eraseGuardianEmailAction } from "../actions";
+import { eraseGuardianEmailAction } from "../record-actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 
 /**

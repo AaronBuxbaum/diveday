@@ -136,7 +136,7 @@ with the `diveday-admin` profile, `<old>` the region mail is leaving and `<new>`
    `infra/lib/email-stack.ts`), then add the three
    `SesDkimRecords` CNAME records with the project Vercel CLI and wait for AWS to show the identity verified:
    ```bash
-   pnpm exec vercel dns add dive.day <selector>._domainkey.ses CNAME <value-from-SesDkimRecords>
+   pnpm dlx vercel@62.5.0 dns add dive.day <selector>._domainkey.ses CNAME <value-from-SesDkimRecords>
    ```
    Run that once for each output pair, dropping the trailing `.dive.day` from the record name. A subdomain,
    not the org domain: automated mail and human correspondence should not share a sending
@@ -205,7 +205,7 @@ Two records, on `mail.ses.dive.day`, both in the `SesMailFromRecords` stack outp
 
 **Exactly one MX record.** SES fails the whole MAIL FROM setup if that subdomain has more than one.
 Moving regions is therefore a delete-then-add, and it is yours to do: the post-deploy wizard finds a
-rival MX, prints it with the `pnpm exec vercel dns rm <record-id>` to remove it, and skips its own
+rival MX, prints it with the `pnpm dlx vercel@62.5.0 dns rm <record-id>` to remove it, and skips its own
 add rather than leaving two behind.
 
 These are added through Vercel CLI: authoritative DNS for `dive.day` is **Vercel DNS**, not Route53,
@@ -213,8 +213,8 @@ so the CDK stack has no hosted zone to write them into. It configures the AWS si
 values; add the MAIL FROM pair with:
 
 ```bash
-pnpm exec vercel dns add dive.day mail.ses MX feedback-smtp.us-east-1.amazonses.com 10
-pnpm exec vercel dns add dive.day mail.ses TXT 'v=spf1 include:amazonses.com ~all'
+pnpm dlx vercel@62.5.0 dns add dive.day mail.ses MX feedback-smtp.us-east-1.amazonses.com 10
+pnpm dlx vercel@62.5.0 dns add dive.day mail.ses TXT 'v=spf1 include:amazonses.com ~all'
 ```
 
 Failure is soft by design — `mailFromBehaviorOnMxFailure` is `USE_DEFAULT_VALUE`, so a missing or

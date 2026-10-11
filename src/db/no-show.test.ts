@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { MINUTE_MS, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import { checkInBooking, undoCheckInBooking } from "./check-in";
 import { recordRollCall } from "./manifests";
@@ -36,15 +36,20 @@ import {
 } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const fileCtx = fileScopedShopContext();
+
 /**
  * The first writer of `bookings.status = "no_show"`, and the two things it is
  * not allowed to do: put a diver the crew recorded aboard onto the absent
  * list, and touch money.
  *
- * Written against a fresh database per test rather than the file-scoped
- * transaction helper, because this module's subject *is* transactions —
- * `FOR UPDATE` on the booking and on the trip — and a savepoint inside one
- * outer transaction cannot contend with itself (`src/test/db.ts`).
+ * The module's subject is transactions — `FOR UPDATE` on the booking and on
+ * the trip — and it runs here inside the file's rolled-back transaction, where
+ * its own transaction is a savepoint. That proves the same thing a fresh
+ * database did: PGlite is one connection, so the lock was uncontended there
+ * too. Contention itself is a `*.postgres.test.ts` question.
  */
 
 /** Every table this module must leave alone, in one list (see below). */
@@ -68,7 +73,7 @@ async function moneyRowCounts(db: Awaited<ReturnType<typeof context>>["db"]) {
 }
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = fileCtx;
   const trip = (await upcomingTripsWithCounts(db, shop.id)).find(
     (candidate) => candidate.title === "Two-Tank Reef — Molasses & French",
   );

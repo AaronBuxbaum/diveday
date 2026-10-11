@@ -114,8 +114,3 @@ export const AGENCY_VERIFICATION_PAGES: Readonly<
 export function agencyVerificationPage(agency: CertificationAgency): AgencyVerificationPage | null {
   return AGENCY_VERIFICATION_PAGES[agency] ?? null;
 }
-
-/** The agency's verification page's address, or null when it publishes none. */
-export function agencyVerificationUrl(agency: CertificationAgency): string | null {
-  return agencyVerificationPage(agency)?.url ?? null;
-}

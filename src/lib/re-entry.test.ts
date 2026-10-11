@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  isRefresherCourse,
-  parseReEntryAsk,
-  RE_ENTRY_ASKS,
-  reEntryOffersFor,
-  reEntryWindowOpen,
-} from "./re-entry";
+import { isRefresherCourse, RE_ENTRY_ASKS, reEntryOffersFor, reEntryWindowOpen } from "./re-entry";
 
 const NOW = new Date("2026-09-05T12:00:00.000Z");
 const hoursOut = (hours: number) => new Date(NOW.getTime() + hours * 60 * 60 * 1000);
@@ -59,15 +53,6 @@ describe("isRefresherCourse", () => {
     expect(isRefresherCourse({ sourceTemplateSlug: "open-water-diver", isActive: true })).toBe(
       false,
     );
-  });
-});
-
-describe("parseReEntryAsk", () => {
-  it("takes the three and refuses everything else", () => {
-    for (const ask of RE_ENTRY_ASKS) expect(parseReEntryAsk(ask)).toBe(ask);
-    for (const junk of ["", "primer", 1, null, undefined]) {
-      expect(parseReEntryAsk(junk)).toBeNull();
-    }
   });
 });
 

@@ -4,7 +4,7 @@ import type { AppDb } from "@/db/client";
 import { createCourseForm, listCourseForms } from "@/db/course-forms";
 import { courseForms, shops } from "@/db/schema";
 import { getCurrentWaiverTemplate } from "@/db/waivers";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_CAPTAIN_EMAIL,
@@ -12,6 +12,10 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * The waiver template is the shop's legal instrument: whatever text is current
@@ -50,7 +54,7 @@ const { deleteCourseFormAction, saveCourseFormAction, saveWaiverAction } = await
 const NEW_BODY = "Rewritten release text posted by someone who should not be able to publish it.";
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   return {
     db,

@@ -37,6 +37,7 @@
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
+import { recordRefusal } from "./hook-log.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 /** Phrases that promise a *next action by this session*, not by a human. */
@@ -147,6 +148,9 @@ function main() {
   if (!promisesUnfinishedWork(text, true)) return 0;
   if (!workingTreeIsDirty()) return 0;
 
+  recordRefusal("unfinished-promises", "closing message promised work on a dirty tree", {
+    session: input.session_id,
+  });
   process.stderr.write(
     [
       "This turn ends by promising work it did not do, and the working tree is dirty.",

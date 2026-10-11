@@ -36,7 +36,8 @@ reasoning and the longer form of every row are in
 
 ## Rules
 
-- **`app → features → lib/db`, one way**: `pnpm check:architecture`.
+- **`app → features → lib/db`, one way**, and `src/lib` takes only *types* from `src/db`; a
+  loader that reads is a `src/db` function or a feature module: `pnpm check:architecture`.
 - **Time is read through the clock** (`nowDate()`/`nowMs()` from `src/lib/clock.ts`), never
   `new Date()` or `Date.now()`: Biome rule `clock` (`pnpm lint`). Freeze the clock at the harness, never mask
   moving text.

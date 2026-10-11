@@ -6,7 +6,7 @@ import { EXTENSION_STORE_URL } from "@/lib/cert-check-extension";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicShopRegisterPath } from "@/lib/public-routes";
 import { shopPath } from "@/lib/staff-notices";
-import { savePackingAction } from "../../actions";
+import { savePackingAction } from "../../booking-actions";
 import { CounterQrCard } from "../../CounterQrCard";
 import { CertCheckExtensionStatus } from "../CertCheckExtensionStatus";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";

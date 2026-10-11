@@ -35,12 +35,11 @@ provider-specific folders are adapters and must not introduce unique requirement
 | --- | --- |
 | `pnpm dev` | dev server at localhost:3000; wait for **`dev: serving … — warmed in Ns`**, not Next's `✓ Ready`. One per checkout (the **run** skill) |
 | `pnpm task:context <area>` | bounded paths, invariants, and validation for a task |
-| `pnpm test <file> --reporter=dot` | focused Vitest run |
-| `pnpm test:changed` | before you push: the tests your diff reaches. After a `src/db/schema/` edit, run the schema guards by path instead |
-| `pnpm typecheck` | tsc |
-| `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
-| `pnpm check:repo` | 46 static guards, concurrently; each names itself and the offending line. The *why* of each: [docs/agents/repo-checks.md](docs/agents/repo-checks.md) |
-| `pnpm e2e <spec> --reporter=line` | build, then one Playwright spec; `pnpm e2e:run <spec>` reuses a `pnpm e2e:build` |
+| `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`, `pnpm test:changed`, `pnpm e2e <spec>` | the pre-commit and pre-push checklist is the **verify** skill |
+| `pnpm lint:fix` | Biome autofix |
+| `pnpm check:repo` | 45 static guards, concurrently; each names itself and the offending line. The *why* of each: [docs/agents/repo-checks.md](docs/agents/repo-checks.md) |
+| `pnpm agent:doctor` | what this environment will trip you on (Node, `gh`, stale `origin/main`, strays) |
+| `node scripts/stack-map.mjs` | your stack's layers and top, from git |
 | `pnpm db:generate` | a Drizzle migration after editing `src/db/schema/` (the **schema-change** skill) |
 | `node scripts/screenshot.mjs <path…>` | phone and desktop PNGs of a page against a running `pnpm dev` |
 
@@ -100,6 +99,7 @@ when you open the file.
 | A dive site's briefing — what a diver reads, and which field writes it | `dive-sites/_components/SiteFields.tsx` writes it, `_components/TripDayPlan.tsx` reads it; the field guide is `src/lib/dive-site-field-guide.ts` + `src/i18n/marine-life-labels.ts` |
 | Starting content a shop copies, and species it picks | `src/content/dive-site-templates.ts`, `src/content/course-templates.ts` (copied, then the shop's); `src/db/marine-life-catalog.ts` (DiveDay's words, photos under `public/marine-life/`, added with `node scripts/fetch-marine-life-photo.mjs`) |
 | Domain logic (framework-free) | `src/lib/` — capacity in `trips.ts`, dates in `format.ts` |
+| A domain term, or an ADR | `docs/product/glossary/` by domain; ADRs indexed in `docs/architecture/decisions/README.md` (generated; the guard names the command) |
 | Feature modules | `src/features/<feature>/` — `index.ts` is the whole public surface; `calendar-sync`, `backup-export`, `integrations` |
 | Outbound integrations a shop connects for itself (Shopify, QuickBooks, Xero, Zapier) | `src/features/integrations/`; rows in `src/db/integrations.ts` + `src/db/integration-events.ts`; staff at `src/app/shop/[shopSlug]/settings/integrations`; callbacks under `src/app/api/integrations/` |
 | Staff calendar subscriptions (iCalendar feeds) | `src/features/calendar-sync/` + `src/app/calendar/[token]/route.ts`; staff UI at `src/app/shop/[shopSlug]/settings/calendar/` |
@@ -132,9 +132,9 @@ Other sessions share this checkout. The full statement of each rule:
 
 - Read the branch and dirty count every prompt opens with before touching shared working-tree
   state; the shell guard refuses a wholesale discard on a dirty tree.
-- **Claim the issue before you start**: the `in-progress` label and a `## Claim` comment naming
-  branch, worktree, start time and owned paths; clear it when you stop
-  ([docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)'s "Claiming an issue").
+- **Claim the issue before you start** and clear it when you stop
+  ([docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)'s "Claiming an issue"); a dead
+  claim expires daily.
 - Before non-trivial work read the open PRs and `pnpm gates`' "Claimed — in flight"; on overlap
   pick another slice. A **stale** claim is a dead session: take the work.
 - Never bare `git stash` / `git stash pop` (the shell guard refuses both); prefer a worktree, then
@@ -155,21 +155,20 @@ One line each, with what enforces it; the full statement and its incident:
 - **A background job you start is yours to end**; check with
   `node scripts/stray-processes.mjs --list`, never `TaskList`, and never pipe a long run through
   `tail`/`head` (`Stop` hook `scripts/stray-processes.mjs`, `scripts/guard-bash.mjs`).
-- **Verify before commit; CI runs anything whole.** Yours: the guard you touched,
-  `pnpm test <file>`, `pnpm typecheck`, `pnpm lint`, one e2e spec, `pnpm test:changed` before you
-  push; *look at* UI you changed. Never report unverified work as done
-  ([docs/agents/verifying.md](docs/agents/verifying.md)).
-- **A thought you don't act on is a `needs-triage` issue**, ending in a prompt a fresh session can
-  paste (`pnpm check:follow-ups`; [issue-tracker.md](docs/agents/issue-tracker.md)'s "Filing a follow-up").
+- **Verify before commit, push once per round; CI runs anything whole.** The **verify** skill is
+  the checklist. Never report unverified work as done.
+- **A thought you don't act on is a `needs-triage` issue**, at most ten per run, ending in a
+  prompt a fresh session can paste ([issue-tracker.md](docs/agents/issue-tracker.md)'s "Filing a follow-up").
 - **A failing or flaky test is part of the work**, even when unrelated: never skipped, never a
   wider timeout; search open PRs for a fix in flight first (`pnpm check:e2e-hygiene`).
 - **A pushed PR is not done until its visual diffs are explained** (the **visual-triage** skill)
   **and every review thread is fixed, declined with a reason, or filed**.
 - **New runtime dependency → ADR** (`pnpm check:adrs`); **new domain concept → glossary**
   (`pnpm check:glossary`); **invalidated doc → fixed in the same PR** (`pnpm check:docs`).
-- **Safety-critical surfaces** (manifests, roll call, cert gating, medical flags) get boring code,
-  adversarial tests and a `dive-domain-expert` review; **security-sensitive changes** (auth, tokens,
-  personal or medical data, export/import) a `security-reviewer` review.
+- **Safety-critical surfaces** (manifests, roll call, readiness, cert gating, medical, erasure) get
+  boring code, adversarial tests and a `dive-domain-expert` review; **security-sensitive changes**
+  (auth, tokens, personal or medical data, export/import) a `security-reviewer` review; the PR body
+  names both (`scripts/check-pr-body.mjs`).
 - **`app → features → lib/db`, one way; routes stay thin** (`pnpm check:architecture`).
 - **Tests travel with behavior**: a bug fix starts with a failing regression test; every important
   flow gets an `e2e/` spec and every important surface a capture in `e2e/visual.spec.ts`

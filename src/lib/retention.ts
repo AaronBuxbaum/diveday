@@ -107,6 +107,7 @@ export type RetainedTable =
   | "notification_delivery_attempts"
   | "activity_events"
   | "account_tokens"
+  | "account_sessions"
   | "shop_contact_email_confirmation_tokens"
   | "booking_capabilities"
   | "booking_payment_events"
@@ -194,6 +195,12 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * who moved a booking, who cancelled a departure. Longest-lived because it
    * is the narrative a shop reconstructs an old season from, and it is small
    * (one short row per operational act).
+   *
+   * It is also the longest window on personal data anywhere here: `params`
+   * holds the actor's and the diver's names as words (`src/lib/activity.ts`),
+   * not ids resolved live. Erasure redacts them on request, by id and by name
+   * (`src/db/anonymize.ts`); this window bounds only what nobody asked to
+   * erase. ADR 20260803-append-only-retention says the same.
    */
   activity_events: 1095,
   /**
@@ -205,6 +212,17 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * live token is never pruned regardless of age.
    */
   account_tokens: 90,
+  /**
+   * The same 90 days past each session's own `expires_at`. A session row is a
+   * sign-in on one device, and it carries that device's IP address and user
+   * agent; nothing deleted it except signing out, revoking it, or erasure, so
+   * a staffer who never signed out kept one such row per device for ever. The
+   * incident question it answers ("which device was signed in to this
+   * account?") is the same one `account_tokens` keeps its 90 days for, and a
+   * session the auth layer still honours is never eligible: the clock is the
+   * expiry, which every use slides forward.
+   */
+  account_sessions: 90,
   /**
    * The same 90 days past `expires_at` as `account_tokens`, for the same shape
    * of row: a hashed one-time link (issue #1288) that is dead the moment it is

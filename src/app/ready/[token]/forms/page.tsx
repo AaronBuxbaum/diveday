@@ -18,7 +18,7 @@ import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
-import { signCourseFormFromReady } from "../actions";
+import { signCourseFormFromReady } from "../paperwork-actions";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = diverTranslator(await requestLocale());

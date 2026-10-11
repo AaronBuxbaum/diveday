@@ -9,7 +9,7 @@ import { AddressSearch } from "./AddressSearch";
 // The actions drag better-auth (and the whole Next server runtime) in behind them.
 const suggest = vi.fn<(query: string) => Promise<AddressLookupResult>>();
 const save = vi.fn<(form: FormData) => Promise<void>>();
-vi.mock("./actions", () => ({
+vi.mock("./shop-actions", () => ({
   suggestAddressAction: (query: string) => suggest(query),
   saveAddressAction: (form: FormData) => save(form),
 }));

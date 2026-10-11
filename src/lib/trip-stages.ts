@@ -69,11 +69,6 @@ export function liveStageOf(
   return reading;
 }
 
-/** `home` alone carries the roll call's success tone; the rest are lagoon. */
-export function stageTone(stage: TripStage): "success" | "primary" {
-  return stage === "home" ? "success" : "primary";
-}
-
 /** The staff bundle's word for each stage, as keys rather than sentences. */
 export const STAGE_WORD_KEYS = {
   boarding: "shopHome.spine.stage.boarding",

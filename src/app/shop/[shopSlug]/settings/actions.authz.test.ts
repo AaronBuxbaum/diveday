@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { mediaDeletionAttempts, processorErasureObligations } from "@/db/schema";
 import { getShopById } from "@/db/shops";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   demoteOwnerToManager,
   redirectedTo,
@@ -12,6 +12,10 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * The "Units" card saves three settings behind one button, and only two of them
@@ -42,28 +46,19 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { revalidatePath } = await import("next/cache");
 const { requireStaffSession } = await import("@/lib/session");
-const {
-  disconnectAction,
-  refreshAction,
-  dischargeProcessorErasureAction,
-  retryMediaDeletionAction,
-  retryProcessorErasureAction,
-  saveAddressAction,
-  saveCrewScheduleAction,
-  saveShopFeatureAction,
-  saveDockDayRhythmAction,
-  saveEmergencyReferenceAction,
-  savePackingAction,
-  saveProfileAction,
-  saveRentalItemsAction,
-  saveRentalPricingAction,
-  saveTaxAction,
-  saveTimezoneAction,
-  saveUnitsAction,
-} = await import("./actions");
+const { saveDockDayRhythmAction, saveEmergencyReferenceAction } = await import("./boat-actions");
+const { savePackingAction } = await import("./booking-actions");
+const { dischargeProcessorErasureAction, retryMediaDeletionAction, retryProcessorErasureAction } =
+  await import("./data-actions");
+const { disconnectAction, refreshAction, saveTaxAction } = await import("./money-actions");
+const { saveRentalItemsAction, saveRentalPricingAction } = await import("./rental-actions");
+const { saveAddressAction, saveShopFeatureAction, saveTimezoneAction, saveUnitsAction } =
+  await import("./shop-actions");
+const { saveCrewScheduleAction } = await import("./team-actions");
+const { saveProfileAction } = await import("./website-actions");
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   return {
     db,

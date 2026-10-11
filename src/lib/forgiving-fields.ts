@@ -1,4 +1,9 @@
-import { type CalendarDate, calendarDateWeekday, isValidCalendarDate } from "./calendar-date";
+import {
+  type CalendarDate,
+  calendarDateInTimezone,
+  calendarDateWeekday,
+  isValidCalendarDate,
+} from "./calendar-date";
 import { formatMoneyScanned, weekdayNames } from "./format";
 import { cachedFormatter } from "./intl-cache";
 import { currencyFractionDigits, majorToMinor, maxPriceMajor } from "./money";
@@ -63,7 +68,11 @@ export const NEVER_FORGIVING_FIELD_NAMES = [
 
 const NEVER_FORGIVING_PREFIXES = ["medical", "questionnaire"] as const;
 
-/** Whether a form field name is on the never-list (exact, or a medical prefix). */
+/**
+ * Whether a form field name is on the never-list (exact, or a medical prefix).
+ * Read by the never-list guard (`forgiving-fields.never-list.test.ts`), which
+ * walks every `<ForgivingInput` in the tree: the export is the guard's rule.
+ */
 export function isNeverForgivingFieldName(name: string): boolean {
   if ((NEVER_FORGIVING_FIELD_NAMES as readonly string[]).includes(name)) return true;
   const lower = name.toLowerCase();
@@ -123,7 +132,7 @@ export function formatWallTime(canonical: string, locale = "en-US"): string {
 function shiftDate(date: CalendarDate, days: number): CalendarDate {
   const [year, month, day] = date.split("-").map(Number);
   const shifted = new Date(Date.UTC(year, month - 1, day + days));
-  return shifted.toISOString().slice(0, 10);
+  return calendarDateInTimezone(shifted, "UTC");
 }
 
 /**

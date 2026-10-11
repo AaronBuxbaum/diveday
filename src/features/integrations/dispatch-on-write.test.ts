@@ -132,7 +132,7 @@ describe("dispatchIntegrationsAfterResponse", () => {
 describe("the write paths that enqueue integration events", () => {
   const ENTRY_POINTS = [
     "src/app/shop/[shopSlug]/orders/new/actions.ts",
-    "src/app/shop/[shopSlug]/orders/[id]/page.tsx",
+    "src/app/shop/[shopSlug]/orders/[id]/actions.ts",
     "src/app/api/webhooks/stripe/route.ts",
   ];
 

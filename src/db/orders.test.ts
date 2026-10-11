@@ -10,7 +10,7 @@ import type {
   ResendInvoiceResult,
   VoidInvoiceResult,
 } from "@/lib/payments/invoicing";
-import { dbNow, dbNowPlus, seededShopContext } from "@/test/db";
+import { dbNow, dbNowPlus, fileScopedShopContext, seededShopContext } from "@/test/db";
 import {
   SEEDED_CAPTAIN_EMAIL,
   SEEDED_OWNER_EMAIL,
@@ -58,6 +58,12 @@ import { setShopCurrency, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`). The racing-refund test and the
+// table-constraint test hydrate their own; each says why.
+const fileCtx = fileScopedShopContext();
+const historyCtx = fileScopedShopContext({ history: true });
+
 function fakeInvoicing(overrides: Partial<InvoicingProvider> = {}): InvoicingProvider {
   let counter = 0;
   return {
@@ -104,8 +110,8 @@ function fakeInvoicing(overrides: Partial<InvoicingProvider> = {}): InvoicingPro
   };
 }
 
-async function orderContext() {
-  const { db, shop } = await seededShopContext();
+async function orderContext({ fresh = false } = {}) {
+  const { db, shop } = fresh ? await seededShopContext() : fileCtx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
@@ -1422,7 +1428,7 @@ describe("orders", () => {
      * shop alone seeds 323, which rendered a ~17,700px page.
      */
     it("pages the index, keeps the total, and never repeats or drops a row", async () => {
-      const { db, shop } = await seededShopContext({ history: true });
+      const { db, shop } = historyCtx;
 
       const first = await listShopOrders(db, shop.id, {}, { page: 1, pageSize: 10 });
       expect(first.rows).toHaveLength(10);
@@ -1453,7 +1459,7 @@ describe("orders", () => {
     });
 
     it("treats a hand-typed page below 1 as the first page rather than a negative offset", async () => {
-      const { db, shop } = await seededShopContext({ history: true });
+      const { db, shop } = historyCtx;
       const first = await listShopOrders(db, shop.id, {}, { page: 1, pageSize: 5 });
       for (const requested of [0, -3, Number.NaN]) {
         const clamped = await listShopOrders(db, shop.id, {}, { page: requested, pageSize: 5 });
@@ -1751,8 +1757,8 @@ describe("resendOrderInvoice", () => {
  * sight.
  */
 describe("orders — a partial refund", () => {
-  async function paidOrder(invoicing = fakeInvoicing()) {
-    const { db, shop, entry, staff } = await orderContext();
+  async function paidOrder(invoicing = fakeInvoicing(), { fresh = false } = {}) {
+    const { db, shop, entry, staff } = await orderContext({ fresh });
     await connectedShop(db, shop.id);
     const result = await createOrder(
       db,
@@ -2014,7 +2020,7 @@ describe("orders — a partial refund", () => {
   it("still refuses a second refund racing the first", async () => {
     // The claim is per *order*, not per amount: two part-refunds are two
     // reversals and must serialize exactly as two full ones did (PAY-L3).
-    const { db, shop, order } = await paidOrder();
+    const { db, shop, order } = await paidOrder(fakeInvoicing(), { fresh: true });
     let calls = 0;
     const slow = fakeInvoicing({
       async refundInvoice(): Promise<RefundInvoiceResult> {
@@ -2044,7 +2050,7 @@ describe("pagedOrdersByDay", () => {
   const SHOP_TZ = "America/New_York";
 
   async function ledgerFixture() {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = fileCtx;
     const staff = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
     const [diver] = await db
       .select({ id: people.id })
@@ -2310,8 +2316,8 @@ describe("counter orders", () => {
     };
   }
 
-  async function recorded(collection: "cash" | "card_machine" = "cash") {
-    const ctx = await orderContext();
+  async function recorded(collection: "cash" | "card_machine" = "cash", { fresh = false } = {}) {
+    const ctx = await orderContext({ fresh });
     const captain = await seededStaffPersonId(ctx.db, ctx.shop.id, SEEDED_CAPTAIN_EMAIL);
     const result = await recordCounterOrder(ctx.db, {
       shopId: ctx.shop.id,
@@ -2451,7 +2457,9 @@ describe("counter orders", () => {
   });
 
   it("is held to its Stripe ids by the database: none on a counter order, all three on an invoice", async () => {
-    const { db, order } = await recorded();
+    // Its own database: the first refusal aborts the transaction it runs in, and
+    // inside the shared one the second would be refused for that reason instead.
+    const { db, order } = await recorded("cash", { fresh: true });
     await expect(
       db.update(orders).set({ stripeInvoiceId: "in_forged" }).where(eq(orders.id, order.id)),
     ).rejects.toThrow();
@@ -2521,7 +2529,7 @@ describe("counter orders", () => {
 
 describe("a diver buying a package online", () => {
   async function packageShop() {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = fileCtx;
     await connectedShop(db, shop.id);
     const pkg = await createDivePackage(db, {
       shopId: shop.id,
@@ -2703,7 +2711,7 @@ describe("a diver buying a package online", () => {
   });
 
   it("keeps no details from a shop that cannot take money", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = fileCtx;
     const pkg = await createDivePackage(db, {
       shopId: shop.id,
       name: "Card",

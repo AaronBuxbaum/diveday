@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { fakeCheckout, fakeEmail } from "@/test/fakes";
 import { anonymizeDiver } from "./anonymize";
 import { cancelBooking, createBookingParty } from "./bookings";
@@ -12,6 +12,10 @@ import { bookingCheckoutBookings, bookingCheckouts, bookings, people, trips } fr
 import { setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts, updateTrip } from "./trips";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 const NOW = new Date("2026-08-01T12:00:00Z");
 const HOUR_MS = 60 * 60 * 1000;
@@ -85,7 +89,7 @@ const alreadyPaidWithTax: CheckoutProvider["retrieveCheckoutSession"] = async ()
 
 /** A connected shop, one priced future trip, one pending checkout `hoursAgo` old. */
 async function pendingCheckoutContext(hoursAgo: number, partySize: 1 | 2 = 1, taxEnabled = false) {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   await upsertShopStripeAccount(db, shop.id, "acct_test");
   await setShopStripeAccountStatus(db, "acct_test", {
     chargesEnabled: true,

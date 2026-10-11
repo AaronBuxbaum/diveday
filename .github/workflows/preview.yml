@@ -148,7 +148,7 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           set -euo pipefail
-          url=$(pnpm exec vercel deploy --archive=tgz --yes --token="$VERCEL_TOKEN")
+          url=$(pnpm dlx vercel@62.5.0 deploy --archive=tgz --yes --token="$VERCEL_TOKEN")
           echo "url=$url" >> "$GITHUB_OUTPUT"
       - name: Say where it is
         env:

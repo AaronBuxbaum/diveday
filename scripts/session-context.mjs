@@ -41,9 +41,62 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { gatherFacts, summaryLines } from "./agent-doctor.mjs";
+import { appendEntry, lastSessionRefusals, readLog, refusalLine } from "./hook-log.mjs";
+import { readStack, gitReader as stackGit, stackSummary } from "./stack-map.mjs";
 import { readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+/**
+ * The one fetch a session makes on its own, at startup and resume: `main`, which
+ * `test:changed`, `check:closing-keywords` and the migration guard all measure from, and the
+ * `claude/*` thread branches `stack-map.mjs` derives the stack from. A container's refs are
+ * whatever its clone saw, and on 2026-10-10 that was an `origin/main` five days and 650 commits
+ * old. `--prune` drops refs of merged-and-deleted branches, so a merged layer leaves the stack.
+ */
+export const SESSION_FETCH_ARGS = [
+  "fetch",
+  "--quiet",
+  "--prune",
+  "--no-tags",
+  "origin",
+  "+refs/heads/main:refs/remotes/origin/main",
+  "+refs/heads/claude/*:refs/remotes/origin/claude/*",
+];
+const SESSION_FETCH_TIMEOUT_MS = 20_000;
+/** A fetch younger than this (by `FETCH_HEAD`'s mtime) is this session's; skip it. */
+const FETCH_FRESH_MS = 10 * 60_000;
+
+/** Whether this SessionStart should fetch: startup or resume, not opted out, not just done. */
+export function fetchNeed({ source, env = process.env, fetchHeadAgeMs = null }) {
+  if (env.DIVEDAY_SESSION_FETCH === "0") return false;
+  if (source !== "startup" && source !== "resume") return false;
+  return fetchHeadAgeMs === null || fetchHeadAgeMs > FETCH_FRESH_MS;
+}
+
+/** How long ago this checkout last fetched, in ms, or null when it never has. */
+export function fetchHeadAgeMs(git, cwd, now = Date.now()) {
+  const file = git(["rev-parse", "--git-path", "FETCH_HEAD"]);
+  if (!file) return null;
+  try {
+    return now - statSync(path.resolve(cwd, file)).mtimeMs;
+  } catch {
+    return null;
+  }
+}
+
+function fetchAtStart(cwd, git, source) {
+  if (!git(["remote", "get-url", "origin"])) return null;
+  if (!fetchNeed({ source, fetchHeadAgeMs: fetchHeadAgeMs(git, cwd) })) return null;
+  const result = runBounded("git", SESSION_FETCH_ARGS, {
+    cwd,
+    stdio: "ignore",
+    timeoutMs: SESSION_FETCH_TIMEOUT_MS,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+  });
+  return result.status === 0 ? "fetched" : "failed";
+}
 
 /** The install a cloud container runs when it wakes without its dependencies. */
 export const INSTALL_ARGS = ["install", "--frozen-lockfile", "--prefer-offline"];
@@ -71,7 +124,10 @@ function gitReader(cwd) {
 export function checkoutState(git) {
   const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
   if (!branch) return null;
-  const upstream = git(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
+  const detached = branch === "HEAD";
+  const upstream = detached
+    ? null
+    : git(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
   let ahead = null;
   let behind = null;
   if (upstream) {
@@ -82,15 +138,24 @@ export function checkoutState(git) {
       behind = b;
     }
   }
-  const unpushedRaw = git(["rev-list", "--count", "HEAD", "--not", "--remotes"]);
-  const unpushed = unpushedRaw === null ? null : Number(unpushedRaw);
+  // Unpushed is measured against the branch's own upstream when it has one. Against every
+  // remote ref at once (`--not --remotes`) a fresh container whose `origin/main` was days old
+  // reported "650 unpushed commits" on a detached checkout of a pushed commit; a detached HEAD
+  // has nothing to push to, so it gets no count at all. A branch with no upstream yet is the
+  // one case `--not --remotes` answers honestly: none of its commits is on any remote branch.
+  let unpushed = null;
+  if (upstream) unpushed = ahead;
+  else if (!detached) {
+    const unpushedRaw = git(["rev-list", "--count", "HEAD", "--not", "--remotes"]);
+    unpushed = unpushedRaw === null ? null : Number(unpushedRaw);
+  }
   const status = git(["status", "--porcelain"]);
   const uncommitted = status === null ? null : status.split("\n").filter(Boolean).length;
   const head = git(["log", "-1", "--format=%h %s"]);
-  return { branch, upstream, ahead, behind, unpushed, uncommitted, head };
+  return { branch, detached, upstream, ahead, behind, unpushed, uncommitted, head };
 }
 
-function pinnedNodeMajor(root) {
+export function pinnedNodeMajor(root) {
   try {
     const pin = readFileSync(path.join(root, ".nvmrc"), "utf8").trim();
     const major = Number(pin.replace(/^v/, "").split(".")[0]);
@@ -192,29 +257,49 @@ export function selectPinnedNode(
   return { status: "selected", ...found };
 }
 
-/** The one-line form for `UserPromptSubmit`. */
-export function promptLine(state) {
+/**
+ * The one-line form for `UserPromptSubmit`: the checkout, then (when there is one) the stack
+ * position from `stack-map.mjs`, then (once per session) the previous session's hook refusals.
+ */
+export function promptLine(state, { stack = "", refusals = "" } = {}) {
   if (!state) return "";
-  const parts = [`git: ${state.branch}`];
+  const parts = [state.detached ? "git: detached HEAD (no upstream)" : `git: ${state.branch}`];
   if (state.uncommitted !== null) {
     parts.push(state.uncommitted === 0 ? "clean tree" : `${state.uncommitted} uncommitted`);
   }
   if (state.unpushed)
     parts.push(`${state.unpushed} unpushed commit${state.unpushed === 1 ? "" : "s"}`);
   if (state.behind) parts.push(`${state.behind} behind ${state.upstream}`);
-  return parts.join(" · ");
+  if (stack) parts.push(stack);
+  const line = parts.join(" · ");
+  return refusals ? `${line}\n${refusals}` : line;
 }
 
 /** The block for `SessionStart`, given the state and the session's `source`. */
 export function sessionBlock(
   state,
-  { source = "startup", nodeMajor, pinnedMajor, installed, nodeSelection = null } = {},
+  {
+    source = "startup",
+    nodeMajor,
+    pinnedMajor,
+    installed,
+    nodeSelection = null,
+    fetched = null,
+    doctor = [],
+  } = {},
 ) {
   const lines = [];
+  if (fetched === "failed") {
+    lines.push(
+      "`git fetch origin main` failed or timed out at session start: origin/main may be stale, so `pnpm test:changed` and `check:closing-keywords` may measure from an old base.",
+    );
+  }
   if (state) {
     const upstream = state.upstream
       ? `upstream ${state.upstream}${state.ahead !== null ? ` (${state.ahead} ahead, ${state.behind} behind)` : ""}`
-      : "no upstream yet";
+      : state.detached
+        ? "detached HEAD, no upstream"
+        : "no upstream yet";
     const tree =
       state.uncommitted === null
         ? ""
@@ -224,8 +309,9 @@ export function sessionBlock(
     lines.push(`Checkout (${source}): branch ${state.branch}, ${upstream}${tree}.`);
     if (state.head) lines.push(`HEAD ${state.head}`);
     if (state.unpushed) {
+      const where = state.upstream ? `not on ${state.upstream}` : "on no remote branch";
       lines.push(
-        `${state.unpushed} local commit${state.unpushed === 1 ? " is" : "s are"} on no remote branch — push before the session ends.`,
+        `${state.unpushed} local commit${state.unpushed === 1 ? " is" : "s are"} ${where} — push before the session ends.`,
       );
     }
   }
@@ -253,6 +339,7 @@ export function sessionBlock(
       "node_modules is missing and `pnpm install --frozen-lockfile` failed — run it and read the error.",
     );
   }
+  lines.push(...doctor);
   lines.push(
     "Path-scoped rules in .claude/rules/ load as you read matching files; the hooks in .claude/settings.json are described in docs/agents/session-hooks.md.",
     // The papercuts log had one entry for a month of visible friction: nothing asked for them.
@@ -320,25 +407,37 @@ function installIfNeeded(root) {
 function main() {
   const payload = readPayload();
   const cwd = process.env.CLAUDE_PROJECT_DIR ?? payload.cwd ?? ROOT;
-  const state = checkoutState(gitReader(cwd));
+  const git = gitReader(cwd);
 
   if (process.argv.includes("--prompt")) {
-    const line = promptLine(state);
+    const session = payload.session_id ?? "unknown";
+    const summary = lastSessionRefusals(readLog({ root: cwd }), session);
+    if (summary) appendEntry({ session, hook: "session-context", kind: "noted" }, { root: cwd });
+    const line = promptLine(checkoutState(git), {
+      stack: stackSummary(readStack(stackGit(cwd))),
+      refusals: refusalLine(summary),
+    });
     if (line) process.stdout.write(`${line}\n`);
     return;
   }
 
   const source = payload.source ?? payload.how_started ?? "startup";
+  // Before reading the state, so ahead/behind and the stack are measured from current refs.
+  const fetched = fetchAtStart(cwd, git, source);
+  const state = checkoutState(git);
   const nodeMajor = Number(process.versions.node.split(".")[0]);
   const pinnedMajor = pinnedNodeMajor(cwd);
   // Before the install, so the install runs on the Node the session will use.
   const nodeSelection = selectPinnedNode({ nodeMajor, pinnedMajor });
+  const installed = installIfNeeded(cwd);
   const block = sessionBlock(state, {
     source,
     nodeMajor,
     pinnedMajor,
     nodeSelection,
-    installed: installIfNeeded(cwd),
+    installed,
+    fetched,
+    doctor: summaryLines(gatherFacts(cwd)),
   });
   if (block) process.stdout.write(`${block}\n`);
 }

@@ -32,6 +32,8 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { recordRefusal } from "./hook-log.mjs";
+
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /** A whole-file read past this many lines is refused without an explicit range. */
@@ -133,6 +135,7 @@ async function main() {
   const reason = violationFor(parsed.tool_input ?? {});
   if (!reason) return;
 
+  recordRefusal("guard-read", reason, { session: parsed.session_id });
   console.error(`Refused by scripts/guard-read.mjs: ${reason}`);
   process.exit(2);
 }

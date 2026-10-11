@@ -15,7 +15,7 @@ import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { isWaiverCode } from "@/lib/today";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { checkInBooking, undoCheckInBooking } from "./check-in";
 import { listAvailableGearUnits, reserveGearUnit } from "./gear";
 import { subscribeManifestEvents } from "./manifest-events";
@@ -47,6 +47,11 @@ import { listRollCallGaps } from "./today";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); the two exceptions are explained
+// above the first describe.
+const ctx = fileScopedShopContext();
+
 vi.mock("@/lib/log", () => ({ log: vi.fn() }));
 
 const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
@@ -73,8 +78,8 @@ async function activityCodesFor(
   return rows.map((row) => row.code);
 }
 
-async function manifestContext() {
-  const { db, shop } = await seededShopContext();
+async function manifestContext({ fresh = false } = {}) {
+  const { db, shop } = fresh ? await seededShopContext() : ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
@@ -88,15 +93,17 @@ async function manifestContext() {
 }
 
 /**
- * **Deliberately still on per-test hydration** (issue #1244). Two tests here —
- * "resolves a same-transaction, same-timestamp pair to the later-appended
- * event", for bookings and for crew — have transaction semantics as their
- * *subject*: they open their own transaction so a pair of roll-call rows share
- * one `now()`, then assert the append-order tie-break. Under
- * `fileScopedShopContext` that inner transaction becomes a savepoint and the
- * outer one has already frozen `now()`, so *every* row in the test would carry
- * the same timestamp and the pair would stop being the thing under test. The
- * assertion would still pass, and prove less.
+ * **Two tests here still hydrate their own database** (issue #1244), through
+ * `manifestContext({ fresh: true })`. "Resolves a same-transaction,
+ * same-timestamp pair to the later-appended event", for bookings and for crew,
+ * have transaction semantics as their *subject*: they open their own
+ * transaction so a pair of roll-call rows share one `now()`, then assert the
+ * append-order tie-break. Under `fileScopedShopContext` that inner transaction
+ * becomes a savepoint and the outer one has already frozen `now()`, so *every*
+ * row in the test would carry the same timestamp and the pair would stop being
+ * the thing under test. The assertion would still pass, and prove less. Every
+ * other test shares the file's one seeded database, each in a rolled-back
+ * transaction.
  */
 describe("trip manifest and roll call (in-memory PGlite)", () => {
   it("derives every active booking into the manifest, including blocked divers", async () => {
@@ -1726,7 +1733,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
    * rows themselves.
    */
   it("resolves a same-transaction, same-timestamp pair to the later-appended event", async () => {
-    const { db, shop, reef, booking, staff } = await manifestContext();
+    const { db, shop, reef, booking, staff } = await manifestContext({ fresh: true });
     const occurredAt = new Date("2026-07-20T14:00:00.000Z");
     await db.transaction(async (tx) => {
       await tx.insert(rollCallEvents).values([
@@ -1776,7 +1783,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
   });
 
   it("resolves a same-transaction crew pair the same way", async () => {
-    const { db, shop, reef, staff } = await manifestContext();
+    const { db, shop, reef, staff } = await manifestContext({ fresh: true });
     await db
       .insert(tripAssignments)
       .values({ tripId: reef.id, personId: staff.id })
@@ -1976,7 +1983,7 @@ describe("age on the crew's boarding list (H-21)", () => {
 
 describe("age and birthdays are measured on the day of the dive", () => {
   it("uses the trip date, not the day staff happen to open the page", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
     // A trip far enough out that "today" and "the day of the dive" cannot both
     // fall inside the birthday window — that gap is what makes this discriminating.

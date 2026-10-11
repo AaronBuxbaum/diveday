@@ -1,8 +1,7 @@
-import type { WaiverRecord } from "@/db/schema";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { MINUTE_MS, nowDate } from "@/lib/clock";
 import { certificationRank } from "@/lib/readiness";
-import { isCompletedWaiverCurrent } from "@/lib/waivers";
+import { isCompletedWaiverCurrent, type WaiverStateFields } from "@/lib/waivers";
 
 /**
  * The door remembers who opened it (ADR 20260906-before-you-ask, decision 3).
@@ -63,7 +62,7 @@ export type KnownDiverSources = {
     importedAt: Date | null;
     createdAt: Date;
   }[];
-  waivers: readonly WaiverRecord[];
+  waivers: readonly WaiverStateFields[];
   currentTemplateGeneration: number | null;
   rentalFit: {
     rentsBcd: boolean;

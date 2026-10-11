@@ -53,9 +53,6 @@ export const MOTION_RUNGS = {
 
 export type MotionRung = keyof typeof MOTION_RUNGS;
 
-/** The stagger between children of an unfolding group, in milliseconds. */
-export const MOTION_STAGGER_MS = 50;
-
 /**
  * How long a rung lasts, for a JS timer that must outlast the CSS it pairs
  * with. Name the rung the stylesheet names; never write the number.

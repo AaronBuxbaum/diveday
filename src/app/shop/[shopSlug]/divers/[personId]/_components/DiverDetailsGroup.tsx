@@ -8,7 +8,7 @@ import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/compo
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { maxPlausibleBirthDate } from "@/lib/age";
 import type { DiverStatusRow } from "@/lib/diver-status";
-import { savePersonAction } from "../actions";
+import { savePersonAction } from "../details-actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { fileGap } from "./file-gap";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";

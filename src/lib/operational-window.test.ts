@@ -6,11 +6,14 @@ import {
   arrivalsWindowIsInsideHorizon,
   OPERATIONAL_HORIZON_DAYS,
   OPERATIONAL_HORIZON_MS,
+  type OperationalWindow,
   operationalWindow,
   SHOP_DAY_SCAN_HOURS,
   shopDayWindow,
-  withinWindow,
 } from "./operational-window";
+
+const withinWindow = (window: OperationalWindow, at: Date): boolean =>
+  at.getTime() >= window.from.getTime() && at.getTime() <= window.to.getTime();
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;

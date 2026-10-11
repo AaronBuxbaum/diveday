@@ -2,7 +2,7 @@ import type { CertificationAgency } from "@/db/schema";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { AgencyCheckQuery } from "@/lib/agency-check";
 import { type AgencyVerificationPage, agencyVerificationPage } from "@/lib/agency-verification";
-import type { AgencyCheckResult } from "../actions";
+import type { AgencyCheckResult } from "../card-actions";
 import { AgencyCheck } from "./AgencyCheck";
 import { AGENCY_KEYS } from "./shared";
 

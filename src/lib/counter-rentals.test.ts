@@ -9,7 +9,6 @@ import {
   counterRentalDayRateCents,
   counterRentalDays,
   counterRentalLineCents,
-  counterRentalSetCents,
   counterRentalWaiverFlag,
   isLifeSupportKind,
 } from "./counter-rentals";
@@ -203,28 +202,6 @@ describe("the set price", () => {
 
   it("reads the core set from what the shop offers, fins carrying the pair", () => {
     expect(core).toEqual(["bcd", "regulator", "wetsuit", "fins"]);
-  });
-
-  it("prices exactly one full set at the set price times the days", () => {
-    expect(
-      counterRentalSetCents(PRICING, core, ["bcd", "regulator", "wetsuit", "fins", "mask"], 3),
-    ).toBe(18_000);
-  });
-
-  it("prices nothing as a set when a piece is missing, doubled, or the shop has no set price", () => {
-    expect(counterRentalSetCents(PRICING, core, ["bcd", "regulator", "wetsuit"], 1)).toBe(null);
-    expect(
-      counterRentalSetCents(PRICING, core, ["bcd", "bcd", "regulator", "wetsuit", "fins"], 1),
-    ).toBe(null);
-    expect(
-      counterRentalSetCents(
-        { ...PRICING, setCents: null },
-        core,
-        ["bcd", "regulator", "wetsuit", "fins"],
-        1,
-      ),
-    ).toBe(null);
-    expect(counterRentalSetCents(PRICING, [], ["bcd"], 1)).toBe(null);
   });
 });
 

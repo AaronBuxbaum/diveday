@@ -95,10 +95,3 @@ const RE_ENTRY_NOTICE_MS = 24 * 60 * 60 * 1000;
 export function reEntryWindowOpen(startsAt: Date, now: Date = nowDate()): boolean {
   return startsAt.getTime() - now.getTime() > RE_ENTRY_NOTICE_MS;
 }
-
-/** A posted or stored value narrowed to one of the three, or null. Never trusts the post. */
-export function parseReEntryAsk(value: unknown): ReEntryAsk | null {
-  return typeof value === "string" && (RE_ENTRY_ASKS as readonly string[]).includes(value)
-    ? (value as ReEntryAsk)
-    : null;
-}

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { promotionProviderFromEnvironment } from "./promotions";
+import { promotionProviderFromEnvironment } from "@/db/stripe-providers";
 
 /** The `stripe_api.request_threw` lines a case wrote, parsed. */
 function threwLines(spy: { mock: { calls: unknown[][] } }): Array<Record<string, unknown>> {

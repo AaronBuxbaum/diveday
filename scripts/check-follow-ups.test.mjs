@@ -383,14 +383,14 @@ describe("a glob in Touches", () => {
 
   /**
    * **A Next.js dynamic segment is a real path and a character class at once.**
-   * `src/app/ready/[token]/actions.ts` is spelled exactly right on disk and
-   * expands to `src/app/ready/t/actions.ts` and friends, none of which exist —
+   * `src/app/ready/[token]/page.tsx` is spelled exactly right on disk and
+   * expands to `src/app/ready/t/page.tsx` and friends, none of which exist —
    * so reading it only as a pattern refused a path anybody could `cat`, and
    * the sentence said "does not exist" about a file that does. Three rounds of
    * red `Repository safeguards` on PR #1746 (issue #1761).
    */
   it("resolves a bracketed route path that is on disk, before expanding it", async () => {
-    expect(await touchedPathExists(root, "src/app/ready/[token]/actions.ts")).toBe(true);
+    expect(await touchedPathExists(root, "src/app/ready/[token]/page.tsx")).toBe(true);
   });
 
   it("still refuses a bracketed path that is not on disk under that spelling", async () => {
@@ -612,7 +612,7 @@ describe("--body, the pre-flight for one drafted issue", () => {
     // The case that stops the strictness above from refusing every good draft.
     const body = valid.body.replace(
       "**Touches:** `src/lib`, `docs/agents/issue-tracker.md`",
-      "**Touches:** `src/app/ready/[token]/actions.ts`",
+      "**Touches:** `src/app/ready/[token]/page.tsx`",
     );
     const result = run("--body", draft("bracketed.md", body));
     expect(result.status).toBe(0);

@@ -1016,12 +1016,13 @@ export async function addRecapPhoto(
 
 export type StaffRecapPhoto = RecapPhotoView & { diverName: string; bookingId: string };
 
-/** Every diver photo on a trip, with who shared it — the staff moderation gallery. */
-export async function listRecapPhotosForTrip(
+/** Every diver photo on these trips, with who shared it — the close-out's moderation gallery. */
+export async function listRecapPhotosForTrips(
   db: AppDb,
   shopId: string,
-  tripId: string,
-): Promise<StaffRecapPhoto[]> {
+  tripIds: readonly string[],
+): Promise<(StaffRecapPhoto & { tripId: string })[]> {
+  if (tripIds.length === 0) return [];
   return db
     .select({
       id: recapPhotos.id,
@@ -1029,11 +1030,12 @@ export async function listRecapPhotosForTrip(
       caption: recapPhotos.caption,
       diverName: people.fullName,
       bookingId: recapPhotos.bookingId,
+      tripId: recapPhotos.tripId,
     })
     .from(recapPhotos)
     .innerJoin(bookings, eq(bookings.id, recapPhotos.bookingId))
     .innerJoin(people, eq(people.id, bookings.personId))
-    .where(and(eq(recapPhotos.shopId, shopId), eq(recapPhotos.tripId, tripId)))
+    .where(and(eq(recapPhotos.shopId, shopId), inArray(recapPhotos.tripId, [...tripIds])))
     .orderBy(desc(recapPhotos.createdAt));
 }
 
@@ -1150,15 +1152,21 @@ export async function addCrewRecapPhoto(
   });
 }
 
-export async function listCrewRecapPhotosForTrip(
+/** The crew's own photos on these trips — the close-out's shared recap gallery. */
+export async function listCrewRecapPhotosForTrips(
   db: AppDb,
   shopId: string,
-  tripId: string,
-): Promise<CrewRecapPhoto[]> {
+  tripIds: readonly string[],
+): Promise<(CrewRecapPhoto & { tripId: string })[]> {
+  if (tripIds.length === 0) return [];
   return db
-    .select({ id: tripRecapPhotos.id, imageUrl: tripRecapPhotos.imageUrl })
+    .select({
+      id: tripRecapPhotos.id,
+      imageUrl: tripRecapPhotos.imageUrl,
+      tripId: tripRecapPhotos.tripId,
+    })
     .from(tripRecapPhotos)
-    .where(and(eq(tripRecapPhotos.shopId, shopId), eq(tripRecapPhotos.tripId, tripId)))
+    .where(and(eq(tripRecapPhotos.shopId, shopId), inArray(tripRecapPhotos.tripId, [...tripIds])))
     .orderBy(desc(tripRecapPhotos.createdAt));
 }
 

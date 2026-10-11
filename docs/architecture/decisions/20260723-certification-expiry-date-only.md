@@ -25,7 +25,7 @@ impossible dates like `2026-02-31`.
 - **`isValidCalendarDate`** rejects a normalized-but-impossible date (`2026-02-31`,
   `2026-04-31`, a non-leap `2025-02-29`) by checking the actual day count for that year/month,
   not just the regex shape. The diver-actions form schema (`dateSchema` in
-  `src/app/shop/[shopSlug]/divers/[personId]/actions.ts`) uses it instead of a bare regex.
+  `src/app/shop/[shopSlug]/divers/[personId]/details-actions.ts`) uses it instead of a bare regex.
 - **`calendarDateInTimezone(now, timezone)`** converts an instant to the shop's own local calendar
   date (reusing `src/lib/zoned.ts`'s `utcToWallTime`), and every expiry comparison —
   `src/lib/readiness.ts`'s readiness gate, the diver-detail card badges, the CSV export's

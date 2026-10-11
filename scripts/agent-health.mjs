@@ -27,6 +27,7 @@ import path from "node:path";
 import process from "node:process";
 
 import { listDirs, measure, rules } from "./check-context-budget.mjs";
+import { loadCoverage } from "./check-route-coverage.mjs";
 import { readRatchet } from "./ratchet.mjs";
 
 const ROOT = process.cwd();
@@ -73,7 +74,9 @@ for (const rule of scoped.sort((a, b) => b.words - a.words)) {
 console.log();
 
 // ------------------------------------------------------- front-end coverage
-const coverage = await readJson("scripts/route-coverage.json");
+// The computed ledger (scripts/check-route-coverage.mjs): the committed file
+// holds only the exceptions.
+const coverage = await loadCoverage(process.cwd());
 const routes = Object.entries(coverage).filter(([route]) => !route.startsWith("//"));
 const withVisual = routes.filter(([, entry]) => (entry.visual ?? []).length > 0);
 // Reads the `a11y` column, not `e2e`. Until 2026-08-27 this counted the routes

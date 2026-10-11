@@ -14,7 +14,7 @@ import { MAX_PACKAGE_DIVE_COUNT } from "@/lib/dive-packages";
 import { formatMoneyScanned } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
-import { createDivePackageAction, deleteDivePackageAction } from "../../settings/actions";
+import { createDivePackageAction, deleteDivePackageAction } from "../../settings/package-actions";
 import { divePackageNoticeMessages } from "../../settings/sub-page-notices";
 
 // See the settings sub-pages (ADR 20260804-instant-navigation).

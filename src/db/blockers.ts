@@ -4,7 +4,7 @@ import { OPERATIONAL_MAX_TRIPS, operationalWindow } from "@/lib/operational-wind
 import { addCalendarDays, toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import { listTripsReadiness } from "./readiness";
-import { pagedUpcomingTripsWithCounts } from "./trips";
+import { pagedUpcomingTripsWithCounts } from "./trips-queries";
 
 /**
  * Readiness across the shared operational horizon, read once. The nav badge

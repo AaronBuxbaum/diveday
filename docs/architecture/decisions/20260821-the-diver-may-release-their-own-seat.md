@@ -29,7 +29,7 @@ number.
 
 **A diver may release their own seat from `/ready`. Moving one is the shop's.**
 
-- `cancelMyBookingAction` returns to `src/app/ready/[token]/actions.ts`, rate-limited by
+- `cancelMyBookingAction` returns to `src/app/ready/[token]/booking-actions.ts`, rate-limited by
   `RATE_LIMITS.bookingSelfCancel` as before. Cancellation and refund stay the two independent steps
   the staff path uses (H-07): the seat is freed first, and a refund failure afterward neither
   re-opens it nor turns an already-committed cancellation into an error the diver cannot read.

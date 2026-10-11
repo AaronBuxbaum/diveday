@@ -20,7 +20,8 @@
  * the values whose absence is a security gap rather than a switched-off feature
  * -- today the Upstash pair, without which every rate limit is per serverless
  * instance. Nowhere else can this be asked: a value Vercel's own integration
- * provisions never passes through `.env.manual`.
+ * provisions never passes through `.env.manual`. The same run refuses a row
+ * marked `forbiddenInProduction` that *is* set: the e2e harness's switches.
  *
  * Then it prints what is unset and what each one switches off. That is a report,
  * never a failure: every one of these is legitimately absent — a local run has
@@ -36,6 +37,7 @@ import {
   envEntry,
   isManual,
   isStackProduced,
+  keysForbiddenInProduction,
   keysRequiredInProduction,
 } from "../config/env-registry.mjs";
 import { parseDotenv } from "./dotenv.mjs";
@@ -77,6 +79,12 @@ if (process.env.VERCEL_ENV === "production") {
   if (missing.length > 0) {
     failures.push(
       `production is missing ${missing.join(", ")}. ${missing.map((key) => `${key}: ${envEntry(key)?.absent ?? "no documented effect"}.`).join(" ")} Set them on the Vercel project (see config/env-registry.mjs).`,
+    );
+  }
+  const present = keysForbiddenInProduction().filter((key) => process.env[key]?.trim());
+  if (present.length > 0) {
+    failures.push(
+      `production sets ${present.join(", ")}, which only the e2e harness may set. Remove them from the Vercel project (see config/env-registry.mjs).`,
     );
   }
 }

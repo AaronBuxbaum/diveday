@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ErasePersonalData } from "./ErasePersonalData";
 import type { DiverProfile } from "./shared";
 
-vi.mock("../actions", () => ({ erasePersonAction: vi.fn() }));
+vi.mock("../record-actions", () => ({ erasePersonAction: vi.fn() }));
 
 afterEach(cleanup);
 

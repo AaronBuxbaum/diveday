@@ -23,8 +23,10 @@ import { deliverZapierEvent } from "./zapier";
  * with no shop connected yet, every one of those 144 daily passes drained an
  * empty outbox.
  *
- * Hourly, on the `:00` the three other hourly passes already wake the database
- * for, so this drain costs no wake-up of its own. It was `0,30` until
+ * Hourly, at `:03`, inside the five minutes the other hourly passes already
+ * keep the database awake for, so this drain costs no wake-up of its own (it
+ * was on their shared `:00` until they were staggered a minute apart, code
+ * review 2026-10-10 item 11). It was `0,30` until
  * 2026-10-06, and the `:30` tick was a wake-up nothing else shared: about half
  * of the compute DiveDay pays for while nobody is using it (ADR
  * 20260919-integration-delivery-is-write-driven's amendment). The price is
@@ -39,7 +41,7 @@ import { deliverZapierEvent } from "./zapier";
  * drift. The cadence stops mattering entirely once delivery is dispatched on
  * write instead of polled for.
  */
-export const INTEGRATIONS_CRON_CRONTAB = "0 * * * *";
+export const INTEGRATIONS_CRON_CRONTAB = "3 * * * *";
 
 export type IntegrationDispatchSummary = {
   scanned: number;

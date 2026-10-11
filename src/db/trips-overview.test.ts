@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import { people, trips } from "./schema";
 import { setStaffLanguages } from "./staff-accounts";
@@ -9,8 +9,12 @@ import { upcomingTripsWithCounts } from "./trips";
 import { listStaff, setTripCrew } from "./trips-crew";
 import { getTripOverview } from "./trips-overview";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const fileCtx = fileScopedShopContext();
+
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = fileCtx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const trip = trips.find((entry) => entry.title.startsWith("Two-Tank Reef — Molasses"));
   if (!trip) throw new Error("demo reef trip missing");

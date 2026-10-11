@@ -1,5 +1,3 @@
-"use client";
-
 import { SubmitButton } from "@/components/SubmitButton";
 import { ToastShell } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";

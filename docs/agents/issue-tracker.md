@@ -107,7 +107,19 @@ August". This is the same lesson as the orphaned-monitor rules in AGENTS.md — 
 machine is the authority, and a registry asserting what should be true is not.
 
 Nothing here fails a build. Clearing someone else's stale claim is a judgment call, so the report
-prints the evidence and leaves the call to you.
+prints the evidence and leaves the call to you — until the claim expires.
+
+### When a claim expires
+
+Every day `.github/workflows/follow-ups.yml` runs `scripts/expire-claims.mjs --apply`, which
+removes `in-progress` and posts a `## Claim expired` comment saying why when either holds:
+
+- the claim's branch is not on origin and the claim is more than a day old, or
+- the claim is more than 7 days old and no open pull request has its branch as head.
+
+`pnpm gates` shows each claim's age and marks one past the 7 days. A label with no parseable claim
+comment is left for a human: it has no date and no branch to check. To keep a long claim alive, keep
+its pull request open; to resume an expired one, post a fresh `## Claim` and re-add the label.
 
 ## Filing a follow-up
 
@@ -257,6 +269,13 @@ comment saying what would un-park it, so the next reader does not re-triage it f
 
 ### Rules
 
+- **At most 10 per run.** A run (a session, a backlog sweep, one container's life) files at most ten
+  `needs-triage` issues. Backlog sweeps filed 54 in three bursts on 2026-10-09 and 2026-10-10, and none
+  had been triaged a day later: a queue written faster than anyone reads it is no memory. Past ten, do the most
+  valuable of what is left, fold related notes into one issue, or name what you did not file in the
+  hand-off. `scripts/file-follow-up.mjs` counts its filings in a gitignored `.claude/.follow-up-log`
+  and refuses the eleventh in twelve hours unless `--over-quota "<why>"` says why it cannot wait; an
+  issue filed through the GitHub MCP counts the same, by your own tally.
 - **One issue per item**, labelled `needs-triage`.
 - **Every section filled**, including a runnable prompt that names real paths and tells the session
   to close the issue.

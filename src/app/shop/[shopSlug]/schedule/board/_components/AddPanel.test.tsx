@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AddPanel } from "./AddPanel";
+import { AddPanel, type AddPanelBuilder } from "./AddPanel";
 import type { BuilderCopy, BuilderMoreOptions } from "./builder-types";
 
 afterEach(cleanup);
@@ -18,8 +18,11 @@ const MORE: BuilderMoreOptions = {
   }),
 };
 
-function renderPanel(over: Partial<Parameters<typeof AddPanel>[0]> = {}) {
-  const props: Parameters<typeof AddPanel>[0] = {
+/** The board's shared builder and one panel's own props, as one flat bag to override. */
+type PanelProps = AddPanelBuilder & Omit<Parameters<typeof AddPanel>[0], "builder">;
+
+function renderPanel(over: Partial<PanelProps> = {}) {
+  const props: PanelProps = {
     locale: "en-US",
     addDraft: null,
     draftActions: { save: async () => {}, discard: async () => {} },
@@ -34,7 +37,22 @@ function renderPanel(over: Partial<Parameters<typeof AddPanel>[0]> = {}) {
     onCancel: vi.fn(),
     ...over,
   };
-  return { props, ...render(<AddPanel {...props} />) };
+  const { dateIso, initialCourse, initialSite, requestPlan, startExpanded, onCancel, ...builder } =
+    props;
+  return {
+    props,
+    ...render(
+      <AddPanel
+        builder={builder}
+        dateIso={dateIso}
+        initialCourse={initialCourse}
+        initialSite={initialSite}
+        requestPlan={requestPlan}
+        startExpanded={startExpanded}
+        onCancel={onCancel}
+      />,
+    ),
+  };
 }
 
 describe("AddPanel", () => {

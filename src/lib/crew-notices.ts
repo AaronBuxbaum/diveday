@@ -53,25 +53,20 @@ export type CrewTripRole = (typeof CREW_TRIP_ROLES)[number];
 /** How long a person's crew must be still before their news goes out. */
 export const CREW_NOTICE_SETTLE_MS = 2 * MINUTE_MS;
 
-/** The hourly pass, as vercel.json schedules it (`src/lib/cron-schedule.test.ts`). */
-export const CREW_NOTICE_CRON_CRONTAB = "0 * * * *";
+/**
+ * The hourly pass, as vercel.json schedules it (`src/lib/cron-schedule.test.ts`):
+ * `:04`, inside the five minutes every hourly pass shares. Genuinely hourly —
+ * news settles within minutes at any hour, and the one read that finds none is
+ * the whole cost of an idle pass.
+ */
+export const CREW_NOTICE_CRON_CRONTAB = "4 * * * *";
 
 /** A change on a departure leaving within this long is sent at once, not on the hour. */
 export const CREW_NOTICE_URGENT_MS = 24 * 60 * MINUTE_MS;
 
-/** Whether news about a departure starting at `startsAt` goes out at write time. */
-export function crewNoticeUrgent(startsAt: Date, now: Date): boolean {
-  return startsAt.getTime() - now.getTime() <= CREW_NOTICE_URGENT_MS;
-}
-
 export type CrewNoticeRow = { tripId: string; change: CrewNoticeChange; seq: number };
 
 export type CrewNews = { tripId: string; change: CrewNoticeChange };
-
-/** Whether a person whose newest pending notice is `newest` is due their message. */
-export function crewNoticesSettled(newest: Date, now: Date): boolean {
-  return now.getTime() - newest.getTime() >= CREW_NOTICE_SETTLE_MS;
-}
 
 /**
  * One person's settled notices, netted to what is still news — one entry per

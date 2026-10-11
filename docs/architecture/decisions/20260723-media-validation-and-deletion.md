@@ -65,7 +65,7 @@ found two related problems in `src/lib/storage/index.ts` and its callers:
   commit, never gating it. A `failed` row (or a `pending` row stale past five minutes, meaning the
   process died mid-attempt — treated identically for retry purposes) shows up in Settings' "Data &
   integrations" group (`src/app/shop/[shopSlug]/settings/SettingsPage.tsx`, owner/manager gate) with
-  a one-tap Retry action (`src/app/shop/[shopSlug]/settings/actions.ts`), and — once stale — as an
+  a one-tap Retry action (`src/app/shop/[shopSlug]/settings/data-actions.ts`), and — once stale — as an
   `urgency: "now"` row on Today. *(Amended 2026-08-06: this shipped on the monthly Reports page,
   beside the stuck-payment-operations panel. Both queues left when the report became only a report:
   payments to the Orders index, deletions here. The gate is unchanged in substance —

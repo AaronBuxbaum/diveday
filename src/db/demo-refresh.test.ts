@@ -2,7 +2,7 @@ import { and, asc, eq, gte, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
-import { seededShopContext, unseededTestDb } from "@/test/db";
+import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
 import {
   DEMO_SCHEDULE_MIN_RUNWAY_DAYS,
@@ -24,6 +24,11 @@ import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-
 import { DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 import { upcomingScheduleRange, upcomingTripsWithCounts } from "./trips";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+const historyCtx = fileScopedShopContext({ history: true });
 
 /**
  * Age a shop's board by `days`, which is what a real deployment does to itself:
@@ -111,7 +116,7 @@ async function runwayDays(db: AppDb, shopId: string): Promise<number> {
 
 describe("refreshCanonicalDemoSchedule", () => {
   it("restores a board that has sailed out from under the seed", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = historyCtx;
     const seededRunway = await runwayDays(db, shop.id);
 
     // The bug this exists for. Every seeded departure is anchored to the moment
@@ -137,7 +142,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // so what it must never do is take the demo's sign-ins with it —
     // `resetDemoSchedule` restores only the playground half by design (ADR
     // 20260718-demo-mode), and nothing else here would notice if that changed.
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = historyCtx;
     await ageTheBoard(db, shop.id, (await runwayDays(db, shop.id)) + 2);
 
     await refreshCanonicalDemoSchedule(db);
@@ -161,7 +166,7 @@ describe("refreshCanonicalDemoSchedule", () => {
    * the shop's second instructor).
    */
   it("restores a cast member the shop was seeded before, instead of failing the pass", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = historyCtx;
     const relief = await db
       .select({ id: people.id })
       .from(people)
@@ -203,7 +208,7 @@ describe("refreshCanonicalDemoSchedule", () => {
    * customer is the serious half; the failing lens test was only the symptom.
    */
   it("never mistakes a diver who shares a staff member's name for that staff member", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = historyCtx;
     // Read off the cast rather than typed here, so this keeps testing the
     // captain even if the demo's crew is recast.
     const captain = staffDefs.find((member) => member.roles.some((role) => role === "captain"));
@@ -237,7 +242,7 @@ describe("refreshCanonicalDemoSchedule", () => {
 
   /** A role lost on its own is the same outage: the lookups join through `person_roles`. */
   it("restores a cast member's missing role", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = historyCtx;
     const [lead] = await db
       .select({ id: people.id })
       .from(people)
@@ -255,7 +260,7 @@ describe("refreshCanonicalDemoSchedule", () => {
   });
 
   it("leaves a board with weeks of departures on it alone", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const before = await upcomingTripsWithCounts(db, shop.id);
 
     const result = await refreshCanonicalDemoSchedule(db);
@@ -273,7 +278,7 @@ describe("refreshCanonicalDemoSchedule", () => {
   });
 
   it("restores as soon as the board runs below the threshold, not once it is empty", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = historyCtx;
     // Leave one day less than the threshold demands — still a schedule a diver
     // could book from, which is the point: the demo is restored while it still
     // looks like a working dive shop.
@@ -292,7 +297,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // departures is a healthy demo to a *diver*, and staff still open
     // /shop/blue-mantis to an empty day — for about forty days out of every
     // six-week restore cycle.
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = historyCtx;
     await pushTheBoardLater(db, shop.id, 4);
     expect(await sailsToday(db, shop.id, DEMO_SHOP_TIMEZONE)).toBe(false);
     const before = await board(db, shop.id);
@@ -333,7 +338,7 @@ describe("refreshCanonicalDemoSchedule", () => {
   });
 
   it("leaves a shop that already has a boat today entirely alone", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const before = await board(db, shop.id);
 
     expect(await ensureDemoSailsToday(db, shop.id, DEMO_SHOP_TIMEZONE)).toBe("already");
@@ -346,7 +351,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // still being out: the shop home reads an ended departure as work (its
     // close-out handoff keys on exactly that), so a morning trip that is already
     // back must not trigger a second one being dragged onto today.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { from } = shopDayBounds(nowDate(), DEMO_SHOP_TIMEZONE);
     const [todaysBoat] = await upcoming(db, shop.id);
     // Park it just after local midnight and give it a short, already-finished run.
@@ -366,7 +371,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // roll does not re-fill the date it left (ADR 20260810-open-ended-recurring-trips),
     // so pulling one onto today would punch a permanent hole in a cadence staff
     // can see. The next non-series departure is moved instead.
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = historyCtx;
     await pushTheBoardLater(db, shop.id, 4);
     const [nearest, second] = await upcoming(db, shop.id);
     const [series] = await db
@@ -411,7 +416,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // here: this pass deletes and re-seeds, and it runs unattended in
     // production. `minRunwayDays` is set past any possible board so the only
     // thing that can stop it is the `isDemo` check.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
     const before = await upcomingTripsWithCounts(db, shop.id);
 

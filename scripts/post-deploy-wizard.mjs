@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PRIMARY_REGION, SES_REGION } from "../config/aws-regions.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { VERCEL_CLI, VERCEL_CLI_PACKAGE } from "./vercel-cli.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 
@@ -388,7 +389,7 @@ export async function runPostDeployWizard({
       if (unreadableReason) throw new Error(unreadableReason);
       existingRecords = execute(
         "pnpm",
-        ["exec", "vercel", "dns", "ls", dnsZone, "--limit", "100", ...vercelScopeArguments],
+        [...VERCEL_CLI, "dns", "ls", dnsZone, "--limit", "100", ...vercelScopeArguments],
         {
           encoding: "utf8",
           timeoutMs: SUBPROCESS_TIMEOUTS.vercelCli,
@@ -577,7 +578,7 @@ export async function runPostDeployWizard({
     }
     if (plan.dmarcToPublish) {
       log(
-        `DMARC: nothing is published at ${plan.dmarcToPublish.name}, so SES mail is judged with no policy of its own and reports nothing. Set \`dmarcReportEmail\` in cdk.json and rerun, or publish it by hand: pnpm exec vercel dns add ${plan.dnsZone} ${plan.dmarcToPublish.name} TXT '${plan.dmarcToPublish.value}'`,
+        `DMARC: nothing is published at ${plan.dmarcToPublish.name}, so SES mail is judged with no policy of its own and reports nothing. Set \`dmarcReportEmail\` in cdk.json and rerun, or publish it by hand: pnpm dlx ${VERCEL_CLI_PACKAGE} dns add ${plan.dnsZone} ${plan.dmarcToPublish.name} TXT '${plan.dmarcToPublish.value}'`,
       );
     }
   };
@@ -595,7 +596,7 @@ export async function runPostDeployWizard({
       logDmarcState(sesDnsPlan);
       for (const line of sesDnsPlan.conflictingMailFromMx) {
         log(
-          `SES MAIL FROM: not adding the ${SES_REGION} MX -- ${sesDnsPlan.dnsZone} already carries a different one, and SES refuses the setup outright when the subdomain has several. Remove it first (\`pnpm exec vercel dns rm <record-id>\`), then rerun this wizard. The record: ${line}`,
+          `SES MAIL FROM: not adding the ${SES_REGION} MX -- ${sesDnsPlan.dnsZone} already carries a different one, and SES refuses the setup outright when the subdomain has several. Remove it first (\`pnpm dlx ${VERCEL_CLI_PACKAGE} dns rm <record-id>\`), then rerun this wizard. The record: ${line}`,
         );
       }
       let added = 0;
@@ -603,8 +604,7 @@ export async function runPostDeployWizard({
         run(
           "pnpm",
           [
-            "exec",
-            "vercel",
+            ...VERCEL_CLI,
             "dns",
             "add",
             sesDnsPlan.dnsZone,
@@ -646,7 +646,7 @@ export async function runPostDeployWizard({
     // production build, not a single API request.
     run(
       "pnpm",
-      ["exec", "vercel", "--prod", "--archive=tgz", ...(ciUnattended ? ["--yes"] : [])],
+      [...VERCEL_CLI, "--prod", "--archive=tgz", ...(ciUnattended ? ["--yes"] : [])],
       SUBPROCESS_TIMEOUTS.build,
     );
   }

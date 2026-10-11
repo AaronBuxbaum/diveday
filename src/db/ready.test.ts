@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { cancelBooking, confirmCarriedFacts, createBooking, setBookingLastDived } from "./bookings";
 import { setBookingPayment } from "./payments";
 import { carriedPreparationForDiver, getReadyPageData } from "./ready";
@@ -10,8 +10,12 @@ import { bookings, people, shops } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 async function seededBooking() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [trip] = await upcomingTripsWithCounts(db, shop.id);
   if (!trip) throw new Error("demo trip missing");
   const [entry] = await getTripRoster(db, shop.id, trip.id);
@@ -21,7 +25,7 @@ async function seededBooking() {
 
 /** A fresh unpaid booking on the seeded "open" reef trip. */
 async function unpaidBooking() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
   if (!open) throw new Error("expected seeded open trip missing");
@@ -292,7 +296,7 @@ describe("a held seat's ready page", () => {
  */
 describe("carriedPreparationForDiver", () => {
   it("finds what the shop holds for a diver who prepared", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const rosters = await Promise.all(trips.map((trip) => getTripRoster(db, shop.id, trip.id)));
 
@@ -323,7 +327,7 @@ describe("carriedPreparationForDiver", () => {
    * is the caller's own fact and is the one thing this reader takes on trust.
    */
   it("claims nothing for a person the shop holds nothing for", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [stranger] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Never Prepared" })
@@ -352,7 +356,7 @@ describe("carriedPreparationForDiver", () => {
    * their records here.
    */
   it("answers nothing when asked about a diver under the wrong shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("demo trip missing");
     const [entry] = await getTripRoster(db, shop.id, trip.id);

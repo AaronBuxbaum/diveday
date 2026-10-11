@@ -733,7 +733,7 @@ function rentedItems(
    * Mask & fins. The fit forms ask **one shoe size** for them — "Fin & boot
    * size", placeholder "US 9 / EU 42" in staff/divers.json and diver.json
    * alike, and the actions behind both write that one answer to `boot_size`
-   * *and* `fin_size` (divers/[personId]/actions.ts, ready/[token]/actions.ts).
+   * *and* `fin_size` (divers/[personId]/fit-actions.ts, ready/[token]/gear-actions.ts).
    * A drysuit's vulcanised boot is two to three fin sizes bigger than the bare
    * foot inside it. Packed to the stated number, the fin does not go on: the
    * diver sits on the bench, the boat waits, and the fix is somebody's spare

@@ -9,6 +9,7 @@ import {
 } from "@/lib/retention";
 import type { AppDb } from "./client";
 import {
+  accountSessions,
   accountTokens,
   activityEvents,
   bookingCapabilities,
@@ -49,7 +50,7 @@ import {
  *   with its own table code and the pass carries on, the same shape the daily
  *   reminders tick uses for its scans.
  * - **Age-based only.** No arm ever consults state a human could still be
- *   acting on. The token arms (`account_tokens`,
+ *   acting on. The token arms (`account_tokens`, `account_sessions`,
  *   `shop_contact_email_confirmation_tokens`, `booking_capabilities`) measure
  *   from each token's own `expires_at`, so a live credential is never eligible
  *   at any age.
@@ -233,6 +234,22 @@ export async function pruneExpiredRecords(
           .where(lt(accountTokens.expiresAt, cutoff("account_tokens")))
           .limit(PRUNE_BATCH_LIMIT),
       (ids) => db.delete(accountTokens).where(inArray(accountTokens.id, ids)),
+    ),
+  );
+
+  // Same clock as account_tokens. A session past its own `expires_at` is one the
+  // auth layer already refuses; deleting it takes its IP address and user agent
+  // with it, and its step-up grants cascade away.
+  outcomes.push(
+    await pruneBatch(
+      "account_sessions",
+      () =>
+        db
+          .select({ id: accountSessions.id })
+          .from(accountSessions)
+          .where(lt(accountSessions.expiresAt, cutoff("account_sessions")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(accountSessions).where(inArray(accountSessions.id, ids)),
     ),
   );
 

@@ -56,6 +56,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { recordRefusal } from "./hook-log.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -357,6 +358,7 @@ async function main() {
   const reason = violationFor(command);
   if (!reason) return;
 
+  recordRefusal("guard-bash", reason, { session: parsed.session_id });
   console.error(`Refused by scripts/guard-bash.mjs: ${reason}`);
   process.exit(2);
 }

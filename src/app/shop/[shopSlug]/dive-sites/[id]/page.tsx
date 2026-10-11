@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { z } from "zod";
 import { EditorRail, UnsavedSections } from "@/components/editor/EditorRail";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -11,23 +10,12 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard, TONE_PANEL_CLASS } from "@/components/ui/card";
 import { DangerDisclosure } from "@/components/ui/disclosure";
 import { FormStatus } from "@/components/ui/form";
-import { getDb } from "@/db/client";
-import { planDiveSitePhotoRelease } from "@/db/dive-site-photos";
 import {
-  deleteDiveSite,
   getDiveSite,
   getDiveSiteTemplateUpdate,
   listDiveSiteCreatures,
   listUpcomingTripsForSite,
-  pullDiveSiteTemplateUpdates,
-  SITE_EDIT_CONFLICT,
-  SITE_NAME_TAKEN,
-  undoDiveSiteTemplateUpdate,
-  updateDiveSiteForForm,
 } from "@/db/dive-sites";
-import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
-import { diveSpecialty } from "@/db/schema";
-import { getShopById } from "@/db/shops";
 import { listTripDives } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -35,20 +23,16 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { staffTideWindowText } from "@/i18n/tide-labels";
 import { tideWindowsForDeparture } from "@/lib/departure-tides";
 import { parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
-import type { DiveSiteTemplateUpdateMode } from "@/lib/dive-site-template-sync";
-import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
 import { parseDockDayRhythm } from "@/lib/diver-planning";
 import { formatShortDate, formatTime } from "@/lib/format";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireShopSurface, requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
-import { supersededDiveSitePhotos, uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { fetchTideStation, tideStationEcho } from "@/lib/tide-stations";
 import { uuidParam } from "@/lib/uuid";
 import { routeEditorCopy } from "../_components/route-editor-copy";
 import { SiteFields } from "../_components/SiteFields";
-import { SiteFormShell, type SiteFormState } from "../_components/SiteFormShell";
+import { SiteFormShell } from "../_components/SiteFormShell";
 import {
   fieldGuideEditorCopy,
   landmarkEditorCopy,
@@ -56,7 +40,6 @@ import {
 } from "../_components/site-editor-copy";
 import { siteFormErrorMessages } from "../_components/site-form-errors";
 import { siteFormSections, siteFormUnsavedCopy } from "../_components/site-form-sections";
-import { siteFormExtras, templatePullMode } from "../site-forms";
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
 // Since the staff shell became synchronous (issue 1446) that holds for a cold,
@@ -64,13 +47,17 @@ import { siteFormExtras, templatePullMode } from "../site-forms";
 // page from `ShopChrome` rather than above it, so the route gets a static
 // shell and its own reads are the only ones the reader waits on. See ADR
 // 20260804-instant-navigation.
+import {
+  deleteDiveSiteAction,
+  pullDiveSiteTemplateAction,
+  saveDiveSiteAction,
+  undoDiveSiteTemplateAction,
+} from "./actions";
 import { TEMPLATE_FIELD_KEYS } from "./template-field-keys";
 
 export const instant = true;
 
 export const metadata: Metadata = { title: "Edit dive site — DiveDay" };
-
-const specialtySchema = z.enum(diveSpecialty.enumValues);
 
 /**
  * How many of the upcoming departures carry a tide line (ADR
@@ -138,7 +125,7 @@ export default async function EditDiveSitePage({
   // What NOAA calls the station this site carries, and whether it sits
   // anywhere near the site's own coordinates (issue #1468, ADR
   // 20260907-noaa-tide-predictions' 2026-09-10 amendment). Read here in the
-  // *render* rather than in `saveAction`, which is what makes "a failed lookup
+  // *render* rather than in `saveDiveSiteAction`, which is what makes "a failed lookup
   // never blocks a save" structural rather than careful: the save writes the
   // id, redirects back, and this render is where the echo appears. `null` for
   // a site with no station, an id NOAA does not know, or a lookup that timed
@@ -209,193 +196,6 @@ export default async function EditDiveSitePage({
     }
   }
 
-  async function saveAction(_state: SiteFormState, formData: FormData): Promise<SiteFormState> {
-    "use server";
-    const activeSession = await requireStaffSession();
-    // Every refusal carries the whole submission back to the form, so an edit
-    // in progress survives a rejected save (see `SiteFormShell`).
-    const refuse = (errorCode: DiveSiteFormError): SiteFormState => ({
-      errorCode,
-      values: submittedValues(formData),
-    });
-    // Depth arrives in whatever unit this shop works in; metres is what's
-    // stored. Re-read the shop rather than trusting a form field for the unit —
-    // a hidden input would let a crafted post store a depth 3.3x off.
-    // `await getDb()`, never the `db` closed over by the page: a server action
-    // serializes what it captures, and handing it a live database client
-    // recurses until the stack blows.
-    const activeShop = await getShopById(await getDb(), activeSession.user.shopId);
-    const parsed = parseDiveSiteForm(
-      Object.fromEntries(formData),
-      activeShop?.depthUnit ?? "meters",
-    );
-    if (!parsed.ok) return refuse(parsed.error);
-    const specialties = z
-      .array(specialtySchema)
-      .safeParse(formData.getAll("specialty").map(String));
-    if (!specialties.success) return refuse("invalid");
-    // The site as stored, re-read rather than closed over: this action runs
-    // long after the page rendered, and it decides what a blank file input
-    // means (keep what is there) and which objects this save orphans.
-    const activeDb = await getDb();
-    const stored = await getDiveSite(activeDb, activeSession.user.shopId, id);
-    if (!stored) notFound();
-    // The generation this page was rendered from, as the staffer's tab last saw
-    // it. A non-numeric value is treated as absent rather than thrown: this page
-    // is the only thing that writes the field, so a bad one means an old release
-    // or a hand-crafted post, and neither is worth a 500 over an input that can
-    // only ever tighten the write.
-    const extras = siteFormExtras(formData);
-    if (!extras) return refuse("invalid");
-    // **Checked before a single byte is uploaded.** `dive-site-photos.ts` says
-    // why in its own words — refusing after storing four photos leaves objects
-    // nothing references, and a refusal never gets far enough to persist their
-    // URLs, so they are invisible to the unfinished-deletions panel too. The
-    // authoritative check is still the one in the `where` below, which is
-    // atomic with the write; this only stops the wasted upload.
-    if (extras.expectedVersion !== null && stored.rowVersion !== extras.expectedVersion) {
-      return refuse("conflict");
-    }
-    // Uploaded from the staffer's own device straight into first-party
-    // storage — there is no pasted URL for a public page to fetch (CR-020).
-    const photos = await uploadDiveSitePhotos(formData, stored);
-    if (!photos.ok) {
-      return refuse(photos.reason === "not_configured" ? "imagesUnconfigured" : "images");
-    }
-    // `maxDepth` and `expectedBottomTime` are the form's own fields, not
-    // columns — they became `parsed.maxDepthMeters` /
-    // `parsed.expectedBottomTimeMinutes`, so neither may reach the spread.
-    const {
-      maxDepth: _maxDepth,
-      expectedBottomTime: _expectedBottomTime,
-      // The note and its author are one value on the row, so the form's plain
-      // string is rebuilt into it below rather than carried by the spread.
-      planningNote: planningNoteWords,
-      ...siteFields
-    } = parsed.fields;
-    // Issue #2078: which superseded photos are this shop's, asked before the write.
-    const releasable = await planDiveSitePhotoRelease(
-      activeDb,
-      activeSession.user.shopId,
-      id,
-      supersededDiveSitePhotos(stored, photos.photos),
-    );
-    const updated = await updateDiveSiteForForm(
-      activeDb,
-      activeSession.user.shopId,
-      id,
-      {
-        shopId: activeSession.user.shopId,
-        ...siteFields,
-        forecastLatitude:
-          parsed.fields.forecastLatitude === "" ? null : parsed.fields.forecastLatitude,
-        forecastLongitude:
-          parsed.fields.forecastLongitude === "" ? null : parsed.fields.forecastLongitude,
-        satelliteImageUrl: photos.photos.satelliteImageUrl,
-        routeImageUrl: photos.photos.routeImageUrl,
-        imageUrls: photos.photos.imageUrls,
-        planningNote: {
-          words: planningNoteWords,
-          byPersonId: activeSession.user.personId,
-        },
-        minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
-        requiredSpecialties: specialties.data,
-        requiresNitrox: extras.requiresNitrox,
-        difficultyLevel: parsed.difficultyLevel,
-        depthRange: parsed.fields.depthRange,
-        maxDepthMeters: parsed.maxDepthMeters,
-        expectedBottomTimeMinutes: parsed.expectedBottomTimeMinutes,
-        currentNote: parsed.fields.currentNote,
-        divePlan: parsed.fields.divePlan,
-        conservationNote: parsed.fields.conservationNote,
-        fitTone: parsed.fields.fitTone,
-        fitNote: parsed.fields.fitNote,
-        fieldGuideTipsHeading: parsed.fields.fieldGuideTipsHeading,
-        landmarks: photos.photos.landmarks,
-        creatures: parsed.creatures,
-        routePoints: parsed.route.points,
-        routeLabel: parsed.route.label,
-        routeNote: parsed.route.note,
-        routeZoom: parsed.route.zoom,
-      },
-      { expectedVersion: extras.expectedVersion },
-    );
-    // Somebody else saved the briefing between this page rendering and this
-    // post. Refused rather than merged, and `refuse` hands back everything that
-    // was typed, so the message announcing that nothing was lost is not itself
-    // what loses it (issue #820).
-    if (updated === SITE_EDIT_CONFLICT) return refuse("conflict");
-    // The name is the one rule the parse above could not check — it takes the
-    // whole shop's library to know — so the database refuses it and the
-    // briefing comes back to the form like any other refusal.
-    if (updated === SITE_NAME_TAKEN) return refuse("nameTaken");
-    if (!updated) notFound();
-    // Only once the row is durably saved: a photo this save replaced or
-    // removed is queued for provider deletion, never blocked on storage and
-    // owner-visible if it fails (CR-012), and only once no other site shows it.
-    for (const url of await releasable()) {
-      await queueAndAttemptMediaDeletion(activeDb, {
-        shopId: activeSession.user.shopId,
-        kind: "dive_site_photo",
-        url,
-      });
-    }
-    revalidateAndRedirect(`${back}/${id}`, noticeUrl(`${back}/${id}`, "saved"));
-  }
-
-  async function deleteAction() {
-    "use server";
-    const activeSession = await requireStaffSession();
-    const deleted = await deleteDiveSite(await getDb(), activeSession.user.shopId, id);
-    revalidateAndRedirect(
-      back,
-      deleted ? noticeUrl(back, "deleted") : `${back}/${id}?error=invalid`,
-    );
-  }
-
-  async function pullTemplateAction(formData: FormData) {
-    "use server";
-    const activeSession = await requireStaffSession();
-    const mode = templatePullMode(formData);
-    if (mode !== "preserve-shop-edits" && mode !== "replace-template-copy") {
-      revalidateAndRedirect(
-        `${back}/${id}`,
-        noticeUrl(`${back}/${id}`, "template-update-unavailable"),
-      );
-    }
-    const result = await pullDiveSiteTemplateUpdates(
-      await getDb(),
-      activeSession.user.shopId,
-      id,
-      mode as DiveSiteTemplateUpdateMode,
-    );
-    revalidateAndRedirect(
-      `${back}/${id}`,
-      noticeUrl(
-        `${back}/${id}`,
-        result.status === "updated"
-          ? result.mode === "replace-template-copy"
-            ? "template-replaced"
-            : "template-updated"
-          : "template-update-unavailable",
-        result.status === "updated" ? { undo: "true" } : undefined,
-      ),
-    );
-  }
-
-  async function undoTemplateAction() {
-    "use server";
-    const activeSession = await requireStaffSession();
-    const result = await undoDiveSiteTemplateUpdate(await getDb(), activeSession.user.shopId, id);
-    revalidateAndRedirect(
-      `${back}/${id}`,
-      noticeUrl(
-        `${back}/${id}`,
-        result.status === "undone" ? "template-undone" : "template-update-unavailable",
-      ),
-    );
-  }
-
   const sections = siteFormSections(t);
 
   return (
@@ -452,7 +252,7 @@ export default async function EditDiveSitePage({
       {undo === "true" && (notice === "template-updated" || notice === "template-replaced") ? (
         <UndoToast
           message={t("diveSites.edit.templateUpdates.undoMessage")}
-          action={undoTemplateAction}
+          action={undoDiveSiteTemplateAction.bind(null, id)}
           fields={{}}
           pendingLabel={t("diveSites.edit.templateUpdates.undoing")}
           undoLabel={t("diveSites.edit.templateUpdates.undo")}
@@ -491,7 +291,7 @@ export default async function EditDiveSitePage({
           <p className="mt-4 text-sm text-muted">
             {t("diveSites.edit.templateUpdates.replaceCopyHint")}
           </p>
-          <form action={pullTemplateAction} className="mt-5">
+          <form action={pullDiveSiteTemplateAction.bind(null, id)} className="mt-5">
             <input type="hidden" name="mode" value="replace-template-copy" />
             <SubmitButton
               pendingLabel={t("diveSites.edit.templateUpdates.replacing")}
@@ -538,7 +338,7 @@ export default async function EditDiveSitePage({
         <EditorRail sections={sections} navLabel={t("diveSites.form.sectionsLabel")} />
         <div className="min-w-0">
           <SiteFormShell
-            action={saveAction}
+            action={saveDiveSiteAction.bind(null, id)}
             errorMessages={siteFormErrorMessages(t, "diveSites.edit.errorInvalid")}
             savedMessage={notice === "saved" ? t("diveSites.edit.savedNotice") : undefined}
             actions={
@@ -589,7 +389,7 @@ export default async function EditDiveSitePage({
       >
         <h2 className="font-semibold">{t("diveSites.edit.deleteConfirmTitle")}</h2>
         <p className="mt-1 max-w-2xl text-muted">{t("diveSites.edit.deleteConfirmBody")}</p>
-        <form action={deleteAction} className="mt-4">
+        <form action={deleteDiveSiteAction.bind(null, id)} className="mt-4">
           <SubmitButton
             pendingLabel={t("diveSites.edit.deleting")}
             className={buttonClass({ variant: "danger-solid" })}

@@ -154,6 +154,30 @@ product decision and failure path are understood.
 Three consecutive hours, not one: a single slow hour on a young product is one visitor on hotel
 wifi.
 
+### What a server render costs
+
+Every staff page, every page under `/s/[shopSlug]/`, and the waiver, readiness and recap links
+write one `render.db_queries` line after their response has gone: the route template, the number
+of database statements the render sent (`queries`), and the wall time from its first statement to
+the end of the response (`ms`). `ms` is not time inside the database; read it beside `queries`, and
+a page whose `ms` moves while its `queries` stays flat is waiting on something else. The line is
+armed by `reportRenderQueries` (`src/lib/observability/query-timing.ts`), which a public or token
+page calls through `await connectionForRoute("<route>")` in place of `await connection()`; a page
+that does not arm its own name is reported under its layout's fallback, `/shop/**` or `/s/**`.
+
+Where to read it:
+
+- **The trend**: the dashboard's **Server render cost (p95)** graph, from the `RenderDbQueries`
+  and `RenderDbMs` metrics. One metric each, undimensioned, for the reason mutation duration has
+  none: a `Route` dimension would bill one metric per route template, and there are over a
+  hundred.
+- **Which page**: the **Heaviest renders by route (p95)** widget below it, or the saved query
+  **DiveDay/Heaviest renders by route**, which group the same lines by `route`.
+
+Neither is alarmed. The guard against a render growing quietly is
+`src/db/staff-render-cost.test.ts`, which pins both the statements Today and the trip page send and
+the number of round trips each waits for one after another.
+
 ### The context around the numbers: CloudWatch RUM
 
 **CloudWatch → RUM → diveday** answers what a metric cannot — which countries, which browsers, which
@@ -189,6 +213,7 @@ For anything narrower, **CloudWatch → Logs Insights → Queries → DiveDay/**
 | Notification failures by provider | Whether a send problem is one provider or all of them, which is what decides the next runbook. |
 | Slowest routes by LCP | The per-route breakdown behind the app-wide vitals metrics. Free, because grouping by a field costs nothing where a metric dimension would. |
 | Slowest mutations (p75) | The settled round-trip time by action, so a locally fast button cannot hide a slow production request. |
+| Heaviest renders by route | Statements and server time per render (p95), by route: which page to make cheaper first. |
 | Core Web Vitals, rated | How many visits landed in each of Google's good / needs-improvement / poor bands — the shape a score is actually reported in. |
 | Scheduled passes | Did every cron run, and what did it do. |
 
@@ -221,7 +246,7 @@ does not depend on the account's age or plan. What that covers, and what this st
 
 | Always free, per month | Used | Billed |
 | --- | --- | --- |
-| 10 custom metrics | 15 (10 signals + 5 web vitals) | 5 × $0.30 = **$1.50** |
+| 10 custom metrics | 19 (11 signals + 5 web vitals + mutation duration + 2 render cost) | 9 × $0.30 = **$2.70** |
 | 10 standard-resolution alarms | 14 (8 alarmed signals + 3 alarmed vitals + 2 SES reputation rates + the external uptime alarm) | 4 × $0.10 = **$0.40** |
 | 3 dashboards | 1 | **$0.00** (a 4th would be $3.00) |
 | 5 GB log ingestion + archive + Insights scan | well under | $0.50/GB ingested, $0.12/GB scanned beyond |
@@ -233,7 +258,7 @@ One cost in this stack is not CloudWatch's: the Route 53 health check the uptime
 matching. It is the only signal that survives a total outage, and the reasoning is in ADR
 [20260907-external-uptime-monitor](../architecture/decisions/20260907-external-uptime-monitor.md).
 
-So the fixed monthly cost of everything in this runbook is about **$1.90**, plus that check. A counter-only signal
+So the fixed monthly cost of everything in this runbook is about **$3.10**, plus that check. A counter-only signal
 added to the registry costs **$0.30**; an alarmed signal costs **$0.40** — $0.30 for the metric plus
 $0.10 for the alarm.
 
@@ -270,6 +295,7 @@ and a sampled count is a count that lies.
 | A preview deploy's lines are mixed in with production's | They are not — the stream name carries `VERCEL_ENV`. Filter by log stream. |
 | No `web_vital.reported` lines | The beacon only fires when the page is *hidden*, so a tab left open reports nothing. Check with DevTools → Application → Background services, or just switch tabs. Also confirm the browser has `navigator.sendBeacon` (every current one does). |
 | No `mutation_duration.reported` lines | Only settled `SubmitButton` actions report, and the beacon requires `navigator.sendBeacon`. Check the browser network panel and the action's `observabilityAction`; the server still answers 204 when telemetry is malformed or rate-limited. |
+| No `render.db_queries` lines | The line is written by `after()` once the response has gone, only from a render that armed it (`reportRenderQueries`), and never from a server action, route handler or cron. A page with no line of its own is reported under its layout's `/shop/**` or `/s/**` label. |
 | Vitals arrive but a p75 looks impossibly good | Check the metric filter has no `DefaultValue`. Publishing a 0 for page views that reported no INP would drag the percentile down until the metric flattered the app; the infra test asserts it is absent. |
 | RUM records nothing | The app monitor's `domain` must match the origin the browser is on — RUM refuses events from anywhere else, and a preview URL is a different origin. Then check the four `NEXT_PUBLIC_RUM_*` values reached the *client* bundle (they must keep the prefix). |
 | RUM's bill is larger than expected | `NEXT_PUBLIC_RUM_SAMPLE_RATE`. If it is already low, look at the Cognito identity pool: it issues anonymous credentials by design, so an unexpected volume of `PutRumEvents` from outside the app's own origin is worth ruling out. |

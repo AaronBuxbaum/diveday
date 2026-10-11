@@ -45,9 +45,10 @@ import {
   trips,
 } from "./schema";
 import { getShopById } from "./shops";
-import { getTripRoster, getTripWithBooked } from "./trips";
 import { crewClashes } from "./trips-crew";
 import { liveTrip } from "./trips-live";
+import { getTripWithBooked } from "./trips-record";
+import { getTripRoster } from "./trips-roster";
 import { welcomeCueInputsByBooking } from "./welcome-cues";
 
 /**

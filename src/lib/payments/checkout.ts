@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { stripeKeySourceFromEnvironment } from "@/db/stripe-key-source";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
@@ -154,7 +153,6 @@ export interface CheckoutProvider {
 }
 
 type Fetch = typeof fetch;
-type PaymentEnvironment = Readonly<Record<string, string | undefined>>;
 
 const sessionResponseSchema = z.object({
   id: z.string().min(1),
@@ -349,12 +347,15 @@ const disabledCheckoutProvider: CheckoutProvider = {
   },
 };
 
-export function checkoutProviderFromEnvironment(
-  env: PaymentEnvironment = process.env,
+/**
+ * The provider over a key source, or the one that answers `not_configured` when
+ * there is none. The key source is built in `src/db/stripe-providers.ts`
+ * (`checkoutProviderFromEnvironment`), because choosing a key reads who holds the
+ * connected account, and that is a database read this layer does not make.
+ */
+export function checkoutProviderFor(
+  keys: StripeKeySource | null,
   fetchImpl: Fetch = fetch,
 ): CheckoutProvider {
-  // Per connected account: the demo's is called only with the test-mode key
-  // (src/lib/payments/stripe-keys.ts, ADR 20261009-demo-test-mode-payments).
-  const keys = stripeKeySourceFromEnvironment({ env });
   return keys ? stripeCheckoutProvider(keys, fetchImpl) : disabledCheckoutProvider;
 }

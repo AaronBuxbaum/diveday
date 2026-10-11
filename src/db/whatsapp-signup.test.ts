@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { shops } from "./schema";
 import {
@@ -13,6 +13,10 @@ import {
   whatsAppProviderForAccount,
 } from "./whatsapp-accounts";
 import { completeWhatsAppSignup } from "./whatsapp-signup";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 const key = randomBytes(32);
 const config = { appId: "app-1", appSecret: "app-secret", configId: "config-1" };
@@ -86,7 +90,7 @@ const urls = (fetchImpl: ReturnType<typeof metaFetch>) =>
 
 describe("completeWhatsAppSignup", () => {
   it("exchanges, registers once, and stores the connection", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const fetchImpl = metaFetch();
     const newPin = vi.fn(() => "123456");
 
@@ -110,7 +114,7 @@ describe("completeWhatsAppSignup", () => {
    * same refusal as one naming a WABA nobody holds.
    */
   it("refuses a bad code before asking who holds the WABA", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const sibling = await siblingShop(db, "sibling-signup-oracle");
     await connectShopWhatsAppAccount(
       db,
@@ -147,7 +151,7 @@ describe("completeWhatsAppSignup", () => {
    * nothing reaches the register step.
    */
   it("refuses a WABA another shop holds after the exchange and before registering", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const sibling = await siblingShop(db, "sibling-signup-held");
     await connectShopWhatsAppAccount(
       db,
@@ -178,7 +182,7 @@ describe("completeWhatsAppSignup", () => {
   });
 
   it("skips registration for a number this shop already registered", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await completeWhatsAppSignup(db, signup(shop.id), config, {
       fetchImpl: metaFetch(),
       newPin: () => "123456",
@@ -199,7 +203,7 @@ describe("completeWhatsAppSignup", () => {
   });
 
   it("names the Meta step that failed under the claim, and stores nothing Meta refused", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const fetchImpl = metaFetch({
       register: () => json(400, { error: { message: "PIN mismatch", code: 133005 } }),
     });
@@ -222,7 +226,7 @@ describe("completeWhatsAppSignup", () => {
    * the holder check, and with no PIN minted.
    */
   it("refuses a WABA the exchanged token cannot read, the same way as a bad code", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const sibling = await siblingShop(db, "sibling-signup-invisible");
     await connectShopWhatsAppAccount(
       db,
@@ -268,7 +272,7 @@ describe("completeWhatsAppSignup", () => {
    * minting one Meta would refuse with 133005.
    */
   it("parks the PIN when subscribe fails, and the next Connect reuses it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const firstPin = vi.fn(() => "123456");
     const failing = metaFetch({ subscribe: () => json(500, { error: { code: 2 } }) });
 
@@ -308,7 +312,7 @@ describe("completeWhatsAppSignup", () => {
    * nothing (the test above), and stores nothing.
    */
   it("parks the PIN when register times out", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const fetchImpl = metaFetch({
       register: () => {
         throw new DOMException("The operation was aborted due to timeout", "TimeoutError");

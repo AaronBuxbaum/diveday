@@ -9,7 +9,7 @@ import {
   type PlaceSuggestion,
   type ShopAddressFields,
 } from "@/lib/address-lookup";
-import { saveAddressAction, suggestAddressAction } from "./actions";
+import { saveAddressAction, suggestAddressAction } from "./shop-actions";
 
 /**
  * Every word this component renders, resolved server-side. Staff Client

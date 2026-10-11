@@ -2,8 +2,12 @@ import { eq, ne } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { bookings, courses, people, trips } from "@/db/schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "@/db/trips";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { staffSession } from "@/test/staff-session";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * **A course student's materials, ticked from PADI's own eLearning page**
@@ -30,7 +34,7 @@ const EMAIL = "lena.ortiz@example.com";
 const PAGE = `Lena Ortiz\t${EMAIL}\tAdvanced Open Water Diver Online\tComplete`;
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   const [staff] = await listStaff(db, shop.id);
   if (!staff) throw new Error("the seeded shop has no staff");

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeEmail, recordingCheckout } from "@/test/fakes";
 import { createBooking, createBookingParty, selfCancelBooking } from "./bookings";
 import { sendDueCheckoutRecoveries } from "./checkout-recovery";
@@ -13,6 +13,10 @@ import { bookingCheckouts, bookings } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
 import { upcomingTripsWithCounts, updateTrip } from "./trips";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * App-side hostile interleavings on the money paths: double-submitted actions
@@ -45,7 +49,7 @@ const HOUR_MS = 60 * 60 * 1000;
 type Db = Awaited<ReturnType<typeof seededShopContext>>["db"];
 
 async function connectedShop() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   await upsertShopStripeAccount(db, shop.id, "acct_test");
   await setShopStripeAccountStatus(db, "acct_test", {
     chargesEnabled: true,

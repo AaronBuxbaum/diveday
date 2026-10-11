@@ -110,7 +110,7 @@ function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps {
  */
 describe("the fly-safe line", () => {
   it("renders nothing when the record could not say", () => {
-    render(<AfterState {...props()} />);
+    render(<AfterState context={props()} />);
     expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.flySafe)).toBeNull();
   });
 
@@ -119,7 +119,7 @@ describe("the fly-safe line", () => {
     // review, the doors and the next dive are each 40px apart (K-532).
     render(
       <AfterState
-        {...props({
+        context={props({
           flySafe: { when: "Sunday 10:20 AM", hours: 24, anchor: "last_dive", reason: "one_dive" },
         })}
       />,
@@ -132,7 +132,7 @@ describe("the fly-safe line", () => {
   it("names the instant, the hours, and the shop, worded off the last dive", () => {
     render(
       <AfterState
-        {...props({
+        context={props({
           flySafe: {
             when: "Sunday 10:20 AM",
             hours: 24,
@@ -150,7 +150,7 @@ describe("the fly-safe line", () => {
   it("says so when the clock started at the scheduled return instead", () => {
     render(
       <AfterState
-        {...props({
+        context={props({
           flySafe: {
             when: "Sunday 10:20 AM",
             hours: 18,
@@ -193,7 +193,7 @@ describe("the fly-safe line", () => {
       cleanup();
       render(
         <AfterState
-          {...props({ flySafe: { when: "Sunday 10:20 AM", hours: 24, anchor, reason } })}
+          context={props({ flySafe: { when: "Sunday 10:20 AM", hours: 24, anchor, reason } })}
         />,
       );
       expect(
@@ -235,7 +235,7 @@ describe("the field guide", () => {
   it("never puts the guide's species on the record as something seen", () => {
     const { container } = render(
       <AfterState
-        {...props({
+        context={props({
           fieldGuide: [guide("French Reef", ["arrow-crab", "atlantic-spadefish"])],
           observedSpecies: [],
         })}
@@ -254,7 +254,7 @@ describe("the field guide", () => {
   it("names what the crew recorded, in the reader's own language", () => {
     const { container } = render(
       <AfterState
-        {...props({
+        context={props({
           fieldGuide: [guide("French Reef", ["arrow-crab"])],
           observedSpecies: ["green-sea-turtle"],
         })}
@@ -272,7 +272,7 @@ describe("the field guide", () => {
 
   it("drops a slug the catalog no longer carries rather than printing it raw", () => {
     const { container } = render(
-      <AfterState {...props({ observedSpecies: ["a-species-diveday-retired"] })} />,
+      <AfterState context={props({ observedSpecies: ["a-species-diveday-retired"] })} />,
     );
     expect(container.querySelector("[data-testid='dive-record-seen']")).toBeNull();
   });
@@ -280,7 +280,7 @@ describe("the field guide", () => {
   it("names each site above its own faces, so the list is about a place", () => {
     const { container } = render(
       <AfterState
-        {...props({
+        context={props({
           fieldGuide: [
             guide("French Reef", ["arrow-crab"]),
             guide("Molasses Reef", ["atlantic-spadefish", "azure-vase-sponge"]),
@@ -308,7 +308,7 @@ describe("the field guide", () => {
    */
   it("is shut on arrival and scoped to the sites in its own heading", () => {
     const { container } = render(
-      <AfterState {...props({ fieldGuide: [guide("French Reef", ["arrow-crab"])] })} />,
+      <AfterState context={props({ fieldGuide: [guide("French Reef", ["arrow-crab"])] })} />,
     );
     const drawer = container.querySelector("[data-recap-door='field-guide'] details");
     expect(drawer).toBeTruthy();
@@ -320,7 +320,7 @@ describe("the field guide", () => {
 
   it("renders no drawer when every species a site names has left the catalog", () => {
     const { container } = render(
-      <AfterState {...props({ fieldGuide: [guide("French Reef", ["gone", "also-gone"])] })} />,
+      <AfterState context={props({ fieldGuide: [guide("French Reef", ["gone", "also-gone"])] })} />,
     );
     expect(container.querySelector("[data-recap-door='field-guide']")).toBeNull();
   });
@@ -328,7 +328,7 @@ describe("the field guide", () => {
   it("drops a site whose whole guide has left the catalog, keeping the rest", () => {
     const { container } = render(
       <AfterState
-        {...props({
+        context={props({
           fieldGuide: [guide("French Reef", ["gone"]), guide("Molasses Reef", ["arrow-crab"])],
         })}
       />,
@@ -344,7 +344,7 @@ describe("the field guide", () => {
   });
 
   it("renders no drawer at all when no site the day dived names a species", () => {
-    const { container } = render(<AfterState {...props({ fieldGuide: [] })} />);
+    const { container } = render(<AfterState context={props({ fieldGuide: [] })} />);
     expect(container.querySelector("[data-recap-door='field-guide']")).toBeNull();
   });
 
@@ -356,7 +356,9 @@ describe("the field guide", () => {
   it("drops a species the catalog no longer carries", () => {
     render(
       <AfterState
-        {...props({ fieldGuide: [guide("French Reef", ["arrow-crab", "not-a-real-species"])] })}
+        context={props({
+          fieldGuide: [guide("French Reef", ["arrow-crab", "not-a-real-species"])],
+        })}
       />,
     );
     expect(screen.getByText("marineLife.species.arrow-crab.name")).toBeTruthy();
@@ -378,7 +380,7 @@ function primaries(container: HTMLElement): Element[] {
 
 describe("the day's facts render once", () => {
   it("carries exactly one conditions element and one sites element", () => {
-    render(<AfterState {...props()} />);
+    render(<AfterState context={props()} />);
     expect(screen.getAllByTestId(AFTER_STATE_TEST_IDS.conditions)).toHaveLength(1);
     expect(screen.getAllByTestId(AFTER_STATE_TEST_IDS.sites)).toHaveLength(1);
   });
@@ -389,7 +391,7 @@ describe("the day's facts render once", () => {
     // keepsake with few facts is short; it never invents a row to fill space.
     render(
       <AfterState
-        {...props({
+        context={props({
           sites: [],
           trip: {
             title: "Shore dive — Dry Rocks",
@@ -437,12 +439,12 @@ describe("what the record may claim", () => {
     // logged": a number a shop typed on the trip row weeks earlier, so a diver
     // who sat out the second tank with an ear squeeze read "2 dives logged".
     // The key is gone from both bundles; this holds the surface to it.
-    const { container } = render(<AfterState {...props()} />);
+    const { container } = render(<AfterState context={props()} />);
     expect(container.textContent).not.toContain("diveCountSummary");
   });
 
   it("claims nothing was verified — only who recorded it", () => {
-    render(<AfterState {...props()} />);
+    render(<AfterState context={props()} />);
     expect(screen.queryByText(/verifiedRecord/)).toBeNull();
     expect(screen.getByText("recap.recordedBy(Blue Mantis Divers)")).toBeInTheDocument();
   });
@@ -461,7 +463,7 @@ describe("what the record may claim", () => {
     // and `_RecapSiteCarriesOnlyItsName` above fails `pnpm typecheck` the
     // moment the projection grows a second field. What is left here is the
     // half a type cannot state — that the sites *are* named.
-    render(<AfterState {...props()} />);
+    render(<AfterState context={props()} />);
     const sites = screen.getByTestId(AFTER_STATE_TEST_IDS.sites);
     expect(sites.textContent).toContain("French Reef");
     expect(sites.textContent).not.toContain("maxDepthLabel");
@@ -471,7 +473,7 @@ describe("what the record may claim", () => {
     // The numbers are the diver's to write and the signing divemaster's to
     // countersign. Deleting the claims without leaving the blanks would have
     // taken the keepsake down with them.
-    render(<AfterState {...props()} />);
+    render(<AfterState context={props()} />);
     expect(screen.getByTestId(AFTER_STATE_TEST_IDS.printNotes)).toBeInTheDocument();
     expect(screen.getByTestId(AFTER_STATE_TEST_IDS.printSignature)).toBeInTheDocument();
   });
@@ -479,7 +481,7 @@ describe("what the record may claim", () => {
 
 describe("one primary at rest", () => {
   it("gives the review the only primary weight on the page", () => {
-    const { container } = render(<AfterState {...props({ canTip: true })} />);
+    const { container } = render(<AfterState context={props({ canTip: true })} />);
     const loud = primaries(container);
     expect(loud).toHaveLength(1);
     expect(loud[0]?.textContent).toBe("reviews.submit");
@@ -491,7 +493,7 @@ describe("one primary at rest", () => {
     // submit steps back, so the page still points at one next action.
     const { container } = render(
       <AfterState
-        {...props({
+        context={props({
           shop: {
             name: "Blue Mantis Divers",
             slug: "blue-mantis",
@@ -519,7 +521,7 @@ describe("one primary at rest", () => {
   it.each([1, 2, 3])("opens the Google door after a %i-star rating too", (rating) => {
     render(
       <AfterState
-        {...props({
+        context={props({
           shop: {
             name: "Blue Mantis Divers",
             slug: "blue-mantis",
@@ -542,7 +544,7 @@ describe("one primary at rest", () => {
   it("keeps the Google door shut when nothing was just submitted", () => {
     render(
       <AfterState
-        {...props({
+        context={props({
           shop: {
             name: "Blue Mantis Divers",
             slug: "blue-mantis",
@@ -562,7 +564,7 @@ describe("one primary at rest", () => {
 
 describe("the coral budget", () => {
   it("spends the thread's last accent on the greeting, once", () => {
-    const { container } = render(<AfterState {...props()} />);
+    const { container } = render(<AfterState context={props()} />);
     expect(container.querySelectorAll("[class*='accent']")).toHaveLength(1);
   });
 
@@ -571,7 +573,7 @@ describe("the coral budget", () => {
     // 20260827-clearwater-surface-language, decision 11). Once the one thing
     // the page asks has been answered, the same words are a page title.
     const { container } = render(
-      <AfterState {...props({ ownReview: { rating: 4, comment: null } })} />,
+      <AfterState context={props({ ownReview: { rating: 4, comment: null } })} />,
     );
     expect(container.querySelectorAll("[class*='accent']")).toHaveLength(0);
     expect(container.querySelector(".rise-in")).toBeNull();
@@ -583,26 +585,26 @@ describe("the coral budget", () => {
 
 describe("a shop that switched reviews off", () => {
   it("asks for no rating", () => {
-    render(<AfterState {...props({ canReview: false })} />);
+    render(<AfterState context={props({ canReview: false })} />);
     expect(screen.queryByText("reviews.askHeading")).toBeNull();
     expect(screen.queryByText("reviews.submit")).toBeNull();
   });
 
   it("asks for one when it is on", () => {
-    render(<AfterState {...props()} />);
+    render(<AfterState context={props()} />);
     expect(screen.getByText("reviews.askHeading")).toBeInTheDocument();
   });
 });
 
 describe("the milestone stamp", () => {
   it("stamps a milestone visit instead of the plain count", () => {
-    render(<AfterState {...props({ visitCount: 10 })} />);
+    render(<AfterState context={props({ visitCount: 10 })} />);
     expect(screen.getByTestId(AFTER_STATE_TEST_IDS.stamp)).toBeInTheDocument();
     expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.visitLine)).toBeNull();
   });
 
   it("leaves an ordinary visit its plain line and no stamp", () => {
-    render(<AfterState {...props({ visitCount: 12 })} />);
+    render(<AfterState context={props({ visitCount: 12 })} />);
     expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.stamp)).toBeNull();
     expect(screen.getByTestId(AFTER_STATE_TEST_IDS.visitLine)).toBeInTheDocument();
   });
@@ -610,14 +612,14 @@ describe("the milestone stamp", () => {
   it("says in words what the roundel draws", () => {
     // Colour and shape never carry a state alone: the whole label is the
     // `<svg>`'s accessible name, however its lines are broken up inside.
-    render(<AfterState {...props({ visitCount: 1 })} />);
+    render(<AfterState context={props({ visitCount: 1 })} />);
     expect(screen.getByRole("img", { name: "recap.milestoneStampFirst" })).toBeInTheDocument();
   });
 });
 
 describe("the keepsake prints like a logbook page", () => {
   it("carries a ruled notes block and a signature rule, print-only", () => {
-    render(<AfterState {...props()} />);
+    render(<AfterState context={props()} />);
     for (const id of [AFTER_STATE_TEST_IDS.printNotes, AFTER_STATE_TEST_IDS.printSignature]) {
       const block = screen.getByTestId(id);
       // `hidden` on screen, `print:block` on paper — the two halves of "this
@@ -629,7 +631,7 @@ describe("the keepsake prints like a logbook page", () => {
 
   it("hides everything except the dive record when printing", () => {
     const { container } = render(
-      <AfterState {...props({ shoutout: "Come back for the wreck." })} />,
+      <AfterState context={props({ shoutout: "Come back for the wreck." })} />,
     );
     const record = screen.getByTestId(AFTER_STATE_TEST_IDS.record);
     for (const child of [...(container.querySelector("main")?.children ?? [])]) {
@@ -645,7 +647,7 @@ describe("the keepsake prints like a logbook page", () => {
     // On screen the band's wash is the facts' top edge, and a rule 20px
     // under it drew that edge twice (K-595). In print the band goes
     // transparent and the rule is the only edge left.
-    render(<AfterState {...props()} />);
+    render(<AfterState context={props()} />);
     const facts = screen.getByTestId(AFTER_STATE_TEST_IDS.record).querySelector("dl");
     expect(facts).toHaveClass("print:border-t", "divide-y");
     expect(facts).not.toHaveClass("border-t");
@@ -665,7 +667,7 @@ describe("a course session's recap", () => {
   } as const;
 
   it("says what the shop recorded, above the one ask", () => {
-    const { container } = render(<AfterState {...props({ course })} />);
+    const { container } = render(<AfterState context={props({ course })} />);
     const said = container.textContent ?? "";
     expect(said).toContain("recap.course.notYetCertified");
     expect(said.indexOf("recap.course.notYetCertified")).toBeLessThan(
@@ -675,7 +677,7 @@ describe("a course session's recap", () => {
   });
 
   it("renders nothing at all on an ordinary charter", () => {
-    const { container } = render(<AfterState {...props({ course: null })} />);
+    const { container } = render(<AfterState context={props({ course: null })} />);
     expect(container.textContent).not.toContain("recap.course.");
   });
 });
@@ -701,7 +703,7 @@ describe("the photo door's second and third controls", () => {
     );
 
   it("hides the caption and the submit until a file is picked", () => {
-    const { container } = render(<AfterState {...props()} />);
+    const { container } = render(<AfterState context={props()} />);
     const form = photoForm(container);
     expect(form).toBeTruthy();
 
@@ -720,7 +722,7 @@ describe("the photo door's second and third controls", () => {
   });
 
   it("leaves one standing control in the door", () => {
-    const { container } = render(<AfterState {...props()} />);
+    const { container } = render(<AfterState context={props()} />);
     const peer = photoForm(container)?.querySelector(".peer");
     // Everything else the form offers is behind the pick.
     expect(peer?.querySelectorAll("input")).toHaveLength(1);
@@ -740,7 +742,7 @@ describe("the buddy link", () => {
   const url = "https://diveday.test/s/blue-mantis?buddy=abc123";
 
   it("never prints the URL as page text", () => {
-    const { container } = render(<AfterState {...props({ buddyLinkUrl: url })} />);
+    const { container } = render(<AfterState context={props({ buddyLinkUrl: url })} />);
     const visible = [...container.querySelectorAll("*")].filter(
       (node) => node.children.length === 0 && !node.className.toString().includes("sr-only"),
     );
@@ -749,7 +751,7 @@ describe("the buddy link", () => {
   });
 
   it("keeps the URL reachable as the control's description, hidden at rest", () => {
-    render(<AfterState {...props({ buddyLinkUrl: url })} />);
+    render(<AfterState context={props({ buddyLinkUrl: url })} />);
     const button = screen.getByText("recap.buddyCta");
     const describedBy = button.getAttribute("aria-describedby");
     expect(describedBy).toBeTruthy();
@@ -765,7 +767,7 @@ describe("the buddy link", () => {
   });
 
   it("renders nothing at all without a link to send", () => {
-    render(<AfterState {...props({ buddyLinkUrl: null })} />);
+    render(<AfterState context={props({ buddyLinkUrl: null })} />);
     expect(screen.queryByText("recap.buddyCta")).toBeNull();
     expect(screen.queryByText("recap.buddyHeading")).toBeNull();
   });
@@ -773,7 +775,7 @@ describe("the buddy link", () => {
 
 describe("the doors stay quiet", () => {
   it("renders no tip door for a shop that cannot take one and has none to report", () => {
-    render(<AfterState {...props({ canTip: false, tip: null })} />);
+    render(<AfterState context={props({ canTip: false, tip: null })} />);
     expect(screen.queryByText("recap.tipCrew")).toBeNull();
   });
 
@@ -782,7 +784,10 @@ describe("the doors stay quiet", () => {
     // the form that started it.
     render(
       <AfterState
-        {...props({ canTip: false, tip: { status: "paid", amountCents: 2000, checkoutUrl: null } })}
+        context={props({
+          canTip: false,
+          tip: { status: "paid", amountCents: 2000, checkoutUrl: null },
+        })}
       />,
     );
     expect(screen.getByText("recap.tipCrew")).toBeInTheDocument();
@@ -793,7 +798,7 @@ describe("the postcard (ADR 20260901-diveday-reimagined, slice 13i)", () => {
   it("wears the shop's brand when the shop has one, and DiveDay's own when not", () => {
     const { container, unmount } = render(
       <AfterState
-        {...props({
+        context={props({
           shop: {
             ...props().shop,
             brandColor: DIVEDAY_BRAND_COLOR,
@@ -806,12 +811,12 @@ describe("the postcard (ADR 20260901-diveday-reimagined, slice 13i)", () => {
     expect(style?.textContent).toContain("--primary:");
     expect(style?.textContent).toContain("--brand-display:");
     unmount();
-    const plain = render(<AfterState {...props()} />);
+    const plain = render(<AfterState context={props()} />);
     expect(plain.container.querySelector("[data-brand-style]")).toBeNull();
   });
 
   it("draws the day's site on the record's face, decorative and off the printed page", () => {
-    const { container } = render(<AfterState {...props({ siteMark: "wreck" })} />);
+    const { container } = render(<AfterState context={props({ siteMark: "wreck" })} />);
     const face = screen.getByTestId(AFTER_STATE_TEST_IDS.face);
     const mark = face.querySelector("[data-site-mark]");
     expect(mark?.getAttribute("data-site-mark")).toBe("wreck");
@@ -831,7 +836,7 @@ describe("the postcard (ADR 20260901-diveday-reimagined, slice 13i)", () => {
     // At 390 the 120px mark and the stamp left "Dive log entry" 101px of the
     // 140 it needs, and it broke onto a second line for one word (K-596).
     // Wrapping, the stamp drops under the mark and the heading keeps one line.
-    render(<AfterState {...props({ visitCount: 1 })} />);
+    render(<AfterState context={props({ visitCount: 1 })} />);
     const face = screen.getByTestId(AFTER_STATE_TEST_IDS.face);
     expect(face).toHaveClass("flex", "flex-wrap", "gap-y-3");
   });
@@ -848,14 +853,14 @@ describe("the postcard (ADR 20260901-diveday-reimagined, slice 13i)", () => {
  */
 describe("the dive-day number", () => {
   it("says the number and stops, without naming the shop again", () => {
-    render(<AfterState {...props({ visitCount: 3 })} />);
+    render(<AfterState context={props({ visitCount: 3 })} />);
     const chip = screen.getByTestId(AFTER_STATE_TEST_IDS.visitLine);
     expect(chip).toHaveTextContent("recap.diveDayNumber(3)");
     expect(chip.textContent).not.toContain("Blue Mantis");
   });
 
   it("leaves the milestone roundel its own sentence", () => {
-    render(<AfterState {...props({ visitCount: 10 })} />);
+    render(<AfterState context={props({ visitCount: 10 })} />);
     expect(screen.getByTestId(AFTER_STATE_TEST_IDS.stamp)).toBeInTheDocument();
     expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.visitLine)).toBeNull();
   });
@@ -882,7 +887,7 @@ describe("the private pulse", () => {
     container.querySelector("[data-recap-door='pulse'] details");
 
   it("is a door, shut, and the first one under the review", () => {
-    const { container } = render(<AfterState {...props()} />);
+    const { container } = render(<AfterState context={props()} />);
     const door = pulseDoor(container);
     expect(door).toBeTruthy();
     expect(door?.hasAttribute("open")).toBe(false);
@@ -894,25 +899,27 @@ describe("the private pulse", () => {
 
   it("opens on arrival when the diver already said something", () => {
     const { container } = render(
-      <AfterState {...props({ ownPulse: { categories: ["boat"], note: null } })} />,
+      <AfterState context={props({ ownPulse: { categories: ["boat"], note: null } })} />,
     );
     expect(pulseDoor(container)?.hasAttribute("open")).toBe(true);
   });
 
   it("opens on arrival to answer a ?pulse= this render has to report", () => {
-    const { container } = render(<AfterState {...props({ params: { pulse: "saved" } })} />);
+    const { container } = render(<AfterState context={props({ params: { pulse: "saved" } })} />);
     expect(pulseDoor(container)?.hasAttribute("open")).toBe(true);
   });
 
   it("stays shut for a ?pulse= it does not recognize", () => {
     // The param is attacker-supplied, so `noticeFromParam` decides whether it
     // is real — and a value that says nothing must open nothing either.
-    const { container } = render(<AfterState {...props({ params: { pulse: "constructor" } })} />);
+    const { container } = render(
+      <AfterState context={props({ params: { pulse: "constructor" } })} />,
+    );
     expect(pulseDoor(container)?.hasAttribute("open")).toBe(false);
   });
 
   it("puts its inputs outside the review's own form", () => {
-    const { container } = render(<AfterState {...props()} />);
+    const { container } = render(<AfterState context={props()} />);
     const reviewForm = [...container.querySelectorAll("form")].find((form) =>
       form.querySelector('textarea[name="comment"]'),
     );
@@ -924,7 +931,7 @@ describe("the private pulse", () => {
   });
 
   it("offers all five categories and a note, and no way back until there is one", () => {
-    const { container } = render(<AfterState {...props()} />);
+    const { container } = render(<AfterState context={props()} />);
     expect(container.querySelectorAll('input[name="category"]')).toHaveLength(5);
     expect(container.querySelector('textarea[name="note"]')).toBeTruthy();
     expect(screen.queryByText("recap.pulseWithdraw")).toBeNull();
@@ -932,7 +939,7 @@ describe("the private pulse", () => {
 
   it("opens on what the diver already said, and shows the way back", () => {
     const { container } = render(
-      <AfterState {...props({ ownPulse: { categories: ["boat"], note: "No shade." } })} />,
+      <AfterState context={props({ ownPulse: { categories: ["boat"], note: "No shade." } })} />,
     );
     const boat = container.querySelector<HTMLInputElement>('input[value="boat"]');
     expect(boat?.defaultChecked).toBe(true);
@@ -947,13 +954,13 @@ describe("the private pulse", () => {
    * value renders nothing rather than walking the prototype.
    */
   it("says nothing for a notice code it does not recognize", () => {
-    render(<AfterState {...props({ params: { pulse: "constructor" } })} />);
+    render(<AfterState context={props({ params: { pulse: "constructor" } })} />);
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("reports the outcome beside the form", () => {
-    render(<AfterState {...props({ params: { pulse: "saved" } })} />);
+    render(<AfterState context={props({ params: { pulse: "saved" } })} />);
     expect(screen.getByRole("status")).toHaveTextContent("recap.pulseSaved(Blue Mantis Divers)");
   });
 });
@@ -979,7 +986,7 @@ describe("the next dive", () => {
   };
 
   it("renders one card carrying one reason", () => {
-    render(<AfterState {...props({ nextDive: pick, nextDiveWorded: worded })} />);
+    render(<AfterState context={props({ nextDive: pick, nextDiveWorded: worded })} />);
     expect(screen.getByRole("heading", { name: "recap.nextDiveHeading" })).toBeInTheDocument();
     expect(screen.getByText(worded.reason)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: pick.title })).toHaveAttribute(
@@ -989,14 +996,14 @@ describe("the next dive", () => {
   });
 
   it("renders nothing at all when the board has nothing for this diver", () => {
-    render(<AfterState {...props({ nextDive: null, nextDiveWorded: null })} />);
+    render(<AfterState context={props({ nextDive: null, nextDiveWorded: null })} />);
     expect(screen.queryByText("recap.nextDiveHeading")).toBeNull();
   });
 
   it("makes the departure's name a 44px target, not a 21px line of text", () => {
     // The card's one door was a bare inline link, 244.7 x 21 on every recap
     // capture (K-187); `tapTargetLinkClass` gives it the 44px floor.
-    render(<AfterState {...props({ nextDive: pick, nextDiveWorded: worded })} />);
+    render(<AfterState context={props({ nextDive: pick, nextDiveWorded: worded })} />);
     expect(screen.getByRole("link", { name: pick.title })).toHaveClass(
       "inline-flex",
       "min-h-11",
@@ -1015,7 +1022,7 @@ describe("the next dive", () => {
    * outside the box) ends above the date's ink rather than across it.
    */
   it("keeps the name's line its words' height, and its date nearer it than the reason", () => {
-    render(<AfterState {...props({ nextDive: pick, nextDiveWorded: worded })} />);
+    render(<AfterState context={props({ nextDive: pick, nextDiveWorded: worded })} />);
     const link = screen.getByRole("link", { name: pick.title });
     expect(link).toHaveClass("-my-2", "py-2");
     const line = link.parentElement;
@@ -1037,18 +1044,18 @@ describe("the next dive", () => {
   it("takes the footer's next-departure line off when the card is present", () => {
     const nextDeparture = { title: "Night Reef", when: "tomorrow" };
     const withCard = render(
-      <AfterState {...props({ nextDeparture, nextDive: pick, nextDiveWorded: worded })} />,
+      <AfterState context={props({ nextDeparture, nextDive: pick, nextDiveWorded: worded })} />,
     );
     expect(withCard.queryByText(/Night Reef/)).toBeNull();
     withCard.unmount();
 
-    render(<AfterState {...props({ nextDeparture })} />);
+    render(<AfterState context={props({ nextDeparture })} />);
     expect(screen.getByText(/Night Reef/)).toBeInTheDocument();
   });
 
   it("carries no score anywhere in what it renders", () => {
     const { container } = render(
-      <AfterState {...props({ nextDive: pick, nextDiveWorded: worded })} />,
+      <AfterState context={props({ nextDive: pick, nextDiveWorded: worded })} />,
     );
     expect(container.innerHTML).not.toMatch(/score|confidence|match strength/i);
   });

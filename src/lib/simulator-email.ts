@@ -55,12 +55,6 @@ export function simulatorEmail(label: string, outcome: SimulatorOutcome = "succe
   return `${outcome}+${slug}@${SES_SIMULATOR_DOMAIN}`;
 }
 
-/** Whether an address goes to the SES mailbox simulator, whatever its outcome or label. */
-export function isSimulatorEmail(email: string): boolean {
-  const at = email.lastIndexOf("@");
-  return at > 0 && email.slice(at + 1).toLowerCase() === SES_SIMULATOR_DOMAIN;
-}
-
 /** The reserved domain seeded people's addresses live under, as staff read them. */
 export const DEMO_MAIL_DOMAIN = "mail.example";
 

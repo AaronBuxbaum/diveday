@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import {
   DATE_REQUESTS_PAGE_SIZE,
@@ -13,8 +13,12 @@ import { getCourseBySlug } from "./courses";
 import { createDiver } from "./divers";
 import { courseInquiries, people, shops } from "./schema";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 async function inquiryContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const course = await getCourseBySlug(db, shop.id, "open-water-diver");
   if (!course) throw new Error("demo Open Water Diver course missing");
   return { db, shop, course };

@@ -54,8 +54,9 @@ erasure-versus-signed-evidence question and has not been through counsel. What s
 | --- | --- | --- |
 | `stripe_webhook_events` | 400 | ~133× Stripe's own ~3-day live retry window. Chronological evidence for `hasNewerAccountUpdate`, so this is a correctness bound, not a convenience one. Holds no diver data — event ids, types, account ids, timestamps. |
 | `notification_delivery_attempts` | 400 | The durable proof a shop did or did not reach a diver. A season plus a year, so last year's incident is answerable during this year's same week. |
-| `activity_events` | 1095 | Staff-facing operational narrative; small rows, and the thing a shop reconstructs an old season from. |
+| `activity_events` | 1095 | Staff-facing operational narrative; small rows, and the thing a shop reconstructs an old season from. **The longest personal-data window in the app**: `params` holds the actor's and the diver's names as rendered words (`src/lib/activity.ts`), so three years of name-bearing lines is the price of the narrative. Erasure redacts them by id and by name on request (`src/db/anonymize.ts`); the window only bounds what nobody asked to erase. |
 | `account_tokens` | 90 **past each token's own expiry** | Hashed bearer credentials over account takeover, so the conservative direction is the *opposite*: long enough for an incident review, no longer. A live token is never eligible at any age. |
+| `account_sessions` | 90 **past each session's own expiry** | Added 2026-10-10 (code review item 38). One row per device sign-in, carrying its IP address and user agent, deleted before only by sign-out, revocation or erasure, so a staffer who never signed out kept them for ever. Same incident-review argument and same clock as `account_tokens`; every use slides `expires_at` forward, so a session still honoured is never eligible. |
 | `booking_payment_events` | 2555 | The local money ledger, at the ordinary seven-year financial horizon. Listed rather than left unbounded so "how long is a shop's money history kept?" has an answer in the same table as everything else. |
 
 `retentionWindowsOutlastStripeRetries()` asserts the first row's relationship to

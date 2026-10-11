@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   checkoutState,
+  fetchNeed,
   findInstalledNode,
   installNeed,
   promptLine,
@@ -32,6 +33,7 @@ describe("reading the checkout", () => {
   it("reports branch, upstream, ahead/behind, unpushed, uncommitted and HEAD", () => {
     expect(checkoutState(tracked)).toEqual({
       branch: "claude/feature",
+      detached: false,
       upstream: "origin/claude/feature",
       ahead: 3,
       behind: 1,
@@ -54,6 +56,39 @@ describe("reading the checkout", () => {
     expect(state.ahead).toBeNull();
     expect(state.unpushed).toBe(2);
     expect(state.uncommitted).toBe(0);
+  });
+
+  it("counts unpushed commits against the branch's upstream, not against every remote ref", () => {
+    // A stale origin/main used to make a pushed branch read as hundreds of commits unpushed.
+    const state = checkoutState(
+      gitFrom({
+        "rev-parse --abbrev-ref HEAD": "claude/feature",
+        "rev-parse --abbrev-ref --symbolic-full-name @{u}": "origin/claude/feature",
+        "rev-list --left-right --count @{u}...HEAD": "0\t0",
+        "rev-list --count HEAD --not --remotes": "650",
+        "status --porcelain": "",
+      }),
+    );
+    expect(state.unpushed).toBe(0);
+    expect(promptLine(state)).toBe("git: claude/feature · clean tree");
+  });
+
+  it("says a detached HEAD has no upstream and counts nothing as unpushed", () => {
+    const state = checkoutState(
+      gitFrom({
+        "rev-parse --abbrev-ref HEAD": "HEAD",
+        "rev-list --count HEAD --not --remotes": "650",
+        "status --porcelain": "",
+        "log -1 --format=%h %s": "3ed8285 the fresh clone",
+      }),
+    );
+    expect(state.detached).toBe(true);
+    expect(state.unpushed).toBeNull();
+    expect(promptLine(state)).toBe("git: detached HEAD (no upstream) · clean tree");
+    const block = sessionBlock(state, { source: "startup" });
+    expect(block).toContain("detached HEAD, no upstream");
+    expect(block).not.toContain("unpushed");
+    expect(block).not.toContain("local commit");
   });
 
   it("returns null when this is not a repository at all", () => {
@@ -79,6 +114,40 @@ describe("the one-line prompt context", () => {
     ).toBe("git: main · clean tree");
     expect(promptLine(null)).toBe("");
   });
+
+  it("appends the stack position, and the refusal tally on a line of its own", () => {
+    const state = checkoutState(tracked);
+    expect(promptLine(state, { stack: "stack: layer 2 of 3, top origin/claude/x-3" })).toMatch(
+      / · stack: layer 2 of 3, top origin\/claude\/x-3$/,
+    );
+    const line = promptLine(state, { refusals: "2 hook refusals last session (guard-bash 2)" });
+    expect(line.split("\n")).toHaveLength(2);
+    expect(line.split("\n")[1]).toContain("2 hook refusals");
+  });
+});
+
+describe("the session-start fetch", () => {
+  it("fetches at startup and resume, once, unless opted out", () => {
+    expect(fetchNeed({ source: "startup", env: {}, fetchHeadAgeMs: null })).toBe(true);
+    expect(fetchNeed({ source: "resume", env: {}, fetchHeadAgeMs: 60 * 60_000 })).toBe(true);
+    // A fetch minutes old is this session's own; a compaction is not a new session.
+    expect(fetchNeed({ source: "startup", env: {}, fetchHeadAgeMs: 60_000 })).toBe(false);
+    expect(fetchNeed({ source: "compact", env: {}, fetchHeadAgeMs: null })).toBe(false);
+    expect(fetchNeed({ source: "clear", env: {}, fetchHeadAgeMs: null })).toBe(false);
+    expect(
+      fetchNeed({ source: "startup", env: { DIVEDAY_SESSION_FETCH: "0" }, fetchHeadAgeMs: null }),
+    ).toBe(false);
+  });
+
+  it("says when the fetch failed, so a stale base is not a surprise", () => {
+    expect(sessionBlock(null, { fetched: "failed" })).toContain("origin/main may be stale");
+    expect(sessionBlock(null, { fetched: "fetched" })).not.toContain("stale");
+  });
+
+  it("prints the doctor's summary lines where it is given them", () => {
+    const block = sessionBlock(null, { doctor: ["Doctor: one", "Stack: two"] });
+    expect(block).toContain("Doctor: one\nStack: two");
+  });
 });
 
 describe("the session-start block", () => {
@@ -88,7 +157,7 @@ describe("the session-start block", () => {
       "branch claude/feature, upstream origin/claude/feature (3 ahead, 1 behind), 2 uncommitted paths",
     );
     expect(block).toContain("HEAD abc1234 feat: the thing");
-    expect(block).toMatch(/3 local commits are on no remote branch/);
+    expect(block).toMatch(/3 local commits are not on origin\/claude\/feature/);
     expect(block).not.toContain("After compaction");
   });
 

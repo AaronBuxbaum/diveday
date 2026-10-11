@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { fakeCheckout } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
@@ -13,11 +13,15 @@ import {
   releaseStripeWebhookEventClaim,
 } from "./webhook-events";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 const REEF_PRICE_CENTS = 18_000;
 
 /** A connected, charges-enabled shop with a priced future trip and a paid checkout for one diver. */
 async function paidCheckoutContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   await upsertShopStripeAccount(db, shop.id, "acct_test");
   await setShopStripeAccountStatus(db, "acct_test", {
     chargesEnabled: true,
@@ -67,7 +71,7 @@ async function paidCheckoutContext() {
 
 describe("claimStripeWebhookEvent", () => {
   it("claims a fresh event id and refuses every later replay", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const input = {
       id: "evt_dedup_1",
       type: "checkout.session.completed",
@@ -80,7 +84,7 @@ describe("claimStripeWebhookEvent", () => {
   });
 
   it("claims two different event ids independently", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const occurredAt = nowDate();
     expect(
       await claimStripeWebhookEvent(db, {
@@ -151,7 +155,7 @@ describe("releaseStripeWebhookEventClaim", () => {
   // having never been handled, and `invoice.paid`/`invoice.voided`/
   // `account.application.deauthorized` have no other self-heal.
   it("gives a claim back so the same event id can be claimed and handled again", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const input = {
       id: "evt_release_1",
       type: "invoice.paid",
@@ -167,12 +171,12 @@ describe("releaseStripeWebhookEventClaim", () => {
   });
 
   it("is a no-op, not an error, when there is no claim to release", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     expect(await releaseStripeWebhookEventClaim(db, "evt_never_claimed")).toBe(false);
   });
 
   it("is a no-op the second time, so a double release reports nothing to give back", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const input = {
       id: "evt_release_twice",
       type: "invoice.paid",
@@ -185,7 +189,7 @@ describe("releaseStripeWebhookEventClaim", () => {
   });
 
   it("releases only the named event, leaving every other claim standing", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const occurredAt = nowDate();
     await claimStripeWebhookEvent(db, {
       id: "evt_keep",
@@ -239,7 +243,7 @@ describe("releaseStripeWebhookEventClaim", () => {
 
 describe("hasNewerAccountUpdate", () => {
   it("is false with no claimed account.updated events for the account yet", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     expect(await hasNewerAccountUpdate(db, "acct_new", "evt_1", nowDate())).toBe(false);
   });
 
@@ -249,7 +253,7 @@ describe("hasNewerAccountUpdate", () => {
   // the stale one after the fresh one would regress charges_enabled back to
   // an old value (security review finding).
   it("is true once a chronologically newer account.updated has already been claimed", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const older = new Date("2026-07-01T00:00:00.000Z");
     const newer = new Date("2026-07-01T00:05:00.000Z");
 
@@ -279,7 +283,7 @@ describe("hasNewerAccountUpdate", () => {
   // checkout creation with. Stripe gives up retrying E1 after ~3 days, so
   // nothing self-heals it.
   it("still sees a newer event whose own handling failed and released its claim", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const older = new Date("2026-07-01T00:00:00.000Z");
     const newer = new Date("2026-07-01T00:05:00.000Z");
 
@@ -312,7 +316,7 @@ describe("hasNewerAccountUpdate", () => {
   // stored value is Stripe's own event-creation time and the only ordering
   // evidence there is.
   it("keeps the original occurred_at across a release and re-claim", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const older = new Date("2026-07-01T00:00:00.000Z");
     const newer = new Date("2026-07-01T00:05:00.000Z");
     const event = {
@@ -331,7 +335,7 @@ describe("hasNewerAccountUpdate", () => {
   });
 
   it("only compares events for the same connected account", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const newer = new Date("2026-07-01T00:05:00.000Z");
     const older = new Date("2026-07-01T00:00:00.000Z");
     await claimStripeWebhookEvent(db, {

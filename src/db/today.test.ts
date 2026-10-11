@@ -1,5 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
@@ -4014,5 +4014,56 @@ describe("staff credentials on Today (one row per staffer)", () => {
     // Any lapsed credential makes the whole row today's work.
     expect(rows[0]).toMatchObject({ id: `staff-credential:${staff.person.id}`, urgency: "now" });
     expect(rows[0]?.detail).toMatch(/^First aid expired .+\. Insurance renews .+\.$/);
+  });
+});
+
+/**
+ * **The high-wind row reads the same forecast it always did, asked once per
+ * site** (code review 2026-10-10, item 1). The queue used to await the
+ * provider one departure at a time inside its loop; it now asks for every
+ * booked departure's forecast at once, before the database wave, and the
+ * forecast cache shares one request between departures to one site.
+ */
+describe("the high-wind row (issue #722)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** Every provider request answers the same hour-by-hour wind, wherever it is asked. */
+  function stubProvider(windKnots: number) {
+    return vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = new URL(String(input));
+      const start = Math.floor(nowMs() / 3_600_000) * 3_600;
+      const time = Array.from({ length: 24 * 10 }, (_, hour) => start + hour * 3_600);
+      const body =
+        url.hostname === "marine-api.open-meteo.com"
+          ? { hourly: { time, wave_height: time.map(() => 0.4) } }
+          : { hourly: { time, wind_speed_10m: time.map(() => windKnots) } };
+      return new Response(JSON.stringify(body));
+    });
+  }
+
+  it("raises the row on a windy forecast and asks each provider once per site", async () => {
+    const { db, shop } = ctx;
+    const fetcher = stubProvider(30);
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+
+    const windRows = work.actions.filter((action) => action.kind === "high_wind_alert");
+    expect(windRows.length).toBeGreaterThan(0);
+    expect(windRows[0]).toMatchObject({ urgency: "now", aboutDeparture: true });
+    const urls = fetcher.mock.calls.map(([input]) => String(input));
+    expect(urls.length).toBeGreaterThan(0);
+    // One request per provider per site, however many departures sail there.
+    expect(new Set(urls).size).toBe(urls.length);
+  });
+
+  it("raises nothing on a calm forecast", async () => {
+    const { db, shop } = ctx;
+    stubProvider(8);
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+
+    expect(work.actions.filter((action) => action.kind === "high_wind_alert")).toEqual([]);
   });
 });

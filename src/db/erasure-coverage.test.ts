@@ -1056,6 +1056,22 @@ describe("erasure coverage", () => {
     expect(hazards.sort()).toEqual([]);
   });
 
+  /**
+   * The sweeps run from `SCRUB_SECTIONS`, not from their position in the file,
+   * so a sweep that is defined but left off the list would still satisfy the
+   * write-set and order checks above while never running. The list must name
+   * every `scrub*` function, in the order the file defines them, which is the
+   * order the order check reads.
+   */
+  it("runs every scrub section, in the order the file defines them", () => {
+    const source = readFileSync("src/db/anonymize.ts", "utf8");
+    const defined = [...source.matchAll(/^async function (scrub\w+)\(/gm)].map((m) => m[1]);
+    const list = source.match(/const SCRUB_SECTIONS = \[([^\]]*)\]/)?.[1] ?? "";
+    const listed = [...list.matchAll(/\b(scrub\w+)\b/g)].map((m) => m[1]);
+    expect(defined.length).toBeGreaterThan(10);
+    expect(listed).toEqual(defined);
+  });
+
   it("decides every table outside the closure, not only the ones a pattern asks about", () => {
     const scoped = new Set(personScopedTableNames(tables));
     expect([...tables.keys()].filter((name) => !scoped.has(name)).sort()).toEqual(

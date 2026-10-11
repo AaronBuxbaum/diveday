@@ -5,7 +5,7 @@ import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { erasePersonAction } from "../actions";
+import { erasePersonAction } from "../record-actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
 

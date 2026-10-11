@@ -5,7 +5,6 @@ import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { createBookingParty } from "./bookings";
 import {
-  countReviewsAwaitingModeration,
   countStaffReviewGroups,
   getReviewForBooking,
   getShopRatingDistribution,
@@ -100,7 +99,7 @@ describe("submitTripReview", () => {
       suppressedCount: 0,
     });
     expect(await listPublishedShopReviews(db, shop.id)).toEqual([]);
-    expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(1);
+    expect((await readReviewsAwaitingModeration(db, shop.id)).count).toBe(1);
   });
 
   it("revises one review in place rather than stacking duplicates on a replayed submit", async () => {
@@ -317,7 +316,7 @@ describe("public review reads", () => {
       pageSize: STAFF_REVIEW_PAGE_SIZE,
       total: 0,
     });
-    expect(await countReviewsAwaitingModeration(db, OTHER_SHOP_ID)).toBe(0);
+    expect((await readReviewsAwaitingModeration(db, OTHER_SHOP_ID)).count).toBe(0);
     // …and the real shop still sees it, so the assertions above aren't vacuous.
     expect(await getShopReviewAggregate(db, shop.id)).toEqual({
       count: 1,
@@ -391,7 +390,7 @@ describe("setReviewPublished", () => {
         reason: "spam",
       }),
     ).toBe(true);
-    expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(0);
+    expect((await readReviewsAwaitingModeration(db, shop.id)).count).toBe(0);
     expect(await listShopReviewsForStaff(db, shop.id, { scope: "waiting" })).toMatchObject({
       reviews: [],
       total: 0,
@@ -438,7 +437,7 @@ describe("setReviewPublished", () => {
     expect(await listShopReviewsForStaff(db, shop.id)).toMatchObject({
       reviews: [{ id: review.id, isPublished: false, isHidden: false }],
     });
-    expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(1);
+    expect((await readReviewsAwaitingModeration(db, shop.id)).count).toBe(1);
   });
 
   it("refuses to moderate another shop's review", async () => {
@@ -514,7 +513,7 @@ describe("setReviewPublished", () => {
       suppressedCount: 1,
     });
     expect(await listPublishedShopReviews(db, shop.id)).toEqual([]);
-    expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(0);
+    expect((await readReviewsAwaitingModeration(db, shop.id)).count).toBe(0);
 
     // Releasing a hidden review un-hides it, but a standout is a separate
     // public choice and must be selected again after the review was hidden.
@@ -546,7 +545,7 @@ describe("setReviewsPublished", () => {
         ownerId,
       ),
     ).toBe(3);
-    expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(0);
+    expect((await readReviewsAwaitingModeration(db, shop.id)).count).toBe(0);
     expect(await getShopReviewAggregate(db, shop.id)).toEqual({
       count: 3,
       average: 4,
@@ -577,7 +576,7 @@ describe("setReviewsPublished", () => {
     expect(await setReviewsPublished(db, shop.id, ["not-a-uuid", "'; drop table x"], ownerId)).toBe(
       0,
     );
-    expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(1);
+    expect((await readReviewsAwaitingModeration(db, shop.id)).count).toBe(1);
 
     // …and the shop's own id still works, so none of the above was a false pass.
     expect(await setReviewsPublished(db, shop.id, [review.id, review.id], ownerId)).toBe(1);

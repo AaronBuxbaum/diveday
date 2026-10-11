@@ -40,7 +40,7 @@ import {
   people,
   specialtyCertifications,
 } from "./schema";
-import { getCurrentWaiverTemplate, listSignedWaiversByPerson } from "./waivers";
+import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
 
 /**
  * **Counter rentals** — units lent to a person who is not on a boat that day
@@ -845,7 +845,7 @@ export async function counterRentalWaiverStandings(
         ),
       ),
     listSignedWaiversByPerson(db, input.shopId, personIds),
-    getCurrentWaiverTemplate(db, input.shopId),
+    getCurrentWaiverGeneration(db, input.shopId),
   ]);
   for (const holder of holders) {
     standings.set(

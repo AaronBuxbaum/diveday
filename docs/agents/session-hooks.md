@@ -1,6 +1,6 @@
 # The session hooks, and why each one exists
 
-`.claude/settings.json` wires nine scripts into the lifecycle of a Claude Code session. Every one
+`.claude/settings.json` wires ten scripts into the lifecycle of a Claude Code session. Every one
 of them exists because a rule written in prose was followed for a while and then was not — a rule
 in `AGENTS.md` is only as reliable as the odds that a session holding thirteen thousand words of it
 happens to be holding that sentence when it types the command. A hook makes the mechanical half of
@@ -29,9 +29,10 @@ what is currently wired.
 
 | Event | Script | What it does |
 | --- | --- | --- |
-| `SessionStart` (all sources) | `scripts/session-context.mjs` | prints the checkout's state and one line asking for a papercut ([papercuts.md](papercuts.md)) when a guard or hook fights the session; after a compaction, the reminders a summary drops; puts the pinned Node first on PATH when it is installed but not running; in a cloud container, installs dependencies when `node_modules/` is missing or older than the lockfile |
-| `UserPromptSubmit` | `scripts/session-context.mjs --prompt` | one line: branch, uncommitted count, unpushed count |
+| `SessionStart` (all sources) | `scripts/session-context.mjs` | at startup and resume, fetches `main` and `claude/*` once; prints the checkout's state, the doctor's two-line summary (`scripts/agent-doctor.mjs`) and one line asking for a papercut ([papercuts.md](papercuts.md)) when a guard or hook fights the session; after a compaction, the reminders a summary drops; puts the pinned Node first on PATH when it is installed but not running; in a cloud container, installs dependencies when `node_modules/` is missing or older than the lockfile |
+| `UserPromptSubmit` | `scripts/session-context.mjs --prompt` | one line: branch, uncommitted count, unpushed count against the upstream, stack position; on the first prompt of a session, the last session's hook refusals |
 | `PreToolUse` on `Bash` | `scripts/guard-bash.mjs` | refuses six command shapes, each naming the correct form |
+| `PreToolUse` on `Bash` | `scripts/guard-commit-format.mjs` | before a `git commit`, Biome's safe fixes over the fully staged files, re-staged; never refuses |
 | `PreToolUse` on `Read` | `scripts/guard-read.mjs` | refuses a generated artifact and a whole-file read of a large source file |
 | `PostToolUse` on `Edit`/`Write` | `scripts/format-touched.mjs` | Biome over the one file just touched; hands back what its safe fixes could not clear |
 | `PostToolUseFailure` on `Bash` | `scripts/explain-failure.mjs` | attaches the written answer to a failure the debug skill already explains |
@@ -71,6 +72,29 @@ run it with.
 
 Nothing here can block, and it prints nothing rather than something wrong: a missing context line
 costs a few tokens; an invented branch name costs a wrong push.
+
+**Unpushed is counted against the branch's upstream**, not against every remote ref. A cloud
+container's refs are whatever its clone saw: on 2026-10-10 its `origin/main` was five days and 650
+commits old, and `git rev-list HEAD --not --remotes` made a detached checkout of a pushed commit
+read "650 unpushed commits" on every prompt. A detached HEAD now says "detached HEAD (no upstream)"
+and counts nothing; a branch with no upstream yet is still counted against every remote, which is
+honest for a branch nobody has pushed. At startup and resume the hook also runs
+`git fetch --quiet --prune origin main claude/*` (20 s bound, skipped when `FETCH_HEAD` is under ten
+minutes old, `DIVEDAY_SESSION_FETCH=0` to opt out) before reading anything, so `test:changed`,
+`check:closing-keywords` and the migration guard measure from a current base, and the
+`unpushed-work` hook below sees current remote refs. A failed fetch is said in the block.
+
+**The stack position** comes from `scripts/stack-map.mjs`, which derives the layers from the remote
+refs (the stacked-prs skill's "Where am I in the stack"). **The doctor's summary** is two lines of
+`pnpm agent:doctor`: what it would warn about, and the stack; the full report names each fix.
+
+**Refusals are counted.** Every guard and `Stop` hook that refuses appends one JSON line to the
+gitignored `.claude/.hook-log` (`scripts/hook-log.mjs`): when, which session, which hook, the
+first line of the reason. The first prompt of the next session reads it back as "N hook refusals
+last session (guard-bash 3, …): if one fought you, add a papercut", once, and writes a `noted`
+line so it is not repeated. One papercut in 322 commits while twelve commit subjects were pure
+format or guard fix-ups is the measurement behind it: the papercuts rule fired on memory, and
+memory is what a session does not have about the session before.
 
 ## `guard-bash.mjs` — six command shapes this repository has been burned by
 
@@ -139,6 +163,19 @@ at the `pnpm check` gate, minutes later, beside real findings. It runs `check`, 
 because the point is `noUnusedImports` and `noUnusedVariables`, not the whitespace. It refuses a
 path outside the repository and stays silent for a file Biome declines (`drizzle/`, canvases, a
 file the edit just deleted).
+
+## `guard-commit-format.mjs` — formatting lands with the commit, not after it
+
+`format-touched.mjs` formats what an Edit or Write touched. What reaches the index another way — a
+merge from `main`, `git checkout <ref> -- <path>`, a file a script wrote — it never sees, and those
+produced the "Format …" commits and the papercut
+[2026-10-03-vendored-config-failed-lint-on-every-layer](papercuts/2026-10-03-vendored-config-failed-lint-on-every-layer.md).
+So on a command that runs `git commit` (alone, in a compound command, after a literal `cd`, or
+with `git -C`), this runs `biome check --write` over the staged files Biome handles and re-stages
+them. Only fully staged files: one with unstaged changes too is left alone, because re-adding it
+would commit hunks its author held back. With `-a`, every modified tracked file counts. A `cd` it
+cannot resolve to a literal path (a variable, `~`) makes it do nothing rather than format another
+checkout's index. It never refuses: what Biome cannot fix is the lint job's to report.
 
 ## `explain-failure.mjs` — a signpost attached to a known failure
 

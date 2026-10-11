@@ -1,10 +1,15 @@
 import { createHmac } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import type { AppDb } from "@/db/client";
 import { nowMs } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeCheckout } from "@/test/fakes";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * Hostile-sequence replay suite: every consumed Stripe event type, delivered
@@ -60,7 +65,7 @@ const { startTipCheckout } = await import("@/db/tips");
 const { upcomingTripsWithCounts, updateTrip } = await import("@/db/trips");
 const { POST } = await import("./route");
 
-type Db = Awaited<ReturnType<typeof seededShopContext>>["db"];
+type Db = AppDb;
 
 const secret = "whsec_replay";
 const ACCOUNT = "acct_replay";
@@ -152,8 +157,8 @@ function invoiceVoided(id: string, invoiceId: string) {
 }
 
 /** A connected, charges-enabled shop wired as the route's own database. */
-async function connectedShop() {
-  const { db, shop } = await seededShopContext();
+async function connectedShop({ fresh = false } = {}) {
+  const { db, shop } = fresh ? await seededShopContext() : ctx;
   vi.mocked(getDb).mockResolvedValue(db as never);
   await upsertShopStripeAccount(db, shop.id, ACCOUNT);
   await setShopStripeAccountStatus(db, ACCOUNT, {
@@ -180,8 +185,8 @@ async function pricedReef(db: Db, shopId: string) {
 }
 
 /** One diver, one pending checkout (`cs_1`) on the shop's connected account. */
-async function checkoutScenario() {
-  const { db, shop } = await connectedShop();
+async function checkoutScenario({ fresh = false } = {}) {
+  const { db, shop } = await connectedShop({ fresh });
   const reef = await pricedReef(db, shop.id);
   const party = await createBookingParty(db, [
     {
@@ -281,8 +286,9 @@ describe("checkout.session.* hostile sequences (real handlers, real db)", () => 
     expect(cleanTerminal.paymentStatus).toBe("paid");
     expect(cleanTerminal.settledTotalCents).toBe(REEF_PRICE_CENTS);
 
-    // Hostile ordering: the settlement outruns the completion in delivery.
-    const hostile = await checkoutScenario();
+    // Hostile ordering: the settlement outruns the completion in delivery. Its
+    // own database, so the same party can be booked again; getDb follows it.
+    const hostile = await checkoutScenario({ fresh: true });
     await deliver(asyncSucceeded("evt_r1", hostile.sessionId, REEF_PRICE_CENTS));
     await deliver(completedUnpaid("evt_r2", hostile.sessionId));
     const hostileTerminal = await checkoutTerminal(

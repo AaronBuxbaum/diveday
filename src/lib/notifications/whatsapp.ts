@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { DiverLocale } from "@/i18n/settings";
 import { log } from "@/lib/log";
+import { safeJson } from "@/lib/safe-json";
 import type { CourtesyDelivery, CourtesyMessage, CourtesyProvider } from "./courtesy";
 
 /**
@@ -150,14 +151,6 @@ function errorInfoFromResponse(status: number, rawBody: string): WhatsAppErrorIn
       code === undefined ? undefined : subcode === undefined ? `${code}` : `${code}/${subcode}`,
     detail: error?.message?.slice(0, 500),
   };
-}
-
-function safeJson(body: string): unknown {
-  try {
-    return JSON.parse(body);
-  } catch {
-    return null;
-  }
 }
 
 function sleep(milliseconds: number): Promise<void> {

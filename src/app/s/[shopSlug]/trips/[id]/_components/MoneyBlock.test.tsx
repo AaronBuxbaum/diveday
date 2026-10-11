@@ -2,7 +2,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { renderDiver } from "@/test/intl";
-import { MoneyBlock } from "./MoneyBlock";
+import { MoneyBlock, type MoneyBlockContext } from "./MoneyBlock";
 
 /**
  * The block's whole job is a rule, not a layout: **one figure at or above
@@ -12,7 +12,7 @@ import { MoneyBlock } from "./MoneyBlock";
 
 afterEach(cleanup);
 
-function props(overrides: Partial<Parameters<typeof MoneyBlock>[0]> = {}) {
+function props(overrides: Partial<MoneyBlockContext> = {}): MoneyBlockContext {
   return {
     fareCents: 9_500,
     partySize: 1,
@@ -41,14 +41,14 @@ function loudFigures() {
 
 describe("MoneyBlock — one figure", () => {
   it("states exactly one figure at total scale when the diver pays now", () => {
-    renderDiver(<MoneyBlock {...props({ partySize: 2, gearCents: 4_500 })} />);
+    renderDiver(<MoneyBlock context={props({ partySize: 2, gearCents: 4_500 })} />);
 
     expect(screen.getByText("Due now")).toBeInTheDocument();
     expect(loudFigures()).toEqual(["$235.00"]);
   });
 
   it("states exactly one figure at total scale when the shop is paid at the counter", () => {
-    renderDiver(<MoneyBlock {...props({ partySize: 3, dueNow: "at_shop" })} />);
+    renderDiver(<MoneyBlock context={props({ partySize: 3, dueNow: "at_shop" })} />);
 
     expect(screen.getByText("Due at the shop")).toBeInTheDocument();
     expect(screen.queryByText("Due now")).not.toBeInTheDocument();
@@ -58,7 +58,9 @@ describe("MoneyBlock — one figure", () => {
   it("renders nothing at all for an unpriced departure", () => {
     // Never a "$0.00" under a Book button: a trip with no price has no money
     // story, and a zero reads as either a bug or a promise.
-    const { container } = renderDiver(<MoneyBlock {...props({ dueNow: "none", fareCents: 0 })} />);
+    const { container } = renderDiver(
+      <MoneyBlock context={props({ dueNow: "none", fareCents: 0 })} />,
+    );
     expect(container.querySelector("dl")).toBeNull();
     expect(screen.queryByText(/\$/)).not.toBeInTheDocument();
   });
@@ -66,18 +68,18 @@ describe("MoneyBlock — one figure", () => {
 
 describe("MoneyBlock — the lines that do not render", () => {
   it("hides the gear line when nothing was rented", () => {
-    renderDiver(<MoneyBlock {...props({ gearCents: 0 })} />);
+    renderDiver(<MoneyBlock context={props({ gearCents: 0 })} />);
     expect(screen.queryByText("Rental gear")).not.toBeInTheDocument();
   });
 
   it("shows the gear line once something is", () => {
-    renderDiver(<MoneyBlock {...props({ gearCents: 4_500 })} />);
+    renderDiver(<MoneyBlock context={props({ gearCents: 4_500 })} />);
     expect(screen.getByText("Rental gear")).toBeInTheDocument();
     expect(screen.getByText("$45.00")).toBeInTheDocument();
   });
 
   it("hides the course-fee and e-learning lines on an ordinary charter", () => {
-    renderDiver(<MoneyBlock {...props()} />);
+    renderDiver(<MoneyBlock context={props()} />);
     expect(screen.queryByText("Course fee")).not.toBeInTheDocument();
     expect(screen.queryByText("E-learning")).not.toBeInTheDocument();
     // …and states the fare instead, which the two of them would otherwise
@@ -86,29 +88,33 @@ describe("MoneyBlock — the lines that do not render", () => {
   });
 
   it("replaces the fare line with the course's own two halves", () => {
-    renderDiver(<MoneyBlock {...props({ courseFeeCents: 40_000, eLearningFeeCents: 9_000 })} />);
+    renderDiver(
+      <MoneyBlock context={props({ courseFeeCents: 40_000, eLearningFeeCents: 9_000 })} />,
+    );
     expect(screen.getByText("Course fee")).toBeInTheDocument();
     expect(screen.getByText("E-learning")).toBeInTheDocument();
     expect(screen.queryByText(/× 1 diver/)).not.toBeInTheDocument();
   });
 
   it("hides the e-learning line for a course that does not sell one", () => {
-    renderDiver(<MoneyBlock {...props({ courseFeeCents: 40_000, eLearningFeeCents: null })} />);
+    renderDiver(
+      <MoneyBlock context={props({ courseFeeCents: 40_000, eLearningFeeCents: null })} />,
+    );
     expect(screen.getByText("Course fee")).toBeInTheDocument();
     expect(screen.queryByText("E-learning")).not.toBeInTheDocument();
   });
 
   it("hides the third-party fee line when the shop charges none", () => {
-    renderDiver(<MoneyBlock {...props({ passThroughFeeLine: null })} />);
+    renderDiver(<MoneyBlock context={props({ passThroughFeeLine: null })} />);
     expect(screen.queryByText(/third-party charge/)).not.toBeInTheDocument();
   });
 
   it("says nothing about tax unless Stripe adds it at checkout", () => {
-    renderDiver(<MoneyBlock {...props({ taxLine: "none" })} />);
+    renderDiver(<MoneyBlock context={props({ taxLine: "none" })} />);
     expect(screen.queryByText("Tax")).not.toBeInTheDocument();
 
     cleanup();
-    renderDiver(<MoneyBlock {...props({ taxLine: "checkout" })} />);
+    renderDiver(<MoneyBlock context={props({ taxLine: "checkout" })} />);
     expect(screen.getByText("Tax")).toBeInTheDocument();
     expect(screen.getByText("added at checkout")).toBeInTheDocument();
   });
@@ -126,7 +132,7 @@ describe("MoneyBlock — the lines that do not render", () => {
  */
 describe("MoneyBlock — the total's rule", () => {
   it("stands 16px under the last line and 16px over the total", () => {
-    renderDiver(<MoneyBlock {...props()} />);
+    renderDiver(<MoneyBlock context={props()} />);
     const total = screen.getByText("Due now").parentElement;
     expect(total?.parentElement).toHaveClass("gap-2");
     expect(total).toHaveClass("mt-2", "border-t", "border-border", "pt-4");
@@ -138,11 +144,13 @@ describe("MoneyBlock — the deposit split", () => {
   it("charges the deposit now and names when the remainder is owed", () => {
     renderDiver(
       <MoneyBlock
-        {...props({
-          partySize: 2,
-          depositCents: 3_000,
-          balanceDueAt: new Date("2026-08-29T15:00:00Z"),
-        })}
+        context={{
+          ...props({
+            partySize: 2,
+            depositCents: 3_000,
+            balanceDueAt: new Date("2026-08-29T15:00:00Z"),
+          }),
+        }}
       />,
     );
 
@@ -157,11 +165,13 @@ describe("MoneyBlock — the deposit split", () => {
     // payment into a deposit and a balance invents a transaction.
     renderDiver(
       <MoneyBlock
-        {...props({
-          dueNow: "at_shop",
-          depositCents: 3_000,
-          balanceDueAt: new Date("2026-08-29T15:00:00Z"),
-        })}
+        context={{
+          ...props({
+            dueNow: "at_shop",
+            depositCents: 3_000,
+            balanceDueAt: new Date("2026-08-29T15:00:00Z"),
+          }),
+        }}
       />,
     );
 

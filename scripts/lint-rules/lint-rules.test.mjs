@@ -5,8 +5,8 @@ import { lintFixtures, refusals } from "./lint-fixtures.mjs";
 /**
  * The Biome rules in this folder, run through the repository's real `biome.json` on fixture
  * files, so each case exercises the rule *and* the override that scopes it. They replaced
- * four `check:repo` guards (check-clock, check-intl-cache, check-timezone,
- * check-redirect-in-try); the cases below are those guards' cases, and the "leaves alone"
+ * five `check:repo` guards (check-clock, check-intl-cache, check-timezone,
+ * check-redirect-in-try, check-soft-delete); the cases below are those guards' cases, and the "leaves alone"
  * ones carry as much weight as the refusals.
  */
 
@@ -270,5 +270,108 @@ describe("redirectInTry: the shapes that are correct", () => {
     });
     expect(status).not.toBe(0);
     expect(diagnostics.map((diagnostic) => diagnostic.line)).toContain(3);
+  });
+});
+
+/**
+ * softDelete reads the message bundles, so its fixtures are JSON: one key per line, and a
+ * refusal is reported as the key path on that line. Every case is one the deleted
+ * check-soft-delete guard carried.
+ */
+describe("softDelete", () => {
+  const bundle = (locale, entries) => {
+    const file = `src/i18n/locales/${locale}/x.json`;
+    const text = `{\n${entries.map(([key, value]) => `  ${JSON.stringify(key)}: ${JSON.stringify(value)}`).join(",\n")}\n}\n`;
+    return refusals({ [file]: text }, "softDelete").map(
+      (at) => entries[Number(at.split(":")[1]) - 2]?.[0] ?? at,
+    );
+  };
+
+  it("catches the exact strings the diver roster shipped before 2026-08-20", () => {
+    expect(
+      bundle("en-US", [
+        ["noticeDeleted", "Diver archived. Their bookings stay on file."],
+        ["viewRemoved", "Archived"],
+        ["restore", "Unarchive"],
+        ["removing", "Archiving…"],
+      ]).sort(),
+    ).toEqual(["noticeDeleted", "removing", "restore", "viewRemoved"]);
+  });
+
+  // The euphemism does not have to be one of the banned words: these shipped on the diver
+  // record while the old guard passed (issue #779).
+  it.each([
+    ["the caption that would not say Delete", "Takes this diver off your active lists."],
+    ["its twin on the way back", "Diver restored. They're back on your active lists."],
+    [
+      "the sentence AGENTS.md forbids by name",
+      "Certification removed. It no longer counts toward readiness; its history is kept for records.",
+    ],
+    ["the shorter form of it", "Deleted. Kept for records."],
+    ["a quoted word inside the string", 'Say "Retire" to take it off the list'],
+    ["the other renamings", "Deactivate this course"],
+    ["the storage word itself", "This is a soft delete"],
+  ])("catches %s", (_label, value) => {
+    expect(bundle("en-US", [["notice", value]])).toEqual(["notice"]);
+  });
+
+  // "Remove" is not banned, and must not be: it is right for taking something out of a
+  // collection it belongs to.
+  it.each([
+    ["a landmark off a site's list", "Remove this landmark"],
+    ["a photo out of a gallery", "Removed from the gallery."],
+    ["a member out of a buddy team", "Remove Priya from this team"],
+    ["a heading about lists that are active", "Your active lists"],
+    [
+      "the delete vocabulary the rule asks for",
+      "No undo. Deleting them instead is the reversible option.",
+    ],
+  ])("leaves %s alone", (_label, value) => {
+    expect(bundle("en-US", [["label", value]])).toEqual([]);
+  });
+
+  it("catches the key name too — it is what the next author reads first", () => {
+    expect(bundle("en-US", [["archiveSite", "Delete site"]])).toEqual(["archiveSite"]);
+  });
+
+  it("catches a nested key, and holds a Spanish bundle's keys to the same list", () => {
+    const file = "src/i18n/locales/es-ES/x.json";
+    expect(
+      refusals({ [file]: '{\n  "row": {\n    "retireGear": "Eliminar"\n  }\n}\n' }, "softDelete"),
+    ).toEqual([`${file}:3`]);
+  });
+
+  it("catches the Spanish action forms", () => {
+    expect(
+      bundle("es-ES", [
+        ["one", "Archivar"],
+        ["two", "Archivando…"],
+        ["three", "Desarchivar"],
+        ["four", "Lo quitamos de tus listas activas."],
+      ]).sort(),
+    ).toEqual(["four", "one", "three", "two"]);
+  });
+
+  it("leaves `archivo` alone — it is the ordinary Spanish word for a file", () => {
+    expect(
+      bundle("es-ES", [
+        ["a", "Guarda el archivo donde lo encuentres."],
+        ["b", "44 archivos, con el número de filas de cada uno"],
+        ["c", "Trae el archivo a DiveDay"],
+        ["d", "Eliminar"],
+        ["e", "Restaurar"],
+      ]),
+    ).toEqual([]);
+  });
+
+  it("fails a locale nobody has written a word list for, rather than passing it", () => {
+    const file = "src/i18n/locales/pt-BR/x.json";
+    expect(refusals({ [file]: '{\n  "a": "Excluir"\n}\n' }, "softDelete")).toEqual([`${file}:1`]);
+  });
+
+  it("leaves JSON outside the bundles alone", () => {
+    expect(
+      refusals({ "src/content/x.json": '{\n  "archived": "Archived"\n}\n' }, "softDelete"),
+    ).toEqual([]);
   });
 });

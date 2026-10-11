@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import type { ParticipantType } from "@/lib/participant-types";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   cancelBooking,
   createBooking,
@@ -44,6 +44,10 @@ import {
 import { joinTripWaitlist } from "./waitlist";
 import { issueWaiverRequest } from "./waivers";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 /**
  * **Who is aboard, and what each of them is doing** (ADR
  * 20261007-participant-types).
@@ -52,11 +56,13 @@ import { issueWaiverRequest } from "./waivers";
  * buddy teams, no course. Each one sets the two limits it is about by hand, so
  * the arithmetic it checks is on the page rather than in the seed.
  *
- * A fresh database per test rather than the file-scoped transaction: the
- * subject is the booking transaction and its trip-row lock.
+ * The subject is the booking transaction and its trip-row lock, run inside the
+ * file's rolled-back transaction as a savepoint. PGlite is one connection, so
+ * the lock is uncontended either way; contention is a `*.postgres.test.ts`
+ * question.
  */
 async function benwood() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const tripRows = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const trip = tripRows.find((row) => row.title.startsWith("Two-Tank Reef — Benwood"));
   if (!trip) throw new Error("demo Benwood trip missing");

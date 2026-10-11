@@ -26,13 +26,8 @@ questions — read the schema module.
    Write failure-path tests for new constraints (unique violations, FK violations), not just
    happy paths.
 5. **Run the coverage guards before you push.** Touching any file under `src/db/schema/` — a whole table
-   or a single column — is the trigger, not the shape of the change:
-
-   ```bash
-   pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/db/retention.test.ts --reporter=dot
-   ```
-
-   Three files, 40 tests, about a minute. They assert over the schema from files your change will
+   or a single column — is the trigger, not the shape of the change. The command is step 3 of the
+   **verify** skill's checklist: four files, 40 tests, about a minute. They assert over the schema from files your change will
    not touch, so a focused `pnpm test <file>` never selects them and you learn about them from CI
    instead — which is how 16g's four columns, 16i's `recap_pulses` table *and* its
    `addressed_by_person_id`, and 16j-B's two `person_id` columns all went red after a push. An

@@ -16,7 +16,7 @@ import {
   refreshAction,
   savePassThroughFeeAction,
   saveTaxAction,
-} from "../../actions";
+} from "../../money-actions";
 import { SettingsRow } from "../SettingsRows";
 import { featureRow, MONEY_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
 

@@ -1,15 +1,17 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
-import { refreshCanonicalDemoSchedule } from "./demo-refresh";
 import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import { shops } from "./schema";
 
 // The demo bootstrap `getDb()` runs on a database's first open: the seeded demo
 // shop, and the local playground's schedule refresh. Apart from `client.ts`
 // because the seed graph reaches most of `src/db`, and those modules import
-// query helpers; with this in `client.ts` the module that owns boot order sat
-// in a 32-file import cycle (`src/db/import-cycles.test.ts`). `client.ts`
-// still decides *when* this runs (ADR 20260723-concurrency-safe-demo-bootstrap,
+// `getDb` and the query helpers; with this in `client.ts` the module that owns
+// boot order sat in a 32-file import cycle (`src/db/import-cycles.test.ts`).
+// `client.ts` loads this file with a dynamic `import()` when it first opens a
+// database, and this file loads the seed and the demo keeper the same way, so
+// no static edge leads from `client.ts` back to itself. `client.ts` still
+// decides *when* this runs (ADR 20260723-concurrency-safe-demo-bootstrap,
 // ADR 20260903-one-process-per-pglite-directory); this file is *what* runs.
 
 /**
@@ -93,6 +95,10 @@ export async function seedProductionDb(
  */
 export async function refreshPgliteDemo(db: AppDb, databaseUrl = process.env.DATABASE_URL) {
   if (databaseUrl) return;
+  // Imported here, not at module scope: the demo keeper reaches the trips
+  // modules and the Stripe account reads, and a deployment (which runs
+  // `seedProductionDb` from this file on a cold start) never needs them.
+  const { refreshCanonicalDemoSchedule } = await import("./demo-refresh");
   await refreshCanonicalDemoSchedule(db);
 }
 

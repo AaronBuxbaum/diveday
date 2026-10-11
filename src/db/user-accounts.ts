@@ -145,7 +145,9 @@ export async function isOrientationDismissed(db: DbExecutor, personId: string): 
 /**
  * The id of the login account a person signs in with, or null when they have
  * none. `person_id` is unique in `user_accounts`, so a staff session's person
- * resolves to at most one account.
+ * resolves to at most one account. The argument is the session's own
+ * `personId` and nothing else: there is no shop predicate here, so a person id
+ * read from a form would resolve another tenant's account.
  */
 export async function getAccountIdForPerson(
   db: DbExecutor,

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonCallDayBlowout } from "@/db/authz";
 import { getDb } from "@/db/client";
@@ -16,8 +17,14 @@ const DOOR_CLASS = buttonClass({ variant: "danger-ghost", size: "sm", flush: tru
  *
  * Neither carries a caption, because the page each opens is one: its lead says
  * what calling it does, and it is the confirm.
+ *
+ * The trip door paints with the page; the day door waits on one role read, so
+ * it streams in its own `<Suspense>` beside it rather than holding the More
+ * list (and the page above it) until the read lands. Nothing stands in for it:
+ * the list is `TripMoreDisclosure`, closed when the page paints, so the door
+ * is there before anyone opens it.
  */
-export async function BlowoutDoors({
+export function BlowoutDoors({
   shop,
   personId,
   tripId,
@@ -32,18 +39,35 @@ export async function BlowoutDoors({
   tripLabel: string;
   dayLabel: string;
 }) {
-  const day = calendarDateInTimezone(startsAt, shop.timezone);
-  const canCallDay = await canPersonCallDayBlowout(await getDb(), shop.id, personId);
   return (
     <>
       <Link href={shopPath(shop.slug, "schedule", "blowout", tripId)} className={DOOR_CLASS}>
         {tripLabel}
       </Link>
-      {canCallDay ? (
-        <Link href={shopPath(shop.slug, "schedule", "blowout", "day", day)} className={DOOR_CLASS}>
-          {dayLabel}
-        </Link>
-      ) : null}
+      <Suspense fallback={null}>
+        <DayBlowoutDoor shop={shop} personId={personId} startsAt={startsAt} label={dayLabel} />
+      </Suspense>
     </>
+  );
+}
+
+/** The whole-day door, for the roles that may call a day (`canPersonCallDayBlowout`). */
+async function DayBlowoutDoor({
+  shop,
+  personId,
+  startsAt,
+  label,
+}: {
+  shop: { id: string; slug: string; timezone: string };
+  personId: string;
+  startsAt: Date;
+  label: string;
+}) {
+  if (!(await canPersonCallDayBlowout(await getDb(), shop.id, personId))) return null;
+  const day = calendarDateInTimezone(startsAt, shop.timezone);
+  return (
+    <Link href={shopPath(shop.slug, "schedule", "blowout", "day", day)} className={DOOR_CLASS}>
+      {label}
+    </Link>
   );
 }

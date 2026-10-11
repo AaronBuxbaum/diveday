@@ -1,11 +1,18 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { arrivalsWindow, operationalWindow, withinWindow } from "@/lib/operational-window";
+import {
+  arrivalsWindow,
+  type OperationalWindow,
+  operationalWindow,
+} from "@/lib/operational-window";
 import { seededShopContext } from "@/test/db";
 import { inHorizonReadiness } from "./blockers";
 import { listCheckInQueue } from "./check-in";
 import { countBlockedDiversNextBoatDay, getTodayWork } from "./today";
+
+const withinWindow = (window: OperationalWindow, at: Date): boolean =>
+  at.getTime() >= window.from.getTime() && at.getTime() <= window.to.getTime();
 
 /**
  * The cross-surface contract of the shared window model (task 141): the day

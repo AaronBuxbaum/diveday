@@ -7,7 +7,7 @@ import { RestoreDiver } from "./RestoreDiver";
 
 // Restoring posts a server action, and with it the whole Next server runtime.
 // This suite is about where the panel stands.
-vi.mock("../actions", () => ({ restorePersonAction: vi.fn() }));
+vi.mock("../record-actions", () => ({ restorePersonAction: vi.fn() }));
 
 afterEach(cleanup);
 

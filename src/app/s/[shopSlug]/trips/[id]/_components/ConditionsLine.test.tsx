@@ -211,3 +211,26 @@ describe("ConditionsLine — with no forecast at all", () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+/**
+ * **The outlook never holds the page** (code review 2026-10-10, item 1). The
+ * page hands over the provider call still in flight; until it answers, the line
+ * shows what it already knows — here, the languages aboard — and no credit for
+ * a forecast that has not arrived.
+ */
+describe("ConditionsLine — a forecast still on its way", () => {
+  it("holds the languages line inside a Suspense boundary until the outlook answers", () => {
+    const element = ConditionsLine({
+      shop,
+      trip: { waterTemperatureC: null } as Trip,
+      crewPrediction: false,
+      automatedForecast: new Promise<AutomatedForecast>(() => {}),
+      crewLanguages: "English and Spanish",
+      locale: DEFAULT_DIVER_LOCALE,
+    });
+
+    render(<>{element.props.fallback}</>);
+    expect(screen.getByText(/English and Spanish/)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open-Meteo" })).not.toBeInTheDocument();
+  });
+});

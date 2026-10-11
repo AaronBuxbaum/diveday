@@ -64,14 +64,6 @@ export function divemastersNeeded(divers: number, diversPerDivemaster: number): 
   return Math.ceil(divers / diversPerDivemaster);
 }
 
-/** How many divers the rostered divemasters cover at this target. */
-export function divemasterRatioCapacity(
-  divemasterCount: number,
-  diversPerDivemaster: number,
-): number {
-  return divemasterCount * diversPerDivemaster;
-}
-
 /**
  * Whether a departure is rostered below the shop's own target, and by how many
  * divemasters.

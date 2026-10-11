@@ -3,7 +3,7 @@ import { buttonClass } from "@/components/ui/button";
 import type { ReadyPageData } from "@/db/ready";
 import type { DiverTranslator } from "@/i18n/messages";
 import { formatTime } from "@/lib/format";
-import { sayRunningLateAction } from "../actions";
+import { sayRunningLateAction } from "../day-of-actions";
 
 /**
  * **"Running late"** (J3): one tap that puts "Running late, said 7:42" on the

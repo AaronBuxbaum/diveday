@@ -20,7 +20,7 @@ import {
 import { LedgerRow } from "@/components/ui/ledger";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { getDiverProfile } from "@/db/divers";
-import { listStaff } from "@/db/trips-crew";
+import { listStaff } from "@/db/trips";
 import { listBenchUnits, listCustomerGearItems, searchWorkOrderCustomers } from "@/db/work-orders";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";

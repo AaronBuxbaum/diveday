@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import type { CheckoutSessionLookupResult, CheckoutSessionSnapshot } from "@/lib/payments/checkout";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeCheckout, fakePromotions, recordingCheckout } from "@/test/fakes";
 import { cancelBooking, createBookingParty } from "./bookings";
 import {
@@ -23,6 +23,12 @@ import { setShopCurrency, setShopPassThroughFee, setShopTaxEnabled } from "./sho
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getActiveTripPromoByCode, sendLastMinuteDealBlast } from "./trip-promos";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`). The last-use race hydrates its
+// own, so the racing checkouts are not interleaved savepoints of one
+// transaction; so does the table-constraint test, below.
+const ctx = fileScopedShopContext();
 
 /**
  * A live trip-scoped last-minute deal on `tripId`, minted the way a shop
@@ -104,8 +110,8 @@ async function pricedReefTrip(
 }
 
 /** A connected, charges-enabled shop with a priced future trip and a fresh two-diver party. */
-async function checkoutContext() {
-  const { db, shop } = await seededShopContext();
+async function checkoutContext({ fresh = false } = {}) {
+  const { db, shop } = fresh ? await seededShopContext() : ctx;
   await upsertShopStripeAccount(db, shop.id, "acct_test");
   await setShopStripeAccountStatus(db, "acct_test", {
     chargesEnabled: true,
@@ -415,7 +421,7 @@ describe("startBookingCheckout", () => {
   });
 
   it("refuses without a connected, charges-enabled Stripe account", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const reef = await pricedReefTrip(db, shop.id);
     const [entry] = await getTripRoster(db, shop.id, reef.id);
     const outcome = await startBookingCheckout(
@@ -944,7 +950,9 @@ describe("startBookingCheckout", () => {
     // reusing the stale one would make Stripe replay the very session whose
     // price is wrong (CR-005). And seats-before-money: the bookings were
     // committed before any of this ran, so retiring a session touches no seat.
-    const { db, shop, reef, bookingIds } = await checkoutContext();
+    // Its own database: "the latest checkout" is ordered by created_at, which the
+    // shared transaction would freeze for both mints.
+    const { db, shop, reef, bookingIds } = await checkoutContext({ fresh: true });
     const seen = recordingCheckout();
     const first = await startBookingCheckout(
       db,
@@ -1843,8 +1851,8 @@ describe("checkout completion", () => {
 });
 
 describe("refreshCheckoutFromStripe", () => {
-  async function pendingCheckout() {
-    const context = await checkoutContext();
+  async function pendingCheckout({ fresh = false } = {}) {
+    const context = await checkoutContext({ fresh });
     const start = await startBookingCheckout(
       context.db,
       startInput(context.shop.id, context.reef.id, context.bookingIds),
@@ -1918,7 +1926,9 @@ describe("refreshCheckoutFromStripe", () => {
 
     // Recorded before the status branch, so an expiring session still leaves
     // the pointer behind rather than taking it to the grave.
-    const expiring = await pendingCheckout();
+    // A second party for the same trip: its own database, or the first party's
+    // divers are already booked.
+    const expiring = await pendingCheckout({ fresh: true });
     await refreshCheckoutFromStripe(
       expiring.db,
       expiring.shop.id,
@@ -2218,7 +2228,7 @@ describe("startBookingCheckout across participant types", () => {
     riderPriceCents: number | null;
     depositCents?: number | null;
   }) {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await upsertShopStripeAccount(db, shop.id, "acct_test");
     await setShopStripeAccountStatus(db, "acct_test", {
       chargesEnabled: true,
@@ -2483,6 +2493,8 @@ describe("a fixed-amount promotion", () => {
   });
 
   it("is refused by the table when a row claims both a percent and an amount", async () => {
+    // Its own database: the first refusal aborts the transaction it runs in, and
+    // inside the shared one the second insert would fail for that reason instead.
     const { db, shop } = await seededShopContext();
     const { shopPromoCodes } = await import("./schema");
     await expect(
@@ -2712,7 +2724,7 @@ describe("a capped discount on the pass-through path", () => {
   it("lets exactly one of two attempts at a code's last use reach Stripe", async () => {
     // Layer-7 re-review: the pending row was written only after two Stripe
     // round trips, so concurrent attempts could each count the same free use.
-    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const { db, shop, reef, bookingIds } = await checkoutContext({ fresh: true });
     await setShopPassThroughFee(db, shop.id, { name: "Park fee", amountCents: 1_500 });
     const withCode = await cappedCode(db, shop.id, "LASTONE", 1);
     const other = await party(db, shop.id, reef.id, "Racing Second");

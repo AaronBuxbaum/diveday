@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { restorePersonAction } from "../actions";
+import { restorePersonAction } from "../record-actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 
 /**

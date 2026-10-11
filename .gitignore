@@ -86,3 +86,7 @@ public/manifest-sw.js
 
 # pixel probe output (scripts/pixel-probe/, docs/design/pixel-craft.md)
 /e2e/pixel-probe/
+
+# session hooks' refusal tally (scripts/hook-log.mjs)
+/.claude/.hook-log
+/.claude/.follow-up-log

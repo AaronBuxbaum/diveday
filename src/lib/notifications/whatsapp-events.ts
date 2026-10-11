@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import type { ProviderEmailStatus } from "./events";
+import { type ProviderEmailStatus, timestampFrom } from "./events";
 
 /**
  * Meta's WhatsApp delivery webhook: signature verification and event parsing
@@ -204,7 +204,7 @@ export function parseWhatsAppDeliveryEvents(payload: string, now: Date): WhatsAp
           providerMessageId: status.id,
           status: mapped,
           detail: failureDetail(status.errors),
-          occurredAt: timestampFrom(status.timestamp, now),
+          occurredAt: timestampFrom([status.timestamp], now, "epoch-seconds"),
         });
       }
     }
@@ -258,7 +258,7 @@ export function parseWhatsAppInboundMessages(payload: string, now: Date): WhatsA
             from: message.from,
             body: text,
             mediaCount: 0,
-            receivedAt: timestampFrom(message.timestamp, now),
+            receivedAt: timestampFrom([message.timestamp], now, "epoch-seconds"),
           });
         } else if (MEDIA_TYPES.has(message.type)) {
           const caption =
@@ -269,7 +269,7 @@ export function parseWhatsAppInboundMessages(payload: string, now: Date): WhatsA
             from: message.from,
             body: caption.trim(),
             mediaCount: 1,
-            receivedAt: timestampFrom(message.timestamp, now),
+            receivedAt: timestampFrom([message.timestamp], now, "epoch-seconds"),
           });
         }
       }
@@ -285,12 +285,4 @@ function failureDetail(errors: z.infer<typeof statusSchema>["errors"]): string |
   // more than 24 hours have passed"); title is the generic bucket.
   const detail = first.error_data?.details ?? first.message ?? first.title;
   return detail?.slice(0, 500) ?? null;
-}
-
-/** Meta sends unix **seconds** as a string; anything unparseable falls back to now. */
-function timestampFrom(timestamp: string | undefined, fallback: Date): Date {
-  if (!timestamp) return fallback;
-  const seconds = Number(timestamp);
-  if (!Number.isFinite(seconds) || seconds <= 0) return fallback;
-  return new Date(seconds * 1_000);
 }

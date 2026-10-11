@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarFeeds, people, personRoles, userAccounts } from "@/db/schema";
 import { listStaff } from "@/db/trips";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import {
   issueCalendarFeed,
   listCalendarFeeds,
@@ -12,8 +12,12 @@ import {
   verifyCalendarFeed,
 } from "./feed-store";
 
-async function staffWithRole(role: string) {
-  const { db, shop } = await seededShopContext();
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
+async function staffWithRole(role: string, { fresh = false } = {}) {
+  const { db, shop } = fresh ? await seededShopContext() : ctx;
   const staff = await listStaff(db, shop.id);
   const member = staff.find((entry) => entry.roles.includes(role));
   if (!member) throw new Error(`seeded shop has no ${role}`);
@@ -65,7 +69,9 @@ describe("issueCalendarFeed", () => {
   });
 
   it("cannot leave two live feeds for one person and scope, even by direct insert", async () => {
-    const { db, shop, personId } = await staffWithRole("owner");
+    // Its own database: the refused insert aborts the transaction it runs in,
+    // and the reads after it would fail inside the shared one.
+    const { db, shop, personId } = await staffWithRole("owner", { fresh: true });
     const issued = await issueCalendarFeed(db, {
       shopId: shop.id,
       personId,
@@ -106,7 +112,7 @@ describe("issueCalendarFeed", () => {
   });
 
   it("refuses a shop-wide feed to a role that may not see the whole operation", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const staff = await listStaff(db, shop.id);
     const crewOnly = staff.find(
       (entry) => !entry.roles.includes("owner") && !entry.roles.includes("manager"),
@@ -130,7 +136,7 @@ describe("issueCalendarFeed", () => {
   });
 
   it("refuses a person who is not this shop's staff at all", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [diver] = await db
       .select({ id: people.id })
       .from(people)
@@ -147,7 +153,7 @@ describe("issueCalendarFeed", () => {
 
 describe("verifyCalendarFeed", () => {
   it("returns null for an unknown token rather than leaking that it is unknown", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     expect(await verifyCalendarFeed(db, { token: "not-a-real-token" })).toBeNull();
   });
 
@@ -269,7 +275,7 @@ describe("feed housekeeping", () => {
   });
 
   it("cleans up feeds held by people who no longer have any staff role", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const staff = await listStaff(db, shop.id);
     const leaver = staff.find((entry) => entry.roles.includes("owner"));
     const stayer = staff.find((entry) => entry.person.id !== leaver?.person.id);

@@ -296,14 +296,3 @@ export function verifyWaiverIntegrity(record: WaiverRecord): WaiverIntegrityStat
     ? "valid"
     : "invalid";
 }
-
-/**
- * Whether a release's guardian address was erased on request — the note that
- * travels with a valid version 4 seal, so a reader is told the release was
- * redacted rather than left to wonder why the address is blank.
- */
-export function guardianEmailRedacted(
-  record: Pick<WaiverRecord, "guardianEmailErasedAt">,
-): boolean {
-  return record.guardianEmailErasedAt !== null;
-}

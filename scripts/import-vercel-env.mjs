@@ -7,6 +7,7 @@ import { PRIMARY_REGION } from "../config/aws-regions.mjs";
 import { ensureAwsLogin } from "./aws-login.mjs";
 import { dotenvMap } from "./dotenv.mjs";
 import { isTimeout, readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { VERCEL_CLI } from "./vercel-cli.mjs";
 
 // Never a bare `process.env.CI`: it is a generic convention many local dev
 // tools set, not proof this is really the unattended CI deploy job. `--ci-unattended`
@@ -226,7 +227,7 @@ try {
     // value from stdin; --force makes rerunning a rotation deterministic.
     const result = runBounded(
       "pnpm",
-      ["exec", "vercel", "env", "add", key, environment, "--force", sensitivity],
+      [...VERCEL_CLI, "env", "add", key, environment, "--force", sensitivity],
       {
         input: value,
         stdio: ["pipe", "inherit", "inherit"],

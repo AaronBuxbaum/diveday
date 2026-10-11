@@ -46,15 +46,15 @@ cannot see it.
 | Self-registration's waiver mail | `src/app/s/[shopSlug]/register/actions.ts` | recipient address | `RATE_LIMITS.selfRegisterEmailByRecipient` (3/hour) — drops the send, never the registration |
 | Self-registration's waiver text (phone-only registrant) | `src/app/s/[shopSlug]/register/actions.ts` | recipient number in E.164, across every shop | `RATE_LIMITS.selfRegisterTextByRecipient` (3/hour) — drops the send, never the registration |
 | Self-registration's waiver texts, shop-wide | `src/app/s/[shopSlug]/register/actions.ts` | shop, per day | `RATE_LIMITS.selfRegisterTextByShop` (40/day) — drops the send, never the registration, and logs `self_registration.release_skipped` at warn with outcome `shop_text_cap`. Before either bucket, the anonymous path texts only a number in the shop's own country and never from a demo shop: its calling code and, for a `+1` shop, one of that country's own area codes, so a US or Canadian shop never texts the Caribbean, Pacific-territory, premium 900 or toll-free ranges (`anonymousTextRecipient`, `src/lib/self-registration.ts`; `NANP_AREA_CODES`, `src/lib/phone.ts`; refused as `foreign_number` or `foreign_area_code`) |
-| Contact-email confirmation link (a save that changes the address, or the resend control; issue #1288) | `src/app/shop/[shopSlug]/settings/actions.ts` | shop, **and** the recipient address | `RATE_LIMITS.contactConfirmationByShop` (3/hour) + `RATE_LIMITS.contactConfirmationByRecipient` (3/hour) — drops the send, never the save; the settings form takes any address and a demo owner login is one click away, so this is what keeps it from being a branded-mail relay |
-| Readiness actions | `src/app/ready/[token]/actions.ts` `contextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |
+| Contact-email confirmation link (a save that changes the address, or the resend control; issue #1288) | `src/app/shop/[shopSlug]/settings/shop-actions.ts` | shop, **and** the recipient address | `RATE_LIMITS.contactConfirmationByShop` (3/hour) + `RATE_LIMITS.contactConfirmationByRecipient` (3/hour) — drops the send, never the save; the settings form takes any address and a demo owner login is one click away, so this is what keeps it from being a branded-mail relay |
+| Readiness actions | `src/app/ready/[token]/action-helpers.ts` `contextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Self-cancelling a booking from the readiness link | same file | IP | `RATE_LIMITS.bookingSelfCancel` (5/hour) |
 | Saving the arrival card from the readiness link | `src/app/s/[shopSlug]/trips/[id]/arrival-card/route.ts` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) — a GET that mints a capability row per request, so an unthrottled loop by anyone holding a forwarded readiness link would grow the table and retire the code the diver already printed |
 | Waiver draft/complete | `src/app/waivers/[token]/page.tsx` | IP | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Emailing a fresh waiver link from a dead one | `src/app/waivers/[token]/actions.ts` | IP, **and** the booking whose inbox receives it | `RATE_LIMITS.capabilityAction` (60/hour) + `RATE_LIMITS.waiverLinkResendByBooking` (5/hour) |
-| Emailing a fresh trip-prep link from a dead one | `src/app/ready/[token]/actions.ts` | IP, **and** the booking whose inbox receives it | `RATE_LIMITS.capabilityAction` (60/hour) + `RATE_LIMITS.readinessLinkResendByBooking` (5/hour) |
+| Emailing a fresh trip-prep link from a dead one | `src/app/ready/[token]/booking-actions.ts` | IP, **and** the booking whose inbox receives it | `RATE_LIMITS.capabilityAction` (60/hour) + `RATE_LIMITS.readinessLinkResendByBooking` (5/hour) |
 | Seat-claim link | `src/app/claim/[token]/actions.ts` | IP | `RATE_LIMITS.capabilityAction` (60/hour) |
-| Address autocomplete in shop settings | `src/app/shop/[shopSlug]/settings/actions.ts` | signed-in staff member | `RATE_LIMITS.addressLookup` (120/hour) |
+| Address autocomplete in shop settings | `src/app/shop/[shopSlug]/settings/shop-actions.ts` | signed-in staff member | `RATE_LIMITS.addressLookup` (120/hour) |
 | Core Web Vitals beacon | `src/app/api/vitals/route.ts` | IP | `RATE_LIMITS.webVitalsBeacon` (300/hour) |
 | CSP violation report | `src/app/api/csp-report/route.ts` | IP | `RATE_LIMITS.cspReport` (120/hour) |
 
@@ -109,7 +109,7 @@ Every capability-token check happens **before** the token is verified, so it
 throttles brute-force token guessing and not only replay of a link already
 known to be valid. Where a file has a shared token-verification helper the
 check lives in it and every action in that file inherits it — `contextFor` in
-`ready/[token]/actions.ts`, `confirmContextFor` in the trip actions. Files
+`ready/[token]/action-helpers.ts`, `confirmContextFor` in the trip actions. Files
 without one (`waivers/[token]/page.tsx`'s two inline server actions,
 `waivers/[token]/actions.ts`, `claim/[token]/actions.ts`) check at each
 action's own first line. Both shapes spend the same `capabilityAction` bucket,
@@ -154,7 +154,7 @@ say nothing for reasons of their own, one of them by accident.
   `/ready/[token]` gives them for the same throttle. Closing the gap means
   giving that helper the two-reason result `contextFor` already has
   (`{ ok: false; reason: "rate_limited" | "invalid" }`,
-  `src/app/ready/[token]/actions.ts`) — do not "fix" it by widening the
+  `src/app/ready/[token]/action-helpers.ts`) — do not "fix" it by widening the
   silent bucket instead.
 - **Two say nothing at all, on purpose.** `suggestAddressAction` returns
   `{ status: "failed" }` and the settings card falls back to plain text boxes —

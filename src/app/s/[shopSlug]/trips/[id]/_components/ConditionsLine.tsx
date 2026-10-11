@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { ledgerRowRoomClass } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import { depthText, seaStateText, temperatureText, windText } from "@/i18n/unit-labels";
@@ -29,13 +30,37 @@ import type { AutomatedForecast, Shop, Trip } from "./types";
  * still renders this line for the languages aboard.
  */
 export function ConditionsLine({
-  shop,
-  trip,
-  crewPrediction,
   automatedForecast,
-  crewLanguages,
-  locale,
-}: {
+  ...rest
+}: Omit<ConditionsLineProps, "automatedForecast"> & {
+  /**
+   * The outlook, or the provider call still on its way. A promise streams in
+   * inside its own `<Suspense>`, holding the line the page already knows (the
+   * crew's read, the languages aboard) until it answers, so a slow Open-Meteo
+   * never holds the booking form (code review 2026-10-10, item 1).
+   */
+  automatedForecast: AutomatedForecast | Promise<AutomatedForecast>;
+}) {
+  if (!(automatedForecast instanceof Promise)) {
+    return <ConditionsLineView {...rest} automatedForecast={automatedForecast} />;
+  }
+  return (
+    <Suspense fallback={<ConditionsLineView {...rest} automatedForecast={null} />}>
+      <ConditionsLineOnceAnswered {...rest} automatedForecast={automatedForecast} />
+    </Suspense>
+  );
+}
+
+async function ConditionsLineOnceAnswered({
+  automatedForecast,
+  ...rest
+}: Omit<ConditionsLineProps, "automatedForecast"> & {
+  automatedForecast: Promise<AutomatedForecast>;
+}) {
+  return <ConditionsLineView {...rest} automatedForecast={await automatedForecast} />;
+}
+
+type ConditionsLineProps = {
   shop: Shop;
   trip: Trip;
   crewPrediction: boolean;
@@ -58,7 +83,16 @@ export function ConditionsLine({
    */
   crewLanguages: string | null;
   locale: string;
-}) {
+};
+
+function ConditionsLineView({
+  shop,
+  trip,
+  crewPrediction,
+  automatedForecast,
+  crewLanguages,
+  locale,
+}: ConditionsLineProps) {
   const t = diverTranslator(locale);
   // Stored metric, displayed in the shop's own units (src/lib/depth-units.ts,
   // src/lib/temperature-units.ts): a Florida shop set to feet was still being

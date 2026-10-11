@@ -4,7 +4,7 @@ import { FactLine } from "@/components/ui/FactLine";
 import { ChoiceRow, controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { MAX_DIVERS_PER_DIVEMASTER, MIN_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
-import { saveCrewScheduleAction } from "../../actions";
+import { saveCrewScheduleAction } from "../../team-actions";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
 import { SectionNotice, SettingsGroup, type SettingsView, TEAM_GROUP } from "./kit";
 

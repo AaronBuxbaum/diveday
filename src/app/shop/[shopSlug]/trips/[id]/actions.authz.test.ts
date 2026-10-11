@@ -13,7 +13,7 @@ import {
   trips,
 } from "@/db/schema";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_CAPTAIN_EMAIL,
@@ -21,6 +21,10 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * Two different gates live in this file, and the line between them is the point:
@@ -59,13 +63,13 @@ const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
 const { refundBookingOnCancellation } = await import("@/db/refunds");
 const {
-  certifyDiverFromRosterAction,
   markPaymentAction,
   removeBookingAction,
   reinstateTripAction,
   saveRequirementsAction,
   setParticipantTypeAction,
 } = await import("./actions");
+const { certifyDiverFromRosterAction } = await import("./course-actions");
 
 /**
  * A seeded ordinary charter — not a course session, whose rules are frozen —
@@ -124,7 +128,7 @@ async function paidBookingId(db: AppDb, shopId: string, tripId: string): Promise
 }
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   activeSurface = { db, shop };
   return {
@@ -631,10 +635,21 @@ describe("who may run each action on the trip page", () => {
     "updateBookingPickupAction",
   ];
 
-  /** Every exported action's source, sliced from its `export` to its closing brace. */
+  /**
+   * Every exported action's source, sliced from its `export` to its closing brace, across the
+   * departure's action files (`course-actions.ts` holds the course roster's doors).
+   */
   function actionBodies(): Map<string, string> {
+    const bodies = new Map<string, string>();
+    for (const file of ["./actions.ts", "./course-actions.ts"]) {
+      for (const [name, body] of bodiesIn(file)) bodies.set(name, body);
+    }
+    return bodies;
+  }
+
+  function bodiesIn(file: string): Map<string, string> {
     const source = readFileSync(
-      new URL("./actions.ts", import.meta.url).pathname.replace(/%5B/g, "[").replace(/%5D/g, "]"),
+      new URL(file, import.meta.url).pathname.replace(/%5B/g, "[").replace(/%5D/g, "]"),
       "utf8",
     );
     const bodies = new Map<string, string>();

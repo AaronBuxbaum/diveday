@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { SHEET_PANEL_CLASS, SheetHeader } from "@/components/ui/sheet";
-import { useDialog } from "@/components/useDialog";
+import { useDialogBehaviour } from "@/components/ui/useDialogBehaviour";
 import { motionMs } from "@/lib/motion";
 
 /**
@@ -106,14 +106,13 @@ export function PersonSheet({
   const descriptionId = useId();
   const sheetId = useId();
   const close = useCallback(() => setOpen(false), []);
-  const { mounted, closing } = useDialog({
+  const { mounted, closing, dialogProps } = useDialogBehaviour({
     open,
-    // Escape hands focus straight back to the name that opened the sheet.
-    onClose: () => {
-      close();
-      triggerRef.current?.focus();
-    },
+    onClose: close,
     containerRef: sheetRef,
+    // Every close — Escape, the scrim, the × — hands focus straight back to the name that
+    // opened the sheet.
+    triggerRef,
     exitMs: SHEET_DURATION_MS,
     lockScroll: true,
   });
@@ -131,10 +130,9 @@ export function PersonSheet({
         ref={sheetRef}
         id={sheetId}
         role="dialog"
-        aria-modal="true"
+        {...dialogProps}
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        tabIndex={-1}
         className={`${SHEET_PANEL_CLASS} outline-none ${closing ? "sheet-out" : "rise-in"}`}
       >
         <div aria-hidden="true" className="mx-auto h-1 w-10 rounded-full bg-border-strong" />

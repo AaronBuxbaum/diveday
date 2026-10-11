@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HANDOFF_TTL_MS } from "@/lib/booking-handoff";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   consumeBookingHandoff,
   issueBookingHandoff,
@@ -14,6 +14,10 @@ import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { bookings, shops } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * **The door remembers who opened it, and only who opened it** (ADR
@@ -62,7 +66,7 @@ async function bookedDiver(db: AppDb, shopId: string, tripId: string, email: str
 }
 
 async function fixture() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [trip, nextTrip] = await upcomingTripsWithCounts(db, shop.id);
   if (!trip || !nextTrip) throw new Error("expected two seeded trips");
   const bookingId = await bookedDiver(db, shop.id, trip.id, "yara@example.com");

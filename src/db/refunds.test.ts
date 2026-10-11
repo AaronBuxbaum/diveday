@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import type { CheckoutProvider, RefundCheckoutResult } from "@/lib/payments/checkout";
-import { dbNowPlus, seededShopContext } from "@/test/db";
+import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking, createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
@@ -23,6 +23,10 @@ import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getActiveTripPromoByCode, sendLastMinuteDealBlast } from "./trip-promos";
 import { getTripRoster, setTripStatus, upcomingTripsWithCounts, updateTrip } from "./trips";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 const REEF_PRICE_CENTS = 18_000;
 
@@ -116,7 +120,7 @@ async function paidBookingContext(
     tripDiscountPercent?: number;
   } = {},
 ) {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   await upsertShopStripeAccount(db, shop.id, "acct_test");
   await setShopStripeAccountStatus(db, "acct_test", {
     chargesEnabled: true,

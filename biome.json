@@ -21,6 +21,9 @@
       "correctness": {
         "noUnusedVariables": "error",
         "noUnusedImports": "error"
+      },
+      "a11y": {
+        "useButtonType": "error"
       }
     },
     "domains": {
@@ -93,6 +96,26 @@
     {
       "includes": ["src/**/*.ts", "src/**/*.tsx", "!**/*.test.ts", "!**/*.test.tsx"],
       "plugins": ["./scripts/lint-rules/redirectInTry.grit"]
+    },
+    {
+      "includes": ["src/i18n/locales/**/*.json"],
+      "plugins": ["./scripts/lint-rules/softDeleteKey.grit"]
+    },
+    {
+      "includes": ["src/i18n/locales/en-US/**/*.json"],
+      "plugins": ["./scripts/lint-rules/softDeleteEnUs.grit"]
+    },
+    {
+      "includes": ["src/i18n/locales/es-ES/**/*.json"],
+      "plugins": ["./scripts/lint-rules/softDeleteEsEs.grit"]
+    },
+    {
+      "includes": [
+        "src/i18n/locales/**/*.json",
+        "!src/i18n/locales/en-US/**",
+        "!src/i18n/locales/es-ES/**"
+      ],
+      "plugins": ["./scripts/lint-rules/softDeleteLocale.grit"]
     }
   ],
   "css": {

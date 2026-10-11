@@ -7,10 +7,7 @@ import type { RentalFit } from "@/lib/dive-prep";
 import { GearAndSizes } from "./GearAndSizes";
 import type { DiverProfile } from "./shared";
 
-vi.mock("../actions", () => ({
-  saveProfileAction: vi.fn(),
-  setNeedsStaffFitAction: vi.fn(),
-}));
+vi.mock("../fit-actions", () => ({ saveProfileAction: vi.fn(), setNeedsStaffFitAction: vi.fn() }));
 
 afterEach(cleanup);
 

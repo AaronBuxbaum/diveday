@@ -16,7 +16,7 @@ import { nowDate } from "@/lib/clock";
 import { refundOnCancellation } from "@/lib/deposits";
 import { log } from "@/lib/log";
 import { capturedPaymentStatuses, isCapturedPaymentStatus } from "@/lib/payment-source";
-import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
+import type { CheckoutProvider } from "@/lib/payments/checkout";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { releasePackageCoverageForBooking } from "./bookings";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
@@ -42,6 +42,7 @@ import {
 } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { findStripePaymentTarget } from "./stripe-payment-targets";
+import { checkoutProviderFromEnvironment } from "./stripe-providers";
 
 /**
  * The result of attempting an automated refund when a paid seat is cancelled.

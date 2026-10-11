@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { shiftCalendarDate } from "./calendar-date";
 import {
-  addDaysToWall,
   EVERY_WEEKDAY,
   isValidWeeklyPattern,
   MAX_OCCURRENCES_PER_ROLL,
@@ -12,16 +11,7 @@ import {
   weekdaySetHas,
   weekdaysIn,
 } from "./recurrence";
-import type { WallTime } from "./zoned";
 import { utcToWallTime, wallTimeToUtc } from "./zoned";
-
-const wall = (year: number, month: number, day: number, hour = 7, minute = 30): WallTime => ({
-  year,
-  month,
-  day,
-  hour,
-  minute,
-});
 
 /** 2026-07-04 is a Saturday; the fixtures below lean on that anchor throughout. */
 const SATURDAY = "2026-07-04";
@@ -301,23 +291,6 @@ describe("occurrences through a timezone", () => {
       return utcToWallTime(instant, "America/New_York").hour;
     });
     expect(local).toEqual([7, 7, 7]);
-  });
-});
-
-describe("addDaysToWall", () => {
-  it("rolls over month and year boundaries", () => {
-    expect(addDaysToWall(wall(2026, 1, 30), 3)).toEqual(wall(2026, 2, 2));
-    expect(addDaysToWall(wall(2026, 12, 30), 5)).toEqual(wall(2027, 1, 4));
-  });
-
-  it("preserves the wall-clock time of day", () => {
-    const result = addDaysToWall(wall(2026, 7, 4, 6, 15), 7);
-    expect(result.hour).toBe(6);
-    expect(result.minute).toBe(15);
-  });
-
-  it("handles a leap day", () => {
-    expect(addDaysToWall(wall(2028, 2, 28), 1)).toEqual(wall(2028, 2, 29));
   });
 });
 

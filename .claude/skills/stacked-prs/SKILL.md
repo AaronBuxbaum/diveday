@@ -110,6 +110,27 @@ No commits between claude/<slug>-1-schema and claude/<slug>-2-reader, Base ref m
 which is exactly what PR #893 recorded as a reason to stop stacking. The failure lives entirely in
 the gap between cutting a branch and opening its pull request; closing that gap removes it.
 
+## Where am I in the stack
+
+**Read it from git, never from a record of it.** `node scripts/stack-map.mjs` prints the stack HEAD
+is in: the layers bottom to top, the top, any other tip above HEAD (a fork two sessions made), the
+sub-branches merged into a layer (`-l2-core` into `-2`), and each layer's own paths; `--json` is the
+same record for a machine. Every prompt's context line carries the position (`stack: layer 2 of 4,
+top origin/claude/<slug>-4`), and the session-start block names the top.
+
+It derives all of that from the remote refs: a layer below is a remote branch HEAD contains and
+`origin/main` does not, a layer above is one that contains HEAD, a layer sits on HEAD's first-parent
+chain and a sub-branch is merged in through a second parent. So it is exactly as fresh as the last
+fetch, and the session-start hook fetches `main` and `claude/*` (with `--prune`, so a merged layer
+drops out) for that reason. Two designs were weighed and refused. A committed `.claude/stack.json`
+that each PR updates is one more shared file every layer edits, stale the moment a layer merges and
+a conflict on every rebase — the problem it would exist to remove. A `STACK` block in each PR body
+read live would put a GitHub call on every prompt, and a hook cannot count on one: `gh`'s GraphQL
+is refused in cloud sessions and `gh` is not signed in everywhere a session runs.
+
+What git cannot say is intent: which branch you *mean* to cut next, and the paths you mean to own.
+Those stay where they were — the draft PR body's position line below and the issue's claim.
+
 Every body states its position and what is beneath it, because a reviewer who lands on layer 3 from
 a notification has no other way to find the bottom:
 
@@ -248,7 +269,5 @@ test is part of the work applies per layer.
 
 ## Claiming
 
-One claim covers the whole stack, not one per layer. Post the `## Claim` comment on the issue with
-the **bottom** branch as `Branch:` and name the layers you intend to open — see
-[docs/agents/issue-tracker.md](../../../docs/agents/issue-tracker.md)'s "Claiming an issue". Three
-half-claimed branches with no stated order is exactly the state that convention exists to prevent.
+Claims follow the issue, not the stack: [docs/agents/issue-tracker.md](../../../docs/agents/issue-tracker.md)'s
+"Claiming an issue" says which branch a claim names.

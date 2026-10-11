@@ -26,7 +26,7 @@ import {
 } from "./schema";
 import { liveTrip } from "./trips-live";
 import {
-  getCurrentWaiverTemplate,
+  getCurrentWaiverGeneration,
   getEmergencyContactForPerson,
   listSignedWaiversByPerson,
 } from "./waivers";
@@ -111,7 +111,7 @@ export async function readKnownDiver(
   const [evidence, waivers, template, rentalFit, emergencyContact] = await Promise.all([
     readCertificationEvidence(db, input.shopId, person.id),
     listSignedWaiversByPerson(db, input.shopId, [person.id]),
-    getCurrentWaiverTemplate(db, input.shopId),
+    getCurrentWaiverGeneration(db, input.shopId),
     getRentalFit(db, input.shopId, person.id),
     getEmergencyContactForPerson(db, input.shopId, person.id),
   ]);

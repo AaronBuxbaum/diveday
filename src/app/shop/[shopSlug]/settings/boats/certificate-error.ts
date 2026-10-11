@@ -4,7 +4,7 @@ import { cachedListFormat } from "@/lib/intl-cache";
 
 /**
  * **The fleet row's certificate error** (H-107), read back off the redirect
- * `certificateRefusal` (settings/actions.ts) sends: which row it belongs on
+ * `certificateRefusal` (settings/boat-actions.ts) sends: which row it belongs on
  * and the sentence it says. Shared by the action and the page, so the two
  * agree on the codes and on the row's anchor.
  */

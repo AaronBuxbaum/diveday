@@ -214,24 +214,6 @@ export function counterRentalCoreKinds(rentalItems: readonly string[]): GearItem
   });
 }
 
-/**
- * **The set price, when the picked units are one full set.** A shop that
- * prices its core kit as one cheaper bundle quotes a diver the set, and a
- * person renting that kit at the counter is the same customer. One unit of
- * each core kind exactly: two BCDs is two people's gear, and a set price on
- * it would undercharge whoever wrote the bundle. Null when the shop has no set
- * price or the picks are not one set, so the pieces price themselves.
- */
-export function counterRentalSetCents(
-  pricing: RentalPricing,
-  coreKinds: readonly GearItemKind[],
-  pickedKinds: readonly GearItemKind[],
-  days: number,
-): number | null {
-  if (pricing.setCents === null) return null;
-  return isOneCoreSet(coreKinds, pickedKinds) ? pricing.setCents * days : null;
-}
-
 /** Exactly one unit of every core kind among the picks (and at least one core kind). */
 export function isOneCoreSet(
   coreKinds: readonly GearItemKind[],

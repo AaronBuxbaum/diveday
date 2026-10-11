@@ -41,16 +41,15 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
 ## Rules
 
 - **Change the schema through the schema-change skill**: `pnpm db:generate --name`, then before
-  you push run the four coverage guards by path:
-  `pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/db/retention.test.ts --reporter=dot`
-  ([verifying.md](../../docs/agents/verifying.md)). Never hand-edit `drizzle/`; regenerate.
+  you push run the four coverage guards by path (the **verify** skill's checklist, step 3). Never
+  hand-edit `drizzle/`; regenerate.
 - **There is no legacy**: drop what nothing writes, delete code that only tolerates old rows, write
   no backfill or dual-read for pre-pilot data (H-49). It does not relax the destructive-migration
   guard (`-- diveday:allow-destructive <rule> <table>.<column>: <why>`) or H-02's retention and
   erasure promises. It expires when Aaron says the first pilot shop has real divers.
 - **Every delete is soft**: `deleted_at`, a partial index over live rows, `deleted_at is null` in
   every live read (ADR 20260820-every-delete-is-soft). On screen the word is still "Delete"
-  (soft-delete-vocabulary guard); a publish toggle is "Hidden". The exceptions are legal erasure
+  (the `softDelete` lint rule); a publish toggle is "Hidden". The exceptions are legal erasure
   (`people.anonymized_at`) and machinery nobody pointed at.
 - **Every read of `trips` carries `liveTrip()`** or says `diveday:allow-deleted-trips: <why>`:
   live-trip-read guard (`scripts/check-live-trips.mjs`).

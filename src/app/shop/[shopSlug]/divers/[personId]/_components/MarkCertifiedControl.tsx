@@ -6,7 +6,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
-import type { MarkCertifiedResult } from "../actions";
+import type { MarkCertifiedResult } from "../card-actions";
 
 /**
  * Every word this control renders, translated on the server ahead of it —

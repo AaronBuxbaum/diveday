@@ -20,9 +20,11 @@ const CRON_MONITOR_CONFIG = {
  * 20261009-crew-hear-about-their-boats).
  *
  * Every person whose crew has been still for the settle window gets one
- * message netting what changed (`sendDueCrewNotices`). Hourly at `:00`, beside
- * the other hourly passes, so it adds no database wake-up of its own
- * (`src/lib/cron-schedule.test.ts`). It sends fresh mail only; the kind is never
+ * message netting what changed (`sendDueCrewNotices`). Hourly at `:04`, inside
+ * the five minutes the other hourly passes share, so it adds no database
+ * wake-up of its own (`src/lib/cron-schedule.test.ts`). Hourly rather than
+ * gated to fewer hours: news settles within minutes at any hour, and the one
+ * read that finds none is the whole cost of an idle pass. It sends fresh mail only; the kind is never
  * queued for a retry.
  */
 export async function GET(request: Request) {

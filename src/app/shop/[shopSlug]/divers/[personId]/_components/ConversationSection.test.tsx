@@ -7,7 +7,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { HOUR_MS } from "@/lib/clock";
 import { ConversationSection } from "./ConversationSection";
 
-vi.mock("../actions", () => ({ replyToDiverAction: vi.fn() }));
+vi.mock("../details-actions", () => ({ replyToDiverAction: vi.fn() }));
 
 afterEach(cleanup);
 

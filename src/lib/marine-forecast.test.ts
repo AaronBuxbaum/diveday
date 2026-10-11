@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { nowDate } from "./clock";
 import {
   AUTOMATED_FORECAST_WINDOW_DAYS,
+  automatedForecastForDeparture,
   fetchAutomatedMarineForecast,
   hasCrewPrediction,
   isHighWind,
@@ -168,7 +170,9 @@ describe("fetchAutomatedMarineForecast", () => {
           ),
         );
       }
-      return Promise.resolve(new Response("unavailable", { status: 503 }));
+      return Promise.resolve(
+        new Response(JSON.stringify({ hourly: { time: [1_784_422_800], wind_speed_10m: [9] } })),
+      );
     });
     const point = { latitude: 25.12, longitude: -80.3 };
     const startsAt = new Date(1_784_422_800_000);
@@ -178,6 +182,81 @@ describe("fetchAutomatedMarineForecast", () => {
 
     expect(second).toEqual(first);
     expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  /**
+   * **One request per site, not per departure.** The provider answers ten days
+   * of hourly values in one response, so a morning with three boats to one
+   * site at three different hours asks once — and three callers arriving
+   * together (Today's queue reads every departure's forecast at once) share
+   * the one request in flight rather than racing three.
+   */
+  it("asks each provider once per site, whatever the hour and however many callers arrive together", async () => {
+    const fetcher = vi.fn().mockImplementation((url: string) =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify(
+            new URL(url).hostname === "marine-api.open-meteo.com"
+              ? { hourly: { time: [1_784_422_800, 1_784_426_400], wave_height: [0.4, 1.2] } }
+              : {
+                  hourly: { time: [1_784_422_800, 1_784_426_400], wind_speed_10m: [8, 24] },
+                },
+          ),
+        ),
+      ),
+    );
+    const point = { latitude: 24.5, longitude: -81.8 };
+
+    const [early, late, againEarly] = await Promise.all([
+      fetchAutomatedMarineForecast(point, new Date(1_784_422_800_000), fetcher),
+      fetchAutomatedMarineForecast(point, new Date(1_784_426_400_000), fetcher),
+      fetchAutomatedMarineForecast(point, new Date(1_784_422_800_000), fetcher),
+    ]);
+
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    // Each departure still reads its own hour from the shared response.
+    expect(early?.surface?.waveHeightMeters).toBe(0.4);
+    expect(early?.wind?.speedKnots).toBe(8);
+    expect(late?.surface?.waveHeightMeters).toBe(1.2);
+    expect(late?.wind?.speedKnots).toBe(24);
+    expect(againEarly).toEqual(early);
+  });
+
+  it("asks again after a failed request instead of remembering the failure", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response("unavailable", { status: 503 }));
+    const point = { latitude: 24.6, longitude: -81.7 };
+    const startsAt = new Date(1_784_422_800_000);
+
+    await fetchAutomatedMarineForecast(point, startsAt, fetcher);
+    await fetchAutomatedMarineForecast(point, startsAt, fetcher);
+
+    expect(fetcher).toHaveBeenCalledTimes(4);
+  });
+
+  it("asks again after half an answer instead of remembering the missing wind", async () => {
+    const marineBody = JSON.stringify({ hourly: { time: [1_784_422_800], wave_height: [0.4] } });
+    const weatherBody = JSON.stringify({
+      hourly: { time: [1_784_422_800], wind_speed_10m: [18], wind_gusts_10m: [24] },
+    });
+    let call = 0;
+    const fetcher = vi.fn(async (input: string | URL | Request) => {
+      call += 1;
+      const url = String(input);
+      if (url.includes("marine-api")) return new Response(marineBody, { status: 200 });
+      // The weather host is down for the first pair only.
+      return call <= 2
+        ? new Response("unavailable", { status: 503 })
+        : new Response(weatherBody, { status: 200 });
+    });
+    const point = { latitude: 24.6, longitude: -81.7 };
+    const startsAt = new Date(1_784_422_800_000);
+
+    const first = await fetchAutomatedMarineForecast(point, startsAt, fetcher);
+    const second = await fetchAutomatedMarineForecast(point, startsAt, fetcher);
+
+    expect(first?.wind).toBeNull();
+    expect(fetcher).toHaveBeenCalledTimes(4);
+    expect(second?.wind?.speedKnots).not.toBeNull();
   });
 
   it("returns null when both providers fail", async () => {
@@ -281,5 +360,41 @@ describe("isHighWind", () => {
 
   it("returns true when gusts are high even if sustained is below threshold", () => {
     expect(isHighWind({ speedKnots: 18, gustsKnots: 27, direction: "e" })).toBe(true);
+  });
+});
+
+describe("automatedForecastForDeparture", () => {
+  const pinned = { forecastLatitude: 24.95, forecastLongitude: -80.45 };
+  const tomorrow = () => new Date(nowDate().getTime() + 24 * 60 * 60 * 1000);
+
+  it("answers null, without asking anybody, for a site with no pin or no site at all", async () => {
+    const spy = vi.spyOn(globalThis, "fetch");
+    try {
+      await expect(automatedForecastForDeparture(null, tomorrow())).resolves.toBeNull();
+      await expect(
+        automatedForecastForDeparture(
+          { forecastLatitude: 24.95, forecastLongitude: null },
+          tomorrow(),
+        ),
+      ).resolves.toBeNull();
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("answers null outside the forecast window, without asking anybody", async () => {
+    const spy = vi.spyOn(globalThis, "fetch");
+    try {
+      const past = new Date(nowDate().getTime() - 60 * 60 * 1000);
+      const tooFar = new Date(
+        nowDate().getTime() + (AUTOMATED_FORECAST_WINDOW_DAYS + 1) * 24 * 60 * 60 * 1000,
+      );
+      await expect(automatedForecastForDeparture(pinned, past)).resolves.toBeNull();
+      await expect(automatedForecastForDeparture(pinned, tooFar)).resolves.toBeNull();
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

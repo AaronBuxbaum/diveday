@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GuardianEmailErasure } from "./GuardianEmailErasure";
 
-vi.mock("../actions", () => ({ eraseGuardianEmailAction: vi.fn() }));
+vi.mock("../record-actions", () => ({ eraseGuardianEmailAction: vi.fn() }));
 
 afterEach(cleanup);
 

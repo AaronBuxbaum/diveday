@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { stripeKeySourceFromEnvironment } from "@/db/stripe-key-source";
 import { ERASURE_FAILURE_DETAIL } from "./erasure-failure";
 import { type StripeKeySource, secretKeyForCall } from "./stripe-keys";
 
@@ -49,7 +48,6 @@ export interface CustomerProvider {
 }
 
 type Fetch = typeof fetch;
-type PaymentEnvironment = Readonly<Record<string, string | undefined>>;
 
 /**
  * Stripe's deleted-object envelope. `deleted` is **required and must be true**:
@@ -133,12 +131,15 @@ const disabledCustomerProvider: CustomerProvider = {
   },
 };
 
-export function customerProviderFromEnvironment(
-  env: PaymentEnvironment = process.env,
+/**
+ * The provider over a key source, or the one that answers `not_configured` when
+ * there is none. The key source is built in `src/db/stripe-providers.ts`
+ * (`customerProviderFromEnvironment`), because choosing a key reads who holds the
+ * connected account, and that is a database read this layer does not make.
+ */
+export function customerProviderFor(
+  keys: StripeKeySource | null,
   fetchImpl: Fetch = fetch,
 ): CustomerProvider {
-  // Per connected account: the demo's is called only with the test-mode key
-  // (src/lib/payments/stripe-keys.ts, ADR 20261009-demo-test-mode-payments).
-  const keys = stripeKeySourceFromEnvironment({ env });
   return keys ? stripeCustomerProvider(keys, fetchImpl) : disabledCustomerProvider;
 }

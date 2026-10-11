@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { countQueries } from "@/test/query-count";
 import { inHorizonReadiness, sharedInHorizonReadiness } from "./blockers";
 import { countBlockedDiversNextBoatDay, getShopDayDepartures, getTodayWork } from "./today";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
 
 /**
  * `getShopDayDepartures` replaced a whole second `getTodayWork` on the shop
@@ -13,7 +17,7 @@ import { countBlockedDiversNextBoatDay, getShopDayDepartures, getTodayWork } fro
  */
 describe("one shop-day's departure cards", () => {
   it("draws exactly the cards getTodayWork draws, today and tomorrow", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = nowDate();
     const evidence = await inHorizonReadiness(db, shop.id, now);
     for (const day of [
@@ -39,7 +43,7 @@ describe("one shop-day's departure cards", () => {
   });
 
   it("has at least one seeded departure to compare, so the test above is not vacuous", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = nowDate();
     const evidence = await inHorizonReadiness(db, shop.id, now);
     let cards = 0;
@@ -51,6 +55,8 @@ describe("one shop-day's departure cards", () => {
   });
 
   it("reads a fraction of what a second queue did", async () => {
+    // Its own database: countQueries wraps the client underneath, which is not
+    // the shared test transaction.
     const { db, shop } = await seededShopContext();
     const now = nowDate();
     const evidence = await inHorizonReadiness(db, shop.id, now);
@@ -78,7 +84,7 @@ describe("one shop-day's departure cards", () => {
 
 describe("the shared readiness pass", () => {
   it("answers what the pass answers when there is no render to share it with", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = nowDate();
     const shared = await sharedInHorizonReadiness(db, shop.id, now);
     const own = await inHorizonReadiness(db, shop.id, now);

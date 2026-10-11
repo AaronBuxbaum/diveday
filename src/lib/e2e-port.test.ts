@@ -4,9 +4,11 @@ import {
   E2E_DEFAULT_BASE_PORT_MIN,
   E2E_EPHEMERAL_PORT_START,
   E2E_WORKER_PORT_STRIDE,
-  e2ePortBlock,
   resolveE2EBasePort,
 } from "./e2e-port";
+
+const e2ePortBlock = (basePort: number, workerCount: number): number[] =>
+  Array.from({ length: workerCount }, (_, workerIndex) => basePort + workerIndex);
 
 describe("e2e port allocation", () => {
   it("derives the same base port for the same worktree every time", () => {

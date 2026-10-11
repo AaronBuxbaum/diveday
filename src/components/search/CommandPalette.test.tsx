@@ -206,3 +206,28 @@ describe("CommandPalette search field focus", () => {
     expect(screen.getByRole("dialog")).toHaveClass("overflow-hidden", "rounded-panel");
   });
 });
+
+/** The keyboard contract every modal layer shares (`useDialogBehaviour`), held on ⌘K. */
+describe("CommandPalette keyboard contract", () => {
+  it("is a modal dialog that Escape closes, handing focus back to the button that opened it", async () => {
+    renderPalette();
+    const opener = screen.getByRole("button", { name: /Search/ });
+    await userEvent.click(opener);
+
+    const dialog = screen.getByRole("dialog", { name: "Search this shop" });
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    await waitFor(() => expect(screen.getByRole("combobox")).toHaveFocus());
+
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(opener).toHaveFocus();
+  });
+
+  it("opens and closes from ⌘K anywhere", async () => {
+    renderPalette();
+    await userEvent.keyboard("{Meta>}k{/Meta}");
+    expect(screen.getByRole("dialog", { name: "Search this shop" })).toBeInTheDocument();
+    await userEvent.keyboard("{Meta>}k{/Meta}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+});

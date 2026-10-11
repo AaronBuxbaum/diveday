@@ -25,7 +25,8 @@ import { listCertificationSummaries } from "./self-declared-cards";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { listTripInvitations } from "./trip-invitations";
 import { listTripLastMinutePromoRecipients, listTripLastMinutePromos } from "./trip-promos";
-import { getTripRoster, getTripWaitlist, getTripWithBooked } from "./trips";
+import { getTripWithBooked } from "./trips-record";
+import { getTripRoster, getTripWaitlist } from "./trips-roster";
 import type { TripSharedReads } from "./trips-shared-reads";
 
 /**

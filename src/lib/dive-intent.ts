@@ -66,10 +66,3 @@ export function diveIntentTally(
     return count > 0 ? [{ intent, count }] : [];
   });
 }
-
-/** A posted or stored value narrowed to one of the five, or null. Never trusts the post. */
-export function parseDiveIntent(value: unknown): DiveIntent | null {
-  return typeof value === "string" && (DIVE_INTENTS as readonly string[]).includes(value)
-    ? (value as DiveIntent)
-    : null;
-}

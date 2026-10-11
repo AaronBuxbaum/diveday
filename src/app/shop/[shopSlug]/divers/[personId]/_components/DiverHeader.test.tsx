@@ -7,7 +7,7 @@ import { BookActivity } from "./BookActivity";
 import { DiverHeader } from "./DiverHeader";
 import type { DiverProfile, Shop } from "./shared";
 
-vi.mock("../actions", () => ({ savePersonAction: vi.fn() }));
+vi.mock("../details-actions", () => ({ savePersonAction: vi.fn() }));
 vi.mock("@/app/actions/seat-diver", () => ({ seatExistingDiverAction: vi.fn() }));
 
 afterEach(cleanup);

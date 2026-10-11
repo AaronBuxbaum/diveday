@@ -102,6 +102,7 @@ import {
   rollCallCompleteness,
 } from "@/lib/manifests";
 import {
+  type AutomatedMarineForecast,
   fetchAutomatedMarineForecast,
   isHighWind,
   shouldShowAutomatedForecast,
@@ -1756,6 +1757,31 @@ export async function countBlockedDiversNextBoatDay(
   return blockedOnNextBoatDay(evidence, timeZone, now, aboard);
 }
 
+/**
+ * The automated marine forecast for each in-window departure that would show
+ * one — booked, inside the provider's ten-day window, at a site with a forecast
+ * point — keyed by trip. Every lookup starts at once; departures to one site
+ * share one provider request through `fetchAutomatedMarineForecast`'s cache,
+ * so this is one request per distinct site, never one per trip in series. A
+ * site the provider cannot answer for maps to null, as it always did.
+ */
+async function forecastsForDepartures(
+  trips: readonly DepartureTrip[],
+  now: Date,
+): Promise<Map<string, AutomatedMarineForecast | null>> {
+  const wanted = trips.flatMap((trip) => {
+    const site = trip.diveSite;
+    if (!site || site.forecastLatitude === null || site.forecastLongitude === null) return [];
+    if (trip.booked <= 0 || !shouldShowAutomatedForecast(trip.startsAt, now)) return [];
+    const point = { latitude: site.forecastLatitude, longitude: site.forecastLongitude };
+    return [{ tripId: trip.id, point, startsAt: trip.startsAt }];
+  });
+  const forecasts = await Promise.all(
+    wanted.map((entry) => fetchAutomatedMarineForecast(entry.point, entry.startsAt)),
+  );
+  return new Map(wanted.map((entry, index) => [entry.tripId, forecasts[index] ?? null]));
+}
+
 export async function getTodayWork(
   db: AppDb,
   shopId: string,
@@ -1828,6 +1854,23 @@ export async function getTodayWork(
     ]),
   );
 
+  // The shop's own calendar day, for the register, boat-papers and bench reads.
+  const todayLocal = calendarDateInTimezone(now, timeZone);
+  const todayTripIds = todayTrips.map((trip) => trip.id);
+
+  // The marine forecast for every booked departure inside the provider's
+  // window, started before the database wave so the outbound request runs
+  // beside it rather than once per trip inside the loop below. Departures to
+  // one site share one request (`fetchAutomatedMarineForecast` keys its cache
+  // and its in-flight promise by site), and a failed or slow provider answers
+  // null — exactly what the loop used to read when it asked one trip at a time.
+  const forecastsByTrip = forecastsForDepartures(inWindow, now);
+
+  // **One wave.** Every read below takes only the shop, the window and the
+  // clock, so none waits on another: they used to run as this fan-out plus
+  // thirteen single reads one after another further down, each a round trip
+  // on the shop's most-opened page (code review 2026-10-10, item 2). The rows
+  // are still pushed in the order they always were; only the reads moved.
   const [
     departureRollCall,
     departureCrewRollCall,
@@ -1843,6 +1886,21 @@ export async function getTodayWork(
     stagesByTrip,
     crewClashState,
     boardedAnywhere,
+    sharedWelcomeSeats,
+    helpRequests,
+    rawStaff,
+    credentialRows,
+    { diveIntents, boatNames, crewByTrip },
+    boatsOut,
+    opsAlerts,
+    reviewsAwaiting,
+    unanswered,
+    shopUnits,
+    [overdueGear, dueBackGear, gearServiceDueRows, fitAdjustedReturns],
+    boatSafety,
+    workOrdersNeedingAttention,
+    crewedAssignments,
+    forecasts,
   ] = await Promise.all([
     // Each booking's latest departure result, not just a head count. The card
     // needs to tell "already aboard" from "still ashore" from "never left the
@@ -1914,25 +1972,81 @@ export async function getTodayWork(
       shopId,
       todayTrips.map((trip) => trip.id),
     ),
+    // Who on today's boats said the crew may know it is their first trip, or
+    // that they are back after a long gap (issue #1182, delight report D22).
+    // Today's departures only: a cue is permission for one day, and a row about
+    // Thursday's boat on Tuesday morning would be a badge with a date on it.
+    sharedWelcomeSeatsByTrip(db, shopId, todayTripIds, now),
+    listTodayHelpRequests(db, shopId, todayTripIds, now),
+    listStaff(db, shopId),
+    listStaffCredentials(db, shopId),
+    // What each card shows beyond readiness and the roll call - intents, hull,
+    // crew - read the one way tomorrow's cards read it too.
+    departureCardFacts(db, shopId, todayTrips),
+    // Blocked divers aboard a boat that has left the horizon but is not back
+    // (issue #2064).
+    blockedAboardOnBoatsOut(db, shopId, timeZone, now, new Set(inWindow.map((trip) => trip.id))),
+    // Owner/manager chores (task 157), read only for a caller that passes
+    // `includeOpsAlerts`; the rows are built further down.
+    includeOpsAlerts
+      ? Promise.all([
+          listStuckPaymentOperations(db, shopId, new Date(now.getTime() - STALE_AFTER_MS)),
+          listPendingMediaDeletions(db, shopId, new Date(now.getTime() - STALE_PENDING_AFTER_MS)),
+          listOwedShopCancellationRefunds(db, shopId, {
+            olderThan: new Date(now.getTime() - OWED_REFUND_STALE_AFTER_MS),
+          }),
+          listOpenPaymentDisputes(db, shopId),
+        ])
+      : null,
+    readReviewsAwaitingModeration(db, shopId),
+    countUnansweredMessages(db, shopId),
+    db
+      .select({
+        unitsConfirmedAt: shops.unitsConfirmedAt,
+        currency: shops.currency,
+        depthUnit: shops.depthUnit,
+      })
+      .from(shops)
+      .where(eq(shops.id, shopId))
+      .limit(1)
+      .then((rows) => rows[0]),
+    Promise.all([
+      listOverdueGearReservations(db, shopId, todayLocal),
+      listGearDueBack(db, shopId, todayLocal),
+      // Six days, not seven: dueAt below is the *shop-local* midnight of the due
+      // date, and the queue's one-week-horizon invariant is measured in flat UTC
+      // hours — a seventh local day can poke past it by a DST hour.
+      listGearServiceDue(db, shopId, todayLocal, 6),
+      // Bounded to the shop's own day on purpose (issue #1174, D14): a question
+      // that came back every evening until somebody answered it would be a nag.
+      // Asked once, tonight.
+      listFitAdjustedReturns(db, shopId, shopDayBounds(now, timeZone)),
+    ]),
+    todayBoatSafety(db, shopId, {
+      todayLocal,
+      departures: todayTrips.flatMap((trip) =>
+        trip.boatId ? [{ tripId: trip.id, boatId: trip.boatId }] : [],
+      ),
+    }),
+    listWorkOrdersNeedingAttention(db, shopId, { todayLocal, timezone: timeZone }),
+    // Which in-window trips this person crews, when the caller asked.
+    personId && inWindow.length > 0
+      ? db
+          .select({ tripId: tripAssignments.tripId })
+          .from(tripAssignments)
+          .where(
+            and(
+              eq(tripAssignments.personId, personId),
+              inArray(
+                tripAssignments.tripId,
+                inWindow.map((trip) => trip.id),
+              ),
+            ),
+          )
+      : null,
+    forecastsByTrip,
   ]);
 
-  // Who on today's boats said the crew may know it is their first trip, or
-  // that they are back after a long gap (issue #1182, delight report D22).
-  // Today's departures only: a cue is permission for one day, and a row about
-  // Thursday's boat on Tuesday morning would be a badge with a date on it.
-  const sharedWelcomeSeats = await sharedWelcomeSeatsByTrip(
-    db,
-    shopId,
-    todayTrips.map((trip) => trip.id),
-    now,
-  );
-
-  const helpRequests = await listTodayHelpRequests(
-    db,
-    shopId,
-    todayTrips.map((trip) => trip.id),
-    now,
-  );
   const helpRequestsByTrip = new Map<string, typeof helpRequests>();
   for (const request of helpRequests) {
     const requests = helpRequestsByTrip.get(request.tripId) ?? [];
@@ -1940,30 +2054,17 @@ export async function getTodayWork(
     helpRequestsByTrip.set(request.tripId, requests);
   }
 
-  const rawStaff = await listStaff(db, shopId);
   const availableStaff = rawStaff.map((s) => ({
     id: s.person.id,
     fullName: s.person.fullName,
     roles: s.roles,
   }));
-  const credentialRows = await listStaffCredentials(db, shopId);
-
-  // What each card shows beyond readiness and the roll call - intents, hull,
-  // crew - read the one way tomorrow's cards read it too.
-  const { diveIntents, boatNames, crewByTrip } = await departureCardFacts(db, shopId, todayTrips);
 
   const actions: TodayAction[] = [];
 
   // Blocked divers aboard a boat that has left the horizon but is not back
   // (issue #2064). Only the boarded ones, and only as `blocked_aboard` rows:
   // an ashore blocker on a boat that has gone is noise.
-  const boatsOut = await blockedAboardOnBoatsOut(
-    db,
-    shopId,
-    timeZone,
-    now,
-    new Set(inWindow.map((trip) => trip.id)),
-  );
   for (const trip of boatsOut.out) {
     const label = `${trip.title} · ${at(trip.startsAt, timeZone, locale)}`;
     const aboard = boatsOut.blocked
@@ -2426,34 +2527,26 @@ export async function getTodayWork(
       }
     }
 
-    const forecastPoint =
-      trip.diveSite &&
-      trip.diveSite.forecastLatitude !== null &&
-      trip.diveSite.forecastLongitude !== null
-        ? { latitude: trip.diveSite.forecastLatitude, longitude: trip.diveSite.forecastLongitude }
-        : null;
-    if (forecastPoint && trip.booked > 0 && shouldShowAutomatedForecast(trip.startsAt, now)) {
-      const forecast = await fetchAutomatedMarineForecast(forecastPoint, trip.startsAt);
-      if (forecast && isHighWind(forecast.wind) && forecast.wind) {
-        actions.push({
-          id: `high-wind:${trip.id}`,
-          kind: "high_wind_alert",
-          urgency: "now",
-          subject: trip.title,
-          context: when,
-          departure,
-          aboutDeparture: true,
-          detail: highWindAlertDetailText(
-            t,
-            forecast.wind.speedKnots,
-            forecast.wind.gustsKnots,
-            forecast.wind.direction ? forecast.wind.direction.toUpperCase() : null,
-          ),
-          actionLabel: openTripActionText(t),
-          href: tripHref,
-          dueAt: trip.startsAt,
-        });
-      }
+    const forecast = forecasts.get(trip.id) ?? null;
+    if (forecast && isHighWind(forecast.wind) && forecast.wind) {
+      actions.push({
+        id: `high-wind:${trip.id}`,
+        kind: "high_wind_alert",
+        urgency: "now",
+        subject: trip.title,
+        context: when,
+        departure,
+        aboutDeparture: true,
+        detail: highWindAlertDetailText(
+          t,
+          forecast.wind.speedKnots,
+          forecast.wind.gustsKnots,
+          forecast.wind.direction ? forecast.wind.direction.toUpperCase() : null,
+        ),
+        actionLabel: openTripActionText(t),
+        href: tripHref,
+        dueAt: trip.startsAt,
+      });
     }
 
     // Emergency contact is a dock-settleable nudge, not a blocker, and only
@@ -2611,15 +2704,8 @@ export async function getTodayWork(
   // rows mirror moved off Reports with the surface consolidation — payments to
   // Orders, deletions to Settings' Data group — and each row's `href` points at
   // wherever its panel now is.
-  if (includeOpsAlerts) {
-    const [stuckOperations, pendingDeletions, owedRefunds, openDisputes] = await Promise.all([
-      listStuckPaymentOperations(db, shopId, new Date(now.getTime() - STALE_AFTER_MS)),
-      listPendingMediaDeletions(db, shopId, new Date(now.getTime() - STALE_PENDING_AFTER_MS)),
-      listOwedShopCancellationRefunds(db, shopId, {
-        olderThan: new Date(now.getTime() - OWED_REFUND_STALE_AFTER_MS),
-      }),
-      listOpenPaymentDisputes(db, shopId),
-    ]);
+  if (opsAlerts) {
+    const [stuckOperations, pendingDeletions, owedRefunds, openDisputes] = opsAlerts;
 
     // A diver's bank is taking a charge back (ADR
     // 20261009-stripe-reversals-reach-diveday). One row per undecided dispute,
@@ -2740,7 +2826,6 @@ export async function getTodayWork(
   // at 2 or more there is not, and the destination stays the bare list. The
   // anchor id is the reviews list's own `review-<id>`, the same fragment a
   // refused hide already redirects back to.
-  const reviewsAwaiting = await readReviewsAwaitingModeration(db, shopId);
   if (reviewsAwaiting.count > 0) {
     const reviewsHref = `/shop/${shopSlug}/reviews`;
     actions.push({
@@ -2764,7 +2849,6 @@ export async function getTodayWork(
   // and `dueAt: null` — the shape the reviews row above already has, and for
   // the same reason: nothing sails on an unanswered message, and a row per
   // message would be the inbox rendered twice. Nothing at all at zero.
-  const unanswered = await countUnansweredMessages(db, shopId);
   if (unanswered > 0) {
     actions.push({
       id: "inbox:unanswered",
@@ -2806,15 +2890,6 @@ export async function getTodayWork(
   // Self-gating like the gear rows below: answering the question empties the
   // row permanently, and a shop that answered it during onboarding never sees
   // one at all.
-  const [shopUnits] = await db
-    .select({
-      unitsConfirmedAt: shops.unitsConfirmedAt,
-      currency: shops.currency,
-      depthUnit: shops.depthUnit,
-    })
-    .from(shops)
-    .where(eq(shops.id, shopId))
-    .limit(1);
   if (shopUnits && !shopUnits.unitsConfirmedAt && (await countShopTrips(db, shopId)) > 0) {
     actions.push({
       id: "units:unconfirmed",
@@ -2841,19 +2916,6 @@ export async function getTodayWork(
   // runs out this week. Mirrored here, not owned here — the register readers
   // are the owning surface's own, so the queue and the register can never
   // disagree — and self-gating: a shop with no fleet produces no rows.
-  const todayLocal = calendarDateInTimezone(now, timeZone);
-  const [overdueGear, dueBackGear, gearServiceDueRows, fitAdjustedReturns] = await Promise.all([
-    listOverdueGearReservations(db, shopId, todayLocal),
-    listGearDueBack(db, shopId, todayLocal),
-    // Six days, not seven: dueAt below is the *shop-local* midnight of the due
-    // date, and the queue's one-week-horizon invariant is measured in flat UTC
-    // hours — a seventh local day can poke past it by a DST hour.
-    listGearServiceDue(db, shopId, todayLocal, 6),
-    // Bounded to the shop's own day on purpose (issue #1174, D14): a question
-    // that came back every evening until somebody answered it would be a nag.
-    // Asked once, tonight.
-    listFitAdjustedReturns(db, shopId, shopDayBounds(now, timeZone)),
-  ]);
   // A calendar date's instant on the shop's own clock — midnight opening the
   // day (a service deadline), or midnight closing it (a return due by tonight).
   const localMidnight = (day: string, plusDays = 0) => {
@@ -2966,12 +3028,6 @@ export async function getTodayWork(
   //
   // The sentences are the pre-departure check's own, so the owner, the crew
   // and the manifest read the same words. Self-gating like the register.
-  const boatSafety = await todayBoatSafety(db, shopId, {
-    todayLocal,
-    departures: todayTrips.flatMap((trip) =>
-      trip.boatId ? [{ tripId: trip.id, boatId: trip.boatId }] : [],
-    ),
-  });
   const todayTripsById = new Map(todayTrips.map((trip) => [trip.id, trip]));
   for (const row of boatSafety.departures) {
     const trip = todayTripsById.get(row.tripId);
@@ -3023,10 +3079,7 @@ export async function getTodayWork(
   // nobody has collected. A different question from the register's service
   // clocks above — those are the shop's own units coming due, these are
   // promises made at the counter — so a unit on the bench can carry both.
-  for (const row of await listWorkOrdersNeedingAttention(db, shopId, {
-    todayLocal,
-    timezone: timeZone,
-  })) {
+  for (const row of workOrdersNeedingAttention) {
     const late = row.reason === "past_promise";
     actions.push({
       id: `work-order-${late ? "late" : "uncollected"}:${row.workOrderId}`,
@@ -3139,20 +3192,8 @@ export async function getTodayWork(
 
   let crewedTripIds: string[] = [];
   let crewedSessions: CrewedSessionSummary[] = [];
-  if (personId && inWindow.length > 0) {
-    const assignments = await db
-      .select({ tripId: tripAssignments.tripId })
-      .from(tripAssignments)
-      .where(
-        and(
-          eq(tripAssignments.personId, personId),
-          inArray(
-            tripAssignments.tripId,
-            inWindow.map((trip) => trip.id),
-          ),
-        ),
-      );
-    const crewed = new Set(assignments.map((row) => row.tripId));
+  if (crewedAssignments) {
+    const crewed = new Set(crewedAssignments.map((row) => row.tripId));
     crewedTripIds = inWindow.filter((trip) => crewed.has(trip.id)).map((trip) => trip.id);
     crewedSessions = inWindow
       .filter((trip) => trip.course && crewed.has(trip.id))

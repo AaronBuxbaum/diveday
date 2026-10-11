@@ -22,8 +22,8 @@ import {
   getRecapPageState,
   hasSentTripRecap,
   isRecapOpen,
-  listCrewRecapPhotosForTrip,
-  listRecapPhotosForTrip,
+  listCrewRecapPhotosForTrips,
+  listRecapPhotosForTrips,
   MAX_RECAP_CAPTION_LENGTH,
   MAX_RECAP_PHOTOS_PER_BOOKING,
   pauseTripRecapAutoSend,
@@ -1359,16 +1359,19 @@ describe("recap photos and crew shout-out", () => {
 
   it("shows staff every photo on a trip and lets them take one down, shop-scoped", async () => {
     const { db, shop, reef, bookingId } = await recapContext();
-    const before = await listRecapPhotosForTrip(db, shop.id, reef.id);
+    const before = await listRecapPhotosForTrips(db, shop.id, [reef.id]);
     const keep = await addRecapPhoto(db, { bookingId, imageUrl: "https://img/keep.jpg" });
     const doomed = await addRecapPhoto(db, { bookingId, imageUrl: "https://img/bad.jpg" });
     if (!keep.ok || !doomed.ok) throw new Error("photos not added");
 
-    const after = await listRecapPhotosForTrip(db, shop.id, reef.id);
+    const after = await listRecapPhotosForTrips(db, shop.id, [reef.id]);
     expect(after.length).toBe(before.length + 2);
     expect(after.find((p) => p.id === doomed.photo.id)?.diverName).toBe("Rae Recap");
 
-    // A different shop can't moderate this photo.
+    // A different shop can neither see nor moderate this photo.
+    expect(
+      await listRecapPhotosForTrips(db, "00000000-0000-0000-0000-000000000000", [reef.id]),
+    ).toEqual([]);
     expect(
       await deleteRecapPhoto(db, "00000000-0000-0000-0000-000000000000", doomed.photo.id),
     ).toEqual({ deleted: false });
@@ -1376,7 +1379,7 @@ describe("recap photos and crew shout-out", () => {
       deleted: true,
       imageUrl: "https://img/bad.jpg",
     });
-    const afterDelete = await listRecapPhotosForTrip(db, shop.id, reef.id);
+    const afterDelete = await listRecapPhotosForTrips(db, shop.id, [reef.id]);
     expect(afterDelete.length).toBe(before.length + 1);
     expect(afterDelete.some((p) => p.id === doomed.photo.id)).toBe(false);
   });
@@ -1415,7 +1418,10 @@ describe("recap photos and crew shout-out", () => {
     expect(added).toMatchObject({ ok: true, photo: { imageUrl: "https://img/crew.jpg" } });
     if (!added.ok) throw new Error("crew photo not added");
 
-    expect(await listCrewRecapPhotosForTrip(db, shop.id, reef.id)).toContainEqual(added.photo);
+    expect(await listCrewRecapPhotosForTrips(db, shop.id, [reef.id])).toContainEqual({
+      ...added.photo,
+      tripId: reef.id,
+    });
     expect((await getRecapPageData(db, bookingId))?.photos).toContainEqual({
       id: added.photo.id,
       imageUrl: "https://img/crew.jpg",

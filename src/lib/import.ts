@@ -1338,7 +1338,7 @@ export function normalizeLevel(raw: string | undefined): ImportLevel | null {
 
 /**
  * The widest a card number may be. Matches the hand-entry form's own bound
- * (`src/app/shop/[shopSlug]/divers/[personId]/actions.ts`), which the bulk path
+ * (`src/app/shop/[shopSlug]/divers/[personId]/card-actions.ts`), which the bulk path
  * had no equivalent of: the unique indexes are btrees over `lower(identifier)`,
  * and one 2,000-character cell (the only cap that used to apply) overflows a
  * btree tuple and aborts the whole import with an opaque database error

@@ -2,7 +2,7 @@ import {
   certifyDiverFromRosterAction,
   saveCourseNextStepAction,
   setCourseMaterialsDoneAction,
-} from "../actions";
+} from "../course-actions";
 import { elearningCheckAction } from "../elearning-actions";
 
 /**

@@ -3,7 +3,7 @@ import { buttonClass } from "@/components/ui/button";
 import { FactLine } from "@/components/ui/FactLine";
 import { ChoiceRow, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
-import { saveDivingOptionsAction } from "../../actions";
+import { saveDivingOptionsAction } from "../../boat-actions";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
 import { BOATS_SITES_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
 

@@ -3,11 +3,8 @@ import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
 import {
   type IntegrationEvent,
-  integrationConnectionStatus,
   integrationDeliveries,
-  integrationDeliveryStatus,
   integrationEvents,
-  integrationProvider,
   orderLineItems,
   orders,
   people,
@@ -357,7 +354,3 @@ export async function markIntegrationDeliveryFailed(
     })
     .where(eq(integrationDeliveries.id, input.deliveryId));
 }
-
-export const integrationProviderEnum = integrationProvider.enumValues;
-export const integrationConnectionStatusEnum = integrationConnectionStatus.enumValues;
-export const integrationDeliveryStatusEnum = integrationDeliveryStatus.enumValues;

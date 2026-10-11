@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { countDiveDays } from "@/lib/founder-metrics";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import {
   claimFounderDigest,
@@ -22,6 +22,10 @@ import {
 } from "./funnel";
 import { shopMilestones, shops } from "./schema";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
 /** The whole seed's calendar, wide enough to hold every seeded departure. */
 const ALL_TIME = { from: "2000-01-01", to: "2100-01-01" } as const;
 
@@ -32,14 +36,14 @@ async function milestonesOf(db: AppDb, shopId: string) {
 
 /** The seeded demo shop, turned into a shop DiveDay would count. */
 async function realShopContext() {
-  const context = await seededShopContext();
+  const context = ctx;
   await context.db.update(shops).set({ isDemo: false }).where(eq(shops.id, context.shop.id));
   return context;
 }
 
 describe("which shops count", () => {
   it("leaves demo shops and shops nobody can sign into out of every number", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await syncShopMilestones(db);
     // The demo shop is `is_demo`; the seed's listed shops have departures but no login.
     expect(await db.select().from(shopMilestones)).toEqual([]);
@@ -133,7 +137,7 @@ describe("the funnel rows", () => {
   };
 
   it("counts demo entries by source inside the week and nowhere else", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     await recordDemoEntry(db, { source: "home-hero", role: "owner", at: week.startsAt });
     await recordDemoEntry(db, {
       source: "home-hero",
@@ -145,7 +149,7 @@ describe("the funnel rows", () => {
   });
 
   it("stores a set-up request and counts the ones whose mail never left", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const input = {
       shopName: "Reef Line Divers",
       region: "Key Largo",
@@ -174,7 +178,7 @@ describe("the funnel rows", () => {
 
 describe("claimFounderDigest", () => {
   it("lets one run send a week's digest, and lets it go again when the send failed", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     expect(await claimFounderDigest(db, "2026-10-05")).toBe(true);
     expect(await claimFounderDigest(db, "2026-10-05")).toBe(false);
     expect(await claimFounderDigest(db, "2026-10-12")).toBe(true);

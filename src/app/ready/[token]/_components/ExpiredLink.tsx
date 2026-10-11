@@ -5,7 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import type { Shop } from "@/db/schema";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
-import { emailFreshReadinessLinkAction } from "../actions";
+import { emailFreshReadinessLinkAction } from "../booking-actions";
 
 /**
  * **Which sentence a rescue attempt gets**, as a code the action carries in the

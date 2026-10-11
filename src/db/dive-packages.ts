@@ -355,22 +355,12 @@ export async function consumeEntitlementsForBooking(
 }
 
 /**
- * Hand a dive back when its booking goes away.
+ * Hand back every dive a booking consumed, when the booking goes away.
  *
  * Undoing a link, never crediting an amount — which is what makes this exact:
  * it cannot round, cannot drift, and cannot return more than it took. A booking
  * that consumed nothing returns nothing.
  */
-export async function releaseEntitlementForBooking(
-  tx: DbExecutor,
-  shopId: string,
-  bookingId: string,
-) {
-  const released = await releaseEntitlementsForBooking(tx, shopId, bookingId);
-  return released[0] ?? null;
-}
-
-/** Return every tank a booking consumed, preserving the exact rows. */
 export async function releaseEntitlementsForBooking(
   tx: DbExecutor,
   shopId: string,

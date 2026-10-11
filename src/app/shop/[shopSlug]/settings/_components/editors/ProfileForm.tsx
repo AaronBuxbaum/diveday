@@ -21,7 +21,7 @@ import {
   deriveDarkBrandTheme,
 } from "@/lib/brand";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
-import { saveProfileAction } from "../../actions";
+import { saveProfileAction } from "../../website-actions";
 import { BrandColorField } from "../BrandColorField";
 import { BrandPreview } from "../BrandPreview";
 import type { SettingsShop } from "../groups/kit";

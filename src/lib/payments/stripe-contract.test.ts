@@ -1,5 +1,11 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
+import {
+  checkoutProviderFromEnvironment,
+  customerProviderFromEnvironment,
+  invoicingProviderFromEnvironment,
+  promotionProviderFromEnvironment,
+} from "@/db/stripe-providers";
 import { nowMs } from "../clock";
 import {
   STRIPE_EVENT_FIXTURES,
@@ -7,11 +13,7 @@ import {
   stripeEventFixtureRaw,
   stripeObjectFixture,
 } from "./__fixtures__/stripe";
-import { checkoutProviderFromEnvironment } from "./checkout";
 import { connectProviderFromEnvironment } from "./connect";
-import { customerProviderFromEnvironment } from "./customers";
-import { invoicingProviderFromEnvironment } from "./invoicing";
-import { promotionProviderFromEnvironment } from "./promotions";
 import { allocateSettledTotal, netOfPercentDiscount } from "./settlement";
 import { verifyStripeWebhook } from "./webhook";
 

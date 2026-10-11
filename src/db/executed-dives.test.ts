@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS, MINUTE_MS } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { checkInBooking } from "./check-in";
 import type { AppDb } from "./client";
@@ -34,8 +34,13 @@ import {
 import { createTrip, listStaff } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
-async function logFixture() {
-  const { db, shop } = await seededShopContext();
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`). The same-dive-number race
+// hydrates its own, so the racing writes are not savepoints of one transaction.
+const fileCtx = fileScopedShopContext();
+
+async function logFixture({ fresh = false } = {}) {
+  const { db, shop } = fresh ? await seededShopContext() : fileCtx;
   const [owner] = await db
     .select({ id: people.id })
     .from(people)
@@ -75,7 +80,7 @@ describe("upsertExecutedDive", () => {
    * `executed_dives_trip_number_live_unique` and escaped as a 500.
    */
   it("lets a second write for the same dive number land on the first one's row", async () => {
-    const { db, shop, owner, trip } = await logFixture();
+    const { db, shop, owner, trip } = await logFixture({ fresh: true });
     const write = (maxDepthMeters: number) =>
       upsertExecutedDive(db, {
         shopId: shop.id,
@@ -511,8 +516,10 @@ describe("peopleWhoDivedBefore", () => {
    * Two departures a day apart, one diver aboard both, with a dive recorded on
    * the earlier one. `after` is the one being asked about.
    */
-  async function twoDays(gapHours = 20, options: { logDive?: boolean } = {}) {
-    const { db, shop } = await seededShopContext();
+  async function twoDays(gapHours = 20, options: { logDive?: boolean; fresh?: boolean } = {}) {
+    // `fresh` for a test that builds this more than once: each build must not
+    // see the one before it.
+    const { db, shop } = options.fresh ? await seededShopContext() : fileCtx;
     const [owner] = await db
       .select({ id: people.id })
       .from(people)
@@ -588,7 +595,7 @@ describe("peopleWhoDivedBefore", () => {
     // fifteen minutes early for the tide is 24h15m — so an hours window let the
     // tide decide the answer. All three of these are the day before.
     for (const gap of [23, 24, 25]) {
-      expect((await (await twoDays(gap)).ask()).size, `${gap}h`).toBe(1);
+      expect((await (await twoDays(gap, { fresh: true })).ask()).size, `${gap}h`).toBe(1);
     }
   });
 
@@ -597,9 +604,9 @@ describe("peopleWhoDivedBefore", () => {
     // three days back is a holiday rather than a surface interval. 70 hours
     // rather than a round 96 on purpose — it sits *inside* the query's own
     // coarse bound, so it is the calendar comparison that has to refuse it.
-    expect((await (await twoDays(24)).ask()).size, "1 day").toBe(1);
-    expect((await (await twoDays(48)).ask()).size, "2 days").toBe(1);
-    expect((await (await twoDays(70)).ask()).size, "3 days").toBe(0);
+    expect((await (await twoDays(24, { fresh: true })).ask()).size, "1 day").toBe(1);
+    expect((await (await twoDays(48, { fresh: true })).ask()).size, "2 days").toBe(1);
+    expect((await (await twoDays(70, { fresh: true })).ask()).size, "3 days").toBe(0);
   });
 
   it("counts the morning boat for the afternoon one", async () => {
@@ -860,7 +867,7 @@ describe("peopleWhoDivedBefore", () => {
         db.update(bookings).set({ shopId }).where(eq(bookings.tripId, tripId)),
     };
     for (const [table, moveToOtherShop] of Object.entries(reassign)) {
-      const { db, shop, before, after, personId } = await twoDays();
+      const { db, shop, before, after, personId } = await twoDays(20, { fresh: true });
       const [other] = await otherShop(db);
       await moveToOtherShop(db, before.id, other.id);
       const found = await peopleWhoDivedBefore(

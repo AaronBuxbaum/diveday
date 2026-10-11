@@ -9,12 +9,21 @@ import {
   deleteTripSighting,
   listTripSightings,
   recordTripSighting,
-  siteSightingSummary,
   siteSightings,
 } from "./trip-sightings";
 import { createTrip } from "./trips";
 
 const NOW = new Date("2026-09-10T15:00:00Z");
+
+/** One site's answer, read through the batched reader every page uses. */
+async function siteSightingSummary(
+  db: Parameters<typeof siteSightings>[0],
+  shopId: string,
+  diveSiteId: string,
+  now: Date,
+) {
+  return (await siteSightings(db, shopId, [diveSiteId], now)).get(diveSiteId) ?? null;
+}
 
 async function reefFixture() {
   const { db, shop } = ctx;

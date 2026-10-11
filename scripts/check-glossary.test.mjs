@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { findDecapitatedEntries } from "./check-glossary.mjs";
+import { findDecapitatedEntries, glossaryIndex, readDomain } from "./check-glossary.mjs";
 
 /**
  * The check's judgement, not its plumbing. It exists because the Blocked / Ready entry lost
@@ -96,5 +96,35 @@ describe("what it leaves alone", () => {
     ].join("\n");
 
     expect(lineNumbers(markdown)).toEqual([]);
+  });
+});
+
+describe("the glossary's generated index", () => {
+  const ops = readDomain(
+    "operations.md",
+    "# Operations\n\n- **Roll call** — a count.\n  More words.\n- **Blow-out** — a call.\n",
+  );
+  const cert = readDomain("certification.md", "# Certification\n\n- **Agency** — a body.\n");
+
+  it("reads a domain file's title and its terms, one per `- **Term**` entry", () => {
+    expect(ops).toEqual({
+      file: "operations.md",
+      title: "Operations",
+      terms: ["Roll call", "Blow-out"],
+    });
+  });
+
+  it("orders files by name and terms alphabetically, one per line, so additions rarely collide", () => {
+    const index = glossaryIndex([ops, cert]);
+    expect(index.indexOf("## Certification")).toBeLessThan(index.indexOf("## Operations"));
+    expect(index).toContain(
+      "[glossary/operations.md](glossary/operations.md)\n\n- Blow-out\n- Roll call\n",
+    );
+    // The same files in any order give the same page.
+    expect(glossaryIndex([cert, ops])).toBe(index);
+  });
+
+  it("keeps a heading per domain, which is what old links like glossary.md#operations land on", () => {
+    expect(glossaryIndex([ops])).toMatch(/^## Operations$/m);
   });
 });

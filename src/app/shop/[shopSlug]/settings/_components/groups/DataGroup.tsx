@@ -15,7 +15,7 @@ import {
   dischargeProcessorErasureAction,
   retryMediaDeletionAction,
   retryProcessorErasureAction,
-} from "../../actions";
+} from "../../data-actions";
 import { SettingsDoorRow } from "../SettingsRows";
 import { DATA_GROUP, SettingsGroup, type SettingsView } from "./kit";
 

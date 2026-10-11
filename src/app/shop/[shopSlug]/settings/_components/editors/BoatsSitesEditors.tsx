@@ -17,7 +17,7 @@ import {
   dockDayOffsets,
 } from "@/lib/diver-planning";
 import { EMERGENCY_LINE_SLOTS } from "@/lib/emergency-reference";
-import { saveDockDayRhythmAction, saveEmergencyReferenceAction } from "../../actions";
+import { saveDockDayRhythmAction, saveEmergencyReferenceAction } from "../../boat-actions";
 import type { SettingsShop } from "../groups/kit";
 
 /*

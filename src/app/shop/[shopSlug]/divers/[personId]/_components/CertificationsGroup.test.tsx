@@ -10,7 +10,7 @@ import type { DiverProfile, Shop } from "./shared";
 // Every control in this group reaches a server action, and with it the whole
 // Next server runtime. The suite is about what the group *says*, so they are
 // stubbed rather than booted — the same call `WaiverGroup.test.tsx` makes.
-vi.mock("../actions", () => ({
+vi.mock("../card-actions", () => ({
   addCardAction: vi.fn(),
   agencyCheckAction: vi.fn(),
   clearNoCertificationAction: vi.fn(),

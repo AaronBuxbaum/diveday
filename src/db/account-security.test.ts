@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
 import { recoveryCodeHashes, TOTP_STEP_SECONDS, totpCode } from "@/lib/totp";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import {
   beginTotpEnrollment,
   enableTotp,
@@ -14,14 +14,20 @@ import {
 } from "./account-security";
 import { accountSecurity, accountSessions, userAccounts } from "./schema";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`). The one race below hydrates its
+// own, so the two racing calls are not interleaved savepoints of one
+// transaction.
+const ctx = fileScopedShopContext();
+
 function sealingKey() {
   const key = secretKeyFromEnvironment();
   if (key.status !== "ok") throw new Error("the unit suite configures a sealing key");
   return key.key;
 }
 
-async function seededAccount() {
-  const { db, shop } = await seededShopContext();
+async function seededAccount({ fresh = false } = {}) {
+  const { db, shop } = fresh ? await seededShopContext() : ctx;
   const [account] = await db
     .select({ id: userAccounts.id, personId: userAccounts.personId })
     .from(userAccounts)
@@ -32,7 +38,7 @@ async function seededAccount() {
 
 describe("account-security recovery codes", () => {
   it("allows a recovery code to be consumed only once", async () => {
-    const { db, account } = await seededAccount();
+    const { db, account } = await seededAccount({ fresh: true });
     const code = "ABCD234567";
     await db.insert(accountSecurity).values({
       userAccountId: account.id,

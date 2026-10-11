@@ -906,11 +906,3 @@ export async function readReviewsAwaitingModeration(
   const count = row?.count ?? 0;
   return { count, onlyId: count === 1 ? (row?.anyId ?? null) : null };
 }
-
-/** How many reviews are waiting on staff — the badge on the moderation nav entry. */
-export async function countReviewsAwaitingModeration(
-  db: DbExecutor,
-  shopId: string,
-): Promise<number> {
-  return (await readReviewsAwaitingModeration(db, shopId)).count;
-}
