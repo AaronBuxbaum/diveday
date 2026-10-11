@@ -2144,7 +2144,7 @@ async function savedOfflineRecordFor(page: Page): Promise<string> {
   await page.route(IDENTITY_ROUTE, (route) => route.abort());
   await page.goto("/offline-manifest");
   // The with-trips heading, so this also proves the store was read and the
-  // rows are on screen — the empty branch says "Nothing saved on this device
+  // rows are on screen — the empty branch says "No manifest saved on this phone
   // yet" instead, and a rewrite against a record the list never found would
   // throw somewhere less obvious.
   await page.getByRole("heading", { name: "Saved on this device" }).waitFor();
