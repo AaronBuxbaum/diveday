@@ -68,6 +68,19 @@ function listen() {
   };
   document.addEventListener("pointerup", lift, { capture: true });
   document.addEventListener("pointercancel", lift, { capture: true });
+  // **A lift the page never heard** (dive-domain review of #2328). Leaving
+  // the app mid-touch can swallow the pointerup and the pointercancel both,
+  // and a contact left counted makes every later single tap read as a palm.
+  // Every way out of the page forgets what was down: no finger survives it.
+  const forget = () => {
+    down.clear();
+    most = 0;
+  };
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") forget();
+  });
+  window.addEventListener("blur", forget);
+  window.addEventListener("pagehide", forget);
 }
 
 /** Starts counting contacts; idempotent, and a no-op on the server. */

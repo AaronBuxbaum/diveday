@@ -79,6 +79,47 @@ describe("the roll call's touch guard", () => {
     document.removeEventListener(TOUCH_REFUSED_EVENT, heard);
   });
 
+  /**
+   * **A lifted finger the page never heard about is forgotten** (dive-domain
+   * review of #2328). Backgrounding the app mid-touch can lose the pointerup,
+   * and a contact left counted made every later single tap read as a palm:
+   * refused, with the cue, on every name.
+   */
+  it.each([
+    [
+      "the page is hidden",
+      () => {
+        Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+        fireEvent(document, new Event("visibilitychange"));
+        Object.defineProperty(document, "visibilityState", {
+          value: "visible",
+          configurable: true,
+        });
+      },
+    ],
+    ["the window loses focus", () => fireEvent(window, new Event("blur"))],
+    ["the page is hidden for the cache", () => fireEvent(window, new Event("pagehide"))],
+  ])("forgets a contact whose lift was lost when %s", (_when, leave) => {
+    const { button, onClick } = surface();
+    touch("pointerDown", 1);
+    leave();
+    touch("pointerDown", 3);
+    touch("pointerUp", 3);
+    expect(wasMultiTouch()).toBe(false);
+    button.click();
+    expect(onClick).toHaveBeenCalledOnce();
+    expect(button.hasAttribute(TOUCH_REFUSED_ATTRIBUTE)).toBe(false);
+  });
+
+  it("still refuses a palm that is down when the page comes back", () => {
+    const { button, onClick } = surface();
+    fireEvent(window, new Event("blur"));
+    touch("pointerDown", 1);
+    touch("pointerDown", 2);
+    button.click();
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
   it("lets a single touch through", () => {
     const { button, onClick } = surface();
     touch("pointerDown", 1);
