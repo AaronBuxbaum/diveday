@@ -116,7 +116,11 @@
   (`trips.dive_mode`). A party organizer's statement — a tap or a reply — covers the party's seats
   (`partyLeadBookingId`), and a text covers every seat on that boat under the same number. The arrivals list (Today's arrival lookup and
   the Divers tab once arrivals open) says "Running late, said 7:42" in the shop's zone on that row
-  until the diver checks in, which clears it. **It gates nothing** and it is not a **no-show**: the
+  until the diver checks in, which clears it. The boat manifest says it too, live and on the
+  **offline copy**, so the rail does not call missing a diver who said they are on the way: at the
+  departure checkpoint only, and hidden on a row already boarded, checked in or released
+  (`runningLateOnManifest`, #2319); after a dive the question is who came back, and the word is
+  gone. A row the crew recorded as not boarded keeps it. **It gates nothing** and it is not a **no-show**: the
   diver still has to arrive, and a diver who said it and never came is still the desk's call.
 - **No-show** — one staffer's recorded statement that a booked diver did not come. The status is
   `bookings.status = "no_show"`, written only by `markBookingNoShow` (`src/db/no-show.ts`), behind
@@ -585,7 +589,9 @@
   whatever the forms missed**: it sells at most the lower of the departure's `capacity` and the
   certificate, read under the trip-row lock (`sellableCapacity`), as do an undo, a no-show undo and
   the wait list's "go and book it"; a copy and a series roll start the new departure at the
-  certificate, and "apply to the rest of the series" skips a date on a hull certified for fewer.
+  certificate, and "apply to the rest of the series" gives a date on a smaller hull the details
+  with its seats capped at the certificate; only a date holding more seats than that, or with a
+  roll call past the new dive count, is left alone.
   The field reads **passengers only, not crew**, the same people capacity counts: everyone aboard
   but the crew. A boat saved over it before H-107 keeps sailing, its fleet row says so in danger
   ink, and its next save must fix it (`src/lib/boat-safety.ts`).
