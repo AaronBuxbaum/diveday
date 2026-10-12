@@ -130,6 +130,7 @@ import { seedCounterBlockers } from "./seed-counter-blockers";
 import { seedCounterRental } from "./seed-counter-rental";
 import { seedCourseInquiries } from "./seed-course-inquiries";
 import { seedCourseMaterials } from "./seed-course-materials";
+import { seedCoursePhotos } from "./seed-course-photos";
 import { seedDateRequests } from "./seed-date-requests";
 import { enforceMintedDemoCap } from "./seed-demo-lifecycle";
 import { seedDeskHandoff } from "./seed-desk-handoff";
@@ -153,6 +154,7 @@ import { seedMoreTrips } from "./seed-more-trips";
 import { seedNitrox } from "./seed-nitrox";
 import { seedOpenInvoice } from "./seed-open-invoice";
 import { seedOrders } from "./seed-orders";
+import { seedPackages } from "./seed-packages";
 import { seedPartnerReferrals } from "./seed-partner-referrals";
 import { seedPreDepartureChecklist } from "./seed-pre-departure-checklist";
 import { seedPromos } from "./seed-promos";
@@ -196,6 +198,8 @@ import { syncDemoStripeAccount } from "./stripe-accounts";
  * | `./seed-course-inquiries.ts` | course leads off the public pages, in all three `person_id` states |
  * | `./seed-course-materials.ts` | the links behind two courses' learning materials, and one student marked done |
  * | `./seed-front-desk.ts` | the desk's own day: walk-ins, wait lists, inquiries, tips |
+ * | `./seed-course-photos.ts` | a species photo of its own on every course, so the storefront reads as a shop and not a template |
+ * | `./seed-packages.ts` | two dive packages on sale, so the public Packages tab and price list have something to show |
  * | `./seed-history.ts` | the trailing quarter that gives owner reporting something to report |
  * | `./seed-cert-gates.ts` | the boats a card can be refused on, one gate each, and the course carve-out |
  * | `./seed-buddy-pairs.ts` | two buddy teams on today's reef boat, plus the odd-roster remainder |
@@ -572,6 +576,8 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   // (ADR 20260824-pre-departure-safety-check) — seeded once here, never
   // re-seeded by a reset, which is why it is not inside seedDemoSchedule.
   await seedPreDepartureChecklist(db, shop.id);
+  // Same tier: packages are shop configuration a reset leaves standing.
+  await seedPackages(db, shop.id);
   // Two listed shops beside a demo no listing may show. Stable half: real
   // rows a reset never touches.
   await seedListedShops(db);
@@ -805,6 +811,10 @@ export async function createDemoShop(
   // private shops can opt into the lean schedule when they need isolation
   // from history-only rows.
   await seedDemoSchedule(db, shop.id, { history: opts.history !== false });
+  // The canonical demo's two packages, for a visitor's demo too. A private
+  // test shop mints without history and starts with nothing on sale, which is
+  // the state `e2e/package-purchase.spec.ts` begins from.
+  if (opts.history !== false) await seedPackages(db, shop.id);
 
   return { slug: shop.slug, ownerEmail: identity.emailFor("dana") };
 }
@@ -898,6 +908,8 @@ export async function seedDemoSchedule(
     db,
     shopId,
   );
+  // A photo of its own on every course, none of them the cover or a site's.
+  await seedCoursePhotos(db, shopId);
   // DiveDay's own catalog first: the shop's Molasses Reef records which
   // template version it came from, and the library reads that back to offer the
   // newer one.

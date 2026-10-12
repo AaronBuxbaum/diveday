@@ -744,6 +744,7 @@
   "packages": {
     "title": "Dive packages",
     "navLabel": "Packages",
+    "none": "No packages right now",
     "metaDescription": "Prepaid dives at {shopName}: pay once, then book the dives as you go.",
     "dives": "{count, plural, one {# dive} other {# dives}}",
     "perDive": "{amount} a dive",
