@@ -35,7 +35,16 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+// `requireShopSurface` is the gate these actions take; it stands on
+// `requireStaffSession`, which is the seam this file steers. The slug check
+// itself is exercised against the real gate in `src/app/shop/[shopSlug]/slug-actions.authz.test.ts`.
+vi.mock("@/lib/session", () => {
+  const requireStaffSession = vi.fn();
+  return {
+    requireStaffSession,
+    requireShopSurface: vi.fn(async () => ({ session: await requireStaffSession() })),
+  };
+});
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");

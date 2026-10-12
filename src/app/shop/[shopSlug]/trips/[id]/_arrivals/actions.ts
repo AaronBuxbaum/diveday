@@ -8,7 +8,7 @@ import { getDb } from "@/db/client";
 import { markBookingNoShow, undoBookingNoShow } from "@/db/no-show";
 import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { counterQueuePath } from "./focus";
@@ -48,7 +48,7 @@ export async function checkInAction(
   tripId: string,
   formData: FormData,
 ): Promise<{ ok: true }> {
-  const session = await requireStaffSession();
+  const session = (await requireShopSurface(shopSlug)).session;
   const back = counterQueuePath(shopSlug, tripId);
   const bookingId = bookingIdFrom(formData, back);
 
@@ -99,7 +99,7 @@ export async function undoCheckInAction(
   tripId: string,
   formData: FormData,
 ): Promise<{ ok: true }> {
-  const session = await requireStaffSession();
+  const session = (await requireShopSurface(shopSlug)).session;
   const back = counterQueuePath(shopSlug, tripId);
   const bookingId = bookingIdFrom(formData, back);
 
@@ -139,7 +139,7 @@ export async function markNoShowAction(
   tripId: string,
   formData: FormData,
 ): Promise<void> {
-  const session = await requireStaffSession();
+  const session = (await requireShopSurface(shopSlug)).session;
   const back = counterQueuePath(shopSlug, tripId);
   const bookingId = bookingIdFrom(formData, back);
 
@@ -173,7 +173,7 @@ export async function undoNoShowAction(
   tripId: string,
   formData: FormData,
 ): Promise<void> {
-  const session = await requireStaffSession();
+  const session = (await requireShopSurface(shopSlug)).session;
   const back = counterQueuePath(shopSlug, tripId);
   const bookingId = bookingIdFrom(formData, back);
 

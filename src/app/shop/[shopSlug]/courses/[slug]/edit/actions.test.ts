@@ -18,7 +18,16 @@ vi.mock("@/lib/navigation", () => ({
     throw new Error(`REDIRECT:${target}`);
   }),
 }));
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+// `requireShopSurface` is the gate these actions take; it stands on
+// `requireStaffSession`, which is the seam this file steers. The slug check
+// itself is exercised against the real gate in `src/app/shop/[shopSlug]/slug-actions.authz.test.ts`.
+vi.mock("@/lib/session", () => {
+  const requireStaffSession = vi.fn();
+  return {
+    requireStaffSession,
+    requireShopSurface: vi.fn(async () => ({ session: await requireStaffSession() })),
+  };
+});
 vi.mock("@/db/authz", () => ({
   canPersonConfigureTrips: vi.fn(async () => true),
   canPersonManageWaiverTemplates: vi.fn(async () => true),
