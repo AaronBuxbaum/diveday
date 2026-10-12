@@ -152,6 +152,25 @@ describe("what the shelf does not say", () => {
     expect(screen.queryByText(/every one from a diver/)).not.toBeInTheDocument();
   });
 
+  it("names a public trip, and leaves no stray dot where a charter's title was withheld (issue 2318)", () => {
+    render(
+      <ShopReviews
+        aggregate={AGGREGATE}
+        reviews={[review(1), review(2, { tripTitle: null })]}
+        shopSlug="blue-mantis"
+        locale="en-US"
+        timezone="America/New_York"
+        t={t}
+      />,
+    );
+    const [named, withheld] = screen.getAllByRole("listitem");
+
+    expect(named?.textContent).toContain("Diver 1 · Two-Tank Reef ·");
+    expect(withheld?.textContent).toMatch(/Diver 2 · \w/);
+    expect(withheld?.textContent).not.toContain("Two-Tank Reef");
+    expect(withheld?.textContent).not.toContain("null");
+  });
+
   it("renders nothing at all for a shop with no published reviews", () => {
     const { container } = render(
       <ShopReviews

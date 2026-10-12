@@ -156,8 +156,9 @@ export default async function EmbedWidgetPage({
         </div>
         <ReviewLedger
           reviews={reviews.slice(0, WIDGET_QUOTES)}
-          // No trip titles on a third-party page: a private charter's name
-          // is not the shop's to publish (the archive hides them too).
+          // No trip titles, like the archive: the widget is a few quotes on
+          // someone else's page. (A private charter's title never reaches
+          // here anyway — `fetchPublicReviewRows` withholds it, #2318.)
           showTrip={false}
           locale={locale}
           timezone={tz}

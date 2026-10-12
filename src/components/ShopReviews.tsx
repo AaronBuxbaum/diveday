@@ -158,7 +158,7 @@ export function ReviewLedger({
           {review.comment ? <p className="mt-1.5 text-base text-pretty">{review.comment}</p> : null}
           <p className="mt-1.5 text-sm text-muted">
             {review.reviewer || t("reviews.anonymousReviewer")}
-            {showTrip ? ` · ${review.tripTitle}` : null} ·{" "}
+            {showTrip && review.tripTitle ? ` · ${review.tripTitle}` : null} ·{" "}
             {formatShortDate(review.divedAt, locale, timezone)}
           </p>
         </LedgerRow>
