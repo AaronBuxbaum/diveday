@@ -195,6 +195,51 @@ describe("idempotency", () => {
   });
 });
 
+/**
+ * **What the channel vouched for is stored on the row** (#2311), so the
+ * after-hours ping's count reads the same gate its trigger does.
+ */
+describe("the sender's credentials", () => {
+  it("files WhatsApp as vouched, and an email as the route said", async () => {
+    const { db, shop } = ctx;
+    const file = async (providerMessageId: string, extra: object) => {
+      const result = await recordInboundMessage(db, {
+        shopId: shop.id,
+        channel: "email",
+        fromAddress: "someone@example.com",
+        body: "hello",
+        receivedAt: NOW,
+        providerMessageId,
+        ...extra,
+      });
+      if (result.status !== "recorded") throw new Error("not filed");
+      const [row] = await db
+        .select({
+          senderAuthenticated: inboundMessages.senderAuthenticated,
+          spamFlagged: inboundMessages.spamFlagged,
+        })
+        .from(inboundMessages)
+        .where(eq(inboundMessages.id, result.id));
+      return row;
+    };
+    expect(await file("ses-vouched", { senderAuthenticated: true })).toEqual({
+      senderAuthenticated: true,
+      spamFlagged: false,
+    });
+    expect(await file("ses-spoofed", { senderAuthenticated: false })).toEqual({
+      senderAuthenticated: false,
+      spamFlagged: false,
+    });
+    expect(await file("ses-junk", { senderAuthenticated: true, spamFlagged: true })).toEqual({
+      senderAuthenticated: true,
+      spamFlagged: true,
+    });
+    expect(
+      await file("wamid.vouched", { channel: "whatsapp", fromAddress: "+1 305 555 0142" }),
+    ).toEqual({ senderAuthenticated: true, spamFlagged: false });
+  });
+});
+
 describe("the reply-to token", () => {
   it("resolves a shop from its token and nothing from a stranger's", async () => {
     const { db, shop } = ctx;

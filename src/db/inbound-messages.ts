@@ -56,6 +56,12 @@ export type RecordInboundMessageInput = {
    * answer it got from SES.
    */
   senderAuthenticated?: boolean;
+  /**
+   * The provider judged it spam (SES's spam verdict failed). Filed all the
+   * same, but stored so the after-hours ping neither fires on it nor counts
+   * it (#2311). Defaults to false; only the email route has a verdict.
+   */
+  spamFlagged?: boolean;
 };
 
 export type RecordInboundMessageResult =
@@ -210,6 +216,8 @@ async function recordMatchedInboundMessage(
       providerMessageId: input.providerMessageId,
       emailMessageId: input.emailMessageId?.trim().slice(0, 998) || null,
       inReplyToDeliveryId,
+      senderAuthenticated: input.senderAuthenticated !== false,
+      spamFlagged: input.spamFlagged === true,
     })
     .onConflictDoNothing({ target: [inboundMessages.channel, inboundMessages.providerMessageId] })
     .returning({ id: inboundMessages.id });

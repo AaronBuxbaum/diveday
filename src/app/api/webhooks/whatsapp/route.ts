@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { getDb } from "@/db/client";
 import { pingDeskAfterHoursSafely } from "@/db/desk-pings";
 import { recordInboundMessage } from "@/db/inbound-messages";
@@ -112,8 +113,11 @@ export async function POST(request: Request) {
         log("whatsapp_webhook.reply_keyword", "info", { shopId, outcome });
       }
       // The desk's after-hours ping (src/db/desk-pings.ts): only for a message
-      // actually filed, and never able to fail this webhook.
-      await pingDeskAfterHoursSafely(db, { shopId, receivedAt: message.receivedAt });
+      // actually filed, never able to fail this webhook, and after the
+      // response (#2311), so a slow mail provider cannot hold Meta's request
+      // open and earn a retry.
+      const receivedAt = message.receivedAt;
+      after(() => pingDeskAfterHoursSafely(db, { shopId, receivedAt }));
     }
   }
 
