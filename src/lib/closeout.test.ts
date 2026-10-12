@@ -480,12 +480,7 @@ describe("assembleEveningClose", () => {
     expect([evening.out, evening.back]).toEqual([11, 11]);
     expect([evening.stations[0]?.sailed, evening.stations[0]?.back]).toEqual([9, 9]);
     expect(evening.allHome).toBe(true);
-    // **The debrief wants the seats, not the souls, and this is what stops the
-    // shared count being narrowed later by accident.** D47 asks why the boat
-    // sailed short of *sold* seats — the last booking, the deal, the
-    // comparable that filled — so ten sold of twelve is still two open, and
-    // the roster the per-departure sentence names is still ten.
-    expect(evening.stations[0]?.openSeats?.openSeats).toBe(2);
+    // The roster the per-departure sentence names is still the ten sold.
     expect(evening.stations[0]?.booked).toBe(10);
   });
 

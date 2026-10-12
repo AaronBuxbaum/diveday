@@ -10,8 +10,11 @@ import { scopedId } from "@/lib/element-id";
  *
  * **The three bans this keeps, because it lives on a manifest** (Budget rule 8
  * of that ADR): *no drawing* — there is no `<svg>` in this file and none may be
- * added; *no coral* — the strip is lagoon-toned `bg-primary-tint`, which is a
- * wash rather than a status; *no motion* — nothing here transitions, animates,
+ * added; *no coral* — the strip sits in the sunken neutral well
+ * (`bg-surface-sunken`), a wash rather than a status. It was lagoon-toned
+ * `bg-primary-tint` until UX review 2026-10-10 item 3: boat mode redeclares
+ * the primary tint as a pale yellow, so on the boat the strip read as a
+ * warning; *no motion* — nothing here transitions, animates,
  * or moves. `CatchUpStrip.test.tsx` pins all three.
  *
  * Two more properties are load-bearing rather than incidental:
@@ -53,7 +56,7 @@ export function CatchUpStrip({
   return (
     <section
       aria-labelledby={scopedId(idPrefix, "catch-up-label")}
-      className="mt-4 rounded-inset bg-primary-tint p-4 print:hidden"
+      className="mt-4 rounded-inset bg-surface-sunken p-4 print:hidden"
     >
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
         <h2 id={scopedId(idPrefix, "catch-up-label")} className="flex-1 text-base font-semibold">

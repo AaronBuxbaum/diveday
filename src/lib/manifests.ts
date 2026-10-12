@@ -543,9 +543,9 @@ export type ManifestBuddyTeam = {
  * What one member's row should say about their team at one checkpoint — from
  * **that member's own perspective**, which is why it is not symmetric:
  *
- * - `separated_dock` — this person is aboard at departure and a teammate is
- *   not (yet). Ordinary mid-boarding churn, worth a glance, worded and toned
- *   as a heads-up rather than an alarm.
+ * - `separated_dock` — this person is aboard at departure and a teammate has
+ *   no result yet. Ordinary mid-boarding churn, worth a glance, worded and
+ *   toned as a heads-up rather than an alarm.
  * - `separated_after_dive` — this person came back from a dive and a human has
  *   **recorded** a teammate as not back aboard. This is the signal a deck
  *   watches for, and it is the loud one.
@@ -598,16 +598,17 @@ export function buddyAlertFor(
   // two checkpoints are different acts.
   //
   // At the dock the crew is *assembling* a boat, so anyone not yet aboard is
-  // genuinely still to gather and "aboard while my buddy is still ashore" is
+  // genuinely still to gather and "aboard while my buddy is not yet" is
   // precisely the heads-up this checkpoint exists to give — a heads-up, worded
-  // and toned as one.
+  // and toned as one. A teammate the crew recorded staying ashore
+  // (`isRecordedAshore`) is a decision already made, not someone to gather.
   //
   // After a dive the crew is *counting a boat back*, believing everyone is
   // already on it. There an uncalled teammate is "not yet", not a split: only a
   // recorded "did not come back" earns the alarm (see the note above).
   const split =
     checkpoint === "departure"
-      ? teammates.some((mate) => mate?.state !== "boarded")
+      ? teammates.some((mate) => mate?.state !== "boarded" && !isRecordedAshore(checkpoint, mate))
       : teammates.some((mate) => isNotBackAboard(checkpoint, mate));
   if (!split) return null;
   return checkpoint === "departure" ? "separated_dock" : "separated_after_dive";

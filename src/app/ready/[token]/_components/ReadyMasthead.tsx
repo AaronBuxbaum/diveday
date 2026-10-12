@@ -1,0 +1,228 @@
+import type { ReactNode } from "react";
+import { TripActions } from "@/app/s/[shopSlug]/trips/[id]/_components/TripActions";
+import { EarnedMoment } from "@/components/EarnedMoment";
+import { ThreadShell } from "@/components/thread/ThreadShell";
+import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
+import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
+import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import type { DiverLocale } from "@/i18n/settings";
+import { nowDate } from "@/lib/clock";
+import {
+  bindTitleDash,
+  formatRelativeDay,
+  formatShortDate,
+  formatTime,
+  formatTimeRangeTz,
+} from "@/lib/format";
+import { publicAppUrl } from "@/lib/notifications";
+import { publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
+import { isDiveDay } from "@/lib/thread-steps";
+
+/**
+ * **The facts the top of `/ready` states**, and the only ones: whose shop,
+ * which departure, when, and when to be there. Both of the page's openings
+ * read them, the ordinary masthead and the "You've got a seat" card a booking
+ * lands on, and both can be built from one narrow row (`getBookedCard`,
+ * src/db/ready.ts) as well as from the full loader, which is what lets the
+ * booked card paint before the thread's reads have finished (UX review
+ * 2026-10-10, item 7).
+ */
+export type MastheadFacts = {
+  shop: { name: string; slug: string; timezone: string; dockCallMinutes: number };
+  trip: { id: string; title: string; startsAt: Date; endsAt: Date };
+  /** A scheduled hotel pickup replaces the dock call: the diver is told where they are collected. */
+  pickup: { time: string | null; location: string | null };
+};
+
+/**
+ * **"Tomorrow · Sun, Oct 11 · 7:00 AM – 10:30 AM EDT"** — the relative day
+ * first (UX review 2026-10-10, item 8).
+ *
+ * It used to trail ("… EDT · tomorrow"), and on a phone the line wrapped so
+ * that "· tomorrow" stood alone on a line of its own: a dangling bullet that
+ * looked broken, on the one word a diver scans the top of this page for. First,
+ * it is the line's lead and can never orphan. `Intl.RelativeTimeFormat` writes
+ * it in lower case for a phrase's middle, so its first letter is raised in the
+ * reader's own locale.
+ */
+export function mastheadWhenLine(facts: MastheadFacts, locale: string, now: Date): string {
+  const { trip, shop } = facts;
+  const relative = formatRelativeDay(trip.startsAt, now, locale, shop.timezone);
+  const lead = relative.charAt(0).toLocaleUpperCase(locale) + relative.slice(1);
+  const date = formatShortDate(trip.startsAt, locale, shop.timezone);
+  const hours = formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone);
+  return `${lead} · ${date} · ${hours}`;
+}
+
+/**
+ * When to be there: the hotel pickup where one is scheduled, otherwise the
+ * dock call (Task 46: the day-before email already says it, and this page is
+ * where a diver re-checks it the morning of).
+ */
+export function mastheadArrivalLine(
+  facts: MastheadFacts,
+  locale: string,
+  t: DiverTranslator,
+): string {
+  if (facts.pickup.time) {
+    return t("ready.hotelPickupHeaderLine", {
+      time: facts.pickup.time,
+      location: facts.pickup.location ?? t("ready.hotelPickupLocationNotSet"),
+    });
+  }
+  const dockCallAt = new Date(facts.trip.startsAt.getTime() - facts.shop.dockCallMinutes * 60_000);
+  return t("ready.dockCallLine", {
+    time: formatTime(dockCallAt, locale, facts.shop.timezone),
+    dock: t("notifications.common.dockCallMinutes", { minutes: facts.shop.dockCallMinutes }),
+  });
+}
+
+/**
+ * The calendar and share row, and the line that says what this page is.
+ *
+ * `shareUrl` is the **public trip page**, never this one: this URL *is* a
+ * bearer capability that can cancel the booking and move its refund, and
+ * "share with a buddy" must not hand that to a group chat
+ * (docs/engineering/capability-telemetry-runbook.md). Absolute where a
+ * canonical origin is configured, since it exists to be pasted somewhere.
+ */
+function MastheadDoors({ facts, t }: { facts: MastheadFacts; t: DiverTranslator }) {
+  const tripPath = publicTripPath(facts.shop.slug, facts.trip.id);
+  const origin = publicAppUrl();
+  const shareUrl = origin ? new URL(tripPath, `${origin}/`).toString() : tripPath;
+  return (
+    <>
+      <TripActions
+        calendarUrl={publicTripCalendarPath(facts.shop.slug, facts.trip.id)}
+        shareUrl={shareUrl}
+      />
+      {/* What this page *is*, said once, at the top. Divers arrive here from a
+          booking submit or an emailed link, and both read as a confirmation, a
+          thing you look at once and close. This one is the same URL all week. */}
+      <p className="mt-3 text-sm text-muted">{t("ready.keepThisPage")}</p>
+    </>
+  );
+}
+
+/**
+ * The ordinary masthead's lines under the trip's title: when, the dive-day
+ * line on the day itself, when to be there, and the doors.
+ */
+export function ReadyMastheadMeta({
+  facts,
+  locale,
+  now,
+  t,
+}: {
+  facts: MastheadFacts;
+  locale: string;
+  now: Date;
+  t: DiverTranslator;
+}) {
+  const diveDay = isDiveDay({
+    startsAt: facts.trip.startsAt,
+    endsAt: facts.trip.endsAt,
+    timeZone: facts.shop.timezone,
+  });
+  return (
+    <>
+      <p className="mt-1 text-base text-muted">{mastheadWhenLine(facts, locale, now)}</p>
+      {/* Today. Said once, above the only number that matters this morning:
+          plain ink, no motion. */}
+      {diveDay ? <p className={`mt-2 ${ITEM_TITLE_CLASS}`}>{t("thread.diveDayLine")}</p> : null}
+      {/* The one number that matters on the morning of the trip, a shade
+          stronger than the line above it, never shouting. */}
+      <p className="mt-1 text-base font-medium">{mastheadArrivalLine(facts, locale, t)}</p>
+      <MastheadDoors facts={facts} t={t} />
+    </>
+  );
+}
+
+/**
+ * **The booked card** (UX review 2026-10-10, items 7 and 34).
+ *
+ * After a booking POST this card *is* the top of the page, in place of the
+ * masthead, the way the recap opens on "Welcome back, Priya.": the shop's name
+ * over "You've got a seat, Priya.", then the departure, when, and when to be
+ * at the dock. Every fact on it comes from the booking's own row, so it paints
+ * in the first response while the thread streams in under it, and the thread
+ * opens with the one next step directly below.
+ *
+ * The Logbook register: a period rather than an exclamation mark, no confetti,
+ * no emoji, and the thread's one coral moment (ADR 20260827-the-divers-thread,
+ * decision 6) spent here rather than on a separate panel under a masthead that
+ * already said the same date twice. It is the page's `<h1>`, because it is the
+ * page's opening.
+ */
+export function ReadyBookedHeader({
+  facts,
+  greetingName,
+  locale,
+  now,
+  t,
+  children,
+}: {
+  facts: MastheadFacts;
+  /** The name the booking greets, already resolved (a held identity greets the name it booked as). */
+  greetingName: string;
+  locale: string;
+  now: Date;
+  t: DiverTranslator;
+  /** Anything that belongs under the card and above the thread. */
+  children?: ReactNode;
+}) {
+  const firstName = greetingName.split(" ")[0] || t("ready.namelessFallback");
+  return (
+    <header>
+      <EarnedMoment
+        as="h1"
+        eyebrow={facts.shop.name}
+        title={t("booking.confirmedHeading", { name: firstName })}
+      >
+        <p className="font-semibold text-foreground">{bindTitleDash(facts.trip.title)}</p>
+        <p className="mt-1">{mastheadWhenLine(facts, locale, now)}</p>
+        <p className="mt-1 font-medium text-foreground">{mastheadArrivalLine(facts, locale, t)}</p>
+      </EarnedMoment>
+      <MastheadDoors facts={facts} t={t} />
+      {children}
+    </header>
+  );
+}
+
+/**
+ * The whole booked opening: the provider, the thread's shell with the card as
+ * its header, and the thread itself (`children`, streamed) under it. The page
+ * renders this only while the card is true (`getBookedCard` found a live booking on a departure still to sail).
+ */
+export function ReadyBookedPage({
+  card,
+  locale,
+  children,
+}: {
+  card: MastheadFacts & { greetingName: string };
+  locale: DiverLocale;
+  children: ReactNode;
+}) {
+  const t = diverTranslator(locale);
+  return (
+    <DiverIntlProvider
+      locale={locale}
+      timeZone={card.shop.timezone}
+      namespaces={["rental", "common", "trip"]}
+    >
+      <ThreadShell
+        header={
+          <ReadyBookedHeader
+            facts={card}
+            greetingName={card.greetingName}
+            locale={locale}
+            now={nowDate()}
+            t={t}
+          />
+        }
+      >
+        {children}
+      </ThreadShell>
+    </DiverIntlProvider>
+  );
+}

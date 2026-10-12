@@ -18,13 +18,20 @@ import { capacityLabel, isFull, type TripCapacity } from "@/lib/trips";
 export function TripCapacityBadge({
   trip,
   cancelledLabel,
+  finished = false,
   t,
 }: {
   trip: TripCapacity & { status: string };
   cancelledLabel: string;
+  /**
+   * The departure is back (`tripPhaseOf`): nothing is for sale, so "4 spots
+   * left" would be a live-day word on a record (UX review 2026-10-10, item 10).
+   */
+  finished?: boolean;
   t: StaffTranslator;
 }) {
   if (trip.status === "cancelled") return <Badge tone="danger">{cancelledLabel}</Badge>;
+  if (finished) return null;
   const capacity = capacityLabel(trip);
   return (
     <Badge tone={isFull(trip) ? "success" : "primary"} tabularNums>

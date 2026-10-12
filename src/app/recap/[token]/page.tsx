@@ -126,6 +126,7 @@ export default async function DiveRecapPage({
       <ExpiredLinkCard
         title={anonT("recap.unavailableHeading")}
         text={anonT("recap.unavailableBody")}
+        t={anonT}
       />
     );
   }
@@ -142,6 +143,7 @@ export default async function DiveRecapPage({
       <ExpiredLinkCard
         title={anonT("recap.unavailableHeading")}
         text={anonT("recap.unavailableBody")}
+        t={anonT}
       />
     );
   }
