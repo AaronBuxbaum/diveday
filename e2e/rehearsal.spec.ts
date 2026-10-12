@@ -25,10 +25,7 @@ test("staff add a rehearsal from the builder, and its trip page says so", async 
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
 
-  await page
-    .locator("[data-week-board] a[data-departure-door]", { hasText: title })
-    .first()
-    .click();
+  await page.getByRole("link", { name: title, exact: true }).first().click();
   await page.waitForURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]{36}/);
   const banner = page.getByRole("region", { name: "Practice departure for training day" });
   await expect(banner).toBeVisible();
