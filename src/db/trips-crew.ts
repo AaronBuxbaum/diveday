@@ -24,7 +24,7 @@ import {
   proposedDepartureWindows,
   windowsOverlap,
 } from "./trips-clashes";
-import { liveTrip } from "./trips-live";
+import { livePerson, liveTrip } from "./trips-live";
 
 /**
  * Who is working a departure.
@@ -70,7 +70,9 @@ export async function listStaff(db: AppDb, shopId: string) {
     .select({ person: staffPersonColumns, role: personRoles.role })
     .from(people)
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(and(eq(people.shopId, shopId), inArray(personRoles.role, [...STAFF_ROLES])))
+    .where(
+      and(eq(people.shopId, shopId), livePerson(), inArray(personRoles.role, [...STAFF_ROLES])),
+    )
     // Name, then id so two namesakes keep their places between loads, then the
     // role enum's own order (most senior first) so each person's roles do too
     // (issue #2176).
@@ -833,6 +835,7 @@ export async function changeTripCrewOutcome(
           eq(trips.shopId, shopId),
           eq(people.shopId, shopId),
           eq(people.id, change.personId),
+          livePerson(),
           inArray(personRoles.role, [...STAFF_ROLES]),
         ),
       )
