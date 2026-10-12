@@ -15,8 +15,8 @@
   "emailFailed": "That email still couldn’t be sent. Check the address and email configuration.",
   "offlineLabel": "Offline — this board may be out of date",
   "nextDeparture": "Next up is <link>{title}</link> on {date} at {time}.",
-  "noDeparturesEmpty": "Nothing is on the books yet. Schedule a trip and it will show up here the morning it sails.",
-  "scheduleTrip": "Schedule a trip",
+  "noDeparturesEmpty": "Nothing is on the books yet. Add a departure and it will show up here the morning it sails.",
+  "scheduleTrip": "Add a departure",
   "notice": {
     "waiversNotAuthorized": "Editing the waiver is limited to owners and managers.",
     "exportNotAuthorized": "Data export is limited to owners and managers.",
@@ -79,7 +79,7 @@
   },
   "firstRun": {
     "groupLabel": "First morning",
-    "subtitle": "{count, plural, one {# step} other {# steps}} and divers can start booking.",
+    "subtitle": "Finish these and divers can start booking.",
     "progress": "{done} of {total} done",
     "contactTitle": "Add your contact details",
     "contactBody": "Phone and email so divers and DiveDay can reach you.",
@@ -90,17 +90,18 @@
     "profileAction": "Set up profile",
     "profileDone": "Shop profile configured.",
     "siteTitle": "Add your first dive site",
-    "siteBody": "The catalog has 34 Florida sites ready to copy",
+    "siteBody": "{count, plural, one {The catalog has # Florida site ready to copy} other {The catalog has # Florida sites ready to copy}}",
+    "siteBodyOwn": "Add your first dive site, the place you’ll pin your trips to",
     "siteAction": "Add a dive site",
     "siteDone": "{count, plural, one {# dive site added.} other {# dive sites added.}}",
-    "tripTitle": "Put a departure on the board",
+    "tripTitle": "Add your first departure",
     "tripBody": "It lists on your schedule the moment you save.",
-    "tripAction": "Schedule a trip",
+    "tripAction": "Add a departure",
     "scheduleTitle": "Share your public schedule",
     "scheduleBody": "Paste it on your website or socials.",
     "scheduleCopy": "Copy link",
     "scheduleCopied": "Copied",
-    "scheduleCopyFailed": "Couldn’t copy. Select the link above instead.",
+    "scheduleCopyFailed": "Couldn’t copy. Open the link and copy its address.",
     "stripeTitle": "Connect payments",
     "stripeBody": "Divers pay when they book; payouts land in your account",
     "stripeAction": "Connect payments",
@@ -112,8 +113,7 @@
     "unitsDone": "Units confirmed.",
     "unitsFeet": "feet",
     "unitsMeters": "meters",
-    "pageTitle": "Your shop is live.",
-    "pageIntro": "Divers can already find you at <address>{url}</address>. Three things put a boat on it."
+    "pageTitle": "Your shop is live."
   },
   "spine": {
     "summaryBoats": "{count, plural, one {# boat today.} other {# boats today.}}",
@@ -140,13 +140,8 @@
     "firstBoatHome": "Your first boat is home: {divers, plural, one {# passenger} other {# passengers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back.",
     "firstBooking": "Your first booking",
     "stage": {
-      "boarding": "Boarding",
-      "underway": "Out on {site}",
-      "underwayNoSite": "Out on the water",
-      "surface": "On the surface",
-      "headingIn": "Heading in",
-      "home": "Home",
-      "chip": "{stage} since {time}"
+      "since": "since {time}",
+      "sinceAtSite": "{site} · since {time}"
     },
     "factOfScale": {
       "divers": "{name} boards the {time} as your {count}th diver of the season.",
@@ -159,14 +154,6 @@
       "closedBy": "last roll call closed by {name}",
       "backSouls": "{divers, plural, one {# passenger} other {# passengers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back",
       "backSoulsBy": "{divers, plural, one {# passenger} other {# passengers}} and {crew, plural, one {# crew} other {# crew}} out, {back} back by {time}",
-      "openSeats": {
-        "label": "Unsold seats",
-        "sentence": "{seats, plural, one {# seat went unsold} other {# seats went unsold}}: {facts}.",
-        "lastBooking": "{days, plural, =0 {the last booking came in on the day} one {the last booking came in # day out} other {the last booking came in # days out}}",
-        "noDeal": "no last-minute deal went out",
-        "comparableSamePrice": "{title} on {date} filled at the same price",
-        "comparableOtherPrice": "{title} on {date} filled at a different price"
-      },
       "planChange": {
         "sentence": "The plan changed: {changes}.",
         "moved": "dive {dive} moved to {site}",
@@ -184,7 +171,8 @@
     "departuresLabel": "Departures",
     "needsYouCount": "{count, plural, one {# thing} other {# things}}",
     "deskFoldLabel": "{count, plural, one {# more for other boats and the desk} other {# more for other boats and the desk}}",
-    "needsYouLabel": "Needs you"
+    "needsYouLabel": "Needs you",
+    "crewTips": "Your boats earned {amount} in tips this week."
   },
   "quietAddDeparture": "Add a departure",
   "quietNextDepartureLabel": "Next departure",

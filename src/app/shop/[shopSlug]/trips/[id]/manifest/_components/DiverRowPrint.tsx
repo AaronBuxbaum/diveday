@@ -3,7 +3,7 @@ import { StatusMark } from "@/components/ui/StatusMark";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
-import { rollCallLabelText } from "@/i18n/manifest-labels";
+import { medicalWarningChips, rollCallLabelText } from "@/i18n/manifest-labels";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
@@ -37,15 +37,7 @@ export function DiverRowPrint({
   timezone: string;
   t: StaffTranslator;
 }) {
-  const {
-    rc,
-    ready,
-    diverStatus,
-    impliedNotBoarded,
-    earlierRefusal,
-    referralUnresolved,
-    capsuleKind,
-  } = state;
+  const { rc, ready, diverStatus, impliedNotBoarded, capsuleKind, medicalDays } = state;
   return (
     <div className="hidden px-4 pb-4 print:block">
       <p className="flex flex-wrap items-center gap-2">
@@ -77,12 +69,13 @@ export function DiverRowPrint({
               : t("manifest.age", { age: diver.age })}
           </Badge>
         ) : null}
-        {earlierRefusal && capsuleKind !== "refusal" ? (
-          <Badge tone="warning">{t("manifest.medicalEarlierRefusalChip")}</Badge>
-        ) : null}
-        {referralUnresolved && capsuleKind !== "referral" ? (
-          <Badge tone="warning">{t("manifest.medicalReferralUnresolvedChip")}</Badge>
-        ) : null}
+        {medicalWarningChips(t, medicalDays)
+          .slice(capsuleKind === "medical" ? 1 : 0)
+          .map((chip) => (
+            <Badge key={chip} tone="warning">
+              {chip}
+            </Badge>
+          ))}
         {diver.birthday && capsuleKind !== "birthday" ? (
           <Badge tone="primary">{birthdayCalloutText(t, diver.birthday)}</Badge>
         ) : null}

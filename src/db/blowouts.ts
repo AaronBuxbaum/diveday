@@ -40,7 +40,7 @@ import { paymentsByBooking } from "./payments";
 import { queryAll } from "./query-helpers";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import { refundBookingOnShopCancellation, shopCancellationPaymentStory } from "./refunds";
-import type { BlowoutMessageStatus, PaymentStatus } from "./schema";
+import type { BlowoutCause, BlowoutMessageStatus, PaymentStatus } from "./schema";
 import {
   bookings,
   certifications,
@@ -116,6 +116,14 @@ export type CallBlowoutInput = {
   tripId: string;
   calledByPersonId: string;
   now?: Date;
+  /**
+   * Why it is off, which is what each diver is told. Weather unless said
+   * otherwise; a repeating trip's "Cancel every upcoming date" passes
+   * `run_ended` (`cancelFutureSeriesTrips`). Read when the record is created,
+   * and when a reinstated trip is called off again; a resume of a trip still
+   * cancelled keeps the cause the call was made with.
+   */
+  cause?: BlowoutCause;
   /** Injectable for tests; defaults to the environment-configured provider. */
   provider?: NotificationProvider;
   /** Injectable for tests; defaults to the environment-configured Stripe seam. */
@@ -159,7 +167,7 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
     if (!trip) return { ok: false as const, reason: "not_found" as const };
 
     const [existing] = await tx
-      .select({ id: tripBlowouts.id })
+      .select({ id: tripBlowouts.id, cause: tripBlowouts.cause })
       .from(tripBlowouts)
       .where(and(eq(tripBlowouts.tripId, input.tripId), eq(tripBlowouts.shopId, input.shopId)))
       .limit(1);
@@ -169,8 +177,11 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
     // roll-call event, it is underway (`departureUnderway`) — cancelling it then
     // would hand roll call a cancelled trip with people aboard. An *existing*
     // cascade may still be resumed afterwards: its messages are about a
-    // cancellation that already happened.
-    if (!existing) {
+    // cancellation that already happened. A *scheduled* trip with a record is
+    // not a resume but a fresh call — it was blown out, then reinstated — so
+    // it is asked the same question (security review D2, 2026-10-12).
+    const freshCall = !existing || trip.status === "scheduled";
+    if (freshCall) {
       const [started] = await tx
         // The id as a value, not the column: in a single-table select the
         // column renders unqualified and would bind inside the subquery.
@@ -194,6 +205,14 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
     }
 
     let blowoutId = existing?.id;
+    // A resume keeps the cause the call was made with; a fresh call on a
+    // reinstated date says why it is off *now* (a run cancel after an old
+    // weather call is `run_ended`, never the weather).
+    const cause: BlowoutCause =
+      existing && !freshCall ? existing.cause : (input.cause ?? "weather");
+    if (existing && freshCall && existing.cause !== cause) {
+      await tx.update(tripBlowouts).set({ cause }).where(eq(tripBlowouts.id, existing.id));
+    }
     if (!blowoutId) {
       const [created] = await tx
         .insert(tripBlowouts)
@@ -202,6 +221,7 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
           tripId: input.tripId,
           calledByPersonId: input.calledByPersonId,
           calledAt: now,
+          cause,
         })
         .returning({ id: tripBlowouts.id });
       blowoutId = created.id;
@@ -238,7 +258,7 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
         .onConflictDoNothing({ target: tripBlowoutDivers.bookingId });
     }
 
-    return { ok: true as const, blowoutId, trip, resumed: Boolean(existing) };
+    return { ok: true as const, blowoutId, trip, cause, resumed: !freshCall };
   });
 }
 
@@ -263,6 +283,7 @@ async function finishTripBlowout(
     shopId: input.shopId,
     blowoutId: setup.blowoutId,
     trip: setup.trip,
+    cause: setup.cause,
     now,
     provider: input.provider,
     checkout: input.checkout,
@@ -563,6 +584,7 @@ async function sendPendingBlowoutMessages(
     shopId: string;
     blowoutId: string;
     trip: typeof trips.$inferSelect;
+    cause: BlowoutCause;
     now: Date;
     provider?: NotificationProvider;
     checkout?: CheckoutProvider;
@@ -685,6 +707,7 @@ async function sendPendingBlowoutMessages(
         tripTitle: input.trip.title,
         startsAt: input.trip.startsAt,
         timezone: shop.timezone,
+        cause: input.cause,
         paymentStory: shopCancellationPaymentStory(refund),
         alternatives: offeredTripIds.flatMap((tripId) => {
           const candidate = candidateTitles.get(tripId);
@@ -804,6 +827,7 @@ export type BlowoutDiverState = {
 export type TripBlowoutRecord = {
   id: string;
   calledAt: Date;
+  cause: BlowoutCause;
   calledByName: string | null;
   divers: BlowoutDiverState[];
 };
@@ -879,6 +903,7 @@ export async function getTripBlowout(
   return {
     id: blowout.blowout.id,
     calledAt: blowout.blowout.calledAt,
+    cause: blowout.blowout.cause,
     calledByName: blowout.calledBy?.fullName ?? null,
     divers: rows.map((row) => ({
       id: row.diver.id,
@@ -899,16 +924,19 @@ export async function getTripBlowout(
   };
 }
 
-/** Whether this trip already has a blow-out record — the trip page's link cue. */
-export async function hasTripBlowout(
+/**
+ * Why this trip's cascade was called, or null when it has none — the trip
+ * page's link cue, and the word on it.
+ */
+export async function tripBlowoutCause(
   db: DbExecutor,
   shopId: string,
   tripId: string,
-): Promise<boolean> {
+): Promise<BlowoutCause | null> {
   const [row] = await db
-    .select({ id: tripBlowouts.id })
+    .select({ cause: tripBlowouts.cause })
     .from(tripBlowouts)
     .where(and(eq(tripBlowouts.tripId, tripId), eq(tripBlowouts.shopId, shopId)))
     .limit(1);
-  return Boolean(row);
+  return row?.cause ?? null;
 }

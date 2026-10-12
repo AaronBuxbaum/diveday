@@ -28,6 +28,7 @@ import {
   priorVisits,
   trips,
 } from "./schema";
+import { lockSeatDeparture } from "./seat-locks";
 import { liveTrip } from "./trips-live";
 
 export type CheckInQueueRow = {
@@ -531,6 +532,10 @@ export async function checkInBooking(
     const recordedBy = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
     if (!recordedBy) return { ok: false, reason: "staff_not_found" };
 
+    // The departure, then the seat (`lockSeatDeparture`, #2324): one joined
+    // `for update` took both in the planner's order, booking first.
+    const tripId = await lockSeatDeparture(tx, input.shopId, input.bookingId);
+    if (!tripId) return { ok: false, reason: "not_found" };
     const [booking] = await tx
       .select({
         id: bookings.id,
@@ -543,9 +548,15 @@ export async function checkInBooking(
       .from(bookings)
       .innerJoin(trips, eq(trips.id, bookings.tripId))
       .innerJoin(people, eq(people.id, bookings.personId))
-      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.tripId, tripId),
+        ),
+      )
       .limit(1)
-      .for("update");
+      .for("update", { of: [bookings, people] });
     if (!booking) return { ok: false, reason: "not_found" };
     // Asked before anything else this transaction could repeat: a retried sync
     // must not re-run readiness, re-stamp the trail, or tell the crew a second
@@ -697,6 +708,10 @@ export async function undoCheckInBooking(
     const recordedBy = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
     if (!recordedBy) return { ok: false, reason: "staff_not_found" };
 
+    // The departure, then the seat (`lockSeatDeparture`, #2324): one joined
+    // `for update` took both in the planner's order, booking first.
+    const tripId = await lockSeatDeparture(tx, input.shopId, input.bookingId);
+    if (!tripId) return { ok: false, reason: "not_found" };
     const [booking] = await tx
       .select({
         id: bookings.id,
@@ -707,9 +722,15 @@ export async function undoCheckInBooking(
       .from(bookings)
       .innerJoin(trips, eq(trips.id, bookings.tripId))
       .innerJoin(people, eq(people.id, bookings.personId))
-      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.tripId, tripId),
+        ),
+      )
       .limit(1)
-      .for("update");
+      .for("update", { of: [bookings, people] });
     if (!booking) return { ok: false, reason: "not_found" };
     if (source === "offline" && input.clientEventId) {
       const applied = await appliedArrivalEventId(tx, input.shopId, input.clientEventId);

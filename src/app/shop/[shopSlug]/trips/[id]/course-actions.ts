@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import { type PaperCourseFormOutcome, recordPaperCourseForm } from "@/db/course-forms";
 import { recordCourseMaterialsDone } from "@/db/course-materials";
@@ -14,6 +15,7 @@ import {
 } from "@/db/readiness";
 import { diveSpecialty } from "@/db/schema";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
+import { formValue, readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -28,6 +30,24 @@ import { requireRosterBooking, tripPath } from "./roster-booking";
  */
 
 /**
+ * Every field the roster's course rows post, each read as `FormData.get`
+ * read it; each action narrows what it reads itself.
+ */
+const courseRosterForm = z.object({
+  award: text(),
+  bookingId: text(),
+  done: formValue(),
+  formId: text(),
+  guardianName: text(),
+  guardianNamesake: formValue(),
+  guardianRelationship: text(),
+  note: text(),
+  paperCopy: formValue(),
+  personId: text(),
+  signedOn: text(),
+});
+
+/**
  * The one path from "this shop's own instructor taught and ran this course"
  * to a `certifications` row this shop's own booking gate will actually read
  * (issue #717) — a per-student tap on the course session's own roster,
@@ -39,11 +59,12 @@ export async function certifyDiverFromRosterAction(
   tripId: string,
   formData: FormData,
 ) {
+  const fields = readForm(courseRosterForm, formData);
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
-  const personId = String(formData.get("personId") ?? "");
-  const award = String(formData.get("award") ?? "");
+  const bookingId = fields.bookingId;
+  const personId = fields.personId;
+  const award = fields.award;
   if (!uuidParam(tripId) || !uuidParam(bookingId) || !uuidParam(personId) || !award) redirect(back);
   const db = await getDb();
   // The row posts its own booking; one from another departure of this shop is
@@ -103,9 +124,10 @@ export async function saveCourseNextStepAction(
   tripId: string,
   formData: FormData,
 ) {
+  const fields = readForm(courseRosterForm, formData);
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
+  const bookingId = fields.bookingId;
   if (!uuidParam(tripId) || !uuidParam(bookingId)) redirect(back);
   const db = await getDb();
   await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
@@ -114,7 +136,7 @@ export async function saveCourseNextStepAction(
     shopId: s.user.shopId,
     bookingId,
     instructorPersonId: s.user.personId,
-    note: String(formData.get("note") ?? ""),
+    note: fields.note,
   });
   revalidateAndRedirect(
     back,
@@ -148,9 +170,10 @@ export async function setCourseMaterialsDoneAction(
   tripId: string,
   formData: FormData,
 ) {
+  const fields = readForm(courseRosterForm, formData);
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
+  const bookingId = fields.bookingId;
   if (!uuidParam(tripId) || !uuidParam(bookingId)) redirect(back);
   const db = await getDb();
   await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
@@ -159,7 +182,7 @@ export async function setCourseMaterialsDoneAction(
     shopId: s.user.shopId,
     bookingId,
     staffPersonId: s.user.personId,
-    done: formData.get("done") === "true",
+    done: fields.done === "true",
   });
   revalidateAndRedirect(
     back,
@@ -208,10 +231,11 @@ export async function recordPaperCourseFormAction(
   tripId: string,
   formData: FormData,
 ) {
+  const fields = readForm(courseRosterForm, formData);
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = uuidParam(String(formData.get("bookingId") ?? ""));
-  const formId = uuidParam(String(formData.get("formId") ?? ""));
+  const bookingId = uuidParam(fields.bookingId);
+  const formId = uuidParam(fields.formId);
   if (!bookingId || !formId) redirect(noticeUrl(back, "course-form-unavailable"));
   const dbi = await getDb();
   // The row posts its own booking; one from another departure is not this
@@ -223,21 +247,21 @@ export async function recordPaperCourseFormAction(
     bookingId,
     noticeUrl(back, "course-form-unavailable"),
   );
-  const guardianName = String(formData.get("guardianName") ?? "").trim();
-  const guardianRelationship = String(formData.get("guardianRelationship") ?? "").trim();
+  const guardianName = fields.guardianName.trim();
+  const guardianRelationship = fields.guardianRelationship.trim();
   const recorded = await recordPaperCourseForm(dbi, {
     shopId: s.user.shopId,
     bookingId,
     formId,
     recordedByPersonId: s.user.personId,
-    paperCopyConfirmed: formData.get("paperCopy") === "on",
-    signedOn: String(formData.get("signedOn") ?? "").trim() || undefined,
+    paperCopyConfirmed: fields.paperCopy === "on",
+    signedOn: fields.signedOn.trim() || undefined,
     guardian:
       guardianName || guardianRelationship
         ? {
             name: guardianName,
             relationship: guardianRelationship,
-            namesakeAttested: formData.get("guardianNamesake") === "on",
+            namesakeAttested: fields.guardianNamesake === "on",
           }
         : undefined,
   });

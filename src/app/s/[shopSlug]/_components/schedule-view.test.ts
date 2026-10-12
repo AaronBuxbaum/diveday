@@ -144,6 +144,7 @@ describe("scheduleMonthRail", () => {
     expect(rail.currentMonth).toEqual({ year: 2026, month: 7 });
     expect(rail.prevMonthKey).toBeNull();
     expect(rail.nextMonthKey).toBe("2026-08");
+    expect(rail.lastTripMonth).toEqual({ year: 2026, month: 8 });
   });
 });
 
@@ -179,6 +180,7 @@ describe("scheduleOffSeason", () => {
       isEmbed: false,
       now: NOW,
       range: { first: later },
+      reopensOn: null,
       locale: "en-US",
       tz: TZ,
       t,
@@ -189,6 +191,7 @@ describe("scheduleOffSeason", () => {
       isEmbed: true,
       now: NOW,
       range: { first: later },
+      reopensOn: null,
       locale: "en-US",
       tz: TZ,
       t,

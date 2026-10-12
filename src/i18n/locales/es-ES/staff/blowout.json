@@ -12,6 +12,7 @@
   },
   "record": {
     "title": "Cascada de la cancelación",
+    "titleRunEnded": "Cancelada con su serie",
     "calledBy": "Llamada por {name} · {when}",
     "notified": "Avisados",
     "rebooked": "Reservaron de nuevo",
@@ -45,7 +46,7 @@
     "called": "Cancelación llamada. La salida queda cancelada y el mensaje de cada buceador está en camino.",
     "resumed": "Se reintentaron los mensajes no enviados.",
     "departed": "Esta salida está en curso o ya zarpó, así que no se canceló nada.",
-    "error": "Eso no funcionó. Inténtalo de nuevo.",
+    "error": "No se canceló nada: esta salida se eliminó o no se pudo leer en este momento. Ábrela desde el calendario para revisarla y vuelve a llamar la cancelación.",
     "dayCalled": "{count, plural, one {Cancelación hecha. La salida está cancelada y el mensaje de cada buceador va en camino.} other {Cancelación hecha en # salidas. Están canceladas y el mensaje de cada buceador va en camino.}}",
     "dayPartly": "{called, plural, one {# salida cancelada.} other {# salidas canceladas.}} {skipped, plural, one {# no se pudo cancelar: ya zarpó o ya no está programada.} other {# no se pudieron cancelar: ya zarparon o ya no están programadas.}}",
     "dayNone": "Selecciona al menos una salida para cancelar."

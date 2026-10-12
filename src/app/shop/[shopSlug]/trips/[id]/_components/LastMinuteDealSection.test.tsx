@@ -28,6 +28,7 @@ function profile(
     noCertificationDeclared: false,
     nitrox: false,
     nitroxSelfDeclared: false,
+    verifiedLevel: null,
   };
 }
 
@@ -39,6 +40,7 @@ function uncertified(): CertificationSummary {
     noCertificationDeclared: true,
     nitrox: false,
     nitroxSelfDeclared: false,
+    verifiedLevel: null,
   };
 }
 

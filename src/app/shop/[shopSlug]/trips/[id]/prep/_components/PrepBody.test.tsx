@@ -117,6 +117,32 @@ describe("snorkel vests", () => {
  * layout, so each case pins the classes whose arithmetic the pixel probe
  * measured wrong; the probe re-measures the pixels.
  */
+describe("the pulled-for-service notice (issue #2345)", () => {
+  it("names how many units went to the bench", () => {
+    renderPrep(everyPanelPrep(), { notice: "gear-returned-set-pulled", noticeCount: "2" });
+    expect(screen.getByRole("status")).toHaveTextContent("Back. 2 pulled for service.");
+  });
+
+  it("says nothing on a count it cannot read, rather than a wrong number", () => {
+    renderPrep(everyPanelPrep(), { notice: "gear-returned-set-pulled", noticeCount: "-1" });
+    expect(screen.queryByText(/pulled for service/)).toBeNull();
+  });
+});
+
+/**
+ * The "Sizes still missing" card no longer explains the list to itself, and
+ * the gas-analysis disclaimer left the tab for the pre-departure checklist
+ * settings (UX review 2026-10-10, item 26).
+ */
+describe("the sizes card on the Gear tab", () => {
+  it("says no sentence about the list, and nothing about gas analysis", () => {
+    const { container } = renderPrep(everyPanelPrep());
+    expect(screen.getByRole("heading", { name: t("tripPrep.missingSizesHeading") })).toBeTruthy();
+    expect(container.textContent).not.toContain("short by that piece");
+    expect(container.textContent).not.toContain("gas analysis");
+  });
+});
+
 describe("the packing list's geometry", () => {
   it("stacks its sections at the gap its page asks for, never a margin each (K-487)", () => {
     const { container } = renderPrep(everyPanelPrep(), { notice: "gear-released" });

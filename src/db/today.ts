@@ -10,14 +10,7 @@ import {
 import type { Role } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
-import {
-  countBothClaims,
-  effectiveCrewRoles,
-  groupCrewAssignments,
-  lapsedRungs,
-  lastDayOfDeparture,
-  rungLostToLapse,
-} from "@/lib/crew-roles";
+import { effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
 import type { DiveIntentCount } from "@/lib/dive-intent";
 import { DEFAULT_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
 import {
@@ -40,8 +33,8 @@ import {
   type RollCallGapReason,
   type TodayAction,
 } from "@/lib/today";
-import { type TripPhase, tripPhaseOf } from "@/lib/trip-phase";
-import { liveStageOf, type TripStageReading } from "@/lib/trip-stages";
+import { boatStageOf, tripPhaseOf } from "@/lib/trip-phase";
+import type { TripStageReading } from "@/lib/trip-stages";
 import { DEPARTURE_BUFFER_MS, hasReturned, hasSailed } from "@/lib/trips";
 import { shopDayBounds } from "@/lib/zoned";
 import {
@@ -53,6 +46,7 @@ import {
 } from "./blockers";
 import { todayBoatSafety } from "./boat-safety";
 import type { AppDb } from "./client";
+import { courseCrewCountsByTrip } from "./course-crew-counts";
 import { diveIntentTallyForTrips } from "./dive-intent";
 import {
   listFitAdjustedReturns,
@@ -91,13 +85,13 @@ import {
   trips,
   tripWaitlistEntries,
 } from "./schema";
-import { listStaffCredentials, ratingCredentialsByPerson } from "./staff-credentials";
+import { listStaffCredentials } from "./staff-credentials";
 import { canAcceptPayments, shopStripeAccountForRender } from "./stripe-accounts";
 import { pushDepartureRows } from "./today-departure-rows";
 import { pushEquipmentRows } from "./today-equipment-rows";
 import { pushRollCallRows } from "./today-roll-call-rows";
 import type { TodayRowsContext } from "./today-rows-context";
-import { at, type SupervisionCrewCount, shopDay } from "./today-shared";
+import { at, shopDay } from "./today-shared";
 import { pushShopRows } from "./today-shop-rows";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { latestTripStagesByTrip } from "./trip-stages";
@@ -227,17 +221,12 @@ export type DepartureSummary = {
   crewReason: CrewIncompleteReason | null;
   /**
    * Where the crew last said this boat was, and when (ADR
-   * 20260904-reef-all-the-way-down, Budget rule 4). Null when nobody has said
-   * anything, which is most departures and renders nothing.
+   * 20260904-reef-all-the-way-down, Budget rule 4), by `boatStageOf`: the
+   * same reading the departure header and the manifest strip print, so the
+   * three say one word (UX review 2026-10-10, item 1). Null when nobody has
+   * said anything today, which renders nothing.
    */
   stage: TripStageReading | null;
-  /**
-   * Where the departure is in its own day — Prep, Check-in, Aboard, Back
-   * (`tripPhaseOf`, ADR 20261001-logbook). Read from the crew's raw tap, never
-   * `stage` above: that one stops speaking two hours past the return, which is
-   * exactly when a late boat must not turn Back.
-   */
-  phase: TripPhase | null;
   /**
    * **What the divers aboard came for, as counts** (D12/#1172 with D23/#1183,
    * issue #1386). Empty on a departure nobody answered on — which renders
@@ -866,16 +855,20 @@ async function standingCrewClashes(
       started.map((trip) => trip.id),
     ),
   ]);
-  // The crew's "home" tap beats the clock, as in `tripPhaseOf`, but only a tap
-  // from the departure's last shop day: a course whose crew said home after
-  // day one is still out on day two.
-  const saidHome = (trip: { id: string; endsAt: Date }) => {
-    const tap = stages.get(trip.id);
-    return (
-      tap?.stage === "home" &&
-      tap.recordedAt.getTime() >= shopDayBounds(trip.endsAt, timeZone).from.getTime()
-    );
-  };
+  // Out is the departure phase's own answer (`tripPhaseOf`), the rule
+  // `blockedAboardOnBoatsOut` reads too: one rule, one answer. A `home` from
+  // the last day brings a boat in; a course whose crew said home after day
+  // one is still out on day two. Every row here is short of `hasReturned`
+  // (the scan bound), where no other tap can turn a departure Back.
+  const isOut = (trip: { id: string; startsAt: Date; endsAt: Date }) =>
+    tripPhaseOf({
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      now,
+      timeZone,
+      stage: stages.get(trip.id) ?? null,
+      cancelled: false,
+    }) === "aboard";
   return {
     clashes,
     divers,
@@ -885,9 +878,7 @@ async function standingCrewClashes(
     // row about it at the desk once it has dropped out of the stations
     // (`assembleDaySpine`). Started is the departure's own `startsAt`, so a
     // course between two of its days still counts as out.
-    outTripIds: started
-      .filter((trip) => !hasReturned(trip.endsAt, now) && !saidHome(trip))
-      .map((trip) => trip.id),
+    outTripIds: started.filter(isOut).map((trip) => trip.id),
   };
 }
 
@@ -1118,111 +1109,6 @@ async function waitlistFrontByTrip(db: AppDb, shopId: string, tripIds: string[])
     });
   }
   return fronts;
-}
-
-/**
- * How many instructors and certified assistants (divemasters) each course
- * trip's crew has, counted by the one definition every ratio gate shares
- * (`countInWaterCrew`, src/lib/crew-roles.ts).
- *
- * Exported because the shift roster's crew-gap summary composes *this* reader
- * — the one Today's own `instructor_missing` detection runs on — rather than
- * re-deriving crew counts of its own (ADR 20260806-staffing-is-the-shift-roster).
- *
- * **This is the supervision claim, so it reads the credentials** (issue
- * #1853). A rostered professional whose every recorded rating has lapsed by
- * the departure's last shop-local day counts for the rung they are still
- * current on, or for nothing (`lapsedRungs`, src/lib/crew-roles.ts). `lapsed`
- * names who a lapse took down a rung, so every surface that shows a gap this
- * count opened can say why rather than showing one more shortfall. The money
- * and roster paths do not come through here: `tripCourseCrewCounts`
- * (src/db/bookings.ts) is the roster's claim, on purpose (H-59).
- */
-export async function courseCrewCountsByTrip(
-  db: AppDb,
-  shopId: string,
-  tripIds: string[],
-): Promise<Map<string, SupervisionCrewCount>> {
-  const counts = new Map<string, SupervisionCrewCount>();
-  if (tripIds.length === 0) return counts;
-  const rows = await db
-    .select({
-      tripId: tripAssignments.tripId,
-      personId: tripAssignments.personId,
-      fullName: people.fullName,
-      tripRole: tripAssignments.tripRole,
-      role: personRoles.role,
-      endsAt: trips.endsAt,
-      timeZone: shops.timezone,
-    })
-    .from(tripAssignments)
-    // `trip_assignments` carries no shop_id of its own; proving the trip
-    // itself belongs to shopId (not just the assigned person) is what closes
-    // the cross-tenant read this table's shape allows (CR-007 review
-    // finding — mirrors getTripCrewIds's already-fixed join, src/db/trips.ts).
-    // Every current caller already pre-filters tripIds to this shop, but the
-    // helper itself shouldn't depend on that discipline.
-    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-    // The zone the departure's day is read in (issue #1853).
-    .innerJoin(shops, eq(shops.id, trips.shopId))
-    .innerJoin(people, eq(people.id, tripAssignments.personId))
-    // A `left join`, and no role filter: the per-trip role lives on the
-    // assignment row, so a rostered captain has to reach the rule that decides
-    // they count for nothing rather than being filtered out of the query.
-    .leftJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(
-      and(
-        liveTrip(),
-        eq(trips.shopId, shopId),
-        eq(people.shopId, shopId),
-        inArray(tripAssignments.tripId, tripIds),
-      ),
-    );
-  const rowsByTrip = new Map<string, typeof rows>();
-  const nameByPerson = new Map<string, string>();
-  for (const row of rows) {
-    const list = rowsByTrip.get(row.tripId) ?? [];
-    list.push(row);
-    rowsByTrip.set(row.tripId, list);
-    nameByPerson.set(row.personId, row.fullName);
-  }
-  const credentials = await ratingCredentialsByPerson(db, shopId, [...nameByPerson.keys()]);
-  for (const tripId of tripIds) {
-    const tripRows = rowsByTrip.get(tripId) ?? [];
-    const [first] = tripRows;
-    // Asked of the departure's own last day in the shop's zone, so a rating
-    // that lapses between the booking and the dive is lapsed for the dive.
-    const divesOn = first ? lastDayOfDeparture(first.endsAt, first.timeZone) : null;
-    const members = groupCrewAssignments(tripRows).map((member) => ({
-      ...member,
-      lapsedRungs:
-        divesOn === null ? [] : lapsedRungs(credentials.get(member.personId) ?? [], divesOn),
-    }));
-    const { supervision, roster } = countBothClaims(members);
-    const lapsed: SupervisionCrewCount["lapsed"] = [];
-    for (const member of members) {
-      const lost = rungLostToLapse(member);
-      if (lost === null) continue;
-      lapsed.push({
-        personId: member.personId,
-        fullName: nameByPerson.get(member.personId) ?? "",
-        lost,
-      });
-    }
-    // Names in a stable order, so the sentence that lists them does not
-    // reshuffle between loads.
-    lapsed.sort(byNameThenId);
-    counts.set(tripId, { ...supervision, roster, lapsed });
-  }
-  return counts;
-}
-
-function byNameThenId(
-  a: { fullName: string; personId: string },
-  b: { fullName: string; personId: string },
-): number {
-  if (a.fullName !== b.fullName) return a.fullName < b.fullName ? -1 : 1;
-  return a.personId < b.personId ? -1 : a.personId > b.personId ? 1 : 0;
 }
 
 /**
@@ -1565,13 +1451,10 @@ function summarizeDepartures(
       crew: tripCrew,
       crewAccountedFor: completeness.crewAccountedFor,
       crewReason: completeness.crewReason,
-      // The same staleness rule every other reader applies: a word older than
-      // the boat's own day stops speaking, so a crew that tapped Underway and
-      // then got busy does not leave the home saying it at midnight. The
-      // manifest is the exception and reads the raw ledger — that strip is the
-      // crew's own control, and it shows them their last answer.
-      stage: liveStageOf(stagesByTrip.get(trip.id) ?? null, trip.endsAt, now),
-      phase: tripPhaseOf({
+      // The chip's one rule (`boatStageOf`), read off the raw tap like the
+      // header and the manifest strip, so a card cannot say a word the boat's
+      // own pages do not.
+      stage: boatStageOf({
         startsAt: trip.startsAt,
         endsAt: trip.endsAt,
         now,

@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
 import { MANIFEST_SYNC_TAG } from "@/lib/background-flush";
+import { nowMs } from "@/lib/clock";
 import {
   listOfflineManifests,
   purgeOfflineManifestsExceptShop,
@@ -12,6 +13,14 @@ import {
   offlineManifestShopSlug,
   pendingOfflineEventCount,
 } from "@/lib/offline-manifests";
+import {
+  forgetReadyPage,
+  isReadyScope,
+  readyPageFallback,
+  readyPagePath,
+  readyPageStylesheets,
+  saveReadyPage,
+} from "./ready-page-cache";
 
 /**
  * The offline manifest's service worker.
@@ -140,8 +149,35 @@ async function cacheOfflineShell() {
   await cache.put(OFFLINE_SHELL, response);
 }
 
+/**
+ * Whether this copy of the worker is the diver's, registered from `/ready/`
+ * with that scope (`ready-page-cache.ts`), rather than the staff worker at `/`.
+ * The same script, two registrations: the diver's does nothing but keep their
+ * trip-prep page, and never fetches the staff shell.
+ */
+function inReadyScope(): boolean {
+  return isReadyScope(self.registration?.scope);
+}
+
+/** Best effort: a stylesheet that fails to cache leaves the copy readable, only plainer. */
+async function keepStylesheets(paths: string[]): Promise<void> {
+  const cache = await caches.open(CACHE_NAME);
+  await Promise.all(
+    paths.map(async (path) => {
+      try {
+        if (await cache.match(path)) return;
+        const response = await fetch(path);
+        if (response.ok) await cache.put(path, response);
+      } catch {
+        // Offline copy without this sheet; nothing to tell anyone.
+      }
+    }),
+  );
+}
+
 self.addEventListener("install", (event) => {
   self.skipWaiting();
+  if (inReadyScope()) return;
   event.waitUntil(cacheOfflineShell());
 });
 
@@ -165,6 +201,35 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("message", (event) => {
+  if (event.data?.type === "KEEP_READY_PAGE") {
+    // The first visit renders before this worker controls the page, so the
+    // page asks once. Only in the diver's own registration, only for the page
+    // that asked (its own path), and only a readiness link.
+    const port = event.ports[0];
+    const source = event.source as Client | null;
+    const sourcePath = source?.url ? new URL(source.url).pathname : null;
+    const path = sourcePath
+      ? readyPagePath(new URL(sourcePath, self.location.origin), self.location.origin)
+      : null;
+    if (!inReadyScope() || !path) {
+      port?.postMessage({ ok: false });
+      return;
+    }
+    event.waitUntil(
+      fetch(path, { credentials: "same-origin", cache: "no-store" })
+        .then(async (response) => {
+          const html = await response.clone().text();
+          const kept = await saveReadyPage(caches, path, response, nowMs());
+          if (kept) await keepStylesheets(readyPageStylesheets(html, self.location.origin));
+          return kept;
+        })
+        .then(
+          (ok) => port?.postMessage({ ok }),
+          () => port?.postMessage({ ok: false }),
+        ),
+    );
+    return;
+  }
   if (event.data?.type === "GET_SHELL_VERSION") {
     event.ports[0]?.postMessage({ version: SHELL_VERSION });
     return;
@@ -477,6 +542,30 @@ self.addEventListener("notificationclick", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin || event.request.method !== "GET") return;
+
+  if (inReadyScope() && event.request.mode === "navigate") {
+    const path = readyPagePath(url, self.location.origin);
+    if (!path) return;
+    event.respondWith(
+      // Network-first: online, the diver always gets the live page. Only a
+      // clean load is kept (a `?saved=` notice is a moment, not the page).
+      fetch(event.request)
+        .then((response) => {
+          if (url.search === "") {
+            event.waitUntil(
+              saveReadyPage(caches, path, response.clone(), nowMs()).catch(() => false),
+            );
+          } else if (url.searchParams.has("cancelled")) {
+            // The diver just cancelled this seat (`cancelMyBookingAction`):
+            // the copy goes with it (security review of layer 8, D2).
+            event.waitUntil(forgetReadyPage(caches, path).catch(() => undefined));
+          }
+          return response;
+        })
+        .catch(async () => (await readyPageFallback(caches, path, nowMs())) ?? Response.error()),
+    );
+    return;
+  }
 
   if (event.request.mode === "navigate" && url.pathname === OFFLINE_SHELL) {
     event.respondWith(

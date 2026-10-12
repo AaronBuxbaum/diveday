@@ -32,7 +32,7 @@ import {
   type TripAdmissionEvidence,
   type TripAdmissionRefusal,
 } from "@/lib/trip-admission";
-import { hasReturned, hasSailed } from "@/lib/trips";
+import { hasReturned, hasSailed, MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { inTrainingBefore, listCourseSeatsInTraining } from "./certifications-in-training";
@@ -124,7 +124,22 @@ export type BookingPerson =
        */
       fromNameMatch?: { typedName: string };
     }
-  | { fullName: string; email?: string; phone?: string };
+  | { fullName: string; email?: string; phone?: string; freshPerson?: FreshPersonDetails };
+
+/**
+ * What a door knows about somebody it is seating for the first time, written
+ * onto the new person row **in the booking's own transaction** — the dock's
+ * emergency contact and date of birth (batch 4, D6), so a rider never exists
+ * for a moment without them. Only ever written to a row this booking creates
+ * with no email: a person matched or created by email goes through
+ * `findOrCreatePerson` and keeps what that record says.
+ */
+export type FreshPersonDetails = {
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  /** `YYYY-MM-DD`, already checked by the caller. */
+  dateOfBirth?: string;
+};
 
 /**
  * What the booker said about their own diving, as the booking path carries it.
@@ -431,6 +446,91 @@ export async function createBookingParty(
     });
 }
 
+/**
+ * Why a seat could not be added to a booking from the diver's own page.
+ * `lead_unavailable` covers every reason the booking itself cannot lead one
+ * (cancelled, held, a party member's own seat, not this shop's), never
+ * distinguished to a diver; `party_full` is the public form's own party cap.
+ */
+export type AddPartySeatOutcome =
+  | { ok: true; bookingId: string }
+  | { ok: false; reason: "lead_unavailable" | "party_full" }
+  | BookingRefusal;
+
+/**
+ * **"Add a seat" from `/ready`** (UX review 2026-10-11, item 13; owner
+ * decision of the same review, §5.5: yes, because it adds a booking rather than
+ * changing one). A diver who booked alone and now wants to bring a friend gets
+ * a new seat in their party, held under the name they type, with a claim link
+ * the organizer's panel then shows (docs ADR 20260804-seat-claim-links), so
+ * the friend fills in their own details, waiver and card.
+ *
+ * **The same gates as booking a seat**, because it is one: the seat goes
+ * through `createBookingRecord` as an anonymous public booking, so capacity,
+ * the divers-only limit, the course ratio and the trip's admission rule are
+ * re-checked inside this transaction exactly as the schedule's form checks
+ * them, and a departed or cancelled trip refuses. The party never grows past
+ * the public form's own cap. An unpaid seat raises `payment_due`, which the
+ * boarding gate already holds, so nothing here can put an unpaid diver aboard.
+ *
+ * Authorization is the caller's: a verified readiness capability over
+ * `leadBookingId`. This only refuses a lead that cannot lead a party — a held
+ * seat (whose record may be somebody else's, issue #2125), a party member's
+ * own seat, or a cancelled one.
+ */
+export async function addPartySeat(
+  db: AppDb,
+  input: { shopId: string; leadBookingId: string; seatName: string },
+): Promise<AddPartySeatOutcome> {
+  return db.transaction(async (tx): Promise<AddPartySeatOutcome> => {
+    const [lead] = await tx
+      .select({
+        id: bookings.id,
+        tripId: bookings.tripId,
+        status: bookings.status,
+        identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+        partyLeadBookingId: bookings.partyLeadBookingId,
+      })
+      .from(bookings)
+      .where(and(eq(bookings.id, input.leadBookingId), eq(bookings.shopId, input.shopId)))
+      .limit(1)
+      // One add at a time per party, so two taps cannot both pass the cap.
+      .for("update");
+    if (
+      !lead ||
+      lead.status === "cancelled" ||
+      lead.identityUnconfirmedAt ||
+      lead.partyLeadBookingId
+    ) {
+      return { ok: false, reason: "lead_unavailable" };
+    }
+    const members = await tx
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.partyLeadBookingId, lead.id),
+          ne(bookings.status, "cancelled"),
+        ),
+      );
+    if (members.length + 1 >= MAX_PUBLIC_PARTY_SIZE) return { ok: false, reason: "party_full" };
+    const pending: PendingDeclaration[] = [];
+    const outcome = await createBookingRecord(
+      tx,
+      { actor: "public", shopId: input.shopId, tripId: lead.tripId, fullName: input.seatName },
+      pending,
+    );
+    if (!outcome.ok) return outcome;
+    await tx
+      .update(bookings)
+      .set({ partyLeadBookingId: lead.id })
+      .where(eq(bookings.id, outcome.bookingId));
+    await flushDeclarations(tx, pending);
+    return { ok: true, bookingId: outcome.bookingId };
+  });
+}
+
 class PartyBookingError extends Error {
   constructor(
     /** The whole refusal, not just its code — `trip_prerequisite` carries detail. */
@@ -453,7 +553,7 @@ class PartyBookingError extends Error {
  *
  * **The roster's claim, deliberately — not the supervision claim** (issue
  * #1853). Today, the staffing week and the trip page read each professional's
- * recorded ratings (`courseCrewCountsByTrip`, src/db/today.ts), so a lapsed
+ * recorded ratings (`courseCrewCountsByTrip`, src/db/course-crew-counts.ts), so a lapsed
  * instructor stops counting there. This passes no `lapsedRungs`, so the sale
  * gate, the seat cap and the no-show hand-back go on counting them: H-59
  * (docs/product/human-decisions/README.md) closed new-sale refusal on a locally
@@ -608,7 +708,12 @@ async function settlePackageCoverage(
     personId: string;
     bookingId: string;
     identityUnconfirmed: boolean;
-    trip: { courseId: string | null; plannedDives: number };
+    /**
+     * A rehearsal spends nothing (ADR 20261012-rehearsal-departures): its seats
+     * are test divers, and a regular who helps on training day keeps the dives
+     * they paid for.
+     */
+    trip: { courseId: string | null; plannedDives: number; isRehearsal: boolean };
     /**
      * A package is prepaid **dives**. A snorkeler's or a rider's seat dives
      * nothing, so it spends none of the holder's: a regular who brings their
@@ -617,7 +722,9 @@ async function settlePackageCoverage(
     participantType: ParticipantType;
   },
 ) {
-  if (input.identityUnconfirmed || !isDiver(input.participantType)) return [];
+  if (input.identityUnconfirmed || !isDiver(input.participantType) || input.trip.isRehearsal) {
+    return [];
+  }
   const spent = await consumeEntitlementsForBooking(tx, {
     shopId: input.shopId,
     personId: input.personId,
@@ -715,6 +822,52 @@ async function nameMatchLeavesIdentityInDoubt(
   return namesakes.length > 0;
 }
 
+/**
+ * The row a booking with no email inserts for its new person: the typed name,
+ * the stored phone, and whatever {@link FreshPersonDetails} the door carried.
+ */
+async function noEmailPersonRow(
+  tx: DbExecutor,
+  req: BookingRequest,
+  pendingInsert: { fullName: string; phone?: string },
+) {
+  return {
+    shopId: req.shopId,
+    fullName: pendingInsert.fullName,
+    email: null,
+    phone: await storedPhone(tx, req.shopId, pendingInsert.phone),
+    ...("personId" in req ? undefined : req.freshPerson),
+  };
+}
+
+/**
+ * Whether this departure takes a seat from this actor at all: still scheduled,
+ * not held for conditions, not sailed — and, for a rehearsal, only from staff,
+ * who seat its test divers (ADR 20261012-rehearsal-departures).
+ */
+function tripTakesSeatFrom(
+  trip: typeof trips.$inferSelect | undefined,
+  actor: BookingRequest["actor"],
+): trip is typeof trips.$inferSelect {
+  if (trip?.status !== "scheduled" || trip.conditionsHold) return false;
+  if (hasSailed(trip.startsAt, nowDate())) return false;
+  return actor === "staff" || !trip.isRehearsal;
+}
+
+/**
+ * **One lock order for a seat: the departure's trip row, then the booking
+ * row** (#2324). Every writer that touches both takes them in this order —
+ * `createBookingRecord` below, `restoreBooking`, `setBookingParticipantType`,
+ * and, through `lockSeatDeparture` (`./seat-locks.ts`), `markBookingNoShow`,
+ * `undoBookingNoShow`, `checkInBooking`, `undoCheckInBooking` and the rail's
+ * `recordRollCall`; and the crew's `recordCrewRollCall`, which locks its trip
+ * read before a crew member's own seat (`./manifests.ts`). Two writers taking the pair in opposite orders deadlock
+ * when they meet, and a staffer's tap fails. A path that goes on to lock an
+ * *existing* booking takes the trip `for no key update`, so a transaction
+ * that holds a booking and only needs a `KEY SHARE` on the trip (a roll-call
+ * or activity insert's foreign key) is never stuck behind it.
+ * `seat-lock-order.postgres.test.ts` races the pairs on a real server.
+ */
 async function createBookingRecord(
   db: DbExecutor,
   req: BookingRequest,
@@ -738,9 +891,7 @@ async function createBookingRecord(
     .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId), liveTrip()))
     .limit(1)
     .for("update");
-  if (trip?.status !== "scheduled" || trip.conditionsHold || hasSailed(trip.startsAt, nowDate())) {
-    return { ok: false, reason: "trip_unavailable" };
-  }
+  if (!tripTakesSeatFrom(trip, req.actor)) return { ok: false, reason: "trip_unavailable" };
   const participantType: ParticipantType = req.participantType ?? "diver";
   // A course session is diving by definition, and its admission rule, its
   // ratio and its minimum age are all about the student in the water. Recording
@@ -1012,12 +1163,7 @@ async function createBookingRecord(
       // insert, same shape as findOrCreatePerson's own insert branch.
       const [inserted] = await tx
         .insert(people)
-        .values({
-          shopId: req.shopId,
-          fullName: pendingInsert.fullName,
-          email: null,
-          phone: await storedPhone(tx, req.shopId, pendingInsert.phone),
-        })
+        .values(await noEmailPersonRow(tx, req, pendingInsert))
         .returning();
       if (!inserted) throw new Error("createBookingRecord: person insert returned no row");
       await tx.insert(personRoles).values({ personId: inserted.id, role: "diver" });
@@ -1086,7 +1232,7 @@ async function createBookingRecord(
       personId: person.id,
       bookingId: existing.id,
       identityUnconfirmed,
-      trip: { courseId: trip.courseId, plannedDives: trip.plannedDives },
+      trip,
       participantType,
     });
     pending.push({ req, personId: person.id, identityUnconfirmed });
@@ -1172,7 +1318,7 @@ async function createBookingRecord(
     personId: person.id,
     bookingId: created.id,
     identityUnconfirmed,
-    trip: { courseId: trip.courseId, plannedDives: trip.plannedDives },
+    trip,
     participantType,
   });
 
@@ -1463,7 +1609,7 @@ export async function restoreBooking(
       personId: booking.personId,
       bookingId,
       identityUnconfirmed: booking.identityUnconfirmedAt !== null,
-      trip: { courseId: trip.courseId, plannedDives: trip.plannedDives },
+      trip,
       participantType: booking.participantType,
     });
     return "restored";
@@ -1633,14 +1779,15 @@ async function changeParticipantType(
 ): Promise<SetParticipantTypeOutcome> {
   const { shopId, tripId, bookingId, to, actorPersonId } = input;
   return db.transaction(async (tx): Promise<SetParticipantTypeOutcome> => {
-    // The trip first, then the seat: the order every seat-granting write
-    // locks in, so this cannot deadlock against a booking on the same boat.
+    // The trip first, then the seat — the order written down at
+    // `createBookingRecord` — and `no key update`, because the seat comes
+    // next and the rail may hold it (`lockSeatDeparture`).
     const [trip] = await tx
       .select()
       .from(trips)
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1)
-      .for("update");
+      .for("no key update");
     const [booking] = await tx
       .select({
         id: bookings.id,
@@ -2232,6 +2379,7 @@ async function settleConfirmedPackageCoverage(
       participantType: bookings.participantType,
       courseId: trips.courseId,
       plannedDives: trips.plannedDives,
+      isRehearsal: trips.isRehearsal,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -2243,7 +2391,7 @@ async function settleConfirmedPackageCoverage(
     personId: input.personId,
     bookingId: input.bookingId,
     identityUnconfirmed: false,
-    trip: { courseId: row.courseId, plannedDives: row.plannedDives },
+    trip: row,
     participantType: row.participantType,
   });
 }

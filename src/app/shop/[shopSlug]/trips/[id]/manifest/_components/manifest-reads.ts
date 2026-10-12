@@ -65,9 +65,9 @@ export async function readManifestPage(
     listDeskEventsSince(db, shopId, tripId, personId),
     // Codes and counts, never a row per seat (#1183's boundary).
     diveIntentTallyForTrip(db, shopId, tripId),
-    // The newest word the crew tapped, whatever its age: the strip shows the
-    // crew their own last answer even on a boat that is hours overdue. The
-    // staleness rule belongs to what a *diver* reads, not to the control.
+    // The newest word the crew tapped; `stageStripProps` reads it by the rule
+    // Today's card and the departure header print, so the strip still speaks
+    // on a boat that is hours overdue.
     latestTripStage(db, shopId, tripId),
   ]);
   // Each live site's field guide, for the dive log's "one thing you saw"

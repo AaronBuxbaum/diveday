@@ -57,8 +57,28 @@ describe("noShowSalvageCopy", () => {
       {
         href: "/shop/blue-mantis/bookings/new/trip-2?diverq=Nadia%20Petrov",
         label: "Add them to Two-Tank Reef, Sat 8:00 AM",
+        offer: {
+          tripId: "trip-2",
+          ariaLabel: "Email Nadia Petrov an offer for Two-Tank Reef, Sat 8:00 AM",
+        },
       },
     ]);
+  });
+
+  /**
+   * **And the same day can go to the diver** (UX review 2026-10-11, item 14):
+   * one tap emails them the offer for the person the line names, so the desk
+   * does not have to reach them by hand to say what it already knows.
+   */
+  it("sends the rebooking offer to the diver the line names, and only on that branch", () => {
+    expect(copyFor({ kind: "rebook", departures: [departure] }).offerCopy).toEqual({
+      personId: "person-1",
+      label: "Email them this date",
+      pending: "Sending…",
+      sendFailed: "That didn’t send. Tap it again.",
+    });
+    expect(copyFor({ kind: "waitlist", count: 1 }).offerCopy).toBeUndefined();
+    expect(copyFor({ kind: "none" }).offerCopy).toBeUndefined();
   });
 
   it("offers nothing, with no link, rather than inventing an offer", () => {

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen, within } from "@testing-library/react";
+import { prerender } from "react-dom/static";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ACTION_KIND_META,
@@ -30,6 +31,8 @@ vi.mock("@/app/shop/[shopSlug]/actions", () => ({
   keepRentalFitAction: vi.fn(),
 }));
 
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { StatusMark } from "@/components/ui/StatusMark";
 import type { FirstBooking } from "@/db/first-booking";
 import type { DayTakings as DayTakingsReading } from "@/lib/closeout";
 import { assembleEveningClose, type CloseoutDeparture } from "@/lib/closeout";
@@ -101,7 +104,6 @@ function closed(overrides: Partial<CloseoutDeparture> & { tripId: string }): Clo
     // Two crew, both counted back at the closing checkpoint — the shape a
     // settled departure has once the day's counting is done (issue #1346).
     crew: [{ rollCall: { state: "boarded" } }, { rollCall: { state: "boarded" } }],
-    openSeats: null,
     planChanges: [],
     status: "all_home",
     gapReason: null,
@@ -152,7 +154,9 @@ function renderSpine({
   firstRun?: React.ReactNode;
   firstBooking?: FirstBooking | null;
   factOfScale?: FactOfScale | null;
+  crewTipsCents?: number;
   evening?: EveningReading;
+  blocked?: number;
 } = {}) {
   return render(
     <DaySpine
@@ -289,12 +293,14 @@ describe("a station owns its departure's facts", () => {
     expect(blocked?.style.transform).toBe(`scaleX(${Math.round((10 / 12) * 1e4) / 1e4})`);
   });
 
-  it("wears the departure's stage as a pill, and none when the reader has no phase", () => {
-    renderSpine({ departures: [departure({ phase: "checkin" })] });
-    expect(screen.getByText("Check-in")).toBeInTheDocument();
+  it("wears the crew's stage as a pill, and no clock word when nobody has said", () => {
+    renderSpine({ departures: [departure({ stage: stationStage("boarding") })] });
+    expect(screen.getByText("Boarding")).toBeInTheDocument();
     cleanup();
-    renderSpine({ departures: [departure({ phase: null })] });
-    for (const word of ["Prep", "Check-in", "Aboard", "Back"]) {
+    renderSpine({ departures: [departure({ stage: null })] });
+    // The phase words are gone from every chip (UX review 2026-10-10, item 1):
+    // "Aboard" from a clock is a claim about where people are.
+    for (const word of ["Prep", "Check-in", "Aboard", "Back", "Boarding"]) {
       expect(screen.queryByText(word)).toBeNull();
     }
   });
@@ -545,6 +551,83 @@ describe("the desk group", () => {
  * from `TodayQueue.test.tsx` when the queue became the spine; the conditions
  * are restated in spine terms and nothing was dropped.
  */
+/**
+ * **A claim a wind row would contradict waits for the wind** (code review
+ * 2026-10-11, item 1, dive-domain review). The high-wind rows stream in after
+ * the queue, so the two good-news claims render only once the forecast has
+ * answered. Rendered on the server, as the page streams it: `signal` stops the
+ * render with the forecast still out, so the fallbacks stand where it lands.
+ */
+describe("the good-news moments, beside a forecast still arriving", () => {
+  const windRow = action({
+    id: "high-wind:t1",
+    kind: "high_wind_alert",
+    detail: "Forecast 25 kt wind from NE.",
+    departure: boat("t1"),
+    aboutDeparture: true,
+  });
+
+  async function prerenderSpine(
+    actions: TodayAction[],
+    highWind: Promise<readonly TodayAction[]>,
+    signal?: AbortSignal,
+  ) {
+    const { prelude } = await prerender(
+      <DaySpine
+        context={{
+          spine: assembleDaySpine(
+            { departures: [departure()], actions },
+            { departures: [], actions: [] },
+          ),
+          highWind,
+          shopSlug: "blue-mantis",
+          shopName: "Blue Mantis",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          currency: "usd",
+          now: NOW,
+        }}
+      />,
+      { progressiveChunkSize: Number.POSITIVE_INFINITY, signal, onError: () => {} },
+    );
+    return new Response(prelude).text();
+  }
+  const cleanRoster = [
+    action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+    action({ id: "later", kind: "waiver", departure: boat("t9") }),
+  ];
+
+  it("never calls today's boats clear above a wind warning on one of them", async () => {
+    const html = await prerenderSpine(cleanRoster, Promise.resolve([windRow]));
+    expect(html).toContain("Forecast 25 kt wind from NE.");
+    expect(html).not.toContain("Today’s boats are all clear");
+    expect(html).not.toContain("Nothing is waiting on you");
+  });
+
+  it("never says nothing is waiting while a wind warning is", async () => {
+    const html = await prerenderSpine([], Promise.resolve([windRow]));
+    expect(html).toContain("Forecast 25 kt wind from NE.");
+    expect(html).not.toContain("Nothing is waiting on you");
+    expect(html).not.toContain("Today’s boats are all clear");
+  });
+
+  it("says either once a calm forecast answers", async () => {
+    expect(await prerenderSpine(cleanRoster, Promise.resolve([]))).toContain(
+      "Today’s boats are all clear",
+    );
+    expect(await prerenderSpine([], Promise.resolve([]))).toContain("Nothing is waiting on you");
+  });
+
+  it("says neither while the forecast is out, and says it is checking", async () => {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 0);
+    const html = await prerenderSpine(cleanRoster, new Promise(() => {}), controller.signal);
+    expect(html).toContain("Checking the forecast…");
+    expect(html).not.toContain("Today’s boats are all clear");
+    expect(html).toContain("Diver");
+  });
+});
+
 describe("the good-news moments", () => {
   it("celebrates once today's stations carry nothing pressing but later work remains", () => {
     renderSpine({
@@ -1184,34 +1267,12 @@ describe("the evening reading", () => {
     expect(screen.queryByText(/plan changed/)).toBeNull();
   });
 
-  it("renders the open-seats debrief as one row, and nothing at all when the boat filled", () => {
-    renderSpine({
-      departures: [],
-      evening: evening([
-        closed({
-          tripId: "t1",
-          openSeats: {
-            openSeats: 4,
-            lastBookingDaysOut: 3,
-            dealSent: false,
-            comparable: null,
-          },
-        }),
-      ]),
-    });
-    expect(screen.getByText("Unsold seats")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "4 seats went unsold: the last booking came in 3 days out and no last-minute deal went out.",
-      ),
-    ).toBeInTheDocument();
-    // No trailing door: the station's own title already opens this departure,
-    // and a second path to it from the same panel is what restraint deletes.
-    expect(screen.getAllByRole("link", { name: "Two-Tank Reef" })).toHaveLength(1);
-
-    cleanup();
-    renderSpine({ departures: [], evening: evening([closed({ tripId: "t1" })]) });
+  it("carries no unsold-seats post-mortem on a settled station", () => {
+    // It moved to the departure's Details tab (UX review 2026-10-10, item 31):
+    // the day spine is where the desk looks for what needs doing.
+    renderSpine({ departures: [], evening: evening([closed({ tripId: "t1", booked: 8 })]) });
     expect(screen.queryByText("Unsold seats")).toBeNull();
+    expect(screen.queryByText(/went unsold/)).toBeNull();
   });
 
   it("gives the rental-fit row a control that saves", () => {
@@ -1566,7 +1627,7 @@ describe("the evening reading", () => {
  * spine's rows did not carry until 2026-09-02.
  */
 describe("the row glyph", () => {
-  it("leads every row with the status family's shape for its tone, never a drawing", () => {
+  it("leads a wrong row with the status family's shape and a quiet row with its category drawing", () => {
     const { container } = renderSpine({
       actions: [
         action({ id: "danger", kind: "medical_review", departure: boat("t1") }),
@@ -1584,6 +1645,43 @@ describe("the row glyph", () => {
     expect(inks[2]).toContain("text-muted");
     // From the shipped status family: a drawing is never a status glyph.
     for (const row of rows) expect(row.querySelector("[data-site-mark]")).toBeNull();
+    // UX review 2026-10-10, item 6: the quiet row's mark is the gear drawing,
+    // not the hollow ring that read as a checkbox.
+    const gear = render(<DiveDayIcon name="gear" />).container.querySelector("svg");
+    const ring = render(<StatusMark variant="pending" />).container.querySelector("svg");
+    const quiet = rows[2]?.querySelector("span > svg");
+    expect(quiet?.innerHTML).toBe(gear?.innerHTML);
+    expect(quiet?.innerHTML).not.toBe(ring?.innerHTML);
+  });
+});
+
+/**
+ * **Good news never wears the warning colour** (UX review 2026-10-10, item 3).
+ * The all-clear line wore the coral accent, which reads amber in boat mode; it
+ * now wears success, and it never shows while a boat still has someone blocked.
+ */
+describe("the all-clear line's tone", () => {
+  it("wears success, never the accent or warning", () => {
+    renderSpine({
+      actions: [
+        action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+        action({ id: "later", kind: "waiver", departure: boat("t9") }),
+      ],
+    });
+    const line = screen.getByText("Today’s boats are all clear").closest("[role=status]");
+    expect(line?.className).toContain("bg-success-tint");
+    expect(line?.className).not.toMatch(/accent|warning|primary-tint/);
+  });
+
+  it("stays quiet while the day still counts someone blocked", () => {
+    renderSpine({
+      blocked: 1,
+      actions: [
+        action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+        action({ id: "later", kind: "waiver", departure: boat("t9") }),
+      ],
+    });
+    expect(screen.queryByText("Today’s boats are all clear")).toBeNull();
   });
 });
 
@@ -1720,17 +1818,22 @@ describe("the stage chip (slice 16c)", () => {
       departures: [{ ...departure(), stage: null }],
       actions: [action({ id: "b", departure: boat("t1") })],
     });
-    expect(container.textContent).not.toMatch(/Out on|Heading in|On the surface/);
+    expect(container.textContent).not.toMatch(/Boarding|Underway|Surface|Heading in|Home/);
     // The word this app refuses to say about a boat nobody has spoken for.
     expect(container.textContent).not.toMatch(/unknown/i);
   });
 
-  it("carries the crew's word, the site and the time they said it", () => {
+  it("says the manifest strip's own word, then the site and the time they said it", () => {
     withStage("underway");
-    expect(screen.getByText(/Out on Molasses Reef since /)).toBeInTheDocument();
+    expect(screen.getByText("Underway")).toBeInTheDocument();
+    expect(screen.getByText(/^Molasses Reef · since /)).toBeInTheDocument();
   });
 
-  it("falls back to the siteless word on a departure with no plan", () => {
+  it("names no site at the dock, and none on a departure with no plan", () => {
+    withStage("boarding");
+    expect(screen.getByText("Boarding")).toBeInTheDocument();
+    expect(screen.getByText(/^since /)).toBeInTheDocument();
+    cleanup();
     renderSpine({
       departures: [
         {
@@ -1740,7 +1843,7 @@ describe("the stage chip (slice 16c)", () => {
       ],
       actions: [action({ id: "b", departure: boat("t1") })],
     });
-    expect(screen.getByText(/Out on the water since /)).toBeInTheDocument();
+    expect(screen.getByText(/^since /)).toBeInTheDocument();
   });
 });
 
@@ -1858,6 +1961,7 @@ describe("what today made", () => {
     revenueCents: 124_000,
     tipsCents: 0,
     importedRecordCount: 0,
+    boatTips: [],
     ...over,
   });
 
@@ -1928,6 +2032,40 @@ describe("what today made", () => {
     expect(screen.queryByText("$1,325")).toBeNull();
   });
 
+  it("splits the day's tips by boat when more than one boat was tipped", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1" })], {
+        takings: takings({
+          tipsCents: 14_000,
+          boatTips: [
+            { tripId: "t1", startsAt: hoursFromNow(-8), label: "Manta", cents: 8_000 },
+            { tripId: "t2", startsAt: hoursFromNow(-4), label: "Wreck run", cents: 6_000 },
+          ],
+        }),
+      }),
+    });
+
+    expect(screen.getByText("And $140 in tips.")).toBeInTheDocument();
+    expect(screen.getByText(/Manta: \$80/)).toBeInTheDocument();
+    expect(screen.getByText(/Wreck run: \$60/)).toBeInTheDocument();
+  });
+
+  it("says nothing more about one boat's tips than the sentence already does", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1" })], {
+        takings: takings({
+          tipsCents: 8_000,
+          boatTips: [{ tripId: "t1", startsAt: hoursFromNow(-8), label: "Manta", cents: 8_000 }],
+        }),
+      }),
+    });
+
+    expect(screen.getByText("And $80 in tips.")).toBeInTheDocument();
+    expect(screen.queryByText(/Manta:/)).toBeNull();
+  });
+
   it("says nothing about tips a day did not get", () => {
     renderSpine({
       departures: [],
@@ -1949,5 +2087,18 @@ describe("what today made", () => {
     expect(
       screen.getByText("Includes 3 imported records Stripe has not confirmed."),
     ).toBeInTheDocument();
+  });
+});
+
+/** What the divers left on the reader's boats this week (UX review 2026-10-11, item 18). */
+describe("the crew's tips line", () => {
+  it("tells a crew member what their boats earned in tips this week", () => {
+    renderSpine({ crewTipsCents: 14_000 });
+    expect(screen.getByText("Your boats earned $140 in tips this week.")).toBeInTheDocument();
+  });
+
+  it("says nothing on a week with no tips", () => {
+    renderSpine({ crewTipsCents: 0 });
+    expect(screen.queryByText(/in tips this week/)).toBeNull();
   });
 });

@@ -29,28 +29,31 @@ import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type FormNotice, noticeForForm, noticeFromParam, shopPath } from "@/lib/staff-notices";
-import { tripPhaseOf } from "@/lib/trip-phase";
-import { acceptsNewDivers, isFull } from "@/lib/trips";
+import { departureStage } from "@/lib/trip-phase";
+import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
-import { buildArrivalDesk } from "./_arrivals/arrival-desk";
+import { diversTabState } from "./_arrivals/departure-record";
 import { DESK_NOTICES } from "./_arrivals/notices";
 import { courseRosterActions } from "./_components/course-roster-actions";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
+import { openSeatsDetailsRows } from "./_components/details-rows";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
 import { noteRosterActions } from "./_components/note-roster-actions";
-import { PulseFacts } from "./_components/PulseFacts";
+import { PulseFacts, shownPulseFacts } from "./_components/PulseFacts";
 import { TripAboutLinks } from "./_components/TripAboutLinks";
 import { TripAboutSection } from "./_components/TripAboutSection";
+import { TripIncidentReports } from "./_components/TripIncidentReports";
 import { TripMoreActions } from "./_components/TripMoreActions";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
 import { TripAddDiverLink, TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
 import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRosterContent";
 import { TripStageBadge, TripTabs } from "./_components/TripTabs";
-import { tripAboutRows } from "./_components/trip-about-rows";
+import { assignedCrewNames, tripAboutRows } from "./_components/trip-about-rows";
 import { tripCrewNotes } from "./_components/trip-crew-notes";
 import { DETAILS_FORMS, pageNoticesFor } from "./_components/trip-notice-tabs";
 import { tripPulseFacts } from "./_components/trip-pulse-facts";
+import type { TripPageSearchParams } from "./_components/trip-search-params";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
 import {
   addToWaitlistAction,
@@ -102,25 +105,7 @@ export default async function ManageTripPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{
-    notice?: string;
-    bid?: string;
-    diverq?: string;
-    inviteq?: string;
-    count?: string;
-    /** Which form on this page the notice answers — see `resolveTripNotice`. */
-    form?: string;
-    /** Signed, and verified against this route's own `id` — src/lib/trip-admission-gate.ts. */
-    gate?: string | string[];
-    rf?: string;
-    noteBookingId?: string;
-    noteBody?: string;
-    confirmName?: string;
-    confirmEmail?: string;
-    confirmPhone?: string;
-    /** `details` opens the Details tab; anything else is the Divers tab. */
-    view?: string;
-  }>;
+  searchParams: Promise<TripPageSearchParams>;
 }) {
   const [
     { shopSlug, id: tripId },
@@ -137,6 +122,8 @@ export default async function ManageTripPage({
       confirmEmail,
       confirmPhone,
       view,
+      held,
+      tell,
     },
   ] = await Promise.all([params, searchParams]);
   // An unparseable id names no row. Guarded here rather than in the query
@@ -241,6 +228,7 @@ export default async function ManageTripPage({
   // **Details is its own tab**, and a save on it lands back on it.
   const showDetails =
     view === "details" || Boolean(tripNotice && DETAILS_FORMS.has(tripNotice.form));
+  const openSeatsRows = openSeatsDetailsRows({ db, shop, tripId, t, locale, shown: showDetails });
   const { automatedForecast, tideLines } = departureConditionReads({
     showDetails,
     trip,
@@ -254,7 +242,7 @@ export default async function ManageTripPage({
   const { rootPageNotice, rosterPageNotice } = pageNoticesFor(tripNotice);
   const now = nowDate();
   const acceptsDivers = acceptsNewDivers(trip, now);
-  const phase = tripPhaseOf({
+  const { shown: shownStage, finished } = departureStage({
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     now,
@@ -262,26 +250,20 @@ export default async function ManageTripPage({
     stage: stageReading,
     cancelled,
   });
-  // The desk, on the Divers tab of a departure whose arrivals are open; null
-  // otherwise, and the roster is exactly what it is the rest of the week.
-  const desk = showDetails
-    ? null
-    : await buildArrivalDesk({
-        db,
-        shopId: shop.id,
-        shopSlug,
-        tripId,
-        trip,
-        now,
-        locale,
-        timeZone: shop.timezone,
-        t,
-      });
-  // The count leads the desk and says "1 person can't board yet" itself, so the
-  // pulse's door to the same rows stands down while it is on screen.
-  const shownPulseFacts = desk?.arrival.instrument
-    ? pulseFacts.filter((fact) => !fact.href.endsWith("#roster"))
-    : pulseFacts;
+  // The desk while arrivals are open, or a finished departure's record.
+  const { desk, record } = await diversTabState({
+    db,
+    shopId: shop.id,
+    shopSlug,
+    tripId,
+    trip,
+    now,
+    locale,
+    timeZone: shop.timezone,
+    t,
+    onDivers: !showDetails,
+    finished,
+  });
 
   const tabsCopy = tripTabsCopy(t);
   const rosterActions = {
@@ -349,9 +331,10 @@ export default async function ManageTripPage({
           timeZone={shop.timezone}
           badge={
             <>
-              <TripStageBadge phase={phase} copy={tabsCopy} />
+              <TripStageBadge stage={shownStage?.stage ?? null} copy={tabsCopy} />
               <TripCapacityBadge
                 trip={trip}
+                finished={finished}
                 cancelledLabel={t("trips.detail.cancelledBadge")}
                 t={t}
               />
@@ -386,7 +369,7 @@ export default async function ManageTripPage({
           // cancelled, and the header offers nothing (owner, 2026-10-06). A
           // full boat's wait list stays in the roster's own Add band.
           actions={
-            !acceptsDivers || isFull(trip) ? undefined : (
+            !acceptsDivers || isFull(seatsOnSale(trip)) ? undefined : (
               <TripAddDiverLink
                 // The roster's own band, on the Divers tab: from Details the
                 // anchor is not on the page.
@@ -435,7 +418,7 @@ export default async function ManageTripPage({
                   href={shopPath(shopSlug, "schedule", "blowout", tripId)}
                   className={buttonClass({ variant: "secondary" })}
                 >
-                  {t("trips.detail.viewBlowout")}
+                  {t("trips.detail.viewBlowout", { cause: blowoutCalled })}
                 </Link>
               ) : null}
             </div>
@@ -445,25 +428,29 @@ export default async function ManageTripPage({
         {showDetails ? (
           <>
             <TripAboutSection
-              rows={tripAboutRows({
-                overview,
-                crewNotes,
-                liveBoatClashes,
-                shop,
-                shopSlug,
-                tripId,
-                locale,
-                t,
-                tripNotice,
-                shopBoats,
-                shopLenses,
-                automatedForecast,
-                tideLines,
-              })}
+              rows={[
+                ...tripAboutRows({
+                  overview,
+                  crewNotes,
+                  liveBoatClashes,
+                  shop,
+                  shopSlug,
+                  tripId,
+                  locale,
+                  t,
+                  tripNotice,
+                  shopBoats,
+                  shopLenses,
+                  automatedForecast,
+                  tideLines,
+                  held: notice === "saved" ? held : undefined,
+                  tell,
+                }),
+                ...(await openSeatsRows),
+              ]}
               actions={
                 <TripAboutLinks
-                  db={db}
-                  shopId={shop.id}
+                  shop={shop}
                   personId={session.user.personId}
                   shopSlug={shopSlug}
                   tripId={tripId}
@@ -471,6 +458,7 @@ export default async function ManageTripPage({
                 />
               }
             />
+            <TripIncidentReports shop={shop} personId={session.user.personId} tripId={tripId} />
             <TripPromoteAndActivity
               guests={guests}
               shopSlug={shopSlug}
@@ -487,6 +475,7 @@ export default async function ManageTripPage({
                     tripId={tripId}
                     startsAt={trip.startsAt}
                     series={canConfigure ? series : null}
+                    crewNames={assignedCrewNames(overview)}
                     lifecycleStatus={lifecycleStatus}
                     locale={locale}
                     t={t}
@@ -504,7 +493,7 @@ export default async function ManageTripPage({
               refreshing: t("checkIn.pullToRefresh.refreshing"),
             }}
           >
-            {pulseNeeded ? (
+            {pulseNeeded && !finished ? (
               <MinimumSeatsBand
                 trip={trip}
                 booked={trip.booked}
@@ -515,13 +504,14 @@ export default async function ManageTripPage({
             ) : null}
 
             <PulseFacts
-              facts={shownPulseFacts}
+              facts={shownPulseFacts(pulseFacts, { desk, finished })}
               foldLabel={(count) => t("trips.pulse.toSort", { count })}
             />
 
             <TripRosterContent
               context={{
                 arrival: desk?.arrival,
+                record,
                 walkInOpen: desk?.walkInOpen,
                 acceptsDivers,
                 guests,

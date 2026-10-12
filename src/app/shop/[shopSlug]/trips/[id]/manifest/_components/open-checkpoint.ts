@@ -1,7 +1,6 @@
-import { notFound } from "next/navigation";
 import { withholdHeldSeatParticulars } from "@/lib/held-seat";
 import {
-  isRollCallCheckpoint,
+  manifestAtCheckpoint,
   type RollCallCheckpoint,
   rollCallCheckpoints,
   type TripManifest,
@@ -9,8 +8,7 @@ import {
 
 /**
  * **The checkpoint this page opens on, and its manifest**: the one the URL
- * asked for when the departure has it, the dock otherwise. A checkpoint with
- * no manifest is a 404, like a departure with none.
+ * asked for when the departure has it, the dock otherwise.
  */
 export function openCheckpoint(
   completeManifests: readonly TripManifest[],
@@ -19,12 +17,11 @@ export function openCheckpoint(
 ) {
   const plannedDiveCount = departureManifest.trip.plannedDives;
   const checkpoints = rollCallCheckpoints(plannedDiveCount);
-  const checkpoint: RollCallCheckpoint =
-    requestedCheckpoint && isRollCallCheckpoint(requestedCheckpoint, plannedDiveCount)
-      ? requestedCheckpoint
-      : "departure";
-  const checkpointManifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
-  if (!checkpointManifest) notFound();
+  // An unknown or absent checkpoint opens the departure list.
+  const checkpointManifest =
+    manifestAtCheckpoint(completeManifests, requestedCheckpoint ?? "departure") ??
+    departureManifest;
+  const checkpoint: RollCallCheckpoint = checkpointManifest.checkpoint;
   // Held seats are settled once, here, so every reader on the page — the
   // not-back-aboard alarm, the buddy builder, both roll calls — sees the seat
   // and never the matched person's particulars (issue #1690).

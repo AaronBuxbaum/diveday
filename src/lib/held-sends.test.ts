@@ -4,6 +4,7 @@ import {
   heldSendRunAt,
   heldSendSecondsLeft,
   isHeldSendDue,
+  mergeRescheduleHolds,
   SEND_HOLD_MS,
 } from "./held-sends";
 
@@ -102,5 +103,51 @@ describe("heldSendPayloadSchema", () => {
     expect(heldSendPayloadSchema.safeParse({ ...deal, discountAmountCents: 0 }).success).toBe(
       false,
     );
+  });
+});
+
+describe("mergeRescheduleHolds", () => {
+  const trip = "4b1f6f5e-2c7d-4c47-9a35-0d5c1e3f7a21";
+  const other = "9a0b1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d";
+  const held = (previousStartsAt: string, meetingPointMoved = false, tripId = trip) => ({
+    kind: "trip_rescheduled" as const,
+    tripId,
+    previousStartsAt,
+    meetingPointMoved,
+  });
+
+  it("tells the divers the time they were last told, however many moves are held", () => {
+    const merged = mergeRescheduleHolds(
+      [held("2026-10-20T13:00:00.000Z")],
+      held("2026-10-21T13:00:00.000Z", true),
+      new Date("2026-10-22T13:00:00Z"),
+    );
+    expect(merged).toEqual(held("2026-10-20T13:00:00.000Z", true));
+  });
+
+  it("says nothing when the departure is back where the divers were told it was", () => {
+    expect(
+      mergeRescheduleHolds(
+        [held("2026-10-20T13:00:00.000Z")],
+        held("2026-10-21T13:00:00.000Z"),
+        new Date("2026-10-20T13:00:00Z"),
+      ),
+    ).toBeNull();
+  });
+
+  it("never folds another departure's hold into this one", () => {
+    const merged = mergeRescheduleHolds(
+      [held("2026-10-01T13:00:00.000Z", true, other)],
+      held("2026-10-21T13:00:00.000Z"),
+      new Date("2026-10-22T13:00:00Z"),
+    );
+    expect(merged).toEqual(held("2026-10-21T13:00:00.000Z"));
+  });
+
+  it("holds ids and instants only", () => {
+    expect(
+      heldSendPayloadSchema.safeParse({ ...held("2026-10-21T13:00:00.000Z"), to: "a@b.c" }).data,
+    ).toEqual(held("2026-10-21T13:00:00.000Z"));
+    expect(heldSendPayloadSchema.safeParse(held("next tuesday")).success).toBe(false);
   });
 });

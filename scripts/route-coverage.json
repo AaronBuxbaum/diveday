@@ -110,6 +110,10 @@
   "/shop/[shopSlug]/trips/[id]": {
     "a11y": ["a11y.spec.ts"]
   },
+  "/shop/[shopSlug]/trips/[id]/incidents/[reportId]": {
+    "e2e": ["incident-reports.spec.ts"],
+    "visual": ["incident-report-draft"]
+  },
   "/shop/[shopSlug]/trips/[id]/log": {
     "visual": ["departure-log", "departure-log-every-checkpoint"],
     "a11y": ["a11y.spec.ts"]

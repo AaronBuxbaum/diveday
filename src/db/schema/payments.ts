@@ -374,6 +374,12 @@ export const paymentEventOperation = pgEnum("payment_event_operation", [
    * (ADR 20261009-stripe-reversals-reach-diveday).
    */
   "stripe_dashboard_refund",
+  /**
+   * A refund Stripe accepted and later reported `failed` or `canceled`
+   * (`charge.refund.updated`, issue #2291): the money came back to the shop,
+   * so the seat goes back to what it was before that refund.
+   */
+  "refund_failed",
 ]);
 
 /**
@@ -906,10 +912,32 @@ export const bookingCheckouts = pgTable(
      * webhook arrives.
      */
     refundedCents: integer("refunded_cents").notNull().default(0),
+    /**
+     * When Stripe reported this session paid after DiveDay had already closed
+     * it (`expired`: a stale quote retired, a reschedule, a seat that changed
+     * type) — issue #2335. The diver's card was charged, but the checkout stays
+     * `expired` and no seat is marked paid from it, because the price it quoted
+     * no longer describes any seat. Null is the normal state.
+     *
+     * Paired with `paid_after_close_cents`, what Stripe captured. The money is
+     * owed back until `refunded_cents` reaches it, by DiveDay's own refund from
+     * the Orders index or by one made in the Stripe dashboard; that comparison,
+     * not a third column, is what takes it off the queue.
+     */
+    paidAfterCloseAt: timestamp("paid_after_close_at", { withTimezone: true }),
+    paidAfterCloseCents: integer("paid_after_close_cents"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("booking_checkouts_stripe_session_unique").on(table.stripeSessionId),
+    check(
+      "booking_checkouts_paid_after_close_pair",
+      sql`(${table.paidAfterCloseAt} is null) = (${table.paidAfterCloseCents} is null)`,
+    ),
+    check(
+      "booking_checkouts_paid_after_close_nonnegative",
+      sql`${table.paidAfterCloseCents} is null or ${table.paidAfterCloseCents} >= 0`,
+    ),
     index("booking_checkouts_stripe_payment_intent_idx").on(table.stripePaymentIntentId),
     check("booking_checkouts_refunded_nonnegative", sql`${table.refundedCents} >= 0`),
     index("booking_checkouts_shop_trip_idx").on(table.shopId, table.tripId),
@@ -1067,6 +1095,110 @@ export const paymentDisputes = pgTable(
   ],
 );
 
+/**
+ * **A Stripe payout**: money Stripe moved from a shop's connected account to
+ * its bank, one row per Stripe payout, kept current by the `payout.paid` and
+ * `payout.failed` webhooks (ADR 20261012-payouts-reach-diveday).
+ *
+ * This is the line that ties Reports to the bank statement: "Paid out $1,842
+ * on Oct 3, covering Sep 27 to Oct 1". The amount, currency and arrival date
+ * are Stripe's own, verbatim off the event. `covered_from`/`covered_to` and
+ * `fee_cents` are a summary of the payout's balance transactions, asked of
+ * Stripe once when the payout is paid and never at render; null means Stripe
+ * did not say (a manual payout, which Stripe will not itemize, or a read that
+ * was refused), never zero.
+ *
+ * Informs, never moves money. A failed payout is Stripe's to retry and the
+ * shop's to fix in its own Stripe account; DiveDay only says so.
+ */
+export const stripePayouts = pgTable(
+  "stripe_payouts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    /** The event's own `account`: whose bank this money went to. */
+    stripeAccountId: text("stripe_account_id").notNull(),
+    stripePayoutId: text("stripe_payout_id").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    currency: text("currency").notNull(),
+    /** Stripe's own status code (`paid`, `failed`, …), verbatim. */
+    status: text("status").notNull(),
+    /** When Stripe says the money reaches (or reached) the bank. */
+    arrivalDate: timestamp("arrival_date", { withTimezone: true }).notNull(),
+    /** Stripe's own failure code (`account_closed`, `no_account`, …), verbatim. */
+    failureCode: text("failure_code"),
+    /** The earliest and latest money this payout carries, by Stripe's `created`. */
+    coveredFrom: timestamp("covered_from", { withTimezone: true }),
+    coveredTo: timestamp("covered_to", { withTimezone: true }),
+    /** Stripe's fees on the money this payout carries, net of fees it returned. */
+    feeCents: integer("fee_cents"),
+    /** The `created` time of the newest event applied; an older one never overwrites it. */
+    lastEventAt: timestamp("last_event_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("stripe_payouts_stripe_payout_unique").on(table.stripePayoutId),
+    /** Reports' and the Orders index's read: one shop's live payouts by arrival. */
+    index("stripe_payouts_shop_arrival_idx")
+      .on(table.shopId, table.arrivalDate)
+      .where(sql`${table.deletedAt} is null`),
+  ],
+);
+
+/**
+ * A refund Stripe accepted and then reported **failed or canceled**
+ * (`charge.refund.updated`, issue #2291): the card was closed, the bank sent
+ * it back. The money is in the shop's Stripe balance again, so the refund
+ * recorded on the order or checkout is reversed in the same transaction this
+ * row is written in, and the diver is owed it.
+ *
+ * One row per Stripe refund (`stripe_refund_id` is unique), which is what makes
+ * a redelivered event a no-op. The row is owed on the Orders index until the
+ * order's or checkout's `refunded_cents` is back at
+ * `owed_until_refunded_cents` (its figure before the reversal): a new refund,
+ * from DiveDay or from the Stripe dashboard, takes it off the queue. Nothing
+ * re-issues the refund automatically.
+ */
+export const stripeRefundFailures = pgTable(
+  "stripe_refund_failures",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    stripeAccountId: text("stripe_account_id").notNull(),
+    stripeRefundId: text("stripe_refund_id").notNull(),
+    orderId: uuid("order_id").references(() => orders.id),
+    checkoutId: uuid("checkout_id").references(() => bookingCheckouts.id),
+    /** The seat whose payment row went back to its state before the refund, when one did. */
+    bookingId: uuid("booking_id").references(() => bookings.id),
+    /** What the failed refund was for; what came back to the shop. */
+    amountCents: integer("amount_cents").notNull(),
+    currency: text("currency").notNull(),
+    /** Stripe's refund status, verbatim: `failed` or `canceled`. */
+    refundStatus: text("refund_status").notNull(),
+    /** Stripe's `failure_reason` (`expired_or_canceled_card`, …) when it gives one, narrowed to its documented codes (`refundFailureReasonOf`). */
+    failureReason: text("failure_reason"),
+    owedUntilRefundedCents: integer("owed_until_refunded_cents").notNull(),
+    failedAt: timestamp("failed_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("stripe_refund_failures_refund_unique").on(table.stripeRefundId),
+    index("stripe_refund_failures_shop_idx").on(table.shopId, table.failedAt),
+    check("stripe_refund_failures_amount_nonnegative", sql`${table.amountCents} >= 0`),
+    check(
+      "stripe_refund_failures_one_target",
+      sql`(${table.orderId} is null) <> (${table.checkoutId} is null)`,
+    ),
+    check("stripe_refund_failures_status", sql`${table.refundStatus} in ('failed', 'canceled')`),
+  ],
+);
+
 export const tipStatus = pgEnum("tip_status", ["pending", "paid", "expired"]);
 
 /**
@@ -1201,7 +1333,11 @@ export const paymentOperationIntents = pgTable(
     bookingId: uuid("booking_id").references(() => bookings.id),
     /** Set for a refund intent against an order's invoice. */
     orderId: uuid("order_id").references(() => orders.id),
-    /** Reserved for a future refund path that has a booking_checkouts row in hand; no caller sets this today. */
+    /**
+     * Set for a refund intent against a checkout as a whole: a reversal Stripe
+     * made that no seat was matched to (`parkStripeReversal`), or the refund of
+     * money captured after the checkout closed (`refundPaidAfterCloseCheckout`).
+     */
     checkoutId: uuid("checkout_id").references(() => bookingCheckouts.id),
     /**
      * The capped discount a checkout_session attempt is spending, written under
@@ -1365,6 +1501,7 @@ export type StripeWebhookEvent = typeof stripeWebhookEvents.$inferSelect;
 export type BookingCheckout = typeof bookingCheckouts.$inferSelect;
 
 export type PaymentDispute = typeof paymentDisputes.$inferSelect;
+export type StripePayout = typeof stripePayouts.$inferSelect;
 
 export type Tip = typeof tips.$inferSelect;
 

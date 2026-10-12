@@ -16,7 +16,8 @@
     "pagination": {
       "total": "{count, plural, one {# course} other {# courses}}"
     },
-    "formsAwaitingText": "Paste the agency’s wording: {forms}"
+    "formsAwaitingTextSummary": "{count, plural, one {# course needs its agency form wording.} other {# courses need their agency form wording.}}",
+    "formsAwaitingTextDoor": "Start with {title}"
   },
   "edit": {
     "depthMarkersHint": "<marker>'{depth18}'</marker> prints as “18 meters” or “60 feet” in the diver’s unit. Also <marker>'{depth12}'</marker>, <marker>'{depth21}'</marker>, <marker>'{depth30}'</marker> and <marker>'{depth40}'</marker>; add <marker>n</marker> for a bare number in a range. Delete a marker to write the depth yourself.",

@@ -21,7 +21,8 @@ the `order.refunded` the shop's books needed. A dispute was invisible until the 
   PaymentIntent is recorded as each payment settles: `orders.stripe_payment_intent_id` off
   `invoice.paid`, `booking_checkouts.stripe_payment_intent_id` off the session's completion. When
   neither has it, Stripe is asked once (`src/lib/payments/payment-sources.ts`: read-only list calls
-  by PaymentIntent) and the answer is written back. Matching is always scoped to the event's own
+  by PaymentIntent, with the key `stripeSecretKeyFor` chooses for the event's account, so the
+  demo's account is asked with its test-mode key; issue #2296) and the answer is written back. Matching is always scoped to the event's own
   `account`.
 - **A refund is reconciled to Stripe's cumulative `amount_refunded`, never applied as an event.**
   The delta `amount_refunded − refunded_cents` is computed under the row's lock and applied only
@@ -63,6 +64,11 @@ the `order.refunded` the shop's books needed. A dispute was invisible until the 
 - The Connect webhook must list the four new events; `config/env-registry.mjs` says so.
 - A refund that later **fails** at the bank (`charge.refund.updated`) is not handled: the books
   keep it. A lost dispute is not written onto the order either. Both are follow-ups if they occur.
+  *Amended 2026-10-12 (issue #2291):* a failed or canceled refund is now handled. The endpoint
+  also listens to `charge.refund.updated`; one `stripe_refund_failures` row per Stripe refund
+  reverses the recorded refund on the order or checkout (and on a seat DiveDay refunded itself),
+  and the diver shows as owed on the Orders index until a new refund brings `refunded_cents`
+  back. Nothing is re-issued automatically, and the accounting integrations are not told.
 - A party checkout's dashboard refund is counted on the checkout but on no seat, so Reports still
   shows those seats in full until staff mark the right one; it waits on the stuck-operations
   queue, and automatic refunds of that checkout's seats wait with it.

@@ -193,7 +193,9 @@
   "remove": {
     "removePersonSummary": "Eliminar a {name}",
     "removing": "Eliminando…",
-    "removeDiver": "Eliminar buceador"
+    "removeDiver": "Eliminar buceador",
+    "consequence": "Quita a {name} de la lista, los selectores de reserva, los manifiestos y la preparación. Sus exenciones, salidas y pagos se conservan, y puedes restaurarlo.",
+    "staffWarning": "También trabaja aquí. Al eliminarlo sale del equipo y ya no podrá iniciar sesión."
   },
   "removed": {
     "badge": "Eliminado",
@@ -430,6 +432,7 @@
     "mergeAnonymized": "Estos registros no se pueden fusionar porque uno ya fue borrado.",
     "mergeAssessmentChanged": "Algo cambió en estos registros desde que abriste esta comparación. Revísala de nuevo antes de fusionar. No se movió nada.",
     "mergeBookingConflict": "Ambos registros tienen un lugar en la misma salida, lo que suele indicar dos personas. No se movió nada.",
+    "mergeBookingConflictOn": "Ambos registros tienen un lugar en {departure}, lo que suele indicar dos personas. No se movió nada.",
     "mergeDepartureUnderway": "Uno de estos registros está en una salida que está en el agua ahora. Fusiona cuando el barco haya vuelto.",
     "mergeDifferentPeopleUnacknowledged": "Verifica que estos registros son de la misma persona antes de fusionar. No se movió nada.",
     "mergeInvalid": "Elige uno de los posibles registros duplicados e inténtalo de nuevo.",
@@ -441,6 +444,7 @@
     "noCertificationNothingToClear": "No hay nada que corregir. La ficha de este buceador ya no dice que no tenga certificación.",
     "notAuthorizedCards": "Tu cuenta ya no puede modificar certificaciones en este centro. Pide a un propietario o gerente que revise tu acceso.",
     "notAuthorizedDelete": "Eliminar a un buceador está limitado a propietarios y gerentes; pide a uno de ellos que lo haga.",
+    "removeCrewUpcoming": "Forma parte de la tripulación de una salida próxima. Quítalo de esas salidas y luego elimínalo.",
     "notAuthorizedDetails": "Tu cuenta ya no puede editar a este buceador en este centro. Pide a un propietario o gerente que revise tu acceso.",
     "notAuthorizedErase": "Borrar los datos personales de un buceador está limitado al propietario del centro. Pídeselo a esa persona.",
     "notAuthorizedFit": "Cambiar el ajuste de alquiler indicado de un buceador está limitado a propietarios, gerentes, instructores y divemasters. Aún puedes marcarlos para ajuste manual en el check-in.",
@@ -505,8 +509,18 @@
   "story": {
     "heading": "La historia",
     "empty": "Todavía no hay visitas.",
-    "sailed": "zarpó",
-    "waiverSigned": "exención firmada",
+    "sailed": "salió",
+    "dived": "buceó",
+    "stayedAshore": "se quedó en tierra",
+    "didNotDive": "no buceó",
+    "joinedLater": "se sumó más tarde",
+    "firstDive": "primera inmersión con nosotros",
+    "rented": "alquiló {items}",
+    "rated": "le dio {rating} de 5",
+    "canceled": "cancelada",
+    "tripCalledOff": "salida suspendida",
+    "noShow": "no se presentó",
+    "notCountedBack": "no se contó de vuelta a bordo",
     "showAll": "Ver las {count}",
     "newInvoice": "Nueva factura"
   },
@@ -529,7 +543,8 @@
     "viewRefusedRecord": "Ver registro firmado",
     "referralUnresolved": "Derivación médica del {date}; firmada de nuevo sin autorización de un médico registrada. Regístrala o pregunta.",
     "viewReferralRecord": "Ver la derivación",
-    "openClearanceDocument": "Abrir la evaluación médica"
+    "openClearanceDocument": "Abrir la evaluación médica",
+    "openSignedRecord": "Abrir la exención firmada"
   },
   "details": {
     "label": "Datos de contacto",

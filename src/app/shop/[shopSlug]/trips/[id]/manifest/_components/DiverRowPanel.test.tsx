@@ -93,6 +93,25 @@ describe("asserting aboard over a missing mark is never the cheap direction", ()
     expect(retract).toBeDefined();
   });
 
+  /**
+   * **Both controls wear an opaque fill** (issue #2341). A translucent
+   * `bg-<hue>/N` takes its contrast from whatever is under it, and these are
+   * the two controls read in direct sunlight with someone possibly in the
+   * water.
+   */
+  it("paints both directions on an opaque tint, never a see-through one", () => {
+    renderList({ divers: [diver({ rollCall: notBackAt() })] });
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    const sheet = screen.getByRole("dialog");
+    const backAboard = within(sheet).getByRole("button", { name: /^Mark back aboard/ });
+    const retract = within(sheet).getByRole("button", { name: "Not back aboard" });
+    expect(backAboard.className).toContain("bg-success-tint");
+    expect(retract.className).toContain("bg-danger-tint");
+    for (const control of [backAboard, retract]) {
+      expect(control.className).not.toMatch(/\bbg-[a-z]+\/\d+/);
+    }
+  });
+
   it("still says a diver is blocked at the dock, where readiness does gate boarding", () => {
     const { container } = renderList({
       checkpoint: "departure",
@@ -130,7 +149,7 @@ describe("the person panel's spacing", () => {
   });
 
   /**
-   * **The rule under "Resolve blockers on Guests →" sits as far from the link's
+   * **The rule under "Resolve blockers on Divers →" sits as far from the link's
    * words as from the next line's** (pixel-craft class 4, K-362). The link is a
    * 44px target round a 24px line, so about 15px of its box is already air under
    * its words; the rule's `my-3` added 12px more above and 12 below — 27px of
@@ -159,7 +178,7 @@ describe("DiverRowPanel, drawn on its own", () => {
       <DiverRowPanel
         context={diverContext({ checkpoint: "departure", isDeparture: true, divers: [blocked] })}
         diver={blocked}
-        state={diverRowState(blocked, "departure", true)}
+        state={diverRowState(blocked, "departure", true, "America/New_York")}
         sharedAdvisoryTexts={new Set()}
         bookingNotes={[]}
       />,
@@ -176,7 +195,7 @@ describe("DiverRowPanel, drawn on its own", () => {
       <DiverRowPanel
         context={diverContext({ divers: [missing] })}
         diver={missing}
-        state={diverRowState(missing, "after_dive_1", false)}
+        state={diverRowState(missing, "after_dive_1", false, "America/New_York")}
         sharedAdvisoryTexts={new Set()}
         bookingNotes={[]}
       />,

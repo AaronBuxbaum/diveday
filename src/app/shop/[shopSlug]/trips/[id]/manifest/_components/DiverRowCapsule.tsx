@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { buddyAlertText } from "@/i18n/buddy-labels";
+import { medicalWarningChips } from "@/i18n/manifest-labels";
 import { staffParticipantTypeLabel, staffSeatTypeNote } from "@/i18n/participant-labels";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -9,49 +10,33 @@ import type { TripManifest } from "@/lib/manifests";
 import type { DiverRowState } from "./diver-row-state";
 
 /**
- * **The row's one capsule**, drawn for the exception `diverRowState` chose —
- * or nothing. A function rather than a component because the row asks
- * whether there *is* one before it draws the line that holds it.
+ * **The row's one capsule**, drawn from the kind `diverRowState` chose —
+ * or nothing (issue #2307: one chain decides it, so screen and paper
+ * agree). A function rather than a component because the row asks whether
+ * there *is* one before it draws the line that holds it.
  */
 export function diverCapsule(
   diver: TripManifest["divers"][number],
-  {
-    splitAfterDive,
-    alarmed,
-    blockedAtDock,
-    diverStatus,
-    earlierRefusal,
-    referralUnresolved,
-  }: DiverRowState,
+  { splitAfterDive, diverStatus, capsuleKind, medicalDays }: DiverRowState,
   t: StaffTranslator,
 ): ReactNode {
-  const buddyCapsule =
-    diver.buddyAlert && diver.buddyTeam ? (
-      <Badge tone={splitAfterDive ? "danger" : "warning"}>
-        {buddyAlertText(t, diver.buddyAlert)}
-      </Badge>
-    ) : null;
-  const capsule =
-    splitAfterDive && buddyCapsule ? (
-      buddyCapsule
-    ) : alarmed ? null : blockedAtDock ? (
-      <Badge tone={readinessStatusTone(diverStatus)}>{readinessStatusText(t, diverStatus)}</Badge>
-    ) : buddyCapsule ? (
-      buddyCapsule
-    ) : earlierRefusal ? (
-      <Badge tone="warning">{t("manifest.medicalEarlierRefusalChip")}</Badge>
-    ) : referralUnresolved ? (
-      <Badge tone="warning">{t("manifest.medicalReferralUnresolvedChip")}</Badge>
-    ) : diver.minor && diver.age !== null && diver.age !== undefined ? (
-      <Badge tone="warning" tabularNums>
-        {t("manifest.minorAge", { age: diver.age })}
-      </Badge>
-    ) : diver.depthAdvisory?.status === "exceeds" ? (
-      <Badge tone="warning">{t("manifest.depthChip")}</Badge>
-    ) : diver.birthday ? (
-      <Badge tone="primary">{birthdayCalloutText(t, diver.birthday)}</Badge>
-    ) : null;
-  return capsule;
+  return capsuleKind === "buddy" && diver.buddyAlert ? (
+    <Badge tone={splitAfterDive ? "danger" : "warning"}>
+      {buddyAlertText(t, diver.buddyAlert)}
+    </Badge>
+  ) : capsuleKind === "blocked" ? (
+    <Badge tone={readinessStatusTone(diverStatus)}>{readinessStatusText(t, diverStatus)}</Badge>
+  ) : capsuleKind === "medical" ? (
+    <Badge tone="warning">{medicalWarningChips(t, medicalDays)[0]}</Badge>
+  ) : capsuleKind === "minor" ? (
+    <Badge tone="warning" tabularNums>
+      {t("manifest.minorAge", { age: diver.age ?? 0 })}
+    </Badge>
+  ) : capsuleKind === "depth" ? (
+    <Badge tone="warning">{t("manifest.depthChip")}</Badge>
+  ) : capsuleKind === "birthday" && diver.birthday ? (
+    <Badge tone="primary">{birthdayCalloutText(t, diver.birthday)}</Badge>
+  ) : null;
 }
 
 /** The seat's type in words, beside the capsule — or nothing for a diver. */

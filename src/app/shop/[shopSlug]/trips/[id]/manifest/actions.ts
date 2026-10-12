@@ -34,7 +34,7 @@ import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { isAllowedPushEndpoint } from "@/lib/notifications/web-push";
 import { PLAN_CHANGE_NOTE_MAX, PLAN_CHANGE_REASONS } from "@/lib/plan-change";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { TRIP_STAGES } from "@/lib/trip-stages";
 import { UUID_SOURCE } from "@/lib/uuid";
@@ -87,6 +87,17 @@ export type ManifestTripContext = Omit<ManifestActionContext, "checkpoint">;
  */
 function manifestPath({ shopSlug, tripId }: ManifestTripContext): string {
   return shopPath(shopSlug, "trips", tripId, "manifest");
+}
+
+/**
+ * The staff session for an act on this manifest. The slug is bound into the
+ * context by the page and steers every revalidation and redirect below, so a
+ * context naming a shop that is not this session's is a 404
+ * (`requireShopSurface`), the same as the page itself. Writes are scoped by
+ * `session.user.shopId` either way.
+ */
+async function manifestStaff(ctx: ManifestTripContext) {
+  return (await requireShopSurface(ctx.shopSlug)).session;
 }
 
 /**
@@ -167,7 +178,7 @@ export type ExecutedDiveResult =
  * anything the client sent — a tap can only ever move the tapper's own mark.
  */
 export async function markTripCaughtUpAction(ctx: ManifestTripContext): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await manifestStaff(ctx);
   await markTripCaughtUp(await getDb(), {
     shopId: staff.user.shopId,
     tripId: ctx.tripId,
@@ -183,7 +194,7 @@ export async function saveExecutedDiveAction(
   _previous: ExecutedDiveResult | undefined,
   formData: FormData,
 ): Promise<ExecutedDiveResult> {
-  const staff = await requireStaffSession();
+  const staff = await manifestStaff(ctx);
   const parsed = executedDiveSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { status: "error", reason: "invalid" };
   const checkpointDive = /^after_dive_(\d+)$/.exec(ctx.checkpoint)?.[1];
@@ -269,7 +280,7 @@ export async function recordSightingAction(
   _previous: SightingResult | undefined,
   formData: FormData,
 ): Promise<SightingResult> {
-  const staff = await requireStaffSession();
+  const staff = await manifestStaff(ctx);
   const parsed = sightingSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { status: "error" };
   const saved = await recordTripSighting(await getDb(), {
@@ -290,7 +301,7 @@ export async function deleteSightingAction(
   _previous: SightingResult | undefined,
   formData: FormData,
 ): Promise<SightingResult> {
-  const staff = await requireStaffSession();
+  const staff = await manifestStaff(ctx);
   const parsed = sightingSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { status: "error" };
   const removed = await deleteTripSighting(await getDb(), {
@@ -483,7 +494,7 @@ export async function rollCallAction(
   formData: FormData,
 ): Promise<RollCallResult> {
   const { tripId, checkpoint } = ctx;
-  const staff = await requireStaffSession();
+  const staff = await manifestStaff(ctx);
   const parsed = rollCallSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, reason: "error" };
   // A throw or dropped connection returns the worded rollback rather than
@@ -536,7 +547,7 @@ export async function preDepartureCheckAction(
   _prev: PreDepartureCheckResult,
   formData: FormData,
 ): Promise<PreDepartureCheckResult> {
-  const staff = await requireStaffSession();
+  const staff = await manifestStaff(ctx);
   const parsed = preDepartureCheckSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, reason: "error" };
   try {
@@ -571,7 +582,7 @@ export async function setTripStageAction(
   _prev: PreDepartureCheckResult,
   formData: FormData,
 ): Promise<PreDepartureCheckResult> {
-  const staff = await requireStaffSession();
+  const staff = await manifestStaff(ctx);
   const parsed = tripStageSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, reason: "error" };
   try {
@@ -599,7 +610,7 @@ export async function addManifestPrivateNoteAction(
   ctx: ManifestTripContext,
   formData: FormData,
 ): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = await manifestStaff(ctx);
   const parsed = privateNoteSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return;
   const saved = await addInternalNote(await getDb(), {
@@ -624,7 +635,7 @@ export async function crewRollCallAction(
   formData: FormData,
 ): Promise<RollCallResult> {
   const { tripId, checkpoint } = ctx;
-  const staff = await requireStaffSession();
+  const staff = await manifestStaff(ctx);
   const parsed = crewRollCallSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, reason: "error" };
   try {
@@ -658,7 +669,7 @@ export async function crewRollCallAction(
  * refusal re-lands on this checkpoint with a worded reason.
  */
 export async function formBuddyTeamAction(ctx: ManifestActionContext, formData: FormData) {
-  const staff = await requireStaffSession();
+  const staff = await manifestStaff(ctx);
   const { tripId } = ctx;
   const back = manifestBack(ctx);
   const parsed = formTeamSchema.safeParse({ members: formData.getAll("members") });
@@ -677,7 +688,7 @@ export async function formBuddyTeamAction(ctx: ManifestActionContext, formData: 
 
 /** Add one more person to a team that already stands. */
 export async function addBuddyTeamMemberAction(ctx: ManifestActionContext, formData: FormData) {
-  const staff = await requireStaffSession();
+  const staff = await manifestStaff(ctx);
   const { tripId } = ctx;
   const back = manifestBack(ctx);
   const parsed = teamMemberSchema.safeParse(Object.fromEntries(formData));
@@ -700,7 +711,7 @@ export async function addBuddyTeamMemberAction(ctx: ManifestActionContext, formD
  * own entry on the trail.
  */
 export async function removeBuddyTeamMemberAction(ctx: ManifestActionContext, formData: FormData) {
-  const staff = await requireStaffSession();
+  const staff = await manifestStaff(ctx);
   const { tripId } = ctx;
   const back = manifestBack(ctx);
   const parsed = teamMemberSchema.safeParse(Object.fromEntries(formData));
@@ -718,7 +729,7 @@ export async function removeBuddyTeamMemberAction(ctx: ManifestActionContext, fo
 
 /** Dissolve a team — the explicit act re-forming always goes through. */
 export async function dissolveBuddyTeamAction(ctx: ManifestActionContext, formData: FormData) {
-  const staff = await requireStaffSession();
+  const staff = await manifestStaff(ctx);
   const { tripId } = ctx;
   const back = manifestBack(ctx);
   const parsed = teamSchema.safeParse(Object.fromEntries(formData));

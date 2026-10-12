@@ -107,8 +107,8 @@ export function DiverRowPanel({
         locale={locale}
         timezone={timezone}
         columns={1}
-        referralHref={(referral) =>
-          shopPath(shopSlug, "divers", referral.personId, "waivers", referral.recordId)
+        waiverHref={(record) =>
+          shopPath(shopSlug, "divers", record.personId, "waivers", record.recordId)
         }
         t={t}
       />

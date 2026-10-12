@@ -1,12 +1,12 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { bookings, preDepartureChecklistItems, trips } from "@/db/schema";
+import { bookings, preDepartureChecklistItems, tripStageEvents, trips } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId, staffSession } from "@/test/staff-session";
 
 /**
  * **A form posted with another shop's slug bound into it**, for each of the
- * five action files that bind one.
+ * six action files that bind one (the manifest binds it inside a context object).
  *
  * Every write these actions make is scoped by `session.user.shopId`, so no
  * other tenant's row was ever at risk. The slug steered the rest: the
@@ -43,6 +43,7 @@ const { pullCourseTemplateUpdatesAction } = await import("./courses/[slug]/edit/
 const { callBlowoutAction } = await import("./schedule/blowout/[tripId]/actions");
 const { removeDepartureAction } = await import("./schedule/board/actions");
 const { checkInAction } = await import("./trips/[id]/_arrivals/actions");
+const { setTripStageAction } = await import("./trips/[id]/manifest/actions");
 const { addChecklistItemAction } = await import("./settings/safety-checklist/actions");
 
 const ctx = fileScopedShopContext();
@@ -128,6 +129,25 @@ describe("a form posted with another shop's slug bound into it", () => {
       .from(bookings)
       .where(eq(bookings.id, booking.id));
     expect(after?.status).toBe(booking.status);
+  });
+
+  it("manifest: a stage posted with the slug inside its bound context is a 404 and records nothing", async () => {
+    const trip = await aLiveTrip();
+    const stages = () =>
+      ctx.db
+        .select({ id: tripStageEvents.id })
+        .from(tripStageEvents)
+        .where(eq(tripStageEvents.tripId, trip.id));
+    const before = (await stages()).length;
+    await expect(
+      setTripStageAction(
+        { shopSlug: FOREIGN, tripId: trip.id },
+        { ok: false, reason: "error" },
+        form({ stage: "boarding" }),
+      ),
+    ).rejects.toThrow("NOT_FOUND");
+    expect((await stages()).length).toBe(before);
+    expect(revalidatePath).not.toHaveBeenCalled();
   });
 
   it("safety checklist: adding an item is a 404 and adds nothing", async () => {

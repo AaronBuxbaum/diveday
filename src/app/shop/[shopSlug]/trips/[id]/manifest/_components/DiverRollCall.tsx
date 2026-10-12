@@ -1,3 +1,4 @@
+import { RollCallTouchCue } from "@/components/RollCallTouchCue";
 import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
@@ -97,6 +98,8 @@ export function DiverRollCall({ context }: { context: DiverRollCallContext }) {
           />
         ))}
       </ul>
+      {/* The words for a press the touch guard refused, crew rows included (issue #2328). */}
+      <RollCallTouchCue message={t("manifest.touchRefused")} />
     </section>
   );
 }

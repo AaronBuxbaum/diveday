@@ -15,6 +15,7 @@ import {
   listDiverRecordNotes,
   listTripActivity,
   pagedDiverActivity,
+  recordDiverSelfCancel,
 } from "./operations";
 import { activityEvents, bookings, people } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -607,5 +608,51 @@ describe("a diver's own activity trail", () => {
     const after = await pagedDiverActivity(db, shop.id, priya, { pageSize: 200 });
     expect(after.total).toBe(claimed.total);
     for (const row of after.rows) expect(row).toMatchObject(ACTIVITY_REDACTED);
+  });
+});
+
+describe("a diver's own cancellation on the departure's trail (UX review 2026-10-11, item 19)", () => {
+  it("names the seat's own diver, and says when the card was refunded", async () => {
+    const { db, shop } = ctx;
+    const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
+    if (!trip) throw new Error("expected a booked trip");
+    const [entry] = await getTripRoster(db, shop.id, trip.id);
+    if (!entry) throw new Error("expected a seat");
+
+    await recordDiverSelfCancel(db, {
+      shopId: shop.id,
+      bookingId: entry.booking.id,
+      refunded: true,
+    });
+    expect((await listTripActivity(db, shop.id, trip.id))[0]).toMatchObject({
+      code: "seat_self_refunded",
+      params: { actor: entry.person.fullName },
+    });
+
+    await recordDiverSelfCancel(db, {
+      shopId: shop.id,
+      bookingId: entry.booking.id,
+      refunded: false,
+    });
+    expect((await listTripActivity(db, shop.id, trip.id))[0]).toMatchObject({
+      code: "seat_self_cancelled",
+    });
+  });
+
+  it("writes nothing for a booking that is not this shop's", async () => {
+    const { db, shop } = ctx;
+    const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
+    if (!trip) throw new Error("expected a booked trip");
+    const [entry] = await getTripRoster(db, shop.id, trip.id);
+    if (!entry) throw new Error("expected a seat");
+    const before = (await listTripActivity(db, shop.id, trip.id)).length;
+    expect(
+      await recordDiverSelfCancel(db, {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        bookingId: entry.booking.id,
+        refunded: true,
+      }),
+    ).toBeNull();
+    expect(await listTripActivity(db, shop.id, trip.id)).toHaveLength(before);
   });
 });

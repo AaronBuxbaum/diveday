@@ -136,6 +136,45 @@ describe("the guests ledger (slice 5d)", () => {
     expect(screen.queryByRole("navigation", { name: /filter/i })).toBeNull();
   });
 
+  /**
+   * **A finished departure's Divers tab is its record** (UX review
+   * 2026-10-10, item 10): "Sailed" and "Didn't sail", never "Still to clear",
+   * "Ready" or a Blocked capsule on a boat that is home.
+   */
+  it("files a finished departure as who sailed and who did not, with nothing to clear", () => {
+    renderRoster({
+      ...fixtures,
+      record: {
+        dock: new Map([
+          [ready.booking.id, "boarded"],
+          [blocked.booking.id, "not_boarded"],
+        ]),
+        afterDive: new Set(),
+        rollCallTaken: true,
+      },
+    });
+    expect(screen.getByRole("heading", { name: "Sailed · 1" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Didn’t sail · 1" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: /Still to clear|Ready/ })).toBeNull();
+    expect(screen.queryByText("Blocked")).toBeNull();
+    expect(screen.queryByText("No certification is on file for this trip.")).toBeNull();
+  });
+
+  it("files a seat nobody counted at the dock under its own band, never as Didn't sail", () => {
+    renderRoster({
+      ...fixtures,
+      record: {
+        dock: new Map([[ready.booking.id, "boarded"]]),
+        afterDive: new Set(),
+        rollCallTaken: true,
+      },
+    });
+    expect(screen.getByRole("heading", { name: "Sailed · 1" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Not counted at the dock · 1" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: /Didn’t sail/ })).toBeNull();
+    expect(screen.queryByRole("heading", { name: /No roll call taken/ })).toBeNull();
+  });
+
   it("makes add diver the terminal ledger group, including on an empty roster", () => {
     const { container } = renderRoster({
       roster: [],

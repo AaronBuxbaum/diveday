@@ -1,4 +1,16 @@
-import { and, countDistinct, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
+import {
+  and,
+  countDistinct,
+  eq,
+  exists,
+  gt,
+  gte,
+  isNull,
+  lte,
+  or,
+  type SQLWrapper,
+  sql,
+} from "drizzle-orm";
 import { isStaff, type Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import {
@@ -73,10 +85,27 @@ async function staffLogins(db: DbExecutor, shopId: string): Promise<StaffLogin[]
 }
 
 /**
+ * A live, unanswered message that could page somebody by itself: its sender
+ * vouched for by the channel and not flagged as spam (#2311). The count and
+ * the trailing ping read this, so neither is wider than the webhook's own
+ * trigger.
+ */
+const pingWorthyWaiting = (shopId: string | SQLWrapper) =>
+  and(
+    eq(inboundMessages.shopId, shopId),
+    isNull(inboundMessages.deletedAt),
+    isNull(inboundMessages.answeredAt),
+    eq(inboundMessages.senderAuthenticated, true),
+    eq(inboundMessages.spamFlagged, false),
+  );
+
+/**
  * How many divers have written in since the desk closed and are still waiting:
  * distinct senders of live, unanswered messages received at or after `since`.
  * Senders rather than messages, because three texts from one diver are one
- * person waiting.
+ * person waiting. Only messages that could have pinged by themselves count
+ * (`pingWorthyWaiting`): a spoofed or junk message is in the Inbox, but it is
+ * not a diver waiting.
  */
 export async function countWaitingSince(
   db: DbExecutor,
@@ -86,14 +115,7 @@ export async function countWaitingSince(
   const [row] = await db
     .select({ value: countDistinct(inboundMessages.fromAddress) })
     .from(inboundMessages)
-    .where(
-      and(
-        eq(inboundMessages.shopId, shopId),
-        isNull(inboundMessages.deletedAt),
-        isNull(inboundMessages.answeredAt),
-        gte(inboundMessages.receivedAt, since),
-      ),
-    );
+    .where(and(pingWorthyWaiting(shopId), gte(inboundMessages.receivedAt, since)));
   return row?.value ?? 0;
 }
 
@@ -177,11 +199,44 @@ export async function pingDeskAfterHours(
   const waiting = await countWaitingSince(db, shop.id, deskClosedSince(now, shop.timezone, hours));
   if (waiting === 0) return { status: "nobody_waiting" };
 
-  const outcome = { status: "pinged" as const, sent: 0, failed: 0, batched: 0 };
   const recipients = (await staffLogins(db, shop.id)).filter((person) =>
     afterHoursPingWanted(person.choice, person.roles),
   );
-  for (const person of recipients) {
+  const outcome = await pingRecipients(db, {
+    shop,
+    recipients,
+    waiting,
+    now,
+    origin,
+    provider: input.provider,
+  });
+  // Ids and counts only — never an address, a name, or a word of a message.
+  log("desk_ping.after_hours", "info", { shopId: shop.id, waiting, ...outcome });
+  return { status: "pinged", ...outcome };
+}
+
+type PingShop = { id: string; slug: string; name: string; defaultLocale: string };
+
+/**
+ * Claim each recipient's batching clock and send them the count. One that is
+ * not theirs to take yet is `batched`; a send that did not go gives the clock
+ * back, so the next message may try again at once. Shared by the webhook's
+ * ping and the trailing sweep, so the two cannot word or claim differently.
+ */
+async function pingRecipients(
+  db: AppDb,
+  input: {
+    shop: PingShop;
+    recipients: readonly StaffLogin[];
+    waiting: number;
+    now: Date;
+    origin: string;
+    provider?: NotificationProvider;
+  },
+): Promise<{ sent: number; failed: number; batched: number }> {
+  const { shop, now, origin } = input;
+  const outcome = { sent: 0, failed: 0, batched: 0 };
+  for (const person of input.recipients) {
     if (!(await claimPing(db, person.accountId, now))) {
       outcome.batched += 1;
       continue;
@@ -197,7 +252,7 @@ export async function pingDeskAfterHours(
         locale: recipientLocale(person.locale, shop.defaultLocale),
         recipientName: person.fullName,
         shopName: shop.name,
-        waiting,
+        waiting: input.waiting,
         inboxUrl: `${origin}${shopPath(shop.slug, "inbox")}`,
         settingsUrl: `${origin}${shopPath(shop.slug, "settings", "email")}`,
         pingedAt: now,
@@ -208,18 +263,147 @@ export async function pingDeskAfterHours(
       outcome.sent += 1;
     } else {
       outcome.failed += 1;
-      // Not sent, so not a ping: the next message may try again at once.
       await releasePing(db, person.accountId, now);
     }
   }
-  // Ids and counts only — never an address, a name, or a word of a message.
-  log("desk_ping.after_hours", "info", {
-    shopId: shop.id,
+  return outcome;
+}
+
+/**
+ * **The trailing ping** (#2311): the hourly sweep's half of the batching
+ * clock. A message that lands while a staffer's clock is still running is
+ * `batched` — they were pinged minutes ago — and before this, with nothing
+ * arriving after it, it waited until morning.
+ *
+ * "Owed a catch-up" is derived rather than stored: a staffer pinged during
+ * tonight's closed stretch, whose clock has since run out, with a
+ * ping-worthy message (`pingWorthyWaiting`) received **after** that ping and
+ * still unanswered. A message that pinged on its own was received before its
+ * ping, so it never makes a second one; and the claim is the same
+ * conditional update the webhook takes, so two passes cannot both send.
+ *
+ * Every rule the webhook's ping keeps holds here too: the desk must be closed
+ * now, a demo shop never pings, the count names divers still waiting since the
+ * desk closed and nothing they said, and only a staffer who wants the ping
+ * gets it.
+ */
+export async function sendTrailingDeskPings(
+  db: AppDb,
+  input: { now?: Date; origin?: string | null; provider?: NotificationProvider } = {},
+): Promise<{ shops: number; sent: number; failed: number }> {
+  const now = input.now ?? nowDate();
+  const summary = { shops: 0, sent: 0, failed: 0 };
+  const origin = input.origin === undefined ? publicAppUrl() : input.origin;
+  if (!origin) return summary;
+  // Candidates only: which shops have a staffer whose clock ran out within a
+  // day with something ping-worthy received after it. Each shop then checks
+  // its own closed stretch, in its own zone (`trailingPingForShop`).
+  const candidates = await db
+    .selectDistinct({ shopId: people.shopId })
+    .from(userAccounts)
+    .innerJoin(people, eq(people.id, userAccounts.personId))
+    .innerJoin(shops, eq(shops.id, people.shopId))
+    .where(
+      and(
+        eq(shops.isDemo, false),
+        owedCatchUp(
+          people.shopId,
+          new Date(now.getTime() - DAY_MS),
+          new Date(now.getTime() - AFTER_HOURS_PING_INTERVAL_MS),
+        ),
+      ),
+    );
+  for (const { shopId } of candidates) {
+    const outcome = await trailingPingForShop(db, {
+      shopId,
+      now,
+      origin,
+      provider: input.provider,
+    });
+    if (!outcome) continue;
+    summary.shops += 1;
+    summary.sent += outcome.sent;
+    summary.failed += outcome.failed;
+  }
+  return summary;
+}
+
+const DAY_MS = 24 * 60 * 60_000;
+
+/**
+ * This login is owed a catch-up: its clock was taken at or after `from` and
+ * ran out by `until`, and a ping-worthy message arrived after it.
+ */
+const owedCatchUp = (shopId: string | SQLWrapper, from: Date, until: Date) =>
+  and(
+    gte(userAccounts.afterHoursPingedAt, from),
+    lte(userAccounts.afterHoursPingedAt, until),
+    exists(
+      sql`(select 1 from ${inboundMessages} where ${and(
+        pingWorthyWaiting(shopId),
+        gt(inboundMessages.receivedAt, userAccounts.afterHoursPingedAt),
+      )})`,
+    ),
+  );
+
+/** One shop's catch-up: the webhook ping's checks, then only the staffers owed one. */
+async function trailingPingForShop(
+  db: AppDb,
+  input: {
+    shopId: string;
+    now: Date;
+    origin: string;
+    provider?: NotificationProvider;
+  },
+): Promise<{ sent: number; failed: number; batched: number } | null> {
+  const { now } = input;
+  const [shop] = await db
+    .select({
+      id: shops.id,
+      slug: shops.slug,
+      name: shops.name,
+      timezone: shops.timezone,
+      defaultLocale: shops.defaultLocale,
+      opensMinute: shops.deskOpensMinute,
+      closesMinute: shops.deskClosesMinute,
+    })
+    .from(shops)
+    .where(and(eq(shops.id, input.shopId), eq(shops.isDemo, false)))
+    .limit(1);
+  if (!shop) return null;
+  const hours: DeskHours = { opensMinute: shop.opensMinute, closesMinute: shop.closesMinute };
+  // Open again: the Inbox is in front of somebody.
+  if (!isAfterHours(now, shop.timezone, hours)) return null;
+  const closedSince = deskClosedSince(now, shop.timezone, hours);
+  const waiting = await countWaitingSince(db, shop.id, closedSince);
+  if (waiting === 0) return null;
+  // Pinged during *tonight's* closed stretch, and only then: a clock from
+  // this morning or yesterday evening owes tonight nothing.
+  const owed = await db
+    .select({ id: userAccounts.id })
+    .from(userAccounts)
+    .innerJoin(people, eq(people.id, userAccounts.personId))
+    .where(
+      and(
+        eq(people.shopId, shop.id),
+        owedCatchUp(shop.id, closedSince, new Date(now.getTime() - AFTER_HOURS_PING_INTERVAL_MS)),
+      ),
+    );
+  const owedIds = new Set(owed.map((row) => row.id));
+  const recipients = (await staffLogins(db, shop.id)).filter(
+    (person) => owedIds.has(person.accountId) && afterHoursPingWanted(person.choice, person.roles),
+  );
+  if (recipients.length === 0) return null;
+  const outcome = await pingRecipients(db, {
+    shop,
+    recipients,
     waiting,
-    sent: outcome.sent,
-    failed: outcome.failed,
-    batched: outcome.batched,
+    now,
+    origin: input.origin,
+    provider: input.provider,
   });
+  // Ids and counts only, as the webhook's ping logs.
+  log("desk_ping.trailing", "info", { shopId: shop.id, waiting, ...outcome });
   return outcome;
 }
 
@@ -275,14 +459,23 @@ export async function setAfterHoursPingChoice(
   return updated.length > 0;
 }
 
-/** The shop's desk hours, already validated by `parseDeskHours`. */
+/**
+ * The shop's desk hours, already validated by `parseDeskHours`. Saving them is
+ * the shop stating them, so it stamps `desk_hours_confirmed_at`: from then on
+ * the public footer may print them (until then they are only the default).
+ */
 export async function setShopDeskHours(
   db: DbExecutor,
   shopId: string,
   hours: DeskHours,
+  now: Date = nowDate(),
 ): Promise<void> {
   await db
     .update(shops)
-    .set({ deskOpensMinute: hours.opensMinute, deskClosesMinute: hours.closesMinute })
+    .set({
+      deskOpensMinute: hours.opensMinute,
+      deskClosesMinute: hours.closesMinute,
+      deskHoursConfirmedAt: now,
+    })
     .where(eq(shops.id, shopId));
 }

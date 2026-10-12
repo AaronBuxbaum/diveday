@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { RollCallCheckpoint, TripManifest } from "@/lib/manifests";
 import { DiverFacts } from "./DiverFacts";
@@ -46,6 +46,60 @@ describe("an unanswered referral's warning", () => {
     expect(
       screen.getAllByText(/re-signed with no physician clearance on file/).length,
     ).toBeGreaterThanOrEqual(1);
+  });
+
+  it("links the earlier refusal to its record from the on-screen facts, and paper stays unlinked", () => {
+    const refusedBefore = {
+      at: new Date("2026-09-01T12:00:00.000Z"),
+      source: "digital",
+      overriddenReferralAt: null,
+      overriddenReferral: null,
+      overriddenRefusal: {
+        recordId: "w-refused",
+        personId: "p-refused",
+        at: new Date("2026-08-20T12:00:00.000Z"),
+      },
+      clearance: null,
+      guardian: null,
+    } as unknown as TripManifest["divers"][number]["medicalWaiver"];
+    const { container } = renderList({ divers: [diver({ medicalWaiver: refusedBefore })] });
+    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
+    expect(printed).toHaveTextContent(/A physician did not clear this person/);
+    expect(within(printed as HTMLElement).queryAllByRole("link")).toHaveLength(0);
+    expect(screen.queryByRole("link", { name: "View the refusal" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    const links = screen.getAllByRole("link", { name: "View the refusal" });
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/p-refused/waivers/w-refused",
+    );
+    expect(screen.queryByRole("link", { name: "View the referral" })).toBeNull();
+  });
+
+  it("links neither warning on a held seat, whose medical history is the matched person's", () => {
+    renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
+          readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
+          medicalWaiver: {
+            ...referredBefore,
+            overriddenRefusal: {
+              recordId: "w-refused",
+              personId: "p-referred",
+              at: new Date("2026-08-10T12:00:00.000Z"),
+            },
+          } as TripManifest["divers"][number]["medicalWaiver"],
+        }),
+      ],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Maria" }));
+    expect(screen.queryByRole("link", { name: "View the referral" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "View the refusal" })).toBeNull();
+    expect(screen.getByRole("dialog")).not.toHaveTextContent(/physician/);
   });
 
   it("draws no link for a release with no referral behind it", () => {

@@ -1,12 +1,9 @@
 import type { OfflineManifestManagerCopy } from "@/components/OfflineManifestManager";
-import type { PushOptInCopy } from "@/components/PushOptIn";
 import type { listDeskEventsSince } from "@/db/desk-events";
-import type { latestTripStage } from "@/db/trip-stages";
 import { catchUpSentences } from "@/i18n/desk-event-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { groupCatchUp } from "@/lib/desk-events";
 import { formatTime } from "@/lib/format";
-import { STAGE_TAP_KEYS, TRIP_STAGES } from "@/lib/trip-stages";
 
 /** The emergency reference card's words — one copy for all three places it renders. */
 export function emergencyReferenceCopy(t: StaffTranslator) {
@@ -16,29 +13,6 @@ export function emergencyReferenceCopy(t: StaffTranslator) {
     vesselLabel: t("manifest.emergency.vesselLabel"),
     shoreContactLabel: t("manifest.emergency.shoreContactLabel"),
     planLabel: t("manifest.emergency.planLabel"),
-  };
-}
-
-/** The stage strip's words, with who tapped the current stage and when. */
-export function stageStripCopy(
-  t: StaffTranslator,
-  stage: Awaited<ReturnType<typeof latestTripStage>>,
-  locale: string,
-  timeZone: string,
-) {
-  return {
-    legend: t("manifest.stage.legend"),
-    errorRefusal: t("manifest.stage.errorRefusal"),
-    taps: TRIP_STAGES.map((value) => ({
-      stage: value,
-      label: t(STAGE_TAP_KEYS[value]),
-    })),
-    recordedLine: stage
-      ? t("manifest.stage.recordedLine", {
-          name: stage.recordedByName ?? "",
-          time: formatTime(stage.recordedAt, locale, timeZone),
-        })
-      : undefined,
   };
 }
 
@@ -72,22 +46,6 @@ export function offlineManifestManagerCopy(t: StaffTranslator): OfflineManifestM
     refreshNowLabel: t("trips.offlineManifestManager.refreshNowLabel"),
     openOfflineRollCall: t("trips.offlineManifestManager.openOfflineRollCall"),
     groupHeading: t("manifest.onThisPhone"),
-  };
-}
-
-/** The push opt-in's words, inside the device group. */
-export function pushOptInCopy(t: StaffTranslator): PushOptInCopy {
-  return {
-    heading: t("trips.offlineManifestManager.pushHeading"),
-    body: t("trips.offlineManifestManager.pushBody"),
-    enable: t("trips.offlineManifestManager.pushEnable"),
-    enabling: t("trips.offlineManifestManager.pushEnabling"),
-    disable: t("trips.offlineManifestManager.pushDisable"),
-    on: t("trips.offlineManifestManager.pushOn"),
-    unsupported: t("trips.offlineManifestManager.pushUnsupported"),
-    homeScreenHint: t("trips.offlineManifestManager.pushHomeScreenHint"),
-    denied: t("trips.offlineManifestManager.pushDenied"),
-    error: t("trips.offlineManifestManager.pushError"),
   };
 }
 

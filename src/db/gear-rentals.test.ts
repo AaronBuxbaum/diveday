@@ -164,6 +164,46 @@ describe("listGearRentals", () => {
     });
   });
 
+  /**
+   * H-108 (issue #2346): the Rentals list says where each counter-rental
+   * holder stands with the waiver, read only for those holders and only when
+   * the caller names the shop's zone. A trip holder's waiver is the
+   * departure's business, said on the roster.
+   */
+  it("reads the waiver for counter holders only, and only when given the shop's zone", async () => {
+    const { db, shop } = await rentalShop();
+    const bcd = await unit(db, shop.id, "BCD #1", "M");
+    const reg = await unit(db, shop.id, "Reg #1");
+    const ana = await tripBooking(db, shop.id, "Ana Diaz", "Wreck Trip");
+    await reserve(db, {
+      shopId: shop.id,
+      gearItemId: bcd.id,
+      bookingId: ana.bookingId,
+      from: "2026-10-10",
+      until: "2026-10-10",
+    });
+    const walker = await walkIn(db, shop.id, "Walk In");
+    await counterRental(db, {
+      shopId: shop.id,
+      gearItemId: reg.id,
+      personId: walker.id,
+      from: TODAY,
+      until: TODAY,
+    });
+
+    const withZone = await listGearRentals(db, shop.id, {
+      todayLocal: TODAY,
+      timezone: shop.timezone,
+    });
+    expect(withZone.counterWaivers?.get(walker.id)).toBe("none");
+    expect(withZone.counterWaivers?.has(ana.personId)).toBe(false);
+    expect(withZone.counterWaivers?.size).toBe(1);
+
+    const withoutZone = await listGearRentals(db, shop.id, { todayLocal: TODAY });
+    expect(withoutZone.counterWaivers).toBeUndefined();
+    expect(withoutZone.rows).toHaveLength(2);
+  });
+
   it("leaves out what came home, what was deleted, and what another shop holds", async () => {
     const { db, shop } = await rentalShop();
     const home = await unit(db, shop.id, "BCD #home");

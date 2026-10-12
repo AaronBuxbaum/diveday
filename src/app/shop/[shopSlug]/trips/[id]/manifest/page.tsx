@@ -7,6 +7,7 @@ import { SkipLink } from "@/components/SkipLink";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
 import { scopedHash, scopedId } from "@/lib/element-id";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
@@ -22,6 +23,7 @@ import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CheckpointSwitch } from "./_components/CheckpointSwitch";
 import { CrewRollCall } from "./_components/CrewRollCall";
 import { DiverRollCall } from "./_components/DiverRollCall";
+import { DockDesk } from "./_components/DockDesk";
 import { departureBoatSafetySection } from "./_components/departure-boat-safety";
 import { ExecutedDiveLog } from "./_components/ExecutedDiveLog";
 import { executedDiveLogView } from "./_components/executed-dive-copy";
@@ -33,7 +35,6 @@ import {
   catchUpStripView,
   emergencyReferenceCopy,
   offlineManifestManagerCopy,
-  stageStripCopy,
 } from "./_components/manifest-copy";
 import { readManifestPage } from "./_components/manifest-reads";
 import { manifestSpecies } from "./_components/manifest-species";
@@ -54,6 +55,7 @@ import { manifestNoteThreads } from "./_components/StaffNotes";
 import { StageStrip } from "./_components/StageStrip";
 import { SummaryPanel } from "./_components/SummaryPanel";
 import { seenGroupView } from "./_components/seen-group-view";
+import { stageStripProps } from "./_components/stage-strip-props";
 import { TripPlanSection } from "./_components/TripPlanSection";
 import type { ManifestActionContext } from "./actions";
 
@@ -271,8 +273,13 @@ export default async function TripManifestPage({
           drifts on the home and the storefront is deliberately not here. */}
       <StageStrip
         action={actions.setTripStage}
-        current={stage?.stage ?? null}
-        copy={stageStripCopy(t, stage, locale, shop.timezone)}
+        {...stageStripProps(t, {
+          trip: departureManifest.trip,
+          stage,
+          now: nowDate(),
+          timeZone: shop.timezone,
+          locale,
+        })}
       />
 
       <CheckpointSwitch
@@ -350,6 +357,15 @@ export default async function TripManifestPage({
           crewRollCallButtonCopy={crewRollCallButtonCopy}
           buddyTeamLabel={buddyTeamLabel}
           t={t}
+        />
+        <DockDesk
+          t={t}
+          shopId={shop.id}
+          tripId={tripId}
+          isDeparture={isDeparture}
+          startsAt={departureManifest.trip.startsAt}
+          stage={stage}
+          seats={departureManifest.divers}
         />
 
         {/* **The plan** (issue #1184, D24).

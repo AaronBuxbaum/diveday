@@ -4,10 +4,10 @@ import { publicTripPath } from "@/lib/public-routes";
 import { similarDepartures } from "@/lib/similar-departures";
 import { spotsRemaining } from "@/lib/trips";
 import { worthALook } from "@/lib/worth-a-look";
-import type { publicTripRecord, readBookingPageWave } from "./booking-page-wave";
+import type { publicTripRecord, readTripPage } from "../_lib/page-reads";
 
 type PublicTrip = NonNullable<Awaited<ReturnType<typeof publicTripRecord>>>;
-type Board = Awaited<ReturnType<typeof readBookingPageWave>>["board"];
+type Board = Awaited<ReturnType<typeof readTripPage>>["board"];
 
 /** Where the other boats' links point and how their days are worded. */
 export type OtherBoatsWhere = {

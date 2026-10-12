@@ -29,6 +29,7 @@ function show(over: Partial<React.ComponentProps<typeof TripMoreActions>> = {}) 
       tripId="trip-1"
       startsAt={new Date("2026-07-25T12:00:00Z")}
       series={null}
+      crewNames={[]}
       lifecycleStatus={undefined}
       locale="en-US"
       t={t}

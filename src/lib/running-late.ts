@@ -4,9 +4,12 @@ import { hasSailed } from "./trips";
 /**
  * **"Running late"** (J3): a diver telling the shop, before the boat sails,
  * that they are on their way but behind. Two doors write it — the button on
- * `/ready/[token]` and a `LATE` reply to a shop message — and one place reads
+ * `/ready/[token]` and a `LATE` reply to a shop message — and two places read
  * it: the arrivals list (Today's arrival lookup and the trip's Divers tab),
- * which says "Running late, said 7:42" instead of a blank.
+ * which says "Running late, said 7:42" instead of a blank until the diver
+ * checks in (`runningLateShown`), and the boat manifest, live and offline, at
+ * the departure checkpoint only, hidden once the row is boarded, checked in or
+ * released (`runningLateOnManifest`, #2319).
  *
  * It **gates nothing**. Readiness, admission, boarding, roll call and the
  * no-show door never read it: a diver who said they were late and then never
@@ -54,4 +57,31 @@ export function runningLateShown(input: {
   runningLateAt: Date | null;
 }): Date | null {
   return input.bookingStatus === "booked" ? input.runningLateAt : null;
+}
+
+/**
+ * The instant to show on a **manifest** row, live or offline, or null (#2319):
+ * the captain's half of the same statement, so the rail does not call missing
+ * a diver who said they are on the way.
+ *
+ * Only at the dock, only on a row not boarded yet, and only while the desk
+ * still has the seat as one to arrive (not checked in, not released). After a
+ * dive the question is who came back, and the morning's word answers nothing.
+ * A row the crew recorded as not boarded keeps it: that is the row where it is
+ * the context.
+ *
+ * **Display only.** No count, no roll-call result and no completeness reads
+ * it (`src/lib/manifests.test.ts` pins that a roster with every row late
+ * builds the same summary as one with none).
+ */
+export function runningLateOnManifest(input: {
+  checkpoint: string;
+  runningLateAt?: Date | null;
+  rollCallState?: string;
+  checkedIn?: boolean;
+  notHere?: boolean;
+}): Date | null {
+  if (input.checkpoint !== "departure" || !input.runningLateAt) return null;
+  if (input.rollCallState === "boarded" || input.checkedIn || input.notHere) return null;
+  return input.runningLateAt;
 }

@@ -9,7 +9,7 @@ import { signingDate } from "@/lib/guardian";
 import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import type { RosterRowContext } from "./RosterRow";
 import { type RosterArrival, RosterSection } from "./RosterSection";
-import { rosterPaymentStatusCopy, waiverControls } from "./roster-model";
+import { type RosterRecord, rosterPaymentStatusCopy, waiverControls } from "./roster-model";
 import { type RosterSeat, rosterSeat } from "./roster-seat";
 import type {
   NitroxByBooking,
@@ -111,6 +111,7 @@ export type RosterFixtureOptions = {
   canManageOrders?: boolean;
   requiresPayment?: boolean;
   arrival?: RosterArrival;
+  record?: RosterRecord;
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
   heldSeatLastDiveDay?: ReadonlyMap<string, Date | null>;
   packageDivesByBooking?: ReadonlyMap<string, number>;
@@ -130,6 +131,7 @@ function rosterProps({
   canManageOrders = true,
   requiresPayment = false,
   arrival,
+  record,
   sameNameHeldSeats,
   heldSeatLastDiveDay,
   packageDivesByBooking,
@@ -177,7 +179,7 @@ function rosterProps({
       saveEmergencyContactAction: noop,
       certifyDiverAction: certifyDefaultLevel === undefined ? undefined : noop,
     },
-    slots: { addDiverGroup, arrival },
+    slots: { addDiverGroup, arrival, record },
   };
 }
 
@@ -203,6 +205,7 @@ export function seatFacts(
     rows,
     actions,
     arrival: slots.arrival,
+    record: Boolean(slots.record),
     sharedAdvisoryTexts: new Set(),
     waiverControls: waiverControls(t),
     paymentStatusCopy: rosterPaymentStatusCopy(t),

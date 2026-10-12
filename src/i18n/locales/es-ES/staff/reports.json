@@ -5,9 +5,6 @@
   "nextMonth": "Mes siguiente",
   "currentMonthTitle": "Estás viendo el mes actual",
   "earliestMonthTitle": "Este es tu primer mes con salidas",
-  "monthPicker": {
-    "label": "Ir a un mes"
-  },
   "numbersLabel": "Los números de este mes",
   "comparison": {
     "yearAgo": "{trend}frente a {baseline} en {month}",
@@ -28,7 +25,7 @@
     "waiversAllIn": "Toda la documentación está en regla",
     "revenueViewOrders": "Ver pedidos",
     "tipsLabel": "Propinas",
-    "tipsDetail": "{count, plural, =0 {Sin propinas en las salidas de este mes} one {# propina, íntegra para el centro} other {# propinas, íntegras para el centro}}"
+    "tipsDetail": "{count, plural, =0 {Sin propinas en las salidas de este mes} one {# propina, para que el centro la pase a la tripulación} other {# propinas, para que el centro las pase a la tripulación}}"
   },
   "noTripsFuture": "Todavía no hay nada reservado para este mes.",
   "noTripsPast": "Ninguna salida zarpó este mes.",
@@ -90,8 +87,17 @@
     "rentals": "Alquileres",
     "gearBench": "Taller de equipos",
     "packages": "Paquetes de inmersiones",
-    "retail": "Venta minorista y otros"
+    "retail": "Venta minorista y otros",
+    "imported": "Historial importado sin verificar"
   },
   "packagesOwed": "{dives, plural, one {# inmersión de paquete} other {# inmersiones de paquete}} por bucear, por valor de {amount}",
-  "returningDivers": "{returning} de {total, plural, one {# buceador} other {# buceadores}} ya habían buceado contigo"
+  "returningDivers": "{returning} de {total, plural, one {# buceador} other {# buceadores}} ya habían buceado contigo",
+  "moneyOut": {
+    "refunded": "Reembolsado {amount} de los cobros de este mes",
+    "discounted": "Los códigos de descuento restaron {amount}",
+    "fees": "Comisiones de Stripe {amount}, en lo pagado a tu banco este mes"
+  },
+  "payouts": {
+    "heading": "Pagado a tu banco"
+  }
 }

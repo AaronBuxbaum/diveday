@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
+import { ridingOnlyMedicalSentences } from "@/i18n/manifest-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
@@ -44,7 +45,7 @@ export function DiverFacts({
   locale,
   timezone,
   columns,
-  referralHref,
+  waiverHref,
   t,
 }: {
   diver: TripManifest["divers"][number];
@@ -64,17 +65,23 @@ export function DiverFacts({
    */
   columns: 1 | 2;
   /**
-   * Where an unanswered referral's warning links, on screen only (issue
-   * #2195): paper has nothing to tap. Absent, the warning is drawn unlinked.
+   * Where a medical-history warning links to the record it is about, on
+   * screen only: an unanswered referral (issue #2195) and an earlier refusal
+   * (issue #2348). Paper has nothing to tap. Absent, both are drawn unlinked.
    */
-  referralHref?: (referral: { personId: string; recordId: string }) => string;
+  waiverHref?: (record: { personId: string; recordId: string }) => string;
   t: StaffTranslator;
 }) {
   // The pickup belongs to the booking, not to the matched person, so a held
   // seat keeps it.
   // The two warning days, in the shop's zone and with the year: the refusal by
   // the physician's evaluation (dive-domain review of #2163).
-  const warningDays = medicalWarningDays(diver.medicalWaiver, timezone);
+  const warningDays = medicalWarningDays(diver.medicalWaiver, timezone, diver.riderMedicalHold);
+  // A rider boarding riding only under a medical hold (H-109): said in full on
+  // screen and paper alike, with no medical mark to hang it on.
+  const ridingOnly = ridingOnlyMedicalSentences(t, warningDays, (day) =>
+    formatCalendarDate(day, locale),
+  );
   const pickup = diver.hotelPickupLocation ? (
     <p>
       <span className="font-bold">{t("manifest.hotelPickupLabel")}</span>
@@ -148,6 +155,15 @@ export function DiverFacts({
         </p>
       ) : null}
       {pickup}
+      {ridingOnly.length > 0 ? (
+        <p className="font-medium text-warning-strong">
+          {ridingOnly.map((line) => (
+            <span key={line} className="block">
+              {line}
+            </span>
+          ))}
+        </p>
+      ) : null}
       {diver.medicalWaiver ? (
         <p>
           <span className="font-bold">
@@ -182,6 +198,19 @@ export function DiverFacts({
               {t("manifest.medicalEarlierRefusal", {
                 date: formatCalendarDate(warningDays.refusedOn ?? "", locale),
               })}
+              {/* The refused record, one tap away, as the weaker referral
+                  warning below already is (issue #2348). */}
+              {waiverHref ? (
+                <>
+                  {" "}
+                  <Link
+                    href={waiverHref(diver.medicalWaiver.overriddenRefusal)}
+                    className="font-semibold text-primary hover:underline"
+                  >
+                    {t("manifest.medicalRefusalLink")}
+                  </Link>
+                </>
+              ) : null}
             </span>
           ) : null}
           {/* The signature standing here replaced a referral instead of
@@ -194,11 +223,11 @@ export function DiverFacts({
               })}
               {/* The override stands, and the warning links back to the
                   referral (Aaron, 2026-10-09, issue #2195, amending H-98). */}
-              {referralHref && diver.medicalWaiver.overriddenReferral ? (
+              {waiverHref && diver.medicalWaiver.overriddenReferral ? (
                 <>
                   {" "}
                   <Link
-                    href={referralHref(diver.medicalWaiver.overriddenReferral)}
+                    href={waiverHref(diver.medicalWaiver.overriddenReferral)}
                     className="font-semibold text-primary hover:underline"
                   >
                     {t("manifest.medicalReferralLink")}

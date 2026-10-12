@@ -7,7 +7,7 @@
       "notConnected": "Conecta una cuenta de Stripe en los ajustes del centro antes de crear un pedido.",
       "taxLocationRequired": "Los impuestos están activados. Añade la dirección de facturación del cliente antes de enviar esta factura.",
       "stripeFailed": "Stripe no pudo crear esa factura. Inténtalo de nuevo en un momento.",
-      "fallback": "No se pudo crear ese pedido."
+      "fallback": "Ese pedido no se creó y no se envió nada. Revisa el cliente y cada línea y vuelve a enviarlo; si falla dos veces, abre Pedidos para ver si se registró."
     },
     "linkedTo": "Vinculado a la reserva de {personName} en {tripTitle} ({date}).",
     "courseNote": "Borra la línea de e-learning si este alumno ya lo completó por su cuenta.",
@@ -112,7 +112,13 @@
     "newOrder": "Nuevo pedido",
     "notice": {
       "paymentNotConnected": "Los pagos aún no están conectados, así que no hay ninguna cuenta desde la que facturar. Conecta una para empezar a cobrar a los buceadores.",
-      "notAuthorized": "Enviar una factura está limitado a propietarios y gerentes. Pide a uno de ellos que le facture a este buceador."
+      "notAuthorized": "Enviar una factura está limitado a propietarios y gerentes. Pide a uno de ellos que le facture a este buceador.",
+      "notAuthorizedRefund": "Los reembolsos son solo para propietarios y gerentes.",
+      "paidAfterCloseRefunded": "Reembolso enviado.",
+      "paidAfterCloseInProgress": "Ese reembolso ya está en camino.",
+      "paidAfterCloseNeedsCheck": "Stripe ya devolvió parte de este pago. Revísalo antes en Pagos que necesitan revisión.",
+      "paidAfterCloseNotConnected": "Tu cuenta de Stripe no está aceptando pagos, así que el reembolso no puede salir. Reembólsalo en Stripe.",
+      "paidAfterCloseFailed": "Stripe no aceptó ese reembolso. Inténtalo de nuevo o reembólsalo en Stripe."
     },
     "filters": {
       "searchLabel": "Buscar pedidos",
@@ -190,6 +196,19 @@
       "detail": "Su dinero no pudo volver por tarjeta. A cada uno se le dijo que te pondrías en contacto. Devuélvelo y luego marca la plaza como reembolsada en la pestaña Buceadores de la salida.",
       "depositOnly": "solo el depósito",
       "unrecordedAmount": "importe no registrado",
+      "openTrip": "Abrir salida"
+    },
+    "paidAfterClose": {
+      "sectionLabel": "Pagados después de cerrar el cobro",
+      "heading": "{count, plural, one {# pago llegó} other {# pagos llegaron}} después de cerrar el cobro. Ninguna plaza quedó pagada. Reembólsalos.",
+      "refund": "Reembolsar",
+      "refunding": "Reembolsando…",
+      "openTrip": "Abrir salida"
+    },
+    "failedRefunds": {
+      "sectionLabel": "Reembolsos que fallaron",
+      "heading": "{count, plural, one {# reembolso no llegó} other {# reembolsos no llegaron}} al buceador. El dinero volvió a tu saldo de Stripe. Vuelve a reembolsarlos.",
+      "openOrder": "Abrir pedido",
       "openTrip": "Abrir salida"
     }
   }

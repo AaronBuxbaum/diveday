@@ -169,6 +169,28 @@ export function isCompletedWaiverCurrent(
   now: Date = nowDate(),
 ): boolean {
   if (!isCleanCompletion(record)) return false;
+  if (!isSignatureCurrent(record, currentTemplateGeneration, now)) return false;
+  // A cleared referral ages on **two** clocks and stands only while both run.
+  // The signature's is the ordinary one; the physician's evaluation has its own,
+  // because a shop that records a two-year-old letter today has not established
+  // anything for the next twelve months (issue #1252, `dive-domain-expert`
+  // review). Whichever expires first ends the release.
+  const evaluatedAt = clearanceEvaluatedAt(record);
+  return !(evaluatedAt !== null && evaluatedAt + WAIVER_SIGNATURE_VALIDITY_MS <= now.getTime());
+}
+
+/**
+ * The signature half of {@link isCompletedWaiverCurrent}, asking nothing of the
+ * medical: given (signed or parked in medical review), not superseded, against
+ * the shop's current material terms, and inside the validity window. Fails
+ * closed on a missing signature time.
+ */
+function isSignatureCurrent(
+  record: WaiverRecord,
+  currentTemplateGeneration: number | null,
+  now: Date,
+): boolean {
+  if (record.status !== "completed" && record.status !== "medical_review") return false;
   if (record.supersededAt) return false;
   if (
     record.signatureMethod !== "imported" &&
@@ -182,15 +204,6 @@ export function isCompletedWaiverCurrent(
   }
   const signedAt = record.signedAt ?? record.completedAt;
   if (!signedAt) return false;
-  // A cleared referral ages on **two** clocks and stands only while both run.
-  // The signature's is the ordinary one; the physician's evaluation has its own,
-  // because a shop that records a two-year-old letter today has not established
-  // anything for the next twelve months (issue #1252, `dive-domain-expert`
-  // review). Whichever expires first ends the release.
-  const evaluatedAt = clearanceEvaluatedAt(record);
-  if (evaluatedAt !== null && evaluatedAt + WAIVER_SIGNATURE_VALIDITY_MS <= now.getTime()) {
-    return false;
-  }
   return signedAt.getTime() + WAIVER_SIGNATURE_VALIDITY_MS > now.getTime();
 }
 
@@ -258,6 +271,37 @@ export function effectiveWaiverForBooking(input: {
 }
 
 /**
+ * **The release a rider's seat stands on** (H-109, issue #2212).
+ *
+ * A rider stays on the boat, so they are held to the shop's release and to
+ * nothing in its medical. A record a referral parked, or a physician refused,
+ * is still a signature the rider gave, and a hold never outranks an older
+ * clean signature here the way it does for a seat in the water
+ * ({@link effectiveWaiverForBooking}). Every other condition on the signature
+ * stands: current terms, inside the year, not superseded. The newest such
+ * signature wins; with none, the seat's own unsigned link drives the send
+ * flow, and anything else signed but no longer current reads as nothing.
+ *
+ * Only `calculateReadiness` with a rider's seat reads the record this way
+ * (`isHeldToMedical`); the record itself, and what every surface says about
+ * it, is unchanged.
+ */
+export function effectiveReleaseForRiderSeat(input: {
+  bookingWaiver: WaiverRecord | null;
+  personSignedWaivers: readonly WaiverRecord[];
+  currentTemplateVersion: number | null;
+  now?: Date;
+}): WaiverRecord | null {
+  const now = input.now ?? nowDate();
+  const own = input.bookingWaiver;
+  const signed = [...(own ? [own] : []), ...input.personSignedWaivers]
+    .filter((record) => isSignatureCurrent(record, input.currentTemplateVersion, now))
+    .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
+  if (signed) return signed;
+  return own && own.status === "pending" ? own : null;
+}
+
+/**
  * Where a diver stands with **the shop**, independent of any one booking.
  *
  * A release is signed once and carries across every booking the diver has here
@@ -272,7 +316,14 @@ export function effectiveWaiverForBooking(input: {
 export type ShopWaiverStatus =
   | { state: "none" }
   /** Signed, clean, against current terms, and inside the validity window. */
-  | { state: "current"; signedAt: Date; expiresAt: Date; medical: MedicalWaiverMark | null }
+  | {
+      state: "current";
+      /** The signed record itself, so the diver record can open it (UX review 2026-10-10, item 27). */
+      recordId: string;
+      signedAt: Date;
+      expiresAt: Date;
+      medical: MedicalWaiverMark | null;
+    }
   /**
    * Signed before, but the signature no longer stands — aged past the validity
    * window, or given against terms the shop has since edited. Either way the
@@ -369,6 +420,7 @@ export function shopWaiverStatus(input: {
   if (clean) {
     return {
       state: "current",
+      recordId: clean.id,
       signedAt: new Date(signatureTime(clean)),
       expiresAt: new Date(signatureTime(clean) + WAIVER_SIGNATURE_VALIDITY_MS),
       medical: medicalWaiverMark(clean, input.personSignedWaivers),
@@ -609,31 +661,97 @@ export function overriddenRefusal(
  */
 export type OverriddenRefusal = {
   recordId: string;
+  /** Whose record it is: the record's page lives under the person (issue #2348). */
+  personId: string;
   at: Date;
   /** Optional so a mark built by hand (a test, an older fixture) still types. */
   evaluatedOn?: CalendarDate | null;
 };
 
 /**
- * **The two days a crew reads beside a medical warning**, in the shop's zone:
+ * **A rider boarding on a release a medical holds** (H-109; dive-domain review
+ * of #2212). A rider is never held at the rail on a referral or a physician's
+ * "no" — they stay on the boat — but the crew still sees it, as a warning that
+ * says "riding only", never as a blocker.
+ *
+ * `not_cleared` when a physician's "no" stands that no later clearance has
+ * answered — the release itself, an earlier one ({@link overriddenRefusal}'s
+ * rule), or one signed after it and since retired, which the rider path skips
+ * past — dated by the physician's evaluation day when stored. `referral` when
+ * the release is an unresolved referral and no refusal stands. Otherwise null
+ * for a clean release, which the ordinary warnings already cover.
+ *
+ * Only for the release `effectiveReleaseForRiderSeat` chose; a seat held to the
+ * medical is blocked by the same record instead.
+ */
+export type RiderMedicalHold = {
+  kind: "not_cleared" | "referral";
+  at: Date;
+  evaluatedOn?: CalendarDate | null;
+};
+
+export function riderMedicalHold(
+  release: WaiverRecord | null,
+  personSignedWaivers: readonly WaiverRecord[],
+): RiderMedicalHold | null {
+  if (!release) return null;
+  const records = personSignedWaivers.some((record) => record.id === release.id)
+    ? personSignedWaivers
+    : [...personSignedWaivers, release];
+  const held = isUnresolvedMedicalHold(release);
+  // A "no" signed *after* the release the rider stands on — a refusal retired
+  // so its seat could take a new link, which the rider path does not choose —
+  // is warned about whatever the release is (dive-domain re-review of #2212).
+  // On a held release every unanswered "no" counts, its own and earlier ones
+  // too; on a clean one an earlier "no" is `overriddenRefusal`'s warning.
+  const refusal = unansweredRefusal(
+    records,
+    Number.POSITIVE_INFINITY,
+    held ? Number.NEGATIVE_INFINITY : signatureTime(release),
+  );
+  if (refusal) {
+    return { kind: "not_cleared", at: refusal.at, evaluatedOn: refusal.evaluatedOn ?? null };
+  }
+  return held ? { kind: "referral", at: new Date(signatureTime(release)) } : null;
+}
+
+/**
+ * **The days a crew reads beside a medical warning**, in the shop's zone:
  * the physician's evaluation day for an earlier refusal (falling back to the
- * day staff recorded it), and the day of a referral a release stands over.
- * One derivation for the live roll call and the offline dock copy, so the two
- * never print different days. Absent keys mean no warning.
+ * day staff recorded it), the day of a referral a release stands over, and
+ * for a rider ({@link riderMedicalHold}) the day of the refusal or referral
+ * they board under, riding only. One derivation for the live roll call and
+ * the offline dock copy, so the two never print different days. Absent keys
+ * mean no warning.
  */
 export function medicalWarningDays(
   mark: Pick<MedicalWaiverMark, "overriddenRefusal" | "overriddenReferralAt"> | null | undefined,
   timeZone: string,
-): { refusedOn?: CalendarDate; referredOn?: CalendarDate } {
+  riderHold?: RiderMedicalHold | null,
+): MedicalWarningDays {
   const refusal = mark?.overriddenRefusal;
   const referral = mark?.overriddenReferralAt;
+  const riderDay = riderHold
+    ? (riderHold.evaluatedOn ?? calendarDateInTimezone(riderHold.at, timeZone))
+    : null;
   return {
     ...(refusal
       ? { refusedOn: refusal.evaluatedOn ?? calendarDateInTimezone(refusal.at, timeZone) }
       : {}),
     ...(referral ? { referredOn: calendarDateInTimezone(referral, timeZone) } : {}),
+    ...(riderHold?.kind === "not_cleared" && riderDay ? { ridingNotClearedOn: riderDay } : {}),
+    ...(riderHold?.kind === "referral" && riderDay ? { ridingReferredOn: riderDay } : {}),
   };
 }
+
+export type MedicalWarningDays = {
+  refusedOn?: CalendarDate;
+  referredOn?: CalendarDate;
+  /** A rider boarding, riding only, under a physician's standing "no" (H-109). */
+  ridingNotClearedOn?: CalendarDate;
+  /** A rider boarding, riding only, under a referral nobody answered (H-109). */
+  ridingReferredOn?: CalendarDate;
+};
 
 /**
  * The physician's "no" on file that no later clearance has answered
@@ -643,9 +761,16 @@ export function medicalWarningDays(
 function unansweredRefusal(
   records: readonly WaiverRecord[],
   signedBefore: number,
+  /** Exclusive lower bound on the refusal's signature; none by default. */
+  signedAfter = Number.NEGATIVE_INFINITY,
 ): OverriddenRefusal | null {
   const refusals = records
-    .filter((record) => isStandingRefusal(record) && signatureTime(record) < signedBefore)
+    .filter(
+      (record) =>
+        isStandingRefusal(record) &&
+        signatureTime(record) < signedBefore &&
+        signatureTime(record) > signedAfter,
+    )
     .sort((a, b) => (decidedAfter(a, b) ? -1 : decidedAfter(b, a) ? 1 : 0));
   for (const refusal of refusals) {
     const refused = flaggedPromptsOf(refusal);
@@ -658,6 +783,7 @@ function unansweredRefusal(
     if (!answered && refusal.medicalClearanceDeclinedAt) {
       return {
         recordId: refusal.id,
+        personId: refusal.personId,
         at: refusal.medicalClearanceDeclinedAt,
         evaluatedOn: isValidCalendarDate(refusal.medicalClearanceEvaluatedOn ?? "")
           ? (refusal.medicalClearanceEvaluatedOn ?? null)

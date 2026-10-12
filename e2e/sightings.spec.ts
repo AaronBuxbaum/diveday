@@ -115,10 +115,8 @@ test("a diver reads the crew's month under the site on the trip page", async ({ 
   // beat is that it says how often, out of how many dives.
   await expect(page.getByText(/Southern stingray on \d+ of \d+ logged dives/)).toBeVisible();
   await expect(page.getByText(/Last seen /).first()).toBeVisible();
-  // And the sentence that stops a log being read as a guarantee.
-  await expect(
-    page
-      .getByText("What the crew logged, and when. It says what was seen, not what you will see.")
-      .first(),
-  ).toBeVisible();
+  // The "it says what was seen, not what you will see" caption is gone (UX
+  // review 2026-10-10, item 20): the heading and the "N of M logged dives"
+  // lines carry the honesty themselves.
+  await expect(page.getByText("It says what was seen, not what you will see.")).toHaveCount(0);
 });

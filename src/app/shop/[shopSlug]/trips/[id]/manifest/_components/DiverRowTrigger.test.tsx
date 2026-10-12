@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import type { TripManifest } from "@/lib/manifests";
 import { DiverRowTrigger } from "./DiverRowTrigger";
 import {
+  boardedAt,
   dangerToned,
   diver,
   renderList,
@@ -15,13 +17,115 @@ afterEach(cleanup);
 
 /**
  * **The capsule has the whole row's width** (issue #2008). A Badge never wraps,
- * and the longest capsule ("Someone unaccounted for", "Alguien sin
- * contabilizar") is wider than the name column at 390px, so beside the name it
+ * and the longest capsule ("Buddy not back aboard", "Compañero sin
+ * regresar a bordo") is wider than the name column at 390px, so beside the name it
  * would spill over the caret and the mark. It takes its own line under the
  * row, from the index's edge to the caret's, still inside the name button:
  * the tap target and what the button opens are unchanged. jsdom has no
  * layout, so this pins the structure that gives it the room.
  */
+/**
+ * **A rider boarding under a medical hold, riding only** (H-109). The hold is
+ * never a blocker, so the row's capsule says it: below a desk blocker and a
+ * team that did not come back after a dive, above the minor, depth and
+ * birthday capsules, and at every checkpoint, since a rider back aboard after
+ * a dive is still not to go in the water.
+ */
+describe("the rider's riding-only capsule", () => {
+  const NOT_CLEARED = "Physician did not clear: riding only";
+  const REFERRAL = "Medical referral open: riding only";
+  const notCleared = {
+    kind: "not_cleared",
+    at: new Date("2026-08-20T12:00:00.000Z"),
+    evaluatedOn: "2026-08-19",
+  } as TripManifest["divers"][number]["riderMedicalHold"];
+  const referral = {
+    kind: "referral",
+    at: new Date("2026-08-20T12:00:00.000Z"),
+  } as TripManifest["divers"][number]["riderMedicalHold"];
+  const rider = (overrides: Partial<TripManifest["divers"][number]> = {}) =>
+    diver({
+      participantType: "rider",
+      medicalWaiver: null,
+      riderMedicalHold: notCleared,
+      ...overrides,
+    });
+
+  function capsuleOf(container: HTMLElement) {
+    return container.querySelector(".basis-full");
+  }
+
+  it("says an open referral on the row, and in the dated sentence the details and paper both carry", () => {
+    const { container } = renderList({ divers: [rider({ riderMedicalHold: referral })] });
+    expect(capsuleOf(container)).toHaveTextContent(REFERRAL);
+    const sentence =
+      /Referred to a physician on Aug\s20,\s2026 with no answer on file: riding only, not in the water/;
+    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
+    expect(printed).toHaveTextContent(sentence);
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    expect(within(screen.getByRole("dialog")).getByText(sentence)).toBeDefined();
+  });
+
+  it("yields to Blocked at the dock", () => {
+    const { container } = renderList({
+      checkpoint: "departure",
+      divers: [
+        rider({
+          readiness: { status: "blocked", blockers: [{ code: "certification_missing" }] },
+        }),
+      ],
+    });
+    expect(capsuleOf(container)).toHaveTextContent("Blocked");
+    expect(capsuleOf(container)).not.toHaveTextContent(NOT_CLEARED);
+  });
+
+  it("yields to a team that did not come back after a dive", () => {
+    const { container } = renderList({
+      divers: [
+        rider({
+          buddyAlert: "separated_after_dive",
+          buddyTeam: { teamId: "t-1", others: [] },
+        }),
+      ],
+    });
+    expect(capsuleOf(container)).toHaveTextContent("Buddy not back aboard");
+    expect(capsuleOf(container)).not.toHaveTextContent(NOT_CLEARED);
+  });
+
+  it("outranks the minor, depth and birthday capsules", () => {
+    const { container } = renderList({
+      divers: [
+        rider({
+          age: 13,
+          minor: true,
+          depthAdvisory: {
+            status: "exceeds",
+            limitDepth: 18,
+            siteDepth: 30,
+            unit: "meters",
+            basis: "certification",
+            level: "open_water",
+          },
+          birthday: { status: "today" },
+        } as unknown as Partial<TripManifest["divers"][number]>),
+      ],
+    });
+    expect(capsuleOf(container)).toHaveTextContent(NOT_CLEARED);
+    expect(capsuleOf(container)).not.toHaveTextContent("Minor");
+  });
+
+  it("stays on the row after a dive, for a rider counted aboard", () => {
+    for (const checkpoint of ["after_dive_1", "after_dive_2"] as const) {
+      const { container, unmount } = renderList({
+        checkpoint,
+        divers: [rider({ boardedEarlier: true, rollCall: boardedAt() })],
+      });
+      expect(capsuleOf(container), checkpoint).toHaveTextContent(NOT_CLEARED);
+      unmount();
+    }
+  });
+});
+
 describe("the exception capsule's line", () => {
   function capsuleLine(row: HTMLElement, text: string) {
     const pill = within(row).getByText(text);
@@ -151,9 +255,11 @@ describe("the counter's write-off is on the row", () => {
 });
 
 describe("DiverRowTrigger, drawn on its own", () => {
+  const at = { lateAt: null, locale: "en-US", timezone: "America/New_York" };
+
   it("numbers the row from one and holds no capsule line when there is nothing to say", () => {
     const { container } = render(
-      <DiverRowTrigger diver={diver()} index={4} capsule={null} typeBadge={null} t={t} />,
+      <DiverRowTrigger diver={diver()} index={4} capsule={null} typeBadge={null} {...at} t={t} />,
     );
     expect(container.textContent).toMatch(/^05Meera Iyer/);
     expect(container.querySelector(".basis-full")).toBeNull();
@@ -166,9 +272,26 @@ describe("DiverRowTrigger, drawn on its own", () => {
         index={0}
         capsule={<span>Blocked</span>}
         typeBadge={null}
+        {...at}
         t={t}
       />,
     );
     expect(container.querySelector(".basis-full")).toHaveTextContent("Blocked");
+  });
+
+  it("says the diver's running-late word under the name, and lifts the capsule line beside it", () => {
+    const { container } = render(
+      <DiverRowTrigger
+        diver={diver()}
+        index={0}
+        capsule={<span>Blocked</span>}
+        typeBadge={null}
+        {...at}
+        lateAt={new Date("2026-09-11T11:42:00.000Z")}
+        t={t}
+      />,
+    );
+    expect(container.textContent?.replace(/\s/g, " ")).toContain("Running late, said 7:42 AM");
+    expect(container.querySelector(".basis-full")?.className).toContain("sm:self-start");
   });
 });

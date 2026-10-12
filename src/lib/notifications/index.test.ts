@@ -15,7 +15,7 @@ import {
 
 const sesConfig = {
   region: "us-east-1",
-  from: "Blue Mantis <bookings@ses.dive.day>",
+  from: "DiveDay <noreply@ses.dive.day>",
   accessKeyId: "AKIA_TEST",
   secretAccessKey: "test-secret",
 };
@@ -384,7 +384,10 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
     expect(client.send).toHaveBeenCalledTimes(1);
     const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
     expect(command.input).toMatchObject({
-      FromEmailAddress: "Blue Mantis <bookings@ses.dive.day>",
+      // Sent as the shop, on DiveDay's own verified address (ux review
+      // 2026-10-11, item 3): only the display name moves, so DMARC still
+      // aligns on the DiveDay domain.
+      FromEmailAddress: '"Blue Mantis via DiveDay" <noreply@ses.dive.day>',
       Destination: { ToAddresses: ["delivered+booking@dive.day"] },
       Content: {
         Simple: {
@@ -651,7 +654,9 @@ describe("notificationProviderFromEnvironment (ADR 20260803-ses-sole-email-provi
     await notify(booking, provider);
 
     const command = sesClient.send.mock.calls[0]?.[0] as SendEmailCommand;
-    expect(command.input.FromEmailAddress).toBe("DiveDay <notifications@demo.invalid>");
+    expect(command.input.FromEmailAddress).toBe(
+      '"Blue Mantis via DiveDay" <notifications@demo.invalid>',
+    );
   });
 
   it("is disabled when SES config is incomplete", async () => {
@@ -719,7 +724,9 @@ describe("email rendering", () => {
     });
 
     expect(email.html).toContain("&lt;Reef &quot;Special&quot;&gt;");
-    expect(email.html).toContain("Blue Mantis &amp; Co.");
+    // The shop speaks as "we" now (ux review 2026-10-11, item 9), so its name
+    // is not in this body at all, and never raw.
+    expect(email.html).not.toContain("Blue Mantis & Co.");
   });
 });
 

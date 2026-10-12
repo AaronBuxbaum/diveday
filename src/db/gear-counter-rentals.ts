@@ -19,9 +19,11 @@ import { type ShopWaiverStatus, shopWaiverStatus } from "@/lib/waivers";
 import type { AppDb } from "./client";
 import {
   type GearReservationActionOutcome,
+  type GearSetReturnOutcome,
   latestServiceClocks,
   openGearReservation,
   openServiceConcerns,
+  pullReturnedUnitsForService,
 } from "./gear";
 import { violatesExclusionConstraint } from "./query-helpers";
 import {
@@ -550,6 +552,11 @@ export async function checkOutCounterRental(
  * twin of `returnTripGearSet`, with its rules: only units that left are
  * closed, a service concern must carry words, and the refusal comes before
  * anything is written so a set is never half-closed.
+ *
+ * **"Pull for service" too** (issue #2345): the units ticked under a concern
+ * go to the bench through the same step a departure's return uses
+ * ({@link pullReturnedUnitsForService}), in the same transaction, and the
+ * answer says how many moved.
  */
 export async function returnCounterRental(
   db: AppDb,
@@ -560,29 +567,41 @@ export async function returnCounterRental(
     note?: string;
     /** Dives the person did on the rental, when they said; each unit did them all. */
     dives?: number | null;
+    /** The units ticked "Pull for service"; read only on a service concern. */
+    pullGearItemIds?: readonly string[];
   },
-): Promise<GearReservationActionOutcome> {
+): Promise<GearSetReturnOutcome> {
   const note = input.note?.trim() || null;
   if (input.outcome === "service_concern" && !note) {
     return { ok: false, reason: "concern_needs_words" };
   }
-  const returned = await db
-    .update(gearReservations)
-    .set({
-      returnedAt: nowDate(),
-      returnNote: note,
-      returnOutcome: input.outcome,
-      divesLogged: input.dives ?? null,
-    })
-    .where(
-      and(
-        sameCounterRental(input.shopId, input.ticketId),
-        isNotNull(gearReservations.checkedOutAt),
-        openGearReservation(),
-      ),
-    )
-    .returning({ id: gearReservations.id });
-  return returned.length > 0 ? { ok: true } : { ok: false, reason: "not_found" };
+  return db.transaction(async (tx) => {
+    const returned = await tx
+      .update(gearReservations)
+      .set({
+        returnedAt: nowDate(),
+        returnNote: note,
+        returnOutcome: input.outcome,
+        divesLogged: input.dives ?? null,
+      })
+      .where(
+        and(
+          sameCounterRental(input.shopId, input.ticketId),
+          isNotNull(gearReservations.checkedOutAt),
+          openGearReservation(),
+        ),
+      )
+      .returning({ id: gearReservations.id, gearItemId: gearReservations.gearItemId });
+    if (returned.length === 0) return { ok: false, reason: "not_found" } as const;
+    const pulled = await pullReturnedUnitsForService(tx, {
+      shopId: input.shopId,
+      outcome: input.outcome,
+      note,
+      returnedGearItemIds: returned.map((row) => row.gearItemId),
+      pullGearItemIds: input.pullGearItemIds,
+    });
+    return { ok: true, pulled } as const;
+  });
 }
 
 /**
@@ -825,12 +844,16 @@ function groupCounterRentals(rows: readonly CounterRentalRow[]): CounterRentalTi
  * sent from their record — so a counter has had a person's waiver to read all
  * along. Shop-scoped on every read; a person id from another shop answers
  * nothing, which the caller reads as "say nothing".
+ *
+ * The whole status, not just its state: a current release can stand over a
+ * physician's earlier "not cleared" or an open referral (H-98 as amended),
+ * and the counter says that warning as the manifest does.
  */
 export async function counterRentalWaiverStandings(
   db: AppDb,
   input: { shopId: string; timezone: string; personIds: readonly string[] },
-): Promise<Map<string, ShopWaiverStatus["state"]>> {
-  const standings = new Map<string, ShopWaiverStatus["state"]>();
+): Promise<Map<string, ShopWaiverStatus>> {
+  const standings = new Map<string, ShopWaiverStatus>();
   const personIds = [...new Set(input.personIds)];
   if (personIds.length === 0) return standings;
   const [holders, signed, template] = await Promise.all([
@@ -854,7 +877,7 @@ export async function counterRentalWaiverStandings(
         personSignedWaivers: signed.get(holder.id) ?? [],
         currentTemplateVersion: template?.materialGeneration ?? null,
         signer: { dateOfBirth: holder.dateOfBirth, timezone: input.timezone },
-      }).state,
+      }),
     );
   }
   return standings;

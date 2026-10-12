@@ -18,6 +18,7 @@ function show(over: Partial<React.ComponentProps<typeof MoreWaysRows>> = {}) {
     <MoreWaysRows
       shopSlug="blue-mantis"
       quiet={false}
+      promotedAsk={false}
       dateRequestsEnabled
       lastMinuteListEnabled
       everHadDeparture
@@ -37,6 +38,11 @@ describe("MoreWaysRows", () => {
 
   it("leaves the date request to the off-season card when it is up", () => {
     show({ quiet: true });
+    expect(screen.queryByText("date-request")).toBeNull();
+  });
+
+  it("leaves the date request to the board's-end ask when the runs keep going", () => {
+    show({ promotedAsk: true });
     expect(screen.queryByText("date-request")).toBeNull();
   });
 

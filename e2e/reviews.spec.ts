@@ -43,9 +43,11 @@ test("a diver's bare rating publishes straight away and reaches the public page"
   // 20260827-clearwater-surface-language, decision 8).
   // The average and count are separate inline spans so each can carry its own
   // typography; assert the composed paragraph rather than a text node that
-  // cannot cross those element boundaries.
+  // cannot cross those element boundaries. The hero counts every star given
+  // ("N ratings"); the written ones are counted apart in the archive (UX
+  // review 2026-10-10, item 17).
   const aggregate = page.locator("p").filter({
-    hasText: /\d+(?:\.\d+)?\s*·\s*\d+ reviews/,
+    hasText: /\d+(?:\.\d+)?\s*·\s*\d+ ratings?/,
   });
   await expect(aggregate).toHaveCount(1);
 });
@@ -448,7 +450,8 @@ test("the public review count opens all reviews without trip names", async ({ pa
   // the hero owns the average-plus-count line (ADR
   // 20260827-clearwater-surface-language, decision 8).
   await expect(heading).toHaveClass(/text-\[2\.5rem\]/);
-  await expect(page.getByText(/^\d+ reviews$/)).toHaveCount(1);
+  // Every star given, then the written ones (UX review 2026-10-10, item 17).
+  await expect(page.getByText(/^\d+ ratings · \d+ reviews$/)).toHaveCount(1);
   await expect(page.getByText("Read what divers who were on the boat said")).toHaveCount(0);
   await expect(page.getByText("Two-Tank Reef — Molasses & French")).toHaveCount(0);
   await expect(

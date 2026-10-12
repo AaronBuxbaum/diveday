@@ -21,8 +21,7 @@ describe("TripAboutLinks", () => {
   it("copies and opens the public page, prints the packet, and offers the log", () => {
     const { container } = render(
       <TripAboutLinks
-        db={{} as never}
-        shopId="shop"
+        shop={{ id: "shop", slug: "blue-mantis", defaultLocale: "en-US" }}
         personId="person"
         shopSlug="blue-mantis"
         tripId="trip-1"

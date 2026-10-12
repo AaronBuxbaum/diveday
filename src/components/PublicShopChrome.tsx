@@ -106,6 +106,8 @@ export function PublicShopHeader({
 export function PublicShopFooter({
   shop,
   spokenLanguagesLine,
+  deskHoursLine = null,
+  whatsAppHref = null,
   t,
 }: {
   shop: {
@@ -127,6 +129,14 @@ export function PublicShopFooter({
    * language the page itself renders in.
    */
   spokenLanguagesLine: string | null;
+  /**
+   * "Desk open 7:00 to 17:00", already worded, or null until the shop has
+   * saved its hours: the default is a guess for after-hours pings, never a
+   * promise to print (`shops.desk_hours_confirmed_at`).
+   */
+  deskHoursLine?: string | null;
+  /** The shop's own WhatsApp sender as a wa.me link, or null when it has none. */
+  whatsAppHref?: string | null;
   t: DiverTranslator;
 }) {
   // **Where the shop is** — the first question a visiting diver asks, and the
@@ -195,12 +205,13 @@ export function PublicShopFooter({
           {spokenLanguagesLine ? (
             <p>{t("shopChrome.spokenLanguages", { languages: spokenLanguagesLine })}</p>
           ) : null}
+          {deskHoursLine ? <p>{deskHoursLine}</p> : null}
         </div>
         {/* Only when there is a way to reach the shop on file. A shop still
             being set up has none, and the empty line took the phone column's
             8px gap under the credit line (the pixel probe,
             public-schedule-new-shop). */}
-        {addressNode || shop.contactPhone || shop.contactEmail ? (
+        {addressNode || shop.contactPhone || shop.contactEmail || whatsAppHref ? (
           <p className="flex flex-wrap items-center gap-x-3 gap-y-0">
             {addressNode}
             {shop.contactPhone ? (
@@ -217,6 +228,18 @@ export function PublicShopFooter({
                 className={`${tapTargetLinkClass} hover:text-foreground hover:underline`}
               >
                 {shop.contactEmail}
+              </a>
+            ) : null}
+            {/* The shop's own WhatsApp Business number, where a diver's
+                message lands in the shop's Inbox like any other. */}
+            {whatsAppHref ? (
+              <a
+                href={whatsAppHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${tapTargetLinkClass} hover:text-foreground hover:underline`}
+              >
+                {t("shopChrome.whatsApp")}
               </a>
             ) : null}
           </p>

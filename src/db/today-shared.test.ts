@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatTime } from "@/lib/format";
-import { at, NO_SUPERVISION, shopDay } from "./today-shared";
+import { at, shopDay } from "./today-shared";
 
 describe("today-shared", () => {
   it("names the shop's own day, not UTC's", () => {
@@ -14,14 +14,5 @@ describe("today-shared", () => {
     expect(at(startsAt, "America/New_York", "en-US")).toBe(
       formatTime(startsAt, "en-US", "America/New_York"),
     );
-  });
-
-  it("reads an unrostered departure as nobody in the water and nobody lapsed", () => {
-    expect(NO_SUPERVISION).toEqual({
-      instructorCount: 0,
-      assistantCount: 0,
-      roster: { instructorCount: 0, assistantCount: 0 },
-      lapsed: [],
-    });
   });
 });

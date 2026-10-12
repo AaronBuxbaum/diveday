@@ -34,4 +34,58 @@ describe("the remove-diver disclosure", () => {
     expect(summary).toHaveClass("min-h-12", "text-base");
     expect(summary).not.toHaveClass("text-sm");
   });
+
+  it("warns, before the confirm, that someone who also works here leaves the team", () => {
+    const { getByText, rerender, queryByText } = render(
+      <RemoveDiver
+        diver={
+          {
+            person: { fullName: "Ines Dual-Role" },
+            holdsStaffRole: true,
+          } as unknown as DiverProfile
+        }
+        shopSlug="blue-mantis"
+        personId="person-1"
+        t={staffTranslator("en-US")}
+      />,
+    );
+    expect(getByText(/can no longer sign in/)).toBeInTheDocument();
+
+    rerender(
+      <RemoveDiver
+        diver={
+          { person: { fullName: "Morgan Vale" }, holdsStaffRole: false } as unknown as DiverProfile
+        }
+        shopSlug="blue-mantis"
+        personId="person-1"
+        t={staffTranslator("en-US")}
+      />,
+    );
+    expect(queryByText(/can no longer sign in/)).toBeNull();
+  });
+});
+
+/**
+ * Delete is a soft delete, and the record's foot says so before anyone taps
+ * it: what goes, what stays, and that it comes back (UX review 2026-10-10,
+ * item 37).
+ */
+describe("the sentence under Delete", () => {
+  it("names the diver, what they leave, what stays, and that a restore brings them back", () => {
+    const { container } = render(
+      <RemoveDiver
+        diver={{ person: { fullName: "Morgan Vale" } } as unknown as DiverProfile}
+        shopSlug="blue-mantis"
+        personId="person-1"
+        t={staffTranslator("en-US")}
+      />,
+    );
+    const sentence = container.querySelector("#remove > p");
+    expect(sentence).toHaveTextContent(
+      "Takes Morgan Vale off the roster, the booking pickers, manifests, and trip prep.",
+    );
+    expect(sentence).toHaveTextContent(/stay on file, and you can restore them/);
+    // Visible while the disclosure is shut: the warning comes before the tap.
+    expect(sentence?.closest("details")).toBeNull();
+  });
 });

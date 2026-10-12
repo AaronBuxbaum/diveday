@@ -17,7 +17,6 @@ import {
   courseFormTextChanged,
   fillCourseFormText,
   normalizeCourseFormText,
-  outstandingCourseForms,
   type RequiredCourseForm,
 } from "@/lib/course-forms";
 import {
@@ -1188,58 +1187,6 @@ export async function recordPaperCourseForm(
       guardian,
     });
   });
-}
-
-/**
- * Which forms each booking on these trips still owes, by booking id — the
- * course roster's and the trip roster's view, read whatever
- * `COURSE_FORMS_BLOCK_BOARDING` says, so a shop sees what is owed even when
- * it does not block.
- */
-export async function owedCourseFormsByBooking(
-  db: DbExecutor,
-  shopId: string,
-  tripIds: readonly string[],
-  now: Date = nowDate(),
-): Promise<Map<string, RequiredCourseForm[]>> {
-  const result = new Map<string, RequiredCourseForm[]>();
-  const requiredByTrip = await requiredCourseFormsForTrips(db, shopId, tripIds, now);
-  if (requiredByTrip.size === 0) return result;
-  const seats = await db
-    .select({
-      bookingId: bookings.id,
-      personId: bookings.personId,
-      tripId: bookings.tripId,
-      dateOfBirth: people.dateOfBirth,
-      timezone: shops.timezone,
-    })
-    .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .innerJoin(shops, eq(shops.id, bookings.shopId))
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        inArray(bookings.tripId, [...requiredByTrip.keys()]),
-        ne(bookings.status, "cancelled"),
-      ),
-    );
-  const signatures = await courseFormSignaturesForBookings(
-    db,
-    shopId,
-    seats.map((seat) => seat.bookingId),
-  );
-  for (const seat of seats) {
-    const owed = outstandingCourseForms({
-      shopId,
-      bookingId: seat.bookingId,
-      personId: seat.personId,
-      required: requiredByTrip.get(seat.tripId) ?? [],
-      signatures,
-      signer: { dateOfBirth: seat.dateOfBirth, timezone: seat.timezone },
-    });
-    if (owed.length > 0) result.set(seat.bookingId, owed);
-  }
-  return result;
 }
 
 /** How many students, on how many sessions, a change to forms reaches. */

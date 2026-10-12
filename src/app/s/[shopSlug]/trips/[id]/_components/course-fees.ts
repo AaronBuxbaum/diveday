@@ -1,5 +1,5 @@
 import { courseCharges } from "@/lib/courses";
-import type { publicTripRecord } from "./booking-page-wave";
+import type { publicTripRecord } from "../_lib/page-reads";
 
 type PublicTrip = NonNullable<Awaited<ReturnType<typeof publicTripRecord>>>;
 

@@ -10,8 +10,10 @@ import {
   type EveningReading,
   type SpineDraft,
 } from "@/app/shop/[shopSlug]/_components/today/DaySpine";
+import { readDayMoney } from "@/app/shop/[shopSlug]/_components/today/day-money";
 import { FirstBookableCard } from "@/app/shop/[shopSlug]/_components/today/FirstBookableCard";
 import { FirstRunChecklist } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
+import { firstRunChecklistCopy } from "@/app/shop/[shopSlug]/_components/today/first-run-copy";
 import { RecapNoteEditor } from "@/app/shop/[shopSlug]/_components/today/RecapNoteEditor";
 import {
   RoleOrientationCard,
@@ -19,6 +21,7 @@ import {
 } from "@/app/shop/[shopSlug]/_components/today/RoleOrientationCard";
 import { recapStatusLine } from "@/app/shop/[shopSlug]/_components/today/recap-status";
 import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessions";
+import { YourWeek } from "@/app/shop/[shopSlug]/_components/today/YourWeek";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
@@ -34,7 +37,7 @@ import { shopFirstBooking } from "@/db/first-booking";
 import { listFreshFormDrafts } from "@/db/form-drafts";
 import { shopHasEverTakenAnOrder } from "@/db/orders";
 import type { ConfirmRentalFitOutcome } from "@/db/rental-fit";
-import { canPersonViewShopReports, getMonthlyReport } from "@/db/reporting";
+import { canPersonViewShopReports } from "@/db/reporting";
 import { seasonScale } from "@/db/season-scale";
 import { shopByIdCached } from "@/db/shops";
 import { canAcceptPayments, shopStripeAccountForRender } from "@/db/stripe-accounts";
@@ -51,7 +54,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { daySpineSummaryText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
-import { assembleEveningClose, dayTakings } from "@/lib/closeout";
+import { assembleEveningClose } from "@/lib/closeout";
 import { shopCrewTarget } from "@/lib/crew-schedule";
 import { FORM_DRAFT_RESUME_SUFFIX } from "@/lib/form-drafts";
 import {
@@ -63,10 +66,8 @@ import {
 } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
-import { FIRST_RUN_STEP_COUNT } from "@/lib/onboarding";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { recapAutoSendAt } from "@/lib/recap-schedule";
-import { summarizeMonth } from "@/lib/reporting";
 import { seasonStartInstant } from "@/lib/season";
 import { requireStaffSession } from "@/lib/session";
 import {
@@ -78,14 +79,12 @@ import {
 } from "@/lib/staff-notices";
 import {
   assembleDaySpine,
-  type DayStation,
   factOfScaleFor,
-  pressingRows,
+  readNeedsYou,
   roleLensFor,
   spineIsQuiet,
   spineJobCount,
 } from "@/lib/today";
-import { hasSailed } from "@/lib/trips";
 import { shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { AUTH_NOTICES } from "./_components/auth-notices";
 import {
@@ -368,6 +367,10 @@ async function TodayBody({
   // and badges the boat they crew; an instructor's leads with their sessions. It never re-orders
   // the spine — clock order wins.
   const lens = roleLensFor(session.user.roles);
+  // "Your week" is the crew's: a reader the lens files under boat work, or a
+  // deckhand, at a shop that plans its crew in DiveDay.
+  const showCrewWeek =
+    shop.crewScheduleEnabled && (lens === "boat" || session.user.roles.includes("crew"));
   const eveningClose = assembleEveningClose(closeout.departures, now);
   // **The shop's own calendar day**, as the two UTC instants that bracket it. Four readers below
   // want it — the first-boat-ever question, the day strip's window and ticks, and the day's takings
@@ -386,23 +389,9 @@ async function TodayBody({
   // gate is checked against the database rather than the session's roles so a demotion takes effect
   // at once, and resolved once here rather than per station.
   //
-  // **What today made** — the evening's one money reading (issue #1930; ADR 20260919-one-idea,
-  // decision I · Tide: "money is what the day made"). It renders above the closing block and inside
-  // nothing; `DayTakings.tsx` carries the placement and its decision.
-  //
-  // **The month's own derivation, over the day's bounds.** `getMonthlyReport` is window-shaped —
-  // nothing in it is month-specific but its name — and it anchors every figure to `trips.startsAt`,
-  // so the day is the same query with `shopDayBounds` in place of `shopMonthBounds`. That is
-  // deliberate rather than convenient: a second derivation would let tonight's figure and the same
-  // day inside `/reports` disagree, and which of them a shop then believed would be a coin toss.
-  // `reporting.test.ts` pins the two together by summing the days of a month against the month
-  // itself.
-  //
-  // **Gated before it is read.** `canReadShopMoney` is the live role read resolved in the first
-  // wave, so a reader who may not have the number never causes the query that would produce it —
-  // and the whole thing is skipped until the day is closing, so the ordinary morning render pays
-  // nothing for it.
-  const [work, tomorrowDepartures, [headCountCloses, canOpenLog], sailedBefore, dayMonthReport] =
+  // **The day's money** (`readDayMoney`): what today made, gated on `canReadShopMoney` (the live
+  // role read of the first wave) and the day closing; and the tips on the reader's own boats.
+  const [work, tomorrowDepartures, [headCountCloses, canOpenLog], sailedBefore, dayMoney] =
     await Promise.all([
       getTodayWork(
         db,
@@ -428,19 +417,17 @@ async function TodayBody({
               shop.id,
               eveningClose.stations
                 .filter((station) => station.status === "all_home")
-                .map((station) => station.tripId),
+                .map(({ tripId, crewAccountedFor }) => ({ tripId, crewClosed: crewAccountedFor })),
             ),
             canPersonExportIncidentRecord(db, shop.id, session.user.personId),
           ])
         : ([new Map(), false] as [Map<string, { closedAt: Date; closedBy: string }>, boolean]),
       // The once-ever wording, asked for only in the moment it could apply.
       eveningClose.allHome ? shopHasSailedBefore(db, shop.id, dayBounds.from) : true,
-      eveningClose.closing && canReadShopMoney
-        ? getMonthlyReport(db, shop.id, dayBounds.from, dayBounds.to, {
-            currency: shop.currency,
-            timeZone: shop.timezone,
-          })
-        : null,
+      readDayMoney(db, shop, dayBounds, {
+        personId: session.user.personId,
+        withTakings: eveningClose.closing && canReadShopMoney,
+      }),
     ]);
   const { actions, withheldCount, nextDeparture, crewedTripIds, crewedSessions } = work;
   const spine = assembleDaySpine(work, { departures: tomorrowDepartures, actions: [] });
@@ -534,15 +521,19 @@ async function TodayBody({
   const blockedToday = work.departures.reduce((sum, departure) => sum + departure.blocked, 0);
   const urgentJobs = actions.filter((action) => action.urgency === "now").length;
   after(() => trackEvent({ name: "blockers_surfaced", count: blockedToday, urgent: urgentJobs }));
-  // The next boat that has not gone yet, carrying the standing one-hour
-  // late-arrival buffer every "has it sailed" question in this app carries.
-  const nextStation: DayStation | undefined = spine.stations.find(
-    (station) => !hasSailed(station.startsAt, now),
-  );
-  // "3 boats today. 2 things need you before the 7:00 AM leaves the dock." The
-  // count is what is still open on the boat the sentence names, because that
-  // is what "before it leaves" means; once every boat is away it counts what
-  // is open across the day instead.
+  // **One reading of Needs you for every role** (UX review 2026-10-10, item 2):
+  // the sentence under the date counts the rows of the reader's own list about
+  // the boat it names, and the spine is handed the same reading for its count
+  // and its all-clear line.
+  const blockedFigures = daySummaryBlocked(evidence, shop.timezone, now, work.blockedAboard);
+  const needsYou = readNeedsYou(spine, {
+    crewedTripIds: lens === "boat" ? crewedTripIds : [],
+    readerPersonId: session.user.personId,
+    drafts: spineDrafts.length,
+    paymentsRow: showPaymentsRow,
+    blocked: blockedFigures.blocked,
+    now,
+  });
   const daySummaryText = showFirstRunChecklist
     ? null
     : daySpineSummaryText(t, {
@@ -550,17 +541,14 @@ async function TodayBody({
         // has three boats on it, and the line under the date says what the day
         // *is* before it says what is left of it.
         boats: dayDepartures.length,
-        ...daySummaryBlocked(evidence, shop.timezone, now, work.blockedAboard),
-        jobs: nextStation
-          ? pressingRows(nextStation.rows)
-          : spine.stations.reduce((total, station) => total + pressingRows(station.rows), 0) +
-            pressingRows(spine.desk),
-        nextDepartureTime: nextStation
-          ? formatTime(nextStation.startsAt, locale, shop.timezone)
+        ...blockedFigures,
+        jobs: needsYou.dueBeforeNext,
+        nextDepartureTime: needsYou.next
+          ? formatTime(needsYou.next.startsAt, locale, shop.timezone)
           : null,
       });
   // What today made: the second wave's last read, gated there.
-  const dayTakingsReading = dayMonthReport ? dayTakings(summarizeMonth(dayMonthReport)) : null;
+  const dayTakingsReading = dayMoney.takings;
   // The whole page is empty at once, and collapses to a heading, one sentence
   // and the one act available — never a spine of empty groups. Every clause of
   // that rule lives with the spine (`spineIsQuiet`), first-run included: the
@@ -689,18 +677,9 @@ async function TodayBody({
           ) : null
         }
       >
-        {/* The day's own line is in the sky above this, so the only sentence
-              left here is first-run's, which carries the address a diver would
-              use and the count of what is left to do — neither of which the
-              band says (issue #711). */}
-        {showFirstRunChecklist ? (
-          <p className="max-w-2xl text-lg text-muted">
-            {t.rich("shopHome.firstRun.pageIntro", {
-              address: (chunks) => <address className="inline not-italic">{chunks}</address>,
-              url: publicScheduleUrl,
-            })}
-          </p>
-        ) : null}
+        {/* First run says nothing here (UX review 2026-10-10, item 29): the
+            checklist below counts what is left, and its share row carries the
+            address as a copy control rather than a URL printed in prose. */}
         {/* A day with no boats answers its follow-up question right here. */}
         {!quietDay && spine.stations.length === 0 && nextDeparture ? (
           <p className="mt-1 max-w-2xl text-muted">
@@ -906,7 +885,9 @@ async function TodayBody({
             showPaymentsRow,
             firstBooking,
             factOfScale,
+            crewTipsCents: dayMoney.crewTipsCents,
             evening,
+            needsYou,
             now,
             sessions:
               lens === "sessions" ? (
@@ -932,57 +913,31 @@ async function TodayBody({
                 diveSiteCount={firstRunDiveSites?.length ?? 0}
                 unitsDone={Boolean(shop.unitsConfirmedAt)}
                 stripeDone={canAcceptPayments(firstRunStripeAccount)}
-                copy={{
-                  groupLabel: t("shopHome.firstRun.groupLabel"),
-                  subtitle: t("shopHome.firstRun.subtitle", { count: FIRST_RUN_STEP_COUNT }),
-                  progress: t("shopHome.firstRun.progress", {
-                    done: firstRunDoneCount,
-                    total: FIRST_RUN_STEP_COUNT,
-                  }),
-                  contactTitle: t("shopHome.firstRun.contactTitle"),
-                  contactBody: t("shopHome.firstRun.contactBody"),
-                  contactAction: t("shopHome.firstRun.contactAction"),
-                  contactDone: t("shopHome.firstRun.contactDone"),
-                  profileTitle: t("shopHome.firstRun.profileTitle"),
-                  profileBody: t("shopHome.firstRun.profileBody"),
-                  profileAction: t("shopHome.firstRun.profileAction"),
-                  profileDone: t("shopHome.firstRun.profileDone"),
-                  unitsTitle: t("shopHome.firstRun.unitsTitle"),
-                  unitsBody: t("shopHome.firstRun.unitsBody", {
-                    currency: shop.currency.toUpperCase(),
-                    depth: t(
-                      shop.depthUnit === "feet"
-                        ? "shopHome.firstRun.unitsFeet"
-                        : "shopHome.firstRun.unitsMeters",
-                    ),
-                  }),
-                  unitsAction: t("shopHome.firstRun.unitsAction"),
-                  unitsDone: t("shopHome.firstRun.unitsDone"),
-                  siteTitle: t("shopHome.firstRun.siteTitle"),
-                  siteBody: t("shopHome.firstRun.siteBody"),
-                  siteAction: t("shopHome.firstRun.siteAction"),
-                  siteDone: t("shopHome.firstRun.siteDone", {
-                    count: firstRunDiveSites?.length ?? 0,
-                  }),
-                  tripTitle: t("shopHome.firstRun.tripTitle"),
-                  tripBody: t("shopHome.firstRun.tripBody"),
-                  tripAction: t("shopHome.firstRun.tripAction"),
-                  scheduleTitle: t("shopHome.firstRun.scheduleTitle"),
-                  scheduleBody: t("shopHome.firstRun.scheduleBody"),
-                  scheduleCopy: t("shopHome.firstRun.scheduleCopy"),
-                  scheduleCopied: t("shopHome.firstRun.scheduleCopied"),
-                  scheduleCopyFailed: t("shopHome.firstRun.scheduleCopyFailed"),
-                  stripeTitle: t("shopHome.firstRun.stripeTitle"),
-                  stripeBody: t("shopHome.firstRun.stripeBody"),
-                  stripeAction: t("shopHome.firstRun.stripeAction"),
-                  stripeDone: t("shopHome.firstRun.stripeDone"),
-                  doneBadge: t("shopHome.firstRun.doneBadge"),
-                }}
+                copy={firstRunChecklistCopy(t, shop, {
+                  diveSiteCount: firstRunDiveSites?.length ?? 0,
+                  doneCount: firstRunDoneCount,
+                })}
               />
             ) : null,
           }}
         />
       )}
+
+      {/* A crew member's next three departures, on any day, quiet or not. */}
+      {showCrewWeek ? (
+        <Suspense fallback={null}>
+          <YourWeek
+            db={db}
+            shopId={shop.id}
+            shopSlug={shopSlug}
+            personId={session.user.personId}
+            timeZone={shop.timezone}
+            locale={locale}
+            now={now}
+            diversPerDivemaster={shop.diversPerDivemaster}
+          />
+        </Suspense>
+      ) : null}
     </>
   );
 }

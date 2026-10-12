@@ -1,13 +1,19 @@
-import { and, asc, eq, inArray, isNull, ne, or } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, ne, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { courseSeatCapacity } from "@/lib/course-ratios";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { seatRefusal } from "@/lib/participant-types";
 import { publicTripPath } from "@/lib/public-routes";
-import type { AppDb } from "./client";
+import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
+import { tripAdmissionFor, tripCourseCrewCounts } from "./bookings";
+import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { sendNotification } from "./notifications";
 import {
   bookings,
+  certifications,
   courseInquiries,
+  courses,
   people,
   personRoles,
   shops,
@@ -15,6 +21,7 @@ import {
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
+import { heldSeatCounts, sellableCapacity } from "./trips-queries";
 
 export type CreateTripRequestInvitationsInput = {
   shopId: string;
@@ -314,4 +321,150 @@ export async function deliverTripInvitation(
     bookingUrl: new URL(publicTripPath(input.shopSlug, context.trip.id), `${origin}/`).toString(),
   });
   return delivery.status === "sent" ? "sent" : "fallback";
+}
+
+/**
+ * **"Email them this date"** on the counter's no-show panel (UX review
+ * 2026-10-11, item 14). The desk already knows the fix for the diver who
+ * missed the boat — another departure with room — and this sends it to them
+ * in one tap: a direct invitation to that departure, delivered the way every
+ * direct invitation is (`deliverTripInvitation`), so the diver books the seat
+ * themselves from the link and a diver who turned off shop email is not
+ * emailed. Nothing is seated and nothing is charged.
+ *
+ * An invitation already standing for this diver and departure is sent again
+ * rather than refused, so a second tap after "no email" was fixed works.
+ * `unavailable` covers every reason there is nothing to offer: the departure
+ * is gone or full, the diver could not book it (`departureOpenToDiver`), or
+ * the person is not this shop's diver. Nothing is written or sent then.
+ */
+/**
+ * **Could this diver book this departure from a link right now?** The
+ * no-show's "another day" names a departure and promises the diver can take
+ * it (dive-domain review of layer 8, F1), so both the panel that lists the
+ * days and the act that sends one ask this first.
+ *
+ * The same refusals the booking transaction would give the diver, read
+ * without its locks: a departure that is cancelled, held for conditions,
+ * private or already gone; no sellable seat (`seatRefusal` over
+ * `sellableCapacity`, the certificate's cap included); a course session with
+ * no instructor, at its ratio cap, or asking a verified card the diver lacks;
+ * and the trip's own admission gate (`tripAdmissionFor`) on the diver's
+ * evidence. "Already gone" is the scheduled time, not `hasSailed`'s grace: the
+ * diver books later, from an email.
+ *
+ * Any booking row on it, a no-show included, refuses too: `bookings` is
+ * unique on (trip, person) and the booking form answers `already_booked` for
+ * a row that is not cancelled.
+ */
+export async function departureOpenToDiver(
+  db: DbExecutor,
+  input: { shopId: string; tripId: string; personId: string; now?: Date },
+): Promise<boolean> {
+  const now = input.now ?? nowDate();
+  const [trip] = await db
+    .select()
+    .from(trips)
+    .where(
+      and(
+        eq(trips.id, input.tripId),
+        eq(trips.shopId, input.shopId),
+        eq(trips.status, "scheduled"),
+        eq(trips.isPrivate, false),
+        gt(trips.startsAt, now),
+        liveTrip(),
+      ),
+    )
+    .limit(1);
+  if (!trip || trip.conditionsHold) return false;
+
+  const [row] = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.tripId, trip.id),
+        eq(bookings.personId, input.personId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .limit(1);
+  if (row) return false;
+
+  const held = await heldSeatCounts(db, input.shopId, trip.id);
+  if (seatRefusal("diver", { ...trip, capacity: await sellableCapacity(db, trip) }, held)) {
+    return false;
+  }
+
+  if (trip.courseId) {
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.id, trip.courseId), eq(courses.shopId, input.shopId)))
+      .limit(1);
+    if (!course) return false;
+    const { instructorCount, assistantCount } = await tripCourseCrewCounts(db, trip.id);
+    if (instructorCount === 0) return false;
+    const seatCap = courseSeatCapacity(course, instructorCount, assistantCount);
+    if (seatCap !== null && held.aboard >= seatCap) return false;
+    if (course.minimumCertificationLevel) {
+      const cards = await db
+        .select()
+        .from(certifications)
+        .where(
+          and(
+            eq(certifications.shopId, input.shopId),
+            eq(certifications.personId, input.personId),
+            isNull(certifications.deletedAt),
+          ),
+        );
+      if (!hasVerifiedCertificationAtLeast(cards, course.minimumCertificationLevel)) return false;
+    }
+  }
+
+  const admission = await tripAdmissionFor(
+    db,
+    input.shopId,
+    trip.id,
+    { id: input.personId },
+    false,
+    Boolean(trip.courseId),
+  );
+  return admission.admitted;
+}
+
+export async function offerDepartureToDiver(
+  db: AppDb,
+  input: {
+    shopId: string;
+    shopSlug: string;
+    tripId: string;
+    personId: string;
+    createdByPersonId: string;
+  },
+): Promise<TripInvitationDelivery | "unavailable"> {
+  if (!(await departureOpenToDiver(db, input))) return "unavailable";
+  await createDirectTripInvitation(db, input);
+  const [standing] = await db
+    .select({ id: tripInvitations.id })
+    .from(tripInvitations)
+    .innerJoin(trips, eq(trips.id, tripInvitations.tripId))
+    .where(
+      and(
+        eq(tripInvitations.shopId, input.shopId),
+        eq(tripInvitations.tripId, input.tripId),
+        eq(tripInvitations.personId, input.personId),
+        eq(tripInvitations.source, "direct"),
+        liveTrip(),
+      ),
+    )
+    .limit(1);
+  if (!standing) return "unavailable";
+  return deliverTripInvitation(db, {
+    shopId: input.shopId,
+    shopSlug: input.shopSlug,
+    tripId: input.tripId,
+    invitationId: standing.id,
+  });
 }

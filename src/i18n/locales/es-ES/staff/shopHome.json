@@ -15,8 +15,8 @@
   "emailFailed": "Ese correo no se pudo enviar. Revisa la dirección y la configuración de correo.",
   "offlineLabel": "Sin conexión: este tablón puede estar desactualizado",
   "nextDeparture": "La próxima es <link>{title}</link> el {date} a las {time}.",
-  "noDeparturesEmpty": "Todavía no hay nada programado. Programa una salida y aparecerá aquí la mañana que zarpe.",
-  "scheduleTrip": "Programar una salida",
+  "noDeparturesEmpty": "Todavía no hay nada programado. Añade una salida y aparecerá aquí la mañana que zarpe.",
+  "scheduleTrip": "Añadir una salida",
   "notice": {
     "waiversNotAuthorized": "Editar el waiver está limitado a propietarios y gerentes.",
     "exportNotAuthorized": "La exportación de datos está limitada a propietarios y gerentes.",
@@ -79,7 +79,7 @@
   },
   "firstRun": {
     "groupLabel": "Primera mañana",
-    "subtitle": "{count, plural, one {# paso} other {# pasos}} y los buceadores podrán reservar.",
+    "subtitle": "Termina esto y los buceadores podrán reservar.",
     "progress": "{done} de {total, plural, one {# completado} other {# completados}}",
     "contactTitle": "Añade tus datos de contacto",
     "contactBody": "Teléfono y correo para que los buceadores y DiveDay puedan contactarte.",
@@ -90,17 +90,18 @@
     "profileAction": "Configurar perfil",
     "profileDone": "Perfil del centro configurado.",
     "siteTitle": "Añade tu primer sitio de buceo",
-    "siteBody": "El catálogo tiene 34 sitios de Florida listos para copiar",
+    "siteBody": "{count, plural, one {El catálogo tiene # sitio de Florida listo para copiar} other {El catálogo tiene # sitios de Florida listos para copiar}}",
+    "siteBodyOwn": "Agrega tu primer sitio de buceo, el lugar al que vas a fijar tus salidas",
     "siteAction": "Añadir un sitio de buceo",
     "siteDone": "{count, plural, one {# sitio de buceo añadido.} other {# sitios de buceo añadidos.}}",
-    "tripTitle": "Añade una salida al calendario",
+    "tripTitle": "Añade tu primera salida",
     "tripBody": "Aparecerá en tu calendario en cuanto la guardes.",
-    "tripAction": "Programar una salida",
+    "tripAction": "Añadir una salida",
     "scheduleTitle": "Comparte tu calendario público",
     "scheduleBody": "Pega el enlace en tu web o redes sociales.",
     "scheduleCopy": "Copiar enlace",
     "scheduleCopied": "Copiado",
-    "scheduleCopyFailed": "No se pudo copiar. Selecciona el enlace de arriba.",
+    "scheduleCopyFailed": "No se pudo copiar. Abre el enlace y copia su dirección.",
     "stripeTitle": "Conecta los pagos",
     "stripeBody": "Los buceadores pagan al reservar; los fondos llegan a tu cuenta",
     "stripeAction": "Conectar pagos",
@@ -112,8 +113,7 @@
     "unitsDone": "Unidades confirmadas.",
     "unitsFeet": "pies",
     "unitsMeters": "metros",
-    "pageTitle": "Tu centro está listo.",
-    "pageIntro": "Los buceadores ya pueden encontrarte en <address>{url}</address>. Tres cosas ponen una salida en el calendario."
+    "pageTitle": "Tu centro está listo."
   },
   "spine": {
     "summaryBoats": "{count, plural, one {# salida hoy.} other {# salidas hoy.}}",
@@ -140,13 +140,8 @@
     "firstBoatHome": "Tu primer barco está en puerto: salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",
     "firstBooking": "Tu primera reserva",
     "stage": {
-      "boarding": "Embarcando",
-      "underway": "En {site}",
-      "underwayNoSite": "En el agua",
-      "surface": "En superficie",
-      "headingIn": "De regreso",
-      "home": "En puerto",
-      "chip": "{stage} desde las {time}"
+      "since": "desde las {time}",
+      "sinceAtSite": "{site} · desde las {time}"
     },
     "factOfScale": {
       "divers": "{name} embarca en la salida de las {time} como tu buceador número {count} de la temporada.",
@@ -159,14 +154,6 @@
       "closedBy": "último pase de lista cerrado por {name}",
       "backSouls": "salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}",
       "backSoulsBy": "salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back} a las {time}",
-      "openSeats": {
-        "label": "Plazas sin vender",
-        "sentence": "{seats, plural, one {Quedó # plaza sin vender} other {Quedaron # plazas sin vender}}: {facts}.",
-        "lastBooking": "{days, plural, =0 {la última reserva entró el mismo día} one {la última reserva entró # día antes} other {la última reserva entró # días antes}}",
-        "noDeal": "no salió ninguna oferta de última hora",
-        "comparableSamePrice": "{title} del {date} se llenó al mismo precio",
-        "comparableOtherPrice": "{title} del {date} se llenó a otro precio"
-      },
       "planChange": {
         "sentence": "El plan cambió: {changes}.",
         "moved": "la inmersión {dive} se trasladó a {site}",
@@ -184,7 +171,8 @@
     "departuresLabel": "Salidas",
     "needsYouCount": "{count, plural, one {# cosa} other {# cosas}}",
     "deskFoldLabel": "{count, plural, one {# más para otras salidas y el mostrador} other {# más para otras salidas y el mostrador}}",
-    "needsYouLabel": "Pendiente"
+    "needsYouLabel": "Pendiente",
+    "crewTips": "Tus barcos ganaron {amount} en propinas esta semana."
   },
   "quietAddDeparture": "Añadir una salida",
   "quietNextDepartureLabel": "Próxima salida",

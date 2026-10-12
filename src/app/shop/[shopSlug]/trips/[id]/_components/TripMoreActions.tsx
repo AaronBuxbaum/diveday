@@ -38,6 +38,7 @@ export function TripMoreActions({
   tripId,
   startsAt,
   series,
+  crewNames,
   lifecycleStatus,
   locale,
   t,
@@ -49,6 +50,8 @@ export function TripMoreActions({
   startsAt: Date;
   /** The departure's series, to a staffer who may configure it; null otherwise. */
   series: TripOverview["series"] | null;
+  /** Who crews this departure, for the series' standing-crew question. */
+  crewNames: string[];
   lifecycleStatus: FormNotice | undefined;
   locale: string;
   t: StaffTranslator;
@@ -60,8 +63,8 @@ export function TripMoreActions({
       </FormStatus>
       {series ? (
         <SeriesMoreActions
-          futureScheduledCount={series.futureScheduledCount}
-          endsOn={series.endsOn}
+          series={series}
+          crewNames={crewNames}
           applyAction={applySeriesDetailsAction.bind(null, shopSlug, tripId, series.id)}
           cancelAction={cancelSeriesAction.bind(null, shopSlug, tripId, series.id)}
           repeatAction={setSeriesRepeatAction.bind(null, shopSlug, tripId, series.id)}

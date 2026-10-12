@@ -33,6 +33,7 @@
     "orderCreated": "Se crea un pedido",
     "orderPaid": "Se paga un pedido",
     "orderRefunded": "Se reembolsa un pedido",
+    "orderVoided": "Se anula un pedido",
     "notAvailable": "Todavía no está disponible. Escribe a {email} y la activamos.",
     "notAvailableShort": "Todavía no está disponible.",
     "notAvailableAsk": "¿Quieres alguna? Escribe a {email} y la activamos."

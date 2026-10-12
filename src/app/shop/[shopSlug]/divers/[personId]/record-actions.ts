@@ -1,9 +1,12 @@
 "use server";
+import { z } from "zod";
 import { anonymizeDiver } from "@/db/anonymize";
 import { canPersonDeleteDiver, canPersonErasePersonalData, canPersonMergeDiver } from "@/db/authz";
 import { DIVER_MERGE_FIELDS, type DiverMergeChoices, mergeDiverRecords } from "@/db/diver-merge";
 import { deleteDiver, getDiverProfile, restoreDiver } from "@/db/divers";
 import { eraseGuardianEmail } from "@/db/guardian-erasure";
+import { countUpcomingCrewDepartures } from "@/db/trips";
+import { formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
@@ -19,6 +22,11 @@ import { backTo, requireDiverActionContext } from "./action-helpers";
  * authorization again before moving anything. A refusal lands back on the
  * preview beside the button, so the staffer reads it where they decided.
  */
+/** The survivor, the acknowledgement, and a `keep_<field>` choice per merge field. */
+const mergeForm = z.object({ survivorId: text(), acknowledgement: text() }).catchall(formValue());
+const eraseForm = z.object({ confirmName: trimmedText() });
+const guardianEmailForm = z.object({ email: trimmedText(), confirmEmail: trimmedText() });
+
 export async function mergeDiverAction(shopSlug: string, personId: string, formData: FormData) {
   const context = await requireDiverActionContext(
     shopSlug,
@@ -32,14 +40,15 @@ export async function mergeDiverAction(shopSlug: string, personId: string, formD
     revalidateAndRedirect(base, backTo(base, "not-authorized-merge"));
     return;
   }
-  const survivorId = uuidParam(String(formData.get("survivorId") ?? ""));
+  const form = readForm(mergeForm, formData);
+  const survivorId = uuidParam(form.survivorId);
   if (!survivorId || survivorId === personId) {
     revalidateAndRedirect(base, backTo(base, "merge-invalid", "merge"));
     return;
   }
   const choices: DiverMergeChoices = {};
   for (const field of DIVER_MERGE_FIELDS) {
-    if (formData.get(`keep_${field}`) === "source") choices[field] = "source";
+    if (form[`keep_${field}`] === "source") choices[field] = "source";
   }
 
   const result = await mergeDiverRecords({
@@ -50,7 +59,7 @@ export async function mergeDiverAction(shopSlug: string, personId: string, formD
     actorPersonId: staff.user.personId,
     choices,
     // The checkbox posts the acknowledgement the staffer read, and only when ticked.
-    acknowledged: String(formData.get("acknowledgement") ?? "") || undefined,
+    acknowledged: form.acknowledgement || undefined,
   });
   if (!result.ok) {
     if (result.reason === "not_authorized") {
@@ -63,7 +72,15 @@ export async function mergeDiverAction(shopSlug: string, personId: string, formD
       return;
     }
     const preview = shopPath(staff.user.shopSlug, "divers", personId, "merge", survivorId);
-    revalidateAndRedirect(preview, noticeUrl(preview, `merge-${result.reason}`, { form: "merge" }));
+    revalidateAndRedirect(
+      preview,
+      noticeUrl(preview, `merge-${result.reason}`, {
+        form: "merge",
+        // The departure the conflict is on, by id only: the page reads its
+        // title and time from the shop's own trips (issue #2333).
+        trip: result.conflictTripId,
+      }),
+    );
     return;
   }
 
@@ -84,6 +101,13 @@ export async function deletePersonAction(shopSlug: string, personId: string, _fo
   // owner/manager only (H-14, ADR 20260724-role-authorization).
   if (!(await canPersonDeleteDiver(db, staff.user.shopId, staff.user.personId))) {
     revalidateAndRedirect(base, backTo(base, "not-authorized-delete", "remove"));
+    return;
+  }
+  // Someone who also works here and is still crew on a boat ahead would stay
+  // on that manifest, and in its crew ratio, after leaving every picker and
+  // sign-in. They come off those boats first.
+  if ((await countUpcomingCrewDepartures(db, staff.user.shopId, personId)) > 0) {
+    revalidateAndRedirect(base, backTo(base, "remove-crew-upcoming", "remove"));
     return;
   }
   const deleted = await deleteDiver(db, staff.user.shopId, personId);
@@ -182,7 +206,7 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
     revalidateAndRedirect(base, backTo(base, "erase-requires-delete"));
     return;
   }
-  const typed = String(formData.get("confirmName") ?? "").trim();
+  const typed = readForm(eraseForm, formData).confirmName;
   if (!profile || typed.toLowerCase() !== profile.person.fullName.trim().toLowerCase()) {
     revalidateAndRedirect(base, backTo(base, "erase-name-mismatch", "erase"));
     return;
@@ -234,8 +258,7 @@ export async function eraseGuardianEmailAction(
     revalidateAndRedirect(base, backTo(base, "not-authorized-guardian-email", "guardian-email"));
     return;
   }
-  const email = String(formData.get("email") ?? "").trim();
-  const typed = String(formData.get("confirmEmail") ?? "").trim();
+  const { email, confirmEmail: typed } = readForm(guardianEmailForm, formData);
   if (!email || typed.toLowerCase() !== email.toLowerCase()) {
     revalidateAndRedirect(base, backTo(base, "guardian-email-mismatch", "guardian-email"));
     return;

@@ -58,7 +58,7 @@ export function DiverRollCallRow({
     buddyTeamLabel,
     t,
   } = context;
-  const state = diverRowState(diver, checkpoint, isDeparture);
+  const state = diverRowState(diver, checkpoint, isDeparture, timezone);
   const { rc, rowState, recordedTone, blockedAtDock, alarmed, boardingControlShown } = state;
   const personTrail = personTrailWithCurrentRecord({
     trail: todayTrailByBooking?.get(diver.bookingId) ?? [],
@@ -187,6 +187,9 @@ export function DiverRollCallRow({
               index={index}
               capsule={capsule}
               typeBadge={typeBadge}
+              lateAt={state.lateAt}
+              locale={locale}
+              timezone={timezone}
               t={t}
             />
           }

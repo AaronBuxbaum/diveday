@@ -1453,4 +1453,20 @@ describe("a dual-role person removed as a diver", () => {
     ).toEqual({ ok: false, refusal: "refused" });
     expect(await getTripCrewIds(db, shop.id, trip.id)).not.toContain(personId);
   });
+
+  it("can still be taken off a departure they were already crewing", async () => {
+    const { db, shop } = ctx;
+    const personId = await dualRolePerson(db, shop.id);
+    const [trip] = await upcomingTripsWithCounts(db, shop.id, nowDate());
+    if (!trip) throw new Error("seeded shop has no upcoming trip");
+    expect(
+      (await changeTripCrewOutcome(db, shop.id, trip.id, { personId, operation: "assign" })).ok,
+    ).toBe(true);
+    expect(await deleteDiver(db, shop.id, personId)).toBe(true);
+
+    expect(
+      (await changeTripCrewOutcome(db, shop.id, trip.id, { personId, operation: "unassign" })).ok,
+    ).toBe(true);
+    expect(await getTripCrewIds(db, shop.id, trip.id)).not.toContain(personId);
+  });
 });

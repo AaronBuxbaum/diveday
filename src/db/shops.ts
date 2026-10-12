@@ -1,6 +1,7 @@
 import { and, eq, exists, gt, isNull, or, sql } from "drizzle-orm";
 import { cache } from "react";
 import type { BrandBadgeCode, BrandDisplayFontCode } from "@/lib/brand";
+import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DockDayRhythm } from "@/lib/diver-planning";
@@ -10,6 +11,7 @@ import type { RentalPricing } from "@/lib/rentals";
 import type { SeasonStart } from "@/lib/season";
 import { SHOP_FEATURE_COLUMNS, type ShopFeature } from "@/lib/shop-features";
 import type { TemperatureUnit } from "@/lib/temperature-units";
+import type { CustomerRegulatorServiceMonths } from "@/lib/work-orders";
 import type { AppDb } from "./client";
 import { courses, divePackages, orders, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -146,6 +148,20 @@ export async function setShopSeasonStart(db: AppDb, shopId: string, season: Seas
     .set({ seasonStartMonth: season.month, seasonStartDay: season.day })
     .where(eq(shops.id, shopId))
     .returning();
+  return shop ?? null;
+}
+
+/**
+ * The shop's "back on the water" date, or null to say nothing. The public
+ * off-season line reads it only while the board is empty and the date is ahead
+ * (`src/lib/off-season.ts`); the caller validates the date.
+ */
+export async function setShopReopensOn(db: AppDb, shopId: string, reopensOn: CalendarDate | null) {
+  const [shop] = await db
+    .update(shops)
+    .set({ reopensOn })
+    .where(eq(shops.id, shopId))
+    .returning({ id: shops.id });
   return shop ?? null;
 }
 
@@ -400,6 +416,23 @@ export async function setShopRentalTerms(db: AppDb, shopId: string, rentalTerms:
   const [shop] = await db
     .update(shops)
     .set({ rentalTerms })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
+ * Sets how often the shop services a customer's regulator (12 or 24 months),
+ * the interval a customer regulator's suggested next-due date counts from.
+ */
+export async function setShopCustomerRegulatorServiceMonths(
+  db: AppDb,
+  shopId: string,
+  months: CustomerRegulatorServiceMonths,
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({ customerRegulatorServiceMonths: months })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;

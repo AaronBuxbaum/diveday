@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mailtoHref, telHref } from "./contact-links";
+import { mailtoHref, telHref, whatsAppChatHref } from "./contact-links";
 
 describe("telHref", () => {
   it("strips what a dialer refuses from a number a shop typed to be read", () => {
@@ -38,5 +38,19 @@ describe("mailtoHref", () => {
 
   it("adds no query at all when there is nothing to prefill", () => {
     expect(mailtoHref("a@b.com", {})).toBe("mailto:a@b.com");
+  });
+});
+
+describe("whatsAppChatHref", () => {
+  it("links the number Meta printed as digits only", () => {
+    expect(whatsAppChatHref("+1 305-555-0134")).toBe("https://wa.me/13055550134");
+    expect(whatsAppChatHref("+34 612 34 56 78")).toBe("https://wa.me/34612345678");
+  });
+
+  it("refuses what cannot be a number", () => {
+    expect(whatsAppChatHref(null)).toBeNull();
+    expect(whatsAppChatHref("")).toBeNull();
+    expect(whatsAppChatHref("12345")).toBeNull();
+    expect(whatsAppChatHref("1234567890123456")).toBeNull();
   });
 });

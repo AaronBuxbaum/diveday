@@ -17,6 +17,6 @@ describe("the waivers barrel", () => {
       .filter(([, value]) => value === undefined)
       .map(([name]) => name);
     expect(missing).toEqual([]);
-    expect(Object.keys(waivers)).toHaveLength(31);
+    expect(Object.keys(waivers)).toHaveLength(30);
   });
 });

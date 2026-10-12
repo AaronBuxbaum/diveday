@@ -1,7 +1,7 @@
 import { RepeatFields } from "@/components/RepeatFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { FormStatus } from "@/components/ui/form";
+import { ChoiceRow, FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
@@ -64,6 +64,25 @@ export function recurrenceSummaryText(
         date: formatCalendarDate(summary.endsOn, locale),
       })
     : t("tripSeries.panel.summaryOpenEnded", { cadence });
+}
+
+/**
+ * What "Cancel every upcoming date" will do, said before the tap: how many
+ * dates, how many booked divers it messages, and how many of them have paid,
+ * because each of those is refunded or owed (`cancelFutureSeriesTrips`).
+ */
+export function cancelConfirmText(
+  t: StaffTranslator,
+  reach: { dates: number; booked: number; paid: number },
+): string {
+  const parts = [t("tripSeries.panel.cancelDescription", { count: reach.dates })];
+  if (reach.booked === 0) {
+    parts.push(t("tripSeries.panel.cancelReachNone"));
+  } else {
+    parts.push(t("tripSeries.panel.cancelReach", { count: reach.booked }));
+    if (reach.paid > 0) parts.push(t("tripSeries.panel.cancelReachPaid", { count: reach.paid }));
+  }
+  return parts.join(" ");
 }
 
 /** An upcoming date the edited cadence no longer fires on, as the panel shows it. */
@@ -216,22 +235,35 @@ export function SeriesCadenceEditor({
  * happened to the dates already on the board (principle 7).
  */
 export function SeriesMoreActions({
-  futureScheduledCount,
-  endsOn,
+  series,
+  crewNames,
   applyAction,
   cancelAction,
   repeatAction,
   locale,
 }: {
-  futureScheduledCount: number;
-  /** The series' last date, or null when it simply keeps going. */
-  endsOn: CalendarDate | null;
-  applyAction: () => void;
+  /**
+   * The run as `getTripSeriesSummary` reads it: its upcoming dates, the divers
+   * booked on them ("cancel every upcoming date" reaches those), how many of
+   * them have money with the shop, whether it carries a standing crew, and its
+   * last date (null when it simply keeps going).
+   */
+  series: {
+    futureScheduledCount: number;
+    futureBookedCount: number;
+    futurePaidCount: number;
+    standingCrew: boolean;
+    endsOn: CalendarDate | null;
+  };
+  /** This date's crew by name; empty hides the standing-crew choice. */
+  crewNames: string[];
+  applyAction: (formData: FormData) => void;
   cancelAction: () => void;
   repeatAction: (formData: FormData) => void;
   locale: string;
 }) {
   const t = staffTranslator(locale);
+  const { futureScheduledCount, futureBookedCount, futurePaidCount, standingCrew, endsOn } = series;
   const hasFuture = futureScheduledCount > 0;
   const hasOtherFuture = futureScheduledCount > 1;
   const repeating = endsOn === null;
@@ -241,7 +273,23 @@ export function SeriesMoreActions({
         <form action={applyAction} className="w-full">
           <InlineConfirm
             triggerLabel={t("tripSeries.panel.applyToSeries")}
-            message={t("tripSeries.panel.applyDescription")}
+            message={
+              crewNames.length > 0
+                ? t("tripSeries.panel.applyDescriptionWithCrew")
+                : t("tripSeries.panel.applyDescription")
+            }
+            extra={
+              crewNames.length > 0 ? (
+                <>
+                  <input type="hidden" name="crewSwitch" value="shown" />
+                  <ChoiceRow type="checkbox" name="standingCrew" defaultChecked={standingCrew}>
+                    {t("tripSeries.panel.standingCrew", {
+                      names: cachedListFormat(locale, { type: "conjunction" }).format(crewNames),
+                    })}
+                  </ChoiceRow>
+                </>
+              ) : undefined
+            }
             confirmLabel={t("tripSeries.panel.applyConfirm")}
             cancelLabel={t("tripSeries.panel.neverMind")}
             pendingLabel={t("tripSeries.panel.applying")}
@@ -268,7 +316,11 @@ export function SeriesMoreActions({
         <form action={cancelAction} className="w-full">
           <InlineConfirm
             triggerLabel={t("tripSeries.panel.cancelAllUpcoming")}
-            message={t("tripSeries.panel.cancelDescription", { count: futureScheduledCount })}
+            message={cancelConfirmText(t, {
+              dates: futureScheduledCount,
+              booked: futureBookedCount,
+              paid: futurePaidCount,
+            })}
             confirmLabel={t("tripSeries.panel.cancelAllConfirm")}
             cancelLabel={t("tripSeries.panel.neverMind")}
             pendingLabel={t("tripSeries.panel.cancelling")}

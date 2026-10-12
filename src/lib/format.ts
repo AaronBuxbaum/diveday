@@ -374,7 +374,10 @@ export function formatRelativeDay(
  * frozen-clock e2e run. `timeZone: "UTC"` because a weekday *name* has no
  * instant in it; the reference dates are a calendar, not a moment.
  */
-export function weekdayNames(locale = "en-US", width: "short" | "narrow" = "short"): string[] {
+export function weekdayNames(
+  locale = "en-US",
+  width: "long" | "short" | "narrow" = "short",
+): string[] {
   const format = cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     weekday: width,
     timeZone: "UTC",

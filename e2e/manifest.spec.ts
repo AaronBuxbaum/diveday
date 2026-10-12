@@ -922,7 +922,6 @@ test("an owner adds and removes a line on the shop's own pre-departure checklist
   await page.goto("/shop/blue-mantis/settings/safety-checklist");
   // The seeded demo shop's own list (src/db/seed-pre-departure-checklist.ts).
   await expect(page.getByText("VHF radio checked")).toBeVisible();
-
   await page.getByLabel("New line").fill("Test kit checked");
   await page.getByRole("button", { name: "Add" }).click();
   await expect(page.getByText("Added to the checklist.")).toBeVisible();

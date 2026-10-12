@@ -244,7 +244,11 @@ export function heldPrep(): TripPrep {
 
 export function renderPrep(
   prep: TripPrep,
-  { grouping = "item", notice }: { grouping?: PrepGrouping; notice?: string } = {},
+  {
+    grouping = "item",
+    notice,
+    noticeCount,
+  }: { grouping?: PrepGrouping; notice?: string; noticeCount?: string } = {},
 ) {
   return render(
     <PrepBody
@@ -255,6 +259,7 @@ export function renderPrep(
       tripId="t1"
       rentalItems={["bcd", "wetsuit", "boots", "weights", "regulator", "mask_fins"]}
       notice={notice}
+      noticeCount={noticeCount}
       grouping={grouping}
       groupPath="/shop/blue-mantis/trips/t1"
       cancelled={false}

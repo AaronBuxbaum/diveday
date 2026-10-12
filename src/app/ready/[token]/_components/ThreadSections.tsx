@@ -1,12 +1,11 @@
 import { PackingSection } from "@/app/s/[shopSlug]/trips/[id]/_components/PackingSection";
 import { TripCrewLine } from "@/app/s/[shopSlug]/trips/[id]/_components/TripCrewLine";
-import { PartyClaimPanel } from "@/components/PartyClaimPanel";
+import { LogEntryPreview } from "@/components/LogEntryPreview";
 import { TripArrivalCard } from "@/components/TripArrivalCard";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { THREAD_FOOT_SECTION_CLASS } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { SettledCheck } from "@/components/ui/SettledCheck";
 import type { ReadyPageData } from "@/db/ready";
 import type { issuePartySeatClaims } from "@/db/seat-claims";
 import type { getShopBySlug } from "@/db/shops";
@@ -15,11 +14,13 @@ import type { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trip
 import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { claimLinkPath } from "@/lib/booking-capabilities";
+import { formatShortDate } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicTripArrivalCardPath } from "@/lib/public-routes";
-import { cancelMyBookingAction } from "../booking-actions";
+import { addSeatFromReady, cancelMyBookingAction } from "../booking-actions";
 import { CourseMaterials } from "./CourseMaterials";
 import { CANCEL_PREVIEW_KEY } from "./cancel-notices";
+import { PartySection } from "./PartySection";
 import { RunningLate } from "./RunningLate";
 
 /** What the thread's streamed reads hand the sections under the spine. */
@@ -40,8 +41,8 @@ export type ReadyThreadSectionsContext = {
 
 /**
  * The readiness thread under its spine: running late, where to go, the crew,
- * what changed, course materials, the party's claim panel, the packing list,
- * and last the diver's own cancel door. One `space-y-10` run, so no section
+ * what changed, course materials, the party's section, the packing list, the
+ * log entry it turns into, and last the diver's own cancel door. One `space-y-10` run, so no section
  * carries a top margin of its own (K-233).
  */
 export function ThreadSections({ context }: { context: ReadyThreadSectionsContext }) {
@@ -132,22 +133,13 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
         {/* A course's learning materials, the same list the confirmation
                 email carried (ADR 20261008-course-learning-materials). */}
         <CourseMaterials data={data} t={t} />
-        {/* The party's panel and its all-set line are one section: the line
-                is the panel's close, 12px under it, not a section of its own. */}
-        {partySeats.length > 0 ? (
-          <div>
-            <PartyClaimPanel locale={locale} seats={partySeats} />
-            {partyAllSet ? (
-              <p className="mt-3">
-                <SettledCheck
-                  settled
-                  label={t("thread.partyAllSet")}
-                  className="text-sm text-muted"
-                />
-              </p>
-            ) : null}
-          </div>
-        ) : null}
+        <PartySection
+          locale={locale}
+          seats={partySeats}
+          allSet={partyAllSet}
+          addSeatAction={data.canAddSeat ? addSeatFromReady.bind(null, token) : null}
+          t={t}
+        />
         {/* What to put in the bag. Below the spine — which carries the gear
                 form as one of its steps — because this page's job is still "what's
                 left before you sail", and this is what a diver reads once that is
@@ -172,6 +164,19 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
             locale={locale}
           />
         ) : null}
+        {/* Where the day ends up (UX review 2026-10-10, item 35): the recap's
+                log entry is the keepsake this same link turns into once the
+                boat is home, and nothing on the page said so. One line and a
+                miniature of the card, drawn from what is already true. */}
+        <LogEntryPreview
+          line={t("ready.logEntryWaiting")}
+          date={formatShortDate(detail.trip.startsAt, locale, detail.shop.timezone)}
+          siteNames={tripDives
+            .map(({ diveSite }) => diveSite?.name)
+            .filter((name): name is string => Boolean(name))}
+          isCourse={Boolean(fullTrip?.course)}
+          t={t}
+        />
         {/* The diver may release their own seat; moving it is the shop's
                 (ADR 20260821-the-diver-may-release-their-own-seat). It sits last,
                 under everything the page is actually for, and above the shop card

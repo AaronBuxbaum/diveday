@@ -25,7 +25,7 @@ let warnedAboutRedaction = false;
  */
 
 /** Where a staff action happened, so recovery can be sliced by surface. */
-export type EventSurface = "today" | "roster" | "diver";
+export type EventSurface = "today" | "roster" | "diver" | "counter";
 
 /**
  * The typed event vocabulary. Adding an event here — rather than a free-form

@@ -28,6 +28,7 @@ export type RowHeaderInput = Pick<
   | "depthShared"
   | "arrivalControl"
   | "holdOpen"
+  | "record"
 >;
 
 export function rowHeader(seat: RowHeaderInput) {
@@ -45,6 +46,7 @@ export function rowHeader(seat: RowHeaderInput) {
     depthShared,
     arrivalControl,
     holdOpen,
+    record,
   } = seat;
   const headerLeft = (
     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -126,7 +128,9 @@ export function rowHeader(seat: RowHeaderInput) {
     // `lg`: the readiness word is the one fact on this row a staffer reads
     // to decide, which principle 2's own definition makes critical text —
     // 16px, not the pill default.
-    readiness && readiness.status !== "ready" ? (
+    // A record says who sailed, not who was blocked (UX review 2026-10-10,
+    // item 10): the band above already says whether they sailed.
+    !record && readiness && readiness.status !== "ready" ? (
       <Badge
         key="readiness"
         tone={readinessStatusTone(readiness.status)}
@@ -148,14 +152,14 @@ export function rowHeader(seat: RowHeaderInput) {
     // shows. It reads existing booking state and gates nothing.
     // Not where the row's own tap already says it: with the desk open, an
     // arrived diver's row ends in "Checked in", the control that undoes it.
-    booking.status === "checked_in" && !arrivalControl ? (
+    booking.status === "checked_in" && !arrivalControl && !record ? (
       <Badge key="checked-in" tone="neutral">
         {t("trips.roster.checkedInPill")}
       </Badge>
     ) : null,
     // The boat-wide advisory's mark on this diver — the group's shared
     // line above carries the sentence once.
-    depthShared ? (
+    depthShared && !record ? (
       <Badge key="depth" tone="warning" size="sm">
         {t("trips.roster.depthChip")}
       </Badge>

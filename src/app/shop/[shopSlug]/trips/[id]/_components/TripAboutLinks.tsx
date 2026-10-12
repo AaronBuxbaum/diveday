@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
-import type { getDb } from "@/db/client";
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
 // Since the staff shell became synchronous (issue 1446) that holds for a cold,
@@ -23,15 +22,13 @@ import { PrintTripBundleButton } from "./PrintTripBundleButton";
  * panel's column.
  */
 export function TripAboutLinks({
-  db,
-  shopId,
+  shop,
   personId,
   shopSlug,
   tripId,
   t,
 }: {
-  db: Awaited<ReturnType<typeof getDb>>;
-  shopId: string;
+  shop: { id: string; slug: string; defaultLocale: string };
   /** The signed-in staffer; the log link asks whether they may read it. */
   personId: string;
   shopSlug: string;
@@ -65,14 +62,7 @@ export function TripAboutLinks({
         recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
         flush
       />
-      <DepartureLogLink
-        db={db}
-        shopId={shopId}
-        personId={personId}
-        shopSlug={shopSlug}
-        tripId={tripId}
-        label={t("incidentExport.openLink")}
-      />
+      <DepartureLogLink shop={shop} personId={personId} tripId={tripId} />
     </>
   );
 }

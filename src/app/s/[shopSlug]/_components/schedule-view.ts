@@ -3,6 +3,7 @@ import type { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { addMonths, type MonthRef, monthKey } from "@/lib/calendar";
+import type { CalendarDate } from "@/lib/calendar-date";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { formatRelativeDay, formatShortDate } from "@/lib/format";
 import { offSeason } from "@/lib/off-season";
@@ -16,6 +17,7 @@ import {
 } from "@/lib/schedule-pagination";
 import { capacityLabel, nextBookableDeparture } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { offSeasonLine } from "./OffSeasonPanel";
 
 /** A level a diver can say they hold in the schedule's filter row. */
 type DeclarableLevel = (typeof DECLARABLE_CERTIFICATION_LEVELS)[number];
@@ -170,7 +172,7 @@ export function scheduleMonthRail({
     firstTripMonth && ordinal(prev) >= ordinal(firstTripMonth) ? monthKey(prev) : null;
   const nextMonthKey =
     lastTripMonth && ordinal(next) <= ordinal(lastTripMonth) ? monthKey(next) : null;
-  return { currentMonth, prevMonthKey, nextMonthKey };
+  return { currentMonth, lastTripMonth, prevMonthKey, nextMonthKey };
 }
 
 /**
@@ -305,6 +307,7 @@ export function scheduleOffSeason({
   isEmbed,
   now,
   range,
+  reopensOn,
   locale,
   tz,
   t,
@@ -312,22 +315,16 @@ export function scheduleOffSeason({
   isEmbed: boolean;
   now: Date;
   range: { first: Date | null };
+  /** `shops.reopens_on`: the shop's own typed "back on the water" date. */
+  reopensOn: CalendarDate | null;
   locale: string;
   tz: string;
   t: DiverTranslator;
 }) {
   const quiet = isEmbed
-    ? { quiet: false, opensAt: null }
-    : offSeason({ now, firstDeparture: range.first });
-  /**
-   * The one sentence the card is allowed, already zoned and already worded.
-   *
-   * `formatShortDate` for the departure (a real instant, read in the shop's
-   * own zone, the same words the week rows below use).
-   */
-  const quietLine = quiet.opensAt
-    ? t("schedule.offSeason.back", { date: formatShortDate(quiet.opensAt, locale, tz) })
-    : null;
+    ? { quiet: false, opensAt: null, reopensOn: null }
+    : offSeason({ now, firstDeparture: range.first, reopensOn, timeZone: tz });
+  const quietLine = offSeasonLine(t, quiet, locale, tz);
   return { quiet, quietLine };
 }
 

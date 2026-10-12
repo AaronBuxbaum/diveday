@@ -2,11 +2,11 @@
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { FIGURE_CLASS } from "@/components/ui/typography";
 import type { TripPrep } from "@/db/trips";
 import { diveRecencyText } from "@/i18n/readiness-labels";
 import type { PrepGrouping } from "@/lib/dive-prep";
 import { PrepKitList } from "./PrepKitList";
+import { KIT_PHONE_ROW_CLASS } from "./prep-lines";
 import {
   diverLinks,
   everyPanelPrep,
@@ -58,6 +58,28 @@ describe("snorkel vests", () => {
  * layout, so each case pins the classes whose arithmetic the pixel probe
  * measured wrong; the probe re-measures the pixels.
  */
+/**
+ * **The tab says what is short on the piece, not in a sentence about the list**
+ * (UX review 2026-10-10, item 26). Grace rents weights and gave no weight:
+ * her weights line carries "Size missing" in the warning ink, by item and by
+ * diver.
+ */
+describe("a piece with no size on the Gear tab", () => {
+  it("marks the piece itself, in both groupings", () => {
+    for (const grouping of ["item", "diver"] as const) {
+      const { container, unmount } = renderKitList(everyPanelPrep(), { grouping });
+      const marks = [...container.querySelectorAll("[data-size-missing]")];
+      // The phone row and the table, each once for Grace's weights.
+      expect(marks.length, grouping).toBe(2);
+      for (const mark of marks) {
+        expect(mark).toHaveTextContent(t("tripPrep.sizeMissing"));
+        expect(tokens(mark), grouping).toContain("text-warning-strong");
+      }
+      unmount();
+    }
+  });
+});
+
 describe("the packing list's geometry", () => {
   it("gives the phone card's name a 44px target on its 24px line, and the table's row the RowLink (K-146)", () => {
     const { container } = renderKitList(everyPanelPrep(), { grouping: "diver" });
@@ -71,21 +93,22 @@ describe("the packing list's geometry", () => {
     expect(row.closest("tr")).toHaveClass("relative");
   });
 
-  it("starts both values of a kit card at one x, however long the names run (K-147)", () => {
+  it("draws each phone packing line as one row: the piece, who it is for, the count (UX review item 13)", () => {
+    // Twenty-three cards of a Size row and a For row ran a seeded boat's Gear
+    // tab to 7,000px at 390. One card of rows now, three cells each, and the
+    // first column fixed so every name list starts at one x (K-147's rule,
+    // kept in a row instead of a card).
     const { container } = renderKitList(everyPanelPrep());
-    const cards = container.querySelectorAll("ul.sm\\:hidden > li dl");
-    expect(cards.length).toBeGreaterThan(0);
-    for (const dl of cards) {
-      expect(tokens(dl)).toEqual(
-        expect.arrayContaining(["grid", "grid-cols-[auto_minmax(0,1fr)]", "gap-x-2"]),
-      );
-      expect(dl.children).toHaveLength(2);
-      for (const pair of dl.children) {
-        expect(tokens(pair)).toEqual(
-          expect.arrayContaining(["col-span-2", "grid", "grid-cols-subgrid"]),
-        );
-      }
+    const card = container.querySelector("ul.sm\\:hidden");
+    expect(card).not.toBeNull();
+    expect(tokens(card)).toEqual(expect.arrayContaining(["divide-y", "print:hidden"]));
+    const rows = card?.querySelectorAll(":scope > li") ?? [];
+    expect(rows.length).toBeGreaterThan(1);
+    for (const row of rows) {
+      expect(row.className).toBe(KIT_PHONE_ROW_CLASS);
+      expect(row.children).toHaveLength(3);
     }
+    expect(KIT_PHONE_ROW_CLASS).toMatch(/grid-cols-\[[\d.]+rem_minmax\(0,1fr\)_auto\]/);
   });
 
   it("pins the quantity column narrow in both tables, so the names get the room (K-148)", () => {
@@ -127,16 +150,16 @@ describe("the packing list's geometry", () => {
     }
   });
 
-  it("sets each card's count on its title's baseline (K-149)", () => {
+  it("sets each phone row's count on its first line's baseline (K-149)", () => {
     for (const grouping of ["item", "diver"] as const) {
       const { container, unmount } = renderKitList(everyPanelPrep(), { grouping });
-      const counts = [...container.querySelectorAll("ul.sm\\:hidden > li p")].filter((p) =>
-        tokens(p).includes(FIGURE_CLASS.split(" ")[0]),
-      );
-      expect(counts.length, grouping).toBeGreaterThan(0);
-      for (const count of counts) {
-        expect(tokens(count.parentElement), grouping).toContain("items-baseline");
-        expect(tokens(count.parentElement), grouping).not.toContain("items-start");
+      const rows = [...container.querySelectorAll("ul.sm\\:hidden > li")];
+      expect(rows.length, grouping).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(tokens(row), grouping).toContain("items-baseline");
+        expect(tokens(row), grouping).not.toContain("items-start");
+        const count = row.lastElementChild as HTMLElement;
+        expect(tokens(count), grouping).toContain("tabular-nums");
       }
       unmount();
     }
@@ -157,9 +180,9 @@ describe("the packing list's geometry", () => {
 
   it("breaks a shared rental line between two names, and a name only where it cannot fit whole (K-353)", () => {
     const { container } = renderKitList(everyPanelPrep());
-    // Carmen and Grace share the BCD L line: drawn as a phone card's For list
+    // Carmen and Grace share the BCD L line: drawn as a phone row's middle
     // and as the table's For cell.
-    const shared = [...container.querySelectorAll("dd, td")].filter(
+    const shared = [...container.querySelectorAll("[data-kit-line] > p, td")].filter(
       (cell) => cell.textContent === "Carmen Ruiz, Grace Mensah",
     );
     expect(shared).toHaveLength(2);

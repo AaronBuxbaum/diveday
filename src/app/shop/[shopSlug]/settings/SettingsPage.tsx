@@ -33,6 +33,8 @@ import { DataGroup } from "./_components/groups/DataGroup";
 import { DATA_GROUP, SettingsGroup, type SettingsView } from "./_components/groups/kit";
 import { MessagesGroup } from "./_components/groups/MessagesGroup";
 import { MoneyGroup } from "./_components/groups/MoneyGroup";
+import { NotificationsGroup } from "./_components/groups/NotificationsGroup";
+import { RarelyChangedGroup } from "./_components/groups/RarelyChangedGroup";
 import { RentalsGroup } from "./_components/groups/RentalsGroup";
 import { ShopGroup } from "./_components/groups/ShopGroup";
 import { TeamGroup } from "./_components/groups/TeamGroup";
@@ -54,6 +56,8 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
     "timezone-saved": { tone: "success", text: t("settings.main.notice.timezoneSaved") },
     "season-saved": { tone: "success", text: t("settings.main.notice.seasonSaved") },
     "season-invalid": { tone: "danger", text: t("settings.main.notice.seasonInvalid") },
+    "reopens-saved": { tone: "success", text: t("settings.main.notice.reopensSaved") },
+    "reopens-invalid": { tone: "danger", text: t("settings.main.notice.reopensInvalid") },
     "timezone-invalid": { tone: "danger", text: t("settings.main.notice.timezoneInvalid") },
     "package-saved": { tone: "success", text: t("settings.main.notice.packageSaved") },
     "package-deleted": { tone: "success", text: t("settings.main.notice.packageDeleted") },
@@ -65,6 +69,14 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
     "pass-through-saved": { tone: "success", text: t("settings.main.notice.passThroughSaved") },
     "pass-through-invalid": { tone: "danger", text: t("settings.main.notice.passThroughInvalid") },
     "rental-terms-saved": { tone: "success", text: t("settings.main.notice.rentalTermsSaved") },
+    "regulator-service-saved": {
+      tone: "success",
+      text: t("settings.main.notice.regulatorServiceSaved"),
+    },
+    "regulator-service-invalid": {
+      tone: "danger",
+      text: t("settings.main.notice.regulatorServiceInvalid"),
+    },
     "rental-terms-invalid": {
       tone: "danger",
       text: t("settings.main.notice.rentalTermsInvalid"),
@@ -254,7 +266,7 @@ export default async function SettingsPage({
           addressLookupEnabled={isAddressLookupConfigured()}
         />
 
-        {canManageTeam ? <TeamGroup view={view} canManageTeam={canManageTeam} /> : null}
+        <TeamGroup view={view} canManageTeam={canManageTeam} />
 
         <BoatsSitesGroup view={view} />
 
@@ -271,6 +283,8 @@ export default async function SettingsPage({
 
         <MessagesGroup view={view} canManageMessaging={canManageMessaging} />
 
+        <NotificationsGroup view={view} />
+
         <WebsiteGroup view={view} />
 
         <Suspense fallback={<GroupFallback group={DATA_GROUP} label={t(DATA_GROUP.labelKey)} />}>
@@ -284,6 +298,8 @@ export default async function SettingsPage({
         </Suspense>
 
         <AccountGroup view={view} canViewBilling={canViewBilling} />
+
+        <RarelyChangedGroup view={view} canPayments={canPayments} />
 
         {/* The stack's last child, so it sits a section's 40px under the last
             card like every section above it; on its own `mt-12` it sat 48px

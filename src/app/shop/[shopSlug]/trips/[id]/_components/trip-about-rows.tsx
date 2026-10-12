@@ -15,7 +15,6 @@ import { depthInUnit } from "@/lib/depth-units";
 import { formatShortDate, weekdayNames } from "@/lib/format";
 import { hasCrewPrediction } from "@/lib/marine-forecast";
 import { toShopCurrency } from "@/lib/money";
-import { recurrenceSummary } from "@/lib/recurrence";
 import type { requireShopSurface } from "@/lib/session";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
@@ -30,11 +29,12 @@ import {
 } from "../details-actions";
 import { ConditionsOutlookSlot, ConditionsSection } from "./ConditionsSection";
 import { CrewSection } from "./CrewSection";
-import { DetailsSection } from "./DetailsSection";
+import { DetailsEditor } from "./DetailsEditor";
 import type { departureConditionReads } from "./departure-conditions";
+import { repeatsRowText } from "./details-rows";
 import { participantTermsRows } from "./ParticipantTermsSection";
 import { RequirementsSection } from "./RequirementsSection";
-import { recurrenceSummaryText, SeriesCadenceEditor } from "./SeriesSection";
+import { SeriesCadenceEditor } from "./SeriesSection";
 import { boatClashText, type tripCrewNotes } from "./trip-crew-notes";
 
 type TripOverview = NonNullable<Awaited<ReturnType<typeof getTripOverview>>>;
@@ -56,7 +56,17 @@ export type TripAboutRowsContext = {
   shopLenses: Awaited<ReturnType<typeof listTripLenses>>;
   automatedForecast: ReturnType<typeof departureConditionReads>["automatedForecast"];
   tideLines: ReturnType<typeof departureConditionReads>["tideLines"];
+  /** A retime's held reschedule notice, on the save that set it going. */
+  held?: string;
+  tell?: string;
 };
+
+/** The names of the staff assigned to this departure, in the shop's staff order. */
+export function assignedCrewNames(overview: TripOverview): string[] {
+  return overview.staff
+    .filter((entry) => overview.crew.crewIds.includes(entry.person.id))
+    .map((entry) => entry.person.fullName);
+}
 
 /**
  * **The Details tab's About rows**, each a one-line summary over its editor:
@@ -80,6 +90,8 @@ export function tripAboutRows(context: TripAboutRowsContext) {
     shopLenses,
     automatedForecast,
     tideLines,
+    held,
+    tell,
   } = context;
   const {
     trip,
@@ -158,9 +170,7 @@ export function tripAboutRows(context: TripAboutRowsContext) {
       // one's tide as the whole departure's conditions. The tide is not the
       // crew's conditions read, and the panel below already carries it in full.
       conditionParts.join(" · ") || t("trips.about.noConditions");
-  const assignedCrew = staff
-    .filter((entry) => crewIds.includes(entry.person.id))
-    .map((entry) => entry.person.fullName);
+  const assignedCrew = assignedCrewNames(overview);
   // The fleet's row for this departure's boat, for its name on the about line.
   // A shore dive or a pool session finds nothing here.
   const boat = shopBoats.find((row) => row.id === trip.boatId);
@@ -168,29 +178,6 @@ export function tripAboutRows(context: TripAboutRowsContext) {
   const boatAndCrew = [boatName, ...assignedCrew].filter((part): part is string => Boolean(part));
   const boatCrewSummary = boatAndCrew.join(" · ") || t("trips.about.noBoat");
 
-  const repeatsSummary = series
-    ? recurrenceSummaryText(
-        t,
-        locale,
-        recurrenceSummary({
-          intervalWeeks: series.intervalWeeks,
-          weekdays: series.weekdayMask,
-          endsOn: series.endsOn,
-        }),
-      )
-    : t("trips.about.oneTime");
-  // How much of the run is still on the board — a fact the cadence sentence
-  // alone does not carry, and the one the "cancel every upcoming date" confirm
-  // is counting. It rides on the row rather than on the collapsed strip, which
-  // is one truncating line and has the cadence to fit first.
-  const repeatsRowValue = series
-    ? series.futureScheduledCount > 0
-      ? t("tripSeries.panel.summaryWithFuture", {
-          summary: repeatsSummary,
-          count: series.futureScheduledCount,
-        })
-      : t("tripSeries.panel.summaryAllDone", { summary: repeatsSummary })
-    : repeatsSummary;
   // The clash is a fact about two boats that will both sail, so a called-off
   // departure drops it with the rest of the live-trip nudges — `crewClashes`
   // answers nothing for one anyway, and this keeps the two from ever
@@ -234,7 +221,9 @@ export function tripAboutRows(context: TripAboutRowsContext) {
       editLabel: t("trips.details.edit"),
       editorOpen: Boolean(detailsStatus),
       editor: canConfigure ? (
-        <DetailsSection
+        <DetailsEditor
+          held={held}
+          tell={tell}
           context={{
             action: saveDetails.bind(null, shopSlug, tripId),
             status: detailsStatus,
@@ -424,7 +413,7 @@ export function tripAboutRows(context: TripAboutRowsContext) {
     {
       id: "series",
       label: t("trips.about.repeats"),
-      value: repeatsRowValue,
+      value: repeatsRowText(t, locale, series),
       editLabel: t("tripSeries.panel.editCadence"),
       editorOpen: Boolean(seriesStatus),
       editor:

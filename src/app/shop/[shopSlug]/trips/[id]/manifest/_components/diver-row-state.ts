@@ -1,18 +1,13 @@
-import type { RollCallCheckpoint, TripManifest } from "@/lib/manifests";
+import { blockedAtRail, type RollCallCheckpoint, type TripManifest } from "@/lib/manifests";
+import { runningLateOnManifest } from "@/lib/running-late";
+import { medicalWarningDays } from "@/lib/waivers";
 import { rollCallRecordedTone, rollCallRowState } from "./RollCallControls";
 
 /**
  * Which of the row's exceptions took its one capsule — or none. The printed
  * block reads it to say the *other* facts without repeating this one.
  */
-export type DiverCapsuleKind =
-  | "buddy"
-  | "blocked"
-  | "refusal"
-  | "referral"
-  | "minor"
-  | "depth"
-  | "birthday";
+export type DiverCapsuleKind = "buddy" | "blocked" | "medical" | "minor" | "depth" | "birthday";
 
 /**
  * **What one diver's row is, before anything is drawn**: the recorded
@@ -25,6 +20,8 @@ export function diverRowState(
   diver: TripManifest["divers"][number],
   checkpoint: RollCallCheckpoint,
   isDeparture: boolean,
+  /** The shop's zone, which dates the medical warnings. */
+  timezone: string,
 ) {
   const diverStatus = diver.readiness.status;
   const ready = diverStatus === "ready";
@@ -45,14 +42,17 @@ export function diverRowState(
   // red on the page that means somebody is in the water (DD9), which is
   // also decision 4's rule: an alarm is earned by a recorded fact.
   //
-  // A diver tapped aboard after a dive with no earlier boarding is
-  // boarding *now* — they joined at the second site — so their row
-  // reads as the dock's would (domain review of #2123). The tap stays.
-  // Not once the crew has recorded them not back aboard: that row is
-  // the alarm, and no paperwork word may sit on it (DD9).
+  // After a dive, a first boarding reads as the dock's (`blockedAtRail`).
   const recordedTone = rollCallRecordedTone(rowState);
-  const blockedAtDock =
-    !ready && (isDeparture || (diver.boardedEarlier === false && !rowState.notBackAboard));
+  const blockedAtDock = blockedAtRail({
+    ready,
+    isDeparture,
+    boardedEarlier: diver.boardedEarlier,
+    notBackAboard: rowState.notBackAboard,
+  });
+  // **"Running late, said 7:42"** (#2319): the diver's word, on a dock row
+  // not boarded yet. Context under the name, never a roll-call result.
+  const lateAt = runningLateOnManifest({ checkpoint, ...diver, rollCallState: rc?.state });
   // Every row is a jump target — the count panel's chips link to any
   // uncalled person — so every row carries the scroll margin that keeps
   // its name clear of the sticky panel. Shared with the crew rows.
@@ -72,24 +72,23 @@ export function diverRowState(
   // at rest is a name and a mark; the expected state is quiet. This is
   // the priority when a diver is several things at once, loudest first
   // — a team that did not come back after a dive outranks a desk
-  // blocker outranks a split buddy team at the dock outranks a physician's
-  // earlier "no" outranks the crew's duty of care to a minor outranks
+  // blocker outranks a split buddy team at the dock outranks a medical
+  // warning outranks the crew's duty of care to a minor outranks
   // an advisory outranks a birthday. Everything not chosen here still
   // reaches the reader: it is in the panel one tap away, and
   // unconditionally on paper.
   //
-  // **The earlier refusal** (H-98; dive-domain review of #2096): a
-  // clean new release cleared a diver a physician had refused. It
-  // boards them, so it is never a blocker, but the crew at the rail
-  // decides with it in view, which a sentence one tap away is not.
-  // Which of the six the capsule ended up being, so the printed block
-  // below can say the *other* five without repeating this one. Paper
-  // carries every fact the screen tucks away; it does not carry the
-  // same fact twice.
-  const earlierRefusal = Boolean(diver.medicalWaiver?.overriddenRefusal);
-  // A release standing over a referral nobody answered (issue #1282):
-  // the next capsule down from the refusal (dive-domain review of #2163).
-  const referralUnresolved = Boolean(diver.medicalWaiver?.overriddenReferralAt);
+  // **The medical warnings** (`medicalWarningChips`, strongest first):
+  // a rider riding only under a "no" or an open referral (H-109), an
+  // earlier refusal (H-98), a referral replaced (#1282). Each boards,
+  // so none is a blocker, but the crew at the rail decides with it in
+  // view. The capsule takes the first; paper prints the rest, and
+  // every other fact the capsule did not take, never one twice.
+  //
+  // Read here in the shop's zone; the chips carry no date, so which
+  // warnings exist is all the capsule chain needs from them.
+  const medicalDays = medicalWarningDays(diver.medicalWaiver, timezone, diver.riderMedicalHold);
+  const medicalWarned = Object.values(medicalDays).some(Boolean);
   // A diver recorded not back aboard carries the alarm and nothing
   // else: no birthday, minor or advisory word beside someone in the
   // water (DD9). A split buddy team still shows — it is part of the
@@ -101,19 +100,25 @@ export function diverRowState(
   // a boat it is not cleared for. The row read "Someone not aboard"
   // under a head count saying "1 blocked person aboard".
   const splitAfterDive = diver.buddyAlert === "separated_after_dive";
-  const capsuleKind: DiverCapsuleKind | null = splitAfterDive
-    ? "buddy"
-    : alarmed
-      ? null
-      : blockedAtDock
-        ? "blocked"
-        : diver.buddyAlert
-          ? "buddy"
-          : earlierRefusal
-            ? "refusal"
-            : referralUnresolved
-              ? "referral"
-              : diver.minor && diver.age !== null && diver.age !== undefined
+  // A buddy alert earns the capsule only with a team to name, so the
+  // kind below is the capsule the row actually draws.
+  const buddyAlerted = Boolean(diver.buddyAlert && diver.buddyTeam);
+  const minorAge = Boolean(diver.minor && diver.age !== null && diver.age !== undefined);
+  // **One chain** (issue #2307): the kind is decided once, and the
+  // capsule is drawn from the kind, so the screen and the printed block
+  // below can never disagree about which fact the row already carries.
+  const capsuleKind: DiverCapsuleKind | null =
+    splitAfterDive && buddyAlerted
+      ? "buddy"
+      : alarmed
+        ? null
+        : blockedAtDock
+          ? "blocked"
+          : buddyAlerted
+            ? "buddy"
+            : medicalWarned
+              ? "medical"
+              : minorAge
                 ? "minor"
                 : diver.depthAdvisory?.status === "exceeds"
                   ? "depth"
@@ -130,8 +135,8 @@ export function diverRowState(
     blockedAtDock,
     alarmed,
     boardingControlShown,
-    earlierRefusal,
-    referralUnresolved,
+    lateAt,
+    medicalDays,
     splitAfterDive,
     capsuleKind,
   };

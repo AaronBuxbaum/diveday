@@ -33,28 +33,41 @@ export function RemoveDiver({
        diver" confirm under it: as `sm` it stood 44px and 14px beside a 48px,
        16px button, 2px short at each edge. The size follows the surface, and
        the foot is a page row. */
-    <details open={Boolean(status)} className="scroll-mt-24" id="remove">
-      <summary
-        className={buttonClass({
-          variant: "danger-ghost",
-          flush: true,
-          className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
-        })}
-      >
-        {t("divers.remove.removePersonSummary", { name: diver.person.fullName })}
-      </summary>
-      <form
-        action={deletePersonAction.bind(null, shopSlug, personId)}
-        className="mt-3 flex flex-wrap items-center gap-3"
-      >
-        <SubmitButton
-          pendingLabel={t("divers.remove.removing")}
-          className={buttonClass({ variant: "danger-solid" })}
+    <div className="scroll-mt-24 space-y-2" id="remove">
+      <details open={Boolean(status)}>
+        <summary
+          className={buttonClass({
+            variant: "danger-ghost",
+            flush: true,
+            className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+          })}
         >
-          {t("divers.remove.removeDiver")}
-        </SubmitButton>
-        <DiverFormStatus status={status} />
-      </form>
-    </details>
+          {t("divers.remove.removePersonSummary", { name: diver.person.fullName })}
+        </summary>
+        <form
+          action={deletePersonAction.bind(null, shopSlug, personId)}
+          className="mt-3 flex flex-wrap items-center gap-3"
+        >
+          <SubmitButton
+            pendingLabel={t("divers.remove.removing")}
+            className={buttonClass({ variant: "danger-solid" })}
+          >
+            {t("divers.remove.removeDiver")}
+          </SubmitButton>
+          <DiverFormStatus status={status} />
+        </form>
+      </details>
+      {/* What the act does, said before anyone taps it (UX review 2026-10-10,
+        item 37): a soft delete, so the sentence names what goes away, what
+        stays, and that it comes back. */}
+      <p className="max-w-prose text-sm text-muted">
+        {t("divers.remove.consequence", { name: diver.person.fullName })}
+      </p>
+      {/* Someone who also works here leaves the team with it, and loses
+          sign-in (`livePerson()`, layer B review). */}
+      {diver.holdsStaffRole ? (
+        <p className="max-w-prose text-sm text-muted">{t("divers.remove.staffWarning")}</p>
+      ) : null}
+    </div>
   );
 }

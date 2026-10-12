@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { shopSenderOf } from "./sender";
+import { emailLogoUrl, shopSenderOf } from "./sender";
 
 /** Inbound mail switched off, so these cases read the front-desk rule on its own. */
 const off = { EMAIL_INBOUND_DOMAIN: "" };
@@ -142,5 +142,37 @@ describe("shopSenderOf (ADR 20260902-sender-standards-for-ses)", () => {
         off,
       ),
     ).toEqual({ postalAddress: "US" });
+  });
+});
+
+// ux review 2026-10-11, item 3: the email leads with the shop's own mark.
+describe("the shop's logo and colour on its mail", () => {
+  const env = {
+    ...off,
+    APP_HOST: "https://dive.day",
+    MEDIA_PUBLIC_URL_BASE: "https://media.dive.day",
+  };
+
+  it("carries a logo our own storage holds, and the brand colour", () => {
+    expect(
+      shopSenderOf(
+        { ...nothing, logoUrl: "https://media.dive.day/logos/a.png", brandColor: "#158462" },
+        env,
+      ),
+    ).toEqual({ logoUrl: "https://media.dive.day/logos/a.png", brandColor: "#158462" });
+  });
+
+  it("puts a root-relative logo on DiveDay's own origin", () => {
+    expect(emailLogoUrl("/dive-sites/logo.png", env)).toBe("https://dive.day/dive-sites/logo.png");
+  });
+
+  it("refuses a logo on anybody else's host, so a diver's client never fetches from one", () => {
+    expect(emailLogoUrl("https://tracker.example/pixel.png", env)).toBeNull();
+    expect(emailLogoUrl("//tracker.example/pixel.png", env)).toBeNull();
+    expect(emailLogoUrl("http://media.dive.day/logos/a.png", env)).toBeNull();
+  });
+
+  it("drops a colour that is not one", () => {
+    expect(shopSenderOf({ ...nothing, brandColor: "red; background:url(x)" }, env)).toBeUndefined();
   });
 });

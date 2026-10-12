@@ -1,13 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { diver } from "./diver-roll-call-test-fixtures";
 import { tripManifest } from "./manifest-page-test-fixtures";
 import { openCheckpoint } from "./open-checkpoint";
-
-vi.mock("next/navigation", () => ({
-  notFound: () => {
-    throw new Error("NEXT_NOT_FOUND");
-  },
-}));
 
 const departure = tripManifest({ checkpoint: "departure" });
 const afterOne = tripManifest({ checkpoint: "after_dive_1" });
@@ -28,8 +22,8 @@ describe("openCheckpoint", () => {
     expect(openCheckpoint(all, departure, undefined).checkpoint).toBe("departure");
   });
 
-  it("is a 404 when the checkpoint has no manifest", () => {
-    expect(() => openCheckpoint([departure], departure, "after_dive_1")).toThrow("NEXT_NOT_FOUND");
+  it("opens the departure list when the checkpoint is unknown or has no manifest", () => {
+    expect(openCheckpoint([departure], departure, "after_dive_1").checkpoint).toBe("departure");
   });
 
   it("withholds a held seat's matched particulars before anything reads the row", () => {

@@ -158,6 +158,41 @@ describe("sendDueReminders", () => {
     expect(mine).toHaveLength(1);
   });
 
+  it("texts where to meet and the diver's own trip-prep link (ux review 2026-10-11, items 4 and 6)", async () => {
+    const { db, reef, bookingId, personId, inWeekBucket } = await reminderContext();
+    await db.update(people).set({ phone: PHONE }).where(eq(people.id, personId));
+    await db
+      .update(trips)
+      .set({
+        meetingPointLabel: "North Pier",
+        meetingPointAddress: "1 Dock St",
+        arrivalLandmark: "Blue awning",
+      })
+      .where(eq(trips.id, reef.id));
+    const sms = fakeSms();
+    const email = fakeEmail();
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: email.provider,
+      smsProvider: sms.provider,
+      appOrigin: ORIGIN,
+    });
+    const [text] = sms.sent.filter((m) => m.to === PHONE);
+    expect(text.body).toContain("Meet at North Pier, 1 Dock St.");
+    // The short form: the landmark is the email's, not the text's.
+    expect(text.body).not.toContain("Blue awning");
+    expect(text.body).toMatch(/Your trip prep: https:\/\/diveday\.example\/ready\//);
+    const [mail] = emailsFor(email, bookingId);
+    if (mail.kind !== "trip_reminder_7d") throw new Error(`unexpected ${mail.kind}`);
+    expect(mail.meetingPoint).toMatchObject({
+      label: "North Pier",
+      address: "1 Dock St",
+      landmark: "Blue awning",
+    });
+    // One capability, the same link on both channels.
+    expect(text.body).toContain(mail.readinessUrl);
+  });
+
   it("sends the courtesy text over the shop's WhatsApp when it has connected one", async () => {
     const { db, shop, personId, inWeekBucket } = await reminderContext();
     await db.update(people).set({ phone: PHONE }).where(eq(people.id, personId));
@@ -337,6 +372,12 @@ describe("sendDueReminders", () => {
       visibilityMeters: 20,
       surfaceConditions: "calm",
     });
+    // Celsius and metres here, so this case and the next read the same stored
+    // row in the two systems; the Key Largo demo itself starts on Fahrenheit.
+    await db
+      .update(shops)
+      .set({ temperatureUnit: "celsius", depthUnit: "meters" })
+      .where(eq(shops.id, shop.id));
     await db.update(shops).set({ contactPhone: "+13055551234" }).where(eq(shops.id, shop.id));
     const email = fakeEmail();
     // 6h out lands in the 24-hour bucket, inside the send window, so the

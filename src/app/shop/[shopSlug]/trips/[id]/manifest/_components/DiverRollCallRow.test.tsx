@@ -211,7 +211,7 @@ describe("a diver with no earlier boarding, after a dive", () => {
       ],
     });
     const onScreen = screen
-      .queryAllByText("Someone unaccounted for")
+      .queryAllByText("Buddy not back aboard")
       .filter((element) => !element.closest(".hidden.print\\:block"));
     expect(onScreen.length).toBeGreaterThan(0);
   });

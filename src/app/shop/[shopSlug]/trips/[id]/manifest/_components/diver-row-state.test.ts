@@ -30,7 +30,9 @@ const deep = {
 
 describe("diverRowState's one capsule", () => {
   it("is nothing for a diver who is only a name and a mark", () => {
-    expect(diverRowState(diver(), "after_dive_1", false).capsuleKind).toBeNull();
+    expect(
+      diverRowState(diver(), "after_dive_1", false, "America/New_York").capsuleKind,
+    ).toBeNull();
   });
 
   it("goes to a team that did not come back, even over the alarm", () => {
@@ -42,6 +44,7 @@ describe("diverRowState's one capsule", () => {
       }),
       "after_dive_1",
       false,
+      "America/New_York",
     );
     expect(state.alarmed).toBe(true);
     expect(state.capsuleKind).toBe("buddy");
@@ -52,6 +55,7 @@ describe("diverRowState's one capsule", () => {
       diver({ rollCall: notBackAt(), age: 13, minor: true, birthday: { status: "today" } }),
       "after_dive_1",
       false,
+      "America/New_York",
     );
     expect(state.capsuleKind).toBeNull();
   });
@@ -61,15 +65,16 @@ describe("diverRowState's one capsule", () => {
       diver({ readiness: blocked, medicalWaiver: refusedBefore }),
       "departure",
       true,
+      "America/New_York",
     );
     expect(state.blockedAtDock).toBe(true);
     expect(state.capsuleKind).toBe("blocked");
   });
 
-  it("ranks the earlier refusal over the minor, the minor over depth, depth over a birthday", () => {
+  it("ranks a medical warning over the minor, the minor over depth, depth over a birthday", () => {
     const at = (overrides: Partial<TripManifest["divers"][number]>) =>
-      diverRowState(diver(overrides), "after_dive_1", false).capsuleKind;
-    expect(at({ medicalWaiver: refusedBefore, age: 13, minor: true })).toBe("refusal");
+      diverRowState(diver(overrides), "after_dive_1", false, "America/New_York").capsuleKind;
+    expect(at({ medicalWaiver: refusedBefore, age: 13, minor: true })).toBe("medical");
     expect(at({ age: 13, minor: true, depthAdvisory: deep })).toBe("minor");
     expect(at({ depthAdvisory: deep, birthday: { status: "today" } })).toBe("depth");
     expect(at({ birthday: { status: "today" } })).toBe("birthday");
@@ -78,7 +83,12 @@ describe("diverRowState's one capsule", () => {
 
 describe("diverRowState's gate", () => {
   it("holds a blocked diver at the dock and offers no tap", () => {
-    const state = diverRowState(diver({ readiness: blocked }), "departure", true);
+    const state = diverRowState(
+      diver({ readiness: blocked }),
+      "departure",
+      true,
+      "America/New_York",
+    );
     expect(state.blockedAtDock).toBe(true);
     expect(state.boardingControlShown).toBe(false);
   });
@@ -88,6 +98,7 @@ describe("diverRowState's gate", () => {
       diver({ readiness: blocked, boardedEarlier: true }),
       "after_dive_1",
       false,
+      "America/New_York",
     );
     expect(state.blockedAtDock).toBe(false);
     expect(state.boardingControlShown).toBe(true);
@@ -98,6 +109,7 @@ describe("diverRowState's gate", () => {
       diver({ readiness: blocked, boardedEarlier: false, rollCall: boardedAt() }),
       "after_dive_1",
       false,
+      "America/New_York",
     );
     expect(state.blockedAtDock).toBe(true);
     expect(state.boardingControlShown).toBe(true);

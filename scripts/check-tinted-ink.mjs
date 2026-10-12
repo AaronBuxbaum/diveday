@@ -71,6 +71,11 @@ const fillPattern = (hue) => new RegExp(`bg-${hue}\\/\\d+\\b`);
  * reason: its one map, `ROLL_CALL_ROW_TONE`, is read only by those two
  * surfaces' roll-call rows.
  *
+ * The roll-call controls themselves are not on the list (issue #2341):
+ * `RollCallControls.tsx` and the offline view's two roll-call sections paint
+ * their controls on the opaque `bg-<hue>-tint`, so this check holds them to it
+ * rather than trusting the skin.
+ *
  * The cost of the coarser grain, stated: a component added to one of these
  * folders that somehow renders *outside* boat-mode would be exempt without
  * anybody noticing. That has not been possible so far — the page owns the
@@ -78,7 +83,6 @@ const fillPattern = (hue) => new RegExp(`bg-${hue}\\/\\d+\\b`);
  */
 const BOAT_MODE_FILES = new Set(
   [
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/RollCallControls.tsx",
     // The diver list and the parts of its row (split out of `DiverRollCall`).
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.tsx",
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCallRow.tsx",
@@ -89,9 +93,6 @@ const BOAT_MODE_FILES = new Set(
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/CrewRollCall.tsx",
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/BuddyTeamChip.tsx",
     "src/components/OfflineManifestView.tsx",
-    // Its roll-call sections, drawn only inside that view's `boat-mode` main.
-    "src/components/offline-manifest/CrewRollCall.tsx",
-    "src/components/offline-manifest/DiverRollCall.tsx",
     "src/components/row-tones.ts",
   ].map((file) => path.normalize(file)),
 );

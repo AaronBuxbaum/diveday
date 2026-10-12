@@ -130,6 +130,45 @@ export function seatListPriceCents(
   return participantPriceCents(trip, type);
 }
 
+/**
+ * **What one seat's money looks like in its confirmation** (ux review
+ * 2026-10-11, item 5): the same three facts the booking form showed above the
+ * button, so the email a diver forwards is a receipt in the shop's voice and
+ * not only Stripe's. A code and amounts, never words.
+ *
+ * - `at_shop` — nothing is taken online; the whole seat is owed at the shop.
+ * - `online` — the whole seat is charged by card at booking.
+ * - `deposit` — a deposit by card at booking, the balance at the dock.
+ *
+ * Null for an unpriced seat, which has no money story to tell (the form
+ * renders nothing for it either). `chargesOnline` is the caller's: whether
+ * this booking went to a checkout, which is a fact about the shop's Stripe
+ * account and the request, not about the trip.
+ */
+export type SeatMoneyTerms =
+  | { due: "at_shop" | "online"; amountCents: number }
+  | { due: "deposit"; depositCents: number; balanceCents: number };
+
+export function seatMoneyTerms(
+  trip: DepositTrip & ParticipantPricing,
+  course: CoursePricing | null,
+  type: ParticipantType,
+  chargesOnline: boolean,
+): SeatMoneyTerms | null {
+  const charge = seatCheckoutCharge(trip, course, type);
+  if (!charge) return null;
+  const whole = charge.amountCents + charge.balanceDueCents;
+  if (!chargesOnline) return { due: "at_shop", amountCents: whole };
+  if (charge.isDeposit) {
+    return {
+      due: "deposit",
+      depositCents: charge.amountCents,
+      balanceCents: charge.balanceDueCents,
+    };
+  }
+  return { due: "online", amountCents: whole };
+}
+
 export type CancellationTrip = {
   startsAt: Date;
   cancellationWindowHours: number | null;

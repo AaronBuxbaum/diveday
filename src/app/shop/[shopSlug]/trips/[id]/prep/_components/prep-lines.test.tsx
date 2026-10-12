@@ -53,10 +53,10 @@ describe("careLine", () => {
 });
 
 describe("pieceSize and sizeCell", () => {
-  it("says the size to pull, or that it was never recorded", () => {
+  it("says the size to pull, or that it is missing", () => {
     expect(pieceSize(t, piece({ size: "L" }))).toBe("L");
     const { container } = render(pieceSize(t, piece({})));
-    expect(container.textContent).toBe(t("tripPrep.notRecorded"));
+    expect(container.textContent).toBe(t("tripPrep.sizeMissing"));
   });
 
   it("says a piece the shop no longer rents beside its size", () => {

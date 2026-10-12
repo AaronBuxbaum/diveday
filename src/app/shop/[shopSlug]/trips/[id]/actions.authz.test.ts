@@ -630,12 +630,31 @@ describe("who may run each action on the trip page", () => {
     // course session's own roster, and it is bookkeeping that gates nothing.
     "setCourseMaterialsDoneAction",
     "updateBookingPickupAction",
+    // **A rider added at the dock** (batch 4, D6) is the counter's walk-in at
+    // the rail: whoever holds the roster when somebody turns up, on the same
+    // terms as seating a walk-in. Everything that limits the seat is in the
+    // one seating path it goes through (capacity, the certificate, a sailed or
+    // canceled departure), it never seats a diver, and the trail names who did it.
+    "addDockRiderAction",
+    // **A note to everyone on a departure** (batch 4, J4): "the marina lot is
+    // closed" is known first by whoever is at the dock, and the precedent is
+    // `cancelTripAction` above, a day-of operating call any staffer makes. What
+    // bounds it is in the note, not the role: 200 characters, no links but the
+    // diver's own, three per departure, never to a canceled or sailed one, and
+    // held with Undo (H-110 puts the role question to the owner).
+    "holdDepartureNoteAction",
+    // **Lost and found** (batch 4, J2), from the Boat tab and the shop's list:
+    // crew bookkeeping that gates nothing. The one message it can send goes
+    // once, to the diver whose seat it was found at, in DiveDay's own words.
+    "recordLostItemAction",
+    "lostItemRowAction",
   ];
 
   /**
    * Every exported action's source, sliced from its `export` to its closing brace, across the
    * departure's action files, one per tab (`details-actions.ts` the About and Details tab,
-   * `notes-actions.ts` the internal notes, `course-actions.ts` the course roster's doors).
+   * `notes-actions.ts` the internal notes, `course-actions.ts` the course roster's doors; the
+   * desk's three — the note, the dock rider, lost and found — have their own files).
    */
   function actionBodies(): Map<string, string> {
     const bodies = new Map<string, string>();
@@ -644,6 +663,10 @@ describe("who may run each action on the trip page", () => {
       "./details-actions.ts",
       "./notes-actions.ts",
       "./course-actions.ts",
+      "./departure-note-actions.ts",
+      "./manifest/dock-rider-actions.ts",
+      // Shared with the shop's list, but run from this departure's Boat tab.
+      "../../../../actions/lost-items.ts",
     ]) {
       for (const [name, body] of bodiesIn(file)) bodies.set(name, body);
     }

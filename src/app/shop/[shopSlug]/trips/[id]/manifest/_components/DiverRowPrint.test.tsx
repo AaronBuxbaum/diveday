@@ -39,7 +39,7 @@ describe("the roll call on paper", () => {
 describe("DiverRowPrint, drawn on its own", () => {
   it("is paper only, and dates a recorded state in full with its zone", () => {
     const boarded = diver({ rollCall: boardedAt() });
-    const state = diverRowState(boarded, "departure", true);
+    const state = diverRowState(boarded, "departure", true, "America/New_York");
     const { container } = render(
       <DiverRowPrint
         diver={boarded}

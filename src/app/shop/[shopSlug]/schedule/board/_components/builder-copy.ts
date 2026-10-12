@@ -10,6 +10,7 @@ import { formatMoneyCents, weekdayNames } from "@/lib/format";
 import { currencyFractionDigits, maxPriceMajor, type ShopCurrency } from "@/lib/money";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import type { BuilderCopy, BuilderMoreOptions, BuilderPriceInput } from "./ScheduleBuilder";
+import { weekDayCopy } from "./week-copy";
 
 /** Every word the departure builder says, resolved for the reader: a Client Component cannot translate itself. */
 export function scheduleBuilderCopy(st: StaffTranslator): BuilderCopy {
@@ -37,8 +38,7 @@ export function scheduleBuilderCopy(st: StaffTranslator): BuilderCopy {
     noPriceSet: st("schedule.builder.noPriceSet"),
     noPriceSetAria: st.raw("schedule.builder.noPriceSetAria"),
     noPriceSetAll: st("schedule.builder.noPriceSetAll"),
-    noBoats: st("schedule.week.noBoats"),
-    asked: st("schedule.week.asked"),
+    ...weekDayCopy(st),
     addDeparture: st("requests.addDeparture"),
     rollCallOpen: st.raw("schedule.builder.rollCallOpen"),
     rollCallOpenAria: st.raw("schedule.builder.rollCallOpenAria"),
@@ -117,6 +117,8 @@ export function scheduleBuilderCopy(st: StaffTranslator): BuilderCopy {
     selfGuidedLabel: st("schedule.builder.selfGuidedLabel"),
     selfGuidedHint: st("schedule.builder.selfGuidedHint"),
     isPrivateHint: st("schedule.builder.isPrivateHint"),
+    isRehearsalLabel: st("schedule.builder.isRehearsalLabel"),
+    isRehearsalHint: st("schedule.builder.isRehearsalHint"),
     daysLabel: st("schedule.builder.daysLabel"),
     daysDescription: st("schedule.builder.daysDescription"),
     payAtBookingLegend: st("schedule.builder.payAtBookingLegend"),

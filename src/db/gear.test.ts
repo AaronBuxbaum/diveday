@@ -15,6 +15,6 @@ describe("the gear barrel", () => {
       .filter(([, value]) => value === undefined)
       .map(([name]) => name);
     expect(missing).toEqual([]);
-    expect(Object.keys(gear)).toHaveLength(35);
+    expect(Object.keys(gear)).toHaveLength(36);
   });
 });

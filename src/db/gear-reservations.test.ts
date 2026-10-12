@@ -921,7 +921,7 @@ describe("handing a whole rental set over", () => {
     await checkOutTripGearSet(db, { shopId: shop.id, bookingId });
     expect(
       await returnTripGearSet(db, { shopId: shop.id, bookingId, outcome: "all_good" }),
-    ).toEqual({ ok: true });
+    ).toEqual({ ok: true, pulled: 0 });
 
     // A closed reservation is not something to hand over again.
     expect(await checkOutTripGearSet(db, { shopId: shop.id, bookingId })).toEqual({
@@ -987,7 +987,7 @@ describe("returning a whole rental set", () => {
 
     expect(
       await returnTripGearSet(db, { shopId: shop.id, bookingId, outcome: "all_good" }),
-    ).toEqual({ ok: true });
+    ).toEqual({ ok: true, pulled: 0 });
 
     const rows = await outcomesOf(db, reservationIds);
     expect(rows).toHaveLength(2);
@@ -1018,7 +1018,7 @@ describe("returning a whole rental set", () => {
         outcome: "service_concern",
         note: "second stage free-flowed on the descent",
       }),
-    ).toEqual({ ok: true });
+    ).toEqual({ ok: true, pulled: 0 });
     for (const row of await outcomesOf(db, reservationIds)) {
       expect(row.outcome).toBe("service_concern");
       expect(row.note).toBe("second stage free-flowed on the descent");
@@ -1033,7 +1033,7 @@ describe("returning a whole rental set", () => {
     const { bookingId } = await aSetOut(db, shop.id);
     expect(
       await returnTripGearSet(db, { shopId: shop.id, bookingId, outcome: "all_good" }),
-    ).toEqual({ ok: true });
+    ).toEqual({ ok: true, pulled: 0 });
     expect(
       await returnTripGearSet(db, { shopId: shop.id, bookingId, outcome: "all_good" }),
     ).toEqual({ ok: false, reason: "not_found" });
@@ -1059,7 +1059,7 @@ describe("returning a whole rental set", () => {
 
     expect(
       await returnTripGearSet(db, { shopId: shop.id, bookingId, outcome: "all_good" }),
-    ).toEqual({ ok: true });
+    ).toEqual({ ok: true, pulled: 0 });
 
     const [untouched] = await outcomesOf(db, [reserved.reservation.id]);
     expect(untouched?.returnedAt).toBeNull();
@@ -1116,7 +1116,7 @@ describe("returning a whole rental set", () => {
           note: "second stage free-flowed on the descent",
           pullGearItemIds: [reg],
         }),
-      ).toEqual({ ok: true });
+      ).toEqual({ ok: true, pulled: 1 });
 
       expect(await statusOf(db, reg)).toEqual({
         status: "needs_service",
@@ -1150,7 +1150,7 @@ describe("returning a whole rental set", () => {
           outcome: "service_concern",
           note: "mask strap scratched",
         }),
-      ).toEqual({ ok: true });
+      ).toEqual({ ok: true, pulled: 0 });
 
       expect((await statusOf(db, reg))?.status).toBe("in_service");
       expect((await statusOf(db, bcd))?.status).toBe("in_service");
@@ -1218,13 +1218,16 @@ describe("returning a whole rental set", () => {
         serviceNote: "inflator sticks",
       });
 
-      await returnTripGearSet(db, {
-        shopId: shop.id,
-        bookingId,
-        outcome: "service_concern",
-        note: "free-flow",
-        pullGearItemIds: [reg],
-      });
+      // Nothing moved, so the desk is not told it did (issue #2345).
+      expect(
+        await returnTripGearSet(db, {
+          shopId: shop.id,
+          bookingId,
+          outcome: "service_concern",
+          note: "free-flow",
+          pullGearItemIds: [reg],
+        }),
+      ).toEqual({ ok: true, pulled: 0 });
       expect(await statusOf(db, reg)).toEqual({
         status: "needs_service",
         serviceNote: "inflator sticks",

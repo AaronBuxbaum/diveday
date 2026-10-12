@@ -1,4 +1,3 @@
-import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import {
   resolveRevokedBookingCapability,
   staleBookingCapabilityForToken,
@@ -10,7 +9,7 @@ import { getShopById } from "@/db/shops";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { cancelledNotice } from "./CancelledNotice";
-import { ExpiredLink } from "./ExpiredLink";
+import { ExpiredLink, UnavailableReadyLink } from "./ExpiredLink";
 import { TripCancelledCard } from "./TripCancelledCard";
 
 /**
@@ -120,10 +119,5 @@ export async function readyDeadLink({
   // Nothing resolved at all (garbage, or a token that was never ours). There
   // is no shop to attribute it to without weakening the guarantee the model
   // rests on — a bearer token reveals only its own record.
-  return (
-    <ExpiredLinkCard
-      title={anonT("ready.unavailableHeading")}
-      text={anonT("ready.unavailableBody")}
-    />
-  );
+  return <UnavailableReadyLink t={anonT} />;
 }

@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { readinessStatusText } from "@/i18n/readiness-labels";
-import type { TripManifest } from "@/lib/manifests";
+import { buddyAlertFor, type TripManifest } from "@/lib/manifests";
 import { diverCapsule, diverTypeBadge } from "./DiverRowCapsule";
-import { boardedAt, diver, renderList, t } from "./diver-roll-call-test-fixtures";
+import { boardedAt, diver, notBackAt, renderList, t } from "./diver-roll-call-test-fixtures";
 import { diverRowState } from "./diver-row-state";
 
 afterEach(cleanup);
@@ -42,6 +42,31 @@ describe("the earlier-refusal capsule", () => {
     );
   });
 
+  it("gives way to a rider's riding-only warning, which the row and its details both say (H-109)", () => {
+    // A clean release over an older "no", and a later "no" the rider boards
+    // under: both warnings stand, and the riding-only one takes the row.
+    const { container } = renderList({
+      divers: [
+        diver({
+          participantType: "rider",
+          medicalWaiver: refusedBefore,
+          riderMedicalHold: {
+            kind: "not_cleared",
+            at: new Date("2026-09-05T12:00:00.000Z"),
+            evaluatedOn: "2026-09-04",
+          },
+        }),
+      ],
+    });
+    expect(capsuleOf(container)).toHaveTextContent("Physician did not clear: riding only");
+    expect(capsuleOf(container)).not.toHaveTextContent(CAPSULE);
+    expect(container.textContent).toMatch(
+      /A physician did not clear this person on Sep\s4,\s2026: riding only, not in the water/,
+    );
+    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
+    expect(within(printed as HTMLElement).getByText(CAPSULE)).toBeDefined();
+  });
+
   it("is short in Spanish too", () => {
     const { container } = renderList({
       divers: [diver({ medicalWaiver: refusedBefore })],
@@ -62,7 +87,7 @@ describe("the earlier-refusal capsule", () => {
         }),
       ],
     });
-    expect(capsuleOf(split.container)).toHaveTextContent("Someone unaccounted for");
+    expect(capsuleOf(split.container)).toHaveTextContent("Buddy not back aboard");
     expect(capsuleOf(split.container)).not.toHaveTextContent(CAPSULE);
     split.unmount();
 
@@ -95,6 +120,66 @@ describe("the earlier-refusal capsule", () => {
     expect(screen.getAllByText("Minor · age 13").length).toBeGreaterThan(0);
   });
 
+  /**
+   * **A minor with a physician's earlier "no", recorded not back aboard**
+   * (issue #2307). The alarm takes the row on screen and nothing sits beside
+   * it: no refusal capsule and no minor capsule. The facts still reach the
+   * reader: the age in the person's own panel, and on paper the refusal
+   * sentence with the minor flag beside it.
+   */
+  it("gives a not-back minor's refusal no capsule on screen, the age in the panel, and the sentence on paper", () => {
+    const { container } = renderList({
+      divers: [
+        diver({
+          medicalWaiver: refusedBefore,
+          age: 13,
+          minor: true,
+          boardedEarlier: true,
+          rollCall: notBackAt(),
+        }),
+      ],
+    });
+    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
+    if (!printed) throw new Error("no printed block");
+    const onScreen = (text: string | RegExp) =>
+      screen.queryAllByText(text).filter((element) => !printed.contains(element));
+    expect(capsuleOf(container)).toBeNull();
+    expect(onScreen(CAPSULE)).toHaveLength(0);
+    expect(onScreen(/Minor/)).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    expect(within(screen.getByRole("dialog")).getByText("Minor · age 13")).toBeDefined();
+
+    expect(printed).toHaveTextContent(
+      /A physician did not clear this person on .* \(earlier waiver\)/,
+    );
+    expect(printed).toHaveTextContent(CAPSULE);
+    expect(printed).toHaveTextContent("Minor · age 13");
+  });
+
+  /**
+   * **What paper restates is decided by the capsule the row actually drew**
+   * (issue #2307). A buddy alert with no team to name draws no buddy capsule,
+   * so the refusal takes the row; paper must not then print the refusal a
+   * second time beside the one already on the summary line.
+   */
+  it("prints the refusal once when a teamless buddy alert gives it the row", () => {
+    const { container } = renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          medicalWaiver: refusedBefore,
+          buddyAlert: "separated_dock",
+          buddyTeam: null,
+          rollCall: boardedAt(),
+        }),
+      ],
+    });
+    expect(capsuleOf(container)).toHaveTextContent(CAPSULE);
+    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
+    expect(within(printed as HTMLElement).queryAllByText(CAPSULE)).toHaveLength(0);
+  });
+
   it("dates the refusal by the physician's evaluation, with the year", () => {
     const evaluated = {
       ...refusedBefore,
@@ -105,7 +190,7 @@ describe("the earlier-refusal capsule", () => {
       },
     } as TripManifest["divers"][number]["medicalWaiver"];
     const { container } = renderList({ divers: [diver({ medicalWaiver: evaluated })] });
-    expect(container.textContent).toMatch(/did not clear this diver on Aug\s3,\s2026/);
+    expect(container.textContent).toMatch(/did not clear this person on Aug\s3,\s2026/);
   });
 });
 
@@ -117,6 +202,50 @@ describe("the earlier-refusal capsule", () => {
  * for, and the head count above already says so. Only a split team after a
  * dive outranks the blocker.
  */
+/**
+ * **The split-team chip names the buddy, on the row of the one aboard** (UX
+ * review 2026-10-10, item 23). It read "Someone not aboard" on the diver who
+ * *was* aboard, which a crew read as that diver missing. The alert belongs on
+ * the boarded diver's row (`buddyAlertFor`), so the words have to say whose
+ * absence it is; the teammate still ashore wears no chip, because their own
+ * row already says they are not aboard.
+ */
+describe("a buddy team split at the dock", () => {
+  it("says the buddy is not aboard yet on the boarded row, and nothing on the ashore one", () => {
+    const team = { teamId: "t-1", others: [] };
+    const aboard = boardedAt();
+    const ashore = undefined;
+    renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          fullName: "Meera Iyer",
+          rollCall: aboard,
+          buddyAlert: buddyAlertFor("departure", aboard, [ashore]),
+          buddyTeam: team,
+        }),
+        diver({
+          bookingId: "00000000-0000-4000-8000-000000000002",
+          fullName: "Ravi Iyer",
+          rollCall: ashore,
+          buddyAlert: buddyAlertFor("departure", ashore, [aboard]),
+          buddyTeam: team,
+        }),
+      ],
+    });
+    const rows = screen.getAllByRole("listitem");
+    const rowOf = (name: string) => {
+      const row = rows.find((item) => within(item).queryByText(name));
+      if (!row) throw new Error(`no row for ${name}`);
+      return row;
+    };
+    expect(within(rowOf("Meera Iyer")).getAllByText("Buddy not aboard yet").length).toBeGreaterThan(
+      0,
+    );
+    expect(within(rowOf("Ravi Iyer")).queryByText(/not aboard yet|Someone/)).toBeNull();
+  });
+});
+
 describe("a blocked diver marked aboard at the dock", () => {
   const blocked: TripManifest["divers"][number]["readiness"] = {
     status: "blocked",
@@ -172,7 +301,7 @@ describe("a blocked diver marked aboard at the dock", () => {
         }),
       ],
     });
-    expect(onScreen("Someone unaccounted for").length).toBeGreaterThan(0);
+    expect(onScreen("Buddy not back aboard").length).toBeGreaterThan(0);
     expect(onScreen("Blocked")).toHaveLength(0);
   });
 });
@@ -219,13 +348,17 @@ describe("the unresolved-referral capsule", () => {
 describe("diverCapsule, called on its own", () => {
   it("draws the capsule diverRowState chose, and nothing when it chose none", () => {
     const quiet = diver();
-    expect(diverCapsule(quiet, diverRowState(quiet, "after_dive_1", false), t)).toBeNull();
+    expect(
+      diverCapsule(quiet, diverRowState(quiet, "after_dive_1", false, "America/New_York"), t),
+    ).toBeNull();
 
     const blocked = diver({
       readiness: { status: "blocked", blockers: [{ code: "certification_missing" }] },
     });
     const { container } = render(
-      <span>{diverCapsule(blocked, diverRowState(blocked, "departure", true), t)}</span>,
+      <span>
+        {diverCapsule(blocked, diverRowState(blocked, "departure", true, "America/New_York"), t)}
+      </span>,
     );
     expect(container).toHaveTextContent(readinessStatusText(t, "blocked"));
   });

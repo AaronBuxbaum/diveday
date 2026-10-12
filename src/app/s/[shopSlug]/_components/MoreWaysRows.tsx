@@ -17,6 +17,7 @@ import { LastMinuteListForm } from "./LastMinuteListForm";
 export function MoreWaysRows({
   shopSlug,
   quiet,
+  promotedAsk,
   dateRequestsEnabled,
   lastMinuteListEnabled,
   everHadDeparture,
@@ -25,6 +26,8 @@ export function MoreWaysRows({
   shopSlug: string;
   /** The off-season card is up, so its own open composer already carries the date request. */
   quiet: boolean;
+  /** `PromotedDateAsk` carries the date request above, at the board's end. */
+  promotedAsk: boolean;
   dateRequestsEnabled: boolean;
   lastMinuteListEnabled: boolean;
   /** The shop has run a departure at some point (`everHadDepartureRead`). */
@@ -51,12 +54,12 @@ export function MoreWaysRows({
             The footer four rows below already carries the shop's email and
             phone, so omitting them here prevents duplicate contact lines
             on the same screen (issue #777). */}
-      {/* Not while the off-season card is up: the same composer is
-            already open above, and two of them would render the same
+      {/* Not while the off-season card or the board's-end ask is up: the
+            same composer is already open above, and two of them would render the same
             `#request-a-date` id twice (N-45). */}
       {/* And not for a shop that switched date requests off (ADR
             20261005-optional-shop-features). */}
-      {quiet || !dateRequestsEnabled ? null : (
+      {quiet || promotedAsk || !dateRequestsEnabled ? null : (
         <DateRequestForm
           submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
           askInterest

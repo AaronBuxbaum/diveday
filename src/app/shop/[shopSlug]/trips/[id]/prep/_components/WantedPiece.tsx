@@ -104,7 +104,7 @@ export function WantedPiece({
   );
   return (
     <div className={`${kitLineClass} print:hidden`}>
-      <dt className="text-muted sm:pt-2">
+      <dt className="text-muted">
         {groups.length === 0 ? pieceLabel : <label htmlFor={selectId}>{pieceLabel}</label>}
       </dt>
       <dd>
@@ -114,7 +114,9 @@ export function WantedPiece({
           // The width lives on a wrapper: `controlClass`
           // carries w-full, and a competing width utility
           // on the same element loses alphabetically.
-          <div className="w-full min-w-44 sm:max-w-64">
+          // A proposal's words and two acts get a wider measure than a
+          // bare select, so "Proposed: BCD #5 · L" holds one line on a desk.
+          <div className={`w-full min-w-0 ${proposal ? "sm:max-w-sm" : "sm:max-w-64"}`}>
             {/* **No "Assign" beside it.** The pick is the
                                       act; a second tap to confirm it is an
                                       "Edit" button once per row, twenty-one

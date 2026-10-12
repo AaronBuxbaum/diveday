@@ -21,7 +21,10 @@ vi.mock("@/db/ready", () => ({ getReadyPageData: db.getReadyPageData }));
 vi.mock("@/db/payments", () => ({ getBookingPayment: db.getBookingPayment }));
 vi.mock("@/db/shops", () => ({ getShopById: db.getShopById }));
 vi.mock("@/i18n/request", () => ({ requestLocale: async () => "en-US" }));
-vi.mock("./ExpiredLink", () => ({ ExpiredLink: () => <p>expired-with-shop</p> }));
+vi.mock("./ExpiredLink", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./ExpiredLink")>()),
+  ExpiredLink: () => <p>expired-with-shop</p>,
+}));
 vi.mock("./TripCancelledCard", () => ({ TripCancelledCard: () => <p>departure-cancelled</p> }));
 
 const t = diverTranslator("en-US");

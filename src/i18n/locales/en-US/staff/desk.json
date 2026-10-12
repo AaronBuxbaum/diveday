@@ -1,0 +1,99 @@
+{
+  "staffingWarnings": {
+    "heading": "Crew warnings",
+    "missingOxygen": "No oxygen provider on {title}, {when}",
+    "missingFirstAid": "No first aid / CPR on {title}, {when}",
+    "longDay": "{name} crews departures over {hours, plural, one {# hour} other {# hours}} on {day}",
+    "credentialExpired": "{name}, crewing {title}: {credential} expired {date}",
+    "credentialExpiredOther": "{name}, crewing {title}: a credential expired {date}"
+  },
+  "dockRider": {
+    "door": "Add a rider",
+    "name": "Name",
+    "phone": "Phone",
+    "optional": "(optional)",
+    "emergencyName": "Emergency contact",
+    "emergencyPhone": "Emergency contact phone",
+    "dateOfBirth": "Date of birth",
+    "aboardAs": "Aboard as",
+    "ridesAlong": "Rides along",
+    "snorkels": "Snorkels",
+    "submit": "Add rider",
+    "pending": "Adding…",
+    "added": "{name} is on the manifest.",
+    "addedOwesRelease": "{name} is on the manifest and still needs to sign the release before boarding.",
+    "releaseHandOver": "Record a paper signature from their row, or",
+    "openRelease": "open the release on this phone",
+    "owesPayment": "Their seat needs settling at the counter before boarding.",
+    "owesOther": "Check their row before boarding.",
+    "refusals": {
+      "tripFull": "The boat is full.",
+      "tripUnavailable": "This departure isn’t taking anyone now.",
+      "courseSession": "A course session carries no riders.",
+      "departed": "The boat has left the dock.",
+      "alreadyAboard": "Someone by that name is already aboard.",
+      "invalid": "Check the name, the emergency contact and the date of birth.",
+      "other": "Couldn’t add them."
+    }
+  },
+  "departureNote": {
+    "heading": "Note to everyone",
+    "description": "One short message to everyone booked on this departure, by email or text. No links: each person’s own booking link goes with it.",
+    "label": "Note",
+    "left": "{left} left",
+    "submit": "Send to everyone booked",
+    "sent": "Sent. {delivered} of {recipients} delivered.",
+    "sentLine": "{when} · {name} · {delivered} of {recipients} delivered",
+    "someone": "Staff",
+    "refusals": {
+      "empty": "Write the note first.",
+      "tooLong": "Keep it to 200 characters.",
+      "link": "Take the link out. Everyone gets their own booking link.",
+      "cancelled": "This departure is canceled.",
+      "past": "This departure has sailed.",
+      "limit": "This departure has had its {max, plural, one {# note} other {# notes}}.",
+      "noRecipients": "Nobody is booked yet.",
+      "other": "Couldn’t send it."
+    },
+    "sentCount": "{count, plural, one {# sent} other {# sent}}"
+  },
+  "lostFound": {
+    "heading": "Left aboard",
+    "lead": "What the crew found after the trip. Pick the seat and DiveDay can tell that person.",
+    "description": "What was found",
+    "seat": "Whose seat",
+    "noSeat": "Not sure",
+    "submit": "Record",
+    "pending": "Recording…",
+    "recorded": "Recorded.",
+    "tell": "Tell {name}",
+    "told": "told by {channel}",
+    "channels": {
+      "email": "email",
+      "sms": "text",
+      "whatsapp": "WhatsApp"
+    },
+    "returned": "Returned",
+    "discarded": "Discarded",
+    "reopen": "Reopen",
+    "unclaimed": "Unclaimed",
+    "statusReturned": "returned",
+    "statusDiscarded": "discarded",
+    "tripLine": "{title}, {date}",
+    "empty": "Nothing is waiting to go home.",
+    "whereToAdd": "Items are recorded on each departure’s Boat tab.",
+    "refusals": {
+      "empty": "Say what was found.",
+      "tooLong": "Keep it to 120 characters.",
+      "link": "Take the link out.",
+      "notFound": "That item or departure is gone.",
+      "seatNotOnTrip": "That seat isn’t on this departure.",
+      "notOpen": "That item is already resolved.",
+      "noOwner": "Nobody is tied to this item.",
+      "alreadyTold": "They’ve already been told.",
+      "noContact": "No email or phone on file for them.",
+      "failed": "Couldn’t send. Try again in a minute.",
+      "other": "That didn’t work."
+    }
+  }
+}

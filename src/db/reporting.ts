@@ -47,7 +47,7 @@ import {
   userAccounts,
   waiverRecords,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * Owner reporting exposes shop-wide revenue, so it re-checks authorization
@@ -146,13 +146,13 @@ export async function getMonthlyReport(
   // always read the same boats. `reporting.test.ts` pins the refusal rather
   // than a zero sum, because the refusal is what keeps this true.
   //
-  // The one route to a deleted departure with bookings is the e2e-only
-  // `api/test/seed-off-season` route, gated to demo shops behind
-  // `e2eTestRouteAuthorized`; a capture of /reports after it can show revenue
-  // against no seats, and that is the seed, not this report.
+  // Two routes reach a deleted departure with bookings: the e2e-only `api/test/seed-off-season`
+  // (demo shops only; revenue against no seats after it is that seed, not this report), and a
+  // rehearsal cleared overnight, which `inWindow` leaves out as it does every rehearsal.
   const inWindow = and(
     eq(trips.shopId, shopId),
     ne(trips.status, "cancelled"),
+    notRehearsal(),
     gte(trips.startsAt, startUtc),
     lt(trips.startsAt, endUtc),
   );
@@ -639,7 +639,7 @@ export async function getMonthlyReport(
 /**
  * The departure time of this shop's oldest reportable trip, or null when the
  * shop has never scheduled one. The reports page uses it as the floor of its
- * month picker: a shop that opened in March should not be handed a control
+ * back arrow: a shop that opened in March should not be handed a control
  * offering to walk back to 1970, and it is the same bound the page clamps a
  * hand-typed `?month=` against. Cancelled trips are excluded for the reason
  * every other aggregate here excludes them — a cancelled boat sailed nothing,
@@ -652,7 +652,7 @@ export async function earliestReportedTripStart(
   const [row] = await db
     .select({ startsAt: trips.startsAt })
     .from(trips)
-    .where(and(eq(trips.shopId, shopId), ne(trips.status, "cancelled"), liveTrip()))
+    .where(and(eq(trips.shopId, shopId), ne(trips.status, "cancelled"), liveTrip(), notRehearsal()))
     .orderBy(asc(trips.startsAt))
     .limit(1);
   return row?.startsAt ?? null;
@@ -661,7 +661,7 @@ export async function earliestReportedTripStart(
 /**
  * The first source-financial day that can affect the report's aggregate. This
  * deliberately follows the same currency/direction/amount gate as
- * `getMonthlyReport`, so the month picker never reaches backwards merely for
+ * `getMonthlyReport`, so the back arrow never reaches backwards merely for
  * an ambiguous receipt that the report itself correctly leaves out.
  */
 export async function earliestImportedFinancialHistoryDate(
@@ -719,6 +719,7 @@ export async function pagedMonthlyReportTrips(
   const inWindow = and(
     eq(trips.shopId, shopId),
     ne(trips.status, "cancelled"),
+    notRehearsal(),
     gte(trips.startsAt, startUtc),
     lt(trips.startsAt, endUtc),
   );
@@ -733,7 +734,7 @@ export async function pagedMonthlyReportTrips(
       const [counted] = await db
         .select({ total: count() })
         .from(trips)
-        .where(and(inWindow, liveTrip()));
+        .where(and(inWindow, liveTrip(), notRehearsal()));
       return counted?.total ?? 0;
     },
     fetchRows: async (offset, limit) =>
@@ -754,7 +755,7 @@ export async function pagedMonthlyReportTrips(
             inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
           ),
         )
-        .where(and(inWindow, liveTrip()))
+        .where(and(inWindow, liveTrip(), notRehearsal()))
         .groupBy(trips.id, trips.title, trips.startsAt, trips.capacity)
         .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id))
         .limit(limit)
@@ -788,7 +789,7 @@ export async function pagedMonthlyReportTrips(
             isNull(waiverRecords.supersededAt),
           ),
         )
-        .where(and(inArray(trips.id, tripIds), liveTrip()))
+        .where(and(inArray(trips.id, tripIds), liveTrip(), notRehearsal()))
         .groupBy(trips.id)
     : [];
   const waiverByTrip = new Map(waiverRows.map((row) => [row.tripId, Number(row.waiverComplete)]));
@@ -816,7 +817,7 @@ export async function pagedMonthlyReportTrips(
  * a cost. DiveDay does not know what a shop pays anybody, so a thin departure
  * that sailed with a full crew is visible here as a fact about staffing, not
  * an inference about money (issue #700). One batched query rather than one
- * per row, the same shape `courseCrewCountsByTrip` (src/db/today.ts) uses for
+ * per row, the same shape `courseCrewCountsByTrip` (src/db/course-crew-counts.ts) uses for
  * the identical N+1 reason.
  *
  * `trip_assignments` carries no `shop_id` of its own (CR-007) — proven here by
@@ -833,6 +834,7 @@ export async function crewCountsByTrip(
     .select({ tripId: tripAssignments.tripId, crewCount: countDistinct(tripAssignments.personId) })
     .from(tripAssignments)
     .innerJoin(trips, and(eq(trips.id, tripAssignments.tripId), eq(trips.shopId, shopId)))
+    // diveday:allow-rehearsal: `tripIds` is the caller's, already the board's.
     .where(inArray(tripAssignments.tripId, tripIds))
     .groupBy(tripAssignments.tripId);
   return new Map(rows.map((row) => [row.tripId, Number(row.crewCount)]));
@@ -900,7 +902,7 @@ export async function getShopYear(
       db
         .select({ day: localDay, boats: count(), seats: sum(trips.capacity) })
         .from(trips)
-        .where(and(sailedInYear, liveTrip()))
+        .where(and(sailedInYear, liveTrip(), notRehearsal()))
         .groupBy(sql`1`),
     () =>
       db
@@ -914,7 +916,7 @@ export async function getShopYear(
             inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
           ),
         )
-        .where(and(sailedInYear, liveTrip()))
+        .where(and(sailedInYear, liveTrip(), notRehearsal()))
         .groupBy(sql`1`),
     // Days per hull, not departures per hull: a boat that goes out twice in a
     // day was at sea once. A departure with no boat on it contributes to the
@@ -927,7 +929,7 @@ export async function getShopYear(
         })
         .from(trips)
         .innerJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, shopId)))
-        .where(and(sailedInYear, liveTrip()))
+        .where(and(sailedInYear, liveTrip(), notRehearsal()))
         .groupBy(boats.id, boats.name),
     // The times a site was dived, from the day's plan. `trip_dives` carries no
     // `shop_id` of its own (CR-007), so it is reached only through `trips`,
@@ -946,7 +948,7 @@ export async function getShopYear(
           diveSites,
           and(eq(diveSites.id, tripDives.diveSiteId), eq(diveSites.shopId, shopId)),
         )
-        .where(and(sailedInYear, liveTrip()))
+        .where(and(sailedInYear, liveTrip(), notRehearsal()))
         .groupBy(diveSites.id, diveSites.name, diveSites.deletedAt),
     // The shop's first day at sea, ever — the "since May" rule's only input.
     () =>
@@ -959,6 +961,7 @@ export async function getShopYear(
             ne(trips.status, "cancelled"),
             lte(trips.startsAt, sailedBy),
             liveTrip(),
+            notRehearsal(),
           ),
         ),
   ]);

@@ -20,7 +20,16 @@ function statusPayload(statuses: unknown[]) {
     entry: [
       {
         id: "waba-1",
-        changes: [{ field: "messages", value: { messaging_product: "whatsapp", statuses } }],
+        changes: [
+          {
+            field: "messages",
+            value: {
+              messaging_product: "whatsapp",
+              metadata: { display_phone_number: "13055550100", phone_number_id: "pn-1" },
+              statuses,
+            },
+          },
+        ],
       },
     ],
   });
@@ -123,11 +132,17 @@ describe("parseWhatsAppDeliveryEvents", () => {
     expect(parseWhatsAppDeliveryEvents(payload, NOW)[0].wabaId).toBe("waba-1");
   });
 
+  it("carries the phone number id each event arrived at, the tenant key under H-83", () => {
+    const payload = statusPayload([{ id: "wamid.1", status: "delivered" }]);
+    expect(parseWhatsAppDeliveryEvents(payload, NOW)[0].phoneNumberId).toBe("pn-1");
+  });
+
   it("reports a null WABA when Meta named none, rather than inventing one", () => {
     const payload = JSON.stringify({
       entry: [{ changes: [{ value: { statuses: [{ id: "wamid.1", status: "sent" }] } }] }],
     });
     expect(parseWhatsAppDeliveryEvents(payload, NOW)[0].wabaId).toBeNull();
+    expect(parseWhatsAppDeliveryEvents(payload, NOW)[0].phoneNumberId).toBeNull();
   });
 
   it("ignores read receipts — DiveDay does not record opens on any channel", () => {
@@ -218,7 +233,16 @@ describe("parseWhatsAppInboundMessages (ADR 20260907-two-way-inbox)", () => {
       entry: [
         {
           ...(wabaId ? { id: wabaId } : {}),
-          changes: [{ field: "messages", value: { messaging_product: "whatsapp", messages } }],
+          changes: [
+            {
+              field: "messages",
+              value: {
+                messaging_product: "whatsapp",
+                metadata: { display_phone_number: "13055550100", phone_number_id: "pn-1" },
+                messages,
+              },
+            },
+          ],
         },
       ],
     });
@@ -237,6 +261,7 @@ describe("parseWhatsAppInboundMessages (ADR 20260907-two-way-inbox)", () => {
     expect(parseWhatsAppInboundMessages(payload, NOW)).toEqual([
       {
         wabaId: "waba-1",
+        phoneNumberId: "pn-1",
         providerMessageId: "wamid.in1",
         from: "13055551234",
         body: "Running 10 minutes late",
@@ -282,6 +307,38 @@ describe("parseWhatsAppInboundMessages (ADR 20260907-two-way-inbox)", () => {
       null,
     );
     expect(parseWhatsAppInboundMessages(payload, NOW)[0].wabaId).toBeNull();
+  });
+
+  it("keeps each change's own number apart when one WABA's delivery carries two", () => {
+    // A chain sharing one Business account (H-83): Meta may batch changes for
+    // two of its numbers under one entry, and each message must keep its own.
+    const payload = JSON.stringify({
+      entry: [
+        {
+          id: "waba-chain",
+          changes: [
+            {
+              value: {
+                metadata: { phone_number_id: "pn-north" },
+                messages: [{ from: "1", id: "wamid.a", type: "text", text: { body: "north" } }],
+              },
+            },
+            {
+              value: {
+                metadata: { phone_number_id: "pn-south" },
+                messages: [{ from: "2", id: "wamid.b", type: "text", text: { body: "south" } }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(
+      parseWhatsAppInboundMessages(payload, NOW).map((m) => [m.body, m.phoneNumberId, m.wabaId]),
+    ).toEqual([
+      ["north", "pn-north", "waba-chain"],
+      ["south", "pn-south", "waba-chain"],
+    ]);
   });
 
   it("returns nothing for malformed payloads rather than throwing", () => {

@@ -13,6 +13,7 @@ import {
 } from "@/db/trips";
 import { EMPTY_REVIEW_AGGREGATE } from "@/lib/reviews";
 import { resolveLens } from "@/lib/trip-lenses";
+import { seatsOnSale } from "@/lib/trips";
 
 /**
  * **Has this shop ever run a departure** — which is not what `hasUpcoming` asks.
@@ -115,7 +116,7 @@ export async function readSchedulePage(
       tripType: tripTypeFilter,
       publicOnly: true,
       lensId: activeLens?.id,
-    }),
+    }).then((page) => ({ ...page, trips: page.trips.map(seatsOnSale) })),
   );
   const rangeRead = upcomingScheduleRange(db, shop.id, now, { publicOnly: true });
   const activeCoursesRead = isEmbed ? Promise.resolve([]) : listActiveCourses(db, shop.id);

@@ -17,7 +17,7 @@
   the log when its row is pruned, and an erased diver's lines read `[redacted]` there as they do
   everywhere. Refunds, write-offs and the schedule builder's acts (add, repeat, move, copy, delete)
   record their actor for it. Owners and managers only (`canViewShopActivity`); reached from
-  Settings' Data group at `/settings/activity`.
+  Settings' Team group at `/settings/activity`.
 
 - **Rental set** — typically: **BCD** (jacket, sized), **regulator** ("reg", with octopus and
   SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, a **dive
@@ -178,8 +178,12 @@
   the window's last day or that has an open service concern, and lends a flagged soft-goods unit
   only with its own "Lend anyway": the one place a **service clock** gates. Counter tanks are air
   only; a nitrox fill is not modelled. **The waiver informs and never gates** (H-108): the
-  release is the person's, so the ticket and the Rentals list say its standing when it is short of
-  signed ("Waiver: Not signed"), and the ticket offers the person's waiver link.
+  release is the person's, so the new-rental form, the ticket and the Rentals list say its
+  standing when it is short of signed ("Waiver: Not signed"), and the form and the ticket offer the
+  person's waiver link. A medical hold or a physician's "not cleared" is said in the readiness
+  sentence, with no link; a current release standing over an earlier refusal or an open referral
+  (H-98 as amended) carries the manifest's warning and a link to the record. Its return can **pull
+  units for service** the way a departure's does (issue #2345).
   Trip-scoped reads (prep, manifests) never count one; a departure's Gear tab names the units a
   booked diver holds on one over its window. ADR 20260815-minimal-gear-register, amendment
   2026-10-08.
@@ -204,9 +208,12 @@
   wetsuit, a mask, fins) has no service and no check to write, so a dated note is its clearing
   event, because a note is the only record those units ever get. A return with no outcome (the
   register's quick Return) says nothing, and leaves an earlier concern standing. A concern on a
-  departure's set return can also **pull the unit for service** in the same act (issue #2205): one
+  departure's set return, or a **counter rental**'s return (issue #2345), can also **pull the unit
+  for service** in the same act (issue #2205): one
   unticked box per unit, shown only once the concern is open, which moves a ticked unit to
-  `needs_service` with the concern as its note. Never automatic, and still no service event. A regulator is
+  `needs_service` with the concern as its note. While the concern is open, the fast answers hide,
+  so the note cannot be dropped by a tap on "All good"; Cancel closes it. Never automatic, and still
+  no service event. A regulator is
   never proposed for a diver who asked for nitrox, because the register cannot yet say which
   regulators are O2-clean. One unit is never proposed twice. Every pick, one row or "Assign all",
   goes through `assignGearUnit` or `confirmProposedGearUnits`, and each is re-read against what

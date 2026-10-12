@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { paymentSourceLookupFromEnvironment, stripePaymentSourceLookup } from "./payment-sources";
+import { paymentSourceLookupFor, stripePaymentSourceLookup } from "./payment-sources";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status });
@@ -69,27 +69,57 @@ describe("stripePaymentSourceLookup", () => {
 
   it("never asks Stripe about an event from the other mode than its key", async () => {
     const fetchImpl = vi.fn(async () => jsonResponse({ data: [] }));
-    const live = { STRIPE_SECRET_KEY: "sk_live_x" };
+    const live = { secretKey: "sk_live_x" };
     expect(
-      await paymentSourceLookupFromEnvironment(live, fetchImpl as never, {
-        livemode: false,
-      }).findSource("acct_1", "pi_1"),
+      await paymentSourceLookupFor(live, fetchImpl as never, { livemode: false }).findSource(
+        "acct_1",
+        "pi_1",
+      ),
     ).toEqual({ status: "not_configured" });
-    const test = { STRIPE_SECRET_KEY: "rk_test_x" };
+    const test = { secretKey: "rk_test_x" };
     expect(
-      await paymentSourceLookupFromEnvironment(test, fetchImpl as never, {
-        livemode: true,
-      }).findSource("acct_1", "pi_1"),
+      await paymentSourceLookupFor(test, fetchImpl as never, { livemode: true }).findSource(
+        "acct_1",
+        "pi_1",
+      ),
     ).toEqual({ status: "not_configured" });
     expect(fetchImpl).not.toHaveBeenCalled();
-    await paymentSourceLookupFromEnvironment(live, fetchImpl as never, {
-      livemode: true,
-    }).findSource("acct_1", "pi_1");
+    await paymentSourceLookupFor(live, fetchImpl as never, { livemode: true }).findSource(
+      "acct_1",
+      "pi_1",
+    );
     expect(fetchImpl).toHaveBeenCalled();
   });
 
-  it("is not_configured without a platform key", async () => {
-    expect(await paymentSourceLookupFromEnvironment({}).findSource("acct_1", "pi_1")).toEqual({
+  // Issue #2296: the demo's account is asked with its own test-mode key, on a
+  // deployment whose platform key is live, so a refund made in the demo's test
+  // dashboard still finds its checkout.
+  it("asks with the key chosen for the event's account", async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ data: [] }));
+    const keys = {
+      secretKeyFor: (account: string) =>
+        account === "acct_demo" ? "sk_test_demo" : account === "acct_real" ? "sk_live_x" : null,
+    };
+    const testEvent = paymentSourceLookupFor(keys, fetchImpl as never, { livemode: false });
+
+    await testEvent.findSource("acct_demo", "pi_1");
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(init.headers).toMatchObject({
+      Authorization: "Bearer sk_test_demo",
+      "Stripe-Account": "acct_demo",
+    });
+
+    fetchImpl.mockClear();
+    // A real shop's live key never answers a test event; an account with no key is not asked.
+    expect(await testEvent.findSource("acct_real", "pi_1")).toEqual({ status: "not_configured" });
+    expect(await testEvent.findSource("acct_other", "pi_1")).toEqual({
+      status: "not_configured",
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("is not_configured without a key source", async () => {
+    expect(await paymentSourceLookupFor(null).findSource("acct_1", "pi_1")).toEqual({
       status: "not_configured",
     });
   });

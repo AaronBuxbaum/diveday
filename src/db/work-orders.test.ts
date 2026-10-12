@@ -41,7 +41,6 @@ import {
   restoreWorkOrder,
   saveWorkOrder,
   setWorkOrderStatus,
-  updateCustomerGearItem,
   updateWorkOrderLine,
   workOrderBoard,
 } from "./work-orders";
@@ -166,19 +165,6 @@ describe("a customer's own gear", () => {
     expect(outcome).toEqual({ ok: false, reason: "invalid_date" });
   });
 
-  it("lets staff edit the next-service date a ticket suggested", async () => {
-    const { db, shop } = await workOrderShopContext();
-    const maya = await diver(db, shop.id, "Maya Pressure");
-    const piece = await customerPiece(db, shop.id, maya.id);
-    const outcome = await updateCustomerGearItem(db, {
-      shopId: shop.id,
-      customerGearItemId: piece.id,
-      kind: "regulator",
-      serviceDueOn: "2027-06-01",
-    });
-    expect(outcome.ok && outcome.item.serviceDueOn).toBe("2027-06-01");
-  });
-
   it("gives a cylinder its two dates and never a service date", async () => {
     const { db, shop } = await workOrderShopContext();
     const maya = await diver(db, shop.id, "Maya Pressure");
@@ -210,21 +196,12 @@ describe("a customer's own gear", () => {
     expect(rows).toHaveLength(0);
   });
 
-  it("refuses to add to or edit the gear of a diver the shop erased", async () => {
+  it("refuses to add to the gear of a diver the shop erased", async () => {
     const { db, shop } = await workOrderShopContext();
     const maya = await diver(db, shop.id, "Maya Pressure");
-    const piece = await customerPiece(db, shop.id, maya.id);
     await erased(db, shop.id, maya.id);
     expect(
       await addCustomerGearItem(db, { shopId: shop.id, personId: maya.id, kind: "bcd" }),
-    ).toEqual({ ok: false, reason: "not_found" });
-    expect(
-      await updateCustomerGearItem(db, {
-        shopId: shop.id,
-        customerGearItemId: piece.id,
-        kind: "regulator",
-        note: "new words",
-      }),
     ).toEqual({ ok: false, reason: "not_found" });
   });
 
@@ -291,13 +268,6 @@ describe("a customer's own gear", () => {
     if (!rival) throw new Error("rival shop insert failed");
 
     expect(await listCustomerGearItems(db, rival.id, maya.id)).toEqual([]);
-    expect(
-      await updateCustomerGearItem(db, {
-        shopId: rival.id,
-        customerGearItemId: piece.id,
-        kind: "bcd",
-      }),
-    ).toEqual({ ok: false, reason: "not_found" });
     expect(
       await deleteCustomerGearItem(db, { shopId: rival.id, customerGearItemId: piece.id }),
     ).toEqual({ ok: false, reason: "not_found" });
@@ -948,12 +918,11 @@ describe("the Work done record, the only path to a clock", () => {
     const { db, shop } = await workOrderShopContext();
     const maya = await diver(db, shop.id, "Maya Pressure");
     const piece = await customerPiece(db, shop.id, maya.id);
-    await updateCustomerGearItem(db, {
-      shopId: shop.id,
-      customerGearItemId: piece.id,
-      kind: "regulator",
-      serviceDueOn: "2028-01-01",
-    });
+    // A date staff typed by hand, set straight on the row.
+    await db
+      .update(customerGearItems)
+      .set({ serviceDueOn: "2028-01-01" })
+      .where(eq(customerGearItems.id, piece.id));
     const tank = await addCustomerGearItem(db, {
       shopId: shop.id,
       personId: maya.id,
@@ -1017,12 +986,11 @@ describe("the Work done record, the only path to a clock", () => {
     const { db, shop } = await workOrderShopContext();
     const maya = await diver(db, shop.id, "Maya Pressure");
     const piece = await customerPiece(db, shop.id, maya.id);
-    await updateCustomerGearItem(db, {
-      shopId: shop.id,
-      customerGearItemId: piece.id,
-      kind: "regulator",
-      serviceDueOn: "2028-01-01",
-    });
+    // A date staff typed by hand, set straight on the row.
+    await db
+      .update(customerGearItems)
+      .set({ serviceDueOn: "2028-01-01" })
+      .where(eq(customerGearItems.id, piece.id));
     const ticket = await customerTicket(db, shop.id, maya.id, piece.id);
     await recordWorkOrderWork(db, {
       shopId: shop.id,

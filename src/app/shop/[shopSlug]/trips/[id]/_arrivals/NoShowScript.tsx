@@ -122,7 +122,18 @@ export type NoShowSalvageCopy = {
    */
   line: string;
   /** Where to act on it. At most two — the wait list, or two days to seat them on. */
-  links: readonly { href: string; label: string }[];
+  links: readonly {
+    href: string;
+    label: string;
+    /**
+     * The same day, sent to the diver instead of seated by the desk (UX review
+     * 2026-10-11, item 14): the departure the button invites them to, and the
+     * button's name for a screen reader, which names the diver and the day.
+     */
+    offer?: { tripId: string; ariaLabel: string };
+  }[];
+  /** The send button's words and whom it sends to; present only on the rebooking offer. */
+  offerCopy?: { personId: string; label: string; pending: string; sendFailed: string };
   /**
    * **The money, as a sentence.** What happens to the fare is a decision a
    * person makes on the shop's own terms — a refund, a credit, a regular the
@@ -134,20 +145,43 @@ export type NoShowSalvageCopy = {
   money: { line: string; href: string; label: string };
 };
 
-export function NoShowSalvage({ copy }: { copy: NoShowSalvageCopy }) {
+export function NoShowSalvage({
+  copy,
+  offerAction,
+}: {
+  copy: NoShowSalvageCopy;
+  /** Sends a rebooking offer to the diver; absent, the panel only links to seating them. */
+  offerAction?: (formData: FormData) => Promise<void>;
+}) {
+  const offerCopy = copy.offerCopy;
   return (
     <div className="pb-3 text-sm">
       <p className="text-muted">{copy.line}</p>
       {copy.links.length > 0 ? (
-        <ul className="mt-1 flex flex-wrap gap-x-4">
+        <ul className="mt-1 flex flex-col gap-1">
           {copy.links.map((link) => (
-            <li key={link.href}>
+            <li key={link.href} className="flex flex-wrap items-center gap-x-4">
               <Link
                 href={link.href}
                 className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
               >
                 {link.label}
               </Link>
+              {/* One tap sends the same day to the diver, who books it from
+                  the link; the desk seats nobody (UX review 2026-10-11, item 14). */}
+              {link.offer && offerAction && offerCopy ? (
+                <RowActionForm action={offerAction} sendFailedLabel={offerCopy.sendFailed}>
+                  <input type="hidden" name="offerTripId" value={link.offer.tripId} />
+                  <input type="hidden" name="personId" value={offerCopy.personId} />
+                  <SubmitButton
+                    pendingLabel={offerCopy.pending}
+                    ariaLabel={link.offer.ariaLabel}
+                    className={buttonClass({ variant: "secondary", size: "sm" })}
+                  >
+                    {offerCopy.label}
+                  </SubmitButton>
+                </RowActionForm>
+              ) : null}
             </li>
           ))}
         </ul>

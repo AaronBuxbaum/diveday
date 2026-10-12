@@ -15,8 +15,8 @@ import {
   inWaterDivemasterCount,
 } from "@/lib/divemaster-ratio";
 import { type TodayAction, urgencyFor } from "@/lib/today";
+import { NO_SUPERVISION } from "./course-crew-counts";
 import type { TodayRowsContext } from "./today-rows-context";
-import { NO_SUPERVISION } from "./today-shared";
 
 type WindowTrip = TodayRowsContext["inWindow"][number];
 

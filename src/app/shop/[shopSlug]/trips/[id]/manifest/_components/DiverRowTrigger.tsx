@@ -3,11 +3,12 @@ import { Badge } from "@/components/ui/badge";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { welcomeCueText } from "@/i18n/welcome-cue-labels";
+import { formatTime } from "@/lib/format";
 import type { TripManifest } from "@/lib/manifests";
 
 /**
  * **What the row says before it is opened**: the rail number, the name, the
- * welcome word, and the line that holds the one capsule, the seat's type and
+ * quiet lines under it, and the line that holds the one capsule, the seat's type and
  * the counter's write-off. It is the person sheet's trigger, so all of it is
  * one tap target.
  */
@@ -16,6 +17,9 @@ export function DiverRowTrigger({
   index,
   capsule,
   typeBadge,
+  lateAt,
+  locale,
+  timezone,
   t,
 }: {
   diver: TripManifest["divers"][number];
@@ -23,6 +27,10 @@ export function DiverRowTrigger({
   index: number;
   capsule: ReactNode;
   typeBadge: ReactNode;
+  /** When the diver said they are running late, while it still applies (`runningLateOnManifest`). */
+  lateAt: Date | null;
+  locale: string;
+  timezone: string;
   t: StaffTranslator;
 }) {
   return (
@@ -36,34 +44,18 @@ export function DiverRowTrigger({
         <span className={`block ${ITEM_TITLE_CLASS} group-hover/summary:underline`}>
           {diver.fullName}
         </span>
-        {/* **The welcome word** (issue #1182, delight report
-          D22; ADR 20260904-reef-all-the-way-down slice 16d):
-          "first time with us", "back after 3 years".
-
-          Muted text under the name, never a `Badge` and never
-          inside the roll-call circle — a badge is the profile
-          decoration D22's boundary rules out, and it would
-          also take the row's one capsule away from an
-          exception the crew has to act on. It does not enter
-          that priority chain at all, so a diver with a cue
-          and a birthday shows the birthday capsule *and* this
-          line.
-
-          `text-base`, not the 12.5px the canvas drew: this is
-          a manifest, where AGENTS.md's licence to trade
-          legibility for restraint stops. It costs a second
-          line on some rows, which is the price of it being
-          readable at the rail. */}
-        {diver.welcomeCue ? (
-          <span className="mt-0.5 block text-base text-muted">
-            {welcomeCueText(t, diver.welcomeCue)}
-          </span>
-        ) : null}
+        <UnderName
+          t={t}
+          welcomeCue={diver.welcomeCue}
+          lateAt={lateAt}
+          locale={locale}
+          timezone={timezone}
+        />
       </span>
       {/* **The capsule's own line, the row's full width**
         (issue #2008). A Badge never wraps, and the longest
-        capsule ("Someone unaccounted for", about 210px; es-ES
-        about 222px) is wider than the name column a 390px
+        capsule ("Buddy not back aboard", about 172px; es-ES
+        "Compañero sin regresar a bordo", about 229px) is wider than the name column a 390px
         phone leaves (186px), so beside the name it spilled
         over the caret toward the mark. Here it runs from the
         index's edge to the caret's (about 246px at 390), and
@@ -82,7 +74,7 @@ export function DiverRowTrigger({
           className={`order-last flex basis-full flex-wrap items-center gap-2 sm:order-none sm:flex-1 sm:basis-auto print:order-none print:flex-1 print:basis-auto ${
             // Level with the name's line: the top of a
             // two-line column, the middle of a one-line one.
-            diver.welcomeCue ? "sm:self-start print:self-start" : ""
+            diver.welcomeCue || lateAt ? "sm:self-start print:self-start" : ""
           }`}
         >
           {capsule}
@@ -107,6 +99,56 @@ export function DiverRowTrigger({
             turns up after all is tapped aboard exactly as
             before. */}
           {diver.notHere ? <Badge tone="neutral">{t("manifest.notHerePill")}</Badge> : null}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * The quiet lines under a diver's name: the welcome word, and the diver's own
+ * "running late".
+ *
+ * **The welcome word** (issue #1182, delight report D22; ADR
+ * 20260904-reef-all-the-way-down slice 16d): "first time with us", "back after
+ * 3 years". Muted text under the name, never a `Badge` and never inside the
+ * roll-call circle — a badge is the profile decoration D22's boundary rules
+ * out, and it would also take the row's one capsule away from an exception the
+ * crew has to act on. It does not enter that priority chain at all, so a diver
+ * with a cue and a birthday shows the birthday capsule *and* this line.
+ *
+ * **"Running late, said 7:42"** (#2319): the diver's word, on a dock row not
+ * boarded yet (`runningLateOnManifest` decides), so the rail does not call
+ * missing somebody who said they are on the way. The same quiet clothes and
+ * for the same reason: it is context, never a roll-call result, and nothing
+ * on this page counts it.
+ *
+ * `text-base`, not the 12.5px the canvas drew: this is a manifest, where
+ * AGENTS.md's licence to trade legibility for restraint stops. It costs a
+ * second line on some rows, which is the price of it being readable at the
+ * rail.
+ */
+function UnderName({
+  t,
+  welcomeCue,
+  lateAt,
+  locale,
+  timezone,
+}: {
+  t: StaffTranslator;
+  welcomeCue: TripManifest["divers"][number]["welcomeCue"];
+  lateAt: Date | null;
+  locale: string;
+  timezone: string;
+}) {
+  return (
+    <>
+      {welcomeCue ? (
+        <span className="mt-0.5 block text-base text-muted">{welcomeCueText(t, welcomeCue)}</span>
+      ) : null}
+      {lateAt ? (
+        <span className="mt-0.5 block text-base text-muted">
+          {t("manifest.runningLate", { time: formatTime(lateAt, locale, timezone) })}
         </span>
       ) : null}
     </>

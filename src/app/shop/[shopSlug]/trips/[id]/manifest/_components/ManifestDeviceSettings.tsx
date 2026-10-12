@@ -8,7 +8,7 @@ import {
   subscribePushAction,
   unsubscribePushAction,
 } from "../actions";
-import { pushOptInCopy } from "./manifest-copy";
+import { pushOptInCopy } from "./push-opt-in-copy";
 
 /**
  * **What this phone does**, inside the offline copy's disclosure: wake for a

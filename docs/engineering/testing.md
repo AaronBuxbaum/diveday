@@ -292,6 +292,7 @@ named, and all picked up by that glob rather than by a list anyone has to rememb
 | `payments.postgres.test.ts` | Two simultaneous payment writes leave one unbroken `booking_payment_events` chain rather than a fork |
 | `refunds.postgres.test.ts` | Two — and five — simultaneous taps of Refund on one paid order reach Stripe exactly once; the losers are refused locally with `in_progress` rather than by Stripe's over-refund rejection (PAY-L3) |
 | `roll-call.postgres.test.ts` | The counter marking a diver not here and the crew boarding them at the rail serialise on the booking row, so a standing `boarded` result and a released seat never both stand — the rail overrules the desk, and never refuses |
+| `seat-lock-order.postgres.test.ts` | Seat writers meeting on one departure (an undo of a no-show, a counter check-in, a participant-type change, the rail boarding) take the trip and then the booking, so none of the pairs deadlocks (#2324) |
 | `postgres-harness.postgres.test.ts` | The harness itself: finishing a test never terminates a connection that is still alive, and an unreleased `holdRowLock` gate does not hang teardown |
 
 A new suite needs no wiring beyond the name: write `src/db/<thing>.postgres.test.ts` against

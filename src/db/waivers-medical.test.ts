@@ -984,6 +984,7 @@ describe("physician medical clearance", () => {
       );
       expect(row?.overriddenRefusal).toEqual({
         recordId: refused.id,
+        personId: person.id,
         at: refused.medicalClearanceDeclinedAt,
         evaluatedOn: refused.medicalClearanceEvaluatedOn ?? null,
       });

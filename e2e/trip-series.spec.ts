@@ -98,7 +98,46 @@ test("a repeating trip is scheduled on two weekdays, stopped, and canceled as on
   await page.goto(tripUrl);
   const moreAgain = await openTripMore(page);
   await moreAgain.getByRole("button", { name: "Cancel every upcoming date" }).click();
-  await expect(moreAgain.getByText(/off the public schedule/)).toBeVisible();
+  // The confirm says who it reaches before anybody taps it: every date goes
+  // through the blow-out cascade, so booked divers are told and refunded.
+  await expect(
+    moreAgain.getByText(/and stops the repeat\. Nobody is booked on them\./),
+  ).toBeVisible();
   await moreAgain.getByRole("button", { name: "Yes, cancel every upcoming date" }).click();
-  await expect(page.getByText(/Canceled every upcoming date in this series/)).toBeVisible();
+  await expect(page.getByText(/Canceled every upcoming date and stopped the repeat/)).toBeVisible();
+});
+
+test("an open-ended run says it keeps going on the board's last month", async ({ page }) => {
+  // The public month rail ends where the series horizon ends, about four months
+  // out. On that last month an open-ended run says it keeps going, with the
+  // date request open beneath it (UX review 2026-10-11, item 11). One board
+  // render to schedule the run, then one public render per month to reach the
+  // end: its own test, so the walk above keeps its budget.
+  test.setTimeout(30_000);
+  const title = `Horizon Test ${e2eNow().getTime()}`;
+  await page.goto("/shop/blue-mantis/schedule/board?add=full");
+  await page.getByLabel("What is it").fill(title);
+  await page.getByLabel("Date").fill(daysFromNow(5));
+  await page.getByLabel("Departs").fill("08:00");
+  await page.getByLabel("Returns").fill("11:00");
+  await page.getByLabel("Seats").fill("6");
+  await page.getByLabel("How often").selectOption("1");
+  await page.getByRole("button", { name: "Put it on the board" }).click();
+  await expect(page.getByRole("status")).toContainText(title);
+
+  // Follow the rail's "Next month" by address until it runs out.
+  await page.goto("/s/blue-mantis");
+  for (let step = 0; step < 8; step += 1) {
+    const href = await page
+      .getByRole("link", { name: "Next month" })
+      .getAttribute("href", { timeout: 1_000 })
+      .catch(() => null);
+    if (!href) break;
+    await page.goto(href);
+  }
+  await expect(page.getByText(new RegExp(`${title} runs every`))).toBeVisible();
+  await expect(page.getByText(/Later dates open as the season goes\./)).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Planning further out? Ask us for a day" }),
+  ).toBeVisible();
 });
