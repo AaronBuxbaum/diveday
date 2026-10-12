@@ -789,7 +789,21 @@ describe("dayTakings", () => {
       revenueCents: 124_000,
       tipsCents: 0,
       importedRecordCount: 0,
+      boatTips: [],
     });
+  });
+
+  it("carries the tips by boat, and none on a day that took no tips", () => {
+    const boat = {
+      tripId: "t1",
+      startsAt: new Date("2026-10-09T13:00:00Z"),
+      label: "Manta",
+      cents: 8_000,
+    };
+    expect(dayTakings(report({ revenueCents: 1_000, tipsCents: 8_000 }), [boat])?.boatTips).toEqual(
+      [boat],
+    );
+    expect(dayTakings(report({ revenueCents: 1_000 }), [boat])?.boatTips).toEqual([]);
   });
 
   it("keeps tips beside revenue rather than inside it", () => {

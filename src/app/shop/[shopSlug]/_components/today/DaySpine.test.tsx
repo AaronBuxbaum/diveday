@@ -152,6 +152,7 @@ function renderSpine({
   firstRun?: React.ReactNode;
   firstBooking?: FirstBooking | null;
   factOfScale?: FactOfScale | null;
+  crewTipsCents?: number;
   evening?: EveningReading;
 } = {}) {
   return render(
@@ -1854,6 +1855,7 @@ describe("what today made", () => {
     revenueCents: 124_000,
     tipsCents: 0,
     importedRecordCount: 0,
+    boatTips: [],
     ...over,
   });
 
@@ -1924,6 +1926,40 @@ describe("what today made", () => {
     expect(screen.queryByText("$1,325")).toBeNull();
   });
 
+  it("splits the day's tips by boat when more than one boat was tipped", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1" })], {
+        takings: takings({
+          tipsCents: 14_000,
+          boatTips: [
+            { tripId: "t1", startsAt: hoursFromNow(-8), label: "Manta", cents: 8_000 },
+            { tripId: "t2", startsAt: hoursFromNow(-4), label: "Wreck run", cents: 6_000 },
+          ],
+        }),
+      }),
+    });
+
+    expect(screen.getByText("And $140 in tips.")).toBeInTheDocument();
+    expect(screen.getByText(/Manta: \$80/)).toBeInTheDocument();
+    expect(screen.getByText(/Wreck run: \$60/)).toBeInTheDocument();
+  });
+
+  it("says nothing more about one boat's tips than the sentence already does", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1" })], {
+        takings: takings({
+          tipsCents: 8_000,
+          boatTips: [{ tripId: "t1", startsAt: hoursFromNow(-8), label: "Manta", cents: 8_000 }],
+        }),
+      }),
+    });
+
+    expect(screen.getByText("And $80 in tips.")).toBeInTheDocument();
+    expect(screen.queryByText(/Manta:/)).toBeNull();
+  });
+
   it("says nothing about tips a day did not get", () => {
     renderSpine({
       departures: [],
@@ -1945,5 +1981,18 @@ describe("what today made", () => {
     expect(
       screen.getByText("Includes 3 imported records Stripe has not confirmed."),
     ).toBeInTheDocument();
+  });
+});
+
+/** What the divers left on the reader's boats this week (UX review 2026-10-11, item 18). */
+describe("the crew's tips line", () => {
+  it("tells a crew member what their boats earned in tips this week", () => {
+    renderSpine({ crewTipsCents: 14_000 });
+    expect(screen.getByText("Your boats earned $140 in tips this week.")).toBeInTheDocument();
+  });
+
+  it("says nothing on a week with no tips", () => {
+    renderSpine({ crewTipsCents: 0 });
+    expect(screen.queryByText(/in tips this week/)).toBeNull();
   });
 });

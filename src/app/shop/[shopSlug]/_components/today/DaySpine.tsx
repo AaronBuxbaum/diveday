@@ -481,6 +481,75 @@ export type EveningReading = {
   firstEver: boolean;
 };
 
+/**
+ * **A crew reader's lens** (UX audit 2026-10-07, item 7): for a captain or
+ * divemaster who crews one of today's boats, the list leads with that boat's
+ * rows, and every other row folds into one line. A danger row about any boat
+ * never folds: a diver unaccounted for is everyone's to see. Nor does a row
+ * about the reader themself, such as their own credential coming due.
+ */
+function crewLens(
+  needsYou: readonly TodayAction[],
+  spine: DaySpineData,
+  crewed: ReadonlySet<string>,
+  readerPersonId: string | null | undefined,
+  showPaymentsRow: boolean,
+): { lead: TodayAction[]; deskFold: TodayAction[] | null } {
+  const crewsToday = spine.stations.some((station) => crewed.has(station.tripId));
+  const leads = (action: TodayAction) =>
+    !crewsToday ||
+    ACTION_KIND_META[action.kind].tone === "danger" ||
+    (action.departure != null && crewed.has(action.departure.tripId)) ||
+    (readerPersonId != null && action.staffPersonId === readerPersonId);
+  const folded = needsYou.filter((action) => !leads(action));
+  return {
+    lead: needsYou.filter(leads),
+    deskFold: crewsToday && (folded.length > 0 || showPaymentsRow) ? folded : null,
+  };
+}
+
+/** The desk's "take card payments" row, for a shop with no Stripe account yet. */
+function DeskPaymentsRow({ shopSlug, t }: { shopSlug: string; t: StaffTranslator }) {
+  return (
+    <SpineRow
+      tone="neutral"
+      kind={t("shopHome.spine.deskPaymentsKind")}
+      door={{
+        href: `/shop/${shopSlug}/settings#stripe`,
+        linkLabel: t("shopHome.spine.deskPaymentsAction"),
+      }}
+    >
+      <span className="text-muted">{t("shopHome.spine.deskPaymentsRow")}</span>
+    </SpineRow>
+  );
+}
+
+/**
+ * **What the divers left the reader's boats** (UX review 2026-10-11, item 18):
+ * paid tips on the boats this reader crewed this week (`crewTipsOnBoats`), in
+ * the shop's minor units. The diver was told the shop passes tips on to the
+ * crew; this is the crew seeing that it did. A plain line, not a coral moment:
+ * it is money, and the coral table never carries money. Zero renders nothing.
+ */
+function CrewTipsLine({
+  cents,
+  currency,
+  locale,
+  t,
+}: {
+  cents: number;
+  currency: string;
+  locale: string;
+  t: StaffTranslator;
+}) {
+  if (cents <= 0) return null;
+  return (
+    <p className="text-sm text-muted tabular-nums">
+      {t("shopHome.spine.crewTips", { amount: formatMoneyScanned(cents, currency, locale) })}
+    </p>
+  );
+}
+
 export function DaySpine({
   spine,
   shopSlug,
@@ -497,6 +566,7 @@ export function DaySpine({
   firstRun,
   firstBooking,
   factOfScale,
+  crewTipsCents = 0,
   sessions,
   evening,
   now,
@@ -550,6 +620,8 @@ export function DaySpine({
    * renders, and on most days it is null.
    */
   factOfScale?: FactOfScale | null;
+  /** Paid tips on the reader's boats this week (`CrewTipsLine`). */
+  crewTipsCents?: number;
   /** The instructor lens's own labeled group, above the first station. */
   sessions?: React.ReactNode;
   /** The day's closing state. Omitted, the spine renders its morning reading alone. */
@@ -658,28 +730,9 @@ export function DaySpine({
   // rows, and every other row folds into one line. A danger row about any boat
   // never folds: a diver unaccounted for is everyone's to see. Nor does a row
   // about the reader themself, such as their own credential coming due.
-  const crewsToday = spine.stations.some((station) => crewed.has(station.tripId));
-  const leads = (action: TodayAction) =>
-    !crewsToday ||
-    ACTION_KIND_META[action.kind].tone === "danger" ||
-    (action.departure != null && crewed.has(action.departure.tripId)) ||
-    (readerPersonId != null && action.staffPersonId === readerPersonId);
-  const lead = needsYou.filter(leads);
-  const folded = needsYou.filter((action) => !leads(action));
-  const deskFold = crewsToday && (folded.length > 0 || showPaymentsRow) ? folded : null;
+  const { lead, deskFold } = crewLens(needsYou, spine, crewed, readerPersonId, showPaymentsRow);
   const paymentsRows = showPaymentsRow ? 1 : 0;
-  const paymentsRow = showPaymentsRow ? (
-    <SpineRow
-      tone="neutral"
-      kind={t("shopHome.spine.deskPaymentsKind")}
-      door={{
-        href: `/shop/${shopSlug}/settings#stripe`,
-        linkLabel: t("shopHome.spine.deskPaymentsAction"),
-      }}
-    >
-      <span className="text-muted">{t("shopHome.spine.deskPaymentsRow")}</span>
-    </SpineRow>
-  ) : null;
+  const paymentsRow = showPaymentsRow ? <DeskPaymentsRow shopSlug={shopSlug} t={t} /> : null;
 
   return (
     <div className="flex flex-col gap-10">
@@ -753,6 +806,8 @@ export function DaySpine({
           </span>
         </EarnedMomentLine>
       ) : null}
+
+      <CrewTipsLine cents={crewTipsCents} currency={currency} locale={locale} t={t} />
 
       {/* **The first booking ever, and then never again.** The word, the coral
           dot, and the seat itself — one row, because the moment *is* that
@@ -931,7 +986,13 @@ export function DaySpine({
       {/* **What today made** (issue #1930). While one boat is out there is no
           day to have made anything yet. */}
       {closing && evening?.takings ? (
-        <DayTakings takings={evening.takings} currency={currency} locale={locale} t={t} />
+        <DayTakings
+          takings={evening.takings}
+          currency={currency}
+          locale={locale}
+          timeZone={timeZone}
+          t={t}
+        />
       ) : null}
 
       {/* The two horizons, collapsed. Tomorrow expands in place through the

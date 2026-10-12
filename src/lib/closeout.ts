@@ -776,14 +776,23 @@ export function assembleEveningClose(
  */
 export function dayTakings(
   report: Pick<MonthlyReport, "revenueCents" | "tipsCents" | "importedFinancialRecordCount">,
+  boatTips: readonly BoatTips[] = [],
 ): DayTakings | null {
   if (report.revenueCents === 0 && report.tipsCents === 0) return null;
   return {
     revenueCents: report.revenueCents,
     tipsCents: report.tipsCents,
     importedRecordCount: report.importedFinancialRecordCount,
+    boatTips: report.tipsCents === 0 ? [] : [...boatTips],
   };
 }
+
+/**
+ * One departure's paid tips (`tipsByDeparture`, `src/db/crew-tips.ts`): the
+ * per-boat line under the day's tips, so the crew of each boat can see what
+ * the divers left them (UX review 2026-10-11, item 18).
+ */
+export type BoatTips = { tripId: string; startsAt: Date; label: string; cents: number };
 
 /** The three figures the evening's takings reading renders, and nothing more. */
 export type DayTakings = {
@@ -802,6 +811,8 @@ export type DayTakings = {
   revenueCents: number;
   /** Settled tips on the same departures. Zero renders no clause. */
   tipsCents: number;
+  /** The same tips by departure, clock order; empty when the day took none. */
+  boatTips: BoatTips[];
   /**
    * How many unverified imported source rows are inside `revenueCents`. The
    * evening names them for the same reason the month's revenue card does: a

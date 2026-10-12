@@ -184,7 +184,8 @@
     "departuresLabel": "Salidas",
     "needsYouCount": "{count, plural, one {# cosa} other {# cosas}}",
     "deskFoldLabel": "{count, plural, one {# más para otras salidas y el mostrador} other {# más para otras salidas y el mostrador}}",
-    "needsYouLabel": "Pendiente"
+    "needsYouLabel": "Pendiente",
+    "crewTips": "Tus barcos ganaron {amount} en propinas esta semana."
   },
   "quietAddDeparture": "Añadir una salida",
   "quietNextDepartureLabel": "Próxima salida",

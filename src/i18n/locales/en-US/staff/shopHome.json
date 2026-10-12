@@ -184,7 +184,8 @@
     "departuresLabel": "Departures",
     "needsYouCount": "{count, plural, one {# thing} other {# things}}",
     "deskFoldLabel": "{count, plural, one {# more for other boats and the desk} other {# more for other boats and the desk}}",
-    "needsYouLabel": "Needs you"
+    "needsYouLabel": "Needs you",
+    "crewTips": "Your boats earned {amount} in tips this week."
   },
   "quietAddDeparture": "Add a departure",
   "quietNextDepartureLabel": "Next departure",

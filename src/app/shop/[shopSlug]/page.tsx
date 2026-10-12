@@ -10,6 +10,7 @@ import {
   type EveningReading,
   type SpineDraft,
 } from "@/app/shop/[shopSlug]/_components/today/DaySpine";
+import { readDayMoney } from "@/app/shop/[shopSlug]/_components/today/day-money";
 import { FirstBookableCard } from "@/app/shop/[shopSlug]/_components/today/FirstBookableCard";
 import { FirstRunChecklist } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
 import { RecapNoteEditor } from "@/app/shop/[shopSlug]/_components/today/RecapNoteEditor";
@@ -33,7 +34,7 @@ import { shopFirstBooking } from "@/db/first-booking";
 import { listFreshFormDrafts } from "@/db/form-drafts";
 import { shopHasEverTakenAnOrder } from "@/db/orders";
 import type { ConfirmRentalFitOutcome } from "@/db/rental-fit";
-import { canPersonViewShopReports, getMonthlyReport } from "@/db/reporting";
+import { canPersonViewShopReports } from "@/db/reporting";
 import { seasonScale } from "@/db/season-scale";
 import { shopByIdCached } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -50,7 +51,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { daySpineSummaryText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
-import { assembleEveningClose, dayTakings } from "@/lib/closeout";
+import { assembleEveningClose } from "@/lib/closeout";
 import { shopCrewTarget } from "@/lib/crew-schedule";
 import { FORM_DRAFT_RESUME_SUFFIX } from "@/lib/form-drafts";
 import {
@@ -66,7 +67,6 @@ import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { FIRST_RUN_STEP_COUNT } from "@/lib/onboarding";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { recapAutoSendAt } from "@/lib/recap-schedule";
-import { summarizeMonth } from "@/lib/reporting";
 import { seasonStartInstant } from "@/lib/season";
 import { requireStaffSession } from "@/lib/session";
 import {
@@ -385,23 +385,9 @@ async function TodayBody({
   // gate is checked against the database rather than the session's roles so a demotion takes effect
   // at once, and resolved once here rather than per station.
   //
-  // **What today made** — the evening's one money reading (issue #1930; ADR 20260919-one-idea,
-  // decision I · Tide: "money is what the day made"). It renders above the closing block and inside
-  // nothing; `DayTakings.tsx` carries the placement and its decision.
-  //
-  // **The month's own derivation, over the day's bounds.** `getMonthlyReport` is window-shaped —
-  // nothing in it is month-specific but its name — and it anchors every figure to `trips.startsAt`,
-  // so the day is the same query with `shopDayBounds` in place of `shopMonthBounds`. That is
-  // deliberate rather than convenient: a second derivation would let tonight's figure and the same
-  // day inside `/reports` disagree, and which of them a shop then believed would be a coin toss.
-  // `reporting.test.ts` pins the two together by summing the days of a month against the month
-  // itself.
-  //
-  // **Gated before it is read.** `canReadShopMoney` is the live role read resolved in the first
-  // wave, so a reader who may not have the number never causes the query that would produce it —
-  // and the whole thing is skipped until the day is closing, so the ordinary morning render pays
-  // nothing for it.
-  const [work, tomorrowDepartures, [headCountCloses, canOpenLog], sailedBefore, dayMonthReport] =
+  // **The day's money** (`readDayMoney`): what today made, gated on `canReadShopMoney` (the live
+  // role read of the first wave) and the day closing; and the tips on the reader's own boats.
+  const [work, tomorrowDepartures, [headCountCloses, canOpenLog], sailedBefore, dayMoney] =
     await Promise.all([
       getTodayWork(
         db,
@@ -434,12 +420,10 @@ async function TodayBody({
         : ([new Map(), false] as [Map<string, { closedAt: Date; closedBy: string }>, boolean]),
       // The once-ever wording, asked for only in the moment it could apply.
       eveningClose.allHome ? shopHasSailedBefore(db, shop.id, dayBounds.from) : true,
-      eveningClose.closing && canReadShopMoney
-        ? getMonthlyReport(db, shop.id, dayBounds.from, dayBounds.to, {
-            currency: shop.currency,
-            timeZone: shop.timezone,
-          })
-        : null,
+      readDayMoney(db, shop, dayBounds, {
+        personId: session.user.personId,
+        withTakings: eveningClose.closing && canReadShopMoney,
+      }),
     ]);
   const { actions, withheldCount, nextDeparture, crewedTripIds, crewedSessions } = work;
   const spine = assembleDaySpine(work, { departures: tomorrowDepartures, actions: [] });
@@ -565,7 +549,7 @@ async function TodayBody({
           : null,
       });
   // What today made: the second wave's last read, gated there.
-  const dayTakingsReading = dayMonthReport ? dayTakings(summarizeMonth(dayMonthReport)) : null;
+  const dayTakingsReading = dayMoney.takings;
   // The whole page is empty at once, and collapses to a heading, one sentence
   // and the one act available — never a spine of empty groups. Every clause of
   // that rule lives with the spine (`spineIsQuiet`), first-run included: the
@@ -927,6 +911,7 @@ async function TodayBody({
           showPaymentsRow={showPaymentsRow}
           firstBooking={firstBooking}
           factOfScale={factOfScale}
+          crewTipsCents={dayMoney.crewTipsCents}
           evening={evening}
           now={now}
           sessions={
