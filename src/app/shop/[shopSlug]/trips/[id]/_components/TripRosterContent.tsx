@@ -17,7 +17,7 @@ import { formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
-import { isFull, spotsRemaining } from "@/lib/trips";
+import { isFull, seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { recordPaperCourseFormAction } from "../course-actions";
 import { AddDiverSection } from "./AddDiverSection";
@@ -215,7 +215,7 @@ export function TripRosterContent({
           locale,
           tripId: trip.id,
           booked: trip.booked,
-          capacity: trip.capacity,
+          capacity: trip.sellableCapacity,
           tripDate: tripDateIso,
           requiresPayment: Boolean(requirement?.requiresPayment),
           paymentsConnected,
@@ -308,7 +308,7 @@ export function TripRosterContent({
             <AddDiverSection
               context={{
                 shopSlug,
-                full: isFull(trip),
+                full: isFull(seatsOnSale(trip)),
                 query: diverQuery,
                 candidates: diverCandidates,
                 tripId: trip.id,
@@ -408,7 +408,7 @@ export function TripPromoteAndActivity({
               }))}
               requirement={dealRequirement}
               course={courseTarget}
-              openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}
+              openSeats={spotsRemaining(seatsOnSale(trip))}
               hasWaitlist={waitlist.length > 0}
               cancelled={cancelled}
               promos={lastMinute.promos}

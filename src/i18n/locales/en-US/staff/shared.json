@@ -93,7 +93,8 @@
   },
   "capacity": {
     "full": "Full",
-    "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}"
+    "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}",
+    "certificateCap": "Certificate: {sellable} of {stated} seats"
   },
   "compass": {
     "n": "N",

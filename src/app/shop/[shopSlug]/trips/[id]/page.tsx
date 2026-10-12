@@ -45,7 +45,7 @@ import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type FormNotice, noticeForForm, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { tripPhaseOf } from "@/lib/trip-phase";
-import { acceptsNewDivers, isFull } from "@/lib/trips";
+import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { buildArrivalDesk } from "./_arrivals/arrival-desk";
 import { DESK_NOTICES } from "./_arrivals/notices";
@@ -707,7 +707,7 @@ export default async function ManageTripPage({
           // cancelled, and the header offers nothing (owner, 2026-10-06). A
           // full boat's wait list stays in the roster's own Add band.
           actions={
-            !acceptsDivers || isFull(trip) ? undefined : (
+            !acceptsDivers || isFull(seatsOnSale(trip)) ? undefined : (
               <TripAddDiverLink
                 // The roster's own band, on the Divers tab: from Details the
                 // anchor is not on the page.

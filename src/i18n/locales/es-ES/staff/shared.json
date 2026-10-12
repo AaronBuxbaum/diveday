@@ -93,7 +93,8 @@
   },
   "capacity": {
     "full": "Completo",
-    "spotsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}"
+    "spotsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}",
+    "certificateCap": "Certificado: {sellable} de {stated} plazas"
   },
   "compass": {
     "n": "N",
