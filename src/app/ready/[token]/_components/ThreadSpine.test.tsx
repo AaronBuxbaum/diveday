@@ -35,25 +35,19 @@ function step(overrides: Partial<ThreadSpineStep> & Pick<ThreadSpineStep, "id">)
 
 describe("ThreadStatus", () => {
   it("says what is next and how far along, in one element", () => {
-    render(
-      <ThreadStatus lead="Next: sign your waiver, about two minutes." progress="0 of 4 done" />,
-    );
+    render(<ThreadStatus lead="Next: sign your waiver." progress="0 of 4 done" />);
     const statements = screen.getAllByTestId(THREAD_STATUS_TEST_ID);
     expect(statements).toHaveLength(1);
-    expect(statements[0]?.textContent).toBe(
-      "Next: sign your waiver, about two minutes.0 of 4 done",
-    );
+    expect(statements[0]?.textContent).toBe("Next: sign your waiver.0 of 4 done");
   });
 
   it("leads with the next step, and keeps the count as the small line under it", () => {
     // UX review 2026-10-10, item 9: a diver who had just paid opened the
     // thread on a large "0" beside the smallest text in the row. The sentence
     // is the line to read; the count is quiet and never a figure.
-    render(
-      <ThreadStatus lead="Next: sign your waiver, about two minutes." progress="0 of 4 done" />,
-    );
+    render(<ThreadStatus lead="Next: sign your waiver." progress="0 of 4 done" />);
     const [lead, progress] = [...screen.getByTestId(THREAD_STATUS_TEST_ID).children];
-    expect(lead?.textContent).toBe("Next: sign your waiver, about two minutes.");
+    expect(lead?.textContent).toBe("Next: sign your waiver.");
     expect(lead?.className).toContain("font-semibold");
     expect(progress?.textContent).toBe("0 of 4 done");
     expect(progress?.className).toContain("text-sm");

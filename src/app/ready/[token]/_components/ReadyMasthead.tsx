@@ -21,8 +21,8 @@ import { isDiveDay } from "@/lib/thread-steps";
 /**
  * **The facts the top of `/ready` states**, and the only ones: whose shop,
  * which departure, when, and when to be there. Both of the page's openings
- * read them, the ordinary masthead and the "You're on the boat" card a booking
- * lands on, and both can be built from one narrow row (`getBookedMoment`,
+ * read them, the ordinary masthead and the "You've got a seat" card a booking
+ * lands on, and both can be built from one narrow row (`getBookedCard`,
  * src/db/ready.ts) as well as from the full loader, which is what lets the
  * booked card paint before the thread's reads have finished (UX review
  * 2026-10-10, item 7).
@@ -139,11 +139,11 @@ export function ReadyMastheadMeta({
 }
 
 /**
- * **The booking moment** (UX review 2026-10-10, items 7 and 34).
+ * **The booked card** (UX review 2026-10-10, items 7 and 34).
  *
  * After a booking POST this card *is* the top of the page, in place of the
  * masthead, the way the recap opens on "Welcome back, Priya.": the shop's name
- * over "You're on the boat, Priya.", then the departure, when, and when to be
+ * over "You've got a seat, Priya.", then the departure, when, and when to be
  * at the dock. Every fact on it comes from the booking's own row, so it paints
  * in the first response while the thread streams in under it, and the thread
  * opens with the one next step directly below.
@@ -192,14 +192,14 @@ export function ReadyBookedHeader({
 /**
  * The whole booked opening: the provider, the thread's shell with the card as
  * its header, and the thread itself (`children`, streamed) under it. The page
- * renders this only while the card is true (`bookedMomentHolds`).
+ * renders this only while the card is true (`getBookedCard` found a live booking on a departure still to sail).
  */
 export function ReadyBookedPage({
-  moment,
+  card,
   locale,
   children,
 }: {
-  moment: MastheadFacts & { greetingName: string };
+  card: MastheadFacts & { greetingName: string };
   locale: DiverLocale;
   children: ReactNode;
 }) {
@@ -207,14 +207,14 @@ export function ReadyBookedPage({
   return (
     <DiverIntlProvider
       locale={locale}
-      timeZone={moment.shop.timezone}
+      timeZone={card.shop.timezone}
       namespaces={["rental", "common", "trip"]}
     >
       <ThreadShell
         header={
           <ReadyBookedHeader
-            facts={moment}
-            greetingName={moment.greetingName}
+            facts={card}
+            greetingName={card.greetingName}
             locale={locale}
             now={nowDate()}
             t={t}

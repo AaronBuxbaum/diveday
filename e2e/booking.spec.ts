@@ -83,15 +83,15 @@ test.describe("staff", () => {
     // trip page — one page after booking, and the one the confirmation email
     // links to (ADR 20260820-one-page-after-booking).
     await expect(page).toHaveURL(/\/ready\//);
-    await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
     // The booked card is the page's opening (UX review 2026-10-10, items 7 and
     // 34): its `<h1>`, in the Logbook register, with the next step leading the
     // thread under it and the log entry the day turns into at its foot.
     await expect(
-      page.getByRole("heading", { level: 1, name: "You’re on the boat, Nora." }),
+      page.getByRole("heading", { level: 1, name: "You’ve got a seat, Nora." }),
     ).toBeVisible();
-    await expect(threadStatus(page)).toContainText("Next: sign your waiver, about two minutes.");
-    await expect(page.getByText("After the dive, your log entry is waiting here.")).toBeVisible();
+    await expect(threadStatus(page)).toContainText("Next: sign your waiver.");
+    await expect(page.getByText("After you dive, your log entry is waiting here.")).toBeVisible();
 
     // No email provider is configured in the e2e fleet, so nothing left the
     // building — and the page must not claim two emails are coming when they
@@ -104,7 +104,7 @@ test.describe("staff", () => {
     // param: coming back to this URL afterwards is the ordinary checklist, with
     // no earned moment to measure.
     const confirmationBox = await page
-      .getByRole("heading", { name: /You’re on the boat, Nora/ })
+      .getByRole("heading", { name: /You’ve got a seat, Nora/ })
       .boundingBox();
     const packBox = await page.getByRole("heading", { name: "Pack with confidence" }).boundingBox();
     expect(confirmationBox?.y ?? 0).toBeLessThan(packBox?.y ?? Number.POSITIVE_INFINITY);
@@ -497,7 +497,7 @@ test.describe("as owner", () => {
     await page.getByLabel("Name", { exact: true }).fill("Nora Quinn");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-    await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
 
     // A different name on the same inbox books trip B — reuses Nora's record.
     await page.goto("/s/blue-mantis");
@@ -514,7 +514,7 @@ test.describe("as owner", () => {
     await page.getByLabel("Name", { exact: true }).fill("Ben Quinn");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-    await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).toBeVisible();
 
     // Staff open trip B's roster: the diver is held on identity, not ready.
     await signInAsOwner(page);
@@ -577,14 +577,14 @@ test("a tampered readiness token reveals nothing, and ?booking= no longer opens 
   const tripUrl = page.url();
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
   await expect(page).toHaveURL(/\/ready\//);
-  await expect(page.getByRole("heading", { name: /You’re on the boat, Casey/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /You’ve got a seat, Casey/ })).toBeVisible();
 
   const realToken = new URL(page.url()).pathname.split("/").pop();
   expect(realToken).toBeTruthy();
 
   // A garbage token in the same position must not open the booking.
   await page.goto("/ready/not-a-real-token?booked=1");
-  await expect(page.getByRole("heading", { name: /You’re on the boat/ })).not.toBeVisible();
+  await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).not.toBeVisible();
   await expect(page.getByRole("heading", { name: /readiness link isn.t available/ })).toBeVisible();
 
   // And the branch this replaced is gone: a real, live capability presented in
@@ -592,7 +592,7 @@ test("a tampered readiness token reveals nothing, and ?booking= no longer opens 
   // wrong purpose for that param, the param is only read inside the embed now,
   // and no unframed booking mints a `confirm` token in the first place.
   await page.goto(`${tripUrl}?booking=${realToken}`);
-  await expect(page.getByRole("heading", { name: /You’re on the boat/ })).not.toBeVisible();
+  await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).not.toBeVisible();
   await expect(page.getByRole("heading", { name: "Grab a spot" })).toBeVisible();
 });
 

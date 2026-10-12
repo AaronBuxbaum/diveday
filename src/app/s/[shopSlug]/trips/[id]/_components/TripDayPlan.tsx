@@ -351,7 +351,6 @@ export function TripDayPlan({
               ),
             ]}
             isCourse={logEntry.isCourse}
-            shopName={shop.name}
             t={t}
           />
         </div>

@@ -45,7 +45,7 @@ const THREAD_SUSPENSE = "<Suspense fallback={<ReadyThreadBodySkeleton />}>{threa
  * waiting to be told it worked. The masthead and the moment once moved above
  * the thread's boundary, but still waited on the full loader, which reads the
  * departure's whole readiness roster. Now the booked card paints from one
- * narrow row (`getBookedMoment`) and everything else streams under it.
+ * narrow row (`getBookedCard`) and everything else streams under it.
  */
 describe("the confirmation paints before the thread", () => {
   const page = positionOf("export default async function ReadyTokenPage");
@@ -60,9 +60,7 @@ describe("the confirmation paints before the thread", () => {
       positionOf("const { bookingId, shopId: capabilityShopId } = capability;"),
       readyThread,
     );
-    expect(fastPath).toContain(
-      "await getBookedMoment(db, { shopId: capabilityShopId, bookingId })",
-    );
+    expect(fastPath).toContain("await getBookedCard(db, { shopId: capabilityShopId, bookingId })");
     // The card is the shell's header; the rest is a streamed child under it.
     const opening = fastPath.indexOf("<ReadyBookedPage");
     expect(opening).toBeGreaterThan(-1);
@@ -172,7 +170,7 @@ describe("the thread page's order", () => {
  * and "Anything changed" (`TripChangeLedger`) are `md` cards; the party panel
  * under them was `lg`, so "Your group's seats" started 4px right of "Where to
  * go" above it — 41 against 37 at 390, 401 against 397 at 1280 — and the
- * coral booked moment at the top of the column 8px right, at 45 and 405 (K-52,
+ * coral booked card at the top of the column 8px right, at 45 and 405 (K-52,
  * TOKEN-2-07). Each panel was consistent with itself; the column was not.
  */
 describe("the thread column's cards", () => {
@@ -190,7 +188,7 @@ describe("the thread column's cards", () => {
     }
   });
 
-  it("opens the page with the booked moment rather than stacking it among them", () => {
+  it("opens the page with the booked card rather than stacking it among them", () => {
     // It used to head the column of cards at their `md` inset (K-52), under a
     // masthead that had already said the departure and the date. Since UX
     // review 2026-10-10, item 34, it *is* the opening, at the moment rung the
@@ -365,9 +363,9 @@ describe("the coral budget", () => {
     // `?booked=1` is flashed straight back out of the URL, so reopening the
     // link three days later replays nothing.
     expect(SOURCE).toContain(
-      "const found = justBooked\n    ? await getBookedMoment(db, { shopId: capabilityShopId, bookingId })\n    : null;",
+      "const found = justBooked\n    ? await getBookedCard(db, { shopId: capabilityShopId, bookingId })\n    : null;",
     );
-    expect(SOURCE).toContain("if (!moment) return thread;");
+    expect(SOURCE).toContain("if (!card) return thread;");
   });
 
   it("settles the all-set state into the status head rather than a second moment", () => {
@@ -613,9 +611,9 @@ describe("the sign step's actions", () => {
  */
 describe("a held seat's greeting", () => {
   it("greets the booked-as name while held, and remembers nobody", () => {
-    // The booked card greets `getBookedMoment`'s name, which applies the held
+    // The booked card greets `getBookedCard`'s name, which applies the held
     // rule itself (src/db/ready.test.ts holds it to the full loader's).
-    expect(MASTHEAD).toContain("greetingName={moment.greetingName}");
+    expect(MASTHEAD).toContain("greetingName={card.greetingName}");
     expect(MASTHEAD).toContain('greetingName.split(" ")[0]');
     expect(SOURCE).toContain("justBooked && person.email && !data.identityHeld ? (");
     expect(countOf("detail.person.fullName")).toBe(1);

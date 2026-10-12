@@ -97,13 +97,36 @@ describe("ReadyBookedHeader", () => {
       ),
     );
     const heading = screen.getByRole("heading", { level: 1 });
-    expect(heading.textContent).toBe("You’re on the boat, Priya.");
+    expect(heading.textContent).toBe("You’ve got a seat, Priya.");
     expect(screen.getByText("Blue Mantis Divers")).toBeTruthy();
     expect(screen.getByText(/^Morning Two-Tank\s— Molasses Reef$/)).toBeTruthy();
     expect(screen.getByText(/^Tomorrow · Sun, Oct\s11/)).toBeTruthy();
     expect(screen.getByText(/Aim to be at the dock by 6:30/)).toBeTruthy();
     // Still the page's own doors under the card.
     expect(screen.getByRole("link", { name: "Add to calendar" })).toBeTruthy();
+  });
+
+  it("claims the seat and never the boat, in either language", () => {
+    // Dive-domain review 2026-10-12: the card paints before readiness is read
+    // and takes no readiness input at all, so a diver in medical review or
+    // short a certification level sees it too. Whatever it says must be true
+    // of them: they hold a seat; whether they board is the thread's to say.
+    for (const locale of ["en-US", "es-ES"] as const) {
+      const { container, unmount } = render(
+        withProvider(
+          locale,
+          <ReadyBookedHeader
+            facts={FACTS}
+            greetingName="Priya Sharma"
+            locale={locale}
+            now={NIGHT_BEFORE}
+            t={diverTranslator(locale)}
+          />,
+        ),
+      );
+      expect(container.textContent, locale).not.toMatch(/on the boat|a bordo|aboard/i);
+      unmount();
+    }
   });
 
   it("greets a nameless booking without an empty comma", () => {

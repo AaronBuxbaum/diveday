@@ -63,7 +63,7 @@ import { getCourseFormsForBooking } from "@/db/course-forms";
 import { countSpendableDives } from "@/db/dive-packages";
 import { departureRollCallForBooking } from "@/db/manifests";
 import { getBookingPayment } from "@/db/payments";
-import { getBookedMoment, getReadyPageData } from "@/db/ready";
+import { getBookedCard, getReadyPageData } from "@/db/ready";
 import { departureAfterLateBoarding, getRecapPageState } from "@/db/recap";
 import { certificationAgency, certificationLevel, type DiveSpecialty } from "@/db/schema";
 import { issuePartySeatClaims } from "@/db/seat-claims";
@@ -759,18 +759,17 @@ export default async function ReadyTokenPage({
    * 34). Straight after a booking POST the diver used to land on this route's
    * whole-page skeleton until the full loader had read the departure's entire
    * readiness roster, at the one moment they were waiting to be told it
-   * worked. The card needs one row: `getBookedMoment` reads it, the card paints,
+   * worked. The card needs one row: `getBookedCard` reads it, the card paints,
    * and everything else streams in under it behind the thread's own skeleton.
-   *
-   * Only while the card would be true. A seat or a departure that is already
-   * gone, or a boat already home, falls through to the full path below, which
-   * owns those terminal cards; a hand-edited `?booked=1` on an old link moves
-   * nothing but which opening renders, exactly as before.
+   * Only while the card would be true: a seat or departure already gone, or a
+   * boat already home, falls through to the full path, which owns those cards.
+   * Never gated on readiness: the card claims a seat, never boarding (see
+   * `getBookedCard`), and a held diver reads the hold in the thread under it.
    */
   const found = justBooked
-    ? await getBookedMoment(db, { shopId: capabilityShopId, bookingId })
+    ? await getBookedCard(db, { shopId: capabilityShopId, bookingId })
     : null;
-  const moment =
+  const card =
     found && !found.bookingCancelled && !found.departureCancelled && !theBoatIsHome(found.trip)
       ? found
       : null;
@@ -781,12 +780,12 @@ export default async function ReadyTokenPage({
       bookingId={bookingId}
       search={{ saved, error, pay, justBooked }}
       anonT={anonT}
-      underBookedHeader={moment !== null}
+      underBookedHeader={card !== null}
     />
   );
-  if (!moment) return thread;
+  if (!card) return thread;
   return (
-    <ReadyBookedPage moment={moment} locale={await requestLocale(moment.shop.defaultLocale)}>
+    <ReadyBookedPage card={card} locale={await requestLocale(card.shop.defaultLocale)}>
       <Suspense fallback={<ReadyThreadBodySkeleton />}>{thread}</Suspense>
     </ReadyBookedPage>
   );
@@ -1478,7 +1477,6 @@ async function DiverReadinessPage({
               .map(({ diveSite }) => diveSite?.name)
               .filter((name): name is string => Boolean(name))}
             isCourse={Boolean(fullTrip?.course)}
-            shopName={detail.shop.name}
             t={t}
           />
           {/* The diver may release their own seat; moving it is the shop's
@@ -1531,7 +1529,7 @@ async function DiverReadinessPage({
     <>
       {/* `booked` among them: the celebration is the moment a seat was taken,
           not a property of the link. Leaving it in the URL would replay
-          "You're on the boat" every time a diver reopened this page from
+          "You've got a seat" every time a diver reopened this page from
           their history three days later. */}
       <FlashParams params={["saved", "error", "pay", "booked"]} />
       {notice ? (

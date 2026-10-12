@@ -308,7 +308,7 @@
     },
     "pitchDoor": "El resto del briefing",
     "pitchDoorSpecies": "{count, plural, one {# especie} other {# especies}}",
-    "logEntryWaiting": "Después de la inmersión, tu registro te espera."
+    "logEntryWaiting": "Después de bucear, tu página de bitácora te espera."
   },
   "factSource": {
     "forecast": "Pronóstico",
@@ -375,7 +375,7 @@
     "holdBody": "Consulta arriba la actualización de condiciones. Quien ya reservó conserva su plaza y puede seguirlo aquí en directo.",
     "certBelowRequirement": "Esta salida es para buceadores con certificación {required}: trae tu tarjeta y la verificamos en el centro.",
     "certNoneOnGatedTrip": "Esta salida es para buceadores certificados. Reserva si quieres y habla con el centro: también hacen cursos e inmersiones más sencillas.",
-    "confirmedHeading": "Estás a bordo, {name}.",
+    "confirmedHeading": "Tu plaza está reservada, {name}.",
     "confirmedDockCall": "{date}, {time}. Preséntate en el muelle {minutes, plural, one {# minuto} other {# minutos}} antes y nos encargamos del resto.",
     "paymentDepositBalance": "Tu plaza está asegurada. Los {balance} restantes se pagan en el muelle.",
     "paymentStillOpen": "Tu plaza está a salvo y el pago sigue abierto",
@@ -860,7 +860,7 @@
     "certInvalid": "Revisa la agencia, el nivel y el número de certificación, e inténtalo de nuevo.",
     "certOptional": "Opcional",
     "keepThisPage": "Esta página es tuya: guárdala en favoritos y seguirá al día hasta que zarpes.",
-    "logEntryWaiting": "Después de la inmersión, tu registro te espera aquí.",
+    "logEntryWaiting": "Después de bucear, tu página de bitácora te espera aquí.",
     "gearOnFile": "La tripulación ya tiene tus tallas.",
     "packageDivesLeft": "{line} · {count, plural, one {te queda # inmersión del paquete} other {te quedan # inmersiones del paquete}}",
     "changesSizesLabel": "Tallas",
@@ -944,11 +944,17 @@
   "thread": {
     "stepsDone": "{done} de {total, plural, one {# paso completado} other {# pasos completados}}",
     "next": {
-      "signWaiver": "Siguiente: firma tu exención, unos dos minutos.",
+      "signWaiver": "Siguiente: firma tu exención.",
+      "signGuardian": "Siguiente: tu madre, padre o tutor firma la exención.",
+      "freshWaiver": "Siguiente: consigue un enlace nuevo para la exención.",
       "signForms": "Siguiente: firma los formularios del curso.",
       "certification": "Siguiente: agrega tu certificación.",
+      "certificationLevel": "Siguiente: consulta tu nivel de certificación con el centro.",
+      "specialty": "Siguiente: agrega tu tarjeta de especialidad.",
+      "nitrox": "Siguiente: agrega tu tarjeta de nitrox.",
+      "certificationMultiple": "Siguiente: agrega las tarjetas que pide esta inmersión.",
       "pay": "Siguiente: paga esta salida.",
-      "gear": "Siguiente: dile a la tripulación tus tallas.",
+      "gear": "Siguiente: tu equipo, ¿lo alquilas o traes el tuyo?",
       "changes": "Siguiente: confirma que nada cambió.",
       "dayof": "Siguiente: unos detalles para el día."
     },

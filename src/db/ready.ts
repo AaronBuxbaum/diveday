@@ -41,7 +41,7 @@ import { welcomeCueInputsByBooking } from "./welcome-cues";
  * The page after a booking POST used to hold the diver on a whole-page
  * skeleton until {@link getReadyPageData} had finished, and that loader reads
  * the departure's entire readiness roster before it returns. The masthead and
- * the "You're on the boat" card need none of it: whose shop, which departure,
+ * the "You've got a seat" card need none of it: whose shop, which departure,
  * when, when to be at the dock, and who to greet. That is one row, so the page
  * paints it from this read and streams the thread in under it.
  *
@@ -54,8 +54,15 @@ import { welcomeCueInputsByBooking } from "./welcome-cues";
  * The greeting follows {@link getReadyPageData}'s rule word for word: a booking
  * whose identity is held greets the name it was booked under, never the
  * matched record's (`src/db/ready.test.ts` holds the two to each other).
+ *
+ * **It reads no readiness, deliberately**, which is why the card it feeds
+ * claims a seat and never boarding ("You've got a seat", not "You're on the
+ * boat"; dive-domain review 2026-10-12). A diver held for medical review, short
+ * a certification level, with a held identity or under a course's minimum age
+ * still holds the seat, so the card is true of them; whether they board is the
+ * thread's to say, directly under it.
  */
-export type BookedMoment = {
+export type BookedCard = {
   shop: {
     name: string;
     slug: string;
@@ -70,10 +77,10 @@ export type BookedMoment = {
   departureCancelled: boolean;
 };
 
-export async function getBookedMoment(
+export async function getBookedCard(
   db: AppDb,
   { shopId, bookingId }: { shopId: string; bookingId: string },
-): Promise<BookedMoment | null> {
+): Promise<BookedCard | null> {
   const [row] = await db
     .select({
       status: bookings.status,

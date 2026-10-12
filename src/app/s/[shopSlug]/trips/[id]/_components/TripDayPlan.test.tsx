@@ -258,12 +258,14 @@ describe("TripDayPlan's profile", () => {
         }}
       />,
     );
-    expect(screen.getByText("After the dive, your log entry is waiting for you.")).toBeVisible();
+    expect(screen.getByText("After you dive, your log entry is waiting for you.")).toBeVisible();
     const preview = screen.getByTestId("log-entry-preview");
     expect(preview).toHaveAttribute("aria-hidden", "true");
     expect(within(preview).getByText("Dive log entry")).toBeInTheDocument();
     expect(within(preview).getByText("French Reef")).toBeInTheDocument();
-    expect(within(preview).getByText("Recorded by Blue Mantis Divers")).toBeInTheDocument();
+    // Nobody has recorded anything yet: the shop's signature belongs on the
+    // real card the crew writes, never on the promise of one.
+    expect(within(preview).queryByText(/Recorded by/)).not.toBeInTheDocument();
     // A line follows the run, so the run closes itself even over a door.
     for (const line of lines()) expect(line).toHaveClass("last:border-b");
   });

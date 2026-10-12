@@ -1917,7 +1917,7 @@ async function bookAVisualRegressionSeat(page: Page, scheme: "light" | "dark") {
   await page.getByLabel("Name", { exact: true }).fill("Visual Regression Diver");
   await page.getByLabel("Email", { exact: true }).fill(`visual-regression-${scheme}@example.com`);
   await page.getByRole("button", { name: /^Book/ }).click();
-  await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
+  await page.getByRole("heading", { name: /You’ve got a seat/ }).waitFor();
   await expect(page).toHaveURL(/\/ready\//);
 }
 
@@ -2518,7 +2518,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Name", { exact: true }).fill("Embed Regression Diver");
         await page.getByLabel("Email", { exact: true }).fill(`embed-visual-${scheme}@example.com`);
         await page.getByRole("button", { name: /^Book/ }).click();
-        await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
+        await page.getByRole("heading", { name: /You’ve got a seat/ }).waitFor();
         // Still framed, and still on the trip page — the assertion that this
         // capture is of the embed branch and not a `/ready` that leaked in.
         await expect(page).toHaveURL(/embed=1/);
@@ -3039,7 +3039,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       /**
        * The moment the whole public funnel exists for: `/ready` as it looks in
-       * the seconds after a seat is taken — the "You're on the boat" earned
+       * the seconds after a seat is taken — the "You've got a seat" earned
        * moment, the emails line, and the checklist under it (ADR
        * 20260820-one-page-after-booking). It was a branch of the trip page
        * until 2026-08-20; the capture keeps its name, because what it is a
@@ -3303,7 +3303,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Diver 2 name").fill("Sam Reyes");
         await page.getByLabel("Use the main contact’s email for this diver").check();
         await page.getByRole("button", { name: /^Book/ }).click();
-        await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
+        await page.getByRole("heading", { name: /You’ve got a seat/ }).waitFor();
         await expect(page).toHaveURL(/\/ready\//);
         await page.getByRole("heading", { name: "Your group’s seats" }).waitFor();
         await capture(page, "party-organizer-confirmation", scheme);

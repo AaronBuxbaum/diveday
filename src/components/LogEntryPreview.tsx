@@ -3,7 +3,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { siteMarkFor } from "@/lib/site-mark";
 
 /**
- * **"After the dive, your log entry is waiting"**, and a small picture of it
+ * **"After you dive, your log entry is waiting"**, and a small picture of it
  * (UX review 2026-10-10, item 35).
  *
  * The recap's log entry, the card a diver saves as an image or prints into a
@@ -17,7 +17,9 @@ import { siteMarkFor } from "@/lib/site-mark";
  * **A preview, not the card.** The recap's `DiveRecord` carries the diver's
  * name, the crew, the conditions and a canvas export, none of which exist
  * before the dive; reusing it here would mean faking them. This draws only
- * what is already true: the date and the planned sites. The miniature is
+ * what is already true: the date and the planned sites. It carries no
+ * "Recorded by" line: nobody has recorded anything yet, and the shop's
+ * signature belongs on the real card once the crew has. The miniature is
  * decoration under a sentence that says everything (`aria-hidden`), so a
  * screen reader hears the line once and no list of facts it already has.
  */
@@ -26,7 +28,6 @@ export function LogEntryPreview({
   date,
   siteNames,
   isCourse = false,
-  shopName,
   t,
 }: {
   /** The sentence that points at the card, already in the reader's language. */
@@ -36,7 +37,6 @@ export function LogEntryPreview({
   /** The day's planned sites, in plan order. */
   siteNames: string[];
   isCourse?: boolean;
-  shopName: string;
   t: DiverTranslator;
 }) {
   return (
@@ -71,7 +71,6 @@ export function LogEntryPreview({
             </div>
           ) : null}
         </dl>
-        <p className="px-4 pb-3 text-xs text-muted">{t("recap.recordedBy", { shopName })}</p>
       </div>
     </section>
   );

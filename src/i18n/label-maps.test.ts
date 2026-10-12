@@ -112,6 +112,8 @@ import { staffTranslator } from "./staff-messages";
 import { STAFF_ROLE_LABEL_KEYS, staffRoleLabel } from "./staff-role-labels";
 import { suitChoiceLabel } from "./suit-choice-labels";
 import {
+  CERTIFICATION_NEXT_KEYS,
+  SIGN_NEXT_KEYS,
   THREAD_STEP_NEXT_KEYS,
   THREAD_STEP_STATE_KEYS,
   THREAD_STEP_TITLE_KEYS,
@@ -906,6 +908,20 @@ const CASES: readonly LabelMapCase[] = [
     map: "THREAD_STEP_NEXT_KEYS",
     rows: codeRows(keysOf(THREAD_STEP_NEXT_KEYS), (locale, step) =>
       diverTranslator(locale)(THREAD_STEP_NEXT_KEYS[step]),
+    ),
+  },
+  {
+    module: "thread-labels.ts",
+    map: "CERTIFICATION_NEXT_KEYS",
+    rows: codeRows(keysOf(CERTIFICATION_NEXT_KEYS), (locale, code) =>
+      diverTranslator(locale)(CERTIFICATION_NEXT_KEYS[code]),
+    ),
+  },
+  {
+    module: "thread-labels.ts",
+    map: "SIGN_NEXT_KEYS",
+    rows: codeRows(keysOf(SIGN_NEXT_KEYS), (locale, code) =>
+      diverTranslator(locale)(SIGN_NEXT_KEYS[code]),
     ),
   },
   {

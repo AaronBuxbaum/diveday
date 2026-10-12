@@ -1,3 +1,4 @@
+import type { ReadinessBlockerCode } from "@/lib/readiness";
 import type { ThreadStep, ThreadStepId, ThreadStepState } from "@/lib/thread-steps";
 import type { DiverMessageKey } from "./messages";
 
@@ -44,21 +45,75 @@ export const THREAD_STEP_STATE_KEYS: Record<Exclude<ThreadStepState, "done">, Di
  * **What the thread asks next, as a sentence** (UX review 2026-10-10, item 9).
  *
  * The status head leads with this line, so it says the act rather than naming
- * the step ("Next: sign your waiver, about two minutes.", not "Next: Sign").
- * The sign step speaks for two things: the release, and the course forms an
- * enrollment can still owe once the release is on file (issue #2266). Only
- * the release is promised at two minutes; a diver whose release is signed and
- * whose forms are not is asked for the forms by name.
+ * the step ("Next: sign your waiver.", not "Next: Sign"). The step row under
+ * it already says how long the release takes, so this line does not repeat it.
+ *
+ * The sign and certification steps each speak for several readiness codes, and
+ * one sentence for all of them would ask a diver to do the wrong thing: a
+ * diver short a level is not helped by "add your certification", and a minor
+ * cannot sign their own waiver. Those two steps branch on the item's code in
+ * `threadNextKey`; every other step has one sentence here.
  */
-export const THREAD_STEP_NEXT_KEYS: Record<Exclude<ThreadStepId, "sign">, DiverMessageKey> = {
-  certification: "thread.next.certification",
+export const THREAD_STEP_NEXT_KEYS: Record<
+  Exclude<ThreadStepId, "sign" | "certification">,
+  DiverMessageKey
+> = {
   pay: "thread.next.pay",
   gear: "thread.next.gear",
   changes: "thread.next.changes",
   dayof: "thread.next.dayof",
 };
 
+/**
+ * The certification step's sentence by the worst blocker's code. A code not
+ * listed (the shop-side waits, or no code at all) falls back to "add your
+ * certification", which is the step's plain ask.
+ */
+type CertificationNextCode = Extract<
+  ReadinessBlockerCode,
+  | "certification_missing"
+  | "certification_self_declared"
+  | "certification_insufficient"
+  | "specialty_missing"
+  | "nitrox_missing"
+  | "nitrox_self_declared"
+>;
+
+export const CERTIFICATION_NEXT_KEYS: Record<CertificationNextCode, DiverMessageKey> = {
+  certification_missing: "thread.next.certification",
+  certification_self_declared: "thread.next.certification",
+  certification_insufficient: "thread.next.certificationLevel",
+  specialty_missing: "thread.next.specialty",
+  nitrox_missing: "thread.next.nitrox",
+  nitrox_self_declared: "thread.next.nitrox",
+};
+
+/** The sign step's sentence by the worst blocker's code; the rest sign the waiver. */
+type SignNextCode = Extract<ReadinessBlockerCode, "guardian_signature_missing" | "waiver_expired">;
+
+export const SIGN_NEXT_KEYS: Record<SignNextCode, DiverMessageKey> = {
+  guardian_signature_missing: "thread.next.signGuardian",
+  waiver_expired: "thread.next.freshWaiver",
+};
+
 export function threadNextKey(step: Pick<ThreadStep, "id" | "item">): DiverMessageKey {
-  if (step.id !== "sign") return THREAD_STEP_NEXT_KEYS[step.id];
-  return step.item?.state === "done" ? "thread.next.signForms" : "thread.next.signWaiver";
+  if (step.id === "sign") {
+    // The release is on file and the course forms are what is left (issue #2266).
+    if (step.item?.state === "done") return "thread.next.signForms";
+    const code = step.item?.code;
+    return code && Object.hasOwn(SIGN_NEXT_KEYS, code)
+      ? SIGN_NEXT_KEYS[code as SignNextCode]
+      : "thread.next.signWaiver";
+  }
+  if (step.id === "certification") {
+    // Several cards short is one row with several jobs; name them together.
+    if (step.item?.detailCode === "certification_multiple_needed") {
+      return "thread.next.certificationMultiple";
+    }
+    const code = step.item?.code;
+    return code && Object.hasOwn(CERTIFICATION_NEXT_KEYS, code)
+      ? CERTIFICATION_NEXT_KEYS[code as CertificationNextCode]
+      : "thread.next.certification";
+  }
+  return THREAD_STEP_NEXT_KEYS[step.id];
 }

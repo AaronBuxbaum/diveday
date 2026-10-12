@@ -122,7 +122,7 @@ test.describe("a shop that stops filling nitrox", () => {
     await anon.getByLabel("Name").fill("Priya Sharma");
     await anon.getByLabel("Email").fill(`priya+${e2eNow().getTime()}@example.com`);
     await anon.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-    await expect(anon.getByRole("heading", { name: /You’re on the boat, Priya/ })).toBeVisible();
+    await expect(anon.getByRole("heading", { name: /You’ve got a seat, Priya/ })).toBeVisible();
 
     // The card first, because the request is gated on it now — filed from the
     // spine's certification step, which is the only place this page takes one.
@@ -296,7 +296,7 @@ test("the nitrox request is hidden until the diver files a nitrox card, then app
   // demo reset in fixtures.ts.
   await page.getByLabel("Email").fill(`nora+${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-  await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
 
   // Nothing on file, so there is no request box at all — and no sentence
   // pointing at one either. Scoped to the gear step and read without a
@@ -365,7 +365,7 @@ test("a course taught on air offers no nitrox request, at the same shop that fil
   // for the attestation an ordinary charter's does not.
   await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-  await expect(page.getByRole("heading", { name: /You’re on the boat, Owen/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /You’ve got a seat, Owen/ })).toBeVisible();
 
   // The rest of the rental form is untouched — this closes one box, not the
   // picker — so the assertion is about nitrox alone, not about a form that
