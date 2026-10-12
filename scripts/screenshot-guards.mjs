@@ -6,6 +6,8 @@
  * imported it would start Chromium to assert a string.
  */
 
+import credentials from "../src/db/dev-credentials.json" with { type: "json" };
+
 /**
  * A skeleton still standing where the page's body belongs.
  *
@@ -57,8 +59,8 @@ export const OFFLINE_SETTLED_SELECTOR = "html[data-offline-settled]";
 /** The staff manifest's own line once it has saved this phone's copy. */
 export const OFFLINE_COPY_SAVED = /(Fresh|Aging|Stale) copy/;
 
-/** The demo shop the dev logins belong to (src/db/dev-credentials.ts). */
-export const DEMO_SHOP_SLUG = "blue-mantis";
+/** The demo shop the dev logins belong to (src/db/dev-credentials.json). */
+export const DEMO_SHOP_SLUG = credentials.demoShopSlug;
 
 /**
  * What capturing one path needs before the shot, for the offline manifest; `null`
