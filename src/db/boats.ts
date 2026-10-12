@@ -1,7 +1,8 @@
 import { and, asc, count, eq, gt, isNull, ne } from "drizzle-orm";
+import { type BoatSeatsRefusal, boatSeatsRefusal } from "@/lib/boat-safety";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { boats, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -103,7 +104,7 @@ export async function countBoatDepartures(
  * certificate can no longer change.
  */
 export async function upcomingBoatDepartures(
-  db: AppDb,
+  db: DbExecutor,
   input: { shopId: string; boatId: string; timeZone: string; now?: Date },
 ): Promise<{ capacity: number; on: CalendarDate }[]> {
   const { shopId, boatId, timeZone, now = nowDate() } = input;
@@ -166,6 +167,87 @@ export async function updateBoat(
     .where(and(eq(boats.shopId, shopId), eq(boats.id, boatId), isNull(boats.deletedAt)))
     .returning();
   return boat ?? null;
+}
+
+export type BoatSaveOutcome =
+  | { ok: true; boat: Boat }
+  | { ok: false; reason: "not_found" }
+  | { ok: false; reason: "certificate"; refusal: BoatSeatsRefusal };
+
+/**
+ * **Save a hull under its certificate, in one transaction** (H-107, #2324).
+ *
+ * The check and the write used to be two steps in the settings action, so a
+ * departure edited between them could slip past the certificate the save had
+ * just approved. Here the boat row is locked, then each of its upcoming
+ * departures (`for no key update`, in id order, so two saves of one hull
+ * queue rather than cross), and only then are their seats read and the
+ * refusal decided — a trip edit either lands before and is counted, or waits
+ * behind the save. The booking transaction still enforces the certificate at
+ * the point of sale whatever this says.
+ */
+export async function updateBoatWithinCertificate(
+  db: AppDb,
+  input: {
+    shopId: string;
+    boatId: string;
+    name: string;
+    capacity: number;
+    description: string | null;
+    papers: BoatPapersInput;
+    timeZone: string;
+    now?: Date;
+  },
+): Promise<BoatSaveOutcome> {
+  const { shopId, boatId, now = nowDate() } = input;
+  return db.transaction(async (tx): Promise<BoatSaveOutcome> => {
+    const [boat] = await tx
+      .select({ id: boats.id })
+      .from(boats)
+      .where(and(eq(boats.shopId, shopId), eq(boats.id, boatId), isNull(boats.deletedAt)))
+      .limit(1)
+      // Not `for update`: a trip edit that points a departure at this hull
+      // takes a `KEY SHARE` on it through the foreign key while holding its
+      // trip, and must not be made to wait here while this waits on that trip.
+      .for("no key update");
+    if (!boat) return { ok: false, reason: "not_found" };
+    if (input.papers.certifiedPassengers !== null) {
+      await tx
+        .select({ id: trips.id })
+        .from(trips)
+        .where(
+          and(
+            eq(trips.shopId, shopId),
+            eq(trips.boatId, boatId),
+            eq(trips.status, "scheduled"),
+            liveTrip(),
+            gt(trips.startsAt, now),
+          ),
+        )
+        .orderBy(asc(trips.id))
+        .for("no key update");
+    }
+    const refusal = boatSeatsRefusal({
+      capacity: input.capacity,
+      ...input.papers,
+      upcomingDepartures:
+        input.papers.certifiedPassengers !== null
+          ? await upcomingBoatDepartures(tx, { shopId, boatId, timeZone: input.timeZone, now })
+          : [],
+    });
+    if (refusal) return { ok: false, reason: "certificate", refusal };
+    const [saved] = await tx
+      .update(boats)
+      .set({
+        name: input.name,
+        capacity: input.capacity,
+        description: input.description,
+        ...input.papers,
+      })
+      .where(and(eq(boats.shopId, shopId), eq(boats.id, boatId)))
+      .returning();
+    return saved ? { ok: true, boat: saved } : { ok: false, reason: "not_found" };
+  });
 }
 
 /**

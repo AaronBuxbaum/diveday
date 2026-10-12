@@ -1,0 +1,73 @@
+import { yearCardCopy } from "@/app/_og/year-card-copy";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import type { DbExecutor } from "@/db/client";
+import { getShopYear } from "@/db/reporting";
+import type { DiverTranslator } from "@/i18n/messages";
+import { nowDate } from "@/lib/clock";
+import { summarizeShopYear } from "@/lib/shop-year";
+
+/**
+ * **"Our year" at the foot of the shopfront** — the Reports year card's
+ * sentence ("312 divers. 140 boats out. 18 reefs and wrecks.") where a diver
+ * comparing shops reads it. Only with the shop's yes (`shops.public_year_enabled`,
+ * off by default), and only counts: `getShopYear` carries no money across its
+ * boundary at all, and this panel shows nothing but the range and the
+ * sentence. Nothing at all before a departure has sailed: a year of zeroes is
+ * not something a shop would choose to publish.
+ */
+export async function OurYearSection({
+  db,
+  shop,
+  locale,
+  t,
+  className = "",
+}: {
+  db: DbExecutor;
+  shop: { id: string; name: string; timezone: string };
+  locale: string;
+  t: DiverTranslator;
+  className?: string;
+}) {
+  const year = summarizeShopYear(
+    await getShopYear(db, shop.id, { timeZone: shop.timezone, now: nowDate() }),
+  );
+  if (!year.hasActivity) return null;
+  const copy = yearCardCopy({ shopName: shop.name, year, t, locale });
+  return (
+    <OurYearPanel
+      className={className}
+      heading={t("shopYear.panel.heading")}
+      range={copy.range}
+      sentence={
+        // A shop that plans no site still went to sea; "0 reefs and wrecks"
+        // would publish a gap in its records as a fact about its year.
+        year.siteCount > 0
+          ? copy.sentence
+          : t("shopYear.panel.sentenceNoSites", { divers: year.divers, boats: year.boatsOut })
+      }
+    />
+  );
+}
+
+/** The panel itself: a heading, the range it covers, and the one sentence. */
+export function OurYearPanel({
+  heading,
+  range,
+  sentence,
+  className = "",
+}: {
+  heading: string;
+  range: string;
+  sentence: string;
+  className?: string;
+}) {
+  return (
+    <section aria-labelledby="our-year" className={className}>
+      <h2 id="our-year" className={SECTION_TITLE_CLASS}>
+        {heading}
+      </h2>
+      <p className="mt-1 text-sm text-muted">{range}</p>
+      <p className="mt-3 text-lg font-medium text-foreground">{sentence}</p>
+    </section>
+  );
+}

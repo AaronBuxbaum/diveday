@@ -170,3 +170,40 @@ describe("the trailing mark", () => {
     expect(trigger.nextElementSibling).toBeNull();
   });
 });
+
+/**
+ * **A roll-call trail reads at the dock-test size** (UX review 2026-10-11,
+ * item 29). The status word ("Not back after dive 1") and its time and
+ * marker ("8:29 · Keiko") are what a captain decides on, so neither sits
+ * below 16px. Nor does the note under a line (dive-domain review of layer 8,
+ * F8): it is what a crew member wrote about that diver, read on the same deck.
+ */
+describe("the person sheet's trail", () => {
+  it("keeps the status and its time at reading size", () => {
+    render(<PersonSheet {...props} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    const time = screen.getByText("8:29 · Keiko");
+    expect(time).toHaveClass("text-base");
+    expect(screen.getByText("Not back after dive 1").closest(".text-base")).not.toBeNull();
+  });
+
+  it("keeps a line's note at reading size too", () => {
+    render(
+      <PersonSheet
+        {...props}
+        trail={[
+          {
+            label: "Not back after dive 1",
+            detail: "8:29 · Keiko",
+            state: "notBack" as const,
+            note: "Surfaced up-current, picked up by the tender",
+          },
+        ]}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    expect(screen.getByText("Surfaced up-current, picked up by the tender")).toHaveClass(
+      "text-base",
+    );
+  });
+});

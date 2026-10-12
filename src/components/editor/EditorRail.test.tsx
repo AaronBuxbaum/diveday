@@ -104,22 +104,21 @@ describe("the editor rail", () => {
   });
 
   /**
-   * The current section's tint is a desktop state (`lg:bg-primary-tint`), and a
-   * bare `hover:bg-surface-sunken` on every row outranked it: under the
-   * pointer the one tinted row went grey with foreground text. Hover belongs to
-   * the rows that are not current, and to the current one only below `lg`,
-   * where it carries no tint to lose.
+   * The rail is a desktop column now; below `lg` it is gone, because each
+   * section folds to a header that names it and opens it (EditorSection).
+   * A bare `hover:bg-surface-sunken` on the current row outranked its tint,
+   * so the current row carries no hover at all.
    */
-  it("keeps the current section's tint under the pointer", () => {
+  it("stands only from lg up, and keeps the current section's tint under the pointer", () => {
     render(<Editor />);
 
     const rail = railNav();
+    expect(rail).toHaveClass("max-lg:hidden");
     const tokens = (link: Element | null | undefined) => link?.className.split(/\s+/) ?? [];
     const current = tokens(rail.querySelector("a[aria-current='true']"));
-    expect(current).toContain("lg:bg-primary-tint");
+    expect(current).toContain("bg-primary-tint");
     expect(current).not.toContain("hover:bg-surface-sunken");
     expect(current).not.toContain("hover:text-foreground");
-    expect(current).toContain("max-lg:hover:bg-surface-sunken");
 
     const other = tokens(rail.querySelector("a:not([aria-current])"));
     expect(other).toContain("hover:bg-surface-sunken");
@@ -148,10 +147,8 @@ describe("the editor rail", () => {
 
 /**
  * **The rail's skeleton is the rail's geometry** (docs/design/pixel-craft.md,
- * class 11: 0px of shift on load). The editors' loading pages drew the phone
- * rail as one row of three 36px pills over a hairline with `mb-8`, about 77px;
- * the loaded rail at 390 is a borderless wrap of 44px links with `mb-6`, so on
- * the new-site editor the whole form dropped about 131px when it arrived.
+ * class 11: 0px of shift on load): the rail's own boxes, one 44px stub per
+ * section, and like the rail nothing below `lg`.
  */
 describe("the editor rail's skeleton", () => {
   it("draws one 44px stub per section, in the rail's own two boxes", () => {
@@ -164,34 +161,9 @@ describe("the editor rail's skeleton", () => {
 
     expect(skeleton?.className).toBe(rail.className);
     expect(stubs?.className).toBe(list?.className);
-    expect(skeleton).toHaveClass("mb-6", "lg:pt-1");
-    expect(skeleton).not.toHaveClass("border-b");
-    expect(stubs).toHaveClass("flex-wrap");
+    expect(skeleton).toHaveClass("max-lg:hidden", "lg:pt-1");
     expect(stubs?.children).toHaveLength(11);
-    for (const stub of stubs?.children ?? []) expect(stub).toHaveClass("h-11", "w-24", "lg:w-full");
-  });
-
-  /**
-   * The stubs' widths decide how many rows the phone wrap takes, and every row
-   * is 44px of form pushed down. Eleven uniform `w-24` stubs wrap three to a
-   * row at 390, four rows, where the dive-site editor's own labels wrap
-   * 3/3/2/2/1, five: the form still dropped 44px. An editor whose labels wrap
-   * differently from uniform stubs names each stub's width instead.
-   */
-  it("draws each stub at the width its editor names, still a column from lg", () => {
-    const { container } = render(<EditorRailSkeleton widths={["w-20", "w-38", "w-49"]} />);
-    const stubs = [...(container.firstElementChild?.firstElementChild?.children ?? [])];
-
-    expect(stubs).toHaveLength(3);
-    expect(stubs.map((stub) => [...stub.classList].find((token) => /^w-/.test(token)))).toEqual([
-      "w-20",
-      "w-38",
-      "w-49",
-    ]);
-    for (const stub of stubs) {
-      expect(stub).toHaveClass("h-11", "lg:w-full");
-      expect(stub).not.toHaveClass("w-24");
-    }
+    for (const stub of stubs?.children ?? []) expect(stub).toHaveClass("h-11", "w-full");
   });
 });
 
@@ -257,7 +229,7 @@ describe("an editor section", () => {
 
     const pricing = document.getElementById("block-pricing");
     expect(pricing?.tagName).toBe("FIELDSET");
-    expect(pricing?.querySelector("legend")?.textContent).toBe("Pricing");
+    expect(pricing).toHaveAccessibleName("Pricing");
     expect(pricing?.className).not.toContain("rounded");
     // The hairline between sections is a `border-t`; the box it replaced was a
     // bare `border` with a radius and its own padding.

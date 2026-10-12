@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { HOUR_MS, MINUTE_MS } from "./clock";
 import { TRIP_REMINDER_CADENCES } from "./reminders";
-import { canSayRunningLate, RUNNING_LATE_LEAD_MS, runningLateShown } from "./running-late";
+import {
+  canSayRunningLate,
+  RUNNING_LATE_LEAD_MS,
+  runningLateOnManifest,
+  runningLateShown,
+} from "./running-late";
 import { DEPARTURE_BUFFER_MS } from "./trips";
 
 const startsAt = new Date("2026-10-09T12:00:00Z");
@@ -64,5 +69,51 @@ describe("runningLateShown", () => {
 
   it("is nothing when the diver said nothing", () => {
     expect(runningLateShown({ bookingStatus: "booked", runningLateAt: null })).toBeNull();
+  });
+});
+
+/**
+ * **The captain's half** (#2319): the same statement on the manifest and its
+ * offline copy, so the rail does not call missing a diver who said they are on
+ * the way. A quiet line and nothing more — every case below that answers null
+ * is a row where the line would now be wrong or a distraction.
+ */
+describe("runningLateOnManifest", () => {
+  const saidAt = new Date("2026-10-09T11:42:00Z");
+  const row = (overrides: Partial<Parameters<typeof runningLateOnManifest>[0]> = {}) => ({
+    checkpoint: "departure",
+    runningLateAt: saidAt,
+    rollCallState: undefined,
+    checkedIn: false,
+    notHere: false,
+    ...overrides,
+  });
+
+  it("shows on a dock row nobody has called yet", () => {
+    expect(runningLateOnManifest(row())).toEqual(saidAt);
+  });
+
+  it("stays on a row the crew recorded as not boarded, which is when it is the context", () => {
+    expect(runningLateOnManifest(row({ rollCallState: "not_boarded" }))).toEqual(saidAt);
+  });
+
+  it("disappears the moment the diver is boarded", () => {
+    expect(runningLateOnManifest(row({ rollCallState: "boarded" }))).toBeNull();
+  });
+
+  it("disappears once the counter has them, and on a seat the desk released", () => {
+    expect(runningLateOnManifest(row({ checkedIn: true }))).toBeNull();
+    expect(runningLateOnManifest(row({ notHere: true }))).toBeNull();
+  });
+
+  it("never shows after a dive, where the question is who came back", () => {
+    for (const rollCallState of [undefined, "boarded", "not_boarded"]) {
+      expect(runningLateOnManifest(row({ checkpoint: "after_dive_1", rollCallState }))).toBeNull();
+    }
+  });
+
+  it("is nothing when the diver said nothing, or a copy saved before the field", () => {
+    expect(runningLateOnManifest(row({ runningLateAt: null }))).toBeNull();
+    expect(runningLateOnManifest(row({ runningLateAt: undefined }))).toBeNull();
   });
 });

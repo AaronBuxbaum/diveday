@@ -9,7 +9,7 @@ import {
   OfflineManifestManager,
   type OfflineManifestManagerCopy,
 } from "@/components/OfflineManifestManager";
-import { PushOptIn, type PushOptInCopy } from "@/components/PushOptIn";
+import { PushOptIn } from "@/components/PushOptIn";
 import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -43,8 +43,8 @@ import { withholdHeldSeatParticulars } from "@/lib/held-seat";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
   blockedAtDock,
-  isRollCallCheckpoint,
   type ManifestBuddyTeam,
+  manifestAtCheckpoint,
   type RollCallCheckpoint,
   rollCallCheckpoints,
   rollCallRowState,
@@ -57,7 +57,6 @@ import { requireShopSurface } from "@/lib/session";
 import { seenChipSlugs, seenSiteFor } from "@/lib/sightings";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
-import { STAGE_TAP_KEYS, TRIP_STAGES } from "@/lib/trip-stages";
 import { hasSailed } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
@@ -67,6 +66,7 @@ import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CrewRollCall } from "./_components/CrewRollCall";
 import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
+import { DockDesk } from "./_components/DockDesk";
 import { departureBoatSafetySection } from "./_components/departure-boat-safety";
 import { type ExecutedDiveLabels, ExecutedDiveLog } from "./_components/ExecutedDiveLog";
 import { ManifestMoreMenu } from "./_components/ManifestMoreMenu";
@@ -77,9 +77,11 @@ import {
   printedBoatProcedureCopy,
 } from "./_components/PrintedBoatProcedure";
 import { personTrailIndex } from "./_components/person-trail";
+import { pushOptInCopy } from "./_components/push-opt-in-copy";
 import { SeenGroup } from "./_components/SeenGroup";
 import { StageStrip } from "./_components/StageStrip";
 import { SummaryPanel } from "./_components/SummaryPanel";
+import { stageStripProps } from "./_components/stage-strip-props";
 import { TripPlanSection } from "./_components/TripPlanSection";
 import {
   addBuddyTeamMemberAction,
@@ -296,9 +298,9 @@ export default async function TripManifestPage({
     listDeskEventsSince(db, shop.id, tripId, session.user.personId),
     // Codes and counts, never a row per seat (#1183's boundary).
     diveIntentTallyForTrip(db, shop.id, tripId),
-    // The newest word the crew tapped, whatever its age: the strip shows the
-    // crew their own last answer even on a boat that is hours overdue. The
-    // staleness rule belongs to what a *diver* reads, not to the control.
+    // The newest word the crew tapped; `stageStripProps` reads it by the rule
+    // Today's card and the departure header print, so the strip still speaks
+    // on a boat that is hours overdue.
     latestTripStage(db, shop.id, tripId),
   ]);
   // Each live site's field guide, for the dive log's "one thing you saw"
@@ -342,12 +344,11 @@ export default async function TripManifestPage({
 
   const plannedDiveCount = departureManifest.trip.plannedDives;
   const checkpoints = rollCallCheckpoints(plannedDiveCount);
-  const checkpoint: RollCallCheckpoint =
-    requestedCheckpoint && isRollCallCheckpoint(requestedCheckpoint, plannedDiveCount)
-      ? requestedCheckpoint
-      : "departure";
-  const checkpointManifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
-  if (!checkpointManifest) notFound();
+  // An unknown or absent checkpoint opens the departure list.
+  const checkpointManifest =
+    manifestAtCheckpoint(completeManifests, requestedCheckpoint ?? "departure") ??
+    departureManifest;
+  const checkpoint: RollCallCheckpoint = checkpointManifest.checkpoint;
   // Held seats are settled once, here, so every reader below — the
   // not-back-aboard alarm, the buddy builder, both roll calls — sees the seat
   // and never the matched person's particulars (issue #1690).
@@ -659,16 +660,14 @@ export default async function TripManifestPage({
           reading of where the boat is, and a second one above it would be the
           same fact twice. */}
       <TripTabs shopSlug={shopSlug} tripId={tripId} current="boat" copy={tripTabsCopy(t)} />
-      {/* Souls on board, on paper only. The printed manifest is the document
-          that goes ashore with the dock or into a coastguard's hands, and the
-          first question either asks is how many people the boat left with —
-          which the screen answers with a live progress panel that does not
-          print. Deliberately **static facts**: how many divers the trip
-          carries and how many crew it names, never a live status count. A
-          "Boarded 6" printed at 07:12 is a lie by 07:20 and paper cannot
-          correct itself, so nothing here moves after the sheet comes off the
-          printer. */}
+      {/* Souls on board, on paper only: the sheet goes ashore or into a
+          coastguard's hands, and the first question is how many the boat left
+          with, which the screen answers with a live panel that does not print.
+          **Static facts** only (divers carried, crew named), never a live
+          count: "Boarded 6" printed at 07:12 is a lie by 07:20. A rehearsal
+          says so first, so a practice sheet is never read as a real boat. */}
       <p className="mt-4 hidden text-base font-semibold tabular-nums print:block">
+        {manifest.trip.isRehearsal ? `${t("trips.rehearsal.label")} · ` : null}
         {staffSoulsOnBoardLine(t, manifest.summary, manifest.crew.length)}
         {/* **The count is the number read over the radio, and a crew member
             rostered on two overlapping boats makes it wrong** (issue #1779).
@@ -738,21 +737,13 @@ export default async function TripManifestPage({
           drifts on the home and the storefront is deliberately not here. */}
       <StageStrip
         action={boundSetTripStageAction}
-        current={stage?.stage ?? null}
-        copy={{
-          legend: t("manifest.stage.legend"),
-          errorRefusal: t("manifest.stage.errorRefusal"),
-          taps: TRIP_STAGES.map((value) => ({
-            stage: value,
-            label: t(STAGE_TAP_KEYS[value]),
-          })),
-          recordedLine: stage
-            ? t("manifest.stage.recordedLine", {
-                name: stage.recordedByName ?? "",
-                time: formatTime(stage.recordedAt, locale, shop.timezone),
-              })
-            : undefined,
-        }}
+        {...stageStripProps(t, {
+          trip: departureManifest.trip,
+          stage,
+          now: nowDate(),
+          timeZone: shop.timezone,
+          locale,
+        })}
       />
 
       {/* A segmented control, not a row of buttons: the active checkpoint used
@@ -856,6 +847,15 @@ export default async function TripManifestPage({
           crewRollCallButtonCopy={crewRollCallButtonCopy}
           buddyTeamLabel={buddyTeamLabel}
           t={t}
+        />
+        <DockDesk
+          t={t}
+          shopId={shop.id}
+          tripId={tripId}
+          isDeparture={isDeparture}
+          startsAt={departureManifest.trip.startsAt}
+          stage={stage}
+          seats={departureManifest.divers}
         />
 
         {/* **The plan** (issue #1184, D24).
@@ -1061,20 +1061,7 @@ export default async function TripManifestPage({
                 unsubscribeAction={unsubscribePushAction.bind(null, tripId)}
                 isSubscribedAction={isPushSubscribedAction.bind(null, tripId)}
                 isSubscribedAnyAction={isPushSubscribedAnywhereAction}
-                copy={
-                  {
-                    heading: t("trips.offlineManifestManager.pushHeading"),
-                    body: t("trips.offlineManifestManager.pushBody"),
-                    enable: t("trips.offlineManifestManager.pushEnable"),
-                    enabling: t("trips.offlineManifestManager.pushEnabling"),
-                    disable: t("trips.offlineManifestManager.pushDisable"),
-                    on: t("trips.offlineManifestManager.pushOn"),
-                    unsupported: t("trips.offlineManifestManager.pushUnsupported"),
-                    homeScreenHint: t("trips.offlineManifestManager.pushHomeScreenHint"),
-                    denied: t("trips.offlineManifestManager.pushDenied"),
-                    error: t("trips.offlineManifestManager.pushError"),
-                  } satisfies PushOptInCopy
-                }
+                copy={pushOptInCopy(t)}
               />
             </div>
 

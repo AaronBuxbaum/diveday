@@ -36,7 +36,9 @@ import { resolveWeekStart, shiftWeek, WEEK_PARAM, weekStartOf } from "@/lib/week
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { ScheduleViews } from "../schedule/_components/ScheduleViews";
 import { staffingGapWords } from "./_components/gap-words";
+import { StaffingWarnings } from "./_components/StaffingWarnings";
 import { StaffingWeek, weekTailRowClass } from "./_components/StaffingWeek";
+import { staffingWeekWords } from "./_components/staffing-week-words";
 import {
   createShiftAction,
   decideCrewRequestAction,
@@ -317,6 +319,7 @@ export default async function StaffingPage({
         />
       ) : (
         <>
+          <StaffingWarnings shop={shop} shopSlug={shopSlug} view={view} locale={locale} />
           <StaffingWeek
             week={week}
             gapWords={gapWords}
@@ -335,43 +338,7 @@ export default async function StaffingPage({
               // Absent while it would only reload the week already on screen.
               thisWeekHref: weekStart === weekStartOf(today) ? null : staffingPath,
             }}
-            words={{
-              ariaLabel: t("staffing.week.ariaLabel"),
-              previous: t("staffing.week.previous"),
-              next: t("staffing.week.next"),
-              thisWeek: t("staffing.week.thisWeek"),
-              today: t("staffing.week.today"),
-              print: t("print.sheet.door"),
-              person: t("staffing.week.person"),
-              needsCrew: t("staffing.week.needsCrew"),
-              assign: t("staffing.week.assign"),
-              // **`t.raw`, not `t`** — both of these name an argument that only
-              // `StaffingWeek` can supply (the departure's title, the person and
-              // the day), so they cross as templates and `fill()` completes them
-              // on the client. `t()` would try to *format* them here, with the
-              // argument by definition absent (src/i18n/fill.ts).
-              assignAria: t.raw("staffing.week.assignAria"),
-              crewing: t("staffing.week.crewing"),
-              remove: t("staffing.working.remove"),
-              removing: t("staffing.working.removing"),
-              shiftAria: t.raw("staffing.week.shiftAria"),
-              empty: t("staffing.week.empty"),
-              away: t("staffing.week.away"),
-              awayConflict: t.raw("staffing.week.awayConflict"),
-              crewClash: t.raw("staffing.week.crewClash"),
-              request: t("staffing.week.request"),
-              requestAria: t.raw("staffing.week.requestAria"),
-              requesting: t("staffing.week.requesting"),
-              requested: t.raw("staffing.week.requested"),
-              approve: t("staffing.week.approve"),
-              decline: t("staffing.week.decline"),
-              deciding: t("staffing.week.deciding"),
-              requestApproved: t("staffing.week.requestApproved"),
-              requestDeclined: t("staffing.week.requestDeclined"),
-              askWontClose: t("staffing.week.askWontClose"),
-              requestWontClose: t("staffing.week.requestWontClose"),
-              ratingLapsed: t("staffing.week.ratingLapsed"),
-            }}
+            words={staffingWeekWords(t)}
           />
 
           {canManage ? (

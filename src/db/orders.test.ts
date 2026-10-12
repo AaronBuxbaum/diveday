@@ -1025,6 +1025,40 @@ describe("orders", () => {
   // an illegal move, not just the ones each caller happens to guard against
   // today. voidOrder already required status === "open" before this fix; the
   // webhook-driven mark functions had no equivalent guard.
+  it("queues order.voided when Stripe voids an open invoice, once", async () => {
+    const { db, shop, entry, staff } = await orderContext();
+    await connectedShop(db, shop.id);
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: staff,
+        bookingId: entry.booking.id,
+        lineItems,
+      },
+      fakeInvoicing(),
+    );
+    if (!result.ok) throw new Error("expected order creation to succeed");
+
+    expect((await markOrderVoidedByInvoiceId(db, invoiceIdOf(result.order)))?.status).toBe("void");
+    // A redelivered invoice.voided queues nothing more.
+    await markOrderVoidedByInvoiceId(db, invoiceIdOf(result.order));
+
+    const events = await db
+      .select()
+      .from(integrationEvents)
+      .where(
+        and(
+          eq(integrationEvents.shopId, shop.id),
+          eq(integrationEvents.entityId, result.order.id),
+          eq(integrationEvents.eventType, "order.voided"),
+        ),
+      );
+    expect(events.map((event) => event.idempotencyKey)).toEqual([`order:${result.order.id}:void`]);
+    expect(events[0]?.payload).toMatchObject({ status: "void" });
+  });
+
   describe("applyOrderUpdate transition guard", () => {
     it("markOrderVoidedByInvoiceId on a paid order leaves it paid", async () => {
       const { db, shop, entry, staff } = await orderContext();
@@ -2483,6 +2517,15 @@ describe("counter orders", () => {
     if (!voided.ok) throw new Error("expected the void to succeed");
     expect(voided.order).toMatchObject({ status: "void", amountPaidCents: 0, totalCents: 5_000 });
     expect(voided.order.voidedAt).toBeInstanceOf(Date);
+    // The accounting integrations hear about it in the same transaction (issue #2309).
+    const events = await db
+      .select()
+      .from(integrationEvents)
+      .where(and(eq(integrationEvents.shopId, shop.id), eq(integrationEvents.entityId, order.id)));
+    expect(events.map((event) => [event.eventType, event.idempotencyKey])).toEqual([
+      ["order.paid", `order:${order.id}:paid`],
+      ["order.voided", `order:${order.id}:void`],
+    ]);
 
     // Once void, it is not voided again.
     expect(

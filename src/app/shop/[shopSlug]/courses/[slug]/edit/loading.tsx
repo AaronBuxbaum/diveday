@@ -30,7 +30,7 @@ export default function EditCourseLoading() {
           meta={<div className="h-5 w-72 max-w-full rounded bg-surface-sunken" />}
         />
         <div className="mt-6 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">
-          {/* The rail: a jump-row across the top on a phone, a column from `lg`. */}
+          {/* The rail, from `lg` up; a phone has none. */}
           <EditorRailSkeleton count={COURSE_EDITOR_SECTIONS} />
           <div className="divide-y divide-border">
             {[0, 1, 2].map((i) => (

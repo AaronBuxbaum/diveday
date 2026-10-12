@@ -6,6 +6,7 @@ import { z } from "zod";
 import { checkInBooking, undoCheckInBooking } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { markBookingNoShow, undoBookingNoShow } from "@/db/no-show";
+import { offerDepartureToDiver } from "@/db/trip-invitations";
 import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface } from "@/lib/session";
@@ -224,4 +225,49 @@ export async function undoNoShowAction(
     return;
   }
   revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`));
+}
+
+const offerForm = z.object({
+  offerTripId: z.string().refine((id) => uuidParam(id) !== undefined),
+  personId: z.string().refine((id) => uuidParam(id) !== undefined),
+});
+
+/**
+ * **"Email them this date"** (UX review 2026-10-11, item 14): the no-show
+ * panel's rebooking door, sent to the diver in one tap. A direct invitation to
+ * the sister departure (`offerDepartureToDiver`), so the diver books the seat
+ * from the link themselves; the counter seats nobody and charges nothing.
+ * Lands back on this boat with a notice that says whether mail went, and when
+ * it did not, why, so the staffer knows to call.
+ */
+export async function offerAnotherDayAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+): Promise<void> {
+  const session = (await requireShopSurface(shopSlug)).session;
+  const back = counterQueuePath(shopSlug, tripId);
+  const parsed = parseForm(offerForm, formData);
+  if (!parsed.ok) redirect(noticeUrl(back, "invalid"));
+  // The link in the mail is built from the session's own shop, never from the
+  // slug the caller posted.
+  const outcome = await offerDepartureToDiver(await getDb(), {
+    shopId: session.user.shopId,
+    shopSlug: session.user.shopSlug,
+    tripId: parsed.data.offerTripId,
+    personId: parsed.data.personId,
+    createdByPersonId: session.user.personId,
+  });
+  redirect(
+    noticeUrl(
+      back,
+      outcome === "sent"
+        ? "offer-sent"
+        : outcome === "opted_out"
+          ? "offer-opted-out"
+          : outcome === "unavailable"
+            ? "offer-unavailable"
+            : "offer-not-sent",
+    ),
+  );
 }

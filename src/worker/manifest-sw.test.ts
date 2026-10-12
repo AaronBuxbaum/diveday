@@ -4,7 +4,7 @@
 // `ServiceWorkerGlobalScope` would test a global the shipped worker never has.
 // The scope below is built by hand instead, and the worker is driven through
 // the only surface it actually exposes: its own events.
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { MANIFEST_SYNC_TAG } from "@/lib/background-flush";
 import {
   listOfflineManifests,
@@ -18,6 +18,7 @@ import {
   type OfflineManifestPayload,
   type OfflineRollCallEvent,
 } from "@/lib/offline-manifests";
+import { READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
 
 vi.mock("@/lib/offline-manifest-store", () => ({
   listOfflineManifests: vi.fn(),
@@ -132,7 +133,7 @@ const scope = {
     listeners.set(type, listener);
   },
   clients: { matchAll: clientsMatchAll },
-  registration: { showNotification },
+  registration: { showNotification, scope: "https://dive.day/" },
   skipWaiting: () => {},
   location: new URL("https://dive.day/"),
 };
@@ -328,5 +329,112 @@ describe("refreshSavedManifests (the push event)", () => {
     await firePush();
 
     expect(saveOfflineManifest).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The diver's trip-prep page, kept on their phone (`ready-page-cache.ts`).
+ * The same script registered twice: under `/ready/` it keeps the page; under
+ * `/` (the staff worker, on a shared shop tablet) it never does.
+ */
+describe("the /ready/ registration's fetch", () => {
+  const TOKEN = "Z".repeat(43);
+  const PATH = `/ready/${TOKEN}`;
+  const kept = new Map<string, Response>();
+  const cacheStub = {
+    keys: async () => [...kept.keys()].map((path) => new Request(`https://dive.day${path}`)),
+    delete: async (key: string | Request) =>
+      kept.delete(new URL(typeof key === "string" ? key : key.url, "https://dive.day").pathname),
+    put: async (key: string | Request, response: Response) => {
+      kept.set(
+        new URL(typeof key === "string" ? key : key.url, "https://dive.day").pathname,
+        response,
+      );
+    },
+    match: async (key: string | Request) =>
+      kept
+        .get(new URL(typeof key === "string" ? key : key.url, "https://dive.day").pathname)
+        ?.clone(),
+  };
+
+  function navigate(url: string) {
+    const handler = listeners.get("fetch");
+    if (!handler) throw new Error("no fetch listener");
+    let responded: Promise<Response> | undefined;
+    const waits: Promise<unknown>[] = [];
+    handler({
+      request: { url, method: "GET", mode: "navigate" },
+      respondWith: (promise: Promise<Response>) => {
+        responded = promise;
+      },
+      waitUntil: (promise: Promise<unknown>) => waits.push(promise),
+    });
+    return { responded, settle: async () => Promise.allSettled([responded, ...waits]) };
+  }
+
+  /** The live page, naming the day its copy may be kept until (well past the frozen clock). */
+  const html = (body: string) =>
+    new Response(
+      `<meta name="${READY_KEEP_UNTIL_META}" content="${Number.MAX_SAFE_INTEGER}"/>${body}`,
+      {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      },
+    );
+
+  beforeEach(() => {
+    kept.clear();
+    vi.stubGlobal("caches", { open: async () => cacheStub, match: async () => undefined });
+    scope.registration.scope = "https://dive.day/ready/";
+  });
+
+  afterEach(() => {
+    scope.registration.scope = "https://dive.day/";
+  });
+
+  it("keeps the live page on the way through, and serves it when the network fails", async () => {
+    fetchMock.mockResolvedValueOnce(html("live"));
+    const online = navigate(`https://dive.day${PATH}`);
+    expect(await (await online.responded)?.text()).toContain("live");
+    await online.settle();
+    expect(kept.size).toBe(1);
+
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    const offline = navigate(`https://dive.day${PATH}`);
+    expect(await (await offline.responded)?.text()).toContain("live");
+  });
+
+  /** Security review of layer 8, D2: a self-cancel lands here, and the copy goes with the seat. */
+  it("forgets the copy when the page comes back cancelled", async () => {
+    fetchMock.mockResolvedValueOnce(html("live"));
+    const online = navigate(`https://dive.day${PATH}`);
+    await online.responded;
+    await online.settle();
+    expect(kept.size).toBe(1);
+
+    fetchMock.mockResolvedValueOnce(html("cancelled"));
+    const cancelled = navigate(`https://dive.day${PATH}?cancelled=1`);
+    await cancelled.responded;
+    await cancelled.settle();
+    expect(kept.size).toBe(0);
+  });
+
+  it("does not keep a load that carries a one-time notice", async () => {
+    fetchMock.mockResolvedValueOnce(html("with notice"));
+    const load = navigate(`https://dive.day${PATH}?saved=seat`);
+    await load.settle();
+    expect(kept.size).toBe(0);
+  });
+
+  it("leaves every other navigation to the network", () => {
+    expect(navigate("https://dive.day/shop/blue-mantis").responded).toBeUndefined();
+    expect(navigate(`https://dive.day${PATH}/forms`).responded).toBeUndefined();
+  });
+
+  it("keeps nothing under the staff registration", async () => {
+    scope.registration.scope = "https://dive.day/";
+    const load = navigate(`https://dive.day${PATH}`);
+    expect(load.responded).toBeUndefined();
+    expect(kept.size).toBe(0);
   });
 });

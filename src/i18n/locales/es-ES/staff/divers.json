@@ -194,6 +194,7 @@
     "removePersonSummary": "Eliminar a {name}",
     "removing": "Eliminando…",
     "removeDiver": "Eliminar buceador",
+    "consequence": "Quita a {name} de la lista, los selectores de reserva, los manifiestos y la preparación. Sus exenciones, salidas y pagos se conservan, y puedes restaurarlo.",
     "staffWarning": "También trabaja aquí. Al eliminarlo sale del equipo y ya no podrá iniciar sesión."
   },
   "removed": {
@@ -431,6 +432,7 @@
     "mergeAnonymized": "Estos registros no se pueden fusionar porque uno ya fue borrado.",
     "mergeAssessmentChanged": "Algo cambió en estos registros desde que abriste esta comparación. Revísala de nuevo antes de fusionar. No se movió nada.",
     "mergeBookingConflict": "Ambos registros tienen un lugar en la misma salida, lo que suele indicar dos personas. No se movió nada.",
+    "mergeBookingConflictOn": "Ambos registros tienen un lugar en {departure}, lo que suele indicar dos personas. No se movió nada.",
     "mergeDepartureUnderway": "Uno de estos registros está en una salida que está en el agua ahora. Fusiona cuando el barco haya vuelto.",
     "mergeDifferentPeopleUnacknowledged": "Verifica que estos registros son de la misma persona antes de fusionar. No se movió nada.",
     "mergeInvalid": "Elige uno de los posibles registros duplicados e inténtalo de nuevo.",
@@ -507,8 +509,18 @@
   "story": {
     "heading": "La historia",
     "empty": "Todavía no hay visitas.",
-    "sailed": "zarpó",
-    "waiverSigned": "exención firmada",
+    "sailed": "salió",
+    "dived": "buceó",
+    "stayedAshore": "se quedó en tierra",
+    "didNotDive": "no buceó",
+    "joinedLater": "se sumó más tarde",
+    "firstDive": "primera inmersión con nosotros",
+    "rented": "alquiló {items}",
+    "rated": "le dio {rating} de 5",
+    "canceled": "cancelada",
+    "tripCalledOff": "salida suspendida",
+    "noShow": "no se presentó",
+    "notCountedBack": "no se contó de vuelta a bordo",
     "showAll": "Ver las {count}",
     "newInvoice": "Nueva factura"
   },
@@ -531,7 +543,8 @@
     "viewRefusedRecord": "Ver registro firmado",
     "referralUnresolved": "Derivación médica del {date}; firmada de nuevo sin autorización de un médico registrada. Regístrala o pregunta.",
     "viewReferralRecord": "Ver la derivación",
-    "openClearanceDocument": "Abrir la evaluación médica"
+    "openClearanceDocument": "Abrir la evaluación médica",
+    "openSignedRecord": "Abrir la exención firmada"
   },
   "details": {
     "label": "Datos de contacto",

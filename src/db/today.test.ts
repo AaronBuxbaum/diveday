@@ -5,6 +5,7 @@ import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { assembleDaySpine, sortStationRows } from "@/lib/today";
+import { shopDayBounds } from "@/lib/zoned";
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { createBoat } from "./boats";
@@ -197,19 +198,20 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   /**
-   * **The stage pill reads the crew's tap before the clock** (ADR
-   * 20261001-logbook, decision 4): a boat the crew says is boarding is Aboard
-   * on Today even before its scheduled hour, and the clock speaks otherwise.
+   * **The stage pill is the crew's word, never the clock's** (UX review
+   * 2026-10-10, item 1): a departure nobody has tapped carries no stage, and
+   * one the crew says is boarding says Boarding — the word the manifest strip
+   * has selected, by the same `boatStageOf`.
    */
-  it("gives each departure its phase, the crew's tap first", async () => {
+  it("gives each departure the crew's stage and nothing the clock made up", async () => {
     const { db, shop } = ctx;
-    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    const departure = before.departures[0];
-    if (!departure) throw new Error("demo departure missing");
-    expect(departure.phase).not.toBeNull();
-
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("demo staff missing");
+    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const untapped = before.departures.find((row) => row.stage === null);
+    const departure = untapped ?? before.departures[0];
+    if (!departure) throw new Error("demo departure missing");
+
     const recorded = await recordTripStage(db, {
       shopId: shop.id,
       tripId: departure.tripId,
@@ -220,7 +222,9 @@ describe("today's work queue (in-memory PGlite)", () => {
     expect(recorded.ok).toBe(true);
 
     const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    expect(after.departures.find((row) => row.tripId === departure.tripId)?.phase).toBe("aboard");
+    expect(after.departures.find((row) => row.tripId === departure.tripId)?.stage?.stage).toBe(
+      "boarding",
+    );
   });
 
   /**
@@ -2607,6 +2611,90 @@ describe("unclosed roll call (DOM-H3)", () => {
         expect(work.outTripIds).not.toContain(trip.id);
       });
 
+      it("keeps a night boat tapped Underway out past midnight, as long as its untapped twin", async () => {
+        // A crew's tap must never finish a departure sooner than silence would
+        // (dive-domain review of UX batch 1): back at 23:30, still inside the
+        // hour's buffer at 00:05, so the diver aboard on a hold stays listed.
+        const { db, shop } = ctx;
+        const midnight = shopDayBounds(new Date(nowMs()), shop.timezone).to.getTime();
+        const endsAt = midnight - 30 * 60 * 1000;
+        const fixture = await returnedTrip(db, shop.id, {
+          endedHoursAgo: (nowMs() - endsAt) / HOUR,
+          divers: 1,
+          title: "Blocked Aboard, night boat — Molasses",
+        });
+        const { trip, bookingIds, staffId } = fixture;
+        await boardAtDeparture(
+          db,
+          { shopId: shop.id, tripId: trip.id, staffId, bookingIds },
+          new Date(trip.startsAt.getTime() + 5 * 60 * 1000),
+        );
+        const recorded = await recordTripStage(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          stage: "underway",
+          recordedByPersonId: staffId,
+          recordedAt: new Date(trip.startsAt.getTime() + HOUR),
+        });
+        expect(recorded.ok).toBe(true);
+
+        const afterMidnight = new Date(midnight + 5 * 60 * 1000);
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, afterMidnight);
+        expect(rowsFor(work, trip.id).map((row) => row.kind)).toEqual(["blocked_aboard"]);
+        expect(work.outTripIds).toContain(trip.id);
+
+        // Both readers let go together once the hour past its return is over.
+        const later = new Date(endsAt + HOUR);
+        const home = await getTodayWork(db, shop.id, shop.slug, shop.timezone, later);
+        expect(rowsFor(home, trip.id)).toEqual([]);
+        expect(home.outTripIds).not.toContain(trip.id);
+      });
+
+      it("keeps a two-day course out on day two after its crew said home on day one", async () => {
+        // `starts_at`/`ends_at` bound the whole run: a `home` after day one is
+        // the crew tying up for the night, and only one from the last day ends it.
+        const { db, shop } = ctx;
+        const dayTwo = shopDayBounds(new Date(nowMs()), shop.timezone).from.getTime();
+        const [course] = await db
+          .insert(tripsTable)
+          .values({
+            shopId: shop.id,
+            title: "Open Water weekend — Molasses",
+            startsAt: new Date(dayTwo - 16 * HOUR),
+            endsAt: new Date(dayTwo + 16 * HOUR),
+            capacity: 8,
+            plannedDives: 2,
+            priceCents: 45000,
+          })
+          .returning();
+        if (!course) throw new Error("fixture trip insert returned no row");
+        const [staff] = await listStaff(db, shop.id);
+        if (!staff) throw new Error("seed staff missing");
+        const tap = (recordedAt: Date) =>
+          recordTripStage(db, {
+            shopId: shop.id,
+            tripId: course.id,
+            stage: "home",
+            recordedByPersonId: staff.person.id,
+            recordedAt,
+          });
+        expect((await tap(new Date(dayTwo - 7 * HOUR))).ok).toBe(true);
+
+        const dayTwoMorning = new Date(dayTwo + 10 * HOUR);
+        const out = await getTodayWork(db, shop.id, shop.slug, shop.timezone, dayTwoMorning);
+        expect(out.outTripIds).toContain(course.id);
+
+        expect((await tap(new Date(dayTwo + 15 * HOUR))).ok).toBe(true);
+        const home = await getTodayWork(
+          db,
+          shop.id,
+          shop.slug,
+          shop.timezone,
+          new Date(dayTwo + 15.5 * HOUR),
+        );
+        expect(home.outTripIds).not.toContain(course.id);
+      });
+
       it("drops the row once the crew count the diver back aboard after the last dive", async () => {
         // The boat is still out by the clock, but the diver this row is about
         // is out of the water: the evening's "All boats are home" line reads
@@ -3611,6 +3699,7 @@ describe("unanswered messages", () => {
   it("grows by one message and renders nothing once every one is answered", async () => {
     const { db, shop } = ctx;
     const recorded = await recordInboundMessage(db, {
+      senderAuthenticated: true,
       shopId: shop.id,
       channel: "email",
       fromAddress: "someone.new@example.net",

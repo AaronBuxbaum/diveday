@@ -39,8 +39,8 @@ trip-row lock, never as a pre-check.
   seat's price moves.
 - **Gates by type.** A snorkeler or rider is never asked for a certification, specialty or nitrox
   card (in `decideTripAdmission` and `calculateReadiness`). They get no depth advisory and consume
-  no prepaid dive. **The waiver and medical gates stay for everyone**, the conservative default
-  until a human answers H-01/H-03 for non-divers. The payment gate counts a non-diver seat priced at
+  no prepaid dive. **The waiver gate stays for everyone** (H-01/H-03). The medical gate holds a
+  diver and a snorkeler and never a rider (H-109, amended 2026-10-12). The payment gate counts a non-diver seat priced at
   zero as settled. An unpriced seat stays blocked until staff record or waive payment, as a diver's
   would.
 - **Divers only where it is diving.** A buddy team takes divers only (`not_a_diver`). Nitrox is a
@@ -79,8 +79,9 @@ trip-row lock, never as a pre-check.
   `participant_type_changed` line to the trip's trail with the old type, the new one and the card
   checks it cleared or overrode, and a desk event named for the new type (`now_diving`,
   `now_snorkeling`, `now_riding`) for the manifest's catch-up strip ("Ana Ruiz is snorkeling
-  now"). Moving a seat out of diving clears no medical blocker: a physician
-  referral still blocks a snorkeler.
+  now"). Moving a seat out of diving clears no medical blocker for a snorkeler: a
+  physician referral still blocks one. A rider is never held on a medical (H-109), and the
+  record still reads as held on the roster.
 - **Where it shows.** A neutral word beside the name on the roster, the live roll call and the
   offline copy. The manifest's head count reads "Passengers" and states the split once anyone is
   not diving ("Passengers 12 (8 divers, 3 snorkelers, 1 rider)", leaving out a type nobody is), as do the incident export and the
@@ -106,8 +107,11 @@ trip-row lock, never as a pre-check.
   door that counts rows itself would miss the diver limit.
 - Readiness still blocks an unsigned rider, which is deliberate. If a human rules that riders sign
   nothing, the change is one branch in `calculateReadiness`.
-- **Riders are sent the dive medical, a known overreach** pending a human decision on which form a
-  snorkeler and a rider get (issue #2212). It is the conservative default, not the answer. Vests
+- **A rider is never held on a medical** (H-109, issue #2212): readiness raises no medical code
+  for a rider's seat and reads their newest current signature, held or not
+  (`effectiveReleaseForRiderSeat`). The waiver link still asks a rider the dive medical until a
+  release can say it carries none, because a release is signed once and carries to every seat in
+  the water. A snorkeler keeps the dive medical. Vests
   for snorkelers (#2213) and snorkel-suitable sites (#2214) are filed and not built.
 - Per-type prices are on the trip. When the boat entity of ADR 20260804-boat-resource-model lands,
   `diver_capacity` belongs to the boat or the boat-day, and moving it is a column move with no data

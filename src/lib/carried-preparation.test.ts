@@ -12,6 +12,7 @@ import type { ShopWaiverStatus } from "./waivers";
  */
 const SIGNED: ShopWaiverStatus = {
   state: "current",
+  recordId: "w-1",
   signedAt: new Date("2026-08-01T10:00:00Z"),
   expiresAt: new Date("2027-08-01T10:00:00Z"),
   medical: null,

@@ -1307,6 +1307,67 @@ describe("what the retry queue is allowed to hold", () => {
    * and the failure this guards against is silence, which no assertion on a
    * row would ever notice.
    */
+  // Issue #2334. A thrown error's message can quote the recipient or the bound
+  // parameters, and `detail` becomes the queue row's `last_error`. The row keeps
+  // the error's class, never its message.
+  const throwsQuotingTheRecipient: NotificationProvider = {
+    async send() {
+      throw new TypeError(`connect failed for front-desk@example.invalid (Ola Roe) ${TOKEN}`);
+    },
+  };
+
+  it("keeps a first send's thrown message out of the queued row", async () => {
+    const { db, shop } = ctx;
+    const delivery = await sendNotification(
+      db,
+      linkBearing(shop.id, "staff_invite"),
+      throwsQuotingTheRecipient,
+    );
+    expect(delivery).toMatchObject({
+      status: "failed",
+      retryable: true,
+      errorCode: "provider_error",
+      detail: "TypeError",
+    });
+
+    const [row] = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    expect(row?.lastError).toBe("TypeError");
+    expect(row?.lastError).not.toContain("Ola Roe");
+  });
+
+  it("keeps a batch send's thrown message out of every result", async () => {
+    const { db, shop } = ctx;
+    const [delivery] = await sendNotificationBatch(
+      db,
+      [linkBearing(shop.id, "staff_invite")],
+      throwsQuotingTheRecipient,
+    );
+    expect(delivery).toMatchObject({ status: "failed", detail: "TypeError" });
+    expect(JSON.stringify(delivery)).not.toContain("front-desk@example.invalid");
+  });
+
+  it("keeps the drain's thrown message out of the row it updates", async () => {
+    const { db, shop } = ctx;
+    await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0) })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    await drainNotificationRetries(db, { provider: throwsQuotingTheRecipient });
+
+    const [row] = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    expect(row?.errorCode).toBe("worker_error");
+    expect(row?.lastError).toBe("TypeError");
+    expect(row?.lastError).not.toContain("Ola Roe");
+  });
+
   describe("the line an operator gets instead of a screen", () => {
     let errorLines: Record<string, unknown>[] = [];
 

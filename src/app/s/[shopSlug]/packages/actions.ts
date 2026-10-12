@@ -8,6 +8,7 @@ import { createDiverPackageOrder } from "@/db/orders";
 import { getShopBySlug } from "@/db/shops";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { parseForm } from "@/lib/form-parse";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 
@@ -22,6 +23,13 @@ export type PackagePurchaseState = {
   email?: string;
   packageId?: string;
 };
+
+/** What the diver typed, handed back as-is (bounded) so a refusal does not lose it. */
+const typedBack = z
+  .unknown()
+  .optional()
+  .transform((value) => (typeof value === "string" ? value.slice(0, 200) : undefined));
+const echoSchema = z.object({ name: typedBack, email: typedBack, packageId: typedBack });
 
 const purchaseSchema = z.object({
   packageId: z.uuid(),
@@ -47,12 +55,9 @@ export async function buyPackageAction(
   _prev: PackagePurchaseState,
   formData: FormData,
 ): Promise<PackagePurchaseState> {
-  const typed = (key: string) => {
-    const value = formData.get(key);
-    return typeof value === "string" ? value.slice(0, 200) : undefined;
-  };
+  const echo = parseForm(echoSchema, formData);
   const { error } = await purchase(shopSlug, formData);
-  return { error, name: typed("name"), email: typed("email"), packageId: typed("packageId") };
+  return { error, ...(echo.ok ? echo.data : {}) };
 }
 
 async function purchase(shopSlug: string, formData: FormData): Promise<{ error: string }> {
@@ -65,12 +70,8 @@ async function purchase(shopSlug: string, formData: FormData): Promise<{ error: 
     return { error: t("common.rateLimited") };
   }
 
-  const parsed = purchaseSchema.safeParse({
-    packageId: formData.get("packageId"),
-    name: formData.get("name"),
-    email: formData.get("email"),
-  });
-  if (!parsed.success) return { error: t("packages.error.invalid") };
+  const parsed = parseForm(purchaseSchema, formData);
+  if (!parsed.ok) return { error: t("packages.error.invalid") };
   const email = parsed.data.email.trim().toLowerCase();
 
   const db = await getDb();

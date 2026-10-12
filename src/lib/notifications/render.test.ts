@@ -38,6 +38,32 @@ describe("messageFor", () => {
     expect(email.html.endsWith("</html>")).toBe(true);
   });
 
+  // ux review 2026-10-11, item 3: the shop's mail wears the shop.
+  it("dresses a diver's mail in the shop's logo and colour, DiveDay at the foot, in their language", () => {
+    const email = messageFor({
+      kind: "booking_confirmation",
+      ...trip,
+      locale: "es-ES",
+      sender: { logoUrl: "https://media.dive.day/logos/blue-mantis.png", brandColor: "#158462" },
+    });
+    expect(email.html).toContain('<img src="https://media.dive.day/logos/blue-mantis.png" alt=""');
+    expect(email.html).toContain("Reservas con DiveDay");
+    expect(email.html).not.toContain("background-color: #0b6e8a; border-radius: 12px");
+  });
+
+  it("keeps DiveDay's own mark and no credit on DiveDay's own mail", () => {
+    const email = messageFor({
+      kind: "password_changed",
+      ...ids,
+      to: "owner@bluemantis.dive",
+      locale: "en-US",
+      ownerName: "Marisol Vega",
+      changedAt: new Date("2026-08-01T13:00:00.000Z"),
+    });
+    expect(email.html).not.toContain("Bookings by DiveDay");
+    expect(email.html).toContain("#ff6b6b");
+  });
+
   it("brands as DiveDay when the kind carries no shop to brand as", () => {
     const email = messageFor({
       kind: "password_changed",
@@ -121,7 +147,7 @@ describe("messageFor", () => {
       const withReplyOnly = messageFor({ ...invite, sender: { replyTo: "desk@bluemantis.dive" } });
       expect(withNone.text).toBe(withReplyOnly.text);
       expect(withNone.html).toBe(withReplyOnly.html);
-      expect(withNone.html).not.toContain("font-size: 12px");
+      expect(withNone.html).not.toContain("Blue Mantis · ");
     });
 
     /**

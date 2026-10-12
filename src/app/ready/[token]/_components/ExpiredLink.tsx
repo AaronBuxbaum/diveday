@@ -89,3 +89,18 @@ export function ExpiredLink({
     </ExpiredLinkCard>
   );
 }
+
+/**
+ * The card for a readiness link that resolves nothing at all: no shop can be
+ * named without weakening the guarantee that a bearer token reveals only its
+ * own record, so it offers DiveDay's own door (UX review 2026-10-10, item 11).
+ */
+export function UnavailableReadyLink({ t }: { t: DiverTranslator }) {
+  return (
+    <ExpiredLinkCard
+      title={t("ready.unavailableHeading")}
+      text={t("ready.unavailableBody")}
+      t={t}
+    />
+  );
+}

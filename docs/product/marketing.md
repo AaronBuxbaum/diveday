@@ -196,7 +196,9 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   same small team without naming an individual or promising a response time — phrase it as "write in
   and a real person reads it," never "the founder personally answers" or any response-time
   guarantee. It appears on `/about` (the "How we work with shops" band; since 2026-10-07 the page names no
-  individual at all, H-99), the marketing footer, `/pricing`, the homepage's closing contact band, the sign-up
+  individual at all, H-99), the marketing footer, `/pricing`, the homepage's closing contact band
+  (which leaves the "real person" clause to the set-up note a few lines above it, so the close says
+  it once), the sign-up
   reassurance card, and the signed-in shop settings page. **Trial upgrades get their own address,**
   `onboarding@dive.day` — used only for "how do I move a trial shop to paid," on the pricing page's
   trial FAQ, the sign-up form's trial note, and the shop Settings trial-status card (3-week trial,

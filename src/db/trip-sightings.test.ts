@@ -50,6 +50,7 @@ async function departure(
   shopId: string,
   title: string,
   daysAgo: number,
+  isPrivate = false,
 ) {
   const startsAt = new Date(NOW.getTime() - daysAgo * DAY_MS);
   const trip = await createTrip(db, {
@@ -59,6 +60,7 @@ async function departure(
     endsAt: new Date(startsAt.getTime() + 4 * HOUR_MS),
     capacity: 6,
     plannedDives: 1,
+    isPrivate,
   });
   if (!trip) throw new Error(`createTrip refused ${title}`);
   return trip;
@@ -396,6 +398,27 @@ describe("siteSightings", () => {
     expect(answer.get(otherSite.id)?.species.map((row) => row.speciesSlug)).toEqual([
       "nurse-shark",
     ]);
+  });
+
+  it("leaves a private charter's log off the public answer", async () => {
+    const { db, shop, owner, site } = await reefFixture();
+    const charter = await departure(db, shop.id, "Charter", 3, true);
+    await recordTripSighting(db, {
+      shopId: shop.id,
+      tripId: charter.id,
+      diveSiteId: site.id,
+      speciesSlug: "whale-shark",
+      recordedByPersonId: owner.id,
+      now: new Date(charter.startsAt.getTime() + HOUR_MS),
+    });
+    await upsertExecutedDive(db, {
+      shopId: shop.id,
+      tripId: charter.id,
+      diveNumber: 1,
+      actualSiteId: site.id,
+      recordedByPersonId: owner.id,
+    });
+    expect(await siteSightingSummary(db, shop.id, site.id, NOW)).toBeNull();
   });
 
   it("says nothing at all for a site nobody logged", async () => {

@@ -1,16 +1,19 @@
+import { EmptyState } from "@/components/EmptyState";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { MonthMoneyDetail as Detail } from "@/db/report-lines";
+import { payoutSentence } from "@/i18n/payout-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { RevenueLine } from "@/lib/report-lines";
 
 /** Each revenue line's name in the staff bundle. */
-const BY_LINE_KEYS = {
+export const BY_LINE_KEYS = {
   courses: "reports.byLine.courses",
   funDives: "reports.byLine.funDives",
   rentals: "reports.byLine.rentals",
   gearBench: "reports.byLine.gearBench",
   packages: "reports.byLine.packages",
   retail: "reports.byLine.retail",
+  imported: "reports.byLine.imported",
 } as const satisfies Record<RevenueLine, string>;
 
 /**
@@ -112,6 +115,129 @@ export function MoneyByLine({
           </div>
         ))}
       </dl>
+    </section>
+  );
+}
+
+/**
+ * A month with no departures. It is this page's rest state, not news about
+ * it: `ShopNotice` is the vocabulary for something that *happened* (a save, a
+ * refusal, a permission bounce), and wearing it here made an ordinary quiet
+ * January read as a warning. No figure row either — five zeroes over an empty
+ * ledger is a month described wrongly, not described quietly
+ * (`monthHasActivity`). It can still have taken money, a package, a counter
+ * sale, a gear-bench job, so the money by line still shows (issue #2305).
+ */
+export function QuietMonth({
+  title,
+  detail,
+  t,
+  money,
+}: {
+  title: string;
+  detail: Detail;
+  t: StaffTranslator;
+  money: (cents: number) => string;
+}) {
+  return (
+    <>
+      <EmptyState title={title} />
+      <MoneyByLine detail={detail} t={t} money={money} />
+    </>
+  );
+}
+
+/**
+ * **The quiet lines under the month's figures.**
+ *
+ * The month's two quiet doors on one line: what Stripe Tax took out of the
+ * revenue figure above, and the CSV an owner sends their accountant (issue
+ * #700 — the full-shop export is the right tool for a bookkeeper and the wrong
+ * one for "just this month"). Tax used to be the sixth tile; it is a footnote
+ * to net revenue, not a headline beside it.
+ *
+ * Then **what left the month's money** (UX review 2026-10-11, item 17):
+ * refunds, what discount codes took off, and Stripe's fees. Quiet lines on the
+ * tax line's pattern, each only when there is something to say; a month whose
+ * payouts never said what their fees were prints no fee line rather than $0.
+ */
+export function MonthFootnotes({
+  taxCents,
+  csvHref,
+  detail,
+  t,
+  money,
+}: {
+  taxCents: number;
+  csvHref: string;
+  detail: Detail;
+  t: StaffTranslator;
+  money: (cents: number) => string;
+}) {
+  const { refundedCents, discountedCents, stripeFeesCents } = detail.out;
+  return (
+    <>
+      <p className="mt-3 text-end text-sm text-muted tabular-nums">
+        {t("reports.taxLine", { amount: money(taxCents) })}
+        {" · "}
+        <a href={csvHref} className="font-medium text-primary hover:underline">
+          {t("reports.downloadCsv")}
+        </a>
+      </p>
+      {refundedCents > 0 ? (
+        <p className="mt-1 text-end text-sm text-muted tabular-nums">
+          {t("reports.moneyOut.refunded", { amount: money(refundedCents) })}
+        </p>
+      ) : null}
+      {discountedCents > 0 ? (
+        <p className="mt-1 text-end text-sm text-muted tabular-nums">
+          {t("reports.moneyOut.discounted", { amount: money(discountedCents) })}
+        </p>
+      ) : null}
+      {stripeFeesCents !== null && stripeFeesCents !== 0 ? (
+        <p className="mt-1 text-end text-sm text-muted tabular-nums">
+          {t("reports.moneyOut.fees", { amount: money(stripeFeesCents) })}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * **What Stripe paid into the bank this month** (ADR
+ * 20261012-payouts-reach-diveday): one sentence per payout, the line an owner
+ * holds against a bank statement. Read from stored rows only; a month with no
+ * payout renders nothing.
+ */
+export function MonthPayouts({
+  detail,
+  t,
+  locale,
+  timeZone,
+}: {
+  detail: Detail;
+  t: StaffTranslator;
+  locale: string;
+  timeZone: string;
+}) {
+  if (detail.payouts.length === 0) return null;
+  return (
+    <section aria-labelledby="reports-payouts" className="mt-10">
+      <h2 id="reports-payouts" className={SECTION_TITLE_CLASS}>
+        {t("reports.payouts.heading")}
+      </h2>
+      <ul className="mt-3 max-w-xl text-sm">
+        {detail.payouts.map((payout) => (
+          <li
+            key={payout.id}
+            className={`border-t border-border py-2 tabular-nums last:border-b ${
+              payout.status === "failed" ? "text-warning-strong" : ""
+            }`}
+          >
+            {payoutSentence(t, payout, { locale, timeZone })}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

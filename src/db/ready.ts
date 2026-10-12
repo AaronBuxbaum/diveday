@@ -35,6 +35,96 @@ import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers
 import { welcomeCueInputsByBooking } from "./welcome-cues";
 
 /**
+ * **What `/ready` says in the first paint after a booking**, and nothing else
+ * (UX review 2026-10-10, item 7).
+ *
+ * The page after a booking POST used to hold the diver on a whole-page
+ * skeleton until {@link getReadyPageData} had finished, and that loader reads
+ * the departure's entire readiness roster before it returns. The masthead and
+ * the "You've got a seat" card need none of it: whose shop, which departure,
+ * when, when to be at the dock, and who to greet. That is one row, so the page
+ * paints it from this read and streams the thread in under it.
+ *
+ * Keyed by a booking id the caller has already verified through the readiness
+ * capability; it reads only that booking's own row, its departure and its
+ * shop, and authorizes nothing. The two `Cancelled` flags are there so the page
+ * can decline the fast path for a seat or departure that is already gone and
+ * fall through to the full loader, which owns those terminal cards.
+ *
+ * The greeting follows {@link getReadyPageData}'s rule word for word: a booking
+ * whose identity is held greets the name it was booked under, never the
+ * matched record's (`src/db/ready.test.ts` holds the two to each other).
+ *
+ * **It reads no readiness, deliberately**, which is why the card it feeds
+ * claims a seat and never boarding ("You've got a seat", not "You're on the
+ * boat"; dive-domain review 2026-10-12). A diver held for medical review, short
+ * a certification level, with a held identity or under a course's minimum age
+ * still holds the seat, so the card is true of them; whether they board is the
+ * thread's to say, directly under it.
+ */
+export type BookedCard = {
+  shop: {
+    name: string;
+    slug: string;
+    timezone: string;
+    defaultLocale: (typeof shops.$inferSelect)["defaultLocale"];
+    dockCallMinutes: number;
+  };
+  trip: { id: string; title: string; startsAt: Date; endsAt: Date };
+  greetingName: string;
+  pickup: { time: string | null; location: string | null };
+  bookingCancelled: boolean;
+  departureCancelled: boolean;
+};
+
+export async function getBookedCard(
+  db: AppDb,
+  { shopId, bookingId }: { shopId: string; bookingId: string },
+): Promise<BookedCard | null> {
+  const [row] = await db
+    .select({
+      status: bookings.status,
+      pickupTime: bookings.pickupTime,
+      hotelPickupLocation: bookings.hotelPickupLocation,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      identityBookedAs: bookings.identityBookedAs,
+      personName: people.fullName,
+      tripId: trips.id,
+      tripTitle: trips.title,
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+      tripStatus: trips.status,
+      shopName: shops.name,
+      slug: shops.slug,
+      timezone: shops.timezone,
+      defaultLocale: shops.defaultLocale,
+      dockCallMinutes: shops.dockCallMinutes,
+    })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .innerJoin(shops, eq(shops.id, bookings.shopId))
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .limit(1);
+  if (!row) return null;
+  const identityHeld = row.identityUnconfirmedAt !== null;
+  return {
+    shop: {
+      name: row.shopName,
+      slug: row.slug,
+      timezone: row.timezone,
+      defaultLocale: row.defaultLocale,
+      dockCallMinutes: row.dockCallMinutes,
+    },
+    trip: { id: row.tripId, title: row.tripTitle, startsAt: row.startsAt, endsAt: row.endsAt },
+    greetingName: identityHeld ? row.identityBookedAs?.trim() || "" : row.personName,
+    pickup: { time: row.pickupTime, location: row.hotelPickupLocation },
+    bookingCancelled: row.status === "cancelled",
+    departureCancelled: row.tripStatus !== "scheduled",
+  };
+}
+
+/**
  * Everything the transactional `/ready` page needs, gathered from the same
  * source-of-truth queries the staff and booking surfaces use, so the diver's
  * self-serve page can never show a state those surfaces disagree with. The
@@ -215,6 +305,14 @@ export type ReadyPageData = {
    */
   canCancelBooking: boolean;
   /**
+   * **"Add a seat"** (UX review 2026-10-11, item 13): this booking may lead a
+   * party seat added from the page. The same moment a seat may be released
+   * (`canCancelBooking`), never on a held seat, and never on a party member's
+   * own seat, so the page draws no control `addPartySeat` would only refuse
+   * for who is asking. Capacity and admission are its own to answer.
+   */
+  canAddSeat: boolean;
+  /**
    * **"Running late"** (J3). `open` is `canSayRunningLate` for this seat now —
    * booked, not checked in, from the night-before brief until a scheduled
    * departure has sailed — and `saidAt` is when the diver already said
@@ -283,6 +381,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       carriedFactsConfirmedAt: bookings.carriedFactsConfirmedAt,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       identityBookedAs: bookings.identityBookedAs,
+      partyLeadBookingId: bookings.partyLeadBookingId,
       slug: shops.slug,
       defaultLocale: shops.defaultLocale,
       currency: shops.currency,
@@ -441,6 +540,12 @@ export async function getReadyPageData(
 
   const canCancelBooking = row.status === "booked" && !hasSailed(trip.startsAt, now);
   const identityHeld = row.identityUnconfirmedAt !== null;
+  // **A lead the page could charge pays before adding anyone** (security
+  // review of layer 8, D3). The link is shared by design, so without this a
+  // holder could add unpaid seats until the boat read full. Settled, or a
+  // page that takes no payment here (pay at the dock), opens the door.
+  const canAddSeat =
+    canCancelBooking && !identityHeld && row.partyLeadBookingId === null && (settled || !canPay);
 
   return {
     detail,
@@ -497,6 +602,7 @@ export async function getReadyPageData(
     canPay,
     cancelPreview,
     canCancelBooking,
+    canAddSeat,
     runningLate: {
       open: canSayRunningLate({
         bookingStatus: row.status,

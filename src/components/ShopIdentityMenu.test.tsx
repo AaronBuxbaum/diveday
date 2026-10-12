@@ -7,6 +7,10 @@ import { MENU_PANEL, MENU_TICK, MENU_TICK_GUTTER } from "@/components/ui/menu";
 import { SEGMENT_CORNER } from "@/components/ui/segmented";
 import { ShopIdentityMenu, shopInitials } from "./ShopIdentityMenu";
 
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/shop/blue-mantis/trips/abc",
+}));
+
 afterEach(() => {
   cleanup();
 });
@@ -17,6 +21,9 @@ const COPY = {
   signOutConfirm: "Sign out now?",
   boatMode: "Boat mode",
   signOutPending: "Signing out…",
+  tellUs: "Tell us",
+  tellUsSubject: "DiveDay note from blue-mantis",
+  tellUsBody: "Page: {path}\n\n",
 };
 
 describe("shopInitials", () => {
@@ -249,5 +256,43 @@ describe("the identity trigger", () => {
     const button = trigger();
     expect(button).toHaveClass("min-w-11", "min-h-11");
     expect(button).not.toHaveClass("min-w-0");
+  });
+});
+
+describe("ShopIdentityMenu — Tell us", () => {
+  it("opens a note to support carrying the shop and the page's path, and nothing else", async () => {
+    render(
+      <ShopIdentityMenu
+        shopName="Blue Mantis Divers"
+        signOutAction={vi.fn()}
+        locale="en-US"
+        languages={[{ locale: "en-US", label: "English (US)" }]}
+        setLocaleAction={vi.fn()}
+        tellUs={{ to: "support@dive.day" }}
+        copy={COPY}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Blue Mantis Divers/ }));
+    const link = screen.getByRole("link", { name: "Tell us" });
+    const href = link.getAttribute("href") ?? "";
+    expect(href.startsWith("mailto:support@dive.day?")).toBe(true);
+    const params = new URLSearchParams(href.slice(href.indexOf("?") + 1));
+    expect(params.get("subject")).toBe("DiveDay note from blue-mantis");
+    expect(params.get("body")).toBe("Page: /shop/blue-mantis/trips/abc\n\n");
+  });
+
+  it("offers no row when no support address is given", async () => {
+    render(
+      <ShopIdentityMenu
+        shopName="Blue Mantis Divers"
+        signOutAction={vi.fn()}
+        locale="en-US"
+        languages={[{ locale: "en-US", label: "English (US)" }]}
+        setLocaleAction={vi.fn()}
+        copy={COPY}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Blue Mantis Divers/ }));
+    expect(screen.queryByRole("link", { name: "Tell us" })).toBeNull();
   });
 });

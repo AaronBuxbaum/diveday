@@ -405,11 +405,22 @@ export const test = base.extend<
     };
     await signInAs(page, { email: minted.ownerEmail, password: minted.password });
     await use({ slug: minted.slug, ownerEmail: minted.ownerEmail });
-    // Best-effort: a teardown failure must not turn a passing test red, and
-    // the next reset would clear the shop regardless.
-    await request
-      .delete(`/api/test/seed-private-shop?slug=${encodeURIComponent(minted.slug)}`)
-      .catch(() => {});
+    // Best-effort: a teardown failure must not turn a passing test red. But it
+    // says so here: a cascade that cannot finish leaves the minted shop for
+    // `purgeMintedDemoShops`, which then 500s every later reset on the same FK
+    // and turns a whole shard red far from the spec that left the rows.
+    const teardownUrl = `/api/test/seed-private-shop?slug=${encodeURIComponent(minted.slug)}`;
+    try {
+      const teardown = await request.delete(teardownUrl);
+      if (!teardown.ok()) {
+        const body = await teardown.text().catch(() => "");
+        console.warn(
+          `private shop teardown failed: DELETE ${teardownUrl} returned ${teardown.status()}. ${body}`,
+        );
+      }
+    } catch (error) {
+      console.warn(`private shop teardown failed: DELETE ${teardownUrl} threw. ${String(error)}`);
+    }
   },
 
   // Pin the browser clock to the same instant the server is frozen at
@@ -523,6 +534,11 @@ export const test = base.extend<
         body: "<!doctype html><title></title>",
       }),
     );
+    // The route maps' reachability read (`MAP_REACHABILITY_PROBE`,
+    // src/lib/maps.ts) is refused, so every capture draws the route alone over
+    // the panel, the way it reads where the map cannot load, and no test
+    // leaves this worker for it.
+    await context.route("https://www.google.com/favicon.ico", (route) => route.abort());
     // The storefront's brand display face is a Google Fonts stylesheet (see
     // src/lib/brand.ts). Answering it with an empty sheet keeps every capture
     // on the same fallback face wherever the fleet runs — a font that arrives

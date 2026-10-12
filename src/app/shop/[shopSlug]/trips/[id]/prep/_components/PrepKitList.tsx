@@ -4,12 +4,19 @@ import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
-import { FIGURE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { rentalItemLabel } from "@/i18n/rental-labels";
 import { type PrepGrouping, prepLineKey } from "@/lib/dive-prep";
 import { scopedId } from "@/lib/element-id";
 import { shopPath } from "@/lib/staff-notices";
-import { diveRecencyLine, diverNames, kitCell, sizeCell } from "./prep-lines";
+import {
+  diveRecencyLine,
+  diverNames,
+  KIT_PHONE_ROW_CLASS,
+  kitCell,
+  pieceSize,
+  sizeCell,
+} from "./prep-lines";
 import type { PrepView } from "./prep-view";
 
 /** The rental kit to pull, by item or by diver. */
@@ -104,44 +111,37 @@ export function PrepKitList({
         />
       ) : grouping === "item" ? (
         <>
-          {/* Phone: stacked cards. Four columns at 390px put a
-                    comma-joined diver list against three other columns and the
-                    names win — the item, size, and count a staffer is actually
-                    pulling gear by get squeezed to a character or two. Cards
-                    under `sm`, the table above — the split the diver roster
-                    also carried until it became one ledger at every width (ADR
-                    20260827-people-not-lists); this list is the departure
-                    surfaces' own call and stays. `print:` pins each half explicitly so the
-                    printed packing list is the table at any paper width, not a
+          {/* **Phone: one dense row per line, in one card** (UX review
+                    2026-10-10, item 13). Each line was a card of its own with
+                    a Size row and a For row, 23 of them and about 3,000px on a
+                    seeded boat; the same three facts now share one row: the
+                    piece and its size, who it is for, and how many. Four
+                    table columns still do not fit 390px, so the names take
+                    the row's middle and wrap there, never the piece or the
+                    count. `print:` pins each half explicitly so the printed
+                    packing list is the table at any paper width, not a
                     breakpoint coincidence. */}
-          <ul className="mt-3 flex flex-col gap-3 sm:hidden print:hidden">
+          <ul
+            className={sectionCardClass({
+              padding: "none",
+              className: "mt-3 divide-y divide-border overflow-hidden sm:hidden print:hidden",
+            })}
+          >
             {checklist.lines.map((line) => (
-              <li key={`${line.kind}:${prepLineKey(line)}`} className={sectionCardClass()}>
-                {/* `items-baseline`, in this card and the by-diver one:
-                            top-aligned, the 24/32 count's baseline sat 6px
-                            under the 16/24 title's (pixel-craft class 1). */}
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="font-semibold">{rentalItemLabel(t, line.kind)}</p>
-                  <p className={`shrink-0 ${FIGURE_CLASS}`}>
-                    <span className="sr-only">{t("tripPrep.qtyColumn")} </span>
-                    {line.count}
-                  </p>
-                </div>
-                {/* One grid for both pairs, each a subgrid row, so
-                            both values start at the wider label plus 8px and a
-                            long "For" list wraps in its own column: as two
-                            flex rows the values stood 6px apart and the names
-                            fell back under the label. */}
-                <dl className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1 text-sm">
-                  <div className="col-span-2 grid grid-cols-subgrid">
-                    <dt className="text-muted">{t("tripPrep.sizeColumn")}</dt>
-                    <dd>{sizeCell(t, line)}</dd>
-                  </div>
-                  <div className="col-span-2 grid grid-cols-subgrid">
-                    <dt className="text-muted">{t("tripPrep.forColumn")}</dt>
-                    <dd className="text-muted">{diverNames(line.divers)}</dd>
-                  </div>
-                </dl>
+              <li
+                key={`${line.kind}:${prepLineKey(line)}`}
+                data-kit-line=""
+                className={KIT_PHONE_ROW_CLASS}
+              >
+                <p>
+                  <span className="font-semibold">{rentalItemLabel(t, line.kind)}</span>
+                  {pieceSize(t, line) ? <> {pieceSize(t, line)}</> : null}
+                </p>
+                <p className="text-muted">{diverNames(line.divers)}</p>
+                <p className="font-semibold tabular-nums">
+                  <span className="sr-only">{t("tripPrep.qtyColumn")} </span>
+                  {line.count}
+                </p>
               </li>
             ))}
           </ul>
@@ -190,30 +190,39 @@ export function PrepKitList({
                  table-above split and the same `print:` pins as the by-item
                  view, so whichever grouping is on screen is what prints. */
         <>
-          <ul className="mt-3 flex flex-col gap-3 sm:hidden print:hidden">
+          {/* One card of rows on a phone, as the by-item view above: a
+                    diver's whole kit on one row under their name. */}
+          <ul
+            className={sectionCardClass({
+              padding: "none",
+              className: "mt-3 divide-y divide-border overflow-hidden sm:hidden print:hidden",
+            })}
+          >
             {checklist.diverLines.map((line) => (
-              <li key={line.bookingId} className={sectionCardClass()}>
-                <div className="flex items-baseline justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-semibold">
-                      {/* The card's 16px name: `nameLinkClass`'s floor,
-                                  padding and handing back (44 − 24) / 2 of its
-                                  own line, so a name that wraps keeps both. */}
-                      <Link
-                        href={`/shop/${shopSlug}/divers/${line.personId}`}
-                        className={`${tapTargetLinkClass} py-2.5 -my-2.5 hover:text-primary hover:underline`}
-                      >
-                        {line.fullName}
-                      </Link>
-                    </p>
-                    {diveRecencyLine(t, line.lastDivedBand)}
-                  </div>
-                  <p className={`shrink-0 ${FIGURE_CLASS}`}>
-                    <span className="sr-only">{t("tripPrep.qtyColumn")} </span>
-                    {line.items.length}
+              <li
+                key={line.bookingId}
+                data-kit-line=""
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 px-4 py-2.5 text-sm"
+              >
+                <div className="min-w-0">
+                  <p className="font-semibold">
+                    {/* The row's name: `nameLinkClass`'s floor, padding and
+                        handing back (44 − 20) / 2 of its own line, so a name
+                        that wraps keeps both. */}
+                    <Link
+                      href={`/shop/${shopSlug}/divers/${line.personId}`}
+                      className={`${tapTargetLinkClass} py-2.5 -my-2.5 hover:text-primary hover:underline`}
+                    >
+                      {line.fullName}
+                    </Link>
                   </p>
+                  {diveRecencyLine(t, line.lastDivedBand)}
+                  <div className="mt-0.5">{kitCell(t, line)}</div>
                 </div>
-                <div className="mt-2 text-sm">{kitCell(t, line)}</div>
+                <p className="font-semibold tabular-nums">
+                  <span className="sr-only">{t("tripPrep.qtyColumn")} </span>
+                  {line.items.length}
+                </p>
               </li>
             ))}
           </ul>

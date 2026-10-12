@@ -6,6 +6,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
 import { formatDateWithYear, formatTime } from "@/lib/format";
+import { meetingPointOfRows } from "@/lib/meeting-point";
 import { publicAppUrl } from "@/lib/notifications";
 import { PAPER_PASS_PAPER, passCodePayload, storefrontAddress } from "@/lib/print-sheets";
 import { requireShopSurface } from "@/lib/session";
@@ -26,8 +27,8 @@ export const metadata: Metadata = {
  * **The paper pass** (A6, printed at the counter from one booking) — ADR
  * 20260908-one-hand, decision 6, lever X.
  *
- * The pass (lever M) for a diver without a phone: where to be, when, on which
- * hull, what to bring, and a code the counter can read off paper exactly as it
+ * The pass (lever M) for a diver without a phone: where to be (the meeting
+ * point, its address, landmark and parking), when, on which hull, what to bring, and a code the counter can read off paper exactly as it
  * reads one off glass.
  *
  * **The code carries the booking's id and nothing else** (`passCodePayload`).
@@ -61,10 +62,10 @@ export default async function PaperPassPage({
   // The shop's own dock call, which is when a diver should *be there* — not
   // when a counter opens. The same figure the confirmation email states.
   const dockCallAt = new Date(booking.startsAt.getTime() - shop.dockCallMinutes * 60_000);
-  const meetingPoint = [booking.meetingPointLabel, booking.meetingPointAddress]
-    .filter((part): part is string => Boolean(part?.trim()))
-    .join(", ");
-  const where = [booking.boatName, meetingPoint].filter((part): part is string => Boolean(part));
+  // Where to go, as the trip page and the confirmation say it (ux review
+  // 2026-10-11, item 27): the departure's meeting point, or the shop itself,
+  // with the landmark and the parking note a diver without a phone needs most.
+  const where = meetingPointOfRows(shop, booking);
 
   return (
     <SheetDocument
@@ -99,12 +100,29 @@ export default async function PaperPassPage({
           {formatTime(booking.startsAt, locale, shop.timezone)}
         </p>
         <p className="mt-3 text-sm font-semibold">{booking.diverName}</p>
-        {where.length > 0 ? <p className="paper-sheet-muted text-xs">{where.join(" · ")}</p> : null}
+        {booking.boatName ? <p className="paper-sheet-muted text-xs">{booking.boatName}</p> : null}
         <p className="paper-sheet-muted text-xs">
           {t("print.sheet.pass.beAtDock", {
             time: formatTime(dockCallAt, locale, shop.timezone),
           })}
         </p>
+        <div className="mt-2 text-xs leading-snug">
+          <p className="paper-sheet-muted text-[0.625rem] font-bold tracking-[0.12em] uppercase">
+            {t("print.sheet.pass.whereHeading")}
+          </p>
+          <p className="font-semibold">{where.label}</p>
+          {where.address ? <p>{where.address}</p> : null}
+          {where.landmark ? (
+            <p className="paper-sheet-muted">
+              {t("print.sheet.pass.landmark", { landmark: where.landmark })}
+            </p>
+          ) : null}
+          {where.parking ? (
+            <p className="paper-sheet-muted">
+              {t("print.sheet.pass.parking", { parking: where.parking })}
+            </p>
+          ) : null}
+        </div>
         {shop.packingList.length > 0 ? (
           <p className="paper-sheet-muted mt-2 text-xs">
             {t("print.sheet.pass.bringHeading")}: {shop.packingList.join(", ")}

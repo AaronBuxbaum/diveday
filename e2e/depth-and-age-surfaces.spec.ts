@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
+import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { openSettingsRow, openTripAbout, tripPathByTitle } from "./helpers";
 
@@ -99,8 +99,9 @@ test.describe("staff", () => {
   test("a site deeper than a diver's card warns staff but never refuses the booking", async ({
     page,
   }) => {
-    // Give the reef site a depth past an Open Water diver's 18 m ceiling.
-    await setSiteDepth(page, "Molasses Reef", "32", /Maximum depth/);
+    // Give the reef site a depth past an Open Water diver's 60 ft ceiling: the
+    // Key Largo demo works in feet, so 105 ft (32 m) is what the field takes.
+    await setSiteDepth(page, "Molasses Reef", "105", /Maximum depth/);
 
     const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
     await page.goto(`${tripPath}`);
@@ -148,81 +149,80 @@ test.describe("staff", () => {
   });
 
   test("depth is entered and read back in the shop's own unit", async ({ page }) => {
-    // Metres by default; the setting is display-and-entry only, so flipping it
-    // must never move a stored number.
+    // Feet by default: the demo is in Key Largo, and units follow the shop's
+    // country. The setting is display-and-entry only, so flipping it must
+    // never move a stored number.
     await page.goto(`/shop/${SHOP}/settings`);
     await expect(page.getByRole("heading", { name: "Units" })).toBeVisible();
 
     const siteHref = await setSiteDepth(
       page,
       "Christ of the Abyss",
-      "18",
-      /Maximum depth \(meters\)/,
+      "60",
+      /Maximum depth \(feet\)/,
     );
 
-    // Switch the shop to feet; 18 m must read back as 59 ft, not as 18.
+    // Switch the shop to metres; 60 ft must read back as 18 m, not as 60.
     await page.goto(`/shop/${SHOP}/settings`);
     await openSettingsRow(page, "Units");
-    await page.getByLabel("Show depths in", { exact: true }).selectOption("feet");
+    await page.getByLabel("Show depths in", { exact: true }).selectOption("meters");
     await page.getByRole("button", { name: "Save units" }).click();
     await expect(page.getByText(/Units saved/)).toBeVisible();
 
     await page.goto(siteHref);
-    const feetField = page.getByLabel(/Maximum depth \(feet\)/);
-    await expect(feetField).toBeVisible();
-    await expect(feetField).toHaveValue("59");
+    const metersField = page.getByLabel(/Maximum depth \(meters\)/);
+    await expect(metersField).toBeVisible();
+    await expect(metersField).toHaveValue("18");
 
-    // A number typed in feet round-trips exactly — the reason the column is
-    // floating-point rather than whole metres.
-    await feetField.fill("60");
+    // A number typed in metres round-trips exactly too.
+    await metersField.fill("18");
     await page.getByRole("button", { name: "Save dive site" }).click();
     await expect(page.getByText("Dive site saved.")).toBeVisible();
     await page.goto(siteHref);
-    await expect(page.getByLabel(/Maximum depth \(feet\)/)).toHaveValue("60");
+    await expect(page.getByLabel(/Maximum depth \(meters\)/)).toHaveValue("18");
   });
 
   test("water temperature is entered and read back in the shop's own unit", async ({ page }) => {
     const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
 
-    // Celsius by default, and the unit is part of the field's label rather
-    // than a hint beside it — a bare "Water temp" is how a 27 meant as °F
-    // reaches every diver as an 81°F day.
+    // Fahrenheit by default (a Key Largo shop), and the unit is part of the
+    // field's label rather than a hint beside it — a bare "Water temp" is how
+    // a 27 meant as °C reaches every diver as a 27°F day.
     await page.goto(tripPath);
     // The conditions form waits behind its disclosure (summary-first
     // Overview) — Publish or Edit, depending on whether the seed already
     // published a prediction for this trip.
     await openTripAbout(page);
     await page.getByText(/Write a crew prediction|Edit crew prediction/).click();
-    await page.getByLabel("Water temp °C").fill("27");
+    await page.getByLabel("Water temp °F").fill("81");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction published");
 
     // Its own field, independent of the depth unit even though the two now
     // share a card and a save button: switching only the temperature leaves
-    // visibility in metres.
+    // visibility in feet.
     await page.goto(`/shop/${SHOP}/settings`);
     await expect(page.getByRole("heading", { name: "Units" })).toBeVisible();
     await openSettingsRow(page, "Units");
-    await page.getByLabel("Show water temperature in", { exact: true }).selectOption("fahrenheit");
+    await page.getByLabel("Show water temperature in", { exact: true }).selectOption("celsius");
     await page.getByRole("button", { name: "Save units" }).click();
     await expect(page.getByText(/Units saved/)).toBeVisible();
 
-    // 27°C reads back as 81°F — the stored Celsius never moved.
+    // 81°F reads back as 27°C — the stored Celsius never moved.
     await page.goto(tripPath);
     // A prediction is published now, so the disclosure reads "Edit".
     await openTripAbout(page);
     await page.getByText("Edit crew prediction", { exact: true }).click();
-    await expect(page.getByLabel("Water temp °F")).toHaveValue("81");
-    await expect(page.getByLabel("Visibility m")).toBeVisible();
+    await expect(page.getByLabel("Water temp °C")).toHaveValue("27");
+    await expect(page.getByLabel("Visibility ft")).toBeVisible();
 
-    // And a whole Fahrenheit degree typed in round-trips exactly, which is why
-    // the column is floating-point rather than whole Celsius.
-    await page.getByLabel("Water temp °F").fill("76");
+    // And a whole Celsius degree typed in round-trips exactly.
+    await page.getByLabel("Water temp °C").fill("24");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction published");
     await page.goto(tripPath);
     await openTripAbout(page);
     await page.getByText("Edit crew prediction", { exact: true }).click();
-    await expect(page.getByLabel("Water temp °F")).toHaveValue("76");
+    await expect(page.getByLabel("Water temp °C")).toHaveValue("24");
   });
 });

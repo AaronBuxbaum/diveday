@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { HOUR_MS, nowMs } from "@/lib/clock";
 import { seededTestDb } from "@/test/db";
 import { issueAccountToken } from "./account-tokens";
-import { DEMO_SHOP_SLUG } from "./dev-credentials";
+import { DEMO_SHOP_SLUG } from "./demo-shop";
 import {
   accountTokens,
   activityEvents,
@@ -13,9 +13,12 @@ import {
   authVerifications,
   bookings,
   buddyTeamEvents,
+  divePackageEntitlements,
+  divePackages,
   globalDiveSites,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
+  orders,
   people,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
@@ -229,6 +232,51 @@ describe("deleteDemoShopCascade", () => {
     // The canonical demo and the shared global dive-site catalog are untouched.
     expect(await findShop(db, DEMO_SHOP_SLUG)).toBeDefined();
     expect((await db.select().from(globalDiveSites)).length).toBe(globalsBefore);
+  });
+
+  /**
+   * A shop that sold a package was the one reset could not clear: the cascade
+   * deleted orders before the entitlements that name them, so every
+   * /api/test/reset after package-purchase.spec 500'd on the minted shop.
+   */
+  it("deletes sold package dives instead of FK-violating on the order they came from", async () => {
+    const db = await seededTestDb();
+    const { slug } = await createDemoShop(db);
+    const shop = await requireShop(db, slug);
+    const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
+    if (!person) throw new Error("test setup: demo shop has no people");
+    const [pkg] = await db
+      .insert(divePackages)
+      .values({ shopId: shop.id, name: "Ten-dive card", diveCount: 10, priceCents: 45_000 })
+      .returning();
+    const [order] = await db
+      .insert(orders)
+      .values({
+        shopId: shop.id,
+        personId: person.id,
+        createdByPersonId: person.id,
+        collection: "cash",
+        currency: "usd",
+        totalCents: 45_000,
+      })
+      .returning();
+    if (!pkg || !order) throw new Error("test setup: package or order insert failed");
+    await db
+      .insert(divePackageEntitlements)
+      .values({ shopId: shop.id, packageId: pkg.id, personId: person.id, orderId: order.id });
+
+    // No FK violation here is the real assertion — entitlements go before orders.
+    await deleteDemoShopCascade(db, shop.id);
+
+    expect(await findShop(db, slug)).toBeUndefined();
+    expect(
+      (
+        await db
+          .select()
+          .from(divePackageEntitlements)
+          .where(eq(divePackageEntitlements.shopId, shop.id))
+      ).length,
+    ).toBe(0);
   });
 
   it("deletes a booking's tip instead of FK-violating on the booking it references", async () => {

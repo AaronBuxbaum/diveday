@@ -111,12 +111,17 @@ import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES, type DiverLocale } from "./setting
 import { staffTranslator } from "./staff-messages";
 import { STAFF_ROLE_LABEL_KEYS, staffRoleLabel } from "./staff-role-labels";
 import { suitChoiceLabel } from "./suit-choice-labels";
-import { THREAD_STEP_STATE_KEYS, THREAD_STEP_TITLE_KEYS } from "./thread-labels";
+import {
+  CERTIFICATION_NEXT_KEYS,
+  SIGN_NEXT_KEYS,
+  THREAD_STEP_NEXT_KEYS,
+  THREAD_STEP_STATE_KEYS,
+  THREAD_STEP_TITLE_KEYS,
+} from "./thread-labels";
 import {
   ACTION_KIND_KEYS,
   blockerActionLabelText,
   blockerRowText,
-  GREETING_KEYS,
   mediaDeletionKindText,
   seasonalBriefingText,
   stuckOperationKindText,
@@ -899,6 +904,27 @@ const CASES: readonly LabelMapCase[] = [
   },
   {
     module: "thread-labels.ts",
+    map: "THREAD_STEP_NEXT_KEYS",
+    rows: codeRows(keysOf(THREAD_STEP_NEXT_KEYS), (locale, step) =>
+      diverTranslator(locale)(THREAD_STEP_NEXT_KEYS[step]),
+    ),
+  },
+  {
+    module: "thread-labels.ts",
+    map: "CERTIFICATION_NEXT_KEYS",
+    rows: codeRows(keysOf(CERTIFICATION_NEXT_KEYS), (locale, code) =>
+      diverTranslator(locale)(CERTIFICATION_NEXT_KEYS[code]),
+    ),
+  },
+  {
+    module: "thread-labels.ts",
+    map: "SIGN_NEXT_KEYS",
+    rows: codeRows(keysOf(SIGN_NEXT_KEYS), (locale, code) =>
+      diverTranslator(locale)(SIGN_NEXT_KEYS[code]),
+    ),
+  },
+  {
+    module: "thread-labels.ts",
     map: "THREAD_STEP_STATE_KEYS",
     rows: codeRows(keysOf(THREAD_STEP_STATE_KEYS), (locale, state) =>
       diverTranslator(locale)(THREAD_STEP_STATE_KEYS[state]),
@@ -952,13 +978,6 @@ const CASES: readonly LabelMapCase[] = [
     map: "MEDIA_DELETION_KIND_KEYS",
     rows: codeRows(MEDIA_DELETION_KINDS, (locale, kind) =>
       mediaDeletionKindText(staffTranslator(locale), kind),
-    ),
-  },
-  {
-    module: "today-labels.ts",
-    map: "GREETING_KEYS",
-    rows: codeRows(keysOf(GREETING_KEYS), (locale, band) =>
-      staffTranslator(locale)(GREETING_KEYS[band], { name: "Priya" }),
     ),
   },
   {

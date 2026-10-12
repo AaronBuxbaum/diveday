@@ -143,7 +143,9 @@ export function ShopfrontHero({
               either side of it; the spaces are for anything reading the text,
               and a flex row renders none of them. */}
           <span aria-hidden="true">·</span>{" "}
-          <span className="tabular-nums">{t("reviews.count", { count: aggregate.count })}</span>
+          <span className="tabular-nums">
+            {t("reviews.ratingsCount", { count: aggregate.count })}
+          </span>
         </p>
       )}
       <BadgeWall badges={badges} establishedYear={establishedYear} t={t} className="mt-4" />

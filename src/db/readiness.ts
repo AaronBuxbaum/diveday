@@ -4,7 +4,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { outstandingCourseForms } from "@/lib/course-forms";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
-import { isDiver, participantPriceCents } from "@/lib/participant-types";
+import { isDiver, isHeldToMedical, participantPriceCents } from "@/lib/participant-types";
 import type { CardUnreviewRefusal, CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
 import {
   BLOCKER_CATEGORY,
@@ -17,7 +17,13 @@ import {
   unreviewedCardState,
 } from "@/lib/readiness";
 import { isUuid } from "@/lib/uuid";
-import { effectiveWaiverForBooking, overriddenReferral, overriddenRefusal } from "@/lib/waivers";
+import {
+  effectiveReleaseForRiderSeat,
+  effectiveWaiverForBooking,
+  overriddenReferral,
+  overriddenRefusal,
+  riderMedicalHold,
+} from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import {
   type CourseSeatInTraining,
@@ -1663,7 +1669,14 @@ export async function listTripsReadiness(
       ? calendarDateInTimezone(courseRow.startsAt, timezone)
       : null;
 
-    const effectiveWaiver = effectiveWaiverForBooking({
+    // A rider is held to the release and never to its medical (H-109), so a
+    // hold does not outrank their signatures and a held record is a signed one
+    // — read only while it is itself current, never the hold's own standing.
+    const effectiveWaiver = (
+      isHeldToMedical(row.booking.participantType)
+        ? effectiveWaiverForBooking
+        : effectiveReleaseForRiderSeat
+    )({
       bookingWaiver: row.waiver,
       personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
       currentTemplateVersion: currentTemplateGeneration,
@@ -1715,6 +1728,12 @@ export async function listTripsReadiness(
         effectiveWaiver,
         signedWaiversByPerson.get(row.person.id) ?? [],
       ),
+      // A rider boards on a release a medical holds (H-109), and the crew
+      // still reads it as a "riding only" warning, from the same record the
+      // rider path chose (dive-domain review of #2212).
+      riderMedicalHold: isHeldToMedical(row.booking.participantType)
+        ? null
+        : riderMedicalHold(effectiveWaiver, signedWaiversByPerson.get(row.person.id) ?? []),
       requirement,
       siteRequirement,
       certifications: certificationsByPerson.get(row.person.id) ?? [],

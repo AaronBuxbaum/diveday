@@ -7,6 +7,7 @@ import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking, tripCourseCrewCounts } from "./bookings";
 import type { AppDb } from "./client";
+import { courseCrewCountsByTrip } from "./course-crew-counts";
 import {
   bookings,
   courses,
@@ -16,7 +17,7 @@ import {
   tripAssignments,
 } from "./schema";
 import { getStaffingView } from "./staffing";
-import { courseCrewCountsByTrip, getTodayWork } from "./today";
+import { getTodayWork } from "./today";
 import { createTrip } from "./trips";
 import { getTripOverview } from "./trips-overview";
 

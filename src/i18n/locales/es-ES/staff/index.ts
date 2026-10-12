@@ -35,6 +35,7 @@ import checkIn from "./checkIn.json";
 import closeout from "./closeout.json";
 import counterRentals from "./counterRentals.json";
 import courses from "./courses.json";
+import desk from "./desk.json";
 import divers from "./divers.json";
 import diveSites from "./diveSites.json";
 import emailSettings from "./emailSettings.json";
@@ -43,6 +44,7 @@ import gear from "./gear.json";
 import gearRentals from "./gearRentals.json";
 import inbox from "./inbox.json";
 import incidentExport from "./incidentExport.json";
+import incidents from "./incidents.json";
 import integrations from "./integrations.json";
 import lenses from "./lenses.json";
 import manifest from "./manifest.json";
@@ -109,12 +111,14 @@ const staff = {
   blowout,
   inbox,
   incidentExport,
+  incidents,
   integrations,
   boatSafety,
   boats,
   lenses,
   participants,
   workOrders,
+  desk,
 };
 
 export default staff;

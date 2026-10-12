@@ -4,7 +4,7 @@ import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
-import { migrationPathsAt, resolveBaseCommit } from "./previous-release-migrations.mjs";
+import { migrationPathsAt, resolveBaseCommit, runGit } from "./previous-release-migrations.mjs";
 
 /**
  * One invariant: **a migration may not break the deployment that is still live
@@ -515,13 +515,101 @@ const excerpt = (text) => {
   return flat.length > 90 ? `${flat.slice(0, 89)}…` : flat;
 };
 
+/** Where the Drizzle schema lives, in every release. */
+const SCHEMA_DIR = "src/db/schema";
+
+/**
+ * The Drizzle property a schema source declares for `table.column`, or `null`.
+ *
+ * The table's block runs from its `pgTable("<table>"` to the next `pgTable(`,
+ * and a declaration is `<property>: <builder>("<column>"` inside it. Every
+ * column in this schema names its SQL column explicitly (no casing config), so
+ * the quoted name is exact. A text-level reader, like the rest of this guard:
+ * it does not resolve a column built by a helper that hides the name.
+ *
+ * @param {string} source every schema file of one release, concatenated
+ * @param {string} table
+ * @param {string} column
+ * @returns {string | null}
+ */
+export function declaredProperty(source, table, column) {
+  const start = source.search(new RegExp(String.raw`pgTable\(\s*"${escapeForRegExp(table)}"\s*,`));
+  if (start === -1) return null;
+  const rest = source.slice(start + "pgTable(".length);
+  const next = rest.search(/pgTable\(/);
+  const block = next === -1 ? rest : rest.slice(0, next);
+  const declared = new RegExp(
+    String.raw`([A-Za-z_$][\w$]*)\s*:\s*[\w$.]+\(\s*"${escapeForRegExp(column)}"\s*[,)]`,
+  ).exec(block);
+  return declared ? declared[1] : null;
+}
+
+/**
+ * Every `.ts` file under `src/db/schema/` at `commit`, concatenated, read out
+ * of the object store the way `previous-release-migrations.mjs` reads
+ * `drizzle/` — nothing checked out, no ref moved. `null` when git cannot say.
+ *
+ * @returns {string | null}
+ */
+export function schemaSourceAt(commit, run = runGit) {
+  const listed = run(["ls-tree", "-r", "--name-only", commit, "--", SCHEMA_DIR]);
+  if (!listed.ok) return null;
+  const files = listed.out
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.endsWith(".ts"))
+    .sort();
+  const sources = [];
+  for (const file of files) {
+    const shown = run(["show", `${commit}:${file}`]);
+    if (!shown.ok) return null;
+    sources.push(shown.out);
+  }
+  return sources.join("\n");
+}
+
+/**
+ * The second question a `drop-column` marker has to answer, which its free-text
+ * reason never could: does a release that will be serving while this migration
+ * runs still *declare* the column? A declared column is named by every
+ * whole-row `select()`, `returning()` and relational query on its table, so a
+ * release that declares it fails on every one of those for the deploy window,
+ * however little its code reads the value itself (issue #2336). The drop goes
+ * in the release after the one that stopped declaring it.
+ *
+ * `schemas` is one `{ label, source }` per release to ask about: the previous
+ * release (from git) and this branch (from disk).
+ */
+function liveDeclarations(acknowledgement, schemas) {
+  if (acknowledgement.ruleId !== "drop-column") return [];
+  const parts = acknowledgement.target
+    .split(".")
+    .map((part) => part.replace(/"/g, "").trim())
+    .filter(Boolean);
+  if (parts.length < 2) return [];
+  const [table, column] = parts.slice(-2);
+  return schemas.flatMap(({ label, source }) => {
+    const property = declaredProperty(source, table, column);
+    if (!property) return [];
+    return [
+      {
+        line: acknowledgement.line,
+        message: `drop-column ${table}.${column}: the ${label} still declares it as ${table}.${property} in ${SCHEMA_DIR}/, so its whole-row selects and returning() name the column and fail while this migration's deploy is in flight — remove the declaration in one release and drop the column in the next (no marker reason, H-49 included, excuses this)`,
+      },
+    ];
+  });
+}
+
 /**
  * One migration's problems: unacknowledged destructive statements, malformed or
- * unknown acknowledgements, and acknowledgements that excuse nothing.
+ * unknown acknowledgements, acknowledgements that excuse nothing, and
+ * `drop-column` acknowledgements for a column a serving release still declares.
  *
+ * @param {string} sql
+ * @param {{ schemas?: Array<{ label: string, source: string }> }} [options]
  * @returns {Array<{ line: number, message: string }>}
  */
-export function auditMigration(sql) {
+export function auditMigration(sql, { schemas = [] } = {}) {
   const acknowledgements = parseAcknowledgements(sql);
   const problems = acknowledgements
     .filter((item) => item.error)
@@ -544,6 +632,10 @@ export function auditMigration(sql) {
         spent.add(index);
       }
     }
+  }
+
+  for (const item of acknowledgements) {
+    if (!item.error) problems.push(...liveDeclarations(item, schemas));
   }
 
   acknowledgements.forEach((item, index) => {
@@ -581,6 +673,7 @@ export function gitBaseFolders(run) {
   return {
     folders: listed.paths.map((file) => path.basename(path.dirname(file))),
     how: base.how,
+    commit: base.commit,
   };
 }
 
@@ -616,6 +709,30 @@ async function migrationFoldersOnDisk() {
   return folders;
 }
 
+/**
+ * The schemas a `drop-column` marker is checked against: the previous
+ * release's, when git can reach it, and this branch's, always. A shallow clone
+ * still gets the branch check — the weaker half, but never nothing.
+ */
+async function releaseSchemas(commit) {
+  const schemas = [];
+  if (commit) {
+    const previous = schemaSourceAt(commit);
+    if (previous !== null) schemas.push({ label: "previous release", source: previous });
+  }
+  let entries = [];
+  try {
+    entries = await readdir(path.join(ROOT, SCHEMA_DIR), { recursive: true });
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+  const files = entries.filter((entry) => String(entry).endsWith(".ts")).sort();
+  const sources = [];
+  for (const file of files) sources.push(await readFile(path.join(ROOT, SCHEMA_DIR, file), "utf8"));
+  schemas.push({ label: "this branch", source: sources.join("\n") });
+  return schemas;
+}
+
 async function main() {
   const onDisk = await migrationFoldersOnDisk();
   const base = gitBaseFolders();
@@ -624,11 +741,12 @@ async function main() {
     watermark: GRANDFATHERED_THROUGH,
   });
 
+  const schemas = await releaseSchemas(base.commit);
   const violations = [];
   for (const folder of audited) {
     const file = path.join(MIGRATIONS_DIR, folder, "migration.sql");
     const sql = await readFile(path.join(ROOT, file), "utf8");
-    for (const problem of auditMigration(sql)) {
+    for (const problem of auditMigration(sql, { schemas })) {
       violations.push(`${file}:${problem.line}: ${problem.message}`);
     }
   }

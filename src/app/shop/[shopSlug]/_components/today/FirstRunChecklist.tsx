@@ -160,6 +160,16 @@ function ChecklistStep({
   );
 }
 
+/** The path of the public schedule's address, for display: `/s/blue-mantis`. */
+export function schedulePathOf(url: string): string {
+  if (url.startsWith("/")) return url;
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return url;
+  }
+}
+
 export function FirstRunChecklist({
   shopSlug,
   scheduleUrl,
@@ -282,7 +292,17 @@ export function FirstRunChecklist({
           <div className="min-w-0">
             <p className="font-medium">{copy.scheduleTitle}</p>
             <p className="mt-0.5 text-sm text-muted">{copy.scheduleBody}</p>
-            <p className="mt-1 max-w-full truncate font-mono text-xs text-muted">{scheduleUrl}</p>
+            {/* The address as a short door, not a URL in prose (UX review
+                2026-10-10, item 29): the path names the page, the copy control
+                beside it carries the whole address. */}
+            <a
+              href={scheduleUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 block max-w-full truncate font-mono text-xs text-muted underline-offset-2 hover:underline"
+            >
+              {schedulePathOf(scheduleUrl)}
+            </a>
           </div>
         </LedgerRow>
         {/* **The one step that is not the row.** Every other open step is a

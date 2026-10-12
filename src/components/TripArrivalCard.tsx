@@ -8,7 +8,8 @@ import { dockCallAt } from "@/lib/dock-call";
 import { formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { googleMapEmbedUrl, googleMapsUrl } from "@/lib/maps";
-import { type ShopAddressParts, shopAddressLines, shopMapQuery } from "@/lib/shop-address";
+import { meetingPointOf } from "@/lib/meeting-point";
+import type { ShopAddressParts } from "@/lib/shop-address";
 
 export type ArrivalCardShop = {
   name: string;
@@ -40,24 +41,22 @@ function clean(value: string | null | undefined): string | null {
 
 /** The arrival projection shared by the booked Ready view and saved card. */
 export function arrivalCardFacts(shop: ArrivalCardShop, trip: ArrivalCardTrip) {
-  const shopLines = shopAddressLines(shop.address);
-  const customLabel = clean(trip.meetingPointLabel);
-  const customAddress = clean(trip.meetingPointAddress);
-  const label = customLabel ?? shop.name;
-  const address = customAddress ?? (shopLines.length > 0 ? shopLines.join(", ") : null);
-  const mapQuery = customAddress
-    ? [label, customAddress].filter(Boolean).join(", ")
-    : customLabel
-      ? address
-        ? [label, address].join(", ")
-        : null
-      : shopMapQuery(shop.name, shop.address);
+  // One reading of "where to go", shared with the mail and the printed pass
+  // (`src/lib/meeting-point.ts`), so the page and what the diver carries agree.
+  const point = meetingPointOf({
+    shopName: shop.name,
+    shopAddress: shop.address,
+    meetingPointLabel: trip.meetingPointLabel,
+    meetingPointAddress: trip.meetingPointAddress,
+    arrivalLandmark: trip.arrivalLandmark,
+    arrivalParkingNote: trip.arrivalParkingNote,
+  });
   return {
-    label,
-    address,
-    mapQuery,
-    landmark: clean(trip.arrivalLandmark),
-    parkingNote: clean(trip.arrivalParkingNote),
+    label: point.label,
+    address: point.address,
+    mapQuery: point.mapQuery,
+    landmark: point.landmark,
+    parkingNote: point.parking,
     transitNote: clean(trip.arrivalTransitNote),
     lookFor: clean(trip.arrivalLookFor),
     firstInteraction: clean(trip.arrivalFirstInteraction),
@@ -65,16 +64,6 @@ export function arrivalCardFacts(shop: ArrivalCardShop, trip: ArrivalCardTrip) {
   };
 }
 
-/**
- * "Aim to be at the dock by 7:30 AM EDT, 30 minutes before we sail." — the
- * same sentence and the same minute `/ready`'s masthead gives (`ready.dockCallLine`),
- * for the card a diver keeps offline at the dock (issue #2034). A diver
- * reading only the departure range would arrive as the boat leaves.
- *
- * `null` when there is no dock call to state: the shop asks for no lead time,
- * or the caller passed none because this diver is collected from their hotel
- * (the masthead names the pickup instead, and so does nothing here).
- */
 export function arrivalDockCallLine(
   t: DiverTranslator,
   startsAt: Date,

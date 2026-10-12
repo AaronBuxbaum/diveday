@@ -1,6 +1,13 @@
 import { counterIsDone, isSettledAtCounter } from "@/lib/check-in";
 import { cachedFormatter } from "@/lib/intl-cache";
-import { isNotBackAboard, type RollCallCheckpoint, rollCallCompleteness } from "@/lib/manifests";
+import {
+  boardedBefore,
+  isNotBackAboard,
+  type RollCallCheckpoint,
+  rollCallCheckpointOrdinal,
+  rollCallCompleteness,
+  blockedAtRail as rowBlockedAtRail,
+} from "@/lib/manifests";
 import {
   isOfflineManifestExpired,
   latestOfflineArrival,
@@ -109,6 +116,26 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   const rejected = rejectedOfflineEventCount(envelope);
   const localStates = manifest.divers.map((diver) =>
     latestOfflineRollCall(envelope.snapshot, envelope.events, diver.bookingId, checkpoint),
+  );
+  // The live roll call's after-dive rule, read through the same predicate
+  // (`blockedAtRail`, issue #2286): a blocked diver nobody boarded at an
+  // earlier checkpoint still wears their readiness here. Read off this device's
+  // own taps as well as the saved copy, so a diver boarded at the dock with no
+  // signal is not marked at the next count.
+  const earlierCheckpoints = envelope.snapshot.manifests
+    .map((entry) => entry.checkpoint)
+    .filter((entry) => rollCallCheckpointOrdinal(entry) < rollCallCheckpointOrdinal(checkpoint));
+  const blockedAtRail = manifest.divers.map((diver, index) =>
+    rowBlockedAtRail({
+      ready: diver.readiness.status === "ready",
+      isDeparture: checkpoint === "departure",
+      boardedEarlier: boardedBefore(
+        earlierCheckpoints.map((earlier) =>
+          latestOfflineRollCall(envelope.snapshot, envelope.events, diver.bookingId, earlier),
+        ),
+      ),
+      notBackAboard: isNotBackAboard(checkpoint, localStates[index]),
+    }),
   );
   const boarded = localStates.filter((state) => state?.state === "boarded").length;
   const awaiting = localStates.filter((state) => !state).length;
@@ -224,6 +251,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
     pending,
     rejected,
     localStates,
+    blockedAtRail,
     boarded,
     awaiting,
     notBackAboard,

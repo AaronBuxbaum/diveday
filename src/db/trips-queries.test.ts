@@ -774,6 +774,39 @@ describe("trips.dive_site_id — the denormalized pointer the forecast and calen
       undecidedDives: 1,
     });
   });
+
+  // Issue #2313: the details form's save says whether the boat now leaves at a
+  // different time, so its action can write the board's "moved" line.
+  it("says the start moved only when the departure instant changed", async () => {
+    const { db, shop } = ctx;
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Time check",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("trip not created");
+    const patch = {
+      title: "Time check, renamed",
+      startsAt: trip.startsAt,
+      endsAt: new Date("2030-08-15T17:00:00Z"),
+      capacity: trip.capacity,
+      plannedDives: 2,
+    };
+
+    const sameStart = await updateTrip(db, shop.id, trip.id, patch);
+    if (!sameStart.ok) throw new Error("update refused");
+    expect(sameStart.startMoved).toBe(false);
+
+    const later = await updateTrip(db, shop.id, trip.id, {
+      ...patch,
+      startsAt: new Date("2030-08-15T13:00:00Z"),
+    });
+    if (!later.ok) throw new Error("update refused");
+    expect(later.startMoved).toBe(true);
+  });
 });
 
 /**

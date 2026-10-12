@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SENTRY_DATA_COLLECTION } from "@/app/observability";
 import { log, setLogSink } from "@/lib/log";
 import { register } from "./instrumentation";
 
@@ -127,6 +128,8 @@ describe("Sentry on the server", () => {
     expect(fake.init).toHaveBeenCalledTimes(1);
     const options = fake.init.mock.calls[0]?.[0];
     expect(options).toMatchObject({ tracesSampleRate: 0, defaultIntegrations: false });
+    // The SDK's own collection switch stays the first layer of redaction.
+    expect(options.dataCollection).toEqual(SENTRY_DATA_COLLECTION);
     expect(options.beforeSend).toBeTypeOf("function");
     expect(options.beforeBreadcrumb).toBeTypeOf("function");
     const names = options.integrations.map((integration: { name: string }) => integration.name);

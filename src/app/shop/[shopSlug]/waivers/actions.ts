@@ -11,6 +11,7 @@ import {
   COURSE_FORM_BODY_MIN,
   COURSE_FORM_TITLE_MAX,
 } from "@/lib/course-forms";
+import { blankAsAbsent, formValue, parseForm, readForm, single, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -54,7 +55,7 @@ export async function saveWaiverAction(formData: FormData) {
   // that is a render-time gate on an action reachable without it — and
   // defaulting a missing answer either way would decide, on the shop's behalf,
   // whether its whole roster signs again.
-  const materialValue = formData.get("material");
+  const materialValue = readForm(materialField, formData).material;
   if (atRisk.divers > 0 && materialValue !== "material" && materialValue !== "non-material") {
     // Its **own** code, never the `invalid` above. That one renders "the
     // release needs to be at least a few sentences long", and this refusal is
@@ -93,10 +94,16 @@ export async function saveWaiverAction(formData: FormData) {
 }
 
 const courseFormSchema = z.object({
-  formId: z.uuid().optional(),
-  title: z.string().trim().min(2).max(COURSE_FORM_TITLE_MAX),
-  body: z.string().trim().min(COURSE_FORM_BODY_MIN).max(COURSE_FORM_BODY_MAX),
+  formId: blankAsAbsent(z.uuid()),
+  title: single(z.string().trim().min(2).max(COURSE_FORM_TITLE_MAX), ""),
+  body: single(z.string().trim().min(COURSE_FORM_BODY_MIN).max(COURSE_FORM_BODY_MAX), ""),
 });
+
+/** The posted form id as typed, for a refusal to land beside the form it was about. */
+const formIdField = z.object({ formId: text() });
+
+/** Whether a rewrite asks the shop's divers to sign again; the action reads it itself. */
+const materialField = z.object({ material: formValue() });
 
 /**
  * Write a course form (ADR 20261008-course-forms): a new one when no `formId`
@@ -115,14 +122,10 @@ export async function saveCourseFormAction(formData: FormData) {
     redirect(noticeUrl(shopPath(staff.user.shopSlug), "waivers-not-authorized"));
   }
   const waivers = shopPath(staff.user.shopSlug, "waivers");
-  const postedId = String(formData.get("formId") ?? "");
+  const postedId = readForm(formIdField, formData).formId;
   const anchorFor = (id: string) => `${waivers}#course-form-${id}`;
-  const parsed = courseFormSchema.safeParse({
-    formId: postedId || undefined,
-    title: formData.get("title") ?? "",
-    body: formData.get("body") ?? "",
-  });
-  if (!parsed.success) {
+  const parsed = parseForm(courseFormSchema, formData);
+  if (!parsed.ok) {
     // A malformed id is no form at all: the refusal lands on the new-form box.
     const target = z.uuid().safeParse(postedId).success ? postedId : "new";
     redirect(noticeUrl(anchorFor(target), "course-form-invalid", { form: target }));
@@ -167,9 +170,9 @@ export async function deleteCourseFormAction(formData: FormData) {
     redirect(noticeUrl(shopPath(staff.user.shopSlug), "waivers-not-authorized"));
   }
   const waivers = shopPath(staff.user.shopSlug, "waivers");
-  const formId = z.uuid().safeParse(formData.get("formId"));
-  const deleted = formId.success
-    ? await deleteCourseForm(db, { shopId: staff.user.shopId, formId: formId.data })
+  const formId = parseForm(z.object({ formId: single(z.uuid()) }), formData);
+  const deleted = formId.ok
+    ? await deleteCourseForm(db, { shopId: staff.user.shopId, formId: formId.data.formId })
     : false;
   revalidateAndRedirect(
     waivers,

@@ -51,7 +51,9 @@ const { savePackingAction } = await import("./booking-actions");
 const { dischargeProcessorErasureAction, retryMediaDeletionAction, retryProcessorErasureAction } =
   await import("./data-actions");
 const { disconnectAction, refreshAction, saveTaxAction } = await import("./money-actions");
-const { saveRentalItemsAction, saveRentalPricingAction } = await import("./rental-actions");
+const { saveRegulatorServiceAction, saveRentalItemsAction, saveRentalPricingAction } = await import(
+  "./rental-actions"
+);
 const { saveAddressAction, saveShopFeatureAction, saveTimezoneAction, saveUnitsAction } =
   await import("./shop-actions");
 const { saveCrewScheduleAction } = await import("./team-actions");
@@ -392,11 +394,37 @@ describe("every settings mutation refuses the daily crew", () => {
     profile.set("tagline", "Written by the captain");
     expect(await redirectedTo(() => saveProfileAction(profile))).toBe(refused);
 
+    const regulator = new FormData();
+    regulator.set("regulatorServiceMonths", "24");
+    expect(await redirectedTo(() => saveRegulatorServiceAction(regulator))).toBe(refused);
+
     const after = await getShopById(db, shop.id);
     expect(after?.emergencyReference).toEqual(before?.emergencyReference);
     expect(after?.rentalItems).toEqual(before?.rentalItems);
     expect(after?.rentalPricing).toEqual(before?.rentalPricing);
     expect(after?.tagline).toEqual(before?.tagline);
+    expect(after?.customerRegulatorServiceMonths).toBe(12);
+  });
+
+  it("saves a shop's regulator service interval, and only 12 or 24 months", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const settings = `/shop/${shop.slug}/settings?notice=`;
+    const form = (months: string) => {
+      const data = new FormData();
+      data.set("regulatorServiceMonths", months);
+      return data;
+    };
+
+    expect(await redirectedTo(() => saveRegulatorServiceAction(form("18")))).toBe(
+      `${settings}regulator-service-invalid&saved=regulatorService`,
+    );
+    expect((await getShopById(db, shop.id))?.customerRegulatorServiceMonths).toBe(12);
+
+    expect(await redirectedTo(() => saveRegulatorServiceAction(form("24")))).toBe(
+      `${settings}regulator-service-saved&saved=regulatorService`,
+    );
+    expect((await getShopById(db, shop.id))?.customerRegulatorServiceMonths).toBe(24);
   });
 
   it("still lets an owner through every one of them", async () => {

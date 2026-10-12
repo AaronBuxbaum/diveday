@@ -9,6 +9,7 @@ const LABELS = {
   allGood: "All good",
   fitAdjusted: "Fit adjusted",
   serviceConcern: "Service concern",
+  cancelConcern: "Cancel",
   noteLabel: "What to tell the technician",
   notePlaceholder: "Torn strap",
 };
@@ -69,5 +70,37 @@ describe("GearReturnPane's bench offer", () => {
     renderPane();
     fireEvent.click(screen.getByRole("button", { name: "Service concern" }));
     expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+});
+
+/**
+ * **An open concern is the only answer on offer** (dive-domain review): a tap
+ * on "All good" with the concern open used to post the set as fine and throw
+ * away the typed note and every tick.
+ */
+describe("GearReturnPane's open concern", () => {
+  it("hides the fast answers while the concern is open", () => {
+    renderPane(BENCH);
+    expect(screen.getByRole("button", { name: "All good" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Service concern" }));
+    expect(screen.queryByRole("button", { name: "All good" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Fit adjusted" })).toBeNull();
+    // The only submit left is the concern itself.
+    const submits = screen
+      .getAllByRole("button")
+      .filter((button) => (button as HTMLButtonElement).type === "submit");
+    expect(submits.map((button) => button.textContent)).toEqual(["Service concern"]);
+  });
+
+  it("brings the fast answers back on Cancel, with the note and ticks gone", () => {
+    renderPane(BENCH);
+    fireEvent.click(screen.getByRole("button", { name: "Service concern" }));
+    expect(document.activeElement).toBe(screen.getByLabelText("What to tell the technician"));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Reg #4" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("button", { name: "All good" })).toBeTruthy();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByLabelText("What to tell the technician")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Service concern" }));
   });
 });

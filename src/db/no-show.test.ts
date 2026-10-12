@@ -16,6 +16,7 @@ import {
   bookingPaymentEvents,
   bookingPayments,
   bookings,
+  certifications,
   courses,
   orderLineItems,
   orders,
@@ -23,6 +24,7 @@ import {
   people,
   rollCallEvents,
   shops,
+  tripRequirements,
   trips,
   tripWaitlistEntries,
 } from "./schema";
@@ -88,6 +90,7 @@ async function context() {
     trip,
     staffId: staff.person.id,
     bookingId: seat.booking.id,
+    personId: seat.person.id,
     personName: seat.person.fullName,
     /** Inside the arrivals window, ten minutes after the boat left without them. */
     now: new Date(trip.startsAt.getTime() + 10 * MINUTE_MS),
@@ -899,7 +902,7 @@ describe("undoBookingNoShow", () => {
 
 describe("noShowSalvage", () => {
   it("offers the wait list ahead of anything else, and counts only the uninvited", async () => {
-    const { db, shop, trip, now } = await context();
+    const { db, shop, trip, personId, now } = await context();
     const waiting = await db
       .select({ id: people.id })
       .from(people)
@@ -912,14 +915,14 @@ describe("noShowSalvage", () => {
       { shopId: shop.id, tripId: trip.id, personId: invited.id, invitedAt: now },
     ]);
 
-    expect(await noShowSalvage(db, { shopId: shop.id, tripId: trip.id, now })).toEqual({
+    expect(await noShowSalvage(db, { shopId: shop.id, tripId: trip.id, personId, now })).toEqual({
       kind: "waitlist",
       count: 1,
     });
   });
 
   it("falls back to a day the diver who missed could be put on instead", async () => {
-    const { db, shop, trip, now } = await context();
+    const { db, shop, trip, personId, now } = await context();
     const [site] = await db
       .select({ diveSiteId: trips.diveSiteId })
       .from(trips)
@@ -937,17 +940,77 @@ describe("noShowSalvage", () => {
       .returning();
     if (!alternative) throw new Error("alternative trip insert failed");
 
-    const offer = await noShowSalvage(db, { shopId: shop.id, tripId: trip.id, now });
+    const offer = await noShowSalvage(db, { shopId: shop.id, tripId: trip.id, personId, now });
     expect(offer.kind).toBe("rebook");
     if (offer.kind !== "rebook") throw new Error("unreachable");
     expect(offer.departures.map((row) => row.tripId)).toContain(alternative.id);
   });
 
+  /**
+   * Dive-domain review of layer 8, F1: the "another day" named here is one
+   * the diver who missed could book from the offer's link. A full day and a
+   * private charter are dropped before the panel lists them.
+   */
+  it("offers only a day the diver who missed could book", async () => {
+    const { db, shop, trip, personId, now } = await context();
+    const [site] = await db
+      .select({ diveSiteId: trips.diveSiteId })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    const day = (hours: number, title: string) => ({
+      shopId: shop.id,
+      title,
+      startsAt: new Date(trip.startsAt.getTime() + hours * 60 * MINUTE_MS),
+      endsAt: new Date(trip.startsAt.getTime() + (hours + 4) * 60 * MINUTE_MS),
+      capacity: 8,
+      diveSiteId: site?.diveSiteId ?? null,
+    });
+    const [alreadyOn, gated, open] = await db
+      .insert(trips)
+      .values([day(20, "Booked Reef Run"), day(21, "Advanced Reef Run"), day(30, "Open Reef Run")])
+      .returning();
+    if (!alreadyOn || !gated || !open) throw new Error("alternative trip insert failed");
+    // They already hold a seat on one day…
+    const rebooked = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: alreadyOn.id,
+      personId: personId,
+    });
+    if (!rebooked.ok) throw new Error(`booking failed: ${rebooked.reason}`);
+    // …and another asks a card they do not hold.
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId: personId,
+      agency: "padi",
+      level: "open_water",
+      identifier: "OW-SALVAGE-1",
+      status: "verified",
+    });
+    await db.insert(tripRequirements).values({
+      tripId: gated.id,
+      shopId: shop.id,
+      minimumCertificationLevel: "rescue",
+    });
+
+    const offer = await noShowSalvage(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: personId,
+      now,
+    });
+    if (offer.kind !== "rebook") throw new Error(`expected a rebook offer, got ${offer.kind}`);
+    const offered = offer.departures.map((row) => row.tripId);
+    expect(offered).toContain(open.id);
+    expect(offered).not.toContain(alreadyOn.id);
+    expect(offered).not.toContain(gated.id);
+  });
+
   it("says there is nothing rather than inventing an offer", async () => {
-    const { db, shop, trip, now } = await context();
+    const { db, shop, trip, personId, now } = await context();
     // Nothing else on this shop's board shares the reef trip's site or course.
     await db.update(trips).set({ diveSiteId: null, courseId: null }).where(eq(trips.id, trip.id));
-    expect(await noShowSalvage(db, { shopId: shop.id, tripId: trip.id, now })).toEqual({
+    expect(await noShowSalvage(db, { shopId: shop.id, tripId: trip.id, personId, now })).toEqual({
       kind: "none",
     });
   });
@@ -961,7 +1024,7 @@ describe("noShowSalvage", () => {
    * diver they have no relationship with.
    */
   it("never counts another shop's wait list", async () => {
-    const { db, shop, now } = await context();
+    const { db, shop, personId, now } = await context();
     const {
       shop: other,
       stranger,
@@ -971,7 +1034,9 @@ describe("noShowSalvage", () => {
       .insert(tripWaitlistEntries)
       .values({ shopId: other.id, tripId: theirTrip.id, personId: stranger.id });
 
-    expect(await noShowSalvage(db, { shopId: shop.id, tripId: theirTrip.id, now })).toEqual({
+    expect(
+      await noShowSalvage(db, { shopId: shop.id, tripId: theirTrip.id, personId, now }),
+    ).toEqual({
       kind: "none",
     });
   });

@@ -178,9 +178,8 @@ async function overlappingCrewDepartures(
       and(
         liveTrip(),
         eq(trips.shopId, shopId),
-        // A called-off departure holds nobody's day. `setTripCrew`'s own
-        // conflict check does not exclude these; this one does, and the
-        // difference is filed rather than quietly copied.
+        // A called-off departure holds nobody's day; `crewBusyElsewhere`,
+        // `setTripCrew`'s own conflict check, reads it the same way.
         eq(trips.status, "scheduled"),
         ne(trips.id, tripId),
         inArray(tripAssignments.personId, [...crewIds]),
@@ -670,28 +669,8 @@ export async function setTripCrew(
       .where(eq(tripScheduleDays.tripId, tripId));
     const proposedDays =
       days.length > 0 ? days : [{ startsAt: trip.startsAt, endsAt: trip.endsAt }];
-    if (valid.length > 0) {
-      const conflict = await tx
-        .select({ personId: tripAssignments.personId })
-        .from(tripAssignments)
-        .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-        .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
-        .where(
-          and(
-            liveTrip(),
-            eq(trips.shopId, shopId),
-            ne(trips.id, tripId),
-            inArray(tripAssignments.personId, valid),
-            // The one overlap predicate every clash reader shares
-            // (src/db/trips-clashes.ts), so a refusal here and a warning there
-            // cannot disagree about the same pair of departures.
-            or(
-              ...proposedDays.map((day) => windowsOverlap(legWindow(tripScheduleDays, trips), day)),
-            ),
-          ),
-        )
-        .limit(1);
-      if (conflict.length > 0) return false;
+    if ((await crewBusyElsewhere(tx, shopId, tripId, valid, proposedDays)).size > 0) {
+      return false;
     }
     // The roles were read before the delete (`existingRoles` above), so a crew
     // edit that says nothing about roles preserves them instead of blanking
@@ -749,6 +728,140 @@ export async function setTripCrew(
     await flushUrgentCrewNotices(db, { shopId, tripIds: [tripId], now: options.now });
   }
   return changed;
+}
+
+/**
+ * Which of these people are already crewing another live departure whose hours
+ * meet any of `days` — the conflict `setTripCrew` refuses, and the one
+ * `seatStandingCrew` leaves a person off a new date for. One query, one
+ * predicate (`windowsOverlap` over `legWindow`, src/db/trips-clashes.ts), so a
+ * refusal here and a warning on the staffing week cannot disagree about the
+ * same pair of departures.
+ */
+async function crewBusyElsewhere(
+  tx: DbExecutor,
+  shopId: string,
+  tripId: string,
+  personIds: readonly string[],
+  days: readonly { startsAt: Date; endsAt: Date }[],
+): Promise<Set<string>> {
+  if (personIds.length === 0 || days.length === 0) return new Set();
+  const rows = await tx
+    .selectDistinct({ personId: tripAssignments.personId })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        // A called-off departure holds nobody's day, as in
+        // `overlappingCrewDepartures` (review 2b, 2026-10-12).
+        eq(trips.status, "scheduled"),
+        ne(trips.id, tripId),
+        inArray(tripAssignments.personId, [...personIds]),
+        or(...days.map((day) => windowsOverlap(legWindow(tripScheduleDays, trips), day))),
+      ),
+    );
+  return new Set(rows.map((row) => row.personId));
+}
+
+/**
+ * **A repeating trip's standing crew, seated on a date the horizon roll just
+ * made** (`trip_series_crew`, ADR 20260810-open-ended-recurring-trips,
+ * addendum 2026-10-12). Called inside the roll's transaction, on a departure
+ * that has no crew yet.
+ *
+ * Nothing about the crew is assumed from the date it was copied from; each
+ * person is asked again of *this* date:
+ *
+ * - **Still on the staff.** Somebody who has left the shop is not rostered.
+ * - **Free in these hours.** A person already crewing another departure that
+ *   overlaps this one is left off this date only — the same conflict
+ *   `setTripCrew` refuses, through the same predicate. The date then shows the
+ *   shortfall the staffing week and Today already read, per date.
+ * - **A course session keeps an instructor.** If the people left would give a
+ *   course session no instructor, nobody is seated, exactly as `setTripCrew`
+ *   would refuse that crew; the session's own "no instructor" gap says so.
+ *
+ * Ratios are not checked here because no write door checks them: an over-ratio
+ * crew is recorded and surfaced as `over_ratio`, never refused (see this
+ * module's header). Every crew member seated is told, in their next crew digest.
+ *
+ * Returns who was seated.
+ */
+export async function seatStandingCrew(
+  tx: DbExecutor,
+  input: {
+    shopId: string;
+    tripId: string;
+    courseSession: boolean;
+    days: readonly { startsAt: Date; endsAt: Date }[];
+    crew: readonly { personId: string; tripRole: TripCrewRole | null }[];
+    now?: Date;
+  },
+): Promise<string[]> {
+  if (input.crew.length === 0) return [];
+  const roleRows = await tx
+    .select({ personId: personRoles.personId, role: personRoles.role })
+    .from(personRoles)
+    .innerJoin(people, eq(people.id, personRoles.personId))
+    .where(
+      and(
+        eq(people.shopId, input.shopId),
+        isNull(people.deletedAt),
+        inArray(
+          personRoles.personId,
+          input.crew.map((member) => member.personId),
+        ),
+        inArray(personRoles.role, [...STAFF_ROLES]),
+      ),
+    );
+  const shopRoles = new Map<string, string[]>();
+  for (const row of roleRows) {
+    shopRoles.set(row.personId, [...(shopRoles.get(row.personId) ?? []), row.role]);
+  }
+  const staff = input.crew.filter((member) => shopRoles.has(member.personId));
+  const busy = await crewBusyElsewhere(
+    tx,
+    input.shopId,
+    input.tripId,
+    staff.map((member) => member.personId),
+    input.days,
+  );
+  const seated = staff.filter((member) => !busy.has(member.personId));
+  if (seated.length === 0) return [];
+  if (input.courseSession) {
+    const proposedCrew = seated.map((member) => ({
+      tripRole: member.tripRole,
+      shopRoles: shopRoles.get(member.personId) ?? [],
+    }));
+    if (
+      reviewManifestChange({ courseRequiresInstructor: true, proposedCrew }).blocking ||
+      countInWaterCrew(proposedCrew).instructorCount === 0
+    ) {
+      return [];
+    }
+  }
+  await tx.insert(tripAssignments).values(
+    seated.map((member) => ({
+      tripId: input.tripId,
+      personId: member.personId,
+      tripRole: member.tripRole,
+    })),
+  );
+  await recordCrewNotices(
+    tx,
+    seated.map((member) => ({
+      shopId: input.shopId,
+      tripId: input.tripId,
+      personId: member.personId,
+      change: "assigned" as const,
+      actorPersonId: null,
+    })),
+    input.now,
+  );
+  return seated.map((member) => member.personId);
 }
 
 /**

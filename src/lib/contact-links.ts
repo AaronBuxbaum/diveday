@@ -39,3 +39,15 @@ export function mailtoHref(email: string, options?: { subject?: string; body?: s
   // literally; `%20` is what every client agrees on.
   return `mailto:${email}${search ? `?${search.replace(/\+/g, "%20")}` : ""}`;
 }
+
+/**
+ * A WhatsApp click-to-chat link (`https://wa.me/<digits>`) for a number stored
+ * as Meta printed it ("+1 305-555-0134"), or null when what is stored cannot
+ * be one: wa.me takes the full international number as digits only, and a
+ * link to a number too short to be real opens a chat with nobody.
+ */
+export function whatsAppChatHref(displayNumber: string | null | undefined): string | null {
+  const digits = (displayNumber ?? "").replace(/\D/g, "");
+  if (digits.length < 8 || digits.length > 15) return null;
+  return `https://wa.me/${digits}`;
+}

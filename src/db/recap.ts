@@ -33,7 +33,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { diveDay } from "./dive-days";
 import { listSiteFieldGuides } from "./dive-sites";
-import { listExecutedDives, peopleWhoDivedBefore } from "./executed-dives";
+import { diveDaysBefore, listExecutedDives } from "./executed-dives";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import {
   notificationProviderForDb,
@@ -60,7 +60,7 @@ import { tripsWithSomebodyMissing } from "./today";
 import { listTripSightings } from "./trip-sightings";
 import { getTripWithBooked, listTripDives } from "./trips";
 import { tripCrewByTrip } from "./trips-crew";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 /** A diver's own recap photo, as the recap page renders it. */
@@ -626,7 +626,7 @@ async function loadRecapPageData(
     // Did this diver dive here yesterday? DAN's 18 hours covers multiple days
     // as well as repetitive dives, so the answer widens the fly-safe basis
     // below. One more element of this `Promise.all`, not a second round trip.
-    peopleWhoDivedBefore(db, row.shopId, [row.personId], trip.startsAt, row.timezone),
+    diveDaysBefore(db, row.shopId, [row.personId], trip.startsAt, row.timezone),
     trip.boatId ? getBoatForHistory(db, row.shopId, trip.boatId) : Promise.resolve(null),
     tripCrewByTrip(db, row.shopId, [row.tripId]),
     db
@@ -774,7 +774,9 @@ async function loadRecapPageData(
     })),
     plannedDives: trip.plannedDives,
     endsAt: trip.endsAt,
-    divedRecently: divedRecentlyIds.has(row.personId),
+    divedRecently: divedRecentlyIds.dived.has(row.personId),
+    exceedsNoDecoLimits: trip.exceedsNoDecoLimits,
+    decompressionRecently: divedRecentlyIds.decompression.has(row.personId),
     now: nowDate(),
     hours: DEFAULT_FLY_SAFE_HOURS,
   });
@@ -1413,6 +1415,9 @@ async function sendRecaps(
         // recap is about the matched diver record, sent to its address.
         isNull(bookings.identityUnconfirmedAt),
         eq(trips.status, "scheduled"),
+        // A rehearsal's test divers get no recap, by any channel (ADR
+        // 20261012-rehearsal-departures).
+        notRehearsal(),
         ...(scope.shopId ? [eq(trips.shopId, scope.shopId)] : []),
         ...(scope.tripId
           ? [eq(trips.id, scope.tripId)]
@@ -1495,7 +1500,7 @@ async function sendRecaps(
       const [dives, lived, divedRecentlyIds] = await Promise.all([
         listTripDives(db, shopId, tripId),
         listExecutedDives(db, shopId, tripId),
-        peopleWhoDivedBefore(
+        diveDaysBefore(
           db,
           shopId,
           tripRows.map((r) => r.booking.personId),
@@ -1519,7 +1524,9 @@ async function sendRecaps(
             executedDives: executed,
             plannedDives: first.trip.plannedDives,
             endsAt: first.trip.endsAt,
-            divedRecently: divedRecentlyIds.has(r.booking.personId),
+            divedRecently: divedRecentlyIds.dived.has(r.booking.personId),
+            exceedsNoDecoLimits: first.trip.exceedsNoDecoLimits,
+            decompressionRecently: divedRecentlyIds.decompression.has(r.booking.personId),
             now,
             hours: DEFAULT_FLY_SAFE_HOURS,
           }),

@@ -8,9 +8,9 @@ import {
   callDayBlowout,
   callTripBlowout,
   getTripBlowout,
-  hasTripBlowout,
   listDayBlowoutDepartures,
   resumeTripBlowout,
+  tripBlowoutCause,
 } from "./blowouts";
 import { createBookingParty } from "./bookings";
 import { recordRollCall } from "./manifests";
@@ -165,7 +165,7 @@ describe("callTripBlowout — the one-tap cascade", () => {
       .from(tripsTable)
       .where(eq(tripsTable.id, ctx.trip.id));
     expect(trip.status).toBe("cancelled");
-    expect(await hasTripBlowout(ctx.db, ctx.shop.id, ctx.trip.id)).toBe(true);
+    expect(await tripBlowoutCause(ctx.db, ctx.shop.id, ctx.trip.id)).toBe("weather");
   });
 
   it("refuses an unknown trip and another shop's trip id", async () => {

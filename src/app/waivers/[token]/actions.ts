@@ -28,6 +28,7 @@ import {
   emergencyContactSchema,
   readEmergencyContact,
 } from "@/lib/contact";
+import { formValue, parseForm } from "@/lib/form-parse";
 import { GUARDIAN_RELATIONSHIPS, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import type { MedicalQuestionnaire } from "@/lib/medical";
 import {
@@ -274,6 +275,12 @@ function refusedSubmitPath(token: string, field: WaiverInvalidField | undefined)
 }
 
 /**
+ * The questionnaire's answers are named by question id, so every field rides
+ * the catch-all, each read by its first value as `FormData.get` read it.
+ */
+const medicalAnswerFields = z.object({}).catchall(formValue());
+
+/**
  * This form's questionnaire answers.
  *
  * The rule itself lives in `src/lib/medical.ts` — it is the one function that
@@ -286,10 +293,12 @@ function readFormMedicalAnswers(
   questionnaire: MedicalQuestionnaire,
   options: { allowIncomplete?: boolean } = {},
 ): MedicalAnswers | null {
+  const parsed = parseForm(medicalAnswerFields, formData);
+  const fields = parsed.ok ? parsed.data : {};
   return readMedicalAnswers(
     questionnaire,
     (questionId) => {
-      const value = formData.get(medicalQuestionField(questionId));
+      const value = fields[medicalQuestionField(questionId)];
       return value === "yes" || value === "no" ? value : null;
     },
     options,

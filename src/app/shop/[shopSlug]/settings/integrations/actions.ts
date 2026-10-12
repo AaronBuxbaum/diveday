@@ -25,6 +25,7 @@ import {
   xeroAuthorizationUrl,
   xeroConfigFromEnvironment,
 } from "@/features/integrations";
+import { formValue, parseForm, readForm, single, text, trimmedText } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
@@ -45,8 +46,12 @@ type Notice =
   | "encryption-key-invalid";
 
 const shopifyDomainSchema = z.object({
-  shopDomain: z.string().trim().min(1).max(120),
+  shopDomain: single(z.string().trim().min(1).max(120), ""),
 });
+const zapierForm = z.object({ webhookUrl: text() });
+const quickBooksForm = z.object({ incomeAccountId: trimmedText() });
+const xeroForm = z.object({ salesAccountCode: trimmedText(), bankAccountCode: trimmedText() });
+const providerForm = z.object({ provider: formValue() });
 
 async function integrationContext() {
   const session = await requireStaffSession();
@@ -73,11 +78,11 @@ function done(
 
 export async function startShopifyConnectionAction(formData: FormData): Promise<void> {
   const { db, session, path } = await integrationContext();
-  const parsed = shopifyDomainSchema.safeParse({ shopDomain: formData.get("shopDomain") ?? "" });
+  const parsed = parseForm(shopifyDomainSchema, formData);
   const config = shopifyConfigFromEnvironment();
   const appHost = publicAppUrl();
-  if (!parsed.success || !config || !appHost || secureStorageNotice())
-    done(path, !parsed.success ? "invalid" : "not-configured");
+  if (!parsed.ok || !config || !appHost || secureStorageNotice())
+    done(path, !parsed.ok ? "invalid" : "not-configured");
   // Normalized *before* the state row is minted. The schema only bounds the
   // length, and `shopifyAuthorizationUrl` throws on anything that is not
   // `*.myshopify.com` -- so a shop typing its own name or its storefront
@@ -144,7 +149,7 @@ export async function startXeroConnectionAction(): Promise<void> {
 
 export async function saveZapierIntegrationAction(formData: FormData): Promise<void> {
   const { db, session, path } = await integrationContext();
-  const url = normalizeZapierWebhookUrl(String(formData.get("webhookUrl") ?? ""));
+  const url = normalizeZapierWebhookUrl(readForm(zapierForm, formData).webhookUrl);
   const eventTypes = normalizeZapierEventTypes(
     formData.getAll("eventType").filter((value): value is string => typeof value === "string"),
   );
@@ -183,7 +188,7 @@ export async function updateZapierEventsAction(formData: FormData): Promise<void
 
 export async function updateQuickBooksSettingsAction(formData: FormData): Promise<void> {
   const { db, session, path } = await integrationContext();
-  const incomeAccountId = String(formData.get("incomeAccountId") ?? "").trim();
+  const { incomeAccountId } = readForm(quickBooksForm, formData);
   if (incomeAccountId && !/^\d{1,32}$/.test(incomeAccountId)) done(path, "invalid");
   const row = await getShopIntegration(db, session.user.shopId, "quickbooks");
   if (!row) done(path, "failed");
@@ -204,8 +209,7 @@ const XERO_ACCOUNT_CODE = /^[A-Za-z0-9-]{1,10}$/;
 
 export async function updateXeroSettingsAction(formData: FormData): Promise<void> {
   const { db, session, path } = await integrationContext();
-  const salesAccountCode = String(formData.get("salesAccountCode") ?? "").trim();
-  const bankAccountCode = String(formData.get("bankAccountCode") ?? "").trim();
+  const { salesAccountCode, bankAccountCode } = readForm(xeroForm, formData);
   for (const code of [salesAccountCode, bankAccountCode]) {
     if (code && !XERO_ACCOUNT_CODE.test(code)) done(path, "invalid");
   }
@@ -254,7 +258,7 @@ export async function testZapierIntegrationAction(): Promise<void> {
 
 export async function disconnectIntegrationAction(formData: FormData): Promise<void> {
   const { db, session, path } = await integrationContext();
-  const provider = formData.get("provider");
+  const provider = readForm(providerForm, formData).provider;
   if (
     provider !== "shopify" &&
     provider !== "quickbooks" &&

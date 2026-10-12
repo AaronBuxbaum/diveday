@@ -36,6 +36,15 @@ export const READY_NOTICES: Record<
   // Landing here fresh off a successful seat claim (docs ADR
   // 20260804-seat-claim-links) — the one moment to say whose page this now is.
   "saved-claimed": { tone: "success", key: "seatClaim.claimedNotice" },
+  // "Add a seat" (UX review 2026-10-11, item 13). Each refusal names its door:
+  // the boat is full, the shop has to check who is coming, the group is at the
+  // one-booking cap, or the name box was empty.
+  "saved-seat": { tone: "success", key: "seatClaim.addedNotice" },
+  "error-seat": { tone: "danger", key: "seatClaim.addUnavailable" },
+  "error-seat-full": { tone: "danger", key: "seatClaim.addFull" },
+  "error-seat-ask-shop": { tone: "danger", key: "seatClaim.addAskShop" },
+  "error-seat-party-full": { tone: "danger", key: "seatClaim.addPartyFull" },
+  "error-seat-name": { tone: "danger", key: "seatClaim.addNameMissing" },
   // A card the diver typed in. "Added", never "verified": a staff review is
   // what makes it count, and the copy says so rather than implying the
   // checklist row has cleared.

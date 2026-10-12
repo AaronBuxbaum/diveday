@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, makeActivitySafe, READ_ONLY, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, READ_ONLY, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
   choosePartySize,
@@ -25,6 +25,14 @@ import {
  */
 const openMoreDetails = (page: Page) =>
   page.locator("summary").filter({ hasText: "More details" }).click();
+
+/**
+ * **The course editor's own hydration flag**, not "whatever carries
+ * `data-hydrated`". The staff header's Search button publishes the same flag
+ * (#2366), so a bare `[data-hydrated]` matches two elements and fails strict
+ * mode. The guard's wrapper is the one that holds the editor's fields.
+ */
+const editorHydrated = (page: Page) => page.locator('[data-hydrated="true"]:has([name="summary"])');
 
 test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba session and save rental preferences", async ({
   page,
@@ -62,7 +70,7 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await page.getByLabel("Email").fill("nora@example.com");
   await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-  await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
 
   // Sizes live in the thread's "Gear and sizes" step, and at most one step is
   // open at rest (ADR 20260827-the-divers-thread, decision 3).
@@ -523,7 +531,7 @@ test.describe("staff", () => {
     await page.getByLabel("Email").fill(`ravi-${e2eNow().getTime()}@example.com`);
     await acceptAgeAttestation(page);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-    await expect(page.getByRole("heading", { name: /You’re on the boat, Ravi/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /You’ve got a seat, Ravi/ })).toBeVisible();
   });
 
   // PADI's published entry-level in-water ratio (H-08, src/lib/course-ratios.ts):
@@ -581,7 +589,7 @@ test.describe("staff", () => {
       }
       await acceptAgeAttestation(page);
       await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-      await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toBeVisible();
+      await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).toBeVisible();
     };
 
     // Two party bookings fill the 8-seat ratio (6 + 2); the trip's own
@@ -616,7 +624,7 @@ test.describe("staff", () => {
     // that lands first is thrown away and the box goes back to the row's own
     // text. Here that is silent: the save succeeds on the text the writer did
     // not type, and the assertion that fails is the *next* one.
-    await expect(page.locator("[data-hydrated]")).toBeVisible();
+    await expect(editorHydrated(page)).toBeVisible();
     await page.getByLabel("Subhead").fill("Plan every dive to {depth18}");
     await page.getByRole("button", { name: "Save course page" }).click();
     await expect(page.getByRole("status")).toContainText("Course page saved");
@@ -637,7 +645,7 @@ test.describe("staff", () => {
     // marker was thrown away by hydration, the *valid* text from the save above
     // was posted instead, and the refusal this asserts never happened — so the
     // wait burned its eight seconds and reported the alert as simply absent.
-    await expect(page.locator("[data-hydrated]")).toBeVisible();
+    await expect(editorHydrated(page)).toBeVisible();
     await page.getByLabel("Subhead").fill("Plan every dive to {depth 18}");
     await page.getByRole("button", { name: "Save course page" }).click();
     // Filtered, not bare: Next's own route announcer is a `role="alert"` too.
@@ -649,6 +657,46 @@ test.describe("staff", () => {
     // diver reads.
     await page.goto("/s/blue-mantis/courses/wreck-diver");
     await expect(page.getByText(/Plan every dive to/)).toContainText(/(18 meters|60 feet)/);
+  });
+
+  /**
+   * **On a phone the editor folds** (UX review 2026-10-10, item 15). There is
+   * no rail at 390: each section is a header naming it, the first one open,
+   * one open at a time. What a writer typed in a section survives folding it,
+   * because the fields are hidden rather than unmounted, and Save still posts
+   * them.
+   */
+  test("on a phone, one section opens at a time and a folded edit still saves", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/shop/blue-mantis/courses/discover-scuba-diving/edit");
+    await expect(editorHydrated(page)).toBeAttached();
+    await expect(page.getByRole("navigation", { name: "Sections", exact: true })).toBeHidden();
+
+    const pitch = page.getByRole("button", { name: /^The pitch/ });
+    const pricing = page.getByRole("button", { name: /^Pricing/ });
+    await expect(pitch).toHaveAttribute("aria-expanded", "true");
+    await expect(pricing).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByLabel("Instruction fee")).toBeHidden();
+
+    await pricing.click();
+    await expect(pitch).toHaveAttribute("aria-expanded", "false");
+    await page.getByLabel("Instruction fee").fill("151.00");
+
+    // Fold it again by opening another: the edit is still in the form.
+    await pitch.click();
+    await expect(page.getByLabel("Instruction fee")).toBeHidden();
+    await expect(pricing).toContainText("151.00");
+    await page.getByRole("button", { name: "Save course page" }).click();
+    await expect(page.getByRole("status")).toContainText("Course page saved");
+
+    await page.goto("/shop/blue-mantis/courses/discover-scuba-diving/edit#pricing");
+    await expect(page.getByRole("button", { name: /^Pricing/ })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await expect(page.getByLabel("Instruction fee")).toHaveValue(/151/);
   });
 
   /**
@@ -677,7 +725,7 @@ test.describe("staff", () => {
     // renders `data-hydrated` for exactly this and the visual suite already waits
     // on the same signal; only this spec typed blind. Failed that way twice on CI
     // on 2026-09-11, on two different heads, passing on a re-run in between.
-    await expect(page.locator("[data-hydrated]")).toBeVisible();
+    await expect(editorHydrated(page)).toBeVisible();
 
     await page.getByLabel("Subhead").fill("Three days from pool to reef");
     await expect(page.getByText("Unsaved changes in The pitch")).toBeVisible();
@@ -1069,7 +1117,7 @@ test.describe("the course editor over a wander through the app", () => {
     // to the form — a native event the dirty flag never hears, so the bar
     // below never says "Unsaved changes". Wait for the guard to say it is
     // listening, the way the orders and counter searches are waited on.
-    await page.locator('[data-hydrated="true"]:has([name="summary"])').waitFor();
+    await editorHydrated(page).waitFor();
     await summary.fill("Half a thought, never saved");
     // The bar says so, pinned to the bottom edge rather than four thousand
     // pixels down where Save used to be the only sign this was a form — and it
@@ -1234,4 +1282,37 @@ test("a course's learning materials reach the student's thread, and staff tick t
   await expect(diverPage.getByText("The shop has these marked done")).toBeVisible();
   await expect(diverPage.getByRole("link", { name: "Pool skills video" })).toBeVisible();
   await diverContext.close();
+});
+
+/**
+ * **The agency-wording door is for the staffer who can walk through it** (UX
+ * review 2026-10-10, item 16). The course editor draws its Forms section only
+ * for someone who may configure courses, so a divemaster reading the roster is
+ * told the wording is missing and is offered no link into an editor with no
+ * Forms in it.
+ */
+test.describe("the agency-wording notice on the course roster", () => {
+  test.describe("for an owner", () => {
+    signedInAsOwner();
+    test("says what is missing and opens the first course's Forms", async ({ page }) => {
+      await page.goto("/shop/blue-mantis/courses");
+      const notice = page.getByText(/needs? (its|their) agency form wording/);
+      await expect(notice).toBeVisible();
+      await expect(page.getByRole("link", { name: /^Start with / })).toHaveAttribute(
+        "href",
+        /\/shop\/blue-mantis\/courses\/[^/]+\/edit#forms$/,
+      );
+    });
+  });
+
+  test.describe("for a divemaster", () => {
+    signedInAs("divemaster");
+    test("says what is missing and offers no door into a Forms section they cannot see", async ({
+      page,
+    }) => {
+      await page.goto("/shop/blue-mantis/courses");
+      await expect(page.getByText(/needs? (its|their) agency form wording/)).toBeVisible();
+      await expect(page.getByRole("link", { name: /^Start with / })).toHaveCount(0);
+    });
+  });
 });

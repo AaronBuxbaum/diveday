@@ -1,6 +1,7 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { createHmac } from "node:crypto";
+import { type APIRequestContext, expect, type Locator, type Page } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { E2E_FROZEN_CLOCK } from "./servers";
+import { E2E_FROZEN_CLOCK, E2E_STRIPE_TEST_WEBHOOK_SECRET } from "./servers";
 
 // Better Auth sign-out revokes a database session. The staff storage-state
 // fixture caches one session per worker/role for speed, so a test that signs
@@ -142,8 +143,9 @@ export async function bookASeatAndOpenThread(page: Page, name: string, email?: s
 }
 
 /**
- * The thread page's **one status statement** — "2 of 4 done · Next: Gear and
- * sizes" (ADR 20260827-the-divers-thread, decision 3, slice 7c).
+ * The thread page's **one status statement** — "Next: your gear, renting or
+ * bringing your own?" over "2 of 4 done" (ADR 20260827-the-divers-thread, decision 3,
+ * slice 7c; the sentence leads since UX review 2026-10-10, item 9).
  *
  * The stable anchor for "the prep state has rendered". Specs used to wait on
  * the heading "Your pre-trip checklist", which went with the card that carried
@@ -218,6 +220,39 @@ export async function openRecapDoor(page: Page, door: string): Promise<Locator> 
  */
 export function e2eNow(): Date {
   return new Date(E2E_FROZEN_CLOCK);
+}
+
+/**
+ * **Pay a Stripe invoice the way Stripe does** (issue #2306): a test-mode
+ * `invoice.paid`, signed with the fleet's test webhook secret, posted to the
+ * real `/api/webhooks/stripe`. No door marks an invoice paid but the webhook,
+ * so the spec goes through it rather than around it. Signed at the frozen
+ * clock, the instant the server checks the signature's age against.
+ */
+export async function payInvoiceThroughWebhook(
+  request: APIRequestContext,
+  invoice: { invoiceId: string; stripeAccountId: string; amountCents: number },
+): Promise<void> {
+  const created = Math.floor(e2eNow().getTime() / 1000);
+  const payload = JSON.stringify({
+    id: `evt_e2e_${invoice.invoiceId}`,
+    type: "invoice.paid",
+    account: invoice.stripeAccountId,
+    created,
+    livemode: false,
+    data: { object: { id: invoice.invoiceId, amount_paid: invoice.amountCents } },
+  });
+  const signature = createHmac("sha256", E2E_STRIPE_TEST_WEBHOOK_SECRET)
+    .update(`${created}.${payload}`)
+    .digest("hex");
+  const response = await request.post("/api/webhooks/stripe", {
+    data: payload,
+    headers: {
+      "content-type": "application/json",
+      "stripe-signature": `t=${created},v1=${signature}`,
+    },
+  });
+  expect(response.status()).toBe(200);
 }
 
 /**

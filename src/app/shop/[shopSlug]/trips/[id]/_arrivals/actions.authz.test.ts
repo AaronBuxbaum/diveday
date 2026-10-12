@@ -52,9 +52,13 @@ vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
-const { checkInAction, markNoShowAction, undoCheckInAction, undoNoShowAction } = await import(
-  "./actions"
-);
+const {
+  checkInAction,
+  markNoShowAction,
+  offerAnotherDayAction,
+  undoCheckInAction,
+  undoNoShowAction,
+} = await import("./actions");
 
 const SHOP_SLUG = "reef-life";
 const FOCUS_TRIP_ID = "33333333-3333-4333-8333-333333333333";
@@ -74,6 +78,7 @@ describe("who may run each action at the counter", () => {
     "undoCheckInAction",
     "markNoShowAction",
     "undoNoShowAction",
+    "offerAnotherDayAction",
   ];
 
   /** Every exported action's source, sliced from its `export` to its closing brace. */
@@ -157,6 +162,11 @@ describe("a refused session at the counter", () => {
     undoCheckInAction: (form) => undoCheckInAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
     markNoShowAction: (form) => markNoShowAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
     undoNoShowAction: (form) => undoNoShowAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
+    offerAnotherDayAction: (form) => {
+      form.set("offerTripId", FOCUS_TRIP_ID);
+      form.set("personId", BOOKING_ID);
+      return offerAnotherDayAction(SHOP_SLUG, FOCUS_TRIP_ID, form);
+    },
   };
 
   function bookingForm(): FormData {

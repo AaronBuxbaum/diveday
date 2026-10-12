@@ -16,7 +16,7 @@ import {
   type StripeAccountHolder,
 } from "@/lib/payments/stripe-keys";
 import type { AppDb, DbExecutor } from "./client";
-import { DEMO_SHOP_SLUG } from "./dev-credentials";
+import { DEMO_SHOP_SLUG } from "./demo-shop";
 import type { ShopStripeAccount } from "./schema";
 import { shopStripeAccounts, shops } from "./schema";
 

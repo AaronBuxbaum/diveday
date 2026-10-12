@@ -40,17 +40,10 @@ import {
   updateXeroSettingsAction,
   updateZapierEventsAction,
 } from "./actions";
+import { EVENT_OPTIONS, type EventLabelKey } from "./event-options";
 
 export const instant = true;
 export const metadata: Metadata = { title: "Integrations — DiveDay" };
-
-const EVENT_OPTIONS = [
-  { value: "order.created", label: "integrations.common.orderCreated" },
-  { value: "order.paid", label: "integrations.common.orderPaid" },
-  { value: "order.refunded", label: "integrations.common.orderRefunded" },
-] as const;
-
-type EventLabelKey = (typeof EVENT_OPTIONS)[number]["label"];
 
 function noticeMessages(t: StaffTranslator) {
   return {

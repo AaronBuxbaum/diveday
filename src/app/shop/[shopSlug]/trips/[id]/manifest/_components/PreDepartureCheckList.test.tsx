@@ -140,3 +140,25 @@ describe("the boat check's disclosure", () => {
     expect(details(container).open).toBe(false);
   });
 });
+
+/**
+ * **A check's own label is critical text** (UX review 2026-10-11, item 29):
+ * "Emergency oxygen kit aboard" is a control's label read at the dock, so it
+ * sits at the 16px floor. "Checked by the recorder · 7:12 AM" is the caption
+ * under it: smaller, but at full ink and never below 14px (dive-domain review
+ * of layer 8, F8).
+ */
+describe("the pre-departure check's label", () => {
+  it("reads at the dock-test size while its caption stays small", () => {
+    const { getAllByRole, getByText } = render(
+      <PreDepartureCheckList action={async () => null} items={items} copy={copy} atDeparture />,
+    );
+    const oxygen = getAllByRole("button", { pressed: true })[0];
+    expect(oxygen).toHaveClass("text-base");
+    expect(oxygen).not.toHaveClass("text-sm");
+    const caption = getByText("Checked by the recorder · 7:12 AM");
+    expect(caption).toHaveClass("text-sm");
+    expect(caption).not.toHaveClass("text-xs");
+    expect(caption).not.toHaveClass("opacity-80");
+  });
+});

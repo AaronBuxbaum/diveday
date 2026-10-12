@@ -56,6 +56,7 @@ async function inboundEmail(
   overrides: { subject?: string | null; emailMessageId?: string | null; receivedAt?: Date } = {},
 ) {
   const result = await recordInboundMessage(db, {
+    senderAuthenticated: true,
     shopId,
     channel: "email",
     fromAddress,
@@ -346,6 +347,7 @@ describe("what cannot be answered", () => {
   it("refuses a WhatsApp reply once Meta's 24-hour window has closed", async () => {
     const { db, shop, diver, staff } = await shopContext();
     const recorded = await recordInboundMessage(db, {
+      senderAuthenticated: true,
       shopId: shop.id,
       channel: "whatsapp",
       fromAddress: diver.phone,
@@ -369,6 +371,7 @@ describe("what cannot be answered", () => {
   it("refuses a WhatsApp reply from a shop with no sender connected", async () => {
     const { db, shop, diver, staff } = await shopContext();
     const recorded = await recordInboundMessage(db, {
+      senderAuthenticated: true,
       shopId: shop.id,
       channel: "whatsapp",
       fromAddress: diver.phone,

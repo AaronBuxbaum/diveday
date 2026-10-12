@@ -34,7 +34,7 @@ The infra-ASCII one (`scripts/check-infra-ascii.mjs`) refuses any non-ASCII char
 
 ### destructive-migration
 
-The destructive-migration one (`scripts/check-migrations.mjs`, also run by `scripts/vercel-build.mjs` before `pnpm db:migrate`) refuses a `DROP`/rename/type-change in any migration newer than the previous release unless the SQL itself carries a `-- diveday:allow-destructive <rule> <table>.<column>: <why>` line — migrations apply inside the production build while the *previous* release is still serving, and there are no down migrations (ADR 20260806-destructive-migration-guard).
+The destructive-migration one (`scripts/check-migrations.mjs`, also run by `scripts/vercel-build.mjs` before `pnpm db:migrate`) refuses a `DROP`/rename/type-change in any migration newer than the previous release unless the SQL itself carries a `-- diveday:allow-destructive <rule> <table>.<column>: <why>` line — migrations apply inside the production build while the *previous* release is still serving, and there are no down migrations (ADR 20260806-destructive-migration-guard). A `drop-column` marker is refused outright while the previous release's or this branch's `src/db/schema/` still declares the column, because a declared column is named by every whole-row select on that release and no free-text reason can make that safe (issue #2336).
 
 ### migration-graph
 
@@ -110,7 +110,7 @@ Rule 3 is newer (issue #1757) and exists because of a fallback nobody could see:
 
 ### tinted-ink
 
-The tinted-ink one (`scripts/check-tinted-ink.mjs`) refuses a `bg-<hue>/10` fill on an element whose own text is `text-<hue>`. That fill is **translucent**, so the colour the text is read against is the hue composited over whatever happens to be behind the element — and every ratio in `docs/design/forms-and-controls.md` was computed against `--surface`. Turning axe's `color-contrast` rule back on found 24 failing nodes on 2026-08-23 and every one was this: a status pill on `--background` rather than a card (4.21:1 where the table says 4.86), a `bg-primary/10` badge nested inside the green of a boarded row on `/check-in` (**4.09:1**, the worst in the app), and in dark mode a danger count badge inside the current nav tab's own primary tint. The fix is the opaque `--<hue>-tint` token, which resolves against `--surface` once and is the table's number wherever the element is mounted — or `Badge`, which does it for you. The check exists because the axe scan reaches about thirty routes and the pill that started this was on none of them; it matches the same element only and the `/10` fill only, since a parent's tint under a child's ink is invisible to a grep and the `/15` roll-call states render under `.boat-mode`, a different palette with its own measurements. A line that genuinely means the translucent form says `diveday:allow-tinted-ink: <why>`.
+The tinted-ink one (`scripts/check-tinted-ink.mjs`) refuses a `bg-<hue>/10` fill on an element whose own text is `text-<hue>`. That fill is **translucent**, so the colour the text is read against is the hue composited over whatever happens to be behind the element — and every ratio in `docs/design/forms-and-controls.md` was computed against `--surface`. Turning axe's `color-contrast` rule back on found 24 failing nodes on 2026-08-23 and every one was this: a status pill on `--background` rather than a card (4.21:1 where the table says 4.86), a `bg-primary/10` badge nested inside the green of a boarded row on `/check-in` (**4.09:1**, the worst in the app), and in dark mode a danger count badge inside the current nav tab's own primary tint. The fix is the opaque `--<hue>-tint` token, which resolves against `--surface` once and is the table's number wherever the element is mounted — or `Badge`, which does it for you. The check exists because the axe scan reaches about thirty routes and the pill that started this was on none of them; it matches the same element only, at any opacity, since a parent's tint under a child's ink is invisible to a grep, and it skips the files in its `BOAT_MODE_FILES`, which render under `.boat-mode`, a different palette with its own measurements. The roll-call controls are not among them: they wear the opaque tint, and the check holds them to it (issue #2341). A line that genuinely means the translucent form says `diveday:allow-tinted-ink: <why>`.
 
 ### type-ramp
 
@@ -418,6 +418,8 @@ Five guards that were one syntactic pattern each are rules in `pnpm lint` now: a
 
 The escape hatch is Biome's own, and its reason is required: `// biome-ignore lint/plugin/<rule>: <why>` on the line above. One with nothing after the rule name is itself an error, so the hatch cannot be taken silently. A file-wide exemption is a negated glob in the rule's `biome.json` override, with its reason in this section.
 
+**Three guards stay scripts, on evidence (issue #2359).** A GritQL rule sees one syntax node at a time and Biome's regex has no lookaround, so a port is only made when an injected corpus shows it refuses exactly the lines the script refuses. `check-tokens` fails that test both ways: its issue-citation exemption reads the text *before* a `#722` across node boundaries and per occurrence (`"issue #722 and #333"` refuses only `#333`), which a per-string pattern cannot, and the script scans all non-comment text, so a private field `this.#fed` is refused by the script and not by a string rule, while `"https://x//#fff"` is the reverse. `check-type-ramp` reads comment lines (its `diveday:allow-type-ramp:` marker on the line above, and a spelling inside a comment) and judges `LEAD_TITLE_CLASS` by the file's directory, none of which a GritQL pattern sees. `check-uuid-segments` judges a page by its directory path. Revisit when Biome's plugins can read trivia and paths.
+
 ### clock
 
 Refuses `new Date()` and `Date.now()` in `src/lib`, `src/db` and `src/features`, tests included; read time through `nowDate()` / `nowMs()` in `src/lib/clock.ts`. The demo seed is clock-anchored and dozens of surfaces render relative time, so a live wall-clock read in domain or data code is what makes visual baselines drift: the clock module is the one seam the e2e fleet freezes (`DIVEDAY_CLOCK`), and in production it is the native call byte for byte. `src/app` is out of scope because client components read the browser clock, which the e2e specs freeze with `page.clock`. Tests are in scope because dozens of them once drifted into depending on real time running ahead of the frozen instant (`new Date(Date.now() + 1000)` as an upper bound, a session placed relative to real time and read back against `nowMs()`), and failed as a mass the day the instant moved. Exempt: `src/lib/clock.ts`, and `src/lib/clock.test.ts`, whose assertion is bracketing `nowMs()` between two real readings.
@@ -504,8 +506,10 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   Divers (`trips/[id]/page.tsx`, the roster, which is also the arrival desk inside the arrivals window:
   `_arrivals/arrival-desk.tsx`, its walk-in form at `walk-in/`), Boat (`manifest/`), Gear (`prep/`, the packing list) and Details (`trips/[id]?view=details`,
   the About panel). One component draws them, `_components/TripTabs.tsx`; every tab wears `TripPageHeader`, whose
-  stage pill's phase (Prep, Check-in, Aboard, Back) comes from `src/lib/trip-phase.ts`, where the crew's tap
-  on the manifest beats the clock. Add to a tab, never a fifth surface; a second list of the same divers is the duplicate this cut removed. A gear form redirects to
+  stage pill is the crew's own tap in the manifest strip's five words (`boatStageOf` in
+  `src/lib/trip-phase.ts`, the same reading Today's card and the strip use), or nothing; the clock's phase
+  (Prep, Check-in, Aboard, Back) is never printed and only decides that a departure is finished, when its
+  Divers tab becomes the record of who sailed. Add to a tab, never a fifth surface; a second list of the same divers is the duplicate this cut removed. A gear form redirects to
   `prep#{PREP_SECTION_ID}`; an About form redirects to the departure with its `form`, which opens
   Details. **A cancelled departure keeps its Boat tab and packs nothing**: the roll call is a
   record of people, the packing list an instruction about a check-in that is not happening
@@ -772,7 +776,8 @@ migration spent on rows that have never had a reader. When in doubt the answer i
 while a migration runs inside the production build, and having no users does not help a shop
 watching its schedule mid-deploy — a destructive migration still carries its
 `-- diveday:allow-destructive <rule> <table>.<column>: <why>` line, where "pre-pilot, no users,
-H-49" is now a sufficient *why*. And **H-02's retention windows and the erasure path** are promises
+H-49" is now a sufficient *why* — except for a `drop-column` whose column the previous release
+still declares, which the guard refuses whatever the reason: the drop waits one release. And **H-02's retention windows and the erasure path** are promises
 about data we *will* hold; they stand. This rule expires the moment the first pilot shop has real
 divers in the system — Aaron will say so, and it is not an agent's call to make.
 
@@ -859,6 +864,9 @@ For `src/lib/` and `src/features/`; the rules themselves are in `.claude/rules/d
   `api/offline-manifests/upcoming` answers with the whole 48-hour board, `identity` answers
   `{ shop: { slug } }` and nothing else. Both `no-store`; both read through the response types in
   `offline-manifests.ts`, never an inline cast (ADR 20260726-shopwide-offline-manifest-priming).
+  The same worker script, registered a second time from `/ready/` with that scope, keeps the
+  diver's last trip-prep page and nothing else (`src/worker/ready-page-cache.ts`,
+  `src/lib/ready-offline.ts`); the staff registration at `/` never stores one.
 - **Dive-site difficulty**: `dive_sites.difficulty_level`, one of three codes
   (`src/lib/dive-site-difficulty.ts`), worded by `src/i18n/dive-site-labels.ts`. Never free text
   (ADR 20260813-dive-site-difficulty-is-a-code). `siteFit()` believes a chosen level outright and
@@ -901,7 +909,10 @@ inside that direction are enforced too (ratcheted in `scripts/ratchets.json`): `
 `src/app` imports `drizzle-orm` (a query is a named `src/db` function), and everything outside
 `src/db` reaches the trips modules through the `@/db/trips` barrel. Test files and the e2e fixture
 routes under `src/app/api/test/` are exempt. Inside `src/db`, a module imports the `trips-*` sibling
-it needs rather than the barrel, so the barrel never closes an import cycle.
+it needs rather than the barrel, so the barrel never closes an import cycle. The guard is a hand-written
+import reader on purpose: dependency-cruiser found the same violations, but it cannot parse imports
+with TypeScript 7 and cannot check the feature README or run the ratchet (ADR
+20261012-architecture-guard-stays-hand-written).
 
 #### Read time through the clock
 
