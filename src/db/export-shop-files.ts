@@ -702,9 +702,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "anchor_date",
       "ends_on",
       "occurrence_count",
-      // Whether the run's crew follows it onto new dates; the shop's own
-      // choice, so its backup carries it.
-      "standing_crew",
       "last_rolled_at",
       "created_at",
     ],
@@ -721,11 +718,23 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.anchorDate,
         row.endsOn,
         row.occurrenceCount,
-        row.standingCrew,
         row.lastRolledAt,
         row.createdAt,
       ]),
     note: EXPORT_FILE_NOTES["trip_series.csv"],
+  },
+  {
+    file: "trip_series_crew.csv",
+    header: ["series_id", "series_title", "person_id", "person_name", "trip_role"],
+    rows: ({ seriesTitle, personName, seriesCrewRows }) =>
+      seriesCrewRows.map((row) => [
+        row.seriesId,
+        seriesTitle.get(row.seriesId),
+        row.personId,
+        personName.get(row.personId),
+        row.tripRole,
+      ]),
+    note: EXPORT_FILE_NOTES["trip_series_crew.csv"],
   },
   {
     file: "trip_series_skips.csv",

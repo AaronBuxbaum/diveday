@@ -28,6 +28,7 @@ import {
   createTripSeries,
   deleteTrip,
   getLatestSeriesInstance,
+  getSeriesStandingCrew,
   getTripCrewAssignments,
   getTripSeriesById,
   getTripSeriesSummary,
@@ -1231,9 +1232,9 @@ describe("a run's standing crew (2026-10-12): applied per date, never assumed", 
     for (const trip of run.result.trips) {
       expect(await crewOn(run.db, run.shop.id, trip.id)).toEqual(expected);
     }
-    expect((await getTripSeriesById(run.db, run.shop.id, run.result.series.id))?.standingCrew).toBe(
-      true,
-    );
+    expect(
+      (await getSeriesStandingCrew(run.db, run.shop.id, run.result.series.id)).length,
+    ).toBeGreaterThan(0);
   });
 
   it("leaves a date with its own crew when somebody on this one is on another boat then", async () => {
@@ -1350,9 +1351,7 @@ describe("a run's standing crew (2026-10-12): applied per date, never assumed", 
     });
     expect(fromEmpty).toEqual({ updated: 0, skipped: 0 });
     expect(await crewOn(run.db, run.shop.id, second.id)).toEqual([`${run.crew.captain}:`]);
-    expect((await getTripSeriesById(run.db, run.shop.id, run.result.series.id))?.standingCrew).toBe(
-      false,
-    );
+    expect((await getSeriesStandingCrew(run.db, run.shop.id, run.result.series.id)).length).toBe(0);
   });
 
   it("seats nobody on a course date whose instructor is busy elsewhere, never a crew with no instructor", async () => {
@@ -1428,6 +1427,129 @@ describe("a run's standing crew (2026-10-12): applied per date, never assumed", 
     expect((await getTripCrewAssignments(db, shop.id, free.id)).length).toBe(2);
   });
 
+  // Review 1a (2026-10-12): the standing crew is the run's own fact, not
+  // whatever the furthest-out date happens to carry. A date the roll seated
+  // short — somebody busy, a course instructor away — must not become the crew
+  // of every date after it.
+  it("seats the whole crew on a later roll after a date the roll had to leave short", async () => {
+    const run = await runWithCrew();
+    await setSeriesStandingCrew(run.db, {
+      shopId: run.shop.id,
+      seriesId: run.result.series.id,
+      sourceTripId: run.source.id,
+      standing: true,
+      actorPersonId: null,
+      now: run.now,
+    });
+    // The furthest date the first roll adds (2030-11-01 + 120 days, a
+    // Saturday); the other crew member is on another boat then.
+    const clash = at("2031-03-01T12:00:00.000Z");
+    const elsewhere = await createTrip(run.db, {
+      shopId: run.shop.id,
+      title: "Wreck Charter",
+      startsAt: clash,
+      endsAt: at("2031-03-01T16:00:00.000Z"),
+      capacity: 6,
+      plannedDives: 2,
+    });
+    if (!elsewhere) throw new Error("charter not created");
+    expect(await setTripCrew(run.db, run.shop.id, elsewhere.id, [run.crew.other])).toBe(true);
+    await rollSeriesForward(
+      run.db,
+      run.shop.id,
+      run.result.series.id,
+      at("2030-11-01T12:00:00.000Z"),
+    );
+    const dateAt = async (startsAt: Date) => {
+      const [row] = await run.db
+        .select({ id: trips.id })
+        .from(trips)
+        .where(
+          and(
+            eq(trips.seriesId, run.result.series.id),
+            eq(trips.startsAt, startsAt),
+            isNull(trips.deletedAt),
+          ),
+        );
+      if (!row) throw new Error(`the roll did not add ${startsAt.toISOString()}`);
+      return row.id;
+    };
+    expect(await crewOn(run.db, run.shop.id, await dateAt(clash))).toEqual([
+      `${run.crew.captain}:captain`,
+    ]);
+
+    // A week later the roll adds the next Saturday, past the short date.
+    await rollSeriesForward(
+      run.db,
+      run.shop.id,
+      run.result.series.id,
+      at("2030-11-08T12:00:00.000Z"),
+    );
+    expect(await crewOn(run.db, run.shop.id, await dateAt(at("2031-03-08T12:00:00.000Z")))).toEqual(
+      [`${run.crew.captain}:captain`, `${run.crew.other}:`].sort(),
+    );
+  });
+
+  it("seats a course run's crew again once its instructor is free, after a date that had nobody", async () => {
+    const { db, shop } = ctx;
+    const [course] = await db
+      .select({ id: courses.id })
+      .from(courses)
+      .where(eq(courses.shopId, shop.id))
+      .limit(1);
+    if (!course) throw new Error("seeded shop has no course");
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    const helper = staff.find(
+      (entry) => entry.person.id !== instructor?.person.id && !entry.roles.includes("instructor"),
+    );
+    if (!instructor || !helper) throw new Error("seeded shop needs an instructor and a helper");
+    const result = await createTripSeries(
+      db,
+      seriesInput({ shopId: shop.id, courseId: course.id, endsOn: null }),
+    );
+    if (!result) throw new Error("series not created");
+    const [source] = result.trips;
+    if (!source) throw new Error("expected a first date");
+    expect(
+      await setTripCrew(db, shop.id, source.id, [instructor.person.id, helper.person.id]),
+    ).toBe(true);
+    await setSeriesStandingCrew(db, {
+      shopId: shop.id,
+      seriesId: result.series.id,
+      sourceTripId: source.id,
+      standing: true,
+      actorPersonId: null,
+      now: at("2030-08-15T00:00:00.000Z"),
+    });
+    // The instructor is away on the furthest date the first roll adds.
+    const away = at("2031-03-01T12:00:00.000Z");
+    const elsewhere = await createTrip(db, {
+      shopId: shop.id,
+      title: "Private Lesson",
+      startsAt: away,
+      endsAt: at("2031-03-01T16:00:00.000Z"),
+      capacity: 2,
+      plannedDives: 1,
+    });
+    if (!elsewhere) throw new Error("lesson not created");
+    expect(await setTripCrew(db, shop.id, elsewhere.id, [instructor.person.id])).toBe(true);
+    await rollSeriesForward(db, shop.id, result.series.id, at("2030-11-01T12:00:00.000Z"));
+    await rollSeriesForward(db, shop.id, result.series.id, at("2030-11-08T12:00:00.000Z"));
+    const [next] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(
+        and(
+          eq(trips.seriesId, result.series.id),
+          eq(trips.startsAt, at("2031-03-08T12:00:00.000Z")),
+          isNull(trips.deletedAt),
+        ),
+      );
+    if (!next) throw new Error("the second roll did not add the next date");
+    expect((await getTripCrewAssignments(db, shop.id, next.id)).length).toBe(2);
+  });
+
   it("refuses a series that is not this shop's", async () => {
     const run = await runWithCrew();
     expect(
@@ -1440,9 +1562,7 @@ describe("a run's standing crew (2026-10-12): applied per date, never assumed", 
         now: run.now,
       }),
     ).toBeNull();
-    expect((await getTripSeriesById(run.db, run.shop.id, run.result.series.id))?.standingCrew).toBe(
-      false,
-    );
+    expect((await getSeriesStandingCrew(run.db, run.shop.id, run.result.series.id)).length).toBe(0);
   });
 });
 

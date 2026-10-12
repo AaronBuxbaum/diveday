@@ -473,6 +473,7 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "trip_requirements",
   "gear_items",
   "trip_series",
+  "trip_series_crew",
   "trip_series_skips",
   "trip_schedule_days",
   // DiveDay's own shared catalogue, and a shop asking for an addition to it.

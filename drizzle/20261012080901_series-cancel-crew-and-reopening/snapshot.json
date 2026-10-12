@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "d666f2cb-b84b-489f-aa26-0b8dd8f1dc50",
+  "id": "f411c55a-d9d7-4556-83cf-464239922f2a",
   "prevIds": [
     "e924913e-db37-4806-9e9c-01399c3ade4f"
   ],
@@ -1420,6 +1420,12 @@
     {
       "isRlsEnabled": false,
       "name": "trip_assignments",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "trip_series_crew",
       "entityType": "tables",
       "schema": "public"
     },
@@ -9290,6 +9296,58 @@
       "entityType": "columns",
       "schema": "public",
       "table": "trip_assignments"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_series_crew"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "series_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_series_crew"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_series_crew"
+    },
+    {
+      "type": "trip_assignment_role",
+      "typeSchema": "public",
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "trip_role",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_series_crew"
     },
     {
       "type": "uuid",
@@ -21070,19 +21128,6 @@
       "table": "trip_series"
     },
     {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "false",
-      "generated": null,
-      "identity": null,
-      "name": "standing_crew",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "trip_series"
-    },
-    {
       "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": true,
@@ -26994,6 +27039,48 @@
       "entityType": "indexes",
       "schema": "public",
       "table": "staff_shifts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "trip_series_crew_shop_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "trip_series_crew"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "person_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "trip_series_crew_person_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "trip_series_crew"
     },
     {
       "nameExplicit": true,
@@ -34952,6 +35039,57 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
+      "name": "trip_series_crew_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "trip_series_crew"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "series_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "trip_series",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "trip_series_crew_series_id_trip_series_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "trip_series_crew"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "trip_series_crew_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "trip_series_crew"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
       "name": "departure_notes_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -39585,6 +39723,17 @@
       "entityType": "pks",
       "schema": "public",
       "table": "trip_assignments"
+    },
+    {
+      "columns": [
+        "series_id",
+        "person_id"
+      ],
+      "nameExplicit": false,
+      "name": "trip_series_crew_pkey",
+      "entityType": "pks",
+      "schema": "public",
+      "table": "trip_series_crew"
     },
     {
       "columns": [

@@ -34,10 +34,10 @@ import {
   bookings,
   rollCallEvents,
   shops,
-  tripAssignments,
   tripDives,
   tripScheduleDays,
   tripSeries,
+  tripSeriesCrew,
   tripSeriesSkips,
   trips,
 } from "./schema";
@@ -80,8 +80,6 @@ import { boatCertifiedPassengers } from "./trips-queries";
 /** Where a materialization pass reads its per-occurrence shape from. */
 type InstanceTemplate = {
   trip: typeof trips.$inferSelect;
-  /** Who crews it, for a run with a standing crew (`trip_series.standing_crew`). */
-  crew: Array<{ personId: string; tripRole: TripCrewRole | null }>;
   days: Array<{ startsAt: Date; endsAt: Date }>;
   drafts: Array<{
     diveNumber: number;
@@ -165,13 +163,8 @@ async function loadTemplate(
     .from(tripDives)
     .where(eq(tripDives.tripId, trip.id))
     .orderBy(asc(tripDives.diveNumber));
-  const crew = await tx
-    .select({ personId: tripAssignments.personId, tripRole: tripAssignments.tripRole })
-    .from(tripAssignments)
-    .where(eq(tripAssignments.tripId, trip.id));
   return {
     trip,
-    crew,
     days: days.length > 0 ? days : [{ startsAt: trip.startsAt, endsAt: trip.endsAt }],
     drafts: dives.map((dive) => ({
       diveNumber: dive.diveNumber,
@@ -264,6 +257,9 @@ async function materializeWindow(
           and(eq(tripSeriesSkips.seriesId, series.id), eq(tripSeriesSkips.shopId, series.shopId)),
         ),
   ]);
+  // The run's own standing crew, never the furthest-out date's: a date the
+  // roll had to leave short must not become every later date's crew.
+  const standingCrew = await getSeriesStandingCrew(tx, series.shopId, series.id);
   const spokenFor = new Set<string>();
   for (const row of taken) if (row.date) spokenFor.add(row.date);
   for (const row of skipped) spokenFor.add(row.date);
@@ -316,13 +312,13 @@ async function materializeWindow(
     created.push(instance);
     // A run with a standing crew sails with it on the new date too, each
     // person asked again of this date's hours (`seatStandingCrew`).
-    if (series.standingCrew && template.crew.length > 0) {
+    if (standingCrew.length > 0) {
       await seatStandingCrew(tx, {
         shopId: series.shopId,
         tripId: instance.id,
         courseSession: Boolean(instance.courseId),
         days,
-        crew: template.crew,
+        crew: standingCrew,
       });
     }
   }
@@ -713,6 +709,7 @@ export async function getTripSeriesSummary(
     );
   return {
     ...row.series,
+    standingCrew: (await getSeriesStandingCrew(db, shopId, row.series.id)).length > 0,
     scheduledCount: counts?.scheduled ?? 0,
     futureScheduledCount: counts?.future ?? 0,
     futureBookedCount: reach?.divers ?? 0,
@@ -1138,7 +1135,7 @@ export type SeriesCrewApplyResult = { updated: number; skipped: number };
  * **Give a run a standing crew** (ADR 20260810-open-ended-recurring-trips,
  * addendum 2026-10-12): this date's crew, with the job each does on it, onto
  * every upcoming still-scheduled date of the series, and on every date the
- * horizon roll adds from now on (`trip_series.standing_crew`).
+ * horizon roll adds from now on (`trip_series_crew`, the run's own record of it).
  *
  * Each date goes through `setTripCrew`, the crew editor's own write door, so
  * nothing is assumed from the source date: a date where somebody on this crew
@@ -1185,10 +1182,24 @@ export async function setSeriesStandingCrew(
   // A date with nobody on it has no crew to stand: turning it "on" from there
   // would strip every upcoming date's own crew, so it stays off instead.
   const standing = input.standing && crew.length > 0;
-  await db
-    .update(tripSeries)
-    .set({ standingCrew: standing })
-    .where(and(eq(tripSeries.id, input.seriesId), eq(tripSeries.shopId, input.shopId)));
+  // The run's crew is written whole: the rows are the switch, so "off" is none.
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(tripSeriesCrew)
+      .where(
+        and(eq(tripSeriesCrew.seriesId, input.seriesId), eq(tripSeriesCrew.shopId, input.shopId)),
+      );
+    if (standing) {
+      await tx.insert(tripSeriesCrew).values(
+        crew.map((member) => ({
+          shopId: input.shopId,
+          seriesId: input.seriesId,
+          personId: member.personId,
+          tripRole: member.tripRole,
+        })),
+      );
+    }
+  });
   if (!standing) return { updated: 0, skipped: 0 };
 
   const siblings = await db
@@ -1225,6 +1236,22 @@ export async function setSeriesStandingCrew(
     else skipped += 1;
   }
   return { updated, skipped };
+}
+
+/**
+ * A run's standing crew (`trip_series_crew`): who sails with every date the
+ * horizon roll adds, and the job each does. Empty for a run without one.
+ */
+export async function getSeriesStandingCrew(
+  db: AppDb | AppTransaction,
+  shopId: string,
+  seriesId: string,
+): Promise<Array<{ personId: string; tripRole: TripCrewRole | null }>> {
+  return db
+    .select({ personId: tripSeriesCrew.personId, tripRole: tripSeriesCrew.tripRole })
+    .from(tripSeriesCrew)
+    .where(and(eq(tripSeriesCrew.seriesId, seriesId), eq(tripSeriesCrew.shopId, shopId)))
+    .orderBy(asc(tripSeriesCrew.personId));
 }
 
 /** A crew as one comparable string: who, and the job each does. */

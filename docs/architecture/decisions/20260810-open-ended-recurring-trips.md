@@ -179,10 +179,12 @@ Three things a run did differently from the dates it is made of, changed togethe
   blow-out, which already distinguishes refunded from owed, rather than holding every seat's money
   for the shop to move by hand. Narrowing a cadence still cancels nothing, and its explicit
   "cancel those dates" is unchanged by this addendum.
-- **A run can have a standing crew** (`trip_series.standing_crew`). "Apply this date's details"
-  gains a switch, shown when the date has a crew: on, it gives every upcoming date this date's crew
-  and makes the horizon roll crew every new date the same way, copying from the furthest-out date
-  exactly as it already copies the boat, the legs and the price. **Nothing is assumed from the
+- **A run can have a standing crew** (`trip_series_crew`, the run's own rows: who, and the job
+  each does). "Apply this date's details" gains a switch, shown when the date has a crew: on, it
+  records this date's crew as the run's, gives every upcoming date that crew, and makes the horizon
+  roll seat it on every new date. Unlike the boat, the legs and the price, the crew is **not**
+  copied from the furthest-out date: a date the roll had to leave short (somebody busy, a course
+  instructor away) would otherwise become every later date's crew. **Nothing is assumed from the
   source date.** Upcoming dates go through `setTripCrew`, so a date where somebody on the crew is
   already working an overlapping departure, or where a course session would be left without an
   instructor, keeps its own crew and is reported back as skipped. A rolled date seats each person
@@ -190,8 +192,8 @@ Three things a run did differently from the dates it is made of, changed togethe
   overlap predicate), and seats nobody on a course session the remaining people would leave
   without an instructor. Ratios are read per date by the surfaces that already read them (the
   staffing week, Today, the trip page) and are never refused at write, as everywhere else. Turning
-  the switch off changes no date. The trade-off is the one stated above for details: a one-off
-  crew on the furthest-out date becomes the next date's crew.
+  the switch off clears the run's crew and changes no date. Editing one date's crew changes that
+  date only; applying again from any date replaces the run's crew.
 - **The public schedule says a run keeps going.** The month rail still ends at the last
   materialized month; on that month an open-ended, public run says so in its own cadence words
   ("Saturday Two-Tank runs every Saturday. Later dates open as the season goes.") and the date

@@ -108,6 +108,7 @@ import {
   tripRequirements,
   tripReviews,
   tripSeries,
+  tripSeriesCrew,
   tripSeriesSkips,
   tripSightings,
   tripStageEvents,
@@ -304,6 +305,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // Before the series it points at, and after the trips: a skip is the
   // memory of a date that is no longer there.
   await db.delete(tripSeriesSkips).where(eq(tripSeriesSkips.shopId, shopId));
+  await db.delete(tripSeriesCrew).where(eq(tripSeriesCrew.shopId, shopId));
   await db.delete(tripSeries).where(eq(tripSeries.shopId, shopId));
 
   // People-scoped records and the shop's own catalog/config.

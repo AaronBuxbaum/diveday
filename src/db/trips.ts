@@ -156,6 +156,7 @@ export {
   cancelOffCadenceSeriesTrips,
   createTripSeries,
   getLatestSeriesInstance,
+  getSeriesStandingCrew,
   getTripSeriesById,
   getTripSeriesSummary,
   listOffCadenceSeriesTrips,

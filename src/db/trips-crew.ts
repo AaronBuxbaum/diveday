@@ -764,7 +764,7 @@ async function crewBusyElsewhere(
 
 /**
  * **A repeating trip's standing crew, seated on a date the horizon roll just
- * made** (`trip_series.standing_crew`, ADR 20260810-open-ended-recurring-trips,
+ * made** (`trip_series_crew`, ADR 20260810-open-ended-recurring-trips,
  * addendum 2026-10-12). Called inside the roll's transaction, on a departure
  * that has no crew yet.
  *

@@ -308,6 +308,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   const seriesTitle = new Map(seriesRows.map((row) => [row.id, row.title]));
 
   const seriesSkipRows = await readScoped(tx, "tripSeriesSkips", scope);
+  const seriesCrewRows = await readScoped(tx, "tripSeriesCrew", scope);
 
   const waitlistRows = await readScoped(tx, "tripWaitlistEntries", scope);
 
@@ -630,6 +631,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     seriesRows,
     seriesTitle,
     seriesSkipRows,
+    seriesCrewRows,
     waitlistRows,
     lastMinuteListRows,
     lastMinutePromoRows,
@@ -1165,6 +1167,7 @@ export async function loadShopExportCounts(
     "trip_stage_events.csv": await countShopScoped(db, "tripStageEvents", shopId),
     "trip_series.csv": await countShopScoped(db, "tripSeries", shopId),
     "trip_series_skips.csv": await countShopScoped(db, "tripSeriesSkips", shopId),
+    "trip_series_crew.csv": await countShopScoped(db, "tripSeriesCrew", shopId),
     "trip_schedule_days.csv": await countOf(
       db
         .select({ n: count() })

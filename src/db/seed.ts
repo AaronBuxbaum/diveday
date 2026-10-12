@@ -104,6 +104,7 @@ import {
   tripRequirements,
   tripReviews,
   tripSeries,
+  tripSeriesCrew,
   tripSeriesSkips,
   tripSightings,
   tripStageEvents,
@@ -1409,6 +1410,7 @@ export async function resetDemoSchedule(
   // Before the series it points at, and after the trips: a skip is the
   // memory of a date that is no longer there.
   await db.delete(tripSeriesSkips).where(eq(tripSeriesSkips.shopId, shopId));
+  await db.delete(tripSeriesCrew).where(eq(tripSeriesCrew.shopId, shopId));
   await db.delete(tripSeries).where(eq(tripSeries.shopId, shopId));
   await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
