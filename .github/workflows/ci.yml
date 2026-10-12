@@ -711,6 +711,9 @@ jobs:
         run: node scripts/wait-for-baseline.mjs
         env:
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       # `steps.keys.outcome` as well as the shards: an `if:` expression replaces
       # the implicit `success()`, so without naming it this step would run after
       # the resolver's tripwire fired and publish this run's screenshots under

@@ -106,6 +106,12 @@ export const SUBPROCESS_TIMEOUTS = {
    * command rather than as the parent's anonymous timeout.
    */
   drizzleKitCheck: 60_000,
+  /**
+   * The export-bundle snapshot test run with `-u` by `pnpm regen` (`scripts/regenerate.mjs`):
+   * it seeds a PGlite database and builds two bundles, under a minute locally. Five minutes
+   * so a cold vitest start on a busy runner is not cut off.
+   */
+  regenerateSnapshot: 300_000,
   /** `pnpm db:migrate` inside the production build, while the previous release still serves. */
   migrate: 300_000,
   /**

@@ -38,6 +38,13 @@ written**. The ratchets are the sharpest version: a baseline written on layer 4 
 3's work, so `--absorb` is left for genuine merges from outside the stack rather than for your own
 previous branch.
 
+**Merging a layer up never stops on a generated file.** `.gitattributes` gives
+`scripts/ratchets.json`, the export-bundle snapshot and the glossary and ADR indexes merge drivers
+(`scripts/merge-drivers.mjs`, installed by the `SessionStart` hook; a human runs
+`node scripts/merge-drivers.mjs install` once). The merge prints a line naming each file it settled
+mechanically; then run **`pnpm regen`**, which rewrites all of them from their sources, and commit
+what it changed before you push (`--no-snapshot` skips the slow one when no seed, schema or export file moved).
+
 **A layer that moves pixels is a layer like any other.** That restriction was lifted on 2026-08-23
 (Aaron's call, issue #905) once the trade was measured: losing the baseline race costs a **re-read,
 not a missed regression**, and the pipeline now names each layer's baseline key and waits for the
@@ -195,9 +202,10 @@ to its own change.
   `claude/<slug>-1-schema` gets the identical gate `main` does (ADR [20261003-every-stack-layer-runs-ci](../../../docs/architecture/decisions/20261003-every-stack-layer-runs-ci.md)).
   Read every layer's checks: each one's green means it ran. Two things follow:
 
-  1. **Every layer is keyed to `main` for visual regression.** Each layer compares against the
-     stack's fork point from `main`, so a layer's visual diff is **cumulative** — it shows every
-     layer at or below it, not that layer's own pixels.
+  1. **A layer's visual diff is its own when it can be.** When the layer below's commit (the
+     `merge-base` of the PR's base sha and HEAD) has a published snapshot, the layer compares
+     against it and the sticky comment says so; otherwise it falls back to the stack's fork point
+     from `main`, and the diff is **cumulative** (ADR [20261012-visual-baseline-layer-below](../../../docs/architecture/decisions/20261012-visual-baseline-layer-below.md)).
   2. **Opening a layer above does not cancel the run below.** Only a new push to the same branch
      supersedes a run (per-ref concurrency in `ci.yml`).
   3. **Push several layers a layer at a time, bottom first.** Push the bottom layer, wait until its
@@ -217,7 +225,8 @@ to its own change.
   20-minute poll from
   [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md)).
 
-  What that means when you read a report: **the top layer's diff is the whole stack's**, because
+  `scripts/wait-for-baseline.mjs` then narrows a stacked layer to the layer below when that commit
+  already published, never waiting for it. On the fallback path, read a report this way: **the top layer's diff is the whole stack's**, because
   every layer beneath it is also above the fork point. That is usually what you want from the top —
   it is the closest thing a stack has to a statement about the merged result — but do not read it as
   "this layer moved 40 surfaces". Compare it against the bottom layer's report, which is its own

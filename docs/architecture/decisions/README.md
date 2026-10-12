@@ -384,5 +384,6 @@ script again.
 | 20261012-incident-reports | Keep an incident report on… |
 | 20261012-payouts-reach-diveday | Record Stripe payouts so Reports… |
 | 20261012-rehearsal-departures | A rehearsal departure for training… |
+| 20261012-visual-baseline-layer-below | Compare a stacked layer against… |
 
 <!-- adr-index:end -->

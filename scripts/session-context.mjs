@@ -43,6 +43,7 @@ import { fileURLToPath } from "node:url";
 
 import { gatherFacts, summaryLines } from "./agent-doctor.mjs";
 import { appendEntry, lastSessionRefusals, readLog, refusalLine } from "./hook-log.mjs";
+import { install as installMergeDrivers } from "./merge-drivers.mjs";
 import { readStack, gitReader as stackGit, stackSummary } from "./stack-map.mjs";
 import { readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
@@ -430,6 +431,8 @@ function main() {
   // Before the install, so the install runs on the Node the session will use.
   const nodeSelection = selectPinnedNode({ nodeMajor, pinnedMajor });
   const installed = installIfNeeded(cwd);
+  // So a restack merge never stops on a generated file (scripts/merge-drivers.mjs).
+  installMergeDrivers(cwd);
   const block = sessionBlock(state, {
     source,
     nodeMajor,
