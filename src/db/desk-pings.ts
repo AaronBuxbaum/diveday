@@ -275,14 +275,23 @@ export async function setAfterHoursPingChoice(
   return updated.length > 0;
 }
 
-/** The shop's desk hours, already validated by `parseDeskHours`. */
+/**
+ * The shop's desk hours, already validated by `parseDeskHours`. Saving them is
+ * the shop stating them, so it stamps `desk_hours_confirmed_at`: from then on
+ * the public footer may print them (until then they are only the default).
+ */
 export async function setShopDeskHours(
   db: DbExecutor,
   shopId: string,
   hours: DeskHours,
+  now: Date = nowDate(),
 ): Promise<void> {
   await db
     .update(shops)
-    .set({ deskOpensMinute: hours.opensMinute, deskClosesMinute: hours.closesMinute })
+    .set({
+      deskOpensMinute: hours.opensMinute,
+      deskClosesMinute: hours.closesMinute,
+      deskHoursConfirmedAt: now,
+    })
     .where(eq(shops.id, shopId));
 }

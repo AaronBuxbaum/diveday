@@ -174,3 +174,14 @@ describe("the boats grid", () => {
     expect(tokens(boatsGrid)).toEqual(tokens(shelfGrid));
   });
 });
+
+/**
+ * "Our year" is the shop's own counts, so it renders only with its yes and
+ * never inside somebody else's website (the embed).
+ */
+describe("the public schedule's Our year panel", () => {
+  it("is gated on the shop's switch and kept out of the embed", () => {
+    expect(SOURCE).toContain("{!isEmbed && shop.publicYearEnabled ? (");
+    expect(positionOf("<OurYearSection")).toBeGreaterThan(positionOf("<ScheduleReviewsSection"));
+  });
+});

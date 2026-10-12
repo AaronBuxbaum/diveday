@@ -91,6 +91,7 @@ export const SECTION_IDS = [
   "reviews",
   "dateRequests",
   "lastMinuteList",
+  "publicYear",
   "stripe",
 ] as const;
 export type SectionId = (typeof SECTION_IDS)[number];
@@ -113,6 +114,7 @@ const SECTION_FRAGMENTS: Partial<Record<SectionId, string>> = {
   passThrough: "pass-through",
   dateRequests: "date-requests",
   lastMinuteList: "last-minute-list",
+  publicYear: "public-year",
   counterCard: "counter-card",
   certCheck: "cert-check",
 };
@@ -375,6 +377,12 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.features.lastMinuteList.heading",
     group: "website",
     target: { kind: "section", id: "lastMinuteList" },
+  },
+  {
+    id: "publicYear",
+    labelKey: "settings.main.features.publicYear.heading",
+    group: "website",
+    target: { kind: "section", id: "publicYear" },
   },
   {
     id: "embed",

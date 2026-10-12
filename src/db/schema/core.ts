@@ -182,6 +182,14 @@ export const shops = pgTable(
     lastMinuteListEnabled: boolean("last_minute_list_enabled").notNull().default(true),
     tipsEnabled: boolean("tips_enabled").notNull().default(true),
     /**
+     * **"Our year" on the public schedule**: the Reports year card's counts
+     * (divers, boats out, sites) at the foot of the shopfront. The one
+     * optional feature that defaults *off*: it publishes a reading of the
+     * shop's own records, so the shop opts in (Aaron, 2026-10-11). Counts
+     * only, never money (`src/db/public-year.ts`).
+     */
+    publicYearEnabled: boolean("public_year_enabled").notNull().default(false),
+    /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
      * personal one — nullable because a shop that has not chosen one must not
@@ -339,6 +347,14 @@ export const shops = pgTable(
      */
     deskOpensMinute: integer("desk_opens_minute").notNull().default(480),
     deskClosesMinute: integer("desk_closes_minute").notNull().default(1080),
+    /**
+     * When the shop last saved its desk hours. The public footer prints them
+     * ("Desk open 7:00 to 17:00") only once this is set: the 08:00 to 18:00
+     * default is a guess for deciding after-hours pings, and a guess printed
+     * on a storefront is a promise the shop never made. A timestamp for the
+     * reason `units_confirmed_at` is one.
+     */
+    deskHoursConfirmedAt: timestamp("desk_hours_confirmed_at", { withTimezone: true }),
     /**
      * When the shop last saved its units — the signal behind the setup
      * checklist's "check your currency and depth unit" step. Onboarding now

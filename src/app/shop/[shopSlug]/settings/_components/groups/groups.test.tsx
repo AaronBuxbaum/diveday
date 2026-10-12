@@ -89,7 +89,12 @@ describe("each settings group renders as its own component", () => {
     expect(hrefsIn(NotificationsGroup({ view }))).toEqual([
       `/shop/${view.shopSlug}/settings/email`,
     ]);
-    expect(rendered[8]?.rows).toEqual(["shopPhotos", "dateRequests", "lastMinuteList"]);
+    expect(rendered[8]?.rows).toEqual([
+      "shopPhotos",
+      "dateRequests",
+      "lastMinuteList",
+      "publicYear",
+    ]);
     expect(rendered[10]?.rows).toEqual([]);
     // The set-once rows, last.
     expect(rendered[11]?.rows).toEqual(["season", "divingOptions", "passThrough", "searchListing"]);

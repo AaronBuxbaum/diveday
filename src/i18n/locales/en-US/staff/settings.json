@@ -408,6 +408,11 @@
         "heading": "Tips",
         "label": "Offer a tip on the trip recap",
         "description": "Divers can tip the crew by card after the dive."
+      },
+      "publicYear": {
+        "heading": "Our year",
+        "label": "Show “Our year” on your schedule",
+        "description": "The year so far in counts at the foot of your public schedule: divers, boats out, and sites. Never money. Off until you turn it on."
       }
     },
     "crewSchedule": {

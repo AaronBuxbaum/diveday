@@ -2,16 +2,24 @@
  * **The optional features a shop can switch off** (ADR
  * 20261005-optional-shop-features).
  *
- * Each is a boolean on `shops`, on by default, and each is a feature a shop
- * can run without: DiveDay's own star ratings, divers asking for a day that is
- * not on the board, the last-minute deals list, and tips on the recap. Off
+ * Each is a boolean on `shops`, on by default (except "Our year" on the
+ * shopfront, which publishes the shop's own counts and so waits for its yes),
+ * and each is a feature a shop can run without: DiveDay's own star ratings,
+ * divers asking for a day that is not on the board, the last-minute deals
+ * list, tips on the recap, and the shopfront's "Our year". Off
  * hides the feature on every surface that offers it and deletes nothing, so
  * turning it back on finds everything where it was.
  *
  * The crew schedule is the same idea with its own rule (`crew-schedule.ts`),
  * because switching it off also has to keep a safety count honest.
  */
-export const SHOP_FEATURES = ["reviews", "dateRequests", "lastMinuteList", "tips"] as const;
+export const SHOP_FEATURES = [
+  "reviews",
+  "dateRequests",
+  "lastMinuteList",
+  "tips",
+  "publicYear",
+] as const;
 
 export type ShopFeature = (typeof SHOP_FEATURES)[number];
 
@@ -21,6 +29,7 @@ export const SHOP_FEATURE_COLUMNS = {
   dateRequests: "dateRequestsEnabled",
   lastMinuteList: "lastMinuteListEnabled",
   tips: "tipsEnabled",
+  publicYear: "publicYearEnabled",
 } as const satisfies Record<ShopFeature, string>;
 
 export type ShopFeatureColumn = (typeof SHOP_FEATURE_COLUMNS)[ShopFeature];

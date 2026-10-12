@@ -60,6 +60,8 @@
     "languageHeading": "Language",
     "footerLine": "{shop}",
     "spokenLanguages": "We speak {languages}",
+    "deskHours": "Desk open {opens} to {closes}",
+    "whatsApp": "Message us on WhatsApp",
     "languageFallback": "DiveDay isn’t in {requested} yet. This page is in {shown}, the language {shop} works in.",
     "credit": "Bookings by DiveDay"
   },
@@ -4436,6 +4438,9 @@
       "daysAtSea": "Days at sea",
       "mostDived": "Most dived · {times, number}",
       "divers": "Divers"
+    },
+    "panel": {
+      "heading": "Our year"
     }
   },
   "participants": {

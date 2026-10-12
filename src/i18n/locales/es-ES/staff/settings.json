@@ -408,6 +408,11 @@
         "heading": "Propinas",
         "label": "Ofrecer una propina en el resumen de la salida",
         "description": "Los buceadores pueden dar propina a la tripulación con tarjeta después de bucear."
+      },
+      "publicYear": {
+        "heading": "Nuestro año",
+        "label": "Mostrar “Nuestro año” en tu calendario",
+        "description": "El año hasta hoy en cifras al pie de tu calendario público: buceadores, salidas y sitios. Nunca dinero. Apagado hasta que lo actives."
       }
     },
     "crewSchedule": {

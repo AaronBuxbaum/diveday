@@ -137,6 +137,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "date_requests_enabled",
       "last_minute_list_enabled",
       "tips_enabled",
+      // Off unless the shop said yes: a restore must not publish its counts
+      // for a shop that never chose to.
+      "public_year_enabled",
       "contact_email",
       "contact_phone",
       "address_street",
@@ -178,6 +181,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // the season is: a restore must not quietly move the shop's hours.
       "desk_opens_minute",
       "desk_closes_minute",
+      // When the shop saved those hours, which is what lets its public
+      // footer print them; a restore keeps the footer as the shop left it.
+      "desk_hours_confirmed_at",
       // Whether the shop asked to stay out of search engines
       // (ADR 20260813-search-listing-is-a-choice). Exported because the
       // bundle is also the *backup*: a shop that opted out and later
@@ -216,6 +222,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.dateRequestsEnabled,
         shop.lastMinuteListEnabled,
         shop.tipsEnabled,
+        shop.publicYearEnabled,
         shop.contactEmail,
         shop.contactPhone,
         shop.addressStreet,
@@ -239,6 +246,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.seasonStartDay,
         shop.deskOpensMinute,
         shop.deskClosesMinute,
+        shop.deskHoursConfirmedAt,
         shop.searchListingOptOutAt,
         shop.tagline,
         shop.description,

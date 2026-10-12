@@ -76,6 +76,7 @@ import { LastMinuteListForm } from "./_components/LastMinuteListForm";
 import { MonthRail } from "./_components/MonthRail";
 import { NextBoatCard } from "./_components/NextBoatCard";
 import { OffSeasonPanel } from "./_components/OffSeasonPanel";
+import { OurYearSection } from "./_components/OurYear";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
 import { ShopPhotoStrip } from "./_components/ShopPhotoStrip";
@@ -1215,6 +1216,12 @@ export default async function SchedulePage({
           20260726-schedule-embed). A relative href resolves against the
           iframe's own document (this page's origin), not the parent page, so
           it reaches the DiveDay homepage regardless of what site framed it. */}
+      {/* "Our year": the shop's own year in counts, last, and only with its yes. */}
+      {!isEmbed && shop.publicYearEnabled ? (
+        <Suspense fallback={null}>
+          <OurYearSection db={db} shop={shop} locale={locale} t={t} className={SECTION_GAP} />
+        </Suspense>
+      ) : null}
       {isEmbed ? (
         <div className="mt-8 flex flex-col items-center gap-2 border-t border-border pt-6">
           {/* **The way out of the frame.** The widget shows the next few

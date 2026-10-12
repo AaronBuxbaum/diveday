@@ -100,6 +100,8 @@ export function WebsiteGroup({ view }: { view: SettingsView }) {
 
         {featureRow(view, "lastMinuteList")}
 
+        {featureRow(view, "publicYear")}
+
         <SettingsDoorRow
           href={`/shop/${shopSlug}/settings/embed`}
           heading={t("settings.main.embed.heading")}
