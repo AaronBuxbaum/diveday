@@ -193,7 +193,8 @@
   "remove": {
     "removePersonSummary": "Delete {name}",
     "removing": "Deleting…",
-    "removeDiver": "Delete diver"
+    "removeDiver": "Delete diver",
+    "consequence": "Takes {name} off the roster, the booking pickers, manifests, and trip prep. Their waivers, trips, and payments stay on file, and you can restore them."
   },
   "removed": {
     "badge": "Deleted",

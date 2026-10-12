@@ -193,7 +193,8 @@
   "remove": {
     "removePersonSummary": "Eliminar a {name}",
     "removing": "Eliminando…",
-    "removeDiver": "Eliminar buceador"
+    "removeDiver": "Eliminar buceador",
+    "consequence": "Quita a {name} de la lista, los selectores de reserva, los manifiestos y la preparación. Sus exenciones, salidas y pagos se conservan, y puedes restaurarlo."
   },
   "removed": {
     "badge": "Eliminado",
