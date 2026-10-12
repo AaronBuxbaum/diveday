@@ -287,14 +287,27 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 0, undefined, null);
   });
 
-  it("invoice.voided marks the order void", async () => {
+  it("invoice.voided marks the order void, on the event's own account", async () => {
+    const response = await post({
+      id: "evt_1",
+      type: "invoice.voided",
+      account: "acct_123",
+      data: { object: { id: "in_123" } },
+    });
+    expect(response.status).toBe(200);
+    expect(markOrderVoidedByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", "acct_123");
+  });
+
+  // Security review: with no account to cross-check, an invoice id alone
+  // could name any shop's order, so nothing is voided.
+  it("invoice.voided without an account voids nothing", async () => {
     const response = await post({
       id: "evt_1",
       type: "invoice.voided",
       data: { object: { id: "in_123" } },
     });
     expect(response.status).toBe(200);
-    expect(markOrderVoidedByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", undefined);
+    expect(markOrderVoidedByInvoiceId).not.toHaveBeenCalled();
   });
 
   it("invoice.paid passes the event's top-level account through for the row's own cross-check", async () => {
@@ -1202,7 +1215,12 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
     },
     {
       name: "invoice.voided",
-      event: { id: "evt_fail_void", type: "invoice.voided", data: { object: { id: "in_1" } } },
+      event: {
+        id: "evt_fail_void",
+        type: "invoice.voided",
+        account: "acct_1",
+        data: { object: { id: "in_1" } },
+      },
       arrange: () => vi.mocked(markOrderVoidedByInvoiceId).mockRejectedValue(boom),
     },
     {

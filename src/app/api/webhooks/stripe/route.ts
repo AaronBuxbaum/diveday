@@ -128,6 +128,8 @@ const refundObjectSchema = z.object({
 async function handleInvoiceVoided(db: AppDb, event: StripeWebhookEvent): Promise<string> {
   const invoice = invoiceObjectSchema.safeParse(event.data.object);
   if (!invoice.success) return "malformed_payload";
+  // An invoice id with no account to cross-check could name any shop's order.
+  if (!event.account) return "missing_account";
   const order = await markOrderVoidedByInvoiceId(db, invoice.data.id, event.account);
   if (!order) return "order_not_found";
   dispatchIntegrationsAfterResponse();
