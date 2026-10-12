@@ -995,7 +995,11 @@ async function countPaidAfterCloseRefund(
           eq(paymentOperationIntents.checkoutId, current.id),
           eq(paymentOperationIntents.kind, "refund"),
           eq(paymentOperationIntents.status, "started"),
-          gte(paymentOperationIntents.startedAt, staleBefore),
+          // Fresh, or confirmed by Stripe and never counted: `ownRefundInFlight`'s rule.
+          or(
+            gte(paymentOperationIntents.startedAt, staleBefore),
+            isNotNull(paymentOperationIntents.stripeObjectId),
+          ),
         ),
       )
       .limit(1);

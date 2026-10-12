@@ -301,6 +301,36 @@ describe("a refund made in the Stripe dashboard", () => {
     expect(await recordStripeChargeRefund(db, event)).toEqual({ status: "already_recorded" });
   });
 
+  // Security review: an old intent Stripe confirmed (it carries the refund's
+  // id) but whose local count never landed is DiveDay's own refund. Counting
+  // its echo here would count it again when a human reconciles it.
+  it("waits on our own confirmed refund however old, as every other refund does", async () => {
+    const { db, shop, checkout } = await closedCheckout();
+    await markCheckoutPaidBySessionId(db, checkout.stripeSessionId, "acct_test", 17_500);
+    await recordCheckoutPaymentIntent(db, {
+      stripeSessionId: checkout.stripeSessionId,
+      paymentIntentId: "pi_echo",
+    });
+    await db.insert(paymentOperationIntents).values({
+      shopId: shop.id,
+      kind: "refund",
+      checkoutId: checkout.id,
+      stripeObjectId: "re_echo",
+      startedAt: new Date("2020-01-01T00:00:00Z"),
+    });
+
+    expect(
+      await recordStripeChargeRefund(db, {
+        stripeAccountId: "acct_test",
+        paymentIntentId: "pi_echo",
+        amountRefundedCents: 17_500,
+        chargeId: "ch_echo",
+        occurredAt: nowDate(),
+      }),
+    ).toEqual({ status: "deferred" });
+    expect((await row(db, checkout.id))?.refundedCents).toBe(0);
+  });
+
   it("still ignores a refund on a closed checkout nobody paid", async () => {
     const { db, checkout } = await closedCheckout();
     await recordCheckoutPaymentIntent(db, {
