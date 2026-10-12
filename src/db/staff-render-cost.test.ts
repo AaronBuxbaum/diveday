@@ -3,10 +3,19 @@ import { and, asc, eq, gt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { inHorizonReadiness } from "@/db/blockers";
+import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-capabilities";
 import type { AppDb } from "@/db/client";
+import { getCourseFormsForBooking } from "@/db/course-forms";
 import { hasActiveCourses } from "@/db/courses";
+import { countSpendableDives } from "@/db/dive-packages";
+import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { countGearItems } from "@/db/gear";
-import { people, personRoles, trips } from "@/db/schema";
+import { getBookingPayment } from "@/db/payments";
+import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
+import { getReadyPageData } from "@/db/ready";
+import { getShopReviewAggregate } from "@/db/reviews";
+import { bookings, people, personRoles, trips } from "@/db/schema";
+import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { getShopStripeAccount } from "@/db/stripe-accounts";
 import {
@@ -15,11 +24,23 @@ import {
   getTodayWork,
   todayNextDepartureTripId,
 } from "@/db/today";
+import { listTripChangeEvents } from "@/db/trip-change-events";
+import { siteSightings } from "@/db/trip-sightings";
+import { latestTripStage } from "@/db/trip-stages";
+import {
+  getTripWithBooked,
+  listTripDives,
+  listTripScheduleDays,
+  pagedUpcomingTripsWithCounts,
+  tripCrewSpokenLanguages,
+  tripPublicCrew,
+} from "@/db/trips";
 import { getTripGuests } from "@/db/trips-guests";
 import { liveTrip } from "@/db/trips-live";
 import { getTripOverview } from "@/db/trips-overview";
 import { loadTripSharedReads } from "@/db/trips-shared-reads";
 import { nowDate } from "@/lib/clock";
+import { perDiverBookingPriceCents } from "@/lib/courses";
 import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-timing";
 import { seededShopContext } from "@/test/db";
 
@@ -182,14 +203,29 @@ function phaseCountingDb(client: PGlite) {
   let running = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const held: Array<() => void> = [];
+  // Answers from outside the database that are **slower than any chain of
+  // statements**, as a provider with a four-second timeout is: each comes back
+  // only once the database has nothing left to answer, in a round of its own.
+  // A render that awaits one waits that extra phase; one that streams it
+  // finishes first.
+  const slow: Array<() => void> = [];
   const settleLater = () => {
     clearTimeout(timer);
     timer = setTimeout(() => {
-      if (running > 0 || held.length === 0) return;
+      if (running > 0) return;
+      const due = held.length > 0 ? held.splice(0) : slow.splice(0);
+      if (due.length === 0) return;
       rounds += 1;
-      for (const release of held.splice(0)) release();
+      for (const release of due) release();
+      if (slow.length > 0) settleLater();
     }, QUIET_MS);
   };
+  /** A value from outside the database, answered after the database goes quiet. */
+  const slowly = <T>(value: () => T) =>
+    new Promise<T>((resolve) => {
+      slow.push(() => resolve(value()));
+      settleLater();
+    });
   const delayed = new Proxy(client, {
     get(target, property, receiver) {
       if (property === "query") {
@@ -217,22 +253,31 @@ function phaseCountingDb(client: PGlite) {
     },
   });
   const db = drizzle({ client: delayed as PGlite }) as unknown as AppDb;
-  return { db, phases: () => rounds };
+  return { db, phases: () => rounds, slowly };
 }
 
 describe("how many round trips a staff render waits for, one after another", () => {
-  // Today's queue also asks the marine provider; a phase is a database round
-  // trip, and the network has no business in this count.
   beforeEach(() => {
     vi.stubEnv("DIVEDAY_DISABLE_EXTERNAL_HTTP", "1");
   });
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
   it("assembles Today's queue and day spine in a bounded number of phases", async () => {
     const { plain, shop } = await timedSeededShop();
-    const { db, phases } = phaseCountingDb(plain.$client as PGlite);
+    const { db, phases, slowly } = phaseCountingDb(plain.$client as PGlite);
+    // **The marine provider answers late, and Today must not wait for it**
+    // (code review 2026-10-11, item 1). Its answer comes back a round after it
+    // was asked, so a queue that awaited the forecast would show the wait here
+    // as a phase of its own; the high-wind row streams beside the page instead.
+    vi.stubEnv("DIVEDAY_DISABLE_EXTERNAL_HTTP", "");
+    const provider = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(() =>
+        slowly(() => new Response(JSON.stringify({ hourly: { time: [] } }))),
+      );
     const now = nowDate();
     const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     // The page's own shape (`src/app/shop/[shopSlug]/page.tsx`): the readiness
@@ -254,6 +299,9 @@ describe("how many round trips a staff render waits for, one after another", () 
       getShopDayDepartures(db, shop.id, shop.timezone, tomorrow, evidence),
     ]);
     expect(report("today phases", phases())).toBeLessThanOrEqual(TODAY_PHASE_CEILING);
+    // The provider was asked: a seeded departure is booked, in the window, at a
+    // site with a forecast point, so the count above covers a real request.
+    expect(provider).toHaveBeenCalled();
   });
 
   it("reads one departure's overview and guests in a bounded number of phases", async () => {
@@ -272,6 +320,149 @@ describe("how many round trips a staff render waits for, one after another", () 
       getTripGuests(db, shop, trip.id, {}, shared),
     ]);
     expect(report("trip phases", phases())).toBeLessThanOrEqual(TRIP_PHASE_CEILING);
+  });
+});
+
+/**
+ * **The two diver pages a booking lives on**: the public booking page
+ * (`src/app/s/[shopSlug]/trips/[id]/page.tsx`) and the readiness thread
+ * (`src/app/ready/[token]/page.tsx`). Their reads sit in the page bodies, so
+ * each is replayed here in the page's own shape, for an anonymous visitor on
+ * the standalone page and for the night-before visit to `/ready` (no Stripe
+ * return, no roll call yet). A change to either page's waves changes the
+ * replay beside it.
+ */
+async function upcomingBookableTrip(plain: AppDb, shopId: string) {
+  const [trip] = await plain
+    .select({ id: trips.id })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        liveTrip(),
+        eq(trips.status, "scheduled"),
+        gt(trips.startsAt, nowDate()),
+      ),
+    )
+    .orderBy(asc(trips.startsAt))
+    .limit(1);
+  if (!trip) throw new Error("the seeded shop has no upcoming departure");
+  return trip.id;
+}
+
+async function readinessLinkForUpcomingSeat(plain: AppDb, shopId: string) {
+  const [seat] = await plain
+    .select({ bookingId: bookings.id })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.status, "booked"),
+        liveTrip(),
+        eq(trips.status, "scheduled"),
+        gt(trips.startsAt, nowDate()),
+      ),
+    )
+    .orderBy(asc(trips.startsAt), asc(bookings.id))
+    .limit(1);
+  if (!seat) throw new Error("the seeded shop has no upcoming booked seat");
+  const issued = await issueBookingCapability(plain, {
+    shopId,
+    bookingId: seat.bookingId,
+    purpose: "readiness",
+  });
+  if (!issued) throw new Error("no readiness link for the seeded seat");
+  return issued.token;
+}
+
+/** The public booking page's reads, as the page awaits them. */
+async function publicTripPageReads(db: AppDb, shopSlug: string, tripId: string) {
+  const shop = await getShopBySlug(db, shopSlug);
+  if (!shop) throw new Error("no shop");
+  const [trip, tripDives] = await Promise.all([
+    getTripWithBooked(db, shop.id, tripId),
+    listTripDives(db, shop.id, tripId),
+    listTripScheduleDays(db, shop.id, tripId),
+    tripCrewSpokenLanguages(db, shop.id, tripId),
+    tripPublicCrew(db, shop.id, tripId),
+  ]);
+  if (!trip) throw new Error("no trip");
+  await listTripChangeEvents(db, shop.id, tripId);
+  const siteIds = tripDives
+    .map(({ diveSite }) => diveSite?.id)
+    .filter((id): id is string => Boolean(id));
+  await listDiveSiteBriefingExtras(db, shop.id, siteIds);
+  await siteSightings(db, shop.id, siteIds);
+  if (perDiverBookingPriceCents(trip, trip.course)) await getShopStripeAccount(db, shop.id);
+  await Promise.all([
+    getTripRequirements(db, shop.id, tripId),
+    getTripSiteRequirement(db, shop.id, tripId),
+  ]);
+  if (!trip.conditionsHold) {
+    await pagedUpcomingTripsWithCounts(db, shop.id, {
+      now: nowDate(),
+      limit: 50,
+      hasSpace: true,
+      publicOnly: true,
+    });
+  }
+  if (shop.reviewsEnabled) await getShopReviewAggregate(db, shop.id);
+}
+
+/** `/ready`'s reads on the night-before visit, as the page awaits them. */
+async function readyPageReads(db: AppDb, token: string) {
+  const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
+  if (!capability) throw new Error("the readiness link did not verify");
+  const data = await getReadyPageData(db, capability.bookingId);
+  if (!data) throw new Error("no ready page data");
+  // The thread body: party seats, the trip fan-out, the receipt, the course
+  // forms and the package dives.
+  await issuePartySeatClaims(db, { shopId: data.shop.id, leadBookingId: capability.bookingId });
+  await Promise.all([
+    getShopBySlug(db, data.shop.slug),
+    getTripWithBooked(db, data.shop.id, data.trip.id),
+    listTripDives(db, data.shop.id, data.trip.id),
+    listTripChangeEvents(db, data.shop.id, data.trip.id),
+    tripPublicCrew(db, data.shop.id, data.trip.id),
+    latestTripStage(db, data.shop.id, data.trip.id),
+  ]);
+  await getBookingPayment(db, data.shop.id, capability.bookingId);
+  if (data.trip.course) await getCourseFormsForBooking(db, data.shop.id, capability.bookingId);
+  await countSpendableDives(db, data.shop.id, data.person.id);
+}
+
+describe("what a diver's page sends", () => {
+  it("reads the public booking page", async () => {
+    const { db, plain, shop } = await timedSeededShop();
+    const tripId = await upcomingBookableTrip(plain, shop.id);
+    const { stats } = await withQueryStats(() => publicTripPageReads(db, shop.slug, tripId));
+    expect(report("public trip", stats.queries)).toBeLessThanOrEqual(PUBLIC_TRIP_CEILING);
+  });
+
+  it("reads /ready the night before", async () => {
+    const { db, plain, shop } = await timedSeededShop();
+    const token = await readinessLinkForUpcomingSeat(plain, shop.id);
+    const { stats } = await withQueryStats(() => readyPageReads(db, token));
+    expect(report("ready", stats.queries)).toBeLessThanOrEqual(READY_CEILING);
+  });
+});
+
+describe("how many round trips a diver's page waits for, one after another", () => {
+  it("reads the public booking page in a bounded number of phases", async () => {
+    const { plain, shop } = await timedSeededShop();
+    const { db, phases } = phaseCountingDb(plain.$client as PGlite);
+    const tripId = await upcomingBookableTrip(plain, shop.id);
+    await publicTripPageReads(db, shop.slug, tripId);
+    expect(report("public trip phases", phases())).toBeLessThanOrEqual(PUBLIC_TRIP_PHASE_CEILING);
+  });
+
+  it("reads /ready in a bounded number of phases", async () => {
+    const { plain, shop } = await timedSeededShop();
+    const { db, phases } = phaseCountingDb(plain.$client as PGlite);
+    const token = await readinessLinkForUpcomingSeat(plain, shop.id);
+    await readyPageReads(db, token);
+    expect(report("ready phases", phases())).toBeLessThanOrEqual(READY_PHASE_CEILING);
   });
 });
 
@@ -313,5 +504,19 @@ const TRIP_CEILING = 50;
  * The trip page's 10 is its shared reads, then `getTripOverview`'s four steps
  * after its fan-out (`src/db/trips-overview.ts`).
  */
-const TODAY_PHASE_CEILING = 7;
+// 7 → 8: not a new wait, an old one made visible. The marine provider now
+// answers after the database goes quiet, as a real one does, and Today's queue
+// awaited it inside its wave (code review 2026-10-11, item 1).
+const TODAY_PHASE_CEILING = 8;
 const TRIP_PHASE_CEILING = 10;
+
+/**
+ * The diver pages, measured 2026-10-12 before their reads were grouped (code
+ * review 2026-10-11, items 2 and 3): the public booking page awaited eight
+ * reads one after another after its fan-out, and `/ready` its readiness pass,
+ * four more steps of `getReadyPageData` and five single awaits in the thread.
+ */
+const PUBLIC_TRIP_CEILING = 18;
+const READY_CEILING = 36;
+const PUBLIC_TRIP_PHASE_CEILING = 10;
+const READY_PHASE_CEILING = 12;
