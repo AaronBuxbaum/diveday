@@ -39,12 +39,14 @@ import {
   recipientLocale,
   shopSenderOf,
 } from "@/lib/notifications";
+import { confirmationExtras } from "@/lib/notifications/confirmation-extras";
 import { ACTIONABLE_PROVIDER_STATUSES, type ProviderEmailStatus } from "@/lib/notifications/events";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { findCourtesyEmailRecipientByAddress } from "./courtesy-email";
 import {
+  bookingPayments,
   bookings,
   courses,
   notificationDeliveries,
@@ -1241,13 +1243,19 @@ async function sendStoredBookingConfirmation(
       person: people,
       trip: trips,
       shop: shops,
-      courseMaterials: courses.learningMaterials,
+      course: courses,
+      /** Who took the money, when anyone has: "stripe" is a card checkout. */
+      paymentProvider: bookingPayments.provider,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, bookings.shopId)))
+    .leftJoin(
+      bookingPayments,
+      and(eq(bookingPayments.bookingId, bookings.id), eq(bookingPayments.shopId, bookings.shopId)),
+    )
     .where(
       and(
         eq(bookings.id, bookingId),
@@ -1257,7 +1265,7 @@ async function sendStoredBookingConfirmation(
     )
     .limit(1);
   if (!row?.person.email) return null;
-  const learningMaterials = readLearningMaterials(row.courseMaterials);
+  const learningMaterials = readLearningMaterials(row.course?.learningMaterials);
   if (options.onlyWithMaterials && learningMaterials.length === 0) return null;
   const origin = publicAppUrl();
   const readinessCapability = origin
@@ -1289,6 +1297,17 @@ async function sendStoredBookingConfirmation(
         ? new URL(readinessLinkPath(readinessCapability.token), `${origin}/`).toString()
         : undefined,
       ...(learningMaterials.length > 0 ? { learningMaterials } : {}),
+      // The same where, calendar, money and window the booking-time send
+      // carried (ux review 2026-10-11, items 4 and 5). Online when a card
+      // checkout took this seat's money; otherwise it is owed at the shop.
+      ...confirmationExtras({
+        shop: row.shop,
+        trip: row.trip,
+        course: row.course,
+        participantType: row.booking.participantType,
+        chargesOnline: row.paymentProvider === "stripe",
+        origin,
+      }),
       // A staff-triggered resend is a new logical send, not a replay of the
       // original booking confirmation's provider idempotency key.
       confirmedAt: nowDate(),

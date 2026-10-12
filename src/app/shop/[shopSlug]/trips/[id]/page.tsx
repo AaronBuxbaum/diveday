@@ -47,6 +47,7 @@ import { temperatureUnitFor } from "@/lib/temperature-units";
 import { tripPhaseOf } from "@/lib/trip-phase";
 import { acceptsNewDivers, isFull } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
+import { RescheduleNotice } from "../../_components/RescheduleNotice";
 import { buildArrivalDesk } from "./_arrivals/arrival-desk";
 import { DESK_NOTICES } from "./_arrivals/notices";
 import { BlowoutDoors } from "./_components/BlowoutDoors";
@@ -73,6 +74,7 @@ import { TripAddDiverLink, TripCapacityBadge, TripPageHeader } from "./_componen
 import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRosterContent";
 import { TripStageBadge, TripTabs } from "./_components/TripTabs";
 import { DETAILS_FORMS, ROSTER_FORMS } from "./_components/trip-notice-tabs";
+import type { TripPageSearchParams } from "./_components/trip-search-params";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
 import {
   addInternalNoteAction,
@@ -139,25 +141,7 @@ export default async function ManageTripPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{
-    notice?: string;
-    bid?: string;
-    diverq?: string;
-    inviteq?: string;
-    count?: string;
-    /** Which form on this page the notice answers — see `resolveTripNotice`. */
-    form?: string;
-    /** Signed, and verified against this route's own `id` — src/lib/trip-admission-gate.ts. */
-    gate?: string | string[];
-    rf?: string;
-    noteBookingId?: string;
-    noteBody?: string;
-    confirmName?: string;
-    confirmEmail?: string;
-    confirmPhone?: string;
-    /** `details` opens the Details tab; anything else is the Divers tab. */
-    view?: string;
-  }>;
+  searchParams: Promise<TripPageSearchParams>;
 }) {
   const [
     { shopSlug, id: tripId },
@@ -174,6 +158,8 @@ export default async function ManageTripPage({
       confirmEmail,
       confirmPhone,
       view,
+      held,
+      tell,
     },
   ] = await Promise.all([params, searchParams]);
   // An unparseable id names no row. Guarded here rather than in the query
@@ -730,6 +716,10 @@ export default async function ManageTripPage({
         />
 
         <TripNoticeBanner notice={rootPageNotice} locale={locale} />
+        {/* A retime's reschedule notice: not beside Save, which sits inside a form. */}
+        {notice === "saved" && held ? (
+          <RescheduleNotice shopId={shop.id} heldId={held} tell={tell} tripId={tripId} t={t} />
+        ) : null}
 
         {cancelled && (canConfigure || blowoutCalled || lifecycleStatus) ? (
           // A card in a tone: the card's radius, bed and inset, so its words

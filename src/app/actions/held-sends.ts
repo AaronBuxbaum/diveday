@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { HeldTicket } from "@/components/SendHold";
-import { canPersonManagePaymentSettings } from "@/db/authz";
+import { canPersonConfigureTrips, canPersonManagePaymentSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import {
   claimHeldSend,
@@ -13,6 +13,7 @@ import {
   undoHeldSend,
 } from "@/db/held-sends";
 import { getShopById } from "@/db/shops";
+import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import { trackEvent } from "@/lib/analytics";
 import { nowMs } from "@/lib/clock";
 import { type HeldSendPayload, heldSendPayloadSchema } from "@/lib/held-sends";
@@ -80,7 +81,14 @@ function payloadFromForm(formData: FormData, currency: string): HeldSendPayload 
             ...dealDiscountFromForm(formData, currency),
             recipientPersonIds: uuidList(formData, "recipientPersonIds"),
           }
-        : { kind, tripId: optional("tripId"), entryId: optional("entryId") };
+        : kind === "trip_rescheduled"
+          ? {
+              kind,
+              tripId: optional("tripId"),
+              previousStartsAt: optional("previousStartsAt"),
+              meetingPointMoved: formData.get("meetingPointMoved") === "true",
+            }
+          : { kind, tripId: optional("tripId"), entryId: optional("entryId") };
   return heldSendPayloadSchema.parse(raw);
 }
 
@@ -99,6 +107,27 @@ export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
       session.user.personId,
     );
     if (!allowed) throw new Error("not_authorized");
+  }
+  if (payload.kind === "trip_rescheduled") {
+    // "Tell them" after an Undo: the same gate as the move that held it, and
+    // the same hold, so a second tap folds into the first rather than sending
+    // twice. The recipients are read off the trip at send time, never here.
+    if (!(await canPersonConfigureTrips(db, session.user.shopId, session.user.personId))) {
+      throw new Error("not_authorized");
+    }
+    const held = await holdRescheduleNotice(db, {
+      shopId: session.user.shopId,
+      tripId: payload.tripId,
+      previousStartsAt: new Date(payload.previousStartsAt),
+      meetingPointMoved: payload.meetingPointMoved,
+      actorPersonId: session.user.personId,
+    });
+    if (!held) throw new Error("nothing_to_send");
+    return {
+      id: held.id,
+      runAt: held.runAt.getTime(),
+      holdMs: Math.max(0, held.runAt.getTime() - nowMs()),
+    };
   }
   const held = await holdSend(db, {
     shopId: session.user.shopId,

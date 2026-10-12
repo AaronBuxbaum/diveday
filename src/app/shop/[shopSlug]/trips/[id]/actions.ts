@@ -43,6 +43,7 @@ import {
   type TripInvitationDelivery,
 } from "@/db/trip-invitations";
 import { getTripLens } from "@/db/trip-lenses";
+import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
@@ -78,6 +79,7 @@ import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
 import { depthToMeters, maxEnteredVisibility } from "@/lib/depth-units";
 import { parseForm } from "@/lib/form-parse";
+import { meetingPointMoved, meetingPointOfRows } from "@/lib/meeting-point";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
@@ -562,7 +564,31 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
       url: previousArrivalPhotoUrl,
     });
   }
-  revalidateAndRedirect(back, noticeUrl(back, "saved"));
+  // **A retime tells the divers** (ux review 2026-10-11, item 1), the same
+  // held send the board's move takes, and says where too when the meeting
+  // point moved in the same save.
+  const notice =
+    tripNow && tripNow.startsAt.getTime() !== details.patch.startsAt.getTime()
+      ? await holdRescheduleNotice(dbi, {
+          shopId: s.user.shopId,
+          tripId,
+          previousStartsAt: tripNow.startsAt,
+          meetingPointMoved: meetingPointMoved(
+            meetingPointOfRows(shopNow, tripNow),
+            meetingPointOfRows(shopNow, {
+              meetingPointLabel: meetingPointLabel || null,
+              meetingPointAddress: meetingPointAddress || null,
+              arrivalLandmark: null,
+              arrivalParkingNote: null,
+            }),
+          ),
+          actorPersonId: s.user.personId,
+        })
+      : null;
+  revalidateAndRedirect(
+    back,
+    noticeUrl(back, "saved", notice ? { held: notice.id, tell: notice.told } : undefined),
+  );
 }
 
 export async function saveConditionsAction(shopSlug: string, tripId: string, formData: FormData) {

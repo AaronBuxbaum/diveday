@@ -28,6 +28,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { describeCheckoutLine } from "@/i18n/participant-labels";
 import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
+import type { DiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { BUDDY_COOKIE, buddyReferralFromCookie } from "@/lib/buddy-links";
@@ -40,7 +41,8 @@ import {
 } from "@/lib/dive-declaration";
 import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { type Notification, publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { confirmationExtras } from "@/lib/notifications/confirmation-extras";
 import { isDiver, parsePartyTypes, rentsKind } from "@/lib/participant-types";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import {
@@ -488,29 +490,23 @@ export async function bookSpot(
   });
   if (confirmedBooking?.person.email && tripNow) {
     try {
-      const delivery = await sendAndRecordNotification(dbi, {
-        kind: "booking_confirmation",
-        bookingId: primaryBookingId,
-        shopId: shopNow.id,
-        to: confirmedBooking.person.email,
-        locale: recipientLocale(ownLocale ?? confirmedBooking.person.locale, shopNow.defaultLocale),
-        diverName: confirmedBooking.person.fullName,
-        shopName: shopNow.name,
-        tripTitle: tripNow.title,
-        startsAt: tripNow.startsAt,
-        endsAt: tripNow.endsAt,
-        timezone: shopNow.timezone,
-        dockCallMinutes: shopNow.dockCallMinutes,
-        readinessUrl: readinessCapability
-          ? readinessEmailUrl(readinessCapability.token)
-          : undefined,
-        packingList: shopNow.packingList,
-        // A course session's learning materials, delivered with the seat
-        // (ADR 20261008-course-learning-materials).
-        learningMaterials: tripNow.course
-          ? readLearningMaterials(tripNow.course.learningMaterials)
-          : undefined,
-      });
+      const delivery = await sendAndRecordNotification(
+        dbi,
+        bookSpotConfirmation({
+          shop: shopNow,
+          trip: tripNow,
+          confirmed: confirmedBooking,
+          to: confirmedBooking.person.email,
+          locale: recipientLocale(
+            ownLocale ?? confirmedBooking.person.locale,
+            shopNow.defaultLocale,
+          ),
+          readinessUrl: readinessCapability
+            ? readinessEmailUrl(readinessCapability.token)
+            : undefined,
+          chargesOnline: payAtBookingForGear,
+        }),
+      );
       if (delivery.status === "failed") {
         log("booking.confirmation_send_failed", "error", { bookingId: primaryBookingId });
       }
@@ -935,4 +931,54 @@ export async function offerHandoff({ shopSlug, tripId }: TripRef, email: string)
       // A link that fails to send is the cold form the diver already has.
     }
   });
+}
+
+/**
+ * The confirmation `bookSpot` sends the lead booker, composed out of the
+ * action so the action stays readable: the time, the dock call, the diver's
+ * trip prep, a course's materials, and (ux review 2026-10-11, items 4 and 5)
+ * where to go, the calendar, this seat's money and the free-cancellation
+ * window. Online money exactly when this booking went to a checkout, the rule
+ * the form used.
+ */
+function bookSpotConfirmation(input: {
+  shop: NonNullable<Awaited<ReturnType<typeof getShopBySlug>>>;
+  trip: NonNullable<Awaited<ReturnType<typeof getTripWithBooked>>>;
+  confirmed: NonNullable<Awaited<ReturnType<typeof getBookingForTrip>>>;
+  /** The lead's own address, already checked present. */
+  to: string;
+  locale: DiverLocale;
+  readinessUrl: string | undefined;
+  chargesOnline: boolean;
+}): Notification {
+  const { shop, trip, confirmed } = input;
+  return {
+    kind: "booking_confirmation",
+    bookingId: confirmed.booking.id,
+    shopId: shop.id,
+    to: input.to,
+    locale: input.locale,
+    diverName: confirmed.person.fullName,
+    shopName: shop.name,
+    tripTitle: trip.title,
+    startsAt: trip.startsAt,
+    endsAt: trip.endsAt,
+    timezone: shop.timezone,
+    dockCallMinutes: shop.dockCallMinutes,
+    readinessUrl: input.readinessUrl,
+    packingList: shop.packingList,
+    // A course session's learning materials, delivered with the seat
+    // (ADR 20261008-course-learning-materials).
+    learningMaterials: trip.course
+      ? readLearningMaterials(trip.course.learningMaterials)
+      : undefined,
+    ...confirmationExtras({
+      shop,
+      trip,
+      course: trip.course ?? null,
+      participantType: confirmed.booking.participantType,
+      chargesOnline: input.chargesOnline,
+      origin: publicAppUrl(),
+    }),
+  };
 }

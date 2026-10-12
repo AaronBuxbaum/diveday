@@ -13,6 +13,7 @@ import { recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
 import { createTripRequestInvitations } from "@/db/trip-invitations";
 import { getTripLens, listTripLenses } from "@/db/trip-lenses";
+import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import {
   countShopTrips,
   createTrip,
@@ -810,14 +811,26 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
     actorPersonId: session.user.personId,
     write: { code: "departure_moved", tripId: parsed.data.tripId },
   });
+  // **Tell the divers** (ux review 2026-10-11, item 1): every booked seat
+  // hears the new time after the same eight-second hold every staff send
+  // takes; the board shows "Telling 6 divers the new time" with Undo. Nothing
+  // is held for a departure with nobody on it.
+  const notice = await holdRescheduleNotice(db, {
+    shopId: shop.id,
+    tripId: parsed.data.tripId,
+    previousStartsAt: outcome.previousStartsAt,
+    meetingPointMoved: false,
+    actorPersonId: session.user.personId,
+  });
   // A move that had to let go of gear says so on the way back. Silence here is
   // a unit somebody still thinks is packed for this departure.
-  revalidateAndRedirect(
-    back,
-    outcome.gearReleased > 0
-      ? `${back}?builder=moved&gear=${outcome.gearReleased}`
-      : `${back}?builder=moved`,
-  );
+  const params = new URLSearchParams({ builder: "moved" });
+  if (outcome.gearReleased > 0) params.set("gear", String(outcome.gearReleased));
+  if (notice) {
+    params.set("held", notice.id);
+    params.set("tell", String(notice.told));
+  }
+  revalidateAndRedirect(back, `${back}?${params}`);
 }
 
 const duplicateSchema = z.object({

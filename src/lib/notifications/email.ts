@@ -19,6 +19,7 @@ import {
 } from "@/lib/format";
 import type { ShopMilestone } from "@/lib/founder-metrics";
 import { escapeHtml } from "@/lib/html";
+import { googleMapsUrl } from "@/lib/maps";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReminderActionCode } from "@/lib/readiness-summary";
 import type { SetupCurrentSystem } from "@/lib/setup-requests";
@@ -47,7 +48,29 @@ type BookingConfirmationEmailInput = {
   packingList?: string[];
   /** A course session's learning materials, already read through `readLearningMaterials`. */
   learningMaterials?: CourseLearningMaterial[];
+  /** Where to go (`meetingPointOf`), drawn as its own panel. */
+  meetingPoint?: MeetingPoint;
+  /** The departure's public `.ics`, for "Add to calendar". */
+  calendarUrl?: string;
+  /** This seat's money as the booking form showed it. */
+  money?: ConfirmationMoney;
+  /** When free cancellation closes, in the shop's zone. */
+  freeCancellationUntil?: Date;
 };
+
+/** Where to go, as a message carries it (`meetingPointForMessage`). */
+type MeetingPoint = {
+  label: string;
+  address?: string | null;
+  landmark?: string | null;
+  parking?: string | null;
+  mapQuery?: string | null;
+};
+
+/** A seat's money, minor units and an ISO currency (`seatMoneyTerms`). */
+type ConfirmationMoney =
+  | { due: "at_shop" | "online"; amountCents: number; currency: string }
+  | { due: "deposit"; depositCents: number; balanceCents: number; currency: string };
 
 type WaiverRequestEmailInput = {
   locale: DiverLocale;
@@ -212,6 +235,8 @@ type TripReminderEmailInput = {
   scheduleDays?: { startsAt: Date; endsAt: Date }[];
   /** A course session: the week-out note says it starts, and names no dock. */
   courseSession?: boolean;
+  /** Where to go (`meetingPointOf`), drawn as its own panel. */
+  meetingPoint?: MeetingPoint;
   /**
    * Whether this message can be replied to with a keyword (ADR
    * 20260909-reply-keywords). Decided by the sender, because it is a fact
@@ -633,6 +658,59 @@ function dockCallPhrase(t: DiverTranslator, dockCallMinutes: number | undefined)
   return t("notifications.common.dockCallMinutes", { minutes: dockCallMinutes ?? 30 });
 }
 
+/**
+ * **Where to go** (ux review 2026-10-11, items 4 and 27): the meeting point,
+ * its address, the landmark and the parking note, and a link to a maps app —
+ * the panel the public trip page and `/ready` already draw, carried into the
+ * mail the diver actually has open at the dock. The map link is built here
+ * from the query, never passed in, so only a maps URL can become this `href`.
+ */
+function meetingPointSection(t: DiverTranslator, point: MeetingPoint | undefined) {
+  if (!point) return { text: "", html: "" };
+  const heading = t("trip.arrivalHeading");
+  const lines = [
+    point.label,
+    point.address,
+    point.landmark ? t("notifications.meetingPoint.landmark", { landmark: point.landmark }) : null,
+    point.parking ? t("notifications.meetingPoint.parking", { parking: point.parking }) : null,
+  ].filter((line): line is string => Boolean(line));
+  const mapUrl = point.mapQuery ? googleMapsUrl(point.mapQuery) : null;
+  const openMap = t("trip.openArrivalMap");
+  return {
+    text: `\n\n${heading}\n${lines.join("\n")}${mapUrl ? `\n${openMap}: ${mapUrl}` : ""}`,
+    html: emailPanel(
+      escapeHtml(heading),
+      `<p style="margin: 8px 0 0;">${lines.map(escapeHtml).join("<br>")}</p>${
+        mapUrl
+          ? `<p style="margin: 8px 0 0;"><a href="${escapeHtml(mapUrl)}" target="_blank">${escapeHtml(openMap)}</a></p>`
+          : ""
+      }`,
+    ),
+  };
+}
+
+/** The confirmation's money line, in the words the booking form used. */
+function confirmationMoneyLine(
+  t: DiverTranslator,
+  money: ConfirmationMoney,
+  input: { locale: DiverLocale; startsAt: Date; timezone: string },
+): string {
+  const amount = (cents: number) => formatMoneyCents(cents, money.currency, input.locale);
+  if (money.due === "deposit") {
+    return t("notifications.bookingConfirmation.moneyDeposit", {
+      deposit: amount(money.depositCents),
+      balance: amount(money.balanceCents),
+      date: formatShortDate(input.startsAt, input.locale, input.timezone),
+    });
+  }
+  return t(
+    money.due === "online"
+      ? "notifications.bookingConfirmation.moneyOnline"
+      : "notifications.bookingConfirmation.moneyAtShop",
+    { amount: amount(money.amountCents) },
+  );
+}
+
 /** The diver's outstanding items as one bullet list, or empty when nothing's left. */
 function outstandingLines(
   t: DiverTranslator,
@@ -823,11 +901,29 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
   // A course's learning materials, above the packing list: the eLearning is
   // the one thing on this page with a deadline weeks before the boat.
   const materials = materialsSection(t, input.learningMaterials);
+  const where = meetingPointSection(t, input.meetingPoint);
+  // The terms the diver agreed to, under the time (ux review 2026-10-11, item
+  // 5): what they pay and where, and until when they can walk away for free.
+  const terms = [
+    input.money ? confirmationMoneyLine(t, input.money, input) : null,
+    input.freeCancellationUntil
+      ? t("trip.freeCancellationUntil", {
+          when: formatDateTimeTz(input.freeCancellationUntil, input.locale, input.timezone),
+        })
+      : null,
+  ].filter((line): line is string => Boolean(line));
+  const termsText = terms.length ? `\n\n${terms.join("\n")}` : "";
+  const termsHtml = terms.length ? `<p>${terms.map(escapeHtml).join("<br>")}</p>` : "";
+  const addToCalendar = t("trip.addToCalendar");
+  const calendarText = input.calendarUrl ? `\n${addToCalendar}:\n${input.calendarUrl}` : "";
+  const calendarHtml = input.calendarUrl
+    ? `<p><a href="${escapeHtml(input.calendarUrl)}">${escapeHtml(addToCalendar)}</a></p>`
+    : "";
 
   return {
     subject: t("notifications.bookingConfirmation.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${confirmed}\n\n${date}\n${time}\n\n${dockNote}${readyText}${materials.text}${reminderText}`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${confirmedHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${dockNoteHtml}</p>${readyHtml}${materials.html}${reminderHtml}`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${confirmed}\n\n${date}\n${time}${termsText}\n\n${dockNote}${where.text}${readyText}${calendarText}${materials.text}${reminderText}`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${confirmedHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${termsHtml}<p>${dockNoteHtml}</p>${where.html}${readyHtml}${calendarHtml}${materials.html}${reminderHtml}`,
   };
 }
 
@@ -1004,6 +1100,9 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
   const keywordHtml = keywordOffer
     ? `<p style="font-size: 13px; opacity: 0.8;">${escapeHtml(keywordOffer)}</p>`
     : "";
+  // Where to go, on both leads (ux review 2026-10-11, item 4): the week-out
+  // note is the one a diver books a taxi from.
+  const where = meetingPointSection(t, input.meetingPoint);
 
   // The 7-day reminder stays a light nudge. The night-before (day) lead becomes
   // the full brief: conditions, what to bring, a concrete arrival time, and who
@@ -1033,8 +1132,8 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
         });
     return {
       subject: t("notifications.tripReminder.daySubject", { tripTitle: input.tripTitle }),
-      text: `${t("notifications.common.greeting", { firstName })}\n\n${opener}\n\n${when.text}${brief.text}${todo.text}${readyText}${keywordText}`,
-      html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${openerHtml}</p>${when.html}${brief.html}${todo.html}${readyHtml}${keywordHtml}`,
+      text: `${t("notifications.common.greeting", { firstName })}\n\n${opener}\n\n${when.text}${brief.text}${where.text}${todo.text}${readyText}${keywordText}`,
+      html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${openerHtml}</p>${when.html}${brief.html}${where.html}${todo.html}${readyHtml}${keywordHtml}`,
     };
   }
 
@@ -1057,8 +1156,59 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
         : "notifications.tripReminder.weekSubject",
       { tripTitle: input.tripTitle },
     ),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${weekBody}\n\n${when.text}${dockNote ? `\n\n${dockNote}` : ""}${todo.text}${materials.text}${readyText}${keywordText}`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${weekBodyHtml}</p>${when.html}${dockNote ? `<p>${dockNote}</p>` : ""}${todo.html}${materials.html}${readyHtml}${keywordHtml}`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${weekBody}\n\n${when.text}${dockNote ? `\n\n${dockNote}` : ""}${where.text}${todo.text}${materials.text}${readyText}${keywordText}`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${weekBodyHtml}</p>${when.html}${dockNote ? `<p>${dockNote}</p>` : ""}${where.html}${todo.html}${materials.html}${readyHtml}${keywordHtml}`,
+  };
+}
+
+type TripRescheduledEmailInput = {
+  locale: DiverLocale;
+  diverName: string;
+  shopName: string;
+  tripTitle: string;
+  previousStartsAt: Date;
+  startsAt: Date;
+  endsAt: Date;
+  timezone: string;
+  /** Absent on a course session, which names no dock. */
+  dockCallMinutes?: number;
+  /** Present only when the meeting point moved with the time. */
+  meetingPoint?: MeetingPoint;
+  readinessUrl?: string;
+};
+
+/**
+ * **"Your departure moved"** (ux review 2026-10-11, item 1): the new date and
+ * time first, the old one under it so nobody wonders which is which, the
+ * meeting point only when it moved too, and the diver's own trip prep.
+ */
+export function tripRescheduledEmail(input: TripRescheduledEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const title = escapeHtml(input.tripTitle);
+  const when = whenLines(t, input);
+  const previous = formatDateTimeTz(input.previousStartsAt, input.locale, input.timezone);
+  const was = t("notifications.tripRescheduled.was", { when: previous });
+  const body = t("notifications.tripRescheduled.body", { tripTitle: input.tripTitle });
+  const bodyHtml = t("notifications.tripRescheduled.body", {
+    tripTitle: `<strong>${title}</strong>`,
+  });
+  const dockNote =
+    input.dockCallMinutes === undefined
+      ? null
+      : t("notifications.tripReminder.dockNote", {
+          dock: dockCallPhrase(t, input.dockCallMinutes),
+        });
+  const movedToo = input.meetingPoint ? t("notifications.tripRescheduled.meetingPointMoved") : null;
+  const where = meetingPointSection(t, input.meetingPoint);
+  const cantMakeIt = t("notifications.tripRescheduled.cantMakeIt");
+  const seeWhatsLeft = t("notifications.common.seeWhatsLeft");
+  const readyText = input.readinessUrl ? `\n\n${seeWhatsLeft}:\n${input.readinessUrl}\n` : "\n";
+  const readyHtml = input.readinessUrl ? emailButton(input.readinessUrl, seeWhatsLeft) : "";
+  return {
+    subject: t("notifications.tripRescheduled.subject", { tripTitle: input.tripTitle }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${when.text}\n${was}${dockNote ? `\n\n${dockNote}` : ""}${movedToo ? `\n\n${movedToo}` : ""}${where.text}\n\n${cantMakeIt}${readyText}`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${when.html}<p style="opacity: 0.8;">${escapeHtml(was)}</p>${dockNote ? `<p>${escapeHtml(dockNote)}</p>` : ""}${movedToo ? `<p>${escapeHtml(movedToo)}</p>` : ""}${where.html}<p>${escapeHtml(cantMakeIt)}</p>${readyHtml}`,
   };
 }
 

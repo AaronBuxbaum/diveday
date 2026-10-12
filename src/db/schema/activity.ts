@@ -286,6 +286,7 @@ export const heldSendKind = pgEnum("held_send_kind", [
   "waiver_send",
   "last_minute_deal",
   "waitlist_invite",
+  "trip_rescheduled",
 ]);
 
 /**

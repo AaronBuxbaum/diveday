@@ -145,6 +145,11 @@ export const notificationKind = pgEnum("notification_kind", [
   // money (src/db/booking-cancelled-notice.ts). Tracked per booking so the
   // shop can see the diver was told.
   "booking_cancelled",
+  // The departure moved: old time, new time, where to go if that moved too
+  // (src/db/trip-rescheduled.ts, ux review 2026-10-11 item 1). Tracked per
+  // booking, by whichever channel carried it, so the roster can show who
+  // heard.
+  "trip_rescheduled",
 ]);
 
 export const notificationDeliveryStatus = pgEnum("notification_delivery_status", [

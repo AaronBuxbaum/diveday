@@ -170,6 +170,58 @@ test.describe("schedule builder", () => {
     await expect(page.getByRole("status")).toHaveCount(0);
   });
 
+  /**
+   * **Moving a booked departure tells its divers, after a hold you can take
+   * back** (ux review 2026-10-11, item 1). The move holds a reschedule notice
+   * for every booked seat; the board says how many it is telling, with Undo,
+   * and after Undo it says the divers still have the old time and offers to
+   * tell them. Undone before it drains, so nothing is sent from here; the send
+   * itself is `src/db/trip-rescheduled.test.ts`.
+   */
+  test("moving a booked departure holds a notice to its divers, with Undo", async ({ page }) => {
+    test.setTimeout(30_000);
+    await page.goto(BOARD);
+    await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
+    const titles = await page
+      .getByRole("button", { name: /^Move, copy, or remove / })
+      .evaluateAll((nodes) =>
+        nodes
+          .map((node) =>
+            /^Move, copy, or remove ([^,]+),/.exec(node.getAttribute("aria-label") ?? ""),
+          )
+          .map((match) => match?.[1] ?? "")
+          .filter(Boolean),
+      );
+    // A departure whose divers have been told its date and that has not
+    // sailed: the panel's own impact lines say which, so the seed's calendar
+    // is not written down here.
+    let booked: string | null = null;
+    for (const title of new Set(titles)) {
+      await chooseRowAction(page, "Move", title);
+      await expect(page.getByText("If you move it")).toBeVisible();
+      const told = await page.getByText(/already been told this date/).count();
+      const sailed = await page.getByText("already counted heads").count();
+      if (told > 0 && sailed === 0) {
+        booked = title;
+        break;
+      }
+      await page.getByRole("button", { name: "Cancel" }).click();
+    }
+    expect(booked).toBeTruthy();
+    await expect(page.getByText(/Moving it tells them the new one\./)).toBeVisible();
+    const date = await page.getByLabel("New date").inputValue();
+    const next = new Date(`${date}T12:00:00Z`);
+    next.setUTCDate(next.getUTCDate() + 1);
+    await page.getByLabel("New date").fill(next.toISOString().slice(0, 10));
+    await page.getByRole("button", { name: "Move it" }).click();
+
+    await expect(page.getByText("Moved.")).toBeVisible();
+    await expect(page.getByText(/^Telling \d+ divers? the new time…$/)).toBeVisible();
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect(page.getByText("Not told. The divers still have the old time.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Tell them" })).toBeVisible();
+  });
+
   test("staff add, move, copy, and remove a departure without leaving the board", async ({
     page,
   }) => {

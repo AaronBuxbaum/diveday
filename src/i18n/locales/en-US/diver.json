@@ -4096,7 +4096,10 @@
       "subject": "You’re on the boat — {tripTitle}",
       "confirmed": "Your spot on {tripTitle} is confirmed.",
       "dockNote": "Please be at the dock {dock} early. We’ll take it from there.",
-      "packingHeading": "Bring"
+      "packingHeading": "Bring",
+      "moneyOnline": "Your seat: {amount}, by card online.",
+      "moneyDeposit": "Your seat: {deposit} by card online, then {balance} at the dock on {date}.",
+      "moneyAtShop": "Your seat: {amount}, due at the shop."
     },
     "waitlistInvite": {
       "subject": "A spot opened up on {tripTitle}",
@@ -4289,7 +4292,9 @@
       "waiver": "{shopName}: please sign your dive release before you dive — {url}",
       "waiverForTrip": "{shopName}: please sign your dive release for {tripTitle} — {url}",
       "stopLine": "Reply STOP to opt out.",
-      "courseForms": "{shopName}: please sign your course forms for {tripTitle} — {url}"
+      "courseForms": "{shopName}: please sign your course forms for {tripTitle} — {url}",
+      "readyLink": "Your trip prep: {url}",
+      "rescheduled": "{shopName}: we moved {tripTitle} to {date}, {time}. It was {previous}."
     },
     "whatsappTemplate": {
       "body": "Hi! An update from '{{1}}': '{{2}}'",
@@ -4387,6 +4392,17 @@
       "subject": "Course forms to sign for {tripTitle}",
       "body": "{shopName} asks every student on {tripTitle} to sign the course forms. Your release is already signed, so these are all that’s left.",
       "openLink": "Sign your course forms"
+    },
+    "meetingPoint": {
+      "landmark": "Landmark: {landmark}",
+      "parking": "Parking: {parking}"
+    },
+    "tripRescheduled": {
+      "subject": "New time for {tripTitle}",
+      "body": "We moved {tripTitle}. Here is the new time.",
+      "was": "It was {when}.",
+      "meetingPointMoved": "We meet somewhere new, too.",
+      "cantMakeIt": "Can’t make the new time? Get in touch and we’ll sort it out."
     }
   },
   "brand": {

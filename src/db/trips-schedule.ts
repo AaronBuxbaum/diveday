@@ -72,6 +72,8 @@ export type MoveTripOutcome =
   | {
       ok: true;
       trip: Trip;
+      /** Where the departure sat before the move: what its divers were told. */
+      previousStartsAt: Date;
       /**
        * Gear reservations the move could not carry onto the new dates, because
        * the unit is already spoken for there. Released rather than left
@@ -163,7 +165,7 @@ export async function moveTrip(
     }
 
     if (startsAt.getTime() === existing.startsAt.getTime())
-      return { ok: true, trip: existing, gearReleased: 0 };
+      return { ok: true, trip: existing, previousStartsAt: existing.startsAt, gearReleased: 0 };
 
     const [shop] = await tx
       .select({ timezone: shops.timezone })
@@ -208,7 +210,12 @@ export async function moveTrip(
       tripId,
       window: tripReservationWindow(trip, shop.timezone),
     });
-    return { ok: true, trip, gearReleased: gear.released };
+    return {
+      ok: true,
+      trip,
+      previousStartsAt: existing.startsAt,
+      gearReleased: gear.released,
+    };
   });
 }
 

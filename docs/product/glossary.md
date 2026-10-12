@@ -196,6 +196,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Reconciliation
 - Reminder cadence
 - Reply keyword
+- Reschedule notice
 - Retention window
 - Review request
 - Rider

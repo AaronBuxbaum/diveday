@@ -47,6 +47,7 @@ export function SendHold<Outcome>({
   copy,
   note,
   className,
+  initialTicket,
   children,
 }: {
   hold: (formData: FormData) => Promise<HeldTicket>;
@@ -59,9 +60,15 @@ export function SendHold<Outcome>({
   /** The one clause a send keeps ("the old link stops working"), shown beside "Sending…". */
   note?: string;
   className?: string;
+  /**
+   * A send already held on the server before this rendered: the board's move
+   * holds the reschedule notice itself, and the page it lands on shows the
+   * hold draining with Undo (ux review 2026-10-11, item 1).
+   */
+  initialTicket?: HeldTicket | null;
   children: ReactNode;
 }) {
-  const [ticket, setTicket] = useState<HeldTicket | null>(null);
+  const [ticket, setTicket] = useState<HeldTicket | null>(initialTicket ?? null);
   const [releasing, setReleasing] = useState(false);
   // How much of the hold has run, counted in ticks of the interval below —
   // never read off a clock. `Date.now()` is pinned in the e2e fleet (and may

@@ -29,6 +29,7 @@ import {
   tripMinimumNotMetEmail,
   tripRecapEmail,
   tripReminderEmail,
+  tripRescheduledEmail,
   usageCeilingAlertEmail,
   verifyAccountEmail,
   waitlistInviteEmail,
@@ -109,6 +110,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "trip_reminder_24h") {
     return tripReminderEmail({ ...notification, lead: "day" });
   }
+  if (notification.kind === "trip_rescheduled") return tripRescheduledEmail(notification);
   if (notification.kind === "trip_recap") return tripRecapEmail(notification);
   if (notification.kind === "trip_conditions_hold") return tripConditionsHoldEmail(notification);
   if (notification.kind === "trip_blowout") return tripBlowoutEmail(notification);

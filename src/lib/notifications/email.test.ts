@@ -19,6 +19,7 @@ import {
   tripMinimumNotMetEmail,
   tripRecapEmail,
   tripReminderEmail,
+  tripRescheduledEmail,
   usageCeilingAlertEmail,
   verifyAccountEmail,
   welcomeEmail,
@@ -1252,5 +1253,138 @@ describe("founderDigestEmail (ADR 20261007-founder-metrics)", () => {
     expect(founderDigestEmail({ ...digest, unnotifiedSetupRequests: 2 }).text).toContain(
       "2 never reached the onboarding inbox",
     );
+  });
+});
+
+/** Intl's narrow and non-breaking spaces, as plain ones, for reading a body as a person would. */
+const flat = (text: string) => text.replace(/[\u00a0\u202f]/g, " ");
+
+const meetingPoint = {
+  label: "North Pier",
+  address: "1 Dock St, Key Largo, FL",
+  landmark: "Blue awning beside the fuel dock",
+  parking: "Free lot behind the bait shop",
+  mapQuery: "North Pier, 1 Dock St, Key Largo, FL",
+};
+
+describe("where to go (ux review 2026-10-11, items 4 and 27)", () => {
+  it("puts the meeting point, its notes and a maps link on the confirmation", () => {
+    const email = bookingConfirmationEmail({ ...base, meetingPoint });
+    expect(email.text).toContain(
+      "Where to go\nNorth Pier\n1 Dock St, Key Largo, FL\nLandmark: Blue awning beside the fuel dock\nParking: Free lot behind the bait shop\nOpen in maps: https://www.google.com/maps/search/?api=1&query=North%20Pier%2C%201%20Dock%20St%2C%20Key%20Largo%2C%20FL",
+    );
+    expect(email.html).toContain("<strong>Where to go</strong>");
+    expect(email.html).toContain('class="dd-panel"');
+    expect(email.html).toContain(">Open in maps</a>");
+  });
+
+  it("puts it on both reminders", () => {
+    for (const lead of ["week", "day"] as const) {
+      const email = tripReminderEmail({ ...base, lead, meetingPoint });
+      expect(email.text).toContain("Where to go\nNorth Pier");
+      expect(email.html).toContain("Landmark: Blue awning beside the fuel dock");
+    }
+  });
+
+  it("escapes the shop's words and draws no map link without an honest query", () => {
+    const email = bookingConfirmationEmail({
+      ...base,
+      meetingPoint: { ...meetingPoint, label: "<b>Pier</b>", mapQuery: null },
+    });
+    expect(email.html).toContain("&lt;b&gt;Pier&lt;/b&gt;");
+    expect(email.html).not.toContain("Open in maps");
+  });
+
+  it("says it in Spanish to a Spanish reader", () => {
+    const email = bookingConfirmationEmail({ ...base, locale: "es-ES", meetingPoint });
+    expect(email.text).toContain("Adónde ir");
+    expect(email.text).toContain("Referencia: Blue awning");
+    expect(email.text).toContain("Aparcamiento: Free lot");
+    expect(email.text).toContain("Abrir en mapas");
+  });
+});
+
+describe("the confirmation's terms (ux review 2026-10-11, item 5)", () => {
+  it("names the seat's money, the free-cancellation window and the calendar link", () => {
+    const email = bookingConfirmationEmail({
+      ...base,
+      money: { due: "deposit", depositCents: 5_000, balanceCents: 10_000, currency: "usd" },
+      freeCancellationUntil: new Date("2026-07-30T13:00:00.000Z"),
+      calendarUrl: "https://diveday.example/s/blue-mantis/trips/abc/calendar",
+    });
+    expect(flat(email.text)).toContain(
+      "Your seat: $50.00 by card online, then $100.00 at the dock on Sat, Aug 1.",
+    );
+    expect(flat(email.text)).toContain("Free cancellation until Jul 30, 9:00 AM EDT");
+    expect(email.text).toContain(
+      "Add to calendar:\nhttps://diveday.example/s/blue-mantis/trips/abc/calendar",
+    );
+    expect(email.html).toContain(
+      '<a href="https://diveday.example/s/blue-mantis/trips/abc/calendar">Add to calendar</a>',
+    );
+  });
+
+  it("says what is owed at the shop, and what was taken online", () => {
+    expect(
+      bookingConfirmationEmail({
+        ...base,
+        money: { due: "at_shop", amountCents: 12_000, currency: "usd" },
+      }).text,
+    ).toContain("Your seat: $120.00, due at the shop.");
+    expect(
+      bookingConfirmationEmail({
+        ...base,
+        locale: "es-ES",
+        money: { due: "online", amountCents: 12_000, currency: "usd" },
+      }).text,
+    ).toMatch(/Tu plaza: .*120.*, con tarjeta en línea\./);
+  });
+
+  it("says nothing of money, window or calendar when there is none", () => {
+    const email = bookingConfirmationEmail(base);
+    expect(email.text).not.toContain("Your seat");
+    expect(email.text).not.toContain("Free cancellation");
+    expect(email.text).not.toContain("Add to calendar");
+  });
+});
+
+describe("tripRescheduledEmail (ux review 2026-10-11, item 1)", () => {
+  const moved = {
+    ...base,
+    previousStartsAt: new Date("2026-07-31T13:00:00.000Z"),
+    dockCallMinutes: 30,
+    readinessUrl: "https://diveday.example/ready/tok",
+  };
+
+  it("leads with the new time, says the old one, and links the diver's trip prep", () => {
+    const email = tripRescheduledEmail(moved);
+    expect(email.subject).toBe("New time for Two-Tank Reef");
+    expect(email.text).toContain("We moved Two-Tank Reef. Here is the new time.");
+    expect(flat(email.text)).toContain(
+      "Sat, Aug 1\n9:00 AM – 1:00 PM EDT\nIt was Jul 31, 9:00 AM EDT.",
+    );
+    expect(email.text).toContain("Please be at the dock 30 minutes early.");
+    expect(email.text).toContain("https://diveday.example/ready/tok");
+    expect(email.text).not.toContain("Where to go");
+    expect(email.html).toContain("<strong>Two-Tank Reef</strong>");
+  });
+
+  it("says where only when the meeting point moved too", () => {
+    const email = tripRescheduledEmail({ ...moved, meetingPoint });
+    expect(email.text).toContain("We meet somewhere new, too.");
+    expect(email.text).toContain("Where to go\nNorth Pier");
+  });
+
+  it("escapes the title and speaks Spanish to a Spanish reader", () => {
+    const email = tripRescheduledEmail({ ...moved, locale: "es-ES", tripTitle: "<i>Reef</i>" });
+    expect(email.subject).toBe("Nuevo horario para <i>Reef</i>");
+    expect(email.html).toContain("<strong>&lt;i&gt;Reef&lt;/i&gt;</strong>");
+    expect(email.text).toContain("Antes era el");
+    expect(email.text).toContain("¿No puedes a la nueva hora?");
+  });
+
+  it("names no dock on a course session", () => {
+    const { dockCallMinutes: _omit, ...course } = moved;
+    expect(tripRescheduledEmail(course).text).not.toContain("dock");
   });
 });

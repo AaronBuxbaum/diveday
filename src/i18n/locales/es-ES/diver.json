@@ -4096,7 +4096,10 @@
       "subject": "Estás a bordo — {tripTitle}",
       "confirmed": "Tu plaza en {tripTitle} está confirmada.",
       "dockNote": "Preséntate en el muelle {dock} antes. Nosotros nos encargamos del resto.",
-      "packingHeading": "Trae"
+      "packingHeading": "Trae",
+      "moneyOnline": "Tu plaza: {amount}, con tarjeta en línea.",
+      "moneyDeposit": "Tu plaza: {deposit} con tarjeta en línea y {balance} en el muelle el {date}.",
+      "moneyAtShop": "Tu plaza: {amount}, a pagar en el centro."
     },
     "waitlistInvite": {
       "subject": "Se ha liberado una plaza en {tripTitle}",
@@ -4289,7 +4292,9 @@
       "waiver": "{shopName}: firma tu exención de buceo antes de bucear — {url}",
       "waiverForTrip": "{shopName}: firma tu exención de buceo para {tripTitle} — {url}",
       "stopLine": "Responde STOP para darte de baja.",
-      "courseForms": "{shopName}: firma los formularios del curso {tripTitle} — {url}"
+      "courseForms": "{shopName}: firma los formularios del curso {tripTitle} — {url}",
+      "readyLink": "Tu preparación: {url}",
+      "rescheduled": "{shopName}: cambiamos {tripTitle} al {date}, {time}. Antes era el {previous}."
     },
     "whatsappTemplate": {
       "body": "¡Hola! Un aviso de '{{1}}': '{{2}}'",
@@ -4387,6 +4392,17 @@
       "subject": "Formularios del curso por firmar para {tripTitle}",
       "body": "{shopName} pide a cada estudiante de {tripTitle} que firme los formularios del curso. Tu exención ya está firmada, así que solo faltan estos.",
       "openLink": "Firmar los formularios del curso"
+    },
+    "meetingPoint": {
+      "landmark": "Referencia: {landmark}",
+      "parking": "Aparcamiento: {parking}"
+    },
+    "tripRescheduled": {
+      "subject": "Nuevo horario para {tripTitle}",
+      "body": "Cambiamos el horario de {tripTitle}. Este es el nuevo.",
+      "was": "Antes era el {when}.",
+      "meetingPointMoved": "También cambia el punto de encuentro.",
+      "cantMakeIt": "¿No puedes a la nueva hora? Escríbenos y lo resolvemos."
     }
   },
   "brand": {

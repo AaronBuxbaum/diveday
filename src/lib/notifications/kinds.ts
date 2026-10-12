@@ -14,6 +14,7 @@ import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
 import { SHOP_MILESTONES } from "@/lib/founder-metrics";
 import { GEAR_KIND_ORDER, GEAR_SERVICE_KINDS } from "@/lib/gear";
 import { REPLY_BODY_MAX_LENGTH } from "@/lib/inbox";
+import { MEETING_POINT_LIMITS } from "@/lib/meeting-point";
 import { DIVER_EMAIL_MAX } from "@/lib/person-fields";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
 import {
@@ -101,6 +102,37 @@ const learningMaterialsSchema = z
   .max(MAX_LEARNING_MATERIALS)
   .optional();
 
+/**
+ * Where to go for the departure (ux review 2026-10-11, items 4 and 27), as
+ * `meetingPointOf` reads it and `meetingPointForMessage` clips it. The map
+ * link is built by the renderer from `mapQuery` (`googleMapsUrl`), so no
+ * caller can put an arbitrary `href` in a diver's inbox through this field.
+ */
+const meetingPointSchema = z.object({
+  label: z.string().trim().min(1).max(MEETING_POINT_LIMITS.label),
+  address: z.string().trim().min(1).max(MEETING_POINT_LIMITS.address).nullish(),
+  landmark: z.string().trim().min(1).max(MEETING_POINT_LIMITS.landmark).nullish(),
+  parking: z.string().trim().min(1).max(MEETING_POINT_LIMITS.parking).nullish(),
+  mapQuery: z.string().trim().min(1).max(MEETING_POINT_LIMITS.mapQuery).nullish(),
+});
+
+const centsSchema = z.number().int().min(1).max(100_000_000);
+
+/**
+ * This seat's money as the booking form showed it (`seatMoneyTerms`): a code
+ * and amounts in minor units, never a sentence.
+ */
+const seatMoneySchema = z.discriminatedUnion("due", [
+  z.object({ due: z.literal("at_shop"), amountCents: centsSchema, currency: z.string().length(3) }),
+  z.object({ due: z.literal("online"), amountCents: centsSchema, currency: z.string().length(3) }),
+  z.object({
+    due: z.literal("deposit"),
+    depositCents: centsSchema,
+    balanceCents: centsSchema,
+    currency: z.string().length(3),
+  }),
+]);
+
 const bookingConfirmationSchema = z.object({
   kind: z.literal("booking_confirmation"),
   bookingId: z.uuid(),
@@ -117,6 +149,16 @@ const bookingConfirmationSchema = z.object({
   readinessUrl: z.url().max(2_000).optional(),
   packingList: z.array(z.string().trim().min(1).max(100)).max(12).optional(),
   learningMaterials: learningMaterialsSchema,
+  meetingPoint: meetingPointSchema.optional(),
+  /**
+   * The departure's public `.ics` (`publicTripCalendarPath`): a page anybody
+   * may open, so a link to it carries no capability (ux review 2026-10-11,
+   * item 5).
+   */
+  calendarUrl: z.url().max(2_000).optional(),
+  money: seatMoneySchema.optional(),
+  /** When free cancellation closes (`cancellationDeadline`); absent when the trip states no window. */
+  freeCancellationUntil: z.date().optional(),
   /**
    * Set only by a caller sending a *second* confirmation for the same
    * `bookingId` — a reschedule reactivating a previously-cancelled row, or a
@@ -402,6 +444,7 @@ const tripReminderFields = {
     .optional(),
   /** A course session: the week-out note says it starts, and names no dock. */
   courseSession: z.boolean().optional(),
+  meetingPoint: meetingPointSchema.optional(),
 };
 
 // The night-before brief's extra sections, carried only on the 24h cadence
@@ -424,6 +467,40 @@ const tripReminder24hSchema = z.object({
   kind: z.literal("trip_reminder_24h"),
   ...tripReminderFields,
   brief: nightBeforeBriefSchema.optional(),
+});
+
+/**
+ * **"Your departure moved."** (ux review 2026-10-11, item 1.) The board's move
+ * and the trip page's retime both bumped `trips.revision` so subscribed
+ * calendars re-alerted, and told no booked diver — "or a diver stands at the
+ * dock at the old time", in the code's own words. One message per booked seat,
+ * sent by the diver's usual channel after the same eight-second hold every
+ * other staff send takes (`held_sends`, kind `trip_rescheduled`).
+ *
+ * The old time and the new, the meeting point **only when it moved with the
+ * time**, and the diver's own trip-prep link. Addressed to the address on the
+ * booking's own person record and nobody else (`src/db/trip-rescheduled.ts`).
+ *
+ * `revision` is the trip's `revision` after the move, and keys the send: a
+ * departure moved twice is news twice, and a retry of one move is one email.
+ */
+const tripRescheduledSchema = z.object({
+  kind: z.literal("trip_rescheduled"),
+  bookingId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  previousStartsAt: z.date(),
+  startsAt: z.date(),
+  endsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  dockCallMinutes: z.number().int().min(5).max(180).optional(),
+  revision: z.number().int().min(0),
+  meetingPoint: meetingPointSchema.optional(),
+  readinessUrl: z.url().max(2_000).optional(),
 });
 
 const tripRecapSchema = z.object({
@@ -1209,6 +1286,7 @@ export const notificationSchema = z
     directTripInvitationSchema,
     tripReminder7dSchema,
     tripReminder24hSchema,
+    tripRescheduledSchema,
     tripRecapSchema,
     tripConditionsHoldSchema,
     tripMinimumNotMetSchema,
@@ -1398,6 +1476,10 @@ export function notificationIdempotencyKey(notification: Notification): string {
     case "trip_reminder_7d":
     case "trip_reminder_24h":
       return `${notification.kind}/${notification.bookingId}`;
+    // One per seat per move: the trip's revision after the move keys it, so a
+    // second move is a second message and a retried send is not.
+    case "trip_rescheduled":
+      return `trip-rescheduled/${notification.bookingId}/${notification.revision}`;
     // One recap per booking after the trip departs.
     case "trip_recap":
       return `trip-recap/${notification.bookingId}`;
