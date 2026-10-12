@@ -51,6 +51,8 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   booking_no_show_missing_after_dive: "seats",
   seat_added: "seats",
   seat_added_walk_in: "seats",
+  rider_added_at_dock: "seats",
+  departure_note_sent: "departures",
   booking_link_requested: "seats",
   seat_claimed: "seats",
   participant_type_changed: "safety",

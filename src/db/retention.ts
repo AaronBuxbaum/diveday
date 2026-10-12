@@ -1,4 +1,4 @@
-import { inArray, lt, sql } from "drizzle-orm";
+import { and, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
@@ -16,11 +16,13 @@ import {
   bookingPaymentEvents,
   crewNotices,
   demoEntries,
+  departureNotes,
   formDrafts,
   inboundMessages,
   incidentReports,
   integrationEvents,
   integrationOauthStates,
+  lostItems,
   notificationDeliveries,
   notificationDeliveryAttempts,
   pushSubscriptions,
@@ -353,6 +355,37 @@ export async function pruneExpiredRecords(
           .where(lt(crewNotices.createdAt, cutoff("crew_notices")))
           .limit(PRUNE_BATCH_LIMIT),
       (ids) => db.delete(crewNotices).where(inArray(crewNotices.id, ids)),
+    ),
+  );
+
+  // Found items, only once resolved: an open one is still the shop's to hold,
+  // so `resolved_at` is both the clock and the filter (batch 4, J2).
+  outcomes.push(
+    await pruneBatch(
+      "lost_items",
+      () =>
+        db
+          .select({ id: lostItems.id })
+          .from(lostItems)
+          .where(
+            and(isNotNull(lostItems.resolvedAt), lt(lostItems.resolvedAt, cutoff("lost_items"))),
+          )
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(lostItems).where(inArray(lostItems.id, ids)),
+    ),
+  );
+
+  // Notes sent to a whole departure, on the send's own time (batch 4, J4).
+  outcomes.push(
+    await pruneBatch(
+      "departure_notes",
+      () =>
+        db
+          .select({ id: departureNotes.id })
+          .from(departureNotes)
+          .where(lt(departureNotes.sentAt, cutoff("departure_notes")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(departureNotes).where(inArray(departureNotes.id, ids)),
     ),
   );
 

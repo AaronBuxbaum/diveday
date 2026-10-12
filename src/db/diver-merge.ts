@@ -202,6 +202,9 @@ export const DIVER_HISTORY_TABLES = [
   // "running late" the crew acted on sits on a record nobody opens.
   "inbound_messages",
   "staff_replies",
+  // Something the crew found aboard with this diver's name on it (batch 4,
+  // J2). It is the diver's, so it follows them: the survivor is who gets told.
+  "lost_items",
 ] as const;
 
 /** These rows identify a staff account or crew assignment, not a diver history. */
@@ -350,6 +353,9 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "waiver_records.moved_from_person_id": "where a refiled release sat before; inside its seal",
   "waiver_records.recorded_by_person_id": "who witnessed the signature",
   "course_form_records.recorded_by_person_id": "who recorded the paper form",
+  "lost_items.recorded_by_person_id": "which crew member found the item",
+  "lost_items.resolved_by_person_id": "who handed it back or let it go",
+  "departure_notes.sent_by_person_id": "who sent the note to the departure",
   "course_form_records.anonymized_by_person_id": "who erased the signer's names from the form",
   "course_form_versions.created_by_person_id": "who wrote that version of the form",
 };
@@ -906,6 +912,7 @@ export const DIVER_MERGE_COUNT_GROUPS = {
     "rental_fit_profiles",
     "customer_gear_items",
     "work_orders",
+    "lost_items",
   ],
   history: ["prior_visits"],
   lists: [

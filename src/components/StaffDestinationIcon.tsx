@@ -270,6 +270,13 @@ const ICON_PATHS: Record<StaffDestinationId, ReactNode> = {
       <path d="M16 12v-1.5" />
     </>
   ),
+  // Lost and found: a tagged item — a luggage tag on its string.
+  lostFound: (
+    <>
+      <path d="M20 12.6 12.6 20a2 2 0 0 1-2.8 0L4 14.2a2 2 0 0 1-.6-1.4V5a2 2 0 0 1 2-2h7.8a2 2 0 0 1 1.4.6L20 9.8a2 2 0 0 1 0 2.8Z" />
+      <circle cx="8" cy="8" r="1.5" />
+    </>
+  ),
   // Courses: teaching — an open book.
   courses: (
     <>

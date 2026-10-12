@@ -11,6 +11,7 @@ import {
 } from "@/lib/courses";
 import { CREW_NOTICE_CHANGES, CREW_TRIP_ROLES } from "@/lib/crew-notices";
 import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
+import { DEPARTURE_NOTE_MAX, departureNoteProblem } from "@/lib/departure-notes";
 import { SHOP_MILESTONES } from "@/lib/founder-metrics";
 import { GEAR_KIND_ORDER, GEAR_SERVICE_KINDS } from "@/lib/gear";
 import { REPLY_BODY_MAX_LENGTH } from "@/lib/inbox";
@@ -1066,6 +1067,60 @@ export type CustomerGearPiece = z.infer<typeof customerGearPieceSchema>;
  * `workPerformed` is the technician's words *for the customer*; the bench
  * notes never reach this payload.
  */
+/**
+ * **A note to everyone on a departure** (batch 4, J4): the staffer's own short
+ * line, checked before it was held (`departureNoteProblem`), and the diver's
+ * own `/ready` link — the one link it may carry. One send per note per seat.
+ * Not queued: a note about this morning's parking that arrives an hour late
+ * is worse than none, and `departure_notes.delivered` says how many went.
+ */
+const departureNoteSchema = z.object({
+  kind: z.literal("departure_note"),
+  noteId: z.uuid(),
+  /**
+   * The seat this copy is for. Deliberately not `bookingId`: that name makes a
+   * kind tracked per booking on `notification_deliveries`, and a note is
+   * counted on its own row instead (`departure_notes.delivered`).
+   */
+  seatId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  body: z
+    .string()
+    .trim()
+    .min(1)
+    .max(DEPARTURE_NOTE_MAX)
+    .refine((body) => departureNoteProblem(body) === null),
+  readinessUrl: z.url().max(2_000).optional(),
+});
+
+/**
+ * **Something the crew found aboard** (batch 4, J2), told to the diver it was
+ * found with, once per tap. Not queued, for the reason the ready-for-pickup
+ * message is not.
+ */
+const lostItemFoundSchema = z.object({
+  kind: z.literal("lost_item_found"),
+  itemId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  description: z.string().trim().min(1).max(120),
+  /** When the staffer tapped Tell, so a second tap is a second send. */
+  toldAt: z.date(),
+});
+
 const workOrderReadySchema = z.object({
   kind: z.literal("work_order_ready"),
   noticeId: z.uuid(),
@@ -1217,6 +1272,8 @@ export const notificationSchema = z
     gearServiceDueSchema,
     crewScheduleChangeSchema,
     deskAfterHoursSchema,
+    departureNoteSchema,
+    lostItemFoundSchema,
   ])
   .and(z.object({ sender: notificationSenderSchema.optional() }));
 
@@ -1327,6 +1384,8 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "gear_service_due":
     case "crew_schedule_change":
     case "desk_after_hours":
+    case "departure_note":
+    case "lost_item_found":
       return false;
     default:
       return true;
@@ -1454,6 +1513,12 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per reply row; the row exists before the send does.
     case "staff_reply":
       return `staff-reply/${notification.replyId}`;
+    // One send per note per seat; the note row exists before the send does.
+    case "departure_note":
+      return `departure-note/${notification.noteId}/${notification.seatId}`;
+    // One send per tap on Tell.
+    case "lost_item_found":
+      return `lost-item-found/${notification.itemId}/${notification.toldAt.toISOString()}`;
     // One Monday email per person per shop-local week — the same pair
     // `weekly_digest_sends` holds unique, so a queued retry and the claim
     // agree on what "this week's email" means.

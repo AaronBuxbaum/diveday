@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DEPARTURE_NOTE_MAX, departureNoteProblem, foldDepartureNote } from "./departure-notes";
 
 /**
  * A send you can take back (ADR 20260906-before-you-ask, decision 2).
@@ -12,7 +13,9 @@ import { z } from "zod";
  *
  * This module is the framework-free half: the hold length, the kinds, their
  * payload shapes (ids only, never a name or an address — the executor joins
- * those at send time, so an erasure needs no sweep here), and the arithmetic.
+ * those at send time, so an erasure needs no sweep here; a departure note
+ * also carries the staffer's one line about the departure), and the
+ * arithmetic.
  */
 export const SEND_HOLD_MS = 8_000;
 
@@ -23,7 +26,12 @@ export const SEND_HOLD_MS = 8_000;
  */
 export const SEND_HOLD_TOLERANCE_MS = 750;
 
-export const HELD_SEND_KINDS = ["waiver_send", "last_minute_deal", "waitlist_invite"] as const;
+export const HELD_SEND_KINDS = [
+  "waiver_send",
+  "last_minute_deal",
+  "waitlist_invite",
+  "departure_note",
+] as const;
 export type HeldSendKind = (typeof HELD_SEND_KINDS)[number];
 
 export const WAIVER_SEND_SURFACES = ["today", "roster", "diver", "counter"] as const;
@@ -67,10 +75,26 @@ const waitlistInvitePayload = z.object({
   entryId: z.uuid(),
 });
 
+/**
+ * A note to everyone on a departure (batch 4, J4). The one payload that
+ * carries words: the staffer's own line about the departure, which names no
+ * diver and is checked here as it is at the send (`departureNoteProblem`).
+ */
+const departureNotePayload = z.object({
+  kind: z.literal("departure_note"),
+  tripId: z.uuid(),
+  body: z
+    .string()
+    .max(DEPARTURE_NOTE_MAX * 4)
+    .transform(foldDepartureNote)
+    .refine((body) => departureNoteProblem(body) === null, { message: "note_refused" }),
+});
+
 export const heldSendPayloadSchema = z.discriminatedUnion("kind", [
   waiverSendPayload,
   lastMinuteDealPayload,
   waitlistInvitePayload,
+  departureNotePayload,
 ]);
 
 export type HeldSendPayload = z.infer<typeof heldSendPayloadSchema>;

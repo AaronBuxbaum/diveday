@@ -66,6 +66,9 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Change ledger
 - Conditions hold
 - Day-of help request
+- Departure note
+- Dock rider
+- Lost item
 - Staff note
 
 ## Modeling notes
@@ -134,6 +137,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Crew news
 - Crew roll-call event
 - Crew schedule
+- Crew warning
 - DAN
 - Default course page
 - Delivery receipt

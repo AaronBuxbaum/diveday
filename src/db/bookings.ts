@@ -124,7 +124,22 @@ export type BookingPerson =
        */
       fromNameMatch?: { typedName: string };
     }
-  | { fullName: string; email?: string; phone?: string };
+  | { fullName: string; email?: string; phone?: string; freshPerson?: FreshPersonDetails };
+
+/**
+ * What a door knows about somebody it is seating for the first time, written
+ * onto the new person row **in the booking's own transaction** — the dock's
+ * emergency contact and date of birth (batch 4, D6), so a rider never exists
+ * for a moment without them. Only ever written to a row this booking creates
+ * with no email: a person matched or created by email goes through
+ * `findOrCreatePerson` and keeps what that record says.
+ */
+export type FreshPersonDetails = {
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  /** `YYYY-MM-DD`, already checked by the caller. */
+  dateOfBirth?: string;
+};
 
 /**
  * What the booker said about their own diving, as the booking path carries it.
@@ -715,6 +730,24 @@ async function nameMatchLeavesIdentityInDoubt(
   return namesakes.length > 0;
 }
 
+/**
+ * The row a booking with no email inserts for its new person: the typed name,
+ * the stored phone, and whatever {@link FreshPersonDetails} the door carried.
+ */
+async function noEmailPersonRow(
+  tx: DbExecutor,
+  req: BookingRequest,
+  pendingInsert: { fullName: string; phone?: string },
+) {
+  return {
+    shopId: req.shopId,
+    fullName: pendingInsert.fullName,
+    email: null,
+    phone: await storedPhone(tx, req.shopId, pendingInsert.phone),
+    ...("personId" in req ? undefined : req.freshPerson),
+  };
+}
+
 async function createBookingRecord(
   db: DbExecutor,
   req: BookingRequest,
@@ -1012,12 +1045,7 @@ async function createBookingRecord(
       // insert, same shape as findOrCreatePerson's own insert branch.
       const [inserted] = await tx
         .insert(people)
-        .values({
-          shopId: req.shopId,
-          fullName: pendingInsert.fullName,
-          email: null,
-          phone: await storedPhone(tx, req.shopId, pendingInsert.phone),
-        })
+        .values(await noEmailPersonRow(tx, req, pendingInsert))
         .returning();
       if (!inserted) throw new Error("createBookingRecord: person insert returned no row");
       await tx.insert(personRoles).values({ personId: inserted.id, role: "diver" });

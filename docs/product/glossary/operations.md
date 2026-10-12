@@ -722,7 +722,8 @@
   no number is unreachable when it matters, so it counts as missing on the manifest and in the
   Today nudge. It is never a boarding blocker: a missing contact is an administrative gap, not a
   fitness-to-dive gap, so it surfaces only as a low-priority, dock-settleable nudge on boats within
-  three days.
+  three days. It also comes in at the dock door: a **dock rider** added from the Boat tab carries
+  the contact the captain asks for on the spot, written onto the new person.
 - **Emergency reference** — the **shop's** own card of numbers a crew dials *during* an incident:
   its nearest chamber, the dive-accident hotline, the coastguard, the vessel's name, who to raise on
   shore, and the shop's emergency action plan as prose (`src/lib/emergency-reference.ts`, stored
@@ -1399,3 +1400,12 @@
   their own password, which flips the account to **active**. A shop may never end up with zero
   people holding the `owner` role: removing, disabling, or demoting the shop's last owner is
   refused. See [20260726-staff-invite-accounts](../../architecture/decisions/20260726-staff-invite-accounts.md).
+- **Crew warning** — a line above the staffing week that informs and never blocks. Four checks: a
+  departure whose rostered crew holds no current oxygen-provider credential; separately, one whose
+  crew holds no current first aid / CPR credential; a person whose **crewed departures** run past
+  12 hours in one shop-local day (a shift is availability, not duty, and never counts); and
+  somebody crewing this week whose credential has expired, except a dive-professional rating, whose
+  lapse the crew editor's supervision claim already shows on the departure. A credential with no
+  renewal date counts as current, a renewal date is good through the end of that day, and a kind
+  the shop has never recorded for anybody raises nothing. Pure logic in
+  `src/lib/staffing-warnings.ts`; words in `src/i18n/staffing-warning-labels.ts`.

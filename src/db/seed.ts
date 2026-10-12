@@ -9,6 +9,7 @@ import { demoEmail } from "@/lib/simulator-email";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
+import { deleteHeldSendsAndDeskRows } from "./departure-notes";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { deleteDemoSafetyTrail } from "./incident-reports";
 import { isUniqueConstraintViolation } from "./query-helpers";
@@ -50,7 +51,6 @@ import {
   gearItems,
   gearReservations,
   gearServiceEvents,
-  heldSends,
   importedPaymentHistory,
   inboundMessages,
   integrationDeliveries,
@@ -1199,7 +1199,7 @@ export async function resetDemoSchedule(
   // against them are schedule-scoped operational history.
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
-  await db.delete(heldSends).where(eq(heldSends.shopId, shopId));
+  await deleteHeldSendsAndDeskRows(db, shopId);
   await db.delete(formDrafts).where(eq(formDrafts.shopId, shopId));
   // Neither of these is seeded — both are written only by what a visitor does
   // (a staff note on a diver, the activity trail `seat-diver.ts` appends), and
