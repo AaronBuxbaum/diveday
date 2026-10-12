@@ -227,3 +227,20 @@ test("the divers list filters live as you type, no submit", { tag: READ_ONLY }, 
   await search.fill("Priya");
   await expect(page.getByRole("link", { name: "Priya Sharma", exact: true })).toBeVisible();
 });
+
+test("the staff 404 carries the search, so a dead link is a door", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  // UX review 2026-10-10, item 38: "We couldn't find that page · Back to
+  // Today" was a dead end. The page renders outside the staff shell, so the
+  // palette is mounted as a field of its own under the message.
+  await page.goto("/shop/blue-mantis/no-such-page");
+  const main = page.getByRole("main");
+  await expect(main.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
+  await main.getByRole("button", { name: "Search" }).click();
+  const box = page.getByRole("combobox", { name: /Search divers/ });
+  await expect(box).toBeFocused();
+  await box.fill("Priya Sharma");
+  await page.getByRole("option", { name: "Priya Sharma", exact: true }).click();
+  await expect(page).toHaveURL(/\/shop\/blue-mantis\/divers\/[a-f0-9-]+$/);
+});
