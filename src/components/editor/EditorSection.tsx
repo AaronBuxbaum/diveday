@@ -272,11 +272,11 @@ function useSectionWiring({
     const onOtherOpened = (event: Event) => {
       if ((event as CustomEvent<string>).detail !== id) setOpen(false);
     };
-    const onHashChange = () => jump(decodeURIComponent(window.location.hash.slice(1)));
+    const onHashChange = () => jump(decodeFragment(window.location.hash.slice(1)));
     const onClick = (event: MouseEvent) => {
       const link = event.target instanceof Element ? event.target.closest("a") : null;
       const href = link?.getAttribute("href");
-      if (href?.startsWith("#")) jump(decodeURIComponent(href.slice(1)));
+      if (href?.startsWith("#")) jump(decodeFragment(href.slice(1)));
     };
     const refreshPreview = () => setPreview(sectionPreview(body));
 
@@ -309,6 +309,19 @@ function useSectionWiring({
   }, [id, rootRef, bodyRef, setOpen, setPreview, openAlone]);
 }
 
+/**
+ * A `#fragment` as the id it names. A malformed escape (`#%E0%A4%A`) is kept
+ * as typed rather than thrown: thrown inside the layout effect, it took every
+ * section's wiring down with it, and no id is spelled that way anyway.
+ */
+function decodeFragment(fragment: string): string {
+  try {
+    return decodeURIComponent(fragment);
+  } catch {
+    return fragment;
+  }
+}
+
 /** Controls whose value is words a person typed or picked. */
 const PREVIEW_INPUT_TYPES = new Set([
   "",
@@ -326,7 +339,7 @@ const PREVIEW_INPUT_TYPES = new Set([
 /**
  * **What a folded section holds**, in its own words: the first two of its
  * fields that have something in them, in page order, joined by a middle dot.
- * A pick list says the option's words, never its code.
+ * A pick list says the option's words, never its code; a ticked box, its label.
  *
  * Read off the section's own controls, so there is nothing per section to keep
  * in step with the fields, and nothing to translate: it is the shop's text.
@@ -343,6 +356,10 @@ export function sectionPreview(body: Element): string {
       text = control.value;
     } else if (control instanceof HTMLInputElement) {
       if (PREVIEW_INPUT_TYPES.has(control.getAttribute("type") ?? "")) text = control.value;
+      // A ticked box says its label: a folded Certification section's demands
+      // are boxes, and an empty preview read as a section with nothing in it.
+      else if (control.type === "checkbox" && control.checked)
+        text = control.labels?.[0]?.textContent ?? "";
     }
     const trimmed = text.replace(/\s+/g, " ").trim();
     if (trimmed) parts.push(trimmed.length > 60 ? `${trimmed.slice(0, 60).trimEnd()}…` : trimmed);

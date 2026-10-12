@@ -20,7 +20,7 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/dive-sites");
     await page.getByRole("link", { name: "Add a dive site" }).click();
     await page.getByLabel("Name").fill(siteName);
-    await page.getByLabel("Location").fill("Key Largo");
+    await page.getByRole("textbox", { name: "Location" }).fill("Key Largo");
     await page.getByLabel("Latitude").fill("25.123");
     await page.getByLabel("Longitude").fill("-80.321");
     await page.getByLabel("What might divers see?").fill("Green turtles · spotted eagle rays");
@@ -270,7 +270,9 @@ test.describe("staff", () => {
     await expect(page.locator("fieldset#briefing-photos")).toBeVisible();
 
     // One edit names its section by name; a second stops naming and counts.
-    await page.getByLabel("Location").fill("Key Largo National Marine Sanctuary");
+    await page
+      .getByRole("textbox", { name: "Location" })
+      .fill("Key Largo National Marine Sanctuary");
     await expect(page.getByText("Unsaved changes in The site")).toBeVisible();
     await page.getByLabel("Depth range").fill("20-45 ft");
     await expect(page.getByText("Unsaved changes in 2 sections")).toBeVisible();
@@ -355,7 +357,12 @@ test.describe("staff", () => {
     await page.getByRole("heading", { name: "The rest of the briefing" }).click();
     await expect(page.getByText("Ledge and back")).toBeVisible();
     await expect(page.getByText("Out along the ledge, home over the sand.")).toBeVisible();
-    await expect(page.getByTitle(`Terrain map of ${siteName}`)).toBeVisible();
+    // The e2e context refuses the map's reachability probe (fixtures.ts), so
+    // the frame keeps its box but stays hidden and the route draws alone, the
+    // way the page reads on a boat with no signal (MapFrame).
+    const terrain = page.getByTitle(`Terrain map of ${siteName}`);
+    await expect(terrain).toHaveAttribute("data-map-reachable", "false");
+    await expect(terrain).toBeHidden();
   });
 
   test("a half-entered GPS location is named as the reason, and nothing typed is lost", async ({
@@ -372,7 +379,7 @@ test.describe("staff", () => {
 
     await page.goto("/shop/blue-mantis/dive-sites/new");
     await page.getByLabel("Name").fill(siteName);
-    await page.getByLabel("Location").fill("Key Largo");
+    await page.getByRole("textbox", { name: "Location" }).fill("Key Largo");
     await page.getByLabel("What might divers see?").fill("Green turtles");
     await page.getByLabel("Latitude").fill("25.123"); // …and no longitude.
     await page.getByRole("button", { name: "Save dive site" }).click();
@@ -388,7 +395,7 @@ test.describe("staff", () => {
     // The whole point: still on the form, still filled in.
     await expect(page).toHaveURL(/\/dive-sites\/new$/);
     await expect(page.getByLabel("Name")).toHaveValue(siteName);
-    await expect(page.getByLabel("Location")).toHaveValue("Key Largo");
+    await expect(page.getByRole("textbox", { name: "Location" })).toHaveValue("Key Largo");
     await expect(page.getByLabel("What might divers see?")).toHaveValue("Green turtles");
     await expect(page.getByLabel("Latitude")).toHaveValue("25.123");
 
@@ -427,7 +434,7 @@ test.describe("staff", () => {
     // A second site reaching for the same name gets an answer, not a stack.
     await page.goto("/shop/blue-mantis/dive-sites/new");
     await page.getByLabel("Name").fill(taken);
-    await page.getByLabel("Location").fill("Key Largo");
+    await page.getByRole("textbox", { name: "Location" }).fill("Key Largo");
     await page.getByRole("button", { name: "Save dive site" }).click();
 
     // Not `getByRole("alert")` — Next's own route announcer is one too.
@@ -436,7 +443,7 @@ test.describe("staff", () => {
     await expect(page.locator("form").filter({ has: refusal })).toHaveCount(1);
     // Still on the form, still filled in — a rename is all it takes.
     await expect(page).toHaveURL(/\/dive-sites\/new$/);
-    await expect(page.getByLabel("Location")).toHaveValue("Key Largo");
+    await expect(page.getByRole("textbox", { name: "Location" })).toHaveValue("Key Largo");
     await page.getByLabel("Name").fill(`${taken} south`);
     await page.getByRole("button", { name: "Save dive site" }).click();
     await expect(page.getByRole("heading", { level: 1, name: `${taken} south` })).toBeVisible();

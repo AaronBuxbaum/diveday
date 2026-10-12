@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, makeActivitySafe, READ_ONLY, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, READ_ONLY, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
   choosePartySize,
@@ -1274,4 +1274,37 @@ test("a course's learning materials reach the student's thread, and staff tick t
   await expect(diverPage.getByText("The shop has these marked done")).toBeVisible();
   await expect(diverPage.getByRole("link", { name: "Pool skills video" })).toBeVisible();
   await diverContext.close();
+});
+
+/**
+ * **The agency-wording door is for the staffer who can walk through it** (UX
+ * review 2026-10-10, item 16). The course editor draws its Forms section only
+ * for someone who may configure courses, so a divemaster reading the roster is
+ * told the wording is missing and is offered no link into an editor with no
+ * Forms in it.
+ */
+test.describe("the agency-wording notice on the course roster", () => {
+  test.describe("for an owner", () => {
+    signedInAsOwner();
+    test("says what is missing and opens the first course's Forms", async ({ page }) => {
+      await page.goto("/shop/blue-mantis/courses");
+      const notice = page.getByText(/needs? (its|their) agency form wording/);
+      await expect(notice).toBeVisible();
+      await expect(page.getByRole("link", { name: /^Start with / })).toHaveAttribute(
+        "href",
+        /\/shop\/blue-mantis\/courses\/[^/]+\/edit#forms$/,
+      );
+    });
+  });
+
+  test.describe("for a divemaster", () => {
+    signedInAs("divemaster");
+    test("says what is missing and offers no door into a Forms section they cannot see", async ({
+      page,
+    }) => {
+      await page.goto("/shop/blue-mantis/courses");
+      await expect(page.getByText(/needs? (its|their) agency form wording/)).toBeVisible();
+      await expect(page.getByRole("link", { name: /^Start with / })).toHaveCount(0);
+    });
+  });
 });
