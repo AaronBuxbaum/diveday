@@ -17,15 +17,14 @@ import { recurrenceSummary } from "@/lib/recurrence";
  * horizon is the one most owed the sentence. The default, uncursored view says
  * it only once its own list has nothing further to page to.
  */
-export function viewsBoardsEnd(input: {
-  viewed: MonthRef;
-  lastTripMonth: MonthRef | null;
-  explicitMonth: boolean;
-  morePages: boolean;
-}): boolean {
-  if (input.lastTripMonth === null) return false;
-  if (compareMonths(input.viewed, input.lastTripMonth) < 0) return false;
-  return input.explicitMonth || !input.morePages;
+export function viewsBoardsEnd(
+  viewed: MonthRef,
+  lastTripMonth: MonthRef | null,
+  /** A month the reader chose, or a default view with nothing further to page to. */
+  settled: boolean,
+): boolean {
+  if (lastTripMonth === null || compareMonths(viewed, lastTripMonth) < 0) return false;
+  return settled;
 }
 
 /**

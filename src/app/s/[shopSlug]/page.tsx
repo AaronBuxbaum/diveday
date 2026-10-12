@@ -504,15 +504,9 @@ export default async function SchedulePage({
     lastTripMonth && ordinal(next) <= ordinal(lastTripMonth) ? monthKey(next) : null;
 
   // The board's last month says which runs keep going (`PromotedDateAsk`).
+  const settled = explicitMonth !== null || !nextCursor;
   const atBoardsEnd =
-    !isEmbed &&
-    !quiet.quiet &&
-    viewsBoardsEnd({
-      viewed: currentMonth,
-      lastTripMonth,
-      explicitMonth: explicitMonth !== null,
-      morePages: Boolean(nextCursor),
-    });
+    !isEmbed && !quiet.quiet && viewsBoardsEnd(currentMonth, lastTripMonth, settled);
   const runningLines = atBoardsEnd
     ? seriesHorizonLines(t, locale, await listRunningPublicSeries(db, shop.id, now))
     : [];

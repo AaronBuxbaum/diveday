@@ -181,6 +181,20 @@ async function readSafetyRecordRows(tx: AppTransaction, scope: ShopExportScope) 
 }
 
 /**
+ * A shop's repeating trips as the bundle carries them: the runs, the dates
+ * taken out of each, and each run's standing crew.
+ */
+async function readSeriesRecordRows(tx: AppTransaction, scope: ShopExportScope) {
+  const seriesRows = await readScoped(tx, "tripSeries", scope);
+  return {
+    seriesRows,
+    seriesTitle: new Map(seriesRows.map((row) => [row.id, row.title])),
+    seriesSkipRows: await readScoped(tx, "tripSeriesSkips", scope),
+    seriesCrewRows: await readScoped(tx, "tripSeriesCrew", scope),
+  };
+}
+
+/**
  * Every review the shop holds, with the shop's live public reply under it
  * riding on its row (`review_replies` is folded: one live reply per review,
  * batch 4 K2).
@@ -304,11 +318,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   const courseRows = await readScoped(tx, "courses", scope);
   const courseTitle = new Map(courseRows.map((row) => [row.id, row.title]));
 
-  const seriesRows = await readScoped(tx, "tripSeries", scope);
-  const seriesTitle = new Map(seriesRows.map((row) => [row.id, row.title]));
-
-  const seriesSkipRows = await readScoped(tx, "tripSeriesSkips", scope);
-  const seriesCrewRows = await readScoped(tx, "tripSeriesCrew", scope);
+  const seriesRecordRows = await readSeriesRecordRows(tx, scope);
 
   const waitlistRows = await readScoped(tx, "tripWaitlistEntries", scope);
 
@@ -628,10 +638,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     entitlementRows,
     courseRows,
     courseTitle,
-    seriesRows,
-    seriesTitle,
-    seriesSkipRows,
-    seriesCrewRows,
+    ...seriesRecordRows,
     waitlistRows,
     lastMinuteListRows,
     lastMinutePromoRows,
