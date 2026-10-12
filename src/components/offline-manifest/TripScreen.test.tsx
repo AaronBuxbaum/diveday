@@ -227,7 +227,9 @@ describe("OfflineManifestView — one column, one text edge", () => {
     // where the list began.
     expect(row).toHaveClass("ring-1", "ring-danger/40");
     const box = screen.getByRole("region", { name: "Crew aboard" });
-    expect(box).toHaveClass("border-danger", "bg-danger/10");
+    // An opaque tint, not a see-through one (dive-domain review of #2341).
+    expect(box).toHaveClass("border-danger", "bg-danger-tint");
+    expect(box.className).not.toMatch(/\bbg-danger\/\d+/);
     expect(box).not.toHaveClass("ring-1");
     expect(box).not.toHaveClass("ring-inset");
   });
