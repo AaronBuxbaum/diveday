@@ -118,6 +118,7 @@
     credit.href = creditUrl.toString();
     credit.target = "_blank";
     credit.rel = "noopener";
+    credit.setAttribute("data-diveday-credit", "");
     credit.textContent = el.getAttribute("data-credit") || "Powered by DiveDay";
     credit.style.cssText =
       "display:block;margin-top:6px;font:12px/1.4 inherit;color:#5b6f77;text-decoration:none";
@@ -230,14 +231,24 @@
     for (let i = 0; i < nodes.length; i++) mount(nodes[i]);
   }
   // A framed widget reports its own height, so the frame never scrolls inside
-  // the shop's page. Only our own origin is believed.
+  // the shop's page. Only our own origin is believed. A report of exactly 0 is
+  // a widget with nothing to show (the reviews of a shop with none published):
+  // the frame and its credit fold away, and come back on the next real report.
+  // Anything else keeps the 120px floor, so a garbled number never hides a
+  // widget that has content (#2317).
   window.addEventListener("message", (event) => {
     if (event.origin !== origin || !event.data || event.data.type !== "diveday:height") return;
+    const empty = event.data.height === 0;
     const frames = document.querySelectorAll("iframe[data-diveday-frame]");
     for (let i = 0; i < frames.length; i++) {
       if (frames[i].contentWindow === event.source) {
-        frames[i].style.height =
-          `${Math.max(120, Math.min(4000, Number(event.data.height) || 0))}px`;
+        frames[i].style.height = empty
+          ? "0px"
+          : `${Math.max(120, Math.min(4000, Number(event.data.height) || 0))}px`;
+        const credit = frames[i].nextElementSibling;
+        if (credit?.hasAttribute("data-diveday-credit")) {
+          credit.style.display = empty ? "none" : "block";
+        }
       }
     }
   });

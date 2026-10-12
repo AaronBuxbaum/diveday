@@ -179,4 +179,40 @@ describe("the loader", () => {
     deliver(location.origin, 99999);
     expect(frame?.style.height).toBe("4000px");
   });
+
+  /**
+   * **A widget with nothing to show folds away, credit and all** (#2317). The
+   * reviews widget of a shop with none published says so with a height of
+   * exactly 0; the 120px floor left a blank box and a "Powered by" line under
+   * nothing on the shop's own page. Any other report keeps the floor, so a
+   * garbled or missing number never hides a widget that has content.
+   */
+  it("folds a frame that reports nothing to show, and keeps the floor for anything else", () => {
+    host(
+      `<div data-diveday="reviews" data-shop="blue-mantis" data-look="light" data-lang="auto"></div>`,
+    );
+    const frame = document.querySelector<HTMLIFrameElement>("iframe[data-diveday-frame]");
+    const credit = document.querySelector<HTMLAnchorElement>("a[data-diveday-credit]");
+    expect(credit?.style.display).toBe("block");
+    const deliver = (height: unknown) =>
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: location.origin,
+          source: frame?.contentWindow,
+          data: { type: "diveday:height", height },
+        }),
+      );
+    deliver(0);
+    expect(frame?.style.height).toBe("0px");
+    expect(credit?.style.display).toBe("none");
+    // Reviews published later in the same session: the widget comes back.
+    deliver(300);
+    expect(frame?.style.height).toBe("300px");
+    expect(credit?.style.display).toBe("block");
+    for (const garbled of [undefined, "", "0", Number.NaN, -5, 40]) {
+      deliver(garbled);
+      expect(frame?.style.height).toBe("120px");
+      expect(credit?.style.display).toBe("block");
+    }
+  });
 });

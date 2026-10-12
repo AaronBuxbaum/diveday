@@ -120,11 +120,12 @@ export default async function EmbedWidgetPage({
     // **Quiet below the shelf's own threshold.** The storefront's shelf renders
     // nothing until a rating is published, because an empty "no reviews yet"
     // panel reads as a warning; on someone else's page it would read worse.
-    // The frame then reports a height of nothing, and the loader folds it.
+    // The frame reports a height of exactly 0, and the loader folds it and
+    // its credit away (`public/embed.js`, #2317).
     if (!aggregate || aggregate.average === null || aggregate.count === 0) {
       return (
         <main className="w-full">
-          <EmbedHeightReporter />
+          <EmbedHeightReporter empty />
         </main>
       );
     }
