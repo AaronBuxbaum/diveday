@@ -59,6 +59,63 @@ export function parseForm<Schema extends z.ZodType>(
 }
 
 /**
+ * A field read exactly as `formData.get(name)` read it: its first value when
+ * the form sent it more than once, and `null` when it sent nothing. For a
+ * field whose action narrows the value itself (an enum guard, a honeypot, a
+ * value echoed back into the form), where a schema of its own would only
+ * restate that narrowing.
+ */
+export function formValue() {
+  return z.unknown().optional().transform(firstEntry);
+}
+
+function firstEntry(value: unknown): FormDataEntryValue | null {
+  const first = Array.isArray(value) ? value[0] : value;
+  return typeof first === "string" || first instanceof File ? first : null;
+}
+
+/**
+ * A text box read as `String(formData.get(name) ?? "").trim()` read it: its
+ * first value trimmed, and `""` when the form sent nothing. For an action that
+ * measures the text itself, so it can point at the box that is wrong.
+ */
+export function trimmedText() {
+  return z
+    .unknown()
+    .optional()
+    .transform((value) => String(firstEntry(value) ?? "").trim());
+}
+
+/**
+ * A field read by its first value, as `FormData.get` read it, and held to
+ * `schema`: a name the form sent twice reaches `schema` once rather than as an
+ * array, and an absent one reaches it as `undefined`.
+ */
+export function single<Schema extends z.ZodType>(schema: Schema) {
+  return z.preprocess((value) => (Array.isArray(value) ? value[0] : value), schema);
+}
+
+/**
+ * A field that may be left blank: an empty box and an absent field both read
+ * as `undefined`, exactly as `formData.get(name) || undefined` did, and
+ * anything else must satisfy `schema`.
+ */
+export function blankAsAbsent<Schema extends z.ZodType>(schema: Schema) {
+  return z.preprocess((value) => firstEntry(value) || undefined, schema.optional());
+}
+
+/**
+ * A checkbox: on when the browser sent `"on"` (or the value a form names),
+ * off when it sent nothing — the reading `formData.get(name) === "on"` gave.
+ */
+export function checkbox(on = "on") {
+  return z
+    .unknown()
+    .optional()
+    .transform((value) => firstEntry(value) === on);
+}
+
+/**
  * The one shape every CSV importer posts: a single non-empty file named
  * `file`. An empty pick and no pick at all are the same refusal.
  */

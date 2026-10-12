@@ -38,6 +38,7 @@ import {
   diveDeclarationSchema,
   toDiveDeclaration,
 } from "@/lib/dive-declaration";
+import { formValue, parseForm, trimmedText } from "@/lib/form-parse";
 import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
@@ -123,6 +124,28 @@ const bookSchema = z.object({
 
 const emailField = diverEmailSchema;
 
+/**
+ * Every field the booking form posts, each read the way `FormData.get` read
+ * it, so this action still measures each box itself and points at the one
+ * that is wrong. The party's own fields are numbered (`fullName-0`,
+ * `gear-1-Mask`, `nitrox-2`), so they ride the catch-all.
+ */
+const bookingForm = z
+  .object({
+    partySize: formValue(),
+    phone: trimmedText(),
+    promoCode: trimmedText(),
+    handoff: formValue(),
+  })
+  .catchall(formValue());
+
+/** A wait-list joiner's identity fields; the dive declaration is read apart. */
+const waitlistForm = z.object({
+  "fullName-0": formValue(),
+  "email-0": formValue(),
+  phone: formValue().transform((value) => value || undefined),
+});
+
 export async function bookSpot(
   { shopSlug, tripId, embed }: TripRef,
   _prev: BookingFormState,
@@ -136,6 +159,9 @@ export async function bookSpot(
   const locale = await requestLocale();
   const t = diverTranslator(locale);
   const ip = await clientIp();
+  const form = parseForm(bookingForm, formData);
+  if (!form.ok) return { error: t(ERROR_MESSAGE_KEYS.invalid) };
+  const fields = form.data;
 
   // Bounded, and the bound is measured — see MAX_PUBLIC_PARTY_SIZE for the
   // numbers and for why the lock, not the row count, is what decides it.
@@ -144,7 +170,7 @@ export async function bookSpot(
     .int()
     .min(1)
     .max(MAX_PUBLIC_PARTY_SIZE)
-    .safeParse(formData.get("partySize"));
+    .safeParse(fields.partySize);
   if (!partySize.success) return { error: t(ERROR_MESSAGE_KEYS.invalid) };
 
   // Validate per field so the form can point at the exact box that is wrong,
@@ -152,8 +178,8 @@ export async function bookSpot(
   const fieldErrors: Record<string, string> = {};
   const validParty: { fullName: string; email: string }[] = [];
   for (let index = 0; index < partySize.data; index++) {
-    const fullName = String(formData.get(`fullName-${index}`) ?? "").trim();
-    const email = String(formData.get(`email-${index}`) ?? "").trim();
+    const fullName = String(fields[`fullName-${index}`] ?? "").trim();
+    const email = String(fields[`email-${index}`] ?? "").trim();
     if (!fullName) fieldErrors[`fullName-${index}`] = t("booking.fieldErrors.nameRequired");
     if (fullName.length > DIVER_NAME_MAX)
       fieldErrors[`fullName-${index}`] = t("booking.fieldErrors.nameTooLong");
@@ -173,7 +199,7 @@ export async function bookSpot(
     }
     validParty.push({ fullName, email });
   }
-  const phone = String(formData.get("phone") ?? "").trim();
+  const phone = fields.phone;
   if (phone.length > DIVER_PHONE_MAX) fieldErrors.phone = t("booking.fieldErrors.phoneTooLong");
   if (Object.keys(fieldErrors).length > 0) {
     return { error: t("booking.errors.checkFields"), fieldErrors };
@@ -191,7 +217,7 @@ export async function bookSpot(
   // (unknown code, wrong scope, expired, not started) — reusing that here
   // keeps this check from becoming a second oracle for enumerating a shop's
   // live codes; it only ever says "doesn't apply".
-  const promoCodeInput = String(formData.get("promoCode") ?? "").trim();
+  const promoCodeInput = fields.promoCode;
   let tripPromo: Awaited<ReturnType<typeof getActiveTripPromoByCode>> = null;
   let shopPromo: Awaited<ReturnType<typeof getRedeemableShopPromo>> = null;
   if (promoCodeInput) {
@@ -229,7 +255,7 @@ export async function bookSpot(
   // What each person is coming as (ADR 20261007-participant-types), checked
   // against what this departure sells rather than trusted from the form.
   const parsedTypes = parsePartyTypes(
-    Array.from({ length: partySize.data }, (_, index) => formData.get(`participantType-${index}`)),
+    Array.from({ length: partySize.data }, (_, index) => fields[`participantType-${index}`]),
     tripForGear,
   );
   if (!parsedTypes.ok) {
@@ -272,7 +298,7 @@ export async function bookSpot(
         rentedKinds: withOneSuit(
           offeredGearItems
             .filter((item) => rentsKind(partyTypes[index], item.kind))
-            .filter((item) => formData.get(`gear-${index}-${item.name}`) === "on")
+            .filter((item) => fields[`gear-${index}-${item.name}`] === "on")
             .map((item) => item.kind),
         ),
         // A nitrox fill is a diver's alone; the database refuses it on any
@@ -280,7 +306,7 @@ export async function bookSpot(
         wantsNitrox:
           isDiver(partyTypes[index]) &&
           nitroxOfferedAtCheckout &&
-          formData.get(`nitrox-${index}`) === "on",
+          fields[`nitrox-${index}`] === "on",
       });
     }
   }
@@ -467,7 +493,7 @@ export async function bookSpot(
   const handoff = z
     .string()
     .regex(/^[A-Za-z0-9_-]{20,128}$/)
-    .safeParse(formData.get("handoff"));
+    .safeParse(fields.handoff);
   if (handoff.success) {
     await consumeBookingHandoff(dbi, { shopId: shopNow.id, token: handoff.data });
   }
@@ -844,11 +870,16 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
   if (!(await checkRateLimit(rateLimitKey("waitlist", ip), RATE_LIMITS.waitlistJoin)).allowed) {
     redirect(`${publicTripPath(shopSlug, tripId)}?error=unavailable${embedParam(embed, "&")}`);
   }
-  const parsed = bookSchema.safeParse({
-    fullName: formData.get("fullName-0"),
-    email: formData.get("email-0"),
-    phone: formData.get("phone") || undefined,
-  });
+  const joiner = parseForm(waitlistForm, formData);
+  const parsed = bookSchema.safeParse(
+    joiner.ok
+      ? {
+          fullName: joiner.data["fullName-0"],
+          email: joiner.data["email-0"],
+          phone: joiner.data.phone,
+        }
+      : {},
+  );
   // The optional "what can you dive?" pair, parsed apart from the identity
   // fields on purpose: it is not the diver's fault if a level code arrives
   // malformed, and a wait-list join must not be refused over an answer the form
