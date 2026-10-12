@@ -18,13 +18,11 @@ import {
   canPersonRetireMedicalRefusal,
 } from "@/db/authz";
 import { listBoats } from "@/db/boats";
-import { getTripOpenSeatsDebrief } from "@/db/open-seats";
 import { listTripLenses } from "@/db/trip-lenses";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripGuests, getTripOverview, loadTripSharedReads } from "@/db/trips";
 import { overRatioPulseKey, overRatioWarningText } from "@/i18n/crew-gap-labels";
 import { languageNameIn } from "@/i18n/language-labels";
-import { openSeatsDebriefText } from "@/i18n/open-seats-labels";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -41,7 +39,6 @@ import { automatedForecastForDeparture, hasCrewPrediction } from "@/lib/marine-f
 import { toShopCurrency } from "@/lib/money";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { publicTripPath } from "@/lib/public-routes";
-import { recurrenceSummary } from "@/lib/recurrence";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type FormNotice, noticeForForm, noticeFromParam, shopPath } from "@/lib/staff-notices";
@@ -59,16 +56,13 @@ import { courseRosterActions } from "./_components/course-roster-actions";
 import { DepartureLogLink } from "./_components/DepartureLogLink";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { DetailsSection } from "./_components/DetailsSection";
+import { openSeatsDetailsRows, repeatsRowText } from "./_components/details-rows";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
 import { participantTermsRows } from "./_components/ParticipantTermsSection";
 import { PrintTripBundleButton } from "./_components/PrintTripBundleButton";
 import { PulseFacts } from "./_components/PulseFacts";
 import { RequirementsSection } from "./_components/RequirementsSection";
-import {
-  recurrenceSummaryText,
-  SeriesCadenceEditor,
-  SeriesMoreActions,
-} from "./_components/SeriesSection";
+import { SeriesCadenceEditor, SeriesMoreActions } from "./_components/SeriesSection";
 import { TripAboutSection, TripMoreDisclosure } from "./_components/TripAboutSection";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
 import { TripAddDiverLink, TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
@@ -412,10 +406,7 @@ export default async function ManageTripPage({
   // **Details is its own tab**, and a save on it lands back on it.
   const showDetails =
     view === "details" || Boolean(tripNotice && DETAILS_FORMS.has(tripNotice.form));
-  // Read only where it is drawn, and never awaited ahead of anything else.
-  const openSeatsDebrief = showDetails
-    ? getTripOpenSeatsDebrief(db, shop.id, tripId, shop.timezone)
-    : Promise.resolve(null);
+  const openSeatsRows = openSeatsDetailsRows({ db, shop, tripId, t, locale, shown: showDetails });
   const siteWithForecast = tripDiveList.find(
     ({ diveSite }) =>
       diveSite && diveSite.forecastLatitude !== null && diveSite.forecastLongitude !== null,
@@ -565,29 +556,6 @@ export default async function ManageTripPage({
   const boatCrewSummary = boatAndCrew.join(" · ") || t("trips.about.noBoat");
 
   const tabsCopy = tripTabsCopy(t);
-  const repeatsSummary = series
-    ? recurrenceSummaryText(
-        t,
-        locale,
-        recurrenceSummary({
-          intervalWeeks: series.intervalWeeks,
-          weekdays: series.weekdayMask,
-          endsOn: series.endsOn,
-        }),
-      )
-    : t("trips.about.oneTime");
-  // How much of the run is still on the board — a fact the cadence sentence
-  // alone does not carry, and the one the "cancel every upcoming date" confirm
-  // is counting. It rides on the row rather than on the collapsed strip, which
-  // is one truncating line and has the cadence to fit first.
-  const repeatsRowValue = series
-    ? series.futureScheduledCount > 0
-      ? t("tripSeries.panel.summaryWithFuture", {
-          summary: repeatsSummary,
-          count: series.futureScheduledCount,
-        })
-      : t("tripSeries.panel.summaryAllDone", { summary: repeatsSummary })
-    : repeatsSummary;
   // The clash is a fact about two boats that will both sail, so a called-off
   // departure drops it with the rest of the live-trip nudges — `crewClashes`
   // answers nothing for one anyway, and this keeps the two from ever
@@ -634,15 +602,6 @@ export default async function ManageTripPage({
     undoRemoveBookingAction: undoRemoveBookingAction.bind(null, shopSlug, tripId),
     restoreInternalNoteAction: restoreInternalNoteAction.bind(null, shopSlug, tripId),
   };
-
-  const openSeats = await openSeatsDebrief;
-  const openSeatsText = openSeats
-    ? openSeatsDebriefText(t, locale, openSeats, {
-        comparableDate: openSeats.comparable
-          ? formatShortDate(openSeats.comparable.startsAt, locale, shop.timezone)
-          : "",
-      })
-    : null;
 
   return (
     <>
@@ -993,7 +952,7 @@ export default async function ManageTripPage({
                 {
                   id: "series",
                   label: t("trips.about.repeats"),
-                  value: repeatsRowValue,
+                  value: repeatsRowText(t, locale, series),
                   editLabel: t("tripSeries.panel.editCadence"),
                   editorOpen: Boolean(seriesStatus),
                   editor:
@@ -1030,13 +989,7 @@ export default async function ManageTripPage({
                       />
                     ) : undefined,
                 },
-                // **Why seats went unsold**, once the boat has sailed short
-                // (issue #1207, D47). A fact row with no editor: a post-mortem
-                // for whoever plans the next run of this trip, moved off the
-                // day spine (UX review 2026-10-10, item 31).
-                ...(openSeatsText
-                  ? [{ id: "open-seats", label: t("trips.openSeats.label"), value: openSeatsText }]
-                  : []),
+                ...(await openSeatsRows),
               ]}
               actions={
                 <>

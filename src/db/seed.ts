@@ -244,6 +244,11 @@ const canonicalStaffEmail = (local: string) => `${local}@demo.invalid`;
  * puts back what a spec flipped.
  */
 const DEMO_SHOP_UNITS = shopDefaults({ country: "US", timeZone: DEMO_SHOP_TIMEZONE });
+/** The two unit columns alone, for the reset that puts them back. */
+const DEMO_SHOP_UNIT_COLUMNS = {
+  depthUnit: DEMO_SHOP_UNITS.depthUnit,
+  temperatureUnit: DEMO_SHOP_UNITS.temperatureUnit,
+};
 
 /**
  * The one shift every member of the demo cast works today (`demoTodayShift`:
@@ -1590,11 +1595,7 @@ export async function resetDemoSchedule(
   // flips it.
   await db
     .update(shops)
-    .set({
-      reviewUrl: null,
-      depthUnit: DEMO_SHOP_UNITS.depthUnit,
-      temperatureUnit: DEMO_SHOP_UNITS.temperatureUnit,
-    })
+    .set({ reviewUrl: null, ...DEMO_SHOP_UNIT_COLUMNS })
     .where(eq(shops.id, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
   // ...and puts back the one connection the canonical demo is configured with:

@@ -47,6 +47,43 @@ export function salesTaxCents(netCents: number): number {
   return Math.round(netCents * DEMO_SALES_TAX_RATE);
 }
 
+// Reviews from divers who actually sailed. Deterministic by index (never the
+// clock or randomness) so the frozen-clock e2e fleet renders an identical
+// rating every run. Most carry words and are published; one carries words
+// and is still waiting on staff, so the moderation queue is demonstrable; the
+// rest are bare ratings, which publish on arrival.
+//
+// **A believable spread, not a wall of fives and fours** (UX review
+// 2026-10-10, item 17): a few four-star days with a short reason and one
+// three-star, the way a trading shop's archive reads. A distribution with
+// nothing under four stars reads as fabricated.
+const DEMO_REVIEWS: { rating: number; comment: string }[] = [
+  { rating: 5, comment: "Vis was unreal and the crew found us a turtle on the second tank." },
+  {
+    rating: 5,
+    comment: "Calm, unhurried briefing — exactly what I wanted for my first boat dive back.",
+  },
+  { rating: 4, comment: "Choppy ride out, but the reef more than made up for it." },
+  {
+    rating: 4,
+    comment: "The crew made a busy weekend feel easy, thoughtful, and beautifully organized.",
+  },
+  // The fifth written review stays unpublished: the "waiting on you" card
+  // the staff Reviews page exists to clear.
+  { rating: 5, comment: "A warm, patient crew and a brilliant final drift over the reef." },
+  { rating: 4, comment: "Good guide, sensible pace. The rental fins were a size big." },
+  { rating: 3, comment: "Nice reef, but we sat at the dock forty minutes before leaving." },
+  { rating: 4, comment: "Easy check-in and a full boat that never felt crowded." },
+];
+/** Which written review (1-based) stays unpublished. */
+const WAITING_COMMENT = 5;
+
+/** A bare rating by its index: half fives, most of the rest fours, the odd three. */
+function bareRating(index: number): number {
+  if (index % 17 === 16) return 3;
+  return index % 2 === 0 ? 5 : 4;
+}
+
 /**
  * The months behind today. Owner reporting ("how's your month") is hollow over a
  * shop that opened yesterday, so this back-fills a realistic trailing quarter:
@@ -879,35 +916,7 @@ export async function seedHistory(
     .filter((row): row is NonNullable<typeof row> => row !== null);
   if (tipRows.length > 0) await db.insert(tips).values(tipRows);
 
-  // Reviews from divers who actually sailed. Deterministic by index (never the
-  // clock or randomness) so the frozen-clock e2e fleet renders an identical
-  // rating every run. Most carry words and are published; one carries words
-  // and is still waiting on staff, so the moderation queue is demonstrable; the
-  // rest are bare ratings, which publish on arrival.
-  //
-  // **A believable spread, not a wall of fives and fours** (UX review
-  // 2026-10-10, item 17): a few four-star days with a short reason and one
-  // three-star, the way a trading shop's archive reads. A distribution with
-  // nothing under four stars reads as fabricated.
-  const reviewComments: { rating: number; comment: string }[] = [
-    { rating: 5, comment: "Vis was unreal and the crew found us a turtle on the second tank." },
-    {
-      rating: 5,
-      comment: "Calm, unhurried briefing — exactly what I wanted for my first boat dive back.",
-    },
-    { rating: 4, comment: "Choppy ride out, but the reef more than made up for it." },
-    {
-      rating: 4,
-      comment: "The crew made a busy weekend feel easy, thoughtful, and beautifully organized.",
-    },
-    // The fifth written review stays unpublished: the "waiting on you" card
-    // the staff Reviews page exists to clear.
-    { rating: 5, comment: "A warm, patient crew and a brilliant final drift over the reef." },
-    { rating: 4, comment: "Good guide, sensible pace. The rental fins were a size big." },
-    { rating: 3, comment: "Nice reef, but we sat at the dock forty minutes before leaving." },
-    { rating: 4, comment: "Easy check-in and a full boat that never felt crowded." },
-  ];
-  const WAITING_COMMENT = 5;
+  // Reviews from divers who actually sailed: `DEMO_REVIEWS` below.
   // The written reviews go on different departures, so the public list reads
   // like a shop's history rather than one memorable boat day.
   const commentedTrips = new Set<string>();
@@ -917,14 +926,13 @@ export async function seedHistory(
       const booking = bookingRows[i];
       if (!booking || plan.status !== "checked_in" || i % 4 !== 0) return null;
       const wantsComment =
-        commentedTrips.size < reviewComments.length && !commentedTrips.has(booking.tripId);
+        commentedTrips.size < DEMO_REVIEWS.length && !commentedTrips.has(booking.tripId);
       if (wantsComment) commentedTrips.add(booking.tripId);
-      const written = wantsComment ? reviewComments[commentedTrips.size - 1] : null;
+      const written = wantsComment ? DEMO_REVIEWS[commentedTrips.size - 1] : null;
       const comment = written?.comment ?? null;
       const isPublished = comment === null || commentedTrips.size !== WAITING_COMMENT;
-      // Bare ratings: half fives, most of the rest fours, the odd three.
       const bare = written ? 0 : bareRatings++;
-      const rating = written ? written.rating : bare % 17 === 16 ? 3 : bare % 2 === 0 ? 5 : 4;
+      const rating = written ? written.rating : bareRating(bare);
       const createdAt = new Date(plan.createdAt.getTime() + 6 * 60 * 60 * 1000);
       return {
         shopId,
