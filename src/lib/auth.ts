@@ -161,6 +161,11 @@ function diveDayCredentialsPlugin() {
   } satisfies BetterAuthPlugin;
 }
 
+/** better-auth's adapter factory, with every adapter it builds hashing session tokens. */
+function hashedSessionAdapter<O, A extends object>(factory: (options: O) => A) {
+  return (options: O) => withHashedSessionTokens(factory(options));
+}
+
 /**
  * The whole better-auth instance for one database handle. Exported so the
  * schema test can build the real thing over a test database: since 1.7.3 the
@@ -168,11 +173,6 @@ function diveDayCredentialsPlugin() {
  * request and refuses to serve *any* request while the two disagree (issue
  * #1588), so a guard that re-declares the options would guard nothing.
  */
-/** better-auth's adapter factory, with every adapter it builds hashing session tokens. */
-function hashedSessionAdapter<O, A extends object>(factory: (options: O) => A) {
-  return (options: O) => withHashedSessionTokens(factory(options));
-}
-
 export function createAuth(db: AppDb) {
   return betterAuth({
     secret: authSecret,
