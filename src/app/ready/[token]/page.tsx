@@ -1,64 +1,47 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 import { HeldAfterDiveCard, NoShowCard } from "@/app/ready/[token]/_components/AfterDiveDoors";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
-import { CarriedPreparation } from "@/app/ready/[token]/_components/CarriedPreparation";
+import { cancelledNotice } from "@/app/ready/[token]/_components/CancelledNotice";
+import { CertificationEntries } from "@/app/ready/[token]/_components/CertificationEntries";
 import { ChangedFacts, fitRecallFrom } from "@/app/ready/[token]/_components/ChangedFacts";
-import { CourseMaterials } from "@/app/ready/[token]/_components/CourseMaterials";
-import {
-  CANCEL_PREVIEW_KEY,
-  verifiedCancelNotice,
-} from "@/app/ready/[token]/_components/cancel-notices";
 import { DayOfDetails } from "@/app/ready/[token]/_components/DayOfDetails";
-import { ExpiredLink } from "@/app/ready/[token]/_components/ExpiredLink";
+import { readyDeadLink } from "@/app/ready/[token]/_components/dead-link";
+import { PayStepBody } from "@/app/ready/[token]/_components/PayStepBody";
 import { payStepLines } from "@/app/ready/[token]/_components/pay-step-lines";
+import { resolvePaymentReceipt } from "@/app/ready/[token]/_components/payment-receipt";
+import { ReadyFitForm } from "@/app/ready/[token]/_components/ReadyFitForm";
+import { ReadyMasthead } from "@/app/ready/[token]/_components/ReadyMasthead";
 import { ReadyThreadBodySkeleton } from "@/app/ready/[token]/_components/ReadyThreadBodySkeleton";
-import { RunningLate } from "@/app/ready/[token]/_components/RunningLate";
 import { READY_NOTICES } from "@/app/ready/[token]/_components/ready-notices";
 import { SignStepActions } from "@/app/ready/[token]/_components/SignStepActions";
+import { ThreadSections } from "@/app/ready/[token]/_components/ThreadSections";
 import {
   ThreadSpine,
   type ThreadSpineStep,
   ThreadStatus,
 } from "@/app/ready/[token]/_components/ThreadSpine";
 import {
+  boatStageLine,
+  readyStepLine,
+  readyThreadFacts,
+} from "@/app/ready/[token]/_components/thread-facts";
+import {
   startTipAction,
   submitRecapPulseAction,
   submitReviewAction,
   uploadRecapPhotoAction,
 } from "@/app/recap/[token]/actions";
-import { PackingSection } from "@/app/s/[shopSlug]/trips/[id]/_components/PackingSection";
-import { RentalFitForm } from "@/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm";
-import { TripActions } from "@/app/s/[shopSlug]/trips/[id]/_components/TripActions";
-import { TripCrewLine } from "@/app/s/[shopSlug]/trips/[id]/_components/TripCrewLine";
-import { TripTerms } from "@/app/s/[shopSlug]/trips/[id]/_components/TripTerms";
-import { type DoorGlyphId, EntryDone } from "@/components/account/EntryShell";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { FlashParams } from "@/components/FlashParams";
-import { PartyClaimPanel } from "@/components/PartyClaimPanel";
 import { RecapWaitingCard } from "@/components/RecapWaitingCard";
 import { RememberBooker } from "@/components/RememberBooker";
 import { ShopNotice } from "@/components/ShopPageHeader";
-import { SubmitButton } from "@/components/SubmitButton";
-import { TripArrivalCard } from "@/components/TripArrivalCard";
-import { TripChangeLedger } from "@/components/TripChangeLedger";
-import { THREAD_FOOT_SECTION_CLASS, ThreadShell } from "@/components/thread/ThreadShell";
-import { Badge } from "@/components/ui/badge";
+import { ThreadShell } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { SettledCheck } from "@/components/ui/SettledCheck";
-import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
-import {
-  resolveRevokedBookingCapability,
-  staleBookingCapabilityForToken,
-  verifyBookingCapability,
-} from "@/db/booking-capabilities";
-import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
+import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
 import { countSpendableDives } from "@/db/dive-packages";
@@ -66,47 +49,23 @@ import { departureRollCallForBooking } from "@/db/manifests";
 import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData } from "@/db/ready";
 import { departureAfterLateBoarding, getRecapPageState } from "@/db/recap";
-import { certificationAgency, certificationLevel, type DiveSpecialty } from "@/db/schema";
 import { issuePartySeatClaims } from "@/db/seat-claims";
-import { getShopById, getShopBySlug } from "@/db/shops";
+import { getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
 import { buildAfterStateProps } from "@/features/recap-after-state";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
-import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
-import {
-  DIVER_CERTIFICATION_AGENCY_KEYS,
-  DIVER_CERTIFICATION_LEVEL_KEYS,
-  DIVER_DIVE_RECENCY_KEYS,
-  DIVER_SPECIALTY_KEYS,
-} from "@/i18n/readiness-labels";
+import { diverTranslator } from "@/i18n/messages";
 import { checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
 import { THREAD_STEP_STATE_KEYS, THREAD_STEP_TITLE_KEYS } from "@/i18n/thread-labels";
-import { claimLinkPath } from "@/lib/booking-capabilities";
-import { nowDate } from "@/lib/clock";
-import {
-  formatMoneyCents,
-  formatRelativeDay,
-  formatShortDate,
-  formatTime,
-  formatTimeRangeTz,
-} from "@/lib/format";
-import { type ShopCurrency, toShopCurrency } from "@/lib/money";
-import { publicAppUrl } from "@/lib/notifications";
+import { formatMoneyCents } from "@/lib/format";
+import { toShopCurrency } from "@/lib/money";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { seatRentalItems } from "@/lib/participant-types";
-import {
-  publicSchedulePath,
-  publicTripArrivalCardPath,
-  publicTripCalendarPath,
-  publicTripPath,
-} from "@/lib/public-routes";
-import { combineCertRequirements, type ReadinessBlockerCode } from "@/lib/readiness";
-import { buildDiverChecklist, type DiverChecklistItem } from "@/lib/readiness-summary";
 import { signRecapToken } from "@/lib/recap-links";
-import { nitroxAvailableOn, nitroxCardWanted } from "@/lib/rentals";
+import { nitroxAvailableOn } from "@/lib/rentals";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
   buildThreadSteps,
@@ -116,14 +75,7 @@ import {
   type ThreadStep,
   theBoatIsHome,
 } from "@/lib/thread-steps";
-import { liveStageOf, STAGE_SENTENCE_KEYS } from "@/lib/trip-stages";
-import { cancelMyBookingAction, payFromReady } from "./booking-actions";
-import {
-  saveCertificationFromReady,
-  saveNitroxCertificationFromReady,
-  saveSpecialtyFromReady,
-} from "./cert-actions";
-import { confirmCarriedFactsFromReady, saveFitFromReady, saveTanksFromReady } from "./gear-actions";
+import { confirmCarriedFactsFromReady, saveTanksFromReady } from "./gear-actions";
 import { saveEmergencyContactFromReady } from "./paperwork-actions";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -132,487 +84,6 @@ export async function generateMetadata(): Promise<Metadata> {
     title: t("ready.metaTitle"),
     robots: { index: false, follow: false },
   };
-}
-
-/**
- * What this booking has actually been charged, or null when nothing has
- * settled. **Only the settled case**, on purpose: the unpaid states — an open
- * Stripe session, a payable balance — are the payment checklist row's job on
- * this page, and a second "Pay now" card beside it would be the duplication
- * this page was collapsed to remove (ADR 20260820-one-page-after-booking). The
- * receipt is the one thing the checklist genuinely cannot say: *how much*.
- *
- * The pending-checkout refresh comes with it, but **only on a return from
- * Stripe**. A diver who has just paid routinely beats the webhook home, and
- * without asking Stripe directly they would read "payment due" on the page
- * they were sent to by paying. On every *other* visit the webhook has long
- * since landed — and unlike the confirmation this replaced, which a diver saw
- * once, this page is opened from every reminder for as long as the trip is
- * ahead. Refreshing unconditionally would turn each of those into an outbound
- * Stripe call for an abandoned session that is never going to change.
- */
-async function resolvePaymentReceipt(
-  // i18n-exempt: multi-line type annotation, not copy — the scanner misreads the signature as a string.
-  db: Awaited<ReturnType<typeof getDb>>,
-  shopId: string,
-  bookingId: string,
-  /** This request is Stripe's own return, so an open session is worth asking about. */
-  returnedFromCheckout: boolean,
-  /**
-   * The full per-diver fare, for the balance still owed after a deposit. Null
-   * on an unpriced departure, which then quotes no balance rather than
-   * guessing one.
-   */
-  fullPriceCents: number | null,
-  /**
-   * What to show when a settled payment predates the currency column and has
-   * none of its own. A settled amount that *does* carry a currency keeps it —
-   * it is evidence of what was charged, and today's shop setting must never
-   * reinterpret it.
-   */
-  shopCurrency: ShopCurrency,
-): Promise<PaymentReceipt> {
-  const receipt = (settled: Awaited<ReturnType<typeof getBookingPayment>>): PaymentReceipt => {
-    if (settled?.status !== "paid" && settled?.status !== "deposit_paid") return null;
-    const isDeposit = settled.status === "deposit_paid";
-    return {
-      amountCents: settled.amountCents ?? null,
-      currency: settled.currency ?? shopCurrency,
-      isDeposit,
-      balanceDueCents:
-        isDeposit && fullPriceCents !== null
-          ? Math.max(0, fullPriceCents - (settled.amountCents ?? 0))
-          : 0,
-    };
-  };
-
-  const settled = await getBookingPayment(db, shopId, bookingId);
-  if (settled?.status === "paid" || settled?.status === "deposit_paid") return receipt(settled);
-  if (settled?.status === "waived" || !returnedFromCheckout) return null;
-
-  const checkout = await getLatestCheckoutForBooking(db, shopId, bookingId);
-  if (checkout?.status !== "pending") return null;
-  // The diver may have just paid and beaten the webhook home; ask Stripe.
-  const refreshed = await refreshCheckoutFromStripe(db, shopId, checkout.id);
-  return refreshed?.status === "completed"
-    ? receipt(await getBookingPayment(db, shopId, bookingId))
-    : null;
-}
-
-/** A settled charge, as this page states it back. Null when nothing has settled. */
-type PaymentReceipt = {
-  amountCents: number | null;
-  currency: string;
-  /** True when only a deposit has been paid; a balance is still owed. */
-  isDeposit: boolean;
-  /** The per-diver balance still due after a deposit, or 0 when paid in full. */
-  balanceDueCents: number;
-} | null;
-
-/**
- * A terminal outcome for this link — a dead token, or a booking that was
- * cancelled underneath the diver. `EntryDone` is the app's one warm terminal
- * pattern (docs/design/principles.md #4) and the same shape `claim/[token]`
- * already gives a dead bearer link; this page used to spell a `rounded-2xl`
- * card of its own instead, which is how three token pages ended up with three
- * different boxes saying the same kind of thing.
- *
- * The mark is drawn and decorative (ADR 20260827-first-light, decision 2).
- * `expired` is the app-wide "this link has run out" clock; a cancelled booking
- * gets the `cancelled` calendar instead, because the link is fine and telling
- * that diver to ask for a fresh one would send them the wrong way.
- */
-function Notice({
-  title,
-  text,
-  glyph = "expired",
-}: {
-  title: string;
-  text: string;
-  glyph?: DoorGlyphId;
-}) {
-  return <EntryDone glyph={glyph} title={title} text={text} />;
-}
-
-/**
- * Which cert blockers a diver can actually answer by typing their card in.
- *
- * `certification_pending` is deliberately absent: that card is already on file
- * and waiting on a staff review, so offering the form again would only invite a
- * duplicate the unique index refuses. The four here all mean the shop is
- * holding nothing usable.
- *
- * `certification_self_declared` belongs in that group and not with `pending`,
- * which is the whole reason it is its own code. A diver who picked a level on a
- * public opt-in has a `pending` row with **no card number in it** — there is
- * nothing for a unique index to collide with, nothing for a staffer to look up,
- * and if this form were withheld the diver would be told their card was being
- * verified while holding the only copy of it (ADR 20260814-self-declared-cards).
- */
-const CERT_ENTRY_CODES = new Set<ReadinessBlockerCode>([
-  "certification_missing",
-  "certification_self_declared",
-  "certification_insufficient",
-]);
-
-/**
- * A specialty card the diver can send: the trip named one and nothing on file
- * answers it. `specialty_import_unconfirmed` and `specialty_pending` are absent
- * for the same reason `certification_pending` is — a real card is already with
- * the shop, and asking again would tell a diver to re-send what they already
- * sent.
- *
- * Offering this at all took a schema change. `specialty_certifications` had no
- * `self_declared_at` column until 2026-08-20, so a row a diver typed was
- * byte-for-byte a staff transcription and the staff list's ordinary one-tap
- * confirm would have promoted an invented number to `verified` — the state that
- * clears a depth gate past 18 m (`security-reviewer`). The column, the sighting
- * guard in `reviewSpecialtyCertification`, and the `isRealCard` fix in
- * `holdsRealCardOutsideLevels` are what this form rests on.
- */
-const SPECIALTY_ENTRY_CODES = new Set<ReadinessBlockerCode>(["specialty_missing"]);
-
-/**
- * A nitrox card, likewise. `nitrox_self_declared` is here because a claim is
- * exactly the state a number resolves; `nitrox_pending` is not, because it
- * means a staffer already holds one.
- */
-const NITROX_ENTRY_CODES = new Set<ReadinessBlockerCode>([
-  "nitrox_missing",
-  "nitrox_self_declared",
-]);
-
-/**
- * One collapsed disclosure, the shell every card-entry form on this page wears.
- *
- * Collapsed, because the row above has already said what is outstanding and a
- * diver short three cards was being handed three stacked forms — nine fields of
- * agency/level/number between them, all open at once, on a phone.
- * Shut, the same three read as a list of three things to do, and each one is a
- * tap. `<details>` carries the open state to a screen reader itself, which is
- * why the caret is decorative (`DisclosureCaret`).
- */
-function CertificationDisclosure({
-  summary,
-  optionalLabel,
-  children,
-}: {
-  summary: string;
-  /** Rendered as a pill beside the summary. Present only on an offer the trip does not require. */
-  optionalLabel?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <details className="group/cert overflow-hidden rounded-inset border border-border bg-surface-sunken/50">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-base font-semibold">
-        <DisclosureCaret className="group-open/cert:rotate-90" />
-        <span className="min-w-0 flex-1">{summary}</span>
-        {optionalLabel ? <Badge size="sm">{optionalLabel}</Badge> : null}
-      </summary>
-      <div className="border-t border-border p-4">{children}</div>
-    </details>
-  );
-}
-
-/**
- * **Every card this departure can still take, each behind its own disclosure.**
- *
- * The certification row is one *line* but can be several *jobs*: a diver short
- * a level card, a Deep card and a nitrox card used to get one form, file it,
- * reload, and discover a second thing they had no way to see. `actionable`
- * carries every blocker that is on the diver, so all of them are answerable in
- * one sitting.
- *
- * `offerNitrox` is the one entry here that is not answering a blocker. A shop
- * that fills nitrox on this departure can take a card from a diver whose trip
- * does not demand one — and it has to be takeable *here*, because the gear
- * row's request box is now locked until a card is on file. It wears an
- * "Optional" pill so a list of things the boat is waiting on never quietly
- * grows an item it is not.
- */
-function CertificationEntries({
-  token,
-  item,
-  offerNitrox,
-  t,
-}: {
-  token: string;
-  item: DiverChecklistItem;
-  offerNitrox: boolean;
-  t: DiverTranslator;
-}) {
-  // Derived first, in its own pass: this used to be a flag set from inside the
-  // `flatMap` below, which made whether the optional offer renders depend on a
-  // side effect of building an unrelated array.
-  const nitroxRequired = item.actionable.some((blocker) => NITROX_ENTRY_CODES.has(blocker.code));
-  const forms = item.actionable.flatMap((blocker) => {
-    if (CERT_ENTRY_CODES.has(blocker.code)) {
-      return [<CertificationEntry key={blocker.code} token={token} t={t} />];
-    }
-    if (SPECIALTY_ENTRY_CODES.has(blocker.code) && blocker.params?.specialty) {
-      return [
-        <SpecialtyEntry
-          key={`${blocker.code}-${blocker.params.specialty}`}
-          token={token}
-          specialty={blocker.params.specialty}
-          t={t}
-        />,
-      ];
-    }
-    if (NITROX_ENTRY_CODES.has(blocker.code)) {
-      return [<NitroxEntry key={blocker.code} token={token} t={t} />];
-    }
-    return [];
-  });
-  // Never both: a trip that demands nitrox already rendered the required one
-  // above, and a second disclosure calling the same card optional would be the
-  // page contradicting itself.
-  if (offerNitrox && !nitroxRequired) {
-    forms.push(<NitroxEntry key="nitrox-optional" token={token} optional t={t} />);
-  }
-  if (forms.length === 0) return null;
-  return <div className="flex flex-col gap-3">{forms}</div>;
-}
-
-/**
- * The diver's own card, typed in.
- *
- * **Capture, never clearance.** The card lands `pending` and a staff review is
- * what makes it count toward readiness (`src/db/readiness.ts`), so nothing here
- * can clear the diver's own gate — which is why it can be offered behind a
- * bearer link at all. The copy says so plainly rather than implying the row is
- * settled.
- *
- * Before this, the checklist named "we still need your certification card" and
- * offered no way to answer it, so the card arrived as a photo in a reply-to
- * email or not until the dock (2026-08-06 review).
- */
-function CertificationEntry({ token, t }: { token: string; t: DiverTranslator }) {
-  return (
-    <CertificationDisclosure summary={t("ready.certHeading")}>
-      <form action={saveCertificationFromReady.bind(null, token)} className="flex flex-col gap-3">
-        <p className="text-sm text-muted">{t("ready.certBody")}</p>
-        <FieldGrid columns={2}>
-          <Field label={t("ready.certAgency")}>
-            <select name="agency" required defaultValue="" className={controlClass}>
-              <option value="" disabled>
-                {t("ready.certChoose")}
-              </option>
-              {certificationAgency.enumValues.map((agency) => (
-                <option key={agency} value={agency}>
-                  {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label={t("ready.certLevel")}>
-            <select name="level" required defaultValue="" className={controlClass}>
-              <option value="" disabled>
-                {t("ready.certChoose")}
-              </option>
-              {certificationLevel.enumValues.map((level) => (
-                <option key={level} value={level}>
-                  {t(DIVER_CERTIFICATION_LEVEL_KEYS[level])}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label={t("ready.certNumber")}>
-            <input
-              name="identifier"
-              required
-              minLength={2}
-              maxLength={60}
-              autoComplete="off"
-              // A card number is printed in caps and read off plastic at arm's
-              // length; a phone keyboard's own autocorrect is nothing but a
-              // source of wrong digits here.
-              autoCapitalize="characters"
-              autoCorrect="off"
-              spellCheck={false}
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-        <div>
-          <SubmitButton
-            pendingLabel={t("ready.certSubmitting")}
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-          >
-            {t("ready.certSubmit")}
-          </SubmitButton>
-        </div>
-      </form>
-    </CertificationDisclosure>
-  );
-}
-
-/**
- * A specialty card, typed in. Same contract as the level card above — the row
- * lands `pending` and only a staff sighting makes it count — with one
- * difference the schema enforces rather than the form: the number is required,
- * because `specialty_certifications.identifier` is `NOT NULL` and that table
- * carries no self-declaration column. A specialty is what authorizes a
- * materially riskier dive, so there is no version of it that is only a claim.
- *
- * The specialty itself is fixed by the blocker, not chosen: the trip asked for
- * Deep, so this is the Deep form. Offering a picker would invite a diver to
- * file the card they have instead of the one they were asked for.
- */
-function SpecialtyEntry({
-  token,
-  specialty,
-  t,
-}: {
-  token: string;
-  specialty: DiveSpecialty;
-  t: DiverTranslator;
-}) {
-  const specialtyName = t(DIVER_SPECIALTY_KEYS[specialty]);
-  return (
-    <CertificationDisclosure summary={t("ready.specialtyHeading", { specialty: specialtyName })}>
-      <form action={saveSpecialtyFromReady.bind(null, token)} className="flex flex-col gap-3">
-        <input type="hidden" name="specialty" value={specialty} />
-        <FieldGrid columns={2}>
-          <Field label={t("ready.certAgency")}>
-            <select name="agency" required defaultValue="" className={controlClass}>
-              <option value="" disabled>
-                {t("ready.certChoose")}
-              </option>
-              {certificationAgency.enumValues.map((agency) => (
-                <option key={agency} value={agency}>
-                  {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label={t("ready.certNumber")}>
-            <input
-              name="identifier"
-              required
-              minLength={2}
-              maxLength={60}
-              autoComplete="off"
-              autoCapitalize="characters"
-              autoCorrect="off"
-              spellCheck={false}
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-        <div>
-          <SubmitButton
-            pendingLabel={t("ready.certSubmitting")}
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-          >
-            {t("ready.certSubmit")}
-          </SubmitButton>
-        </div>
-      </form>
-    </CertificationDisclosure>
-  );
-}
-
-/**
- * A nitrox card, typed in. No level and no expiry — a nitrox card is a yes/no
- * qualification and `nitrox_certifications` has no expiry state at all
- * (`src/lib/readiness.ts` raises no `nitrox_expired`).
- *
- * `optional` is the case where the trip demands nothing and the shop simply
- * fills enriched air: the card is what makes the gear row's request box appear
- * at all, so the offer belongs here with the other cards — pilled, so it never
- * reads as one more thing standing between the diver and the boat.
- *
- * This is also where "what is nitrox?" is answered (issue 627). It used to sit
- * on the gear row's request legend, which a diver only reaches *after* filing a
- * card — the explanation arriving one step after the decision it was for. Here
- * it meets them at the word itself.
- */
-function NitroxEntry({
-  token,
-  optional = false,
-  t,
-}: {
-  token: string;
-  optional?: boolean;
-  t: DiverTranslator;
-}) {
-  return (
-    <CertificationDisclosure
-      summary={t("ready.nitroxCertHeading")}
-      optionalLabel={optional ? t("ready.certOptional") : undefined}
-    >
-      <form
-        action={saveNitroxCertificationFromReady.bind(null, token)}
-        className="flex flex-col gap-3"
-      >
-        {/* What the word means, said plainly rather than hidden behind a
-            marker. This is the gear row's old `InfoHint` detail, moved to the
-            section that asks for the card (issue 627) — as text, because an
-            `InfoHint` is a `<button>` and `<summary>` is already one, and
-            because this page is read on a phone, where there is no hover to
-            discover. Same string, so the booking page's hint and this cannot
-            drift apart. */}
-        <p className="text-sm text-muted">{t("rental.jargonHints.nitrox")}</p>
-        <FieldGrid columns={2}>
-          <Field label={t("ready.certAgency")}>
-            <select name="agency" required defaultValue="" className={controlClass}>
-              <option value="" disabled>
-                {t("ready.certChoose")}
-              </option>
-              {certificationAgency.enumValues.map((agency) => (
-                <option key={agency} value={agency}>
-                  {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label={t("ready.certNumber")}>
-            <input
-              name="identifier"
-              required
-              minLength={2}
-              maxLength={60}
-              autoComplete="off"
-              autoCapitalize="characters"
-              autoCorrect="off"
-              spellCheck={false}
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-        <div>
-          <SubmitButton
-            pendingLabel={t("ready.certSubmitting")}
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-          >
-            {t("ready.certSubmit")}
-          </SubmitButton>
-        </div>
-      </form>
-    </CertificationDisclosure>
-  );
-}
-
-/** The "This booking was cancelled" notice, with refund copy derived from the booking's current payment status. */
-function cancelledNotice(
-  paymentStatus: string | null | undefined,
-  tripTitle: string,
-  shopName: string,
-  t: DiverTranslator,
-) {
-  const refundKey = verifiedCancelNotice(paymentStatus);
-  return (
-    <Notice
-      glyph="cancelled"
-      title={t("ready.cancelledHeading")}
-      text={
-        refundKey
-          ? t(refundKey)
-          : t("ready.cancelledSeatReleased", { trip: tripTitle, shop: shopName })
-      }
-    />
-  );
 }
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -656,113 +127,7 @@ export default async function DiverReadinessPage({
   const anonT = diverTranslator(await requestLocale());
   const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
   if (!capability) {
-    // Revoked, expired, or never ours — with one exception. The diver's own
-    // cancel revokes this exact token as part of cancelling and then redirects
-    // back to it with `?cancelled=1`, so the verified path above can never show
-    // that diver their own confirmation. Resolve the token with the revocation
-    // check relaxed — never the cancelled-booking or shop-scoping checks — so
-    // that one redirect lands on an honest confirmation rather than the generic
-    // "isn't available" notice (ADR 20260821-the-diver-may-release-their-own-seat).
-    // `cancelled` is only the trigger to look: the refund copy itself comes
-    // from the booking's own current payment row, fetched fresh here, never
-    // from the query string.
-    if (cancelled) {
-      const resolved = await resolveRevokedBookingCapability(db, { token, purpose: "readiness" });
-      if (resolved) {
-        const data = await getReadyPageData(db, resolved.bookingId);
-        if (data?.detail.cancelled) {
-          const payment = await getBookingPayment(db, data.shop.id, resolved.bookingId);
-          return cancelledNotice(
-            payment?.status,
-            data.detail.trip.title,
-            data.detail.shop.name,
-            anonT,
-          );
-        }
-      }
-    }
-    /**
-     * **The departure was called off, which is why this token stopped
-     * verifying at all.**
-     *
-     * `verifyBookingCapability` fails closed on `trips.status = 'cancelled'`
-     * (`src/db/booking-capabilities.ts`) — rightly, since an outstanding
-     * capability must not keep paying, rental-fit or cancel authority for a
-     * trip that no longer runs. But this page reaches for the same call as its
-     * *identity* lookup, so a blow-out took the diver's link out from under
-     * them: the branch written below for exactly this case sat behind a guard
-     * (`trip_status` has two values, so `departureCancelled` **is** the
-     * condition that already returned null) that could never be reached, and
-     * every diver a cancellation stranded was told the one thing that is
-     * false — that their link had run out — with no door back and a "send me
-     * a fresh one" button that fails the same check.
-     *
-     * Resolved the relaxed way the diver's-own-cancel path above resolves, and
-     * used only to *say* what happened: the hash must still match an unexpired
-     * capability genuinely issued for this purpose, and what it renders is a
-     * terminal card with no form on it, so it authorizes nothing. A genuinely
-     * aged-out link resolves nothing here and keeps the honest expired notice
-     * below.
-     */
-    const stranded = await resolveRevokedBookingCapability(db, { token, purpose: "readiness" });
-    if (stranded) {
-      const data = await getReadyPageData(db, stranded.bookingId);
-      // A cancelled *booking* keeps its own path above; this is the diver whose
-      // seat is still live under a departure that is not (`callTripBlowout`
-      // cancels the trip and leaves every booking active, because whether each
-      // seat is refunded stays a per-booking staff decision).
-      if (data?.departureCancelled && !data.detail.cancelled) {
-        const strandedT = diverTranslator(await requestLocale(data.shop.defaultLocale));
-        return (
-          <ExpiredLinkCard
-            glyph="cancelled"
-            title={strandedT("booking.cancelledHeading")}
-            text={strandedT("ready.tripCancelledBody")}
-            shop={{
-              name: data.detail.shop.name,
-              contactEmail: data.shop.contactEmail,
-              contactPhone: data.shop.contactPhone,
-            }}
-            t={strandedT}
-          >
-            <CarriedPreparation db={db} data={data} t={strandedT} />
-            <Link href={publicSchedulePath(data.shop.slug)} className={buttonClass()}>
-              {strandedT("recap.seeWhatsNext")}
-            </Link>
-          </ExpiredLinkCard>
-        );
-      }
-    }
-    // **Name the shop where the token still tells us which one it is.**
-    //
-    // `/ready` is the link in the 24-hour trip reminder, so every ordinary way
-    // of reaching a dead one — a bookmark from last season, a forwarded email,
-    // a reminder for a trip that moved — landed here, on four words telling a
-    // diver holding a phone to ask a shop this page would not name (issue
-    // #801). The waiver page solved this first and its comments say why the
-    // expired branch used to "bail out before the shop (and so its contact
-    // info) was ever loaded".
-    //
-    // `staleBookingCapabilityForToken` relaxes expiry and revocation and
-    // nothing else: the hash must still match a capability genuinely issued
-    // for this purpose. It is used for the shop's *name and published contact
-    // details* and for nothing else — no booking, no diver, no trip is read
-    // through an expired token, because an expired token is not a key.
-    const stale = await staleBookingCapabilityForToken(db, { token, purpose: "readiness" });
-    const staleShop = stale ? await getShopById(db, stale.shopId) : null;
-    if (staleShop) {
-      const staleT = diverTranslator(await requestLocale(staleShop.defaultLocale));
-      return <ExpiredLink token={token} shop={staleShop} t={staleT} sent={sent} />;
-    }
-    // Nothing resolved at all (garbage, or a token that was never ours). There
-    // is no shop to attribute it to without weakening the guarantee the model
-    // rests on — a bearer token reveals only its own record.
-    return (
-      <ExpiredLinkCard
-        title={anonT("ready.unavailableHeading")}
-        text={anonT("ready.unavailableBody")}
-      />
-    );
+    return readyDeadLink({ db, token, cancelled, sent, anonT });
   }
   const { bookingId } = capability;
 
@@ -785,38 +150,6 @@ export default async function DiverReadinessPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
   const firstName = data.greetingName.split(" ")[0] || t("ready.namelessFallback");
-  // Every date, time, and relative phrase on this page formats for `locale` —
-  // the *negotiated* one. These four used to pass `shop.defaultLocale`
-  // straight into the formatter, so a diver reading Spanish prose got the
-  // shop's own language for the one thing they most need to read at a glance:
-  // when to show up (AGENTS.md — never hard-code a locale in the UI).
-  const when = formatShortDate(detail.trip.startsAt, locale, detail.shop.timezone);
-  const timeRange = formatTimeRangeTz(
-    detail.trip.startsAt,
-    detail.trip.endsAt,
-    locale,
-    detail.shop.timezone,
-  );
-  // Task 46: the day-before email already tells a diver when to be at the
-  // dock (`dockCallPhrase` in src/lib/notifications/email.ts) — this page
-  // never did, so a diver re-checking it after reading the email couldn't
-  // find the one number that actually matters that morning.
-  const dockCallAt = new Date(detail.trip.startsAt.getTime() - shop.dockCallMinutes * 60_000);
-  const dockCallLine = t("ready.dockCallLine", {
-    time: formatTime(dockCallAt, locale, detail.shop.timezone),
-    dock: t("notifications.common.dockCallMinutes", { minutes: shop.dockCallMinutes }),
-  });
-  // Task 47: "in 2 days" / "tomorrow" / "today" — the page a diver opens the
-  // night before should read at least as rich as the email that sent them
-  // here, and a bare date is easy to misjudge at a glance the way a full
-  // relative phrase isn't.
-  const cancelPreviewKey = CANCEL_PREVIEW_KEY[data.cancelPreview];
-  const relativeWhen = formatRelativeDay(
-    detail.trip.startsAt,
-    nowDate(),
-    locale,
-    detail.shop.timezone,
-  );
 
   if (detail.cancelled) {
     // The shop took this seat off the boat and this diver still holds a live
@@ -912,14 +245,6 @@ export default async function DiverReadinessPage({
     READY_NOTICES,
   );
 
-  // Absolute where a canonical origin is configured — this one exists to be
-  // pasted into a group chat — with the relative fallback the claim links above
-  // use, so a missing APP_HOST shares a working same-origin link rather than a
-  // broken one. Never `window.location.href`: see `TripActions`' `shareUrl`.
-  const shareOrigin = publicAppUrl();
-  const tripPath = publicTripPath(shop.slug, data.trip.id);
-  const shareTripUrl = shareOrigin ? new URL(tripPath, `${shareOrigin}/`).toString() : tripPath;
-
   /**
    * The departure is today. From 00:00 in the shop's own zone, not twenty-four
    * hours out: the night before, this page is a plan; on the day it is a
@@ -1011,115 +336,11 @@ export default async function DiverReadinessPage({
       ]);
     const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage] = tripReads;
     const courseFormsOwed = (courseForms?.outstanding.length ?? 0) > 0;
-    const claimOrigin = publicAppUrl();
-    const partySeats = partySeatClaims.map((seat) => ({
-      bookingId: seat.bookingId,
-      seatName: seat.seatName,
-      claimed: seat.claimed,
-      waiverSigned: seat.waiverSigned,
-      claimUrl: seat.claim
-        ? claimOrigin
-          ? new URL(claimLinkPath(seat.claim.token), `${claimOrigin}/`).toString()
-          : claimLinkPath(seat.claim.token)
-        : null,
-    }));
 
-    // The boat's own line, composed here: word order and where the site sits in
-    // the sentence are the locale's choice, and `liveStageOf` is what stops a
-    // stage nobody cleared speaking for a departure that ended yesterday.
-    const liveStage = liveStageOf(boatStage, detail.trip.endsAt ?? null, nowDate());
-    const stageLine = liveStage
-      ? {
-          sentence:
-            liveStage.stage === "underway" && !liveStage.siteName
-              ? t("tripStage.underwayNoSite", { boat: detail.trip.title })
-              : t(STAGE_SENTENCE_KEYS[liveStage.stage], {
-                  boat: detail.trip.title,
-                  site: liveStage.siteName ?? "",
-                }),
-          said: t("tripStage.said", {
-            time: formatTime(liveStage.recordedAt, locale, detail.shop.timezone),
-          }),
-        }
-      : null;
+    const stageLine = boatStageLine(boatStage, detail.trip, detail.shop.timezone, locale, t);
 
-    // What one seat on this departure costs. Null on an unpriced trip, which
-    // then quotes nothing rather than guessing — see `resolvePaymentReceipt`,
-    // which takes the same figure to work out a balance after a deposit.
-    // This seat's price: a snorkeler pays the snorkeler fare (ADR
-    // 20261007-participant-types), as `getReadyPageData` read it.
-    const fullPriceCents = fullTrip ? data.trip.seatPriceCents : null;
-
-    // Dive 1 first, in the dive plan's own order: where a site names its own
-    // time in the water, that is what the day's rhythm counts rather than the
-    // shop-wide default (src/lib/diver-planning.ts).
-    const siteBottomTimes = tripDives.map(({ diveSite }) => diveSite?.expectedBottomTimeMinutes);
-    // ...and each leg of the run between them, same order: dock to the first
-    // site, then site to site (ADR 20260815-per-leg-travel-minutes). The morning
-    // of a dive is when a long second leg matters most.
-    const legTravelTimes = tripDives.map(({ dive }) => dive.travelMinutes);
-
-    const items = buildDiverChecklist(detail.requirement, detail.readiness);
-    /**
-     * **A balance nobody named.** "There's a balance to settle" is the one step
-     * on this spine whose whole subject is a number, and it carried none — the
-     * amount lived on a receipt panel that exists only once something has
-     * *already* settled, so the diver being asked to pay was the one reader who
-     * could not see the figure.
-     *
-     * The trip's own list price, in the shop's currency. This is raised only on
-     * an unpaid or refunded booking — `PAYMENT_CLEARED` clears a part-paid
-     * deposit, so a fare is either owed whole or not owed here at all — and an
-     * unpriced departure quotes nothing rather than a guess. A *settled* payment
-     * quotes the receipt instead: what was actually charged is evidence, and it
-     * outranks a list price that may have moved since (ADR
-     * 20260731-shop-currency reasons the same way about currency).
-     */
-    const amountDueText =
-      fullPriceCents !== null && fullPriceCents > 0
-        ? formatMoneyCents(fullPriceCents, toShopCurrency(shop.currency), locale)
-        : null;
-    /**
-     * The rung this departure actually demands — the stricter of what the shop
-     * set on the trip and what the sites it visits impose
-     * (`combineCertRequirements`, the same fold the readiness engine gates on).
-     *
-     * Named on the certification step (issue 627) because "we still need your
-     * certification card" never said *which* card, and a diver holding Open Water
-     * had no way to tell from this page whether the Advanced they don't have was
-     * the thing standing between them and the boat. Null when the departure gates
-     * on specialties or nitrox but no level, which is a real shape.
-     */
-    const requiredLevel = detail.requirement
-      ? combineCertRequirements(detail.requirement, detail.siteRequirement)
-          .minimumCertificationLevel
-      : null;
-    // A rental fit is on file — the diver has answered the gear question at least
-    // once, whatever they answered. "Bringing my own" is a complete answer, so
-    // this asks whether the question was answered, never whether anything was
-    // rented. `fitStatedAt`, not the row's existence: the note below writes the
-    // same `rental_fit_profiles` row without stating a fit (schema.ts).
-    const hasRentalFit = data.rentalFit?.fitStatedAt != null;
-    // The diver has answered the currency question at least once. Every band is
-    // a complete answer, "I haven't dived yet" included.
-    const hasLastDived = data.lastDivedBand != null;
-    // Whether to ask for a nitrox card nothing has asked for yet — the rule
-    // itself lives in `src/lib/rentals.ts` beside `nitroxAvailableOn`, because
-    // the card disclosure and the rental form's request lock are two surfaces
-    // that must answer it identically.
-    const offerNitroxCard = nitroxCardWanted(shop.rentalItems, data.trip.course, {
-      verified: data.nitroxCardVerified,
-      onFile: data.nitroxCardOnFile,
-    });
-    /**
-     * ...and whether this page can actually make that offer. The disclosure
-     * lives inside the certification step, so it can only be rendered on a
-     * booking that has one. `RentalFitForm` locks on this single boolean rather
-     * than on a second copy of the rule, so the lock and the offer cannot
-     * disagree.
-     */
-    const nitroxCardEntryOffered =
-      offerNitroxCard && items.some((item) => item.category === "certification");
+    const facts = readyThreadFacts(data, Boolean(fullTrip), locale);
+    const { items, hasRentalFit, hasLastDived, nitroxCardEntryOffered, carriedFacts } = facts;
 
     /**
      * **The spine** (ADR 20260827-the-divers-thread, decision 3). Every step it
@@ -1128,31 +349,6 @@ export default async function DiverReadinessPage({
      * *inside* Day-of details rather than beside it as rows of their
      * own that moved no number when answered.
      */
-    /**
-     * **The shop was already holding this diver's sizes before they booked this
-     * seat** — which is what makes "Anything changed?" a question about last
-     * time (ADR 20260904-reef-all-the-way-down, D15).
-     *
-     * The comparison is against `bookings.created_at` rather than against "does a
-     * fit exist": a wider test would turn true the instant a first-timer saved
-     * their sizes, and the step would appear mid-thread asking whether the thing
-     * they had just typed had changed. A staff edit made after the booking leaves
-     * the ordinary gear row instead — rarer than the naive test, and never wrong.
-     *
-     * **Both sides must come from the same clock, and that is not free.**
-     * `fit_stated_at` is written through `nowDate()`; `bookings.created_at` was
-     * a `defaultNow()` column, which Postgres stamps and `DIVEDAY_CLOCK` cannot
-     * reach. Straddling the two made this "compare a frozen instant against a
-     * live one" (`dbNow`'s docblock in `src/test/db.ts`), and since the frozen
-     * instant sits weeks behind the wall clock under the e2e harness, every fit
-     * read as last season's and every diver as a returning one — the gear step
-     * vanished fleet-wide. `createBooking` now stamps `created_at` from the
-     * application clock for that reason; do not put a `defaultNow()` column on
-     * either side of this again.
-     */
-    const carriedFacts =
-      data.rentalFit?.fitStatedAt != null && data.rentalFit.fitStatedAt < data.bookingCreatedAt;
-
     const spine = buildThreadSteps({
       checklist: items,
       // Money is owed, or money has settled. The receipt matters on its own:
@@ -1185,34 +381,8 @@ export default async function DiverReadinessPage({
     );
 
     /** One step's fact, and one step's form. The two things the spine cannot derive. */
-    const stepLine = (step: ThreadStep): string | null => {
-      if (step.id === "gear") return hasRentalFit ? t("ready.gearOnFile") : null;
-      // A settled "Anything changed?" states the same fact the gear step would
-      // have: the crew has their sizes. No second sentence for one fact, and
-      // nothing that says "you confirmed" — the diver knows what they tapped.
-      if (step.id === "changes") {
-        return step.state === "done" ? t("ready.gearOnFile") : null;
-      }
-      if (step.id === "dayof") {
-        return hasLastDived && data.lastDivedBand
-          ? t(DIVER_DIVE_RECENCY_KEYS[data.lastDivedBand])
-          : null;
-      }
-      if (step.id === "pay" && step.state === "done") return paidLine;
-      if (!step.item) return null;
-      // The certification step names which rung, on every state including
-      // "done" — a diver reading a settled step still wants to know what it
-      // settled against (issue 627).
-      if (step.item.category === "certification" && requiredLevel) {
-        return `${checklistDetailText(t, step.item)} ${t("ready.certMinimumLevel", {
-          level: t(DIVER_CERTIFICATION_LEVEL_KEYS[requiredLevel]),
-        })}`;
-      }
-      if (step.id === "pay" && step.state === "your_turn" && amountDueText) {
-        return t("ready.checklistDetail.paymentDueAmount", { amount: amountDueText });
-      }
-      return checklistDetailText(t, step.item);
-    };
+    const stepLine = (step: ThreadStep): string | null =>
+      readyStepLine(step, { t, facts, lastDivedBand: data.lastDivedBand, paidLine });
 
     /**
      * The step's form, or nothing.
@@ -1234,18 +404,11 @@ export default async function DiverReadinessPage({
      * all of them, rather than a partial that would blank what it did not carry.
      */
     const fitForm = (
-      <RentalFitForm
-        action={saveFitFromReady.bind(null, token)}
-        rentalFit={data.rentalFit}
-        rentalItems={seatItems}
-        course={data.trip.course}
-        pricing={data.shop.rentalPricing}
-        currency={toShopCurrency(data.shop.currency)}
-        wantsNitrox={data.wantsNitrox}
-        nitroxCardVerified={data.nitroxCardVerified}
-        nitroxCardOnFile={data.nitroxCardOnFile}
+      <ReadyFitForm
+        token={token}
+        data={data}
+        seatItems={seatItems}
         nitroxCardEntryOffered={nitroxCardEntryOffered}
-        plannedDives={data.trip.plannedDives}
         saved={saved === "fit"}
       />
     );
@@ -1284,26 +447,16 @@ export default async function DiverReadinessPage({
             (step.item?.code === "payment_due" || step.item?.code === "payment_refunded");
           if (!payable && !depositBalanceLine) return null;
           return (
-            <>
-              {depositBalanceLine ? (
-                <p className="text-base text-muted">{depositBalanceLine}</p>
-              ) : null}
-              {payable ? (
-                <form action={payFromReady.bind(null, token)} className="mt-3 first:mt-0">
-                  <SubmitButton pendingLabel={t("ready.openingPayment")} className={actionButton}>
-                    {t("ready.payForTrip")}
-                  </SubmitButton>
-                </form>
-              ) : null}
-              {/* The one term still ahead of a diver who has already decided,
-                  where ADR 20260820-one-page-after-booking always meant it to
-                  land — beside the money, not on the public pitch page. Once
-                  Pay settles the step closes and the footer's cancel door
-                  carries the same window. */}
-              {payable && fullShop && fullTrip ? (
-                <TripTerms shop={fullShop} trip={fullTrip} locale={locale} />
-              ) : null}
-            </>
+            <PayStepBody
+              token={token}
+              payable={payable}
+              depositBalanceLine={depositBalanceLine}
+              actionButton={actionButton}
+              fullShop={fullShop}
+              fullTrip={fullTrip}
+              locale={locale}
+              t={t}
+            />
           );
         }
         case "gear":
@@ -1375,130 +528,21 @@ export default async function DiverReadinessPage({
             <ThreadSpine steps={spineSteps} />
           </>
         )}
-        {/* **One rhythm under the spine** (K-233): the sections below set no
-                margin of their own, and this run spaces them 40px apart once.
-                Each brought its own before — 32, 24, 24, 32, 40, 40 — so the
-                column stepped unevenly down one scroll. */}
-        <div className="mt-10 space-y-10">
-          <RunningLate token={token} data={data} locale={locale} t={t} />
-          {fullShop && fullTrip ? (
-            <TripArrivalCard
-              shop={{
-                name: fullShop.name,
-                slug: fullShop.slug,
-                timezone: fullShop.timezone,
-                contactPhone: fullShop.contactPhone,
-                contactEmail: fullShop.contactEmail,
-                address: {
-                  street: fullShop.addressStreet,
-                  locality: fullShop.addressLocality,
-                  region: fullShop.addressRegion,
-                  postalCode: fullShop.addressPostalCode,
-                  country: fullShop.addressCountry,
-                },
-              }}
-              trip={fullTrip}
-              locale={locale}
-              // Where the day is planned to go, in the order it runs them. It
-              // wears the Plan chip (Budget rule 5) — the shop wrote it down, and
-              // the ledger below is where a change to it would appear.
-              sites={tripDives
-                .map(({ diveSite }) => diveSite?.name)
-                .filter((name): name is string => Boolean(name))}
-              // The same dock call the masthead names, so the card says it
-              // too (issue #2034) — and the same exception: a diver being
-              // collected from their hotel is told the pickup, not the dock.
-              dockCallMinutes={data.pickupTime ? null : shop.dockCallMinutes}
-              downloadHref={`${publicTripArrivalCardPath(fullShop.slug, fullTrip.id)}?booking=${encodeURIComponent(
-                token,
-              )}`}
-              // The thread's one map, in the one card about where to go. It used
-              // to sit in a trailing "Your dive shop" card that said this card's
-              // address, phone, email and map link over again.
-              showMap
-            />
-          ) : null}
-          <TripCrewLine crew={publicCrew} locale={locale} />
-          <TripChangeLedger events={changeEvents} locale={locale} timeZone={detail.shop.timezone} />
-          {/* A course's learning materials, the same list the confirmation
-                  email carried (ADR 20261008-course-learning-materials). */}
-          <CourseMaterials data={data} t={t} />
-          {/* The party's panel and its all-set line are one section: the line
-                  is the panel's close, 12px under it, not a section of its own. */}
-          {partySeats.length > 0 ? (
-            <div>
-              <PartyClaimPanel locale={locale} seats={partySeats} />
-              {partyAllSet ? (
-                <p className="mt-3">
-                  <SettledCheck
-                    settled
-                    label={t("thread.partyAllSet")}
-                    className="text-sm text-muted"
-                  />
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-          {/* What to put in the bag. Below the spine — which carries the gear
-                  form as one of its steps — because this page's job is still "what's
-                  left before you sail", and this is what a diver reads once that is
-                  settled. The dive briefings that used to follow it are the trip
-                  page's "The day" list and the after-state's keepsake now: what
-                  you'll see down there is pitch and memory, not preparation. */}
-          {fullShop && fullTrip ? (
-            <PackingSection
-              shop={fullShop}
-              trip={fullTrip}
-              rentalFit={data.rentalFit}
-              // Never the "every day follows this shape" note here, even on a
-              // course weekend: this page is what a diver reads the morning they
-              // sail, about the day in front of them.
-              multiDay={false}
-              siteBottomTimes={siteBottomTimes}
-              legTravelTimes={legTravelTimes}
-              // This page renders no conditions card at all, so the suit line
-              // has nowhere else to land — and the morning of a dive is exactly
-              // when a diver is deciding what to put in the car.
-              temperatureStatedAbove={false}
-              locale={locale}
-            />
-          ) : null}
-          {/* The diver may release their own seat; moving it is the shop's
-                  (ADR 20260821-the-diver-may-release-their-own-seat). It sits last,
-                  under everything the page is actually for, and above the shop card
-                  whose phone number answers every plan change this button does not.
-                  Rendered only when `selfCancelBooking` would actually honour it, so
-                  there is no control here that could only come back refused. */}
-          {data.canCancelBooking ? (
-            // `gap-3`, not a margin on the form: the preview renders only when
-            // there is a refund to preview, and the form's own `mt-3` stood
-            // "Cancel my spot" 36px under the rule without one (K-156).
-            <section className={`flex flex-col gap-3 ${THREAD_FOOT_SECTION_CLASS}`}>
-              {cancelPreviewKey ? (
-                <p className="text-base text-muted">{t(cancelPreviewKey)}</p>
-              ) : null}
-              <form action={cancelMyBookingAction.bind(null, token)}>
-                {/* The refund preview is repeated inside the confirm rather than
-                        left further up the page: the diver reads what it costs at the
-                        moment of commitment, not once on the way past. */}
-                <InlineConfirm
-                  triggerLabel={t("ready.cancelSpot")}
-                  triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
-                  message={[
-                    t("ready.cancelConfirm", { trip: detail.trip.title }),
-                    cancelPreviewKey ? t(cancelPreviewKey) : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  confirmLabel={t("ready.cancelConfirmButton")}
-                  cancelLabel={t("ready.neverMind")}
-                  pendingLabel={t("ready.cancelling")}
-                  confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
-                />
-              </form>
-            </section>
-          ) : null}
-        </div>
+        <ThreadSections
+          context={{
+            token,
+            data,
+            locale,
+            t,
+            fullShop,
+            fullTrip,
+            tripDives,
+            changeEvents,
+            publicCrew,
+            partySeatClaims,
+            partyAllSet,
+          }}
+        />
       </>
     );
   })();
@@ -1519,53 +563,7 @@ export default async function DiverReadinessPage({
       <ThreadShell
         shopName={detail.shop.name}
         title={detail.trip.title}
-        meta={
-          <>
-            <p className="mt-1 text-base text-muted">
-              {when} · {timeRange} · {relativeWhen}
-            </p>
-            {/* Today. Said once, above the only number that matters this
-                morning — plain ink, no motion: the thread's three coral
-                moments are booked, paperwork done, and welcome home, and
-                "your boat is today" is none of them. */}
-            {diveDay ? (
-              <p className={`mt-2 ${ITEM_TITLE_CLASS}`}>{t("thread.diveDayLine")}</p>
-            ) : null}
-            {/* The one number that matters on the morning of the trip — a
-                shade stronger than the meta line above it, never shouting.
-                When a hotel pickup is scheduled, that time leads ahead of dock
-                call. */}
-            {data.pickupTime ? (
-              <p className="mt-1 text-base font-medium">
-                {t("ready.hotelPickupHeaderLine", {
-                  time: data.pickupTime,
-                  location: data.hotelPickupLocation ?? t("ready.hotelPickupLocationNotSet"),
-                })}
-              </p>
-            ) : (
-              <p className="mt-1 text-base font-medium">{dockCallLine}</p>
-            )}
-            {/* Put the day in a calendar, and send the trip to whoever is
-                coming — the same ghost-weight row, in the same place under the
-                masthead, as the public trip page carries.
-
-                `shareUrl` is the **public trip page**, never this one: this URL
-                *is* a bearer capability that can cancel the booking and move
-                its refund, and "share with a buddy" must not hand that to a
-                group chat (docs/engineering/capability-telemetry-runbook.md). */}
-            <TripActions
-              calendarUrl={publicTripCalendarPath(shop.slug, data.trip.id)}
-              shareUrl={shareTripUrl}
-            />
-            {/* What this page *is*, said once, at the top. Divers arrive here
-                from a booking submit or an emailed link, and both of those
-                read as a confirmation — a thing you look at once and close.
-                This one is not: it is the same URL all week, it is where the
-                cards and the gear answers go, and it restates itself every
-                time the shop moves. */}
-            <p className="mt-3 text-sm text-muted">{t("ready.keepThisPage")}</p>
-          </>
-        }
+        meta={<ReadyMasthead data={data} locale={locale} t={t} diveDay={diveDay} />}
       >
         {/* `booked` among them: the celebration is the moment a seat was taken,
             not a property of the link. Leaving it in the URL would replay

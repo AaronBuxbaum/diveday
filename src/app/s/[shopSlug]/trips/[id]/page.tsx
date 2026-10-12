@@ -25,20 +25,17 @@ import {
   tripPublicCrew,
 } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
-import { languageEndonymList } from "@/i18n/language-labels";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
-import { DIVER_CERT_LEVEL_KEYS } from "@/i18n/next-dive-labels";
 import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
-import { courseCharges, perDiverBookingPriceCents } from "@/lib/courses";
+import { perDiverBookingPriceCents } from "@/lib/courses";
 import { checkoutSeatTerms } from "@/lib/deposits";
 import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
-import { formatDateTimeTz, formatDayParts, formatShortDate, formatTime } from "@/lib/format";
-import { cachedListFormat } from "@/lib/intl-cache";
+import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { automatedForecastForDeparture, hasCrewPrediction } from "@/lib/marine-forecast";
 import { minimumSeatsState } from "@/lib/minimum-seats";
 import { toShopCurrency } from "@/lib/money";
@@ -48,12 +45,10 @@ import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import { combineCertRequirements } from "@/lib/readiness";
 import { isLiveShopStaff } from "@/lib/session";
-import { similarDepartures } from "@/lib/similar-departures";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { tripPageJsonLd } from "@/lib/structured-data";
 import { hasSailed, isFull, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
-import { worthALook } from "@/lib/worth-a-look";
 import { BookingFinePrint } from "./_components/BookingFinePrint";
 import {
   BookSpotSection,
@@ -65,7 +60,11 @@ import {
 } from "./_components/BookingSections";
 import { publicTripRecord, readBookingPageWave } from "./_components/booking-page-wave";
 import { ConditionsLine } from "./_components/ConditionsLine";
+import { bookingCourseFees } from "./_components/course-fees";
+import { crewLanguagesSentence } from "./_components/crew-languages";
 import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
+import { knownDiverFactLines } from "./_components/known-diver-lines";
+import { fullTripAlternatives, worthALookList } from "./_components/other-boats";
 import { StaffPreviewBar } from "./_components/StaffPreviewBar";
 import { TripActions } from "./_components/TripActions";
 import { TripAlternatives } from "./_components/TripAlternatives";
@@ -252,11 +251,7 @@ export default async function TripDetailPage({
       </DiverIntlProvider>
     );
   }
-  const crewLanguageNames = languageEndonymList(crewLanguages);
-  const crewLanguagesLine =
-    crewLanguageNames.length === 0
-      ? null
-      : cachedListFormat(locale, { style: "long", type: "conjunction" }).format(crewLanguageNames);
+  const crewLanguagesLine = crewLanguagesSentence(crewLanguages, locale);
   const crewPrediction = hasCrewPrediction(trip);
   // Started, never awaited: ConditionsLine streams it in its own `<Suspense>`.
   const automatedForecast = crewPrediction
@@ -331,26 +326,7 @@ export default async function TripDetailPage({
         handoff: handoffToken ?? "",
         blankHref: `${publicTripPath(shopSlug, tripId)}#book`,
         lead: { fullName: knownDiver.fullName, email: knownDiver.email, phone: knownDiver.phone },
-        lines: knownDiver.facts.map((fact) => {
-          const on = (at: Date) => formatShortDate(at, locale, shop.timezone);
-          switch (fact.kind) {
-            case "card":
-              return t("booking.knownDiver.card", {
-                level: t(DIVER_CERT_LEVEL_KEYS[fact.level]),
-                date: on(fact.keptAt),
-              });
-            case "waiver":
-              return t("booking.knownDiver.waiver", { date: on(fact.keptAt) });
-            case "own_gear":
-              return t("booking.knownDiver.ownGear", { date: on(fact.keptAt) });
-            case "sizes":
-              return t("booking.knownDiver.sizes", { date: on(fact.keptAt) });
-            case "contact":
-              return t("booking.knownDiver.contact", { name: fact.name });
-            default:
-              return "";
-          }
-        }),
+        lines: knownDiverFactLines(knownDiver.facts, t, { locale, timeZone: shop.timezone }),
       }
     : null;
   const diveBriefings = tripDives.map(({ dive, diveSite }) => ({
@@ -370,17 +346,7 @@ export default async function TripDetailPage({
   // The money lines the form's one block states, resolved here so the deposit
   // and course-fee arithmetic (src/lib/deposits.ts, src/lib/courses.ts) never
   // ships to the browser — the same reason `TripTerms` is a server component.
-  const courseBreakdown = trip.course
-    ? courseCharges({
-        title: trip.course.title,
-        priceCents: trip.course.priceCents ?? trip.priceCents,
-        eLearningPriceCents: trip.course.eLearningPriceCents,
-      })
-    : [];
-  const courseFeeCents =
-    courseBreakdown.find((line) => line.kind === "course_fee")?.amountCents ?? null;
-  const eLearningFeeCents =
-    courseBreakdown.find((line) => line.kind === "e_learning_fee")?.amountCents ?? null;
+  const { courseFeeCents, eLearningFeeCents } = bookingCourseFees(trip);
   // **What this trip asks of anybody**, read for every visitor rather than only
   // for a diver who already holds a seat. `requirement` used to be fetched
   // inside the `confirmed` branch below and passed only into
@@ -465,66 +431,11 @@ export default async function TripDetailPage({
   // still get on, and reading the schedule twice for two lists that are never
   // both on screen would be a query nobody asked for either way.
   // (`board`, read in the wave above under this same condition.)
+  const where = { shopSlug, isEmbed, locale, timeZone: shop.timezone };
   const offersAnotherBoat = !inPast && !trip.conditionsHold && !confirmed && !waitlistConfirmation;
-  const alternatives = full
-    ? similarDepartures({
-        full: { tripId: trip.id, courseId: trip.courseId, diveSiteId: trip.diveSiteId },
-        candidates: board.map((candidate) => ({
-          id: candidate.id,
-          title: candidate.title,
-          startsAt: candidate.startsAt,
-          courseId: candidate.courseId,
-          diveSiteId: candidate.diveSiteId,
-        })),
-      }).map((row) => ({
-        tripId: row.tripId,
-        title: row.title,
-        reason: row.reason,
-        // Preformatted in the shop's own zone, like every other date this page
-        // hands a client component.
-        when: formatDayParts(row.startsAt, locale, shop.timezone),
-        href: `${publicTripPath(shopSlug, row.tripId)}${isEmbed ? "?embed=1" : ""}`,
-      }))
-    : [];
-  /**
-   * **The right departure, not just the next open seat** (issue #1161, D01).
-   *
-   * Only for a boat a diver can still get on: a full one already stands
-   * `TripFullSection` with D06's own list, and two lists of other boats on one
-   * page is exactly the accretion ADR 20260904-reef-all-the-way-down bounds.
-   */
+  const alternatives = full ? fullTripAlternatives(trip, board, where) : [];
   const worthALookRows =
-    full || !offersAnotherBoat
-      ? []
-      : worthALook({
-          subject: {
-            tripId: trip.id,
-            courseId: trip.courseId,
-            diveSiteId: trip.diveSiteId,
-            difficultyLevel: trip.diveSite?.difficultyLevel ?? null,
-            startsAt: trip.startsAt,
-            seatsOpen: spotsRemaining(trip),
-          },
-          candidates: board.map((candidate) => ({
-            tripId: candidate.id,
-            title: candidate.title,
-            courseId: candidate.courseId,
-            diveSiteId: candidate.diveSiteId,
-            difficultyLevel: candidate.diveSite?.difficultyLevel ?? null,
-            startsAt: candidate.startsAt,
-            seatsOpen: Math.max(candidate.capacity - candidate.booked, 0),
-          })),
-          timeZone: shop.timezone,
-          now,
-        }).map((row) => ({
-          tripId: row.tripId,
-          title: row.title,
-          seatsOpen: row.seatsOpen,
-          reason: row.reason,
-          partOfDay: row.partOfDay,
-          when: `${formatDayParts(row.startsAt, locale, shop.timezone).weekday} ${formatTime(row.startsAt, locale, shop.timezone)}`,
-          href: `${publicTripPath(shopSlug, row.tripId)}${isEmbed ? "?embed=1" : ""}`,
-        }));
+    full || !offersAnotherBoat ? [] : worthALookList(trip, board, { ...where, now });
   const remaining = spotsRemaining(trip);
   const errorMessage = error && isErrorCode(error) ? t(ERROR_MESSAGE_KEYS[error]) : undefined;
   const tripRef = { shopSlug, tripId, embed: isEmbed };
@@ -805,30 +716,32 @@ export default async function TripDetailPage({
                 />
               ) : (
                 <BookSpotSection
-                  trip={trip}
-                  tripRef={tripRef}
-                  remaining={remaining}
-                  errorMessage={errorMessage}
-                  payAtBooking={payAtBooking && checkoutMode(stripeAccount)}
-                  offerCodeField={offerCodeField}
-                  perDiverPriceCents={perDiverPriceCents}
-                  currency={shopCurrency}
-                  locale={locale}
-                  timeZone={shop.timezone}
-                  contactEmail={shop.contactEmail}
-                  contactPhone={shop.contactPhone}
-                  rentalItems={shop.rentalItems}
-                  rentalPricing={shop.rentalPricing}
-                  passThroughFee={passThroughFee}
-                  taxEnabled={shop.taxEnabled}
-                  courseFeeCents={courseFeeCents}
-                  eLearningFeeCents={eLearningFeeCents}
-                  {...checkoutSeatTerms(trip, trip.course)}
-                  balanceDueAt={trip.startsAt}
-                  terms={<BookingFinePrint shop={shop} trip={trip} locale={locale} />}
-                  knownDiver={knownDiverPanel}
-                  requirement={requirementSentence}
-                  offerHandoff={offerHandoff.bind(null, tripRef)}
+                  context={{
+                    trip,
+                    tripRef,
+                    remaining,
+                    errorMessage,
+                    payAtBooking: payAtBooking && checkoutMode(stripeAccount),
+                    offerCodeField,
+                    perDiverPriceCents,
+                    currency: shopCurrency,
+                    locale,
+                    timeZone: shop.timezone,
+                    contactEmail: shop.contactEmail,
+                    contactPhone: shop.contactPhone,
+                    rentalItems: shop.rentalItems,
+                    rentalPricing: shop.rentalPricing,
+                    passThroughFee,
+                    taxEnabled: shop.taxEnabled,
+                    courseFeeCents,
+                    eLearningFeeCents,
+                    ...checkoutSeatTerms(trip, trip.course),
+                    balanceDueAt: trip.startsAt,
+                    terms: <BookingFinePrint shop={shop} trip={trip} locale={locale} />,
+                    knownDiver: knownDiverPanel,
+                    requirement: requirementSentence,
+                    offerHandoff: offerHandoff.bind(null, tripRef),
+                  }}
                 />
               )}
               {/* The last line on the page: how to reach a human. Renders nothing at

@@ -53,7 +53,7 @@ export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: s
  * The old uuid is arbitrary, it is
  * different in every freshly seeded database, and it is unexplainable to the
  * person reading the list. The index of this array **is** the rail numbering:
- * `DiverRollCall.tsx` and the departure log both render
+ * `DiverRowTrigger.tsx` and the departure log both render
  * `String(index + 1).padStart(2, "0")` straight off it. "01" deciding itself
  * by coin flip per seed is how six unchanged visual captures came to need a
  * hand review on every pull request (issue #1720, reproduced on #1739), and it

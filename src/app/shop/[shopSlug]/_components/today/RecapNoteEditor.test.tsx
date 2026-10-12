@@ -20,10 +20,12 @@ describe("the settled station's post-trip recap note", () => {
   it("states the note it already holds at rest, so a closed row still answers 'is there one?'", () => {
     render(
       <RecapNoteEditor
-        action={vi.fn()}
-        shoutout="Eagle ray on the second dive!"
-        saved={false}
-        t={t}
+        context={{
+          action: vi.fn(),
+          shoutout: "Eagle ray on the second dive!",
+          saved: false,
+          t,
+        }}
       />,
     );
     // Twice: once as the summary's quiet line, once as the textarea's value.
@@ -34,14 +36,30 @@ describe("the settled station's post-trip recap note", () => {
   });
 
   it("says so plainly when there is no note, rather than showing an empty line", () => {
-    render(<RecapNoteEditor action={vi.fn()} shoutout={null} saved={false} t={t} />);
+    render(
+      <RecapNoteEditor
+        context={{
+          action: vi.fn(),
+          shoutout: null,
+          saved: false,
+          t,
+        }}
+      />,
+    );
     expect(screen.getByText("No note yet. Recaps go out without one.")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Note to divers" })).toHaveValue("");
   });
 
   it("stays closed until it is opened — the departures list is a reconciliation, not a form", () => {
     const { container } = render(
-      <RecapNoteEditor action={vi.fn()} shoutout={null} saved={false} t={t} />,
+      <RecapNoteEditor
+        context={{
+          action: vi.fn(),
+          shoutout: null,
+          saved: false,
+          t,
+        }}
+      />,
     );
     expect(container.querySelector("details")?.open).toBe(false);
   });
@@ -50,7 +68,14 @@ describe("the settled station's post-trip recap note", () => {
     // The same rule the trip About panel's rows carry: a form whose result lands inside
     // a closed disclosure is a form the staffer cannot see worked.
     const { container } = render(
-      <RecapNoteEditor action={vi.fn()} shoutout="Thanks for diving with us." saved t={t} />,
+      <RecapNoteEditor
+        context={{
+          action: vi.fn(),
+          shoutout: "Thanks for diving with us.",
+          saved: true,
+          t,
+        }}
+      />,
     );
     expect(container.querySelector("details")?.open).toBe(true);
     expect(
@@ -61,16 +86,18 @@ describe("the settled station's post-trip recap note", () => {
   it("renders the recap send controls under the post-trip disclosure", () => {
     render(
       <RecapNoteEditor
-        action={vi.fn()}
-        shoutout={null}
-        saved={false}
-        t={t}
-        tripId="trip-123"
-        recapSendAction={vi.fn()}
-        toggleRecapAutoSendPauseAction={vi.fn()}
-        recapAutoSendAt={new Date("2026-08-16T16:00:00.000Z")}
-        recapAutoSendPaused={false}
-        recapNowMs={new Date("2026-08-16T12:00:00.000Z").getTime()}
+        context={{
+          action: vi.fn(),
+          shoutout: null,
+          saved: false,
+          t,
+          tripId: "trip-123",
+          recapSendAction: vi.fn(),
+          toggleRecapAutoSendPauseAction: vi.fn(),
+          recapAutoSendAt: new Date("2026-08-16T16:00:00.000Z"),
+          recapAutoSendPaused: false,
+          recapNowMs: new Date("2026-08-16T12:00:00.000Z").getTime(),
+        }}
       />,
     );
     expect(screen.getByText("Recap")).toBeInTheDocument();
@@ -87,17 +114,19 @@ describe("the settled station's post-trip recap note", () => {
     // one place saying it — the plain paragraph in between is gone.
     render(
       <RecapNoteEditor
-        action={vi.fn()}
-        shoutout={null}
-        saved
-        t={t}
-        tripId="trip-123"
-        recapSendAction={vi.fn()}
-        toggleRecapAutoSendPauseAction={vi.fn()}
-        recapAutoSendAt={new Date("2026-08-16T16:00:00.000Z")}
-        recapAutoSendPaused={false}
-        recapNowMs={new Date("2026-08-16T12:00:00.000Z").getTime()}
-        recapStatusSummary="This recap will go out automatically in about 1 hour."
+        context={{
+          action: vi.fn(),
+          shoutout: null,
+          saved: true,
+          t,
+          tripId: "trip-123",
+          recapSendAction: vi.fn(),
+          toggleRecapAutoSendPauseAction: vi.fn(),
+          recapAutoSendAt: new Date("2026-08-16T16:00:00.000Z"),
+          recapAutoSendPaused: false,
+          recapNowMs: new Date("2026-08-16T12:00:00.000Z").getTime(),
+          recapStatusSummary: "This recap will go out automatically in about 1 hour.",
+        }}
       />,
     );
     expect(
@@ -108,24 +137,26 @@ describe("the settled station's post-trip recap note", () => {
   it("locks the note and photo controls after the recap is sent", () => {
     render(
       <RecapNoteEditor
-        action={vi.fn()}
-        shoutout="Thanks for diving with us."
-        saved={false}
-        t={t}
-        recapSentAt={new Date("2026-08-16T16:00:00.000Z")}
-        recapSentAtLabel="4:00 PM"
-        photos={[
-          {
-            id: "photo-1",
-            imageUrl: "https://img.example/photo.jpg",
-            caption: null,
-            diverName: "Rae R.",
-            bookingId: "booking-1",
-          },
-        ]}
-        deletePhotoAction={vi.fn()}
-        uploadCrewPhotoAction={vi.fn()}
-        deleteCrewPhotoAction={vi.fn()}
+        context={{
+          action: vi.fn(),
+          shoutout: "Thanks for diving with us.",
+          saved: false,
+          t,
+          recapSentAt: new Date("2026-08-16T16:00:00.000Z"),
+          recapSentAtLabel: "4:00 PM",
+          photos: [
+            {
+              id: "photo-1",
+              imageUrl: "https://img.example/photo.jpg",
+              caption: null,
+              diverName: "Rae R.",
+              bookingId: "booking-1",
+            },
+          ],
+          deletePhotoAction: vi.fn(),
+          uploadCrewPhotoAction: vi.fn(),
+          deleteCrewPhotoAction: vi.fn(),
+        }}
       />,
     );
     expect(screen.getByRole("textbox", { name: "Note to divers" })).toBeDisabled();
@@ -139,13 +170,15 @@ describe("the settled station's post-trip recap note", () => {
   it("adds a crew photo with one control, drawn as the gallery's next cell", () => {
     render(
       <RecapNoteEditor
-        action={vi.fn()}
-        shoutout={null}
-        saved={false}
-        t={t}
-        crewPhotos={[{ id: "crew-1", imageUrl: "https://img.example/crew.jpg" }]}
-        uploadCrewPhotoAction={vi.fn()}
-        deleteCrewPhotoAction={vi.fn()}
+        context={{
+          action: vi.fn(),
+          shoutout: null,
+          saved: false,
+          t,
+          crewPhotos: [{ id: "crew-1", imageUrl: "https://img.example/crew.jpg" }],
+          uploadCrewPhotoAction: vi.fn(),
+          deleteCrewPhotoAction: vi.fn(),
+        }}
       />,
     );
     const picker = screen.getByLabelText("Add a photo");
@@ -167,11 +200,13 @@ describe("the recap row at rest", () => {
   function renderClosed() {
     return render(
       <RecapNoteEditor
-        action={vi.fn()}
-        shoutout={null}
-        saved={false}
-        t={t}
-        recapStatusSummary={WAITING}
+        context={{
+          action: vi.fn(),
+          shoutout: null,
+          saved: false,
+          t,
+          recapStatusSummary: WAITING,
+        }}
       />,
     );
   }

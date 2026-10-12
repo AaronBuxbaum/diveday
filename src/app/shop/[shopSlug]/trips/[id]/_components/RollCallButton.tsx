@@ -43,7 +43,7 @@ export type RollCallButtonCopy = {
  * only the in-flight "Boarding…" hint needs the client.
  *
  * `result` lives in `useActionState`, which exposes no external setter to
- * clear it on demand. The checkpoint switcher (manifest/page.tsx's
+ * clear it on demand. The checkpoint switcher (the manifest's `CheckpointSwitch`,
  * `?checkpoint=` links, `scroll={false}`) reuses the same route/key across
  * checkpoints, so if `cacheComponents: true`'s Activity-based navigation is
  * ever re-enabled, a stale refusal from one checkpoint could otherwise

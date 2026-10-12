@@ -330,53 +330,8 @@ const INITIAL_BOOKING_STATE: BookingFormState = {};
 /** Stable per-slot keys for the gear fieldsets — mirrors `BookingPartyFields`'s `diverSlots`. */
 const GEAR_SLOTS = ["gear-one", "gear-two", "gear-three", "gear-four", "gear-five", "gear-six"];
 
-/**
- * **The form, terminal** — the last thing on the page, with the money resolved
- * once directly above the button (ADR 20260827-the-divers-thread, decision 2).
- *
- * Three things this composition is not allowed to drift back into:
- *
- * - **No nested boxes.** Party, gear and the rest are hairline-separated steps
- *   of one sheet. The card is the only edge; every bordered fieldset inside it
- *   read as a second frame around a third.
- * - **One figure.** `MoneyBlock` owns every amount this card states, and it
- *   states exactly one at or above `text-lg`. The card description that quoted
- *   the price under the heading is gone with the party total, the running
- *   checkout total, the fee line and the tax line — the hero says the price
- *   once, this block says the total once, and nothing in between says it again.
- * - **Nothing under the button but fine print.** The free-cancellation sentence
- *   (`TripTerms`) is the only copy below the action. The requirement note is the
- *   form's first line, one sentence with no box around it: a sunken box here
- *   was a box inside a box, and a line above the card floated free of the
- *   party-size control it governs (UX audit #25).
- */
-export function BookSpotSection({
-  trip,
-  tripRef,
-  remaining,
-  errorMessage,
-  payAtBooking,
-  offerCodeField = false,
-  perDiverPriceCents,
-  currency,
-  locale,
-  contactEmail,
-  contactPhone,
-  rentalItems,
-  rentalPricing,
-  passThroughFee,
-  taxEnabled,
-  courseFeeCents,
-  eLearningFeeCents,
-  depositCents,
-  balanceDueAt,
-  timeZone,
-  terms,
-  knownDiver,
-  offerHandoff,
-  requirement = null,
-  otherSeatOffers = [],
-}: {
+/** Everything `BookSpotSection` draws, assembled once by its caller and handed over as one object. */
+export type BookSpotSectionContext = {
   trip: Trip;
   tripRef: TripRef;
   remaining: number;
@@ -466,7 +421,56 @@ export function BookSpotSection({
    * party-size control it governs rather than above the card (UX audit #25).
    */
   requirement?: string | null;
-}) {
+};
+
+/**
+ * **The form, terminal** — the last thing on the page, with the money resolved
+ * once directly above the button (ADR 20260827-the-divers-thread, decision 2).
+ *
+ * Three things this composition is not allowed to drift back into:
+ *
+ * - **No nested boxes.** Party, gear and the rest are hairline-separated steps
+ *   of one sheet. The card is the only edge; every bordered fieldset inside it
+ *   read as a second frame around a third.
+ * - **One figure.** `MoneyBlock` owns every amount this card states, and it
+ *   states exactly one at or above `text-lg`. The card description that quoted
+ *   the price under the heading is gone with the party total, the running
+ *   checkout total, the fee line and the tax line — the hero says the price
+ *   once, this block says the total once, and nothing in between says it again.
+ * - **Nothing under the button but fine print.** The free-cancellation sentence
+ *   (`TripTerms`) is the only copy below the action. The requirement note is the
+ *   form's first line, one sentence with no box around it: a sunken box here
+ *   was a box inside a box, and a line above the card floated free of the
+ *   party-size control it governs (UX audit #25).
+ */
+export function BookSpotSection({ context }: { context: BookSpotSectionContext }) {
+  const {
+    trip,
+    tripRef,
+    remaining,
+    errorMessage,
+    payAtBooking,
+    offerCodeField = false,
+    perDiverPriceCents,
+    currency,
+    locale,
+    contactEmail,
+    contactPhone,
+    rentalItems,
+    rentalPricing,
+    passThroughFee,
+    taxEnabled,
+    courseFeeCents,
+    eLearningFeeCents,
+    depositCents,
+    balanceDueAt,
+    timeZone,
+    terms,
+    knownDiver,
+    offerHandoff,
+    requirement = null,
+    otherSeatOffers = [],
+  } = context;
   const t = useTranslations("booking");
   const tRoot = useTranslations();
   const money = (cents: number) => formatMoneyCents(cents, currency, locale);

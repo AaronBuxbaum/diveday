@@ -584,27 +584,8 @@ export type EveningReading = {
   firstEver: boolean;
 };
 
-export function DaySpine({
-  spine,
-  shopSlug,
-  shopName,
-  locale,
-  timeZone,
-  currency,
-  crewedTripIds,
-  readerPersonId,
-  withheldCount = 0,
-  helpRequestAction,
-  drafts = [],
-  showPaymentsRow = false,
-  firstRun,
-  firstBooking,
-  factOfScale,
-  sessions,
-  evening,
-  highWind,
-  now,
-}: {
+/** Everything `DaySpine` draws, assembled once by its caller and handed over as one object. */
+export type DaySpineContext = {
   spine: DaySpineData;
   shopSlug: string;
   shopName: string;
@@ -664,7 +645,30 @@ export function DaySpine({
    */
   highWind?: Promise<readonly TodayAction[]>;
   now: Date;
-}) {
+};
+
+export function DaySpine({ context }: { context: DaySpineContext }) {
+  const {
+    spine,
+    shopSlug,
+    shopName,
+    locale,
+    timeZone,
+    currency,
+    crewedTripIds,
+    readerPersonId,
+    withheldCount = 0,
+    helpRequestAction,
+    drafts = [],
+    showPaymentsRow = false,
+    firstRun,
+    firstBooking,
+    factOfScale,
+    sessions,
+    evening,
+    highWind,
+    now,
+  } = context;
   const t = staffTranslator(locale);
   const controls = rowControls({ shopSlug, shopName, helpRequestAction, t });
   const crewed = new Set(crewedTripIds ?? []);
