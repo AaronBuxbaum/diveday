@@ -34,7 +34,7 @@ questions — read the schema module.
    unclassified `person_id` is the expensive one: a merge silently leaves rows pointing at a
    removed diver. `pnpm test:changed` selects these too, but after a schema edit it selects
    the *whole* suite (9,391 of 9,391 entries, measured 2026-09-06) — that run belongs to CI.
-6. **Local sanity**: `pnpm db:reset && pnpm e2e` exercises the auto-migrate + auto-seed boot
+6. **Local sanity**: `pnpm db:reset && pnpm e2e e2e/<the spec your change touches>.spec.ts --reporter=line` exercises the auto-migrate + auto-seed boot
    from zero.
 7. **Commit together**: the schema module, `drizzle/**`, seed, tests, docs. One schema change per PR
    where possible.
