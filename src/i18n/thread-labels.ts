@@ -65,35 +65,69 @@ export const THREAD_STEP_NEXT_KEYS: Record<
 };
 
 /**
- * The certification step's sentence by the worst blocker's code. A code not
- * listed (the shop-side waits, or no code at all) falls back to "add your
- * certification", which is the step's plain ask.
+ * The certification step's sentence, for **every** code `BLOCKER_CATEGORY`
+ * files under "certification" — the shop-side waits included, so a diver
+ * whose card is already in is never asked to add it again (the test walks
+ * the category, so a new code without a sentence fails it). Only an item with
+ * no code at all falls back to the step's plain ask.
  */
-type CertificationNextCode = Extract<
+export type CertificationNextCode = Extract<
   ReadinessBlockerCode,
   | "certification_missing"
+  | "certification_pending"
   | "certification_self_declared"
   | "certification_insufficient"
+  | "certification_in_training"
   | "specialty_missing"
+  | "specialty_pending"
+  | "specialty_import_unconfirmed"
   | "nitrox_missing"
+  | "nitrox_pending"
   | "nitrox_self_declared"
 >;
 
 export const CERTIFICATION_NEXT_KEYS: Record<CertificationNextCode, DiverMessageKey> = {
   certification_missing: "thread.next.certification",
+  certification_pending: "thread.next.cardWithShop",
   certification_self_declared: "thread.next.certification",
   certification_insufficient: "thread.next.certificationLevel",
+  // The card is the instructor's to issue; the diver's part is the course.
+  certification_in_training: "thread.next.certificationInTraining",
   specialty_missing: "thread.next.specialty",
+  specialty_pending: "thread.next.cardWithShop",
+  specialty_import_unconfirmed: "thread.next.cardWithShop",
   nitrox_missing: "thread.next.nitrox",
+  nitrox_pending: "thread.next.cardWithShop",
   nitrox_self_declared: "thread.next.nitrox",
 };
 
-/** The sign step's sentence by the worst blocker's code; the rest sign the waiver. */
-type SignNextCode = Extract<ReadinessBlockerCode, "guardian_signature_missing" | "waiver_expired">;
+/**
+ * The sign step's sentence, for every code `BLOCKER_CATEGORY` files under
+ * "waiver": the release, the medical hold that rides on it, and the course
+ * forms that share the step (ADR 20261008-course-forms).
+ */
+export type SignNextCode = Extract<
+  ReadinessBlockerCode,
+  | "waiver_not_sent"
+  | "waiver_pending"
+  | "waiver_expired"
+  | "medical_review"
+  | "medical_not_cleared"
+  | "guardian_signature_missing"
+  | "course_form_unsigned"
+  | "course_form_guardian_missing"
+>;
 
 export const SIGN_NEXT_KEYS: Record<SignNextCode, DiverMessageKey> = {
-  guardian_signature_missing: "thread.next.signGuardian",
+  // No link ever issued; the honest ask is the shop, not an email we can't promise.
+  waiver_not_sent: "thread.next.askForWaiver",
+  waiver_pending: "thread.next.signWaiver",
   waiver_expired: "thread.next.freshWaiver",
+  medical_review: "thread.next.medical",
+  medical_not_cleared: "thread.next.medical",
+  guardian_signature_missing: "thread.next.signGuardian",
+  course_form_unsigned: "thread.next.signForms",
+  course_form_guardian_missing: "thread.next.signFormsGuardian",
 };
 
 export function threadNextKey(step: Pick<ThreadStep, "id" | "item">): DiverMessageKey {

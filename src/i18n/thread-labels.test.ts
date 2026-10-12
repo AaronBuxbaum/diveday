@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { ReadinessBlockerCode } from "@/lib/readiness";
+import { BLOCKER_CATEGORY, type ReadinessBlockerCode } from "@/lib/readiness";
 import type { ChecklistDetailCode, DiverChecklistItem } from "@/lib/readiness-summary";
 import { THREAD_STEP_ORDER, type ThreadStepId } from "@/lib/thread-steps";
 import { diverTranslator } from "./messages";
-import { threadNextKey } from "./thread-labels";
+import { CERTIFICATION_NEXT_KEYS, SIGN_NEXT_KEYS, threadNextKey } from "./thread-labels";
 
 const item = (
   state: DiverChecklistItem["state"],
@@ -108,6 +108,106 @@ describe("threadNextKey", () => {
       expect(next(locale, "certification", "certification_insufficient")).not.toBe(
         next(locale, "certification", "certification_missing"),
       );
+    }
+  });
+
+  const codesIn = (category: string) =>
+    (Object.keys(BLOCKER_CATEGORY) as ReadinessBlockerCode[])
+      .filter((code) => BLOCKER_CATEGORY[code] === category)
+      .sort();
+
+  it("has a sentence for every code the sign and certification steps can carry", () => {
+    expect(Object.keys(SIGN_NEXT_KEYS).sort()).toEqual(codesIn("waiver"));
+    expect(Object.keys(CERTIFICATION_NEXT_KEYS).sort()).toEqual(codesIn("certification"));
+  });
+
+  // One row per code in each step's category; the walk above fails first on a
+  // code added to the union without a row here.
+  const SIGN_SENTENCES: Record<string, readonly [string, string]> = {
+    waiver_not_sent: [
+      "Next: ask the shop for your waiver.",
+      "Siguiente: pide tu exención al centro.",
+    ],
+    waiver_pending: ["Next: sign your waiver.", "Siguiente: firma tu exención."],
+    waiver_expired: [
+      "Next: get a fresh waiver link.",
+      "Siguiente: consigue un enlace nuevo para la exención.",
+    ],
+    medical_review: [
+      "Next: talk to the shop about your medical answers.",
+      "Siguiente: habla con el centro sobre tus respuestas médicas.",
+    ],
+    medical_not_cleared: [
+      "Next: talk to the shop about your medical answers.",
+      "Siguiente: habla con el centro sobre tus respuestas médicas.",
+    ],
+    guardian_signature_missing: [
+      "Next: a parent or guardian signs the waiver.",
+      "Siguiente: tu madre, padre o tutor firma la exención.",
+    ],
+    course_form_unsigned: [
+      "Next: sign your course forms.",
+      "Siguiente: firma los formularios del curso.",
+    ],
+    course_form_guardian_missing: [
+      "Next: a parent or guardian signs your course forms.",
+      "Siguiente: tu madre, padre o tutor firma los formularios del curso.",
+    ],
+  };
+
+  const CARD_WITH_SHOP = [
+    "Next: nothing from you. The shop is checking your card.",
+    "Siguiente: nada de tu parte. El centro está revisando tu tarjeta.",
+  ] as const;
+
+  const CERTIFICATION_SENTENCES: Record<string, readonly [string, string]> = {
+    certification_missing: ["Next: add your certification.", "Siguiente: agrega tu certificación."],
+    certification_pending: CARD_WITH_SHOP,
+    certification_self_declared: [
+      "Next: add your certification.",
+      "Siguiente: agrega tu certificación.",
+    ],
+    certification_insufficient: [
+      "Next: check your certification level with the shop.",
+      "Siguiente: consulta tu nivel de certificación con el centro.",
+    ],
+    certification_in_training: ["Next: finish your course.", "Siguiente: termina tu curso."],
+    specialty_missing: [
+      "Next: add your specialty card.",
+      "Siguiente: agrega tu tarjeta de especialidad.",
+    ],
+    specialty_pending: CARD_WITH_SHOP,
+    specialty_import_unconfirmed: CARD_WITH_SHOP,
+    nitrox_missing: ["Next: add your Nitrox card.", "Siguiente: agrega tu tarjeta de nitrox."],
+    nitrox_pending: CARD_WITH_SHOP,
+    nitrox_self_declared: [
+      "Next: add your Nitrox card.",
+      "Siguiente: agrega tu tarjeta de nitrox.",
+    ],
+  };
+
+  it.each(codesIn("waiver"))("sign step on %s says what the diver does next", (code) => {
+    const row = SIGN_SENTENCES[code];
+    expect(row, `no sentence row for ${code}`).toBeDefined();
+    expect(next("en-US", "sign", code)).toBe(row?.[0]);
+    expect(next("es-ES", "sign", code)).toBe(row?.[1]);
+  });
+
+  it.each(codesIn("certification"))(
+    "certification step on %s says what the diver does next",
+    (code) => {
+      const row = CERTIFICATION_SENTENCES[code];
+      expect(row, `no sentence row for ${code}`).toBeDefined();
+      expect(next("en-US", "certification", code)).toBe(row?.[0]);
+      expect(next("es-ES", "certification", code)).toBe(row?.[1]);
+    },
+  );
+
+  it("never asks for a card the shop already has", () => {
+    for (const code of ["certification_pending", "specialty_pending", "nitrox_pending"] as const) {
+      for (const locale of ["en-US", "es-ES"] as const) {
+        expect(next(locale, "certification", code)).not.toMatch(/\badd\b|agrega/i);
+      }
     }
   });
 
