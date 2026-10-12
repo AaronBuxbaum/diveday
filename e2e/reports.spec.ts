@@ -141,6 +141,8 @@ test.describe("owner", () => {
     const body = await response.text();
     expect(body).toContain("Net revenue");
     expect(body).toContain("Crew assigned");
+    // The page's "Money in, by line", from the same query (issue #2305).
+    expect(body).toContain('"Money in, by line",This month');
   });
 
   test("the month and its numbers lead the page, above the departures ledger", {
