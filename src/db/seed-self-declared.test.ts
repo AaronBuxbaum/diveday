@@ -39,6 +39,7 @@ describe("seeded self-declared joiners", () => {
       noCertificationDeclared: false,
       nitrox: true,
       nitroxSelfDeclared: true,
+      verifiedLevel: null,
     });
     // The stamp, and no card at all: "I hold none" is never a certification row.
     expect(summaries.get(uncertified)).toMatchObject({

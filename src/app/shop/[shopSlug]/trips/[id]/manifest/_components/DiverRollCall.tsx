@@ -781,8 +781,8 @@ export function DiverRollCall({
                       </span>
                       {/* **The capsule's own line, the row's full width**
                         (issue #2008). A Badge never wraps, and the longest
-                        capsule ("Someone unaccounted for", about 210px; es-ES
-                        about 222px) is wider than the name column a 390px
+                        capsule ("Buddy not back aboard", about 172px; es-ES
+                        "Compañero sin regresar a bordo", about 229px) is wider than the name column a 390px
                         phone leaves (186px), so beside the name it spilled
                         over the caret toward the mark. Here it runs from the
                         index's edge to the caret's (about 246px at 390), and

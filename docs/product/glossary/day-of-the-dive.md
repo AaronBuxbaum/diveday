@@ -42,3 +42,13 @@
   evidence: readiness, trip admission, capacity, boarding, and roll-call completion do not read it.
   New note kinds must name their audience and retention before they are added; free text is not a
   license to put medical or boarding decisions into an unaudited gate.
+- **Dock line** — the one sentence under a consented first-timer's "first time with us" on the
+  arrivals roster: the first name to greet and the level they hold ("Say hello to Priya: Open
+  Water."). It names a level only when a card at that level is **verified** (`verifiedLevel` on
+  `listCertificationSummaries`, `src/db/self-declared-cards.ts`); any card nobody has verified,
+  whether the diver typed it or a staffer did, is what the diver *says* ("says Open Water", es
+  "dice Open Water"), and a stated "no card" is "Not certified yet". Either of those wears the
+  warning tone the certification phrase wears everywhere (`welcomeDockLineUnchecked`,
+  `src/i18n/welcome-cue-labels.ts`). **Nitrox is never on it**: a greeting is not a fill
+  clearance, and enriched air is the fill station's question. It informs and gates nothing; the
+  boarding gate is readiness.

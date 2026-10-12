@@ -32,6 +32,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     refundEligible,
     signedToday,
     offersCreateOrder,
+    record,
   } = context;
   const {
     shopSlug,
@@ -288,6 +289,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     arrivalBelow,
     holdOpen,
     settledRow,
+    record,
   };
 }
 
