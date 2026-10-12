@@ -3,12 +3,28 @@ import path from "node:path";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS } from "@/lib/clock";
+import { FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS } from "@/lib/fly-safe";
 import { fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
+import { countSpendableDives, createDivePackage, grantPackageEntitlements } from "./dive-packages";
+import { peopleWhoDivedBefore } from "./executed-dives";
 import { loadShopExportBundleInput, loadShopExportCounts } from "./export";
 import { clearFinishedRehearsals, notificationHeldForRehearsal } from "./rehearsals";
 import { getMonthlyReport } from "./reporting";
-import { bookings, people, personRoles, trips } from "./schema";
+import {
+  bookings,
+  divePackageEntitlements,
+  executedDives,
+  gearItems,
+  gearReservations,
+  orders,
+  people,
+  personRoles,
+  rollCallEvents,
+  shops,
+  trips,
+} from "./schema";
+import { upsertShopStripeAccount } from "./stripe-accounts";
 import { createTrip, pagedUpcomingTripsWithCounts, updateTrip } from "./trips";
 import { tripExistsForShop } from "./trips-record";
 
@@ -132,6 +148,21 @@ const GATES: { file: string; holds: string; times?: number; why: string }[] = [
     why: "only staff seat anyone on a rehearsal",
   },
   {
+    file: "src/db/bookings.ts",
+    holds: "input.trip.isRehearsal",
+    why: "`settlePackageCoverage`: a rehearsal seat spends no prepaid dive",
+  },
+  {
+    file: "src/app/s/[shopSlug]/trips/[id]/calendar/route.ts",
+    holds: "trip.isRehearsal",
+    why: "no calendar file for a departure with no public URL",
+  },
+  {
+    file: "src/app/s/[shopSlug]/trips/[id]/arrival-card/route.ts",
+    holds: "trip.isRehearsal",
+    why: "no arrival card, even under a live seat token",
+  },
+  {
     file: "src/db/waitlist.ts",
     holds: "notRehearsal()",
     why: "no wait list",
@@ -203,7 +234,7 @@ const GATES: { file: string; holds: string; times?: number; why: string }[] = [
   {
     file: "src/app/api/cron/trip-series/route.ts",
     holds: "clearFinishedRehearsals(db)",
-    why: "deleted the night after it comes home",
+    why: "deleted once fly-safe's look-back has run out, unless it carries evidence",
   },
 ];
 
@@ -291,7 +322,9 @@ describe("rehearsal coverage: the static walk", () => {
 const ctx = fileScopedShopContext();
 const NOW = new Date("2031-05-10T12:00:00Z");
 
-async function rehearsalWithASeat() {
+async function rehearsalWithASeat(
+  at: { startsAt?: Date; hours?: number; fullName?: string; email?: string } = {},
+) {
   const { db, shop } = ctx;
   const [owner] = await db
     .select({ id: people.id })
@@ -299,12 +332,12 @@ async function rehearsalWithASeat() {
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
     .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
     .limit(1);
-  const startsAt = new Date(NOW.getTime() + 48 * HOUR_MS);
+  const startsAt = at.startsAt ?? new Date(NOW.getTime() + 48 * HOUR_MS);
   const trip = await createTrip(db, {
     shopId: shop.id,
     title: "Training day drill",
     startsAt,
-    endsAt: new Date(startsAt.getTime() + 4 * HOUR_MS),
+    endsAt: new Date(startsAt.getTime() + (at.hours ?? 4) * HOUR_MS),
     capacity: 6,
     priceCents: 12_000,
     isRehearsal: true,
@@ -315,12 +348,15 @@ async function rehearsalWithASeat() {
       actor: "staff" as const,
       shopId: shop.id,
       tripId: trip.id,
-      fullName: "Test Diver",
-      email: "test-diver@example.com",
+      fullName: at.fullName ?? "Test Diver",
+      email: at.email ?? "test-diver@example.com",
     },
   ]);
   if (!party.ok) throw new Error(`seat refused: ${party.reason}`);
-  return { db, shop, trip, ownerId: owner.id, bookingId: party.bookings[0].bookingId };
+  const bookingId = party.bookings[0].bookingId;
+  const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+  if (!seat) throw new Error("seat missing");
+  return { db, shop, trip, ownerId: owner.id, bookingId, personId: seat.personId };
 }
 
 describe("rehearsal coverage: a real rehearsal", () => {
@@ -389,8 +425,10 @@ describe("rehearsal coverage: a real rehearsal", () => {
     const counts = await loadShopExportCounts(db, shop.id);
     if (!bundle || !counts) throw new Error("export failed");
     const cells = bundle.tables.flatMap((table) => table.rows.flat());
-    expect(cells).not.toContain(trip.id);
-    expect(cells).not.toContain(bookingId);
+    // Substring, not equality: a cell that names the id inside a longer
+    // value (a URL, a list) leaks it as surely.
+    expect(cells.some((cell) => String(cell).includes(trip.id))).toBe(false);
+    expect(cells.some((cell) => String(cell).includes(bookingId))).toBe(false);
     for (const [index, row] of counts.entries()) {
       expect(row.count).toBe(bundle.tables[index].rows.length);
     }
@@ -407,7 +445,7 @@ describe("rehearsal coverage: a real rehearsal", () => {
     expect(report.trips.map((row) => row.tripId)).not.toContain(trip.id);
   });
 
-  it("is deleted, seats and all, once it has come home — and nothing else is", async () => {
+  it("is deleted, seats and all, once its night and fly-safe's look-back have passed", async () => {
     const { db, shop, trip, bookingId } = await rehearsalWithASeat();
     const deletedOthers = async () =>
       (
@@ -417,12 +455,161 @@ describe("rehearsal coverage: a real rehearsal", () => {
           .where(and(eq(trips.shopId, shop.id), eq(trips.isRehearsal, false)))
       ).filter((row) => row.deletedAt !== null).length;
     const before = await deletedOthers();
-    expect(await clearFinishedRehearsals(db, new Date(trip.endsAt.getTime() - 1))).toBe(0);
-    expect(await clearFinishedRehearsals(db, trip.endsAt)).toBe(1);
+    const settled = new Date(
+      trip.endsAt.getTime() + (FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS + 1) * 24 * HOUR_MS,
+    );
+    expect(await clearFinishedRehearsals(db, trip.endsAt)).toBe(0);
+    expect(await clearFinishedRehearsals(db, new Date(settled.getTime() - 1))).toBe(0);
+    expect(await clearFinishedRehearsals(db, settled)).toBe(1);
     const [cleared] = await db.select().from(trips).where(eq(trips.id, trip.id));
     expect(cleared?.deletedAt).not.toBeNull();
     const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
     expect(seat?.status).toBe("cancelled");
     expect(await deletedOthers()).toBe(before);
+  });
+
+  it("leaves Saturday's rehearsal for Sunday's fly-safe when the cron runs between", async () => {
+    const { db, shop } = ctx;
+    await db.update(shops).set({ timezone: "America/New_York" }).where(eq(shops.id, shop.id));
+    // 09:00-13:00 Saturday in New York; Sunday's real boat at 09:00.
+    const saturday = new Date("2031-05-10T13:00:00Z");
+    const sunday = new Date("2031-05-11T13:00:00Z");
+    const { personId } = await rehearsalWithASeat({ startsAt: saturday });
+    await clearFinishedRehearsals(db, new Date("2031-05-11T03:15:00Z"));
+    const dived = await peopleWhoDivedBefore(db, shop.id, [personId], sunday, "America/New_York");
+    expect(dived.has(personId)).toBe(true);
+  });
+
+  it("does not take an east-of-UTC shop's late rehearsal while it may still be out", async () => {
+    const { db, shop } = ctx;
+    await db.update(shops).set({ timezone: "Australia/Brisbane" }).where(eq(shops.id, shop.id));
+    // 08:00-12:00 Brisbane is 22:00Z-02:00Z; the 03:15Z tick is 13:15 local.
+    const { trip } = await rehearsalWithASeat({ startsAt: new Date("2031-05-09T22:00:00Z") });
+    expect(await clearFinishedRehearsals(db, new Date("2031-05-10T03:15:00Z"))).toBe(0);
+    const [live] = await db.select().from(trips).where(eq(trips.id, trip.id));
+    expect(live?.deletedAt).toBeNull();
+  });
+
+  it("never clears a rehearsal with a boarding, an after-dive count, or a logged dive", async () => {
+    const late = (trip: { endsAt: Date }) => new Date(trip.endsAt.getTime() + 30 * 24 * HOUR_MS);
+    const evidence = [
+      { status: "boarded", checkpoint: "departure" },
+      { status: "not_boarded", checkpoint: "after_dive_1" },
+    ] as const;
+    for (const event of evidence) {
+      const { db, shop, trip, bookingId, ownerId } = await rehearsalWithASeat();
+      await db.insert(rollCallEvents).values({
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId,
+        recordedByPersonId: ownerId,
+        occurredAt: NOW,
+        ...event,
+      });
+      await clearFinishedRehearsals(db, late(trip));
+      const [kept] = await db.select().from(trips).where(eq(trips.id, trip.id));
+      expect(kept?.deletedAt, `${event.status} at ${event.checkpoint}`).toBeNull();
+      await db.update(trips).set({ deletedAt: NOW }).where(eq(trips.id, trip.id));
+    }
+    const { db, shop, trip } = await rehearsalWithASeat();
+    await db.insert(executedDives).values({ shopId: shop.id, tripId: trip.id, diveNumber: 1 });
+    expect(await clearFinishedRehearsals(db, late(trip))).toBe(0);
+  });
+
+  it("clears a rehearsal whose only roll call is a dockside not-boarded", async () => {
+    const { db, shop, trip, bookingId, ownerId } = await rehearsalWithASeat();
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId,
+      recordedByPersonId: ownerId,
+      occurredAt: NOW,
+      status: "not_boarded",
+    });
+    expect(
+      await clearFinishedRehearsals(db, new Date(trip.endsAt.getTime() + 30 * 24 * HOUR_MS)),
+    ).toBe(1);
+  });
+
+  it("spends none of a seated diver's prepaid dives", async () => {
+    const { db, shop } = ctx;
+    const [holder] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Pack Holder", email: "pack-holder@example.com" })
+      .returning();
+    if (!holder) throw new Error("person insert failed");
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    const [order] = await db
+      .insert(orders)
+      .values({
+        shopId: shop.id,
+        personId: holder.id,
+        createdByPersonId: holder.id,
+        description: "Five dives",
+        status: "paid",
+        totalCents: 45_000,
+        amountPaidCents: 45_000,
+        currency: "usd",
+        stripeAccountId: "acct_test",
+        stripeCustomerId: "cus_test",
+        stripeInvoiceId: "in_test",
+      })
+      .returning();
+    const pkg = await createDivePackage(db, {
+      shopId: shop.id,
+      name: "Five dives",
+      diveCount: 5,
+      priceCents: 45_000,
+      scope: "all",
+      validUntil: null,
+    });
+    if (!order || !pkg) throw new Error("package fixture failed");
+    await grantPackageEntitlements(db, {
+      shopId: shop.id,
+      packageId: pkg.id,
+      personId: holder.id,
+      orderId: order.id,
+      diveCount: 5,
+      validUntil: null,
+    });
+    const seated = await rehearsalWithASeat({
+      fullName: "Pack Holder",
+      email: "pack-holder@example.com",
+    });
+    expect(seated.personId).toBe(holder.id);
+    expect(await countSpendableDives(db, shop.id, holder.id)).toBe(5);
+    const [entitled] = await db
+      .select({ id: divePackageEntitlements.id })
+      .from(divePackageEntitlements)
+      .where(eq(divePackageEntitlements.bookingId, seated.bookingId));
+    expect(entitled).toBeUndefined();
+  });
+
+  it("gives back the gear reserved for its seats when it is cleared", async () => {
+    const { db, shop, trip, bookingId } = await rehearsalWithASeat();
+    const [unit] = await db
+      .select({ id: gearItems.id })
+      .from(gearItems)
+      .where(eq(gearItems.shopId, shop.id))
+      .limit(1);
+    if (!unit) throw new Error("seed has no gear");
+    const [reservation] = await db
+      .insert(gearReservations)
+      .values({
+        shopId: shop.id,
+        gearItemId: unit.id,
+        bookingId,
+        reservedFrom: "2031-05-12",
+        reservedUntil: "2031-05-12",
+      })
+      .returning();
+    expect(
+      await clearFinishedRehearsals(db, new Date(trip.endsAt.getTime() + 30 * 24 * HOUR_MS)),
+    ).toBe(1);
+    const [after] = await db
+      .select()
+      .from(gearReservations)
+      .where(eq(gearReservations.id, reservation?.id ?? ""));
+    expect(after?.releasedAt).not.toBeNull();
   });
 });

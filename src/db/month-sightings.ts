@@ -27,7 +27,8 @@ import { liveTrip, notRehearsal } from "./trips-live";
  * a shop whose crews rarely log read as a dead reef. Same rule, and the same
  * reasoning, as `siteSightings`.
  *
- * Deleted departures and rehearsals are not evidence of anything.
+ * Deleted departures and rehearsals are not evidence of anything, and a
+ * private charter is the client's day, not the storefront's.
  */
 export async function monthSightings(
   db: DbExecutor,
@@ -52,6 +53,7 @@ export async function monthSightings(
             eq(trips.shopId, shopId),
             liveTrip(),
             notRehearsal(),
+            eq(trips.isPrivate, false),
             sailed,
             inMonth,
           ),
@@ -68,6 +70,7 @@ export async function monthSightings(
             eq(trips.shopId, shopId),
             liveTrip(),
             notRehearsal(),
+            eq(trips.isPrivate, false),
             sailed,
             inMonth,
           ),
@@ -87,6 +90,7 @@ export async function monthSightings(
             eq(trips.shopId, shopId),
             liveTrip(),
             notRehearsal(),
+            eq(trips.isPrivate, false),
             sailed,
             inMonth,
           ),

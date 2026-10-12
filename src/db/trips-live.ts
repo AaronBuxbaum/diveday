@@ -13,11 +13,13 @@ import { trips } from "./schema";
  *
  * **Which reads need it.** Anything that *lists* or *counts* departures, and
  * anything that resolves one by id for a surface a person acts on. Reads that
- * arrive through a booking, a roll-call row or a manifest do not strictly need
- * it — `deleteTrip` refuses a departure that has any of those, so a deleted row
- * has no children of that kind to arrive through — but they carry it anyway
- * where it costs nothing, because "this reader is safe by an invariant two
- * modules away" is exactly the reasoning that stops being true later.
+ * arrive through a booking, a roll-call row or a manifest usually do not need
+ * it, because `deleteTrip` refuses a departure that has any of those. **The
+ * exception is a cleared rehearsal** (`clearFinishedRehearsals`): a deleted
+ * trip that still has its cancelled seats, and may have a dockside roll call.
+ * So a read that arrives through a child carries it anyway, wherever it costs
+ * nothing: "this reader is safe by an invariant two modules away" has already
+ * stopped being true once.
  *
  * **Which reads must not have it.** The series horizon roll's own bookkeeping
  * (`trip_series_skips` is what keeps a deleted occurrence deleted), the export

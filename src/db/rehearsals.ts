@@ -1,18 +1,25 @@
-import { and, eq, inArray, isNull, lte, ne } from "drizzle-orm";
-import { nowDate } from "@/lib/clock";
+import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
+import { DAY_MS, nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { Notification, NotificationDelivery } from "@/lib/notifications";
+import { REHEARSAL_KEPT_DAYS, rehearsalMayClear } from "@/lib/rehearsal-clearing";
 import type { RehearsalIds } from "@/lib/rehearsal-export";
 import { isUuid } from "@/lib/uuid";
+import { releasePackageCoverageForBooking } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
+import { releaseUnclaimedGearReservationsForTrips } from "./gear-reservations";
 import {
   bookingCheckouts,
   bookings,
+  executedDives,
+  rollCallEvents,
+  shops,
   tripInvitations,
   trips,
   tripWaitlistEntries,
   waiverRecords,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 
 /**
  * **Rehearsal departures** (ADR 20261012-rehearsal-departures; glossary
@@ -175,40 +182,99 @@ export async function notificationHeldForRehearsal(
 }
 
 /**
- * **The nightly delete** (ADR 20261012-rehearsal-departures): every rehearsal
- * that has come home is taken off the board, and its seats are cancelled.
+ * **The nightly delete** (ADR 20261012-rehearsal-departures): a rehearsal is
+ * taken off the board, and its seats cancelled, once `rehearsalMayClear`
+ * says so — a full night in the shop's zone since it was due home, and the
+ * fly-safe look-back run out, so no later boat still counts its divers' day.
+ *
+ * **A rehearsal with real evidence is never cleared here** (see
+ * {@link rehearsalsWithEvidence}): a boarding, an after-dive count or a logged
+ * dive is a record of people in the water, and only an owner deletes that.
+ * The trip page says so on its banner.
  *
  * Soft, like every delete (ADR 20260820-every-delete-is-soft): the departure
  * keeps its rows and gains `deleted_at`. The seats are cancelled by a direct
  * status write rather than through the cancellation path, because that path
- * tells the diver, and a rehearsal tells nobody anything. Returns how many
- * departures it cleared.
+ * tells the diver and a rehearsal tells nobody anything; what the path would
+ * give back — prepaid dives and unclaimed gear — is given back here. Returns
+ * how many departures it cleared.
  *
  * Across every shop: it runs from the nightly trip-series cron
  * (`src/app/api/cron/trip-series/`), which has no shop and logs the count.
  */
 export async function clearFinishedRehearsals(db: AppDb, now: Date = nowDate()): Promise<number> {
-  return db.transaction(async (tx) => {
-    const cleared = await tx
-      .update(trips)
-      .set({ deletedAt: now })
-      .where(and(eq(trips.isRehearsal, true), isNull(trips.deletedAt), lte(trips.endsAt, now)))
-      .returning({ id: trips.id, shopId: trips.shopId });
-    if (cleared.length === 0) return 0;
-    await tx
-      .update(bookings)
-      .set({ status: "cancelled" })
-      .where(
-        and(
-          inArray(
-            bookings.tripId,
-            cleared.map((trip) => trip.id),
-          ),
-          ne(bookings.status, "cancelled"),
-        ),
-      );
-    return cleared.length;
-  });
+  const horizon = new Date(now.getTime() - REHEARSAL_KEPT_DAYS * DAY_MS);
+  const candidates = await db
+    .select({ id: trips.id, shopId: trips.shopId, endsAt: trips.endsAt, zone: shops.timezone })
+    .from(trips)
+    .innerJoin(shops, eq(shops.id, trips.shopId))
+    .where(and(eq(trips.isRehearsal, true), liveTrip(), lte(trips.endsAt, horizon)));
+  const due = candidates.filter((trip) => rehearsalMayClear(trip.endsAt, now, trip.zone));
+  const kept = await rehearsalsWithEvidence(
+    db,
+    due.map((trip) => trip.id),
+  );
+  const clearing = due.filter((trip) => !kept.has(trip.id));
+  if (kept.size > 0) log("rehearsal.kept_with_evidence", "info", { count: kept.size });
+  for (const shopId of new Set(clearing.map((trip) => trip.shopId))) {
+    const tripIds = clearing.filter((trip) => trip.shopId === shopId).map((trip) => trip.id);
+    await db.transaction((tx) => clearShopRehearsals(tx, shopId, tripIds, now));
+  }
+  return clearing.length;
+}
+
+async function clearShopRehearsals(
+  tx: DbExecutor,
+  shopId: string,
+  tripIds: string[],
+  now: Date,
+): Promise<void> {
+  await tx
+    .update(trips)
+    .set({ deletedAt: now })
+    .where(and(eq(trips.shopId, shopId), inArray(trips.id, tripIds), isNull(trips.deletedAt)));
+  // Unclaimed units first, while the seats still read as the trip's.
+  await releaseUnclaimedGearReservationsForTrips(tx, { shopId, tripIds });
+  const seats = await tx
+    .update(bookings)
+    .set({ status: "cancelled" })
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        inArray(bookings.tripId, tripIds),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .returning({ id: bookings.id });
+  // A rehearsal seat spends no prepaid dive (`settlePackageCoverage`); this
+  // gives back any one spent before that rule, or by a path that missed it.
+  for (const seat of seats) await releasePackageCoverageForBooking(tx, shopId, seat.id);
+}
+
+/**
+ * The rehearsals among `tripIds` that carry real evidence: a boarding at the
+ * dock, any after-dive count, or a logged dive. A dockside `not_boarded` is
+ * clerical and is not evidence.
+ */
+export async function rehearsalsWithEvidence(
+  db: DbExecutor,
+  tripIds: readonly string[],
+): Promise<Set<string>> {
+  if (tripIds.length === 0) return new Set();
+  const counted = await db
+    .selectDistinct({ tripId: rollCallEvents.tripId })
+    .from(rollCallEvents)
+    .where(
+      and(
+        inArray(rollCallEvents.tripId, [...tripIds]),
+        or(eq(rollCallEvents.status, "boarded"), ne(rollCallEvents.checkpoint, "departure")),
+      ),
+    );
+  const logged = await db
+    .selectDistinct({ tripId: executedDives.tripId })
+    .from(executedDives)
+    .where(and(inArray(executedDives.tripId, [...tripIds]), isNull(executedDives.deletedAt)));
+  return new Set([...counted, ...logged].map((row) => row.tripId));
 }
 
 /**

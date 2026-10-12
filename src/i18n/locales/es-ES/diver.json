@@ -124,7 +124,7 @@
     "boatsHeading": "Las embarcaciones",
     "monthSeen": {
       "heading": "Lo que podrías ver en {month}",
-      "line": "Visto en {seen} de nuestras {trips, plural, one {# salida de {month}} other {# salidas de {month}}}",
+      "line": "Visto en {seen} de las {trips, plural, one {# salida de {month}} other {# salidas de {month}}} que registraron nuestras tripulaciones",
       "honest": "Lo que registraron nuestras tripulaciones en las salidas de {month}, en todas las temporadas registradas. Dice lo que se vio, no lo que verás."
     },
     "boatSeats": "{count, plural, one {# buceador} other {# buceadores}}"

@@ -226,7 +226,7 @@
     "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 502,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 516,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.tsx#DiverRollCall": 755,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx#TripManifestPage": 918,
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx#TripManifestPage": 916,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 1047,
     "src/app/waivers/[token]/page.tsx#WaiverPage": 791,
     "src/components/BookingPartyFields.tsx#BookingPartyFields": 416,
@@ -318,7 +318,7 @@
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 873,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 626,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1134,
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1132,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1183,
     "src/app/waivers/[token]/page.tsx": 916
   },

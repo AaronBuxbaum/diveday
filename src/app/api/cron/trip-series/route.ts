@@ -72,8 +72,8 @@ export async function GET(request: Request) {
   try {
     const db = await getDb();
     const summary = await rollAllSeriesForward(db);
-    // The same nightly pass takes every rehearsal that has come home off the
-    // board (ADR 20261012-rehearsal-departures).
+    // The same nightly pass takes finished rehearsals off the board once
+    // fly-safe no longer reads them (ADR 20261012-rehearsal-departures).
     const rehearsalsCleared = await clearFinishedRehearsals(db);
 
     // A series that cannot be rolled is not a transient blip: it has had every

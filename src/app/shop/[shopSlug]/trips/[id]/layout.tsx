@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 import { uuidParam } from "@/lib/uuid";
 import { RehearsalBanner } from "./_components/RehearsalBanner";
 import { TRIP_SHELL_CLASS } from "./_components/trip-shell";
@@ -46,10 +45,11 @@ export default async function TripLayout({
     // The day's packet wears the same shell, for the same paper gutter.
     <main className={TRIP_SHELL_CLASS}>
       {/* A rehearsal says so above every trip surface (ADR
-          20261012-rehearsal-departures); nothing for an ordinary departure. */}
-      <Suspense fallback={null}>
-        <RehearsalBanner shopSlug={shopSlug} tripId={id} />
-      </Suspense>
+          20261012-rehearsal-departures); nothing for an ordinary departure.
+          Awaited with the layout, never streamed behind a null fallback: a
+          banner that lands after the page has painted is one somebody has
+          already read past. This layout may block (`instant = false`). */}
+      <RehearsalBanner shopSlug={shopSlug} tripId={id} />
       {children}
     </main>
   );

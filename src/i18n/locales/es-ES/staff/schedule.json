@@ -114,7 +114,7 @@
     "isPrivateLabel": "Chárter privado",
     "isPrivateHint": "Fuera del calendario público. Cualquiera que tenga el enlace puede ver la salida y reservar una plaza.",
     "isRehearsalLabel": "Ensayo para un día de formación",
-    "isRehearsalHint": "Solo para practicar: nada se envía, se cobra, se muestra en público ni cuenta en los informes. Se elimina la noche después de volver.",
+    "isRehearsalHint": "Nadie paga, recibe avisos ni cuenta en los informes. Las personas que añadas aquí son buceadores de prueba.",
     "selfGuidedLabel": "Inmersión autoguiada",
     "selfGuidedHint": "Las parejas entran sin guía, así que DiveDay deja de pedirte que asignes uno.",
     "daysLabel": "Cuántos días",

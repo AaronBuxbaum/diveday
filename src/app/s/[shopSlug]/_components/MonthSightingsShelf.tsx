@@ -49,7 +49,8 @@ async function MonthSightingsLoaded({
  *
  * Rendered only when `monthSightings` found enough evidence; a shop without it
  * gets no section at all rather than an empty one. Every line is a frequency
- * over the shop's own departures ("seen on 9 of our 14 March trips"), and the
+ * over the shop's own logged departures ("seen on 9 of the 14 March trips our
+ * crews logged"), and the
  * note under the list says it is a record and not a promise.
  */
 export function MonthSightingsShelf({

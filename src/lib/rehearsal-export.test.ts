@@ -44,7 +44,7 @@ describe("withoutRehearsals", () => {
     const [roll, notes] = withoutRehearsals(
       [
         table(
-          "roll_call_events.csv",
+          "booking_arrival_events.csv",
           ["id", "trip_id", "booking_id"],
           [
             ["a", TRIP, SEAT],
@@ -83,6 +83,38 @@ describe("withoutRehearsals", () => {
     expect(waivers.rows).toEqual([
       ["w", null],
       ["x", REAL_SEAT],
+    ]);
+  });
+
+  it("keeps a rehearsal's roll call and course paperwork, pointing at no departure or seat", () => {
+    const [roll, forms] = withoutRehearsals(
+      [
+        table(
+          "roll_call_events.csv",
+          ["id", "trip_id", "booking_id", "person_name", "status"],
+          [
+            ["r", TRIP, SEAT, "Test Diver", "boarded"],
+            ["s", REAL_TRIP, REAL_SEAT, "Real Diver", "boarded"],
+          ],
+        ),
+        table(
+          "course_form_records.csv",
+          ["id", "booking_id", "trip_id", "signed_name"],
+          [
+            ["f", SEAT, TRIP, "Test Diver"],
+            ["g", REAL_SEAT, REAL_TRIP, "Real Diver"],
+          ],
+        ),
+      ],
+      ids,
+    );
+    expect(roll.rows).toEqual([
+      ["r", null, null, "Test Diver", "boarded"],
+      ["s", REAL_TRIP, REAL_SEAT, "Real Diver", "boarded"],
+    ]);
+    expect(forms.rows).toEqual([
+      ["f", null, null, "Test Diver"],
+      ["g", REAL_SEAT, REAL_TRIP, "Real Diver"],
     ]);
   });
 

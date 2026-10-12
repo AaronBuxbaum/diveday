@@ -240,6 +240,9 @@ export async function listTripSightings(db: DbExecutor, shopId: string, tripId: 
  * look like it turned up every time, because a quiet day writes nothing.
  * Counting scheduled departures would do the reverse and read as a shop with a
  * dead reef, because most crews do not log at all.
+ *
+ * Public, so only the public board counts: no rehearsal, and no private
+ * charter, whose day is the client's rather than the storefront's.
  */
 export async function siteSightings(
   db: DbExecutor,
@@ -266,6 +269,7 @@ export async function siteSightings(
             eq(trips.shopId, shopId),
             liveTrip(),
             notRehearsal(),
+            eq(trips.isPrivate, false),
             gte(trips.startsAt, since),
           ),
         ),
@@ -284,6 +288,7 @@ export async function siteSightings(
             eq(trips.shopId, shopId),
             liveTrip(),
             notRehearsal(),
+            eq(trips.isPrivate, false),
             gte(trips.startsAt, since),
           ),
         ),
@@ -306,6 +311,7 @@ export async function siteSightings(
             eq(trips.shopId, shopId),
             liveTrip(),
             notRehearsal(),
+            eq(trips.isPrivate, false),
             gte(trips.startsAt, since),
           ),
         )

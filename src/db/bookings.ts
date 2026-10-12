@@ -608,7 +608,12 @@ async function settlePackageCoverage(
     personId: string;
     bookingId: string;
     identityUnconfirmed: boolean;
-    trip: { courseId: string | null; plannedDives: number };
+    /**
+     * A rehearsal spends nothing (ADR 20261012-rehearsal-departures): its seats
+     * are test divers, and a regular who helps on training day keeps the dives
+     * they paid for.
+     */
+    trip: { courseId: string | null; plannedDives: number; isRehearsal: boolean };
     /**
      * A package is prepaid **dives**. A snorkeler's or a rider's seat dives
      * nothing, so it spends none of the holder's: a regular who brings their
@@ -617,7 +622,9 @@ async function settlePackageCoverage(
     participantType: ParticipantType;
   },
 ) {
-  if (input.identityUnconfirmed || !isDiver(input.participantType)) return [];
+  if (input.identityUnconfirmed || !isDiver(input.participantType) || input.trip.isRehearsal) {
+    return [];
+  }
   const spent = await consumeEntitlementsForBooking(tx, {
     shopId: input.shopId,
     personId: input.personId,
@@ -1098,7 +1105,7 @@ async function createBookingRecord(
       personId: person.id,
       bookingId: existing.id,
       identityUnconfirmed,
-      trip: { courseId: trip.courseId, plannedDives: trip.plannedDives },
+      trip,
       participantType,
     });
     pending.push({ req, personId: person.id, identityUnconfirmed });
@@ -1184,7 +1191,7 @@ async function createBookingRecord(
     personId: person.id,
     bookingId: created.id,
     identityUnconfirmed,
-    trip: { courseId: trip.courseId, plannedDives: trip.plannedDives },
+    trip,
     participantType,
   });
 
@@ -1475,7 +1482,7 @@ export async function restoreBooking(
       personId: booking.personId,
       bookingId,
       identityUnconfirmed: booking.identityUnconfirmedAt !== null,
-      trip: { courseId: trip.courseId, plannedDives: trip.plannedDives },
+      trip,
       participantType: booking.participantType,
     });
     return "restored";
@@ -2244,6 +2251,7 @@ async function settleConfirmedPackageCoverage(
       participantType: bookings.participantType,
       courseId: trips.courseId,
       plannedDives: trips.plannedDives,
+      isRehearsal: trips.isRehearsal,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -2255,7 +2263,7 @@ async function settleConfirmedPackageCoverage(
     personId: input.personId,
     bookingId: input.bookingId,
     identityUnconfirmed: false,
-    trip: { courseId: row.courseId, plannedDives: row.plannedDives },
+    trip: row,
     participantType: row.participantType,
   });
 }

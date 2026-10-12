@@ -859,6 +859,11 @@ export type TripManifest = {
      * existed. It is not a licence to omit it from a real manifest.
      */
     capacity?: number;
+    /**
+     * A rehearsal (ADR 20261012-rehearsal-departures): the paper manifest says
+     * so beside souls on board. Optional for the same reason as `capacity`.
+     */
+    isRehearsal?: boolean;
   };
   checkpoint: RollCallCheckpoint;
   crew: (ManifestCrewMember & {

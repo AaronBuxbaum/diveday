@@ -11,8 +11,8 @@
  * shop's departures in that month logged the species; the denominator is how
  * many departures in that month left any record at all (a dive log or a
  * sighting), the same honest denominator the trip page's "Seen here this
- * month" uses (`src/lib/sightings.ts`). The words say "seen on 9 of our 14
- * March trips" and never "you will see".
+ * month" uses (`src/lib/sightings.ts`). The words say "seen on 9 of the 14
+ * March trips our crews logged" and never "you will see".
  *
  * **It stays silent without enough evidence.** See {@link MIN_MONTH_TRIPS}.
  */
@@ -23,7 +23,7 @@
  *
  * Eight is one month of an ordinary twice-a-week boat, the smallest schedule a
  * shop with a storefront runs. Below it, one departure moves every fraction by
- * more than twelve points, so "seen on 2 of our 3 March trips" is an anecdote
+ * more than twelve points, so "seen on 2 of the 3 March trips" is an anecdote
  * printed as a rate, and a diver reads a rate as a promise. At eight, a species
  * needs to turn up on at least two of them (see {@link MIN_SPECIES_TRIPS}) to
  * be named, which is a pattern rather than one lucky dive. The threshold is

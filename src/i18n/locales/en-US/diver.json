@@ -124,7 +124,7 @@
     "boatsHeading": "The boats",
     "monthSeen": {
       "heading": "What you might see in {month}",
-      "line": "Seen on {seen} of our {trips, plural, one {# {month} trip} other {# {month} trips}}",
+      "line": "Seen on {seen} of the {trips, plural, one {# {month} trip} other {# {month} trips}} our crews logged",
       "honest": "What our crews logged on {month} trips, in every season on record. It says what was seen, not what you will see."
     },
     "boatSeats": "{count, plural, one {# diver} other {# divers}}"

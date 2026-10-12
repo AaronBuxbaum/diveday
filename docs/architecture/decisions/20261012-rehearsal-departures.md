@@ -11,36 +11,33 @@ remembers it.
 
 ## Decision
 
-- **`trips.is_rehearsal`, set at creation from the schedule builder's add flow, never changed.**
-  One departure only: the builder refuses a cadence and a series refuses one. A copy stays one.
-- **Private by constraint** (`trips_rehearsal_is_private`), so every public read that hides private
-  departures hides it; creation and edits force it.
-- **Unpriced, and every money door refuses it:** checkout, invoices, last-minute deals.
-- **Staff seat it; nobody else.** No public booking, wait list, page, preview card or URL.
-- **Nothing sent.** Every email is held at `sendNotification`, the batch and the retry drain
-  (`notificationHeldForRehearsal`, recorded `failed / rehearsal_departure`, never queued). Paths
-  outside that chokepoint close where they start: reminder and recap scans, waiver and course-forms
-  links (hand-over only), crew news, manifest push.
+- **`trips.is_rehearsal`, set once from the schedule builder's add flow.** Never a series.
+- **Private by constraint** (`trips_rehearsal_is_private`), so every public read hides it.
+- **Unpriced, and every money door refuses it:** checkout, invoices, last-minute deals, and
+  prepaid package dives (a seat spends none).
+- **Staff seat it; nobody else.** No public booking, wait list, page, preview card, calendar file,
+  arrival card or URL.
+- **Nothing sent.** Every email is held at the send chokepoint (`notificationHeldForRehearsal`,
+  recorded `failed / rehearsal_departure`). Other paths close where they start: reminders, recaps,
+  waiver links (hand-over only), crew news, manifest push.
 - **Counted nowhere.** Reports, digest, metrics, calendar feed and public sightings read with
   `notRehearsal()`. The export drops it and its seats from every file by `trip_id` / `booking_id`
-  after building (`withoutRehearsals`); a signed release stays, its seat blanked, because a
-  signature is evidence.
+  after building (`withoutRehearsals`). Evidence stays with its trip and seat ids blanked: signed
+  releases, course forms and the roll call.
 - **Still a dive day** for the fly-safe advisory: a rehearsal in the water is real nitrogen.
-- **Deleted the night after it comes home** by the nightly trip-series cron
-  (`clearFinishedRehearsals`): soft-deleted, seats cancelled without telling anyone.
-- **A warning panel** above Trip, Manifest and Prep.
+- **Deleted by the nightly trip-series cron** (`clearFinishedRehearsals`, rule in
+  `rehearsalMayClear`) once both hold: it was due home before yesterday began in the shop's zone,
+  and the fly-safe look-back plus a day has passed since, so no later boat still counts its divers'
+  day. Soft-deleted; seats cancelled silently; prepaid dives and unclaimed gear given back.
+  **Never one with evidence**: a boarding, any after-dive count, or a logged dive. That one stays
+  live and its banner says why.
+- **A warning panel** on every trip surface; "Rehearsal" printed beside souls on board.
 
 ### Where it is honored
 
-`src/db/rehearsal-coverage.test.ts` is the list, and walks it: every read of `trips` in an outward
-module (reporting, report-lines, season-scale, weekly-digest, founder-metrics, dive-sites,
-trip-sightings, month-sightings, calendar-sync feed) carries `notRehearsal()` or
-`diveday:allow-rehearsal: <why>`; each gate holds its line (schema check, trips-create,
-trips-record, bookings, waitlist, public trip page and card, checkouts, orders,
-integration-events, trip-promos, notifications, waiver-issue, reminders, recap, crew-notices,
-push-subscriptions, export, the cron); every file that can hand a message to a provider is named
-with its reason, so a new sender fails until classified. Then it reads a real rehearsal back through
-those doors.
+`src/db/rehearsal-coverage.test.ts` is the list, and walks it: every `trips` read in an outward
+module carries `notRehearsal()` or `diveday:allow-rehearsal: <why>`; each gate holds its line;
+every sender is classified with its reason; and a real rehearsal is read back through those doors.
 
 ## Alternatives considered
 
@@ -54,5 +51,7 @@ those doors.
 ## Consequences
 
 - Staff practice the whole boat side without a message leaving or a number moving.
-- A message a staffer sends by hand on a rehearsal records as held, not sent.
+- A message a staffer sends from a rehearsal's seat or departure (a resend, a hold, a blow-out)
+  records as held. A reply from the inbox names no departure and goes.
+- A rehearsal with evidence stays on the staff board until someone removes it by hand.
 - Once a shop has held a rehearsal, the export settings page counts by reading the bundle.

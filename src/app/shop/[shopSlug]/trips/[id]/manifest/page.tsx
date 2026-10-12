@@ -659,16 +659,14 @@ export default async function TripManifestPage({
           reading of where the boat is, and a second one above it would be the
           same fact twice. */}
       <TripTabs shopSlug={shopSlug} tripId={tripId} current="boat" copy={tripTabsCopy(t)} />
-      {/* Souls on board, on paper only. The printed manifest is the document
-          that goes ashore with the dock or into a coastguard's hands, and the
-          first question either asks is how many people the boat left with —
-          which the screen answers with a live progress panel that does not
-          print. Deliberately **static facts**: how many divers the trip
-          carries and how many crew it names, never a live status count. A
-          "Boarded 6" printed at 07:12 is a lie by 07:20 and paper cannot
-          correct itself, so nothing here moves after the sheet comes off the
-          printer. */}
+      {/* Souls on board, on paper only: the sheet goes ashore or into a
+          coastguard's hands, and the first question is how many the boat left
+          with, which the screen answers with a live panel that does not print.
+          **Static facts** only (divers carried, crew named), never a live
+          count: "Boarded 6" printed at 07:12 is a lie by 07:20. A rehearsal
+          says so first, so a practice sheet is never read as a real boat. */}
       <p className="mt-4 hidden text-base font-semibold tabular-nums print:block">
+        {manifest.trip.isRehearsal ? `${t("trips.rehearsal.label")} · ` : null}
         {staffSoulsOnBoardLine(t, manifest.summary, manifest.crew.length)}
         {/* **The count is the number read over the radio, and a crew member
             rostered on two overlapping boats makes it wrong** (issue #1779).

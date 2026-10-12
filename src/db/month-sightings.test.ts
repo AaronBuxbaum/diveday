@@ -43,7 +43,7 @@ async function marchDeparture(
   f: Awaited<ReturnType<typeof fixture>>,
   startsAt: Date,
   species: string[],
-  options: { rehearsal?: boolean } = {},
+  options: { rehearsal?: boolean; private?: boolean } = {},
 ) {
   const trip = await createTrip(f.db, {
     shopId: f.shop.id,
@@ -53,6 +53,7 @@ async function marchDeparture(
     capacity: 6,
     diveSiteId: f.site.id,
     isRehearsal: options.rehearsal,
+    isPrivate: options.private,
   });
   if (!trip) throw new Error("trip not created");
   for (const slug of species) {
@@ -107,7 +108,7 @@ describe("monthSightings", () => {
     });
   });
 
-  it("leaves out other months, departures that have not left, and rehearsals", async () => {
+  it("leaves out other months, departures that have not left, rehearsals and charters", async () => {
     const f = await fixture();
     for (let index = 0; index < MIN_MONTH_TRIPS; index += 1) {
       await marchDeparture(f, march(2029, index + 1), ["green-sea-turtle"]);
@@ -119,6 +120,9 @@ describe("monthSightings", () => {
     await marchDeparture(f, march(2031, 29), ["whale-shark"]);
     await marchDeparture(f, march(2030, 2), ["whale-shark"], { rehearsal: true });
     await marchDeparture(f, march(2030, 3), ["whale-shark"], { rehearsal: true });
+    // A private charter is the client's day, not the storefront's.
+    await marchDeparture(f, march(2030, 4), ["whale-shark"], { private: true });
+    await marchDeparture(f, march(2030, 5), ["whale-shark"], { private: true });
     const answer = await monthSightings(f.db, f.shop.id, "America/New_York", NOW);
     expect(answer?.trips).toBe(MIN_MONTH_TRIPS);
     expect(answer?.species.map((tally) => tally.speciesSlug)).toEqual(["green-sea-turtle"]);

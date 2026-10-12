@@ -114,7 +114,7 @@
     "isPrivateLabel": "Private charter",
     "isPrivateHint": "Off the public schedule. Anyone with the link can see the departure and book a seat.",
     "isRehearsalLabel": "Rehearsal for training day",
-    "isRehearsalHint": "Practice only: nothing is sent, charged, shown publicly or counted in reports. Deleted the night after it comes home.",
+    "isRehearsalHint": "Nobody is charged, told, or counted. People you seat here are test divers.",
     "selfGuidedLabel": "Self-guided dive",
     "selfGuidedHint": "Buddy pairs go in without a guide, so DiveDay stops asking you to roster one.",
     "daysLabel": "How many days",

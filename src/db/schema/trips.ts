@@ -527,7 +527,8 @@ export const trips = pgTable(
      * every place that honours it, and `src/db/rehearsal-coverage.test.ts`
      * walks them, so a new read model that forgets it fails a test.
      *
-     * The nightly retention pass deletes a rehearsal once it has come home
+     * The nightly cron deletes a rehearsal once fly-safe's look-back has run
+     * out, and never one with a boarding, an after-dive count or a logged dive
      * (`clearFinishedRehearsals`, src/db/rehearsals.ts).
      */
     isRehearsal: boolean("is_rehearsal").notNull().default(false),

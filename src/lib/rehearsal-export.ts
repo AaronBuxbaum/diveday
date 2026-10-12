@@ -12,20 +12,25 @@ import type { ExportTable } from "./export";
  * - `trips.csv` drops the rehearsal by `id`, `bookings.csv` its seats by `id`;
  * - every other file drops a row whose `trip_id` or `booking_id` names one.
  *
- * **One exception: a signed release.** A test diver may sign a real release at
- * the rehearsal (a staffer seating themselves, say), and that signature is
- * evidence that outlives the practice departure. Its row stays, with the
- * `booking_id` blanked so nothing in the bundle points at a seat that is not
- * in it — the same shape as a release issued from a diver's record, which
- * has no seat.
+ * **The exception is evidence**: a signed release (a staffer seating
+ * themselves may sign a real one), a course form, and the roll call. A
+ * rehearsal where people were counted onto the boat or out of the water is a
+ * record of people in the water, and it outlives the practice. Those rows stay,
+ * with the `trip_id` and `booking_id` blanked so nothing in the bundle points
+ * at a departure or seat that is not in it; the names and times stay, so the
+ * row still says who and when.
  */
 export type RehearsalIds = {
   tripIds: ReadonlySet<string>;
   bookingIds: ReadonlySet<string>;
 };
 
-/** Files whose rows outlive the rehearsal: kept, with the seat reference blanked. */
-const KEPT_WITH_SEAT_BLANKED = new Set(["waiver_records.csv"]);
+/** Files whose rows outlive the rehearsal: kept, with its references blanked. */
+const KEPT_AS_EVIDENCE = new Set([
+  "waiver_records.csv",
+  "course_form_records.csv",
+  "roll_call_events.csv",
+]);
 
 export function withoutRehearsals(tables: ExportTable[], ids: RehearsalIds): ExportTable[] {
   if (ids.tripIds.size === 0 && ids.bookingIds.size === 0) return tables;
@@ -42,14 +47,13 @@ export function withoutRehearsals(tables: ExportTable[], ids: RehearsalIds): Exp
     const names = (column: number, set: ReadonlySet<string>, row: unknown[]) =>
       column >= 0 && typeof row[column] === "string" && set.has(row[column] as string);
 
-    if (KEPT_WITH_SEAT_BLANKED.has(table.file)) {
+    if (KEPT_AS_EVIDENCE.has(table.file)) {
+      const blank = (row: unknown[], index: number) =>
+        (index === bookingColumn && names(bookingColumn, ids.bookingIds, row)) ||
+        (index === tripColumn && names(tripColumn, ids.tripIds, row));
       return {
         ...table,
-        rows: table.rows.map((row) =>
-          names(bookingColumn, ids.bookingIds, row)
-            ? row.map((cell, index) => (index === bookingColumn ? null : cell))
-            : row,
-        ),
+        rows: table.rows.map((row) => row.map((cell, index) => (blank(row, index) ? null : cell))),
       };
     }
     return {
