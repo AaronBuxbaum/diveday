@@ -15,6 +15,7 @@ import {
   orders,
   paymentOperationIntents,
   people,
+  stripeRefundFailures,
   trips,
 } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
@@ -237,6 +238,66 @@ describe("the paid-after-close queue", () => {
     expect(ariaLabelsIn(await renderOrders("divemaster", paidAfterCheckoutClosed))).not.toContain(
       PAID_AFTER_CLOSE,
     );
+  });
+});
+
+/** A refund Stripe accepted and later reported failed (issue #2291). */
+async function aRefundFailed(db: AppDb, session: DiveDaySession) {
+  const [order] = await db
+    .insert(orders)
+    .values({
+      shopId: session.user.shopId,
+      personId: session.user.personId,
+      createdByPersonId: session.user.personId,
+      status: "paid",
+      currency: "usd",
+      totalCents: 4_200,
+      amountPaidCents: 4_200,
+      stripeAccountId: "acct_bounced",
+      stripeCustomerId: "cus_bounced",
+      stripeInvoiceId: "in_bounced",
+    })
+    .returning({ id: orders.id, refundedCents: orders.refundedCents, currency: orders.currency });
+  if (!order) throw new Error("order insert returned no row");
+  await db.insert(stripeRefundFailures).values({
+    shopId: session.user.shopId,
+    stripeAccountId: "acct_bounced",
+    stripeRefundId: "re_bounced",
+    orderId: order.id,
+    amountCents: 4_200,
+    currency: order.currency,
+    refundStatus: "failed",
+    failureReason: "expired_or_canceled_card",
+    owedUntilRefundedCents: order.refundedCents + 4_200,
+    failedAt: nowDate(),
+  });
+  return order.id;
+}
+
+const FAILED_REFUNDS = "Refunds that failed";
+
+describe("the failed-refunds queue", () => {
+  it("renders nothing when no refund failed", async () => {
+    expect(ariaLabelsIn(await renderOrders("owner"))).not.toContain(FAILED_REFUNDS);
+  });
+
+  it("shows an owner the bounced refund and the order it belongs to", async () => {
+    let orderId = "";
+    const element = await renderOrders("owner", async (db, session) => {
+      orderId = await aRefundFailed(db, session);
+    });
+    expect(ariaLabelsIn(element)).toContain(FAILED_REFUNDS);
+    expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/orders/${orderId}`);
+  });
+
+  it("hides it from a divemaster", async () => {
+    expect(
+      ariaLabelsIn(
+        await renderOrders("divemaster", async (db, session) => {
+          await aRefundFailed(db, session);
+        }),
+      ),
+    ).not.toContain(FAILED_REFUNDS);
   });
 });
 

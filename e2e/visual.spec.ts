@@ -6587,6 +6587,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("region", { name: "Payments that need a check" }).waitFor();
         await page.getByRole("region", { name: "Refunds you still owe" }).waitFor();
         await page.getByRole("region", { name: "Paid after the checkout closed" }).waitFor();
+        await page.getByRole("region", { name: "Refunds that failed" }).waitFor();
         await capture(page, "orders-unconfirmed-and-owed", scheme);
       });
 

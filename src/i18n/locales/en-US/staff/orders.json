@@ -204,6 +204,12 @@
       "refund": "Refund",
       "refunding": "Refunding…",
       "openTrip": "Open trip"
+    },
+    "failedRefunds": {
+      "sectionLabel": "Refunds that failed",
+      "heading": "{count, plural, one {# refund} other {# refunds}} didn’t reach the diver. The money is back in your Stripe balance. Refund them again.",
+      "openOrder": "Open order",
+      "openTrip": "Open trip"
     }
   }
 }

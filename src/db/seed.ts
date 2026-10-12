@@ -88,6 +88,7 @@ import {
   staffCredentials,
   staffReplies,
   staffShifts,
+  stripeRefundFailures,
   tips,
   tripAssignments,
   tripBlowoutDivers,
@@ -1311,6 +1312,8 @@ export async function resetDemoSchedule(
   // A card dispute references the order or checkout it is about (ADR
   // 20261009-stripe-reversals-reach-diveday), so it goes before both.
   await db.delete(paymentDisputes).where(eq(paymentDisputes.shopId, shopId));
+  // A failed refund names its order or checkout and seat too (issue #2291).
+  await db.delete(stripeRefundFailures).where(eq(stripeRefundFailures.shopId, shopId));
   // A redemption points at the checkout that spent the code, so it goes first
   // (docs ADR 20260729-shop-promo-codes). The codes themselves are shop config
   // and survive a schedule reset.

@@ -15,6 +15,7 @@ import {
   recordOrderPaymentIntent,
 } from "@/db/orders";
 import { recordStripeDispute } from "@/db/payment-disputes";
+import { recordStripeRefundFailure } from "@/db/refund-failures";
 import { recordStripeChargeRefund } from "@/db/refunds";
 import {
   disconnectShopStripeAccount,
@@ -97,6 +98,22 @@ function idOf(ref: string | { id: string } | null | undefined): string | null {
 const chargeObjectSchema = z.object({
   id: z.string().min(1),
   amount_refunded: z.number().int().nonnegative(),
+  payment_intent: z
+    .union([z.string().min(1), z.object({ id: z.string().min(1) })])
+    .nullable()
+    .optional(),
+});
+
+/**
+ * The Refund a `charge.refund.updated` event carries. Only a refund whose
+ * status became `failed` or `canceled` changes anything here (issue #2291).
+ */
+const refundObjectSchema = z.object({
+  id: z.string().min(1),
+  amount: z.number().int().nonnegative(),
+  currency: z.string().min(1),
+  status: z.string().nullable().optional(),
+  failure_reason: z.string().nullable().optional(),
   payment_intent: z
     .union([z.string().min(1), z.object({ id: z.string().min(1) })])
     .nullable()
@@ -602,6 +619,40 @@ export async function POST(request: Request) {
         }
         break;
       }
+      case "charge.refund.updated": {
+        // A refund Stripe accepted can still fail later — the card closed, the
+        // bank returned it (issue #2291). The money is back in the shop's
+        // balance, so the refund recorded here is reversed and the diver shows
+        // as owed on the Orders index. Any other status changes nothing.
+        const refund = refundObjectSchema.safeParse(event.data.object);
+        const paymentIntentId = refund.success ? idOf(refund.data.payment_intent) : null;
+        if (!refund.success) {
+          logOutcome("malformed_payload");
+        } else if (!event.account) {
+          logOutcome("missing_account");
+        } else if (!paymentIntentId) {
+          logOutcome("refund_target_not_found");
+        } else {
+          const outcome = await recordStripeRefundFailure(
+            db,
+            {
+              stripeAccountId: event.account,
+              paymentIntentId,
+              refund: {
+                id: refund.data.id,
+                amountCents: refund.data.amount,
+                currency: refund.data.currency,
+                status: refund.data.status ?? "",
+                failureReason: refund.data.failure_reason ?? null,
+              },
+              occurredAt,
+            },
+            sourceLookup,
+          );
+          logOutcome(`refund_failure_${outcome.status}`);
+        }
+        break;
+      }
       case "charge.dispute.created":
       case "charge.dispute.updated":
       case "charge.dispute.closed": {
@@ -663,6 +714,8 @@ export async function POST(request: Request) {
     // `markTipPaidBySessionId` early-returns once paid, both
     // `*ExpiredBySessionId` and `markCheckoutPaymentFailedBySessionId` only
     // touch a `pending` row,
+    // `recordStripeRefundFailure` writes one row per Stripe refund and
+    // reverses only alongside it,
     // `setShopStripeAccountStatus` is gated by `hasNewerAccountUpdate`, and
     // `disconnectShopStripeAccount` neither moves `disconnectedAt` on a row
     // that is already disconnected nor touches one reconnected since this

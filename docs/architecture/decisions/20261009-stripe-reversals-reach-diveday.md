@@ -63,6 +63,11 @@ the `order.refunded` the shop's books needed. A dispute was invisible until the 
 - The Connect webhook must list the four new events; `config/env-registry.mjs` says so.
 - A refund that later **fails** at the bank (`charge.refund.updated`) is not handled: the books
   keep it. A lost dispute is not written onto the order either. Both are follow-ups if they occur.
+  *Amended 2026-10-12 (issue #2291):* a failed or canceled refund is now handled. The endpoint
+  also listens to `charge.refund.updated`; one `stripe_refund_failures` row per Stripe refund
+  reverses the recorded refund on the order or checkout (and on a seat DiveDay refunded itself),
+  and the diver shows as owed on the Orders index until a new refund brings `refunded_cents`
+  back. Nothing is re-issued automatically, and the accounting integrations are not told.
 - A party checkout's dashboard refund is counted on the checkout but on no seat, so Reports still
   shows those seats in full until staff mark the right one; it waits on the stuck-operations
   queue, and automatic refunds of that checkout's seats wait with it.

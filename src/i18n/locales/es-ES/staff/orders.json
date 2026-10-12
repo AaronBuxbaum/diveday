@@ -204,6 +204,12 @@
       "refund": "Reembolsar",
       "refunding": "Reembolsando…",
       "openTrip": "Abrir salida"
+    },
+    "failedRefunds": {
+      "sectionLabel": "Reembolsos que fallaron",
+      "heading": "{count, plural, one {# reembolso no llegó} other {# reembolsos no llegaron}} al buceador. El dinero volvió a tu saldo de Stripe. Vuelve a reembolsarlos.",
+      "openOrder": "Abrir pedido",
+      "openTrip": "Abrir salida"
     }
   }
 }

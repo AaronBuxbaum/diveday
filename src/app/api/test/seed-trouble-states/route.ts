@@ -25,12 +25,14 @@ import {
   gearServiceEvents,
   mediaDeletionAttempts,
   nitroxCertifications,
+  orders,
   paymentOperationIntents,
   people,
   personRoles,
   processorErasureObligations,
   rentalFitProfiles,
   specialtyCertifications,
+  stripeRefundFailures,
   tripAssignments,
   tripReviews,
   trips,
@@ -205,6 +207,32 @@ export async function POST(request: Request) {
         .insert(bookingCheckoutBookings)
         .values({ shopId: shop.id, checkoutId: lateCheckout.id, bookingId: lateSeat.id });
     }
+  }
+
+  // 2c. A refund Stripe accepted and later reported failed (issue #2291): the
+  //     diver is owed again, on the Orders index.
+  const [bouncedOrder] = await db
+    .select({ id: orders.id, refundedCents: orders.refundedCents, currency: orders.currency })
+    .from(orders)
+    .where(eq(orders.shopId, shop.id))
+    .orderBy(orders.createdAt)
+    .limit(1);
+  if (bouncedOrder) {
+    await db
+      .insert(stripeRefundFailures)
+      .values({
+        shopId: shop.id,
+        stripeAccountId: "acct_e2e_bounced",
+        stripeRefundId: "re_e2e_bounced",
+        orderId: bouncedOrder.id,
+        amountCents: 4_200,
+        currency: bouncedOrder.currency,
+        refundStatus: "failed",
+        failureReason: "expired_or_canceled_card",
+        owedUntilRefundedCents: bouncedOrder.refundedCents + 4_200,
+        failedAt: now,
+      })
+      .onConflictDoNothing();
   }
 
   // 3. A photo delete the provider refused, and

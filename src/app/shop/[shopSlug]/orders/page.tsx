@@ -16,6 +16,7 @@ import { listImportedPaymentHistory } from "@/db/imported-payment-history";
 import { ORDER_DEFAULT_RANGE_DAYS, pagedOrdersByDay } from "@/db/orders";
 import { listStuckPaymentOperations } from "@/db/payment-operations";
 import { getShopPersonName } from "@/db/people";
+import { listFailedRefunds } from "@/db/refund-failures";
 import { listOwedShopCancellationRefunds } from "@/db/refunds";
 import { orderStatus } from "@/db/schema";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -276,6 +277,9 @@ export default async function OrdersIndexPage({
   // Money Stripe captured on a checkout DiveDay had already closed (issue
   // #2335): no seat was marked paid from it, so it is owed back. Same gate.
   const paidAfterClose = canReconcilePayments ? await listPaidAfterCloseCheckouts(db, shop.id) : [];
+  // Refunds Stripe accepted and then reported failed (issue #2291): the money
+  // is back in the shop's balance and the diver is owed it again. Same gate.
+  const failedRefunds = canReconcilePayments ? await listFailedRefunds(db, shop.id) : [];
 
   const statusFilter = orderStatus.enumValues.includes(
     status as (typeof orderStatus.enumValues)[number],
@@ -667,6 +671,55 @@ export default async function OrdersIndexPage({
                       {t("orders.index.paidAfterClose.refund")}
                     </SubmitButton>
                   </form>
+                </li>
+              ))}
+            </ul>
+          </ShopNotice>
+        </section>
+      ) : null}
+
+      {failedRefunds.length > 0 ? (
+        <section aria-label={t("orders.index.failedRefunds.sectionLabel")} className="mb-6">
+          <ShopNotice tone="warning" role="status">
+            <p className="font-medium">
+              {t("orders.index.failedRefunds.heading", { count: failedRefunds.length })}
+            </p>
+            <ul className={NOTICE_ROWS}>
+              {failedRefunds.map((owed) => (
+                <li key={owed.id}>
+                  <span className="font-medium">{owed.diverNames.join(", ")}</span>
+                  {owed.tripTitle ? (
+                    <>
+                      {FACT_SEPARATOR}
+                      {owed.tripTitle}
+                    </>
+                  ) : null}
+                  <span className="text-muted">
+                    {FACT_SEPARATOR}
+                    {joinFacts([
+                      formatMoneyCents(owed.amountCents, owed.currency, locale),
+                      formatShortDate(owed.failedAt, locale, shop.timezone),
+                    ])}
+                  </span>{" "}
+                  {owed.orderId ? (
+                    <span className={OPEN_TRIP_LINE}>
+                      <Link
+                        href={`/shop/${shopSlug}/orders/${owed.orderId}`}
+                        className={OPEN_TRIP_LINK}
+                      >
+                        {t("orders.index.failedRefunds.openOrder")}
+                      </Link>
+                    </span>
+                  ) : owed.tripId ? (
+                    <span className={OPEN_TRIP_LINE}>
+                      <Link
+                        href={`/shop/${shopSlug}/trips/${owed.tripId}`}
+                        className={OPEN_TRIP_LINK}
+                      >
+                        {t("orders.index.failedRefunds.openTrip")}
+                      </Link>
+                    </span>
+                  ) : null}
                 </li>
               ))}
             </ul>
