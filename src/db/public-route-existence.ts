@@ -195,13 +195,17 @@ const rememberedLookups = new TtlLru<PublicRouteLookup>(
  * instance answering a remembered URL never touches the pool at all.
  *
  * **What it is allowed to get wrong, and for how long.** Only a plain yes —
- * `exists`, and not a hidden course — is remembered, so:
+ * `exists`, for a shape that is not a course — is remembered, so:
  *
  * - A shop, departure, course or site created (or a course published) a
  *   moment ago is visible at once. A refusal is never remembered, and neither
  *   is a hidden course, so nothing new waits on a TTL.
- * - One deleted (or a course taken off the public site) may still pass the
- *   edge for up to the TTL on an instance that saw it live. That is the same
+ * - **A course is never remembered at all.** Hiding one is a refusal this
+ *   layer applies rather than reports (issue #1735), and the editor's own page
+ *   links to the public course, so the edge had always just seen it live: a
+ *   remembered yes served the freshly hidden draft 200 for a minute.
+ * - A shop, departure or site deleted may still pass the edge for up to the
+ *   TTL on an instance that saw it live. That is the same
  *   answer the edge gave a minute earlier, and it is not the only gate: the
  *   page's own reader runs its own `notFound()` and its own `isActive` and
  *   staff checks on every render, so the lingering yes buys a dead link the
@@ -218,7 +222,9 @@ export async function rememberedPublicRouteLookup(
   const remembered = rememberedLookups.get(key);
   if (remembered) return remembered;
   const lookup = await publicRouteLookup(await open(), shape);
-  if (lookup.exists && !lookup.hidden) rememberedLookups.set(key, lookup);
+  if (lookup.exists && !lookup.hidden && shape.kind !== "course") {
+    rememberedLookups.set(key, lookup);
+  }
   return lookup;
 }
 
