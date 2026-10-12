@@ -11,7 +11,6 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { ChoiceRow, controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
@@ -24,22 +23,25 @@ import {
   staleWaiverRecordForToken,
 } from "@/db/waivers";
 import { fill, pluralForm } from "@/i18n/fill";
-import { diverGuardianRelationshipOptions } from "@/i18n/guardian-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
-import { telHref } from "@/lib/contact-links";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { medicalProgress, medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { completeWaiverAction, saveWaiverDraftAction } from "./actions";
+import { EmergencyContactSection } from "./EmergencyContactSection";
+import { GuardianCard } from "./GuardianCard";
 import { MedicalQuestionnaireFields } from "./MedicalQuestionnaireFields";
+import { MedicalReviewContact } from "./MedicalReviewContact";
 import { QuestionnaireProgress } from "./QuestionnaireProgress";
+import { SectionHeading } from "./SectionHeading";
 import { ExpiredLink, HeldWaiverCard } from "./WaiverDoorCards";
+import { WaiverHelpLine } from "./WaiverHelpLine";
 import { WaiverPacing } from "./WaiverPacing";
 import {
   WAIVER_RAIL_TOTAL,
@@ -92,28 +94,6 @@ function railDoneLabel(t: DiverTranslator, locale: string, done: number): string
     ),
     { done, total: WAIVER_RAIL_TOTAL },
   );
-}
-
-/**
- * What makes "do this" read differently from "read this": the release above the
- * form is an unboxed document with no heading at all, and each thing the diver
- * acts on — health check, emergency contact, signature — announces itself with
- * one. The published questionnaire title passes through unreworded.
- *
- * **These headings carry no numbers, and the page has exactly one scale of
- * progress.** They used to be numbered 1-2-3, which was fine while it was the
- * page's only enumeration; the step rail's arrival made it the second, and the
- * two disagreed — the rail counts Release · Medical · Sign (ADR
- * 20260827-the-divers-thread, decision 5) and the numbering counted the medical
- * form, the emergency contact and the signature. So a diver read "2 of 3 done"
- * at the top of the same viewport as "step 2 of 3" in the body, over two
- * different memberships, and the step the two quietly disagreed about — the
- * emergency contact — is the one worth not losing (glossary: a name *and* a
- * reachable number, "on file" only when both are there). The rail is the scale;
- * these are section headings, and the contact keeps its own.
- */
-function SectionHeading({ children }: { children: React.ReactNode }) {
-  return <h2 className={SECTION_TITLE_CLASS}>{children}</h2>;
 }
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -262,45 +242,7 @@ export default async function WaiverPage({
                   this never promises a timeline the diver's own doctor
                   controls. */}
               <p className="mt-3">{t("waiver.medicalReviewNext")}</p>
-              <p className="mt-3 font-medium text-foreground">
-                {shop.contactEmail && shop.contactPhone
-                  ? t.rich("waiver.medicalContactBoth", {
-                      shop: shopName,
-                      phoneNumber: shop.contactPhone,
-                      emailAddress: shop.contactEmail,
-                      phone: (chunks) => (
-                        <a href={telHref(shop.contactPhone ?? "")} className="hover:underline">
-                          {chunks}
-                        </a>
-                      ),
-                      email: (chunks) => (
-                        <a href={`mailto:${shop.contactEmail}`} className="hover:underline">
-                          {chunks}
-                        </a>
-                      ),
-                    })
-                  : shop.contactPhone
-                    ? t.rich("waiver.medicalContactPhoneOnly", {
-                        shop: shopName,
-                        phoneNumber: shop.contactPhone,
-                        phone: (chunks) => (
-                          <a href={telHref(shop.contactPhone ?? "")} className="hover:underline">
-                            {chunks}
-                          </a>
-                        ),
-                      })
-                    : shop.contactEmail
-                      ? t.rich("waiver.medicalContactEmailOnly", {
-                          shop: shopName,
-                          emailAddress: shop.contactEmail,
-                          email: (chunks) => (
-                            <a href={`mailto:${shop.contactEmail}`} className="hover:underline">
-                              {chunks}
-                            </a>
-                          ),
-                        })
-                      : t("waiver.medicalContactNone", { shop: shopName })}
-              </p>
+              <MedicalReviewContact shop={shop} t={t} />
             </>
           ) : null}
           {readyPath ? (
@@ -631,76 +573,11 @@ export default async function WaiverPage({
             </QuestionnaireProgress>
           </section>
 
-          {/* No card here: the heading, helper line, and the two fields carry
-              the section by themselves (principle 10 — type and space before
-              boxes). The one card left in the form is the signature block. */}
-          <section>
-            <SectionHeading>{t("waiver.emergencyContact")}</SectionHeading>
-            {/* Editable whether or not something is on file. It used to go
-                read-only the moment a contact existed, on the reasoning that a
-                correction was staff work — but this is the one screen a diver
-                fills in the week before a trip, and the person they'd name has
-                often changed since they booked. `saveBookingEmergencyContact`
-                never lets a blank overwrite a stored value, so re-showing the
-                fields can only ever improve what the crew has. */}
-            {emergencyContact?.name && emergencyContact?.phone ? (
-              <p className="mt-2 text-sm text-muted">
-                {/* The number is set whole: it broke after "+1-305-555-" at 390
-                    (K-257). A `nowrap` span, never non-breaking hyphens, so a
-                    number copied off the page still dials; the bundle glues the
-                    dot before it to both sides. */}
-                {t.rich("waiver.emergencyOnFile", {
-                  name: emergencyContact.name,
-                  phone: emergencyContact.phone,
-                  nowrap: (chunks) => <span className="whitespace-nowrap">{chunks}</span>,
-                })}{" "}
-                {t("waiver.emergencyContactChangeHint")}
-              </p>
-            ) : (
-              <p className="mt-2 text-sm text-muted">{t("waiver.emergencyContactDescription")}</p>
-            )}
-            {/* A half-filled pair is refused on the empty box, in the same
-                shape as every other refusal on this page: the words under the
-                control the reader was just sent to, not a banner at the top. */}
-            <FieldGrid columns={2} className="mt-4">
-              <Field
-                label={t("waiver.contactName")}
-                error={
-                  namedFieldError?.anchor === "emergencyContactName"
-                    ? t(namedFieldError.textKey)
-                    : undefined
-                }
-              >
-                <input
-                  id="emergencyContactName"
-                  name="emergencyContactName"
-                  autoComplete="name"
-                  maxLength={120}
-                  defaultValue={emergencyContact?.name ?? ""}
-                  className={controlClass}
-                />
-              </Field>
-              <Field
-                label={t("waiver.contactPhone")}
-                error={
-                  namedFieldError?.anchor === "emergencyContactPhone"
-                    ? t(namedFieldError.textKey)
-                    : undefined
-                }
-              >
-                <input
-                  id="emergencyContactPhone"
-                  name="emergencyContactPhone"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  maxLength={40}
-                  defaultValue={emergencyContact?.phone ?? ""}
-                  className={controlClass}
-                />
-              </Field>
-            </FieldGrid>
-          </section>
+          <EmergencyContactSection
+            emergencyContact={emergencyContact}
+            namedFieldError={namedFieldError}
+            t={t}
+          />
 
           {/* The signature block is the one card in the form — the formal act at
               the end of a paper release gets the same visual weight here. The
@@ -782,135 +659,18 @@ export default async function WaiverPage({
               on the page is still the act, and nobody signs above a section
               they have not read. */}
           {guardianRequired ? (
-            <SectionCard padding="lg">
-              <SectionHeading>{t("waiver.guardianHeading")}</SectionHeading>
-              <p className="mt-2 text-sm text-muted">
-                {t("waiver.guardianIntro", { name: signerOnFile?.fullName ?? "" })}
-              </p>
-              <FieldGrid columns={2} className="mt-4">
-                <Field
-                  label={t("waiver.guardianName")}
-                  error={
-                    namedFieldError?.anchor === "guardianName"
-                      ? t(namedFieldError.textKey)
-                      : undefined
-                  }
-                >
-                  <input
-                    id="guardianName"
-                    name="guardianName"
-                    autoComplete="off"
-                    required
-                    minLength={2}
-                    maxLength={120}
-                    defaultValue={draftGuardian?.name ?? ""}
-                    className={controlClass}
-                  />
-                </Field>
-                <Field
-                  label={t("waiver.guardianEmail")}
-                  // Optional since issue #1453, and the description says what
-                  // giving one buys — an address collected under no stated
-                  // purpose is the wrong end of the promise.
-                  description={t("waiver.guardianEmailDescription")}
-                  error={
-                    namedFieldError?.anchor === "guardianEmail"
-                      ? t(namedFieldError.textKey)
-                      : undefined
-                  }
-                >
-                  <input
-                    id="guardianEmail"
-                    name="guardianEmail"
-                    type="email"
-                    inputMode="email"
-                    autoComplete="off"
-                    maxLength={200}
-                    defaultValue={draftGuardian?.email ?? ""}
-                    className={controlClass}
-                  />
-                </Field>
-              </FieldGrid>
-              <FieldGrid columns={1} className="mt-4">
-                <Field
-                  label={t("waiver.guardianRelationship", {
-                    name: signerOnFile?.fullName ?? "",
-                  })}
-                  error={
-                    namedFieldError?.anchor === "guardianRelationship"
-                      ? t(namedFieldError.textKey)
-                      : undefined
-                  }
-                >
-                  <select
-                    id="guardianRelationship"
-                    name="guardianRelationship"
-                    required
-                    defaultValue={draftGuardian?.relationship ?? ""}
-                    className={controlClass}
-                  >
-                    <option value="" disabled>
-                      {t("waiver.guardianRelationshipChoose")}
-                    </option>
-                    {diverGuardianRelationshipOptions(t).map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </FieldGrid>
-              <ChoiceRow
-                type="checkbox"
-                id="guardianAcknowledged"
-                name="guardianAcknowledged"
-                value="on"
-                required
-                // Kept across a refusal, like the diver's own box above: a
-                // family that hit one refusal should not have to re-read and
-                // re-tick the agreement to try the next answer.
-                defaultChecked={draftGuardian?.acknowledged ?? false}
-                aria-invalid={
-                  namedFieldError?.anchor === "guardianAcknowledged" ? "true" : undefined
-                }
-                aria-describedby={
-                  namedFieldError?.anchor === "guardianAcknowledged"
-                    ? "guardianAcknowledged-error"
-                    : undefined
-                }
-                className="mt-4 text-base"
-              >
-                {t("waiver.guardianAgreementCheckbox")}
-              </ChoiceRow>
-              {namedFieldError?.anchor === "guardianAcknowledged" ? (
-                <FormStatus id="guardianAcknowledged-error" className="mt-2">
-                  {t(namedFieldError.textKey)}
-                </FormStatus>
-              ) : null}
+            <GuardianCard
+              diverName={signerOnFile?.fullName ?? ""}
+              draftGuardian={draftGuardian}
+              namedFieldError={namedFieldError}
+              t={t}
+            >
               {signBlock}
-            </SectionCard>
+            </GuardianCard>
           ) : null}
         </form>
       </WaiverPacing>
-      <p className="mt-8 text-center text-sm text-muted">
-        {shop.contactEmail || shop.contactPhone
-          ? t.rich("common.needHelpContact", {
-              shop: shopName,
-              link: (chunks) => (
-                <a
-                  href={
-                    shop.contactEmail
-                      ? `mailto:${shop.contactEmail}`
-                      : telHref(shop.contactPhone ?? "")
-                  }
-                  className="font-medium text-primary hover:underline"
-                >
-                  {chunks}
-                </a>
-              ),
-            })
-          : t("common.needHelpPlain", { shop: shopName })}
-      </p>
+      <WaiverHelpLine shop={shop} t={t} />
     </ThreadShell>
   );
 }

@@ -27,6 +27,9 @@ import { diverTranslator } from "@/i18n/messages";
 const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
 /** The two signing doors, which moved out of the page into the route's `actions.ts`. */
 const ACTIONS = readFileSync(join(__dirname, "actions.ts"), "utf8");
+/** The emergency contact's section and the guardian's card, which moved beside the page. */
+const CONTACT = readFileSync(join(__dirname, "EmergencyContactSection.tsx"), "utf8");
+const GUARDIAN = readFileSync(join(__dirname, "GuardianCard.tsx"), "utf8");
 
 function positionOf(marker: string): number {
   return SOURCE.indexOf(marker);
@@ -119,13 +122,17 @@ describe("the waiver's pacing", () => {
     // of signing rather than a fourth thing to finish, so the rail is untouched
     // by it; what must never come back is a heading that *numbers itself*.
     expect(SOURCE).not.toMatch(/StepHeading/);
-    expect(countOf("<SectionHeading>")).toBe(4);
+    const headings = [SOURCE, CONTACT, GUARDIAN].map(
+      (file) => file.split("<SectionHeading>").length - 1,
+    );
+    expect(headings.reduce((sum, n) => sum + n, 0)).toBe(4);
     // The rail's own membership, stated where a future heading cannot drift it:
     // three labels, and the guardian is not one of them.
     for (const step of ["waiver.railRelease", "waiver.railMedical", "waiver.railSign"]) {
       expect(countOf(step)).toBe(1);
     }
     expect(SOURCE).not.toMatch(/railGuardian/);
+    expect(GUARDIAN).not.toMatch(/railGuardian|StepHeading/);
   });
 });
 
@@ -252,8 +259,9 @@ describe("the emergency contact's two boxes", () => {
     // renders the sentence under that same control (the rule in
     // docs/design/forms-and-controls.md). Without the ids the refusal would
     // land the diver at the top of the page.
-    expect(SOURCE).toContain('id="emergencyContactName"');
-    expect(SOURCE).toContain('id="emergencyContactPhone"');
+    expect(SOURCE).toContain("<EmergencyContactSection");
+    expect(CONTACT).toContain('id="emergencyContactName"');
+    expect(CONTACT).toContain('id="emergencyContactPhone"');
     // One sentence for both boxes: the fix is the same either way.
     // The field map lives beside the doors that refuse on it (`waiver-fields.ts`).
     const fields = readFileSync(join(__dirname, "waiver-fields.ts"), "utf8");
@@ -273,8 +281,8 @@ describe("the emergency contact's two boxes", () => {
     // this one, so the dot is glued to both sides in the bundle (U+00A0, as
     // `joinFacts` glues a line's last fact): "(sister) · +1-305-555-0231."
     // moves as one, and the name still breaks between its own words.
-    expect(SOURCE).toContain('t.rich("waiver.emergencyOnFile"');
-    expect(SOURCE).toContain(
+    expect(CONTACT).toContain('t.rich("waiver.emergencyOnFile"');
+    expect(CONTACT).toContain(
       'nowrap: (chunks) => <span className="whitespace-nowrap">{chunks}</span>',
     );
     for (const locale of ["en-US", "es-ES"] as const) {

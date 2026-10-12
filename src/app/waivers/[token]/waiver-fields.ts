@@ -49,3 +49,6 @@ export const WAIVER_FIELD_ERROR: Record<
     anchor: "guardianAcknowledged",
   },
 };
+
+/** One refused field's copy and anchor, as the page and its cards receive it. */
+export type WaiverFieldError = (typeof WAIVER_FIELD_ERROR)[WaiverInvalidField];
