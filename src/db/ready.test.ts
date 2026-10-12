@@ -110,6 +110,35 @@ describe("getReadyPageData", () => {
     expect((await getReadyPageData(db, added.bookingId))?.canAddSeat).toBe(false);
   });
 
+  /**
+   * Security review of layer 8, D3: the link is shared by design, so a lead
+   * who has not paid on a page that takes payment cannot fill the boat with
+   * unpaid seats. Paying (or a page that takes no payment) opens the door.
+   */
+  it("offers no seat to add until a lead the page could charge has paid", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    await upsertShopStripeAccount(db, shop.id, "acct_ready_add_seat");
+    await setShopStripeAccountStatus(db, "acct_ready_add_seat", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    const owing = await getReadyPageData(db, bookingId);
+    expect(owing?.canPay).toBe(true);
+    expect(owing?.canAddSeat).toBe(false);
+
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: 12_000,
+      provider: "stripe",
+      providerRef: "pi_ready_add_seat",
+    });
+    expect((await getReadyPageData(db, bookingId))?.canAddSeat).toBe(true);
+  });
+
   it("offers no seat to add on a held seat or a canceled one", async () => {
     const { db, shop, bookingId } = await unpaidBooking();
     await db

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
@@ -7,7 +7,16 @@ import { recordCourseInquiry } from "./course-inquiries";
 import { getCourseBySlug } from "./courses";
 import { listBookableDivers } from "./divers";
 import { loadShopExportBundleInput } from "./export";
-import { people, shops } from "./schema";
+import {
+  bookings,
+  certifications,
+  people,
+  personRoles,
+  shops,
+  tripInvitations,
+  tripRequirements,
+  trips as tripsTable,
+} from "./schema";
 import {
   createDirectTripInvitation,
   createTripRequestInvitations,
@@ -269,5 +278,141 @@ describe("trip invitations", () => {
         createdByPersonId: author.id,
       }),
     ).resolves.toBe("unavailable");
+  });
+  /**
+   * Dive-domain review of layer 8, F1: the offer must name a departure the
+   * diver could actually book from the link, or the notice that it was sent
+   * is a promise the booking form then breaks. Each refusal sends nothing and
+   * leaves no invitation behind.
+   */
+  describe("offers only a departure the diver could book", () => {
+    async function freshDiver(
+      db: Awaited<ReturnType<typeof invitationContext>>["db"],
+      shopId: string,
+    ) {
+      const [person] = await db
+        .insert(people)
+        .values({ shopId, fullName: "Offer Olive", email: "offer.olive@example.com" })
+        .returning({ id: people.id });
+      if (!person) throw new Error("person insert failed");
+      await db.insert(personRoles).values({ personId: person.id, role: "diver" });
+      return person.id;
+    }
+
+    async function expectNothingSent(
+      ctx: Awaited<ReturnType<typeof invitationContext>>,
+      personId: string,
+    ) {
+      await expect(
+        offerDepartureToDiver(ctx.db, {
+          shopId: ctx.shop.id,
+          shopSlug: ctx.shop.slug,
+          tripId: ctx.firstTrip.id,
+          personId,
+          createdByPersonId: ctx.author.id,
+        }),
+      ).resolves.toBe("unavailable");
+      const rows = await ctx.db
+        .select({ id: tripInvitations.id })
+        .from(tripInvitations)
+        .where(
+          and(eq(tripInvitations.tripId, ctx.firstTrip.id), eq(tripInvitations.personId, personId)),
+        );
+      expect(rows).toEqual([]);
+    }
+
+    it("refuses a full departure", async () => {
+      const ctx = await invitationContext();
+      const personId = await freshDiver(ctx.db, ctx.shop.id);
+      const held = await createBooking(ctx.db, {
+        actor: "staff",
+        shopId: ctx.shop.id,
+        tripId: ctx.firstTrip.id,
+        fullName: "Last Seat Lou",
+        email: "last.seat.lou@example.com",
+      });
+      if (!held.ok) throw new Error("booking failed");
+      const roster = await getTripRoster(ctx.db, ctx.shop.id, ctx.firstTrip.id);
+      await ctx.db
+        .update(tripsTable)
+        .set({ capacity: roster.length })
+        .where(eq(tripsTable.id, ctx.firstTrip.id));
+      await expectNothingSent(ctx, personId);
+    });
+
+    it("refuses a departure that has already left", async () => {
+      const ctx = await invitationContext();
+      const personId = await freshDiver(ctx.db, ctx.shop.id);
+      const now = nowDate();
+      await ctx.db
+        .update(tripsTable)
+        .set({
+          // diveday:allow-flat-revision: a fixture moving the clock, not a reschedule.
+          startsAt: new Date(now.getTime() - 10 * 60 * 1000),
+          endsAt: new Date(now.getTime() + 3 * 60 * 60 * 1000),
+        })
+        .where(eq(tripsTable.id, ctx.firstTrip.id));
+      await expectNothingSent(ctx, personId);
+    });
+
+    it("refuses a departure whose requirement the diver does not meet", async () => {
+      const ctx = await invitationContext();
+      const personId = await freshDiver(ctx.db, ctx.shop.id);
+      // An Open Water card on file, so admission judges them (a diver the shop
+      // knows nothing about is admitted blind, H-08) and finds them short.
+      await ctx.db.insert(certifications).values({
+        shopId: ctx.shop.id,
+        personId,
+        agency: "padi",
+        level: "open_water",
+        identifier: "OW-OFFER-1",
+        status: "verified",
+      });
+      await ctx.db
+        .insert(tripRequirements)
+        .values({
+          tripId: ctx.firstTrip.id,
+          shopId: ctx.shop.id,
+          minimumCertificationLevel: "advanced_open_water",
+        })
+        .onConflictDoUpdate({
+          target: tripRequirements.tripId,
+          set: { minimumCertificationLevel: "advanced_open_water" },
+        });
+      await expectNothingSent(ctx, personId);
+    });
+
+    it("refuses a private charter", async () => {
+      const ctx = await invitationContext();
+      const personId = await freshDiver(ctx.db, ctx.shop.id);
+      await ctx.db
+        .update(tripsTable)
+        .set({ isPrivate: true })
+        .where(eq(tripsTable.id, ctx.firstTrip.id));
+      await expectNothingSent(ctx, personId);
+    });
+
+    /**
+     * F2 (the review asked for seat-held statuses here). A `no_show` row on the
+     * offered departure still refuses the offer on purpose: `bookings` is
+     * unique on (trip, person) and the booking form answers `already_booked`
+     * for any row that is not cancelled, so the link would not seat them.
+     */
+    it("refuses a departure the diver already has a booking row on, whatever its status", async () => {
+      const ctx = await invitationContext();
+      const booked = await createBooking(ctx.db, {
+        actor: "staff",
+        shopId: ctx.shop.id,
+        tripId: ctx.firstTrip.id,
+        fullName: "Marked Absent",
+        email: "marked.absent@example.com",
+      });
+      if (!booked.ok) throw new Error("booking failed");
+      await ctx.db
+        .update(bookings)
+        .set({ status: "no_show" })
+        .where(eq(bookings.id, booked.bookingId));
+      await expectNothingSent(ctx, booked.personId);
+    });
   });
 });

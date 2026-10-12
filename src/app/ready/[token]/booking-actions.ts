@@ -211,6 +211,20 @@ export async function addSeatFromReady(token: string, formData: FormData) {
   if (!ctx.data.canAddSeat) redirect(`${base(token)}?error=seat`);
   const parsed = diverNameSchema.safeParse(formData.get("seatName"));
   if (!parsed.success) redirect(`${base(token)}?error=seat-name`);
+  // **Per booking, decided first** (security review of layer 8, D3): the link
+  // is shared by design, so the per-IP bucket above is not the cap on how many
+  // seats one booking can add. Every holder of this link spends from one
+  // bucket, and only once the page has said a seat may be added.
+  if (
+    !(
+      await checkRateLimit(
+        rateLimitKey("ready-add-seat", "booking", ctx.bookingId),
+        RATE_LIMITS.readyAddSeatByBooking,
+      )
+    ).allowed
+  ) {
+    redirect(bounceTarget(token, "rate_limited"));
+  }
   const outcome = await addPartySeat(ctx.db, {
     shopId: ctx.data.shop.id,
     leadBookingId: ctx.bookingId,

@@ -196,7 +196,7 @@ const offerForm = z.object({
 });
 
 /**
- * **"Send them this date"** (UX review 2026-10-11, item 14): the no-show
+ * **"Email them this date"** (UX review 2026-10-11, item 14): the no-show
  * panel's rebooking door, sent to the diver in one tap. A direct invitation to
  * the sister departure (`offerDepartureToDiver`), so the diver books the seat
  * from the link themselves; the counter seats nobody and charges nothing.

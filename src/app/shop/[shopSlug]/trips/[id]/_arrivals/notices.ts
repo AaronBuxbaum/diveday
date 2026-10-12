@@ -86,7 +86,7 @@ export const DESK_NOTICES: DeskNoticeMap = {
   "no-show-course-ratio-full": { tone: "danger", key: "checkIn.notice.noShowCourseRatioFull" },
   "no-show-not-found": { tone: "danger", key: "checkIn.notice.notFound" },
   "no-show-staff-not-found": { tone: "danger", key: "checkIn.notice.staffNotFound" },
-  // "Send them this date" on the no-show panel (UX review 2026-10-11, item 14):
+  // "Email them this date" on the no-show panel (UX review 2026-10-11, item 14):
   // whether the offer left, and when it did not, the reason that sends the
   // staffer to the phone instead.
   "offer-sent": { tone: "success", key: "checkIn.notice.offerSent" },

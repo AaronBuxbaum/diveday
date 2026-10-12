@@ -380,7 +380,12 @@ export async function getReadyPageData(
 
   const canCancelBooking = row.status === "booked" && !hasSailed(trip.startsAt, now);
   const identityHeld = row.identityUnconfirmedAt !== null;
-  const canAddSeat = canCancelBooking && !identityHeld && row.partyLeadBookingId === null;
+  // **A lead the page could charge pays before adding anyone** (security
+  // review of layer 8, D3). The link is shared by design, so without this a
+  // holder could add unpaid seats until the boat read full. Settled, or a
+  // page that takes no payment here (pay at the dock), opens the door.
+  const canAddSeat =
+    canCancelBooking && !identityHeld && row.partyLeadBookingId === null && (settled || !canPay);
 
   return {
     detail,

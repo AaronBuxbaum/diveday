@@ -10,7 +10,7 @@ import {
   salvageOffer,
 } from "@/lib/no-show";
 import { seatRefusal } from "@/lib/participant-types";
-import { similarDepartures } from "@/lib/similar-departures";
+import { type SimilarDeparture, similarDepartures } from "@/lib/similar-departures";
 import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
 import { tripCourseCrewCounts } from "./bookings";
@@ -18,6 +18,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { onTheWaterByRollCall } from "./manifests";
 import { activityEvents, bookings, courses, people, trips } from "./schema";
+import { departureOpenToDiver } from "./trip-invitations";
 import { getTripWaitlist, pagedUpcomingTripsWithCounts } from "./trips";
 import { liveTrip } from "./trips-live";
 import { heldSeatCounts, sellableCapacity } from "./trips-queries";
@@ -387,7 +388,13 @@ export async function undoBookingNoShow(
  */
 export async function noShowSalvage(
   db: AppDb,
-  input: { shopId: string; tripId: string; now?: Date },
+  input: {
+    shopId: string;
+    tripId: string;
+    /** The diver who missed: a day is offered only if they could book it. */
+    personId: string;
+    now?: Date;
+  },
 ): Promise<SalvageOffer> {
   const now = input.now ?? nowDate();
   const waitlist = await getTripWaitlist(db, input.shopId, input.tripId);
@@ -411,17 +418,37 @@ export async function noShowSalvage(
     hasSpace: true,
     publicOnly: true,
   });
-  return salvageOffer({
-    waitlistCount: 0,
-    alternatives: similarDepartures({
-      full: { tripId: trip.id, courseId: trip.courseId, diveSiteId: trip.diveSiteId },
-      candidates: board.trips.map((candidate) => ({
-        id: candidate.id,
-        title: candidate.title,
-        startsAt: candidate.startsAt,
-        courseId: candidate.courseId,
-        diveSiteId: candidate.diveSiteId,
-      })),
-    }),
+  // Every similar day, ranked, then only those this diver could book from the
+  // offer's link (`departureOpenToDiver`: a seat they already hold, a card the
+  // day asks that they lack, a course at its ratio). Dive-domain review of
+  // layer 8, F1: the panel promises the day is theirs to take.
+  const similar = similarDepartures({
+    full: { tripId: trip.id, courseId: trip.courseId, diveSiteId: trip.diveSiteId },
+    candidates: board.trips.map((candidate) => ({
+      id: candidate.id,
+      title: candidate.title,
+      startsAt: candidate.startsAt,
+      courseId: candidate.courseId,
+      diveSiteId: candidate.diveSiteId,
+    })),
+    limit: board.trips.length,
   });
+  const alternatives: SimilarDeparture[] = [];
+  for (const departure of similar) {
+    if (alternatives.length === SALVAGE_DAYS) break;
+    if (
+      await departureOpenToDiver(db, {
+        shopId: input.shopId,
+        tripId: departure.tripId,
+        personId: input.personId,
+        now,
+      })
+    ) {
+      alternatives.push(departure);
+    }
+  }
+  return salvageOffer({ waitlistCount: 0, alternatives });
 }
+
+/** As many days as `similarDepartures` offers by default, for the same reason. */
+const SALVAGE_DAYS = 2;
