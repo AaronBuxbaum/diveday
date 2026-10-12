@@ -525,12 +525,16 @@ export async function getDayCloseout(
  * stays `listRollCallGaps`'s answer alone (an absent gap), which is why this
  * can be a plain read.
  *
- * **Both halves of the count** (issue #2331): the newest diver mark and the
- * newest crew mark per trip, and the later of the two supplies the time *and*
- * the name. Reading diver marks alone named whoever made the last diver mark
- * when a crew member's own back-aboard mark closed the count. A trip with no
- * roll call at all is simply absent from the map, and the station drops the
- * clause rather than guessing at one.
+ * **Both halves of the count, once both are closed** (issue #2331): the
+ * newest diver mark and the newest crew mark per trip, and the later of the two
+ * supplies the time *and* the name. Reading diver marks alone named whoever
+ * made the last diver mark when a crew member's own back-aboard mark closed the
+ * count. But a trip whose crew are not all accounted for (`crewClosed` false)
+ * keeps the diver-only sentence, "8 of 8 back by {time}", and a crew mark is
+ * no part of that claim: the divers were back when the last diver was, so the
+ * diver half alone answers both the time and the name there (dive-domain review
+ * of #2331). A trip with no roll call at all is simply absent from the map,
+ * and the station drops the clause rather than guessing at one.
  *
  * Each half is ordered by the trio every roll-call read in this repo orders by
  * — `occurredAt`, then `createdAt`, then `seq` — because the first two tie
@@ -544,10 +548,14 @@ export async function getDayCloseout(
 export async function listHeadCountCloses(
   db: AppDb,
   shopId: string,
-  tripIds: readonly string[],
+  stations: readonly { tripId: string; crewClosed: boolean }[],
 ): Promise<Map<string, { closedAt: Date; closedBy: string }>> {
   const closes = new Map<string, { closedAt: Date; closedBy: string }>();
-  if (tripIds.length === 0) return closes;
+  if (stations.length === 0) return closes;
+  const tripIds = stations.map((station) => station.tripId);
+  const crewClosedTripIds = stations
+    .filter((station) => station.crewClosed)
+    .map((station) => station.tripId);
   const [diverRows, crewRows] = await Promise.all([
     db
       .select({
@@ -564,26 +572,28 @@ export async function listHeadCountCloses(
         desc(rollCallEvents.createdAt),
         desc(rollCallEvents.seq),
       ),
-    db
-      .select({
-        tripId: rollCallCrewEvents.tripId,
-        occurredAt: rollCallCrewEvents.occurredAt,
-        createdAt: rollCallCrewEvents.createdAt,
-        closedBy: people.fullName,
-      })
-      .from(rollCallCrewEvents)
-      .innerJoin(people, eq(people.id, rollCallCrewEvents.recordedByPersonId))
-      .where(
-        and(
-          eq(rollCallCrewEvents.shopId, shopId),
-          inArray(rollCallCrewEvents.tripId, [...tripIds]),
-        ),
-      )
-      .orderBy(
-        desc(rollCallCrewEvents.occurredAt),
-        desc(rollCallCrewEvents.createdAt),
-        desc(rollCallCrewEvents.seq),
-      ),
+    crewClosedTripIds.length === 0
+      ? []
+      : db
+          .select({
+            tripId: rollCallCrewEvents.tripId,
+            occurredAt: rollCallCrewEvents.occurredAt,
+            createdAt: rollCallCrewEvents.createdAt,
+            closedBy: people.fullName,
+          })
+          .from(rollCallCrewEvents)
+          .innerJoin(people, eq(people.id, rollCallCrewEvents.recordedByPersonId))
+          .where(
+            and(
+              eq(rollCallCrewEvents.shopId, shopId),
+              inArray(rollCallCrewEvents.tripId, crewClosedTripIds),
+            ),
+          )
+          .orderBy(
+            desc(rollCallCrewEvents.occurredAt),
+            desc(rollCallCrewEvents.createdAt),
+            desc(rollCallCrewEvents.seq),
+          ),
   ]);
   type Mark = (typeof diverRows)[number];
   const newestPerTrip = (rows: readonly Mark[]) => {
