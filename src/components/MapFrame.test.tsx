@@ -54,16 +54,80 @@ describe("MapFrame", () => {
 
   it("stays invisible when the provider cannot be reached", () => {
     const iframe = frame();
+    // Asserted, not optional-chained: a probe with no error handler would
+    // pass this test without ever failing.
+    expect(probes[0]?.onerror).toBeTypeOf("function");
     act(() => probes[0]?.onerror?.());
     expect(iframe).toHaveClass("invisible");
     // The box is still there, so the route's percentages still land.
     expect(iframe).toHaveClass("h-full");
   });
 
-  it("does not ask at all with the radio off", () => {
-    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+  it("does not ask with the radio off, and asks once the signal comes back", () => {
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     const iframe = frame();
     expect(probes).toHaveLength(0);
     expect(iframe).toHaveClass("invisible");
+    onLine.mockReturnValue(true);
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+    });
+    expect(probes).toHaveLength(1);
+    act(() => probes[0]?.onload?.());
+    expect(iframe).not.toHaveClass("invisible");
+    // Once is enough: a second `online` does not ask again.
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+    });
+    expect(probes).toHaveLength(1);
+  });
+
+  it("stops listening for the signal once it is gone from the page", () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    const remove = vi.spyOn(window, "removeEventListener");
+    const { unmount } = render(
+      <MapFrame
+        title="Terrain map"
+        src="https://maps.google.com/x"
+        className="h-full"
+        interactive={false}
+      />,
+    );
+    unmount();
+    expect(remove).toHaveBeenCalledWith("online", expect.any(Function));
+  });
+
+  it("asks nothing until the frame is on screen: a folded editor section contacts no one", () => {
+    const observers: { callback: IntersectionObserverCallback; disconnected: boolean }[] = [];
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        record: { callback: IntersectionObserverCallback; disconnected: boolean };
+        constructor(callback: IntersectionObserverCallback) {
+          this.record = { callback, disconnected: false };
+          observers.push(this.record);
+        }
+        observe() {}
+        disconnect() {
+          this.record.disconnected = true;
+        }
+      },
+    );
+    const iframe = frame();
+    expect(probes).toHaveLength(0);
+    const seen = (isIntersecting: boolean) =>
+      act(() =>
+        observers[0]?.callback(
+          [{ isIntersecting } as IntersectionObserverEntry],
+          {} as IntersectionObserver,
+        ),
+      );
+    seen(false);
+    expect(probes).toHaveLength(0);
+    seen(true);
+    expect(probes).toHaveLength(1);
+    expect(observers[0]?.disconnected).toBe(true);
+    act(() => probes[0]?.onload?.());
+    expect(iframe).not.toHaveClass("invisible");
   });
 });
