@@ -1,3 +1,4 @@
+// i18n-exempt-file: test fixture; only the roster's tests import it, and its names are seeded data.
 import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { SameNameHeldSeat } from "@/db/bookings";

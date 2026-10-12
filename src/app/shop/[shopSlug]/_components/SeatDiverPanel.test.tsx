@@ -29,11 +29,15 @@ const copy: SeatDiverPanelCopy = {
   noMatchesHeading: "No matches",
   noMatches: "No returning diver matches.",
   noMatchesAction: "Add diver",
+  addDiver: "Add diver",
+  addDiverAction: "Add diver",
+  addDiverPrompt: "Not listed?",
   confirmMatchesTitle:
     "Is this the same Nadia Ruis? Picking one reuses that diver’s record, and their certifications and waiver only count once someone confirms it’s the same person.",
   confirmMatchesLastDive: (at) => `Last dive day here: ${at.toISOString().slice(0, 10)}`,
   confirmMatchesNoDiveDay: "No dive days here yet",
   confirmMatchesBorn: (dateOfBirth) => `Born ${dateOfBirth}`,
+  confirmMatchesSubmit: "Create new diver anyway",
 };
 
 const match = (over: Partial<SimilarDiver> = {}): SimilarDiver => ({

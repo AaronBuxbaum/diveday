@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import { EXEMPT_FILE, findCopy, looksLikeCopy } from "./check-copy.mjs";
 
 /**
- * The `copy` section of `scripts/ratchets.json` is empty, so this check is a **full gate** over
- * `src/app` and `src/components`: any hard-coded copy anywhere under those
- * roots fails it. That makes the failure mode of a too-broad exclusion a green
+ * The `copy` section of `scripts/ratchets.json` names three files and no others, so this
+ * check is a **full gate** over the rest of `src/app` and `src/components`: any
+ * hard-coded copy anywhere else under those roots fails it. That makes the failure mode of a too-broad exclusion a green
  * run — nothing to notice, and the repository's main defence against
  * untranslated copy quietly off.
  *
@@ -249,6 +249,56 @@ describe("findCopy — JSX", () => {
   it("finds nothing in a .ts file's JSX-shaped text", () => {
     // Only `.tsx` carries JSX; the `.ts` walk is the narrower label-map one.
     expect(texts("<p>Ready to dive?</p>", false)).toEqual([]);
+  });
+});
+
+describe("findCopy — an English fallback behind || ?? or a ternary", () => {
+  /**
+   * The shape `SeatDiverPanel` shipped four times (2026-10-11 review, item 31):
+   * every window holding `||` or `? :` is excused as an expression, so the
+   * fallback inside it was never read. These are its own lines, verbatim.
+   */
+  const seatDiverPanelBefore = `export function Panel({ copy, query }) {
+  return (
+    <div>
+      <SubmitButton pendingLabel={copy.adding}>
+        {copy.confirmMatchesSubmit || "Create new diver anyway"}
+      </SubmitButton>
+      <PersonSearchForm addDiverLabel={!query ? copy.addDiver || "Add diver" : undefined} />
+      <p>
+        {copy.addDiverPrompt ? fill(copy.addDiverPrompt, { query }) : "Not listed?"}{" "}
+        <Link href={addHref}>{copy.addDiverAction || "Add diver"}</Link>
+      </p>
+    </div>
+  );
+}`;
+
+  it("finds all four of SeatDiverPanel's fallbacks", () => {
+    expect(texts(seatDiverPanelBefore).sort()).toEqual(
+      ["Add diver", "Add diver", "Create new diver anyway", "Not listed?"].sort(),
+    );
+  });
+
+  it("finds the ?? form and the ternary's first branch, in .ts as well as .tsx", () => {
+    expect(texts('const who = session.user.name ?? "A teammate";', false)).toEqual(["A teammate"]);
+    expect(texts('const label = solo ? "Just you" : other;', false)).toEqual(["Just you"]);
+  });
+
+  it("leaves code-shaped fallbacks alone: locales, tones, class lists, paths", () => {
+    expect(texts('const l = shop.defaultLocale ?? "en-US";')).toEqual([]);
+    expect(texts('const tone = ok ? "success" : "danger";')).toEqual([]);
+    expect(texts('<div className={wide ? "mt-4 text-sm" : "mt-2"} />')).toEqual([]);
+    expect(texts('const to = back || "/shop/blue-mantis";')).toEqual([]);
+  });
+
+  it("does not read an object literal's value as a ternary branch", () => {
+    expect(texts('export const metadata = { title: "Team — DiveDay" };', false)).toEqual([]);
+  });
+
+  it("honours an exemption on the line", () => {
+    expect(
+      texts('const n = named("rider") ?? "Owen Quint"; // i18n-exempt: seeded fixture name', false),
+    ).toEqual([]);
   });
 });
 

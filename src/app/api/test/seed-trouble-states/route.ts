@@ -694,8 +694,8 @@ async function carrySomebodyWhoIsNotDiving(
       if (!seated.ok) return null;
     }
   }
-  const snorkeler = named("snorkeler") ?? "Mara Quint";
-  const rider = named("rider") ?? "Owen Quint";
+  const snorkeler = named("snorkeler") ?? NOT_DIVING[0].fullName;
+  const rider = named("rider") ?? NOT_DIVING[1].fullName;
   return { tripId: reef.id, title: reef.title, snorkeler, rider };
 }
 

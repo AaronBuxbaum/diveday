@@ -183,7 +183,20 @@
     ]
   },
   "copy": {
-    "//": "Hard-coded user-facing strings still awaiting extraction, per file. Written by `node scripts/check-copy.mjs --write`. This number may only go down — see scripts/check-copy.mjs."
+    "//": "Hard-coded user-facing strings still awaiting extraction, per file. Written by `node scripts/check-copy.mjs --write`. This number may only go down — see scripts/check-copy.mjs.",
+    "//absorbed": [
+      {
+        "why": "The guard learned the || / ?? / ternary fallback shape (2026-10-11 review, item 31); these English fallbacks predate it. AddPanel sits in the file a sibling layer is splitting; the other two need a translator where none is held. Each has a follow-up.",
+        "files": {
+          "src/app/actions/waiver-send-types.ts": "0 -> 1",
+          "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx": "0 -> 7",
+          "src/app/shop/[shopSlug]/settings/team/actions.ts": "0 -> 2"
+        }
+      }
+    ],
+    "src/app/actions/waiver-send-types.ts": 1,
+    "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx": 7,
+    "src/app/shop/[shopSlug]/settings/team/actions.ts": 2
   },
   "domain-strings": {
     "//": "English strings returned from src/lib or src/db, per file. Written by `node scripts/check-domain-strings.mjs --write`. This number may only go down — see scripts/check-domain-strings.mjs."

@@ -26,9 +26,9 @@ export type SeatDiverPanelCopy = {
   noMatchesHeading: string;
   noMatches: string;
   noMatchesAction: string;
-  addDiver?: string;
-  addDiverAction?: string;
-  addDiverPrompt?: string;
+  addDiver: string;
+  addDiverAction: string;
+  addDiverPrompt: string;
   addNewDiverAction?: string;
   handEntryHeading?: string;
   handEntryDescription?: string;
@@ -63,7 +63,7 @@ export type SeatDiverPanelCopy = {
    * panel prints nothing for the rest (`candidateBirthDate`).
    */
   confirmMatchesBorn: (dateOfBirth: CalendarDate) => string;
-  confirmMatchesSubmit?: string;
+  confirmMatchesSubmit: string;
 };
 
 /**
@@ -176,7 +176,7 @@ export function SeatDiverPanel({
                 pendingLabel={copy.adding}
                 className={buttonClass({ variant: "secondary", size: "sm" })}
               >
-                {copy.confirmMatchesSubmit || "Create new diver anyway"}
+                {copy.confirmMatchesSubmit}
               </SubmitButton>
             </form>
           </div>
@@ -190,7 +190,7 @@ export function SeatDiverPanel({
           label={copy.findLabel}
           placeholder={copy.findPlaceholder}
           addDiverHref={!query ? addHref : undefined}
-          addDiverLabel={!query ? copy.addDiver || "Add diver" : undefined}
+          addDiverLabel={!query ? copy.addDiver : undefined}
         />
 
         {query ? (
@@ -210,9 +210,9 @@ export function SeatDiverPanel({
                 className="mt-4"
               />
               <p className="rise-in mt-3 text-sm text-muted">
-                {copy.addDiverPrompt ? fill(copy.addDiverPrompt, { query }) : "Not listed?"}{" "}
+                {fill(copy.addDiverPrompt, { query })}{" "}
                 <Link href={addHref} className="font-medium text-primary hover:underline">
-                  {copy.addDiverAction || "Add diver"}
+                  {copy.addDiverAction}
                 </Link>
               </p>
             </>

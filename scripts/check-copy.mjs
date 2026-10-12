@@ -19,14 +19,17 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  * down, and it tracks reality rather than drifting into a stale allowlist.
  *
  * The original extraction backlog (once ~1,000 strings across 110 files) is finished:
- * The `copy` section holds only its `//` note, so the ratchet now behaves as a full gate —
- * any hard-coded copy anywhere under the guarded roots fails the check. Trust the baseline
+ * The `copy` section names only the three files whose `||`/`??` fallbacks the guard learned to
+ * see on 2026-10-12, so the ratchet behaves as a full gate everywhere else — any hard-coded
+ * copy anywhere under the guarded roots fails the check. Trust the baseline
  * file over any number in prose, here or elsewhere, since prose drifts and the file cannot.
  *
  * What counts as user-facing copy:
  *   - a JSX text node (`<p>Book now</p>`)
  *   - a string literal in an attribute whose whole purpose is to be read by a
  *     human or a screen reader (`placeholder`, `aria-label`, `alt`, `title`, …)
+ *   - a capitalised string literal behind `||`, `??` or a ternary, the English
+ *     fallback for copy a prop did not carry (`fallbackStringPatterns`)
  *
  * What does not, and why:
  *   - `className`, `href`, `id`, test ids, enum-ish values — string literals,
@@ -121,6 +124,28 @@ const labelMapPropertyPattern = new RegExp(
  */
 const textNodePattern = />([^<>{}]+)</g;
 const bracedStringPattern = /[>\s]\{\s*(?:"([^"]{2,})"|'([^']{2,})')\s*\}/g;
+
+/**
+ * A string literal standing in for copy that did not arrive: the right operand
+ * of `||` or `??`, or either branch of a ternary. `looksLikeCopy` excuses every
+ * window holding `||` or `? :`, because that is what an expression looks like
+ * between a `>` and a `<`, so `{copy.addDiverAction || "Add diver"}` read as
+ * code and four English fallbacks in `SeatDiverPanel` shipped past a gate
+ * that was otherwise at zero (2026-10-11 review, item 31). These look at the
+ * operand alone.
+ *
+ * Narrower than the text-node rule on purpose: the operand must start with a
+ * capital letter. A fallback that is a locale, a tone, a class list or a path
+ * starts lower-case (`?? "en-US"` aside, which `looksLikeCopy` already excuses
+ * as an identifier), and a sentence does not. The ternary's alternate is read
+ * on one line only, so an object literal's `key: "Value"` with no `?` before it
+ * on that line is not mistaken for a branch.
+ */
+const fallbackStringPatterns = [
+  /(?:\|\||\?\?)\s*(?:"([^"\n]{2,})"|'([^'\n]{2,})')/g,
+  /\s\?\s*(?:"([^"\n]{2,})"|'([^'\n]{2,})')\s*:/g,
+  /\s\?\s[^?;\n]*?\s:\s*(?:"([^"\n]{2,})"|'([^'\n]{2,})')/g,
+];
 
 /**
  * Exemption markers, anchored to real comment syntax.
@@ -311,6 +336,12 @@ export function findCopy(source, { isTsx }) {
       if (looksLikeCopy(value)) record(match.index, `${match[1]}="${value}"`);
     }
   }
+  for (const pattern of fallbackStringPatterns) {
+    for (const match of stripped.matchAll(pattern)) {
+      const value = match[1] ?? match[2] ?? "";
+      if (/^[A-Z]/.test(value) && looksLikeCopy(value)) record(match.index, value);
+    }
+  }
   for (const match of stripped.matchAll(labelMapPropertyPattern)) {
     const value = match[2] ?? match[3] ?? match[4] ?? "";
     if (looksLikeCopy(value)) record(match.index, `${match[1]}: "${value}"`);
@@ -323,8 +354,8 @@ export function findCopy(source, { isTsx }) {
  * `looksLikeCopy` and `findCopy` can be imported and tested without walking the
  * tree, calling `process.exit`, or rewriting the baseline — the same shape
  * `scripts/check-e2e-hygiene.mjs` uses. That matters more here than it looks:
- * The `copy` section of `scripts/ratchets.json` is empty, so this check is a full gate over
- * `src/app` and `src/components`, and an exclusion one character too broad
+ * The `copy` section of `scripts/ratchets.json` names three files and no others, so this check
+ * is a full gate over the rest of `src/app` and `src/components`, and an exclusion one character too broad
  * stops the repository's main defence against untranslated copy with a green
  * run and nothing to notice.
  */
