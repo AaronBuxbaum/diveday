@@ -12,6 +12,28 @@ if (typeof window !== "undefined") {
   if (!Element.prototype.scrollIntoView) {
     Element.prototype.scrollIntoView = function scrollIntoView() {};
   }
+  // The `ui` project runs in `vmForks` (vitest.config.ts): each file gets a
+  // fresh VM context holding jsdom, and a VM context starts without the
+  // globals Node adds to its own — the WHATWG streams, `CryptoKey`,
+  // `BroadcastChannel`, a `crypto` with `subtle`. Under plain forks jsdom was laid over Node's global,
+  // so they were simply there, and react-dom/server (a streamed render), msw
+  // and the offline store's encryption all reach for them. Copy each one in
+  // from Node's own global (`runInThisContext` evaluates in the main context,
+  // not this one), only where the context has none, so the two pools see the
+  // same world and jsdom's own classes win wherever it has them.
+  const { runInThisContext } = await import("node:vm");
+  const outer = runInThisContext("globalThis") as Record<string, unknown>;
+  const context = globalThis as Record<string, unknown>;
+  if (outer !== context) {
+    for (const name of Object.getOwnPropertyNames(outer)) {
+      if (/^[A-Z]/.test(name) && !(name in context)) context[name] = outer[name];
+    }
+    // jsdom's `crypto` has `getRandomValues` and no `subtle`; under forks the
+    // test saw Node's, which has both.
+    if (!(context.crypto as Crypto | undefined)?.subtle) {
+      Object.defineProperty(context, "crypto", { value: outer.crypto, configurable: true });
+    }
+  }
 }
 
 // Pin TZ=UTC so PGlite and date operations resolve consistently regardless of host machine timezone.
