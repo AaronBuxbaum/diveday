@@ -270,6 +270,8 @@ const SENDERS: Record<string, string> = {
   "src/app/shop/[shopSlug]/trips/[id]/actions.ts": HELD_AT_CHOKEPOINT,
   "src/db/departure-notes.ts": "its departure read carries `notRehearsal()`, so no note goes",
   "src/db/lost-items.ts": "its tell reads the departure with `notRehearsal()`, so nobody is told",
+  "src/db/trip-rescheduled.ts":
+    "its hold and its send read the departure with `notRehearsal()`, so no email or text",
   "src/db/desk-pings.ts": NOT_ABOUT_A_DEPARTURE,
   "src/db/staff-reply.ts": NOT_ABOUT_A_DEPARTURE,
   "src/db/weekly-digest.ts": "its counts carry `notRehearsal()`",
