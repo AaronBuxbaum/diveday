@@ -82,7 +82,7 @@ describe("the thread page's order", () => {
     const status = positionOf("<ThreadStatus");
     const spine = positionOf("<ThreadSpine");
     const arrival = positionOf("<TripArrivalCard");
-    const party = positionOf("<PartyClaimPanel");
+    const party = positionOf("<PartySection");
     const packing = positionOf("<PackingSection");
     const cancel = positionOf("<InlineConfirm");
 
@@ -156,7 +156,7 @@ describe("the thread's sections under the spine", () => {
     "<TripArrivalCard",
     "<TripCrewLine",
     "<TripChangeLedger",
-    "<PartyClaimPanel",
+    "<PartySection",
     "<PackingSection",
     "<InlineConfirm",
   ];
@@ -574,12 +574,22 @@ describe("a held seat after the dive", () => {
 
 /** UX review 2026-10-11, item 13: "Add a seat" lives with the group's seats, and only when allowed. */
 describe("adding a seat from the diver's page", () => {
-  it("draws the control only when the booking may lead a seat, inside the party section", () => {
-    const section = positionOf('<div id="party-seats"');
-    const control = positionOf("<AddSeat action={addSeatFromReady.bind(null, token)}");
+  const PARTY_SECTION = readFileSync(join(__dirname, "_components/PartySection.tsx"), "utf8");
+
+  it("hands the party section the action only when the booking may lead a seat", () => {
+    expect(SOURCE).toMatch(
+      /<PartySection[^>]*addSeatAction=\{data\.canAddSeat \? addSeatFromReady\.bind\(null, token\) : null\}/,
+    );
+    expect(countOf("<AddSeat")).toBe(0);
+  });
+
+  it("draws the control inside the party section, after the seats", () => {
+    const section = PARTY_SECTION.indexOf('<div id="party-seats"');
+    const panel = PARTY_SECTION.indexOf("<PartyClaimPanel");
+    const control = PARTY_SECTION.indexOf("{addSeatAction ? <AddSeat action={addSeatAction}");
     expect(section).toBeGreaterThan(-1);
-    expect(control).toBeGreaterThan(section);
-    expect(SOURCE).toMatch(/\{data\.canAddSeat \? \(\s*<AddSeat/);
+    expect(panel).toBeGreaterThan(section);
+    expect(control).toBeGreaterThan(panel);
   });
 });
 

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { AddSeat } from "@/app/ready/[token]/_components/AddSeat";
 import { HeldAfterDiveCard, NoShowCard } from "@/app/ready/[token]/_components/AfterDiveDoors";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
@@ -14,6 +13,7 @@ import {
 } from "@/app/ready/[token]/_components/cancel-notices";
 import { DayOfDetails } from "@/app/ready/[token]/_components/DayOfDetails";
 import { ExpiredLink } from "@/app/ready/[token]/_components/ExpiredLink";
+import { PartySection } from "@/app/ready/[token]/_components/PartySection";
 import { payStepLines } from "@/app/ready/[token]/_components/pay-step-lines";
 import { ReadyOfflineCopy } from "@/app/ready/[token]/_components/ReadyOfflineCopy";
 import { ReadyThreadBodySkeleton } from "@/app/ready/[token]/_components/ReadyThreadBodySkeleton";
@@ -40,7 +40,6 @@ import { type DoorGlyphId, EntryDone } from "@/components/account/EntryShell";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { FlashParams } from "@/components/FlashParams";
-import { PartyClaimPanel } from "@/components/PartyClaimPanel";
 import { RecapWaitingCard } from "@/components/RecapWaitingCard";
 import { RememberBooker } from "@/components/RememberBooker";
 import { ShopNotice } from "@/components/ShopPageHeader";
@@ -53,7 +52,6 @@ import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { SettledCheck } from "@/components/ui/SettledCheck";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import {
   resolveRevokedBookingCapability,
@@ -1428,27 +1426,13 @@ export default async function DiverReadinessPage({
           {/* A course's learning materials, the same list the confirmation
                   email carried (ADR 20261008-course-learning-materials). */}
           <CourseMaterials data={data} t={t} />
-          {/* The party's panel and its all-set line are one section: the line
-                  is the panel's close, 12px under it, not a section of its own. */}
-          {partySeats.length > 0 || data.canAddSeat ? (
-            <div id="party-seats" className="scroll-mt-8 space-y-3">
-              <PartyClaimPanel locale={locale} seats={partySeats} />
-              {partyAllSet ? (
-                <p>
-                  <SettledCheck
-                    settled
-                    label={t("thread.partyAllSet")}
-                    className="text-sm text-muted"
-                  />
-                </p>
-              ) : null}
-              {/* Bring a friend on this booking (UX review 2026-10-11, item
-                  13): the seat joins the panel above with its own claim link. */}
-              {data.canAddSeat ? (
-                <AddSeat action={addSeatFromReady.bind(null, token)} t={t} />
-              ) : null}
-            </div>
-          ) : null}
+          <PartySection
+            locale={locale}
+            seats={partySeats}
+            allSet={partyAllSet}
+            addSeatAction={data.canAddSeat ? addSeatFromReady.bind(null, token) : null}
+            t={t}
+          />
           {/* What to put in the bag. Below the spine — which carries the gear
                   form as one of its steps — because this page's job is still "what's
                   left before you sail", and this is what a diver reads once that is
