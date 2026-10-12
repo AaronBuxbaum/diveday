@@ -37,6 +37,13 @@ describe("CatchUpStrip", () => {
     expect(container.querySelectorAll("button")).toHaveLength(1);
   });
 
+  it("wears a neutral well, never a tint boat mode turns yellow", () => {
+    const { container } = render(<CatchUpStrip {...props} />);
+    const className = container.querySelector("section")?.className ?? "";
+    expect(className).toContain("bg-surface-sunken");
+    expect(className).not.toMatch(/primary-tint|warning|accent/);
+  });
+
   it("keeps the strip off the printed sheet", () => {
     // The printed manifest goes ashore or into a coastguard's hands. A
     // paragraph about what the desk did at 06:40 is neither current nor

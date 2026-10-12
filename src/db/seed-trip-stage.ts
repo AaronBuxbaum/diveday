@@ -1,96 +1,105 @@
-import { and, asc, eq, gt, lte } from "drizzle-orm";
+import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { MINUTE_MS, nowDate } from "@/lib/clock";
+import type { TripStage } from "@/lib/trip-stages";
+import { shopDayBounds } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
-import { tripDives, tripStageEvents, trips } from "./schema";
+import { tripAssignments, tripDives, tripStageEvents, trips } from "./schema";
+import { DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { liveTrip } from "./trips-live";
 
+/** Boarding opens this long before the lines come off. */
+const BOARDING_OPENS_BEFORE_MS = 30 * MINUTE_MS;
+/** A crew says `home` once the boat is tied up, a little after her return. */
+const HOME_AFTER_RETURN_MS = 10 * MINUTE_MS;
+
 /**
- * When the crew of a boat that is already out would have tapped **Underway**:
- * twenty minutes after the lines came off, or this instant if she has not been
- * out that long.
+ * **The taps a crew would already have made on this departure, by `now`.**
  *
- * The clamp is the whole point. `liveStageOf` refuses a reading stamped after
- * the moment it is read — a word from the future is not a word anyone has said
- * — so an unclamped `startsAt + 20m` on a boat that left ten minutes ago seeds a
- * row that no surface will ever render, and the demo's chip and every diver's
- * line come up blank on the one shop every capture is of.
+ * Every stamp is relative to the departure, never to the instant the seed ran:
+ * boarding opens thirty minutes before she sails, `underway` is the moment she
+ * leaves, and `home` comes a few minutes after her scheduled return. Only the
+ * taps whose moment has passed are returned, so a boat five hours out carries
+ * none at all. That is the fix for "Boarding since 1:18 PM" on a 6:30 PM boat
+ * (UX review 2026-10-10, item 4): a word from the future, or a word said hours
+ * before anyone could have said it, is not a word the crew said.
  */
-export function demoStageRecordedAt(startsAt: Date, now: Date): Date {
-  return new Date(Math.min(startsAt.getTime() + 20 * MINUTE_MS, now.getTime()));
+export function demoStageTaps(
+  startsAt: Date,
+  endsAt: Date,
+  now: Date,
+): { stage: TripStage; recordedAt: Date }[] {
+  const taps: { stage: TripStage; recordedAt: Date }[] = [
+    { stage: "boarding", recordedAt: new Date(startsAt.getTime() - BOARDING_OPENS_BEFORE_MS) },
+    { stage: "underway", recordedAt: new Date(startsAt.getTime()) },
+    { stage: "home", recordedAt: new Date(endsAt.getTime() + HOME_AFTER_RETURN_MS) },
+  ];
+  return taps.filter((tap) => tap.recordedAt.getTime() <= now.getTime());
 }
 
 /**
- * **The demo's boat says where it is** — ADR 20260904-reef-all-the-way-down,
+ * **The demo's boats say where they are** — ADR 20260904-reef-all-the-way-down,
  * decision 2, Budget rule 4.
  *
- * One tap on today's departure, twenty minutes after it left the dock, so the
- * demo shop reads the way the canvas draws it: a chip on the home's station and
- * a line on the diver's link. It is deliberately
- * `underway` rather than `home` — `home` publishes nothing, so seeding it
- * would leave the whole slice invisible on the one shop every capture is of.
+ * Every departure on the shop's day that has already reached a stage carries
+ * the taps its crew would have made (`demoStageTaps`): the dawn boat that is
+ * back reads boarding, underway and home; a boat out right now reads underway;
+ * one within half an hour of sailing reads boarding; one later in the day
+ * reads nothing yet, and its stepper falls back to the clock.
  *
- * A tap is a thing a person did, so it is recorded by the crew member who is
- * on the boat, and the site comes off the departure's own plan exactly as the
- * writer would stamp it.
+ * A tap is a thing a person did, so it is recorded by somebody on that boat:
+ * the departure's own captain, else the first of its crew, and only for a
+ * departure with no crew at all the shop's captain (`fallbackRecorderId`). The
+ * site comes off the departure's own plan exactly as the writer would stamp it.
  */
 export async function seedTripStage(
   db: DbExecutor,
   shopId: string,
-  recordedByPersonId: string,
+  fallbackRecorderId: string,
 ): Promise<void> {
-  // The departure that is out *right now*, or the next one boarding. Anything
-  // else and the demo seeds a word that has already gone stale — a stage stops
-  // speaking once a boat's own day is over, which is the rule, and a seed that
-  // ignored it would leave the whole slice invisible on the one shop every
-  // capture is of.
   const now = nowDate();
-  const [running] = await db
-    .select({ id: trips.id, startsAt: trips.startsAt })
+  const today = shopDayBounds(now, DEMO_SHOP_TIMEZONE);
+  const departures = await db
+    .select({ id: trips.id, startsAt: trips.startsAt, endsAt: trips.endsAt })
     .from(trips)
     .where(
       and(
         eq(trips.shopId, shopId),
         liveTrip(),
         eq(trips.status, "scheduled"),
-        lte(trips.startsAt, now),
-        gt(trips.endsAt, now),
+        gte(trips.startsAt, today.from),
+        lte(trips.startsAt, new Date(now.getTime() + BOARDING_OPENS_BEFORE_MS)),
       ),
     )
-    .orderBy(asc(trips.startsAt))
-    .limit(1);
-  const [upcoming] = running
-    ? []
-    : await db
-        .select({ id: trips.id, startsAt: trips.startsAt })
-        .from(trips)
-        .where(
-          and(
-            eq(trips.shopId, shopId),
-            liveTrip(),
-            eq(trips.status, "scheduled"),
-            gt(trips.startsAt, now),
-          ),
-        )
-        .orderBy(asc(trips.startsAt))
-        .limit(1);
-  const today = running ?? upcoming;
-  if (!today) return;
+    .orderBy(asc(trips.startsAt));
 
-  const [firstDive] = await db
-    .select({ diveSiteId: tripDives.diveSiteId })
-    .from(tripDives)
-    .where(eq(tripDives.tripId, today.id))
-    .orderBy(asc(tripDives.diveNumber))
-    .limit(1);
-
-  await db.insert(tripStageEvents).values({
-    shopId,
-    tripId: today.id,
-    // A boat that has left is out on its site; one still at the dock is
-    // boarding, which is the word its crew would have tapped.
-    stage: running ? "underway" : "boarding",
-    diveSiteId: firstDive?.diveSiteId ?? null,
-    recordedByPersonId,
-    recordedAt: running ? demoStageRecordedAt(today.startsAt, now) : now,
-  });
+  for (const departure of departures) {
+    const taps = demoStageTaps(departure.startsAt, departure.endsAt, now);
+    if (taps.length === 0) continue;
+    const [firstDive] = await db
+      .select({ diveSiteId: tripDives.diveSiteId })
+      .from(tripDives)
+      .where(eq(tripDives.tripId, departure.id))
+      .orderBy(asc(tripDives.diveNumber))
+      .limit(1);
+    const crew = await db
+      .select({ personId: tripAssignments.personId, tripRole: tripAssignments.tripRole })
+      .from(tripAssignments)
+      .where(eq(tripAssignments.tripId, departure.id))
+      .orderBy(asc(tripAssignments.personId));
+    const recordedByPersonId =
+      crew.find((member) => member.tripRole === "captain")?.personId ??
+      crew[0]?.personId ??
+      fallbackRecorderId;
+    await db.insert(tripStageEvents).values(
+      taps.map((tap) => ({
+        shopId,
+        tripId: departure.id,
+        stage: tap.stage,
+        // The departure's first site, as the writer stamps it; `home` names none.
+        diveSiteId: tap.stage === "home" ? null : (firstDive?.diveSiteId ?? null),
+        recordedByPersonId,
+        recordedAt: tap.recordedAt,
+      })),
+    );
+  }
 }

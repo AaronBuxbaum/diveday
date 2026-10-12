@@ -4,7 +4,7 @@
  *
  * Two callers, one shape. `loading.tsx` draws it under the masthead's bars
  * while the token is still being verified, and the page draws it under the
- * real masthead and the "You're on the boat" moment while the spine's own
+ * real masthead and the "You've got a seat" moment while the spine's own
  * reads stream in (UX audit #5), so the confirmation is never held behind a
  * skeleton of itself. The third row stands tall because one step is open at
  * rest with its form inline, and a skeleton of five equal rows would collapse

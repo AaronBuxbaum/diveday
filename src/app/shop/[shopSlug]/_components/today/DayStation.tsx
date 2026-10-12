@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { Badge, type BadgeTone } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { ReadinessBar } from "@/components/ui/ProgressBar";
@@ -10,7 +10,7 @@ import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatTime } from "@/lib/format";
 import type { DayStation as DayStationData } from "@/lib/today";
-import type { TripPhase } from "@/lib/trip-phase";
+import { STAGE_TONE } from "@/lib/trip-stage-tone";
 import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
 
 /**
@@ -19,8 +19,9 @@ import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
  * here (the site tile, the water dial, the rows inside the panel).
  *
  * A card that answers three questions at a glance: when it leaves, where it is
- * in its day (the stage pill, the same Prep, Check-in, Aboard, Back the
- * departure's own stepper draws), and how ready its divers are (the bar). The
+ * in its day (the stage pill: the crew's own word, the one the departure
+ * header and the manifest strip show, `boatStageOf`), and how ready its divers
+ * are (the bar). The
  * work that hangs off a departure is no longer drawn inside it: every job on
  * the day is one ranked "Needs you" list under the departures, each row naming
  * its boat by time.
@@ -49,20 +50,6 @@ function lastWordApart(title: string): [head: string, last: string] {
   return [match[1] ?? "", match[2]];
 }
 
-export const PHASE_TONE: Record<TripPhase, BadgeTone> = {
-  prep: "neutral",
-  checkin: "warning",
-  aboard: "primary",
-  back: "success",
-};
-
-const PHASE_KEYS = {
-  prep: "trips.phases.prep",
-  checkin: "trips.phases.checkin",
-  aboard: "trips.phases.aboard",
-  back: "trips.phases.back",
-} as const satisfies Record<TripPhase, string>;
-
 export function DayStation({
   station,
   shopSlug,
@@ -82,13 +69,15 @@ export function DayStation({
   t: StaffTranslator;
 }) {
   const stage = station.stage ?? null;
-  const phase = station.phase ?? null;
-  // The crew's own word, beside the pill: "Out on Molasses Reef since 9:14 AM"
-  // says more than "Aboard" and is what the crew actually tapped.
-  const stageWord = stage
-    ? stage.stage === "underway" && !stage.siteName
-      ? t("shopHome.spine.stage.underwayNoSite")
-      : t(STAGE_WORD_KEYS[stage.stage], { site: stage.siteName ?? "" })
+  // The pill is the word the crew tapped, the manifest strip's own word (UX
+  // review 2026-10-10, item 1); where and since when ride beside it.
+  const stageSince = stage
+    ? stage.siteName && (stage.stage === "underway" || stage.stage === "surface")
+      ? t("shopHome.spine.stage.sinceAtSite", {
+          site: stage.siteName,
+          time: formatTime(stage.recordedAt, locale, timeZone),
+        })
+      : t("shopHome.spine.stage.since", { time: formatTime(stage.recordedAt, locale, timeZone) })
     : "";
   const blocked = Math.min(station.blocked, station.booked);
   const ready = station.booked - blocked;
@@ -125,18 +114,13 @@ export function DayStation({
         <span className="text-sm text-muted tabular-nums">
           {t("shopHome.spine.until", { time: formatTime(station.endsAt, locale, timeZone) })}
         </span>
-        {phase ? (
-          <Badge tone={PHASE_TONE[phase]} toneMark={false}>
-            {t(PHASE_KEYS[phase])}
-          </Badge>
-        ) : null}
         {stage ? (
-          <span className="text-sm text-muted tabular-nums">
-            {t("shopHome.spine.stage.chip", {
-              stage: stageWord,
-              time: formatTime(stage.recordedAt, locale, timeZone),
-            })}
-          </span>
+          <>
+            <Badge tone={STAGE_TONE[stage.stage]} toneMark={false}>
+              {t(STAGE_WORD_KEYS[stage.stage])}
+            </Badge>
+            <span className="text-sm text-muted tabular-nums">{stageSince}</span>
+          </>
         ) : null}
       </p>
       <h3 className={`mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 ${ITEM_TITLE_CLASS}`}>

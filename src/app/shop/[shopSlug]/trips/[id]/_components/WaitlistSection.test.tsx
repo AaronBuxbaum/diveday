@@ -113,6 +113,7 @@ describe("WaitlistGroup declared level", () => {
             noCertificationDeclared: false,
             nitrox: false,
             nitroxSelfDeclared: false,
+            verifiedLevel: null,
           } satisfies CertificationSummary,
         ],
       ]),
@@ -140,6 +141,7 @@ describe("WaitlistGroup declared level", () => {
             noCertificationDeclared: false,
             nitrox: true,
             nitroxSelfDeclared: true,
+            verifiedLevel: null,
           } satisfies CertificationSummary,
         ],
       ]),
@@ -186,6 +188,7 @@ describe("WaitlistGroup declared level", () => {
             noCertificationDeclared: true,
             nitrox: false,
             nitroxSelfDeclared: false,
+            verifiedLevel: null,
           } satisfies CertificationSummary,
         ],
       ]),
@@ -217,6 +220,7 @@ describe("WaitlistGroup below the departure's bar", () => {
     noCertificationDeclared: false,
     nitrox: false,
     nitroxSelfDeclared: false,
+    verifiedLevel: null,
     ...over,
   });
   const summaries = (over?: Partial<CertificationSummary>) => new Map([["p-a", card(over)]]);
