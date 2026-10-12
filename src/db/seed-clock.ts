@@ -1,6 +1,6 @@
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { DAY_MS, nowDate, nowMs } from "@/lib/clock";
-import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { shopDayBounds, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 /**
  * The seed's clock.
@@ -129,4 +129,28 @@ export function demoTodayDepartureStart(
   const wall = utcToWallTime(now, timeZone);
   const midnight = wallTimeToUtc({ ...wall, day: wall.day + 1, hour: 0, minute: 0 }, timeZone);
   return new Date(Math.min(now.getTime() + 60 * 1000, midnight.getTime() - 1000));
+}
+
+/** How long today's seeded departure runs, dock to dock (`seed-trips.ts`). */
+export const DEMO_TODAY_DEPARTURE_MS = 3.5 * 60 * 60 * 1000;
+
+/**
+ * **The one shift every member of the demo cast works today**, on the boat's
+ * own local day: an hour before today's departure sails until an hour after it
+ * is back, and never past the shop's midnight. It used to be a flat twelve
+ * hours from an hour before sailing, so an evening boat put every shift at
+ * "5:30 PM – 5:30 AM" (UX review 2026-10-10, item 4).
+ */
+export function demoTodayShift(
+  now = nowDate(),
+  timeZone: string = DEMO_SHOP_TIMEZONE,
+): { startsAt: Date; endsAt: Date } {
+  const hour = 60 * 60 * 1000;
+  const sails = demoTodayDepartureStart(now, timeZone);
+  const startsAt = new Date(sails.getTime() - hour);
+  const dayEnds = shopDayBounds(sails, timeZone).to;
+  const endsAt = new Date(
+    Math.min(sails.getTime() + DEMO_TODAY_DEPARTURE_MS + hour, dayEnds.getTime()),
+  );
+  return { startsAt, endsAt };
 }

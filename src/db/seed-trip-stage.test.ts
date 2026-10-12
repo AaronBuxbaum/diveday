@@ -1,34 +1,52 @@
 import { describe, expect, it } from "vitest";
 import { MINUTE_MS } from "@/lib/clock";
-import { demoStageRecordedAt } from "./seed-trip-stage";
+import { demoStageTaps } from "./seed-trip-stage";
 
-describe("demoStageRecordedAt", () => {
-  const startsAt = new Date("2026-07-21T13:00:00.000Z");
+/**
+ * **The demo's taps sit where a crew would have made them, relative to the
+ * departure** (UX review 2026-10-10, item 4). The seed used to stamp
+ * "boarding" at the instant it ran, so a 6:30 PM boat read "Boarding since
+ * 1:18 PM" all afternoon and the trip header said Aboard five hours early.
+ */
+describe("demoStageTaps", () => {
+  const startsAt = new Date("2026-07-21T22:30:00.000Z"); // 6:30 PM EDT
+  const endsAt = new Date("2026-07-22T02:00:00.000Z"); // 10:00 PM EDT
+  const words = (now: Date) => demoStageTaps(startsAt, endsAt, now).map((tap) => tap.stage);
 
-  it("stamps the tap twenty minutes after the lines came off", () => {
-    const now = new Date("2026-07-21T14:30:00.000Z");
-    expect(demoStageRecordedAt(startsAt, now).toISOString()).toBe("2026-07-21T13:20:00.000Z");
+  it("says nothing about a boat whose boarding has not opened", () => {
+    // Five hours out: nobody has tapped anything yet, so the demo must not.
+    expect(demoStageTaps(startsAt, endsAt, new Date("2026-07-21T17:18:00.000Z"))).toEqual([]);
+    // One minute before boarding opens.
+    expect(words(new Date(startsAt.getTime() - 31 * MINUTE_MS))).toEqual([]);
   });
 
-  it("never stamps a tap in the future", () => {
-    // Regression: a boat ten minutes out got a tap stamped at startsAt + 20m,
-    // which `liveShopStage` refuses for being later than the read's own
-    // instant — so the demo's chip, storefront panel and diver line were all
-    // blank for the first twenty minutes of every departure.
-    const now = new Date("2026-07-21T13:10:00.000Z");
-    expect(demoStageRecordedAt(startsAt, now).getTime()).toBe(now.getTime());
+  it("opens boarding thirty minutes before the lines come off", () => {
+    const now = new Date(startsAt.getTime() - 10 * MINUTE_MS);
+    expect(demoStageTaps(startsAt, endsAt, now)).toEqual([
+      { stage: "boarding", recordedAt: new Date(startsAt.getTime() - 30 * MINUTE_MS) },
+    ]);
   });
 
-  it("clamps to this instant on the exact minute the boat leaves", () => {
-    expect(demoStageRecordedAt(startsAt, startsAt).getTime()).toBe(startsAt.getTime());
+  it("is underway from the moment she leaves, never stamped in the future", () => {
+    const now = new Date(startsAt.getTime() + 45 * MINUTE_MS);
+    const taps = demoStageTaps(startsAt, endsAt, now);
+    expect(taps.map((tap) => tap.stage)).toEqual(["boarding", "underway"]);
+    expect(taps[1]?.recordedAt.getTime()).toBe(startsAt.getTime());
+    for (const tap of taps) expect(tap.recordedAt.getTime()).toBeLessThanOrEqual(now.getTime());
   });
 
-  it("stops clamping the moment twenty minutes have passed", () => {
-    const now = new Date(startsAt.getTime() + 20 * MINUTE_MS);
-    expect(demoStageRecordedAt(startsAt, now).getTime()).toBe(now.getTime());
-    const later = new Date(startsAt.getTime() + 20 * MINUTE_MS + 1);
-    expect(demoStageRecordedAt(startsAt, later).getTime()).toBe(
-      startsAt.getTime() + 20 * MINUTE_MS,
-    );
+  it("brings a finished boat home after her return, not before", () => {
+    const now = new Date(endsAt.getTime() + 120 * MINUTE_MS);
+    const taps = demoStageTaps(startsAt, endsAt, now);
+    expect(taps.map((tap) => tap.stage)).toEqual(["boarding", "underway", "home"]);
+    const home = taps[2];
+    expect(home?.recordedAt.getTime()).toBeGreaterThan(endsAt.getTime());
+    expect(home?.recordedAt.getTime()).toBeLessThanOrEqual(now.getTime());
+  });
+
+  it("keeps every tap in the order the crew would have made them", () => {
+    const taps = demoStageTaps(startsAt, endsAt, new Date(endsAt.getTime() + 60 * MINUTE_MS));
+    const times = taps.map((tap) => tap.recordedAt.getTime());
+    expect([...times].sort((a, b) => a - b)).toEqual(times);
   });
 });
