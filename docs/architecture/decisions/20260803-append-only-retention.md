@@ -50,6 +50,10 @@ erasure-versus-signed-evidence question and has not been through counsel. What s
 
 ### The windows, and why
 
+`RETENTION_DAYS` in `src/lib/retention.ts` is the one list of pruned tables and their windows, each
+with its reason beside it. The table below is the set this record argued for, not the current list;
+see the [2026-10-12 amendment](#amendment-2026-10-12--retention_days-is-the-list).
+
 | Table | Days | Why |
 | --- | --- | --- |
 | `stripe_webhook_events` | 400 | ~133× Stripe's own ~3-day live retry window. Chronological evidence for `hasNewerAccountUpdate`, so this is a correctness bound, not a convenience one. Holds no diver data — event ids, types, account ids, timestamps. |
@@ -115,3 +119,18 @@ If a window turns out to be wrong, it is one number in `RETENTION_DAYS` — but 
 already pruned are not recoverable, which is why every default here errs long. If the batch cap
 turns out to leave a table permanently behind, raise `PRUNE_BATCH_LIMIT` or move the schedule to
 daily; both are one-line changes. Disabling the mechanism entirely is removing one `crons` entry.
+
+## Amendment 2026-10-12 — `RETENTION_DAYS` is the list
+
+The windows table above grew stale: by 2026-10-10 `RetainedTable` held twenty tables, and the table
+here six. It is kept as the set this record argued for, and no longer answers "how long is X kept?".
+`RETENTION_DAYS` does, with each window's reason in a docblock beside it, and `src/db/retention.ts`
+holds the column each window is measured against. A table joins or leaves there, not here.
+
+Two additions carry the argument of a row above. `shop_contact_email_confirmation_tokens` and
+`booking_capabilities` are hashed bearer credentials, pruned 90 days past each row's own
+`expires_at`, as `account_tokens` is. For `booking_capabilities` the end of that window is visible to
+a diver: a dead link stops naming its shop
+([capability runbook](../../engineering/capability-telemetry-runbook.md#after-the-prune-a-dead-link-names-no-shop)).
+The trails left unbounded on purpose are named in `UNBOUNDED_BY_DECISION` in the same file.
+No window changed in this amendment; the numbers stay HD-11's and H-82's.
