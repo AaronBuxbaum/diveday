@@ -6,9 +6,10 @@
 // shell and its own reads are the only ones the reader waits on. See ADR
 // 20260804-instant-navigation.
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { weekdayNames } from "@/lib/format";
+import { formatMoneyCents, weekdayNames } from "@/lib/format";
+import { currencyFractionDigits, maxPriceMajor, type ShopCurrency } from "@/lib/money";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
-import type { BuilderCopy, BuilderMoreOptions } from "./ScheduleBuilder";
+import type { BuilderCopy, BuilderMoreOptions, BuilderPriceInput } from "./ScheduleBuilder";
 
 /** Every word the departure builder says, resolved for the reader: a Client Component cannot translate itself. */
 export function scheduleBuilderCopy(st: StaffTranslator): BuilderCopy {
@@ -211,5 +212,19 @@ export function scheduleBuilderMore(st: StaffTranslator, locale: string): Builde
       diverFacingDetailsLabel: st("shared.tripDiveFields.diverFacingDetailsLabel"),
       footerNote: st("shared.tripDiveFields.footerNote"),
     },
+  };
+}
+
+/**
+ * The add panel's price box in the shop's own currency, as the full trip form
+ * has it: whole-number entry and a symbol-only placeholder for a zero-decimal
+ * currency, where "$0.00" would be wrong twice over.
+ */
+export function builderPriceInput(currency: ShopCurrency, locale: string): BuilderPriceInput {
+  const fractionDigits = currencyFractionDigits(currency);
+  return {
+    step: fractionDigits === 0 ? "1" : `0.${"0".repeat(fractionDigits - 1)}1`,
+    max: maxPriceMajor(currency),
+    placeholder: formatMoneyCents(0, currency, locale),
   };
 }

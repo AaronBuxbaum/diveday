@@ -15,8 +15,8 @@ import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { formatMoneyCents, formatTime } from "@/lib/format";
-import { currencyFractionDigits, maxPriceMajor, toShopCurrency } from "@/lib/money";
+import { formatTime } from "@/lib/format";
+import { toShopCurrency } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { requireShopSurface } from "@/lib/session";
 import { noticeRole } from "@/lib/staff-notices";
@@ -26,12 +26,15 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { ScheduleViews } from "../_components/ScheduleViews";
 import { requestedCourseAndSite, weekCrewRead } from "./_components/board-reads";
 import { boardWeekView } from "./_components/board-week-view";
-import { scheduleBuilderCopy, scheduleBuilderMore } from "./_components/builder-copy";
+import {
+  builderPriceInput,
+  scheduleBuilderCopy,
+  scheduleBuilderMore,
+} from "./_components/builder-copy";
 import { builderRequestPlan } from "./_components/builder-request-plan";
 import {
   type BuilderInitialCourse,
   type BuilderInitialSite,
-  type BuilderPriceInput,
   ScheduleBuilder,
 } from "./_components/ScheduleBuilder";
 import {
@@ -252,12 +255,7 @@ export default async function ScheduleBoardPage({
   // whole-number entry and a symbol-only placeholder for a zero-decimal
   // currency, where "$0.00" would be wrong twice over.
   const currency = toShopCurrency(shop.currency);
-  const fractionDigits = currencyFractionDigits(currency);
-  const priceInput: BuilderPriceInput = {
-    step: fractionDigits === 0 ? "1" : `0.${"0".repeat(fractionDigits - 1)}1`,
-    max: maxPriceMajor(currency),
-    placeholder: formatMoneyCents(0, currency, locale),
-  };
+  const priceInput = builderPriceInput(currency, locale);
 
   // The date an add panel opens on when the URL names none. Read off
   // `upcomingScheduleRange` since the stream that used to supply the first row
@@ -408,33 +406,34 @@ export default async function ScheduleBoardPage({
       ) : null}
 
       <ScheduleBuilder
-        shopSlug={shopSlug}
-        locale={locale}
-        addDraft={addDraft}
-        loadPattern={loadWeekdayPatternAction}
-        loadTideWindow={loadTideWindowAction}
-        loadOptions={loadBuilderOptionsAction}
-        loadMovePreflight={loadMovePreflightAction}
-        price={priceInput}
-        // Only a real `YYYY-MM-DD` from `?date=` is honoured; anything else
-        // falls back to the soonest day already on the board.
-        defaultDateIso={
-          date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : (firstUpcomingDateIso ?? todayIso)
-        }
-        canConfigure={canConfigure}
-        copy={builderCopy}
-        more={builderMore}
-        initialCourse={initialCourse}
-        initialSite={initialSite}
-        requestPlan={requestPlan}
-        openAdd={addPanelState}
-        week={builderWeek}
-        actions={{
-          add: addDepartureAction.bind(null, shopSlug),
-          move: moveDepartureAction.bind(null, shopSlug),
-          duplicate: duplicateDepartureAction.bind(null, shopSlug),
-          remove: removeDepartureAction.bind(null, shopSlug),
-          draft: { save: saveFormDraftAction, discard: discardFormDraftAction },
+        context={{
+          shopSlug,
+          locale,
+          addDraft,
+          loadPattern: loadWeekdayPatternAction,
+          loadTideWindow: loadTideWindowAction,
+          loadOptions: loadBuilderOptionsAction,
+          loadMovePreflight: loadMovePreflightAction,
+          price: priceInput,
+          // Only a real `YYYY-MM-DD` from `?date=` is honoured; anything else
+          // falls back to the soonest day already on the board.
+          defaultDateIso:
+            date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : (firstUpcomingDateIso ?? todayIso),
+          canConfigure,
+          copy: builderCopy,
+          more: builderMore,
+          initialCourse,
+          initialSite,
+          requestPlan,
+          openAdd: addPanelState,
+          week: builderWeek,
+          actions: {
+            add: addDepartureAction.bind(null, shopSlug),
+            move: moveDepartureAction.bind(null, shopSlug),
+            duplicate: duplicateDepartureAction.bind(null, shopSlug),
+            remove: removeDepartureAction.bind(null, shopSlug),
+            draft: { save: saveFormDraftAction, discard: discardFormDraftAction },
+          },
         }}
       />
     </main>

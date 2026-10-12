@@ -235,21 +235,23 @@ export function tripAboutRows(context: TripAboutRowsContext) {
       editorOpen: Boolean(detailsStatus),
       editor: canConfigure ? (
         <DetailsSection
-          action={saveDetails.bind(null, shopSlug, tripId)}
-          status={detailsStatus}
-          trip={trip}
-          diveSiteList={diveSiteList}
-          tripDiveList={tripDiveList}
-          startWall={startWall}
-          endWall={endWall}
-          dayCount={Math.max(1, scheduleDays.length)}
-          locale={locale}
-          currency={toShopCurrency(shop.currency)}
-          boats={shopBoats.map((boat) => ({ id: boat.id, name: boat.name }))}
-          lenses={shopLenses.map((lens) => ({ id: lens.id, name: lens.name }))}
-          hasBoatDiving={shop.hasBoatDiving}
-          hasShoreDiving={shop.hasShoreDiving}
-          hasPoolDiving={shop.hasPoolDiving}
+          context={{
+            action: saveDetails.bind(null, shopSlug, tripId),
+            status: detailsStatus,
+            trip,
+            diveSiteList,
+            tripDiveList,
+            startWall,
+            endWall,
+            dayCount: Math.max(1, scheduleDays.length),
+            locale,
+            currency: toShopCurrency(shop.currency),
+            boats: shopBoats.map((boat) => ({ id: boat.id, name: boat.name })),
+            lenses: shopLenses.map((lens) => ({ id: lens.id, name: lens.name })),
+            hasBoatDiving: shop.hasBoatDiving,
+            hasShoreDiving: shop.hasShoreDiving,
+            hasPoolDiving: shop.hasPoolDiving,
+          }}
         />
       ) : undefined,
     },

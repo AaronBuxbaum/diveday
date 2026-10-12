@@ -41,16 +41,18 @@ describe("BookSpotSection price currency (task 35)", () => {
   it("quotes the per-diver price in the shop's currency, not dollars", () => {
     renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking
-        perDiverPriceCents={130_000}
-        currency="mxn"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={[]}
-        rentalPricing={EMPTY_RENTAL_PRICING}
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking: true,
+          perDiverPriceCents: 130_000,
+          currency: "mxn",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: [],
+          rentalPricing: EMPTY_RENTAL_PRICING,
+        }}
       />,
     );
 
@@ -62,16 +64,18 @@ describe("BookSpotSection price currency (task 35)", () => {
     // would offer the seat at ¥130.
     renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking
-        perDiverPriceCents={13_000}
-        currency="jpy"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={[]}
-        rentalPricing={EMPTY_RENTAL_PRICING}
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking: true,
+          perDiverPriceCents: 13_000,
+          currency: "jpy",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: [],
+          rentalPricing: EMPTY_RENTAL_PRICING,
+        }}
       />,
     );
 
@@ -81,16 +85,18 @@ describe("BookSpotSection price currency (task 35)", () => {
   it("still reads as dollars for a usd shop", () => {
     renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking
-        perDiverPriceCents={13_000}
-        currency="usd"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={[]}
-        rentalPricing={EMPTY_RENTAL_PRICING}
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking: true,
+          perDiverPriceCents: 13_000,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: [],
+          rentalPricing: EMPTY_RENTAL_PRICING,
+        }}
       />,
     );
 
@@ -108,16 +114,18 @@ describe("BookSpotSection — the money says itself once", () => {
   it("renders exactly one figure at total scale when the diver pays now", () => {
     renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking
-        perDiverPriceCents={9_500}
-        currency="usd"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={[]}
-        rentalPricing={EMPTY_RENTAL_PRICING}
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking: true,
+          perDiverPriceCents: 9_500,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: [],
+          rentalPricing: EMPTY_RENTAL_PRICING,
+        }}
       />,
     );
 
@@ -128,16 +136,18 @@ describe("BookSpotSection — the money says itself once", () => {
   it("renders exactly one figure at total scale when the shop is paid at the counter", () => {
     renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking={false}
-        perDiverPriceCents={9_500}
-        currency="usd"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={[]}
-        rentalPricing={EMPTY_RENTAL_PRICING}
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking: false,
+          perDiverPriceCents: 9_500,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: [],
+          rentalPricing: EMPTY_RENTAL_PRICING,
+        }}
       />,
     );
 
@@ -148,16 +158,18 @@ describe("BookSpotSection — the money says itself once", () => {
   it("says no money at all on an unpriced departure", () => {
     renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking={false}
-        perDiverPriceCents={null}
-        currency="usd"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={[]}
-        rentalPricing={EMPTY_RENTAL_PRICING}
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking: false,
+          perDiverPriceCents: null,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: [],
+          rentalPricing: EMPTY_RENTAL_PRICING,
+        }}
       />,
     );
 
@@ -171,16 +183,18 @@ describe("BookSpotSection — the money says itself once", () => {
     // never a design preference, only a consequence.
     renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking
-        perDiverPriceCents={9_500}
-        currency="usd"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={[]}
-        rentalPricing={EMPTY_RENTAL_PRICING}
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking: true,
+          perDiverPriceCents: 9_500,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: [],
+          rentalPricing: EMPTY_RENTAL_PRICING,
+        }}
       />,
     );
 
@@ -193,16 +207,18 @@ describe("BookSpotSection — the money says itself once", () => {
     // repeating it was the second of five places this form said the money.
     renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking
-        perDiverPriceCents={9_500}
-        currency="usd"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={[]}
-        rentalPricing={EMPTY_RENTAL_PRICING}
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking: true,
+          perDiverPriceCents: 9_500,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: [],
+          rentalPricing: EMPTY_RENTAL_PRICING,
+        }}
       />,
     );
 
@@ -219,17 +235,19 @@ describe("BookSpotSection — under the button", () => {
   function renderWithTerms(payAtBooking: boolean) {
     renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking={payAtBooking}
-        perDiverPriceCents={9_500}
-        currency="usd"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={[]}
-        rentalPricing={EMPTY_RENTAL_PRICING}
-        terms={<p>Free cancellation until Fri, 11:00 AM EDT</p>}
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking,
+          perDiverPriceCents: 9_500,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: [],
+          rentalPricing: EMPTY_RENTAL_PRICING,
+          terms: <p>Free cancellation until Fri, 11:00 AM EDT</p>,
+        }}
       />,
     );
   }
@@ -266,17 +284,19 @@ describe("BookSpotSection — no box inside the box", () => {
   it("states who the trip is for as the form's first line, unboxed", () => {
     const { container } = renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking
-        perDiverPriceCents={9_500}
-        currency="usd"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={[]}
-        rentalPricing={EMPTY_RENTAL_PRICING}
-        requirement="This charter is for divers with Advanced Open Water or higher."
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking: true,
+          perDiverPriceCents: 9_500,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: [],
+          rentalPricing: EMPTY_RENTAL_PRICING,
+          requirement: "This charter is for divers with Advanced Open Water or higher.",
+        }}
       />,
     );
 
@@ -288,16 +308,18 @@ describe("BookSpotSection — no box inside the box", () => {
   it("renders no requirement line when the trip asks nothing", () => {
     renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking
-        perDiverPriceCents={9_500}
-        currency="usd"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={[]}
-        rentalPricing={EMPTY_RENTAL_PRICING}
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking: true,
+          perDiverPriceCents: 9_500,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: [],
+          rentalPricing: EMPTY_RENTAL_PRICING,
+        }}
       />,
     );
 
@@ -308,16 +330,18 @@ describe("BookSpotSection — no box inside the box", () => {
   it("wraps no party or gear step in a bordered fieldset", () => {
     const { container } = renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={4}
-        payAtBooking
-        perDiverPriceCents={9_500}
-        currency="usd"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={["bcd", "regulator", "wetsuit", "mask_fins", "weights"]}
-        rentalPricing={pricedRentals}
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 4,
+          payAtBooking: true,
+          perDiverPriceCents: 9_500,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
+          rentalPricing: pricedRentals,
+        }}
       />,
     );
 
@@ -343,16 +367,18 @@ describe("BookSpotSection — the group captions", () => {
   it("draws how many and the lead's details in one caption style", () => {
     renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking
-        perDiverPriceCents={9_500}
-        currency="usd"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={[]}
-        rentalPricing={EMPTY_RENTAL_PRICING}
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking: true,
+          perDiverPriceCents: 9_500,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: [],
+          rentalPricing: EMPTY_RENTAL_PRICING,
+        }}
       />,
     );
     for (const caption of ["Number of divers", "Your details"]) {
@@ -368,16 +394,18 @@ describe("BookSpotSection rental gear at checkout", () => {
   it("shows a gear step per diver when the shop prices rental gear and checkout is on", () => {
     renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking
-        perDiverPriceCents={12_000}
-        currency="usd"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={["bcd", "regulator", "wetsuit", "mask_fins", "weights"]}
-        rentalPricing={pricedRentals}
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking: true,
+          perDiverPriceCents: 12_000,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
+          rentalPricing: pricedRentals,
+        }}
       />,
     );
 
@@ -398,16 +426,18 @@ describe("BookSpotSection rental gear at checkout", () => {
   it("shows no gear step when the shop hasn't priced any rental gear online", () => {
     renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking
-        perDiverPriceCents={12_000}
-        currency="usd"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={["bcd", "regulator", "wetsuit", "mask_fins", "weights"]}
-        rentalPricing={EMPTY_RENTAL_PRICING}
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking: true,
+          perDiverPriceCents: 12_000,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
+          rentalPricing: EMPTY_RENTAL_PRICING,
+        }}
       />,
     );
 
@@ -417,16 +447,18 @@ describe("BookSpotSection rental gear at checkout", () => {
   it("shows no gear step when checkout itself is off, even with rental pricing configured", () => {
     renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking={false}
-        perDiverPriceCents={null}
-        currency="usd"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={["bcd", "regulator", "wetsuit", "mask_fins", "weights"]}
-        rentalPricing={pricedRentals}
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking: false,
+          perDiverPriceCents: null,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
+          rentalPricing: pricedRentals,
+        }}
       />,
     );
 
@@ -445,18 +477,20 @@ describe("BookSpotSection tax disclosure", () => {
   it("says tax is added at checkout when the shop has Stripe Tax on", () => {
     renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking
-        perDiverPriceCents={19_500}
-        currency="usd"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={[]}
-        rentalPricing={EMPTY_RENTAL_PRICING}
-        passThroughFee={{ name: "Marine park fee", amountCents: 2_500 }}
-        taxEnabled
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking: true,
+          perDiverPriceCents: 19_500,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: [],
+          rentalPricing: EMPTY_RENTAL_PRICING,
+          passThroughFee: { name: "Marine park fee", amountCents: 2_500 },
+          taxEnabled: true,
+        }}
       />,
     );
 
@@ -467,17 +501,19 @@ describe("BookSpotSection tax disclosure", () => {
   it("says nothing about tax when the shop handles it outside DiveDay", () => {
     renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking
-        perDiverPriceCents={19_500}
-        currency="usd"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={[]}
-        rentalPricing={EMPTY_RENTAL_PRICING}
-        passThroughFee={{ name: "Marine park fee", amountCents: 2_500 }}
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking: true,
+          perDiverPriceCents: 19_500,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: [],
+          rentalPricing: EMPTY_RENTAL_PRICING,
+          passThroughFee: { name: "Marine park fee", amountCents: 2_500 },
+        }}
       />,
     );
 
@@ -562,16 +598,18 @@ describe("BookSpotSection on the demo's test-mode checkout", () => {
   function renderPay(payAtBooking: true | "test-mode") {
     renderDiver(
       <BookSpotSection
-        trip={trip()}
-        tripRef={tripRef}
-        remaining={6}
-        payAtBooking={payAtBooking}
-        perDiverPriceCents={13_000}
-        currency="usd"
-        locale="en-US"
-        timeZone="America/New_York"
-        rentalItems={[]}
-        rentalPricing={EMPTY_RENTAL_PRICING}
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking,
+          perDiverPriceCents: 13_000,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          rentalItems: [],
+          rentalPricing: EMPTY_RENTAL_PRICING,
+        }}
       />,
     );
   }

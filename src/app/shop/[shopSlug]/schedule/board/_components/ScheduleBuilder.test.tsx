@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { type ComponentProps, StrictMode } from "react";
+import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -12,6 +12,7 @@ import {
   type BuilderMoreOptions,
   type BuilderPriceInput,
   ScheduleBuilder,
+  type ScheduleBuilderContext,
 } from "./ScheduleBuilder";
 import type { BuilderWeek, WeekEntry, WeekSpan } from "./WeekBoard";
 
@@ -367,19 +368,21 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
   function renderBuilder() {
     return render(
       <ScheduleBuilder
-        shopSlug="blue-mantis"
-        week={weekFrom(days)}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
+        context={{
+          shopSlug: "blue-mantis",
+          week: weekFrom(days),
+          loadOptions,
+          loadMovePreflight,
+          price: PRICE,
+          actions,
+          defaultDateIso: "2026-08-01",
+          canConfigure: true,
+          locale: "en-US",
+          copy: COPY,
+          more: MORE,
+          initialCourse: null,
+          openAdd: "closed",
+        }}
       />,
     );
   }
@@ -517,20 +520,22 @@ describe("ScheduleBuilder add panel: the tide at the chosen site", () => {
   function renderBuilder() {
     return render(
       <ScheduleBuilder
-        shopSlug="blue-mantis"
-        week={weekFrom(days)}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        loadTideWindow={loadTideWindow}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
+        context={{
+          shopSlug: "blue-mantis",
+          week: weekFrom(days),
+          loadOptions,
+          loadMovePreflight,
+          loadTideWindow,
+          price: PRICE,
+          actions,
+          defaultDateIso: "2026-08-01",
+          canConfigure: true,
+          locale: "en-US",
+          copy: COPY,
+          more: MORE,
+          initialCourse: null,
+          openAdd: "closed",
+        }}
       />,
     );
   }
@@ -611,24 +616,26 @@ describe("ScheduleBuilder add panel: the weekday pattern", () => {
   };
   const loadPattern = vi.fn(async (_dateIso: string) => pattern);
 
-  function renderBuilder(extra: Partial<ComponentProps<typeof ScheduleBuilder>> = {}) {
+  function renderBuilder(extra: Partial<ScheduleBuilderContext> = {}) {
     return render(
       <ScheduleBuilder
-        shopSlug="blue-mantis"
-        week={weekFrom(days)}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        loadPattern={loadPattern}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
-        {...extra}
+        context={{
+          shopSlug: "blue-mantis",
+          week: weekFrom(days),
+          loadOptions,
+          loadMovePreflight,
+          loadPattern,
+          price: PRICE,
+          actions,
+          defaultDateIso: "2026-08-01",
+          canConfigure: true,
+          locale: "en-US",
+          copy: COPY,
+          more: MORE,
+          initialCourse: null,
+          openAdd: "closed",
+          ...extra,
+        }}
       />,
     );
   }
@@ -735,19 +742,21 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
     ];
     const { rerender } = render(
       <ScheduleBuilder
-        shopSlug="blue-mantis"
-        week={weekFrom(days)}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
+        context={{
+          shopSlug: "blue-mantis",
+          week: weekFrom(days),
+          loadOptions,
+          loadMovePreflight,
+          price: PRICE,
+          actions,
+          defaultDateIso: "2026-08-01",
+          canConfigure: true,
+          locale: "en-US",
+          copy: COPY,
+          more: MORE,
+          initialCourse: null,
+          openAdd: "closed",
+        }}
       />,
     );
 
@@ -762,19 +771,21 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
     setMockPathname("/shop/blue-mantis/schedule/board?foo=bar");
     rerender(
       <ScheduleBuilder
-        shopSlug="blue-mantis"
-        week={weekFrom(days)}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
+        context={{
+          shopSlug: "blue-mantis",
+          week: weekFrom(days),
+          loadOptions,
+          loadMovePreflight,
+          price: PRICE,
+          actions,
+          defaultDateIso: "2026-08-01",
+          canConfigure: true,
+          locale: "en-US",
+          copy: COPY,
+          more: MORE,
+          initialCourse: null,
+          openAdd: "closed",
+        }}
       />,
     );
 
@@ -811,10 +822,24 @@ describe("ScheduleBuilder top add panel opened by link (?add=)", () => {
     // route — a client navigation that re-renders this instance with a new
     // prop rather than remounting it. Without the prop-change effect the
     // link opened the panel exactly once per mount.
-    const { rerender } = render(<ScheduleBuilder {...props} openAdd="closed" />);
+    const { rerender } = render(
+      <ScheduleBuilder
+        context={{
+          ...props,
+          openAdd: "closed",
+        }}
+      />,
+    );
     expect(screen.queryByPlaceholderText(COPY.titlePlaceholder)).not.toBeInTheDocument();
 
-    rerender(<ScheduleBuilder {...props} openAdd="quick" />);
+    rerender(
+      <ScheduleBuilder
+        context={{
+          ...props,
+          openAdd: "quick",
+        }}
+      />,
+    );
     expect(screen.getByPlaceholderText(COPY.titlePlaceholder)).toBeInTheDocument();
   });
 
@@ -828,7 +853,12 @@ describe("ScheduleBuilder top add panel opened by link (?add=)", () => {
     // button read as dead. StrictMode here reproduces that second pass.
     render(
       <StrictMode>
-        <ScheduleBuilder {...props} openAdd="quick" />
+        <ScheduleBuilder
+          context={{
+            ...props,
+            openAdd: "quick",
+          }}
+        />
       </StrictMode>,
     );
     expect(screen.getByPlaceholderText(COPY.titlePlaceholder)).toBeInTheDocument();
@@ -839,7 +869,14 @@ describe("ScheduleBuilder top add panel opened by link (?add=)", () => {
     // settles in an effect), and Cancel's closure reads the *latest* render's
     // params. afterEach restores the empty default.
     useSearchParams.mockReturnValue(new URLSearchParams("add=1&after=cursor-2"));
-    render(<ScheduleBuilder {...props} openAdd="quick" />);
+    render(
+      <ScheduleBuilder
+        context={{
+          ...props,
+          openAdd: "quick",
+        }}
+      />,
+    );
     expect(screen.getByPlaceholderText(COPY.titlePlaceholder)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
@@ -862,19 +899,21 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
     ];
     render(
       <ScheduleBuilder
-        shopSlug="blue-mantis"
-        week={weekFrom(days)}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
+        context={{
+          shopSlug: "blue-mantis",
+          week: weekFrom(days),
+          loadOptions,
+          loadMovePreflight,
+          price: PRICE,
+          actions,
+          defaultDateIso: "2026-08-01",
+          canConfigure: true,
+          locale: "en-US",
+          copy: COPY,
+          more: MORE,
+          initialCourse: null,
+          openAdd: "closed",
+        }}
       />,
     );
 
@@ -898,19 +937,21 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
     ];
     render(
       <ScheduleBuilder
-        shopSlug="blue-mantis"
-        week={weekFrom(days)}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
+        context={{
+          shopSlug: "blue-mantis",
+          week: weekFrom(days),
+          loadOptions,
+          loadMovePreflight,
+          price: PRICE,
+          actions,
+          defaultDateIso: "2026-08-01",
+          canConfigure: true,
+          locale: "en-US",
+          copy: COPY,
+          more: MORE,
+          initialCourse: null,
+          openAdd: "closed",
+        }}
       />,
     );
 
@@ -937,23 +978,25 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     },
   ];
 
-  function renderBuilder(overrides: Partial<ComponentProps<typeof ScheduleBuilder>> = {}) {
+  function renderBuilder(overrides: Partial<ScheduleBuilderContext> = {}) {
     return render(
       <ScheduleBuilder
-        shopSlug="blue-mantis"
-        week={weekFrom(days)}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
-        {...overrides}
+        context={{
+          shopSlug: "blue-mantis",
+          week: weekFrom(days),
+          loadOptions,
+          loadMovePreflight,
+          price: PRICE,
+          actions,
+          defaultDateIso: "2026-08-01",
+          canConfigure: true,
+          locale: "en-US",
+          copy: COPY,
+          more: MORE,
+          initialCourse: null,
+          openAdd: "closed",
+          ...overrides,
+        }}
       />,
     );
   }
@@ -1264,27 +1307,29 @@ describe("ScheduleBuilder request plan: copy composed on the client", () => {
   function renderPlan(locale: string, divemasters: number, divers: number) {
     return render(
       <ScheduleBuilder
-        shopSlug="blue-mantis"
-        locale={locale}
-        week={weekFrom(days)}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        copy={{ ...COPY, ...requestPlanCopy(locale) }}
-        more={MORE}
-        initialCourse={null}
-        openAdd="expanded"
-        requestPlan={{
-          estimatedDivers: divers,
-          suggestedCapacity: 12,
-          suggestedDivemasters: divemasters,
-          diversPerDivemaster: 4,
-          suggestedBoatName: "Reef Runner",
-          exceedsKnownBoats: false,
-          requests: [{ id: "inq-1", name: "Marisol", subject: "Saturday reef", divers }],
+        context={{
+          shopSlug: "blue-mantis",
+          locale,
+          week: weekFrom(days),
+          loadOptions,
+          loadMovePreflight,
+          price: PRICE,
+          actions,
+          defaultDateIso: "2026-08-01",
+          canConfigure: true,
+          copy: { ...COPY, ...requestPlanCopy(locale) },
+          more: MORE,
+          initialCourse: null,
+          openAdd: "expanded",
+          requestPlan: {
+            estimatedDivers: divers,
+            suggestedCapacity: 12,
+            suggestedDivemasters: divemasters,
+            diversPerDivemaster: 4,
+            suggestedBoatName: "Reef Runner",
+            exceedsKnownBoats: false,
+            requests: [{ id: "inq-1", name: "Marisol", subject: "Saturday reef", divers }],
+          },
         }}
       />,
     );
@@ -1440,19 +1485,21 @@ describe("ScheduleBuilder week board", () => {
   function board(weekProps: BuilderWeek | null, canConfigure = true) {
     return render(
       <ScheduleBuilder
-        shopSlug="blue-mantis"
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-27"
-        canConfigure={canConfigure}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
-        week={weekProps}
+        context={{
+          shopSlug: "blue-mantis",
+          loadOptions,
+          loadMovePreflight,
+          price: PRICE,
+          actions,
+          defaultDateIso: "2026-08-27",
+          canConfigure,
+          locale: "en-US",
+          copy: COPY,
+          more: MORE,
+          initialCourse: null,
+          openAdd: "closed",
+          week: weekProps,
+        }}
       />,
     );
   }
@@ -2124,19 +2171,21 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
   function renderBoard() {
     return render(
       <ScheduleBuilder
-        shopSlug="blue-mantis"
-        week={weekFrom(days)}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
+        context={{
+          shopSlug: "blue-mantis",
+          week: weekFrom(days),
+          loadOptions,
+          loadMovePreflight,
+          price: PRICE,
+          actions,
+          defaultDateIso: "2026-08-01",
+          canConfigure: true,
+          locale: "en-US",
+          copy: COPY,
+          more: MORE,
+          initialCourse: null,
+          openAdd: "closed",
+        }}
       />,
     );
   }
@@ -2373,19 +2422,21 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
     ];
     render(
       <ScheduleBuilder
-        shopSlug="blue-mantis"
-        week={weekFrom(twoDays)}
-        loadOptions={loadOptions}
-        loadMovePreflight={loadMovePreflight}
-        price={PRICE}
-        actions={actions}
-        defaultDateIso="2026-08-01"
-        canConfigure={true}
-        locale="en-US"
-        copy={COPY}
-        more={MORE}
-        initialCourse={null}
-        openAdd="closed"
+        context={{
+          shopSlug: "blue-mantis",
+          week: weekFrom(twoDays),
+          loadOptions,
+          loadMovePreflight,
+          price: PRICE,
+          actions,
+          defaultDateIso: "2026-08-01",
+          canConfigure: true,
+          locale: "en-US",
+          copy: COPY,
+          more: MORE,
+          initialCourse: null,
+          openAdd: "closed",
+        }}
       />,
     );
 

@@ -25,7 +25,6 @@ import {
   tripPublicCrew,
 } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
-import { languageEndonymList } from "@/i18n/language-labels";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { tripRequirementList } from "@/i18n/readiness-labels";
@@ -37,7 +36,6 @@ import { perDiverBookingPriceCents } from "@/lib/courses";
 import { checkoutSeatTerms } from "@/lib/deposits";
 import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
-import { cachedListFormat } from "@/lib/intl-cache";
 import { automatedForecastForDeparture, hasCrewPrediction } from "@/lib/marine-forecast";
 import { minimumSeatsState } from "@/lib/minimum-seats";
 import { toShopCurrency } from "@/lib/money";
@@ -63,6 +61,7 @@ import {
 import { publicTripRecord, readBookingPageWave } from "./_components/booking-page-wave";
 import { ConditionsLine } from "./_components/ConditionsLine";
 import { bookingCourseFees } from "./_components/course-fees";
+import { crewLanguagesSentence } from "./_components/crew-languages";
 import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
 import { knownDiverFactLines } from "./_components/known-diver-lines";
 import { fullTripAlternatives, worthALookList } from "./_components/other-boats";
@@ -252,11 +251,7 @@ export default async function TripDetailPage({
       </DiverIntlProvider>
     );
   }
-  const crewLanguageNames = languageEndonymList(crewLanguages);
-  const crewLanguagesLine =
-    crewLanguageNames.length === 0
-      ? null
-      : cachedListFormat(locale, { style: "long", type: "conjunction" }).format(crewLanguageNames);
+  const crewLanguagesLine = crewLanguagesSentence(crewLanguages, locale);
   const crewPrediction = hasCrewPrediction(trip);
   // Started, never awaited: ConditionsLine streams it in its own `<Suspense>`.
   const automatedForecast = crewPrediction
@@ -721,30 +716,32 @@ export default async function TripDetailPage({
                 />
               ) : (
                 <BookSpotSection
-                  trip={trip}
-                  tripRef={tripRef}
-                  remaining={remaining}
-                  errorMessage={errorMessage}
-                  payAtBooking={payAtBooking && checkoutMode(stripeAccount)}
-                  offerCodeField={offerCodeField}
-                  perDiverPriceCents={perDiverPriceCents}
-                  currency={shopCurrency}
-                  locale={locale}
-                  timeZone={shop.timezone}
-                  contactEmail={shop.contactEmail}
-                  contactPhone={shop.contactPhone}
-                  rentalItems={shop.rentalItems}
-                  rentalPricing={shop.rentalPricing}
-                  passThroughFee={passThroughFee}
-                  taxEnabled={shop.taxEnabled}
-                  courseFeeCents={courseFeeCents}
-                  eLearningFeeCents={eLearningFeeCents}
-                  {...checkoutSeatTerms(trip, trip.course)}
-                  balanceDueAt={trip.startsAt}
-                  terms={<BookingFinePrint shop={shop} trip={trip} locale={locale} />}
-                  knownDiver={knownDiverPanel}
-                  requirement={requirementSentence}
-                  offerHandoff={offerHandoff.bind(null, tripRef)}
+                  context={{
+                    trip,
+                    tripRef,
+                    remaining,
+                    errorMessage,
+                    payAtBooking: payAtBooking && checkoutMode(stripeAccount),
+                    offerCodeField,
+                    perDiverPriceCents,
+                    currency: shopCurrency,
+                    locale,
+                    timeZone: shop.timezone,
+                    contactEmail: shop.contactEmail,
+                    contactPhone: shop.contactPhone,
+                    rentalItems: shop.rentalItems,
+                    rentalPricing: shop.rentalPricing,
+                    passThroughFee,
+                    taxEnabled: shop.taxEnabled,
+                    courseFeeCents,
+                    eLearningFeeCents,
+                    ...checkoutSeatTerms(trip, trip.course),
+                    balanceDueAt: trip.startsAt,
+                    terms: <BookingFinePrint shop={shop} trip={trip} locale={locale} />,
+                    knownDiver: knownDiverPanel,
+                    requirement: requirementSentence,
+                    offerHandoff: offerHandoff.bind(null, tripRef),
+                  }}
                 />
               )}
               {/* The last line on the page: how to reach a human. Renders nothing at

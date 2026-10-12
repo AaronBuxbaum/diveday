@@ -36,23 +36,8 @@ import type { DiveSiteList, Trip, TripDiveList } from "./types";
  */
 const GROUP_INSET = "rounded-inset bg-surface-sunken p-4 sm:p-5";
 
-export function DetailsSection({
-  action,
-  status,
-  trip,
-  diveSiteList,
-  tripDiveList,
-  startWall,
-  endWall,
-  dayCount,
-  locale,
-  currency,
-  boats,
-  lenses,
-  hasBoatDiving,
-  hasShoreDiving,
-  hasPoolDiving,
-}: {
+/** Everything `DetailsSection` draws, assembled once by its caller and handed over as one object. */
+export type DetailsSectionContext = {
   action: (formData: FormData) => void;
   /** This form's own outcome, rendered beside its Save button rather than at the top of the page. */
   status?: FormNotice;
@@ -73,7 +58,26 @@ export function DetailsSection({
   locale: string;
   /** The shop's currency — what the numbers in these price boxes mean. */
   currency: string;
-}) {
+};
+
+export function DetailsSection({ context }: { context: DetailsSectionContext }) {
+  const {
+    action,
+    status,
+    trip,
+    diveSiteList,
+    tripDiveList,
+    startWall,
+    endWall,
+    dayCount,
+    locale,
+    currency,
+    boats,
+    lenses,
+    hasBoatDiving,
+    hasShoreDiving,
+    hasPoolDiving,
+  } = context;
   const t = staffTranslator(locale);
   // Both price boxes follow the shop's currency: whole-number entry and a
   // symbol-only placeholder for a zero-decimal currency, where "$0.00" was

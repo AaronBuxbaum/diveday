@@ -49,7 +49,7 @@ import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRos
 import { TripStageBadge, TripTabs } from "./_components/TripTabs";
 import { tripAboutRows } from "./_components/trip-about-rows";
 import { tripCrewNotes } from "./_components/trip-crew-notes";
-import { DETAILS_FORMS, ROSTER_FORMS } from "./_components/trip-notice-tabs";
+import { DETAILS_FORMS, pageNoticesFor } from "./_components/trip-notice-tabs";
 import { tripPulseFacts } from "./_components/trip-pulse-facts";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
 import {
@@ -251,11 +251,7 @@ export default async function ManageTripPage({
     t,
   });
 
-  const rootPageNotice =
-    tripNotice && !DETAILS_FORMS.has(tripNotice.form) && !ROSTER_FORMS.has(tripNotice.form)
-      ? tripNotice
-      : undefined;
-  const rosterPageNotice = tripNotice && tripNotice.form === "roster" ? tripNotice : undefined;
+  const { rootPageNotice, rosterPageNotice } = pageNoticesFor(tripNotice);
   const now = nowDate();
   const acceptsDivers = acceptsNewDivers(trip, now);
   const phase = tripPhaseOf({
@@ -524,45 +520,46 @@ export default async function ManageTripPage({
             />
 
             <TripRosterContent
-              arrival={desk?.arrival}
-              walkInOpen={desk?.walkInOpen}
-              acceptsDivers={acceptsDivers}
-              guests={guests}
-              shopSlug={shopSlug}
-              shopName={shop.name}
-              locale={locale}
-              timezone={shop.timezone}
-              depthUnit={shop.depthUnit}
-              shopRentalItems={shop.rentalItems}
-              tripNotice={tripNotice}
-              pageNotice={rosterPageNotice}
-              noteDeleted={
-                noteBookingId && noteBody ? { bookingId: noteBookingId, body: noteBody } : undefined
-              }
-              confirmName={confirmName}
-              confirmEmail={confirmEmail}
-              confirmPhone={confirmPhone}
-              undoBookingId={
-                notice?.startsWith("booking-removed") && notice !== "booking-removed-refunded"
-                  ? bid
-                  : undefined
-              }
-              // Every row folds its fixes now, so whatever a save inside a row
-              // reports, the row it names stays open on the way back: the
-              // staffer lands where they were working, not on a closed list.
-              // A removed seat has no row to hold.
-              keepOpenBookingId={notice?.startsWith("booking-removed") ? undefined : bid}
-              // The one paper-release refusal with a way through (issue #1573),
-              // scoped to the seat the action named so a roster of minors does not
-              // all sprout the staffer's confirmation.
-              namesakeRefusedBookingId={notice === "waiver-guardian-name" ? bid : undefined}
-              participantTypeCertBookingId={
-                notice === "participant-type-cert" && mayOverrideCertBlock ? bid : undefined
-              }
-              mayWriteOffPayment={mayWriteOffPayment}
-              canManageOrders={canManageOrders}
-              compact
-              actions={rosterActions}
+              context={{
+                arrival: desk?.arrival,
+                walkInOpen: desk?.walkInOpen,
+                acceptsDivers,
+                guests,
+                shopSlug,
+                shopName: shop.name,
+                locale,
+                timezone: shop.timezone,
+                depthUnit: shop.depthUnit,
+                shopRentalItems: shop.rentalItems,
+                tripNotice,
+                pageNotice: rosterPageNotice,
+                noteDeleted:
+                  noteBookingId && noteBody
+                    ? { bookingId: noteBookingId, body: noteBody }
+                    : undefined,
+                confirmName,
+                confirmEmail,
+                confirmPhone,
+                undoBookingId:
+                  notice?.startsWith("booking-removed") && notice !== "booking-removed-refunded"
+                    ? bid
+                    : undefined,
+                // Every row folds its fixes now, so whatever a save inside a row
+                // reports, the row it names stays open on the way back: the
+                // staffer lands where they were working, not on a closed list.
+                // A removed seat has no row to hold.
+                keepOpenBookingId: notice?.startsWith("booking-removed") ? undefined : bid,
+                // The one paper-release refusal with a way through (issue #1573),
+                // scoped to the seat the action named so a roster of minors does not
+                // all sprout the staffer's confirmation.
+                namesakeRefusedBookingId: notice === "waiver-guardian-name" ? bid : undefined,
+                participantTypeCertBookingId:
+                  notice === "participant-type-cert" && mayOverrideCertBlock ? bid : undefined,
+                mayWriteOffPayment,
+                canManageOrders,
+                compact: true,
+                actions: rosterActions,
+              }}
             />
           </DeskRefresh>
         )}
