@@ -1041,6 +1041,25 @@ export async function applyDetailsToFutureSeries(
       travelMinutes: dive.travelMinutes,
     }));
 
+    const siblingScope = and(
+      eq(trips.seriesId, seriesId),
+      eq(trips.shopId, shopId),
+      eq(trips.status, "scheduled"),
+      gte(trips.startsAt, now),
+      ne(trips.id, sourceTripId),
+    );
+    // **Hold every sibling before counting its seats** (dive-domain review of
+    // #2322): the seat check below and the write after it must see the same
+    // bookings, so the dates are locked the way every seat writer locks a trip
+    // (`for no key update`, the #2324 order), in id order so two applies to
+    // one series cannot take them crosswise. A separate read because Postgres
+    // will not lock the rows of a grouped query.
+    await tx
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(liveTrip(), siblingScope))
+      .orderBy(asc(trips.id))
+      .for("no key update");
     const siblings = await tx
       .select({
         id: trips.id,
@@ -1054,17 +1073,9 @@ export async function applyDetailsToFutureSeries(
       // The seats somebody is holding, as everywhere else: a no-show has
       // released theirs (`seatHeld`).
       .leftJoin(bookings, liveBookingJoin)
-      .where(
-        and(
-          liveTrip(),
-          eq(trips.seriesId, seriesId),
-          eq(trips.shopId, shopId),
-          eq(trips.status, "scheduled"),
-          gte(trips.startsAt, now),
-          ne(trips.id, sourceTripId),
-        ),
-      )
-      .groupBy(trips.id, boats.id);
+      .where(and(liveTrip(), siblingScope))
+      .groupBy(trips.id, boats.id)
+      .orderBy(asc(trips.id));
 
     // Same operational-history invariant updateTrip enforces for a single
     // trip (CR-006) — a bulk apply must not silently orphan a sibling's

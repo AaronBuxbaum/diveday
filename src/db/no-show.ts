@@ -213,9 +213,10 @@ export async function markBookingNoShow(
  * Not a plain status flip, because the release was real: by the time somebody
  * taps Undo the shop may have sold the seat to the diver who was waiting for
  * it, and putting the first one back would overfill the boat. So the seat
- * count re-runs under the trip's own lock — the same `FOR UPDATE` on `trips`
- * that `restoreBooking` and `bookSpot` take — and a seat that is gone refuses
- * rather than quietly oversells.
+ * count re-runs under the trip's own lock — `FOR NO KEY UPDATE`, taken by
+ * `lockSeatDeparture` before the booking (#2324's order), which still
+ * serializes against `restoreBooking` and `bookSpot`'s `FOR UPDATE` — and a
+ * seat that is gone refuses rather than quietly oversells.
  *
  * "Gone" means gone under **both** limits every seat-granting path applies, the
  * same pair `restoreBooking` checks and for the same reason: the trip's own
