@@ -9,7 +9,7 @@
       "unitsSaved": "Units saved.",
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
       "taxSaved": "Tax setting saved.",
-      "taxInvalid": "That tax setting couldn’t be saved.",
+      "taxInvalid": "Nothing changed: the tax switch sent a value this page didn’t expect. Reload Settings and turn it on or off again.",
       "passThroughSaved": "Pass-through fee saved.",
       "passThroughInvalid": "Enter both a fee name and a positive amount, or leave both blank to disable it.",
       "rentalsSaved": "Rental catalog saved.",
@@ -23,7 +23,7 @@
       "profileSaved": "Shop profile and branding saved.",
       "profileInvalid": "Check your tagline, description, and logo file.",
       "shopPhotosSaved": "Shop photos saved.",
-      "shopPhotosInvalid": "Those photos didn’t save. Use JPG, PNG, WebP, or HEIC under {maxMb} MB, and keep to {max} in all.",
+      "shopPhotosInvalid": "Those photos didn’t save. Use JPG, PNG, WebP, or HEIC under {maxMb}\u00a0MB, and keep to {max} in all.",
       "addressSaved": "Shop address saved.",
       "addressRemoved": "Shop address removed.",
       "addressInvalid": "That address couldn’t be saved. Search again and pick your shop from the list.",
@@ -702,7 +702,7 @@
       },
       "waiverDocuments": {
         "what": "Waiver / medical documents",
-        "detail": "Fetched once from your file’s URL and kept for audit. Images and PDFs up to 5 MB."
+        "detail": "Fetched once from your file’s URL and kept for audit. Images and PDFs up to 5\u00a0MB."
       },
       "role": {
         "what": "Role",
@@ -898,7 +898,7 @@
       "notOwnerOrManager": "Importing contacts is limited to the shop’s owner or manager.",
       "csvRequired": "Choose a CSV file to import.",
       "noImportableRows": "No rows could be imported. Every row was missing a name or duplicated.",
-      "fileTooLarge": "The file is too large. The limit is {limitMb} MB.",
+      "fileTooLarge": "The file is too large. The limit is {limitMb}\u00a0MB.",
       "fileEmpty": "The file is empty.",
       "tooManyColumns": "Too many columns ({count}). The limit is {limit}.",
       "tooManyRows": "Too many rows ({count}). The limit is {limit} per import, so split the file and import it in batches.",
@@ -947,7 +947,7 @@
       "codeInvalid": "That code was not accepted.",
       "stepUpRequired": "Verify with your authenticator before continuing.",
       "unavailable": "Security setup is unavailable until the deployment encryption key is configured.",
-      "invalid": "That security change could not be completed.",
+      "invalid": "Nothing changed: your sign-in expired or the form was out of date. Sign out, sign back in, and try again from this page.",
       "tooManyAttempts": "Too many attempts. Wait a few minutes and try again."
     }
   },

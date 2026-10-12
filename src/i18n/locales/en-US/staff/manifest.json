@@ -151,7 +151,7 @@
   "buddyErrorDuplicate": "Pick different people. Nobody is their own buddy.",
   "buddyErrorAlreadyTeamed": "One of those divers is already on a buddy team. Dissolve it first.",
   "buddyErrorTooFew": "A buddy team needs at least two people.",
-  "buddyErrorGeneric": "That didn’t save. Try again.",
+  "buddyErrorGeneric": "That team changed: someone left this departure or the team was edited on another screen. The teams below are current; pick again.",
   "boardedCheck": "Boarded",
   "boardedCheckAriaLabel": "Boarded — tap again to undo",
   "markBoarded": "Mark boarded",

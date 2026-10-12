@@ -7,7 +7,7 @@
       "notConnected": "Conecta una cuenta de Stripe en los ajustes del centro antes de crear un pedido.",
       "taxLocationRequired": "Los impuestos están activados. Añade la dirección de facturación del cliente antes de enviar esta factura.",
       "stripeFailed": "Stripe no pudo crear esa factura. Inténtalo de nuevo en un momento.",
-      "fallback": "No se pudo crear ese pedido."
+      "fallback": "Ese pedido no se creó y no se envió nada. Revisa el cliente y cada línea y vuelve a enviarlo; si falla dos veces, abre Pedidos para ver si se registró."
     },
     "linkedTo": "Vinculado a la reserva de {personName} en {tripTitle} ({date}).",
     "courseNote": "Borra la línea de e-learning si este alumno ya lo completó por su cuenta.",

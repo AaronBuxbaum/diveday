@@ -83,7 +83,7 @@
     "bundle_failed": "The export bundle couldn’t be built.",
     "encryption_key_unset": "This DiveDay instance isn’t set up to hold credentials safely.",
     "encryption_key_invalid": "This DiveDay instance’s encryption key is misconfigured.",
-    "unknown": "Something went wrong."
+    "unknown": "The delivery stopped and gave no reason we recognize. Run a test delivery below; if it fails again, check the endpoint, bucket and key."
   },
   "disconnect": {
     "heading": "Remove destination",

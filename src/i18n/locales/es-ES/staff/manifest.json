@@ -151,7 +151,7 @@
   "buddyErrorDuplicate": "Elige personas distintas. Nadie es su propio compañero.",
   "buddyErrorAlreadyTeamed": "Uno de esos buceadores ya tiene pareja de buceo. Deshaz esa pareja primero.",
   "buddyErrorTooFew": "Una pareja de buceo necesita al menos dos personas.",
-  "buddyErrorGeneric": "No se guardó. Inténtalo de nuevo.",
+  "buddyErrorGeneric": "Ese equipo cambió: alguien dejó esta salida o el equipo se editó en otra pantalla. Los equipos de abajo están al día; elige de nuevo.",
   "boardedCheck": "Embarcado",
   "boardedCheckAriaLabel": "Embarcado — toca de nuevo para deshacer",
   "markBoarded": "Marcar embarcado",
