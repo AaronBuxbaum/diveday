@@ -383,16 +383,29 @@ export async function returnCounterRentalAction(formData: FormData) {
   const parsed = returnSchema.safeParse(Object.fromEntries(formData));
   const ticket = ticketLanding(session.user.shopSlug, parsed);
   if (!parsed.data) return;
+  // The units ticked "Pull for service" under a concern (issue #2345), read as
+  // the departure's return reads them: a repeated field, unit ids only. The
+  // writer reaches only units this return closes, so a forged id pulls nothing.
+  const pullGearItemIds = formData
+    .getAll("pull")
+    .filter((value): value is string => typeof value === "string")
+    .filter((value) => z.uuid().safeParse(value).success);
   const outcome = await returnCounterRental(await getDb(), {
     shopId: session.user.shopId,
     ticketId: parsed.data.ticketId,
     outcome: parsed.data.outcome,
     note: parsed.data.note,
     dives: parsed.data.dives,
+    pullGearItemIds,
   });
   // A unit flagged at the return is not "back on the wall": it waits for the
-  // bench, and the notice says so.
-  const returned = parsed.data.outcome === "service_concern" ? "returned-flagged" : "returned";
+  // bench, and the notice says so. "Pulled" only when a unit really moved.
+  const returned =
+    outcome.ok && outcome.pulled > 0
+      ? "returned-pulled"
+      : parsed.data.outcome === "service_concern"
+        ? "returned-flagged"
+        : "returned";
   revalidateAndRedirect(
     shopPath(session.user.shopSlug, "gear"),
     noticeUrl(ticket, outcome.ok ? returned : outcome.reason),

@@ -94,6 +94,7 @@
       "notFound": "Nothing on this rental is left to do that to.",
       "concernNeedsWords": "A service concern needs a line saying what happened, so a technician can act on it.",
       "returnedFlagged": "Back, and flagged for the bench.",
+      "returnedPulled": "Back. Pulled for service.",
       "invoiced": "This rental has a payment on it. Void that in Orders first, then release it.",
       "rentedPaid": "Rented out. Payment recorded.",
       "rentedNotRecorded": "Rented out, but the payment didn’t save. Release the rental and rent it out again."

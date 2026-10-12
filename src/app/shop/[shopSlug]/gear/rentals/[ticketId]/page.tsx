@@ -58,6 +58,7 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "handed-over": { tone: "success", key: "counterRentals.ticket.notice.handedOver" },
   returned: { tone: "success", key: "counterRentals.ticket.notice.returned" },
   "returned-flagged": { tone: "warning", key: "counterRentals.ticket.notice.returnedFlagged" },
+  "returned-pulled": { tone: "success", key: "counterRentals.ticket.notice.returnedPulled" },
   invoiced: { tone: "warning", key: "counterRentals.ticket.notice.invoiced" },
   released: { tone: "success", key: "counterRentals.ticket.notice.released" },
   "not-found": { tone: "warning", key: "counterRentals.ticket.notice.notFound" },
@@ -254,6 +255,10 @@ export default async function CounterRentalTicketPage({
                   serviceConcern: t("gear.prep.returnServiceConcern"),
                   noteLabel: t("gear.prep.returnNoteLabel"),
                   notePlaceholder: t("gear.prep.returnNotePlaceholder"),
+                }}
+                bench={{
+                  legend: t("gear.prep.returnPullToBench"),
+                  units: out.map((unit) => ({ id: unit.gearItemId, label: unit.label })),
                 }}
               >
                 {/* Optional, and the only count the dive clock gets for a

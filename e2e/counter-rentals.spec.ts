@@ -106,6 +106,32 @@ test.describe("staff", () => {
     await expect(page.getByRole("button", { name: "Hand over" })).toHaveCount(0);
   });
 
+  // Issue #2345: a walk-in's return offers the same unticked "Pull for
+  // service" boxes a departure's does, and says "Pulled" because one moved.
+  test("pulls a ticked unit to the bench on a service concern", async ({ page }) => {
+    await startRentalForCustomer(page);
+    await pickUnit(page, "Mask", "Mask #2");
+    await pickUnit(page, "Fins", "Fins #2");
+    await payBy(page, "No charge");
+    await page.getByRole("button", { name: "Rent out", exact: true }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Rented out." })).toBeVisible();
+    await page.getByRole("button", { name: "Hand over" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Handed over." })).toBeVisible();
+
+    await page.getByRole("button", { name: "Service concern" }).click();
+    const bench = page.getByRole("group", { name: "Pull for service" });
+    // Every box starts unticked: pulling is never automatic (#2205).
+    await expect(bench.getByRole("checkbox")).toHaveCount(2);
+    for (const box of await bench.getByRole("checkbox").all()) await expect(box).not.toBeChecked();
+    await page.getByLabel("What to tell the technician").fill("Mask skirt torn");
+    await bench.getByRole("checkbox", { name: "Mask #2" }).check();
+    // The armed concern's own submit, below the boxes.
+    await page.getByRole("button", { name: "Service concern" }).last().click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Back. Pulled for service." }),
+    ).toBeVisible();
+  });
+
   test("the register sees a handed-over counter rental out, with its holder", async ({ page }) => {
     await startRentalForCustomer(page);
     await pickUnit(page, "Mask", "Mask #3");

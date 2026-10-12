@@ -74,4 +74,20 @@ describe("the counter-rental ticket", () => {
   it("does not call a flagged return back on the wall", () => {
     expect(SOURCE).toContain('"returned-flagged"');
   });
+
+  /**
+   * Issue #2345: the counter's return offers the same unticked "Pull for
+   * service" boxes a departure's does (#2205), one per unit that is out, and
+   * says "Pulled" only when the writer moved one.
+   */
+  it("offers the bench for the units that are out, and words a real pull", () => {
+    const pane = SOURCE.slice(
+      SOURCE.indexOf("<GearReturnPane"),
+      SOURCE.indexOf("</GearReturnPane>"),
+    );
+    expect(pane).toContain("bench={{");
+    expect(pane).toContain('legend: t("gear.prep.returnPullToBench")');
+    expect(pane).toMatch(/units: out\.map\(/);
+    expect(SOURCE).toContain('"returned-pulled": {');
+  });
 });

@@ -39,6 +39,7 @@ import {
 import {
   certifications,
   type GearItemKindValue,
+  gearItems,
   gearReservations,
   orders,
   people,
@@ -704,6 +705,7 @@ describe("the whole rental in one act", () => {
     });
     expect(await returnCounterRental(db, { ...ticket, outcome: "all_good" })).toEqual({
       ok: true,
+      pulled: 0,
     });
 
     const after = await getCounterRentalTicket(db, shop.id, rental.ticketId);
@@ -735,6 +737,99 @@ describe("the whole rental in one act", () => {
       expect(row.releasedByPersonId).toBe(desk.id);
     }
     expect(await releaseCounterRental(db, release)).toEqual({ ok: false, reason: "not_found" });
+  });
+
+  /**
+   * **"Pull for service" at the counter too** (issue #2345): the same opt-in,
+   * unticked boxes a departure's set return has (#2205), with the same rules,
+   * from the same shared step.
+   */
+  describe("pulling a unit to the bench on a counter return", () => {
+    async function statusOf(db: AppDb, gearItemId: string) {
+      const [row] = await db
+        .select({ status: gearItems.status, serviceNote: gearItems.serviceNote })
+        .from(gearItems)
+        .where(eq(gearItems.id, gearItemId));
+      return row;
+    }
+
+    async function outRental() {
+      const { db, shop, rental, other } = await twoUnitRental();
+      const ticket = { shopId: shop.id, ticketId: rental.ticketId };
+      await checkOutCounterRental(db, ticket);
+      await checkOutCounterRental(db, { shopId: shop.id, ticketId: other.ticketId });
+      const units = await db
+        .select({ id: gearReservations.gearItemId, label: gearItems.label })
+        .from(gearReservations)
+        .innerJoin(gearItems, eq(gearItems.id, gearReservations.gearItemId))
+        .where(inArray(gearReservations.id, [...rental.reservationIds, ...other.reservationIds]));
+      const byLabel = new Map(units.map((row) => [row.label, row.id]));
+      const reg = byLabel.get("Reg #1");
+      const bcd = byLabel.get("BCD #1");
+      const fins = byLabel.get("Fins #1");
+      if (!reg || !bcd || !fins) throw new Error("rental units missing");
+      return { db, shop, ticket, reg, bcd, fins };
+    }
+
+    it("pulls only the ticked unit, with the concern as its service note", async () => {
+      const { db, ticket, reg, bcd } = await outRental();
+      expect(
+        await returnCounterRental(db, {
+          ...ticket,
+          outcome: "service_concern",
+          note: "Free-flowed on the surface",
+          pullGearItemIds: [reg],
+        }),
+      ).toEqual({ ok: true, pulled: 1 });
+      expect(await statusOf(db, reg)).toEqual({
+        status: "needs_service",
+        serviceNote: "Free-flowed on the surface",
+      });
+      expect(await statusOf(db, bcd)).toEqual({ status: "in_service", serviceNote: null });
+    });
+
+    it("ignores a tick on any outcome but a service concern", async () => {
+      const { db, ticket, reg } = await outRental();
+      expect(
+        await returnCounterRental(db, { ...ticket, outcome: "all_good", pullGearItemIds: [reg] }),
+      ).toEqual({ ok: true, pulled: 0 });
+      expect((await statusOf(db, reg))?.status).toBe("in_service");
+    });
+
+    it("never reaches a unit on somebody else's rental", async () => {
+      const { db, ticket, fins } = await outRental();
+      expect(
+        await returnCounterRental(db, {
+          ...ticket,
+          outcome: "service_concern",
+          note: "Free-flow",
+          pullGearItemIds: [fins],
+        }),
+      ).toEqual({ ok: true, pulled: 0 });
+      expect((await statusOf(db, fins))?.status).toBe("in_service");
+    });
+
+    it("keeps a technician's note on a unit already off the wall, and counts no pull", async () => {
+      const { db, shop, ticket, reg } = await outRental();
+      await setGearItemStatus(db, {
+        shopId: shop.id,
+        gearItemId: reg,
+        status: "needs_service",
+        serviceNote: "inflator sticks",
+      });
+      expect(
+        await returnCounterRental(db, {
+          ...ticket,
+          outcome: "service_concern",
+          note: "Free-flow",
+          pullGearItemIds: [reg],
+        }),
+      ).toEqual({ ok: true, pulled: 0 });
+      expect(await statusOf(db, reg)).toEqual({
+        status: "needs_service",
+        serviceNote: "inflator sticks",
+      });
+    });
   });
 
   it("frees a released counter rental's units for the same window (issue #2258)", async () => {
@@ -1056,7 +1151,7 @@ describe("the service screen: the one place a clock gates", () => {
         outcome: "service_concern",
         note: "Free-flowed on the surface",
       }),
-    ).toEqual({ ok: true });
+    ).toEqual({ ok: true, pulled: 0 });
 
     expect(await lend(db, shop.id, next.id, [reg.id])).toEqual({
       ok: false,
