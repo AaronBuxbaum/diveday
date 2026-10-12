@@ -764,6 +764,14 @@ export async function listOffCadenceSeriesTrips(
 }
 
 /**
+ * Who called a run's dates off. Both series cancels are a staffer's act, never
+ * a system pass, so the crew's "called off" news names them, and they are not
+ * told about their own act (issue #2284). `null` only for a caller with no
+ * person behind it.
+ */
+export type SeriesCallOffOptions = { actorPersonId?: string | null };
+
+/**
  * Take the off-cadence upcoming dates off the public schedule — the second,
  * explicit half of narrowing a run.
  *
@@ -780,6 +788,7 @@ export async function cancelOffCadenceSeriesTrips(
   shopId: string,
   seriesId: string,
   now: Date = nowDate(),
+  options: SeriesCallOffOptions = {},
 ): Promise<number> {
   const stale = await listOffCadenceSeriesTrips(db, shopId, seriesId, now);
   if (stale.length === 0) return 0;
@@ -814,7 +823,7 @@ export async function cancelOffCadenceSeriesTrips(
     await recordCrewCalledOff(tx, {
       shopId,
       tripIds: cancelled.map((trip) => trip.id),
-      actorPersonId: null,
+      actorPersonId: options.actorPersonId ?? null,
       now,
     });
     return cancelled.map((trip) => trip.id);
@@ -942,6 +951,7 @@ export async function cancelFutureSeriesTrips(
   shopId: string,
   seriesId: string,
   now: Date = nowDate(),
+  options: SeriesCallOffOptions = {},
 ): Promise<number> {
   const cancelled = await db.transaction(async (tx) => {
     const rows = await tx
@@ -966,7 +976,7 @@ export async function cancelFutureSeriesTrips(
     await recordCrewCalledOff(tx, {
       shopId,
       tripIds: rows.map((trip) => trip.id),
-      actorPersonId: null,
+      actorPersonId: options.actorPersonId ?? null,
       now,
     });
     return rows;

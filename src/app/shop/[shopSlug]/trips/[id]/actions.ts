@@ -718,7 +718,13 @@ export async function applySeriesDetailsAction(shopSlug: string, tripId: string,
 export async function cancelSeriesAction(shopSlug: string, tripId: string, seriesId: string) {
   const back = backPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
-  const cancelled = await cancelFutureSeriesTrips(await getDb(), s.user.shopId, seriesId);
+  const cancelled = await cancelFutureSeriesTrips(
+    await getDb(),
+    s.user.shopId,
+    seriesId,
+    nowDate(),
+    { actorPersonId: s.user.personId },
+  );
   revalidateAndRedirect(back, noticeUrl(back, cancelled > 0 ? "series-cancelled" : "series-error"));
 }
 
@@ -806,7 +812,13 @@ export async function cancelOffCadenceSeriesAction(
 ) {
   const back = backPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
-  const cancelled = await cancelOffCadenceSeriesTrips(await getDb(), s.user.shopId, seriesId);
+  const cancelled = await cancelOffCadenceSeriesTrips(
+    await getDb(),
+    s.user.shopId,
+    seriesId,
+    nowDate(),
+    { actorPersonId: s.user.personId },
+  );
   const notice = cancelled > 0 ? "series-off-cadence-cancelled" : "series-error";
   revalidateAndRedirect(back, noticeUrl(back, notice));
 }
