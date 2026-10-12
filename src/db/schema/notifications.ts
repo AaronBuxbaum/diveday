@@ -592,22 +592,26 @@ export const shopWhatsappAccounts = pgTable(
     shopId: uuid("shop_id")
       .primaryKey()
       .references(() => shops.id),
-    /** Meta's id for the sending number — the path segment of the Cloud API send endpoint. */
+    /**
+     * Meta's id for the sending number — the path segment of the Cloud API send
+     * endpoint, and **the tenant key for everything inbound** (H-83, issue
+     * #1767). Meta names it in `value.metadata.phone_number_id` on every
+     * webhook change, and `shopIdForWhatsAppEvent` turns it into the shop whose
+     * bookings a reply keyword acts on. The unique index below is why that
+     * resolution has one answer.
+     */
     phoneNumberId: text("phone_number_id").notNull(),
     /** The human-readable number Meta reports for it, shown back to staff for confirmation. */
     displayPhoneNumber: text("display_phone_number"),
     /**
-     * The WhatsApp Business Account the number belongs to — and the **tenant key
-     * for everything inbound**, not merely a support note. Meta names the WABA in
-     * `entry[].id` on every webhook delivery, and `shopIdForWhatsAppWaba` is what
-     * turns that into the shop whose bookings a reply keyword acts on. The unique
-     * index below is why that resolution has one answer: without it a chain
-     * completing Embedded Signup for two of its DiveDay shops against one Meta
-     * Business put two rows here, and a diver's message — up to a cancellation —
-     * landed in whichever came back first (issue #1715).
+     * The WhatsApp Business Account the number belongs to. **Shared across
+     * shops on purpose** (H-83): a chain with one Meta Business and a number
+     * per location connects each shop to its own number under the one WABA.
+     * It is the tenant key only for an event that names no number, and then
+     * only while one shop alone holds it (`shopIdForWhatsAppWaba`); an event
+     * whose number's row records a different WABA is not placed.
      *
-     * Nullable on purpose, and Postgres lets nulls repeat under a unique index:
-     * a row connected before a WABA was recorded stays legal.
+     * Nullable: a row connected before a WABA was recorded stays legal.
      */
     wabaId: text("waba_id"),
     /**
@@ -637,7 +641,10 @@ export const shopWhatsappAccounts = pgTable(
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("shop_whatsapp_accounts_waba_unique").on(table.wabaId)],
+  (table) => [
+    uniqueIndex("shop_whatsapp_accounts_phone_number_unique").on(table.phoneNumberId),
+    index("shop_whatsapp_accounts_waba_idx").on(table.wabaId),
+  ],
 );
 
 /**

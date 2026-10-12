@@ -89,8 +89,17 @@ Signup failures name the step that failed (`signup_failed_exchange`, `_register`
 `_template`) and log as `notification.whatsapp_signup_failed`:
 
 - **exchange** — the one-time code was already used or expired, or the token it returned cannot read
-  the WABA the form posted (the two are reported identically, so the refusal never says whether
-  another shop holds a WABA the caller cannot see). Press Connect again.
+  the WABA the form posted, or that WABA does not list the posted number (all reported identically,
+  so the refusal never says whether another shop holds a number the caller cannot see). Press
+  Connect again.
+
+**One WABA, several shops** (H-83, issue #1767). A chain may connect each of its shops to its own
+number under one WhatsApp Business account; inbound events route on the number
+(`value.metadata.phone_number_id`), and the WABA is only the fallback for an event that names none
+and that one shop alone holds. A number is one shop's: a second shop connecting a number another
+shop holds is refused as `phone_number_already_connected`. An event whose number's row records a
+different WABA from the one Meta names is dropped and logged as
+`whatsapp_account.number_waba_mismatch`; the shop reconnects to refresh the row.
 - **register** — only ever attempted for a number DiveDay has not finished registering. The number
   is probably still active in the consumer WhatsApp or WhatsApp Business *app* and has to be removed
   there first. A `133005` here means the number is bound to a **different two-step PIN** than the one

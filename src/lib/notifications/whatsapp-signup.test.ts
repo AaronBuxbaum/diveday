@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   type CompleteSignupInput,
+  confirmNumberInWaba,
   confirmWabaAccess,
   courtesyTemplateDefinition,
   exchangeSignupCode,
@@ -347,6 +348,42 @@ describe("confirmWabaAccess", () => {
       status: "failed",
       step: "exchange",
       errorCode: "waba_not_visible",
+    });
+  });
+});
+
+describe("confirmNumberInWaba", () => {
+  it("lists the WABA's numbers with the exchanged token and finds the posted one", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockImplementation(async () =>
+        json(200, { data: [{ id: "pn-north" }, { id: "pn-south" }] }),
+      );
+    expect(await confirmNumberInWaba("waba-1", "pn-south", "EAAG-token", fetchImpl)).toEqual({
+      status: "visible",
+    });
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(String(url)).toContain("/waba-1/phone_numbers?fields=id");
+    expect(init.headers.Authorization).toBe("Bearer EAAG-token");
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("refuses as an exchange failure a number that is not that WABA's", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockImplementation(async () => json(200, { data: [{ id: "pn-north" }] }));
+    expect(
+      await confirmNumberInWaba("waba-1", "pn-someone-else", "EAAG-token", fetchImpl),
+    ).toMatchObject({ status: "failed", step: "exchange", errorCode: "number_not_in_waba" });
+  });
+
+  it("refuses as an exchange failure when Meta will not list them", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockImplementation(async () => json(400, { error: { message: "nope", code: 100 } }));
+    expect(await confirmNumberInWaba("waba-1", "pn-north", "EAAG-token", fetchImpl)).toMatchObject({
+      status: "failed",
+      step: "exchange",
     });
   });
 });

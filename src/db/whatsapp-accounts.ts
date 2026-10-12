@@ -34,20 +34,23 @@ export type WhatsAppKeyRefusal = "encryption_key_unset" | "encryption_key_invali
 
 /**
  * Why a connection was not stored. The key refusals are about DiveDay's own
- * configuration; `waba_already_connected` is about another shop — the WABA this
- * one is trying to claim is the tenant key inbound events are routed on, and one
- * WABA resolves to one shop or to none (see {@link shopIdForWhatsAppWaba}).
+ * configuration; `phone_number_already_connected` is about another shop — the
+ * number this one is trying to claim is the tenant key inbound events are
+ * routed on (H-83), and one number resolves to one shop or to none (see
+ * {@link shopIdForWhatsAppEvent}). A WABA may be shared: a chain with one Meta
+ * Business account and a number per location connects each shop to its own.
  */
-export type WhatsAppConnectRefusal = WhatsAppKeyRefusal | "waba_already_connected";
+export type WhatsAppConnectRefusal = WhatsAppKeyRefusal | "phone_number_already_connected";
 
 /**
- * The unique index that makes a WABA resolve to one shop; named so its 23505 can be told apart.
+ * The unique index that makes a phone number resolve to one shop; named so
+ * its 23505 can be told apart.
  *
  * It keeps the table right and nothing else: a Connect it refuses has already
- * registered a number at Meta. The signup runs under {@link claimWhatsAppWaba}'s
- * advisory lock on the WABA, whose scope is stated there (issue #1769).
+ * registered a number at Meta. The signup runs under {@link claimWhatsAppNumber}'s
+ * advisory locks, whose scope is stated there (issue #1769).
  */
-const WABA_UNIQUE_INDEX = "shop_whatsapp_accounts_waba_unique";
+const PHONE_NUMBER_UNIQUE_INDEX = "shop_whatsapp_accounts_phone_number_unique";
 
 export type ConnectWhatsAppInput = {
   shopId: string;
@@ -159,21 +162,14 @@ export function openRegistrationPin(
 
 /**
  * The shop a WhatsApp Business Account belongs to, or null when no single shop
- * does.
+ * does — **the fallback** for an event that names no phone number (H-83).
  *
- * This is the tenant key for inbound delivery events: Meta names the WABA in
- * `entry[].id`, and scoping the update to the shop it resolves to is what stops
- * a delivery outcome being applied across a multi-tenant table on a provider
- * message id alone.
- *
- * Two rows asked for, one expected — the belt to the constraint's braces.
- * `shop_whatsapp_accounts_waba_unique` is what makes the second row impossible
- * (issue #1715), so this branch is unreachable while the index stands, and it
- * stays anyway: the cost of asking for one extra row is nothing, and the cost of
- * guessing is a reply keyword — a cancellation — applied to the wrong shop's
- * booking, silently. There is no honest answer to pick when two rows come back,
- * so pick none and say so loudly; the webhook already drops what it cannot
- * place. Dropping the index without noticing this is the failure it guards.
+ * A chain may connect several shops under one WABA, each with its own number,
+ * so two rows here are an ordinary state now, not a broken one. There is no
+ * honest answer to pick between them — guessing is a reply keyword, up to a
+ * cancellation, applied to the wrong shop's booking — so pick none; the
+ * webhook drops what it cannot place. An event that names its number never
+ * comes here ({@link shopIdForWhatsAppEvent}).
  */
 export async function shopIdForWhatsAppWaba(
   db: DbExecutor,
@@ -186,7 +182,7 @@ export async function shopIdForWhatsAppWaba(
     .limit(2);
   if (rows.length > 1) {
     // Ids, never the WABA or the sender — the same posture as the webhook route.
-    log("whatsapp_account.ambiguous_waba", "error", {
+    log("whatsapp_account.shared_waba_without_number", "warn", {
       shopIds: rows.map((row) => row.shopId).join(" "),
     });
     return null;
@@ -195,18 +191,68 @@ export async function shopIdForWhatsAppWaba(
 }
 
 /**
+ * The shop a phone number id belongs to, with the WABA its row recorded, or
+ * null when no shop holds it. `shop_whatsapp_accounts_phone_number_unique`
+ * makes the answer single.
+ */
+export async function whatsAppAccountForPhoneNumber(
+  db: DbExecutor,
+  phoneNumberId: string,
+): Promise<{ shopId: string; wabaId: string | null } | null> {
+  const [row] = await db
+    .select({ shopId: shopWhatsappAccounts.shopId, wabaId: shopWhatsappAccounts.wabaId })
+    .from(shopWhatsappAccounts)
+    .where(eq(shopWhatsappAccounts.phoneNumberId, phoneNumberId))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * **Whose event is this** (H-83): the tenant key for every inbound WhatsApp
+ * event, delivery outcome and diver message alike.
+ *
+ * - **The number decides.** An event naming a `phone_number_id` resolves to
+ *   the one shop holding that number, or to none. It never falls back to the
+ *   WABA: on a shared WABA that would hand a number nobody here holds to
+ *   whichever shop happened to be alone on it.
+ * - **The WABA must agree.** When both the event and the row name a WABA and
+ *   they differ, the event is not placed: a number Meta now reports under
+ *   another business is a row gone stale, and a stale row is not a tenant.
+ * - **No number, then the WABA** ({@link shopIdForWhatsAppWaba}), which
+ *   answers only when exactly one shop holds it.
+ *
+ * Null means drop: the webhook never applies anything unscoped.
+ */
+export async function shopIdForWhatsAppEvent(
+  db: DbExecutor,
+  event: { phoneNumberId: string | null; wabaId: string | null },
+): Promise<string | null> {
+  if (event.phoneNumberId) {
+    const account = await whatsAppAccountForPhoneNumber(db, event.phoneNumberId);
+    if (!account) return null;
+    if (event.wabaId && account.wabaId && account.wabaId !== event.wabaId) {
+      log("whatsapp_account.number_waba_mismatch", "error", { shopId: account.shopId });
+      return null;
+    }
+    return account.shopId;
+  }
+  return event.wabaId ? shopIdForWhatsAppWaba(db, event.wabaId) : null;
+}
+
+/**
  * Connect (or re-connect) a shop's WhatsApp sender. Upsert rather than
  * insert-or-fail: rotating a token or fixing a mistyped template name is the
  * same gesture as connecting for the first time, and forcing a disconnect in
  * between would blank the channel for no reason.
  *
- * The one thing it will not do is take a WABA another shop already holds. That
- * is the trap in an upsert whose whole design is "never fail, just overwrite":
- * `onConflictDoUpdate` handles a collision on `shop_id` and nothing else, so a
- * WABA collision arrives as a raw 23505 from
- * `shop_whatsapp_accounts_waba_unique`. Caught by that index's name rather than
- * by message text or a bare code, so an unrelated constraint failure is never
- * reported to a staffer as "already connected to another shop".
+ * The one thing it will not do is take a phone number another shop already
+ * holds. That is the trap in an upsert whose whole design is "never fail, just
+ * overwrite": `onConflictDoUpdate` handles a collision on `shop_id` and nothing
+ * else, so a number collision arrives as a raw 23505 from
+ * `shop_whatsapp_accounts_phone_number_unique`. Caught by that index's name
+ * rather than by message text or a bare code, so an unrelated constraint
+ * failure is never reported to a staffer as "already connected to another
+ * shop". A WABA another shop holds is fine (H-83).
  */
 export async function connectShopWhatsAppAccount(
   db: DbExecutor,
@@ -236,7 +282,7 @@ export async function connectShopWhatsAppAccount(
     : {};
   try {
     // In its own savepoint (a transaction when `db` is not one), so a WABA
-    // collision rolls back only this insert. Under `claimWhatsAppWaba` the
+    // collision rolls back only this insert. Under `claimWhatsAppNumber` the
     // caller's transaction is still open, and a bare 23505 there would abort
     // it and turn the worded refusal into "current transaction is aborted".
     const account = await db.transaction(async (savepoint) => {
@@ -256,14 +302,14 @@ export async function connectShopWhatsAppAccount(
     });
     return { status: "connected", account };
   } catch (error) {
-    if (violatesUniqueIndex(error, WABA_UNIQUE_INDEX)) {
-      return { status: "refused", reason: "waba_already_connected" };
+    if (violatesUniqueIndex(error, PHONE_NUMBER_UNIQUE_INDEX)) {
+      return { status: "refused", reason: "phone_number_already_connected" };
     }
     throw error;
   }
 }
 
-export type WhatsAppWabaClaim<T> =
+export type WhatsAppNumberClaim<T> =
   | { status: "held_elsewhere" }
   | { status: "busy" }
   | { status: "claimed"; value: T };
@@ -297,32 +343,49 @@ async function tryTransactionLock(tx: DbExecutor, key: string): Promise<boolean>
 }
 
 /**
- * **Run one shop's WhatsApp Connect with the WABA to itself** (issue #1769,
- * H-83).
+ * **How long a parked row may hold a number against another shop** (issue
+ * #2194).
  *
- * `shop_whatsapp_accounts_waba_unique` keeps the table right, but the table is
- * not the only state: registering a number at Meta mints a PIN, and a Connect
- * whose row the index then refuses has already bound the number to a PIN
- * DiveDay throws away. Recovery for that runs through Meta support, not here.
- * Two staffers pressing Connect within the length of a Meta round trip both
- * passed an unlocked pre-check, both registered, and one lost.
+ * A parked row ({@link SETUP_INCOMPLETE_TEMPLATE}) claims its number exactly as
+ * a connected one does, and nobody can see it: the shop that abandoned the
+ * Connect has no connected account to disconnect. Past this age, measured from
+ * its `updated_at` (every Connect attempt rewrites it), another shop's claim on
+ * the same number deletes it inside {@link claimWhatsAppNumber}. A week keeps
+ * the PIN for a shop that is still finishing its own setup.
+ */
+export const PARKED_REGISTRATION_STALE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * **Run one shop's WhatsApp Connect with the number to itself** (issues #1769,
+ * #1767, H-83).
+ *
+ * `shop_whatsapp_accounts_phone_number_unique` keeps the table right, but the
+ * table is not the only state: registering a number at Meta mints a PIN, and a
+ * Connect whose row the index then refuses has already bound the number to a
+ * PIN DiveDay throws away. Recovery for that runs through Meta support, not
+ * here. Two staffers pressing Connect within the length of a Meta round trip
+ * both passed an unlocked pre-check, both registered, and one lost.
  *
  * So the holder check, `work` (steps 2–4 at Meta) and the insert run in one
- * transaction holding two advisory locks, and a Connect that cannot take them
+ * transaction holding three advisory locks, and a Connect that cannot take them
  * is refused at once (`busy`) rather than queued. Refusing instead of waiting
  * is the point (security review, #1769): a waiter holds a pooled connection
  * for as long as the holder's Meta calls take, so a handful of posts would
  * empty an instance's pool. The busy Connect has registered nothing; pressing
  * Connect again once the first finishes reads the first one's row.
  *
- * **Scope of the locks.** Shop first, then WABA, always in that order so two
- * Connects can never each hold the lock the other wants:
+ * **Scope of the locks.** Shop, then WABA, then number, always in that order
+ * so two Connects can never each hold the lock the other wants:
  *
  * - `hashtext('whatsapp-shop:' || shopId)` — one Connect per shop at a time,
- *   so the same shop pressing Connect twice with two different WABAs cannot
+ *   so the same shop pressing Connect twice with two different numbers cannot
  *   register two numbers and keep one.
  * - `hashtext('whatsapp-waba:' || wabaId)` — one Connect per WABA at a time,
- *   across shops.
+ *   across shops. A chain connecting two shops under one WABA at the same
+ *   instant gets one `busy`; the WABA-level steps at Meta (subscribe, the
+ *   template) are then never raced.
+ * - `hashtext('whatsapp-number:' || phoneNumberId)` — one Connect per number,
+ *   across shops: the number is what a PIN binds and what events route on.
  *
  * A hash collision costs a spurious `busy`, never a wrong answer, because the
  * refusal that matters is the row read under the lock. They are *transaction*
@@ -335,33 +398,24 @@ async function tryTransactionLock(tx: DbExecutor, key: string): Promise<boolean>
  * the caller redirect afterwards. Do the code exchange *before* calling this:
  * it changes nothing at Meta, so it needs no lock and no open transaction.
  */
-/**
- * **How long a parked row may hold a WABA against another shop** (issue #2194).
- *
- * A parked row ({@link SETUP_INCOMPLETE_TEMPLATE}) claims its WABA exactly as a
- * connected one does, and nobody can see it: the shop that abandoned the
- * Connect has no connected account to disconnect. Past this age, measured from
- * its `updated_at` (every Connect attempt rewrites it), another shop's claim on
- * the same WABA deletes it inside {@link claimWhatsAppWaba}. A week keeps the
- * PIN for a shop that is still finishing its own setup.
- */
-export const PARKED_REGISTRATION_STALE_MS = 7 * 24 * 60 * 60 * 1000;
-
-export async function claimWhatsAppWaba<T>(
+export async function claimWhatsAppNumber<T>(
   db: AppDb,
-  input: { shopId: string; wabaId: string },
+  input: { shopId: string; wabaId: string; phoneNumberId: string },
   work: (tx: DbExecutor) => Promise<T>,
-): Promise<WhatsAppWabaClaim<T>> {
-  return db.transaction(async (tx): Promise<WhatsAppWabaClaim<T>> => {
+): Promise<WhatsAppNumberClaim<T>> {
+  return db.transaction(async (tx): Promise<WhatsAppNumberClaim<T>> => {
     for (const bound of CLAIM_BOUNDS) await tx.execute(bound);
     if (!(await tryTransactionLock(tx, `whatsapp-shop:${input.shopId}`))) return { status: "busy" };
     if (!(await tryTransactionLock(tx, `whatsapp-waba:${input.wabaId}`))) return { status: "busy" };
-    // Under the WABA lock, so no other Connect can be finishing that row now.
+    if (!(await tryTransactionLock(tx, `whatsapp-number:${input.phoneNumberId}`))) {
+      return { status: "busy" };
+    }
+    // Under the number lock, so no other Connect can be finishing that row now.
     const released = await tx
       .delete(shopWhatsappAccounts)
       .where(
         and(
-          eq(shopWhatsappAccounts.wabaId, input.wabaId),
+          eq(shopWhatsappAccounts.phoneNumberId, input.phoneNumberId),
           ne(shopWhatsappAccounts.shopId, input.shopId),
           eq(shopWhatsappAccounts.templateName, SETUP_INCOMPLETE_TEMPLATE),
           isNull(shopWhatsappAccounts.verifiedAt),
@@ -373,14 +427,14 @@ export async function claimWhatsAppWaba<T>(
       )
       .returning({ shopId: shopWhatsappAccounts.shopId });
     for (const row of released) {
-      // Ids only, never the WABA — the same posture as the webhook route.
+      // Ids only, never the number — the same posture as the webhook route.
       log("whatsapp_account.stale_parked_released", "warn", {
         shopId: row.shopId,
         claimingShopId: input.shopId,
       });
     }
-    const holder = await shopIdForWhatsAppWaba(tx, input.wabaId);
-    if (holder && holder !== input.shopId) return { status: "held_elsewhere" };
+    const holder = await whatsAppAccountForPhoneNumber(tx, input.phoneNumberId);
+    if (holder && holder.shopId !== input.shopId) return { status: "held_elsewhere" };
     return { status: "claimed", value: await work(tx) };
   });
 }

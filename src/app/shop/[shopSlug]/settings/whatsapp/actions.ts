@@ -62,7 +62,7 @@ export type Notice =
   | "no-account"
   | "encryption-key-unset"
   | "encryption-key-invalid"
-  | "waba-already-connected";
+  | "phone-number-already-connected";
 
 /**
  * What Meta's Embedded Signup popup hands back. All three are opaque ids from

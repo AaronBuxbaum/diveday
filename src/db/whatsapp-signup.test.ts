@@ -9,7 +9,7 @@ import {
   getShopWhatsAppRegistration,
   isWhatsAppSetupComplete,
   openRegistrationPin,
-  shopIdForWhatsAppWaba,
+  shopIdForWhatsAppEvent,
   whatsAppProviderForAccount,
 } from "./whatsapp-accounts";
 import { completeWhatsAppSignup } from "./whatsapp-signup";
@@ -25,11 +25,12 @@ function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status });
 }
 
-type MetaStep = "exchange" | "waba" | "register" | "subscribe" | "template";
+type MetaStep = "exchange" | "waba" | "numbers" | "register" | "subscribe" | "template";
 
 const META_OK: Record<MetaStep, () => Response> = {
   exchange: () => json(200, { access_token: "EAAG-token" }),
   waba: () => json(200, { id: "waba_signup" }),
+  numbers: () => json(200, { data: [{ id: "1234567890" }, { id: "2222222222" }] }),
   register: () => json(200, { success: true }),
   subscribe: () => json(200, { success: true }),
   template: () => json(200, { id: "template-1", status: "PENDING" }),
@@ -40,6 +41,7 @@ function metaStep(url: string): MetaStep {
   if (url.includes("/register")) return "register";
   if (url.includes("/subscribed_apps")) return "subscribe";
   if (url.includes("/message_templates")) return "template";
+  if (url.includes("/phone_numbers")) return "numbers";
   return "waba";
 }
 
@@ -59,7 +61,10 @@ const registerPins = (fetchImpl: ReturnType<typeof metaFetch>) =>
     .filter((call: unknown[]) => String(call[0]).includes("/register"))
     .map((call: unknown[]) => JSON.parse(String((call[1] as RequestInit).body)).pin);
 
-function signup(shopId: string, overrides: Partial<{ code: string; wabaId: string }> = {}) {
+function signup(
+  shopId: string,
+  overrides: Partial<{ code: string; wabaId: string; phoneNumberId: string }> = {},
+) {
   return {
     shopId,
     code: "AQD-signup-code",
@@ -103,8 +108,11 @@ describe("completeWhatsAppSignup", () => {
     expect(outcome).toBe("connected");
     expect(newPin).toHaveBeenCalledTimes(1);
     expect(urls(fetchImpl)[1]).toContain("/waba_signup?fields=id");
-    expect(urls(fetchImpl)[2]).toContain("/register");
-    expect(await shopIdForWhatsAppWaba(db, "waba_signup")).toBe(shop.id);
+    expect(urls(fetchImpl)[2]).toContain("/waba_signup/phone_numbers?fields=id");
+    expect(urls(fetchImpl)[3]).toContain("/register");
+    expect(
+      await shopIdForWhatsAppEvent(db, { phoneNumberId: "1234567890", wabaId: "waba_signup" }),
+    ).toBe(shop.id);
   });
 
   /**
@@ -147,17 +155,17 @@ describe("completeWhatsAppSignup", () => {
 
   /**
    * **Refused before any number is registered** (issue #1769). A valid code for
-   * a WABA another shop holds stops after the exchange: no PIN is minted and
+   * a number another shop holds stops after the exchange: no PIN is minted and
    * nothing reaches the register step.
    */
-  it("refuses a WABA another shop holds after the exchange and before registering", async () => {
+  it("refuses a number another shop holds after the exchange and before registering", async () => {
     const { db, shop } = ctx;
     const sibling = await siblingShop(db, "sibling-signup-held");
     await connectShopWhatsAppAccount(
       db,
       {
         shopId: sibling.id,
-        phoneNumberId: "999",
+        phoneNumberId: "1234567890",
         accessToken: "t",
         templateName: "x",
         templateLanguage: "en_US",
@@ -174,11 +182,78 @@ describe("completeWhatsAppSignup", () => {
       sender: { key },
     });
 
-    expect(outcome).toBe("waba_already_connected");
-    expect(urls(fetchImpl)).toHaveLength(2);
+    expect(outcome).toBe("phone_number_already_connected");
+    expect(urls(fetchImpl)).toHaveLength(3);
     expect(urls(fetchImpl).some((url) => url.includes("/register"))).toBe(false);
     expect(newPin).not.toHaveBeenCalled();
     expect(await getShopWhatsAppAccount(db, shop.id)).toBeNull();
+  });
+
+  /**
+   * **A chain's second shop connects its own number on the shared WABA**
+   * (H-83, issue #1767), and each shop then receives only its own events.
+   */
+  it("connects a second shop of a chain on the same WABA with a number of its own", async () => {
+    const { db, shop } = ctx;
+    const sibling = await siblingShop(db, "sibling-signup-chain");
+    expect(
+      await completeWhatsAppSignup(db, signup(shop.id), config, {
+        fetchImpl: metaFetch(),
+        newPin: () => "123456",
+        sender: { key },
+      }),
+    ).toBe("connected");
+    expect(
+      await completeWhatsAppSignup(
+        db,
+        signup(sibling.id, { phoneNumberId: "2222222222" }),
+        config,
+        {
+          fetchImpl: metaFetch(),
+          newPin: () => "654321",
+          sender: { key },
+        },
+      ),
+    ).toBe("connected");
+    expect(
+      await shopIdForWhatsAppEvent(db, { phoneNumberId: "1234567890", wabaId: "waba_signup" }),
+    ).toBe(shop.id);
+    expect(
+      await shopIdForWhatsAppEvent(db, { phoneNumberId: "2222222222", wabaId: "waba_signup" }),
+    ).toBe(sibling.id);
+  });
+
+  /**
+   * **A number that is not the posted WABA's learns nothing** (issue #1767):
+   * the number is the tenant key now, so posting another shop's number beside
+   * your own WABA is refused as a bad code is, before the holder check.
+   */
+  it("refuses a number the exchanged token's WABA does not list, the same way as a bad code", async () => {
+    const { db, shop } = ctx;
+    const sibling = await siblingShop(db, "sibling-signup-foreign-number");
+    await connectShopWhatsAppAccount(
+      db,
+      {
+        shopId: sibling.id,
+        phoneNumberId: "5555555555",
+        accessToken: "t",
+        templateName: "x",
+        templateLanguage: "en_US",
+        wabaId: "waba_someone_else",
+      },
+      { key },
+    );
+    const fetchImpl = metaFetch();
+    const newPin = vi.fn(() => "123456");
+    const outcome = await completeWhatsAppSignup(
+      db,
+      signup(shop.id, { phoneNumberId: "5555555555" }),
+      config,
+      { fetchImpl, newPin, sender: { key } },
+    );
+    expect(outcome).toBe("signup_failed_exchange");
+    expect(urls(fetchImpl)).toHaveLength(3);
+    expect(newPin).not.toHaveBeenCalled();
   });
 
   it("skips registration for a number this shop already registered", async () => {
@@ -288,7 +363,9 @@ describe("completeWhatsAppSignup", () => {
     expect(parked && isWhatsAppSetupComplete(parked)).toBe(false);
     expect(parked?.verifiedAt).toBeNull();
     expect(parked && whatsAppProviderForAccount(parked, { key })).toBeNull();
-    expect(await shopIdForWhatsAppWaba(db, "waba_signup")).toBe(shop.id);
+    expect(
+      await shopIdForWhatsAppEvent(db, { phoneNumberId: "1234567890", wabaId: "waba_signup" }),
+    ).toBe(shop.id);
 
     const retry = metaFetch();
     const secondPin = vi.fn(() => "654321");
