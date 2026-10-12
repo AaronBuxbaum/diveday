@@ -3611,6 +3611,7 @@ describe("unanswered messages", () => {
   it("grows by one message and renders nothing once every one is answered", async () => {
     const { db, shop } = ctx;
     const recorded = await recordInboundMessage(db, {
+      senderAuthenticated: true,
       shopId: shop.id,
       channel: "email",
       fromAddress: "someone.new@example.net",

@@ -106,6 +106,8 @@ export async function POST(request: Request) {
       mediaCount: message.mediaCount,
       receivedAt: message.receivedAt,
       providerMessageId: message.providerMessageId,
+      // Meta reports the number the message came from, and only its owner can send from it.
+      senderAuthenticated: true,
     });
     // Ids and outcomes only — never the sender or the words (PII-in-logs rule).
     log("whatsapp_webhook.inbound_recorded", "info", {

@@ -52,10 +52,10 @@ export type RecordInboundMessageInput = {
    * that number's owner can send from it. Email only when SES authenticated
    * it: a `From:` header is written by whoever sent the mail, so an
    * unauthenticated one is filed as a stranger rather than put on the record
-   * of the diver it names. Defaults to true; the email route passes the
-   * answer it got from SES.
+   * of the diver it names. Required, so a writer can never vouch by
+   * forgetting: the schema's default is false for the same reason (#2311).
    */
-  senderAuthenticated?: boolean;
+  senderAuthenticated: boolean;
   /**
    * The provider judged it spam (SES's spam verdict failed). Filed all the
    * same, but stored so the after-hours ping neither fires on it nor counts
@@ -184,7 +184,7 @@ async function recordMatchedInboundMessage(
   fromAddress: string,
 ): Promise<RecordInboundMessageResult> {
   const personId =
-    input.senderAuthenticated === false
+    input.senderAuthenticated !== true
       ? null
       : await matchPersonByAddress(db, input.shopId, input.channel, fromAddress);
   let inReplyToDeliveryId: string | null = null;
@@ -216,7 +216,7 @@ async function recordMatchedInboundMessage(
       providerMessageId: input.providerMessageId,
       emailMessageId: input.emailMessageId?.trim().slice(0, 998) || null,
       inReplyToDeliveryId,
-      senderAuthenticated: input.senderAuthenticated !== false,
+      senderAuthenticated: input.senderAuthenticated === true,
       spamFlagged: input.spamFlagged === true,
     })
     .onConflictDoNothing({ target: [inboundMessages.channel, inboundMessages.providerMessageId] })

@@ -105,6 +105,7 @@ describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbo
       mediaCount: 0,
       receivedAt: new Date(1785672000 * 1000),
       providerMessageId: "wamid.in1",
+      senderAuthenticated: true,
     });
     // After the webhook has answered (#2311): Meta retries a slow 200 too.
     expect(pingDeskAfterHoursSafely).not.toHaveBeenCalled();

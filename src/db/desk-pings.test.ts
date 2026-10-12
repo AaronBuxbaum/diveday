@@ -83,7 +83,8 @@ async function diverWrites(
     body: "Is there room on Saturday’s night dive? My cert is in my bag.",
     receivedAt: at,
     providerMessageId: `ses-${randomUUID()}`,
-    ...vouched,
+    senderAuthenticated: vouched.senderAuthenticated ?? true,
+    spamFlagged: vouched.spamFlagged,
   });
   if (result.status !== "recorded") throw new Error("message not filed");
   return result.id;
