@@ -23,7 +23,7 @@ describe("rowReasonList, from one literal input", () => {
       arrival: undefined,
       reasonLines: lines,
     });
-    render(<>{reasonList}</>);
+    render(reasonList);
     expect(screen.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
       "No certification on file",
       "Not paid",
@@ -41,7 +41,7 @@ describe("rowReasonList, from one literal input", () => {
       arrival: {} as RosterArrival,
       reasonLines: lines,
     });
-    render(<>{reasonList}</>);
+    render(reasonList);
     expect(screen.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
       "No certification on file",
     ]);

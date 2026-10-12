@@ -15,7 +15,7 @@ describe("rowHeader, from the seat's facts alone", () => {
       readiness: new Map([["h", readinessRow("ready")]]) as ReadinessByBooking,
       waivers: new Map([["h", signedWaiver]]) as WaiverByBooking,
     });
-    render(<>{rowHeader(seat).headerLeft}</>);
+    render(rowHeader(seat).headerLeft);
     expect(screen.getByRole("link", { name: "Rene Marsh" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers/p-h",

@@ -17,7 +17,7 @@ const options = {
 describe("rowNotices, from the seat's facts alone", () => {
   it("says a returning diver's own ask under the name", () => {
     const seat = seatFacts(entry("n", "Rene Marsh", { reEntryAsk: "easy_first_dive" }), options);
-    const { container } = render(<>{rowNotices(seat).reEntryNote}</>);
+    const { container } = render(rowNotices(seat).reEntryNote);
     expect(container.textContent).not.toBe("");
   });
 
@@ -26,7 +26,7 @@ describe("rowNotices, from the seat's facts alone", () => {
       ...options,
       arrival: { controls: new Map(), below: new Map(), boarded: new Set() },
     });
-    const { container } = render(<>{rowNotices(seat).reEntryNote}</>);
+    const { container } = render(rowNotices(seat).reEntryNote);
     expect(container.textContent).toBe("");
   });
 

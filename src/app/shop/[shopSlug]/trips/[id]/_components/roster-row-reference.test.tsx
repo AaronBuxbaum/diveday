@@ -21,7 +21,7 @@ describe("rowReference, from the seat's facts and one drawn block", () => {
 
   it("files the emergency-contact block among the seat's reference facts", () => {
     const seat = seatFacts(entry("r", "Rene Marsh"), options);
-    render(<>{rowReference({ ...seat, emergencyContactBlock: block }).reference}</>);
+    render(rowReference({ ...seat, emergencyContactBlock: block }).reference);
     expect(screen.getByTestId("emergency-block")).toBeInTheDocument();
   });
 
@@ -32,7 +32,7 @@ describe("rowReference, from the seat's facts and one drawn block", () => {
       "2026-10-01T12:00:00Z",
     );
     const seat = seatFacts(held, options);
-    render(<>{rowReference({ ...seat, emergencyContactBlock: block }).reference}</>);
+    render(rowReference({ ...seat, emergencyContactBlock: block }).reference);
     expect(screen.queryByTestId("emergency-block")).toBeNull();
   });
 });
