@@ -335,7 +335,11 @@ function everyPanelPrep(): TripPrep {
 
 function renderPrep(
   prep: TripPrep,
-  { grouping = "item", notice }: { grouping?: PrepGrouping; notice?: string } = {},
+  {
+    grouping = "item",
+    notice,
+    noticeCount,
+  }: { grouping?: PrepGrouping; notice?: string; noticeCount?: string } = {},
 ) {
   return render(
     <PrepBody
@@ -346,6 +350,7 @@ function renderPrep(
       tripId="t1"
       rentalItems={["bcd", "wetsuit", "boots", "weights", "regulator", "mask_fins"]}
       notice={notice}
+      noticeCount={noticeCount}
       grouping={grouping}
       groupPath="/shop/blue-mantis/trips/t1"
       cancelled={false}
@@ -665,6 +670,18 @@ describe("an assigned unit that needs care", () => {
   it("counts it on the cart line in words that fit a concern as well as a clock", () => {
     renderPrep(withAssigned({ serviceState: { state: "no_clock" }, serviceConcern: true }));
     expect(screen.getByText(/1 unit needs service/)).toBeInTheDocument();
+  });
+});
+
+describe("the pulled-for-service notice (issue #2345)", () => {
+  it("names how many units went to the bench", () => {
+    renderPrep(everyPanelPrep(), { notice: "gear-returned-set-pulled", noticeCount: "2" });
+    expect(screen.getByRole("status")).toHaveTextContent("Back. 2 pulled for service.");
+  });
+
+  it("says nothing on a count it cannot read, rather than a wrong number", () => {
+    renderPrep(everyPanelPrep(), { notice: "gear-returned-set-pulled", noticeCount: "-1" });
+    expect(screen.queryByText(/pulled for service/)).toBeNull();
   });
 });
 

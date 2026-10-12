@@ -233,6 +233,7 @@ export function ResultNotice({ state, copy }: { state: WaiverSendState; copy: Wa
 export function WaiverSendControl({
   surface,
   tripId,
+  ticketId,
   bookingIds,
   personId,
   label,
@@ -245,6 +246,8 @@ export function WaiverSendControl({
   surface: WaiverSendSurface;
   /** Required when surface is "roster" — which trip's guests page to revalidate. */
   tripId?: string;
+  /** The counter rental's ticket, when surface is "counter" and there is one yet. */
+  ticketId?: string;
   bookingIds: string[];
   /** A person-scoped waiver target, independent of any booking or schedule. */
   personId?: string;
@@ -323,6 +326,7 @@ export function WaiverSendControl({
           <input type="hidden" name="holdKind" value="waiver_send" />
           <input type="hidden" name="surface" value={surface} />
           {tripId ? <input type="hidden" name="tripId" value={tripId} /> : null}
+          {ticketId ? <input type="hidden" name="ticketId" value={ticketId} /> : null}
           {bookingIds.map((id) => (
             <input key={id} type="hidden" name="bookingId" value={id} />
           ))}
