@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
@@ -36,6 +36,26 @@ const SRC_DIR = join(HERE, "..", "..");
 
 function read(relativePath: string) {
   return readFileSync(join(SRC_DIR, relativePath), "utf8");
+}
+
+/**
+ * A page plus the sibling modules it imports (`from "./X"`), so a rule over
+ * what a page renders survives the page moving a card into a file beside it.
+ */
+function withSiblingDoors(relativePath: string): string {
+  const source = read(relativePath);
+  const dir = dirname(relativePath);
+  const siblings = [...source.matchAll(/from "\.\/([^"]+)"/g)].map((m) => m[1] ?? "");
+  const extras = siblings.flatMap((name) => {
+    for (const ext of ["", ".tsx", ".ts"]) {
+      const candidate = join(SRC_DIR, dir, `${name}${ext}`);
+      if (existsSync(candidate) && statSync(candidate).isFile()) {
+        return [readFileSync(candidate, "utf8")];
+      }
+    }
+    return [];
+  });
+  return [source, ...extras].join("\n");
 }
 
 /** Every non-test `.ts`/`.tsx` under a directory, so a sweep can be stated as a fact. */
@@ -604,8 +624,14 @@ describe("the dead-link law has two tiers", () => {
     }
   });
 
+  /**
+   * The hand may be offered by the page itself or by a door module it keeps
+   * beside it (`./WaiverDoorCards`): a page under its length budget moves its
+   * doors out, and the law is over what the diver gets, not over which file
+   * says it.
+   */
   it.each(BOOKING_TIER)("%s offers the shop's hand", (page) => {
-    const source = read(page);
+    const source = withSiblingDoors(page);
     expect(source).toContain("<ExpiredLinkCard");
     expect(source).toMatch(/shop=\{/);
   });

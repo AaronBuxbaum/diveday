@@ -3,7 +3,7 @@ import { MINUTE_MS, nowDate } from "@/lib/clock";
 import type { TripStage } from "@/lib/trip-stages";
 import { shopDayBounds } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
-import { tripAssignments, tripDives, tripStageEvents, trips } from "./schema";
+import { people, tripAssignments, tripDives, tripStageEvents, trips } from "./schema";
 import { DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { liveTrip } from "./trips-live";
 
@@ -81,11 +81,15 @@ export async function seedTripStage(
       .where(eq(tripDives.tripId, departure.id))
       .orderBy(asc(tripDives.diveNumber))
       .limit(1);
+    // Ordered by name, never by id: a person id is random, so "the first of
+    // its crew" would change from one seed to the next and the export
+    // snapshot with it (it did, until the stack's CI caught it).
     const crew = await db
       .select({ personId: tripAssignments.personId, tripRole: tripAssignments.tripRole })
       .from(tripAssignments)
+      .innerJoin(people, eq(people.id, tripAssignments.personId))
       .where(eq(tripAssignments.tripId, departure.id))
-      .orderBy(asc(tripAssignments.personId));
+      .orderBy(asc(people.fullName), asc(tripAssignments.personId));
     const recordedByPersonId =
       crew.find((member) => member.tripRole === "captain")?.personId ??
       crew[0]?.personId ??

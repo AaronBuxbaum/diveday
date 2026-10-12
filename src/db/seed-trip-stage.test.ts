@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { MINUTE_MS } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
-import { tripAssignments, tripStageEvents } from "./schema";
+import { people, tripAssignments, tripStageEvents } from "./schema";
 import { demoStageTaps } from "./seed-trip-stage";
 
 /**
@@ -74,6 +74,38 @@ describe("seedTripStage", () => {
         .where(eq(tripAssignments.tripId, tap.tripId));
       if (crew.length === 0) continue;
       expect(crew.map((member) => member.personId)).toContain(tap.by);
+    }
+  });
+
+  it("picks the same recorder every time a departure has no captain", async () => {
+    // Person ids are random, so a crew with nobody in the captain's role must
+    // be read in name order or two seeds of the same shop disagree about who
+    // tapped (the export snapshot did, run to run).
+    const { db, shop } = await seededShopContext();
+    const taps = await db
+      .select({
+        tripId: tripStageEvents.tripId,
+        by: tripStageEvents.recordedByPersonId,
+        seq: tripStageEvents.seq,
+      })
+      .from(tripStageEvents)
+      .where(eq(tripStageEvents.shopId, shop.id));
+    expect(taps.length).toBeGreaterThan(0);
+    for (const tap of taps) {
+      const crew = await db
+        .select({
+          personId: tripAssignments.personId,
+          tripRole: tripAssignments.tripRole,
+          fullName: people.fullName,
+        })
+        .from(tripAssignments)
+        .innerJoin(people, eq(people.id, tripAssignments.personId))
+        .where(eq(tripAssignments.tripId, tap.tripId));
+      if (crew.length === 0) continue;
+      const expected =
+        crew.find((member) => member.tripRole === "captain") ??
+        [...crew].sort((a, b) => (a.fullName < b.fullName ? -1 : 1))[0];
+      expect(tap.by).toBe(expected?.personId);
     }
   });
 });
