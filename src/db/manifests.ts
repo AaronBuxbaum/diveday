@@ -1744,7 +1744,13 @@ export async function recordCrewRollCall(
       if (existing) return { ok: true, eventId: existing.id, duplicate: true };
     }
 
-    // Same tenancy and trip-status gate the other two writers apply.
+    // Same tenancy and trip-status gate the other two writers apply — and the
+    // trip's lock, taken here, before the crew member's own seat below
+    // (#2324's one order: trip, then booking). An after-dive `not_boarded`
+    // locks that seat and then updates this row
+    // (`pauseRecapOnMissingAfterDive`); booking-then-trip deadlocked against
+    // the counter on a staffer's seat (`seat-lock-order.postgres.test.ts`).
+    // `no key update`, so the event's own foreign-key `KEY SHARE` passes.
     const [trip] = await tx
       .select({ id: trips.id, plannedDives: trips.plannedDives })
       .from(trips)
@@ -1756,7 +1762,8 @@ export async function recordCrewRollCall(
           scheduledOrCountingHeads(input.tripId),
         ),
       )
-      .limit(1);
+      .limit(1)
+      .for("no key update", { of: trips });
     if (!trip) return { ok: false, reason: "trip_unavailable" };
     if (!isRollCallCheckpoint(checkpoint, trip.plannedDives)) {
       return { ok: false, reason: "invalid_checkpoint" };
@@ -1890,10 +1897,8 @@ export async function recordCrewRollCall(
     //
     // The lookup is a probe of `bookings_trip_person_unique`, so the ordinary
     // crew member — who holds no seat — pays one index miss and locks nothing.
-    // Ahead of the insert this holds the booking and then needs only a
-    // `KEY SHARE` on the trip, through the event's foreign key. The counter
-    // takes the trip first but `for no key update` (`lockSeatDeparture`), which
-    // a `KEY SHARE` passes, so the pair stays out of a deadlock.
+    // The trip is already held (`for no key update`, above), so this takes
+    // the seat second, in the counter's own order (`lockSeatDeparture`).
     const seat = standingResultMeansSailed(checkpoint, input.status)
       ? ((
           await tx

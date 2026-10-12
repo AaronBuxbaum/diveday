@@ -775,7 +775,8 @@ function tripTakesSeatFrom(
  * `createBookingRecord` below, `restoreBooking`, `setBookingParticipantType`,
  * and, through `lockSeatDeparture` (`./seat-locks.ts`), `markBookingNoShow`,
  * `undoBookingNoShow`, `checkInBooking`, `undoCheckInBooking` and the rail's
- * `recordRollCall`. Two writers taking the pair in opposite orders deadlock
+ * `recordRollCall`; and the crew's `recordCrewRollCall`, which locks its trip
+ * read before a crew member's own seat (`./manifests.ts`). Two writers taking the pair in opposite orders deadlock
  * when they meet, and a staffer's tap fails. A path that goes on to lock an
  * *existing* booking takes the trip `for no key update`, so a transaction
  * that holds a booking and only needs a `KEY SHARE` on the trip (a roll-call

@@ -7,10 +7,10 @@ import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } fro
 import { cancelBooking, createBooking, setBookingParticipantType } from "./bookings";
 import { checkInBooking } from "./check-in";
 import type { AppDb } from "./client";
-import { departureRollCallForBooking, recordRollCall } from "./manifests";
+import { departureRollCallForBooking, recordCrewRollCall, recordRollCall } from "./manifests";
 import { markBookingNoShow, undoBookingNoShow } from "./no-show";
 import { getBookingReadiness } from "./readiness";
-import { bookings } from "./schema";
+import { bookings, tripAssignments } from "./schema";
 import { seedDemo } from "./seed";
 import { getShopBySlug } from "./shops";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -93,6 +93,45 @@ async function readySeat(db: AppDb) {
     };
   }
   throw new Error("no demo diver could be made ready on a fresh departure");
+}
+
+/**
+ * A staffer on the reef trip's crew list who also holds a seat on it — the
+ * one subject the crew writer locks a booking for. No readiness work: the
+ * crew path has no readiness gate.
+ */
+async function crewMemberWithASeat(db: AppDb) {
+  await seedDemo(db);
+  const shop = await getShopBySlug(db, "blue-mantis");
+  if (!shop) throw new Error('seeded demo shop "blue-mantis" missing');
+  const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+  const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+  if (!reef) throw new Error("demo reef trip missing");
+  const seated = new Set((await getTripRoster(db, shop.id, reef.id)).map((s) => s.person.id));
+  const crew = (await listStaff(db, shop.id)).find((s) => !seated.has(s.person.id));
+  if (!crew) throw new Error("every demo staffer already holds a seat on the reef trip");
+  await db
+    .insert(tripAssignments)
+    .values({ tripId: reef.id, personId: crew.person.id })
+    .onConflictDoNothing();
+  const [seat] = await db
+    .insert(bookings)
+    .values({
+      bookedAs: "diver",
+      shopId: shop.id,
+      tripId: reef.id,
+      personId: crew.person.id,
+      status: "booked",
+    })
+    .returning({ id: bookings.id });
+  if (!seat) throw new Error("expected the crew member's own seat");
+  return {
+    shopId: shop.id,
+    tripId: reef.id,
+    startsAt: reef.startsAt,
+    bookingId: seat.id,
+    staffId: crew.person.id,
+  };
 }
 
 /**
@@ -234,5 +273,45 @@ describePostgres("seat writers on one departure take the trip, then the booking"
       "boarded",
     );
     expect(seatIsHeld(await statusOf(pg.db, seat.bookingId))).toBe(true);
+  });
+
+  /**
+   * **The crew writer is a seat writer too** (dive-domain review of #2324).
+   * A crew member who holds a seat and is recorded not back aboard after a
+   * dive has their booking locked (the reclaim read) and then the trip
+   * updated (`pauseRecapOnMissingAfterDive`). Taken in that order it is the
+   * reverse of the counter's, and the two deadlock on the staffer's seat.
+   */
+  it("a crew member not back after a dive and the counter on the same seat never deadlock", async () => {
+    const pg = await postgresTestDb();
+    const crew = await crewMemberWithASeat(pg.db);
+
+    const gate = await holdRowLock(
+      pg,
+      sql`select id from bookings where id = ${crew.bookingId} for update`,
+    );
+    const rail = recordCrewRollCall(pg.connect(), {
+      shopId: crew.shopId,
+      tripId: crew.tripId,
+      personId: crew.staffId,
+      recordedByPersonId: crew.staffId,
+      status: "not_boarded",
+      checkpoint: "after_dive_1",
+    });
+    await waitForLockWaiters(pg.db, 1);
+    const desk = markBookingNoShow(pg.connect(), {
+      shopId: crew.shopId,
+      bookingId: crew.bookingId,
+      recordedByPersonId: crew.staffId,
+      now: crew.startsAt,
+    });
+    await waitForLockWaiters(pg.db, 2);
+    await gate.release();
+
+    const [railed, desked] = await Promise.allSettled([rail, desk]);
+    expect(failure(railed)).toBeNull();
+    expect(failure(desked)).toBeNull();
+    // The rail never refuses a statement about somebody in the water.
+    expect(railed).toMatchObject({ value: { ok: true } });
   });
 });
