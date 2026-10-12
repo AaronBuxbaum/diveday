@@ -82,6 +82,15 @@
       "back": "Volvemos al agua el {date}.",
       "requestHeading": "Pídenos un día"
     },
+    "horizon": {
+      "heading": "Fechas más adelante",
+      "runs": "{title} sale {cadence}.",
+      "cadenceDaily": "todos los días",
+      "cadenceWeekly": "cada {days}",
+      "cadenceEveryNWeeks": "{weeks, plural, one {cada semana, los {days}} other {cada # semanas, los {days}}}",
+      "later": "Las fechas siguientes se abren a medida que avanza la temporada.",
+      "requestHeading": "¿Planeas para más adelante? Pídenos un día"
+    },
     "filters": {
       "disclosure": "Filtrar",
       "tripType": "Tipo de salida",
@@ -4082,6 +4091,7 @@
     "tripBlowout": {
       "subject": "Salida cancelada — {tripTitle}",
       "body": "{shopName} ha tenido que cancelar {tripTitle} del {date} por el mal tiempo. Tu plaza queda liberada y no necesitas hacer nada.",
+      "bodyRunEnded": "{shopName} ha dejado de ofrecer {tripTitle} por ahora, así que la salida del {date} queda cancelada. Tu plaza queda liberada y no necesitas hacer nada.",
       "moneyNone": "No se te ha cobrado nada por esta salida.",
       "moneyDeposit": "Tu depósito está a salvo: {shopName} se pondrá en contacto contigo para pasarlo a una nueva fecha o gestionar tu reembolso.",
       "moneyPaid": "Tu pago está a salvo: {shopName} se pondrá en contacto contigo para pasarlo a una nueva fecha o gestionar tu reembolso.",

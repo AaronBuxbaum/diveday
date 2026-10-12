@@ -33,6 +33,7 @@
     "departure_moved": "{actor} movió la salida",
     "departure_copied": "{actor} copió una salida en esta",
     "departure_deleted": "{actor} eliminó la salida",
+    "series_cancelled": "{actor} canceló todas las próximas fechas de esta salida recurrente",
     "redacted": "[eliminado]",
     "demo_charter_confirmed": "{actor} confirmó el chárter con el capitán",
     "demo_second_dive_moved": "{actor} movió el segundo buceo a French Reef por el oleaje",

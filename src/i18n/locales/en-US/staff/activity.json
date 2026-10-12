@@ -33,6 +33,7 @@
     "departure_moved": "{actor} moved the departure",
     "departure_copied": "{actor} copied a departure to this one",
     "departure_deleted": "{actor} deleted the departure",
+    "series_cancelled": "{actor} canceled every upcoming date of this repeating departure",
     "redacted": "[redacted]",
     "demo_charter_confirmed": "{actor} confirmed the charter with the captain",
     "demo_second_dive_moved": "{actor} moved the second dive to French Reef for the swell",

@@ -12,6 +12,7 @@
   },
   "record": {
     "title": "Cascada de la cancelación",
+    "titleRunEnded": "Cancelada con su serie",
     "calledBy": "Llamada por {name} · {when}",
     "notified": "Avisados",
     "rebooked": "Reservaron de nuevo",

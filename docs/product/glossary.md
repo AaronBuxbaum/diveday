@@ -108,6 +108,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Arrivals window
 - Automated cancellation refund
 - Automated marine outlook
+- Back on the water
 - Backup delivery
 - Backup destination
 - Blocked / Ready
@@ -221,6 +222,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Snorkeler
 - Souls on board
 - Staff invite
+- Standing crew
 - Station acknowledgement
 - Station echo
 - STOP list

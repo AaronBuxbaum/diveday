@@ -157,3 +157,42 @@ bypass, and three things worth fixing. All three are in the tree:
   sentinels (`weekday_mask = 0`, `anchor_date = ''`) would otherwise be counted as a failure every
   night forever — a permanently red monitor for a row that was never going to produce a date. The
   cadence editor above is now also the repair path for one.
+
+## Addendum, 2026-10-12 — a run behaves like a trip
+
+Three things a run did differently from the dates it is made of, changed together (UX review
+2026-10-11, items 2, 10 and 11):
+
+- **"Cancel every upcoming date" runs every date through the blow-out cascade**
+  ([20260804-blowout-cascade](20260804-blowout-cascade.md)), the same `callDayBlowout` the day
+  weather call uses. The decision above said it cancels the dates and closes the run; it said
+  nothing about the people booked on them, and the code took that literally: the dates kept their
+  bookings and their money, the crew were told, and nobody else was. Now each date is cancelled,
+  each booked diver gets one message, card captures go back by themselves
+  ([20260813-shop-cancellation-refunds-itself](20260813-shop-cancellation-refunds-itself.md)),
+  anything that cannot is owed on Today, and staff get a cascade record per date. The record and
+  the message carry a cause, `run_ended` rather than `weather` (`trip_blowouts.cause`), so the
+  diver reads that the shop stopped running the trip, not that the sea was rough. Every date is set
+  up before any message is written, so nobody is offered another date of the run being cancelled.
+  The run still closes first, for the reason given above. The confirm counts the booked divers it
+  reaches and how many of them have paid. Aaron's call (2026-10-12): the same per-trip path as the
+  blow-out, which already distinguishes refunded from owed, rather than holding every seat's money
+  for the shop to move by hand. Narrowing a cadence still cancels nothing, and its explicit
+  "cancel those dates" is unchanged by this addendum.
+- **A run can have a standing crew** (`trip_series.standing_crew`). "Apply this date's details"
+  gains a switch, shown when the date has a crew: on, it gives every upcoming date this date's crew
+  and makes the horizon roll crew every new date the same way, copying from the furthest-out date
+  exactly as it already copies the boat, the legs and the price. **Nothing is assumed from the
+  source date.** Upcoming dates go through `setTripCrew`, so a date where somebody on the crew is
+  already working an overlapping departure, or where a course session would be left without an
+  instructor, keeps its own crew and is reported back as skipped. A rolled date seats each person
+  only if they are still on the staff and free in that date's hours (`seatStandingCrew`, the same
+  overlap predicate), and seats nobody on a course session the remaining people would leave
+  without an instructor. Ratios are read per date by the surfaces that already read them (the
+  staffing week, Today, the trip page) and are never refused at write, as everywhere else. Turning
+  the switch off changes no date. The trade-off is the one stated above for details: a one-off
+  crew on the furthest-out date becomes the next date's crew.
+- **The public schedule says a run keeps going.** The month rail still ends at the last
+  materialized month; on that month an open-ended, public run says so in its own cadence words
+  ("Saturday Two-Tank runs every Saturday. Later dates open as the season goes.") and the date
+  request stands open under it.

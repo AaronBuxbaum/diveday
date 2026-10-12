@@ -19,6 +19,10 @@
   cancelled" gets `false` for all twelve people who drove to the dock and were sent home. The
   diver's own thread therefore says the departure was cancelled on its own authority, the **dive
   day** count excludes the date, and there is no **after-state** for a day that never happened.
+  **The same cascade cancels a run.** A repeating trip's "Cancel every upcoming date" sends each of
+  those dates through it (`trip_blowouts.cause` = `run_ended`), so the record, the refunds and the
+  one message per diver are the blow-out's, and the message says the shop stopped running the trip
+  rather than blaming the weather.
 - **Conditions hold** — a reversible crew call while weather or sea state is uncertain. Existing
   bookings remain valid, new bookings pause, and booked divers are notified. It is not a
   cancellation and never implies a refund.

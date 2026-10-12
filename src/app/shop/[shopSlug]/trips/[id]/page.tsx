@@ -755,7 +755,7 @@ export default async function ManageTripPage({
                   href={shopPath(shopSlug, "schedule", "blowout", tripId)}
                   className={buttonClass({ variant: "secondary" })}
                 >
-                  {t("trips.detail.viewBlowout")}
+                  {t("trips.detail.viewBlowout", { cause: blowoutCalled })}
                 </Link>
               ) : null}
             </div>
@@ -1069,8 +1069,8 @@ export default async function ManageTripPage({
                     </FormStatus>
                     {canConfigure && series ? (
                       <SeriesMoreActions
-                        futureScheduledCount={series.futureScheduledCount}
-                        endsOn={series.endsOn}
+                        series={series}
+                        crewNames={assignedCrew}
                         applyAction={applySeriesDetailsAction.bind(
                           null,
                           shopSlug,

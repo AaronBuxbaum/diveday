@@ -114,7 +114,13 @@ export default async function BlowoutPage({
       // (principle 10, issue #823).
       eyebrow={t("trips.surfaces.trip")}
       eyebrowHref={tripPath}
-      title={blowout ? t("blowout.record.title") : t("blowout.confirm.title")}
+      title={
+        blowout
+          ? blowout.cause === "run_ended"
+            ? t("blowout.record.titleRunEnded")
+            : t("blowout.record.title")
+          : t("blowout.confirm.title")
+      }
       meta={
         <div className="flex flex-col gap-1 text-sm text-muted">
           <span className="font-medium text-foreground">{trip.title}</span>

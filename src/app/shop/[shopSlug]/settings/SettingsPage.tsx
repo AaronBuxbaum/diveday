@@ -56,6 +56,8 @@ function noticeMessages(
     "timezone-saved": { tone: "success", text: t("settings.main.notice.timezoneSaved") },
     "season-saved": { tone: "success", text: t("settings.main.notice.seasonSaved") },
     "season-invalid": { tone: "danger", text: t("settings.main.notice.seasonInvalid") },
+    "reopens-saved": { tone: "success", text: t("settings.main.notice.reopensSaved") },
+    "reopens-invalid": { tone: "danger", text: t("settings.main.notice.reopensInvalid") },
     "timezone-invalid": { tone: "danger", text: t("settings.main.notice.timezoneInvalid") },
     "package-saved": { tone: "success", text: t("settings.main.notice.packageSaved") },
     "package-deleted": { tone: "success", text: t("settings.main.notice.packageDeleted") },

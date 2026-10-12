@@ -43,6 +43,8 @@
       "timezoneSaved": "Zona horaria guardada.",
       "seasonSaved": "Inicio de temporada guardado.",
       "seasonInvalid": "Elige un día que ese mes tenga.",
+      "reopensSaved": "Guardado. Tu página pública muestra esta fecha mientras su calendario esté vacío.",
+      "reopensInvalid": "Esa fecha no existe en el calendario. Elige una en el campo.",
       "timezoneInvalid": "No reconocemos esa zona horaria: elige una de la lista.",
       "emergencySaved": "Referencia de emergencia guardada.",
       "packageSaved": "Paquete añadido.",
@@ -95,7 +97,10 @@
       "monthLabel": "Mes",
       "dayLabel": "Día",
       "submitting": "Guardando…",
-      "submit": "Guardar inicio de temporada"
+      "submit": "Guardar inicio de temporada",
+      "reopensLabel": "De vuelta en el agua",
+      "reopensHint": "Mientras tu calendario público esté vacío, dirá que vuelves a salir en esta fecha.",
+      "reopensSubmit": "Guardar la fecha"
     },
     "contact": {
       "heading": "Datos de contacto públicos",
