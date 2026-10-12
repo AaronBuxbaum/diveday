@@ -296,7 +296,7 @@ export default async function ReportsPage({
       : Promise.resolve(null),
     // The money by line, the package dives still owed, and the returning
     // divers (owner decision 2026-10-09) — `src/lib/report-lines.ts`.
-    getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now),
+    getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now, { currency, timeZone: tz }),
   ]);
   const report = summarizeMonth(input);
   const money = (cents: number) => formatReportMoney(cents, currency, locale);
@@ -609,7 +609,12 @@ export default async function ReportsPage({
         // ordinary quiet January read as a warning. No figure row either — five
         // zeroes over an empty ledger is a month described wrongly, not
         // described quietly (`monthHasActivity`).
-        <EmptyState title={isFuture ? t("reports.noTripsFuture") : t("reports.noTripsPast")} />
+        <>
+          <EmptyState title={isFuture ? t("reports.noTripsFuture") : t("reports.noTripsPast")} />
+          {/* A month with no departures can still take money: a package, a
+              counter sale, a gear-bench job (issue #2305). */}
+          <MoneyByLine detail={moneyDetail} t={t} money={money} />
+        </>
       ) : (
         <>
           <MonthFigures label={t("reports.numbersLabel")} figures={figures} />

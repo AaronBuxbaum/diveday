@@ -4,13 +4,14 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { RevenueLine } from "@/lib/report-lines";
 
 /** Each revenue line's name in the staff bundle. */
-const BY_LINE_KEYS = {
+export const BY_LINE_KEYS = {
   courses: "reports.byLine.courses",
   funDives: "reports.byLine.funDives",
   rentals: "reports.byLine.rentals",
   gearBench: "reports.byLine.gearBench",
   packages: "reports.byLine.packages",
   retail: "reports.byLine.retail",
+  imported: "reports.byLine.imported",
 } as const satisfies Record<RevenueLine, string>;
 
 /**
