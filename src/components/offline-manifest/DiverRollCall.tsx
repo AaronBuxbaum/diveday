@@ -101,7 +101,8 @@ function OfflineDiverRow({
   // only board at departure once readiness clears them, so a blocked
   // diver's circle is a drawn held ring with no tap.
   const showBoardControl = ready || !isDeparture;
-  // The live roll call's two medical warnings (issue #2163), dates only. A
+  // The live roll call's four medical warnings, dates only: two riding-only
+  // (H-109), an earlier refusal (H-98) and a referral still open (#2163). A
   // held seat never carries them, and the facts block below says why instead.
   const withheld = diver.identityWithheld || isHeldSeat(diver);
   const medicalWarnings = withheld ? undefined : diver.medicalWarnings;

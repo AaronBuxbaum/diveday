@@ -582,23 +582,28 @@ describe("the earlier-refusal capsule", () => {
   });
 
   it("gives way to a rider's riding-only warning, which the row and its details both say (H-109)", () => {
+    // A clean release over an older "no", and a later "no" the rider boards
+    // under: both warnings stand, and the riding-only one takes the row.
     const { container } = renderList({
       divers: [
         diver({
           participantType: "rider",
-          medicalWaiver: null,
+          medicalWaiver: refusedBefore,
           riderMedicalHold: {
             kind: "not_cleared",
-            at: new Date("2026-08-20T12:00:00.000Z"),
-            evaluatedOn: "2026-08-19",
+            at: new Date("2026-09-05T12:00:00.000Z"),
+            evaluatedOn: "2026-09-04",
           },
         }),
       ],
     });
     expect(capsuleOf(container)).toHaveTextContent("Physician did not clear: riding only");
+    expect(capsuleOf(container)).not.toHaveTextContent(CAPSULE);
     expect(container.textContent).toMatch(
-      /A physician did not clear this person on Aug\s19,\s2026: riding only, not in the water/,
+      /A physician did not clear this person on Sep\s4,\s2026: riding only, not in the water/,
     );
+    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
+    expect(within(printed as HTMLElement).getByText(CAPSULE)).toBeDefined();
   });
 
   it("is short in Spanish too", () => {
@@ -946,6 +951,108 @@ describe("the unresolved-referral capsule", () => {
  * the tap target and what the button opens are unchanged. jsdom has no
  * layout, so this pins the structure that gives it the room.
  */
+/**
+ * **A rider boarding under a medical hold, riding only** (H-109). The hold is
+ * never a blocker, so the row's capsule says it: below a desk blocker and a
+ * team that did not come back after a dive, above the minor, depth and
+ * birthday capsules, and at every checkpoint, since a rider back aboard after
+ * a dive is still not to go in the water.
+ */
+describe("the rider's riding-only capsule", () => {
+  const NOT_CLEARED = "Physician did not clear: riding only";
+  const REFERRAL = "Medical referral open: riding only";
+  const notCleared = {
+    kind: "not_cleared",
+    at: new Date("2026-08-20T12:00:00.000Z"),
+    evaluatedOn: "2026-08-19",
+  } as TripManifest["divers"][number]["riderMedicalHold"];
+  const referral = {
+    kind: "referral",
+    at: new Date("2026-08-20T12:00:00.000Z"),
+  } as TripManifest["divers"][number]["riderMedicalHold"];
+  const rider = (overrides: Partial<TripManifest["divers"][number]> = {}) =>
+    diver({
+      participantType: "rider",
+      medicalWaiver: null,
+      riderMedicalHold: notCleared,
+      ...overrides,
+    });
+
+  function capsuleOf(container: HTMLElement) {
+    return container.querySelector(".basis-full");
+  }
+
+  it("says an open referral on the row, and in the dated sentence the details and paper both carry", () => {
+    const { container } = renderList({ divers: [rider({ riderMedicalHold: referral })] });
+    expect(capsuleOf(container)).toHaveTextContent(REFERRAL);
+    const sentence =
+      /Referred to a physician on Aug\s20,\s2026 with no answer on file: riding only, not in the water/;
+    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
+    expect(printed).toHaveTextContent(sentence);
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    expect(within(screen.getByRole("dialog")).getByText(sentence)).toBeDefined();
+  });
+
+  it("yields to Blocked at the dock", () => {
+    const { container } = renderList({
+      checkpoint: "departure",
+      divers: [
+        rider({
+          readiness: { status: "blocked", blockers: [{ code: "certification_missing" }] },
+        }),
+      ],
+    });
+    expect(capsuleOf(container)).toHaveTextContent("Blocked");
+    expect(capsuleOf(container)).not.toHaveTextContent(NOT_CLEARED);
+  });
+
+  it("yields to a team that did not come back after a dive", () => {
+    const { container } = renderList({
+      divers: [
+        rider({
+          buddyAlert: "separated_after_dive",
+          buddyTeam: { teamId: "t-1", others: [] },
+        }),
+      ],
+    });
+    expect(capsuleOf(container)).toHaveTextContent("Someone unaccounted for");
+    expect(capsuleOf(container)).not.toHaveTextContent(NOT_CLEARED);
+  });
+
+  it("outranks the minor, depth and birthday capsules", () => {
+    const { container } = renderList({
+      divers: [
+        rider({
+          age: 13,
+          minor: true,
+          depthAdvisory: {
+            status: "exceeds",
+            limitDepth: 18,
+            siteDepth: 30,
+            unit: "meters",
+            basis: "certification",
+            level: "open_water",
+          },
+          birthday: { status: "today" },
+        } as unknown as Partial<TripManifest["divers"][number]>),
+      ],
+    });
+    expect(capsuleOf(container)).toHaveTextContent(NOT_CLEARED);
+    expect(capsuleOf(container)).not.toHaveTextContent("Minor");
+  });
+
+  it("stays on the row after a dive, for a rider counted aboard", () => {
+    for (const checkpoint of ["after_dive_1", "after_dive_2"] as const) {
+      const { container, unmount } = renderList({
+        checkpoint,
+        divers: [rider({ boardedEarlier: true, rollCall: boardedAt() })],
+      });
+      expect(capsuleOf(container), checkpoint).toHaveTextContent(NOT_CLEARED);
+      unmount();
+    }
+  });
+});
+
 describe("the exception capsule's line", () => {
   function capsuleLine(row: HTMLElement, text: string) {
     const pill = within(row).getByText(text);
