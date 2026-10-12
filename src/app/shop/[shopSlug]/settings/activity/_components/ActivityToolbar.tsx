@@ -33,6 +33,14 @@ export type ActivityToolbarCopy = {
 };
 
 const FIELD_CLASS = "min-w-36 flex-1 sm:w-44 sm:flex-none";
+const RANGE_CLASS = "flex basis-full items-end gap-3 sm:basis-auto";
+/**
+ * `grid-cols-1` is `minmax(0, 1fr)`, and each input's wrapper carries `min-w-0`:
+ * `Field` lays its control out in a grid, and a date input's own intrinsic
+ * width (193px) held the pair 4px past a 390px screen and ran each box into
+ * the gap beside it.
+ */
+const DATE_CLASS = "min-w-0 flex-1 grid-cols-1 sm:w-44 sm:flex-none";
 
 export function ActivityToolbar({
   personId,
@@ -99,12 +107,28 @@ export function ActivityToolbar({
         </select>
       </div>
 
-      <Field label={copy.fromLabel} className={FIELD_CLASS}>
-        <DateField id="activity-from" name="from" defaultValue={from} onChange={submit} />
-      </Field>
-      <Field label={copy.toLabel} className={FIELD_CLASS}>
-        <DateField id="activity-to" name="to" defaultValue={to} onChange={submit} />
-      </Field>
+      {/* The range wraps as one unit, so "To" never lands alone on a line
+        under "From"; on a phone it takes its own row, a box each. */}
+      <div className={RANGE_CLASS}>
+        <Field label={copy.fromLabel} className={DATE_CLASS}>
+          <DateField
+            id="activity-from"
+            name="from"
+            defaultValue={from}
+            onChange={submit}
+            wrapperClassName="min-w-0"
+          />
+        </Field>
+        <Field label={copy.toLabel} className={DATE_CLASS}>
+          <DateField
+            id="activity-to"
+            name="to"
+            defaultValue={to}
+            onChange={submit}
+            wrapperClassName="min-w-0"
+          />
+        </Field>
+      </div>
 
       {clearHref ? (
         <Link

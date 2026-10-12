@@ -21,12 +21,17 @@ export default function ShopActivityLoading() {
             <div className="flex flex-wrap items-end gap-3">
               <div className="h-11 min-w-36 flex-1 rounded-lg bg-surface-sunken sm:w-44 sm:flex-none" />
               <div className="h-11 min-w-36 flex-1 rounded-lg bg-surface-sunken sm:w-44 sm:flex-none" />
-              {DATES.map((date) => (
-                <div key={date} className="grid min-w-36 flex-1 gap-y-1 sm:w-44 sm:flex-none">
-                  <div className="h-5 w-12 rounded bg-surface-sunken" />
-                  <div className="h-11 rounded-lg bg-surface-sunken" />
-                </div>
-              ))}
+              <div className="flex basis-full items-end gap-3 sm:basis-auto">
+                {DATES.map((date) => (
+                  <div
+                    key={date}
+                    className="grid min-w-0 flex-1 grid-cols-1 gap-y-1 sm:w-44 sm:flex-none"
+                  >
+                    <div className="h-5 w-12 rounded bg-surface-sunken" />
+                    <div className="h-11 rounded-lg bg-surface-sunken" />
+                  </div>
+                ))}
+              </div>
             </div>
             <ol className="grid gap-2">
               {LINES.map((line) => (
