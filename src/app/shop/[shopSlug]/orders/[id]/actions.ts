@@ -70,6 +70,7 @@ export async function voidAction(formData: FormData) {
     revalidateAndRedirect(back, stepUpChallengeUrl(session.user.shopSlug, "money", back));
   }
   const updated = orderId ? await voidOrder(db, session.user.shopId, orderId) : null;
+  if (updated) dispatchIntegrationsAfterResponse();
   revalidateAndRedirect(back, noticeUrl(back, updated ? "voided" : "void-failed"));
 }
 

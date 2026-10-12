@@ -315,3 +315,84 @@ describe("Xero OAuth state", () => {
     expect(await consumeIntegrationOAuthState(db, { state, provider: "xero" })).not.toBeNull();
   });
 });
+
+/**
+ * A voided order takes its sale back off the books (issue #2309). Xero has no
+ * void for a bank transaction; it is deleted, by posting `Status: DELETED`.
+ */
+describe("deliverXeroEvent — voids", () => {
+  async function voidEvent(db: Ctx, shopId: string) {
+    const event = await enqueueIntegrationEvent(db, {
+      shopId,
+      eventType: "order.voided",
+      entityType: "order",
+      entityId: "order-1",
+      idempotencyKey: "order:order-1:void",
+      payload: { ...orderPayload(0, 0), status: "void" },
+    });
+    if (!event) throw new Error("event fixture failed");
+    return event;
+  }
+
+  function recordingFetch() {
+    const calls: { url: string; body: unknown }[] = [];
+    const fetchImpl = (async (url: string, init: { body: string }) => {
+      calls.push({ url, body: JSON.parse(init.body) });
+      return okResponse({ BankTransactions: [{ BankTransactionID: "txn-1", Status: "DELETED" }] });
+    }) as unknown as typeof fetch;
+    return { calls, fetchImpl };
+  }
+
+  it("deletes the receive transaction it booked, once", async () => {
+    const { db, shop } = await seededShopContext();
+    const integration = await connectedIntegration(db, shop.id);
+    await upsertIntegrationSyncRecord(db, {
+      shopId: shop.id,
+      provider: "xero",
+      sourceType: "xero_bank_transaction",
+      sourceId: "order-1",
+      operation: "receive_transaction",
+      externalId: "txn-1",
+    });
+    const event = await voidEvent(db, shop.id);
+    const { calls, fetchImpl } = recordingFetch();
+
+    expect(await deliverXeroEvent(db, integration, event, CONFIG, fetchImpl)).toEqual({
+      status: "delivered",
+    });
+    expect(calls).toEqual([
+      {
+        url: expect.stringMatching(/\/BankTransactions\/txn-1$/),
+        body: { BankTransactions: [{ BankTransactionID: "txn-1", Status: "DELETED" }] },
+      },
+    ]);
+
+    // A redelivered void is a no-op.
+    await deliverXeroEvent(db, integration, event, CONFIG, fetchImpl);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("does nothing for an order it never booked", async () => {
+    const { db, shop } = await seededShopContext();
+    const integration = await connectedIntegration(db, shop.id);
+    const { calls, fetchImpl } = recordingFetch();
+    expect(
+      await deliverXeroEvent(db, integration, await voidEvent(db, shop.id), CONFIG, fetchImpl),
+    ).toEqual({ status: "delivered" });
+    expect(calls).toHaveLength(0);
+  });
+
+  it("does not book a sale whose void is already queued", async () => {
+    const { db, shop } = await seededShopContext();
+    const integration = await connectedIntegration(db, shop.id);
+    const paid = await paidEvent(db, shop.id);
+    const voided = await voidEvent(db, shop.id);
+    const { calls, fetchImpl } = recordingFetch();
+
+    await deliverXeroEvent(db, integration, voided, CONFIG, fetchImpl);
+    expect(await deliverXeroEvent(db, integration, paid, CONFIG, fetchImpl)).toEqual({
+      status: "delivered",
+    });
+    expect(calls).toHaveLength(0);
+  });
+});

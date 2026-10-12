@@ -422,6 +422,7 @@ export async function POST(request: Request) {
         const invoice = invoiceObjectSchema.safeParse(event.data.object);
         if (invoice.success) {
           const order = await markOrderVoidedByInvoiceId(db, invoice.data.id, event.account);
+          if (order) dispatchIntegrationsAfterResponse();
           logOutcome(order ? "order_voided" : "order_not_found");
         } else {
           logOutcome("malformed_payload");
