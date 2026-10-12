@@ -21,7 +21,8 @@ the `order.refunded` the shop's books needed. A dispute was invisible until the 
   PaymentIntent is recorded as each payment settles: `orders.stripe_payment_intent_id` off
   `invoice.paid`, `booking_checkouts.stripe_payment_intent_id` off the session's completion. When
   neither has it, Stripe is asked once (`src/lib/payments/payment-sources.ts`: read-only list calls
-  by PaymentIntent) and the answer is written back. Matching is always scoped to the event's own
+  by PaymentIntent, with the key `stripeSecretKeyFor` chooses for the event's account, so the
+  demo's account is asked with its test-mode key; issue #2296) and the answer is written back. Matching is always scoped to the event's own
   `account`.
 - **A refund is reconciled to Stripe's cumulative `amount_refunded`, never applied as an event.**
   The delta `amount_refunded − refunded_cents` is computed under the row's lock and applied only

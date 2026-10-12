@@ -23,6 +23,7 @@ import {
   stripeAccountHolder,
 } from "@/db/stripe-accounts";
 import { recordTipPaymentIntent } from "@/db/stripe-payment-targets";
+import { paymentSourceLookupFromEnvironment } from "@/db/stripe-providers";
 import {
   markTipExpiredBySessionId,
   markTipPaidBySessionId,
@@ -37,7 +38,6 @@ import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { nowDate } from "@/lib/clock";
 import { type LogContext, log } from "@/lib/log";
 import { invoicePaymentIntentId } from "@/lib/payments/invoicing";
-import { paymentSourceLookupFromEnvironment } from "@/lib/payments/payment-sources";
 import { demoStripeAccount, platformKeyIsLive } from "@/lib/payments/stripe-keys";
 import { verifyStripeWebhook } from "@/lib/payments/webhook";
 
@@ -325,10 +325,12 @@ export async function POST(request: Request) {
     logOutcome("livemode_mismatch", { verifiedWith, livemode: event.livemode ?? null });
     return new Response(null, { status: 200 });
   }
-  // Which charge a reversal is about, asked of Stripe only with a key of this
-  // event's own mode (ADR 20261009-stripe-reversals-reach-diveday).
+  // Which charge a reversal is about, asked of Stripe with the key chosen for
+  // the event's account, and only one of this event's own mode (ADR
+  // 20261009-stripe-reversals-reach-diveday; the demo's test key, issue #2296).
   const sourceLookup = paymentSourceLookupFromEnvironment(process.env, fetch, {
     livemode: expectedLivemode,
+    db: async () => db,
   });
 
   // On a deployment that takes real money, the only test-mode traffic with
