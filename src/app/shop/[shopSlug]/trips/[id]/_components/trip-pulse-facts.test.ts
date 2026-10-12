@@ -43,7 +43,9 @@ describe("tripPulseFacts", () => {
     const facts = tripPulseFacts(input({ requirement: null as never }));
     expect(facts.map((fact) => fact.href)).toEqual(["?view=details#requirements"]);
     expect(tripPulseFacts(input({ requirement: null as never, cancelled: true }))).toEqual([]);
-    expect(tripPulseFacts(input({ requirement: null as never, course: { id: "c" } as never }))).toEqual([]);
+    expect(
+      tripPulseFacts(input({ requirement: null as never, course: { id: "c" } as never })),
+    ).toEqual([]);
   });
 
   it("opens the other departure for a hull clash", () => {
