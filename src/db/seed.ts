@@ -4,6 +4,7 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { crewPublicNameToStore } from "@/lib/crew-public-name";
+import { shopDefaults } from "@/lib/curated-defaults";
 import { generateDemoShopIdentity, pinnedDemoShopIdentity } from "@/lib/demo-identity";
 import { demoEmail } from "@/lib/simulator-email";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
@@ -127,11 +128,12 @@ import { seedBuddyPairs } from "./seed-buddy-pairs";
 import { LEAD_INSTRUCTOR_NAME, OWNER_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-cast";
 import { seedCatalog } from "./seed-catalog";
 import { seedCertGates } from "./seed-cert-gates";
-import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "./seed-clock";
+import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart, demoTodayShifts } from "./seed-clock";
 import { seedCounterBlockers } from "./seed-counter-blockers";
 import { seedCounterRental } from "./seed-counter-rental";
 import { seedCourseInquiries } from "./seed-course-inquiries";
 import { seedCourseMaterials } from "./seed-course-materials";
+import { seedCoursePhotos } from "./seed-course-photos";
 import { seedDateRequests } from "./seed-date-requests";
 import { enforceMintedDemoCap } from "./seed-demo-lifecycle";
 import { seedDeskHandoff } from "./seed-desk-handoff";
@@ -155,6 +157,7 @@ import { seedMoreTrips } from "./seed-more-trips";
 import { seedNitrox } from "./seed-nitrox";
 import { seedOpenInvoice } from "./seed-open-invoice";
 import { seedOrders } from "./seed-orders";
+import { seedPackages } from "./seed-packages";
 import { seedPartnerReferrals } from "./seed-partner-referrals";
 import { seedPreDepartureChecklist } from "./seed-pre-departure-checklist";
 import { seedPromos } from "./seed-promos";
@@ -198,6 +201,8 @@ import { syncDemoStripeAccount } from "./stripe-accounts";
  * | `./seed-course-inquiries.ts` | course leads off the public pages, in all three `person_id` states |
  * | `./seed-course-materials.ts` | the links behind two courses' learning materials, and one student marked done |
  * | `./seed-front-desk.ts` | the desk's own day: walk-ins, wait lists, inquiries, tips |
+ * | `./seed-course-photos.ts` | a species photo of its own on every course, so the storefront reads as a shop and not a template |
+ * | `./seed-packages.ts` | two dive packages on sale, so the public Packages tab and price list have something to show |
  * | `./seed-history.ts` | the trailing quarter that gives owner reporting something to report |
  * | `./seed-cert-gates.ts` | the boats a card can be refused on, one gate each, and the course carve-out |
  * | `./seed-buddy-pairs.ts` | two buddy teams on today's reef boat, plus the odd-roster remainder |
@@ -234,8 +239,24 @@ import { syncDemoStripeAccount } from "./stripe-accounts";
 const canonicalStaffEmail = (local: string) => `${local}@demo.invalid`;
 
 /**
- * The one 12-hour shift every member of the demo cast works today, so the
- * rostering surface (`/shop/<slug>/staffing`) has a day to show.
+ * **The demo's units follow its country**, by the one rule every shop starts
+ * on (`shopDefaults`): Blue Mantis is in Key Largo, so depths read in feet,
+ * the water in Fahrenheit and prices in dollars. It used to seed metres and
+ * Celsius, so a Florida diver read "6–12 m" and "27°C" (UX review 2026-10-10,
+ * item 5). Shared by the canonical shop, a minted one, and the reset that
+ * puts back what a spec flipped.
+ */
+const DEMO_SHOP_UNITS = shopDefaults({ country: "US", timeZone: DEMO_SHOP_TIMEZONE });
+/** The two unit columns alone, for the reset that puts them back. */
+const DEMO_SHOP_UNIT_COLUMNS = {
+  depthUnit: DEMO_SHOP_UNITS.depthUnit,
+  temperatureUnit: DEMO_SHOP_UNITS.temperatureUnit,
+};
+
+/**
+ * The shifts every member of the demo cast works today (`demoTodayShifts`:
+ * around today's departure, on its own local day), so the rostering surface
+ * (`/shop/<slug>/staffing`) has a day to show.
  *
  * Shared by all three places staff arrive in a demo shop — the canonical seed,
  * a shop minted by "Try the live demo", and `restoreMissingStableStaff`'s
@@ -244,23 +265,42 @@ const canonicalStaffEmail = (local: string) => `${local}@demo.invalid`;
  * **stable** half: a schedule reset never re-seeds these, so a person who
  * already has one keeps it.
  */
-async function seedStaffShifts(db: DbExecutor, shopId: string, personIds: string[]): Promise<void> {
-  if (personIds.length === 0) return;
-  const startsAt = new Date(demoTodayDepartureStart().getTime() - 60 * 60 * 1000);
-  const endsAt = new Date(startsAt.getTime() + 12 * 60 * 60 * 1000);
+async function seedStaffShifts(
+  db: DbExecutor,
+  shopId: string,
+  cast: { id: string; roles: readonly string[] }[],
+): Promise<void> {
+  if (cast.length === 0) return;
+  const now = nowDate();
   await db.insert(staffShifts).values(
-    personIds.map((personId) => ({
-      shopId,
-      personId,
-      startsAt,
-      endsAt,
-      // No note: a seed label ("Demo schedule") on every chip of the Crew
-      // view read as a test fixture, not a shop (UX audit 2026-10-07, item 34).
-      note: null,
-      createdByPersonId: personId,
-    })),
+    cast.flatMap((person) =>
+      // The dawn boat's crew (`DEMO_DAWN_CREW_ROLES`) are on from 4:30 too.
+      demoTodayShifts(now, DEMO_SHOP_TIMEZONE, {
+        dawnCrew: person.roles.some((role) => DEMO_DAWN_CREW_ROLES.has(role)),
+      }).map(({ startsAt, endsAt }) => ({
+        shopId,
+        personId: person.id,
+        startsAt,
+        endsAt,
+        // No note: a seed label ("Demo schedule") on every chip of the Crew
+        // view read as a test fixture, not a shop (UX audit 2026-10-07, item 34).
+        note: null,
+        createdByPersonId: person.id,
+      })),
+    ),
   );
 }
+
+/**
+ * Who crews the first-light boat (`seed-more-trips.ts` puts the shop's captain,
+ * divemaster and assistant instructor on every charter it seeds), and so whose
+ * day starts at 4:30 rather than an hour before today's departure.
+ */
+const DEMO_DAWN_CREW_ROLES: ReadonlySet<string> = new Set([
+  "captain",
+  "divemaster",
+  "assistant_instructor",
+]);
 
 /**
  * One crew member's days away, so the staffing week has a blackout to draw and
@@ -280,7 +320,10 @@ async function seedCrewAway(db: DbExecutor, shopId: string, personIds: string[])
   if (!personId) return;
   // Three days out, so it lands inside the week the page opens on: a demo
   // where the one blackout is always in a week nobody looks at shows nothing.
-  const from = shiftCalendarDate(calendarDateInTimezone(demoTodayDepartureStart(), "UTC"), 3);
+  const from = shiftCalendarDate(
+    calendarDateInTimezone(demoTodayDepartureStart(), DEMO_SHOP_TIMEZONE),
+    3,
+  );
   await db.insert(crewAvailabilityBlocks).values({
     shopId,
     personId,
@@ -371,6 +414,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       tagline: "Small-boat reef and wreck diving out of Key Largo.",
       ...DEMO_SHOP_BRAND,
       timezone: DEMO_SHOP_TIMEZONE,
+      ...DEMO_SHOP_UNITS,
       // **Blue Mantis finished its own onboarding**, like the trading shop it
       // is meant to portray. Without this the queue asks it which currency it
       // works in on every screenshot ever taken of Today, which is the same
@@ -545,7 +589,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   await seedStaffShifts(
     db,
     shop.id,
-    staff.map((person) => person.id),
+    staff.map((person, i) => ({ id: person.id, roles: staffDefs[i].roles })),
   );
   await seedDemoSchedule(db, shop.id, opts);
   // Pay-at-booking in Stripe test mode, when configured (ADR
@@ -560,6 +604,8 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   // (ADR 20260824-pre-departure-safety-check) — seeded once here, never
   // re-seeded by a reset, which is why it is not inside seedDemoSchedule.
   await seedPreDepartureChecklist(db, shop.id);
+  // Same tier: packages are shop configuration a reset leaves standing.
+  await seedPackages(db, shop.id);
   // Two listed shops beside a demo no listing may show. Stable half: real
   // rows a reset never touches.
   await seedListedShops(db);
@@ -612,6 +658,7 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false
           name: identity.name,
           slug: identity.slug,
           timezone: DEMO_SHOP_TIMEZONE,
+          ...DEMO_SHOP_UNITS,
           // **Deliberately left unconfirmed**, unlike the canonical demo above.
           // A minted shop genuinely has not answered the units question, and
           // pre-answering it on the shop's behalf would make the one fixture
@@ -785,13 +832,17 @@ export async function createDemoShop(
   await seedStaffShifts(
     db,
     shop.id,
-    staff.map((person) => person.id),
+    staff.map((person, i) => ({ id: person.id, roles: staffDefs[i].roles })),
   );
   // A visitor's demo should carry the same owner-facing story as the
   // canonical demo, including sailed trips, tips, and reviews. Test-only
   // private shops can opt into the lean schedule when they need isolation
   // from history-only rows.
   await seedDemoSchedule(db, shop.id, { history: opts.history !== false });
+  // The canonical demo's two packages, for a visitor's demo too. A private
+  // test shop mints without history and starts with nothing on sale, which is
+  // the state `e2e/package-purchase.spec.ts` begins from.
+  if (opts.history !== false) await seedPackages(db, shop.id);
 
   return { slug: shop.slug, ownerEmail: identity.emailFor("dana") };
 }
@@ -885,6 +936,8 @@ export async function seedDemoSchedule(
     db,
     shopId,
   );
+  // A photo of its own on every course, none of them the cover or a site's.
+  await seedCoursePhotos(db, shopId);
   // DiveDay's own catalog first: the shop's Molasses Reef records which
   // template version it came from, and the library reads that back to offer the
   // newer one.
@@ -1132,8 +1185,9 @@ export async function seedDemoSchedule(
   // which mints with `history: false`, because a stated leg beats the shop's own
   // ride-out figure and that figure is exactly what a spec taking a shop of its
   // own is usually testing.
-  // The demo's boat says where it is, once, on today's departure (ADR
-  // 20260904-reef-all-the-way-down, Budget rule 4) — after the trips exist and
+  // The demo's boats say where they are, with every tap stamped relative to
+  // its own departure (ADR 20260904-reef-all-the-way-down, Budget rule 4;
+  // `demoStageTaps`) — after the trips exist and
   // their plans have sites on them, since the tap stamps the site it reads.
   if (captainId) await seedTripStage(db, shopId, captainId);
   await seedTripLegs(db, shopId, opts.history !== false);
@@ -1559,10 +1613,10 @@ export async function resetDemoSchedule(
   // either, so restoring to that state is just deleting/nulling them.
   // `shops.depth_unit` is the same class of leak: it's the only
   // shop-settings column e2e/depth-and-age-surfaces.spec.ts's "read back in
-  // the shop's own unit" test mutates (metres → feet, mid-test), and nothing
+  // the shop's own unit" test mutates (feet → metres, mid-test), and nothing
   // ever flips it back — a second run against the same server (e.g. a local
   // `pnpm exec playwright test` rerun without restarting `next start`)
-  // starts already on "feet" and the test's own `/Maximum depth \(metres\)/`
+  // starts already on metres and the test's own `/Maximum depth \(feet\)/`
   // locator then never matches, hanging for the full test timeout rather
   // than failing fast.
   // `shops.temperature_unit` rides along for the same reason: it is the second
@@ -1570,7 +1624,7 @@ export async function resetDemoSchedule(
   // flips it.
   await db
     .update(shops)
-    .set({ reviewUrl: null, depthUnit: "meters", temperatureUnit: "celsius" })
+    .set({ reviewUrl: null, ...DEMO_SHOP_UNIT_COLUMNS })
     .where(eq(shops.id, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
   // ...and puts back the one connection the canonical demo is configured with:
@@ -1720,7 +1774,7 @@ async function restoreMissingStableStaff(db: DbExecutor, shopId: string): Promis
     await seedStaffShifts(
       db,
       shopId,
-      restored.map((person) => person.id),
+      restored.map((person, i) => ({ id: person.id, roles: missing[i]?.roles ?? [] })),
     );
   }
 

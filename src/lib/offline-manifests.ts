@@ -360,6 +360,19 @@ export type OfflineManifestPayload = {
            */
           notHere?: boolean;
           /**
+           * **The diver's own "running late"** (#2319), as an ISO instant:
+           * when they said it, and nothing else — no channel, no message.
+           * Already cleared from an arrived or released seat at save time;
+           * the viewer words it in the shop's zone and hides it once this
+           * device boards them (`runningLateOnManifest`). Display only, like
+           * the live line: no count on the dock copy reads it.
+           *
+           * Optional and additive (no record-version bump), and absent rather
+           * than null when the diver said nothing, so a copy with nobody late
+           * serializes to exactly what it did before.
+           */
+          runningLateAt?: string;
+          /**
            * **The two medical warnings the live roll call shows** (issue
            * #2163), as calendar days in the shop's zone and nothing else: the
            * day a physician refused an earlier release this one stands over
@@ -938,6 +951,7 @@ export function serializeManifests(
         bookedAs: diver.bookedAs,
         checkedIn: diver.checkedIn,
         notHere: diver.notHere,
+        ...(diver.runningLateAt ? { runningLateAt: diver.runningLateAt.toISOString() } : {}),
         // Dates only, and absent when there is nothing to warn about: see the
         // allow-list type above.
         ...offlineMedicalWarnings(diver.medicalWaiver, shop.timezone, diver.riderMedicalHold),

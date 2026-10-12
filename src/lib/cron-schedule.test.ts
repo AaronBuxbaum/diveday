@@ -8,6 +8,7 @@ import {
   dailyPassesWithin,
   nextDailyTickAtOrAfter,
 } from "./cron-schedule";
+import { DESK_PING_CRON_CRONTAB } from "./desk-hours";
 import { MINIMUM_SEATS_CRON_CRONTAB } from "./minimum-seats";
 import { RECAP_CRON_CRONTAB } from "./recap-schedule";
 import { TRIP_REMINDER_CRON_CRONTAB } from "./reminders";
@@ -49,6 +50,11 @@ describe("the daily tick", () => {
   it("matches the deployed hourly schedule for /api/cron/crew-notices", () => {
     const pass = vercelCrons().find((cron) => cron.path === "/api/cron/crew-notices");
     expect(pass?.schedule).toBe(CREW_NOTICE_CRON_CRONTAB);
+  });
+
+  it("matches the deployed hourly schedule for /api/cron/desk-pings", () => {
+    const sweep = vercelCrons().find((cron) => cron.path === "/api/cron/desk-pings");
+    expect(sweep?.schedule).toBe(DESK_PING_CRON_CRONTAB);
   });
 
   it("matches the deployed hourly schedule for /api/cron/minimum-seats", () => {
@@ -136,6 +142,13 @@ describe("the daily tick", () => {
       // calls only `sendDueCrewNotices`, which sends fresh mail of a kind that
       // is never queued, and it runs inside the others' five minutes.
       "/api/cron/crew-notices",
+      // The desk ping's trailing catch-up (#2311) is the seventh: a diver's
+      // message batched behind a ping at 21:00 cannot wait for a daily pass,
+      // or it waits until the desk opens, which is the gap the ping exists to
+      // close. It calls only `sendTrailingDeskPings`, which sends fresh mail
+      // and never drains the queue, and it runs inside the others' five
+      // minutes.
+      "/api/cron/desk-pings",
     ]);
     const subDaily = vercelCrons().filter((cron) => {
       const [minute, hour] = cron.schedule.split(" ");

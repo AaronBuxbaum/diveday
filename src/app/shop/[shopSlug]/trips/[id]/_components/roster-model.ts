@@ -6,6 +6,7 @@ import { depthWarningText } from "@/i18n/depth-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
+import { seatSailed } from "@/lib/closeout";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import type { ElearningQuery } from "@/lib/elearning-check";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
@@ -225,6 +226,27 @@ export type RosterArrival = {
   boarded: ReadonlySet<string>;
 };
 
+/**
+ * **A finished departure's Divers tab is its record** (UX review 2026-10-10,
+ * item 10): once the boat is home there is nothing to clear, check in or sell,
+ * so the list says who sailed and who did not, seat by seat, by the evening
+ * count's own rule (`seatSailed`, src/lib/closeout.ts).
+ */
+export type RosterRecord = {
+  /** Each seat's standing result at the dock (`listDepartureRollCallByTrip`). */
+  dock: ReadonlyMap<string, "boarded" | "not_boarded">;
+  /** Seats with a standing after-dive result (`listAfterDiveRollCallByTrip`). */
+  afterDive: ReadonlySet<string>;
+  /**
+   * Whether the crew took the departure roll call at all: any dock event
+   * recording a result, whatever has happened to its booking since
+   * (`departureRollCallTakenTripIds`). Never inferred from a boarded seat, so
+   * a boat whose whole roster stayed ashore, or whose boarded seats were
+   * later cancelled, never reads "No roll call taken".
+   */
+  rollCallTaken: boolean;
+};
+
 /** What the page slots into the ledger beneath the seats. */
 export type RosterSlots = {
   /**
@@ -246,6 +268,8 @@ export type RosterSlots = {
    * roster is exactly what it was.
    */
   arrival?: RosterArrival;
+  /** The departure is finished: the ledger is its record, never the desk. */
+  record?: RosterRecord;
 };
 
 /** Everything the enum holds — for a staffer who may write money off. */
@@ -381,14 +405,17 @@ export function groupRoster({
   requiresPayment,
   arrival,
   controls,
+  record,
 }: {
   t: StaffTranslator;
   rows: Pick<RosterRows, "roster" | "readinessByBooking" | "waiverByBooking">;
   requiresPayment: boolean;
   arrival: RosterArrival | undefined;
   controls: WaiverControls;
+  record?: RosterRecord;
 }) {
   const { roster, readinessByBooking, waiverByBooking } = rows;
+  if (record) return recordGroups(roster, record);
   const WAIVER_CONTROLS = controls;
   // A depth advisory whose sentence renders identically for much of the boat
   // is one fact about the dive plan, not N facts about N divers (principle 9):
@@ -538,6 +565,62 @@ export function groupRoster({
     blockedCount,
     sharedFacts,
     sharedAdvisoryTexts,
+    sailed: [] as RosterEntry[],
+    didNotSail: [] as RosterEntry[],
+    uncounted: [] as RosterEntry[],
+    unrecorded: [] as RosterEntry[],
+  };
+}
+
+/**
+ * **The record's groups**, one seat at a time by `seatSailed`, the rule the
+ * evening close-out counts by (dive-domain review of UX batch 1):
+ *
+ * - **Sailed**: boarded at the dock, or counted at an after-dive checkpoint
+ *   (a diver picked up at the second site sailed, and that count outranks a
+ *   desk's `no_show`).
+ * - **Didn't sail**: only what somebody said: the crew's `not_boarded` at the
+ *   dock, or a released seat (`no_show`) nobody counted aboard.
+ * - **Not counted at the dock**: a seat nobody said anything about on a
+ *   departure whose roll call was taken. Silence is not "didn't sail".
+ * - **No roll call taken**: the same silence on a departure with no dock roll
+ *   call at all, under a band that says so rather than a guess.
+ *
+ * Nothing is still to clear, nothing is blocked, and no shared advisory is
+ * said: the dive is over (dive-domain rule: a record never asks for action).
+ */
+function recordGroups(roster: RosterEntry[], record: RosterRecord) {
+  const sailed: RosterEntry[] = [];
+  const didNotSail: RosterEntry[] = [];
+  const uncounted: RosterEntry[] = [];
+  const unrecorded: RosterEntry[] = [];
+  for (const entry of roster) {
+    const id = entry.booking.id;
+    const dockResult = record.dock.get(id) ?? null;
+    const afterDiveResultStands = record.afterDive.has(id);
+    const noShow = entry.booking.status === "no_show";
+    if (dockResult === null && !afterDiveResultStands && !noShow) {
+      (record.rollCallTaken ? uncounted : unrecorded).push(entry);
+    } else if (seatSailed({ noShow, dockResult, afterDiveResultStands })) {
+      sailed.push(entry);
+    } else {
+      didNotSail.push(entry);
+    }
+  }
+  return {
+    stillToClear: [] as RosterEntry[],
+    ready: [] as RosterEntry[],
+    here: [] as RosterEntry[],
+    notHere: [] as RosterEntry[],
+    deskWorkOpen: false,
+    hereMeta: undefined as string | undefined,
+    blockedCount: 0,
+    sharedFacts: [] as { sentence: string; count: number }[],
+    sharedAdvisoryTexts: new Set<string>(),
+    sailed,
+    didNotSail,
+    uncounted,
+    unrecorded,
   };
 }
 

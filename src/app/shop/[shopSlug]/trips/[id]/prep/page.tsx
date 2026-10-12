@@ -14,7 +14,7 @@ import { PREP_SECTION_ID, scopedId } from "@/lib/element-id";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
-import { tripPhaseOf } from "@/lib/trip-phase";
+import { departureStage } from "@/lib/trip-phase";
 import { uuidParam } from "@/lib/uuid";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
 import { TripStageBadge, TripTabs } from "../_components/TripTabs";
@@ -94,7 +94,8 @@ export default async function TripPrepPage({
   if (!prep) notFound();
   const { trip } = prep;
   const now = nowDate();
-  const phase = tripPhaseOf({
+  // The crew's word for the header chip, and whether the departure is home.
+  const { shown: shownStage, finished } = departureStage({
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     now,
@@ -114,9 +115,10 @@ export default async function TripPrepPage({
         timeZone={shop.timezone}
         badge={
           <>
-            <TripStageBadge phase={phase} copy={tripTabsCopy(t)} />
+            <TripStageBadge stage={shownStage?.stage ?? null} copy={tripTabsCopy(t)} />
             <TripCapacityBadge
               trip={trip}
+              finished={finished}
               cancelledLabel={t("trips.detail.cancelledBadge")}
               t={t}
             />

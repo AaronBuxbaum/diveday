@@ -598,6 +598,7 @@ describe("recordSelfDeclaredCards", () => {
         noCertificationDeclared: false,
         nitrox: false,
         nitroxSelfDeclared: false,
+        verifiedLevel: null,
       });
     });
 
@@ -626,6 +627,7 @@ describe("recordSelfDeclaredCards", () => {
         noCertificationDeclared: true,
         nitrox: false,
         nitroxSelfDeclared: false,
+        verifiedLevel: null,
       });
     });
 
@@ -1391,6 +1393,7 @@ describe("listCertificationSummaries", () => {
       noCertificationDeclared: false,
       nitrox: true,
       nitroxSelfDeclared: true,
+      verifiedLevel: null,
     });
     expect(profiles.get(other.person.id)).toEqual({
       level: "divemaster",
@@ -1398,7 +1401,47 @@ describe("listCertificationSummaries", () => {
       noCertificationDeclared: false,
       nitrox: false,
       nitroxSelfDeclared: false,
+      verifiedLevel: null,
     });
+  });
+
+  /**
+   * **A card a staffer typed is held, but not verified** (dive-domain review of
+   * the demo layer). It carries no self-declared stamp, so `level` reads it
+   * plainly, and the dock line greeted it as checked. `verifiedLevel` is the
+   * highest rung on a card whose status is `verified`, and nothing else.
+   */
+  it("names the highest verified level apart from a pending card a staffer typed", async () => {
+    const { db, shop, person } = await joiner();
+    await createCertification(db, {
+      shopId: shop.id,
+      personId: person.id,
+      agency: "padi",
+      level: "open_water",
+      identifier: "OW-11",
+    });
+    expect(
+      (await listCertificationSummaries(db, shop.id, [person.id])).get(person.id),
+    ).toMatchObject({ level: "open_water", levelSelfDeclared: false, verifiedLevel: null });
+
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId: person.id,
+      agency: "ssi",
+      level: "advanced_open_water",
+      identifier: "AOW-12",
+      status: "verified",
+    });
+    await createCertification(db, {
+      shopId: shop.id,
+      personId: person.id,
+      agency: "naui",
+      level: "rescue",
+      identifier: "RD-13",
+    });
+    expect(
+      (await listCertificationSummaries(db, shop.id, [person.id])).get(person.id),
+    ).toMatchObject({ level: "rescue", verifiedLevel: "advanced_open_water" });
   });
 
   it("has nothing to say about a joiner who said nothing", async () => {
@@ -1430,6 +1473,7 @@ describe("listCertificationSummaries", () => {
       noCertificationDeclared: true,
       nitrox: false,
       nitroxSelfDeclared: false,
+      verifiedLevel: null,
     });
   });
 });

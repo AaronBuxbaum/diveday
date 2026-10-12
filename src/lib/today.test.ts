@@ -13,6 +13,7 @@ import {
   getSeasonalBriefing,
   type OwedRefundInput,
   primaryBlocker,
+  readNeedsYou,
   roleLensFor,
   rollCallGapUrgency,
   type SpineDeparture,
@@ -1082,6 +1083,121 @@ describe("todaysBoatsAreClear", () => {
     );
     expect(spineJobCount(spine)).toBe(0);
     expect(todaysBoatsAreClear(spine)).toBe(false);
+  });
+});
+
+/**
+ * **Today's sentence, its "Needs you" count and the all-clear line are one
+ * reading, for every role** (UX review 2026-10-10, item 2).
+ *
+ * The regression: a captain's Today said "Nothing needs you before the 6:30 PM
+ * leaves the dock" directly above "Needs you · 2 things" about that boat, and
+ * "Today's boats are all clear" under a card saying "1 blocked". The sentence
+ * counted warning rows across the shop, the list counted the reader's lens,
+ * and the line ignored the blocked diver the lens had withheld.
+ *
+ * Each role below reads the day the page reads it: the queue filtered for the
+ * role (`filterActionsForRoles`), the lens the page passes (`roleLensFor`:
+ * a crew lens names the boats the reader crews, everyone else names none).
+ */
+describe("readNeedsYou, one reading for every role", () => {
+  const evening = departure({
+    tripId: "t1",
+    title: "Two-Tank Reef",
+    blocked: 1,
+    booked: 11,
+  });
+  const queue = [
+    // The blocked diver's fix: the desk's, withheld from a captain's lens.
+    action({ id: "waiver", kind: "waiver", subject: "Priya", departure: boat("t1") }),
+    action({ id: "prep", kind: "dive_prep", subject: "4 sizes", departure: boat("t1") }),
+    action({ id: "hello", kind: "say_hello", subject: "Priya and Tom", departure: boat("t1") }),
+    action({ id: "fill", kind: "last_minute_fill", subject: "3 seats", departure: boat("t1") }),
+    action({ id: "messages", kind: "unanswered_messages", subject: "3", departure: undefined }),
+  ];
+  const ROLES = [
+    { role: "owner", crews: false },
+    { role: "captain", crews: true },
+    { role: "divemaster", crews: true },
+    { role: "instructor", crews: false },
+  ] as const;
+
+  function readFor(role: (typeof ROLES)[number]) {
+    const { visibleActions } = filterActionsForRoles(queue, [role.role]);
+    const spine = assembleDaySpine(
+      { departures: [evening], actions: visibleActions },
+      { departures: [], actions: [] },
+    );
+    const lens = roleLensFor([role.role]);
+    return readNeedsYou(spine, {
+      crewedTripIds: lens === "boat" && role.crews ? ["t1"] : [],
+      readerPersonId: "me",
+      blocked: 1,
+      now: NOW,
+    });
+  }
+
+  it.each(ROLES)(
+    "the $role's sentence counts exactly the list's rows about the next boat",
+    (role) => {
+      const reading = readFor(role);
+      expect(reading.next?.tripId).toBe("t1");
+      const aboutNext = reading.lead.filter((row) => row.departure?.tripId === "t1");
+      expect(reading.dueBeforeNext).toBe(aboutNext.length);
+      // The list says how long it is with the same rows it draws.
+      expect(reading.count).toBe(reading.lead.length);
+      // "Nothing needs you before the 6:30 PM" can never sit over rows about it.
+      if (aboutNext.length > 0) expect(reading.dueBeforeNext).toBeGreaterThan(0);
+    },
+  );
+
+  it.each(ROLES)(
+    "never tells the $role today's boats are clear while one carries a blocked diver",
+    (role) => {
+      expect(readFor(role).boatsClear).toBe(false);
+    },
+  );
+
+  it("reads the captain's day as the captain's list: two things, both before the boat", () => {
+    const reading = readFor({ role: "captain", crews: true });
+    expect(reading.lead.map((row) => row.id)).toEqual(["prep", "hello"]);
+    expect(reading.count).toBe(2);
+    expect(reading.dueBeforeNext).toBe(2);
+    // The desk's messages fold behind one line; they are not the boat's.
+    expect(reading.folded?.map((row) => row.id)).toEqual(["messages"]);
+  });
+
+  it("reads the owner's day whole, with the desk's row counted but not as due before the boat", () => {
+    const reading = readFor({ role: "owner", crews: false });
+    expect(reading.count).toBe(5);
+    expect(reading.dueBeforeNext).toBe(4);
+    expect(reading.folded).toBeNull();
+  });
+
+  it("counts the whole list once every boat is away, drafts and the payments row with it", () => {
+    const spine = assembleDaySpine(
+      {
+        departures: [departure({ startsAt: hoursFromNow(-3), endsAt: hoursFromNow(1) })],
+        actions: [action({ id: "messages", kind: "unanswered_messages", departure: undefined })],
+      },
+      { departures: [], actions: [] },
+    );
+    const reading = readNeedsYou(spine, { drafts: 1, paymentsRow: true, now: NOW });
+    expect(reading.next).toBeNull();
+    expect(reading.count).toBe(3);
+    expect(reading.dueBeforeNext).toBe(3);
+  });
+
+  it("still earns the all-clear on a day with nothing pressing and nobody blocked", () => {
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [action({ id: "prep", kind: "dive_prep", departure: boat("t1") })],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(readNeedsYou(spine, { now: NOW }).boatsClear).toBe(true);
+    expect(readNeedsYou(spine, { now: NOW, blocked: 1 }).boatsClear).toBe(false);
   });
 });
 

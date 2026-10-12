@@ -164,6 +164,7 @@ export function IncidentAddenda({
         <form action={action} className="mt-6 space-y-4 border-t border-border pt-6">
           <Field label={t("incidents.addenda.label")}>
             <textarea
+              rows={3}
               name="body"
               required
               maxLength={INCIDENT_TEXT_MAX}

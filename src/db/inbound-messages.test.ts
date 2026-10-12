@@ -82,6 +82,7 @@ describe("attribution by address", () => {
     const { db, shop } = ctx;
     const diver = await firstDiver(db, shop.id);
     const result = await recordInboundMessage(db, {
+      senderAuthenticated: true,
       shopId: shop.id,
       channel: "email",
       fromAddress: `${diver.fullName} <${diver.email.toUpperCase()}>`,
@@ -126,6 +127,7 @@ describe("attribution by address", () => {
   it("leaves a stranger unmatched rather than guessing", async () => {
     const { db, shop } = ctx;
     const result = await recordInboundMessage(db, {
+      senderAuthenticated: true,
       shopId: shop.id,
       channel: "email",
       fromAddress: "nobody.here@example.net",
@@ -140,6 +142,7 @@ describe("attribution by address", () => {
     const { db, shop } = ctx;
     expect(
       await recordInboundMessage(db, {
+        senderAuthenticated: true,
         shopId: shop.id,
         channel: "email",
         fromAddress: "not an address",
@@ -162,6 +165,7 @@ describe("attribution by address", () => {
       await matchPersonByAddress(db, otherShop.id, "email", diver.email.toLowerCase()),
     ).toBeNull();
     const result = await recordInboundMessage(db, {
+      senderAuthenticated: true,
       shopId: otherShop.id,
       channel: "email",
       fromAddress: diver.email,
@@ -183,6 +187,7 @@ describe("idempotency", () => {
       body: "on my way",
       receivedAt: NOW,
       providerMessageId: "wamid.dup",
+      senderAuthenticated: true,
     };
     expect((await recordInboundMessage(db, input)).status).toBe("recorded");
     expect((await recordInboundMessage(db, input)).status).toBe("duplicate");
@@ -192,6 +197,52 @@ describe("idempotency", () => {
       .where(eq(inboundMessages.providerMessageId, "wamid.dup"));
     expect(rows).toHaveLength(1);
     expect(rows[0]?.fromAddress).toBe("13055550199");
+  });
+});
+
+/**
+ * **What the channel vouched for is stored on the row** (#2311), so the
+ * after-hours ping's count reads the same gate its trigger does.
+ */
+describe("the sender's credentials", () => {
+  it("files WhatsApp as vouched, and an email as the route said", async () => {
+    const { db, shop } = ctx;
+    const file = async (providerMessageId: string, extra: object) => {
+      const result = await recordInboundMessage(db, {
+        senderAuthenticated: true,
+        shopId: shop.id,
+        channel: "email",
+        fromAddress: "someone@example.com",
+        body: "hello",
+        receivedAt: NOW,
+        providerMessageId,
+        ...extra,
+      });
+      if (result.status !== "recorded") throw new Error("not filed");
+      const [row] = await db
+        .select({
+          senderAuthenticated: inboundMessages.senderAuthenticated,
+          spamFlagged: inboundMessages.spamFlagged,
+        })
+        .from(inboundMessages)
+        .where(eq(inboundMessages.id, result.id));
+      return row;
+    };
+    expect(await file("ses-vouched", { senderAuthenticated: true })).toEqual({
+      senderAuthenticated: true,
+      spamFlagged: false,
+    });
+    expect(await file("ses-spoofed", { senderAuthenticated: false })).toEqual({
+      senderAuthenticated: false,
+      spamFlagged: false,
+    });
+    expect(await file("ses-junk", { senderAuthenticated: true, spamFlagged: true })).toEqual({
+      senderAuthenticated: true,
+      spamFlagged: true,
+    });
+    expect(
+      await file("wamid.vouched", { channel: "whatsapp", fromAddress: "+1 305 555 0142" }),
+    ).toEqual({ senderAuthenticated: true, spamFlagged: false });
   });
 });
 
@@ -215,6 +266,7 @@ describe("the unanswered count and the inbox", () => {
     // The seed leaves three unanswered rows in the demo shop.
     const before = await countUnansweredMessages(db, shop.id);
     const recorded = await recordInboundMessage(db, {
+      senderAuthenticated: true,
       shopId: shop.id,
       channel: "email",
       fromAddress: diver.email,
@@ -360,6 +412,7 @@ describe("the unanswered count and the inbox", () => {
     if (!foreignStaffer) throw new Error("person insert failed");
 
     const recorded = await recordInboundMessage(db, {
+      senderAuthenticated: true,
       shopId: shop.id,
       channel: "email",
       fromAddress: diver.email,
@@ -406,6 +459,7 @@ describe("a subject with control characters in it", () => {
     const { db, shop } = ctx;
     const diver = await firstDiver(db, shop.id);
     const result = await recordInboundMessage(db, {
+      senderAuthenticated: true,
       shopId: shop.id,
       channel: "email",
       fromAddress: diver.email ?? "",
@@ -427,6 +481,7 @@ describe("a subject with control characters in it", () => {
     const { db, shop } = ctx;
     const diver = await firstDiver(db, shop.id);
     const result = await recordInboundMessage(db, {
+      senderAuthenticated: true,
       shopId: shop.id,
       channel: "email",
       fromAddress: diver.email ?? "",
@@ -447,6 +502,7 @@ describe("the WhatsApp window", () => {
     const { db, shop } = ctx;
     const diver = await firstDiver(db, shop.id);
     await recordInboundMessage(db, {
+      senderAuthenticated: true,
       shopId: shop.id,
       channel: "whatsapp",
       fromAddress: diver.phone,

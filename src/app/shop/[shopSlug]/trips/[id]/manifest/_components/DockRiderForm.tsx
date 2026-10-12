@@ -2,12 +2,13 @@
 
 import { useActionState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, proseLinkClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import {
   ChoiceFieldset,
   ChoicePill,
   controlClass,
+  DateField,
   Field,
   FieldActions,
   FieldGrid,
@@ -127,7 +128,7 @@ export function DockRiderForm({
           />
         </Field>
         <Field label={copy.dateOfBirth} hint={copy.optional}>
-          <input name="dateOfBirth" type="date" className={controlClass} />
+          <DateField name="dateOfBirth" />
         </Field>
         <ChoiceFieldset legend={copy.aboardAs}>
           <div className="flex flex-wrap gap-2">
@@ -155,7 +156,12 @@ export function DockRiderForm({
                 <>
                   {" "}
                   {copy.releaseHandOver}{" "}
-                  <a href={added.waiverPath} target="_blank" rel="noreferrer" className="underline">
+                  <a
+                    href={added.waiverPath}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={proseLinkClass}
+                  >
                     {copy.openRelease}
                   </a>
                 </>

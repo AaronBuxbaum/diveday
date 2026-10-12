@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import { canDrawRoute, DiveSiteMap } from "@/components/DiveSiteMap";
+import { LogEntryPreview } from "@/components/LogEntryPreview";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import {
   GroupLabel,
@@ -51,11 +52,11 @@ export type DayProfileFacts = {
  * line is a frequency rather than an expectation — because a page that prints
  * "turtles on 14 of the last 16 dives" without saying so is one glance away
  * from being read as a promise, and the crew who wrote those rows would be the
- * ones asked about it on the boat. The sentence that states the boundary
- * outright is `trip.seen.honest`, and it belongs to the **day**, not to this
- * block: a two-tank day printed it under each of its two dives, which is a
- * caption repeated word for word twelve lines apart. `TripDayPlan` renders it
- * once, below the plan, whenever any site in the day has a month to show.
+ * ones asked about it on the boat. The heading and the lines carry that
+ * boundary by themselves: "Seen here this month", every count "of N logged
+ * dives", every date "Last seen". A sentence under the plan used to say it
+ * again ("It says what was seen, not what you will see") and was cut as a
+ * disclaimer the diver never asked for (UX review 2026-10-10, item 22).
  *
  * A site whose crew logged nothing this month renders nothing at all. Most
  * sites, most months, on most shops.
@@ -136,13 +137,14 @@ export function TripDayPlan({
   profile,
   sightings,
   nextOpensOnRule = false,
+  logEntry,
 }: {
   briefings: DiveBriefing[];
   /**
    * The shop, for its zone and for its own slug, which is half of every site
    * page's URL.
    */
-  shop: Pick<Shop, "slug" | "timezone">;
+  shop: Pick<Shop, "slug" | "timezone" | "name">;
   /** The negotiated request locale, not the shop's stored default. */
   locale: string;
   /**
@@ -160,10 +162,19 @@ export function TripDayPlan({
    * Whether the block under this section opens on a rule of its own — the
    * public trip's pitch when it opens on its door (`pitchOpensOnDoor`). The
    * run then leaves its close to that rule, but only when the run is the last
-   * thing here: under it may come the crew months' caption, which is not a
-   * rule, and the run closes over it.
+   * thing here: under it may come the log-entry line, which is not a rule,
+   * and the run closes over it.
    */
   nextOpensOnRule?: boolean;
+  /**
+   * **Where the day ends up** (UX review 2026-10-10, item 35): the recap's log
+   * entry, which a booked diver's link turns into once the boat is home. One
+   * line and a miniature under the run, the day's last beat rather than a
+   * section of its own, so the page's bound above the form is unchanged
+   * (ADR 20260904-reef-all-the-way-down, decision 1). Absent on a day that
+   * has already sailed.
+   */
+  logEntry?: { startsAt: Date; isCourse: boolean };
 }) {
   const t = diverTranslator(locale);
   if (briefings.length === 0) return null;
@@ -225,13 +236,13 @@ export function TripDayPlan({
     );
   }
   // **The run closes itself unless a rule follows it directly** (pixel-craft
-  // class 6). On a bare day — no months' caption, a pitch opening
-  // on its door — the run's closing rule sat 32px over the door's own, two
-  // parallel hairlines with nothing between them. Anywhere else the rule is
-  // the list's only close: over the caption, or over a pitch
-  // that opens on its fit word and faces, leaving it open left the last dive
-  // unclosed above body text. Every line, hand-set or not, takes one box.
-  const runCloses = !(nextOpensOnRule && seenByDive.size === 0);
+  // class 6). With a pitch opening on its door, the run's closing rule sat
+  // 32px over the door's own, two parallel hairlines with nothing between
+  // them. Anywhere else the rule is the list's only close: over the log-entry
+  // line, or over a pitch that opens on its fit word and faces, leaving it
+  // open left the last dive unclosed above body text. Every line, hand-set or
+  // not, takes one box.
+  const runCloses = !nextOpensOnRule || Boolean(logEntry);
   const handSetBox = runCloses ? ledgerRowBoxClass : ledgerRowOpenBoxClass;
   return (
     <section>
@@ -327,14 +338,22 @@ export function TripDayPlan({
           );
         })}
       </ul>
-      {/* **What the logged months are and are not**, once for the day. It used
-          to close each `SiteSeen` block, so a two-tank day carried the same
-          two sentences under both dives — a caption restating itself, which is
-          the copy-restraint rule's first deletion. The boundary still has to
-          be stated: these are counts of what a crew wrote down, and a page
-          that prints them bare reads as a promise about Saturday. */}
-      {seenByDive.size > 0 ? (
-        <p className="mt-3 text-sm leading-relaxed text-muted">{t("trip.seen.honest")}</p>
+      {logEntry ? (
+        <div className="mt-6">
+          <LogEntryPreview
+            line={t("trip.logEntryWaiting")}
+            date={formatShortDate(logEntry.startsAt, locale, shop.timezone)}
+            siteNames={[
+              ...new Set(
+                briefings
+                  .map(({ diveSite }) => diveSite?.name)
+                  .filter((name): name is string => Boolean(name)),
+              ),
+            ]}
+            isCourse={logEntry.isCourse}
+            t={t}
+          />
+        </div>
       ) : null}
     </section>
   );

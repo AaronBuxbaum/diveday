@@ -37,7 +37,7 @@
   },
   "notices": {
     "seriesApplied": "Esos detalles ahora se aplican a todas las próximas fechas de esta serie.",
-    "seriesAppliedPartial": "Aplicado a las próximas fechas. Algunas ya tenían más buceadores que la nueva capacidad, salen en un barco certificado para menos, o tienen un recuento más allá del nuevo número de inmersiones, así que se dejaron como estaban.",
+    "seriesAppliedPartial": "Aplicado a las próximas fechas. Las fechas en un barco más pequeño recibieron los detalles con las plazas limitadas a su certificado. Algunas ya tenían más buceadores que eso, o un recuento más allá del nuevo número de inmersiones, así que se dejaron como estaban.",
     "seriesAppliedCrew": "Esos datos y esta tripulación ya se aplican a todas las próximas fechas, y las fechas nuevas también la llevan.",
     "seriesAppliedCrewPartial": "Aplicado. Algunas fechas conservaron su propia tripulación: alguien de esta ya está en otro barco a esa hora o ya no forma parte del equipo, o un curso se quedaría sin instructor.",
     "seriesAppliedCrewPartialCount": "{count, plural, one {Aplicado. # fecha conservó su propia tripulación: alguien de esta ya está en otro barco a esa hora o ya no forma parte del equipo, o un curso se quedaría sin instructor.} other {Aplicado. # fechas conservaron su propia tripulación: alguien de esta ya está en otro barco a esa hora o ya no forma parte del equipo, o un curso se quedaría sin instructor.}}",

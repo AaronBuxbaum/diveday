@@ -67,6 +67,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Conditions hold
 - Day-of help request
 - Departure note
+- Dock line
 - Dock rider
 - Lost item
 - Staff note
@@ -148,6 +149,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Departure log
 - Deposit
 - Desk hours
+- Didn't sail
 - Dive briefing
 - Dive day
 - Dive day (north star)
@@ -181,7 +183,9 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Monday email
 - Needs you
 - Night-before brief
+- No roll call taken
 - No-show
+- Not counted at the dock
 - Not ready
 - Notification delivery status
 - Offline manifest snapshot
