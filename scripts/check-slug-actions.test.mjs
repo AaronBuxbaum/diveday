@@ -43,6 +43,62 @@ export const removeAction = async (shopSlug: string) => {
     ).toEqual(["removeAction"]);
   });
 
+  it("is refused when the slug arrives inside a bound context object", () => {
+    expect(
+      names(`"use server";
+
+export async function noteAction(ctx: ManifestTripContext, formData: FormData) {
+  const staff = await requireStaffSession();
+  revalidatePath(shopPath(ctx.shopSlug, "trips", ctx.tripId));
+}
+`),
+    ).toEqual(["noteAction"]);
+  });
+
+  it("is refused when the context object reaches a path helper that destructures the slug", () => {
+    expect(
+      names(`"use server";
+
+function manifestPath({ shopSlug, tripId }: ManifestTripContext): string {
+  return shopPath(shopSlug, "trips", tripId, "manifest");
+}
+
+export async function rollCallAction(ctx: ManifestActionContext, formData: FormData) {
+  const staff = await requireStaffSession();
+  revalidatePath(manifestPath(ctx));
+}
+`),
+    ).toEqual(["rollCallAction"]);
+  });
+
+  it("passes a context-object action that opens with requireShopSurface", () => {
+    expect(
+      names(`"use server";
+
+async function manifestStaff(ctx: ManifestTripContext) {
+  return (await requireShopSurface(ctx.shopSlug)).session;
+}
+
+export async function noteAction(ctx: ManifestTripContext, formData: FormData) {
+  const staff = await manifestStaff(ctx);
+  revalidatePath(shopPath(ctx.shopSlug, "trips", ctx.tripId));
+}
+`),
+    ).toEqual([]);
+  });
+
+  it("passes an action whose only slug is the session's own", () => {
+    expect(
+      names(`"use server";
+
+export async function pushAction(tripId: string) {
+  const staff = await requireStaffSession();
+  revalidatePath(shopPath(staff.user.shopSlug, "trips", tripId));
+}
+`),
+    ).toEqual([]);
+  });
+
   it("passes when it opens with requireShopSurface", () => {
     expect(
       names(`"use server";

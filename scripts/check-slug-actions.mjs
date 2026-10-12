@@ -146,9 +146,61 @@ export function findSlugActionsOnStaffSession(source) {
     memo.set(fn.name, result);
     return result;
   };
+  const slugMemo = new Map();
+  const takesSlug = (fn, seen = new Set()) => {
+    if (slugMemo.has(fn.name)) return slugMemo.get(fn.name);
+    if (seen.has(fn.name)) return false;
+    seen.add(fn.name);
+    let result = /\bshopSlug\b/.test(fn.params);
+    const names = parameterNames(fn.params);
+    if (!result) {
+      result = names.some((name) =>
+        new RegExp(`\\b${name}\\s*\\??\\.\\s*shopSlug\\b`).test(fn.body),
+      );
+    }
+    if (!result) {
+      // A parameter handed whole to a function of this module that itself
+      // takes a slug: `manifestPath(ctx)` reading `{ shopSlug }` off it.
+      for (const other of byName.values()) {
+        if (other.name === fn.name) continue;
+        const calls = fn.body.matchAll(new RegExp(`\\b${other.name}\\s*\\(([^)]*)\\)`, "g"));
+        const passesParam = [...calls].some((call) =>
+          names.some((name) => new RegExp(`\\b${name}\\b`).test(call[1])),
+        );
+        if (passesParam && takesSlug(other, seen)) {
+          result = true;
+          break;
+        }
+      }
+    }
+    slugMemo.set(fn.name, result);
+    return result;
+  };
   return functions
-    .filter((fn) => fn.exported && /\bshopSlug\b/.test(fn.params) && reaches(fn))
+    .filter((fn) => fn.exported && takesSlug(fn) && reaches(fn))
     .map((fn) => ({ line: fn.line, name: fn.name }));
+}
+
+/**
+ * The plain identifiers a parameter list names (`ctx`, `formData`); a
+ * destructured parameter is left to the `shopSlug` text test above.
+ */
+function parameterNames(params) {
+  const names = [];
+  let depth = 0;
+  let segment = "";
+  for (const char of params.replace(/^\(|\)$/g, "")) {
+    if ("{[(<".includes(char)) depth++;
+    if ("}])>".includes(char)) depth--;
+    if (char === "," && depth === 0) {
+      names.push(segment);
+      segment = "";
+    } else segment += char;
+  }
+  names.push(segment);
+  return names
+    .map((part) => /^\s*(?:\.\.\.)?([A-Za-z_$][\w$]*)/.exec(part)?.[1])
+    .filter((name) => name !== undefined);
 }
 
 async function walk(relativeDirectory) {

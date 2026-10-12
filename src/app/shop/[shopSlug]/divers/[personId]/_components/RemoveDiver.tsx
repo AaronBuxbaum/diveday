@@ -43,6 +43,9 @@ export function RemoveDiver({
       >
         {t("divers.remove.removePersonSummary", { name: diver.person.fullName })}
       </summary>
+      {diver.holdsStaffRole ? (
+        <p className="mt-3 max-w-2xl text-sm text-muted">{t("divers.remove.staffWarning")}</p>
+      ) : null}
       <form
         action={deletePersonAction.bind(null, shopSlug, personId)}
         className="mt-3 flex flex-wrap items-center gap-3"

@@ -345,6 +345,29 @@ describe("confirming a proposal whose unit needs care since the tab loaded", () 
 });
 
 describe("assignGearUnit", () => {
+  it("refuses a booking from another departure of the same shop, and reserves nothing", async () => {
+    // The trip the pick names is the caller's word too. The screen keeps only
+    // a booking this departure's prep wants, and the write pins the trip.
+    const { db, shop, tripId, picks } = await context();
+    const [elsewhere] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.shopId, shop.id),
+          ne(bookings.tripId, tripId),
+          eq(bookings.status, "booked"),
+        ),
+      )
+      .limit(1);
+    if (!elsewhere) throw new Error("the seed has no booking on another departure");
+    expect(
+      await assignGearUnit({ tripId, bookingId: elsewhere.id, gearItemId: picks[0].gearItemId }),
+    ).toEqual({ ok: false, reason: "not_wanted" });
+    expect(reserveGearUnit).not.toHaveBeenCalled();
+    expect(await reservationsFor(db, picks[0].gearItemId)).toEqual([]);
+  });
+
   it("reserves a proposed pick whose unit needs nothing", async () => {
     const { db, tripId, picks } = await context();
     const [pick] = picks;
