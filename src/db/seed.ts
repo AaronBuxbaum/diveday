@@ -125,7 +125,7 @@ import { seedBuddyPairs } from "./seed-buddy-pairs";
 import { LEAD_INSTRUCTOR_NAME, OWNER_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-cast";
 import { seedCatalog } from "./seed-catalog";
 import { seedCertGates } from "./seed-cert-gates";
-import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart, demoTodayShift } from "./seed-clock";
+import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart, demoTodayShifts } from "./seed-clock";
 import { seedCounterBlockers } from "./seed-counter-blockers";
 import { seedCounterRental } from "./seed-counter-rental";
 import { seedCourseInquiries } from "./seed-course-inquiries";
@@ -251,7 +251,7 @@ const DEMO_SHOP_UNIT_COLUMNS = {
 };
 
 /**
- * The one shift every member of the demo cast works today (`demoTodayShift`:
+ * The shifts every member of the demo cast works today (`demoTodayShifts`:
  * around today's departure, on its own local day), so the rostering surface
  * (`/shop/<slug>/staffing`) has a day to show.
  *
@@ -262,22 +262,42 @@ const DEMO_SHOP_UNIT_COLUMNS = {
  * **stable** half: a schedule reset never re-seeds these, so a person who
  * already has one keeps it.
  */
-async function seedStaffShifts(db: DbExecutor, shopId: string, personIds: string[]): Promise<void> {
-  if (personIds.length === 0) return;
-  const { startsAt, endsAt } = demoTodayShift();
+async function seedStaffShifts(
+  db: DbExecutor,
+  shopId: string,
+  cast: { id: string; roles: readonly string[] }[],
+): Promise<void> {
+  if (cast.length === 0) return;
+  const now = nowDate();
   await db.insert(staffShifts).values(
-    personIds.map((personId) => ({
-      shopId,
-      personId,
-      startsAt,
-      endsAt,
-      // No note: a seed label ("Demo schedule") on every chip of the Crew
-      // view read as a test fixture, not a shop (UX audit 2026-10-07, item 34).
-      note: null,
-      createdByPersonId: personId,
-    })),
+    cast.flatMap((person) =>
+      // The dawn boat's crew (`DEMO_DAWN_CREW_ROLES`) are on from 4:30 too.
+      demoTodayShifts(now, DEMO_SHOP_TIMEZONE, {
+        dawnCrew: person.roles.some((role) => DEMO_DAWN_CREW_ROLES.has(role)),
+      }).map(({ startsAt, endsAt }) => ({
+        shopId,
+        personId: person.id,
+        startsAt,
+        endsAt,
+        // No note: a seed label ("Demo schedule") on every chip of the Crew
+        // view read as a test fixture, not a shop (UX audit 2026-10-07, item 34).
+        note: null,
+        createdByPersonId: person.id,
+      })),
+    ),
   );
 }
+
+/**
+ * Who crews the first-light boat (`seed-more-trips.ts` puts the shop's captain,
+ * divemaster and assistant instructor on every charter it seeds), and so whose
+ * day starts at 4:30 rather than an hour before today's departure.
+ */
+const DEMO_DAWN_CREW_ROLES: ReadonlySet<string> = new Set([
+  "captain",
+  "divemaster",
+  "assistant_instructor",
+]);
 
 /**
  * One crew member's days away, so the staffing week has a blackout to draw and
@@ -566,7 +586,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   await seedStaffShifts(
     db,
     shop.id,
-    staff.map((person) => person.id),
+    staff.map((person, i) => ({ id: person.id, roles: staffDefs[i].roles })),
   );
   await seedDemoSchedule(db, shop.id, opts);
   // Pay-at-booking in Stripe test mode, when configured (ADR
@@ -809,7 +829,7 @@ export async function createDemoShop(
   await seedStaffShifts(
     db,
     shop.id,
-    staff.map((person) => person.id),
+    staff.map((person, i) => ({ id: person.id, roles: staffDefs[i].roles })),
   );
   // A visitor's demo should carry the same owner-facing story as the
   // canonical demo, including sailed trips, tips, and reviews. Test-only
@@ -1745,7 +1765,7 @@ async function restoreMissingStableStaff(db: DbExecutor, shopId: string): Promis
     await seedStaffShifts(
       db,
       shopId,
-      restored.map((person) => person.id),
+      restored.map((person, i) => ({ id: person.id, roles: missing[i]?.roles ?? [] })),
     );
   }
 
