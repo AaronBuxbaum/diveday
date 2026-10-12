@@ -88,10 +88,11 @@ function OfflineDiverRow({
   const rowState = rollCallRowState(checkpoint, state);
   const missing = rowState.notBackAboard;
   const recordedTone = rollCallRecordedTone(rowState);
-  // The live page's rule for the fill, from the one helper both read: at the
-  // dock a diver readiness has not cleared is blocked, and aboard over that
-  // block keeps the blocked tone rather than the boarded green.
-  const blockedAtDock = !ready && isDeparture;
+  // The live page's rule for the fill, from the one predicate both read
+  // (`blockedAtRail`, issue #2286): at the dock a diver readiness has not
+  // cleared is blocked, and so is one after a dive with no earlier boarding;
+  // aboard over that block keeps the blocked tone rather than the boarded green.
+  const blockedAtDock = view.blockedAtRail[index] ?? !ready;
   // Same condition the live page passes as `showBoardControl`: divers
   // only board at departure once readiness clears them, so a blocked
   // diver's circle is a drawn held ring with no tap.

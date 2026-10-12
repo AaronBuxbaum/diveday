@@ -27,6 +27,7 @@ import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { withholdHeldSeatParticulars } from "@/lib/held-seat";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
+  blockedAtRail,
   type ManifestBuddyTeam,
   type RollCallCheckpoint,
   rollCallLabel,
@@ -504,14 +505,14 @@ export function DiverRollCall({
           // red on the page that means somebody is in the water (DD9), which is
           // also decision 4's rule: an alarm is earned by a recorded fact.
           //
-          // A diver tapped aboard after a dive with no earlier boarding is
-          // boarding *now* — they joined at the second site — so their row
-          // reads as the dock's would (domain review of #2123). The tap stays.
-          // Not once the crew has recorded them not back aboard: that row is
-          // the alarm, and no paperwork word may sit on it (DD9).
+          // After a dive, a first boarding reads as the dock's (`blockedAtRail`).
           const recordedTone = rollCallRecordedTone(rowState);
-          const blockedAtDock =
-            !ready && (isDeparture || (diver.boardedEarlier === false && !rowState.notBackAboard));
+          const blockedAtDock = blockedAtRail({
+            ready,
+            isDeparture,
+            boardedEarlier: diver.boardedEarlier,
+            notBackAboard: rowState.notBackAboard,
+          });
           // Every row is a jump target — the count panel's chips link to any
           // uncalled person — so every row carries the scroll margin that keeps
           // its name clear of the sticky panel. Shared with the crew rows.

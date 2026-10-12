@@ -246,3 +246,40 @@ export function carryForwardNotBoarded<T extends Pick<RollCallRecord, "state" | 
     return carried ? ({ ...carried, implied: true } as T) : undefined;
   });
 }
+
+/**
+ * Whether a standing `boarded` result sits at any earlier checkpoint — the
+ * `boardedEarlier` a manifest diver carries (domain review of #2123). Handed
+ * the results *before* the checkpoint in question, in any order.
+ */
+export function boardedBefore(
+  earlier: ReadonlyArray<Pick<RollCallRecord, "state"> | null | undefined>,
+): boolean {
+  return earlier.some((record) => record?.state === "boarded");
+}
+
+/**
+ * **Whether a roll-call row still speaks a person's readiness** — its blocked
+ * fill, and on the live page the blocked capsule and the list of blockers.
+ *
+ * At the dock always: readiness is the thing to fix before they board. After a
+ * dive only for someone with no earlier boarding (`boardedEarlier === false`),
+ * because a `boarded` there is their first — they joined at the second site —
+ * so the row reads as the dock's would (domain review of #2123). Never on a row
+ * recorded not back aboard: that row is the alarm, and no paperwork word may
+ * sit on it (DD9). Absent `boardedEarlier` reads as boarded, saying nothing it
+ * cannot back.
+ *
+ * One predicate for the live manifest and the offline copy (issue #2286), so
+ * the same boat never shows two safety pictures depending on signal.
+ */
+export function blockedAtRail(input: {
+  ready: boolean;
+  isDeparture: boolean;
+  boardedEarlier?: boolean;
+  notBackAboard: boolean;
+}): boolean {
+  if (input.ready) return false;
+  if (input.isDeparture) return true;
+  return input.boardedEarlier === false && !input.notBackAboard;
+}

@@ -9,6 +9,7 @@ import { seatName } from "@/lib/held-seat";
 import { log } from "@/lib/log";
 import {
   type BuddyTeammate,
+  boardedBefore,
   buildTripManifest,
   carryForwardNotBoarded,
   isRollCallCheckpoint,
@@ -1058,9 +1059,9 @@ export async function getTripManifests(
       divers: diverInputs.map((diver) => ({
         ...diver,
         rollCall: effectiveByBooking.get(diver.bookingId)?.[index],
-        boardedEarlier: (effectiveByBooking.get(diver.bookingId) ?? [])
-          .slice(0, index)
-          .some((record) => record?.state === "boarded"),
+        boardedEarlier: boardedBefore(
+          (effectiveByBooking.get(diver.bookingId) ?? []).slice(0, index),
+        ),
       })),
     }),
   );

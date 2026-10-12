@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  blockedAtRail,
+  boardedBefore,
   carryForwardNotBoarded,
   isNotBackAboard,
   RETRACTION_SUPERSEDED,
@@ -121,5 +123,76 @@ describe("the bundling constraint", () => {
       .filter((line) => !line.trimStart().startsWith("*"));
     expect(imports).toEqual([]);
     expect(source).not.toMatch(/\brequire\s*\(/);
+  });
+});
+
+/**
+ * **Where readiness still speaks on a roll-call row** (domain review of #2123;
+ * issue #2286): at the dock always, and after a dive only for someone whose
+ * `boarded` there would be their first. The live manifest and the offline copy
+ * both read this one predicate.
+ */
+describe("blockedAtRail", () => {
+  it("never marks a ready person", () => {
+    for (const isDeparture of [true, false]) {
+      for (const boardedEarlier of [true, false, undefined]) {
+        expect(
+          blockedAtRail({ ready: true, isDeparture, boardedEarlier, notBackAboard: false }),
+        ).toBe(false);
+      }
+    }
+  });
+
+  it("marks a blocked person at the dock whatever came before", () => {
+    expect(blockedAtRail({ ready: false, isDeparture: true, notBackAboard: false })).toBe(true);
+    expect(
+      blockedAtRail({
+        ready: false,
+        isDeparture: true,
+        boardedEarlier: true,
+        notBackAboard: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("marks a blocked person after a dive only when nobody boarded them earlier", () => {
+    expect(
+      blockedAtRail({
+        ready: false,
+        isDeparture: false,
+        boardedEarlier: false,
+        notBackAboard: false,
+      }),
+    ).toBe(true);
+    expect(
+      blockedAtRail({
+        ready: false,
+        isDeparture: false,
+        boardedEarlier: true,
+        notBackAboard: false,
+      }),
+    ).toBe(false);
+    // Absent says nothing it cannot back: an older copy, or a hand-built manifest.
+    expect(blockedAtRail({ ready: false, isDeparture: false, notBackAboard: false })).toBe(false);
+  });
+
+  it("never puts a paperwork word on a row recorded not back aboard", () => {
+    expect(
+      blockedAtRail({
+        ready: false,
+        isDeparture: false,
+        boardedEarlier: false,
+        notBackAboard: true,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("boardedBefore", () => {
+  it("reads a standing boarded result at any earlier checkpoint", () => {
+    expect(boardedBefore([])).toBe(false);
+    expect(boardedBefore([undefined, null])).toBe(false);
+    expect(boardedBefore([standing("not_boarded"), standing("not_boarded", true)])).toBe(false);
+    expect(boardedBefore([standing("not_boarded"), standing("boarded")])).toBe(true);
   });
 });

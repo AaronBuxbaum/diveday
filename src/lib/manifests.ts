@@ -36,6 +36,8 @@ function unavailableReadiness(): ReadinessResult {
 }
 
 export {
+  blockedAtRail,
+  boardedBefore,
   carryForwardNotBoarded,
   isNotBackAboard,
   isRollCallCheckpoint,
