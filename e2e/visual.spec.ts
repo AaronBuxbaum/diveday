@@ -6868,7 +6868,8 @@ for (const scheme of ["light", "dark"] as const) {
 
       // A course's edit page, on the long-form editor pattern (ADR
       // 20260827-the-shops-shelves): the section rail down the first column at
-      // 1280 and the same list as a jump-row at 390, eight unboxed sections
+      // 1280 and, at 390, no rail: each section folds to a header naming it
+      // with a line of what it holds, the first one open, eight unboxed sections
       // separated by hairlines rather than eight bordered fieldsets, the depth
       // marker hint beside the prose it governs, and the single Save at the
       // foot — no Preview beside it (ADR 20260805-remove-certification-paths

@@ -59,6 +59,7 @@ import {
   ScheduleBuilder,
 } from "./_components/ScheduleBuilder";
 import type { BuilderWeek, WeekEntry, WeekSpan } from "./_components/WeekBoard";
+import { weekDayCopy } from "./_components/week-copy";
 import {
   addDepartureAction,
   duplicateDepartureAction,
@@ -320,9 +321,7 @@ export default async function ScheduleBoardPage({
     noPriceSet: st("schedule.builder.noPriceSet"),
     noPriceSetAria: st.raw("schedule.builder.noPriceSetAria"),
     noPriceSetAll: st("schedule.builder.noPriceSetAll"),
-    noBoats: st("schedule.week.noBoats"),
-    quietDays: st.raw("schedule.week.quietDays"),
-    asked: st("schedule.week.asked"),
+    ...weekDayCopy(st),
     addDeparture: st("requests.addDeparture"),
     rollCallOpen: st.raw("schedule.builder.rollCallOpen"),
     rollCallOpenAria: st.raw("schedule.builder.rollCallOpenAria"),
