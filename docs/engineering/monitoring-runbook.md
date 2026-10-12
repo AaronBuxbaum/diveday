@@ -87,6 +87,18 @@ query parameter is ever added, update `CAPABILITY_ROUTE_PREFIXES`/`CAPABILITY_QU
 `src/app/observability.ts` once — every consumer (Analytics, Speed Insights, Sentry) picks it up
 from that one place.
 
+### What Sentry never collects
+
+The Sentry SDK collects request bodies, cookies, the user's IP and identity, local variables in
+stack frames and database query values unless told not to. A Stripe webhook body carries a
+customer's name, email and address, a server action's body carries a form, and a cookie is a
+session. `SENTRY_DATA_COLLECTION` in `src/app/observability.ts` turns all of those off in both
+`Sentry.init` calls, and `redactEvent` deletes the request body and cookies and drops the
+`cookie`, `authorization` and `stripe-signature` headers from any event that still has them. An
+error's own message can quote personal data too, so the Stripe webhook sends a stand-in error
+tagged with the event id, the error's class and its cause's code, never the original (issue
+#2334).
+
 ## When something doesn't arrive
 
 | Symptom | Look at |
