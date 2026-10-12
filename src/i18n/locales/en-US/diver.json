@@ -588,7 +588,8 @@
     "savedError": "That didn’t save. Pick a rating and try again.",
     "yourRating": "You rated this {rating} out of 5.",
     "average": "{average} out of 5",
-    "count": "{count, plural, one {# review} other {# reviews}}",
+    "ratingsCount": "{count, plural, one {# rating} other {# ratings}}",
+    "ratingsAndReviews": "{ratings, plural, one {# rating} other {# ratings}} · {reviews, plural, one {# review} other {# reviews}}",
     "allTitle": "All reviews",
     "allDescription": "Read what divers who were on the boat said about their day.",
     "allEmptyHeading": "No written reviews yet",
@@ -745,6 +746,7 @@
   "packages": {
     "title": "Dive packages",
     "navLabel": "Packages",
+    "none": "No packages right now",
     "metaDescription": "Prepaid dives at {shopName}: pay once, then book the dives as you go.",
     "dives": "{count, plural, one {# dive} other {# dives}}",
     "perDive": "{amount} a dive",

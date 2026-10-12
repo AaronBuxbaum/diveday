@@ -24,6 +24,12 @@ import { restoreWorkOrderAction, setWorkOrderStatusAction } from "../actions";
  *
  * A deleted ticket shows Restore in the same place, because the act the
  * staffer wants is the one that undoes the mistake they just made.
+ *
+ * **Actions, captioned as moves, never a segmented control** (UX review
+ * 2026-10-10, item 25). Four status words in a row read as a picker whose
+ * filled one was the current status, so "In progress" looked already chosen
+ * on a ticket that was Received. The caption "Move to" says each button is a
+ * move; the current status is the header's badge, and only there.
  */
 export function WorkOrderStatusCard({
   workOrder,
@@ -57,27 +63,30 @@ export function WorkOrderStatusCard({
 
   return (
     <SectionCard title={t("workOrders.detail.statusHeading")} padding="lg">
-      <div className="flex flex-wrap gap-3">
-        {forward ? (
-          <MoveButton workOrderId={workOrder.id} status={forward} primary t={t}>
-            {label(forward)}
-          </MoveButton>
-        ) : null}
-        {others.map((status) => (
-          <MoveButton
-            key={status}
-            workOrderId={workOrder.id}
-            status={status}
-            primary={false}
-            confirmMessage={
-              status === "picked_up" ? t("workOrders.detail.pickedUpConfirm") : undefined
-            }
-            t={t}
-          >
-            {label(status)}
-          </MoveButton>
-        ))}
-      </div>
+      <fieldset className="m-0 min-w-0 border-0 p-0">
+        <legend className="mb-3 p-0 text-sm text-muted">{t("workOrders.detail.moveTo")}</legend>
+        <div className="flex flex-wrap gap-3">
+          {forward ? (
+            <MoveButton workOrderId={workOrder.id} status={forward} primary t={t}>
+              {label(forward)}
+            </MoveButton>
+          ) : null}
+          {others.map((status) => (
+            <MoveButton
+              key={status}
+              workOrderId={workOrder.id}
+              status={status}
+              primary={false}
+              confirmMessage={
+                status === "picked_up" ? t("workOrders.detail.pickedUpConfirm") : undefined
+              }
+              t={t}
+            >
+              {label(status)}
+            </MoveButton>
+          ))}
+        </div>
+      </fieldset>
     </SectionCard>
   );
 }

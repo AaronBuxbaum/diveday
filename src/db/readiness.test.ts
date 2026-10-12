@@ -34,6 +34,7 @@ import {
   courses,
   diveSites,
   people,
+  shops,
   specialtyCertifications,
   tripAssignments,
   trips,
@@ -743,6 +744,8 @@ describe("depth advisory (H-08 — a warning, never a gate)", () => {
   async function withAllSiteDepths(meters: number | null) {
     const { db, shop, reef, rosterEntry } = await readinessContext();
     await db.update(diveSites).set({ maxDepthMeters: meters }).where(eq(diveSites.shopId, shop.id));
+    // These cases are written in metres; the Key Largo demo reads feet.
+    await db.update(shops).set({ depthUnit: "meters" }).where(eq(shops.id, shop.id));
     // A verified Open Water card, so there is a ceiling (18 m) to measure at all.
     const card = await createCertification(db, {
       shopId: shop.id,

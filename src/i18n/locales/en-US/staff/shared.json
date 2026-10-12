@@ -475,8 +475,8 @@
   },
   "buddyTeam": {
     "with": "Buddy team: {names}",
-    "separatedDock": "Someone not aboard",
-    "separatedAfterDive": "Someone unaccounted for"
+    "separatedDock": "Buddy not aboard yet",
+    "separatedAfterDive": "Buddy not back aboard"
   },
   "payments": {
     "connect": "Connect payments"
@@ -513,7 +513,10 @@
   },
   "welcomeCue": {
     "firstTrip": "first time with us",
-    "returning": "back after {years, plural, one {# year} other {# years}}"
+    "returning": "back after {years, plural, one {# year} other {# years}}",
+    "dockLine": "Say hello to {name}: {card}.",
+    "dockLineNoCard": "Say hello to {name}.",
+    "dockLineSays": "Say hello to {name}: says {level}."
   },
   "diveIntent": {
     "aboardToday": "Aboard today: {list}",

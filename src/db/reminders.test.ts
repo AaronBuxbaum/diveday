@@ -337,6 +337,12 @@ describe("sendDueReminders", () => {
       visibilityMeters: 20,
       surfaceConditions: "calm",
     });
+    // Celsius and metres here, so this case and the next read the same stored
+    // row in the two systems; the Key Largo demo itself starts on Fahrenheit.
+    await db
+      .update(shops)
+      .set({ temperatureUnit: "celsius", depthUnit: "meters" })
+      .where(eq(shops.id, shop.id));
     await db.update(shops).set({ contactPhone: "+13055551234" }).where(eq(shops.id, shop.id));
     const email = fakeEmail();
     // 6h out lands in the 24-hour bucket, inside the send window, so the
