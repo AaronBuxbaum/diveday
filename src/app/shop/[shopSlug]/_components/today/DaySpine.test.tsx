@@ -30,6 +30,8 @@ vi.mock("@/app/shop/[shopSlug]/actions", () => ({
   keepRentalFitAction: vi.fn(),
 }));
 
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { StatusMark } from "@/components/ui/StatusMark";
 import type { FirstBooking } from "@/db/first-booking";
 import type { DayTakings as DayTakingsReading } from "@/lib/closeout";
 import { assembleEveningClose, type CloseoutDeparture } from "@/lib/closeout";
@@ -152,6 +154,7 @@ function renderSpine({
   firstBooking?: FirstBooking | null;
   factOfScale?: FactOfScale | null;
   evening?: EveningReading;
+  blocked?: number;
 } = {}) {
   return render(
     <DaySpine
@@ -286,12 +289,14 @@ describe("a station owns its departure's facts", () => {
     expect(blocked?.style.transform).toBe(`scaleX(${Math.round((10 / 12) * 1e4) / 1e4})`);
   });
 
-  it("wears the departure's stage as a pill, and none when the reader has no phase", () => {
-    renderSpine({ departures: [departure({ phase: "checkin" })] });
-    expect(screen.getByText("Check-in")).toBeInTheDocument();
+  it("wears the crew's stage as a pill, and no clock word when nobody has said", () => {
+    renderSpine({ departures: [departure({ stage: stationStage("boarding") })] });
+    expect(screen.getByText("Boarding")).toBeInTheDocument();
     cleanup();
-    renderSpine({ departures: [departure({ phase: null })] });
-    for (const word of ["Prep", "Check-in", "Aboard", "Back"]) {
+    renderSpine({ departures: [departure({ stage: null })] });
+    // The phase words are gone from every chip (UX review 2026-10-10, item 1):
+    // "Aboard" from a clock is a claim about where people are.
+    for (const word of ["Prep", "Check-in", "Aboard", "Back", "Boarding"]) {
       expect(screen.queryByText(word)).toBeNull();
     }
   });
@@ -1539,7 +1544,7 @@ describe("the evening reading", () => {
  * spine's rows did not carry until 2026-09-02.
  */
 describe("the row glyph", () => {
-  it("leads every row with the status family's shape for its tone, never a drawing", () => {
+  it("leads a wrong row with the status family's shape and a quiet row with its category drawing", () => {
     const { container } = renderSpine({
       actions: [
         action({ id: "danger", kind: "medical_review", departure: boat("t1") }),
@@ -1557,6 +1562,43 @@ describe("the row glyph", () => {
     expect(inks[2]).toContain("text-muted");
     // From the shipped status family: a drawing is never a status glyph.
     for (const row of rows) expect(row.querySelector("[data-site-mark]")).toBeNull();
+    // UX review 2026-10-10, item 6: the quiet row's mark is the gear drawing,
+    // not the hollow ring that read as a checkbox.
+    const gear = render(<DiveDayIcon name="gear" />).container.querySelector("svg");
+    const ring = render(<StatusMark variant="pending" />).container.querySelector("svg");
+    const quiet = rows[2]?.querySelector("span > svg");
+    expect(quiet?.innerHTML).toBe(gear?.innerHTML);
+    expect(quiet?.innerHTML).not.toBe(ring?.innerHTML);
+  });
+});
+
+/**
+ * **Good news never wears the warning colour** (UX review 2026-10-10, item 3).
+ * The all-clear line wore the coral accent, which reads amber in boat mode; it
+ * now wears success, and it never shows while a boat still has someone blocked.
+ */
+describe("the all-clear line's tone", () => {
+  it("wears success, never the accent or warning", () => {
+    renderSpine({
+      actions: [
+        action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+        action({ id: "later", kind: "waiver", departure: boat("t9") }),
+      ],
+    });
+    const line = screen.getByText("Today’s boats are all clear").closest("[role=status]");
+    expect(line?.className).toContain("bg-success-tint");
+    expect(line?.className).not.toMatch(/accent|warning|primary-tint/);
+  });
+
+  it("stays quiet while the day still counts someone blocked", () => {
+    renderSpine({
+      blocked: 1,
+      actions: [
+        action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+        action({ id: "later", kind: "waiver", departure: boat("t9") }),
+      ],
+    });
+    expect(screen.queryByText("Today’s boats are all clear")).toBeNull();
   });
 });
 
@@ -1693,17 +1735,22 @@ describe("the stage chip (slice 16c)", () => {
       departures: [{ ...departure(), stage: null }],
       actions: [action({ id: "b", departure: boat("t1") })],
     });
-    expect(container.textContent).not.toMatch(/Out on|Heading in|On the surface/);
+    expect(container.textContent).not.toMatch(/Boarding|Underway|Surface|Heading in|Home/);
     // The word this app refuses to say about a boat nobody has spoken for.
     expect(container.textContent).not.toMatch(/unknown/i);
   });
 
-  it("carries the crew's word, the site and the time they said it", () => {
+  it("says the manifest strip's own word, then the site and the time they said it", () => {
     withStage("underway");
-    expect(screen.getByText(/Out on Molasses Reef since /)).toBeInTheDocument();
+    expect(screen.getByText("Underway")).toBeInTheDocument();
+    expect(screen.getByText(/^Molasses Reef · since /)).toBeInTheDocument();
   });
 
-  it("falls back to the siteless word on a departure with no plan", () => {
+  it("names no site at the dock, and none on a departure with no plan", () => {
+    withStage("boarding");
+    expect(screen.getByText("Boarding")).toBeInTheDocument();
+    expect(screen.getByText(/^since /)).toBeInTheDocument();
+    cleanup();
     renderSpine({
       departures: [
         {
@@ -1713,7 +1760,7 @@ describe("the stage chip (slice 16c)", () => {
       ],
       actions: [action({ id: "b", departure: boat("t1") })],
     });
-    expect(screen.getByText(/Out on the water since /)).toBeInTheDocument();
+    expect(screen.getByText(/^since /)).toBeInTheDocument();
   });
 });
 

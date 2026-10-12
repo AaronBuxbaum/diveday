@@ -18,7 +18,6 @@ import type { DiveIntentCount } from "./dive-intent";
 import type { CrewIncompleteReason } from "./manifests";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 import type { SeasonStart } from "./season";
-import type { TripPhase } from "./trip-phase";
 import type { TripStageReading } from "./trip-stages";
 import { hasReturned, hasSailed } from "./trips";
 import { utcToWallTime } from "./zoned";
@@ -1543,16 +1542,12 @@ export type SpineDeparture = {
   crewReason: CrewIncompleteReason | null;
   /**
    * The crew's own word for where this boat is, and when they said it (ADR
-   * 20260904-reef-all-the-way-down, Budget rule 4). Null on a departure whose
-   * crew has tapped nothing, which renders nothing — never "Unknown".
+   * 20260904-reef-all-the-way-down, Budget rule 4), read through
+   * `boatStageOf` so the card's chip is the header's and the manifest's word.
+   * Null on a departure whose crew has tapped nothing today, which renders
+   * nothing — never "Unknown", and never a word the clock made up.
    */
   stage?: TripStageReading | null;
-  /**
-   * Where the departure is in its own day (`tripPhaseOf`, read from the raw
-   * tap). Optional so a hand-built station in a test can leave it out, which
-   * renders no stage pill.
-   */
-  phase?: TripPhase | null;
   /**
    * **What the divers aboard came for, as counts** (D12/#1172 with D23/#1183,
    * issue #1386). Empty on a departure nobody answered on, which is the
@@ -1746,11 +1741,6 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
   };
 }
 
-/** Rows a staffer could still act on before a boat leaves. */
-export function pressingRows(rows: readonly TodayAction[]): number {
-  return rows.filter((row) => ACTION_KIND_META[row.kind].tone !== "neutral").length;
-}
-
 /** Every row the spine holds, wherever it filed. */
 export function spineJobCount(spine: DaySpine): number {
   return (
@@ -1810,27 +1800,121 @@ export function spineIsQuiet(
 }
 
 /**
- * Has the day earned its morning all-clear line (principles.md §3, and the
- * coral budget's "The home, morning" row in ADR
- * 20260827-clearwater-surface-language)?
+ * Has the day earned its morning all-clear line (principles.md §3)?
  *
  * Restated in spine terms: no danger or warning row on any of today's stations
- * or in the desk group. Tomorrow's and the week's jobs may remain — the line is
- * about *today's boats*, and a job three days out was never what it counted.
+ * or in the desk group, **and nobody blocked on any of today's boats**. The
+ * second clause is the role lens's honesty clause (UX review 2026-10-10, item
+ * 2): a captain's lens withholds the desk's waiver row, and "Today's boats are
+ * all clear" under a card saying "1 blocked" was the screen contradicting
+ * itself. A blocked diver is a fact about the boat, whoever's job the fix is.
+ * Tomorrow's and the week's jobs may remain — the line is about *today's
+ * boats*.
  *
- * Two conditions ride with it, both carried over from the line's first
- * implementation rather than invented here. A day with **no departures** never
- * earns it: "today's boats are all clear" over an empty dock is a compliment
- * about nothing. And a queue with **no work left anywhere** does not either —
- * that is the other good-news moment, the queue's own "Nothing is waiting on
- * you", and the two have never both rendered at once.
+ * Two conditions ride with it. A day with **no departures** never earns it:
+ * "today's boats are all clear" over an empty dock is a compliment about
+ * nothing. And a queue with **no work left anywhere** does not either — that
+ * is the other good-news moment, the queue's own "Nothing is waiting on you",
+ * and the two have never both rendered at once.
+ *
+ * `blocked` is the figure the day's sentence says ("1 person blocked"), which
+ * also counts a diver blocked aboard a boat that is out past its station.
  */
-export function todaysBoatsAreClear(spine: DaySpine): boolean {
+export function todaysBoatsAreClear(spine: DaySpine, blocked = 0): boolean {
   if (spine.stations.length === 0) return false;
   if (spineJobCount(spine) === 0) return false;
+  if (blocked > 0) return false;
+  if (spine.stations.some((station) => station.blocked > 0)) return false;
   const pressing = (action: TodayAction) => toneRank(action) < TONE_RANK.neutral;
   if (spine.desk.some(pressing)) return false;
   return !spine.stations.some((station) => station.rows.some(pressing));
+}
+
+/** Who is reading the Needs you list, and what stands in it beside the jobs. */
+export type NeedsYouLens = {
+  /**
+   * Trips the reader crews — passed only under the boat lens. Their rows lead
+   * and every other row folds, except a danger row and a row about the
+   * reader themself.
+   */
+  crewedTripIds?: readonly string[];
+  readerPersonId?: string;
+  /** The reader's own fresh form drafts; each is one row of the list. */
+  drafts?: number;
+  /** The desk's presence-derived payments row is showing. */
+  paymentsRow?: boolean;
+  /** The day's sentence's blocked figure (`daySummaryBlocked`). */
+  blocked?: number;
+  now: Date;
+};
+
+/**
+ * **What Needs you holds, read once for every role** (UX review 2026-10-10,
+ * item 2).
+ *
+ * The page's sentence ("2 things need you before the 6:30 PM leaves the
+ * dock"), the list's own count ("Needs you · 2 things") and the all-clear line
+ * used to be three derivations: the sentence counted warning and danger rows
+ * on the next boat across the whole shop, the list counted what the reader's
+ * lens led with, and the line ignored who was blocked. On a captain's Today
+ * that read "Nothing needs you before the 6:30 PM" over "Needs you · 2
+ * things" for that boat, and "all clear" under "1 person blocked". Now all
+ * three are this one reading, so they cannot disagree:
+ *
+ * - `lead` is the list the reader works; `folded` is the one line a crew
+ *   reader can open for the desk's rows (null when nothing folds).
+ * - `count` is the list's own number: the lead rows, the drafts, and the
+ *   payments row when it is not folded.
+ * - `next` is the next boat that has not sailed, and `dueBeforeNext` is how
+ *   many of the lead rows are about it — the sentence's number. Once every
+ *   boat is away the sentence says `count`.
+ * - `boatsClear` is {@link todaysBoatsAreClear}.
+ */
+export type NeedsYouReading = {
+  lead: TodayAction[];
+  folded: TodayAction[] | null;
+  count: number;
+  next: DayStation | null;
+  dueBeforeNext: number;
+  boatsClear: boolean;
+};
+
+export function readNeedsYou(spine: DaySpine, lens: NeedsYouLens): NeedsYouReading {
+  const crewed = new Set(lens.crewedTripIds ?? []);
+  // **One "Needs you" list** (ADR 20261001-logbook, decision 4): every job on
+  // today's boats and at the desk, ranked together.
+  const all = sortStationRows([
+    ...spine.stations.flatMap((station) => station.rows),
+    ...spine.desk,
+  ]);
+  // **A crew reader's lens** (UX audit 2026-10-07, item 7): for a captain or
+  // divemaster who crews one of today's boats, the list leads with that boat's
+  // rows and every other row folds into one line. A danger row about any boat
+  // never folds: a diver unaccounted for is everyone's to see. Nor does a row
+  // about the reader themself, such as their own credential coming due.
+  const crewsToday = spine.stations.some((station) => crewed.has(station.tripId));
+  const leads = (action: TodayAction) =>
+    !crewsToday ||
+    ACTION_KIND_META[action.kind].tone === "danger" ||
+    (action.departure != null && crewed.has(action.departure.tripId)) ||
+    (lens.readerPersonId != null && action.staffPersonId === lens.readerPersonId);
+  const lead = all.filter(leads);
+  const rest = all.filter((action) => !leads(action));
+  const paymentsRows = lens.paymentsRow ? 1 : 0;
+  const folded = crewsToday && (rest.length > 0 || paymentsRows > 0) ? rest : null;
+  const count = lead.length + (lens.drafts ?? 0) + (folded ? 0 : paymentsRows);
+  const next = spine.stations.find((station) => !hasSailed(station.startsAt, lens.now)) ?? null;
+  const dueBeforeNext = next
+    ? lead.filter((action) => action.departure?.tripId === next.tripId).length
+    : count;
+  return {
+    lead,
+    folded,
+    count,
+    next,
+    dueBeforeNext,
+    boatsClear: todaysBoatsAreClear(spine, lens.blocked ?? 0),
+  };
 }
 
 /**
