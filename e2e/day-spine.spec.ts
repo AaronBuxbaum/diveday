@@ -51,13 +51,14 @@ test("the day is named, said once, and followed by its departures and what needs
   // The day in one line, said once.
   await expect(page.getByText(/boats? today[.,]/)).toHaveCount(1);
 
-  // A departure still ahead wears its stage and says how ready its divers
-  // are; the seeded morning boat is already home, and reads as settled.
+  // A departure still ahead wears the stage its crew tapped (the demo seeds
+  // one) and says how ready its divers are; the seeded morning boat is
+  // already home, and reads as settled.
   const live = page
     .locator("ol > li")
     .filter({ hasText: /\d+ of \d+ ready/ })
     .first();
-  await expect(live.getByText(/^(Prep|Check-in|Aboard|Back)$/)).toBeVisible();
+  await expect(live.getByText(/^(Boarding|Underway|Surface|Heading in|Home)$/)).toBeVisible();
   await expect(live.getByText(/^\d+ of \d+ ready$/)).toBeVisible();
 
   // The demo's straggler is a job, and jobs are one list under the departures.

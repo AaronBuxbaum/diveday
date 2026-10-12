@@ -114,7 +114,17 @@ export default async function PublicReviewsPage({
                 maximumFractionDigits: 1,
               }).format(average)}
             </span>
-            <span className="tabular-nums">{t("reviews.count", { count: aggregate.count })}</span>
+            {/* Ratings and written reviews are two counts (UX review
+                2026-10-10, item 17): "83 reviews" over four written ones read
+                as padding. */}
+            <span className="tabular-nums">
+              {reviewPage.total > 0
+                ? t("reviews.ratingsAndReviews", {
+                    ratings: aggregate.count,
+                    reviews: reviewPage.total,
+                  })
+                : t("reviews.ratingsCount", { count: aggregate.count })}
+            </span>
           </p>
         ) : null}
 
@@ -127,8 +137,11 @@ export default async function PublicReviewsPage({
             keeps only the reviews with words. */}
         {average !== null ? (
           <ul className="mt-4 flex max-w-sm flex-col gap-1.5">
+            {/* A bar only once somebody gave that many stars: a row of
+                empty bars reads as a fabricated distribution. */}
             {[5, 4, 3, 2, 1].map((rating) => {
               const ratingCount = distribution.get(rating) ?? 0;
+              if (ratingCount === 0) return null;
               return (
                 <li key={rating} className="flex items-center gap-3 text-sm tabular-nums">
                   {/* The row a screen reader hears: "5 out of 5 stars · 28".
