@@ -605,6 +605,7 @@ export function DaySpine({
         notOpen: t("today.paymentAction.errors.notOpen"),
         notConfigured: t("today.paymentAction.errors.notConfigured"),
         failed: t("today.paymentAction.errors.failed"),
+        rateLimited: t("today.paymentAction.errors.rateLimited"),
       },
     },
   };

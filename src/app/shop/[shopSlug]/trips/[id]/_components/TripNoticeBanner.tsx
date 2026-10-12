@@ -162,6 +162,8 @@ const NOTICE_KEYS: Record<
   "new-waiver-sent": { form: "roster", tone: "success", key: "trips.notices.newWaiverSent" },
   "new-waiver-ready": { form: "roster", tone: "warning", key: "trips.notices.newWaiverReady" },
   "new-waiver-failed": { form: "roster", tone: "danger", key: "trips.notices.newWaiverFailed" },
+  // Refused by the per-staff send bound (`RATE_LIMITS.staffSendByActor`).
+  "send-limit": { form: "roster", tone: "warning", key: "trips.notices.sendLimit" },
   // A course form recorded from paper on a student's row (ADR
   // 20261008-course-forms), and its refusals — each says what to do next.
   "course-form-recorded": {

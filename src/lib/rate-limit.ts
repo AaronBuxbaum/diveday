@@ -439,6 +439,15 @@ export const RATE_LIMITS = {
    * hesitant typist re-typing a long street a few times stays well inside it.
    */
   addressLookup: perHour(120),
+  /**
+   * Staff-triggered sends to someone outside the shop — a fresh waiver link, a
+   * reply to a diver, a staff invite or its resend, an invoice resend — per
+   * staff member and per kind of send. Each is one tap on a signed-in page, so
+   * a compromised or scripted staff session could otherwise turn the shop's
+   * sender into a spam cannon and burn its reputation. Sixty an hour is a send
+   * a minute, far above a busy morning at the counter.
+   */
+  staffSendByActor: perHour(60),
   /** Public wait-list joins, per IP. */
   waitlistJoin: perHour(10),
   /** Course inquiry submissions from the public course page, per IP. */

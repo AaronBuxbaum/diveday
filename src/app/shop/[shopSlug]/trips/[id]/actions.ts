@@ -92,6 +92,7 @@ import {
   diverPhoneSchema,
 } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { paymentGateIsUnclearable, REQUIRABLE_CERTIFICATION_LEVELS } from "@/lib/readiness";
 import {
   isValidWeekdaySet,
@@ -1263,6 +1264,13 @@ export async function sendNewWaiverAction(shopSlug: string, tripId: string, form
   if (!(await canPersonRetireMedicalRefusal(dbi, s.user.shopId, s.user.personId))) {
     redirect(noticeUrl(back, "not-authorized"));
   }
+  // A fresh link is an email to someone outside the shop; bound how many one
+  // staff member can fire in an hour before anything is retired or sent.
+  const sendAllowed = await checkRateLimit(
+    rateLimitKey("staff-send", "new-waiver", s.user.personId),
+    RATE_LIMITS.staffSendByActor,
+  );
+  if (!sendAllowed.allowed) redirect(noticeUrl(back, "send-limit", { bid: bookingId }));
   const retired = await retireMedicalRefusal(dbi, {
     shopId: s.user.shopId,
     bookingId,

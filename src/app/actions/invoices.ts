@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import { resendOrderInvoice } from "@/db/orders";
 import { trackEvent } from "@/lib/analytics";
 import { parseForm } from "@/lib/form-parse";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { requireShopSurface } from "@/lib/session";
 import type { InvoiceResendState } from "./invoice-resend-types";
 
@@ -29,6 +30,13 @@ export async function resendInvoiceAction(
   const parsed = parseForm(resendForm, formData);
   const orderId = parsed.ok ? parsed.data.orderId : "";
   if (!orderId) return { status: "error", reason: "not_found" };
+  // An invoice is an email to the diver; bound how many one staff member can
+  // resend in an hour (`RATE_LIMITS.staffSendByActor`).
+  const sendAllowed = await checkRateLimit(
+    rateLimitKey("staff-send", "invoice", session.user.personId),
+    RATE_LIMITS.staffSendByActor,
+  );
+  if (!sendAllowed.allowed) return { status: "error", reason: "rate_limited" };
 
   const outcome = await resendOrderInvoice(await getDb(), session.user.shopId, orderId);
   // Refresh Today so a resent invoice's row reflects the attempt.

@@ -28,7 +28,8 @@
       "notFound": "No se encontró ese pedido. Abre la salida para revisarlo.",
       "notOpen": "Este pedido ya no está abierto. Abre la salida para verificar su estado.",
       "notConfigured": "Los pagos todavía no están conectados para este centro.",
-      "failed": "Sigue sin poder reenviarse. Abre la salida para revisar el pedido."
+      "failed": "Sigue sin poder reenviarse. Abre la salida para revisar el pedido.",
+      "rateLimited": "Has reenviado mucho en esta hora. Vuelve a intentarlo en un rato."
     }
   },
   "helpRequest": {
