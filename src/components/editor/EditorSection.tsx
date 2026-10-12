@@ -138,7 +138,7 @@ export function EditorSection({
           // under the chrome bar: bring its header back to the top.
           requestAnimationFrame(() => rootRef.current?.scrollIntoView?.({ block: "start" }));
         }}
-        className="flex min-h-12 w-full items-center gap-3 rounded-lg py-3 text-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary lg:hidden"
+        className="flex min-h-12 w-full items-center gap-3 rounded-lg py-3 text-start focus-visible:focus-ring lg:hidden"
       >
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           <span>{label}</span>

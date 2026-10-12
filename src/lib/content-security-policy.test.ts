@@ -255,7 +255,7 @@ describe("the report-only half", () => {
     expect(imgSrc).toContain("https://*.cloudfront.net");
     // The route maps' reachability read (UX review 2026-10-10, item 20), and
     // only a host the map frame already reaches.
-    expect(imgSrc).toContain(new URL(MAP_REACHABILITY_PROBE).origin);
+    expect(imgSrc).toContain(MAP_REACHABILITY_PROBE);
     expect(directives(reportOnlyPolicy(base)).get("frame-src")).toContain(
       new URL(MAP_REACHABILITY_PROBE).origin,
     );

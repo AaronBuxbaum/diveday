@@ -596,7 +596,6 @@
   "safetyChecklist": {
     "title": "Pre-departure checklist",
     "description": "The lines your crew confirms before a boat leaves the dock.",
-    "gasAnalysisNote": "DiveDay logs no gas analysis: every mix is still analyzed and signed for at the fill station.",
     "listHeading": "Checklist",
     "empty": {
       "title": "Nothing on the list yet",
