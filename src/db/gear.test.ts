@@ -333,6 +333,23 @@ describe("gear items", () => {
     expect(await listGearServiceEvents(db, shop.id, item.id)).toHaveLength(1);
   });
 
+  // Issue #2295: the refusal runs in a savepoint, so a caller's transaction
+  // (here the file's shared one) is still usable after it.
+  it("leaves a caller's transaction usable after refusing a restore onto a taken tag", async () => {
+    const { db, shop } = await gearShopContext();
+    const item = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #40" }),
+    );
+    await deleteGearItem(db, { shopId: shop.id, gearItemId: item.id, todayLocal: TODAY });
+    mustCreate(await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #40" }));
+
+    expect(await restoreGearItem(db, { shopId: shop.id, gearItemId: item.id })).toEqual({
+      ok: false,
+      reason: "duplicate_label",
+    });
+    expect(await countGearItems(db, shop.id)).toBe(1);
+  });
+
   it("refuses to delete a unit that is reserved for later or out on a rental", async () => {
     const { db, shop } = await gearShopContext();
     const bcd = mustCreate(
