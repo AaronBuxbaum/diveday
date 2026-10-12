@@ -744,6 +744,33 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       );
     });
 
+    it("charge.refund.updated stores a failure reason Stripe never documented as `unknown`, not its text", async () => {
+      vi.mocked(recordStripeRefundFailure).mockResolvedValue({ status: "reversed" });
+      const object = {
+        id: "re_9",
+        amount: 100,
+        currency: "usd",
+        status: "failed",
+        payment_intent: "pi_1",
+      };
+      await post({
+        id: "evt_rf_odd",
+        type: "charge.refund.updated",
+        account: "acct_1",
+        data: { object: { ...object, failure_reason: "call Jane Doe on +1 555 0100" } },
+      });
+      await post({
+        id: "evt_rf_none",
+        type: "charge.refund.updated",
+        account: "acct_1",
+        data: { object },
+      });
+      const reasons = vi
+        .mocked(recordStripeRefundFailure)
+        .mock.calls.map(([, input]) => input.refund.failureReason);
+      expect(reasons).toEqual(["unknown", null]);
+    });
+
     it("charge.refund.updated with no account or no PaymentIntent records nothing", async () => {
       const refund = { id: "re_2", amount: 100, currency: "usd", status: "failed" };
       await post({
