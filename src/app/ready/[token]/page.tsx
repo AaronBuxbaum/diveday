@@ -108,6 +108,7 @@ import {
 } from "@/lib/public-routes";
 import { combineCertRequirements, type ReadinessBlockerCode } from "@/lib/readiness";
 import { buildDiverChecklist, type DiverChecklistItem } from "@/lib/readiness-summary";
+import { READY_KEEP_UNTIL_META, readyCopyKeepUntil } from "@/lib/ready-offline";
 import { signRecapToken } from "@/lib/recap-links";
 import { nitroxAvailableOn, nitroxCardWanted } from "@/lib/rentals";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
@@ -1573,6 +1574,19 @@ export default async function DiverReadinessPage({
                 cards and the gear answers go, and it restates itself every
                 time the shop moves. */}
             <p className="mt-3 text-sm text-muted">{t("ready.keepThisPage")}</p>
+            {/* Until when the phone may keep its copy of this page: the day
+                after the boat is due back (security review of layer 8, D2).
+                Only this live page names one, so any other answer at this URL
+                (cancelled, called off, expired) clears the copy. */}
+            <meta
+              name={READY_KEEP_UNTIL_META}
+              content={String(
+                readyCopyKeepUntil({
+                  startsAt: detail.trip.startsAt,
+                  endsAt: detail.trip.endsAt ?? null,
+                }),
+              )}
+            />
             <ReadyOfflineCopy offlineNote={t("ready.offlineCopy")} />
           </>
         }

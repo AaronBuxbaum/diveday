@@ -10,6 +10,26 @@
  */
 export const READY_WORKER_SCOPE = "/ready/";
 
+/**
+ * The `<meta name>` the live trip-prep page carries to say **until when** the
+ * phone may keep its copy (security review of layer 8, D2). The worker keeps
+ * no copy of a page without it, so a cancelled booking, a departure called
+ * off or a dead link clears the copy on its next load rather than replacing it.
+ */
+export const READY_KEEP_UNTIL_META = "diveday-ready-keep-until";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The instant (epoch ms) the phone's copy of this page stops being served: a
+ * day after the boat is due back, or, with no return time, a day after it
+ * leaves. Only the live page names one; a departure called off renders a
+ * terminal card that names none, which clears the copy.
+ */
+export function readyCopyKeepUntil(trip: { startsAt: Date; endsAt: Date | null }): number {
+  return (trip.endsAt ?? trip.startsAt).getTime() + DAY_MS;
+}
+
 const ACTIVATE_TIMEOUT_MS = 10_000;
 
 function activeWorker(registration: ServiceWorkerRegistration): Promise<ServiceWorker | null> {

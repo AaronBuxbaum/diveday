@@ -45,7 +45,9 @@
 - **Saved trip-prep copy** — the last `/ready/<token>` page a diver's own browser rendered, kept on
   their phone for a marina with no signal. The one service-worker script, registered a second time
   from `/ready/` with that scope (`src/lib/ready-offline.ts`); the staff registration at `/` never
-  keeps one. One copy (saving a page deletes any other), the page itself only (same origin, its
-  exact path, no query, no redirect, HTML), network-first (served only when `fetch` fails), and
-  deleted after two weeks. Read-only: offline the page says it is the saved copy and that changes
-  need signal. Rules in `src/worker/ready-page-cache.ts`.
+  keeps one. One copy under a key that names no token (saving a page deletes any other; the copy
+  answers a path only by its hash), the page itself only (same origin, its exact path, no query, no
+  redirect, HTML), network-first (served only when `fetch` fails), and kept only until the day
+  after the boat is due back (two weeks at most). A load that is not the live page (a cancelled
+  seat, a departure called off, an expired link) clears it. Read-only: offline the page says it is
+  the saved copy and that changes need signal. Rules in `src/worker/ready-page-cache.ts`.

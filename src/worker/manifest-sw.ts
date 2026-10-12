@@ -14,6 +14,7 @@ import {
   pendingOfflineEventCount,
 } from "@/lib/offline-manifests";
 import {
+  forgetReadyPage,
   isReadyScope,
   readyPageFallback,
   readyPagePath,
@@ -554,6 +555,10 @@ self.addEventListener("fetch", (event) => {
             event.waitUntil(
               saveReadyPage(caches, path, response.clone(), nowMs()).catch(() => false),
             );
+          } else if (url.searchParams.has("cancelled")) {
+            // The diver just cancelled this seat (`cancelMyBookingAction`):
+            // the copy goes with it (security review of layer 8, D2).
+            event.waitUntil(forgetReadyPage(caches, path).catch(() => undefined));
           }
           return response;
         })

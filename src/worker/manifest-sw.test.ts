@@ -18,6 +18,7 @@ import {
   type OfflineManifestPayload,
   type OfflineRollCallEvent,
 } from "@/lib/offline-manifests";
+import { READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
 
 vi.mock("@/lib/offline-manifest-store", () => ({
   listOfflineManifests: vi.fn(),
@@ -371,8 +372,15 @@ describe("the /ready/ registration's fetch", () => {
     return { responded, settle: async () => Promise.allSettled([responded, ...waits]) };
   }
 
+  /** The live page, naming the day its copy may be kept until (well past the frozen clock). */
   const html = (body: string) =>
-    new Response(body, { status: 200, headers: { "content-type": "text/html" } });
+    new Response(
+      `<meta name="${READY_KEEP_UNTIL_META}" content="${Number.MAX_SAFE_INTEGER}"/>${body}`,
+      {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      },
+    );
 
   beforeEach(() => {
     kept.clear();
@@ -387,13 +395,28 @@ describe("the /ready/ registration's fetch", () => {
   it("keeps the live page on the way through, and serves it when the network fails", async () => {
     fetchMock.mockResolvedValueOnce(html("live"));
     const online = navigate(`https://dive.day${PATH}`);
-    expect(await (await online.responded)?.text()).toBe("live");
+    expect(await (await online.responded)?.text()).toContain("live");
     await online.settle();
-    expect(kept.has(PATH)).toBe(true);
+    expect(kept.size).toBe(1);
 
     fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
     const offline = navigate(`https://dive.day${PATH}`);
-    expect(await (await offline.responded)?.text()).toBe("live");
+    expect(await (await offline.responded)?.text()).toContain("live");
+  });
+
+  /** Security review of layer 8, D2: a self-cancel lands here, and the copy goes with the seat. */
+  it("forgets the copy when the page comes back cancelled", async () => {
+    fetchMock.mockResolvedValueOnce(html("live"));
+    const online = navigate(`https://dive.day${PATH}`);
+    await online.responded;
+    await online.settle();
+    expect(kept.size).toBe(1);
+
+    fetchMock.mockResolvedValueOnce(html("cancelled"));
+    const cancelled = navigate(`https://dive.day${PATH}?cancelled=1`);
+    await cancelled.responded;
+    await cancelled.settle();
+    expect(kept.size).toBe(0);
   });
 
   it("does not keep a load that carries a one-time notice", async () => {

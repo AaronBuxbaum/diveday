@@ -13,14 +13,24 @@
  * - **Only the page itself, same origin, by its exact path**: the token in the
  *   path *is* the capability, so the cache answers only someone who already
  *   holds it. No query string, nothing under it (`/forms`), no redirect.
- * - **One copy, the last one rendered**: saving a page deletes every other,
- *   so a phone that opened two bookings holds only the newer.
+ * - **One copy, the last one rendered, under a key that names no token**
+ *   (security review of layer 8, D1): Cache Storage is origin-wide and any
+ *   same-origin script can list its keys, so the copy lives at
+ *   {@link READY_COPY_KEY} and carries only a SHA-256 of its path. A request
+ *   is answered only when its own path hashes to the same value, so a phone
+ *   that opened two bookings holds only the newer.
  * - **Read-only, network-first**: a cached copy is served only when `fetch`
  *   fails. Its forms post to the server like any page and fail offline like
  *   any page; nothing is queued.
- * - **Bounded in time**: a copy older than {@link READY_COPY_MAX_AGE_MS} is
- *   deleted rather than served.
+ * - **Bounded by the trip, not only by the clock** (D2): the live page names
+ *   the instant its copy expires ({@link READY_KEEP_UNTIL_META}: a day after
+ *   the boat is due back), capped at {@link READY_COPY_MAX_AGE_MS}. A page
+ *   that names none (a cancelled booking, a departure called off, a dead link)
+ *   clears the copy instead of replacing it, and a `?cancelled=` landing
+ *   forgets it outright.
  */
+
+import { READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
 
 export const READY_CACHE_NAME = "diveday-ready-page-v1";
 
@@ -30,10 +40,26 @@ export const READY_CACHE_NAME = "diveday-ready-page-v1";
  */
 const READY_PAGE_PATTERN = /^\/ready\/[A-Za-z0-9_-]{43}$/;
 
-/** Two weeks: past any trip a diver is packing for, short of last season's. */
+/** Two weeks: the ceiling on any copy, whatever day the page names. */
 export const READY_COPY_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 
-const SAVED_AT_HEADER = "x-diveday-saved-at";
+/** The one key the copy is filed under: a fixed path that is never a readiness link. */
+export const READY_COPY_KEY = "/ready/kept-copy";
+
+const PATH_HASH_HEADER = "x-diveday-path-sha256";
+const KEEP_UNTIL_HEADER = "x-diveday-keep-until";
+
+const KEEP_UNTIL_PATTERN = new RegExp(`<meta name="${READY_KEEP_UNTIL_META}" content="(\\d+)"`);
+
+async function pathHash(path: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(path));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+/** Every entry in the copy's cache, the one copy included. */
+async function clearCopies(cache: Cache): Promise<void> {
+  for (const request of await cache.keys()) await cache.delete(request);
+}
 
 /** The cache key for a request this module may handle, or null for every other. */
 export function readyPagePath(url: URL, origin: string): string | null {
@@ -60,7 +86,8 @@ function storable(response: Response): boolean {
 
 /**
  * Keep `response` as the one copy for `path`, replacing whatever was kept.
- * Reads the body (pass a clone). Returns whether it was kept.
+ * Reads the body (pass a clone). Returns whether it was kept; a page that
+ * names no keep-until, or one already past, clears the copy.
  */
 export async function saveReadyPage(
   storage: CacheStorage,
@@ -69,38 +96,52 @@ export async function saveReadyPage(
   now: number,
 ): Promise<boolean> {
   if (!storable(response)) return false;
-  const headers = new Headers(response.headers);
-  headers.set(SAVED_AT_HEADER, String(now));
   // A body of its own, so the copy is complete before anything is replaced.
   const body = await response.arrayBuffer();
+  const named = Number(new TextDecoder().decode(body).match(KEEP_UNTIL_PATTERN)?.[1] ?? Number.NaN);
+  const cache = await storage.open(READY_CACHE_NAME);
+  if (!Number.isFinite(named) || named <= now) {
+    await clearCopies(cache);
+    return false;
+  }
+  const headers = new Headers(response.headers);
+  headers.set(KEEP_UNTIL_HEADER, String(Math.min(named, now + READY_COPY_MAX_AGE_MS)));
+  headers.set(PATH_HASH_HEADER, await pathHash(path));
   const copy = new Response(body, {
     status: response.status,
     statusText: response.statusText,
     headers,
   });
-  const cache = await storage.open(READY_CACHE_NAME);
-  for (const request of await cache.keys()) {
-    if (new URL(request.url).pathname !== path) await cache.delete(request);
-  }
-  await cache.put(path, copy);
+  await clearCopies(cache);
+  await cache.put(READY_COPY_KEY, copy);
   return true;
 }
 
-/** The kept copy for `path`, if there is one young enough to serve. */
+/** The kept copy for `path`, if there is one and it is still in date. */
 export async function readyPageFallback(
   storage: CacheStorage,
   path: string,
   now: number,
 ): Promise<Response | undefined> {
   const cache = await storage.open(READY_CACHE_NAME);
-  const cached = await cache.match(path);
+  const cached = await cache.match(READY_COPY_KEY);
   if (!cached) return undefined;
-  const savedAt = Number(cached.headers.get(SAVED_AT_HEADER));
-  if (!Number.isFinite(savedAt) || now - savedAt > READY_COPY_MAX_AGE_MS) {
-    await cache.delete(path);
+  const keepUntil = Number(cached.headers.get(KEEP_UNTIL_HEADER));
+  if (!Number.isFinite(keepUntil) || now > keepUntil) {
+    await cache.delete(READY_COPY_KEY);
     return undefined;
   }
+  if (cached.headers.get(PATH_HASH_HEADER) !== (await pathHash(path))) return undefined;
   return cached;
+}
+
+/** Drop the kept copy if it is `path`'s: the seat it was for has just been cancelled. */
+export async function forgetReadyPage(storage: CacheStorage, path: string): Promise<void> {
+  const cache = await storage.open(READY_CACHE_NAME);
+  const cached = await cache.match(READY_COPY_KEY);
+  if (cached && cached.headers.get(PATH_HASH_HEADER) === (await pathHash(path))) {
+    await cache.delete(READY_COPY_KEY);
+  }
 }
 
 /**

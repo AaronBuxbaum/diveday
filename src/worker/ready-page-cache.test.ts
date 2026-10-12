@@ -1,7 +1,9 @@
 // The default `node` environment, as the worker's own test: this module runs
 // in a service worker, never in a DOM context.
 import { beforeEach, describe, expect, it } from "vitest";
+import { READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
 import {
+  forgetReadyPage,
   isReadyScope,
   READY_CACHE_NAME,
   READY_COPY_MAX_AGE_MS,
@@ -15,6 +17,7 @@ const ORIGIN = "https://dive.day";
 const TOKEN = "A".repeat(43);
 const OTHER = "B".repeat(43);
 const NOW = 1_800_000_000_000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** A Cache Storage with just the surface the module uses, keyed by path. */
 function fakeStorage() {
@@ -38,8 +41,9 @@ function fakeStorage() {
   return { storage: storage as unknown as CacheStorage, caches };
 }
 
-function page(body = "<p>Ready</p>", init: ResponseInit = {}) {
-  return new Response(body, {
+/** The live page as the server renders it: kept until `keepUntil` (default: well past NOW). */
+function page(body = "<p>Ready</p>", init: ResponseInit = {}, keepUntil = NOW + 30 * DAY_MS) {
+  return new Response(`<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/>${body}`, {
     status: 200,
     headers: { "content-type": "text/html; charset=utf-8" },
     ...init,
@@ -76,11 +80,58 @@ describe("saveReadyPage and readyPageFallback", () => {
   it("keeps one copy, the last page rendered, and serves it by its own path", async () => {
     expect(await saveReadyPage(store.storage, `/ready/${OTHER}`, page("older"), NOW)).toBe(true);
     expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("newer"), NOW)).toBe(true);
-    expect([...(store.caches.get(READY_CACHE_NAME)?.keys() ?? [])]).toEqual([`/ready/${TOKEN}`]);
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
 
     const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1000);
-    expect(await served?.text()).toBe("newer");
+    expect(await served?.text()).toContain("newer");
     expect(await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW)).toBeUndefined();
+  });
+
+  /**
+   * Security review of layer 8, D1: Cache Storage is origin-wide, so any
+   * same-origin script can list its keys. The copy is filed under one fixed
+   * key that carries no token, and answers a path only by its hash.
+   */
+  it("files the copy under a key that names no token", async () => {
+    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(), NOW);
+    const keys = [...(store.caches.get(READY_CACHE_NAME)?.keys() ?? [])];
+    expect(keys).toHaveLength(1);
+    expect(keys.join(" ")).not.toContain(TOKEN);
+    const kept = store.caches.get(READY_CACHE_NAME)?.values().next().value;
+    expect([...(kept?.headers.values() ?? [])].join(" ")).not.toContain(TOKEN);
+  });
+
+  /**
+   * D2: a copy does not outlive the trip it is for (the page names the day
+   * after the boat is due back), and a page that names no day (a cancelled
+   * booking, a dead link) clears it rather than replacing it.
+   */
+  it("stops serving the copy the moment the page said, and keeps none the page did not ask for", async () => {
+    const path = `/ready/${TOKEN}`;
+    await saveReadyPage(store.storage, path, page("x", {}, NOW + 1000), NOW);
+    expect(await readyPageFallback(store.storage, path, NOW + 999)).toBeDefined();
+    expect(await readyPageFallback(store.storage, path, NOW + 1001)).toBeUndefined();
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(0);
+
+    await saveReadyPage(store.storage, path, page(), NOW);
+    expect(
+      await saveReadyPage(
+        store.storage,
+        path,
+        new Response("<p>Cancelled</p>", { headers: { "content-type": "text/html" } }),
+        NOW,
+      ),
+    ).toBe(false);
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(0);
+    expect(await saveReadyPage(store.storage, path, page("x", {}, NOW - 1), NOW)).toBe(false);
+  });
+
+  it("forgets the copy for a path, and only that path's", async () => {
+    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(), NOW);
+    await forgetReadyPage(store.storage, `/ready/${OTHER}`);
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
+    await forgetReadyPage(store.storage, `/ready/${TOKEN}`);
+    expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(0);
   });
 
   it("keeps nothing that is not the page itself", async () => {
