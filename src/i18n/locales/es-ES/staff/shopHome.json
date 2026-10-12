@@ -159,14 +159,6 @@
       "closedBy": "último pase de lista cerrado por {name}",
       "backSouls": "salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}",
       "backSoulsBy": "salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back} a las {time}",
-      "openSeats": {
-        "label": "Plazas sin vender",
-        "sentence": "{seats, plural, one {Quedó # plaza sin vender} other {Quedaron # plazas sin vender}}: {facts}.",
-        "lastBooking": "{days, plural, =0 {la última reserva entró el mismo día} one {la última reserva entró # día antes} other {la última reserva entró # días antes}}",
-        "noDeal": "no salió ninguna oferta de última hora",
-        "comparableSamePrice": "{title} del {date} se llenó al mismo precio",
-        "comparableOtherPrice": "{title} del {date} se llenó a otro precio"
-      },
       "planChange": {
         "sentence": "El plan cambió: {changes}.",
         "moved": "la inmersión {dive} se trasladó a {site}",

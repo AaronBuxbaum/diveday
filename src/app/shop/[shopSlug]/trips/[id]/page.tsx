@@ -18,11 +18,13 @@ import {
   canPersonRetireMedicalRefusal,
 } from "@/db/authz";
 import { listBoats } from "@/db/boats";
+import { getTripOpenSeatsDebrief } from "@/db/open-seats";
 import { listTripLenses } from "@/db/trip-lenses";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripGuests, getTripOverview, loadTripSharedReads } from "@/db/trips";
 import { overRatioPulseKey, overRatioWarningText } from "@/i18n/crew-gap-labels";
 import { languageNameIn } from "@/i18n/language-labels";
+import { openSeatsDebriefText } from "@/i18n/open-seats-labels";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -410,6 +412,10 @@ export default async function ManageTripPage({
   // **Details is its own tab**, and a save on it lands back on it.
   const showDetails =
     view === "details" || Boolean(tripNotice && DETAILS_FORMS.has(tripNotice.form));
+  // Read only where it is drawn, and never awaited ahead of anything else.
+  const openSeatsDebrief = showDetails
+    ? getTripOpenSeatsDebrief(db, shop.id, tripId, shop.timezone)
+    : Promise.resolve(null);
   const siteWithForecast = tripDiveList.find(
     ({ diveSite }) =>
       diveSite && diveSite.forecastLatitude !== null && diveSite.forecastLongitude !== null,
@@ -628,6 +634,15 @@ export default async function ManageTripPage({
     undoRemoveBookingAction: undoRemoveBookingAction.bind(null, shopSlug, tripId),
     restoreInternalNoteAction: restoreInternalNoteAction.bind(null, shopSlug, tripId),
   };
+
+  const openSeats = await openSeatsDebrief;
+  const openSeatsText = openSeats
+    ? openSeatsDebriefText(t, locale, openSeats, {
+        comparableDate: openSeats.comparable
+          ? formatShortDate(openSeats.comparable.startsAt, locale, shop.timezone)
+          : "",
+      })
+    : null;
 
   return (
     <>
@@ -1015,6 +1030,13 @@ export default async function ManageTripPage({
                       />
                     ) : undefined,
                 },
+                // **Why seats went unsold**, once the boat has sailed short
+                // (issue #1207, D47). A fact row with no editor: a post-mortem
+                // for whoever plans the next run of this trip, moved off the
+                // day spine (UX review 2026-10-10, item 31).
+                ...(openSeatsText
+                  ? [{ id: "open-seats", label: t("trips.openSeats.label"), value: openSeatsText }]
+                  : []),
               ]}
               actions={
                 <>

@@ -101,7 +101,6 @@ function closed(overrides: Partial<CloseoutDeparture> & { tripId: string }): Clo
     // Two crew, both counted back at the closing checkpoint — the shape a
     // settled departure has once the day's counting is done (issue #1346).
     crew: [{ rollCall: { state: "boarded" } }, { rollCall: { state: "boarded" } }],
-    openSeats: null,
     planChanges: [],
     status: "all_home",
     gapReason: null,
@@ -1180,34 +1179,12 @@ describe("the evening reading", () => {
     expect(screen.queryByText(/plan changed/)).toBeNull();
   });
 
-  it("renders the open-seats debrief as one row, and nothing at all when the boat filled", () => {
-    renderSpine({
-      departures: [],
-      evening: evening([
-        closed({
-          tripId: "t1",
-          openSeats: {
-            openSeats: 4,
-            lastBookingDaysOut: 3,
-            dealSent: false,
-            comparable: null,
-          },
-        }),
-      ]),
-    });
-    expect(screen.getByText("Unsold seats")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "4 seats went unsold: the last booking came in 3 days out and no last-minute deal went out.",
-      ),
-    ).toBeInTheDocument();
-    // No trailing door: the station's own title already opens this departure,
-    // and a second path to it from the same panel is what restraint deletes.
-    expect(screen.getAllByRole("link", { name: "Two-Tank Reef" })).toHaveLength(1);
-
-    cleanup();
-    renderSpine({ departures: [], evening: evening([closed({ tripId: "t1" })]) });
+  it("carries no unsold-seats post-mortem on a settled station", () => {
+    // It moved to the departure's Details tab (UX review 2026-10-10, item 31):
+    // the day spine is where the desk looks for what needs doing.
+    renderSpine({ departures: [], evening: evening([closed({ tripId: "t1", booked: 8 })]) });
     expect(screen.queryByText("Unsold seats")).toBeNull();
+    expect(screen.queryByText(/went unsold/)).toBeNull();
   });
 
   it("gives the rental-fit row a control that saves", () => {

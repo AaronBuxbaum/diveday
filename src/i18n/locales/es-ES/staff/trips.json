@@ -39,6 +39,14 @@
     "cancel": "Cancelar esta salida",
     "more": "Más para esta salida"
   },
+  "openSeats": {
+    "label": "Plazas sin vender",
+    "sentence": "{seats, plural, one {Quedó # plaza sin vender} other {Quedaron # plazas sin vender}}: {facts}.",
+    "lastBooking": "{days, plural, =0 {la última reserva entró el mismo día} one {la última reserva entró # día antes} other {la última reserva entró # días antes}}",
+    "noDeal": "no salió ninguna oferta de última hora",
+    "comparableSamePrice": "{title} del {date} se llenó al mismo precio",
+    "comparableOtherPrice": "{title} del {date} se llenó a otro precio"
+  },
   "notices": {
     "nextStepSaved": "Siguiente paso guardado.",
     "nextStepTooLong": "Mantén el siguiente paso por debajo de 280 caracteres.",

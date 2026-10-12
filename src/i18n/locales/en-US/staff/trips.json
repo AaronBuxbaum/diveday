@@ -39,6 +39,14 @@
     "cancel": "Cancel this departure",
     "more": "More for this departure"
   },
+  "openSeats": {
+    "label": "Unsold seats",
+    "sentence": "{seats, plural, one {# seat went unsold} other {# seats went unsold}}: {facts}.",
+    "lastBooking": "{days, plural, =0 {the last booking came in on the day} one {the last booking came in # day out} other {the last booking came in # days out}}",
+    "noDeal": "no last-minute deal went out",
+    "comparableSamePrice": "{title} on {date} filled at the same price",
+    "comparableOtherPrice": "{title} on {date} filled at a different price"
+  },
   "notices": {
     "nextStepSaved": "Next step saved.",
     "nextStepTooLong": "Keep the next step under 280 characters.",
