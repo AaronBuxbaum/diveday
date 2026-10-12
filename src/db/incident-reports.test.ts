@@ -31,8 +31,10 @@ const ctx = fileScopedShopContext();
 
 const OTHER_SHOP = "99999999-8888-4777-8666-555555555555";
 
+const OCCURRED_AT = new Date("2026-10-01T15:20:00Z");
+
 const complete: IncidentDraftFields = {
-  occurredAt: new Date("2026-10-01T15:20:00Z"),
+  occurredAt: OCCURRED_AT,
   diveSiteId: null,
   locationText: "North wall mooring",
   whatHappened: "Diver surfaced coughing after a fast ascent from 18 m.",
@@ -484,13 +486,13 @@ describe("retention", () => {
     await fileIncidentReport(db, base);
     await addIncidentAddendum(db, { ...base, body: "Closed." });
 
-    const justInside = new Date(complete.occurredAt!.getTime() + 2554 * 86_400_000);
+    const justInside = new Date(OCCURRED_AT.getTime() + 2554 * 86_400_000);
     await pruneExpiredRecords(db, { now: justInside });
     expect(
       await db.select().from(incidentReports).where(eq(incidentReports.id, started.reportId)),
     ).toHaveLength(1);
 
-    const past = new Date(complete.occurredAt!.getTime() + 2556 * 86_400_000);
+    const past = new Date(OCCURRED_AT.getTime() + 2556 * 86_400_000);
     await pruneExpiredRecords(db, { now: past });
     expect(
       await db.select().from(incidentReports).where(eq(incidentReports.id, started.reportId)),

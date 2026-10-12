@@ -16,6 +16,7 @@ import {
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { recordTripActivity } from "./operations";
+import { queryAll } from "./query-helpers";
 import {
   bookings,
   diveSites,
@@ -23,6 +24,8 @@ import {
   incidentReportPeople,
   incidentReports,
   people,
+  rollCallCrewEvents,
+  rollCallEvents,
   tripAssignments,
   trips,
 } from "./schema";
@@ -53,21 +56,22 @@ export async function loadIncidentViewer(
   tripId: string,
   personId: string,
 ): Promise<IncidentViewer> {
-  const [roles, crew] = await Promise.all([
-    loadActiveStaffRoles(db, shopId, personId),
-    db
-      .select({ personId: tripAssignments.personId })
-      .from(tripAssignments)
-      .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-      .where(
-        and(
-          liveTrip(),
-          eq(tripAssignments.tripId, tripId),
-          eq(tripAssignments.personId, personId),
-          eq(trips.shopId, shopId),
-        ),
-      )
-      .limit(1),
+  const [roles, crew] = await queryAll(db, [
+    () => loadActiveStaffRoles(db, shopId, personId),
+    () =>
+      db
+        .select({ personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+        .where(
+          and(
+            liveTrip(),
+            eq(tripAssignments.tripId, tripId),
+            eq(tripAssignments.personId, personId),
+            eq(trips.shopId, shopId),
+          ),
+        )
+        .limit(1),
   ]);
   return { personId, roles, onCrew: crew.length > 0 };
 }
@@ -437,44 +441,55 @@ export async function getIncidentReport(
 
   const seatPeople = alias(people, "incident_seat_people");
   const authors = alias(people, "incident_addendum_authors");
-  const [personRows, addendumRows] = await Promise.all([
-    db
-      .select({
-        id: incidentReportPeople.id,
-        bookingId: incidentReportPeople.bookingId,
-        personId: incidentReportPeople.personId,
-        outsiderName: incidentReportPeople.outsiderName,
-        involvement: incidentReportPeople.involvement,
-        seatName: seatPeople.fullName,
-        staffName: people.fullName,
-      })
-      .from(incidentReportPeople)
-      .leftJoin(bookings, eq(bookings.id, incidentReportPeople.bookingId))
-      .leftJoin(seatPeople, eq(seatPeople.id, bookings.personId))
-      .leftJoin(people, eq(people.id, incidentReportPeople.personId))
-      .where(
-        and(eq(incidentReportPeople.reportId, reportId), eq(incidentReportPeople.shopId, shopId)),
-      )
-      // Affected first, then witnesses, then responders (the enum's order), by
-      // name within each: the order an insurer reads a list of people in.
-      .orderBy(
-        asc(incidentReportPeople.involvement),
-        sql`coalesce(${seatPeople.fullName}, ${people.fullName}, ${incidentReportPeople.outsiderName})`,
-        asc(incidentReportPeople.id),
-      ),
-    db
-      .select({
-        id: incidentReportAddenda.id,
-        body: incidentReportAddenda.body,
-        createdAt: incidentReportAddenda.createdAt,
-        authorName: authors.fullName,
-      })
-      .from(incidentReportAddenda)
-      .innerJoin(authors, eq(authors.id, incidentReportAddenda.authorPersonId))
-      .where(
-        and(eq(incidentReportAddenda.reportId, reportId), eq(incidentReportAddenda.shopId, shopId)),
-      )
-      .orderBy(asc(incidentReportAddenda.createdAt), asc(incidentReportAddenda.id)),
+  const [personRows, addendumRows] = await queryAll(db, [
+    () =>
+      db
+        .select({
+          id: incidentReportPeople.id,
+          bookingId: incidentReportPeople.bookingId,
+          personId: incidentReportPeople.personId,
+          outsiderName: incidentReportPeople.outsiderName,
+          involvement: incidentReportPeople.involvement,
+          seatName: seatPeople.fullName,
+          staffName: people.fullName,
+        })
+        .from(incidentReportPeople)
+        .leftJoin(bookings, eq(bookings.id, incidentReportPeople.bookingId))
+        .leftJoin(seatPeople, eq(seatPeople.id, bookings.personId))
+        .leftJoin(people, eq(people.id, incidentReportPeople.personId))
+        .where(
+          and(eq(incidentReportPeople.reportId, reportId), eq(incidentReportPeople.shopId, shopId)),
+        )
+        // Affected first, then witnesses, then responders (the enum's order), by
+        // name within each: the order an insurer reads a list of people in.
+        .orderBy(
+          asc(incidentReportPeople.involvement),
+          sql`coalesce(${seatPeople.fullName}, ${people.fullName}, ${incidentReportPeople.outsiderName})`,
+          asc(incidentReportPeople.id),
+        ),
+    () =>
+      db
+        .select({
+          id: incidentReportAddenda.id,
+          body: incidentReportAddenda.body,
+          createdAt: incidentReportAddenda.createdAt,
+          authorName: authors.fullName,
+        })
+        .from(incidentReportAddenda)
+        .innerJoin(authors, eq(authors.id, incidentReportAddenda.authorPersonId))
+        .where(
+          and(
+            eq(incidentReportAddenda.reportId, reportId),
+            eq(incidentReportAddenda.shopId, shopId),
+          ),
+        )
+        // Oldest first; the writer and the words settle notes written in one instant.
+        .orderBy(
+          asc(incidentReportAddenda.createdAt),
+          asc(authors.fullName),
+          asc(incidentReportAddenda.body),
+          asc(incidentReportAddenda.id),
+        ),
   ]);
 
   const { report } = row;
@@ -581,7 +596,7 @@ export async function listTripIncidentReports(
         seesAll ? undefined : eq(incidentReports.createdByPersonId, viewerPersonId),
       ),
     )
-    .orderBy(desc(incidentReports.createdAt), desc(incidentReports.id));
+    .orderBy(desc(incidentReports.createdAt), asc(creators.fullName), desc(incidentReports.id));
   return { mayStart: mayStartIncidentReport(viewer), reports: rows.map(toLine) };
 }
 
@@ -653,4 +668,19 @@ export async function listIncidentCrewChoices(
     .innerJoin(people, eq(people.id, tripAssignments.personId))
     .where(and(eq(tripAssignments.tripId, tripId), eq(people.shopId, shopId)))
     .orderBy(asc(people.fullName), asc(people.id));
+}
+
+/**
+ * **Clear a shop's departure safety trail**: its incident reports (addenda and
+ * people first) and both roll-call trails. Only the demo reset calls this
+ * (`resetDemoSchedule`), which wipes the schedule they hang off; nothing a
+ * live shop reaches deletes an incident report, which outlives its departure
+ * for the retention window instead.
+ */
+export async function deleteDemoSafetyTrail(db: DbExecutor, shopId: string): Promise<void> {
+  await db.delete(incidentReportAddenda).where(eq(incidentReportAddenda.shopId, shopId));
+  await db.delete(incidentReportPeople).where(eq(incidentReportPeople.shopId, shopId));
+  await db.delete(incidentReports).where(eq(incidentReports.shopId, shopId));
+  await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
+  await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
 }

@@ -3,6 +3,7 @@ import { nowDate } from "@/lib/clock";
 import { type SafetyMonth, summarizeSafetyMonth } from "@/lib/safety-report";
 import { hasReturned } from "@/lib/trips";
 import type { DbExecutor } from "./client";
+import { queryAll } from "./query-helpers";
 import {
   activityEvents,
   bookings,
@@ -54,7 +55,7 @@ export async function getSafetyMonth(
           lt(trips.startsAt, to),
         ),
       )
-      .orderBy(asc(trips.startsAt), asc(trips.id))
+      .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id))
   ).filter((trip) => hasReturned(trip.endsAt, now));
   const tripIds = tripRows.map((trip) => trip.id);
 
@@ -84,81 +85,87 @@ export async function getSafetyMonth(
     });
   }
 
-  const [roster, crew, diverEvents, crewEvents] = await Promise.all([
-    db
-      .select({ tripId: bookings.tripId, bookingId: bookings.id })
-      .from(bookings)
-      .where(
-        and(
-          eq(bookings.shopId, shopId),
-          inArray(bookings.tripId, tripIds),
-          ne(bookings.status, "cancelled"),
+  const [roster, crew, diverEvents, crewEvents] = await queryAll(db, [
+    () =>
+      db
+        .select({ tripId: bookings.tripId, bookingId: bookings.id })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.shopId, shopId),
+            inArray(bookings.tripId, tripIds),
+            ne(bookings.status, "cancelled"),
+          ),
         ),
-      ),
-    db
-      .select({ tripId: tripAssignments.tripId, personId: tripAssignments.personId })
-      .from(tripAssignments)
-      .innerJoin(people, eq(people.id, tripAssignments.personId))
-      .where(and(inArray(tripAssignments.tripId, tripIds), eq(people.shopId, shopId))),
-    db
-      .select({
-        tripId: rollCallEvents.tripId,
-        subjectId: rollCallEvents.bookingId,
-        checkpoint: rollCallEvents.checkpoint,
-        status: rollCallEvents.status,
-      })
-      .from(rollCallEvents)
-      // A seat cancelled after the boat left keeps its events; they must not
-      // answer for a roster it is no longer on (as `listRollCallGaps` reads).
-      .innerJoin(
-        bookings,
-        and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
-      )
-      .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, tripIds)))
-      .orderBy(
-        asc(rollCallEvents.occurredAt),
-        asc(rollCallEvents.createdAt),
-        asc(rollCallEvents.seq),
-      ),
-    db
-      .select({
-        tripId: rollCallCrewEvents.tripId,
-        subjectId: rollCallCrewEvents.personId,
-        checkpoint: rollCallCrewEvents.checkpoint,
-        status: rollCallCrewEvents.status,
-      })
-      .from(rollCallCrewEvents)
-      .where(
-        and(eq(rollCallCrewEvents.shopId, shopId), inArray(rollCallCrewEvents.tripId, tripIds)),
-      )
-      .orderBy(
-        asc(rollCallCrewEvents.occurredAt),
-        asc(rollCallCrewEvents.createdAt),
-        asc(rollCallCrewEvents.seq),
-      ),
+    () =>
+      db
+        .select({ tripId: tripAssignments.tripId, personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .innerJoin(people, eq(people.id, tripAssignments.personId))
+        .where(and(inArray(tripAssignments.tripId, tripIds), eq(people.shopId, shopId))),
+    () =>
+      db
+        .select({
+          tripId: rollCallEvents.tripId,
+          subjectId: rollCallEvents.bookingId,
+          checkpoint: rollCallEvents.checkpoint,
+          status: rollCallEvents.status,
+        })
+        .from(rollCallEvents)
+        // A seat cancelled after the boat left keeps its events; they must not
+        // answer for a roster it is no longer on (as `listRollCallGaps` reads).
+        .innerJoin(
+          bookings,
+          and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
+        )
+        .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, tripIds)))
+        .orderBy(
+          asc(rollCallEvents.occurredAt),
+          asc(rollCallEvents.createdAt),
+          asc(rollCallEvents.seq),
+        ),
+    () =>
+      db
+        .select({
+          tripId: rollCallCrewEvents.tripId,
+          subjectId: rollCallCrewEvents.personId,
+          checkpoint: rollCallCrewEvents.checkpoint,
+          status: rollCallCrewEvents.status,
+        })
+        .from(rollCallCrewEvents)
+        .where(
+          and(eq(rollCallCrewEvents.shopId, shopId), inArray(rollCallCrewEvents.tripId, tripIds)),
+        )
+        .orderBy(
+          asc(rollCallCrewEvents.occurredAt),
+          asc(rollCallCrewEvents.createdAt),
+          asc(rollCallCrewEvents.seq),
+        ),
   ]);
 
   const crewIds = [...new Set(crew.map((row) => row.personId))];
   const [credentials, names] = crewIds.length
-    ? await Promise.all([
-        db
-          .select({
-            personId: staffCredentials.personId,
-            kind: staffCredentials.kind,
-            renewsAt: staffCredentials.renewsAt,
-          })
-          .from(staffCredentials)
-          .where(
-            and(
-              eq(staffCredentials.shopId, shopId),
-              inArray(staffCredentials.personId, crewIds),
-              isNull(staffCredentials.deletedAt),
+    ? await queryAll(db, [
+        () =>
+          db
+            .select({
+              personId: staffCredentials.personId,
+              kind: staffCredentials.kind,
+              renewsAt: staffCredentials.renewsAt,
+            })
+            .from(staffCredentials)
+            .where(
+              and(
+                eq(staffCredentials.shopId, shopId),
+                inArray(staffCredentials.personId, crewIds),
+                isNull(staffCredentials.deletedAt),
+              ),
             ),
-          ),
-        db
-          .select({ id: people.id, fullName: people.fullName })
-          .from(people)
-          .where(and(eq(people.shopId, shopId), inArray(people.id, crewIds))),
+        () =>
+          db
+            .select({ id: people.id, fullName: people.fullName })
+            .from(people)
+            .where(and(eq(people.shopId, shopId), inArray(people.id, crewIds))),
       ])
     : [[], []];
 

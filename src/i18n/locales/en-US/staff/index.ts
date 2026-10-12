@@ -43,6 +43,7 @@ import gear from "./gear.json";
 import gearRentals from "./gearRentals.json";
 import inbox from "./inbox.json";
 import incidentExport from "./incidentExport.json";
+import incidents from "./incidents.json";
 import integrations from "./integrations.json";
 import lenses from "./lenses.json";
 import manifest from "./manifest.json";
@@ -109,6 +110,7 @@ const staff = {
   blowout,
   inbox,
   incidentExport,
+  incidents,
   integrations,
   boatSafety,
   boats,

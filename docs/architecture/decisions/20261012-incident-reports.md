@@ -5,11 +5,9 @@
 
 ## Context
 
-After something goes wrong on a dive day an insurer asks for the shop's own account: when, where,
-what happened, the first aid and oxygen given, whether emergency services came, and who took the
-person over. The departure log ([20260804-incident-export-owner-gate](20260804-incident-export-owner-gate.md))
-prints recorded facts and judges nothing; it has no place for that narrative. Aaron approved the
-incident report on 2026-10-12 (batch 4, E2). The report holds personal and medical data, so its
+After something goes wrong on a dive day an insurer asks for the shop's own account. The departure log ([20260804-incident-export-owner-gate](20260804-incident-export-owner-gate.md))
+prints recorded facts and judges nothing; it has no place for that narrative. Approved 2026-10-12
+(batch 4, E2). The report holds personal and medical data, so its
 access, export, retention and erasure are decided here.
 
 ## Decision
@@ -17,19 +15,17 @@ access, export, retention and erasure are decided here.
 - **One report per incident, on a departure** (`incident_reports.trip_id`). People involved are
   `incident_report_people` rows: a diver by booking, a staffer by person, or an outsider by a
   free-text name, each tagged `affected`, `witness` or `responder`.
-- **Fields:** when (stored as an instant, entered and shown in the shop's zone), where (one of the
-  shop's dive sites or free text), what happened, first aid given, oxygen given and for how many
-  minutes, whether emergency services were called, the handover (EMS, hospital, chamber, the
-  person themselves, or other, with a free-text detail and a time), and follow-up notes. The three
+- **Fields:** when (an instant, entered in the shop's zone), where (a dive site or free text), what
+  happened, first aid, oxygen and its minutes, emergency services called, the handover (EMS,
+  hospital, chamber, the person themselves, or other, with detail and time), and follow-up. The
   yes/no answers stay null until answered, so "no" is never assumed.
 - **Lifecycle:** a draft can be edited by its author or an owner or manager. Filing needs the time,
   what happened and the three yes/no answers, and is refused without them. A filed report is never
   updated; later facts are `incident_report_addenda` rows, dated and attributed. Filing and each
-  addendum write an activity line (`incident_report_filed`, `incident_report_addendum_added`) that
-  names the actor only.
+  addendum write an activity line naming the actor only.
 - **Access:** owners and managers read every report. A staffer on the departure's crew may start
-  one and reads only reports they started. Each read and write checks the live roles, as every
-  other gate does. Nothing is diver-facing.
+  one and reads only reports they started. Every read and write checks live roles. Nothing is
+  diver-facing.
 - **A record, not a gate.** No readiness, roll-call, booking or close-out path reads these tables.
 - **Export:** three files in the shop bundle, beside `waiver_records.csv`. The diver's own bundle
   leaves them out (H-109).
@@ -39,8 +35,8 @@ access, export, retention and erasure are decided here.
   an outsider row with their name is redacted, and every word-boundary match of their name in the
   narrative fields and addenda becomes `[redacted]`. A filed report changes only through this.
   The trade-off is H-109.
-- **Safety tab:** an owner/manager tab beside Reports reads existing records for the month and
-  lists the reports filed. It adds no tracking of its own.
+- **Safety tab:** an owner/manager tab beside Reports reads the month's existing records and
+  lists its reports.
 
 ## Alternatives considered
 
@@ -51,7 +47,6 @@ access, export, retention and erasure are decided here.
 
 ## Consequences
 
-The report is portable and survives a diver's erasure with that diver's identity removed. Name
-matching misses a nickname or a first name alone; the narrative is the shop's own words, so the
-residual is stated in H-109 rather than closed by a broader sweep. Revisit if counsel asks for a
-different retention period or for full redaction on erasure: both are one window or one sweep.
+The report survives a diver's erasure with their identity removed. Name matching misses a nickname
+or a first name alone; H-109 states that residual. Revisit if counsel asks for a different
+retention period or full redaction on erasure.

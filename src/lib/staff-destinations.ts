@@ -136,6 +136,7 @@ export type StaffDestinationId =
   | "orders"
   | "waivers"
   | "reports"
+  | "safety"
   | "promoCodes"
   | "settings"
   | "team"
@@ -196,6 +197,7 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   orders: "shared.shopNavLinks.orders",
   waivers: "shared.shopNavLinks.waivers",
   reports: "shared.shopNavLinks.reports",
+  safety: "shared.shopNavLinks.safety",
   promoCodes: "shared.shopNavLinks.promoCodes",
   settings: "shared.shopNavLinks.settings",
   team: "shared.shopNavLinks.team",
@@ -280,6 +282,15 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // them and the discounts that shaped them.
   { id: "orders", suffix: "/orders", section: "money", inPalette: true },
   { id: "reports", suffix: "/reports", section: "money", inPalette: true, gate: "reports" },
+  // The month's safety beside its money (ADR 20261012-incident-reports): the
+  // same owner/manager gate, and the longer path wins it from Reports.
+  {
+    id: "safety",
+    suffix: "/reports/safety",
+    section: "money",
+    inPalette: true,
+    gate: "reports",
+  },
   { id: "promoCodes", suffix: "/promos", section: "money", inPalette: true, gate: "reports" },
   { id: "courses", suffix: "/courses", section: "courses", inPalette: true },
   // The rental fleet (ADR 20260815-minimal-gear-register) and the bench beside
@@ -334,7 +345,7 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
 export const STAFF_SECTION_TABS = {
   gear: ["gear", "workOrders"],
   inbox: ["inbox", "requests", "reviews"],
-  money: ["orders", "promoCodes", "reports"],
+  money: ["orders", "promoCodes", "reports", "safety"],
 } as const satisfies Partial<Record<StaffSection, readonly StaffDestinationId[]>>;
 
 export type TabbedStaffSection = keyof typeof STAFF_SECTION_TABS;

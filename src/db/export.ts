@@ -107,6 +107,20 @@ export async function loadShopExportBundleInput(
 }
 
 /**
+ * The shop's safety records as the bundle carries them: crew credentials, and
+ * incident reports with their people and dated notes (ADR
+ * 20261012-incident-reports — the shop bundle only, never a diver's own).
+ */
+async function readSafetyRecordRows(tx: AppTransaction, shopId: string) {
+  return {
+    staffCredentialRows: await readShopScoped(tx, "staffCredentials", shopId),
+    incidentReportRows: await readShopScoped(tx, "incidentReports", shopId),
+    incidentPersonRows: await readShopScoped(tx, "incidentReportPeople", shopId),
+    incidentAddendumRows: await readShopScoped(tx, "incidentReportAddenda", shopId),
+  };
+}
+
+/**
  * Everything the shop bundle's files are built from, read once inside the
  * bundle's transaction: the plain per-table reads through `EXPORT_TABLES`
  * (`./export-tables`), the joined and filtered reads written out below, and
@@ -306,10 +320,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     .where(and(eq(crewAssignmentRequests.shopId, shopId), isNull(crewAssignmentRequests.deletedAt)))
     .orderBy(asc(crewAssignmentRequests.requestedAt), asc(crewAssignmentRequests.id));
 
-  const staffCredentialRows = await readShopScoped(tx, "staffCredentials", shopId);
-  const incidentReportRows = await readShopScoped(tx, "incidentReports", shopId);
-  const incidentPersonRows = await readShopScoped(tx, "incidentReportPeople", shopId);
-  const incidentAddendumRows = await readShopScoped(tx, "incidentReportAddenda", shopId);
+  const safetyRecordRows = await readSafetyRecordRows(tx, shopId);
 
   // **`bookings.csv`'s row order, and why the diver's name is in it.**
   //
@@ -565,10 +576,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     staffShiftRows,
     crewAwayRows,
     crewRequestRows,
-    staffCredentialRows,
-    incidentReportRows,
-    incidentPersonRows,
-    incidentAddendumRows,
+    ...safetyRecordRows,
     bookingRows,
     bookingPerson,
     tripHelpRequestRows,
