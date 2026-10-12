@@ -34,8 +34,10 @@ import { callBlowoutAction, resumeBlowoutAction } from "./actions";
 // 20260804-instant-navigation.
 export const instant = true;
 
+// One title for the confirm and for either cause on the record: a run's
+// cancellation is not weather (review, 2026-10-12).
 export const metadata: Metadata = {
-  title: "Weather blow-out — DiveDay",
+  title: "Departure called off — DiveDay",
 };
 
 /**

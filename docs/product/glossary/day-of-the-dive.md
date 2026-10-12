@@ -22,7 +22,9 @@
   **The same cascade cancels a run.** A repeating trip's "Cancel every upcoming date" sends each of
   those dates through it (`trip_blowouts.cause` = `run_ended`), so the record, the refunds and the
   one message per diver are the blow-out's, and the message says the shop stopped running the trip
-  rather than blaming the weather.
+  rather than blaming the weather. Staff see that record as **Canceled with its run**, never as a
+  weather call. A date blown out, reinstated and then cancelled with its run takes the newer cause,
+  and is still refused while it is underway.
 - **Conditions hold** — a reversible crew call while weather or sea state is uncertain. Existing
   bookings remain valid, new bookings pause, and booked divers are notified. It is not a
   cancellation and never implies a refund.
