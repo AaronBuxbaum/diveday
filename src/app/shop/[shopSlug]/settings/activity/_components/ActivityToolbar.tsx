@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRef } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, DateField } from "@/components/ui/form";
+import { controlClass, DateField, Field } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
 
 /**
@@ -12,8 +12,13 @@ import { QueryForm } from "@/components/ui/QueryForm";
  * changes; `QueryForm` keeps it a real GET form that works before hydration
  * and turns the hydrated submit into a router navigation.
  *
- * The labels are `sr-only` for Orders' reason: each select states its own
+ * The selects' labels are `sr-only` for Orders' reason: each states its own
  * value ("Everyone", "Everything"), and a caption above it would restate it.
+ * The two date boxes are captioned where a staffer can read them (#2314): a
+ * date says nothing about whether it starts the range or ends it, and two
+ * identical boxes side by side left that to a guess. The row aligns its
+ * controls along the bottom, so the selects sit level with the date boxes
+ * under their captions.
  */
 export type ActivityToolbarCopy = {
   personLabel: string;
@@ -53,7 +58,7 @@ export function ActivityToolbar({
   const submit = () => formRef.current?.requestSubmit();
 
   return (
-    <QueryForm ref={formRef} className="flex flex-wrap items-center gap-3">
+    <QueryForm ref={formRef} className="flex flex-wrap items-end gap-3">
       <div className={FIELD_CLASS}>
         <label className="sr-only" htmlFor="activity-person">
           {copy.personLabel}
@@ -94,18 +99,12 @@ export function ActivityToolbar({
         </select>
       </div>
 
-      <div className={FIELD_CLASS}>
-        <label className="sr-only" htmlFor="activity-from">
-          {copy.fromLabel}
-        </label>
+      <Field label={copy.fromLabel} className={FIELD_CLASS}>
         <DateField id="activity-from" name="from" defaultValue={from} onChange={submit} />
-      </div>
-      <div className={FIELD_CLASS}>
-        <label className="sr-only" htmlFor="activity-to">
-          {copy.toLabel}
-        </label>
+      </Field>
+      <Field label={copy.toLabel} className={FIELD_CLASS}>
         <DateField id="activity-to" name="to" defaultValue={to} onChange={submit} />
-      </div>
+      </Field>
 
       {clearHref ? (
         <Link
