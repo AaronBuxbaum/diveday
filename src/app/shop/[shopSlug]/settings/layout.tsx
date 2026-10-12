@@ -15,7 +15,7 @@ import {
 import { requireShopSurface } from "@/lib/session";
 import { SettingsRail } from "./_components/SettingsRail";
 import { SettingsRailSkeleton } from "./_components/SettingsRailSkeleton";
-import { SETTINGS_GROUPS, type SettingsRailGate, settingsRailRowsFor } from "./settings-groups";
+import { SETTINGS_GROUPS, settingsRailGatesFor, settingsRailRowsFor } from "./settings-groups";
 
 /**
  * Settings is a rail and a pane — ADR 20260827-clearwater-surface-language,
@@ -81,18 +81,19 @@ async function SettingsRailPanel({ params }: { params: Promise<{ shopSlug: strin
     session.user.personId,
   );
   const roles = session.user.roles;
-  const gates = new Set<SettingsRailGate>();
-  if (canPayments) gates.add("payments");
-  if (canManageStaffAccounts(roles)) gates.add("team");
-  if (canManageWaiverTemplates(roles)) gates.add("waivers");
-  if (canManageMessagingSettings(roles)) gates.add("messaging");
-  if (canImportShopData(roles)) gates.add("import");
-  if (canExportShopData(roles)) gates.add("export");
-  if (shop.hasBoatDiving) gates.add("boats");
-  // The hub's own condition for its Billing door (`SettingsPage.tsx`).
-  if (!shop.isDemo && canManageBilling(roles)) gates.add("billing");
-
-  const rows = settingsRailRowsFor(gates);
+  const rows = settingsRailRowsFor(
+    settingsRailGatesFor({
+      canPayments,
+      canManageTeam: canManageStaffAccounts(roles),
+      canManageWaivers: canManageWaiverTemplates(roles),
+      canManageMessaging: canManageMessagingSettings(roles),
+      canImport: canImportShopData(roles),
+      canExport: canExportShopData(roles),
+      canBilling: canManageBilling(roles),
+      hasBoatDiving: shop.hasBoatDiving,
+      isDemo: shop.isDemo,
+    }),
+  );
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 

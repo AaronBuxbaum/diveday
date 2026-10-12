@@ -60,7 +60,9 @@ function results(answer: SearchResults["answer"]): SearchResults {
   };
 }
 
-function renderPalette() {
+function renderPalette(
+  settingsShortcuts?: Parameters<typeof CommandPalette>[0]["settingsShortcuts"],
+) {
   return render(
     <CommandPalette
       shopSlug="blue-mantis"
@@ -70,6 +72,7 @@ function renderPalette() {
       setLocaleAction={async () => {}}
       signOutAction={async () => {}}
       createDiverAction={async () => {}}
+      settingsShortcuts={settingsShortcuts}
       copy={COPY}
     />,
   );
@@ -229,5 +232,57 @@ describe("CommandPalette keyboard contract", () => {
     expect(screen.getByRole("dialog", { name: "Search this shop" })).toBeInTheDocument();
     await userEvent.keyboard("{Meta>}k{/Meta}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+});
+
+/** ⌘K reaches a setting: the Settings rail's rows answer by label or group. */
+describe("CommandPalette settings shortcuts", () => {
+  const SHORTCUTS = [
+    { id: "tips", label: "Tips", group: "Money", href: "/shop/blue-mantis/settings#tips" },
+    {
+      id: "deskHours",
+      label: "Desk hours",
+      group: "Notifications",
+      href: "/shop/blue-mantis/settings#desk-hours",
+    },
+    // The same page as the `team` destination: offered once, as that.
+    { id: "team", label: "Team", group: "Team", href: "/shop/blue-mantis/settings/team" },
+  ];
+
+  function stubEmptySearch() {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify(results(null)), { status: 200 })),
+    );
+  }
+
+  it("finds a setting by its own name, with its group beside it", async () => {
+    stubEmptySearch();
+    renderPalette(SHORTCUTS);
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    await userEvent.type(screen.getByRole("combobox"), "tips");
+    const option = await screen.findByRole("option", { name: /Tips/ });
+    expect(option).toHaveTextContent("Money");
+    await userEvent.click(option);
+    expect(routerPush).toHaveBeenCalledWith("/shop/blue-mantis/settings#tips");
+  });
+
+  it("finds a group's rows by the group's name, and offers none before anything is typed", async () => {
+    stubEmptySearch();
+    renderPalette(SHORTCUTS);
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    expect(screen.queryByRole("option", { name: /Desk hours/ })).toBeNull();
+    await userEvent.type(screen.getByRole("combobox"), "notif");
+    expect(await screen.findByRole("option", { name: /Desk hours/ })).toBeInTheDocument();
+  });
+
+  it("never offers a page twice when it is already a destination", async () => {
+    stubEmptySearch();
+    renderPalette(SHORTCUTS);
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    await userEvent.type(screen.getByRole("combobox"), "team");
+    // The registry's row (labelled by its id here); the rail's "Team" is skipped.
+    expect(await screen.findByRole("option", { name: "team" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Team" })).toBeNull();
   });
 });

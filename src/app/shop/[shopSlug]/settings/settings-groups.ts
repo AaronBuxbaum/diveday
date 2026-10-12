@@ -1,4 +1,15 @@
-import type { StaffMessageKey } from "@/i18n/staff-messages";
+import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+import {
+  canExportShopData,
+  canImportShopData,
+  canManageBilling,
+  canManageMessagingSettings,
+  canManagePaymentSettings,
+  canManageShopSettings,
+  canManageStaffAccounts,
+  canManageWaiverTemplates,
+  type Role,
+} from "@/lib/authz";
 
 /**
  * The settings hub's one list of groups, in render order: the ten of ADR
@@ -455,6 +466,78 @@ export function settingsRailRowsFor(
   gates: ReadonlySet<SettingsRailGate>,
 ): readonly SettingsRailRow[] {
   return SETTINGS_RAIL_ROWS.filter((row) => !row.gate || gates.has(row.gate));
+}
+
+/**
+ * **The rail's gates, from what a reader is.** One reading for the rail
+ * (`layout.tsx`, which passes the live payment check) and the ⌘K settings
+ * shortcuts (`ShopChrome.tsx`, which passes the session's). Either way it only
+ * hides: every destination re-checks server-side.
+ */
+export function settingsRailGatesFor(reader: {
+  canPayments: boolean;
+  canManageTeam: boolean;
+  canManageWaivers: boolean;
+  canManageMessaging: boolean;
+  canImport: boolean;
+  canExport: boolean;
+  canBilling: boolean;
+  hasBoatDiving: boolean;
+  isDemo: boolean;
+}): Set<SettingsRailGate> {
+  const gates = new Set<SettingsRailGate>();
+  if (reader.canPayments) gates.add("payments");
+  if (reader.canManageTeam) gates.add("team");
+  if (reader.canManageWaivers) gates.add("waivers");
+  if (reader.canManageMessaging) gates.add("messaging");
+  if (reader.canImport) gates.add("import");
+  if (reader.canExport) gates.add("export");
+  if (reader.hasBoatDiving) gates.add("boats");
+  // The hub's own condition for its Billing door (`SettingsPage.tsx`).
+  if (!reader.isDemo && reader.canBilling) gates.add("billing");
+  return gates;
+}
+
+/** Where a rail row leads, from anywhere: a section row is the hub plus its fragment. */
+export function settingsRailRowHref(shopBasePath: string, row: SettingsRailRow): string {
+  return row.target.kind === "route"
+    ? `${shopBasePath}${row.target.path}`
+    : `${shopBasePath}/settings#${settingsSectionFragment(row.target.id)}`;
+}
+
+/**
+ * **⌘K reaches a setting** (the Settings rail's rows, by label or group). Only
+ * for a reader inside the settings gate, and through the rail's own gates read
+ * from the session's roles: hiding is convenience, and every row's page
+ * re-checks its own permission server-side.
+ */
+export function settingsShortcutsFor(
+  shop: { hasBoatDiving: boolean; isDemo: boolean },
+  roles: readonly Role[],
+  shopSlug: string,
+  t: StaffTranslator,
+): { id: string; label: string; group: string; href: string }[] {
+  if (!canManageShopSettings(roles)) return [];
+  const rows = settingsRailRowsFor(
+    settingsRailGatesFor({
+      canPayments: canManagePaymentSettings(roles),
+      canManageTeam: canManageStaffAccounts(roles),
+      canManageWaivers: canManageWaiverTemplates(roles),
+      canManageMessaging: canManageMessagingSettings(roles),
+      canImport: canImportShopData(roles),
+      canExport: canExportShopData(roles),
+      canBilling: canManageBilling(roles),
+      hasBoatDiving: shop.hasBoatDiving,
+      isDemo: shop.isDemo,
+    }),
+  );
+  const groupLabels = new Map(SETTINGS_GROUPS.map((group) => [group.id, t(group.labelKey)]));
+  return rows.map((row) => ({
+    id: row.id,
+    label: t(row.labelKey),
+    group: groupLabels.get(row.group) ?? "",
+    href: settingsRailRowHref(`/shop/${shopSlug}`, row),
+  }));
 }
 
 /** A row's destination path with any `#fragment` stripped. */
