@@ -412,12 +412,10 @@ export default async function TripDetailPage({
     ? t("trip.requirementNote", { list: requirementNote })
     : null;
   // The embed's short confirmation needs exactly one fact beyond the booking
-  // itself: what mail went. Everything the old in-page confirmation
-  // read — the payment panel, readiness, rental fit, the nitrox card, the
-  // party's claim links — now belongs to `/ready`, which reads it for every
-  // visit rather than only the one right after booking (ADR
-  // 20260820-one-page-after-booking).
-  //
+  // itself: what mail went. Everything the old in-page confirmation read (the
+  // payment panel, readiness, rental fit, the nitrox card, the party's claim
+  // links) now belongs to `/ready`, which reads it on every visit rather than
+  // only the one right after booking (ADR 20260820-one-page-after-booking).
   // Only say mail is on its way when it actually went — a party member booked
   // without an address of their own gets none — and mention the waiver only
   // when the confirmation carried one (UX review 2026-10-11, item 7).

@@ -206,7 +206,7 @@
     "src/app/ready/[token]/page.tsx#DiverReadinessPage": 984,
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 1078,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 503,
-    "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 615,
+    "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 576,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx#TripDetailPage": 732,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": 529,
     "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 705,
