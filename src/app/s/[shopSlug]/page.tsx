@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { submitInquiryAction } from "@/app/actions/inquiry";
 import { DateRequestForm } from "@/components/DateRequestForm";
-import { EmbedCredit } from "@/components/EmbedCredit";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
 import { ShopReviews, ShopReviewsSkeleton } from "@/components/ShopReviews";
@@ -71,6 +70,7 @@ import { capacityLabel, nextBookableDeparture } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { CoursesShelf } from "./_components/CoursesShelf";
 import { DayJumpStrip } from "./_components/DayJumpStrip";
+import { EmbedFooter } from "./_components/EmbedFooter";
 import { FindMyBookingForm } from "./_components/FindMyBookingForm";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
 import { MonthRail } from "./_components/MonthRail";
@@ -1211,49 +1211,20 @@ export default async function SchedulePage({
           </DiverIntlProvider>
         </section>
       ) : null}
-      {/* Human-discovery footer, embed mode only — a single small line, not a
-          banner, so the widget stays compact and booking-focused (docs ADR
-          20260726-schedule-embed). A relative href resolves against the
-          iframe's own document (this page's origin), not the parent page, so
-          it reaches the DiveDay homepage regardless of what site framed it. */}
       {/* "Our year": the shop's own year in counts, last, and only with its yes. */}
       {!isEmbed && shop.publicYearEnabled ? (
         <Suspense fallback={null}>
           <OurYearSection db={db} shop={shop} locale={locale} t={t} className={SECTION_GAP} />
         </Suspense>
       ) : null}
-      {isEmbed ? (
-        <div className="mt-8 flex flex-col items-center gap-2 border-t border-border pt-6">
-          {/* **The way out of the frame.** The widget shows the next few
-              departures; everything else is one tap away on a real page, which
-              is a better answer than a scrollbar inside somebody else's site.
-              `target="_blank"` for the same reason the DiveDay link below has
-              it — a schedule opened *inside* a 900px frame is the nested scroll
-              this change exists to remove (issue #805). */}
-          <Link
-            href={publicSchedulePath(shopSlug)}
-            target="_blank"
-            rel="noopener"
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-          >
-            {t("schedule.embedSeeFullSchedule")}
-          </Link>
-          {zoneNote ? <p className="text-xs text-muted">{zoneNote}</p> : null}
-        </div>
-      ) : null}
-      {isEmbed && hostCarriesCredit ? null : isEmbed ? (
-        <EmbedCredit
-          href={`/?${new URLSearchParams({
-            utm_source: "embed",
-            utm_medium: "widget",
-            utm_campaign: shopSlug,
-          }).toString()}`}
-          target="_blank"
-          rel="noopener"
-        >
-          {t("schedule.poweredByDiveDay")}
-        </EmbedCredit>
-      ) : null}
+      {/* Human-discovery footer, embed mode only. */}
+      <EmbedFooter
+        isEmbed={isEmbed}
+        hostCarriesCredit={hostCarriesCredit}
+        shopSlug={shopSlug}
+        zoneNote={zoneNote}
+        t={t}
+      />
     </main>
   );
 }
