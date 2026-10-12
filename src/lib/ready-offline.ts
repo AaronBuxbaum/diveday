@@ -26,7 +26,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * leaves. Only the live page names one; a departure called off renders a
  * terminal card that names none, which clears the copy.
  */
-export function readyCopyKeepUntil(trip: { startsAt: Date; endsAt: Date | null }): number {
+export function readyCopyKeepUntil(trip: { startsAt: Date; endsAt?: Date | null }): number {
   return (trip.endsAt ?? trip.startsAt).getTime() + DAY_MS;
 }
 

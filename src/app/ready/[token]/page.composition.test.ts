@@ -585,10 +585,10 @@ describe("adding a seat from the diver's page", () => {
 
 /** Security review of layer 8, D2: the phone keeps the live page only until the trip is over. */
 describe("the phone's copy of the page", () => {
-  it("is dated by the live page itself, beside the control that keeps it", () => {
-    const meta = positionOf("name={READY_KEEP_UNTIL_META}");
-    expect(meta).toBeGreaterThan(-1);
-    expect(SOURCE.indexOf("<ReadyOfflineCopy", meta)).toBeGreaterThan(meta);
-    expect(SOURCE.match(/name=\{READY_KEEP_UNTIL_META\}/g)).toHaveLength(1);
+  it("is dated by the live page itself, through the control that keeps it", () => {
+    expect(SOURCE).toMatch(
+      /<ReadyOfflineCopy\s+offlineNote=\{[^}]+\}\s+keepUntil=\{readyCopyKeepUntil\(detail\.trip\)\}/,
+    );
+    expect(SOURCE.match(/<ReadyOfflineCopy\b/g)).toHaveLength(1);
   });
 });
