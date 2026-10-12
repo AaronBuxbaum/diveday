@@ -216,7 +216,6 @@
     "src/app/shop/[shopSlug]/page.tsx#TodayBody": 767,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 460,
     "src/app/shop/[shopSlug]/reports/page.tsx#ReportsPage": 586,
-    "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 786,
     "src/app/shop/[shopSlug]/settings/import/ImportWizard.tsx#ImportWizard": 553,
     "src/app/shop/[shopSlug]/staffing/page.tsx#StaffingPage": 454,
     "src/app/shop/[shopSlug]/trips/[id]/_components/CrewSection.tsx#CrewSection": 442,
