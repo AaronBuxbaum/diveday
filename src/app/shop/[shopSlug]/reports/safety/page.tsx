@@ -19,7 +19,6 @@ import {
   type MonthRef,
   monthKey,
   monthLabel,
-  monthsNewestFirst,
   parseMonthKey,
 } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
@@ -28,7 +27,6 @@ import { shopPath } from "@/lib/staff-notices";
 import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 import { StaffSectionTabs } from "../../_components/StaffSectionTabs";
 import { type MonthFigure, MonthFigures } from "../_components/MonthFigures";
-import { MonthJump } from "../_components/MonthJump";
 import { SafetyLists } from "./_components/SafetyLists";
 
 // Paints from its own `loading.tsx`, like Reports (ADR 20260804-instant-navigation).
@@ -175,14 +173,6 @@ export default async function SafetyReportPage({
               <DiveDayIcon name="arrow-left" className="size-4" />
             </span>
           )}
-          <MonthJump
-            value={monthKey(current)}
-            months={monthsNewestFirst(floor, thisMonth).map((option) => ({
-              value: monthKey(option),
-              label: monthLabel(option, locale),
-            }))}
-            label={t("reports.monthPicker.label")}
-          />
           {nextKey ? (
             <Link
               href={`${safetyPath}?month=${nextKey}`}
