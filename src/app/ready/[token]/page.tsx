@@ -955,8 +955,7 @@ export default async function DiverReadinessPage({
     // (ADR 20260804-instant-navigation).
     // One round trip, not two: the trip reads are scoped by `shop.id`, which the
     // verified capability already resolved, so none of them has to wait on the
-    // shop row `PackingSection` needs for its units and rental catalogue. Joined
-    // to the thread's one wave below.
+    // shop row `PackingSection` needs for its units and rental catalogue.
     const threadTripReads = Promise.all([
       getShopBySlug(db, shop.slug),
       getTripWithBooked(db, shop.id, data.trip.id),
@@ -978,43 +977,40 @@ export default async function DiverReadinessPage({
     // the confirmation email, so "who still hasn't claimed?" has an answer the
     // night before, not only in the minutes after booking. Authorized by the
     // verified `readiness` capability above; the query only ever walks seats
-    // led by this booking, so a member's own /ready renders no panel.
-    //
-    // **One wave** (code review 2026-10-11, item 3): the party seats, the trip
-    // below, the receipt, the course forms and the package dives each take only
-    // the verified booking, its shop and its person, so none waits on another.
-    // They used to be five awaits one after another under this boundary.
-    const [
-      partySeatClaims,
-      [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage],
-      paymentReceipt,
-      courseFormsOwed,
-      packageDivesLeft,
-    ] = await Promise.all([
-      issuePartySeatClaims(db, { shopId: shop.id, leadBookingId: bookingId }),
-      threadTripReads,
-      // What this booking has been charged (see the notes on `paymentReceipt`
-      // below, where it is used).
-      resolvePaymentReceipt(
-        db,
-        shop.id,
-        bookingId,
-        // The two ways a diver arrives here straight off Stripe's hosted page:
-        // paying at booking (`bookSpot`'s success_url) and paying later
-        // (`payFromReady`'s). Both are the moment the webhook may still be in
-        // flight; every other arrival is not.
-        justBooked || pay === "paid",
-        data.trip.seatPriceCents,
-        toShopCurrency(shop.currency),
-      ),
-      // Asked whatever `COURSE_FORMS_BLOCK_BOARDING` says: warn-only raises no blocker (#2266).
-      data.trip.course
-        ? getCourseFormsForBooking(db, shop.id, bookingId).then(
-            (forms) => (forms?.outstanding.length ?? 0) > 0,
-          )
-        : false,
-      countSpendableDives(db, shop.id, data.person.id),
-    ]);
+    // led by this booking, so a member's own /ready renders no panel. One wave with
+    // the rest: each needs only the verified booking, shop and person (review 2026-10-11).
+    const [partySeatClaims, tripReads, paymentReceipt, courseForms, packageDivesLeft] =
+      await Promise.all([
+        issuePartySeatClaims(db, { shopId: shop.id, leadBookingId: bookingId }),
+        threadTripReads,
+        // What this booking has been charged. Read on every visit, because "what did
+        // I pay?" is a question the night before too — and it is what the Pay step's
+        // settled line says, now that the receipt panel that used to say it above
+        // the checklist is gone (ADR 20260827-the-divers-thread, decision 3).
+        //
+        // The emails line went with that panel. It claimed, in the minutes after a
+        // submit, that two messages were on their way — a third statement of the
+        // booking's status in one screenful, on a page whose status is now said once
+        // by the spine. `EmbedBookedNotice` still carries it where it is the *only*
+        // thing the reader gets, which is the embed's confirmation and not this page.
+        resolvePaymentReceipt(
+          db,
+          shop.id,
+          bookingId,
+          // The two ways a diver arrives here straight off Stripe's hosted page:
+          // paying at booking (`bookSpot`'s success_url) and paying later
+          // (`payFromReady`'s). Both are the moment the webhook may still be in
+          // flight; every other arrival is not.
+          justBooked || pay === "paid",
+          data.trip.seatPriceCents,
+          toShopCurrency(shop.currency),
+        ),
+        // Asked whatever `COURSE_FORMS_BLOCK_BOARDING` says: warn-only raises no blocker (#2266).
+        data.trip.course ? getCourseFormsForBooking(db, shop.id, bookingId) : null,
+        countSpendableDives(db, shop.id, data.person.id),
+      ]);
+    const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage] = tripReads;
+    const courseFormsOwed = (courseForms?.outstanding.length ?? 0) > 0;
     const claimOrigin = publicAppUrl();
     const partySeats = partySeatClaims.map((seat) => ({
       bookingId: seat.bookingId,
@@ -1051,22 +1047,8 @@ export default async function DiverReadinessPage({
     // then quotes nothing rather than guessing — see `resolvePaymentReceipt`,
     // which takes the same figure to work out a balance after a deposit.
     // This seat's price: a snorkeler pays the snorkeler fare (ADR
-    // 20261007-participant-types). `getReadyPageData` works it out from the
-    // same departure row (`seatListPriceCents`), which is what lets the receipt
-    // read in the wave above rather than after the trip.
+    // 20261007-participant-types), as `getReadyPageData` read it.
     const fullPriceCents = fullTrip ? data.trip.seatPriceCents : null;
-
-    // What this booking has been charged. Read on every visit, because "what did
-    // I pay?" is a question the night before too — and it is what the Pay step's
-    // settled line says, now that the receipt panel that used to say it above
-    // the checklist is gone (ADR 20260827-the-divers-thread, decision 3).
-    //
-    // The emails line went with that panel. It claimed, in the minutes after a
-    // submit, that two messages were on their way — a third statement of the
-    // booking's status in one screenful, on a page whose status is now said once
-    // by the spine. `EmbedBookedNotice` still carries it where it is the *only*
-    // thing the reader gets, which is the embed's confirmation and not this page.
-    // (`paymentReceipt`, read in the wave above.)
 
     // Dive 1 first, in the dive plan's own order: where a site names its own
     // time in the water, that is what the day's rhythm counts rather than the

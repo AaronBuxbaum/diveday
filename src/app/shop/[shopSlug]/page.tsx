@@ -948,9 +948,8 @@ async function TodayBody({
             showFirstRunChecklist ? (
               <FirstRunChecklist
                 shopSlug={shopSlug}
-                // No configured APP_HOST (local dev, some test environments) means no
-                // origin to build an absolute URL from — `publicScheduleUrl` falls
-                // back to the path alone rather than crash the page on a bad base URL.
+                // No APP_HOST (local dev, some tests) means no origin for an absolute
+                // URL: `publicScheduleUrl` falls back to the path rather than crash.
                 scheduleUrl={publicScheduleUrl}
                 contactDone={Boolean(shop.contactEmail || shop.contactPhone)}
                 profileDone={Boolean(shop.tagline || shop.description || shop.logoUrl)}

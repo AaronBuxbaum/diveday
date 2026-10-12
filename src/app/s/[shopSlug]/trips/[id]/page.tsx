@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cache } from "react";
 import { FlashParams } from "@/components/FlashParams";
 import { JsonLd } from "@/components/JsonLd";
 import { PhoneFootBar } from "@/components/PhoneFootBar";
@@ -15,21 +14,13 @@ import { readKnownDiver } from "@/db/booking-handoff";
 import { getBookingForTrip } from "@/db/bookings";
 import { getLatestCheckoutForBooking } from "@/db/checkouts";
 import { getDb } from "@/db/client";
-import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
-import { bookingConfirmationAndWaiverEmailsSent } from "@/db/notifications";
-import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getShopReviewAggregate } from "@/db/reviews";
-import { tripMayTakeACode } from "@/db/shop-promos";
 import { shopBySlugCached } from "@/db/shops-cached";
-import { canAcceptPayments, checkoutMode, getShopStripeAccount } from "@/db/stripe-accounts";
-import { listTripChangeEvents } from "@/db/trip-change-events";
-import { siteSightings } from "@/db/trip-sightings";
+import { checkoutMode } from "@/db/stripe-accounts";
 import {
-  getTripWithBooked,
   getWaitlistEntryForTrip,
   listTripDives,
   listTripScheduleDays,
-  pagedUpcomingTripsWithCounts,
   tripCrewSpokenLanguages,
   tripPublicCrew,
 } from "@/db/trips";
@@ -72,6 +63,7 @@ import {
   TripSailedNotice,
   WaitlistConfirmation,
 } from "./_components/BookingSections";
+import { publicTripRecord, readBookingPageWave } from "./_components/booking-page-wave";
 import { ConditionsLine } from "./_components/ConditionsLine";
 import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
 import { StaffPreviewBar } from "./_components/StaffPreviewBar";
@@ -89,16 +81,6 @@ import { offerHandoff } from "./actions";
 // and `next build` fails if that ever stops being true.
 // See ADR 20260804-instant-navigation.
 export const instant = true;
-
-/**
- * **The departure, read once per render** (code review 2026-10-11, item 2):
- * `generateMetadata` and the page body both need the row, and two calls to
- * `getTripWithBooked` were two statements for one fact. Keyed on the shop id and
- * the trip id, request-scoped like `shopBySlugCached`.
- */
-const publicTripRecord = cache(async (shopId: string, tripId: string) =>
-  getTripWithBooked(await getDb(), shopId, tripId),
-);
 
 /**
  * The departure's own title, description, and canonical URL. Embed mode points
@@ -308,29 +290,13 @@ export default async function TripDetailPage({
   const waitlistRead = waitlistId
     ? getWaitlistEntryForTrip(db, shop.id, tripId, waitlistId)
     : Promise.resolve(null);
-  // Two queries for the whole day's briefings, not two per dive.
-  const siteIds = tripDives
-    .map(({ diveSite }) => diveSite?.id)
-    .filter((id): id is string => Boolean(id));
-  // Pay-at-booking is offered only when the shop's own Stripe account can
-  // take a charge, the trip carries a price, and a canonical origin exists
-  // for the return links; otherwise the flow is book-now-pay-later as before.
   const passThroughFee = parsePassThroughFee(shop.passThroughFee);
   const perDiverPriceCents = perDiverBookingPriceCents(trip, trip.course);
   const payablePerDiverCents =
     perDiverPriceCents === null ? null : perDiverPriceCents + (passThroughFee?.amountCents ?? 0);
   const now = nowDate();
   const inPast = hasSailed(trip.startsAt, now);
-  /**
-   * **Every read left, in one wave** (code review 2026-10-11, item 2). Each
-   * takes only the shop, the trip or the departure's sites, all in hand after
-   * the fan-out, so none waits on another; they used to be eight awaits one
-   * after another, on the page a stranger loads most. A read that depends on
-   * another — the confirmation behind its capability, the code gate behind the
-   * Stripe account, the board behind whether this visit booked — is chained
-   * inside the wave rather than awaited before it.
-   */
-  const [
+  const {
     knownDiver,
     confirmed,
     waitlistConfirmation,
@@ -338,57 +304,27 @@ export default async function TripDetailPage({
     changeEvents,
     briefingExtras,
     seenBySite,
-    { stripeAccount, payAtBooking, offerCodeField },
-    [requirement, siteRequirement],
+    stripeAccount,
+    payAtBooking,
+    offerCodeField,
+    requirement,
+    siteRequirement,
     board,
     reviewAggregate,
-  ] = await Promise.all([
-    knownDiverRead,
+  } = await readBookingPageWave(db, {
+    shopId: shop.id,
+    tripId,
+    conditionsHold: trip.conditionsHold,
+    siteIds: tripDives.flatMap(({ diveSite }) => (diveSite ? [diveSite.id] : [])),
+    payablePerDiverCents,
+    inPast,
+    now,
     confirmedRead,
     waitlistRead,
-    // The embed's short confirmation needs exactly one fact beyond the booking
-    // itself: whether both emails went (see `emailsOnTheWay` below).
-    confirmedRead.then((booked) =>
-      booked ? bookingConfirmationAndWaiverEmailsSent(db, shop.id, booked.booking.id) : false,
-    ),
-    listTripChangeEvents(db, shop.id, tripId),
-    listDiveSiteBriefingExtras(db, shop.id, siteIds),
-    // What the crew has actually logged at those sites this month. Batched over
-    // the whole day for the same reason the briefings are: this is a public page,
-    // and a query per site per departure is how one becomes slow.
-    siteSightings(db, shop.id, siteIds),
-    (payablePerDiverCents ? getShopStripeAccount(db, shop.id) : Promise.resolve(null)).then(
-      async (account) => {
-        const payable = Boolean(
-          payablePerDiverCents && canAcceptPayments(account) && publicAppUrl(),
-        );
-        return {
-          stripeAccount: account,
-          payAtBooking: payable,
-          offerCodeField: payable
-            ? await tripMayTakeACode(db, { shopId: shop.id, tripId: trip.id })
-            : false,
-        };
-      },
-    ),
-    Promise.all([
-      getTripRequirements(db, shop.id, tripId),
-      getTripSiteRequirement(db, shop.id, tripId),
-    ]),
-    Promise.all([confirmedRead, waitlistRead]).then(async ([booked, waitlisted]) =>
-      inPast || trip.conditionsHold || booked || waitlisted
-        ? []
-        : (
-            await pagedUpcomingTripsWithCounts(db, shop.id, {
-              now,
-              limit: 50,
-              hasSpace: true,
-              publicOnly: true,
-            })
-          ).trips,
-    ),
-    isEmbed || !shop.reviewsEnabled ? null : getShopReviewAggregate(db, shop.id),
-  ]);
+    knownDiverRead,
+    reviewAggregateRead:
+      isEmbed || !shop.reviewsEnabled ? null : getShopReviewAggregate(db, shop.id),
+  });
   const knownDiverPanel = knownDiver
     ? {
         name: knownDiver.fullName,

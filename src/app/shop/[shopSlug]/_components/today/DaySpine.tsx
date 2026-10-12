@@ -111,6 +111,65 @@ type RowControls = {
 };
 
 /**
+ * The copy and context every row's control needs, composed once per render on
+ * the server: the controls are Client Components, so a translator never
+ * crosses the boundary.
+ */
+function rowControls(
+  base: Pick<RowControls, "shopSlug" | "shopName" | "helpRequestAction" | "t">,
+): RowControls {
+  const { t } = base;
+  return {
+    ...base,
+    waiverCopy: waiverSendCopy(t),
+    resendCopy: {
+      resending: t("today.resendConfirmation.resending"),
+      confirmationResent: t("today.resendConfirmation.confirmationResent"),
+      confirmationsResent: t("today.resendConfirmation.confirmationsResent"),
+      errors: {
+        invalid: t("today.resendConfirmation.errors.invalid"),
+        noEmail: t("today.resendConfirmation.errors.noEmail"),
+        notConfigured: t("today.resendConfirmation.errors.notConfigured"),
+        failed: t("today.resendConfirmation.errors.failed"),
+      },
+    },
+    // Same keys `WaitlistSection.tsx` uses — `WaitlistInvite` is a Client
+    // Component, so the full copy object is composed here rather than passing
+    // a translator across the boundary.
+    inviteCopy: {
+      hold: sendHoldCopy(t),
+      invitedRelative: t.raw("trips.waitlist.invitedRelative"),
+      inviteEmailed: t("trips.waitlist.inviteEmailed"),
+      reSendInvite: t("trips.waitlist.reSendInvite"),
+      emailAnInvite: t.raw("trips.waitlist.emailAnInvite"),
+      copied: t("trips.waitlist.copied"),
+      copyInviteMessage: t("trips.waitlist.copyInviteMessage"),
+      copyFailed: t("trips.waitlist.copyFailed"),
+      justNow: t("trips.waitlist.justNow"),
+      minutesAgo: t.raw("trips.waitlist.minutesAgo"),
+      hoursAgo: t.raw("trips.waitlist.hoursAgo"),
+      daysAgo: t.raw("trips.waitlist.daysAgo"),
+      emailSubject: t.raw("trips.waitlist.emailSubject"),
+      emailBody: t.raw("trips.waitlist.emailBody"),
+    },
+    paymentCopy: {
+      copyLink: t("today.paymentAction.copyLink"),
+      linkCopied: t("today.paymentAction.linkCopied"),
+      copyFailed: t("today.paymentAction.copyFailed"),
+      resendInvoice: t("today.paymentAction.resendInvoice"),
+      resending: t("today.paymentAction.resending"),
+      invoiceResent: t("today.paymentAction.invoiceResent"),
+      errors: {
+        notFound: t("today.paymentAction.errors.notFound"),
+        notOpen: t("today.paymentAction.errors.notOpen"),
+        notConfigured: t("today.paymentAction.errors.notConfigured"),
+        failed: t("today.paymentAction.errors.failed"),
+      },
+    },
+  };
+}
+
+/**
  * One job, as a ledger row: its kind as a word in the row's own type, the one
  * sentence saying what is wrong, and the one fix beside it.
  *
@@ -601,57 +660,7 @@ export function DaySpine({
   now: Date;
 }) {
   const t = staffTranslator(locale);
-  const controls: RowControls = {
-    shopSlug,
-    shopName,
-    helpRequestAction,
-    t,
-    waiverCopy: waiverSendCopy(t),
-    resendCopy: {
-      resending: t("today.resendConfirmation.resending"),
-      confirmationResent: t("today.resendConfirmation.confirmationResent"),
-      confirmationsResent: t("today.resendConfirmation.confirmationsResent"),
-      errors: {
-        invalid: t("today.resendConfirmation.errors.invalid"),
-        noEmail: t("today.resendConfirmation.errors.noEmail"),
-        notConfigured: t("today.resendConfirmation.errors.notConfigured"),
-        failed: t("today.resendConfirmation.errors.failed"),
-      },
-    },
-    // Same keys `WaitlistSection.tsx` uses — `WaitlistInvite` is a Client
-    // Component, so the full copy object is composed here rather than passing
-    // a translator across the boundary.
-    inviteCopy: {
-      hold: sendHoldCopy(t),
-      invitedRelative: t.raw("trips.waitlist.invitedRelative"),
-      inviteEmailed: t("trips.waitlist.inviteEmailed"),
-      reSendInvite: t("trips.waitlist.reSendInvite"),
-      emailAnInvite: t.raw("trips.waitlist.emailAnInvite"),
-      copied: t("trips.waitlist.copied"),
-      copyInviteMessage: t("trips.waitlist.copyInviteMessage"),
-      copyFailed: t("trips.waitlist.copyFailed"),
-      justNow: t("trips.waitlist.justNow"),
-      minutesAgo: t.raw("trips.waitlist.minutesAgo"),
-      hoursAgo: t.raw("trips.waitlist.hoursAgo"),
-      daysAgo: t.raw("trips.waitlist.daysAgo"),
-      emailSubject: t.raw("trips.waitlist.emailSubject"),
-      emailBody: t.raw("trips.waitlist.emailBody"),
-    },
-    paymentCopy: {
-      copyLink: t("today.paymentAction.copyLink"),
-      linkCopied: t("today.paymentAction.linkCopied"),
-      copyFailed: t("today.paymentAction.copyFailed"),
-      resendInvoice: t("today.paymentAction.resendInvoice"),
-      resending: t("today.paymentAction.resending"),
-      invoiceResent: t("today.paymentAction.invoiceResent"),
-      errors: {
-        notFound: t("today.paymentAction.errors.notFound"),
-        notOpen: t("today.paymentAction.errors.notOpen"),
-        notConfigured: t("today.paymentAction.errors.notConfigured"),
-        failed: t("today.paymentAction.errors.failed"),
-      },
-    },
-  };
+  const controls = rowControls({ shopSlug, shopName, helpRequestAction, t });
   const crewed = new Set(crewedTripIds ?? []);
   const jobs = spineJobCount(spine);
   const tomorrowDate = spine.tomorrow.stations[0]?.startsAt ?? null;

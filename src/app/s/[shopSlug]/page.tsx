@@ -291,6 +291,7 @@ export default async function SchedulePage({
   );
   const rangeRead = upcomingScheduleRange(db, shop.id, now, { publicOnly: true });
   const activeCoursesRead = isEmbed ? Promise.resolve([]) : listActiveCourses(db, shop.id);
+  const shelfIds = activeCoursesRead.then((shelf) => shelf.slice(0, 3).map((course) => course.id));
   const [
     lenses,
     activeLens,
@@ -322,19 +323,8 @@ export default async function SchedulePage({
         listed.map((trip) => trip.id),
       ),
     ),
-    // The course shelf's next start dates, chained on the courses it shows rather than read
-    // after the batch (code review 2026-10-11, item 35). A diver reads this shelf, so a private
-    // session is not a date they may turn up to.
-    activeCoursesRead.then((courses) =>
-      isEmbed
-        ? new Map<string, Date>()
-        : nextSessionStartByCourse(
-            db,
-            shop.id,
-            courses.slice(0, 3).map((course) => course.id),
-            "storefront",
-          ),
-    ),
+    // The shelf's next starts: a diver reads it, so only storefront sessions count.
+    shelfIds.then((ids) => nextSessionStartByCourse(db, shop.id, ids, "storefront")),
   ]);
   // The view a diver has built — month, embed mode, the lens, and every list filter — must survive
   // every link that re-renders this page. A pager or month arrow that drops `hasSpace` quietly

@@ -1792,6 +1792,25 @@ async function forecastsForDepartures(
 }
 
 /**
+ * Every seat a payment row could be about: a blocked one in the window that
+ * owes money (`collapseDiverActions` raises a payment row from no other).
+ */
+function owingSeatIds(
+  trips: readonly DepartureTrip[],
+  readinessByTrip: HorizonReadinessEvidence["readinessByTrip"],
+): string[] {
+  return trips.flatMap((trip) =>
+    (readinessByTrip.get(trip.id) ?? [])
+      .filter(
+        (row) =>
+          row.readiness.status === "blocked" &&
+          row.readiness.blockers.some((blocker) => BLOCKER_CATEGORY[blocker.code] === "payment"),
+      )
+      .map((row) => row.booking.id),
+  );
+}
+
+/**
  * **The high-wind rows, off the page's critical path** (code review
  * 2026-10-11, item 1). The forecast is the one read on Today that is not the
  * database: two outbound requests with four-second timeouts and a cache that
@@ -1928,17 +1947,7 @@ export async function getTodayWork(
   // to one site share one request (`fetchAutomatedMarineForecast` keys its
   // cache and its in-flight promise by site), and a failed or slow provider
   // answers null.
-  // Every seat a payment row could be about: a blocked one in the window that
-  // owes money (`collapseDiverActions` raises a payment row from no other).
-  const owingBookingIds = inWindow.flatMap((trip) =>
-    (readinessByTrip.get(trip.id) ?? [])
-      .filter(
-        (row) =>
-          row.readiness.status === "blocked" &&
-          row.readiness.blockers.some((blocker) => BLOCKER_CATEGORY[blocker.code] === "payment"),
-      )
-      .map((row) => row.booking.id),
-  );
+  const owingBookingIds = owingSeatIds(inWindow, readinessByTrip);
   const noOpenOrders = new Map<string, { id: string; hostedInvoiceUrl: string | null }>();
   const highWind = highWindActions(inWindow, forecastsForDepartures(inWindow, now), {
     shopSlug,
