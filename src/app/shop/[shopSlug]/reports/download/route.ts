@@ -1,6 +1,9 @@
 import { getDb } from "@/db/client";
+import { getMonthMoneyDetail } from "@/db/report-lines";
 import { canPersonViewShopReports, crewCountsByTrip, getMonthlyReport } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { type MonthRef, monthKey, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { buildCsv, exportDateStamp } from "@/lib/export";
@@ -8,6 +11,7 @@ import { toShopCurrency } from "@/lib/money";
 import { formatPercent, formatReportMoney, summarizeMonth, tripFillRate } from "@/lib/reporting";
 import { requireStaffSession } from "@/lib/session";
 import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
+import { moneyByLineCsv } from "./money-by-line-csv";
 
 /**
  * A CSV of one month's report — "just this month's numbers" for an owner's
@@ -18,8 +22,9 @@ import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
  * disabled, not at their next sign-in.
  *
  * Reuses buildCsv (src/lib/export.ts) rather than a second serializer, as
- * two blocks — the headline numbers, then the trip breakdown — since the two
- * are not one uniform table. `?month=` is read directly, not re-clamped to
+ * three blocks — the headline numbers, the money by line (the page's own
+ * query, issue #2305), then the trip breakdown — since they are not one
+ * uniform table. `?month=` is read directly, not re-clamped to
  * the shop's own earliest month the way the page's picker is: a hand-edited
  * out-of-range month downloads an honest, empty report rather than a page
  * that needs a floor to stay usable.
@@ -45,6 +50,11 @@ export async function GET(request: Request) {
     timeZone: shop.timezone,
   });
   const report = summarizeMonth(input);
+  const detail = await getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now, {
+    currency,
+    timeZone: shop.timezone,
+  });
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
   const crewCounts = await crewCountsByTrip(
     db,
     shop.id,
@@ -81,8 +91,12 @@ export async function GET(request: Request) {
     ]),
   );
 
+  const linesCsv = moneyByLineCsv(detail.lines, t, (cents) =>
+    formatReportMoney(cents, currency, shop.defaultLocale),
+  );
+
   const fileName = `diveday-report-${shop.slug}-${monthKey(current)}-${exportDateStamp(now, shop.timezone)}.csv`;
-  return new Response(`${summaryCsv}\r\n${tripsCsv}`, {
+  return new Response(`${summaryCsv}\r\n${linesCsv}\r\n${tripsCsv}`, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${fileName}"`,

@@ -30,7 +30,7 @@
 // server from empty. That job is the proof; this is the fast, offline gate in
 // front of it, and the only one that runs on every pull request.
 
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import process from "node:process";
@@ -147,6 +147,58 @@ squarely the two contradict each other.
 A generated migration gets its snapshot from \`pnpm db:generate\`. A hand-written
 one needs the snapshot written alongside it, or the folder is DDL nothing
 polices.`,
+  );
+  process.exit(1);
+}
+
+// ---------------------------------------------------------------------------
+// A parent that no folder carries.
+//
+// A rebase that drops a migration folder and keeps the one written on top of it
+// leaves a snapshot whose `prevIds` names an id nothing in the tree holds.
+// drizzle-kit's commutativity walk only visits fork points it can reach, so the
+// dangling edge is skipped rather than refused and `check` exits 0; the graph
+// cannot be walked back to its root, and the first to notice is migrate time.
+// `originUUID` is drizzle-kit's sentinel for "no parent" on the first snapshot.
+const ORIGIN_UUID = "00000000-0000-0000-0000-000000000000";
+
+// Dangling edges known on 2026-10-12, as `folder -> missing id`. Like
+// `KNOWN_UNSNAPSHOTTED` this is a list of holes, not of acceptable shapes.
+//
+// `20260904174946_medical-clearance-declined` names `3eaed088-…`, the head
+// before the squash to a single baseline (#1343) replaced every older folder.
+// Its child `graceful_whiplash` also names the baseline's line through
+// `converge-prior-gear-fk-names`, so the graph still reaches the root. The
+// repair is pointing that one `prevIds` at the baseline's id
+// (`d211c512-a964-4718-bf0f-57e12a04f446`); drizzle-orm never reads
+// `snapshot.json`, so nothing applied changes. It is an edit to migration
+// history and needs the owner's word, so it waits on its own change.
+const KNOWN_DANGLING = new Set([
+  "20260904174946_medical-clearance-declined -> 3eaed088-b80d-4189-8f61-9787bfee04c6",
+]);
+
+const snapshots = withSnapshot.map((name) => {
+  const raw = JSON.parse(readFileSync(path.join(MIGRATIONS_PATH, name, "snapshot.json"), "utf8"));
+  return { name, id: raw.id, prevIds: Array.isArray(raw.prevIds) ? raw.prevIds : [] };
+});
+const knownIds = new Set(snapshots.map((snapshot) => snapshot.id));
+const dangling = snapshots.flatMap(({ name, prevIds }) =>
+  prevIds
+    .filter((prevId) => prevId !== ORIGIN_UUID && !knownIds.has(prevId))
+    .filter((prevId) => !KNOWN_DANGLING.has(`${name} -> ${prevId}`))
+    .map((prevId) => ({ name, prevId })),
+);
+
+if (dangling.length > 0) {
+  console.error(
+    `migration-graph: a snapshot names a parent that no folder in ${MIGRATIONS_DIR}/ carries:
+
+${dangling.map(({ name, prevId }) => `  ${MIGRATIONS_DIR}/${name}/snapshot.json names "${prevId}"`).join("\n")}
+
+\`drizzle-kit check\` skips an edge it cannot follow, so this tree would pass
+there and break at migrate time. The usual cause is a rebase that dropped the
+parent's folder: restore it, or regenerate this migration on top of the
+current head with \`pnpm db:generate\`.`,
   );
   process.exit(1);
 }

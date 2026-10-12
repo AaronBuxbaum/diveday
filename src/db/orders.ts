@@ -649,7 +649,25 @@ export async function voidCounterOrder(
       .where(eq(orders.id, current.id))
       .returning();
     if (!updated) return { ok: false, reason: "not_found" };
+    await enqueueVoidedOrderEvent(tx, updated);
     return { ok: true, order: updated };
+  });
+}
+
+/**
+ * Tell the accounting integrations an order is void (issue #2309), in the
+ * transaction that voided it. One key per order, so a replayed void queues
+ * nothing more; an adapter that never booked the sale does nothing with it.
+ */
+async function enqueueVoidedOrderEvent(tx: DbExecutor, order: Order): Promise<void> {
+  await enqueueOrderIntegrationEvent(tx, {
+    shopId: order.shopId,
+    orderId: order.id,
+    eventType: "order.voided",
+    idempotencyKey: `order:${order.id}:void`,
+    status: order.status,
+    amountPaidCents: order.amountPaidCents,
+    refundedCents: order.refundedCents,
   });
 }
 
@@ -1614,6 +1632,8 @@ async function applyOrderUpdate(
         amountPaidCents: updated.amountPaidCents,
         refundedCents: updated.refundedCents,
       });
+    } else if (updated.status === "void") {
+      await enqueueVoidedOrderEvent(tx, updated);
     } else if (updated.status === "refunded" || updated.status === "partly_refunded") {
       await enqueueOrderIntegrationEvent(tx, {
         shopId: updated.shopId,

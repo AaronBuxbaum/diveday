@@ -279,9 +279,10 @@ export const ENV_GROUPS = [
       "enabled, for invoice.paid, invoice.voided, invoice.payment_failed,",
       "checkout.session.completed, checkout.session.async_payment_succeeded,",
       "checkout.session.async_payment_failed, checkout.session.expired, account.updated,",
-      "account.application.deauthorized, charge.refunded, charge.dispute.created,",
-      "charge.dispute.updated and charge.dispute.closed (ADR",
-      "20261009-stripe-reversals-reach-diveday). Keep the two secrets in 1Password. They never enter the AWS",
+      "account.application.deauthorized, charge.refunded, charge.refund.updated,",
+      "charge.dispute.created, charge.dispute.updated and charge.dispute.closed (ADR",
+      "20261009-stripe-reversals-reach-diveday; charge.refund.updated is issue #2291).",
+      "Keep the two secrets in 1Password. They never enter the AWS",
       "credentials secret -- they reach Vercel from .env.manual.",
     ],
     keys: [

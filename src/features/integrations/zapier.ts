@@ -41,7 +41,12 @@ export function normalizeZapierWebhookUrl(value: string): string | null {
 }
 
 export function normalizeZapierEventTypes(values: readonly string[]): IntegrationEventType[] {
-  const allowed: IntegrationEventType[] = ["order.created", "order.paid", "order.refunded"];
+  const allowed: IntegrationEventType[] = [
+    "order.created",
+    "order.paid",
+    "order.refunded",
+    "order.voided",
+  ];
   return allowed.filter((eventType) => values.includes(eventType));
 }
 

@@ -415,7 +415,16 @@ export type TripPatch = {
 };
 
 export type UpdateTripOutcome =
-  | { ok: true; trip: Trip }
+  | {
+      ok: true;
+      trip: Trip;
+      /**
+       * Whether the departure instant changed: the edit moved the boat. The
+       * caller writes the activity log's "moved the departure" line on it,
+       * the same line the schedule builder's move writes (issue #2313).
+       */
+      startMoved: boolean;
+    }
   | { ok: false; reason: "invalid" | "not_found" }
   | { ok: false; reason: "capacity_below_booked"; detail: { bookedCount: number } }
   | { ok: false; reason: "boat_not_found" }
@@ -543,8 +552,9 @@ export async function updateTrip(
       patch.diveSiteId === undefined
         ? existing.diveSiteId
         : (patch.diveSiteId ?? (drafts ? primaryDiveSiteId(drafts) : null));
+    const startMoved = patch.startsAt.getTime() !== existing.startsAt.getTime();
     const revisionMoved =
-      patch.startsAt.getTime() !== existing.startsAt.getTime() ||
+      startMoved ||
       tripSiteListChanged(beforeSites, afterSites) ||
       // The denormalized pointer counts on its own: it is what the feed reads
       // for `LOCATION` when the trip has no meeting point of its own.
@@ -643,7 +653,7 @@ export async function updateTrip(
         occurredAt: changedAt,
       });
     }
-    return { ok: true, trip };
+    return { ok: true, trip, startMoved };
   });
 }
 

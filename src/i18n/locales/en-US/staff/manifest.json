@@ -126,6 +126,7 @@
   "medicalRidingOnlyNotCleared": "A physician did not clear this person on {date}: riding only, not in the water",
   "medicalRidingOnlyReferral": "Referred to a physician on {date} with no answer on file: riding only, not in the water",
   "medicalReferralLink": "View the referral",
+  "medicalRefusalLink": "View the refusal",
   "resolveBlockersLink": "Resolve blockers on Guests →",
   "addNoteSummary": "Add a note",
   "rollCallRecordedByPlain": "{label} {date} by {name}",
@@ -196,6 +197,7 @@
   "personTrailDetail": "{time} · {name}",
   "rollCallRecordedShort": "{label} · {time} · {name}",
   "markBackAboard": "Mark back aboard",
+  "touchRefused": "Tap again with one finger.",
   "crewMarkBackAboard": "Mark back aboard",
   "emergency": {
     "heading": "In an emergency",

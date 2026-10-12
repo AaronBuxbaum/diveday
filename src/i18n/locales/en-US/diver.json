@@ -2695,7 +2695,7 @@
       "priceLine": "One flat price of {price} {cadence}, locked for two years for founding shops.",
       "seeIncluded": "See what’s included →",
       "contactTitle": "Ask us first",
-      "contactBody": "Write in with whatever would decide it for you. A real person reads it.",
+      "contactBody": "Write in with whatever would decide it for you.",
       "contactCta": "Email {email}",
       "stepLink": "{name} →"
     },

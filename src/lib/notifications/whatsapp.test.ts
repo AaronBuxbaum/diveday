@@ -170,9 +170,26 @@ describe("whatsAppProvider", () => {
       retryable: false,
       httpStatus: 401,
       errorCode: "190",
-      detail: "Error validating access token",
     });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  // Issue #2334: Meta's `message` is free text and can quote the recipient or
+  // the template's words. Its code and subcode already say what failed.
+  it("keeps Meta's free-text message out of the failure", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      jsonResponse(400, {
+        error: { message: "(#100) Invalid parameter: to +13055550199 Nora Quinn", code: 100 },
+      }),
+    );
+    const delivery = await whatsAppProvider(credentials, fetchImpl, noWait).send(message);
+
+    expect(delivery).toEqual({
+      status: "failed",
+      retryable: false,
+      httpStatus: 400,
+      errorCode: "100",
+    });
   });
 
   it("reports an unapproved template without retrying it", async () => {
@@ -241,9 +258,24 @@ describe("whatsAppProvider", () => {
       status: "failed",
       retryable: true,
       errorCode: "network_error",
-      detail: "socket hang up",
+      detail: "Error",
     });
     expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("records a network failure by its cause's code, never the thrown message", async () => {
+    const fetchImpl = vi.fn().mockRejectedValue(
+      new TypeError("fetch failed for +13055550199", {
+        cause: Object.assign(new Error("connect ECONNRESET"), { code: "ECONNRESET" }),
+      }),
+    );
+    const delivery = await whatsAppProvider(credentials, fetchImpl, {
+      ...noWait,
+      maxAttempts: 1,
+    }).send(message);
+
+    expect(delivery).toMatchObject({ errorCode: "network_error", detail: "ECONNRESET" });
+    expect(JSON.stringify(delivery)).not.toContain("13055550199");
   });
 
   it("treats a 200 with no message id as a retryable invalid response", async () => {

@@ -61,7 +61,8 @@ export function cancellationMoney(
  * **Tell the diver their booking is canceled, and what happened to the money.**
  *
  * Called after the cancellation and its refund step, by the diver's own
- * trip-prep link and by the roster's Remove. Never by the blow-out or the
+ * trip-prep link, by a reply's confirm code (src/db/reply-keywords.ts), and by
+ * the roster's Remove. Never by the blow-out or the
  * minimum-head-count sweep, which cancel the whole departure and carry their
  * own message.
  *

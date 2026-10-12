@@ -293,7 +293,8 @@ export async function returnTripGearSetAction(formData: FormData) {
     .filter((value): value is string => typeof value === "string")
     .filter((value) => z.uuid().safeParse(value).success);
   // A set with a unit just pulled for service is not "back on the wall", so
-  // that return answers with its own notice.
+  // that return answers with its own notice, and only when a unit really
+  // moved: a tick on a unit already on the bench pulls nothing (issue #2345).
   const outcome = await returnTripGearSet(await getDb(), {
     shopId: session.user.shopId,
     bookingId: parsed.data.bookingId,
@@ -306,12 +307,13 @@ export async function returnTripGearSetAction(formData: FormData) {
     noticeUrl(
       landing,
       outcome.ok
-        ? parsed.data.outcome === "service_concern" && pullGearItemIds.length > 0
+        ? outcome.pulled > 0
           ? "gear-returned-set-pulled"
           : "gear-returned-set"
         : outcome.reason === "not_found"
           ? "gear-nothing-out"
           : RESERVATION_ACTION_NOTICE[outcome.reason],
+      { count: outcome.ok && outcome.pulled > 0 ? outcome.pulled : undefined },
     ),
   );
 }

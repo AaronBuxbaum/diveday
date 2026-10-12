@@ -111,6 +111,15 @@ const routes: SeedRoute[] = [
     },
   },
   {
+    slug: "seed-open-package-invoice",
+    // Past the guard it reads its query first: no slug is a 400 before the
+    // database is touched, so the 400 is the signal it got through. It raises
+    // an invoice the e2e harness then pays through the signed webhook.
+    expectPastTheGuard: async (response) => {
+      expect(response.status).toBe(400);
+    },
+  },
+  {
     slug: "seed-setup-link",
     // No body: the first thing past the guard is the database, so reaching it
     // is the signal. This one mints a link that creates a shop, so a route
@@ -119,6 +128,12 @@ const routes: SeedRoute[] = [
     expectPastTheGuard: async () => {
       expect(getDb).toHaveBeenCalled();
     },
+  },
+  {
+    slug: "pin-added-date",
+    // Body first past the guard. It rewrites when a person was added, which on
+    // a misconfigured deployment would be falsifying a real shop's records.
+    expectPastTheGuard: expectInvalidBody,
   },
   {
     slug: "seed-trouble-states",
