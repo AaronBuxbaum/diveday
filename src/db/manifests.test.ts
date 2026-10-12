@@ -476,6 +476,41 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
   });
 
   /**
+   * **The diver's own "running late" reaches the captain** (#2319), and only
+   * while the seat is still one to arrive: the manifest reads the column
+   * through `runningLateShown`, so a seat the desk released stops carrying it
+   * on the same read. It moves no count either way.
+   */
+  it("carries a running-late word onto the row, and drops it once the desk releases the seat", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    // A seat still to arrive: the demo checks some of this boat in already.
+    const booking = (await getTripRoster(db, shop.id, reef.id)).find(
+      (seat) => seat.booking.status === "booked",
+    );
+    if (!booking) throw new Error("no demo seat still to arrive");
+    const saidAt = new Date(reef.startsAt.getTime() - 20 * 60_000);
+    const before = await getTripManifest(db, shop.id, reef.id);
+    await db
+      .update(bookings)
+      .set({ runningLateAt: saidAt })
+      .where(eq(bookings.id, booking.booking.id));
+    const diverOn = async () =>
+      (await getTripManifest(db, shop.id, reef.id))?.divers.find(
+        (diver) => diver.bookingId === booking.booking.id,
+      );
+    expect((await diverOn())?.runningLateAt).toEqual(saidAt);
+    expect((await getTripManifest(db, shop.id, reef.id))?.summary).toEqual(before?.summary);
+
+    await markBookingNoShow(db, {
+      shopId: shop.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      now: reef.startsAt,
+    });
+    expect((await diverOn())?.runningLateAt).toBeNull();
+  });
+
+  /**
    * The seat comes back even when it is the seat the shop has already sold.
    * Refusing would leave a person aboard whom the manifest does not carry, so
    * the boat being over is *said* instead — `summary.overCapacity`, the one

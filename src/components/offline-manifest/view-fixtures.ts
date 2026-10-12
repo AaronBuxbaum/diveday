@@ -135,6 +135,8 @@ export function richPayload(
     crewWithoutIds?: boolean;
     /** The counter released this diver's seat before the copy was saved (#1209). */
     notHere?: boolean;
+    /** The diver said they were running late, at this instant (#2319). */
+    runningLateAt?: string;
   } = {},
 ): OfflineManifestPayload {
   // Every charter is crewed, so both cases carry the same two people; the
@@ -204,6 +206,7 @@ export function richPayload(
     rentalFit: { state: "not_recorded" },
     nitroxRequested: false,
     notHere: opts.notHere ?? false,
+    ...(opts.runningLateAt ? { runningLateAt: opts.runningLateAt } : {}),
     rollCall: undefined,
   };
   const carried: DiverFixture = {

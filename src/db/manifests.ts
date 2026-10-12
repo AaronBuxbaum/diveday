@@ -23,6 +23,7 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
+import { runningLateShown } from "@/lib/running-late";
 import { medicalWaiverMark } from "@/lib/waivers";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import { standingArrivalStatus } from "./arrival-provenance";
@@ -1016,6 +1017,12 @@ export async function getTripManifests(
       depthAdvisory: depthByBooking.get(booking.id),
       hotelPickupLocation: booking.hotelPickupLocation,
       pickupTime: booking.pickupTime,
+      // The diver's own "running late" (#2319), cleared from an arrived or
+      // released seat the way the arrivals list clears it.
+      runningLateAt: runningLateShown({
+        bookingStatus: booking.status,
+        runningLateAt: booking.runningLateAt,
+      }),
       checkedIn: booking.status === "checked_in",
       // The other half of the same column, and the one the roster read could
       // not say before there was a writer for it (#1209): this seat was

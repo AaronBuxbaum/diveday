@@ -879,6 +879,65 @@ describe("the welcome word", () => {
 });
 
 /**
+ * **"Running late, said 7:42"** (#2319): the diver's own word on the dock row,
+ * so the rail does not call missing someone who said they are on the way.
+ * Quiet text under the name, never a capsule and never in the mark, and gone
+ * the moment the crew board them.
+ */
+describe("a diver who said they are running late", () => {
+  const saidAt = new Date("2026-09-11T11:42:00.000Z"); // 7:42 AM in New York
+  const lateLine = (container: HTMLElement) =>
+    [...container.querySelectorAll<HTMLElement>("span")].find((element) =>
+      element.textContent?.startsWith("Running late"),
+    );
+
+  it("says so, in the shop's zone, on a dock row nobody has called", () => {
+    const { container } = renderList({
+      divers: [diver({ runningLateAt: saidAt })],
+      checkpoint: "departure",
+    });
+    const line = lateLine(container);
+    // `formatTime` keeps "7:42 AM" whole with a no-break space.
+    expect(line?.textContent?.replace(/\s/g, " ")).toBe("Running late, said 7:42 AM");
+    expect(line?.className).toContain("text-muted");
+    expect(line?.className).not.toMatch(/rounded-full|border|text-danger|text-warning/);
+  });
+
+  it("is gone once the diver is boarded", () => {
+    const { container } = renderList({
+      divers: [diver({ runningLateAt: saidAt, rollCall: boardedAt() })],
+      checkpoint: "departure",
+    });
+    expect(lateLine(container)).toBeUndefined();
+  });
+
+  it("is not said after a dive, or on a seat the desk released or checked in", () => {
+    for (const [checkpoint, extra] of [
+      ["after_dive_1", {}],
+      ["departure", { notHere: true }],
+      ["departure", { checkedIn: true }],
+    ] as const) {
+      const { container } = renderList({
+        divers: [diver({ runningLateAt: saidAt, ...extra })],
+        checkpoint,
+      });
+      expect(lateLine(container)).toBeUndefined();
+      cleanup();
+    }
+  });
+
+  it("speaks Spanish on a Spanish manifest", () => {
+    const { container } = renderList({
+      divers: [diver({ runningLateAt: saidAt })],
+      checkpoint: "departure",
+      locale: "es-ES",
+    });
+    expect(lateLine(container)).toBeUndefined();
+    expect(container.textContent).toContain("Llega tarde, avisó a las 7:42");
+  });
+});
+
+/**
  * **This heading is what makes the abbreviated checkpoint track safe** (#1320).
  * Below `sm` the manifest's checkpoint switch says only "Dock" / "Dive 2"
  * (*Muelle* / *Inm. 2*), and a short word is a handle for a choice only while
