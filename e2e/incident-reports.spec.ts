@@ -30,6 +30,7 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   // The account, in the shop's own zone.
   await page.getByLabel("Date", { exact: true }).fill(daysFromNow(0));
   await page.getByLabel("Time", { exact: true }).fill("09:10");
+  await page.getByLabel("Where, in words").fill("Boat deck, at the ladder");
   await page
     .getByLabel("What happened")
     .fill("Diver surfaced from 18 m short of breath after a fast ascent. Brought aboard.");
@@ -41,6 +42,8 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
     .getByRole("group", { name: "Were emergency services called?" })
     .getByLabel("No")
     .check();
+  // Oxygen was given, so where the diver went is part of the account.
+  await page.getByLabel("Who took over care").selectOption({ label: "Stayed with the crew" });
   await page.getByRole("button", { name: "Save draft" }).click();
   await expect(page.getByText("Draft saved.")).toBeVisible();
 
@@ -58,6 +61,7 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   await page.getByRole("button", { name: "File report" }).click();
   await expect(page.getByText("Report filed.")).toBeVisible();
   await expect(page.getByText("Yes, for 20 minutes")).toBeVisible();
+  await expect(page.getByText("Stayed with the crew")).toBeVisible();
   await expect(page.getByRole("button", { name: "Save draft" })).toHaveCount(0);
 
   // Anything learned later is a dated note, never an edit.

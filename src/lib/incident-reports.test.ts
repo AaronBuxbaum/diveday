@@ -76,6 +76,15 @@ describe("who may do what with an incident report", () => {
     expect(mayWriteIncidentReport(other, report)).toBe(false);
   });
 
+  it("closes every door to roles that are not staff, whatever the crew list says", () => {
+    for (const roles of [["diver"], []] as const) {
+      const viewer = { personId: author, roles: [...roles], onCrew: true };
+      expect(mayStartIncidentReport(viewer)).toBe(false);
+      expect(mayReadIncidentReport(viewer, report)).toBe(false);
+      expect(mayWriteIncidentReport(viewer, report)).toBe(false);
+    }
+  });
+
   it("lets owners and managers read every report", () => {
     expect(
       mayReadIncidentReport({ personId: "m", roles: ["manager"], onCrew: false }, report),
@@ -93,6 +102,7 @@ describe("incidentFilingGaps", () => {
   it("names everything a blank draft still needs", () => {
     expect(incidentFilingGaps(blank)).toEqual([
       "occurred_at",
+      "location",
       "what_happened",
       "first_aid",
       "oxygen",
@@ -105,11 +115,37 @@ describe("incidentFilingGaps", () => {
       incidentFilingGaps({
         ...blank,
         occurredAt: new Date("2026-10-01T10:00:00Z"),
+        locationText: "Boat deck",
         whatHappened: "Diver surfaced coughing.",
         firstAidGiven: false,
         oxygenGiven: false,
         emergencyServicesCalled: false,
       }),
+    ).toEqual([]);
+  });
+
+  it("takes a listed dive site as the place", () => {
+    expect(incidentFilingGaps({ ...blank, diveSiteId: "site" })).not.toContain("location");
+  });
+
+  it("asks who took over care once emergency services were called or oxygen was given", () => {
+    const answered = {
+      ...blank,
+      occurredAt: new Date("2026-10-01T10:00:00Z"),
+      locationText: "Boat deck",
+      whatHappened: "Diver surfaced coughing.",
+      firstAidGiven: true,
+      oxygenGiven: false,
+      emergencyServicesCalled: true,
+    };
+    expect(incidentFilingGaps(answered)).toEqual(["handover"]);
+    expect(
+      incidentFilingGaps({ ...answered, emergencyServicesCalled: false, oxygenGiven: true }),
+    ).toEqual(["handover"]);
+    // "Stayed with the crew" is an answer.
+    expect(incidentFilingGaps({ ...answered, handoverKind: "none" })).toEqual([]);
+    expect(
+      incidentFilingGaps({ ...answered, emergencyServicesCalled: false, oxygenGiven: false }),
     ).toEqual([]);
   });
 
@@ -194,11 +230,18 @@ describe("parseIncidentDraft", () => {
       utc,
     );
     expect(noOxygen).toMatchObject({ ok: true, fields: { oxygenMinutes: null } });
-    for (const minutes of ["-5", "2.5", "lots", "1441"]) {
+    for (const minutes of ["0", "-5", "2.5", "lots", "1441"]) {
       expect(
         parseIncidentDraft({ ...emptyForm, oxygenGiven: "yes", oxygenMinutes: minutes }, utc),
       ).toEqual({ ok: false, reason: "oxygen_minutes_invalid" });
     }
+  });
+
+  it("keeps an explicit nobody-took-over answer", () => {
+    expect(parseIncidentDraft({ ...emptyForm, handoverKind: "none" }, utc)).toMatchObject({
+      ok: true,
+      fields: { handoverKind: "none" },
+    });
   });
 
   it("drops a handover code it does not know", () => {

@@ -36,24 +36,24 @@
     "emergencyServices": "¿Se llamó a los servicios de emergencia?",
     "yes": "Sí",
     "no": "No",
-    "handover": "Traspaso",
+    "handover": "Entrega",
     "handoverKind": "Quién se hizo cargo",
-    "handoverNone": "Sin traspaso",
     "handoverDetail": "Nombre o lugar",
     "handoverDetailHint": "La tripulación, el hospital, la cámara.",
-    "handedOverOn": "Fecha del traspaso",
-    "handedOverTime": "Hora del traspaso",
+    "handedOverOn": "Fecha de la entrega",
+    "handedOverTime": "Hora de la entrega",
     "followUp": "Seguimiento",
-    "followUpHint": "Llamadas hechas, a quién se avisó, qué pasa ahora.",
+    "followUpHint": "A quién se avisó (DAN, la agencia de formación, el contacto de emergencia), equipo guardado para su revisión, qué pasa ahora.",
     "optional": "(opcional)",
     "save": "Guardar borrador",
     "saving": "Guardando…"
   },
   "handoverKind": {
+    "none": "Se quedó con la tripulación",
     "ems": "Servicios médicos de emergencia",
     "hospital": "Un hospital o una clínica",
     "chamber": "Una cámara hiperbárica",
-    "diver": "El propio buceador",
+    "diver": "La propia persona",
     "other": "Otra persona"
   },
   "people": {
@@ -64,6 +64,7 @@
     "choose": "Elige a una persona",
     "seats": "Buceadores de esta salida",
     "crew": "Tripulación",
+    "shopStaff": "Personal del centro",
     "someoneElse": "Alguien que no está en estas listas",
     "outsiderName": "Su nombre",
     "outsiderNameHint": "Solo para alguien que no está en las listas.",
@@ -73,14 +74,14 @@
     "remove": "Quitar",
     "removeLabel": "Quitar a {name} del informe",
     "removing": "Quitando…",
-    "kindBooking": "Buceador",
+    "kindBooking": "En el manifiesto",
     "kindStaff": "Tripulación",
     "kindOutsider": "No iba en la salida"
   },
   "involvement": {
-    "affected": "Afectado",
+    "affected": "Persona afectada",
     "witness": "Testigo",
-    "responder": "Ayudó"
+    "responder": "Prestó auxilio"
   },
   "file": {
     "title": "Presentar el informe",
@@ -90,10 +91,12 @@
     "needs": "Antes de presentarlo, falta:",
     "gap": {
       "occurred_at": "Cuándo pasó",
+      "location": "Dónde pasó",
       "what_happened": "Qué pasó",
       "first_aid": "Si se prestaron primeros auxilios",
       "oxygen": "Si se administró oxígeno",
-      "emergency_services": "Si se llamó a los servicios de emergencia"
+      "emergency_services": "Si se llamó a los servicios de emergencia",
+      "handover": "Quién se hizo cargo"
     }
   },
   "read": {
@@ -120,8 +123,8 @@
     "personAdded": "Añadido al informe.",
     "personRemoved": "Quitado del informe.",
     "occurredAtInvalid": "Indica fecha y hora de cuándo pasó, o deja ambas en blanco.",
-    "handedOverAtInvalid": "Indica fecha y hora del traspaso, o deja ambas en blanco.",
-    "handedOverBeforeIncident": "La hora del traspaso es anterior al incidente. Revisa las dos horas.",
+    "handedOverAtInvalid": "Indica fecha y hora de la entrega, o deja ambas en blanco.",
+    "handedOverBeforeIncident": "La hora de la entrega es anterior al incidente. Revisa las dos horas.",
     "oxygenMinutesInvalid": "Los minutos con oxígeno deben ser un número entero hasta 1440.",
     "textTooLong": "Una de las respuestas es demasiado larga. Acórtala y vuelve a guardar.",
     "incomplete": "Aún no se ha presentado. Responde primero a lo que aparece en la lista.",
@@ -134,20 +137,20 @@
     "notYetFiled": "Presenta el informe antes de añadir una nota posterior."
   },
   "safety": {
-    "intro": "Lo que el centro registró en las salidas que volvieron este mes. Nada de esta página cambia un registro.",
+    "intro": "Lo que el centro registró en las salidas que zarparon este mes y ya han vuelto. Las acreditaciones caducadas se leen según los registros de hoy. Nada de esta página cambia un registro.",
     "figuresLabel": "Registro de seguridad del mes",
     "rollCalls": "Recuentos cerrados",
     "rollCallsValue": "{closed} de {back}",
     "rollCallsDetail": "{back, plural, one {# salida de vuelta} other {# salidas de vuelta}}",
     "boarded": "Embarcados en el muelle",
     "boardedDetail": "{count, plural, =0 {Todas las plazas marcadas en el muelle} one {# plaza sin marcar en el muelle} other {# plazas sin marcar en el muelle}}",
-    "certOverrides": "Verificaciones de titulación anuladas",
+    "certOverrides": "Plazas de buceo concedidas sin titulación",
     "certOverridesLink": "La actividad de seguridad del mes",
     "crew": "Tripulación con una acreditación caducada",
     "crewValue": "{lapsed} de {sailings}",
     "crewDetail": "{sailings, plural, one {# salida de tripulante} other {# salidas de tripulantes}}",
     "incidents": "Informes de incidentes",
-    "boardingNote": "El recuento del muelle solo embarca a los buceadores que superan la verificación de preparación, así que nadie de este recuento embarcó con un bloqueo.",
+    "boardingNote": "El recuento del muelle rechaza a un buceador que la verificación de preparación no ha aprobado. Un buceador contado por primera vez en un recuento posterior no está en esta cifra.",
     "incidentsTitle": "Informes de incidentes",
     "incidentsEmpty": "No hay informes de incidentes este mes.",
     "openTitle": "Recuentos sin cerrar",

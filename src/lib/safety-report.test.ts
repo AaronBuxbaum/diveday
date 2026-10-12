@@ -87,6 +87,88 @@ describe("summarizeSafetyMonth: roll calls", () => {
     expect(summary.boardedAtDock).toBe(1);
   });
 
+  it("holds the count open for a crew member with no dock mark recorded not back aboard", () => {
+    const crewEvents = [
+      { tripId: "t1", subjectId: "c1", checkpoint: "after_dive_2", status: "not_boarded" as const },
+    ];
+    expect(
+      summarizeSafetyMonth(month({ diverEvents: everyoneBack, crewEvents })).openRollCalls,
+    ).toMatchObject([{ closure: "open" }]);
+  });
+
+  it("holds the count open for a crew member whose after-dive mark was undone", () => {
+    const crewEvents = [
+      { tripId: "t1", subjectId: "c1", checkpoint: "after_dive_1", status: "boarded" as const },
+      { tripId: "t1", subjectId: "c1", checkpoint: "after_dive_2", status: "boarded" as const },
+      { tripId: "t1", subjectId: "c1", checkpoint: "after_dive_2", status: "cleared" as const },
+    ];
+    expect(
+      summarizeSafetyMonth(month({ diverEvents: everyoneBack, crewEvents })).rollCallsClosed,
+    ).toBe(0);
+  });
+
+  it("reads a diver who joined at the second site as Today does: owed every after-dive count", () => {
+    const joined = [
+      diver("b1", "departure"),
+      diver("b2", "departure", "not_boarded"),
+      diver("b1", "after_dive_1"),
+      diver("b1", "after_dive_2"),
+      // b2 met the boat at the second site and was counted back after it.
+      diver("b2", "after_dive_2"),
+    ];
+    // The shared population rule (src/lib/roll-call-population.ts) has no
+    // "joined at" mark, so dive 1's count waits on b2 until somebody marks it.
+    expect(summarizeSafetyMonth(month({ diverEvents: joined })).openRollCalls).toMatchObject([
+      { closure: "open" },
+    ]);
+    const marked = [...joined, diver("b2", "after_dive_1")];
+    expect(summarizeSafetyMonth(month({ diverEvents: marked })).rollCallsClosed).toBe(1);
+  });
+
+  it("keeps a count open for a diver left ashore with a stray after-dive result", () => {
+    const stray = [
+      diver("b1", "departure"),
+      diver("b2", "departure", "not_boarded"),
+      diver("b1", "after_dive_1"),
+      diver("b1", "after_dive_2"),
+      // A tap on the wrong row: b2 is now in the after-dive count, and is
+      // not marked back aboard after dive 1.
+      diver("b2", "after_dive_2", "not_boarded"),
+    ];
+    expect(summarizeSafetyMonth(month({ diverEvents: stray })).openRollCalls).toMatchObject([
+      { closure: "open" },
+    ]);
+  });
+
+  it("never lets one departure's marks close another that shares its seats or crew", () => {
+    const second = { ...departure, tripId: "t2", title: "Afternoon two-tank" };
+    const summary = summarizeSafetyMonth(
+      month({
+        departures: [departure, second],
+        diverEvents: everyoneBack,
+        crewEvents: [
+          { tripId: "t1", subjectId: "c1", checkpoint: "departure", status: "boarded" },
+          { tripId: "t1", subjectId: "c1", checkpoint: "after_dive_1", status: "boarded" },
+          { tripId: "t1", subjectId: "c1", checkpoint: "after_dive_2", status: "boarded" },
+        ],
+      }),
+    );
+    expect(summary.rollCallsClosed).toBe(1);
+    expect(summary.openRollCalls).toMatchObject([{ tripId: "t2", closure: "none" }]);
+    expect(summary.boardedAtDock).toBe(2);
+    expect(summary.crewSailings).toBe(2);
+  });
+
+  it("passes over a departure with nobody booked and no head count, as an empty occurrence", () => {
+    const empty = { ...departure, tripId: "t3", bookingIds: [], crewIds: ["c1"] };
+    const summary = summarizeSafetyMonth(
+      month({ departures: [departure, empty], diverEvents: everyoneBack }),
+    );
+    expect(summary.departuresBack).toBe(1);
+    expect(summary.openRollCalls).toEqual([]);
+    expect(summary.crewSailings).toBe(1);
+  });
+
   it("holds the count open for a crew member who boarded and was never counted back", () => {
     const crewEvents = [
       { tripId: "t1", subjectId: "c1", checkpoint: "departure", status: "boarded" as const },

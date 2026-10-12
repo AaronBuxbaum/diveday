@@ -7,6 +7,7 @@ import type {
 
 /** The words for each code an incident report stores, in the staff bundle. */
 export const HANDOVER_KIND_KEYS: Record<IncidentHandoverKind, StaffMessageKey> = {
+  none: "incidents.handoverKind.none",
   ems: "incidents.handoverKind.ems",
   hospital: "incidents.handoverKind.hospital",
   chamber: "incidents.handoverKind.chamber",
@@ -28,8 +29,10 @@ export const PERSON_KIND_KEYS: Record<"booking" | "staff" | "outsider", StaffMes
 
 export const FILING_GAP_KEYS: Record<IncidentFilingGap, StaffMessageKey> = {
   occurred_at: "incidents.file.gap.occurred_at",
+  location: "incidents.file.gap.location",
   what_happened: "incidents.file.gap.what_happened",
   first_aid: "incidents.file.gap.first_aid",
   oxygen: "incidents.file.gap.oxygen",
   emergency_services: "incidents.file.gap.emergency_services",
+  handover: "incidents.file.gap.handover",
 };

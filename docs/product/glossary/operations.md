@@ -629,6 +629,9 @@
   roster, because a released seat never came back to the shelf. Its reader is the evening's
   **souls on board** line, whose crew half is the same idea: assigned crew less the ones a human
   recorded ashore at the dock.
+  A **crew sailing** is one crew member on one departure that is home, unless the crew marked
+  them ashore at the dock; the Safety tab reads each against the crew member's credentials as they
+  stand today, on the departure's last day.
 - **Souls on board** — the industry's (and the coast guard's) term for how many *people* a vessel
   left with: passengers (divers, snorkelers and riders) plus crew, one number, no distinction
   between who paid and who works. It is
@@ -665,10 +668,12 @@
 - **Incident report** — the shop's own written account of something that went wrong on a
   departure, for an insurer or an authority: when (in the shop's zone) and where, what happened,
   first aid, oxygen (and for how many minutes), whether emergency services were called, the
-  **handover** (to EMS, a hospital, a chamber, the person themselves, or someone else, and when),
-  and follow-up notes. It names the people involved — a diver by their seat, a staffer by their
-  record, anyone else by name — as affected, witness or responder. A **draft** is edited; filing
-  needs the time, what happened and the three yes/no answers, and a **filed** report is never
+  **handover** (nobody — they stayed with the crew — or EMS, a hospital, a chamber, the person
+  themselves released on scene, or someone else, and when), and follow-up notes. It names the
+  people involved — a diver by their seat, a staffer by their record, anyone else by name — as
+  affected, witness or gave aid. A **draft** is edited; filing needs the time, the place, what
+  happened, the three yes/no answers, and the handover once emergency services or oxygen were
+  involved, and a **filed** report is never
   edited again: what comes later is an **addendum**, dated and attributed. The departure's crew
   start one and read their own; owners and managers read all of them, on the trip's Details tab
   and the Reports **Safety** tab. Nothing a diver sees, and never a gate. It is not the
@@ -705,6 +710,12 @@
   (an empty crew list, or a whole crew marked ashore) raises no queue row: it fires on trips whose
   crew was never recorded at all, and would bury the rows that mean a person is in the water. The manifest states it; the queue chases what somebody
   actually recorded.
+  **Roll-call closure** is the same rule read once per departure that is home, on the Reports
+  **Safety** tab (`rollCallClosure`, `src/lib/safety-report.ts`; the population predicate is
+  `src/lib/roll-call-population.ts`): **closed** when every seat has a dock result and everybody in
+  each after-dive count, divers and crew alike, is recorded back aboard; **open** when any of that
+  is missing; **none** when the departure has no roll-call event of either kind. A date nobody
+  booked and nobody counted is an empty occurrence and is left out.
 - **Emergency contact** — a name *and* a reachable phone number the crew can call for a diver in
   an incident. It is captured from the diver (the waiver flow, and the `/ready` page), never
   invented, and it is **only "on file" when both the name and the phone are present** — a name with

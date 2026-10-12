@@ -49,6 +49,7 @@ export const INCIDENT_NOTICES: Record<
   },
   "already-listed": { form: "people", tone: "warning", key: "incidents.notices.alreadyListed" },
   "nobody-chosen": { form: "people", tone: "danger", key: "incidents.notices.nobodyChosen" },
+  "name-too-long": { form: "people", tone: "danger", key: "incidents.notices.textTooLong" },
   "note-too-long": { form: "addenda", tone: "danger", key: "incidents.notices.textTooLong" },
   "blank-note": { form: "addenda", tone: "danger", key: "incidents.notices.blankNote" },
 };

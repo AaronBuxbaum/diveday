@@ -57,6 +57,8 @@ export async function getSafetyMonth(
       )
       .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id))
   ).filter((trip) => hasReturned(trip.endsAt, now));
+  // An occurrence nobody booked and nobody counted is passed over in
+  // `summarizeSafetyMonth`, as Today passes it over.
   const tripIds = tripRows.map((trip) => trip.id);
 
   const [certOverrideRow] = await db

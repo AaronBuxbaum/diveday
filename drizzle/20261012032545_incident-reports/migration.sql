@@ -1,4 +1,4 @@
-CREATE TYPE "incident_handover_kind" AS ENUM('ems', 'hospital', 'chamber', 'diver', 'other');--> statement-breakpoint
+CREATE TYPE "incident_handover_kind" AS ENUM('none', 'ems', 'hospital', 'chamber', 'diver', 'other');--> statement-breakpoint
 CREATE TYPE "incident_involvement" AS ENUM('affected', 'witness', 'responder');--> statement-breakpoint
 CREATE TYPE "incident_report_status" AS ENUM('draft', 'filed');--> statement-breakpoint
 CREATE TABLE "incident_report_addenda" (
@@ -8,7 +8,8 @@ CREATE TABLE "incident_report_addenda" (
 	"body" text NOT NULL,
 	"author_person_id" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "incident_report_addenda_body_not_blank" CHECK (length(trim("body")) > 0)
+	CONSTRAINT "incident_report_addenda_body_not_blank" CHECK (length(trim("body")) > 0),
+	CONSTRAINT "incident_report_addenda_body_length" CHECK (length("body") <= 5000)
 );
 --> statement-breakpoint
 CREATE TABLE "incident_report_people" (
@@ -20,7 +21,8 @@ CREATE TABLE "incident_report_people" (
 	"outsider_name" text,
 	"involvement" "incident_involvement" NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "incident_report_people_one_subject" CHECK (num_nonnulls("booking_id", "person_id", "outsider_name") = 1)
+	CONSTRAINT "incident_report_people_one_subject" CHECK (num_nonnulls("booking_id", "person_id", "outsider_name") = 1),
+	CONSTRAINT "incident_report_people_outsider_name_length" CHECK ("outsider_name" is null or length("outsider_name") <= 200)
 );
 --> statement-breakpoint
 CREATE TABLE "incident_reports" (
@@ -45,12 +47,15 @@ CREATE TABLE "incident_reports" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"filed_at" timestamp with time zone,
 	"filed_by_person_id" uuid,
-	CONSTRAINT "incident_reports_oxygen_minutes" CHECK ("oxygen_minutes" is null or ("oxygen_given" is true and "oxygen_minutes" between 0 and 1440)),
+	CONSTRAINT "incident_reports_oxygen_minutes" CHECK ("oxygen_minutes" is null or ("oxygen_given" is true and "oxygen_minutes" between 1 and 1440)),
 	CONSTRAINT "incident_reports_filed_complete" CHECK ("status" = 'draft' or (
         "filed_at" is not null and "filed_by_person_id" is not null
         and "occurred_at" is not null and "what_happened" is not null
         and "first_aid_given" is not null and "oxygen_given" is not null
         and "emergency_services_called" is not null
+        and ("dive_site_id" is not null or "location_text" is not null)
+        and ("handover_kind" is not null
+          or ("emergency_services_called" is false and "oxygen_given" is false))
       ))
 );
 --> statement-breakpoint

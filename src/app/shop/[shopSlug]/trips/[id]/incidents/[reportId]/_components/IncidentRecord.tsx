@@ -46,7 +46,7 @@ export function IncidentRecord({
   const where = [report.diveSiteName, fields.locationText].filter(Boolean).join(" · ");
   const handoverWho = fields.handoverKind
     ? [t(HANDOVER_KIND_KEYS[fields.handoverKind]), fields.handoverDetail].filter(Boolean).join(": ")
-    : fields.handoverDetail;
+    : null;
   return (
     <SectionCard>
       <dl className="-my-3 divide-y divide-border">
@@ -65,11 +65,16 @@ export function IncidentRecord({
           {yesNo(fields.emergencyServicesCalled)}
         </Row>
         <Row label={t("incidents.form.handoverKind")}>
-          {handoverWho
-            ? fields.handedOverAt
-              ? t("incidents.read.handoverAt", { who: handoverWho, when: at(fields.handedOverAt) })
-              : handoverWho
-            : t("incidents.form.handoverNone")}
+          {/* Unanswered is said as such: a blank never reads as "nobody took over". */}
+          {handoverWho ? (
+            fields.handedOverAt ? (
+              t("incidents.read.handoverAt", { who: handoverWho, when: at(fields.handedOverAt) })
+            ) : (
+              handoverWho
+            )
+          ) : (
+            <span className="text-muted">{t("incidents.read.notAnswered")}</span>
+          )}
         </Row>
         <Row label={t("incidents.form.followUp")}>{fields.followUp ?? notWritten}</Row>
       </dl>

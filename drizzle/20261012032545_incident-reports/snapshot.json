@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "f39d9040-82bf-4c69-bc88-acab2fc66840",
+  "id": "fa6a538d-f284-4d37-8598-d65b098623ed",
   "prevIds": [
     "0d3464e2-b4ca-494d-aad4-2cf99b1d8fc9"
   ],
@@ -639,6 +639,7 @@
     },
     {
       "values": [
+        "none",
         "ems",
         "hospital",
         "chamber",
@@ -40254,6 +40255,13 @@
       "table": "incident_report_addenda"
     },
     {
+      "value": "length(\"body\") <= 5000",
+      "name": "incident_report_addenda_body_length",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "incident_report_addenda"
+    },
+    {
       "value": "num_nonnulls(\"booking_id\", \"person_id\", \"outsider_name\") = 1",
       "name": "incident_report_people_one_subject",
       "entityType": "checks",
@@ -40261,14 +40269,21 @@
       "table": "incident_report_people"
     },
     {
-      "value": "\"oxygen_minutes\" is null or (\"oxygen_given\" is true and \"oxygen_minutes\" between 0 and 1440)",
+      "value": "\"outsider_name\" is null or length(\"outsider_name\") <= 200",
+      "name": "incident_report_people_outsider_name_length",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "incident_report_people"
+    },
+    {
+      "value": "\"oxygen_minutes\" is null or (\"oxygen_given\" is true and \"oxygen_minutes\" between 1 and 1440)",
       "name": "incident_reports_oxygen_minutes",
       "entityType": "checks",
       "schema": "public",
       "table": "incident_reports"
     },
     {
-      "value": "\"status\" = 'draft' or (\n        \"filed_at\" is not null and \"filed_by_person_id\" is not null\n        and \"occurred_at\" is not null and \"what_happened\" is not null\n        and \"first_aid_given\" is not null and \"oxygen_given\" is not null\n        and \"emergency_services_called\" is not null\n      )",
+      "value": "\"status\" = 'draft' or (\n        \"filed_at\" is not null and \"filed_by_person_id\" is not null\n        and \"occurred_at\" is not null and \"what_happened\" is not null\n        and \"first_aid_given\" is not null and \"oxygen_given\" is not null\n        and \"emergency_services_called\" is not null\n        and (\"dive_site_id\" is not null or \"location_text\" is not null)\n        and (\"handover_kind\" is not null\n          or (\"emergency_services_called\" is false and \"oxygen_given\" is false))\n      )",
       "name": "incident_reports_filed_complete",
       "entityType": "checks",
       "schema": "public",

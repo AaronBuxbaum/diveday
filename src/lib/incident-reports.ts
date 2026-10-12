@@ -1,4 +1,4 @@
-import type { Role } from "@/lib/authz";
+import { canReadEveryIncidentReport, isStaff, type Role } from "@/lib/authz";
 
 /**
  * **An incident report's rules, without a database** (ADR
@@ -9,7 +9,18 @@ import type { Role } from "@/lib/authz";
  * call, booking or the close-out, and nothing here refuses a diver anything.
  */
 
-export const INCIDENT_HANDOVER_KINDS = ["ems", "hospital", "chamber", "diver", "other"] as const;
+/**
+ * Who took over care. `none` is an answer — the person stayed with the crew —
+ * and is distinct from a handover nobody has written down yet (null).
+ */
+export const INCIDENT_HANDOVER_KINDS = [
+  "none",
+  "ems",
+  "hospital",
+  "chamber",
+  "diver",
+  "other",
+] as const;
 export type IncidentHandoverKind = (typeof INCIDENT_HANDOVER_KINDS)[number];
 
 export const INCIDENT_INVOLVEMENTS = ["affected", "witness", "responder"] as const;
@@ -24,11 +35,6 @@ export const INCIDENT_SHORT_TEXT_MAX = 200;
 /** A day of oxygen is the ceiling the database holds too (`incident_reports_oxygen_minutes`). */
 export const INCIDENT_OXYGEN_MINUTES_MAX = 1440;
 
-/** Owners and managers read every report in the shop. */
-export function canReadEveryIncidentReport(roles: readonly Role[] | null | undefined): boolean {
-  return (roles ?? []).some((role) => role === "owner" || role === "manager");
-}
-
 export type IncidentViewer = {
   personId: string;
   /** Live roles, or null when the person is not active staff of this shop. */
@@ -39,7 +45,7 @@ export type IncidentViewer = {
 
 /** Who may start a report on a departure: its crew, and owners and managers. */
 export function mayStartIncidentReport(viewer: IncidentViewer): boolean {
-  if (viewer.roles === null) return false;
+  if (viewer.roles === null || !isStaff(viewer.roles)) return false;
   return viewer.onCrew || canReadEveryIncidentReport(viewer.roles);
 }
 
@@ -48,7 +54,7 @@ export function mayReadIncidentReport(
   viewer: IncidentViewer,
   report: { createdByPersonId: string },
 ): boolean {
-  if (viewer.roles === null) return false;
+  if (viewer.roles === null || !isStaff(viewer.roles)) return false;
   return canReadEveryIncidentReport(viewer.roles) || report.createdByPersonId === viewer.personId;
 }
 
@@ -82,18 +88,24 @@ export type IncidentDraftFields = {
 /** What filing still needs, as codes. Empty means the report can be filed. */
 export type IncidentFilingGap =
   | "occurred_at"
+  | "location"
   | "what_happened"
   | "first_aid"
   | "oxygen"
-  | "emergency_services";
+  | "emergency_services"
+  | "handover";
 
 export function incidentFilingGaps(fields: IncidentDraftFields): IncidentFilingGap[] {
   const gaps: IncidentFilingGap[] = [];
   if (fields.occurredAt === null) gaps.push("occurred_at");
+  if (fields.diveSiteId === null && !fields.locationText?.trim()) gaps.push("location");
   if (!fields.whatHappened?.trim()) gaps.push("what_happened");
   if (fields.firstAidGiven === null) gaps.push("first_aid");
   if (fields.oxygenGiven === null) gaps.push("oxygen");
   if (fields.emergencyServicesCalled === null) gaps.push("emergency_services");
+  // Once a medic or oxygen was involved, where the person went is part of the account.
+  const careEscalated = fields.emergencyServicesCalled === true || fields.oxygenGiven === true;
+  if (careEscalated && fields.handoverKind === null) gaps.push("handover");
   return gaps;
 }
 
@@ -177,7 +189,8 @@ export function parseIncidentDraft(
   if (minutesText !== null && oxygenGiven === true) {
     if (!/^\d{1,4}$/.test(minutesText)) return { ok: false, reason: "oxygen_minutes_invalid" };
     oxygenMinutes = Number(minutesText);
-    if (oxygenMinutes > INCIDENT_OXYGEN_MINUTES_MAX) {
+    // Zero minutes contradicts "yes": refused rather than stored.
+    if (oxygenMinutes < 1 || oxygenMinutes > INCIDENT_OXYGEN_MINUTES_MAX) {
       return { ok: false, reason: "oxygen_minutes_invalid" };
     }
   }

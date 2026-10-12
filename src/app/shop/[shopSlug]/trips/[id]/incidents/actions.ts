@@ -13,7 +13,6 @@ import {
   startIncidentReport,
 } from "@/db/incident-reports";
 import {
-  INCIDENT_TEXT_MAX,
   type IncidentFieldRefusal,
   isIncidentInvolvement,
   parseIncidentDraft,
@@ -36,7 +35,10 @@ function reportPath(shopSlug: string, tripId: string, reportId: string): string 
 }
 
 /** Every write refusal's code, as the report page's notice map spells it. */
-const REFUSAL_NOTICE: Record<Exclude<IncidentWriteRefusal, "not_found" | "not_allowed">, string> = {
+const REFUSAL_NOTICE: Record<
+  Exclude<IncidentWriteRefusal, "not_found" | "not_allowed" | "too_long">,
+  string
+> = {
   filed: "already-filed",
   draft: "not-yet-filed",
   incomplete: "incomplete",
@@ -63,7 +65,12 @@ function settle(
 ): never {
   if (result.ok) revalidateAndRedirect(back, noticeUrl(back, done, { form }));
   if (result.reason === "not_found" || result.reason === "not_allowed") notFound();
-  const notice = REFUSAL_NOTICE[result.reason];
+  const notice =
+    result.reason === "too_long"
+      ? form === "addenda"
+        ? "note-too-long"
+        : "name-too-long"
+      : REFUSAL_NOTICE[result.reason];
   revalidateAndRedirect(back, noticeUrl(back, notice, { form }));
 }
 
@@ -137,6 +144,7 @@ export async function saveIncidentDraftAction(
   const result = await saveIncidentDraft(await getDb(), {
     shopId: shop.id,
     reportId,
+    tripId,
     actorPersonId: session.user.personId,
     fields: parsed.fields,
   });
@@ -151,6 +159,7 @@ export async function fileIncidentReportAction(shopSlug: string, tripId: string,
   const result = await fileIncidentReport(await getDb(), {
     shopId: shop.id,
     reportId,
+    tripId,
     actorPersonId: session.user.personId,
   });
   settle(back, result, "filed", "file");
@@ -167,12 +176,10 @@ export async function addIncidentAddendumAction(
   requireIds(tripId, reportId);
   const back = reportPath(shopSlug, tripId, reportId);
   const body = text(formData, "body");
-  if (body.trim().length > INCIDENT_TEXT_MAX) {
-    redirect(noticeUrl(back, "note-too-long", { form: "addenda" }));
-  }
   const result = await addIncidentAddendum(await getDb(), {
     shopId: shop.id,
     reportId,
+    tripId,
     actorPersonId: session.user.personId,
     body,
   });
@@ -199,7 +206,7 @@ export async function addIncidentPersonAction(
   if (kind === "booking" && uuidParam(id)) subject = { kind: "booking", bookingId: id };
   else if (kind === "staff" && uuidParam(id)) subject = { kind: "staff", personId: id };
   else if (kind === "outsider" && text(formData, "outsiderName").trim()) {
-    subject = { kind: "outsider", name: text(formData, "outsiderName").trim().slice(0, 200) };
+    subject = { kind: "outsider", name: text(formData, "outsiderName") };
   }
   if (!subject || !isIncidentInvolvement(involvement)) {
     redirect(noticeUrl(back, "nobody-chosen", { form: "people" }));
@@ -207,6 +214,7 @@ export async function addIncidentPersonAction(
   const result = await addIncidentPerson(await getDb(), {
     shopId: shop.id,
     reportId,
+    tripId,
     actorPersonId: session.user.personId,
     subject,
     involvement,
@@ -227,6 +235,7 @@ export async function removeIncidentPersonAction(
   const result = await removeIncidentPerson(await getDb(), {
     shopId: shop.id,
     reportId,
+    tripId,
     actorPersonId: session.user.personId,
     rowId,
   });

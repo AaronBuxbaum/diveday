@@ -16,8 +16,9 @@ import { startIncidentReportAction } from "../incidents/actions";
  * 20261012-incident-reports). The door to start one is here and only here on
  * the departure: the crew who were aboard, and owners and managers.
  *
- * Absent for anyone who may neither start one nor read one, so a staffer not
- * on this boat sees no hint that a report exists. Read against the database on
+ * Absent for anyone who may neither start one nor read one: a staffer not on
+ * this boat sees no report and no door; the Activity line says only who filed
+ * one. Read against the database on
  * every render: a crew change or a demotion takes effect at once.
  */
 export async function TripIncidentReports({

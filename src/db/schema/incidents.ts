@@ -28,8 +28,13 @@ import { trips } from "./trips";
 
 export const incidentReportStatus = pgEnum("incident_report_status", ["draft", "filed"]);
 
-/** Who took the person over after the incident. `diver` is the person themselves. */
+/**
+ * Who took the person over after the incident. `none`: nobody — they stayed
+ * with the crew. `diver`: the person themselves, released on scene. A null
+ * column is a handover nobody has answered yet.
+ */
 export const incidentHandoverKind = pgEnum("incident_handover_kind", [
+  "none",
   "ems",
   "hospital",
   "chamber",
@@ -86,10 +91,11 @@ export const incidentReports = pgTable(
     index("incident_reports_shop_occurred_idx").on(table.shopId, table.occurredAt),
     check(
       "incident_reports_oxygen_minutes",
-      sql`${table.oxygenMinutes} is null or (${table.oxygenGiven} is true and ${table.oxygenMinutes} between 0 and 1440)`,
+      sql`${table.oxygenMinutes} is null or (${table.oxygenGiven} is true and ${table.oxygenMinutes} between 1 and 1440)`,
     ),
     // Filing is refused without these, and the database says so too: a filed
-    // report always answers when, what, and the three yes/no questions.
+    // report always answers when, where, what, and the three yes/no questions,
+    // and who took over care once emergency services or oxygen were involved.
     check(
       "incident_reports_filed_complete",
       sql`${table.status} = 'draft' or (
@@ -97,6 +103,9 @@ export const incidentReports = pgTable(
         and ${table.occurredAt} is not null and ${table.whatHappened} is not null
         and ${table.firstAidGiven} is not null and ${table.oxygenGiven} is not null
         and ${table.emergencyServicesCalled} is not null
+        and (${table.diveSiteId} is not null or ${table.locationText} is not null)
+        and (${table.handoverKind} is not null
+          or (${table.emergencyServicesCalled} is false and ${table.oxygenGiven} is false))
       )`,
     ),
   ],
@@ -131,6 +140,10 @@ export const incidentReportPeople = pgTable(
       "incident_report_people_one_subject",
       sql`num_nonnulls(${table.bookingId}, ${table.personId}, ${table.outsiderName}) = 1`,
     ),
+    check(
+      "incident_report_people_outsider_name_length",
+      sql`${table.outsiderName} is null or length(${table.outsiderName}) <= 200`,
+    ),
   ],
 );
 
@@ -154,5 +167,6 @@ export const incidentReportAddenda = pgTable(
   (table) => [
     index("incident_report_addenda_report_idx").on(table.reportId, table.createdAt),
     check("incident_report_addenda_body_not_blank", sql`length(trim(${table.body})) > 0`),
+    check("incident_report_addenda_body_length", sql`length(${table.body}) <= 5000`),
   ],
 );

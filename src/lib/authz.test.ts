@@ -17,6 +17,7 @@ import {
   canManageWaiverTemplates,
   canOverrideCertBlock,
   canOverrideGearRequest,
+  canReadEveryIncidentReport,
   canReadMedicalClearanceDocument,
   canReadPrivateRecapPulse,
   canRefund,
@@ -136,6 +137,19 @@ describe("canConfigureTrips (H-14 — owner/manager/instructor)", () => {
   it("rejects empty and undefined roles", () => {
     expect(canConfigureTrips([])).toBe(false);
     expect(canConfigureTrips(undefined)).toBe(false);
+  });
+});
+
+describe("canReadEveryIncidentReport (owner or manager)", () => {
+  it("admits owners and managers, and nobody who only works the water", () => {
+    expect(canReadEveryIncidentReport(["owner"])).toBe(true);
+    expect(canReadEveryIncidentReport(["manager"])).toBe(true);
+    expect(canReadEveryIncidentReport(["captain", "manager"])).toBe(true);
+    for (const role of ["instructor", "divemaster", "captain", "crew", "diver"] as const) {
+      expect(canReadEveryIncidentReport([role])).toBe(false);
+    }
+    expect(canReadEveryIncidentReport([])).toBe(false);
+    expect(canReadEveryIncidentReport(undefined)).toBe(false);
   });
 });
 

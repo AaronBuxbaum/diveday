@@ -31,6 +31,7 @@ const ctx = fileScopedShopContext();
 
 const OTHER_SHOP = "99999999-8888-4777-8666-555555555555";
 
+const OTHER_TRIP = "99999999-8888-4777-8666-444444444444";
 const OCCURRED_AT = new Date("2026-10-01T15:20:00Z");
 
 const complete: IncidentDraftFields = {
@@ -110,34 +111,79 @@ describe("a draft, then a filed report", () => {
       actorPersonId: personId === "crew" ? f.crew.id : f.owner.id,
     });
     if (!started.ok) throw new Error("expected a draft");
-    return { ...f, reportId: started.reportId };
+    return { ...f, reportId: started.reportId, tripId: f.trip.id };
   }
 
   it("refuses to file until when, what, and the three yes/no questions are answered", async () => {
     const { db, shop } = ctx;
-    const { reportId, crew } = await draftBy("crew");
+    const { reportId, tripId, crew } = await draftBy("crew");
     expect(
-      await fileIncidentReport(db, { shopId: shop.id, reportId, actorPersonId: crew.id }),
+      await fileIncidentReport(db, { shopId: shop.id, reportId, tripId, actorPersonId: crew.id }),
     ).toEqual({
       ok: false,
       reason: "incomplete",
-      gaps: ["occurred_at", "what_happened", "first_aid", "oxygen", "emergency_services"],
+      gaps: [
+        "occurred_at",
+        "location",
+        "what_happened",
+        "first_aid",
+        "oxygen",
+        "emergency_services",
+      ],
+    });
+  });
+
+  it("answers a write under another departure's address as if the report did not exist", async () => {
+    const { db, shop } = ctx;
+    const { reportId, crew } = await draftBy("crew");
+    const elsewhere = { shopId: shop.id, reportId, tripId: OTHER_TRIP, actorPersonId: crew.id };
+    expect(await saveIncidentDraft(db, { ...elsewhere, fields: complete })).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+    expect(await fileIncidentReport(db, elsewhere)).toEqual({ ok: false, reason: "not_found" });
+    expect(
+      await addIncidentPerson(db, {
+        ...elsewhere,
+        subject: { kind: "outsider", name: "Boat skipper" },
+        involvement: "witness",
+      }),
+    ).toEqual({ ok: false, reason: "not_found" });
+  });
+
+  it("refuses a note or a name longer than the record holds", async () => {
+    const { db, shop } = ctx;
+    const { reportId, tripId, crew } = await draftBy("crew");
+    const base = { shopId: shop.id, reportId, tripId, actorPersonId: crew.id };
+    expect(
+      await addIncidentPerson(db, {
+        ...base,
+        subject: { kind: "outsider", name: "x".repeat(201) },
+        involvement: "witness",
+      }),
+    ).toEqual({ ok: false, reason: "too_long" });
+    await saveIncidentDraft(db, { ...base, fields: complete });
+    await fileIncidentReport(db, base);
+    expect(await addIncidentAddendum(db, { ...base, body: "x".repeat(5001) })).toEqual({
+      ok: false,
+      reason: "too_long",
     });
   });
 
   it("files a complete draft, writes the actor-only activity line, and freezes the report", async () => {
     const { db, shop } = ctx;
-    const { reportId, crew, trip } = await draftBy("crew");
+    const { reportId, tripId, crew, trip } = await draftBy("crew");
     expect(
       await saveIncidentDraft(db, {
         shopId: shop.id,
         reportId,
+        tripId,
         actorPersonId: crew.id,
         fields: complete,
       }),
     ).toEqual({ ok: true });
     expect(
-      await fileIncidentReport(db, { shopId: shop.id, reportId, actorPersonId: crew.id }),
+      await fileIncidentReport(db, { shopId: shop.id, reportId, tripId, actorPersonId: crew.id }),
     ).toEqual({ ok: true });
 
     const [line] = await db
@@ -153,12 +199,13 @@ describe("a draft, then a filed report", () => {
       await saveIncidentDraft(db, {
         shopId: shop.id,
         reportId,
+        tripId,
         actorPersonId: crew.id,
         fields: { ...complete, whatHappened: "Rewritten after the fact." },
       }),
     ).toEqual({ ok: false, reason: "filed" });
     expect(
-      await fileIncidentReport(db, { shopId: shop.id, reportId, actorPersonId: crew.id }),
+      await fileIncidentReport(db, { shopId: shop.id, reportId, tripId, actorPersonId: crew.id }),
     ).toEqual({ ok: false, reason: "filed" });
     const view = await getIncidentReport(db, shop.id, reportId, crew.id);
     expect(view?.status).toBe("filed");
@@ -168,10 +215,11 @@ describe("a draft, then a filed report", () => {
 
   it("drops oxygen minutes that stand beside a no", async () => {
     const { db, shop } = ctx;
-    const { reportId, crew } = await draftBy("crew");
+    const { reportId, tripId, crew } = await draftBy("crew");
     await saveIncidentDraft(db, {
       shopId: shop.id,
       reportId,
+      tripId,
       actorPersonId: crew.id,
       fields: { ...complete, oxygenGiven: false, oxygenMinutes: 10 },
     });
@@ -181,11 +229,12 @@ describe("a draft, then a filed report", () => {
 
   it("refuses a dive site from another shop", async () => {
     const { db, shop } = ctx;
-    const { reportId, crew } = await draftBy("crew");
+    const { reportId, tripId, crew } = await draftBy("crew");
     expect(
       await saveIncidentDraft(db, {
         shopId: shop.id,
         reportId,
+        tripId,
         actorPersonId: crew.id,
         fields: { ...complete, diveSiteId: OTHER_SHOP },
       }),
@@ -194,11 +243,12 @@ describe("a draft, then a filed report", () => {
 
   it("takes addenda only once filed, each attributed, with its own activity line", async () => {
     const { db, shop } = ctx;
-    const { reportId, crew, owner, trip } = await draftBy("crew");
+    const { reportId, tripId, crew, owner, trip } = await draftBy("crew");
     expect(
       await addIncidentAddendum(db, {
         shopId: shop.id,
         reportId,
+        tripId,
         actorPersonId: crew.id,
         body: "Too early",
       }),
@@ -206,14 +256,16 @@ describe("a draft, then a filed report", () => {
     await saveIncidentDraft(db, {
       shopId: shop.id,
       reportId,
+      tripId,
       actorPersonId: crew.id,
       fields: complete,
     });
-    await fileIncidentReport(db, { shopId: shop.id, reportId, actorPersonId: crew.id });
+    await fileIncidentReport(db, { shopId: shop.id, reportId, tripId, actorPersonId: crew.id });
     expect(
       await addIncidentAddendum(db, {
         shopId: shop.id,
         reportId,
+        tripId,
         actorPersonId: owner.id,
         body: "   ",
       }),
@@ -222,6 +274,7 @@ describe("a draft, then a filed report", () => {
       await addIncidentAddendum(db, {
         shopId: shop.id,
         reportId,
+        tripId,
         actorPersonId: owner.id,
         body: "Diver called: discharged from the clinic, no treatment needed.",
       }),
@@ -292,6 +345,7 @@ describe("who reads what", () => {
       await saveIncidentDraft(db, {
         shopId: shop.id,
         reportId: owners.reportId,
+        tripId: f.trip.id,
         actorPersonId: f.crew.id,
         fields: complete,
       }),
@@ -310,6 +364,7 @@ describe("who reads what", () => {
     await saveIncidentDraft(db, {
       shopId: shop.id,
       reportId: started.reportId,
+      tripId: f.trip.id,
       actorPersonId: f.crew.id,
       fields: complete,
     });
@@ -335,7 +390,12 @@ describe("the people in a report", () => {
       actorPersonId: f.crew.id,
     });
     if (!started.ok) throw new Error("expected a draft");
-    const base = { shopId: shop.id, reportId: started.reportId, actorPersonId: f.crew.id };
+    const base = {
+      shopId: shop.id,
+      reportId: started.reportId,
+      tripId: f.trip.id,
+      actorPersonId: f.crew.id,
+    };
     expect(
       await addIncidentPerson(db, {
         ...base,
@@ -407,6 +467,7 @@ describe("the people in a report", () => {
       await addIncidentPerson(db, {
         shopId: shop.id,
         reportId: started.reportId,
+        tripId: f.trip.id,
         actorPersonId: f.crew.id,
         subject: { kind: "booking", bookingId: otherSeat.booking.id },
         involvement: "affected",
@@ -426,7 +487,12 @@ describe("erasing a diver named in a report", () => {
       actorPersonId: f.crew.id,
     });
     if (!started.ok) throw new Error("expected a draft");
-    const base = { shopId: shop.id, reportId: started.reportId, actorPersonId: f.crew.id };
+    const base = {
+      shopId: shop.id,
+      reportId: started.reportId,
+      tripId: f.trip.id,
+      actorPersonId: f.crew.id,
+    };
     await saveIncidentDraft(db, {
       ...base,
       fields: { ...complete, whatHappened: `${name} surfaced coughing. Oxygen started at once.` },
@@ -476,7 +542,12 @@ describe("retention", () => {
       actorPersonId: f.crew.id,
     });
     if (!started.ok) throw new Error("expected a draft");
-    const base = { shopId: shop.id, reportId: started.reportId, actorPersonId: f.crew.id };
+    const base = {
+      shopId: shop.id,
+      reportId: started.reportId,
+      tripId: f.trip.id,
+      actorPersonId: f.crew.id,
+    };
     await saveIncidentDraft(db, { ...base, fields: complete });
     await addIncidentPerson(db, {
       ...base,

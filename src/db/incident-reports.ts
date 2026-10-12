@@ -1,7 +1,10 @@
-import { and, asc, desc, eq, gte, lt, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lt, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import {
+  INCIDENT_SHORT_TEXT_MAX,
+  INCIDENT_TEXT_MAX,
   type IncidentDraftFields,
   type IncidentFilingGap,
   type IncidentHandoverKind,
@@ -24,10 +27,12 @@ import {
   incidentReportPeople,
   incidentReports,
   people,
+  personRoles,
   rollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
   trips,
+  userAccounts,
 } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -85,7 +90,8 @@ export type IncidentWriteRefusal =
   | "site_not_found"
   | "subject_not_found"
   | "already_listed"
-  | "blank";
+  | "blank"
+  | "too_long";
 
 /** Start a draft on a departure. */
 export async function startIncidentReport(
@@ -112,6 +118,9 @@ export async function startIncidentReport(
   return { ok: true, reportId: row.id };
 }
 
+/** Which report a write is for: the shop, the departure it hangs off, and who is writing. */
+type WriteTarget = { shopId: string; reportId: string; tripId: string; actorPersonId: string };
+
 /**
  * The report, locked for the write that follows, and whether this actor may
  * write it. Reads the departure without `liveTrip()`: a report outlives a
@@ -119,9 +128,7 @@ export async function startIncidentReport(
  */
 async function lockForWrite(
   db: DbExecutor,
-  shopId: string,
-  reportId: string,
-  actorPersonId: string,
+  { shopId, reportId, tripId, actorPersonId }: WriteTarget,
 ) {
   const [report] = await db
     .select({
@@ -146,7 +153,8 @@ async function lockForWrite(
     .where(and(eq(incidentReports.id, reportId), eq(incidentReports.shopId, shopId)))
     .limit(1)
     .for("update");
-  if (!report) return { report: null, allowed: false } as const;
+  // A report reached under another departure's address is not this report.
+  if (!report || report.tripId !== tripId) return { report: null, allowed: false } as const;
   const viewer = await loadIncidentViewer(db, shopId, report.tripId, actorPersonId);
   return { report, allowed: mayWriteIncidentReport(viewer, report) } as const;
 }
@@ -154,15 +162,10 @@ async function lockForWrite(
 /** Save a draft's fields. A filed report is refused: it changes only by addendum. */
 export async function saveIncidentDraft(
   db: AppDb,
-  input: { shopId: string; reportId: string; actorPersonId: string; fields: IncidentDraftFields },
+  input: WriteTarget & { fields: IncidentDraftFields },
 ): Promise<{ ok: true } | { ok: false; reason: IncidentWriteRefusal }> {
   return db.transaction(async (tx) => {
-    const { report, allowed } = await lockForWrite(
-      tx,
-      input.shopId,
-      input.reportId,
-      input.actorPersonId,
-    );
+    const { report, allowed } = await lockForWrite(tx, input);
     if (!report || !allowed) return { ok: false, reason: "not_found" } as const;
     if (report.status !== "draft") return { ok: false, reason: "filed" } as const;
     const { fields } = input;
@@ -199,19 +202,14 @@ export async function saveIncidentDraft(
  */
 export async function fileIncidentReport(
   db: AppDb,
-  input: { shopId: string; reportId: string; actorPersonId: string },
+  input: WriteTarget,
 ): Promise<
   | { ok: true }
   | { ok: false; reason: Exclude<IncidentWriteRefusal, "incomplete"> }
   | { ok: false; reason: "incomplete"; gaps: IncidentFilingGap[] }
 > {
   return db.transaction(async (tx) => {
-    const { report, allowed } = await lockForWrite(
-      tx,
-      input.shopId,
-      input.reportId,
-      input.actorPersonId,
-    );
+    const { report, allowed } = await lockForWrite(tx, input);
     if (!report || !allowed) return { ok: false, reason: "not_found" } as const;
     if (report.status !== "draft") return { ok: false, reason: "filed" } as const;
     const gaps = incidentFilingGaps(report);
@@ -225,7 +223,13 @@ export async function fileIncidentReport(
         filedByPersonId: input.actorPersonId,
         updatedAt: now,
       })
-      .where(and(eq(incidentReports.id, input.reportId), eq(incidentReports.status, "draft")));
+      .where(
+        and(
+          eq(incidentReports.id, input.reportId),
+          eq(incidentReports.shopId, input.shopId),
+          eq(incidentReports.status, "draft"),
+        ),
+      );
     await recordTripActivity(tx, {
       shopId: input.shopId,
       tripId: report.tripId,
@@ -239,17 +243,13 @@ export async function fileIncidentReport(
 /** Add a dated, attributed addendum to a filed report. A draft is edited instead. */
 export async function addIncidentAddendum(
   db: AppDb,
-  input: { shopId: string; reportId: string; actorPersonId: string; body: string },
+  input: WriteTarget & { body: string },
 ): Promise<{ ok: true } | { ok: false; reason: IncidentWriteRefusal }> {
   const body = input.body.trim();
   if (!body) return { ok: false, reason: "blank" };
+  if (body.length > INCIDENT_TEXT_MAX) return { ok: false, reason: "too_long" };
   return db.transaction(async (tx) => {
-    const { report, allowed } = await lockForWrite(
-      tx,
-      input.shopId,
-      input.reportId,
-      input.actorPersonId,
-    );
+    const { report, allowed } = await lockForWrite(tx, input);
     if (!report || !allowed) return { ok: false, reason: "not_found" } as const;
     if (report.status !== "filed") return { ok: false, reason: "draft" } as const;
     await tx.insert(incidentReportAddenda).values({
@@ -280,21 +280,10 @@ export type IncidentSubject =
  */
 export async function addIncidentPerson(
   db: AppDb,
-  input: {
-    shopId: string;
-    reportId: string;
-    actorPersonId: string;
-    subject: IncidentSubject;
-    involvement: IncidentInvolvement;
-  },
+  input: WriteTarget & { subject: IncidentSubject; involvement: IncidentInvolvement },
 ): Promise<{ ok: true } | { ok: false; reason: IncidentWriteRefusal }> {
   return db.transaction(async (tx) => {
-    const { report, allowed } = await lockForWrite(
-      tx,
-      input.shopId,
-      input.reportId,
-      input.actorPersonId,
-    );
+    const { report, allowed } = await lockForWrite(tx, input);
     if (!report || !allowed) return { ok: false, reason: "not_found" } as const;
     if (report.status !== "draft") return { ok: false, reason: "filed" } as const;
     const { subject } = input;
@@ -326,6 +315,7 @@ export async function addIncidentPerson(
     } else {
       const name = subject.name.trim();
       if (!name) return { ok: false, reason: "blank" } as const;
+      if (name.length > INCIDENT_SHORT_TEXT_MAX) return { ok: false, reason: "too_long" } as const;
       row.outsiderName = name;
     }
     const [existing] = await tx
@@ -356,15 +346,10 @@ export async function addIncidentPerson(
 /** Take somebody off a draft's list. A filed report's list is fixed. */
 export async function removeIncidentPerson(
   db: AppDb,
-  input: { shopId: string; reportId: string; actorPersonId: string; rowId: string },
+  input: WriteTarget & { rowId: string },
 ): Promise<{ ok: true } | { ok: false; reason: IncidentWriteRefusal }> {
   return db.transaction(async (tx) => {
-    const { report, allowed } = await lockForWrite(
-      tx,
-      input.shopId,
-      input.reportId,
-      input.actorPersonId,
-    );
+    const { report, allowed } = await lockForWrite(tx, input);
     if (!report || !allowed) return { ok: false, reason: "not_found" } as const;
     if (report.status !== "draft") return { ok: false, reason: "filed" } as const;
     await tx
@@ -683,4 +668,33 @@ export async function deleteDemoSafetyTrail(db: DbExecutor, shopId: string): Pro
   await db.delete(incidentReports).where(eq(incidentReports.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+}
+
+/**
+ * The shop's active staff who are not on this departure's crew, for naming a
+ * staffer ashore — the person who took the call, or drove to the clinic.
+ * Only staff with an active account; the write re-checks it.
+ */
+export async function listIncidentShopStaffChoices(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<{ personId: string; name: string }[]> {
+  const crew = await listIncidentCrewChoices(db, shopId, tripId);
+  const onCrew = new Set(crew.map((member) => member.personId));
+  const rows = await db
+    .selectDistinct({ personId: people.id, name: people.fullName })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .innerJoin(userAccounts, eq(userAccounts.personId, people.id))
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        inArray(personRoles.role, [...STAFF_ROLES]),
+        eq(userAccounts.status, "active"),
+      ),
+    )
+    .orderBy(asc(people.fullName), asc(people.id));
+  return rows.filter((row) => !onCrew.has(row.personId));
 }

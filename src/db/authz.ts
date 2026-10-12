@@ -16,6 +16,7 @@ import {
   canMergeDiver,
   canOverrideCertBlock,
   canOverrideGearRequest,
+  canReadEveryIncidentReport,
   canReadMedicalAnswers,
   canReadMedicalClearanceDocument,
   canReadPrivateRecapPulse,
@@ -247,6 +248,13 @@ export const canPersonCallDayBlowout = (db: DbExecutor, shopId: string, personId
  */
 export const canPersonExportIncidentRecord = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canExportIncidentRecord);
+
+/** Live DB-checked companion of `canReadEveryIncidentReport` (src/lib/authz.ts). */
+export const canPersonReadEveryIncidentReport = (
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+) => canPerson(db, shopId, personId, canReadEveryIncidentReport);
 
 /** Live DB-checked companion of the "Change anyway" card-check override (src/lib/authz.ts). */
 export const canPersonOverrideCertBlock = (db: DbExecutor, shopId: string, personId: string) =>

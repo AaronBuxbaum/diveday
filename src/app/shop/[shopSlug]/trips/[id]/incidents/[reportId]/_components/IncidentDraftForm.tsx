@@ -176,7 +176,8 @@ export function IncidentDraftForm({
               defaultValue={fields.handoverKind ?? ""}
               className={controlClass}
             >
-              <option value="">{t("incidents.form.handoverNone")}</option>
+              {/* Blank until answered; "Stayed with the crew" is the answer for nobody. */}
+              <option value="" />
               {INCIDENT_HANDOVER_KINDS.map((kind) => (
                 <option key={kind} value={kind}>
                   {t(HANDOVER_KIND_KEYS[kind])}

@@ -11,6 +11,7 @@ import { INVOLVEMENT_KEYS, PERSON_KIND_KEYS } from "./incident-words";
 type Editing = {
   seats: readonly { bookingId: string; name: string }[];
   crew: readonly { personId: string; name: string }[];
+  shopStaff: readonly { personId: string; name: string }[];
   addAction: (formData: FormData) => Promise<void>;
   removeAction: (rowId: string) => (formData: FormData) => Promise<void>;
 };
@@ -86,6 +87,15 @@ export function IncidentPeople({
                 {editing.crew.length > 0 ? (
                   <optgroup label={t("incidents.people.crew")}>
                     {editing.crew.map((member) => (
+                      <option key={member.personId} value={`staff:${member.personId}`}>
+                        {member.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
+                {editing.shopStaff.length > 0 ? (
+                  <optgroup label={t("incidents.people.shopStaff")}>
+                    {editing.shopStaff.map((member) => (
                       <option key={member.personId} value={`staff:${member.personId}`}>
                         {member.name}
                       </option>

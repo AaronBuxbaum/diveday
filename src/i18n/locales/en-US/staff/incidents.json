@@ -38,22 +38,22 @@
     "no": "No",
     "handover": "Handover",
     "handoverKind": "Who took over care",
-    "handoverNone": "Not handed over",
     "handoverDetail": "Name or place",
     "handoverDetailHint": "The crew, the hospital, the chamber.",
     "handedOverOn": "Handover date",
     "handedOverTime": "Handover time",
     "followUp": "Follow-up",
-    "followUpHint": "Calls made, who was told, what happens next.",
+    "followUpHint": "Who was notified (DAN, the training agency, the emergency contact), gear secured for inspection, what happens next.",
     "optional": "(optional)",
     "save": "Save draft",
     "saving": "Saving…"
   },
   "handoverKind": {
+    "none": "Stayed with the crew",
     "ems": "Emergency medical services",
     "hospital": "A hospital or clinic",
     "chamber": "A hyperbaric chamber",
-    "diver": "The diver, on their own",
+    "diver": "Themselves, released on scene",
     "other": "Someone else"
   },
   "people": {
@@ -64,6 +64,7 @@
     "choose": "Choose a person",
     "seats": "Divers on this departure",
     "crew": "Crew",
+    "shopStaff": "Shop staff",
     "someoneElse": "Someone not on these lists",
     "outsiderName": "Their name",
     "outsiderNameHint": "Only for someone not on the lists.",
@@ -73,14 +74,14 @@
     "remove": "Remove",
     "removeLabel": "Remove {name} from the report",
     "removing": "Removing…",
-    "kindBooking": "Diver",
+    "kindBooking": "On the manifest",
     "kindStaff": "Crew",
     "kindOutsider": "Not on the departure"
   },
   "involvement": {
     "affected": "Affected",
     "witness": "Witness",
-    "responder": "Helped"
+    "responder": "Gave aid"
   },
   "file": {
     "title": "File the report",
@@ -90,10 +91,12 @@
     "needs": "Before it can be filed, it needs:",
     "gap": {
       "occurred_at": "When it happened",
+      "location": "Where it happened",
       "what_happened": "What happened",
       "first_aid": "Whether first aid was given",
       "oxygen": "Whether oxygen was given",
-      "emergency_services": "Whether emergency services were called"
+      "emergency_services": "Whether emergency services were called",
+      "handover": "Who took over care"
     }
   },
   "read": {
@@ -134,20 +137,20 @@
     "notYetFiled": "File the report before adding a later note."
   },
   "safety": {
-    "intro": "What the shop recorded on departures that came back this month. Nothing here changes a record.",
+    "intro": "What the shop recorded on departures that left this month and are home. Lapsed credentials are read as the records stand today. Nothing here changes a record.",
     "figuresLabel": "This month’s safety record",
     "rollCalls": "Roll calls closed",
     "rollCallsValue": "{closed} of {back}",
     "rollCallsDetail": "{back, plural, one {# departure back} other {# departures back}}",
     "boarded": "Boarded at the dock",
     "boardedDetail": "{count, plural, =0 {Every seat marked at the dock} one {# seat never marked at the dock} other {# seats never marked at the dock}}",
-    "certOverrides": "Card checks overridden",
+    "certOverrides": "Seats made diving past a missing card",
     "certOverridesLink": "The month’s safety activity",
     "crew": "Crew sailing on a lapsed credential",
     "crewValue": "{lapsed} of {sailings}",
     "crewDetail": "{sailings, plural, one {# crew sailing} other {# crew sailings}}",
     "incidents": "Incident reports",
-    "boardingNote": "The dock roll call boards only divers the readiness check clears, so nobody counted here boarded with a blocker.",
+    "boardingNote": "The dock roll call refuses a diver the readiness check has not cleared. A diver first counted at a later checkpoint is not in this figure.",
     "incidentsTitle": "Incident reports",
     "incidentsEmpty": "No incident reports this month.",
     "openTitle": "Roll calls left open",

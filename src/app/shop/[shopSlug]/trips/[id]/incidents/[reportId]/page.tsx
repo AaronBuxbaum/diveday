@@ -8,6 +8,7 @@ import {
   getIncidentReport,
   listIncidentCrewChoices,
   listIncidentSeatChoices,
+  listIncidentShopStaffChoices,
 } from "@/db/incident-reports";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -70,13 +71,14 @@ export default async function IncidentReportPage({
 
   const pageNotice = noticeForForm(notice, "page");
   const editing = report.status === "draft" && report.mayWrite;
-  const [diveSites, seats, crew] = editing
+  const [diveSites, seats, crew, shopStaff] = editing
     ? await Promise.all([
         listDiveSites(db, shop.id),
         listIncidentSeatChoices(db, shop.id, tripId),
         listIncidentCrewChoices(db, shop.id, tripId),
+        listIncidentShopStaffChoices(db, shop.id, tripId),
       ])
-    : [[], [], []];
+    : [[], [], [], []];
 
   // Readable is writable (`mayWriteIncidentReport`): whoever reaches a draft
   // here may edit it.
@@ -134,6 +136,7 @@ export default async function IncidentReportPage({
             ? {
                 seats,
                 crew,
+                shopStaff,
                 addAction: addIncidentPersonAction.bind(null, shopSlug, tripId, reportId),
                 removeAction: (rowId) =>
                   removeIncidentPersonAction.bind(null, shopSlug, tripId, reportId, rowId),

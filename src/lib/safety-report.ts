@@ -1,6 +1,11 @@
 import { type CalendarDate, isCalendarDateExpired, isValidCalendarDate } from "./calendar-date";
 import { lastDayOfDeparture } from "./crew-roles";
 import { rollCallCheckpoints } from "./roll-call";
+import {
+  inAfterDivePopulation,
+  isAccountedForAfterDive,
+  type RollCallState,
+} from "./roll-call-population";
 
 /**
  * **The month's safety, read from what the shop already records** (the
@@ -95,35 +100,36 @@ function standing(events: readonly SafetyRollCallEvent[]) {
  *
  * - **the dock count** closes when every seat on the roster has a result at
  *   departure, boarded or not;
- * - **each after-dive count** closes when everybody who boarded — at the dock,
- *   or recorded at a later checkpoint — is recorded back aboard. Nothing but
- *   "boarded" closes it;
- * - **crew** are counted the same way once they boarded at the dock. A crew
- *   member never marked at all raises nothing, as on Today.
+ * - **each after-dive count** closes when everybody in the after-dive count —
+ *   divers and crew by one rule, `inAfterDivePopulation`: boarded at the dock,
+ *   or given any result at a later checkpoint — is recorded back aboard.
+ *   Nothing but "boarded" closes it, and an undone mark is no mark.
  *
  * A departure with no roll-call event of either kind is `none`, never closed.
  */
 export function rollCallClosure(
   departure: SafetyDepartureInput,
-  diverResult: (subjectId: string, checkpoint: string) => "boarded" | "not_boarded" | undefined,
-  crewResult: (subjectId: string, checkpoint: string) => "boarded" | "not_boarded" | undefined,
+  diverResult: (subjectId: string, checkpoint: string) => RollCallState,
+  crewResult: (subjectId: string, checkpoint: string) => RollCallState,
   hasAnyEvent: boolean,
 ): RollCallClosure {
   if (!hasAnyEvent) return "none";
-  const [dock, ...afterDives] = rollCallCheckpoints(departure.plannedDives);
+  const checkpoints = rollCallCheckpoints(departure.plannedDives);
+  const [dock, ...afterDives] = checkpoints;
   if (!dock) return "open";
   for (const bookingId of departure.bookingIds) {
     if (diverResult(bookingId, dock) === undefined) return "open";
   }
-  const divers = departure.bookingIds.filter(
-    (id) =>
-      diverResult(id, dock) === "boarded" ||
-      afterDives.some((checkpoint) => diverResult(id, checkpoint) !== undefined),
-  );
-  const crew = departure.crewIds.filter((id) => crewResult(id, dock) === "boarded");
-  for (const checkpoint of afterDives) {
-    if (divers.some((id) => diverResult(id, checkpoint) !== "boarded")) return "open";
-    if (crew.some((id) => crewResult(id, checkpoint) !== "boarded")) return "open";
+  const counted = (ids: readonly string[], result: typeof diverResult) =>
+    ids
+      .map((id) => checkpoints.map((checkpoint) => result(id, checkpoint)))
+      .filter((states) => inAfterDivePopulation(states));
+  const everyone = [
+    ...counted(departure.bookingIds, diverResult),
+    ...counted(departure.crewIds, crewResult),
+  ];
+  for (let dive = 1; dive <= afterDives.length; dive++) {
+    if (everyone.some((states) => !isAccountedForAfterDive(states[dive]))) return "open";
   }
   return "closed";
 }
@@ -178,7 +184,12 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
   const openRollCalls: SafetyMonth["openRollCalls"] = [];
   const lapsedSailings: SafetyMonth["lapsedSailings"] = [];
 
-  for (const departure of input.departures) {
+  // An occurrence nobody booked and nobody counted is a date on the board,
+  // not a departure that sailed — the same skip the Today queue makes.
+  const departures = input.departures.filter(
+    (departure) => departure.bookingIds.length > 0 || tripsWithEvents.has(departure.tripId),
+  );
+  for (const departure of departures) {
     const dock = rollCallCheckpoints(departure.plannedDives)[0] ?? "departure";
     const closure = rollCallClosure(
       departure,
@@ -221,7 +232,7 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
   }
 
   return {
-    departuresBack: input.departures.length,
+    departuresBack: departures.length,
     rollCallsClosed,
     openRollCalls,
     boardedAtDock,
