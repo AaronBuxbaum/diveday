@@ -387,7 +387,7 @@ export function RollCallBackAboardControl({
         // count panel's chips rather than by reading down the list.
         ariaLabel={`${isCrew ? t("manifest.crewMarkBackAboard") : t("manifest.markBackAboard")} — ${subjectName}`}
         pendingLabel={t("manifest.boarding")}
-        className={`${BOAT_TARGET_CLASS} border border-success bg-success/15 text-success-strong`}
+        className={`${BOAT_TARGET_CLASS} border border-success bg-success-tint text-success-strong`}
         copy={copy}
         observabilityAction={isCrew ? "roll-call-crew" : "roll-call-diver"}
       />
@@ -487,7 +487,7 @@ export function RollCallExceptionControl({
         pendingLabel={t("manifest.saving")}
         className={`${BOAT_TARGET_CLASS} ${
           notBackAboard
-            ? "border border-danger bg-danger/15 text-danger"
+            ? "border border-danger bg-danger-tint text-danger"
             : recordedNotBoarded
               ? "border border-border-strong bg-surface-sunken"
               : "border border-border-strong bg-surface hover:bg-surface-sunken"

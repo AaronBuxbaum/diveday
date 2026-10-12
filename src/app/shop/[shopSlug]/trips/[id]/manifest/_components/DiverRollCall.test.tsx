@@ -456,6 +456,25 @@ describe("asserting aboard over a missing mark is never the cheap direction", ()
     expect(retract).toBeDefined();
   });
 
+  /**
+   * **Both controls wear an opaque fill** (issue #2341). A translucent
+   * `bg-<hue>/N` takes its contrast from whatever is under it, and these are
+   * the two controls read in direct sunlight with someone possibly in the
+   * water.
+   */
+  it("paints both directions on an opaque tint, never a see-through one", () => {
+    renderList({ divers: [diver({ rollCall: notBackAt() })] });
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    const sheet = screen.getByRole("dialog");
+    const backAboard = within(sheet).getByRole("button", { name: /^Mark back aboard/ });
+    const retract = within(sheet).getByRole("button", { name: "Not back aboard" });
+    expect(backAboard.className).toContain("bg-success-tint");
+    expect(retract.className).toContain("bg-danger-tint");
+    for (const control of [backAboard, retract]) {
+      expect(control.className).not.toMatch(/\bbg-[a-z]+\/\d+/);
+    }
+  });
+
   it("still says a diver is blocked at the dock, where readiness does gate boarding", () => {
     const { container } = renderList({
       checkpoint: "departure",
