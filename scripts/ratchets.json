@@ -195,7 +195,6 @@
       }
     ],
     "src/app/actions/waiver-send-types.ts": 1,
-    "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx": 7,
     "src/app/shop/[shopSlug]/settings/team/actions.ts": 2
   },
   "domain-strings": {

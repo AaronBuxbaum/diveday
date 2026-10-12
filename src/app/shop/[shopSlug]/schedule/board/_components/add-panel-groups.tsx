@@ -480,22 +480,18 @@ export function DayKindSelects({
     (options?.lenses && options.lenses.length > 0) ? (
     <FieldGrid columns={2} className="gap-y-4">
       {offeredModes.length > 1 ? (
-        <Field label={copy.diveModeLabel ?? "Dive mode"}>
+        <Field label={copy.diveModeLabel}>
           <select
             name="diveMode"
             value={diveMode}
             onChange={(event) => setDiveMode(event.target.value as DiveMode)}
             className={controlClass}
           >
-            {offeredModes.includes("boat") ? (
-              <option value="boat">{copy.modeBoat ?? "Boat dive"}</option>
-            ) : null}
+            {offeredModes.includes("boat") ? <option value="boat">{copy.modeBoat}</option> : null}
             {offeredModes.includes("shore") ? (
-              <option value="shore">{copy.modeShore ?? "Shore dive"}</option>
+              <option value="shore">{copy.modeShore}</option>
             ) : null}
-            {offeredModes.includes("pool") ? (
-              <option value="pool">{copy.modePool ?? "Pool session"}</option>
-            ) : null}
+            {offeredModes.includes("pool") ? <option value="pool">{copy.modePool}</option> : null}
           </select>
         </Field>
       ) : (
@@ -503,7 +499,7 @@ export function DayKindSelects({
         <input type="hidden" name="diveMode" value={offeredModes[0] ?? "boat"} />
       )}
       {diveMode === "boat" && options?.boats && options.boats.length > 0 ? (
-        <Field label={copy.boatSelectLabel ?? "Assigned boat"} hint={copy.optional}>
+        <Field label={copy.boatSelectLabel} hint={copy.optional}>
           <select
             name="boatId"
             value={selectedBoatId}
@@ -515,7 +511,7 @@ export function DayKindSelects({
             }}
             className={controlClass}
           >
-            <option value="">{copy.unassignedBoat ?? "Any / unassigned"}</option>
+            <option value="">{copy.unassignedBoat}</option>
             {options.boats.map((boat) => (
               <option key={boat.id} value={boat.id}>
                 {boat.name} ({boat.capacity} seats)
@@ -529,7 +525,7 @@ export function DayKindSelects({
           the shop has written a vocabulary, the same silence the hull
           select keeps with no boats. */}
       {options?.lenses && options.lenses.length > 0 ? (
-        <Field label={copy.lensLabel ?? "Trip tag"} hint={copy.optional}>
+        <Field label={copy.lensLabel} hint={copy.optional}>
           <select
             name="lensId"
             value={lensId}
@@ -538,7 +534,7 @@ export function DayKindSelects({
             }}
             className={controlClass}
           >
-            <option value="">{copy.lensNone ?? "None"}</option>
+            <option value="">{copy.lensNone}</option>
             {options.lenses.map((lens) => (
               <option key={lens.id} value={lens.id}>
                 {lens.title}

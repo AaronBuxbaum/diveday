@@ -167,6 +167,14 @@ const COPY: BuilderCopy = {
   endsNever: "Keeps repeating",
   endsOnChoice: "On a date",
   endsOnLabel: "Last date",
+  diveModeLabel: "Dive mode",
+  modeBoat: "Boat dive",
+  modeShore: "Shore dive",
+  modePool: "Pool session",
+  boatSelectLabel: "Assigned boat",
+  unassignedBoat: "Any / unassigned",
+  lensLabel: "Trip tag",
+  lensNone: "None",
 };
 
 /** The bounds and shared dive-card words the expanded half of the panel needs. */
