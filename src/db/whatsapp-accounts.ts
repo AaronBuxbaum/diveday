@@ -161,36 +161,6 @@ export function openRegistrationPin(
 }
 
 /**
- * The shop a WhatsApp Business Account belongs to, or null when no single shop
- * does — **the fallback** for an event that names no phone number (H-83).
- *
- * A chain may connect several shops under one WABA, each with its own number,
- * so two rows here are an ordinary state now, not a broken one. There is no
- * honest answer to pick between them — guessing is a reply keyword, up to a
- * cancellation, applied to the wrong shop's booking — so pick none; the
- * webhook drops what it cannot place. An event that names its number never
- * comes here ({@link shopIdForWhatsAppEvent}).
- */
-export async function shopIdForWhatsAppWaba(
-  db: DbExecutor,
-  wabaId: string,
-): Promise<string | null> {
-  const rows = await db
-    .select({ shopId: shopWhatsappAccounts.shopId })
-    .from(shopWhatsappAccounts)
-    .where(eq(shopWhatsappAccounts.wabaId, wabaId))
-    .limit(2);
-  if (rows.length > 1) {
-    // Ids, never the WABA or the sender — the same posture as the webhook route.
-    log("whatsapp_account.shared_waba_without_number", "warn", {
-      shopIds: rows.map((row) => row.shopId).join(" "),
-    });
-    return null;
-  }
-  return rows[0]?.shopId ?? null;
-}
-
-/**
  * The shop a phone number id belongs to, with the WABA its row recorded, or
  * null when no shop holds it. `shop_whatsapp_accounts_phone_number_unique`
  * makes the answer single.
@@ -211,15 +181,15 @@ export async function whatsAppAccountForPhoneNumber(
  * **Whose event is this** (H-83): the tenant key for every inbound WhatsApp
  * event, delivery outcome and diver message alike.
  *
- * - **The number decides.** An event naming a `phone_number_id` resolves to
- *   the one shop holding that number, or to none. It never falls back to the
- *   WABA: on a shared WABA that would hand a number nobody here holds to
- *   whichever shop happened to be alone on it.
- * - **The WABA must agree.** When both the event and the row name a WABA and
- *   they differ, the event is not placed: a number Meta now reports under
- *   another business is a row gone stale, and a stale row is not a tenant.
- * - **No number, then the WABA** ({@link shopIdForWhatsAppWaba}), which
- *   answers only when exactly one shop holds it.
+ * - **The number decides, and only the number.** An event resolves to the one
+ *   shop holding its `phone_number_id`, or to none. There is no WABA fallback,
+ *   for a number nobody here holds or for an event that names no number: on a
+ *   shared WABA that would hand an event to whichever shop happened to be
+ *   alone on it. Meta names the number on every `messages` change.
+ * - **The WABA must agree.** When the event names a WABA, the number's row
+ *   must record that same WABA. A row that records another one, or none, is
+ *   not placed: a number Meta reports under a business this row never
+ *   recorded is a row gone stale, and a stale row is not a tenant.
  *
  * Null means drop: the webhook never applies anything unscoped.
  */
@@ -227,16 +197,18 @@ export async function shopIdForWhatsAppEvent(
   db: DbExecutor,
   event: { phoneNumberId: string | null; wabaId: string | null },
 ): Promise<string | null> {
-  if (event.phoneNumberId) {
-    const account = await whatsAppAccountForPhoneNumber(db, event.phoneNumberId);
-    if (!account) return null;
-    if (event.wabaId && account.wabaId && account.wabaId !== event.wabaId) {
-      log("whatsapp_account.number_waba_mismatch", "error", { shopId: account.shopId });
-      return null;
-    }
-    return account.shopId;
+  if (!event.phoneNumberId) return null;
+  const account = await whatsAppAccountForPhoneNumber(db, event.phoneNumberId);
+  if (!account) return null;
+  if (event.wabaId && account.wabaId !== event.wabaId) {
+    // Ids only, never the WABA or the number — the same posture as the route.
+    log("whatsapp_account.number_waba_mismatch", "error", {
+      shopId: account.shopId,
+      rowHasWaba: account.wabaId !== null,
+    });
+    return null;
   }
-  return event.wabaId ? shopIdForWhatsAppWaba(db, event.wabaId) : null;
+  return account.shopId;
 }
 
 /**
@@ -281,7 +253,7 @@ export async function connectShopWhatsAppAccount(
     ? { registrationPinSealed: sealSecret(input.registrationPin.trim(), key) }
     : {};
   try {
-    // In its own savepoint (a transaction when `db` is not one), so a WABA
+    // In its own savepoint (a transaction when `db` is not one), so a number
     // collision rolls back only this insert. Under `claimWhatsAppNumber` the
     // caller's transaction is still open, and a bare 23505 there would abort
     // it and turn the worded refusal into "current transaction is aborted".

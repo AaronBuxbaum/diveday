@@ -15,7 +15,7 @@ import {
   PARKED_REGISTRATION_STALE_MS,
   SETUP_INCOMPLETE_TEMPLATE,
   shopIdForWhatsAppEvent,
-  shopIdForWhatsAppWaba,
+  whatsAppAccountForPhoneNumber,
   whatsAppProviderForAccount,
   whatsAppProvidersForShops,
 } from "./whatsapp-accounts";
@@ -263,39 +263,6 @@ describe("getShopWhatsAppAccount", () => {
   });
 });
 
-describe("shopIdForWhatsAppWaba", () => {
-  it("resolves the WABA a delivery event names to its own shop", async () => {
-    const { db, shop } = ctx;
-    await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_abc" }), { key });
-
-    expect(await shopIdForWhatsAppWaba(db, "waba_abc")).toBe(shop.id);
-  });
-
-  it("returns null for a WABA no shop has connected, so nothing is applied unscoped", async () => {
-    const { db, shop } = ctx;
-    await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_abc" }), { key });
-
-    expect(await shopIdForWhatsAppWaba(db, "waba_someone_else")).toBeNull();
-  });
-
-  it("refuses to guess when a chain's shops share the WABA and the event names no number", async () => {
-    const { db, shop } = ctx;
-    const sibling = await siblingShop(db, "sibling-shop-whatsapp-test");
-    await connectShopWhatsAppAccount(
-      db,
-      connectInput(shop.id, { wabaId: "waba_shared", phoneNumberId: "111" }),
-      { key },
-    );
-    await connectShopWhatsAppAccount(
-      db,
-      connectInput(sibling.id, { wabaId: "waba_shared", phoneNumberId: "222" }),
-      { key },
-    );
-
-    expect(await shopIdForWhatsAppWaba(db, "waba_shared")).toBeNull();
-  });
-});
-
 /**
  * **Whose event is this** (H-83, issue #1767): two shops of one chain share a
  * WABA, and each receives only what was sent to its own number.
@@ -346,14 +313,30 @@ describe("shopIdForWhatsAppEvent", () => {
     ).toBeNull();
   });
 
-  it("falls back to a WABA one shop alone holds when the event names no number", async () => {
+  it("drops an event that names no number, even on a WABA one shop alone holds", async () => {
     const { db } = ctx;
     await connectShopWhatsAppAccount(
       db,
       connectInput(ctx.shop.id, { wabaId: "waba_alone", phoneNumberId: "111" }),
       { key },
     );
-    expect(await shopIdForWhatsAppEvent(db, { phoneNumberId: null, wabaId: "waba_alone" })).toBe(
+    expect(
+      await shopIdForWhatsAppEvent(db, { phoneNumberId: null, wabaId: "waba_alone" }),
+    ).toBeNull();
+  });
+
+  it("does not place an event naming a WABA when its number's row records none", async () => {
+    const { db } = ctx;
+    await connectShopWhatsAppAccount(
+      db,
+      connectInput(ctx.shop.id, { wabaId: null, phoneNumberId: "111" }),
+      { key },
+    );
+    expect(
+      await shopIdForWhatsAppEvent(db, { phoneNumberId: "111", wabaId: "waba_anyone" }),
+    ).toBeNull();
+    // An event that names no WABA still routes on the number alone.
+    expect(await shopIdForWhatsAppEvent(db, { phoneNumberId: "111", wabaId: null })).toBe(
       ctx.shop.id,
     );
   });
@@ -412,7 +395,9 @@ describe("claimWhatsAppNumber", () => {
     expect(outcomes.filter((outcome) => outcome.status === "held_elsewhere")).toHaveLength(1);
     const winner = outcomes.find((outcome) => outcome.status === "claimed");
     expect(winner?.status === "claimed" && winner.value.status).toBe("connected");
-    expect(await shopIdForWhatsAppWaba(db, "waba_race")).toBe(registered[0]);
+    expect((await whatsAppAccountForPhoneNumber(db, RACE.phoneNumberId))?.shopId ?? null).toBe(
+      registered[0],
+    );
   });
 
   it("lets a second shop of a chain claim its own number on the same WABA", async () => {
@@ -474,7 +459,9 @@ describe("claimWhatsAppNumber", () => {
     );
     expect(claim.status).toBe("claimed");
     expect(registered).toEqual([shop.id]);
-    expect(await shopIdForWhatsAppWaba(db, "waba_race")).toBe(shop.id);
+    expect((await whatsAppAccountForPhoneNumber(db, RACE.phoneNumberId))?.shopId ?? null).toBe(
+      shop.id,
+    );
     expect(await getShopWhatsAppRegistration(db, sibling.id)).toBeNull();
   });
 
@@ -524,7 +511,9 @@ describe("claimWhatsAppNumber", () => {
         throw new Error("Meta went away");
       }),
     ).rejects.toThrow("Meta went away");
-    expect(await shopIdForWhatsAppWaba(db, "waba_race")).toBeNull();
+    expect(
+      (await whatsAppAccountForPhoneNumber(db, RACE.phoneNumberId))?.shopId ?? null,
+    ).toBeNull();
 
     const registered: string[] = [];
     const next = await claimWhatsAppNumber(

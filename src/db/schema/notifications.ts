@@ -607,9 +607,8 @@ export const shopWhatsappAccounts = pgTable(
      * The WhatsApp Business Account the number belongs to. **Shared across
      * shops on purpose** (H-83): a chain with one Meta Business and a number
      * per location connects each shop to its own number under the one WABA.
-     * It is the tenant key only for an event that names no number, and then
-     * only while one shop alone holds it (`shopIdForWhatsAppWaba`); an event
-     * whose number's row records a different WABA is not placed.
+     * It is never the tenant key: an event naming a WABA is placed only when
+     * its number's row records that same WABA (`shopIdForWhatsAppEvent`).
      *
      * Nullable: a row connected before a WABA was recorded stays legal.
      */

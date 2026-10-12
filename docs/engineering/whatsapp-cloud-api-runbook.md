@@ -95,10 +95,11 @@ Signup failures name the step that failed (`signup_failed_exchange`, `_register`
 
 **One WABA, several shops** (H-83, issue #1767). A chain may connect each of its shops to its own
 number under one WhatsApp Business account; inbound events route on the number
-(`value.metadata.phone_number_id`), and the WABA is only the fallback for an event that names none
-and that one shop alone holds. A number is one shop's: a second shop connecting a number another
-shop holds is refused as `phone_number_already_connected`. An event whose number's row records a
-different WABA from the one Meta names is dropped and logged as
+(`value.metadata.phone_number_id`) and on nothing else: an event that names no number is dropped and
+logged (`whatsapp_webhook.unknown_tenant` / `inbound_unknown_tenant` with `hasNumber: false`). A
+number is one shop's: a second shop connecting a number another shop holds is refused as
+`phone_number_already_connected`. An event naming a WABA its number's row does not record (a
+different one, or none on a row connected before WABAs were stored) is dropped and logged as
 `whatsapp_account.number_waba_mismatch`; the shop reconnects to refresh the row.
 - **register** — only ever attempted for a number DiveDay has not finished registering. The number
   is probably still active in the consumer WhatsApp or WhatsApp Business *app* and has to be removed

@@ -137,7 +137,11 @@ const payloadSchema = z.object({
   entry: z
     .array(
       z.object({
-        /** The WhatsApp Business Account the events belong to — the tenant key. */
+        /**
+         * The WhatsApp Business Account the events belong to. Not the tenant
+         * key (H-83): a chain may share one, so it only has to agree with the
+         * row of the number the change names.
+         */
         id: z.string().min(1).optional(),
         changes: z
           .array(
@@ -169,17 +173,15 @@ export type WhatsAppDeliveryEvent = {
   /**
    * The WABA that produced this event, or null when Meta did not name one.
    *
-   * Carried so the caller can resolve it to a shop and scope the update to that
-   * tenant. Without it, a delivery outcome is applied by provider message id
-   * alone across a multi-tenant table, and the only thing keeping one shop's
-   * webhook off another shop's row is "Meta ids are globally unique" — an
-   * upstream property, not one this codebase enforces.
+   * Carried so the caller can check it against the row of the number below,
+   * which is what resolves the event to a shop (H-83).
    */
   wabaId: string | null;
   /**
    * The phone number id the event belongs to (`value.metadata`), or null when
    * Meta named none — **the tenant key** (H-83). A chain may share one WABA
-   * across shops, so the WABA alone is the fallback, never the answer.
+   * across shops, so the WABA is never the answer, only a check on the
+   * number's row; an event with no number is dropped.
    */
   phoneNumberId: string | null;
   providerMessageId: string;
@@ -229,7 +231,7 @@ export function parseWhatsAppDeliveryEvents(payload: string, now: Date): WhatsAp
 }
 
 export type WhatsAppInboundMessage = {
-  /** The WABA the message arrived at — the fallback tenant key when no number is named. */
+  /** The WABA the message arrived at — checked against the number's row, never the tenant key. */
   wabaId: string | null;
   /** The shop number it was sent to — the tenant key (H-83), resolved to a shop by the caller. */
   phoneNumberId: string | null;

@@ -46,10 +46,10 @@ export async function GET(request: Request) {
  * same posture as the SES route.
  *
  * Both halves resolve the tenant the same way (`shopIdForWhatsAppEvent`, H-83):
- * the phone number id each change names, which one shop holds; the WABA in
- * `entry[].id` only when no number is named and one shop alone holds it. A
+ * the phone number id each change names, which one shop holds, and nothing
+ * else. The WABA in `entry[].id` only has to agree with that number's row; a
  * chain may share a WABA across its shops, a number each, so the WABA alone
- * is never the answer when the number is there. An event that resolves to no
+ * is never the answer, even when no number is named. An event that resolves to no
  * shop is dropped rather than filed nowhere: the row has a `shop_id`, and
  * there is no honest value for it.
  */
@@ -132,9 +132,9 @@ export async function POST(request: Request) {
   }
 
   for (const event of events) {
-    // An event that resolves to no shop — it names neither a number nor a
-    // WABA, a number nobody here holds, a WABA a chain shares with no number
-    // beside it, or a disconnect that raced an in-flight message — is skipped.
+    // An event that resolves to no shop — it names no number, a number nobody
+    // here holds, a WABA its number's row does not record, or a disconnect
+    // that raced an in-flight message — is skipped.
     // `applyProviderEmailEvent` with no `shopId` matches the provider message
     // id across every shop's rows. That is deliberate for SES, where the
     // tenant is genuinely unknowable (src/db/notifications.ts), and wrong here
