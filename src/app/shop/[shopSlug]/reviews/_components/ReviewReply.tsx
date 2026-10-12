@@ -128,6 +128,7 @@ export function ReviewReply({
             {copy.fieldLabel}
           </label>
           <textarea
+            rows={3}
             id={fieldId}
             name="body"
             required
