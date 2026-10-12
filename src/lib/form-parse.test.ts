@@ -6,7 +6,9 @@ import {
   formFields,
   formValue,
   parseForm,
+  readForm,
   single,
+  text,
   trimmedText,
 } from "./form-parse";
 
@@ -172,5 +174,32 @@ describe("single", () => {
     form.append("id", "b");
     expect(parseForm(schema, form)).toEqual({ ok: true, data: { id: "a", note: undefined } });
     expect(parseForm(schema, new FormData())).toMatchObject({ ok: false, fields: ["id"] });
+  });
+});
+
+describe("text and readForm", () => {
+  it("reads a field as its first value as a string, and an absent one as empty", () => {
+    const form = new FormData();
+    form.append("id", " a ");
+    form.append("id", "b");
+    expect(readForm(z.object({ id: text(), missing: text() }), form)).toEqual({
+      id: " a ",
+      missing: "",
+    });
+  });
+
+  it("throws, naming the field, when a schema it was handed refuses after all", () => {
+    expect(() => readForm(z.object({ id: z.string() }), new FormData())).toThrow(/id/);
+  });
+});
+
+describe("single with a reading for an absent field", () => {
+  it("hands the schema that reading, and holds it to the schema like any other", () => {
+    const schema = z.object({ note: single(z.string(), ""), code: single(z.string().min(1), "") });
+    expect(parseForm(schema, form([["code", "x"]]))).toEqual({
+      ok: true,
+      data: { note: "", code: "x" },
+    });
+    expect(parseForm(schema, new FormData())).toMatchObject({ ok: false, fields: ["code"] });
   });
 });

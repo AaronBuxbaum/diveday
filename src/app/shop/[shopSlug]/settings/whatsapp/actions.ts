@@ -14,6 +14,7 @@ import { completeWhatsAppSignup, type WhatsAppSignupOutcome } from "@/db/whatsap
 import { diverTranslator } from "@/i18n/messages";
 import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
+import { parseForm, single } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import {
   DEFAULT_WHATSAPP_TEMPLATE_NAME,
@@ -70,19 +71,25 @@ export type Notice =
  * one of these will simply fail the exchange a moment later.
  */
 const signupSchema = z.object({
-  code: z.string().trim().min(10).max(2_000),
-  wabaId: z
-    .string()
-    .trim()
-    .regex(/^\d{5,32}$/),
-  phoneNumberId: z
-    .string()
-    .trim()
-    .regex(/^\d{5,32}$/),
+  code: single(z.string().trim().min(10).max(2_000), ""),
+  wabaId: single(
+    z
+      .string()
+      .trim()
+      .regex(/^\d{5,32}$/),
+    "",
+  ),
+  phoneNumberId: single(
+    z
+      .string()
+      .trim()
+      .regex(/^\d{5,32}$/),
+    "",
+  ),
 });
 
 const testSchema = z.object({
-  testPhone: z.string().trim().min(1).max(40),
+  testPhone: single(z.string().trim().min(1).max(40), ""),
 });
 
 async function settingsPath(): Promise<{ shopId: string; personId: string; path: string }> {
@@ -125,12 +132,8 @@ export async function completeWhatsAppSignupAction(formData: FormData): Promise<
   const config = whatsAppSignupConfigFromEnvironment();
   if (!config) done(path, "signup-unavailable");
 
-  const parsed = signupSchema.safeParse({
-    code: formData.get("code") ?? "",
-    wabaId: formData.get("wabaId") ?? "",
-    phoneNumberId: formData.get("phoneNumberId") ?? "",
-  });
-  if (!parsed.success) done(path, "invalid");
+  const parsed = parseForm(signupSchema, formData);
+  if (!parsed.ok) done(path, "invalid");
 
   const shop = await getShopById(db, shopId);
   // The template is submitted in the shop's own diver-facing language, with its
@@ -177,8 +180,8 @@ export async function testWhatsAppAction(formData: FormData): Promise<void> {
     done(path, "not-authorized");
   }
 
-  const parsed = testSchema.safeParse({ testPhone: formData.get("testPhone") ?? "" });
-  if (!parsed.success) done(path, "invalid");
+  const parsed = parseForm(testSchema, formData);
+  if (!parsed.ok) done(path, "invalid");
   // Rejected here rather than by Meta, so a mistyped local number reads as
   // "check the details" instead of a provider error the shop can't act on.
   if (!whatsAppRecipient(parsed.data.testPhone)) done(path, "invalid");

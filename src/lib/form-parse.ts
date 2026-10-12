@@ -75,6 +75,18 @@ function firstEntry(value: unknown): FormDataEntryValue | null {
 }
 
 /**
+ * A field read as `String(formData.get(name) ?? "")` read it: its first value
+ * as a string, and `""` when the form sent nothing. For an id or a word the
+ * action looks up or compares, so a missing one is simply not found.
+ */
+export function text() {
+  return z
+    .unknown()
+    .optional()
+    .transform((value) => String(firstEntry(value) ?? ""));
+}
+
+/**
  * A text box read as `String(formData.get(name) ?? "").trim()` read it: its
  * first value trimmed, and `""` when the form sent nothing. For an action that
  * measures the text itself, so it can point at the box that is wrong.
@@ -87,12 +99,31 @@ export function trimmedText() {
 }
 
 /**
+ * {@link parseForm} for a schema built only of fields that cannot refuse
+ * ({@link formValue}, {@link text}, {@link trimmedText}, {@link checkbox}):
+ * the reading itself, with the impossible refusal thrown rather than handled
+ * at every caller.
+ */
+export function readForm<Schema extends z.ZodType>(
+  schema: Schema,
+  formData: FormData,
+): z.infer<Schema> {
+  const parsed = parseForm(schema, formData);
+  if (!parsed.ok) throw new Error(`form refused: ${parsed.fields.join(", ")}`);
+  return parsed.data;
+}
+
+/**
  * A field read by its first value, as `FormData.get` read it, and held to
  * `schema`: a name the form sent twice reaches `schema` once rather than as an
- * array, and an absent one reaches it as `undefined`.
+ * array, and an absent one reaches it as `absent` — `undefined` unless the
+ * action read a missing field as something else (`formData.get(name) ?? ""`).
  */
-export function single<Schema extends z.ZodType>(schema: Schema) {
-  return z.preprocess((value) => (Array.isArray(value) ? value[0] : value), schema);
+export function single<Schema extends z.ZodType>(schema: Schema, absent?: string) {
+  return z.preprocess((value) => {
+    const first = Array.isArray(value) ? value[0] : value;
+    return first === undefined ? absent : first;
+  }, schema);
 }
 
 /**

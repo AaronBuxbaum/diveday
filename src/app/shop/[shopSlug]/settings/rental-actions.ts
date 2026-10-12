@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import {
   getShopById,
@@ -8,6 +9,7 @@ import {
   setShopRentalPricing,
   setShopRentalTerms,
 } from "@/db/shops";
+import { formValue, readForm } from "@/lib/form-parse";
 import { majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { parseRentalTerms } from "@/lib/rental-terms";
@@ -22,13 +24,21 @@ import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { paymentSettingsBlock, settingsBlock } from "./action-helpers";
 
+/**
+ * The rental forms name a field per catalog item (`mask`, `price_mask`), so
+ * every field rides the catch-all, each read as `FormData.get` read it; the
+ * actions below narrow each one themselves.
+ */
+const rentalFields = z.object({}).catchall(formValue());
+
 /** Which gear the shop rents. Unchecked kinds simply drop out of the catalog. */
 export async function saveRentalItemsAction(formData: FormData) {
   const session = await requireStaffSession();
   const page = shopPath(session.user.shopSlug, "settings", "rentals");
   await settingsBlock(session);
   await paymentSettingsBlock(session);
-  const selected = SHOP_CATALOG_ITEMS.filter((item) => formData.get(item.name) === "on").map(
+  const fields = readForm(rentalFields, formData);
+  const selected = SHOP_CATALOG_ITEMS.filter((item) => fields[item.name] === "on").map(
     (item) => item.kind,
   );
   await setShopRentalItems(await getDb(), session.user.shopId, toRentableKinds(selected));
@@ -67,11 +77,12 @@ export async function saveRentalPricingAction(formData: FormData) {
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) redirect(noticeUrl(page, "rental-prices-invalid"));
   const currency = toShopCurrency(shop.currency);
-  const set = parsePriceAmount(formData.get("setPrice"), currency);
+  const fields = readForm(rentalFields, formData);
+  const set = parsePriceAmount(fields.setPrice ?? null, currency);
   let invalid = !set.ok;
   const perItemCents: RentalPricing["perItemCents"] = {};
   for (const item of RENTABLE_ITEMS) {
-    const parsed = parsePriceAmount(formData.get(`price_${item.name}`), currency);
+    const parsed = parsePriceAmount(fields[`price_${item.name}`] ?? null, currency);
     if (!parsed.ok) {
       invalid = true;
       continue;
@@ -84,7 +95,7 @@ export async function saveRentalPricingAction(formData: FormData) {
   // still offered. Only interpret it when it could have been on the page.
   let nitroxCents = shop.rentalPricing.nitroxCents;
   if (shopOffersNitrox(shop.rentalItems)) {
-    const nitrox = parsePriceAmount(formData.get("nitroxPrice"), currency);
+    const nitrox = parsePriceAmount(fields.nitroxPrice ?? null, currency);
     if (!nitrox.ok) invalid = true;
     else nitroxCents = nitrox.cents;
   }
@@ -111,7 +122,7 @@ export async function saveRentalTermsAction(formData: FormData) {
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
   await paymentSettingsBlock(session);
-  const parsed = parseRentalTerms(formData.get("rentalTerms"));
+  const parsed = parseRentalTerms(readForm(rentalFields, formData).rentalTerms ?? null);
   if (!parsed.ok) {
     redirect(noticeUrl(settings, "rental-terms-invalid", { saved: "rentalTerms" }));
   }

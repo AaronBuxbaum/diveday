@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { canPersonErasePersonalData, canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { retryMediaDeletion } from "@/db/media-deletions";
 import { dischargeProcessorErasure, retryProcessorErasure } from "@/db/processor-erasure";
+import { readForm, text } from "@/lib/form-parse";
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 
@@ -41,6 +43,9 @@ import { shopPath } from "@/lib/staff-notices";
  * derive the slug.
  * -------------------------------------------------------------------------- */
 
+const attemptForm = z.object({ attemptId: text() });
+const obligationForm = z.object({ obligationId: text() });
+
 /**
  * The "Retry" for a stuck provider delete (CR-012) — same owner/manager weight
  * as every other control on this page, so a crew member can't reach it by
@@ -50,7 +55,7 @@ export async function retryMediaDeletionAction(formData: FormData) {
   const session = await requireStaffSession();
   const db = await getDb();
   if (!(await canPersonManageShopSettings(db, session.user.shopId, session.user.personId))) return;
-  const attemptId = String(formData.get("attemptId") ?? "");
+  const { attemptId } = readForm(attemptForm, formData);
   if (!attemptId) return;
   await retryMediaDeletion(db, session.user.shopId, attemptId);
   revalidatePath(shopPath(session.user.shopSlug, "settings"));
@@ -70,7 +75,7 @@ export async function retryProcessorErasureAction(formData: FormData) {
   const session = await requireStaffSession();
   const db = await getDb();
   if (!(await canPersonErasePersonalData(db, session.user.shopId, session.user.personId))) return;
-  const obligationId = String(formData.get("obligationId") ?? "");
+  const { obligationId } = readForm(obligationForm, formData);
   if (!obligationId) return;
   await retryProcessorErasure(db, session.user.shopId, obligationId);
   revalidatePath(shopPath(session.user.shopSlug, "settings"));
@@ -93,7 +98,7 @@ export async function dischargeProcessorErasureAction(formData: FormData) {
   const session = await requireStaffSession();
   const db = await getDb();
   if (!(await canPersonErasePersonalData(db, session.user.shopId, session.user.personId))) return;
-  const obligationId = String(formData.get("obligationId") ?? "");
+  const { obligationId } = readForm(obligationForm, formData);
   if (!obligationId) return;
   await dischargeProcessorErasure(db, {
     shopId: session.user.shopId,
