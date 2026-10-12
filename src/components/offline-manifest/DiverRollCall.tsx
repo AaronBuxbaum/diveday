@@ -5,7 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
-import { rollCallLabelText } from "@/i18n/manifest-labels";
+import {
+  medicalWarningChips,
+  ridingOnlyMedicalSentences,
+  rollCallLabelText,
+} from "@/i18n/manifest-labels";
 import { readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { formatCalendarDate } from "@/lib/calendar-date";
@@ -101,6 +105,9 @@ function OfflineDiverRow({
   // held seat never carries them, and the facts block below says why instead.
   const withheld = diver.identityWithheld || isHeldSeat(diver);
   const medicalWarnings = withheld ? undefined : diver.medicalWarnings;
+  // The live roll call's capsule for the same facts, strongest first: riding
+  // only (H-109), then an earlier refusal (H-98), then an open referral.
+  const medicalChip = medicalWarnings ? medicalWarningChips(t, medicalWarnings)[0] : undefined;
   const warningDate = (day: string) => formatCalendarDate(day, locale);
   const stateWord = `${rollCallLabelText(t, rollCallLabel(checkpoint, state))}${
     state?.pending ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}` : ""
@@ -201,11 +208,7 @@ function OfflineDiverRow({
             {/* The live roll call's capsule for the same fact (H-98): a
               physician refused an earlier release. Never a block; the
               crew at the rail decides with it in view. */}
-            {medicalWarnings?.refusedOn ? (
-              <Badge tone="warning">{t("manifest.medicalEarlierRefusalChip")}</Badge>
-            ) : medicalWarnings?.referredOn ? (
-              <Badge tone="warning">{t("manifest.medicalReferralUnresolvedChip")}</Badge>
-            ) : null}
+            {medicalChip ? <Badge tone="warning">{medicalChip}</Badge> : null}
             {/* Snorkeler or rider, as on the live roll call (ADR
               20261007-participant-types). Every row is still called;
               this only says who the body is. */}
@@ -321,6 +324,11 @@ function OfflineDiverRow({
                     (`DiverRollCall.tsx` under `/manifest`). */}
                   {medicalWarnings ? (
                     <p>
+                      {ridingOnlyMedicalSentences(t, medicalWarnings, warningDate).map((line) => (
+                        <span key={line} className="block font-medium text-warning-strong">
+                          {line}
+                        </span>
+                      ))}
                       {medicalWarnings.refusedOn ? (
                         <span className="block font-medium text-warning-strong">
                           {t("manifest.medicalEarlierRefusal", {

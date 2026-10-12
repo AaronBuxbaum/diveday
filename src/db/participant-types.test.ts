@@ -2,6 +2,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { serializeManifests } from "@/lib/offline-manifests";
 import type { ParticipantType } from "@/lib/participant-types";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -235,6 +236,47 @@ describe("the gates a non-diver is not asked to clear", () => {
       expect(codesOf(rider.bookingId).filter((code) => code.startsWith("waiver_"))).toEqual([]);
       expect(codesOf(snorkeler.bookingId)).toContain(medical);
     }
+  });
+
+  it("boards a rider past a referral or a refusal with a riding-only warning, online and offline (H-109)", async () => {
+    const { db, shop, trip, staff } = await benwood();
+    await limits(db, trip.id, 8, null);
+    const refused = await seat(db, shop.id, trip.id, "rider");
+    const referred = await seat(db, shop.id, trip.id, "rider");
+    const snorkeler = await seat(db, shop.id, trip.id, "snorkeler");
+    if (!refused.ok || !referred.ok || !snorkeler.ok) throw new Error("setup failed");
+    await heldRelease(db, shop.id, refused.bookingId, "refusal", staff.id);
+    await heldRelease(db, shop.id, referred.bookingId, "referral", staff.id);
+    await heldRelease(db, shop.id, snorkeler.bookingId, "refusal", staff.id);
+
+    const manifest = await getTripManifest(db, shop.id, trip.id);
+    if (!manifest) throw new Error("manifest missing");
+    const rowOf = (bookingId: string) =>
+      manifest.divers.find((diver) => diver.bookingId === bookingId);
+    // Never a medical blocker for the rider, and never silent either.
+    expect(rowOf(refused.bookingId)?.readiness.blockers.map((b) => b.code)).not.toContain(
+      "medical_not_cleared",
+    );
+    expect(rowOf(refused.bookingId)?.riderMedicalHold).toMatchObject({
+      kind: "not_cleared",
+      evaluatedOn: "2026-01-01",
+    });
+    expect(rowOf(referred.bookingId)?.riderMedicalHold?.kind).toBe("referral");
+    // A snorkeler is blocked by the record instead, so carries no rider warning.
+    expect(rowOf(snorkeler.bookingId)?.riderMedicalHold ?? null).toBeNull();
+
+    const offline = serializeManifests(
+      [manifest],
+      { slug: shop.slug, name: shop.name, timezone: shop.timezone },
+      (blocker) => blocker.code,
+    );
+    const offlineRow = (bookingId: string) =>
+      offline.manifests[0]?.divers.find((diver) => diver.bookingId === bookingId);
+    expect(offlineRow(refused.bookingId)?.medicalWarnings).toEqual({
+      ridingNotClearedOn: "2026-01-01",
+    });
+    expect(offlineRow(referred.bookingId)?.medicalWarnings?.ridingReferredOn).toBeDefined();
+    expect(offlineRow(snorkeler.bookingId)?.medicalWarnings).toBeUndefined();
   });
 
   it("still asks a rider whose held release has aged out to sign again (H-109)", async () => {

@@ -15,7 +15,12 @@ import { buddyAlertText } from "@/i18n/buddy-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
-import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
+import {
+  medicalWarningChips,
+  ridingOnlyMedicalSentences,
+  rollCallCheckpointText,
+  rollCallLabelText,
+} from "@/i18n/manifest-labels";
 import { staffParticipantTypeLabel, staffSeatTypeNote } from "@/i18n/participant-labels";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
@@ -120,7 +125,12 @@ function DiverFacts({
   // seat keeps it.
   // The two warning days, in the shop's zone and with the year: the refusal by
   // the physician's evaluation (dive-domain review of #2163).
-  const warningDays = medicalWarningDays(diver.medicalWaiver, timezone);
+  const warningDays = medicalWarningDays(diver.medicalWaiver, timezone, diver.riderMedicalHold);
+  // A rider boarding riding only under a medical hold (H-109): said in full on
+  // screen and paper alike, with no medical mark to hang it on.
+  const ridingOnly = ridingOnlyMedicalSentences(t, warningDays, (day) =>
+    formatCalendarDate(day, locale),
+  );
   const pickup = diver.hotelPickupLocation ? (
     <p>
       <span className="font-bold">{t("manifest.hotelPickupLabel")}</span>
@@ -194,6 +204,15 @@ function DiverFacts({
         </p>
       ) : null}
       {pickup}
+      {ridingOnly.length > 0 ? (
+        <p className="font-medium text-warning-strong">
+          {ridingOnly.map((line) => (
+            <span key={line} className="block">
+              {line}
+            </span>
+          ))}
+        </p>
+      ) : null}
       {diver.medicalWaiver ? (
         <p>
           <span className="font-bold">
@@ -554,24 +573,22 @@ export function DiverRollCall({
           // at rest is a name and a mark; the expected state is quiet. This is
           // the priority when a diver is several things at once, loudest first
           // — a team that did not come back after a dive outranks a desk
-          // blocker outranks a split buddy team at the dock outranks a physician's
-          // earlier "no" outranks the crew's duty of care to a minor outranks
+          // blocker outranks a split buddy team at the dock outranks a medical
+          // warning outranks the crew's duty of care to a minor outranks
           // an advisory outranks a birthday. Everything not chosen here still
           // reaches the reader: it is in the panel one tap away, and
           // unconditionally on paper.
           //
-          // **The earlier refusal** (H-98; dive-domain review of #2096): a
-          // clean new release cleared a diver a physician had refused. It
-          // boards them, so it is never a blocker, but the crew at the rail
-          // decides with it in view, which a sentence one tap away is not.
-          // Which of the six the capsule ended up being, so the printed block
-          // below can say the *other* five without repeating this one. Paper
-          // carries every fact the screen tucks away; it does not carry the
-          // same fact twice.
-          const earlierRefusal = Boolean(diver.medicalWaiver?.overriddenRefusal);
-          // A release standing over a referral nobody answered (issue #1282):
-          // the next capsule down from the refusal (dive-domain review of #2163).
-          const referralUnresolved = Boolean(diver.medicalWaiver?.overriddenReferralAt);
+          // **The medical warnings** (`medicalWarningChips`, strongest first):
+          // a rider riding only under a "no" or an open referral (H-109), an
+          // earlier refusal (H-98), a referral replaced (#1282). Each boards,
+          // so none is a blocker, but the crew at the rail decides with it in
+          // view. The capsule takes the first; paper prints the rest, and
+          // every other fact the capsule did not take, never one twice.
+          const medicalChips = medicalWarningChips(
+            t,
+            medicalWarningDays(diver.medicalWaiver, timezone, diver.riderMedicalHold),
+          );
           // A diver recorded not back aboard carries the alarm and nothing
           // else: no birthday, minor or advisory word beside someone in the
           // water (DD9). A split buddy team still shows — it is part of the
@@ -591,17 +608,15 @@ export function DiverRollCall({
                 ? "blocked"
                 : diver.buddyAlert
                   ? "buddy"
-                  : earlierRefusal
-                    ? "refusal"
-                    : referralUnresolved
-                      ? "referral"
-                      : diver.minor && diver.age !== null && diver.age !== undefined
-                        ? "minor"
-                        : diver.depthAdvisory?.status === "exceeds"
-                          ? "depth"
-                          : diver.birthday
-                            ? "birthday"
-                            : null;
+                  : medicalChips[0]
+                    ? "medical"
+                    : diver.minor && diver.age !== null && diver.age !== undefined
+                      ? "minor"
+                      : diver.depthAdvisory?.status === "exceeds"
+                        ? "depth"
+                        : diver.birthday
+                          ? "birthday"
+                          : null;
           const buddyCapsule =
             diver.buddyAlert && diver.buddyTeam ? (
               <Badge tone={splitAfterDive ? "danger" : "warning"}>
@@ -617,10 +632,8 @@ export function DiverRollCall({
               </Badge>
             ) : buddyCapsule ? (
               buddyCapsule
-            ) : earlierRefusal ? (
-              <Badge tone="warning">{t("manifest.medicalEarlierRefusalChip")}</Badge>
-            ) : referralUnresolved ? (
-              <Badge tone="warning">{t("manifest.medicalReferralUnresolvedChip")}</Badge>
+            ) : medicalChips[0] ? (
+              <Badge tone="warning">{medicalChips[0]}</Badge>
             ) : diver.minor && diver.age !== null && diver.age !== undefined ? (
               <Badge tone="warning" tabularNums>
                 {t("manifest.minorAge", { age: diver.age })}
@@ -1014,12 +1027,11 @@ export function DiverRollCall({
                           : t("manifest.age", { age: diver.age })}
                       </Badge>
                     ) : null}
-                    {earlierRefusal && capsuleKind !== "refusal" ? (
-                      <Badge tone="warning">{t("manifest.medicalEarlierRefusalChip")}</Badge>
-                    ) : null}
-                    {referralUnresolved && capsuleKind !== "referral" ? (
-                      <Badge tone="warning">{t("manifest.medicalReferralUnresolvedChip")}</Badge>
-                    ) : null}
+                    {medicalChips.slice(capsuleKind === "medical" ? 1 : 0).map((chip) => (
+                      <Badge key={chip} tone="warning">
+                        {chip}
+                      </Badge>
+                    ))}
                     {diver.birthday && capsuleKind !== "birthday" ? (
                       <Badge tone="primary">{birthdayCalloutText(t, diver.birthday)}</Badge>
                     ) : null}

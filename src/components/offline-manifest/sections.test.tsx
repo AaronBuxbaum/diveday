@@ -135,6 +135,22 @@ describe("the offline manifest's sections", () => {
     expect(container.querySelector("#offline-roll-call-b-marcus")).not.toBeNull();
   });
 
+  it("shows a rider's riding-only warning ahead of the others (H-109)", () => {
+    const copy = savedCopy();
+    const [first] = copy.snapshot.manifests[0]?.divers ?? [];
+    if (!first) throw new Error("fixture divers missing");
+    first.medicalWarnings = { ridingReferredOn: "2026-06-10", refusedOn: "2026-05-02" };
+    const trip = offlineTripView(copy, "departure");
+    if (!trip) throw new Error("the fixture carries a manifest");
+    const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+    const warned = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
+    expect(warned).toContain("Medical referral open: riding only");
+    expect(warned).not.toContain("Physician said no before");
+    expect(warned).toMatch(
+      /Referred to a physician on Jun\s10,\s2026 with no answer on file: riding only, not in the water/,
+    );
+  });
+
   it("shows the live roll call's two medical warnings, in its words", () => {
     // Issue #2163: a crew at the rail with no signal saw neither warning.
     const copy = savedCopy();

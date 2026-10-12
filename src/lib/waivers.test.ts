@@ -15,6 +15,7 @@ import {
   overriddenReferral,
   overriddenReferralAt,
   overriddenRefusal,
+  riderMedicalHold,
   shopWaiverStatus,
   WAIVER_SIGNATURE_VALIDITY_MS,
   waiverState,
@@ -1076,5 +1077,64 @@ describe("effectiveReleaseForRiderSeat", () => {
   it("hands back the seat's own unsigned link when nothing is signed, for the send flow", () => {
     const pending = completedWaiver({ status: "pending", signedAt: null, completedAt: null });
     expect(effectiveReleaseForRiderSeat(args({ bookingWaiver: pending }))).toBe(pending);
+  });
+
+  it("hands back a lapsed unsigned link too, so the desk reads expired, as for a diver's seat", () => {
+    const lapsed = completedWaiver({
+      status: "pending",
+      signedAt: null,
+      completedAt: null,
+      expiresAt: new Date(SIGN_NOW.getTime() - 1),
+    });
+    const rider = effectiveReleaseForRiderSeat(args({ bookingWaiver: lapsed }));
+    expect(rider).toBe(lapsed);
+    expect(rider).toBe(effectiveWaiverForBooking(args({ bookingWaiver: lapsed })));
+    expect(waiverState(rider, SIGN_NOW)).toBe("expired");
+  });
+});
+
+/**
+ * **What the crew reads for a rider boarding past a medical** (H-109;
+ * dive-domain review of #2212): never a blocker, always a warning.
+ */
+describe("riderMedicalHold", () => {
+  it("names a physician's no on the rider's own release, by the evaluation day", () => {
+    const refused = completedWaiver({
+      status: "medical_review",
+      medicalClearanceDeclinedAt: SIGN_NOW,
+      medicalClearanceEvaluatedOn: "2026-07-01",
+    });
+    expect(riderMedicalHold(refused, [refused])).toEqual({
+      kind: "not_cleared",
+      at: SIGN_NOW,
+      evaluatedOn: "2026-07-01",
+    });
+  });
+
+  it("names an open referral, and a no on an earlier release outranks it", () => {
+    const referral = completedWaiver({ id: "referral", status: "medical_review" });
+    expect(riderMedicalHold(referral, [referral])?.kind).toBe("referral");
+    const earlierNo = completedWaiver({
+      id: "earlier-no",
+      status: "medical_review",
+      signedAt: new Date(SIGN_NOW.getTime() - 100_000),
+      medicalClearanceDeclinedAt: new Date(SIGN_NOW.getTime() - 50_000),
+    });
+    expect(riderMedicalHold(referral, [referral, earlierNo])?.kind).toBe("not_cleared");
+  });
+
+  it("says nothing for a clean release or none", () => {
+    expect(riderMedicalHold(completedWaiver({}), [])).toBeNull();
+    expect(riderMedicalHold(null, [])).toBeNull();
+  });
+
+  it("dates the riding-only warning in the shop's zone", () => {
+    const referral = completedWaiver({
+      status: "medical_review",
+      signedAt: new Date("2026-07-02T02:00:00.000Z"),
+    });
+    expect(
+      medicalWarningDays(null, "America/New_York", riderMedicalHold(referral, [referral])),
+    ).toEqual({ ridingReferredOn: "2026-07-01" });
   });
 });

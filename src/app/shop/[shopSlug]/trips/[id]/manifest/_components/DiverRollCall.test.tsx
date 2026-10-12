@@ -562,6 +562,26 @@ describe("the earlier-refusal capsule", () => {
     );
   });
 
+  it("gives way to a rider's riding-only warning, which the row and its details both say (H-109)", () => {
+    const { container } = renderList({
+      divers: [
+        diver({
+          participantType: "rider",
+          medicalWaiver: null,
+          riderMedicalHold: {
+            kind: "not_cleared",
+            at: new Date("2026-08-20T12:00:00.000Z"),
+            evaluatedOn: "2026-08-19",
+          },
+        }),
+      ],
+    });
+    expect(capsuleOf(container)).toHaveTextContent("Physician did not clear: riding only");
+    expect(container.textContent).toMatch(
+      /A physician did not clear this person on Aug\s19,\s2026: riding only, not in the water/,
+    );
+  });
+
   it("is short in Spanish too", () => {
     const { container } = renderList({
       divers: [diver({ medicalWaiver: refusedBefore })],

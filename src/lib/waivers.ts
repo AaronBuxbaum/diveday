@@ -659,25 +659,79 @@ export type OverriddenRefusal = {
 };
 
 /**
- * **The two days a crew reads beside a medical warning**, in the shop's zone:
+ * **A rider boarding on a release a medical holds** (H-109; dive-domain review
+ * of #2212). A rider is never held at the rail on a referral or a physician's
+ * "no" — they stay on the boat — but the crew still sees it, as a warning that
+ * says "riding only", never as a blocker.
+ *
+ * `not_cleared` when a physician's "no" stands that no later clearance has
+ * answered — the release itself, or an earlier one ({@link overriddenRefusal}'s
+ * rule) — dated by the physician's evaluation day when stored. `referral` when
+ * the release is an unresolved referral and no refusal stands. Null for a
+ * clean release, which the ordinary warnings already cover.
+ *
+ * Only for the release `effectiveReleaseForRiderSeat` chose; a seat held to the
+ * medical is blocked by the same record instead.
+ */
+export type RiderMedicalHold = {
+  kind: "not_cleared" | "referral";
+  at: Date;
+  evaluatedOn?: CalendarDate | null;
+};
+
+export function riderMedicalHold(
+  release: WaiverRecord | null,
+  personSignedWaivers: readonly WaiverRecord[],
+): RiderMedicalHold | null {
+  if (!release || !isUnresolvedMedicalHold(release)) return null;
+  const records = personSignedWaivers.some((record) => record.id === release.id)
+    ? personSignedWaivers
+    : [...personSignedWaivers, release];
+  // The release's own refusal counts too, so the bound is just past it.
+  const refusal = unansweredRefusal(records, signatureTime(release) + 1);
+  if (refusal) {
+    return { kind: "not_cleared", at: refusal.at, evaluatedOn: refusal.evaluatedOn ?? null };
+  }
+  return { kind: "referral", at: new Date(signatureTime(release)) };
+}
+
+/**
+ * **The days a crew reads beside a medical warning**, in the shop's zone:
  * the physician's evaluation day for an earlier refusal (falling back to the
- * day staff recorded it), and the day of a referral a release stands over.
- * One derivation for the live roll call and the offline dock copy, so the two
- * never print different days. Absent keys mean no warning.
+ * day staff recorded it), the day of a referral a release stands over, and
+ * for a rider ({@link riderMedicalHold}) the day of the refusal or referral
+ * they board under, riding only. One derivation for the live roll call and
+ * the offline dock copy, so the two never print different days. Absent keys
+ * mean no warning.
  */
 export function medicalWarningDays(
   mark: Pick<MedicalWaiverMark, "overriddenRefusal" | "overriddenReferralAt"> | null | undefined,
   timeZone: string,
-): { refusedOn?: CalendarDate; referredOn?: CalendarDate } {
+  riderHold?: RiderMedicalHold | null,
+): MedicalWarningDays {
   const refusal = mark?.overriddenRefusal;
   const referral = mark?.overriddenReferralAt;
+  const riderDay = riderHold
+    ? (riderHold.evaluatedOn ?? calendarDateInTimezone(riderHold.at, timeZone))
+    : null;
   return {
     ...(refusal
       ? { refusedOn: refusal.evaluatedOn ?? calendarDateInTimezone(refusal.at, timeZone) }
       : {}),
     ...(referral ? { referredOn: calendarDateInTimezone(referral, timeZone) } : {}),
+    ...(riderHold?.kind === "not_cleared" && riderDay ? { ridingNotClearedOn: riderDay } : {}),
+    ...(riderHold?.kind === "referral" && riderDay ? { ridingReferredOn: riderDay } : {}),
   };
 }
+
+export type MedicalWarningDays = {
+  refusedOn?: CalendarDate;
+  referredOn?: CalendarDate;
+  /** A rider boarding, riding only, under a physician's standing "no" (H-109). */
+  ridingNotClearedOn?: CalendarDate;
+  /** A rider boarding, riding only, under a referral nobody answered (H-109). */
+  ridingReferredOn?: CalendarDate;
+};
 
 /**
  * The physician's "no" on file that no later clearance has answered

@@ -22,6 +22,7 @@ import {
   effectiveWaiverForBooking,
   overriddenReferral,
   overriddenRefusal,
+  riderMedicalHold,
 } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import {
@@ -1712,6 +1713,12 @@ export async function listTripsReadiness(
         effectiveWaiver,
         signedWaiversByPerson.get(row.person.id) ?? [],
       ),
+      // A rider boards on a release a medical holds (H-109), and the crew
+      // still reads it as a "riding only" warning, from the same record the
+      // rider path chose (dive-domain review of #2212).
+      riderMedicalHold: isHeldToMedical(row.booking.participantType)
+        ? null
+        : riderMedicalHold(effectiveWaiver, signedWaiversByPerson.get(row.person.id) ?? []),
       requirement,
       siteRequirement,
       certifications: certificationsByPerson.get(row.person.id) ?? [],

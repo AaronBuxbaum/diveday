@@ -168,8 +168,11 @@ export function offeredParticipantTypes(
  * Changing a diver to a snorkeler or a rider is the one door that clears a
  * certification block without a card (`setBookingParticipantType`), so every
  * crew surface says it in warning tone beside the name: "Snorkeling, booked as
- * diver". Only an explicit `bookedAs` of diver counts; a row that does not
- * carry the column says nothing rather than guessing.
+ * diver". Leaving for riding also lifts a medical hold for boarding (H-109,
+ * `isHeldToMedical`), and the crew still sees it as a "riding only" warning
+ * (`riderMedicalHold`); leaving for snorkeling never does. Only an explicit
+ * `bookedAs` of diver counts; a row that does not carry the column says
+ * nothing rather than guessing.
  */
 export function leftDiving(seat: {
   participantType?: ParticipantType | null;

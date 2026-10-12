@@ -10,7 +10,7 @@ import {
 import type { ReadinessResult } from "./readiness";
 import type { RollCallCheckpoint, RollCallRecord } from "./roll-call";
 import { isNotBackAboard } from "./roll-call";
-import type { MedicalWaiverMark } from "./waivers";
+import type { MedicalWaiverMark, RiderMedicalHold } from "./waivers";
 import type { WelcomeCue } from "./welcome-cue";
 
 /**
@@ -217,6 +217,12 @@ export type ManifestDiverInput = {
    * it).
    */
   medicalWaiver?: MedicalWaiverMark | null;
+  /**
+   * A rider boarding, riding only, on a release a referral or a physician's
+   * "no" holds (H-109, `riderMedicalHold`): never a blocker, always a warning
+   * at the rail. A person fact, so a held seat drops it with the medical mark.
+   */
+  riderMedicalHold?: RiderMedicalHold | null;
   /**
    * Lodging / hotel location stated by diver on /ready (marker only, not a checkpoint).
    */
