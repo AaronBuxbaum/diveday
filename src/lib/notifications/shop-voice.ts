@@ -45,6 +45,8 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "work_order_ready":
     case "gear_service_due":
     case "crew_schedule_change":
+    case "departure_note":
+    case "lost_item_found":
       return notification.shopName;
     case "welcome":
     case "email_verification":

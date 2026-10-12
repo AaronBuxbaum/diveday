@@ -54,6 +54,7 @@ import {
   trips,
 } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
+import { notRehearsal } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 const REMINDER_KINDS: ReminderKind[] = TRIP_REMINDER_CADENCES.map((c) => c.kind);
@@ -343,7 +344,7 @@ export async function sendDueReminders(
     .where(
       and(
         ne(bookings.status, "cancelled"),
-        eq(trips.status, "scheduled"),
+        and(eq(trips.status, "scheduled"), notRehearsal()),
         gt(trips.startsAt, now),
         lte(trips.startsAt, horizon),
       ),

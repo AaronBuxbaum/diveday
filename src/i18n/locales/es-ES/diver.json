@@ -122,6 +122,11 @@
     "poweredByDiveDay": "Con la tecnología de DiveDay",
     "moreWaysHeading": "Otras formas de ayudarte",
     "boatsHeading": "Las embarcaciones",
+    "monthSeen": {
+      "heading": "Lo que podrías ver en {month}",
+      "line": "Visto en {seen} de las {trips, plural, one {# salida de {month}} other {# salidas de {month}}} que registraron nuestras tripulaciones",
+      "honest": "Lo que registraron nuestras tripulaciones en las salidas de {month}, en todas las temporadas registradas. Dice lo que se vio, no lo que verás."
+    },
     "boatSeats": "{count, plural, one {# buceador} other {# buceadores}}"
   },
   "trip": {
@@ -577,6 +582,7 @@
     "ratingLegend": "Tu puntuación",
     "ratingOption": "{rating} sobre 5 estrellas",
     "anonymousReviewer": "Un buceador",
+    "replyFrom": "Respuesta de {shop}",
     "commentLabel": "¿Algo que le contarías a otro buceador?",
     "commentPlaceholder": "La tripulación, los puntos, cómo fue la jornada",
     "submit": "Enviar mi opinión",
@@ -1066,7 +1072,7 @@
     "expiredBody": "Quien te envió este enlace puede decirte qué ha pasado con la plaza.",
     "errors": {
       "checkFields": "Revisa los campos marcados e inténtalo de nuevo.",
-      "alreadyBooked": "Ya tienes tu propia plaza en esta salida, así que esta se queda con quien organiza el grupo.",
+      "unable": "Esta plaza no se puede reclamar con estos datos. Contacta con el centro y lo resolverán.",
       "coursePrerequisite": "Esta sesión es un curso con sus propios requisitos, y el centro necesita una certificación verificada archivada antes de que la plaza cambie de manos. Contacta con el centro y lo resolverán."
     },
     "claimedNotice": "Esta plaza ya es tuya, y todo lo que ves en esta página es sobre ti. Quien organiza el grupo puede ver que está reclamada.",
@@ -2695,7 +2701,7 @@
       "priceLine": "Un precio único de {price} {cadence}, congelado dos años para los centros fundadores.",
       "seeIncluded": "Ver qué incluye →",
       "contactTitle": "Pregúntanos primero",
-      "contactBody": "Escríbenos con lo que te haría decidir. Lo lee una persona real.",
+      "contactBody": "Escríbenos con lo que te haría decidir.",
       "contactCta": "Escribir a {email}",
       "stepLink": "{name} →"
     },
@@ -4358,6 +4364,7 @@
       "subjectRefused": "{shopName}: No se te pudo sumar a {tripTitle}, {when}",
       "subjectRoleChanged": "{shopName}: Nuevo puesto en {tripTitle}, {when}",
       "subjectCalledOff": "{shopName}: {tripTitle}, {when}, se canceló",
+      "subjectTimeMoved": "{shopName}: {tripTitle} cambia de hora, {when}",
       "subjectMany": "Cambiaron tus salidas en {shopName}",
       "intro": "Cambiaron tus salidas en {shopName}:",
       "assigned": "Estás en el equipo de {tripTitle}, {when}.",
@@ -4368,6 +4375,7 @@
       "roleChanged": "Tu puesto en {tripTitle}, {when}, ahora es {role}.",
       "roleChangedNoRole": "Cambió tu puesto en {tripTitle}, {when}.",
       "calledOff": "{tripTitle}, {when}, se canceló. No te necesitan para esa salida.",
+      "timeMoved": "{tripTitle} cambió de hora: ahora sale {when}, no {previousWhen}.",
       "asRole": "Vas como {role}.",
       "roles": {
         "instructor": "instructor de buceo",
@@ -4403,6 +4411,22 @@
       "was": "Antes era el {when}.",
       "meetingPointMoved": "También cambia el punto de encuentro.",
       "cantMakeIt": "¿No puedes a la nueva hora? Escríbenos y lo resolvemos."
+    },
+    "departureNote": {
+      "subject": "Una nota sobre {tripTitle}",
+      "intro": "{shopName} envió una nota a todos los de {tripTitle}, {date}:",
+      "readyLink": "Tu reserva"
+    },
+    "smsDepartureNote": {
+      "body": "{shopName}, {tripTitle}: {note}",
+      "withLink": "{shopName}, {tripTitle}: {note} Tu reserva: {url}"
+    },
+    "lostItem": {
+      "subject": "Olvidado a bordo después de {tripTitle}",
+      "body": "La tripulación encontró esto a bordo después de {tripTitle} el {date}: {item}. {shopName} lo guarda para ti."
+    },
+    "smsLostItem": {
+      "body": "{shopName}: la tripulación encontró esto a bordo después de {tripTitle}: {item}. Lo guardamos para ti."
     }
   },
   "brand": {

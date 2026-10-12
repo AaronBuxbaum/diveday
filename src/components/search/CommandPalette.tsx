@@ -119,6 +119,26 @@ export type CommandPaletteCopy = {
   goToOfflineRollCall: string;
 };
 
+// ⌘K / Ctrl-K from anywhere toggles the palette. Returns true once the
+// listener is attached: the trigger publishes it as the staff surfaces'
+// `data-hydrated` flag, so a test that presses ⌘K on a fresh page can wait for
+// it rather than lose the keypress to the server-rendered button (issue #2366).
+function useCommandKey(setOpen: (update: (current: boolean) => boolean) => void): boolean {
+  const [listening, setListening] = useState(false);
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setOpen((current) => !current);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    setListening(true);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [setOpen]);
+  return listening;
+}
+
 /**
  * Global search for the front desk: "pull up Priya" without navigating to a
  * list first. Opened by ⌘K / Ctrl-K or the nav button. A hand-rolled combobox
@@ -181,17 +201,7 @@ export function CommandPalette({
     exitMs: motionMs("base"),
   });
 
-  // ⌘K / Ctrl-K from anywhere opens the palette.
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setOpen((current) => !current);
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  const listening = useCommandKey(setOpen);
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
@@ -546,6 +556,7 @@ export function CommandPalette({
         onClick={() => setOpen(true)}
         aria-keyshortcuts="Meta+K Control+K"
         aria-label={copy.search}
+        data-hydrated={listening ? "true" : undefined}
         // **The transition names its two properties rather than saying
         // `transition-colors`.** That shorthand covers `border-color`, and the
         // border below arrives at `sm` — so crossing that breakpoint started

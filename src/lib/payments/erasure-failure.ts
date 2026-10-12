@@ -33,7 +33,7 @@ const HTTP_STATUS = /^HTTP (\d{3})\b/;
  * - `refused`: Stripe answered 4xx (other than 429): retrying the same call
  *   will not help on its own.
  * - `unreachable`: Stripe was busy (429, 5xx), the request never landed (a
- *   network error, which the provider records as the error's own message), or
+ *   network error, recorded as the fixed `unanswered` string), or
  *   the deployment cannot reach Stripe at all. A retry may clear it.
  * - `not_confirmed`: the fallback, and the one claim true of every failure.
  */

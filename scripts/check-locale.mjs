@@ -176,6 +176,7 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/shared.json readiness.certificationLevels.instructor", "course name, used untranslated"],
   // Spelled and read the same in Spanish.
   ["diver.json factSource.plan", "the same word in both languages"],
+  ["staff/incidents.json form.no", "the same word in both languages"],
   // Examined one by one for issue #1797. Each is a value with no Spanish
   // form to give it: a brand, an acronym, a place, a unit, or a word Spanish
   // diving uses unchanged. Held both ways like every entry above — the day
@@ -215,6 +216,7 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["diver.json trip.rentalItems.gopro", "brand"],
   ["diver.json notifications.gearPieces.gopro", "brand"],
   ["staff/inbox.json channel.whatsapp", "brand"],
+  ["staff/desk.json lostFound.channels.whatsapp", "brand"],
   ["staff/integrations.json quickbooks.name", "brand"],
   ["staff/integrations.json shopify.name", "brand"],
   ["staff/integrations.json xero.name", "brand"],

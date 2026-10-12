@@ -12,6 +12,7 @@ import {
   type ManifestBuddyTeam,
   type ManifestCrewMember,
   type ManifestDiverInput,
+  manifestAtCheckpoint,
   maxRecordedDiveNumber,
   type RollCallRecord,
   rollCallCheckpoints,
@@ -65,6 +66,23 @@ const trip = {
   endsAt: new Date("2026-07-20T16:00:00.000Z"),
   plannedDives: 2,
 };
+
+describe("manifestAtCheckpoint", () => {
+  const manifests = rollCallCheckpoints(trip.plannedDives).map((checkpoint) =>
+    buildTripManifest({ trip, checkpoint, crew: [], divers: [] }),
+  );
+
+  it("returns the manifest at a checkpoint the trip has", () => {
+    expect(manifestAtCheckpoint(manifests, "after_dive_2")?.checkpoint).toBe("after_dive_2");
+    expect(manifestAtCheckpoint(manifests, "departure")?.checkpoint).toBe("departure");
+  });
+
+  it("returns null for a checkpoint past the planned dives, or junk", () => {
+    expect(manifestAtCheckpoint(manifests, "after_dive_3")).toBeNull();
+    expect(manifestAtCheckpoint(manifests, "nonsense")).toBeNull();
+    expect(manifestAtCheckpoint([], "departure")).toBeNull();
+  });
+});
 
 describe("buildTripManifest", () => {
   it("retains every supplied booking and fails closed when its readiness lookup is unavailable", () => {

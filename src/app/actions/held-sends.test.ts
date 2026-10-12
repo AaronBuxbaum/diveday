@@ -16,6 +16,7 @@ vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
+const { revalidatePath } = await import("next/cache");
 const { holdSendAction, releaseHeldSendAction, undoHeldSendAction } = await import("./held-sends");
 const { holdRescheduleNotice } = await import("@/db/trip-rescheduled");
 const { moveTrip } = await import("@/db/trips");
@@ -126,6 +127,38 @@ describe("holdSendAction", () => {
     });
     expect(await undoHeldSendAction(ticket.id)).toBe(true);
     expect(await heldRows(db, shop.id)).toEqual([]);
+  });
+
+  // Issue #2346: a rental ticket's send is its own surface, carries the
+  // ticket, and its release refreshes that ticket rather than the diver record.
+  it("holds a counter rental's waiver send with its ticket, and refreshes that ticket", async () => {
+    const { db, shop, captain } = await context();
+    signIn(shop, captain);
+    const [walkIn] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Counter Walk-In" })
+      .returning();
+    if (!walkIn) throw new Error("person insert failed");
+    const ticketId = "6f3c2a10-1b2c-4d3e-8f4a-5b6c7d8e9f00";
+    const form = new FormData();
+    form.set("holdKind", "waiver_send");
+    form.set("surface", "counter");
+    form.set("ticketId", ticketId);
+    form.set("personId", walkIn.id);
+    const ticket = await holdSendAction(form);
+    const [row] = await heldRows(db, shop.id);
+    expect(row?.payload).toEqual({
+      kind: "waiver_send",
+      bookingIds: [],
+      personId: walkIn.id,
+      channel: "email",
+      surface: "counter",
+      ticketId,
+    });
+
+    vi.mocked(revalidatePath).mockClear();
+    expect((await releaseHeldSendAction(ticket.id)).status).toBe("done");
+    expect(revalidatePath).toHaveBeenCalledWith(`/shop/${shop.slug}/gear/rentals/${ticketId}`);
   });
 
   it("refuses a form that names no send at all", async () => {

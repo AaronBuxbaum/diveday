@@ -162,6 +162,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // 20260815-minimal-gear-register, amended 2026-10-08): its text, so its
       // backup carries it.
       "rental_terms",
+      // How often the shop services a customer's regulator (#2272): a policy
+      // the shop chose, so a restore keeps its customers' reminders on time.
+      "customer_regulator_service_months",
       // The shop's own emergency numbers. Exported because the bundle is
       // the backup: a shop restoring from one must come back with the
       // chamber's number on its manifests, not an empty card.
@@ -234,6 +237,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         JSON.stringify(shop.rentalItems),
         JSON.stringify(shop.rentalPricing),
         shop.rentalTerms,
+        shop.customerRegulatorServiceMonths,
         JSON.stringify(shop.emergencyReference),
         shop.seasonStartMonth,
         shop.seasonStartDay,
@@ -558,6 +562,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // The shop's own answer about this departure, not a derived fact,
       // so it leaves with the shop (issue #973).
       "self_guided",
+      "exceeds_no_deco_limits",
       // The bundle carries deleted departures (they are still the shop's
       // rows), so it has to carry the stamp that says which — a file that
       // hands back a deleted departure looking live is worse than one
@@ -609,6 +614,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.arrivalPhotoUrl,
         row.isPrivate,
         row.selfGuided,
+        row.exceedsNoDecoLimits,
         row.deletedAt,
         row.createdAt,
       ]),
@@ -1061,6 +1067,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "expires_at",
       "completed_at",
       "async_payment_failed_at",
+      "paid_after_close_at",
+      "paid_after_close_cents",
       "created_at",
     ],
     rows: ({ tripTitle, tripStartsAt, checkoutRows }) =>
@@ -1090,6 +1098,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.expiresAt,
         row.completedAt,
         row.asyncPaymentFailedAt,
+        row.paidAfterCloseAt,
+        row.paidAfterCloseCents,
         row.createdAt,
       ]),
     note: EXPORT_FILE_NOTES["booking_checkouts.csv"],
@@ -1510,6 +1520,105 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.createdAt,
       ]),
     note: EXPORT_FILE_NOTES["internal_notes.csv"],
+  },
+  {
+    file: "incident_reports.csv",
+    header: [
+      "id",
+      "trip_id",
+      "trip_title",
+      "trip_starts_at",
+      "status",
+      "occurred_at",
+      "dive_site_id",
+      "location_text",
+      "what_happened",
+      "first_aid_given",
+      "oxygen_given",
+      "oxygen_minutes",
+      "emergency_services_called",
+      "handover_kind",
+      "handover_detail",
+      "handed_over_at",
+      "follow_up",
+      "created_by_person_id",
+      "created_by_name",
+      "created_at",
+      "updated_at",
+      "filed_at",
+      "filed_by_person_id",
+      "filed_by_name",
+    ],
+    rows: ({ personName, tripTitle, tripStartsAt, incidentReportRows }) =>
+      incidentReportRows.map((row) => [
+        row.id,
+        row.tripId,
+        tripTitle.get(row.tripId),
+        tripStartsAt.get(row.tripId),
+        row.status,
+        row.occurredAt,
+        row.diveSiteId,
+        row.locationText,
+        row.whatHappened,
+        row.firstAidGiven,
+        row.oxygenGiven,
+        row.oxygenMinutes,
+        row.emergencyServicesCalled,
+        row.handoverKind,
+        row.handoverDetail,
+        row.handedOverAt,
+        row.followUp,
+        row.createdByPersonId,
+        personName.get(row.createdByPersonId),
+        row.createdAt,
+        row.updatedAt,
+        row.filedAt,
+        row.filedByPersonId,
+        row.filedByPersonId ? personName.get(row.filedByPersonId) : null,
+      ]),
+    note: EXPORT_FILE_NOTES["incident_reports.csv"],
+  },
+  {
+    file: "incident_report_people.csv",
+    header: [
+      "id",
+      "report_id",
+      "booking_id",
+      "person_id",
+      "person_name",
+      "outsider_name",
+      "involvement",
+      "created_at",
+    ],
+    rows: ({ personName, bookingPerson, incidentPersonRows }) =>
+      incidentPersonRows.map((row) => {
+        const personId = row.personId ?? (row.bookingId ? bookingPerson.get(row.bookingId) : null);
+        return [
+          row.id,
+          row.reportId,
+          row.bookingId,
+          row.personId,
+          personId ? personName.get(personId) : null,
+          row.outsiderName,
+          row.involvement,
+          row.createdAt,
+        ];
+      }),
+    note: EXPORT_FILE_NOTES["incident_report_people.csv"],
+  },
+  {
+    file: "incident_report_addenda.csv",
+    header: ["id", "report_id", "body", "author_person_id", "author_name", "created_at"],
+    rows: ({ personName, incidentAddendumRows }) =>
+      incidentAddendumRows.map((row) => [
+        row.id,
+        row.reportId,
+        row.body,
+        row.authorPersonId,
+        personName.get(row.authorPersonId),
+        row.createdAt,
+      ]),
+    note: EXPORT_FILE_NOTES["incident_report_addenda.csv"],
   },
   {
     file: "activity_events.csv",

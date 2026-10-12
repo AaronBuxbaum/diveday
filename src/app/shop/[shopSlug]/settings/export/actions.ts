@@ -13,6 +13,7 @@ import {
 } from "@/features/backup-export";
 import { toDiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { parseForm, single } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
@@ -59,14 +60,14 @@ export type Notice =
   | "no-destination";
 
 const destinationSchema = z.object({
-  endpoint: z.string().trim().min(1).max(500),
-  region: z.string().trim().min(1).max(100),
-  bucket: z.string().trim().min(1).max(200),
-  prefix: z.string().trim().max(200).optional(),
-  accessKeyId: z.string().trim().min(1).max(200),
+  endpoint: single(z.string().trim().min(1).max(500), ""),
+  region: single(z.string().trim().min(1).max(100), ""),
+  bucket: single(z.string().trim().min(1).max(200), ""),
+  prefix: single(z.string().trim().max(200).optional(), ""),
+  accessKeyId: single(z.string().trim().min(1).max(200), ""),
   // Optional: blank on an update means "keep the stored secret" — the form
   // never echoes it back, so blank must not mean "erase".
-  secretAccessKey: z.string().max(500).optional(),
+  secretAccessKey: single(z.string().max(500).optional(), ""),
 });
 
 async function backupContext(): Promise<{
@@ -107,15 +108,8 @@ export async function saveBackupDestinationAction(formData: FormData): Promise<v
     redirect(stepUpChallengeUrl(shopSlug, "backup", path));
   }
 
-  const parsed = destinationSchema.safeParse({
-    endpoint: formData.get("endpoint") ?? "",
-    region: formData.get("region") ?? "",
-    bucket: formData.get("bucket") ?? "",
-    prefix: formData.get("prefix") ?? "",
-    accessKeyId: formData.get("accessKeyId") ?? "",
-    secretAccessKey: formData.get("secretAccessKey") ?? "",
-  });
-  if (!parsed.success) done(path, "invalid");
+  const parsed = parseForm(destinationSchema, formData);
+  if (!parsed.ok) done(path, "invalid");
 
   const result = await saveShopBackupDestination(db, { shopId, ...parsed.data });
   if (result.status === "refused") done(path, result.reason);

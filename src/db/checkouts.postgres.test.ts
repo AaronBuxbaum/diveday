@@ -1,14 +1,19 @@
 import { randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fakeCheckout } from "@/test/fakes";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { createBookingParty } from "./bookings";
-import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
+import {
+  markCheckoutPaidBySessionId,
+  recordCheckoutPaymentIntent,
+  startBookingCheckout,
+} from "./checkouts";
 import type { AppDb } from "./client";
 import { getBookingPayment } from "./payments";
-import { bookingCheckouts, shops, trips } from "./schema";
+import { recordStripeChargeRefund } from "./refunds";
+import { bookingCheckouts, bookings, shops, trips } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 
 /**
@@ -142,5 +147,106 @@ describePostgres("checkout completion under real concurrency", () => {
     expect(row?.status).toBe("expired");
     expect(row?.completedAt).toBeNull();
     expect(await getBookingPayment(pg.db, shopId, bookingId)).toBeNull();
+  });
+
+  it("locks the seats before the checkout, so an expiring writer and the webhook never deadlock", async () => {
+    // Issue #2335. The expiring writers (`setBookingParticipantType`, a
+    // reschedule) lock the seat and then retire its checkout. The completion
+    // used to lock the checkout first and reach the seat through the payment
+    // gate, the opposite order: with each holding one row, Postgres killed one
+    // of the two as a deadlock (40P01). Measured: with the completion's seat
+    // lock removed, this test fails with "deadlock detected".
+    const pg = await postgresTestDb();
+    const { shopId, bookingId, checkout } = await pendingCheckout(pg.db);
+
+    let expire!: () => void;
+    const expireNow = new Promise<void>((resolve) => {
+      expire = resolve;
+    });
+    let locked!: () => void;
+    const lockedNow = new Promise<void>((resolve) => {
+      locked = resolve;
+    });
+    const expiring = pg.connect().transaction(async (tx) => {
+      await tx
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(eq(bookings.id, bookingId))
+        .for("update");
+      locked();
+      await expireNow;
+      await tx
+        .update(bookingCheckouts)
+        .set({ status: "expired" })
+        .where(eq(bookingCheckouts.id, checkout.id));
+    });
+    await Promise.race([lockedNow, expiring]);
+
+    const webhook = markCheckoutPaidBySessionId(pg.connect(), checkout.stripeSessionId);
+    await waitForLockWaiters(pg.db, 1);
+    expire();
+    const [expired, completed] = await Promise.allSettled([expiring, webhook]);
+
+    expect(expired.status).toBe("fulfilled");
+    expect(completed).toEqual({ status: "fulfilled", value: null });
+    const [row] = await pg.db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkout.id));
+    expect(row?.status).toBe("expired");
+    expect(await getBookingPayment(pg.db, shopId, bookingId)).toBeNull();
+  });
+
+  it("records a dashboard refund against a seat another writer holds without deadlocking", async () => {
+    // Issue #2335, the refund side of the same pair: `charge.refunded` used to
+    // lock the checkout and then the seat, while DiveDay's own refund writes
+    // the seat and then counts the money on the checkout. Measured: with the
+    // seat lock in `applyStripeChargeRefund` removed, this fails with
+    // "deadlock detected".
+    const pg = await postgresTestDb();
+    const { shopId, bookingId, checkout } = await pendingCheckout(pg.db);
+    await markCheckoutPaidBySessionId(pg.db, checkout.stripeSessionId);
+    await recordCheckoutPaymentIntent(pg.db, {
+      stripeSessionId: checkout.stripeSessionId,
+      paymentIntentId: "pi_race",
+    });
+
+    let count!: () => void;
+    const countNow = new Promise<void>((resolve) => {
+      count = resolve;
+    });
+    let locked!: () => void;
+    const lockedNow = new Promise<void>((resolve) => {
+      locked = resolve;
+    });
+    const seatFirst = pg.connect().transaction(async (tx) => {
+      await tx
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(eq(bookings.id, bookingId))
+        .for("update");
+      locked();
+      await countNow;
+      await tx
+        .update(bookingCheckouts)
+        .set({ refundedCents: sql`${bookingCheckouts.refundedCents}` })
+        .where(eq(bookingCheckouts.id, checkout.id));
+    });
+    await Promise.race([lockedNow, seatFirst]);
+
+    const webhook = recordStripeChargeRefund(pg.connect(), {
+      stripeAccountId: checkout.stripeAccountId,
+      paymentIntentId: "pi_race",
+      amountRefundedCents: 5_000,
+      chargeId: "ch_race",
+      occurredAt: nowDate(),
+    });
+    await waitForLockWaiters(pg.db, 1);
+    count();
+    const [held, refunded] = await Promise.allSettled([seatFirst, webhook]);
+
+    expect(held.status).toBe("fulfilled");
+    expect(refunded).toEqual({ status: "fulfilled", value: { status: "checkout_refunded" } });
+    expect((await getBookingPayment(pg.db, shopId, bookingId))?.status).toBe("partly_refunded");
   });
 });

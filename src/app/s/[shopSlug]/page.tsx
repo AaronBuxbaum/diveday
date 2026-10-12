@@ -74,6 +74,7 @@ import { DayJumpStrip } from "./_components/DayJumpStrip";
 import { FindMyBookingForm } from "./_components/FindMyBookingForm";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
 import { MonthRail } from "./_components/MonthRail";
+import { MonthSightingsSection } from "./_components/MonthSightingsShelf";
 import { NextBoatCard } from "./_components/NextBoatCard";
 import { OffSeasonPanel } from "./_components/OffSeasonPanel";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
@@ -1099,15 +1100,14 @@ export default async function SchedulePage({
           </ul>
         </section>
       )}
-      {/* Reviews are a full-page, diver-facing signal: the embed stays a
-          compact booking widget (docs ADR 20260726-schedule-embed), and staff
-          moderate from /shop/[shopSlug]/reviews rather than reading them here.
-          The published-review list streams in behind the shell and trip list
-          instead of gating them (docs task 119 follow-up: streaming the
-          schedule); the section also carries the page's structured-data script
-          tag, since its `review` items come from the same fetch. The aggregate
-          is already in hand — it belongs to the hero now, and is handed down
-          here rather than read a second time. */}
+      {isEmbed ? null : <MonthSightingsSection shopId={shop.id} tz={tz} locale={locale} t={t} />}
+      {/* Reviews are a full-page, diver-facing signal: the embed stays a compact booking widget
+          (docs ADR 20260726-schedule-embed), and staff moderate from /shop/[shopSlug]/reviews
+          rather than reading them here. The published-review list streams in behind the shell and
+          trip list instead of gating them (docs task 119 follow-up: streaming the schedule); the
+          section also carries the page's structured-data script tag, since its `review` items
+          come from the same fetch. The aggregate is already in hand — it belongs to the hero now,
+          and is handed down here rather than read a second time. */}
       {showReviews ? (
         <Suspense fallback={<ShopReviewsSkeleton className={SECTION_GAP} />}>
           <ScheduleReviewsSection

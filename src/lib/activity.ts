@@ -127,10 +127,24 @@ type ActivityParamShapes = {
   crew_removed: { actor: string; crew: string };
   /** The weather called the day off. */
   blowout_called: { actor: string };
+  /**
+   * **An incident report was filed** on this departure (ADR
+   * 20261012-incident-reports), or an addendum added to one. The actor only:
+   * who was hurt and what happened stay in the report, behind its own gate.
+   */
+  incident_report_filed: { actor: string };
+  incident_report_addendum_added: { actor: string };
   /** A staffer seated a diver. */
   seat_added: { actor: string; diver: string };
   /** …as a walk-in, which is the same act with a different story behind it. */
   seat_added_walk_in: { actor: string; diver: string };
+  /**
+   * …as a rider who turned up at the boat unrostered (batch 4, D6): the crew
+   * added them from the manifest, so the line says where it happened.
+   */
+  rider_added_at_dock: { actor: string; diver: string };
+  /** A staffer sent one note to everyone booked on the departure (batch 4, J4). */
+  departure_note_sent: { actor: string };
   /** A diver asked for their booking link again. */
   booking_link_requested: { actor: string };
   /** A diver claimed the seat somebody else had booked for them. */
@@ -151,6 +165,11 @@ type ActivityParamShapes = {
    * customer's name lives on that row, where an erasure scrubs it.
    */
   order_refunded: { actor: string };
+  /**
+   * Money a card paid on a checkout DiveDay had already closed, sent back from
+   * the Orders index (issue #2335). On the departure the checkout was for.
+   */
+  paid_after_close_refunded: { actor: string };
   /** A removed seat's payment was refunded by card, inside the shop's window. */
   seat_refunded: { actor: string; diver: string };
   /** A seat was marked waived: a free place, the shop's call. */
@@ -168,6 +187,14 @@ type ActivityParamShapes = {
   departure_moved: { actor: string };
   departure_copied: { actor: string };
   departure_deleted: { actor: string };
+  /**
+   * **The shop answered a review in public** (batch 4, K2): wrote the reply
+   * under it, changed it, or took it down. Filed on the departure the review
+   * is about, and naming no reviewer, like the moderation lines beside it.
+   */
+  review_replied: { actor: string };
+  review_reply_edited: { actor: string };
+  review_reply_deleted: { actor: string };
   /**
    * An erasure ran over this line.
    *
@@ -240,13 +267,18 @@ export const ACTIVITY_CODES = [
   "crew_assigned",
   "crew_removed",
   "blowout_called",
+  "incident_report_filed",
+  "incident_report_addendum_added",
   "seat_added",
   "seat_added_walk_in",
+  "rider_added_at_dock",
+  "departure_note_sent",
   "booking_link_requested",
   "seat_claimed",
   "medical_clearance_opened",
   "record_exported",
   "order_refunded",
+  "paid_after_close_refunded",
   "seat_refunded",
   "payment_waived",
   "payment_marked_refunded",
@@ -255,6 +287,9 @@ export const ACTIVITY_CODES = [
   "departure_moved",
   "departure_copied",
   "departure_deleted",
+  "review_replied",
+  "review_reply_edited",
+  "review_reply_deleted",
   "redacted",
   "demo_charter_confirmed",
   "demo_second_dive_moved",

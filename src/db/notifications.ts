@@ -45,6 +45,7 @@ import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { findCourtesyEmailRecipientByAddress } from "./courtesy-email";
+import { notificationHeldForRehearsal, REHEARSAL_HELD_DELIVERY } from "./rehearsals";
 import {
   bookingPayments,
   bookings,
@@ -304,6 +305,16 @@ function openQueuedPayload(sealed: string, key: SecretKey): Notification | null 
  */
 type QueueRefusal = "no_shop" | "not_queueable" | "queue_seal_unavailable";
 
+/**
+ * What a thrown send is recorded as: the error's class, never its message
+ * (issue #2334). This becomes the queue row's `last_error` and the delivery
+ * record's error, and a thrown message can quote the recipient's address or a
+ * driver's bound parameters.
+ */
+function thrownErrorDetail(error: unknown): string {
+  return error instanceof Error ? error.name : "unknown_error";
+}
+
 async function queueRetry(
   db: AppDb,
   input: Notification,
@@ -446,6 +457,12 @@ export async function sendNotification(
     return { status: "failed", retryable: false, errorCode: "invalid_notification" };
   }
 
+  // **A rehearsal sends nothing to anyone** (ADR 20261012-rehearsal-departures).
+  // Held here, at the one door every shop-scoped email passes through, before
+  // the provider is asked, and reported as a non-retryable code so it is never
+  // queued for a second try.
+  if (await notificationHeldForRehearsal(db, input)) return REHEARSAL_HELD_DELIVERY;
+
   let delivery: NotificationDelivery;
   try {
     // Left catching everything on purpose: `withShopSender` reads the database
@@ -456,7 +473,7 @@ export async function sendNotification(
       status: "failed",
       retryable: true,
       errorCode: "provider_error",
-      detail: error instanceof Error ? error.message.slice(0, 500) : undefined,
+      detail: thrownErrorDetail(error),
     };
   }
   if (delivery.status === "failed" && delivery.retryable) {
@@ -500,6 +517,12 @@ export async function sendNotificationBatch(
       const input = batch[index];
       const parsed = notificationSchema.safeParse(input);
       if (parsed.success) {
+        // A member about a rehearsal is held, not sent (ADR
+        // 20261012-rehearsal-departures); the rest of the fan-out goes on.
+        if (await notificationHeldForRehearsal(db, input)) {
+          results[index] = REHEARSAL_HELD_DELIVERY;
+          continue;
+        }
         sendable.push({ index, input });
         continue;
       }
@@ -532,7 +555,7 @@ export async function sendNotificationBatch(
           status: "failed" as const,
           retryable: true,
           errorCode: "provider_error" as const,
-          detail: error instanceof Error ? error.message.slice(0, 500) : undefined,
+          detail: thrownErrorDetail(error),
         }));
       }
       // `sendBatch` answers aligned to what it was *given*, which is now the
@@ -936,13 +959,16 @@ export async function drainNotificationRetries(
     }
     let delivery: NotificationDelivery;
     try {
-      delivery = await notify(await withShopSender(db, notification, senders), provider);
+      // A queued retry about a rehearsal is held like a first send.
+      delivery = (await notificationHeldForRehearsal(db, notification))
+        ? REHEARSAL_HELD_DELIVERY
+        : await notify(await withShopSender(db, notification, senders), provider);
     } catch (error) {
       delivery = {
         status: "failed",
         retryable: true,
         errorCode: "worker_error",
-        detail: error instanceof Error ? error.message.slice(0, 500) : undefined,
+        detail: thrownErrorDetail(error),
       };
     }
     const tracked = "bookingId" in notification ? (notification as TrackedNotification) : null;
@@ -1347,7 +1373,7 @@ export async function applyProviderEmailEvent(
      * Optional because SES has nothing to scope by — its event names a message
      * id and nothing else, and those ids come from DiveDay's own single
      * account. A provider whose events *do* carry a tenant
-     * (WhatsApp names the WhatsApp Business Account) passes it, so a delivery
+     * (WhatsApp names the sending phone number, H-83) passes it, so a delivery
      * outcome can never land on another shop's row even if a provider message
      * id were ever guessable or reused.
      */

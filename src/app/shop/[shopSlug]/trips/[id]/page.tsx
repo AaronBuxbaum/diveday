@@ -68,6 +68,7 @@ import {
   SeriesMoreActions,
 } from "./_components/SeriesSection";
 import { TripAboutSection, TripMoreDisclosure } from "./_components/TripAboutSection";
+import { TripIncidentReports } from "./_components/TripIncidentReports";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
 import { TripAddDiverLink, TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
 import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRosterContent";
@@ -1030,17 +1031,11 @@ export default async function ManageTripPage({
                     recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
                     flush
                   />
-                  <DepartureLogLink
-                    db={db}
-                    shopId={shop.id}
-                    personId={session.user.personId}
-                    shopSlug={shopSlug}
-                    tripId={tripId}
-                    label={t("incidentExport.openLink")}
-                  />
+                  <DepartureLogLink shop={shop} personId={session.user.personId} tripId={tripId} />
                 </>
               }
             />
+            <TripIncidentReports shop={shop} personId={session.user.personId} tripId={tripId} />
             <TripPromoteAndActivity
               guests={guests}
               shopSlug={shopSlug}

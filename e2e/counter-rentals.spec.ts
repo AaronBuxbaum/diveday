@@ -74,6 +74,10 @@ test.describe("staff", () => {
 
   test("rents units out at the counter, hands them over, and takes them back", async ({ page }) => {
     await startRentalForCustomer(page);
+    // The waiver is said while Priya is still at the counter choosing gear,
+    // with the link to send (issue #2346); nothing below waits on it (H-108).
+    await expect(page.getByText("Waiver: Not signed")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Send waiver" })).toBeVisible();
     await pickUnit(page, "Mask", "Mask #2");
     await pickUnit(page, "Fins", "Fins #2");
     await payBy(page, "No charge");
@@ -104,6 +108,34 @@ test.describe("staff", () => {
     // Nothing is left to hand over or bring back.
     await expect(page.getByRole("button", { name: "All good" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Hand over" })).toHaveCount(0);
+  });
+
+  // Issue #2345: a walk-in's return offers the same unticked "Pull for
+  // service" boxes a departure's does, and says "Pulled" because one moved.
+  test("pulls a ticked unit to the bench on a service concern", async ({ page }) => {
+    await startRentalForCustomer(page);
+    await pickUnit(page, "Mask", "Mask #2");
+    await pickUnit(page, "Fins", "Fins #2");
+    await payBy(page, "No charge");
+    await page.getByRole("button", { name: "Rent out", exact: true }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Rented out." })).toBeVisible();
+    await page.getByRole("button", { name: "Hand over" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Handed over." })).toBeVisible();
+
+    await page.getByRole("button", { name: "Service concern" }).click();
+    // An open concern hides the fast answers: "All good" would drop the note.
+    await expect(page.getByRole("button", { name: "All good" })).toHaveCount(0);
+    const bench = page.getByRole("group", { name: "Pull for service" });
+    // Every box starts unticked: pulling is never automatic (#2205).
+    await expect(bench.getByRole("checkbox")).toHaveCount(2);
+    for (const box of await bench.getByRole("checkbox").all()) await expect(box).not.toBeChecked();
+    await page.getByLabel("What to tell the technician").fill("Mask skirt torn");
+    await bench.getByRole("checkbox", { name: "Mask #2" }).check();
+    // The open concern's own submit, below the boxes, beside Cancel.
+    await page.getByRole("button", { name: "Service concern" }).click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Back. 1 pulled for service." }),
+    ).toBeVisible();
   });
 
   test("the register sees a handed-over counter rental out, with its holder", async ({ page }) => {

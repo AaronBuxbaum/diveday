@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { HOUR_MS, nowMs } from "@/lib/clock";
 import { seededTestDb } from "@/test/db";
 import { issueAccountToken } from "./account-tokens";
-import { DEMO_SHOP_SLUG } from "./dev-credentials";
+import { DEMO_SHOP_SLUG } from "./demo-shop";
 import {
   accountTokens,
   activityEvents,

@@ -5,7 +5,9 @@ import { LedgerRow } from "@/components/ui/ledger";
 import type { ReviewModerationReason, StaffReview } from "@/db/reviews";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
+import { ReviewReply } from "./ReviewReply";
 import { ReviewRowActions, type ReviewRowCopy } from "./ReviewRowActions";
+import type { ReviewReplyContext } from "./review-reply-context";
 
 /**
  * **One review, in whichever group it belongs to** (ADR
@@ -52,6 +54,7 @@ export function ReviewLedgerRow({
   reasonKeys,
   reasons,
   copy,
+  reply,
 }: {
   review: StaffReview;
   group: ReviewGroup;
@@ -62,6 +65,8 @@ export function ReviewLedgerRow({
   reasonKeys: ReviewReasonWords;
   reasons: readonly { value: string; label: string }[];
   copy: ReviewRowCopy;
+  /** The shop's reply: who may write one, and its words. Without it the row offers none. */
+  reply?: ReviewReplyContext;
 }) {
   const waiting = group === "waiting";
   return (
@@ -152,6 +157,16 @@ export function ReviewLedgerRow({
                 })}`
               : null}
           </p>
+        ) : null}
+        {/* The shop's public reply (batch 4, K2): only under a published
+            review with words, the one kind of review a reply renders under. */}
+        {reply && review.isPublished && review.comment ? (
+          <ReviewReply
+            reviewId={review.id}
+            reply={review.replyBody}
+            canReply={reply.canReply}
+            copy={reply.copy}
+          />
         ) : null}
       </div>
     </LedgerRow>

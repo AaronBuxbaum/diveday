@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
+import { clearFinishedRehearsals } from "@/db/rehearsals";
 import { rollAllSeriesForward } from "@/db/trips";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
@@ -71,6 +72,9 @@ export async function GET(request: Request) {
   try {
     const db = await getDb();
     const summary = await rollAllSeriesForward(db);
+    // The same nightly pass takes finished rehearsals off the board once
+    // fly-safe no longer reads them (ADR 20261012-rehearsal-departures).
+    const rehearsalsCleared = await clearFinishedRehearsals(db);
 
     // A series that cannot be rolled is not a transient blip: it has had every
     // instance deleted, or its course was archived under it, and it will fail
@@ -95,6 +99,7 @@ export async function GET(request: Request) {
       // nightly pass is visible in the log rather than as boards that advance
       // more slowly than they should.
       seriesDeferred: summary.deferred,
+      rehearsalsCleared,
     });
 
     Sentry.captureCheckIn({
@@ -106,7 +111,10 @@ export async function GET(request: Request) {
     // Some series rolled and some did not, so the invocation log should agree
     // with Sentry that this run was not clean. The pass is idempotent, so a
     // retry re-attempts only what is still missing.
-    return NextResponse.json(summary, { status: summary.failures > 0 ? 500 : 200 });
+    return NextResponse.json(
+      { ...summary, rehearsalsCleared },
+      { status: summary.failures > 0 ? 500 : 200 },
+    );
   } catch (error) {
     // Only reachable before any series is touched — `getDb()` failing to
     // connect or migrate. The check-in still has to be closed out or the

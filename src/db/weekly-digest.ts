@@ -43,7 +43,7 @@ import {
   weeklyDigestSends,
 } from "./schema";
 import { getTodayWork } from "./today";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * **The Monday email's reads and its one send path** (market audit item 51).
@@ -142,7 +142,10 @@ async function countBookingsMade(
   const [row] = await db
     .select({ n: count() })
     .from(bookings)
-    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId), liveTrip()))
+    .innerJoin(
+      trips,
+      and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId), liveTrip(), notRehearsal()),
+    )
     .where(
       and(
         eq(bookings.shopId, shopId),

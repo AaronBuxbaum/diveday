@@ -232,7 +232,10 @@
     "language": "Idioma",
     "signOut": "Cerrar sesión",
     "signOutConfirm": "¿Cerrar sesión? Confirmar",
-    "signOutPending": "Cerrando sesión…"
+    "signOutPending": "Cerrando sesión…",
+    "tellUs": "Escríbenos",
+    "tellUsSubject": "Nota a DiveDay desde {shop}",
+    "tellUsBody": "Página: {path}\n\n"
   },
   "shopNavLinks": {
     "badgeBlocked": "{count, plural, one {# persona bloqueada, a bordo o en las próximas salidas} other {# personas bloqueadas, a bordo o en las próximas salidas}}",
@@ -241,6 +244,7 @@
     "board": "Agenda",
     "addBooking": "Añadir una reserva",
     "staffing": "Turnos de la tripulación",
+    "lostFound": "Objetos perdidos",
     "diveSites": "Sitios de buceo",
     "gear": "Equipo",
     "registerTab": "Registro",
@@ -254,6 +258,7 @@
     "orders": "Pedidos",
     "waivers": "Exenciones",
     "reports": "Informes",
+    "safety": "Seguridad",
     "promoCodes": "Descuentos",
     "settings": "Ajustes",
     "team": "Equipo",
@@ -324,7 +329,6 @@
       "listLoadError": "Este dispositivo no pudo abrir sus manifiestos guardados. Guarda una copia nueva mientras tengas señal.",
       "singleLoadError": "Este dispositivo no pudo abrir su manifiesto guardado. Guarda una copia nueva mientras tengas señal.",
       "savedCount": "{count, plural, one {# manifiesto guardado} other {# manifiestos guardados}} en este dispositivo.",
-      "noneSavedYet": "Todavía no hay nada guardado en este dispositivo.",
       "listPendingRejected": "{count, plural, one {# cambio necesita revisión. Abre esa salida para resolverlo.} other {# cambios necesitan revisión. Abre esa salida para resolverlo.}}",
       "listAllCaughtUp": "Todo enviado en estas salidas.",
       "ready": "El manifiesto guardado en este dispositivo está listo.",
@@ -333,10 +337,10 @@
     "list": {
       "eyebrow": "Manifiestos sin conexión",
       "headingWithTrips": "Guardado en este dispositivo",
-      "headingEmpty": "Todavía no hay nada guardado en este dispositivo",
+      "headingEmpty": "Todavía no hay ningún manifiesto guardado en este teléfono",
       "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
       "expiredViewOnly": "Caducado — solo lectura",
-      "emptyHint": "Mientras aún tengas señal, abre cualquier página del centro: DiveDay mantiene al día la copia de los próximos dos días en este dispositivo.",
+      "emptyHint": "Abre el manifiesto de una salida mientras tengas conexión y se guarda aquí.",
       "freshnessAllCurrent": "Todas al día.",
       "freshnessNeedRefresh": "{count, plural, one {# copia necesita actualizarse.} other {# copias necesitan actualizarse.}}",
       "savedAgo": "Guardada {ago}",

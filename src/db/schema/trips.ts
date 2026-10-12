@@ -349,6 +349,16 @@ export const trips = pgTable(
     diverCapacity: integer("diver_capacity"),
     /** Drives the after-dive roll-call checkpoints; recreational charters are commonly two-tank. */
     plannedDives: integer("planned_dives").notNull().default(2),
+    /**
+     * **This departure's dives went past no-decompression limits** — staged
+     * decompression, extended range (H-84, issue #1555). DAN's preflight
+     * guidance covers no-decompression diving and declines to give a number for
+     * a dive that took stops, so `flySafeFrom` (src/lib/fly-safe.ts) answers
+     * nothing for a departure carrying it and the recap says nothing about
+     * flying. Defaults to no, so a shop that never sets it keeps the ordinary
+     * sentence; it changes no gate, no ratio and no manifest.
+     */
+    exceedsNoDecoLimits: boolean("exceeds_no_deco_limits").notNull().default(false),
     /** Per-diver price; null means unpriced — an order made from this trip needs a manual amount. */
     priceCents: integer("price_cents"),
     /**
@@ -527,10 +537,30 @@ export const trips = pgTable(
      * column's index exists to make cheap to avoid.
      */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /**
+     * **A rehearsal: a departure for training day, not a real sailing** (ADR
+     * 20261012-rehearsal-departures).
+     *
+     * Set when the departure is created and never afterwards: a real departure
+     * does not turn into a practice one, nor the other way round. While it is
+     * set, nothing about this departure leaves the shop. It sends no message to
+     * anyone, appears on no public page or feed, counts in no report, export,
+     * availability answer or integration, and takes no money. The ADR lists
+     * every place that honours it, and `src/db/rehearsal-coverage.test.ts`
+     * walks them, so a new read model that forgets it fails a test.
+     *
+     * The nightly cron deletes a rehearsal once fly-safe's look-back has run
+     * out, and never one with a boarding, an after-dive count or a logged dive
+     * (`clearFinishedRehearsals`, src/db/rehearsals.ts).
+     */
+    isRehearsal: boolean("is_rehearsal").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("trips_shop_starts_idx").on(table.shopId, table.startsAt),
+    // A rehearsal is private as well as flagged, so every public listing that
+    // already leaves private departures out leaves it out too, by construction.
+    check("trips_rehearsal_is_private", sql`not ${table.isRehearsal} or ${table.isPrivate}`),
     index("trips_series_starts_idx").on(table.seriesId, table.startsAt),
     // Partial, over the live rows only: every listing read carries
     // `deleted_at is null`, and a deleted departure is rare enough that

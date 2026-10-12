@@ -86,6 +86,9 @@ const EXPECTED_FILES = [
   "prior_visits.csv",
   "imported_payment_history.csv",
   "internal_notes.csv",
+  "incident_reports.csv",
+  "incident_report_people.csv",
+  "incident_report_addenda.csv",
   "activity_events.csv",
   "notification_deliveries.csv",
   "orders.csv",
@@ -141,6 +144,9 @@ const EXPORTED_TABLES = [
   "executed_dives",
   "trip_sightings",
   "internal_notes",
+  "incident_reports",
+  "incident_report_people",
+  "incident_report_addenda",
   "activity_events",
   "notification_deliveries",
   "course_inquiries",
@@ -197,6 +203,7 @@ const FOLDED_TABLES = [
   "person_roles", // people.csv / trip_assignments.csv `roles`
   "booking_payments", // bookings.csv payment_* columns
   "booking_referrals", // bookings.csv `referred_by_booking_id`
+  "review_replies", // trip_reviews.csv `shop_reply`, the one live reply per review
 ];
 
 /**
@@ -216,6 +223,10 @@ const EXCLUDED_TABLES = [
   // the shop's Stripe dashboard is where a dispute is answered and exported.
   // The money it concerns is already on orders.csv and booking_checkouts.csv.
   "payment_disputes",
+  // Failed refunds (issue #2291): Stripe's record of a refund that bounced,
+  // mirrored so the Orders index can say who is owed. The money it moved is
+  // already on orders.csv and booking_checkouts.csv (`refunded_cents`).
+  "stripe_refund_failures",
   // Historical assignments are source evidence attached to the gear-history
   // import, not a live reservation or booking record. They remain in the
   // shop database and are intentionally not part of the current full-shop
@@ -242,6 +253,14 @@ const EXCLUDED_TABLES = [
   // exactly the reason notification_delivery_attempts is.
   "waiver_deliveries",
   "notification_send_queue", // operational retry state, not shop records
+  // Batch 4's two desk records. A note sent to a whole departure is
+  // correspondence, out for the reason staff_replies is: the bundle has no file
+  // for a message yet, and the 400-day window bounds it like the delivery trail
+  // beside it. A found item is a shelf the shop is holding for somebody, pruned
+  // 90 days after it goes home; there is nothing in it another system would
+  // import. Both are follow-ups with their own file shape if a shop asks.
+  "departure_notes",
+  "lost_items",
   // What the bench told a customer and how it went (ADR
   // 20261008-work-order-follow-up): a kind, a channel and a delivery status,
   // the same plumbing notification_delivery_attempts is. The ticket and the
@@ -420,6 +439,10 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // notice: in-flight messaging state on this installation, cleared by the
     // send, and a re-imported departure has no divers who were told anything.
     "divers_told_starts_at",
+    // A rehearsal never reaches the bundle at all (ADR
+    // 20261012-rehearsal-departures): every exported departure is a real one,
+    // so this column would read false on every row it could appear on.
+    "is_rehearsal",
   ],
   trip_change_events: ["shop_id"],
   trip_stage_events: ["shop_id"],
@@ -525,6 +548,9 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   booking_checkout_bookings: ["shop_id", "id"],
   shop_promo_redemptions: ["shop_id"],
   internal_notes: ["shop_id"],
+  incident_reports: ["shop_id"],
+  incident_report_people: ["shop_id"],
+  incident_report_addenda: ["shop_id"],
   activity_events: ["shop_id"],
   notification_deliveries: ["shop_id"],
   course_inquiries: ["shop_id"],

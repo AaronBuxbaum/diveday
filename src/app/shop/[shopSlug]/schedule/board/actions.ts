@@ -288,6 +288,11 @@ const addSchema = z.object({
     (value) => value === "true" || value === true,
     z.boolean().optional().default(false),
   ),
+  // A practice departure for training day (ADR 20261012-rehearsal-departures).
+  isRehearsal: z.preprocess(
+    (value) => value === "true" || value === true,
+    z.boolean().optional().default(false),
+  ),
   selfGuided: z.preprocess(
     (value) => value === "true" || value === true,
     z.boolean().optional().default(false),
@@ -421,12 +426,24 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     repeatIntervalWeeks,
     repeatEndsOn,
     isPrivate,
+    isRehearsal,
     selfGuided,
     diveMode,
     boatId,
     lensId,
     alsoUsualStart,
   } = parsed.data;
+  // **A rehearsal is one departure** (ADR 20261012-rehearsal-departures): a
+  // series would re-mint practice days on the board every night. Refused
+  // with its own sentence rather than quietly dropping the cadence.
+  if (isRehearsal && repeatIntervalWeeks > 0) {
+    await trackEvent({
+      name: "schedule_builder_action",
+      action: "add",
+      outcome: "invalid",
+    });
+    redirect(`${back}?builder=rehearsal-repeats`);
+  }
   const crewPersonIds = crewPersonIdsFrom(formData);
   if (!crewPersonIds) return await invalid();
 
@@ -511,6 +528,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     minimumBookings: details.patch.minimumBookings,
     minimumDecisionHours: details.patch.minimumDecisionHours,
     isPrivate,
+    isRehearsal,
     selfGuided,
     diveMode: details.patch.diveMode,
     boatId: details.patch.boatId,
@@ -584,20 +602,25 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       actorPersonId: session.user.personId,
     });
   }
-  await createTripRequestInvitations(db, {
-    shopId: shop.id,
-    tripId: created.id,
-    requestIds: requestIds.data,
-    createdByPersonId: session.user.personId,
-  });
+  // A rehearsal answers nobody's request: an invitation is a message, and a
+  // rehearsal sends none (ADR 20261012-rehearsal-departures).
+  if (!isRehearsal) {
+    await createTripRequestInvitations(db, {
+      shopId: shop.id,
+      tripId: created.id,
+      requestIds: requestIds.data,
+      createdByPersonId: session.user.personId,
+    });
+  }
   // "Add it as well": the pattern's second departure, read back off the board
   // here rather than taken from the form, so what goes up is what the shop
   // actually ran. Its own fields where the days agreed; this submission's
   // where they did not. Never on the repeat path — a series carries one
   // departure, and a second one on the anchor date alone would be a stray.
-  const also = alsoUsualStart
-    ? (await weekdayPatternFor(db, shop.id, date, shop.timezone))?.alsoUsual
-    : null;
+  const also =
+    alsoUsualStart && !isRehearsal
+      ? (await weekdayPatternFor(db, shop.id, date, shop.timezone))?.alsoUsual
+      : null;
   const addedAlso =
     also && also.startTime === alsoUsualStart
       ? await addPatternDeparture(db, shop, {
@@ -800,6 +823,7 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
     shop.id,
     parsed.data.tripId,
     wallTimeToUtc(wall, shop.timezone),
+    { actorPersonId: session.user.personId },
   );
   if (!outcome.ok) {
     await trackEvent({ name: "schedule_builder_action", action: "move", outcome: outcome.reason });

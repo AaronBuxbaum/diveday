@@ -196,6 +196,7 @@ describe("the log-signal registry", () => {
     expect(RENDER_DB_QUERIES_SIGNAL.metrics.map(renderDbQueriesFilterPatternFor)).toEqual([
       '{ $.event = "render.db_queries" && $.queries = * }',
       '{ $.event = "render.db_queries" && $.ms = * }',
+      '{ $.event = "render.db_queries" && $.db_ms = * }',
     ]);
   });
 

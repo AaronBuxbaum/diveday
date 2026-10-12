@@ -60,6 +60,8 @@ export default async function TripPrepPage({
   params: Promise<{ shopSlug: string; id: string }>;
   searchParams: Promise<{
     notice?: string;
+    /** The number a counted gear notice names (`noticeCountParam`). */
+    count?: string;
     /** Which grouping; anything unrecognised reads as the by-item default. */
     group?: string;
     /**
@@ -73,7 +75,7 @@ export default async function TripPrepPage({
   }>;
 }) {
   const { shopSlug, id: tripId } = await params;
-  const { notice, group, idPrefix: requestedIdPrefix } = await searchParams;
+  const { notice, count, group, idPrefix: requestedIdPrefix } = await searchParams;
   const idPrefix = uuidParam(requestedIdPrefix ?? "") ?? undefined;
   const grouping: PrepGrouping = isPrepGrouping(group) ? group : "item";
   // An unparseable id names no row. Guarded here rather than in the query
@@ -103,7 +105,7 @@ export default async function TripPrepPage({
 
   return (
     <>
-      <FlashParams params={["notice"]} />
+      <FlashParams params={["notice", "count"]} />
       <TripPageHeader
         boardHref={shopPath(shopSlug, "schedule", "board")}
         backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
@@ -133,6 +135,7 @@ export default async function TripPrepPage({
           tripId={tripId}
           rentalItems={shop.rentalItems}
           notice={notice}
+          noticeCount={count}
           grouping={grouping}
           cancelled={trip.status === "cancelled"}
           groupPath={shopPath(shopSlug, "trips", tripId, "prep")}

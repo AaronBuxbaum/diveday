@@ -17,6 +17,7 @@ import { getShopById } from "@/db/shops";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import { trackEvent } from "@/lib/analytics";
 import { nowMs } from "@/lib/clock";
+import { formValue, parseForm, trimmedText } from "@/lib/form-parse";
 import { type HeldSendPayload, heldSendPayloadSchema } from "@/lib/held-sends";
 import { majorToMinor, toShopCurrency } from "@/lib/money";
 import { requireStaffSession } from "@/lib/session";
@@ -37,9 +38,38 @@ const LAST_MINUTE_NOTICE = {
   stripe_failed: "last-minute-stripe-failed",
 } as const;
 
-const uuidList = (formData: FormData, name: string) => [
-  ...new Set(formData.getAll(name).map(String).filter(Boolean)),
-];
+/** Every value a repeated id field sent, once each and blanks dropped, as `getAll` read it. */
+const idList = () =>
+  z
+    .unknown()
+    .optional()
+    .transform((value) => {
+      const values = value === undefined ? [] : Array.isArray(value) ? value : [value];
+      return [...new Set(values.map(String).filter(Boolean))];
+    });
+
+/** Text that is absent when blank: a blank or missing box is `undefined`, the rest trimmed. */
+const optionalText = () => trimmedText().transform((value) => value || undefined);
+
+/**
+ * Every field a hold posts, read raw: `heldSendPayloadSchema` is the one that
+ * decides what a hold may carry, so this only gathers the form into its shape.
+ */
+const heldSendForm = z.object({
+  holdKind: formValue().transform((value) => String(value ?? "")),
+  bookingId: idList(),
+  recipientPersonIds: idList(),
+  personId: optionalText(),
+  channel: optionalText(),
+  surface: optionalText(),
+  tripId: optionalText(),
+  ticketId: optionalText(),
+  entryId: optionalText(),
+  discount: formValue(),
+  discountPercent: formValue(),
+  discountKind: formValue(),
+});
+type HeldSendForm = z.infer<typeof heldSendForm>;
 
 /**
  * A deal's discount off the form: a percent, or a fixed amount the staffer
@@ -48,41 +78,44 @@ const uuidList = (formData: FormData, name: string) => [
  * is the older single-box spelling and still reads as a percent.
  */
 function dealDiscountFromForm(
-  formData: FormData,
+  form: HeldSendForm,
   currency: string,
 ): { discountPercent?: number; discountAmountCents?: number } {
-  const raw = formData.get("discount") ?? formData.get("discountPercent");
+  const raw = form.discount ?? form.discountPercent;
   const value = Number(String(raw ?? "").trim());
-  if (formData.get("discountKind") === "amount") {
+  if (form.discountKind === "amount") {
     return { discountAmountCents: Number.isFinite(value) ? majorToMinor(value, currency) : value };
   }
   return { discountPercent: value };
 }
 
 function payloadFromForm(formData: FormData, currency: string): HeldSendPayload {
-  const kind = String(formData.get("holdKind") ?? "");
-  const optional = (name: string) => String(formData.get(name) ?? "").trim() || undefined;
+  const parsed = parseForm(heldSendForm, formData);
+  if (!parsed.ok) throw new Error("unreadable hold form");
+  const form = parsed.data;
+  const kind = form.holdKind;
   const raw =
     kind === "waiver_send"
       ? {
           kind,
-          bookingIds: uuidList(formData, "bookingId"),
-          personId: optional("personId"),
+          bookingIds: form.bookingId,
+          personId: form.personId,
           // The diver record's three delivery buttons are three submitters on
           // one form, so the channel is the submitter's own name/value pair;
           // anything else is email, as every older caller meant.
-          channel: optional("channel") ?? "email",
-          surface: optional("surface") ?? "today",
-          tripId: optional("tripId"),
+          channel: form.channel ?? "email",
+          surface: form.surface ?? "today",
+          tripId: form.tripId,
+          ticketId: form.ticketId,
         }
       : kind === "last_minute_deal"
         ? {
             kind,
-            tripId: optional("tripId"),
-            ...dealDiscountFromForm(formData, currency),
-            recipientPersonIds: uuidList(formData, "recipientPersonIds"),
+            tripId: form.tripId,
+            ...dealDiscountFromForm(form, currency),
+            recipientPersonIds: form.recipientPersonIds,
           }
-        : { kind, tripId: optional("tripId"), entryId: optional("entryId") };
+        : { kind, tripId: form.tripId, entryId: form.entryId };
   return heldSendPayloadSchema.parse(raw);
 }
 
@@ -200,6 +233,27 @@ export type ReleasedSend =
       };
     };
 
+/**
+ * The page a waiver send was made from, refreshed once it lands. A counter
+ * send refreshes the rental ticket it was made on, or the new-rental form
+ * when the person was still choosing gear (issue #2346).
+ */
+function waiverSendPath(
+  slug: string,
+  payload: Extract<HeldSendPayload, { kind: "waiver_send" }>,
+): string {
+  if (payload.surface === "today") return shopPath(slug);
+  if (payload.surface === "roster" && payload.tripId) {
+    return shopPath(slug, "trips", payload.tripId);
+  }
+  if (payload.surface === "counter") {
+    return payload.ticketId
+      ? shopPath(slug, "gear", "rentals", payload.ticketId)
+      : shopPath(slug, "gear", "rentals", "new");
+  }
+  return shopPath(slug, "divers", ...(payload.personId ? [payload.personId] : []));
+}
+
 export async function releaseHeldSendAction(id: string): Promise<ReleasedSend> {
   const session = await requireStaffSession();
   const db = await getDb();
@@ -217,13 +271,7 @@ export async function releaseHeldSendAction(id: string): Promise<ReleasedSend> {
   const { payload } = row;
 
   if (payload.kind === "waiver_send") {
-    const path =
-      payload.surface === "today"
-        ? shopPath(shop.slug)
-        : payload.surface === "roster" && payload.tripId
-          ? shopPath(shop.slug, "trips", payload.tripId)
-          : shopPath(shop.slug, "divers", ...(payload.personId ? [payload.personId] : []));
-    revalidatePath(path);
+    revalidatePath(waiverSendPath(shop.slug, payload));
     if (outcome.kind === "waiver_send" && outcome.sent.length > 0) {
       await trackEvent({ name: "staff_recovery", kind: "waiver_sent", surface: payload.surface });
     }

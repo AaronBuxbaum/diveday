@@ -104,13 +104,16 @@ export async function listGearRentals(
     fetchRows: async (offset, limit) => holders.slice(offset, offset + limit),
   });
   if (!options.timezone) return page;
-  const counterWaivers = await counterRentalWaiverStandings(db, {
+  const standings = await counterRentalWaiverStandings(db, {
     shopId,
     timezone: options.timezone,
     personIds: page.rows
       .filter((holder) => holder.rentals.some((rental) => !rental.bookingId))
       .map((holder) => holder.personId),
   });
+  const counterWaivers = new Map(
+    [...standings].map(([personId, status]) => [personId, status.state] as const),
+  );
   return { ...page, counterWaivers };
 }
 

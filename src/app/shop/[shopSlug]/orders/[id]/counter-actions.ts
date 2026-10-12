@@ -2,6 +2,7 @@
 
 import { getDb } from "@/db/client";
 import { voidCounterOrder } from "@/db/orders";
+import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
@@ -30,6 +31,7 @@ export async function voidCounterAction(formData: FormData) {
         actorPersonId: session.user.personId,
       })
     : null;
+  if (outcome?.ok) dispatchIntegrationsAfterResponse();
   const notice = outcome?.ok
     ? "voided"
     : outcome?.reason === "not_authorized"

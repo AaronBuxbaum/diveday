@@ -20,8 +20,8 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
  * the list draws one 98px row. On the departure page that collapse came right
  * after a jump to `#packing-list`. So: each section title in its own line box
  * (`SECTION_TITLE_CLASS`, the size the list sets every section title at), the
- * basis line's two phone lines and one desk line, the note under the tiles the
- * same, and `ShopStat`'s own tile three across at every width. Three because
+ * basis line's two phone lines and one desk line, and `ShopStat`'s own tile three across at every width. (The note under
+ * the tiles went with UX review 2026-10-10, item 26.) Three because
  * a shop that offers nitrox draws Total, Air and Nitrox; one without draws
  * Total alone, which the skeleton cannot know.
  */
@@ -37,9 +37,6 @@ export function PrepBodySkeleton({ className }: { className: string }) {
           {[0, 1, 2].map((i) => (
             <ShopStatSkeleton key={i} />
           ))}
-        </div>
-        <div className="mt-2">
-          <SkeletonLineBars lines={{ base: 2, sm: 1 }} height="h-5" width="w-xl max-w-full" />
         </div>
       </div>
       {/* The kit cards, each a section of the stack, as the list draws them. */}

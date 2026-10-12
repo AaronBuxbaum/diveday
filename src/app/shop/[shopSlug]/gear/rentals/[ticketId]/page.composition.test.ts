@@ -61,17 +61,39 @@ describe("the counter-rental ticket", () => {
    */
   it("says the person's waiver on screen only, with the send beside it", () => {
     const line = SOURCE.slice(
-      SOURCE.indexOf("waiverState && waiverFlag"),
+      SOURCE.indexOf("<CounterRentalWaiverLine"),
       SOURCE.indexOf('aria-labelledby="ticket-units-heading"'),
     );
     expect(line).toContain("print:hidden");
-    expect(line).toContain('t("gearRentals.waiver"');
-    expect(line).toContain("waiverFlag.offerLink ? (");
-    expect(line).toContain("<WaiverSendControl");
     expect(line).toContain("personId={ticket.personId}");
+    // The send is a counter send from this ticket (issue #2346).
+    expect(line).toContain("ticketId={ticket.ticketId}");
   });
 
   it("does not call a flagged return back on the wall", () => {
     expect(SOURCE).toContain('"returned-flagged"');
+  });
+
+  /**
+   * Issue #2345: the counter's return offers the same unticked "Pull for
+   * service" boxes a departure's does (#2205), one per unit that is out, and
+   * says "Pulled" only when the writer moved one.
+   */
+  it("offers the bench for the units that are out, and words a real pull", () => {
+    const pane = SOURCE.slice(
+      SOURCE.indexOf("<GearReturnPane"),
+      SOURCE.indexOf("</GearReturnPane>"),
+    );
+    expect(pane).toContain("bench={{");
+    expect(pane).toContain('legend: t("gear.prep.returnPullToBench")');
+    expect(pane).toMatch(/units: out\.map\(/);
+    expect(SOURCE).toContain('"returned-pulled": {');
+  });
+
+  it("names how many units were pulled, and says nothing on a count it cannot read", () => {
+    expect(SOURCE).toMatch(/"returned-pulled": \{[^}]*counted: true/);
+    expect(SOURCE).toContain("noticeCountParam(count)");
+    expect(SOURCE).toContain("!found.counted || noticeCount !== null");
+    expect(SOURCE).toContain('<FlashParams params={["notice", "count"]} />');
   });
 });

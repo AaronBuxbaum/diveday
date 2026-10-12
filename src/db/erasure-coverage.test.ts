@@ -270,6 +270,8 @@ const ERASURE_KEEPS: Record<string, string> = {
   trip_invitations:
     "that an invitation was sent for a seat, by id. Its risk is not disclosure but #1616, where the foreign key aborts the erasure transaction outright",
   trip_read_marks: "how far a staff member has read a trip’s desk feed",
+  stripe_refund_failures:
+    "a refund Stripe reported failed or canceled: an amount, Stripe's status and reason codes, and the order, checkout or seat it reverses, by id, with no name, address or free text; the diver is reached through that order or checkout, which the erasure redacts (issue #2291)",
   payment_disputes:
     "a card dispute's amount, status and evidence deadline, pointing at its order or checkout by id with no name, address or free text; the diver is reached through that order or checkout, which the erasure redacts (ADR 20261009-stripe-reversals-reach-diveday)",
   booking_referrals:
@@ -346,8 +348,10 @@ const ERASURE_KEEPS: Record<string, string> = {
   marine_life_requests: "a staff member’s search for a species DiveDay does not carry",
   integration_oauth_states:
     "a single-use OAuth handshake bound to the staff member who started it and expiring in minutes",
+  departure_notes:
+    "an operational note a staffer sent to everyone on a departure — the parking, the meeting point — and who sent it. It is addressed to a departure, not to a diver: no recipient is stored, and its one person column is the staff sender",
   held_sends:
-    "an eight-second undo window. Its `payload` carries ids only — never a name or an address, which the table's own docblock states and `src/lib/held-sends.ts` holds to — and nothing lingers, so nothing prunes it",
+    "an eight-second undo window. Its `payload` carries ids only (and, for a departure note, the staffer's one line, which is addressed to a departure, not to a diver) — never a name or an address, which the table's own docblock states and `src/lib/held-sends.ts` holds to — and nothing lingers, so nothing prunes it",
 };
 
 /**
@@ -639,6 +643,15 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     why: "Stripe's dispute about a payment already censused on its order or checkout; the evidence and the cardholder's bank details live at Stripe under that payment, and DiveDay stores none of them",
   },
   "payment_disputes.stripe_account_id": { held: "shop", why: "as orders.stripe_account_id" },
+  "stripe_refund_failures.stripe_refund_id": {
+    held: "copy",
+    why: "the `re_…` of a refund on a payment already censused on the order or checkout the row points at; Stripe holds nothing under it that the payment does not",
+  },
+  "stripe_refund_failures.stripe_account_id": { held: "shop", why: "as orders.stripe_account_id" },
+  "stripe_refund_failures.refund_status": {
+    held: "none",
+    why: "Stripe's status word for the refund, `failed` or `canceled`: a state, not a handle on anything",
+  },
   "booking_checkouts.checkout_url": {
     held: "copy",
     why: "Stripe's hosted page for the session on this row, and it embeds the `cs_…` it was built from. Expiring that session is what `stripe_session_id` already owes",

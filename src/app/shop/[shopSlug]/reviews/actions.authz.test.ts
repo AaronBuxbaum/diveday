@@ -2,7 +2,9 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { submitRecapPulse } from "@/db/recap-pulses";
-import { bookings, recapPulses } from "@/db/schema";
+import { liveReviewReply } from "@/db/review-replies";
+import { setReviewPublished, submitTripReview } from "@/db/reviews";
+import { bookings, recapPulses, tripReviews } from "@/db/schema";
 import { seededShopContext } from "@/test/db";
 import {
   demoteOwnerToManager,
@@ -50,7 +52,7 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { markPulseAddressedAction } = await import("./actions");
+const { markPulseAddressedAction, reviewReplyAction } = await import("./actions");
 
 /** The pulse row as the shop's panel would find it: open, or answered. */
 async function pulseFor(db: AppDb, bookingId: string) {
@@ -159,5 +161,86 @@ describe("marking a private pulse addressed", () => {
 
     expect(to).toBe(`/shop/${shop.slug}/reviews?notice=pulse-not-authorized`);
     expect((await pulseFor(db, bookingId)).addressedAt).toBeNull();
+  });
+});
+
+/**
+ * **Answering a review in public is owner/manager work** (batch 4, K2). The
+ * row hides the form from everyone else, and hiding is not a gate: these run
+ * the real action against a real seeded shop.
+ */
+describe("replying to a review in public", () => {
+  async function replyContext() {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    // The seed publishes no written review, so the fixture writes one the way
+    // a diver does and publishes it the way staff do.
+    const [booking] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, shop.id), eq(bookings.status, "booked")))
+      .orderBy(bookings.id)
+      .limit(1);
+    if (!booking) throw new Error("seeded shop has no live booking");
+    const submitted = await submitTripReview(db, {
+      bookingId: booking.id,
+      rating: 5,
+      comment: "The crew found us a turtle.",
+    });
+    if (!submitted.ok) throw new Error("review refused");
+    const [review] = await db
+      .select({ id: tripReviews.id })
+      .from(tripReviews)
+      .where(eq(tripReviews.bookingId, booking.id));
+    if (!review) throw new Error("review missing");
+    await setReviewPublished(db, shop.id, review.id, true, { recordedByPersonId: owner });
+    return {
+      db,
+      shop,
+      reviewId: review.id,
+      owner,
+      captain: await seededStaffPersonId(db, shop.id, SEEDED_CAPTAIN_EMAIL),
+    };
+  }
+
+  function replyForm(reviewId: string, body = "Thanks for diving with us!") {
+    const formData = new FormData();
+    formData.set("reviewId", reviewId);
+    formData.set("intent", "save");
+    formData.set("body", body);
+    return formData;
+  }
+
+  it("refuses a captain, and no reply is written", async () => {
+    const { db, shop, reviewId, captain } = await replyContext();
+    signIn(shop, captain);
+    const result = await reviewReplyAction(null, replyForm(reviewId));
+    expect(result).toEqual({ ok: false, reviewId, reason: "not-authorized" });
+    expect(await liveReviewReply(db, shop.id, reviewId)).toBeNull();
+  });
+
+  it("lets the owner reply, edit and delete", async () => {
+    const { db, shop, reviewId, owner } = await replyContext();
+    signIn(shop, owner);
+    expect(await reviewReplyAction(null, replyForm(reviewId))).toEqual({
+      ok: true,
+      reviewId,
+      effect: "replied",
+    });
+    expect(await reviewReplyAction(null, replyForm(reviewId, "Edited."))).toEqual({
+      ok: true,
+      reviewId,
+      effect: "edited",
+    });
+    const remove = new FormData();
+    remove.set("reviewId", reviewId);
+    remove.set("intent", "delete");
+    expect(await reviewReplyAction(null, remove)).toEqual({
+      ok: true,
+      reviewId,
+      effect: "deleted",
+    });
+    expect(await liveReviewReply(db, shop.id, reviewId)).toBeNull();
   });
 });

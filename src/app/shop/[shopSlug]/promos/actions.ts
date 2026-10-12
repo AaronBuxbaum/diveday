@@ -11,6 +11,7 @@ import {
   setShopPromoEnabled,
 } from "@/db/shop-promos";
 import { getShopById } from "@/db/shops";
+import { checkbox, formValue, readForm, text } from "@/lib/form-parse";
 import { majorToMinor, minorToMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -70,13 +71,18 @@ async function discountFromForm(
   return { discountAmountCents: majorToMinor(form.discount, currency) };
 }
 
+/** A code's window, read raw for `parseInstant` to narrow. */
+const promoWindowForm = z.object({ startsAt: formValue(), expiresAt: formValue() });
+const promoIdForm = z.object({ promoId: text(), enable: checkbox("true") });
+
 export async function createPromoAction(formData: FormData) {
   const { session, promos } = await requirePromoManager();
 
   const parsed = promoFormSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) revalidateAndRedirect(promos, noticeUrl(promos, "invalid"));
-  const startsAt = parseInstant(formData.get("startsAt"));
-  const expiresAt = parseInstant(formData.get("expiresAt"));
+  const window = readForm(promoWindowForm, formData);
+  const startsAt = parseInstant(window.startsAt);
+  const expiresAt = parseInstant(window.expiresAt);
   if (startsAt === undefined || expiresAt === undefined) {
     revalidateAndRedirect(promos, noticeUrl(promos, "invalid"));
   }
@@ -98,8 +104,7 @@ export async function createPromoAction(formData: FormData) {
 export async function setPromoEnabledAction(formData: FormData) {
   const { session, promos } = await requirePromoManager();
 
-  const promoId = String(formData.get("promoId") ?? "");
-  const enable = formData.get("enable") === "true";
+  const { promoId, enable } = readForm(promoIdForm, formData);
   if (!promoId) revalidateAndRedirect(promos, noticeUrl(promos, "invalid"));
   const changed = await setShopPromoEnabled(await getDb(), session.user.shopId, promoId, enable);
   revalidateAndRedirect(
@@ -112,7 +117,7 @@ export async function setPromoEnabledAction(formData: FormData) {
 export async function retryPromoAction(formData: FormData) {
   const { session, promos } = await requirePromoManager();
 
-  const promoId = String(formData.get("promoId") ?? "");
+  const { promoId } = readForm(promoIdForm, formData);
   if (!promoId) revalidateAndRedirect(promos, noticeUrl(promos, "invalid"));
   const outcome = await retryShopPromoCode(await getDb(), session.user.shopId, promoId);
   revalidateAndRedirect(
@@ -137,7 +142,7 @@ export async function retryPromoAction(formData: FormData) {
 export async function deletePromoAction(formData: FormData) {
   const { session, promos } = await requirePromoManager();
 
-  const promoId = String(formData.get("promoId") ?? "");
+  const { promoId } = readForm(promoIdForm, formData);
   if (!promoId) revalidateAndRedirect(promos, noticeUrl(promos, "invalid"));
   const db = await getDb();
   const existing = await getShopPromoCodeById(db, session.user.shopId, promoId);
@@ -189,8 +194,9 @@ export async function restorePromoAction(formData: FormData) {
 
   const parsed = promoFormSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) revalidateAndRedirect(promos, noticeUrl(promos, "restore-failed"));
-  const startsAt = parseInstant(formData.get("startsAt"));
-  const expiresAt = parseInstant(formData.get("expiresAt"));
+  const window = readForm(promoWindowForm, formData);
+  const startsAt = parseInstant(window.startsAt);
+  const expiresAt = parseInstant(window.expiresAt);
   if (startsAt === undefined || expiresAt === undefined) {
     revalidateAndRedirect(promos, noticeUrl(promos, "restore-failed"));
   }

@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { checkoutCharge, seatCheckoutCharge } from "@/lib/deposits";
 import { log } from "@/lib/log";
@@ -9,7 +9,7 @@ import { type CheckoutProvider, stripeLineDescription } from "@/lib/payments/che
 import type { PromotionProvider } from "@/lib/payments/promotions";
 import { allocateSettledTotal } from "@/lib/payments/settlement";
 import { discountOffCents, type PromoDiscount, promoDiscountOf } from "@/lib/promo-codes";
-import type { AppDb, DbExecutor } from "./client";
+import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { countConsumedEntitlementsForBookings } from "./dive-packages";
 import {
   claimBookingsForCheckout,
@@ -177,7 +177,7 @@ export async function startBookingCheckout(
     .leftJoin(courses, eq(courses.id, trips.courseId))
     .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
     .limit(1);
-  if (!tripRow) return { ok: false, reason: "invalid" };
+  if (!tripRow || tripRow.trip.isRehearsal) return { ok: false, reason: "invalid" };
   const shop = await getShopById(db, input.shopId);
   const passThroughFee = parsePassThroughFee(shop?.passThroughFee);
   const bookingRows = await db
@@ -1022,6 +1022,50 @@ export async function recordCheckoutPaymentIntent(
   return updated !== undefined;
 }
 
+/**
+ * Lock every seat a checkout covers, in id order, before anything touches the
+ * checkout row itself. The one lock order for a seat and its checkout (issue
+ * #2335): the expiring writers in `src/db/bookings.ts` hold the seat and then
+ * retire its checkout, so every writer that also reaches the seat takes the
+ * seats first too. Id order keeps two such writers over the same party from
+ * deadlocking on each other.
+ *
+ * The link rows are written once, when the session is opened, and never moved,
+ * so reading them before the checkout's own lock names the same seats the
+ * cascade below writes.
+ */
+export async function lockCheckoutSeatsBySessionId(
+  tx: AppTransaction,
+  stripeSessionId: string,
+): Promise<void> {
+  const seats = await tx
+    .select({ bookingId: bookingCheckoutBookings.bookingId })
+    .from(bookingCheckoutBookings)
+    .innerJoin(
+      bookingCheckouts,
+      and(
+        eq(bookingCheckouts.id, bookingCheckoutBookings.checkoutId),
+        eq(bookingCheckouts.shopId, bookingCheckoutBookings.shopId),
+      ),
+    )
+    .where(eq(bookingCheckouts.stripeSessionId, stripeSessionId));
+  await lockSeatsInOrder(
+    tx,
+    seats.map((seat) => seat.bookingId),
+  );
+}
+
+/** `SELECT … FOR UPDATE` over these bookings, in id order. */
+export async function lockSeatsInOrder(tx: AppTransaction, bookingIds: string[]): Promise<void> {
+  if (bookingIds.length === 0) return;
+  await tx
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(inArray(bookings.id, bookingIds))
+    .orderBy(asc(bookings.id))
+    .for("update");
+}
+
 function logPaidDisqualified(
   checkout: Pick<BookingCheckout, "shopId" | "id" | "stripeSessionId">,
   localStatus: string,
@@ -1062,6 +1106,13 @@ export async function markCheckoutPaidBySessionId(
   settledTaxCents?: number | null,
 ): Promise<BookingCheckout | null> {
   return db.transaction(async (tx) => {
+    // The seats first, then the checkout (issue #2335): the order every
+    // writer that retires a pending checkout already takes (it holds the seat
+    // it is changing, then expires the checkout quoting it). Taking the
+    // checkout first and reaching each seat through the payment gate below was
+    // the opposite order, and two transactions holding one row each is a
+    // deadlock Postgres resolves by killing one of them.
+    await lockCheckoutSeatsBySessionId(tx, stripeSessionId);
     // Locked (issue #2219): every writer that expires a pending checkout does
     // so in its own transaction (`setBookingParticipantType`, a reschedule, a
     // cancellation). Reading the status under the row's lock serializes this
@@ -1107,6 +1158,25 @@ export async function markCheckoutPaidBySessionId(
     // run (checkout marked completed, but the payment write below never
     // landed) still needs to fall through and repair it below.
     if (checkout.status !== "pending" && checkout.status !== "completed") {
+      // Never resurrected, but never dropped either (issue #2335): the
+      // diver's card was charged, so the money goes on the Orders index for
+      // staff to refund (`listPaidAfterCloseCheckouts`). Write-once: a
+      // redelivery keeps the first report.
+      if (checkout.paidAfterCloseAt === null) {
+        await tx
+          .update(bookingCheckouts)
+          .set({
+            paidAfterCloseAt: nowDate(),
+            paidAfterCloseCents:
+              settledTotalCents !== undefined &&
+              settledTotalCents !== null &&
+              Number.isInteger(settledTotalCents) &&
+              settledTotalCents >= 0
+                ? settledTotalCents
+                : checkout.totalCents,
+          })
+          .where(eq(bookingCheckouts.id, checkout.id));
+      }
       logPaidDisqualified(checkout, checkout.status);
       return null;
     }

@@ -223,6 +223,13 @@ describe("CommandPalette keyboard contract", () => {
     expect(opener).toHaveFocus();
   });
 
+  it("flags its trigger hydrated once the ⌘K listener is attached", () => {
+    // A ⌘K pressed before the listener exists is lost, and the e2e captures
+    // waited on nothing that said it was there (issue #2366).
+    renderPalette();
+    expect(screen.getByRole("button", { name: /Search/ })).toHaveAttribute("data-hydrated", "true");
+  });
+
   it("opens and closes from ⌘K anywhere", async () => {
     renderPalette();
     await userEvent.keyboard("{Meta>}k{/Meta}");

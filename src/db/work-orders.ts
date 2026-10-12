@@ -207,48 +207,6 @@ export async function addCustomerGearItem(
   });
 }
 
-/**
- * Edit a piece, including the dates a recorded job set. Refused on a diver the
- * shop has removed or erased, for the reason adding one is.
- */
-export async function updateCustomerGearItem(
-  db: AppDb,
-  input: Omit<CustomerGearItemInput, "personId"> & { customerGearItemId: string },
-): Promise<SaveCustomerGearItemOutcome> {
-  const dates = piecesDates(input.kind, input);
-  if (dates === "invalid_date") return { ok: false, reason: "invalid_date" };
-  return db.transaction(async (tx) => {
-    const [current] = await tx
-      .select({ personId: customerGearItems.personId })
-      .from(customerGearItems)
-      .where(
-        and(
-          eq(customerGearItems.id, input.customerGearItemId),
-          eq(customerGearItems.shopId, input.shopId),
-          liveCustomerItem(),
-        ),
-      )
-      .limit(1)
-      .for("update");
-    if (!current || !(await isLivePersonAt(tx, input.shopId, current.personId))) {
-      return { ok: false, reason: "not_found" } as const;
-    }
-    const [item] = await tx
-      .update(customerGearItems)
-      .set({
-        kind: input.kind,
-        brandModel: optional(input.brandModel),
-        serialNumber: optional(input.serialNumber),
-        note: optional(input.note),
-        ...dates,
-        updatedAt: nowDate(),
-      })
-      .where(eq(customerGearItems.id, input.customerGearItemId))
-      .returning();
-    return item ? ({ ok: true, item } as const) : ({ ok: false, reason: "not_found" } as const);
-  });
-}
-
 export type DeleteCustomerGearItemOutcome =
   | { ok: true; deleted: CustomerGearItem }
   | { ok: false; reason: "not_found" | "on_open_work_order" };

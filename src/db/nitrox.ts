@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { isDiver } from "@/lib/participant-types";
 import { type CardUnreviewRefusal, needsCardSighting, unreviewedCardState } from "@/lib/readiness";
@@ -266,15 +266,6 @@ export async function restoreNitroxCertification(
     )
     .returning({ id: nitroxCertifications.id });
   return Boolean(row);
-}
-
-export async function listShopNitroxCertifications(db: AppDb, shopId: string) {
-  return db
-    .select({ certification: nitroxCertifications, person: people })
-    .from(nitroxCertifications)
-    .innerJoin(people, eq(people.id, nitroxCertifications.personId))
-    .where(and(eq(nitroxCertifications.shopId, shopId), isNull(nitroxCertifications.deletedAt)))
-    .orderBy(asc(people.fullName), asc(nitroxCertifications.createdAt));
 }
 
 /**

@@ -3,6 +3,7 @@ import {
   NOTICE_CODE_PATTERN,
   type NoticeCodeOf,
   noticeCode,
+  noticeCountParam,
   noticeFromParam,
   noticeRole,
   noticeUrl,
@@ -285,5 +286,30 @@ describe("noticeRole", () => {
     expect(noticeRole("success")).toBe("status");
     expect(noticeRole("warning")).toBe("status");
     expect(noticeRole("neutral")).toBe("status");
+  });
+});
+
+describe("noticeCountParam", () => {
+  it("reads the count a redirect named", () => {
+    expect(noticeCountParam("1")).toBe(1);
+    expect(noticeCountParam("12")).toBe(12);
+  });
+
+  it("refuses anything that is not a whole number above zero", () => {
+    for (const raw of [
+      undefined,
+      "",
+      "0",
+      "-2",
+      "1.5",
+      "2e3",
+      " 3",
+      "3abc",
+      "Infinity",
+      "NaN",
+      "1000",
+    ]) {
+      expect(noticeCountParam(raw), String(raw)).toBeNull();
+    }
   });
 });

@@ -80,6 +80,7 @@ const COPY: BuilderCopy = {
   noPriceSetAll:
     "None of these departures has a price yet, and divers already see them on the schedule. Open a departure to set one.",
   noBoats: "No boats",
+  quietDays: "{first} to {last}",
   asked: "Asked for",
   addDeparture: "Add a departure",
   rollCallOpen: "Roll call · {count} not counted",
@@ -139,6 +140,8 @@ const COPY: BuilderCopy = {
   selfGuidedHint: "Buddy pairs go in without a guide.",
   isPrivateHint:
     "Off the public schedule. Anyone with the link can see the departure and book a seat.",
+  isRehearsalLabel: "Rehearsal for training day",
+  isRehearsalHint: "Practice only.",
   daysLabel: "How many days",
   daysDescription: "Most departures are one day.",
   payAtBookingLegend: "Pay at booking",
@@ -1518,7 +1521,9 @@ describe("ScheduleBuilder week board", () => {
     // An empty *column* is read against the six beside it, which is what gave
     // the blank its meaning; one empty row in a run of rows is just a gap, so
     // the week says it in words.
-    expect(within(grid()).getAllByText("No boats")).toHaveLength(7);
+    // Five of them now: the three days already behind fold into one row
+    // ("Mon–Wed · No boats", UX review 2026-10-10, item 24).
+    expect(within(grid()).getAllByText("No boats")).toHaveLength(5);
     // What an empty day still ahead does carry is its own way to fill it —
     // and a day already behind carries none, because a departure is put on
     // the board and the board is ahead. Aug 27 is "today" in this fixture, so

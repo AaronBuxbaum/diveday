@@ -10,6 +10,7 @@ import type { RentalPricing } from "@/lib/rentals";
 import type { SeasonStart } from "@/lib/season";
 import { SHOP_FEATURE_COLUMNS, type ShopFeature } from "@/lib/shop-features";
 import type { TemperatureUnit } from "@/lib/temperature-units";
+import type { CustomerRegulatorServiceMonths } from "@/lib/work-orders";
 import type { AppDb } from "./client";
 import { courses, divePackages, orders, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -400,6 +401,23 @@ export async function setShopRentalTerms(db: AppDb, shopId: string, rentalTerms:
   const [shop] = await db
     .update(shops)
     .set({ rentalTerms })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
+ * Sets how often the shop services a customer's regulator (12 or 24 months),
+ * the interval a customer regulator's suggested next-due date counts from.
+ */
+export async function setShopCustomerRegulatorServiceMonths(
+  db: AppDb,
+  shopId: string,
+  months: CustomerRegulatorServiceMonths,
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({ customerRegulatorServiceMonths: months })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;

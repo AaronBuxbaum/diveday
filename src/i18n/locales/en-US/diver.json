@@ -122,6 +122,11 @@
     "poweredByDiveDay": "Powered by DiveDay",
     "moreWaysHeading": "Other ways we can help",
     "boatsHeading": "The boats",
+    "monthSeen": {
+      "heading": "What you might see in {month}",
+      "line": "Seen on {seen} of the {trips, plural, one {# {month} trip} other {# {month} trips}} our crews logged",
+      "honest": "What our crews logged on {month} trips, in every season on record. It says what was seen, not what you will see."
+    },
     "boatSeats": "{count, plural, one {# diver} other {# divers}}"
   },
   "trip": {
@@ -577,6 +582,7 @@
     "ratingLegend": "Your rating",
     "ratingOption": "{rating} out of 5 stars",
     "anonymousReviewer": "A diver",
+    "replyFrom": "Reply from {shop}",
     "commentLabel": "Anything you’d tell another diver?",
     "commentPlaceholder": "The crew, the sites, how the day ran",
     "submit": "Leave my review",
@@ -1066,7 +1072,7 @@
     "expiredBody": "Whoever sent you this link can tell you what’s happened with the seat.",
     "errors": {
       "checkFields": "Check the highlighted fields and try again.",
-      "alreadyBooked": "You already have your own spot on this trip, so this seat stays with your organizer.",
+      "unable": "This seat can’t be claimed with these details. Contact the shop and they can sort it out.",
       "coursePrerequisite": "This session is a course with its own prerequisites, and the shop needs a verified certification on file before the seat can change hands. Contact the shop and they can sort it out."
     },
     "claimedNotice": "This seat is yours now, and everything on this page is about you. Your organizer can see it’s claimed.",
@@ -2695,7 +2701,7 @@
       "priceLine": "One flat price of {price} {cadence}, locked for two years for founding shops.",
       "seeIncluded": "See what’s included →",
       "contactTitle": "Ask us first",
-      "contactBody": "Write in with whatever would decide it for you. A real person reads it.",
+      "contactBody": "Write in with whatever would decide it for you.",
       "contactCta": "Email {email}",
       "stepLink": "{name} →"
     },
@@ -4358,6 +4364,7 @@
       "subjectRefused": "{shopName}: You couldn’t be added to {tripTitle}, {when}",
       "subjectRoleChanged": "{shopName}: New role on {tripTitle}, {when}",
       "subjectCalledOff": "{shopName}: {tripTitle}, {when}, is called off",
+      "subjectTimeMoved": "{shopName}: {tripTitle} now leaves {when}",
       "subjectMany": "Your boats at {shopName} changed",
       "intro": "Your boats at {shopName} changed:",
       "assigned": "You’re crewing {tripTitle}, {when}.",
@@ -4368,6 +4375,7 @@
       "roleChanged": "Your role on {tripTitle}, {when}, is now {role}.",
       "roleChangedNoRole": "Your role on {tripTitle}, {when}, changed.",
       "calledOff": "{tripTitle}, {when}, was called off. You’re not needed for it.",
+      "timeMoved": "{tripTitle} now leaves {when}, not {previousWhen}.",
       "asRole": "You’re on as {role}.",
       "roles": {
         "instructor": "instructor",
@@ -4403,6 +4411,22 @@
       "was": "It was {when}.",
       "meetingPointMoved": "We meet somewhere new, too.",
       "cantMakeIt": "Can’t make the new time? Get in touch and we’ll sort it out."
+    },
+    "departureNote": {
+      "subject": "A note about {tripTitle}",
+      "intro": "{shopName} sent a note to everyone on {tripTitle}, {date}:",
+      "readyLink": "Your booking"
+    },
+    "smsDepartureNote": {
+      "body": "{shopName}, {tripTitle}: {note}",
+      "withLink": "{shopName}, {tripTitle}: {note} Your booking: {url}"
+    },
+    "lostItem": {
+      "subject": "Left aboard after {tripTitle}",
+      "body": "The crew found this aboard after {tripTitle} on {date}: {item}. {shopName} is holding it for you."
+    },
+    "smsLostItem": {
+      "body": "{shopName}: the crew found this aboard after {tripTitle}: {item}. We’re holding it for you."
     }
   },
   "brand": {

@@ -47,6 +47,7 @@ vi.mock("@/db/orders", () => ({
   recordOrderPaymentIntent: vi.fn(),
 }));
 vi.mock("@/db/refunds", () => ({ recordStripeChargeRefund: vi.fn() }));
+vi.mock("@/db/refund-failures", () => ({ recordStripeRefundFailure: vi.fn() }));
 vi.mock("@/db/payment-disputes", () => ({ recordStripeDispute: vi.fn() }));
 vi.mock("@/db/stripe-accounts", () => ({
   setShopStripeAccountStatus: vi.fn(),
@@ -70,6 +71,7 @@ const { markTipPaidBySessionId, markTipExpiredBySessionId } = await import("@/db
 const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId, recordOrderPaymentIntent } =
   await import("@/db/orders");
 const { recordStripeChargeRefund } = await import("@/db/refunds");
+const { recordStripeRefundFailure } = await import("@/db/refund-failures");
 const { recordStripeDispute } = await import("@/db/payment-disputes");
 const { setShopStripeAccountStatus, disconnectShopStripeAccount } = await import(
   "@/db/stripe-accounts"
@@ -275,6 +277,28 @@ describe("money reversed outside DiveDay (ADR 20261009-stripe-reversals-reach-di
         amountRefundedCents: 12_000,
         chargeId: "ch_3QsAVgLkdIwHu7ix1ZpMrX8L",
         occurredAt: new Date(1784645400 * 1000),
+      },
+      expect.anything(),
+    );
+  });
+
+  it("charge.refund.updated reads a failed Refund's id, amount, status and PaymentIntent (issue 2291)", async () => {
+    vi.mocked(recordStripeRefundFailure).mockResolvedValue({ status: "reversed" });
+    const response = await deliver("charge.refund.updated");
+    expect(response.status).toBe(200);
+    expect(recordStripeRefundFailure).toHaveBeenCalledWith(
+      FAKE_DB,
+      {
+        stripeAccountId: ACCOUNT,
+        paymentIntentId: "pi_3QsAVgLkdIwHu7ix1YtNqW9K",
+        refund: {
+          id: "re_3QsAVgLkdIwHu7ix1KpQrStU",
+          amountCents: 12_000,
+          currency: "usd",
+          status: "failed",
+          failureReason: "expired_or_canceled_card",
+        },
+        occurredAt: new Date(1784818200 * 1000),
       },
       expect.anything(),
     );

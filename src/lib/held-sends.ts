@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DEPARTURE_NOTE_MAX, departureNoteProblem, foldDepartureNote } from "./departure-notes";
 
 /**
  * A send you can take back (ADR 20260906-before-you-ask, decision 2).
@@ -12,7 +13,9 @@ import { z } from "zod";
  *
  * This module is the framework-free half: the hold length, the kinds, their
  * payload shapes (ids only, never a name or an address — the executor joins
- * those at send time, so an erasure needs no sweep here), and the arithmetic.
+ * those at send time, so an erasure needs no sweep here; a departure note
+ * also carries the staffer's one line about the departure), and the
+ * arithmetic.
  */
 export const SEND_HOLD_MS = 8_000;
 
@@ -28,10 +31,11 @@ export const HELD_SEND_KINDS = [
   "last_minute_deal",
   "waitlist_invite",
   "trip_rescheduled",
+  "departure_note",
 ] as const;
 export type HeldSendKind = (typeof HELD_SEND_KINDS)[number];
 
-export const WAIVER_SEND_SURFACES = ["today", "roster", "diver"] as const;
+export const WAIVER_SEND_SURFACES = ["today", "roster", "diver", "counter"] as const;
 
 const waiverSendPayload = z
   .object({
@@ -42,6 +46,8 @@ const waiverSendPayload = z
     channel: z.enum(["email", "text", "link"]),
     surface: z.enum(WAIVER_SEND_SURFACES),
     tripId: z.uuid().optional(),
+    /** The counter rental's ticket a `counter` send was made from, when there is one yet. */
+    ticketId: z.uuid().optional(),
   })
   // A send with nobody to send to is not a send; refused here so no row is
   // ever held for it.
@@ -87,11 +93,27 @@ const tripRescheduledPayload = z.object({
   meetingPointMoved: z.boolean(),
 });
 
+/**
+ * A note to everyone on a departure (batch 4, J4). The one payload that
+ * carries words: the staffer's own line about the departure, which names no
+ * diver and is checked here as it is at the send (`departureNoteProblem`).
+ */
+const departureNotePayload = z.object({
+  kind: z.literal("departure_note"),
+  tripId: z.uuid(),
+  body: z
+    .string()
+    .max(DEPARTURE_NOTE_MAX * 4)
+    .transform(foldDepartureNote)
+    .refine((body) => departureNoteProblem(body) === null, { message: "note_refused" }),
+});
+
 export const heldSendPayloadSchema = z.discriminatedUnion("kind", [
   waiverSendPayload,
   lastMinuteDealPayload,
   waitlistInvitePayload,
   tripRescheduledPayload,
+  departureNotePayload,
 ]);
 
 export type HeldSendPayload = z.infer<typeof heldSendPayloadSchema>;
