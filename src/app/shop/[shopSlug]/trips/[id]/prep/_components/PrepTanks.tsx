@@ -75,7 +75,6 @@ export function PrepTanks({ view, showNitrox }: { view: PrepView; showNitrox: bo
             : [`${t("tripPrep.total")} ${checklist.tanks.total}`]
           ).join(" · ")}
         </p>
-        <p className="mt-2 text-sm text-muted">{t("tripPrep.noGasAnalysisNote")}</p>
       </section>
 
       {showNitrox && checklist.nitroxBlockers.length > 0 ? (

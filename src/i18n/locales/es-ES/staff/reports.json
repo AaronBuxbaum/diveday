@@ -5,9 +5,6 @@
   "nextMonth": "Mes siguiente",
   "currentMonthTitle": "Estás viendo el mes actual",
   "earliestMonthTitle": "Este es tu primer mes con salidas",
-  "monthPicker": {
-    "label": "Ir a un mes"
-  },
   "numbersLabel": "Los números de este mes",
   "comparison": {
     "yearAgo": "{trend}frente a {baseline} en {month}",

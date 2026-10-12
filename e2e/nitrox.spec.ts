@@ -68,8 +68,10 @@ test.describe("staff", () => {
       .locator("xpath=..")
       .filter({ visible: true });
     await expect(tanks).toContainText("Nitrox");
-    // Nothing on this page claims to know what is in a cylinder.
-    await expect(page.getByText("DiveDay logs no gas analysis")).toBeVisible();
+    // The gas-analysis disclaimer moved to the pre-departure checklist
+    // settings (UX review 2026-10-10, item 26); the tab no longer says it.
+    await expect(page.getByText("one tank per diver per dive")).toBeVisible();
+    await expect(page.getByText("DiveDay logs no gas analysis")).toHaveCount(0);
   });
 });
 

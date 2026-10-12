@@ -596,6 +596,7 @@
   "safetyChecklist": {
     "title": "Lista de verificación previa a la salida",
     "description": "Las líneas que tu tripulación confirma antes de que el barco zarpe.",
+    "gasAnalysisNote": "DiveDay no registra análisis de gas: cada mezcla se sigue analizando y firmando en la estación de carga.",
     "listHeading": "Lista de verificación",
     "empty": {
       "title": "Aún no hay nada en la lista",

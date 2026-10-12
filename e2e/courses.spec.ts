@@ -652,6 +652,46 @@ test.describe("staff", () => {
   });
 
   /**
+   * **On a phone the editor folds** (UX review 2026-10-10, item 15). There is
+   * no rail at 390: each section is a header naming it, the first one open,
+   * one open at a time. What a writer typed in a section survives folding it,
+   * because the fields are hidden rather than unmounted, and Save still posts
+   * them.
+   */
+  test("on a phone, one section opens at a time and a folded edit still saves", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/shop/blue-mantis/courses/discover-scuba-diving/edit");
+    await expect(page.locator("[data-hydrated]")).toBeAttached();
+    await expect(page.getByRole("navigation", { name: "Sections", exact: true })).toBeHidden();
+
+    const pitch = page.getByRole("button", { name: /^The pitch/ });
+    const pricing = page.getByRole("button", { name: /^Pricing/ });
+    await expect(pitch).toHaveAttribute("aria-expanded", "true");
+    await expect(pricing).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByLabel("Instruction fee")).toBeHidden();
+
+    await pricing.click();
+    await expect(pitch).toHaveAttribute("aria-expanded", "false");
+    await page.getByLabel("Instruction fee").fill("151.00");
+
+    // Fold it again by opening another: the edit is still in the form.
+    await pitch.click();
+    await expect(page.getByLabel("Instruction fee")).toBeHidden();
+    await expect(pricing).toContainText("151.00");
+    await page.getByRole("button", { name: "Save course page" }).click();
+    await expect(page.getByRole("status")).toContainText("Course page saved");
+
+    await page.goto("/shop/blue-mantis/courses/discover-scuba-diving/edit#pricing");
+    await expect(page.getByRole("button", { name: /^Pricing/ })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await expect(page.getByLabel("Instruction fee")).toHaveValue(/151/);
+  });
+
+  /**
    * **The editor rail** — ADR 20260827-the-shops-shelves, decision 2.
    *
    * Two things a unit test cannot see: that the rail actually moves the page to

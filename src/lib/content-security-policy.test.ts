@@ -8,6 +8,7 @@ import {
   reportingEndpointsHeader,
   reportOnlyPolicy,
 } from "./content-security-policy";
+import { MAP_REACHABILITY_PROBE } from "./maps";
 
 const base = { denyFraming: true } as const;
 
@@ -252,6 +253,12 @@ describe("the report-only half", () => {
     // expression every browser drops (issue #1263).
     expect(imgSrc).toContain("https://*.s3.amazonaws.com");
     expect(imgSrc).toContain("https://*.cloudfront.net");
+    // The route maps' reachability read (UX review 2026-10-10, item 20), and
+    // only a host the map frame already reaches.
+    expect(imgSrc).toContain(new URL(MAP_REACHABILITY_PROBE).origin);
+    expect(directives(reportOnlyPolicy(base)).get("frame-src")).toContain(
+      new URL(MAP_REACHABILITY_PROBE).origin,
+    );
   });
 });
 

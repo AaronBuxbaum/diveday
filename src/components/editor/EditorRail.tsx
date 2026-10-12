@@ -4,29 +4,27 @@ import { useEffect, useState } from "react";
 import { RAIL_ROW_CLASS, RAIL_ROW_IDLE } from "@/components/ui/rail";
 import type { EditorSectionRef, EditorUnsavedCopy } from "./EditorSection";
 
-/** The rail's outer box, shared with `EditorRailSkeleton`. */
-const RAIL_CLASS = "mb-6 lg:sticky lg:top-(--chrome-h) lg:mb-0 lg:self-start lg:pt-1";
-
 /**
- * The list inside it: a wrap-row below `lg`, a column from `lg` up — the jump
- * row's own shape, without a second landmark to carry it. Shared with
- * `EditorRailSkeleton`.
+ * The rail's outer box, shared with `EditorRailSkeleton`: a column pinned
+ * under the chrome bar from `lg` up, and nothing below it, where each
+ * section's own folding header is the way to it (`EditorSection`).
  */
-const RAIL_LIST_CLASS =
-  "-ms-3 flex flex-wrap items-center gap-x-1 lg:ms-0 lg:flex-col lg:items-stretch lg:gap-x-0 lg:gap-y-0.5";
+const RAIL_CLASS = "max-lg:hidden lg:sticky lg:top-(--chrome-h) lg:self-start lg:pt-1";
+
+/** The list inside it, shared with `EditorRailSkeleton`. */
+const RAIL_LIST_CLASS = "flex flex-col items-stretch gap-y-0.5";
 
 /**
  * **Where you are in a long editor** — ADR 20260827-the-shops-shelves, the
  * long-form editor pattern: "a sticky section rail beside unboxed sections …
- * the rail naming the sections and tracking position. On the phone the rail
- * collapses to a top jump-row."
+ * the rail naming the sections and tracking position."
  *
- * Two shapes of one list, and the width decides which: from `lg` up a column
- * pinned under the chrome bar in the page's first grid column, below it a
- * wrap-row across the top — the jump row's shape, in the rail's own landmark
- * rather than a second one (see the note in the body). They are plain
- * `#anchor` links the browser resolves itself, so the rail works before this
- * component's JavaScript arrives and cannot disturb a form mid-edit.
+ * From `lg` up only. Below it the rail wrapped to four and five rows of pills
+ * over a 7,000px form; there each section folds to a header that names it and
+ * opens it, so the headers are the jump links and the rail would say them
+ * twice. They are plain `#anchor` links the browser resolves itself, so the
+ * rail works before this component's JavaScript arrives and cannot disturb a
+ * form mid-edit.
  *
  * **`top-(--chrome-h)`, never a number.** The bar's height is a token
  * (ADR 20260827-clearwater-surface-language, decision 10) and
@@ -47,40 +45,24 @@ export function EditorRail({
 }) {
   const current = useCurrentSection(sections);
   return (
-    // **One `<nav>` in both readings, never two hidden copies.** This started
-    // as `JumpNav` for the phone beside a rail for the desktop, which is the
-    // app's existing "places on this page" grammar and looked like reuse — but
-    // `JumpNav` brings its own `<nav>` landmark, so the editor announced the
-    // same anchor list twice under one name and a screen reader read it twice.
-    // Hiding one with `lg:hidden` does not help: both are in the accessibility
-    // tree at every width, and it is the *landmark* that duplicates, not the
-    // pixels. So the list changes shape at `lg` and the landmark does not.
     <nav aria-label={navLabel} className={RAIL_CLASS}>
       <ul className={RAIL_LIST_CLASS}>
         {sections.map((section) => {
-          // Current is a *desktop* state: the phone row sits above the section
-          // you are already looking at, so marking one there says nothing.
           const active = section.id === current;
           return (
             <li key={section.id} className="flex">
               {/* The page rail's one row, the settings rail's too
-                  (`ui/rail.ts`), ringed inside itself: from `lg` up this is a
-                  column of stacked rows, and below it the row's `-ms-3` puts
-                  the first link 4px from a 390px screen's edge, which cut an
-                  outset ring by a pixel.
+                  (`ui/rail.ts`), ringed inside itself.
 
                   Hover lives in each branch, not on every row: a bare
                   `hover:bg-surface-sunken` (`RAIL_ROW_IDLE`'s) outranked the
-                  current row's `lg:bg-primary-tint`, so the one tinted row
-                  went grey under the pointer. Below `lg` the current row
-                  carries no tint, so there it hovers like the rest. */}
+                  current row's `bg-primary-tint`, so the one tinted row went
+                  grey under the pointer. */}
               <a
                 href={`#${section.id}`}
                 aria-current={active ? "true" : undefined}
-                className={`${RAIL_ROW_CLASS} lg:w-full ${
-                  active
-                    ? "text-muted max-lg:hover:bg-surface-sunken max-lg:hover:text-foreground lg:bg-primary-tint lg:text-primary"
-                    : RAIL_ROW_IDLE
+                className={`${RAIL_ROW_CLASS} w-full ${
+                  active ? "bg-primary-tint text-primary" : RAIL_ROW_IDLE
                 }`}
               >
                 {section.label}
@@ -96,34 +78,18 @@ export function EditorRail({
 /**
  * **The rail, before the editor arrives** — for a long editor's `loading.tsx`
  * (docs/design/pixel-craft.md, class 11: a skeleton has the loaded page's
- * geometry).
- *
- * The same two boxes as `EditorRail`, holding one 44px stub per section in
- * place of each link: a borderless wrap below `lg` with the rail's `mb-6`, a
- * column from `lg` up. The editors' skeletons each drew a rail of their own — one
- * row of three 36px pills over a hairline with `mb-8` — so on a phone the whole
- * form dropped about 131px when the eleven-section dive-site editor arrived.
- *
- * **How many rows the phone wrap takes is the stubs' widths**, and each row is
- * 44px of form. `count` draws uniform `w-24` stubs, which is right where the
- * editor's labels wrap the way they do (the course editor's eight, at every
- * swept width). `widths` names each stub's width class instead, in section
- * order, for an editor whose labels do not: eleven `w-24` stubs wrap three to a
- * row at 390, four rows, where the dive-site editor's labels wrap 3/3/2/2/1,
- * five, so its form still dropped 44px. Either way the count is the editor's
- * own, read from its section list where the page has one.
+ * geometry). The same box as `EditorRail`, one 44px stub per section in place
+ * of each link; like the rail, nothing below `lg`.
  */
-export function EditorRailSkeleton(props: { count: number } | { widths: readonly string[] }) {
-  const widths =
-    "widths" in props ? props.widths : Array.from({ length: props.count }, () => "w-24");
+export function EditorRailSkeleton({ count }: { count: number }) {
   return (
     <div className={RAIL_CLASS}>
       <div className={RAIL_LIST_CLASS}>
-        {widths.map((width, entry) => (
+        {Array.from({ length: count }, (_, entry) => (
           <div
             // biome-ignore lint/suspicious/noArrayIndexKey: a fixed run of placeholders, never reordered.
             key={entry}
-            className={`h-11 ${width} rounded-lg bg-surface-sunken lg:w-full`}
+            className="h-11 w-full rounded-lg bg-surface-sunken"
           />
         ))}
       </div>

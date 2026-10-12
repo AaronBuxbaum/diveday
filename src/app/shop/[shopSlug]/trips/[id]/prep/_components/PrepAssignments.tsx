@@ -162,7 +162,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                   })}
                 </p>
               ) : null}
-              <dl className="mt-1.5 flex flex-col gap-2 text-sm">
+              <dl className="mt-1.5 flex flex-col gap-1 text-sm">
                 {assigned.map((assignment) => (
                   <div key={assignment.reservationId} className={kitLineClass}>
                     <dt className="text-muted">
