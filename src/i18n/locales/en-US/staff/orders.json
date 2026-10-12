@@ -112,7 +112,13 @@
     "newOrder": "New order",
     "notice": {
       "paymentNotConnected": "Payments aren’t connected yet, so there’s no account to invoice from. Connect one to start charging divers.",
-      "notAuthorized": "Sending an invoice is limited to owners and managers. Ask one of them to bill this diver."
+      "notAuthorized": "Sending an invoice is limited to owners and managers. Ask one of them to bill this diver.",
+      "notAuthorizedRefund": "Refunds are limited to owners and managers.",
+      "paidAfterCloseRefunded": "Refund sent.",
+      "paidAfterCloseInProgress": "That refund is already on its way.",
+      "paidAfterCloseNeedsCheck": "Stripe already reversed part of this payment. Check it under Payments that need a check first.",
+      "paidAfterCloseNotConnected": "Your Stripe account isn’t taking payments, so the refund can’t go out. Refund it in Stripe.",
+      "paidAfterCloseFailed": "Stripe didn’t take that refund. Try again, or refund it in Stripe."
     },
     "filters": {
       "searchLabel": "Search orders",
@@ -190,6 +196,13 @@
       "detail": "Their money couldn’t go back by card. Each of them has been told you’ll be in touch. Return it, then mark the seat refunded on the departure’s Divers tab.",
       "depositOnly": "deposit only",
       "unrecordedAmount": "amount not recorded",
+      "openTrip": "Open trip"
+    },
+    "paidAfterClose": {
+      "sectionLabel": "Paid after the checkout closed",
+      "heading": "{count, plural, one {# payment} other {# payments}} came in after the checkout closed. No seat was marked paid. Refund them.",
+      "refund": "Refund",
+      "refunding": "Refunding…",
       "openTrip": "Open trip"
     }
   }

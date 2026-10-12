@@ -6586,6 +6586,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/orders");
         await page.getByRole("region", { name: "Payments that need a check" }).waitFor();
         await page.getByRole("region", { name: "Refunds you still owe" }).waitFor();
+        await page.getByRole("region", { name: "Paid after the checkout closed" }).waitFor();
         await capture(page, "orders-unconfirmed-and-owed", scheme);
       });
 

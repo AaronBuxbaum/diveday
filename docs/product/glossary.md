@@ -94,6 +94,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Dashboard refund
 - First paid month
 - Free term
+- Paid after close
 - Pass-through fee
 - Subscription (DiveDay billing)
 

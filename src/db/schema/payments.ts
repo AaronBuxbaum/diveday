@@ -906,10 +906,32 @@ export const bookingCheckouts = pgTable(
      * webhook arrives.
      */
     refundedCents: integer("refunded_cents").notNull().default(0),
+    /**
+     * When Stripe reported this session paid after DiveDay had already closed
+     * it (`expired`: a stale quote retired, a reschedule, a seat that changed
+     * type) — issue #2335. The diver's card was charged, but the checkout stays
+     * `expired` and no seat is marked paid from it, because the price it quoted
+     * no longer describes any seat. Null is the normal state.
+     *
+     * Paired with `paid_after_close_cents`, what Stripe captured. The money is
+     * owed back until `refunded_cents` reaches it, by DiveDay's own refund from
+     * the Orders index or by one made in the Stripe dashboard; that comparison,
+     * not a third column, is what takes it off the queue.
+     */
+    paidAfterCloseAt: timestamp("paid_after_close_at", { withTimezone: true }),
+    paidAfterCloseCents: integer("paid_after_close_cents"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("booking_checkouts_stripe_session_unique").on(table.stripeSessionId),
+    check(
+      "booking_checkouts_paid_after_close_pair",
+      sql`(${table.paidAfterCloseAt} is null) = (${table.paidAfterCloseCents} is null)`,
+    ),
+    check(
+      "booking_checkouts_paid_after_close_nonnegative",
+      sql`${table.paidAfterCloseCents} is null or ${table.paidAfterCloseCents} >= 0`,
+    ),
     index("booking_checkouts_stripe_payment_intent_idx").on(table.stripePaymentIntentId),
     check("booking_checkouts_refunded_nonnegative", sql`${table.refundedCents} >= 0`),
     index("booking_checkouts_shop_trip_idx").on(table.shopId, table.tripId),
@@ -1201,7 +1223,11 @@ export const paymentOperationIntents = pgTable(
     bookingId: uuid("booking_id").references(() => bookings.id),
     /** Set for a refund intent against an order's invoice. */
     orderId: uuid("order_id").references(() => orders.id),
-    /** Reserved for a future refund path that has a booking_checkouts row in hand; no caller sets this today. */
+    /**
+     * Set for a refund intent against a checkout as a whole: a reversal Stripe
+     * made that no seat was matched to (`parkStripeReversal`), or the refund of
+     * money captured after the checkout closed (`refundPaidAfterCloseCheckout`).
+     */
     checkoutId: uuid("checkout_id").references(() => bookingCheckouts.id),
     /**
      * The capped discount a checkout_session attempt is spending, written under

@@ -5,11 +5,13 @@ import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
+import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { canPersonManageOrders, canPersonManagePaymentSettings } from "@/db/authz";
+import { listPaidAfterCloseCheckouts } from "@/db/checkouts-paid-after-close";
 import { listImportedPaymentHistory } from "@/db/imported-payment-history";
 import { ORDER_DEFAULT_RANGE_DAYS, pagedOrdersByDay } from "@/db/orders";
 import { listStuckPaymentOperations } from "@/db/payment-operations";
@@ -39,6 +41,7 @@ import { orderLedgerRow } from "./_components/ledger-row";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
 import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
+import { refundPaidAfterCloseAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -141,6 +144,24 @@ function safeImportedDocumentUrl(url: string | null): string | null {
 const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "payment-not-connected": { tone: "warning", key: "orders.index.notice.paymentNotConnected" },
   "not-authorized": { tone: "danger", key: "orders.index.notice.notAuthorized" },
+  "not-authorized-refund": { tone: "danger", key: "orders.index.notice.notAuthorizedRefund" },
+  "paid-after-close-refunded": {
+    tone: "success",
+    key: "orders.index.notice.paidAfterCloseRefunded",
+  },
+  "paid-after-close-in-progress": {
+    tone: "neutral",
+    key: "orders.index.notice.paidAfterCloseInProgress",
+  },
+  "paid-after-close-needs-check": {
+    tone: "warning",
+    key: "orders.index.notice.paidAfterCloseNeedsCheck",
+  },
+  "paid-after-close-not-connected": {
+    tone: "warning",
+    key: "orders.index.notice.paidAfterCloseNotConnected",
+  },
+  "paid-after-close-failed": { tone: "danger", key: "orders.index.notice.paidAfterCloseFailed" },
 };
 
 const DATE_INPUT = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -252,6 +273,9 @@ export default async function OrdersIndexPage({
   const owedRefunds = canReconcilePayments
     ? await listOwedShopCancellationRefunds(db, shop.id)
     : [];
+  // Money Stripe captured on a checkout DiveDay had already closed (issue
+  // #2335): no seat was marked paid from it, so it is owed back. Same gate.
+  const paidAfterClose = canReconcilePayments ? await listPaidAfterCloseCheckouts(db, shop.id) : [];
 
   const statusFilter = orderStatus.enumValues.includes(
     status as (typeof orderStatus.enumValues)[number],
@@ -600,6 +624,49 @@ export default async function OrdersIndexPage({
                       {t("orders.index.owedRefunds.openTrip")}
                     </Link>
                   </span>
+                </li>
+              ))}
+            </ul>
+          </ShopNotice>
+        </section>
+      ) : null}
+
+      {paidAfterClose.length > 0 ? (
+        <section aria-label={t("orders.index.paidAfterClose.sectionLabel")} className="mb-6">
+          <ShopNotice tone="warning" role="status">
+            <p className="font-medium">
+              {t("orders.index.paidAfterClose.heading", { count: paidAfterClose.length })}
+            </p>
+            <ul className={NOTICE_ROWS}>
+              {paidAfterClose.map((owed) => (
+                <li key={owed.checkoutId}>
+                  <span className="font-medium">{owed.diverNames.join(", ")}</span>
+                  {FACT_SEPARATOR}
+                  {owed.tripTitle}
+                  <span className="text-muted">
+                    {FACT_SEPARATOR}
+                    {joinFacts([
+                      formatMoneyCents(owed.amountCents, owed.currency, locale),
+                      formatShortDate(owed.tripStartsAt, locale, shop.timezone),
+                    ])}
+                  </span>{" "}
+                  <span className={OPEN_TRIP_LINE}>
+                    <Link
+                      href={`/shop/${shopSlug}/trips/${owed.tripId}`}
+                      className={OPEN_TRIP_LINK}
+                    >
+                      {t("orders.index.paidAfterClose.openTrip")}
+                    </Link>
+                  </span>
+                  <form action={refundPaidAfterCloseAction} className="mt-2">
+                    <input type="hidden" name="checkoutId" value={owed.checkoutId} />
+                    <SubmitButton
+                      pendingLabel={t("orders.index.paidAfterClose.refunding")}
+                      className={buttonClass({ variant: "secondary" })}
+                    >
+                      {t("orders.index.paidAfterClose.refund")}
+                    </SubmitButton>
+                  </form>
                 </li>
               ))}
             </ul>

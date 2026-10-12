@@ -14,6 +14,8 @@ import { getShopReviewAggregate, setReviewPublished } from "@/db/reviews";
 import { markBookingRunningLate } from "@/db/running-late";
 import {
   boats,
+  bookingCheckoutBookings,
+  bookingCheckouts,
   bookingPayments,
   bookings,
   certifications,
@@ -164,6 +166,45 @@ export async function POST(request: Request) {
     .limit(1);
   if (paidSeat) {
     await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, paidSeat.tripId));
+  }
+
+  // 2b. A diver paid on a checkout DiveDay had already closed (issue #2335):
+  //     the money waits on the Orders index as owed back, with a Refund.
+  const [lateSeat] = await db
+    .select({ id: bookings.id, tripId: bookings.tripId })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, shop.id),
+        ne(bookings.status, "cancelled"),
+        eq(trips.status, "scheduled"),
+      ),
+    )
+    .orderBy(trips.startsAt, bookings.createdAt)
+    .limit(1);
+  if (lateSeat) {
+    const [lateCheckout] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId: lateSeat.tripId,
+        status: "expired",
+        stripeAccountId: "acct_e2e_late",
+        stripeSessionId: "cs_e2e_paid_after_close",
+        currency: "usd",
+        amountPerDiverCents: 14_500,
+        totalCents: 14_500,
+        paidAfterCloseAt: now,
+        paidAfterCloseCents: 14_500,
+      })
+      .onConflictDoNothing()
+      .returning({ id: bookingCheckouts.id });
+    if (lateCheckout) {
+      await db
+        .insert(bookingCheckoutBookings)
+        .values({ shopId: shop.id, checkoutId: lateCheckout.id, bookingId: lateSeat.id });
+    }
   }
 
   // 3. A photo delete the provider refused, and

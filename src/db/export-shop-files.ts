@@ -1061,6 +1061,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "expires_at",
       "completed_at",
       "async_payment_failed_at",
+      "paid_after_close_at",
+      "paid_after_close_cents",
       "created_at",
     ],
     rows: ({ tripTitle, tripStartsAt, checkoutRows }) =>
@@ -1090,6 +1092,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.expiresAt,
         row.completedAt,
         row.asyncPaymentFailedAt,
+        row.paidAfterCloseAt,
+        row.paidAfterCloseCents,
         row.createdAt,
       ]),
     note: EXPORT_FILE_NOTES["booking_checkouts.csv"],

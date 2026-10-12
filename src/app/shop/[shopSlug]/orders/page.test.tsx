@@ -7,6 +7,8 @@ import { tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
 import {
+  bookingCheckoutBookings,
+  bookingCheckouts,
   bookingPayments,
   bookings,
   importedPaymentHistory,
@@ -25,7 +27,7 @@ import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { capturedPaymentStatuses } from "@/lib/payment-source";
 import { seededTestDb } from "@/test/db";
-import { ariaLabelsIn, findElements, hrefsIn } from "@/test/jsx-inspect";
+import { ariaLabelsIn, findElements, hiddenInputNamesIn, hrefsIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
@@ -168,6 +170,73 @@ describe("the stuck-payment-operations panel", () => {
     // not, which is the one thing that could have gone wrong in moving a
     // gated section onto an ungated page.
     expect(ariaLabelsIn(await renderOrders("divemaster", stickAnOperation))).not.toContain(PANEL);
+  });
+});
+
+/**
+ * A diver paid on a checkout DiveDay had already closed (issue #2335): the
+ * captured money waits here, with who paid and how much, and a refund.
+ */
+async function paidAfterCheckoutClosed(db: AppDb, session: DiveDaySession) {
+  const [seat] = await db
+    .select({ id: bookings.id, tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(eq(bookings.shopId, session.user.shopId), ne(bookings.status, "cancelled")))
+    .limit(1);
+  if (!seat) throw new Error("the seed has no booking");
+  const [checkout] = await db
+    .insert(bookingCheckouts)
+    .values({
+      shopId: session.user.shopId,
+      tripId: seat.tripId,
+      status: "expired",
+      stripeAccountId: "acct_late",
+      stripeSessionId: "cs_paid_after_close",
+      currency: "usd",
+      amountPerDiverCents: 12_500,
+      totalCents: 12_500,
+      paidAfterCloseAt: nowDate(),
+      paidAfterCloseCents: 12_500,
+    })
+    .returning({ id: bookingCheckouts.id });
+  if (!checkout) throw new Error("checkout insert returned no row");
+  await db
+    .insert(bookingCheckoutBookings)
+    .values({ shopId: session.user.shopId, checkoutId: checkout.id, bookingId: seat.id });
+}
+
+const PAID_AFTER_CLOSE = "Paid after the checkout closed";
+
+describe("the paid-after-close queue", () => {
+  it("renders nothing when nothing was paid after closing", async () => {
+    expect(ariaLabelsIn(await renderOrders("owner"))).not.toContain(PAID_AFTER_CLOSE);
+  });
+
+  it("shows an owner the money, the departure and a refund", async () => {
+    const element = await renderOrders("owner", paidAfterCheckoutClosed);
+    expect(ariaLabelsIn(element)).toContain(PAID_AFTER_CLOSE);
+    expect(hiddenInputNamesIn(element)).toContain("checkoutId");
+    const section = findElements<{ "aria-label"?: string; children?: unknown }>(
+      element,
+      "section",
+    ).find((node) => node.props["aria-label"] === PAID_AFTER_CLOSE);
+    expect(hrefsIn(section).some((href) => href.includes("/trips/"))).toBe(true);
+    const texts: string[] = [];
+    const collect = (node: unknown): void => {
+      if (typeof node === "string") texts.push(node);
+      else if (Array.isArray(node)) node.forEach(collect);
+      else if (node && typeof node === "object" && "props" in node) {
+        collect((node as { props: { children?: unknown } }).props.children);
+      }
+    };
+    collect(section);
+    expect(texts.join("")).toContain("$125.00");
+  });
+
+  it("hides it from a divemaster", async () => {
+    expect(ariaLabelsIn(await renderOrders("divemaster", paidAfterCheckoutClosed))).not.toContain(
+      PAID_AFTER_CLOSE,
+    );
   });
 });
 
