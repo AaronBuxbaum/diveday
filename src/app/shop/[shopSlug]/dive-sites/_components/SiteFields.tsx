@@ -1,31 +1,18 @@
 import type { ReactNode } from "react";
 import { EditorSection } from "@/components/editor/EditorSection";
-import { ImageFileInput } from "@/components/ImageFileInput";
-import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovablePhoto";
-import {
-  ChoiceFieldset,
-  ChoiceRow,
-  controlClass,
-  Field,
-  FieldGrid,
-  textareaClassFor,
-} from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import type { DiveSiteFitTone, DiveSpecialty } from "@/db/schema";
-import { REQUIRABLE_CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { type DepthUnit, depthInUnit, maxEnteredDepth } from "@/lib/depth-units";
-import { DIVE_SITE_DIFFICULTIES, type DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
+import type { DepthUnit } from "@/lib/depth-units";
+import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import { MAX_PLANNING_NOTE_LENGTH, planningNoteIsFresh } from "@/lib/dive-site-memory";
 import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
-import { MAX_SITE_IMAGES } from "@/lib/dive-sites";
-import { DOCK_DAY_LIMITS } from "@/lib/diver-planning";
 import { formatDateWithYear } from "@/lib/format";
 import type { CertificationLevel } from "@/lib/readiness";
-import { MAX_IMAGE_MB } from "@/lib/storage/limits";
-import { stationDistanceInUnit, stationLabel, type TideStationEcho } from "@/lib/tide-stations";
-import { TIDE_PREFERENCES, type TidePreference } from "@/lib/tides";
+import type { TideStationEcho } from "@/lib/tide-stations";
+import type { TidePreference } from "@/lib/tides";
 import {
   type FieldGuideCatalogEntry,
   FieldGuideEditor,
@@ -33,15 +20,16 @@ import {
 } from "./FieldGuideEditor";
 import { LandmarkEditor, type LandmarkEditorCopy } from "./LandmarkEditor";
 import { RouteEditor, type RouteEditorCopy } from "./RouteEditor";
+import { SiteCertificationFields } from "./SiteCertificationFields";
+import { SiteDiveFields } from "./SiteDiveFields";
+import { SiteForecastFields } from "./SiteForecastFields";
+import { SitePhotoFields } from "./SitePhotoFields";
 import {
   SITE_FORM_SECTION_IDS,
   SITE_FORM_SECTION_ORDER,
   type SiteFormSection,
   siteFormSectionLabels,
 } from "./site-form-sections";
-
-/** The specialty boxes' grid: two across on a phone, three from `sm`. */
-const SPECIALTY_GRID = "grid grid-cols-2 gap-3 sm:grid-cols-3";
 
 /**
  * The subset of a stored dive site the form needs to prefill. `undefined`
@@ -164,90 +152,7 @@ export function SiteFields({
   /** The shop's zone, so that date reads as the day the shop lived. */
   timezone: string;
 }) {
-  // `ImageFileInput` is a Client Component, so its words arrive resolved.
-  const imageInputCopy = {
-    choose: t("shared.imageInput.choose"),
-    chooseAnother: t("shared.imageInput.chooseAnother"),
-    wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
-    tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
-  };
   const labels = siteFormSectionLabels(t);
-
-  // Seven digits, and until issue #1468 nothing on this form said what they
-  // named: a station typed for the wrong end of the Keys answered every
-  // prediction request and read as an ordinary tide sentence on every
-  // departure. The first line is NOAA's own answer to the id, so a wrong one
-  // is legible as a wrong *place*; the second is advice about a station that
-  // sits implausibly far from the coordinates two fields up, and it refuses
-  // nothing — the save above it never waits on this lookup and a failed one
-  // renders neither line.
-  //
-  // That second sentence names what the distance costs on the water, not the
-  // distance alone: a divemaster acts on consequence, and eighty kilometres
-  // down a chain moves the predicted turn by the better part of an hour —
-  // which is the difference between a fact about a row and a fact about
-  // whether the plan holds. The turn is already a height turn rather than
-  // slack (ADR 20260907's 2026-09-07 amendment), so the hour is the second
-  // error stacked on the first.
-  //
-  // **And it can be answered** (issue #1731). A genuinely remote site has no
-  // nearer station to pick — Flower Garden Banks reads Galveston at about 190
-  // km and is right — so without an answer that shop reads the prompt on every
-  // visit forever, and a warning that is always wrong is one a crew learns to
-  // click past. The cost lands on the next warning, which may be the Key Largo
-  // reef reading Vaca Key. So the box below the fields is the answer, the
-  // sentence stops once it is ticked, and the box stays on the page so the shop
-  // can take the answer back. Still a prompt and never a refusal: the id saves
-  // either way, and nothing here reaches a readiness or admission rule.
-  const stationFar = Boolean(tideStation?.far && tideStation.distanceKm !== null);
-  const stationConfirmed = values?.tideStationConfirmed ?? false;
-  const tideStationNote = tideStation ? (
-    <>
-      <span className="block">
-        {t("diveSites.form.tideStationEcho", {
-          id: tideStation.id,
-          name: stationLabel(tideStation),
-        })}
-      </span>
-      {stationFar && !stationConfirmed && tideStation.distanceKm !== null ? (
-        <span className="mt-0.5 block font-medium text-warning-strong">
-          {depthUnit === "feet"
-            ? t("diveSites.form.tideStationFarMiles", {
-                distance: stationDistanceInUnit(tideStation.distanceKm, depthUnit),
-              })
-            : t("diveSites.form.tideStationFarKm", {
-                distance: stationDistanceInUnit(tideStation.distanceKm, depthUnit),
-              })}
-        </span>
-      ) : null}
-    </>
-  ) : undefined;
-
-  // What a site asks of a diver beyond a level: each specialty, then nitrox.
-  const specialtyBoxes = (
-    <>
-      {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
-        <ChoiceRow
-          key={value}
-          name="specialty"
-          type="checkbox"
-          value={value}
-          defaultChecked={values?.requiredSpecialties.includes(value as DiveSpecialty) ?? false}
-          className="text-sm font-medium"
-        >
-          {t(key)}
-        </ChoiceRow>
-      ))}
-      <ChoiceRow
-        name="requiresNitrox"
-        type="checkbox"
-        defaultChecked={values?.requiresNitrox ?? false}
-        className="text-sm font-medium"
-      >
-        {t("diveSites.form.nitroxCheckbox")}
-      </ChoiceRow>
-    </>
-  );
 
   const sections: Record<SiteFormSection, SectionParts> = {
     about: {
@@ -289,111 +194,7 @@ export function SiteFields({
       grouped: true,
       description: t("diveSites.form.forecastDescription"),
       body: (
-        <>
-          <FieldGrid columns={2} className="gap-y-5">
-            <Field label={t("diveSites.form.latitudeLabel")}>
-              <input
-                name="forecastLatitude"
-                type="number"
-                step="any"
-                min={-90}
-                max={90}
-                defaultValue={values?.forecastLatitude ?? ""}
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("diveSites.form.longitudeLabel")}>
-              <input
-                name="forecastLongitude"
-                type="number"
-                step="any"
-                min={-180}
-                max={180}
-                defaultValue={values?.forecastLongitude ?? ""}
-                className={controlClass}
-              />
-            </Field>
-            {/* The tide is read at a NOAA station, never at the coordinates
-              above — a reef is rarely a station — so the id is its own field,
-              and its help carries the one link a staffer needs to find one.
-              A blank id says nothing about the tide anywhere (ADR
-              20260907-noaa-tide-predictions).
-
-              The help is the field's description, under the box, with the
-              station NOAA answered for beneath it: two sentences and a link
-              are not a `hint`, the inline "(optional)" on the caption's line,
-              where they stood "NOAA tide station" two lines above "Dives
-              best" beside it (K-418). */}
-            <Field
-              label={t("diveSites.form.tideStationLabel")}
-              description={
-                <>
-                  <span className="block">
-                    {t.rich("diveSites.form.tideStationHint", {
-                      link: (chunks) => (
-                        <a
-                          href="https://tidesandcurrents.noaa.gov/tide_predictions.html"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {chunks}
-                        </a>
-                      ),
-                    })}
-                  </span>
-                  {tideStationNote}
-                </>
-              }
-            >
-              {/* No `pattern`: native constraint validation refuses the submit
-                outright, in the browser's own words, and the form never
-                reaches the refusal this repository already writes in both
-                languages and puts on the field. */}
-              <input
-                name="tideStationId"
-                inputMode="numeric"
-                maxLength={7}
-                defaultValue={values?.tideStationId ?? ""}
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("diveSites.form.tidePreferenceLabel")}>
-              <select
-                name="tidePreference"
-                defaultValue={values?.tidePreference ?? "any"}
-                className={controlClass}
-              >
-                {TIDE_PREFERENCES.map((preference) => (
-                  <option key={preference} value={preference}>
-                    {t(`diveSites.form.tidePreference.${preference}`)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </FieldGrid>
-          {/* Only while there is something to answer. A station inside the
-              threshold, a site with no coordinates to measure against and a
-              lookup that answered nothing all leave the question unasked, and
-              a tick box for a question nobody put is furniture. It follows the
-              grid rather than sitting inside it because the grid's rows are a
-              subgrid two tracks deep per field, and a checkbox belongs beside
-              its own words the way the nitrox box does. No margin of its
-              own: it is an item in the section's `gap-5` column, where a
-              margin adds to the gap, and `mt-4` stood it 36px under the
-              warning it answers, nearer the next section than its question
-              (K-424). */}
-          {stationFar ? (
-            <ChoiceRow
-              name="tideStationConfirmed"
-              type="checkbox"
-              defaultChecked={stationConfirmed}
-              className="text-sm font-medium"
-            >
-              {t("diveSites.form.tideStationConfirmedCheckbox")}
-            </ChoiceRow>
-          ) : null}
-        </>
+        <SiteForecastFields t={t} depthUnit={depthUnit} values={values} tideStation={tideStation} />
       ),
     },
 
@@ -424,81 +225,7 @@ export function SiteFields({
     photos: {
       grouped: true,
       description: t("diveSites.form.photosDescription"),
-      body: (
-        <>
-          {/* Each field is one grid: the photos it holds, then the tile that
-              adds the next, so a picked photo lands where it will live. The
-              `Field`s carry `htmlFor`, so the caption names the tile rather
-              than wrapping the cells, each of which is a `<label>` of its own
-              (see `src/components/ui/form.tsx`). */}
-          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
-            <Field
-              label={t("diveSites.form.mapImageLabel")}
-              hint={t("diveSites.form.optionalHint")}
-              htmlFor="site-satellite-image"
-            >
-              <div className="flex flex-col gap-3">
-                {values?.satelliteImageUrl ? (
-                  <RemovablePhoto
-                    url={values.satelliteImageUrl}
-                    name="removeSatelliteImage"
-                    label={t("diveSites.form.removeCurrentPhoto")}
-                  />
-                ) : null}
-                <ImageFileInput
-                  id="site-satellite-image"
-                  name="satelliteImageFile"
-                  copy={imageInputCopy}
-                />
-              </div>
-            </Field>
-            <Field
-              label={t("diveSites.form.routeImageLabel")}
-              hint={t("diveSites.form.optionalHint")}
-              htmlFor="site-route-image"
-            >
-              <div className="flex flex-col gap-3">
-                {values?.routeImageUrl ? (
-                  <RemovablePhoto
-                    url={values.routeImageUrl}
-                    name="removeRouteImage"
-                    label={t("diveSites.form.removeCurrentPhoto")}
-                  />
-                ) : null}
-                <ImageFileInput id="site-route-image" name="routeImageFile" copy={imageInputCopy} />
-              </div>
-            </Field>
-          </div>
-          <Field
-            label={t("diveSites.form.sitePhotosLabel")}
-            hint={t("diveSites.form.sitePhotosHint", { max: MAX_SITE_IMAGES })}
-            htmlFor="site-photos"
-          >
-            <div className={removablePhotoGridClass}>
-              {values?.imageUrls.map((url) => (
-                <RemovablePhoto
-                  key={url}
-                  url={url}
-                  name="removeSiteImageUrls"
-                  value={url}
-                  label={t("diveSites.form.removeLabel")}
-                />
-              ))}
-              <ImageFileInput
-                id="site-photos"
-                name="siteImageFiles"
-                multiple
-                maxFiles={MAX_SITE_IMAGES}
-                copy={{
-                  ...imageInputCopy,
-                  chooseAnother: t("shared.imageInput.chooseOthers"),
-                  tooMany: t("diveSites.form.tooManyPhotos", { max: MAX_SITE_IMAGES }),
-                }}
-              />
-            </div>
-          </Field>
-        </>
-      ),
+      body: <SitePhotoFields t={t} values={values} />,
     },
 
     underwater: {
@@ -527,142 +254,7 @@ export function SiteFields({
     },
 
     dive: {
-      body: (
-        <>
-          <FieldGrid columns={2} className="gap-y-5">
-            <Field
-              label={t("diveSites.form.difficultyLabel")}
-              hint={t("diveSites.form.optionalHint")}
-            >
-              {/* A picker, not a text box: the word ends up on a diver's
-                  briefing and has to arrive in their language, so it is a code
-                  with a translated label (ADR
-                  20260813-marine-life-is-diveday-copy applies the same
-                  reasoning to species). Every value any shop had typed here was
-                  already one of these three. */}
-              <select
-                name="difficulty"
-                defaultValue={values?.difficultyLevel ?? ""}
-                className={controlClass}
-              >
-                <option value="">{t("diveSites.form.difficultyUnset")}</option>
-                {DIVE_SITE_DIFFICULTIES.map((level) => (
-                  <option key={level} value={level}>
-                    {t(`diveSites.form.difficultyLevels.${level}`)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field
-              label={t("diveSites.form.depthRangeLabel")}
-              hint={t("diveSites.form.optionalHint")}
-            >
-              <input
-                name="depthRange"
-                maxLength={120}
-                defaultValue={values?.depthRange ?? ""}
-                placeholder={t("diveSites.form.depthRangePlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-          </FieldGrid>
-          <FieldGrid columns={2} className="gap-y-5">
-            {/* The one depth figure a certification ceiling can be compared
-                against (H-08). Left blank it simply never warns — this advises,
-                it never gates. */}
-            <Field
-              label={t(
-                depthUnit === "feet"
-                  ? "diveSites.form.maxDepthFeetLabel"
-                  : "diveSites.form.maxDepthMetersLabel",
-              )}
-              hint={t("diveSites.form.optionalHint")}
-              description={t("diveSites.form.maxDepthHint")}
-            >
-              <input
-                name="maxDepth"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={maxEnteredDepth(depthUnit)}
-                step={1}
-                defaultValue={
-                  values?.maxDepthMeters == null
-                    ? ""
-                    : depthInUnit(values.maxDepthMeters, depthUnit)
-                }
-                placeholder={depthUnit === "feet" ? "60" : "18"}
-                className={controlClass}
-              />
-            </Field>
-            {/* Minutes, in nobody's unit but its own — so it sits beside the
-                depth rather than being folded into the shop-wide rhythm in
-                Settings. A wall run at 30 minutes and a shallow reef run at 60
-                are both real, and one shop-wide number told a diver the wrong
-                one on whichever it was not. Blank leaves the shop's own figure
-                standing. */}
-            <Field
-              label={t("diveSites.form.expectedBottomTimeLabel")}
-              hint={t("diveSites.form.optionalHint")}
-              description={t("diveSites.form.expectedBottomTimeHint")}
-            >
-              <input
-                name="expectedBottomTime"
-                type="number"
-                inputMode="numeric"
-                min={DOCK_DAY_LIMITS.bottomTimeMinutes.min}
-                max={DOCK_DAY_LIMITS.bottomTimeMinutes.max}
-                step={1}
-                defaultValue={values?.expectedBottomTimeMinutes ?? ""}
-                placeholder={t("diveSites.form.expectedBottomTimePlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-          </FieldGrid>
-          <FieldGrid columns={1} className="gap-y-5">
-            <Field
-              label={t("diveSites.form.currentNoteLabel")}
-              hint={t("diveSites.form.optionalHint")}
-            >
-              <textarea
-                name="currentNote"
-                rows={2}
-                maxLength={500}
-                defaultValue={values?.currentNote ?? ""}
-                className={textareaClassFor(2)}
-              />
-            </Field>
-            <Field
-              label={t("diveSites.form.divePlanLabel")}
-              hint={t("diveSites.form.optionalHint")}
-            >
-              <textarea
-                name="divePlan"
-                rows={3}
-                maxLength={1200}
-                defaultValue={values?.divePlan ?? ""}
-                placeholder={t("diveSites.form.divePlanPlaceholder")}
-                className={textareaClassFor(3)}
-              />
-            </Field>
-            {/* A sentence of help, so a description under the box, as the
-                form's other help is; not the caption's inline hint (K-418). */}
-            <Field
-              label={t("diveSites.form.conservationNoteLabel")}
-              description={t("diveSites.form.conservationNoteHint")}
-            >
-              <textarea
-                name="conservationNote"
-                rows={3}
-                maxLength={600}
-                defaultValue={values?.conservationNote ?? ""}
-                placeholder={t("diveSites.form.conservationNotePlaceholder")}
-                className={textareaClassFor(3)}
-              />
-            </Field>
-          </FieldGrid>
-        </>
-      ),
+      body: <SiteDiveFields t={t} depthUnit={depthUnit} values={values} />,
     },
 
     // **What the shop wants to remember about running this site** (issue
@@ -775,40 +367,11 @@ export function SiteFields({
       grouped: true,
       description: certificationDescription,
       body: (
-        <>
-          <FieldGrid columns={1}>
-            <Field label={t("diveSites.form.minimumCertificationLabel")}>
-              <select
-                name="minimumCertificationLevel"
-                defaultValue={values?.minimumCertificationLevel ?? ""}
-                className={controlClass}
-              >
-                <option value="">{t("diveSites.form.noLevelRequired")}</option>
-                {/* Recreational rungs only — a site may not demand a working
-                    rating of a paying diver (issue #630). */}
-                {REQUIRABLE_CERTIFICATION_LEVEL_KEYS.map(([value, key]) => (
-                  <option key={value} value={value}>
-                    {t(key)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </FieldGrid>
-          {/* Captioned, the boxes are one group under a legend at a field
-              caption's distance (`ChoiceFieldset`); the new form passes no
-              caption and they start at the section's own gap. A bare
-              paragraph over a grid pushed `mt-3` down read as floating
-              between the select above and its own boxes, and with no caption
-              the `mt-3` stood them 32px under the select where the section's
-              fields stand 20px apart (K-212). */}
-          {requiredSpecialtiesLabel ? (
-            <ChoiceFieldset legend={requiredSpecialtiesLabel} bodyClassName={SPECIALTY_GRID}>
-              {specialtyBoxes}
-            </ChoiceFieldset>
-          ) : (
-            <div className={SPECIALTY_GRID}>{specialtyBoxes}</div>
-          )}
-        </>
+        <SiteCertificationFields
+          t={t}
+          values={values}
+          requiredSpecialtiesLabel={requiredSpecialtiesLabel}
+        />
       ),
     },
   };

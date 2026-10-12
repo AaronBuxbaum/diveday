@@ -210,7 +210,6 @@
     "src/app/s/[shopSlug]/trips/[id]/page.tsx#TripDetailPage": 647,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": 502,
     "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 705,
-    "src/app/shop/[shopSlug]/dive-sites/_components/SiteFields.tsx#SiteFields": 714,
     "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 488,
     "src/app/shop/[shopSlug]/divers/[personId]/page.tsx#DiverDetailPage": 404,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 402,
