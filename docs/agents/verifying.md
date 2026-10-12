@@ -75,7 +75,8 @@ for what is new since: the unit shards by file from `scripts/test-durations.json
 `scripts/e2e-durations.json` (`scripts/e2e-shard.mjs`, whose bin weights each shard prints in its
 job summary). Both files refresh themselves: `.github/workflows/durations-refresh.yml` reads the
 newest main run's `unit-durations-<n>`, `e2e-durations-<n>` and `visual-durations-<n>` artifacts
-every Monday, and from its Run workflow button, and opens a pull request when the figures moved. To
+every Monday, and from its Run workflow button, and commits them straight to `main` when they
+moved (a pull request on `automation/durations-refresh` only if that push is refused). To
 refresh by hand from a container that cannot download artifacts, save each shard's job log (the
 unit shards print a `diveday-test-durations:` line, the browser shards a `diveday-e2e-durations:`
 one) and run `node scripts/merge-test-durations.mjs <logs…>` or

@@ -55,6 +55,14 @@ either build it or say why you are not.
    diff image, explain each one in the pull request, and carry on
    ([visual-triage](../visual-triage/SKILL.md)).
 
+   **An open `automation/durations-refresh` pull request gets an empty commit and a merge.** The
+   weekly refresh (`.github/workflows/durations-refresh.yml`) commits the recorded shard durations
+   straight to `main` and opens that pull request only when the push was refused. A pull request
+   opened with the workflow token starts no CI, so it waits unchecked until someone pushes:
+   `gh pr list --head automation/durations-refresh --state open`; if one is there, check it out,
+   `git commit --allow-empty -m "Run CI on the durations refresh"`, push, and merge it once green.
+   The diff is two JSON files the next run's shards are dealt by; there is nothing to review.
+
    **Read the review comments in the same pass, not only the checks.** `sourcery-ai` reviews every
    pull request here within minutes of it opening, and Aaron's comments
    land whenever he gets to them — all of it arrives while you are building the next ticket, which
