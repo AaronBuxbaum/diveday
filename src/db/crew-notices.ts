@@ -27,7 +27,7 @@ import {
   trips,
   userAccounts,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * Pending crew news and the hourly pass that tells it (ADR
@@ -59,7 +59,23 @@ export async function recordCrewNotices(
   notices: readonly CrewNoticeInput[],
   now: Date = nowDate(),
 ): Promise<void> {
-  const told = notices.filter((notice) => notice.personId !== notice.actorPersonId);
+  const addressed = notices.filter((notice) => notice.personId !== notice.actorPersonId);
+  if (addressed.length === 0) return;
+  // A rehearsal tells its crew nothing (ADR 20261012-rehearsal-departures), so
+  // its news is never written down to be told later.
+  const rehearsals = await tx
+    .select({ id: trips.id })
+    .from(trips)
+    // diveday:allow-deleted-trips: only asks which of these are rehearsals.
+    // diveday:allow-rehearsal: the same question.
+    .where(
+      and(
+        inArray(trips.id, [...new Set(addressed.map((notice) => notice.tripId))]),
+        eq(trips.isRehearsal, true),
+      ),
+    );
+  const rehearsalIds = new Set(rehearsals.map((row) => row.id));
+  const told = addressed.filter((notice) => !rehearsalIds.has(notice.tripId));
   if (told.length === 0) return;
   await tx.insert(crewNotices).values(told.map((notice) => ({ ...notice, createdAt: now })));
 }
@@ -136,7 +152,14 @@ async function draftCrewNews(
       tripAssignments,
       and(eq(tripAssignments.tripId, trips.id), eq(tripAssignments.personId, input.personId)),
     )
-    .where(and(liveTrip(), eq(trips.shopId, input.shop.id), inArray(trips.id, [...newsTripIds])))
+    .where(
+      and(
+        liveTrip(),
+        notRehearsal(),
+        eq(trips.shopId, input.shop.id),
+        inArray(trips.id, [...newsTripIds]),
+      ),
+    )
     .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
   // A departure is told while it is still ahead, and — unless the news is that
   // it was called off — still running.
@@ -347,6 +370,8 @@ export async function flushUrgentCrewNotices(
     const due = await db
       .selectDistinct({ shopId: crewNotices.shopId, personId: crewNotices.personId })
       .from(crewNotices)
+      // diveday:allow-rehearsal: `recordCrewNotices` never writes a rehearsal's
+      // notice, and the tell above reads the trip again with the filter.
       .innerJoin(trips, eq(trips.id, crewNotices.tripId))
       .where(
         and(
@@ -440,6 +465,7 @@ export async function recordCrewCalledOff(
     .where(
       and(
         liveTrip(),
+        notRehearsal(),
         eq(trips.shopId, input.shopId),
         inArray(tripAssignments.tripId, [...input.tripIds]),
       ),

@@ -139,6 +139,8 @@ const COPY: BuilderCopy = {
   selfGuidedHint: "Buddy pairs go in without a guide.",
   isPrivateHint:
     "Off the public schedule. Anyone with the link can see the departure and book a seat.",
+  isRehearsalLabel: "Rehearsal for training day",
+  isRehearsalHint: "Practice only.",
   daysLabel: "How many days",
   daysDescription: "Most departures are one day.",
   payAtBookingLegend: "Pay at booking",

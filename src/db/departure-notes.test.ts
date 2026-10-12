@@ -14,7 +14,7 @@ import {
   sendDepartureNote,
 } from "./departure-notes";
 import { claimHeldSend, executeHeldSend, holdSend } from "./held-sends";
-import { activityEvents, departureNotes, people, shops } from "./schema";
+import { activityEvents, departureNotes, people, shops, trips } from "./schema";
 import { createTrip, setTripStatus } from "./trips";
 
 /**
@@ -136,6 +136,16 @@ describe("sendDepartureNote", () => {
     expect(await checkDepartureNote(db, { shopId: shop.id, tripId: trip.id, body: NOTE })).toEqual({
       ok: false,
       reason: "cancelled",
+    });
+  });
+
+  it("refuses a rehearsal: nothing about one is sent", async () => {
+    const { db, shop } = ctx;
+    const trip = await departure(db, shop.id);
+    await db.update(trips).set({ isRehearsal: true, isPrivate: true }).where(eq(trips.id, trip.id));
+    expect(await checkDepartureNote(db, { shopId: shop.id, tripId: trip.id, body: NOTE })).toEqual({
+      ok: false,
+      reason: "not_found",
     });
   });
 

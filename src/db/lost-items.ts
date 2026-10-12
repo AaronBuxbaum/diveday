@@ -15,7 +15,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { notificationProviderForDb, sendNotification } from "./notifications";
 import { bookings, type LostItem, lostItems, people, shops, trips } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
-import { liveTrip } from "./trips";
+import { liveTrip, notRehearsal } from "./trips";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 /**
@@ -158,7 +158,12 @@ export async function tellLostItemOwner(
     .from(lostItems)
     .innerJoin(
       trips,
-      and(eq(trips.id, lostItems.tripId), eq(trips.shopId, input.shopId), liveTrip()),
+      and(
+        eq(trips.id, lostItems.tripId),
+        eq(trips.shopId, input.shopId),
+        liveTrip(),
+        notRehearsal(),
+      ),
     )
     .innerJoin(shops, eq(shops.id, lostItems.shopId))
     .where(and(eq(lostItems.id, input.itemId), eq(lostItems.shopId, input.shopId)))

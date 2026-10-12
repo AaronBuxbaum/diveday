@@ -87,6 +87,7 @@ describe("the public reviews' rows", () => {
             tripTitle: "Two-Tank Reef",
             divedAt: new Date("2026-08-26T12:00:00Z"),
             publishedAt: new Date("2026-08-26T18:00:00Z"),
+            reply: null,
           },
         ]}
         locale="en-US"

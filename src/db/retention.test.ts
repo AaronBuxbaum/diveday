@@ -559,6 +559,9 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "trip_recap_photos",
   "trip_reviews",
   "review_moderation_events",
+  // The shop's public reply under a review (batch 4, K2): lives as long as the
+  // review it answers, and goes the way the review goes.
+  "review_replies",
   "recap_pulses",
   // Waivers. H-02's question about these is whether signed evidence may be
   // erased at all — the opposite end of the same question from a window, and

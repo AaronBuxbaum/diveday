@@ -122,6 +122,11 @@
     "poweredByDiveDay": "Powered by DiveDay",
     "moreWaysHeading": "Other ways we can help",
     "boatsHeading": "The boats",
+    "monthSeen": {
+      "heading": "What you might see in {month}",
+      "line": "Seen on {seen} of the {trips, plural, one {# {month} trip} other {# {month} trips}} our crews logged",
+      "honest": "What our crews logged on {month} trips, in every season on record. It says what was seen, not what you will see."
+    },
     "boatSeats": "{count, plural, one {# diver} other {# divers}}"
   },
   "trip": {
@@ -577,6 +582,7 @@
     "ratingLegend": "Your rating",
     "ratingOption": "{rating} out of 5 stars",
     "anonymousReviewer": "A diver",
+    "replyFrom": "Reply from {shop}",
     "commentLabel": "Anything you’d tell another diver?",
     "commentPlaceholder": "The crew, the sites, how the day ran",
     "submit": "Leave my review",

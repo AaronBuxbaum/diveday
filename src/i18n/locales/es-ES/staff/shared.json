@@ -232,7 +232,10 @@
     "language": "Idioma",
     "signOut": "Cerrar sesión",
     "signOutConfirm": "¿Cerrar sesión? Confirmar",
-    "signOutPending": "Cerrando sesión…"
+    "signOutPending": "Cerrando sesión…",
+    "tellUs": "Escríbenos",
+    "tellUsSubject": "Nota a DiveDay desde {shop}",
+    "tellUsBody": "Página: {path}\n\n"
   },
   "shopNavLinks": {
     "badgeBlocked": "{count, plural, one {# persona bloqueada, a bordo o en las próximas salidas} other {# personas bloqueadas, a bordo o en las próximas salidas}}",

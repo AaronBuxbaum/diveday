@@ -108,7 +108,7 @@ export async function generateMetadata({
   const shop = await shopBySlugCached(shopSlug);
   if (!shop) return { title: "Trip — DiveDay" };
   const trip = await getTripWithBooked(db, shop.id, id);
-  if (!trip) return { title: "Trip — DiveDay" };
+  if (!trip || trip.isRehearsal) return { title: "Trip — DiveDay" };
   const locale = await requestLocale(shop.defaultLocale);
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
   const title = `${trip.title} — ${when} · ${shop.name}`;
@@ -215,7 +215,7 @@ export default async function TripDetailPage({
     // has switched nothing on, which is every shop until somebody does.
     tripPublicCrew(db, shop.id, tripId),
   ]);
-  if (!trip) notFound();
+  if (!trip || trip.isRehearsal) notFound();
   // A cancelled trip gets its own soft landing (task 13) rather than the same
   // bare `notFound()` as a typo'd URL — a diver who followed a saved or
   // shared link into a since-cancelled departure gets told what happened and

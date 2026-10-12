@@ -970,6 +970,8 @@ export async function getTripManifests(
     // count has passed them (`summary.overCapacity`). Nothing on the boarding
     // path refuses, so this is the only place the boat being over gets said.
     capacity: trip.capacity,
+    // Printed beside souls on board, so a practice sheet is never read as a boat.
+    isRehearsal: trip.isRehearsal,
   };
   const diverInputs = roster.map(({ booking, person }) => {
     return {

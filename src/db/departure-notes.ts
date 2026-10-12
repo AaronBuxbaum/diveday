@@ -25,7 +25,7 @@ import { notificationProviderForDb, sendNotification } from "./notifications";
 import { recordTripActivity } from "./operations";
 import { bookings, departureNotes, heldSends, lostItems, people, shops, trips } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
-import { liveTrip } from "./trips";
+import { liveTrip, notRehearsal } from "./trips";
 import { seatHeld } from "./trips-queries";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
@@ -119,7 +119,9 @@ export async function checkDepartureNote(
   const [trip] = await db
     .select()
     .from(trips)
-    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
+    .where(
+      and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip(), notRehearsal()),
+    )
     .limit(1);
   if (!trip) return { ok: false, reason: "not_found" };
   const sent =
@@ -158,7 +160,9 @@ async function claimDepartureNote(
     const [trip] = await tx
       .select()
       .from(trips)
-      .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
+      .where(
+        and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip(), notRehearsal()),
+      )
       .limit(1)
       .for("update");
     if (!trip) return { ok: false as const, reason: "not_found" as const };

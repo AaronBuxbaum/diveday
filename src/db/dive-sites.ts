@@ -51,7 +51,7 @@ import {
   tripDives,
   trips,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 import { liveBookingJoin } from "./trips-queries";
 
 export type DiveSiteInput = {
@@ -1304,6 +1304,7 @@ export async function listUpcomingTripsForSite(
       diveMode: trips.diveMode,
     })
     .from(tripDives)
+    // diveday:allow-rehearsal: the staff site page; a rehearsal is staff's own.
     .innerJoin(trips, eq(trips.id, tripDives.tripId))
     .where(
       and(
@@ -1369,6 +1370,7 @@ export async function listUpcomingDeparturesForSite(
     .where(
       and(
         liveTrip(),
+        notRehearsal(),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
         eq(trips.isPrivate, false),

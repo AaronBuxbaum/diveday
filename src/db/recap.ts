@@ -60,7 +60,7 @@ import { tripsWithSomebodyMissing } from "./today";
 import { listTripSightings } from "./trip-sightings";
 import { getTripWithBooked, listTripDives } from "./trips";
 import { tripCrewByTrip } from "./trips-crew";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 /** A diver's own recap photo, as the recap page renders it. */
@@ -1413,6 +1413,9 @@ async function sendRecaps(
         // recap is about the matched diver record, sent to its address.
         isNull(bookings.identityUnconfirmedAt),
         eq(trips.status, "scheduled"),
+        // A rehearsal's test divers get no recap, by any channel (ADR
+        // 20261012-rehearsal-departures).
+        notRehearsal(),
         ...(scope.shopId ? [eq(trips.shopId, scope.shopId)] : []),
         ...(scope.tripId
           ? [eq(trips.id, scope.tripId)]

@@ -374,6 +374,9 @@ export async function duplicateTrip(
       diverCapacity: seats.diverCapacity,
       cancellationWindowHours: source.cancellationWindowHours,
       isPrivate: source.isPrivate,
+      // A copy of a rehearsal is a rehearsal: copying a practice day forward
+      // must not put a real, bookable departure on the board.
+      isRehearsal: source.isRehearsal,
       // Copied like every other stated fact about the departure. A shop that
       // marked a charter self-guided and then copied it to next Saturday must
       // not find the copy raising the row the mark exists to silence.

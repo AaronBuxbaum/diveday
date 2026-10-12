@@ -40,6 +40,7 @@ import {
   type ExportBundleInput,
 } from "@/lib/export";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
+import { withoutRehearsals } from "@/lib/rehearsal-export";
 import { sortBuddyMemberRowsByTeam } from "./buddy-pairs";
 import type { AppDb, AppTransaction } from "./client";
 import { DIVER_EXPORT_FILES } from "./export-diver-files";
@@ -51,6 +52,7 @@ import {
   readPersonScoped,
   readShopScoped,
 } from "./export-tables";
+import { shopRehearsalIds } from "./rehearsals";
 import {
   bookingReferrals,
   bookings,
@@ -66,6 +68,7 @@ import {
   personRoles,
   recapPulses,
   reviewModerationEvents,
+  reviewReplies,
   shops,
   staffShifts,
   tripAssignments,
@@ -93,7 +96,12 @@ export async function loadShopExportBundleInput(
       const context = await loadShopExportContext(tx, shopId);
       if (!context) return null;
       const { shop, photoUrls } = context;
-      const tables = buildExportTables(SHOP_EXPORT_FILES, context);
+      // A rehearsal is practice, not the shop's record (ADR
+      // 20261012-rehearsal-departures): left out of every file at once.
+      const tables = withoutRehearsals(
+        buildExportTables(SHOP_EXPORT_FILES, context),
+        await shopRehearsalIds(tx, shopId),
+      );
       return {
         shopName: shop.name,
         shopSlug: shop.slug,
@@ -118,6 +126,28 @@ async function readSafetyRecordRows(tx: AppTransaction, shopId: string) {
     incidentPersonRows: await readShopScoped(tx, "incidentReportPeople", shopId),
     incidentAddendumRows: await readShopScoped(tx, "incidentReportAddenda", shopId),
   };
+}
+
+/**
+ * Every review the shop holds, with the shop's live public reply under it
+ * riding on its row (`review_replies` is folded: one live reply per review,
+ * batch 4 K2).
+ */
+async function readReviewRowsWithReplies(tx: AppTransaction, shopId: string) {
+  return tx
+    .select({ review: tripReviews, diverName: people.fullName, replyBody: reviewReplies.body })
+    .from(tripReviews)
+    .innerJoin(people, and(eq(people.id, tripReviews.personId), eq(people.shopId, shopId)))
+    .leftJoin(
+      reviewReplies,
+      and(
+        eq(reviewReplies.reviewId, tripReviews.id),
+        eq(reviewReplies.shopId, shopId),
+        isNull(reviewReplies.deletedAt),
+      ),
+    )
+    .where(eq(tripReviews.shopId, shopId))
+    .orderBy(asc(tripReviews.createdAt), asc(tripReviews.id));
 }
 
 /**
@@ -192,12 +222,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     .where(eq(reviewModerationEvents.shopId, shopId))
     .orderBy(asc(reviewModerationEvents.occurredAt), asc(reviewModerationEvents.id));
 
-  const reviewRows = await tx
-    .select({ review: tripReviews, diverName: people.fullName })
-    .from(tripReviews)
-    .innerJoin(people, and(eq(people.id, tripReviews.personId), eq(people.shopId, shopId)))
-    .where(eq(tripReviews.shopId, shopId))
-    .orderBy(asc(tripReviews.createdAt), asc(tripReviews.id));
+  const reviewRows = await readReviewRowsWithReplies(tx, shopId);
 
   // The diver's private word to this shop about the day (ADR
   // 20260904-reef-all-the-way-down, D40). Not a review — it is never
@@ -726,7 +751,10 @@ export async function loadDiverExportBundleInput(
       const context = await loadDiverExportContext(tx, shopId, personId);
       if (!context) return null;
       const { shop, person, photoUrls } = context;
-      const tables = buildExportTables(DIVER_EXPORT_FILES, context);
+      const tables = withoutRehearsals(
+        buildExportTables(DIVER_EXPORT_FILES, context),
+        await shopRehearsalIds(tx, shopId),
+      );
       return {
         shopName: shop.name,
         shopSlug: shop.slug,
@@ -1086,6 +1114,21 @@ export async function loadShopExportCounts(
 ): Promise<ExportFileCount[] | null> {
   const [shop] = await db.select({ id: shops.id }).from(shops).where(eq(shops.id, shopId)).limit(1);
   if (!shop) return null;
+
+  // A shop that has held a rehearsal: its rows are spread over a dozen files,
+  // and the bundle leaves them all out, so the counts are read off the bundle
+  // itself rather than restated file by file (ADR 20261012-rehearsal-departures).
+  const rehearsals = await shopRehearsalIds(db, shopId);
+  if (rehearsals.tripIds.size > 0) {
+    const bundle = await loadShopExportBundleInput(db, shopId);
+    return bundle
+      ? bundle.tables.map((table) => ({
+          file: table.file,
+          note: table.note,
+          count: table.rows.length,
+        }))
+      : null;
+  }
 
   const countOf = async (query: Promise<{ n: number }[]>) => (await query)[0]?.n ?? 0;
   const peopleCount = await countShopScoped(db, "people", shopId);

@@ -80,6 +80,7 @@ import {
   recapPulses,
   rentalFitProfiles,
   reviewModerationEvents,
+  reviewReplies,
   shopPromoCodes,
   shopPromoRedemptions,
   shopStripeAccounts,
@@ -1282,8 +1283,8 @@ export async function resetDemoSchedule(
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
   // The shared close-out photo album also references its trip and uploader.
   await db.delete(tripRecapPhotos).where(eq(tripRecapPhotos.shopId, shopId));
-  // The moderation trail references the review it describes, so it goes first
-  // (ADR 20260813-review-moderation-has-a-floor).
+  // Both name their review, so go first (ADR 20260813-review-moderation-has-a-floor).
+  await db.delete(reviewReplies).where(eq(reviewReplies.shopId, shopId));
   await db.delete(reviewModerationEvents).where(eq(reviewModerationEvents.shopId, shopId));
   // Reviews reference bookings, trips, and people — all three parents below.
   await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));

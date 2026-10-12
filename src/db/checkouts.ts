@@ -177,7 +177,7 @@ export async function startBookingCheckout(
     .leftJoin(courses, eq(courses.id, trips.courseId))
     .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
     .limit(1);
-  if (!tripRow) return { ok: false, reason: "invalid" };
+  if (!tripRow || tripRow.trip.isRehearsal) return { ok: false, reason: "invalid" };
   const shop = await getShopById(db, input.shopId);
   const passThroughFee = parsePassThroughFee(shop?.passThroughFee);
   const bookingRows = await db

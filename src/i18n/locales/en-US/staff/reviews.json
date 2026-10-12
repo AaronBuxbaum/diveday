@@ -61,5 +61,23 @@
   "pulseCategoryBriefing": "Briefing",
   "pulseCategoryBoat": "Boat",
   "pulseCategoryTiming": "Timing",
-  "pulseCategoryOther": "Something else"
+  "pulseCategoryOther": "Something else",
+  "reply": {
+    "open": "Reply in public",
+    "yours": "Reply from {shop}",
+    "fieldLabel": "Your reply",
+    "hint": "Shown under this review on your public pages, signed with your shop’s name. Up to {max, plural, one {# character} other {# characters}}.",
+    "save": "Save reply",
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleteConfirm": "Delete reply",
+    "replied": "Reply published.",
+    "edited": "Reply updated.",
+    "deleted": "Reply deleted.",
+    "notAuthorized": "Replying to reviews is limited to owners and managers.",
+    "empty": "Write a reply before saving.",
+    "tooLong": "Keep the reply to {max, plural, one {# character} other {# characters}}.",
+    "notAnswerable": "Only a published review with words can take a reply."
+  }
 }

@@ -5,6 +5,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/db/trips", () => ({ rollAllSeriesForward: vi.fn() }));
+vi.mock("@/db/rehearsals", () => ({ clearFinishedRehearsals: vi.fn() }));
 vi.mock("@sentry/nextjs", () => ({
   captureCheckIn: vi.fn(() => "check-in-id"),
   captureException: vi.fn(),
@@ -13,6 +14,7 @@ vi.mock("@sentry/nextjs", () => ({
 
 const { getDb } = await import("@/db/client");
 const { rollAllSeriesForward } = await import("@/db/trips");
+const { clearFinishedRehearsals } = await import("@/db/rehearsals");
 const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");
 
@@ -47,6 +49,7 @@ beforeEach(() => {
   vi.mocked(rollAllSeriesForward)
     .mockReset()
     .mockResolvedValue(cleanSweep() as never);
+  vi.mocked(clearFinishedRehearsals).mockReset().mockResolvedValue(0);
 });
 
 // Same fail-closed posture as every other scheduled route: this one *writes*
@@ -108,6 +111,14 @@ describe("GET /api/cron/trip-series — reporting", () => {
     expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
       expect.objectContaining({ status: "ok" }),
     );
+  });
+
+  it("clears the rehearsals that have come home, and says how many", async () => {
+    vi.mocked(clearFinishedRehearsals).mockResolvedValue(2);
+    const response = await GET(cronRequest(`Bearer ${secret}`));
+    expect(clearFinishedRehearsals).toHaveBeenCalledWith(FAKE_DB);
+    await expect(response.json()).resolves.toMatchObject({ rehearsalsCleared: 2 });
+    expect(summaryLine()).toEqual(expect.objectContaining({ rehearsalsCleared: 2 }));
   });
 
   // A pass with nothing to add is the *normal* case — the horizon only needs

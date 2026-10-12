@@ -376,5 +376,6 @@ script again.
 | [20261009-single-use-setup-links](20261009-single-use-setup-links.md) | `/onboard` opens with a single-use link per request, not a standing key | Accepted |  |
 | [20261009-stripe-reversals-reach-diveday](20261009-stripe-reversals-reach-diveday.md) | Record refunds and disputes made outside DiveDay from Stripe's webhooks | Accepted |  |
 | [20261012-incident-reports](20261012-incident-reports.md) | Keep an incident report on the departure, filed once and amended by addenda | Accepted |  |
+| [20261012-rehearsal-departures](20261012-rehearsal-departures.md) | A rehearsal departure for training day, and every place that honors it | Accepted |  |
 
 <!-- adr-index:end -->

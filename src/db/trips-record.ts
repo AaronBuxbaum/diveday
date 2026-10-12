@@ -42,7 +42,7 @@ import {
   type TripScheduleDayInput,
   validateDiveSites,
 } from "./trips-create";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 import { bookedDiversCount, heldSeatCounts, seatHeld } from "./trips-queries";
 
 /**
@@ -88,7 +88,9 @@ export async function tripExistsForShop(
   const rows = await db
     .select({ id: trips.id })
     .from(trips)
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    // A rehearsal is never public (ADR 20261012-rehearsal-departures): its URL
+    // is refused at the edge like a departure that does not exist.
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip(), notRehearsal()))
     .limit(1);
   return rows.length > 0;
 }
@@ -437,6 +439,11 @@ export type UpdateTripOutcome =
  * already recorded a roll call against (CR-006). Both invariants fail
  * closed with a typed reason instead of silently discarding data.
  */
+/** An integer column's new value, or null on a rehearsal (ADR 20261012-rehearsal-departures). */
+function unlessRehearsal(value: number | null) {
+  return sql<number | null>`case when ${trips.isRehearsal} then null else ${value}::integer end`;
+}
+
 export async function updateTrip(
   db: AppDb,
   shopId: string,
@@ -581,18 +588,28 @@ export async function updateTrip(
         startsAt: patch.startsAt,
         endsAt: patch.endsAt,
         capacity: patch.capacity,
-        priceCents: patch.priceCents ?? null,
-        depositCents: patch.depositCents ?? null,
-        cancellationWindowHours: patch.cancellationWindowHours ?? null,
-        minimumBookings: patch.minimumBookings ?? null,
-        minimumDecisionHours: patch.minimumBookings ? (patch.minimumDecisionHours ?? null) : null,
+        // **A rehearsal keeps no price, deposit or minimum** (ADR
+        // 20261012-rehearsal-departures), whatever the details form posts: the
+        // same coercion `insertTripInstance` applies at creation, held here in
+        // SQL against the row's own flag so no edit can make one chargeable.
+        priceCents: unlessRehearsal(patch.priceCents ?? null),
+        depositCents: unlessRehearsal(patch.depositCents ?? null),
+        cancellationWindowHours: unlessRehearsal(patch.cancellationWindowHours ?? null),
+        minimumBookings: unlessRehearsal(patch.minimumBookings ?? null),
+        minimumDecisionHours: unlessRehearsal(
+          patch.minimumBookings ? (patch.minimumDecisionHours ?? null) : null,
+        ),
         plannedDives,
         // Each omitted rather than defaulted: a caller that did not send the
         // field is not asking for a change.
         ...(patch.diveMode === undefined ? {} : { diveMode: patch.diveMode }),
         ...(patch.boatId === undefined ? {} : { boatId: patch.boatId }),
         ...(patch.lensId === undefined ? {} : { lensId: patch.lensId }),
-        ...(patch.isPrivate === undefined ? {} : { isPrivate: patch.isPrivate }),
+        // A rehearsal stays private (`trips_rehearsal_is_private`): unticking
+        // Private on one is a no-op rather than a constraint error.
+        ...(patch.isPrivate === undefined
+          ? {}
+          : { isPrivate: sql<boolean>`(${trips.isRehearsal} or ${patch.isPrivate})` }),
         // **A course session is never self-guided** (issue #1342), the same
         // rule `insertTripInstance` applies to every creation door and for the
         // reason written out there: the mark silences only the shop's own

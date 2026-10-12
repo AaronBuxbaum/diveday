@@ -120,6 +120,7 @@ import {
   recapPhotos,
   recapPulses,
   rentalFitProfiles,
+  reviewReplies,
   rollCallCrewEvents,
   rollCallEvents,
   specialtyCertifications,
@@ -230,6 +231,13 @@ const ERASED_PERSON_COLUMNS = {
  * name-scoped one is skipped, which is a stated residual in the ADR rather
  * than a licence to redact the log.
  */
+/**
+ * What an erased diver's review reply holds afterwards. `review_replies.body`
+ * cannot be empty (its check), and the row is deleted as well, so these words
+ * are never shown; they only say the original was taken out on purpose.
+ */
+const REDACTED_REPLY = "[redacted]";
+
 const MIN_NAME_MATCH_CHARS = 3;
 
 /** Letters, digits and `_` — what Postgres's `\y` treats as inside a word. */
@@ -1358,6 +1366,24 @@ async function scrubReviews(
     .update(tripReviews)
     .set({ comment: null, isPublished: false, publishedAt: null, isStandout: false })
     .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.personId, personId)));
+  // The shop's reply under those reviews (batch 4, K2) answered words that are
+  // gone now, and is free text that may well greet the diver by name. Its
+  // words are blanked and the row deleted, every version, live or not.
+  await tx
+    .update(reviewReplies)
+    .set({ body: REDACTED_REPLY, deletedAt: sql`coalesce(${reviewReplies.deletedAt}, now())` })
+    .where(
+      and(
+        eq(reviewReplies.shopId, shopId),
+        inArray(
+          reviewReplies.reviewId,
+          tx
+            .select({ id: tripReviews.id })
+            .from(tripReviews)
+            .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.personId, personId))),
+        ),
+      ),
+    );
   return [];
 }
 

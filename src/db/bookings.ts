@@ -623,7 +623,12 @@ async function settlePackageCoverage(
     personId: string;
     bookingId: string;
     identityUnconfirmed: boolean;
-    trip: { courseId: string | null; plannedDives: number };
+    /**
+     * A rehearsal spends nothing (ADR 20261012-rehearsal-departures): its seats
+     * are test divers, and a regular who helps on training day keeps the dives
+     * they paid for.
+     */
+    trip: { courseId: string | null; plannedDives: number; isRehearsal: boolean };
     /**
      * A package is prepaid **dives**. A snorkeler's or a rider's seat dives
      * nothing, so it spends none of the holder's: a regular who brings their
@@ -632,7 +637,9 @@ async function settlePackageCoverage(
     participantType: ParticipantType;
   },
 ) {
-  if (input.identityUnconfirmed || !isDiver(input.participantType)) return [];
+  if (input.identityUnconfirmed || !isDiver(input.participantType) || input.trip.isRehearsal) {
+    return [];
+  }
   const spent = await consumeEntitlementsForBooking(tx, {
     shopId: input.shopId,
     personId: input.personId,
@@ -748,6 +755,20 @@ async function noEmailPersonRow(
   };
 }
 
+/**
+ * Whether this departure takes a seat from this actor at all: still scheduled,
+ * not held for conditions, not sailed — and, for a rehearsal, only from staff,
+ * who seat its test divers (ADR 20261012-rehearsal-departures).
+ */
+function tripTakesSeatFrom(
+  trip: typeof trips.$inferSelect | undefined,
+  actor: BookingRequest["actor"],
+): trip is typeof trips.$inferSelect {
+  if (trip?.status !== "scheduled" || trip.conditionsHold) return false;
+  if (hasSailed(trip.startsAt, nowDate())) return false;
+  return actor === "staff" || !trip.isRehearsal;
+}
+
 async function createBookingRecord(
   db: DbExecutor,
   req: BookingRequest,
@@ -771,9 +792,7 @@ async function createBookingRecord(
     .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId), liveTrip()))
     .limit(1)
     .for("update");
-  if (trip?.status !== "scheduled" || trip.conditionsHold || hasSailed(trip.startsAt, nowDate())) {
-    return { ok: false, reason: "trip_unavailable" };
-  }
+  if (!tripTakesSeatFrom(trip, req.actor)) return { ok: false, reason: "trip_unavailable" };
   const participantType: ParticipantType = req.participantType ?? "diver";
   // A course session is diving by definition, and its admission rule, its
   // ratio and its minimum age are all about the student in the water. Recording
@@ -1114,7 +1133,7 @@ async function createBookingRecord(
       personId: person.id,
       bookingId: existing.id,
       identityUnconfirmed,
-      trip: { courseId: trip.courseId, plannedDives: trip.plannedDives },
+      trip,
       participantType,
     });
     pending.push({ req, personId: person.id, identityUnconfirmed });
@@ -1200,7 +1219,7 @@ async function createBookingRecord(
     personId: person.id,
     bookingId: created.id,
     identityUnconfirmed,
-    trip: { courseId: trip.courseId, plannedDives: trip.plannedDives },
+    trip,
     participantType,
   });
 
@@ -1491,7 +1510,7 @@ export async function restoreBooking(
       personId: booking.personId,
       bookingId,
       identityUnconfirmed: booking.identityUnconfirmedAt !== null,
-      trip: { courseId: trip.courseId, plannedDives: trip.plannedDives },
+      trip,
       participantType: booking.participantType,
     });
     return "restored";
@@ -2260,6 +2279,7 @@ async function settleConfirmedPackageCoverage(
       participantType: bookings.participantType,
       courseId: trips.courseId,
       plannedDives: trips.plannedDives,
+      isRehearsal: trips.isRehearsal,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -2271,7 +2291,7 @@ async function settleConfirmedPackageCoverage(
     personId: input.personId,
     bookingId: input.bookingId,
     identityUnconfirmed: false,
-    trip: { courseId: row.courseId, plannedDives: row.plannedDives },
+    trip: row,
     participantType: row.participantType,
   });
 }

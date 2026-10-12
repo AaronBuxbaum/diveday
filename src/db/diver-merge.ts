@@ -315,6 +315,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "recap_pulses.addressed_by_person_id": "which staffer picked the pulse up",
   "staff_replies.sent_by_person_id": "which staffer wrote the reply",
   "review_moderation_events.recorded_by_person_id": "who published or withheld the review",
+  "review_replies.written_by_person_id": "which staffer wrote the shop's reply",
   "roll_call_crew_events.recorded_by_person_id": "who called the crew roll",
   "roll_call_events.recorded_by_person_id": "who called the roll",
   "shop_promo_codes.created_by_person_id": "who wrote the code",

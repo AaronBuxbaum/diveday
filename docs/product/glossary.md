@@ -199,9 +199,11 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Private session / private course
 - Progression order
 - Reconciliation
+- Rehearsal
 - Reminder cadence
 - Reply keyword
 - Retention window
+- Review reply
 - Review request
 - Rider
 - Roll-call checkpoint
@@ -261,6 +263,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Staff credential
 - Supervision claim
 - Surface interval
+- What you might see
 
 ## Rental fit and prep
 

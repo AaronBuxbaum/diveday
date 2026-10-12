@@ -232,7 +232,10 @@
     "language": "Language",
     "signOut": "Sign out",
     "signOutConfirm": "Sign out? Confirm",
-    "signOutPending": "Signing out…"
+    "signOutPending": "Signing out…",
+    "tellUs": "Tell us",
+    "tellUsSubject": "DiveDay note from {shop}",
+    "tellUsBody": "Page: {path}\n\n"
   },
   "shopNavLinks": {
     "badgeBlocked": "{count, plural, one {# person blocked, aboard or on the next boats} other {# people blocked, aboard or on the next boats}}",

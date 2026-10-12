@@ -75,6 +75,7 @@ import {
   recapPulses,
   rentalFitProfiles,
   reviewModerationEvents,
+  reviewReplies,
   rollCallCrewEvents,
   rollCallEvents,
   shopBackupDeliveries,
@@ -220,6 +221,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(tripRecapPhotos).where(eq(tripRecapPhotos.shopId, shopId));
   // Before the reviews it describes: the trail's review_id FK carries no
   // ON DELETE CASCADE (ADR 20260813-review-moderation-has-a-floor).
+  await db.delete(reviewReplies).where(eq(reviewReplies.shopId, shopId));
   await db.delete(reviewModerationEvents).where(eq(reviewModerationEvents.shopId, shopId));
   await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));
   // The review's private sibling, on the same parents (D40).

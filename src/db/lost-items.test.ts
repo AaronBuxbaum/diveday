@@ -14,7 +14,7 @@ import {
   setLostItemStatus,
   tellLostItemOwner,
 } from "./lost-items";
-import { lostItems, shops } from "./schema";
+import { lostItems, shops, trips } from "./schema";
 import { createTrip } from "./trips";
 
 /**
@@ -246,6 +246,29 @@ describe("tellLostItemOwner", () => {
       ),
     ).toEqual({ ok: false, reason: "already_told" });
     expect(email.sent).toHaveLength(1);
+  });
+
+  it("tells nobody about an item found on a rehearsal", async () => {
+    const { db, shop } = ctx;
+    const { trip, booked } = await sailedWithSeat(db, shop.id, { email: "owner-r@example.com" });
+    const result = await recordLostItem(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: booked.bookingId,
+      description: "Red fins",
+      actorPersonId: null,
+    });
+    if (!result.ok) throw new Error(result.reason);
+    await db.update(trips).set({ isRehearsal: true, isPrivate: true }).where(eq(trips.id, trip.id));
+    const email = fakeEmail();
+    expect(
+      await tellLostItemOwner(
+        db,
+        { shopId: shop.id, itemId: result.item.id },
+        { emailProvider: email.provider },
+      ),
+    ).toEqual({ ok: false, reason: "not_found" });
+    expect(email.sent).toHaveLength(0);
   });
 
   it("sends once when two taps race", async () => {

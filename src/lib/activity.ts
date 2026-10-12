@@ -183,6 +183,14 @@ type ActivityParamShapes = {
   departure_copied: { actor: string };
   departure_deleted: { actor: string };
   /**
+   * **The shop answered a review in public** (batch 4, K2): wrote the reply
+   * under it, changed it, or took it down. Filed on the departure the review
+   * is about, and naming no reviewer, like the moderation lines beside it.
+   */
+  review_replied: { actor: string };
+  review_reply_edited: { actor: string };
+  review_reply_deleted: { actor: string };
+  /**
    * An erasure ran over this line.
    *
    * A code rather than a blanked payload, so the row reads the same way it
@@ -273,6 +281,9 @@ export const ACTIVITY_CODES = [
   "departure_moved",
   "departure_copied",
   "departure_deleted",
+  "review_replied",
+  "review_reply_edited",
+  "review_reply_deleted",
   "redacted",
   "demo_charter_confirmed",
   "demo_second_dive_moved",

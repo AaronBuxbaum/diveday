@@ -25,9 +25,11 @@ export async function DepartureNoteSection({
 }: {
   locale: string;
   shop: { id: string; timezone: string };
-  trip: { id: string; status: string; startsAt: Date };
+  trip: { id: string; status: string; startsAt: Date; isRehearsal: boolean };
 }) {
   const t = staffTranslator(locale);
+  // A rehearsal tells nobody anything (ADR 20261012-rehearsal-departures).
+  if (trip.isRehearsal) return null;
   const notes = await listDepartureNotes(await getDb(), shop.id, trip.id);
   const block = departureNoteBlock(trip, notes.length, nowDate());
   if (block && block !== "limit" && notes.length === 0) return null;

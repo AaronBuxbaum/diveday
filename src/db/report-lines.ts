@@ -23,7 +23,7 @@ import {
   trips,
   workOrderBills,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * The three facts the Reports page adds under the month's headline figures
@@ -83,6 +83,8 @@ async function moneyByLine(
     .from(orderLineItems)
     .innerJoin(orders, and(eq(orders.id, orderLineItems.orderId), eq(orders.shopId, shopId)))
     .leftJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
+    // diveday:allow-rehearsal: money only, and a rehearsal can never be
+    // invoiced (`issueOrder` refuses its seats).
     .leftJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
     .where(
       and(
@@ -114,6 +116,8 @@ async function moneyByLine(
         eq(bookingCheckouts.shopId, shopId),
       ),
     )
+    // diveday:allow-rehearsal: money only, and a rehearsal can never be
+    // checked out (`startBookingCheckout` refuses it).
     .innerJoin(trips, and(eq(trips.id, bookingCheckouts.tripId), eq(trips.shopId, shopId)))
     .where(
       and(
@@ -239,6 +243,7 @@ async function returningDivers(
           and earlier_trip.shop_id = ${shopId}
           and earlier_trip.status = 'scheduled'
           and earlier_trip.deleted_at is null
+          and not earlier_trip.is_rehearsal
           and earlier_trip.starts_at < ${startUtc.toISOString()}::timestamptz
       ))`,
     })
@@ -250,6 +255,7 @@ async function returningDivers(
         inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
         ne(trips.status, "cancelled"),
         liveTrip(),
+        notRehearsal(),
         gte(trips.startsAt, startUtc),
         lt(trips.startsAt, endUtc),
       ),

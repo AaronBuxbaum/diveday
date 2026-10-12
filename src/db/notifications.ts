@@ -44,6 +44,7 @@ import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { findCourtesyEmailRecipientByAddress } from "./courtesy-email";
+import { notificationHeldForRehearsal, REHEARSAL_HELD_DELIVERY } from "./rehearsals";
 import {
   bookings,
   courses,
@@ -452,6 +453,12 @@ export async function sendNotification(
     return { status: "failed", retryable: false, errorCode: "invalid_notification" };
   }
 
+  // **A rehearsal sends nothing to anyone** (ADR 20261012-rehearsal-departures).
+  // Held here, at the one door every shop-scoped email passes through, before
+  // the provider is asked, and reported as a non-retryable code so it is never
+  // queued for a second try.
+  if (await notificationHeldForRehearsal(db, input)) return REHEARSAL_HELD_DELIVERY;
+
   let delivery: NotificationDelivery;
   try {
     // Left catching everything on purpose: `withShopSender` reads the database
@@ -506,6 +513,12 @@ export async function sendNotificationBatch(
       const input = batch[index];
       const parsed = notificationSchema.safeParse(input);
       if (parsed.success) {
+        // A member about a rehearsal is held, not sent (ADR
+        // 20261012-rehearsal-departures); the rest of the fan-out goes on.
+        if (await notificationHeldForRehearsal(db, input)) {
+          results[index] = REHEARSAL_HELD_DELIVERY;
+          continue;
+        }
         sendable.push({ index, input });
         continue;
       }
@@ -942,7 +955,10 @@ export async function drainNotificationRetries(
     }
     let delivery: NotificationDelivery;
     try {
-      delivery = await notify(await withShopSender(db, notification, senders), provider);
+      // A queued retry about a rehearsal is held like a first send.
+      delivery = (await notificationHeldForRehearsal(db, notification))
+        ? REHEARSAL_HELD_DELIVERY
+        : await notify(await withShopSender(db, notification, senders), provider);
     } catch (error) {
       delivery = {
         status: "failed",

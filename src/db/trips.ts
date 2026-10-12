@@ -71,7 +71,7 @@ export {
   type TripGuestsFilters,
   type TripGuestsShop,
 } from "./trips-guests";
-export { liveTrip } from "./trips-live";
+export { liveTrip, notRehearsal } from "./trips-live";
 export {
   cancelDeparturesBelowMinimum,
   listDeparturesAwaitingMinimumDecision,

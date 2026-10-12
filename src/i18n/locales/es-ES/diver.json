@@ -122,6 +122,11 @@
     "poweredByDiveDay": "Con la tecnología de DiveDay",
     "moreWaysHeading": "Otras formas de ayudarte",
     "boatsHeading": "Las embarcaciones",
+    "monthSeen": {
+      "heading": "Lo que podrías ver en {month}",
+      "line": "Visto en {seen} de las {trips, plural, one {# salida de {month}} other {# salidas de {month}}} que registraron nuestras tripulaciones",
+      "honest": "Lo que registraron nuestras tripulaciones en las salidas de {month}, en todas las temporadas registradas. Dice lo que se vio, no lo que verás."
+    },
     "boatSeats": "{count, plural, one {# buceador} other {# buceadores}}"
   },
   "trip": {
@@ -577,6 +582,7 @@
     "ratingLegend": "Tu puntuación",
     "ratingOption": "{rating} sobre 5 estrellas",
     "anonymousReviewer": "Un buceador",
+    "replyFrom": "Respuesta de {shop}",
     "commentLabel": "¿Algo que le contarías a otro buceador?",
     "commentPlaceholder": "La tripulación, los puntos, cómo fue la jornada",
     "submit": "Enviar mi opinión",

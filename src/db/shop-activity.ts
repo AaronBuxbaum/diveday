@@ -19,6 +19,7 @@ import {
   personRoles,
   reviewModerationEvents,
   tripChangeEvents,
+  tripReviews,
   trips,
 } from "./schema";
 
@@ -132,8 +133,12 @@ function linesUnion(shopId: string, filter: ShopActivityFilter): SQL | null {
   const actor = (column: SQL) =>
     filter.actorPersonId ? sql` and ${column} = ${filter.actorPersonId}` : sql``;
 
-  if (kind !== "reviews") {
-    const codes = kind ? activityCodesOfKind(kind) : null;
+  // The review kind's own `activity_events` codes (the public replies) ride
+  // this arm too; a kind with no codes of its own skips it, since an empty
+  // code list would otherwise filter nothing.
+  const kindCodes = kind ? activityCodesOfKind(kind) : null;
+  if (!kindCodes || kindCodes.length > 0) {
+    const codes = kindCodes;
     const codeFilter =
       codes && codes.length > 0
         ? sql` and ae.code in (${sql.join(
@@ -304,6 +309,10 @@ export type ShopActivityWrite =
         | "departure_copied"
         | "departure_deleted";
       tripId: string;
+    }
+  | {
+      code: "review_replied" | "review_reply_edited" | "review_reply_deleted";
+      reviewId: string;
     };
 
 /**
@@ -384,6 +393,23 @@ async function writeShopActivity(
       orderId: null,
       subjectPersonId: null,
       entry: { code: write.code, params: { actor: actor.name, diver: seat.diver } },
+    };
+  } else if ("reviewId" in write) {
+    if (!isUuid(write.reviewId)) return false;
+    const [review] = await db
+      .select({ tripId: tripReviews.tripId })
+      .from(tripReviews)
+      .where(and(eq(tripReviews.id, write.reviewId), eq(tripReviews.shopId, shopId)))
+      .limit(1);
+    if (!review) return false;
+    // The departure the review is about, and no reviewer: a review line names
+    // nobody but the staffer who acted (see the module's Erasure note).
+    values = {
+      tripId: review.tripId,
+      bookingId: null,
+      orderId: null,
+      subjectPersonId: null,
+      entry: { code: write.code, params: { actor: actor.name } },
     };
   } else {
     if (!isUuid(write.tripId)) return false;
