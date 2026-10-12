@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { catchUpSentences } from "./desk-event-labels";
 import { staffTranslator } from "./staff-messages";
-import { sayHelloSentences, welcomeCueText, welcomeDockLine } from "./welcome-cue-labels";
+import {
+  sayHelloSentences,
+  welcomeCueText,
+  welcomeDockLine,
+  welcomeDockLineUnchecked,
+} from "./welcome-cue-labels";
 
 const en = staffTranslator("en-US");
 const es = staffTranslator("es-ES");
@@ -108,42 +113,93 @@ describe("welcomeDockLine", () => {
     noCertificationDeclared: false,
     nitrox: false,
     nitroxSelfDeclared: false,
+    verifiedLevel: "open_water" as const,
   };
 
   it("names the diver by first name and the card they hold, in both locales", () => {
-    expect(welcomeDockLine(en, "en-US", { personName: "Priya Sharma", certification: card })).toBe(
+    expect(welcomeDockLine(en, { personName: "Priya Sharma", certification: card })).toBe(
       "Say hello to Priya: Open Water.",
     );
-    expect(
-      welcomeDockLine(es, "es-ES", { personName: "Priya Sharma", certification: card }),
-    ).toMatch(/^Saluda a Priya: .+\.$/);
+    expect(welcomeDockLine(es, { personName: "Priya Sharma", certification: card })).toMatch(
+      /^Saluda a Priya: .+\.$/,
+    );
   });
 
   it("says when the level is only the diver's word", () => {
-    const line = welcomeDockLine(en, "en-US", {
-      personName: "Priya Sharma",
-      certification: { ...card, levelSelfDeclared: true },
-    });
-    expect(line).toContain("Open Water");
-    expect(line).not.toBe("Say hello to Priya: Open Water.");
+    const claimed = { ...card, levelSelfDeclared: true, verifiedLevel: null };
+    expect(welcomeDockLine(en, { personName: "Priya Sharma", certification: claimed })).toBe(
+      "Say hello to Priya: says Open Water.",
+    );
+    expect(welcomeDockLineUnchecked(claimed)).toBe(true);
+  });
+
+  /**
+   * **A card a staffer typed and nobody has verified is not a verified card**
+   * (dive-domain review of the demo layer). It carries no self-declared stamp,
+   * so the summary phrase reads it as a plain "Open Water", and the dock line
+   * did too: the crew greeted a pending card as a checked one.
+   */
+  it("says 'says Open Water' for a pending card a staffer typed, in both locales", () => {
+    const pending = { ...card, levelSelfDeclared: false, verifiedLevel: null };
+    expect(welcomeDockLine(en, { personName: "Priya Sharma", certification: pending })).toBe(
+      "Say hello to Priya: says Open Water.",
+    );
+    expect(welcomeDockLine(es, { personName: "Priya Sharma", certification: pending })).toBe(
+      "Saluda a Priya: dice Open Water.",
+    );
+    expect(welcomeDockLineUnchecked(pending)).toBe(true);
+    expect(welcomeDockLineUnchecked(card)).toBe(false);
+  });
+
+  it("greets with the verified level when a higher card is still pending", () => {
+    const mixed = {
+      ...card,
+      level: "advanced_open_water" as const,
+      verifiedLevel: "open_water" as const,
+    };
+    expect(welcomeDockLine(en, { personName: "Priya Sharma", certification: mixed })).toBe(
+      "Say hello to Priya: Open Water.",
+    );
+    expect(welcomeDockLineUnchecked(mixed)).toBe(false);
+  });
+
+  it("never names nitrox: a greeting is not a fill clearance", () => {
+    const withNitrox = { ...card, nitrox: true };
+    const line = welcomeDockLine(en, { personName: "Priya Sharma", certification: withNitrox });
+    expect(line).toBe("Say hello to Priya: Open Water.");
+    const claimedNitrox = { ...card, nitrox: true, nitroxSelfDeclared: true };
+    expect(
+      welcomeDockLine(es, {
+        personName: "Priya Sharma",
+        certification: claimedNitrox,
+      }),
+    ).not.toMatch(/nitrox/i);
   });
 
   it("says 'not certified yet' for a diver who said so, which is the safety-relevant answer", () => {
-    const line = welcomeDockLine(en, "en-US", {
+    const line = welcomeDockLine(en, {
       personName: "Priya Sharma",
-      certification: { ...card, level: null, noCertificationDeclared: true },
+      certification: { ...card, level: null, verifiedLevel: null, noCertificationDeclared: true },
     });
     expect(line).toMatch(/^Say hello to Priya: .*not certified/i);
+    expect(
+      welcomeDockLineUnchecked({
+        ...card,
+        level: null,
+        verifiedLevel: null,
+        noCertificationDeclared: true,
+      }),
+    ).toBe(true);
   });
 
   it("greets without a card when the shop holds none and the diver said nothing", () => {
-    expect(welcomeDockLine(en, "en-US", { personName: "Priya Sharma", certification: null })).toBe(
+    expect(welcomeDockLine(en, { personName: "Priya Sharma", certification: null })).toBe(
       "Say hello to Priya.",
     );
   });
 
   it("falls back to the whole name when there is no first name to take", () => {
-    expect(welcomeDockLine(en, "en-US", { personName: "Cher", certification: null })).toBe(
+    expect(welcomeDockLine(en, { personName: "Cher", certification: null })).toBe(
       "Say hello to Cher.",
     );
   });

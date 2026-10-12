@@ -9,7 +9,11 @@ import { noShowSalvage } from "@/db/no-show";
 import { listCertificationSummaries } from "@/db/self-declared-cards";
 import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { welcomeCueText, welcomeDockLine } from "@/i18n/welcome-cue-labels";
+import {
+  welcomeCueText,
+  welcomeDockLine,
+  welcomeDockLineUnchecked,
+} from "@/i18n/welcome-cue-labels";
 import { counterIsClear, counterTally, isNoShowAtCounter } from "@/lib/check-in";
 import { formatTime, formatWeekdayTime } from "@/lib/format";
 import { type NoShowClaim, noShowClaim, noShowGate } from "@/lib/no-show";
@@ -292,8 +296,16 @@ export async function buildArrivalDesk({
       <div key="welcome" className="mt-1 text-sm text-muted">
         <p>{welcomeCueText(t, cue)}</p>
         {cue.kind === "first_trip" ? (
-          <p>
-            {welcomeDockLine(t, locale, {
+          // A card nobody has verified wears the warning tone the phrase
+          // wears everywhere else (`certificationSummaryUnchecked`).
+          <p
+            className={
+              welcomeDockLineUnchecked(cards.get(row.personId) ?? null)
+                ? "text-warning-strong"
+                : undefined
+            }
+          >
+            {welcomeDockLine(t, {
               personName: row.personName,
               certification: cards.get(row.personId) ?? null,
             })}

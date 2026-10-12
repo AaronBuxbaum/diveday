@@ -66,6 +66,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Change ledger
 - Conditions hold
 - Day-of help request
+- Dock line
 - Staff note
 
 ## Modeling notes
