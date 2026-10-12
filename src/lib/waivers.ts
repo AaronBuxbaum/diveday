@@ -169,6 +169,28 @@ export function isCompletedWaiverCurrent(
   now: Date = nowDate(),
 ): boolean {
   if (!isCleanCompletion(record)) return false;
+  if (!isSignatureCurrent(record, currentTemplateGeneration, now)) return false;
+  // A cleared referral ages on **two** clocks and stands only while both run.
+  // The signature's is the ordinary one; the physician's evaluation has its own,
+  // because a shop that records a two-year-old letter today has not established
+  // anything for the next twelve months (issue #1252, `dive-domain-expert`
+  // review). Whichever expires first ends the release.
+  const evaluatedAt = clearanceEvaluatedAt(record);
+  return !(evaluatedAt !== null && evaluatedAt + WAIVER_SIGNATURE_VALIDITY_MS <= now.getTime());
+}
+
+/**
+ * The signature half of {@link isCompletedWaiverCurrent}, asking nothing of the
+ * medical: given (signed or parked in medical review), not superseded, against
+ * the shop's current material terms, and inside the validity window. Fails
+ * closed on a missing signature time.
+ */
+function isSignatureCurrent(
+  record: WaiverRecord,
+  currentTemplateGeneration: number | null,
+  now: Date,
+): boolean {
+  if (record.status !== "completed" && record.status !== "medical_review") return false;
   if (record.supersededAt) return false;
   if (
     record.signatureMethod !== "imported" &&
@@ -182,15 +204,6 @@ export function isCompletedWaiverCurrent(
   }
   const signedAt = record.signedAt ?? record.completedAt;
   if (!signedAt) return false;
-  // A cleared referral ages on **two** clocks and stands only while both run.
-  // The signature's is the ordinary one; the physician's evaluation has its own,
-  // because a shop that records a two-year-old letter today has not established
-  // anything for the next twelve months (issue #1252, `dive-domain-expert`
-  // review). Whichever expires first ends the release.
-  const evaluatedAt = clearanceEvaluatedAt(record);
-  if (evaluatedAt !== null && evaluatedAt + WAIVER_SIGNATURE_VALIDITY_MS <= now.getTime()) {
-    return false;
-  }
   return signedAt.getTime() + WAIVER_SIGNATURE_VALIDITY_MS > now.getTime();
 }
 
@@ -255,6 +268,37 @@ export function effectiveWaiverForBooking(input: {
   if (clean) return clean;
 
   return own && !isCleanCompletion(own) ? own : null;
+}
+
+/**
+ * **The release a rider's seat stands on** (H-109, issue #2212).
+ *
+ * A rider stays on the boat, so they are held to the shop's release and to
+ * nothing in its medical. A record a referral parked, or a physician refused,
+ * is still a signature the rider gave, and a hold never outranks an older
+ * clean signature here the way it does for a seat in the water
+ * ({@link effectiveWaiverForBooking}). Every other condition on the signature
+ * stands: current terms, inside the year, not superseded. The newest such
+ * signature wins; with none, the seat's own unsigned link drives the send
+ * flow, and anything else signed but no longer current reads as nothing.
+ *
+ * Only `calculateReadiness` with a rider's seat reads the record this way
+ * (`isHeldToMedical`); the record itself, and what every surface says about
+ * it, is unchanged.
+ */
+export function effectiveReleaseForRiderSeat(input: {
+  bookingWaiver: WaiverRecord | null;
+  personSignedWaivers: readonly WaiverRecord[];
+  currentTemplateVersion: number | null;
+  now?: Date;
+}): WaiverRecord | null {
+  const now = input.now ?? nowDate();
+  const own = input.bookingWaiver;
+  const signed = [...(own ? [own] : []), ...input.personSignedWaivers]
+    .filter((record) => isSignatureCurrent(record, input.currentTemplateVersion, now))
+    .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
+  if (signed) return signed;
+  return own && own.status === "pending" ? own : null;
 }
 
 /**

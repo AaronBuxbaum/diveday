@@ -3,6 +3,7 @@ import type { WaiverRecord } from "@/db/schema";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "./medical";
 import { localTypedConsentProvider, namesakeAttestationProvider } from "./signatures";
 import {
+  effectiveReleaseForRiderSeat,
   effectiveWaiverForBooking,
   isCleanCompletion,
   isCompletedWaiverCurrent,
@@ -999,5 +1000,81 @@ describe("medicalWarningDays", () => {
         "America/New_York",
       ),
     ).toEqual({ referredOn: "2026-06-10" });
+  });
+});
+
+/**
+ * **The release a rider's seat stands on** (H-109, issue #2212). A rider is
+ * held to the shop's release and to nothing in the medical, so a signature a
+ * referral parked or a physician refused is still a signature, and an older
+ * clean one is not outranked by a later hold. Everything else about the
+ * signature still applies: current terms, inside the year, not superseded.
+ */
+describe("effectiveReleaseForRiderSeat", () => {
+  const args = (over: Partial<Parameters<typeof effectiveReleaseForRiderSeat>[0]>) => ({
+    bookingWaiver: null,
+    personSignedWaivers: [],
+    currentTemplateVersion: 1 as number | null,
+    now: SIGN_NOW,
+    ...over,
+  });
+
+  it("stands on a signature a referral or a refusal held", () => {
+    const held = completedWaiver({ status: "medical_review" });
+    expect(effectiveReleaseForRiderSeat(args({ personSignedWaivers: [held] }))).toBe(held);
+    const refused = completedWaiver({
+      status: "medical_review",
+      medicalClearanceDeclinedAt: SIGN_NOW,
+    });
+    expect(effectiveReleaseForRiderSeat(args({ bookingWaiver: refused }))).toBe(refused);
+  });
+
+  it("takes the newest signature, held or clean", () => {
+    const olderClean = completedWaiver({
+      id: "clean",
+      signedAt: new Date(SIGN_NOW.getTime() - 200_000),
+    });
+    const newerHold = completedWaiver({ id: "hold", status: "medical_review" });
+    expect(
+      effectiveReleaseForRiderSeat(args({ personSignedWaivers: [olderClean, newerHold] }))?.id,
+    ).toBe("hold");
+  });
+
+  it("refuses a held signature past the year, or against terms the shop has since changed", () => {
+    const aged = completedWaiver({
+      status: "medical_review",
+      signedAt: new Date(SIGN_NOW.getTime() - WAIVER_SIGNATURE_VALIDITY_MS - 1),
+    });
+    expect(effectiveReleaseForRiderSeat(args({ personSignedWaivers: [aged] }))).toBeNull();
+    expect(effectiveReleaseForRiderSeat(args({ bookingWaiver: aged }))).toBeNull();
+    const oldTerms = completedWaiver({
+      status: "medical_review",
+      templateVersion: 0,
+      templateGeneration: 0,
+    });
+    expect(effectiveReleaseForRiderSeat(args({ personSignedWaivers: [oldTerms] }))).toBeNull();
+  });
+
+  it("refuses a superseded signature, a retired refusal included", () => {
+    const retired = completedWaiver({
+      status: "medical_review",
+      medicalClearanceDeclinedAt: SIGN_NOW,
+      supersededAt: SIGN_NOW,
+    });
+    expect(effectiveReleaseForRiderSeat(args({ personSignedWaivers: [retired] }))).toBeNull();
+  });
+
+  it("refuses a held record with no signature time on it", () => {
+    const unsigned = completedWaiver({
+      status: "medical_review",
+      signedAt: null,
+      completedAt: null,
+    });
+    expect(effectiveReleaseForRiderSeat(args({ bookingWaiver: unsigned }))).toBeNull();
+  });
+
+  it("hands back the seat's own unsigned link when nothing is signed, for the send flow", () => {
+    const pending = completedWaiver({ status: "pending", signedAt: null, completedAt: null });
+    expect(effectiveReleaseForRiderSeat(args({ bookingWaiver: pending }))).toBe(pending);
   });
 });

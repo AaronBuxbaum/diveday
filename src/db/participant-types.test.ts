@@ -215,6 +215,47 @@ describe("the gates a non-diver is not asked to clear", () => {
     }
   });
 
+  it("never holds a rider on a referral or a refusal, and holds a snorkeler on both (H-109)", async () => {
+    const { db, shop, trip, staff } = await benwood();
+    await limits(db, trip.id, 8, null);
+    for (const hold of ["referral", "refusal"] as const) {
+      const rider = await seat(db, shop.id, trip.id, "rider");
+      const snorkeler = await seat(db, shop.id, trip.id, "snorkeler");
+      if (!rider.ok || !snorkeler.ok) throw new Error("setup failed");
+      await heldRelease(db, shop.id, rider.bookingId, hold, staff.id);
+      await heldRelease(db, shop.id, snorkeler.bookingId, hold, staff.id);
+
+      const rows = await listTripReadiness(db, shop.id, trip.id);
+      const codesOf = (bookingId: string) =>
+        rows.find((row) => row.booking.id === bookingId)?.readiness.blockers.map((b) => b.code) ??
+        [];
+      const medical = hold === "referral" ? "medical_review" : "medical_not_cleared";
+      expect(codesOf(rider.bookingId)).not.toContain(medical);
+      // Signed is signed: the held release is the rider's release.
+      expect(codesOf(rider.bookingId).filter((code) => code.startsWith("waiver_"))).toEqual([]);
+      expect(codesOf(snorkeler.bookingId)).toContain(medical);
+    }
+  });
+
+  it("still asks a rider whose held release has aged out to sign again (H-109)", async () => {
+    const { db, shop, trip } = await benwood();
+    await limits(db, trip.id, 8, null);
+    const rider = await seat(db, shop.id, trip.id, "rider");
+    if (!rider.ok) throw new Error("setup failed");
+    await heldRelease(db, shop.id, rider.bookingId, "referral");
+    const longAgo = new Date(nowDate().getTime() - 400 * 24 * 60 * 60 * 1000);
+    await db
+      .update(waiverRecords)
+      .set({ signedAt: longAgo, completedAt: longAgo, consentedAt: longAgo })
+      .where(eq(waiverRecords.bookingId, rider.bookingId));
+
+    const row = (await listTripReadiness(db, shop.id, trip.id)).find(
+      (candidate) => candidate.booking.id === rider.bookingId,
+    );
+    expect(row?.readiness.status).toBe("blocked");
+    expect(row?.readiness.blockers.map((b) => b.code)).toContain("waiver_not_sent");
+  });
+
   it("refuses a snorkeler or a rider on a course session", async () => {
     const { db, shop, trip } = await benwood();
     const [course] = await db
@@ -269,6 +310,41 @@ async function change(
   confirmCertBlock = false,
 ) {
   return setBookingParticipantType(db, { ...ids, bookingId, to, confirmCertBlock });
+}
+
+/**
+ * A release signed on this seat that a medical answer parked: a referral no
+ * physician has answered, or one a physician refused. Signed now, so the
+ * signature itself is current.
+ */
+async function heldRelease(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  hold: "referral" | "refusal",
+  staffId?: string,
+) {
+  await issueWaiverRequest(db, { shopId, bookingId });
+  const at = nowDate();
+  await db
+    .update(waiverRecords)
+    .set({
+      status: "medical_review",
+      medicalReviewRequired: true,
+      signedName: "Guest",
+      signedAt: at,
+      completedAt: at,
+      consentedAt: at,
+      ...(hold === "refusal"
+        ? {
+            medicalClearanceDeclinedAt: at,
+            medicalClearanceDeclinedByPersonId: staffId,
+            medicalClearanceEvaluatedOn: "2026-01-01",
+            medicalClearancePhysicianName: "Dr. Reyes",
+          }
+        : {}),
+    })
+    .where(eq(waiverRecords.bookingId, bookingId));
 }
 
 /** This trip now asks for Advanced Open Water, and nothing else of its own. */
@@ -445,6 +521,36 @@ describe("setBookingParticipantType", () => {
     const readiness = rows.find((row) => row.booking.id === diver.bookingId)?.readiness;
     expect(readiness?.status).toBe("blocked");
     expect(readiness?.blockers.map((blocker) => blocker.code)).toContain("medical_review");
+  });
+
+  it("boards a diver switched to riding past a referral, and the record still says so (H-109)", async () => {
+    // A rider is never held on a medical. The change is not silent: the
+    // governing record still reads as held, which is what the roster shows,
+    // and switching back into the water holds the seat again.
+    const { db, shop, trip, staff } = await benwood();
+    const ids = { shopId: shop.id, tripId: trip.id, actorPersonId: staff.id };
+    await limits(db, trip.id, 8, null);
+    const diver = await seat(db, shop.id, trip.id, "diver");
+    if (!diver.ok) throw new Error("diver not seated");
+    await heldRelease(db, shop.id, diver.bookingId, "referral");
+
+    expect(await change(db, ids, diver.bookingId, "rider")).toMatchObject({ ok: true });
+    const asRider = (await listTripReadiness(db, shop.id, trip.id)).find(
+      (row) => row.booking.id === diver.bookingId,
+    );
+    expect(asRider?.readiness.blockers.map((blocker) => blocker.code) ?? []).not.toContain(
+      "medical_review",
+    );
+    expect(asRider?.readiness.blockers.filter((b) => b.code.startsWith("waiver_"))).toEqual([]);
+    expect(asRider?.waiver?.status).toBe("medical_review");
+
+    expect(await change(db, ids, diver.bookingId, "snorkeler")).toMatchObject({ ok: true });
+    const asSnorkeler = (await listTripReadiness(db, shop.id, trip.id)).find(
+      (row) => row.booking.id === diver.bookingId,
+    );
+    expect(asSnorkeler?.readiness.blockers.map((blocker) => blocker.code)).toContain(
+      "medical_review",
+    );
   });
 
   it("runs the card check on joining the dive, and writes past it only when asked to", async () => {
