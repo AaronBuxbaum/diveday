@@ -4353,6 +4353,7 @@
       "subjectRefused": "{shopName}: You couldn’t be added to {tripTitle}, {when}",
       "subjectRoleChanged": "{shopName}: New role on {tripTitle}, {when}",
       "subjectCalledOff": "{shopName}: {tripTitle}, {when}, is called off",
+      "subjectTimeMoved": "{shopName}: {tripTitle} now leaves {when}",
       "subjectMany": "Your boats at {shopName} changed",
       "intro": "Your boats at {shopName} changed:",
       "assigned": "You’re crewing {tripTitle}, {when}.",
@@ -4363,6 +4364,7 @@
       "roleChanged": "Your role on {tripTitle}, {when}, is now {role}.",
       "roleChangedNoRole": "Your role on {tripTitle}, {when}, changed.",
       "calledOff": "{tripTitle}, {when}, was called off. You’re not needed for it.",
+      "timeMoved": "{tripTitle} now leaves {when}, not {previousWhen}.",
       "asRole": "You’re on as {role}.",
       "roles": {
         "instructor": "instructor",

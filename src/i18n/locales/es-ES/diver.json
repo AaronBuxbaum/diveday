@@ -4353,6 +4353,7 @@
       "subjectRefused": "{shopName}: No se te pudo sumar a {tripTitle}, {when}",
       "subjectRoleChanged": "{shopName}: Nuevo puesto en {tripTitle}, {when}",
       "subjectCalledOff": "{shopName}: {tripTitle}, {when}, se canceló",
+      "subjectTimeMoved": "{shopName}: {tripTitle} cambia de hora, {when}",
       "subjectMany": "Cambiaron tus salidas en {shopName}",
       "intro": "Cambiaron tus salidas en {shopName}:",
       "assigned": "Estás en el equipo de {tripTitle}, {when}.",
@@ -4363,6 +4364,7 @@
       "roleChanged": "Tu puesto en {tripTitle}, {when}, ahora es {role}.",
       "roleChangedNoRole": "Cambió tu puesto en {tripTitle}, {when}.",
       "calledOff": "{tripTitle}, {when}, se canceló. No te necesitan para esa salida.",
+      "timeMoved": "{tripTitle} cambió de hora: ahora sale {when}, no {previousWhen}.",
       "asRole": "Vas como {role}.",
       "roles": {
         "instructor": "instructor de buceo",
