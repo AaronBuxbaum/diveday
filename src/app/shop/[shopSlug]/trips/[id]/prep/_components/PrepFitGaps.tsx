@@ -28,10 +28,10 @@ export function PrepFitGaps({ view }: { view: PrepView }) {
               telling the packer nobody asked would send them to re-ask a
               question that already has half an answer. */}
       {checklist.diversWithIncompleteFit.length > 0 ? (
-        <SectionCard
-          title={t("tripPrep.missingSizesHeading")}
-          description={t("tripPrep.missingSizesDescription")}
-        >
+        // No description: what a missing size costs is said on the piece
+        // itself, "Size missing" in the packing list below (UX review
+        // 2026-10-10, item 26), not in a sentence about the list.
+        <SectionCard title={t("tripPrep.missingSizesHeading")}>
           {/* Two different situations, said differently: a diver with
                   *some* sizes on file keeps a row naming exactly what's
                   missing, while the never-asked share one sentence said once
