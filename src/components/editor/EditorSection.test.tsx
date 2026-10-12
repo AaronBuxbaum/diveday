@@ -176,6 +176,51 @@ describe("an editor section on a phone", () => {
     expect(header(/The pitch/)).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("survives a malformed fragment in the address and in a link, and still opens nothing", () => {
+    // `decodeURIComponent("%E0%A4%A")` throws URIError; thrown inside the
+    // layout effect it took every section's wiring down with it.
+    window.history.replaceState(null, "", "#%E0%A4%A");
+    try {
+      render(
+        <>
+          <a href="#%E0%A4%A">Broken</a>
+          <Form />
+        </>,
+      );
+      expect(() => fireEvent.click(screen.getByRole("link", { name: "Broken" }))).not.toThrow();
+      expect(header(/The pitch/)).toHaveAttribute("aria-expanded", "true");
+      // The wiring is still up: a well-formed jump still opens its section.
+      fireEvent.click(header(/Questions/));
+      expect(header(/Questions/)).toHaveAttribute("aria-expanded", "true");
+    } finally {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  });
+
+  it("names a folded section's ticked boxes by their labels, and says nothing for an unticked one", () => {
+    render(
+      <form>
+        <EditorSection id="lead" label="Lead" lead>
+          <input aria-label="Name" name="name" />
+        </EditorSection>
+        <EditorSection id="certs" label="Certification" as="fieldset">
+          <label>
+            <input type="checkbox" name="nitrox" defaultChecked /> Nitrox
+          </label>
+          <label>
+            <input type="checkbox" name="deep" /> Deep
+          </label>
+          <label>
+            <input type="checkbox" name="wreck" defaultChecked /> Wreck
+          </label>
+        </EditorSection>
+      </form>,
+    );
+    expect(header(/Certification/).querySelector("[data-section-preview]")).toHaveTextContent(
+      /^Nitrox · Wreck$/,
+    );
+  });
+
   it("opens a folded section the browser refuses a required field in", () => {
     render(<Form />);
     act(() => {
