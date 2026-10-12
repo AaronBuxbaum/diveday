@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen, within } from "@testing-library/react";
+import { prerender } from "react-dom/static";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ACTION_KIND_META,
@@ -543,6 +544,81 @@ describe("the desk group", () => {
  * from `TodayQueue.test.tsx` when the queue became the spine; the conditions
  * are restated in spine terms and nothing was dropped.
  */
+/**
+ * **A claim a wind row would contradict waits for the wind** (code review
+ * 2026-10-11, item 1, dive-domain review). The high-wind rows stream in after
+ * the queue, so the two good-news claims render only once the forecast has
+ * answered. Rendered on the server, as the page streams it: `signal` stops the
+ * render with the forecast still out, so the fallbacks stand where it lands.
+ */
+describe("the good-news moments, beside a forecast still arriving", () => {
+  const windRow = action({
+    id: "high-wind:t1",
+    kind: "high_wind_alert",
+    detail: "Forecast 25 kt wind from NE.",
+    departure: boat("t1"),
+    aboutDeparture: true,
+  });
+
+  async function prerenderSpine(
+    actions: TodayAction[],
+    highWind: Promise<readonly TodayAction[]>,
+    signal?: AbortSignal,
+  ) {
+    const { prelude } = await prerender(
+      <DaySpine
+        spine={assembleDaySpine(
+          { departures: [departure()], actions },
+          { departures: [], actions: [] },
+        )}
+        highWind={highWind}
+        shopSlug="blue-mantis"
+        shopName="Blue Mantis"
+        locale="en-US"
+        timeZone="America/New_York"
+        currency="usd"
+        now={NOW}
+      />,
+      { progressiveChunkSize: Number.POSITIVE_INFINITY, signal, onError: () => {} },
+    );
+    return new Response(prelude).text();
+  }
+  const cleanRoster = [
+    action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+    action({ id: "later", kind: "waiver", departure: boat("t9") }),
+  ];
+
+  it("never calls today's boats clear above a wind warning on one of them", async () => {
+    const html = await prerenderSpine(cleanRoster, Promise.resolve([windRow]));
+    expect(html).toContain("Forecast 25 kt wind from NE.");
+    expect(html).not.toContain("Today’s boats are all clear");
+    expect(html).not.toContain("Nothing is waiting on you");
+  });
+
+  it("never says nothing is waiting while a wind warning is", async () => {
+    const html = await prerenderSpine([], Promise.resolve([windRow]));
+    expect(html).toContain("Forecast 25 kt wind from NE.");
+    expect(html).not.toContain("Nothing is waiting on you");
+    expect(html).not.toContain("Today’s boats are all clear");
+  });
+
+  it("says either once a calm forecast answers", async () => {
+    expect(await prerenderSpine(cleanRoster, Promise.resolve([]))).toContain(
+      "Today’s boats are all clear",
+    );
+    expect(await prerenderSpine([], Promise.resolve([]))).toContain("Nothing is waiting on you");
+  });
+
+  it("says neither while the forecast is out, and says it is checking", async () => {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 0);
+    const html = await prerenderSpine(cleanRoster, new Promise(() => {}), controller.signal);
+    expect(html).toContain("Checking the forecast…");
+    expect(html).not.toContain("Today’s boats are all clear");
+    expect(html).toContain("Diver");
+  });
+});
+
 describe("the good-news moments", () => {
   it("celebrates once today's stations carry nothing pressing but later work remains", () => {
     renderSpine({

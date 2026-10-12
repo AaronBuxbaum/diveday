@@ -488,6 +488,94 @@ async function HighWindRows({
   );
 }
 
+/** The wind rows' place while the forecast is out: a late warning is never mistaken for none. */
+function ForecastPending({ t, className }: { t: StaffTranslator; className?: string }) {
+  return (
+    <p className={`text-sm text-muted ${className ?? ""}`}>
+      {t("today.todayQueue.checkingForecast")}
+    </p>
+  );
+}
+
+async function WindGate({
+  wind,
+  show,
+  children,
+}: {
+  wind: Promise<readonly TodayAction[]>;
+  show: (rows: readonly TodayAction[]) => boolean;
+  children: React.ReactNode;
+}) {
+  return show(await wind) ? children : null;
+}
+
+/**
+ * **A claim a wind row would contradict waits for the wind** (code review
+ * 2026-10-11, item 1, dive-domain review). "Today's boats are all clear" and
+ * "nothing is waiting on you" are statements about every row, and the
+ * high-wind rows stream in after the queue: painted first, either line could
+ * stand above a 25 kt warning a second later. So each renders only once the
+ * forecast has answered and `show` agrees; nothing else on the page waits.
+ * Without a forecast promise it decides at once, from no wind.
+ */
+function UnlessWindy({
+  wind,
+  show,
+  children,
+}: {
+  wind?: Promise<readonly TodayAction[]>;
+  show: (rows: readonly TodayAction[]) => boolean;
+  children: React.ReactNode;
+}) {
+  if (!wind) return show([]) ? children : null;
+  return (
+    <Suspense fallback={null}>
+      <WindGate wind={wind} show={show}>
+        {children}
+      </WindGate>
+    </Suspense>
+  );
+}
+
+/**
+ * The whole week is in order — the queue's own good-news moment, and the only
+ * thing that stands where the work would be.
+ */
+function QueueEmpty({
+  t,
+  now,
+  timeZone,
+  shopName,
+  shopSlug,
+}: {
+  t: StaffTranslator;
+  now: Date;
+  timeZone: string;
+  shopName: string;
+  shopSlug: string;
+}) {
+  return (
+    <EmptyState
+      titleId="queue-heading"
+      title={t("today.todayQueue.emptyHeading")}
+      body={
+        <>
+          {t("today.todayQueue.emptyBody")}{" "}
+          {seasonalBriefingText(t, getSeasonalBriefing(now, timeZone), shopName)}
+        </>
+      }
+      action={
+        <Link
+          href={`/shop/${shopSlug}/schedule/board`}
+          className={buttonClass({ variant: "secondary", size: "sm" })}
+        >
+          {t("today.todayQueue.emptyAction")}
+        </Link>
+      }
+    />
+  );
+}
+
 function Stations({
   stations,
   crewedTripIds,
@@ -695,8 +783,15 @@ export function DaySpine({
   // boarding blocker, which is the day a shop most deserves to be told it is
   // on its four hundredth diver.
   const factOfScaleLine = !allHomeLine && !firstBookingMark && factOfScale != null;
-  const boatsClearLine =
-    !allHomeLine && !firstBookingMark && !factOfScaleLine && todaysBoatsAreClear(spine);
+  // Clear of everything the queue answered; the wind decides the rest (`UnlessWindy`).
+  const clearUnlessWindy =
+    !allHomeLine &&
+    !firstBookingMark &&
+    !factOfScaleLine &&
+    spine.stations.length > 0 &&
+    (jobs === 0 || todaysBoatsAreClear(spine));
+  const windOnToday = (wind: readonly TodayAction[]) =>
+    wind.some((row) => row.departure != null && liveTripIds.has(row.departure.tripId));
   const closing = evening?.close.closing === true;
   // **One "Needs you" list** (ADR 20261001-logbook, decision 4): every job on
   // today's boats and at the desk, ranked together — danger first, then by
@@ -772,8 +867,10 @@ export function DaySpine({
             back: evening.close.back,
           })}
         </EarnedMomentLine>
-      ) : boatsClearLine ? (
-        <EarnedMomentLine>{t("today.todayQueue.boatsClear")}</EarnedMomentLine>
+      ) : clearUnlessWindy ? (
+        <UnlessWindy wind={highWind} show={(wind) => jobs + wind.length > 0 && !windOnToday(wind)}>
+          <EarnedMomentLine>{t("today.todayQueue.boatsClear")}</EarnedMomentLine>
+        </UnlessWindy>
       ) : null}
 
       {/* **One fact of scale, on the day it is true** (ADR
@@ -957,7 +1054,7 @@ export function DaySpine({
       ) : null}
 
       {highWind ? (
-        <Suspense fallback={null}>
+        <Suspense fallback={<ForecastPending t={t} />}>
           <HighWindRows rows={highWind} tripIds={liveTripIds} controls={controls} />
         </Suspense>
       ) : null}
@@ -967,24 +1064,9 @@ export function DaySpine({
           a shop still in first-run: that shop has no roster to make a claim
           about (issue #711), and its setup ledger leads the page. */}
       {jobs === 0 && !closing && !firstRun ? (
-        <EmptyState
-          titleId="queue-heading"
-          title={t("today.todayQueue.emptyHeading")}
-          body={
-            <>
-              {t("today.todayQueue.emptyBody")}{" "}
-              {seasonalBriefingText(t, getSeasonalBriefing(now, timeZone), shopName)}
-            </>
-          }
-          action={
-            <Link
-              href={`/shop/${shopSlug}/schedule/board`}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("today.todayQueue.emptyAction")}
-            </Link>
-          }
-        />
+        <UnlessWindy wind={highWind} show={(wind) => wind.length === 0}>
+          <QueueEmpty t={t} now={now} timeZone={timeZone} shopName={shopName} shopSlug={shopSlug} />
+        </UnlessWindy>
       ) : null}
 
       {/* **What today made** (issue #1930). While one boat is out there is no
@@ -1037,7 +1119,7 @@ export function DaySpine({
                   controls={controls}
                 />
                 {highWind ? (
-                  <Suspense fallback={null}>
+                  <Suspense fallback={<ForecastPending t={t} className="mt-4" />}>
                     <HighWindRows
                       rows={highWind}
                       tripIds={new Set(spine.tomorrow.stations.map((station) => station.tripId))}
