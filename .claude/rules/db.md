@@ -17,7 +17,10 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
   from the barrel, edit the sibling.
 - **Demo data** is a new `src/db/seed-<scenario>.ts` plus one line in `src/db/seed.ts`, never rows
   wedged into an existing scenario (ADR 20260803-seed-scenario-modules), and never a failure state
-  in blue-mantis.
+  in blue-mantis. Seed crew goes into `trip_assignments` with direct inserts, not through
+  `setTripCrew`: that writer accepted every seeded crew unchanged, but it also queues crew notices
+  and manifest pushes that a fixture should not hold. Instead, `seed-trips.test.ts` replays every
+  seeded roster through `setTripCrew` and expects each one to be accepted (issue #1813).
 - **Bookings**: `src/db/bookings.ts`, tests first. **Seating a diver**: one consequence path,
   `src/db/seat-diver.ts`.
 - **Retention**: `RETENTION_DAYS` in `src/lib/retention.ts`, the prune in `src/db/retention.ts`.
