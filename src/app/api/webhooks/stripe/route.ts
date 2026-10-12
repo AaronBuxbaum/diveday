@@ -40,6 +40,7 @@ import { errorCauseTokens, errorClassToken } from "@/lib/error-token";
 import { type LogContext, log } from "@/lib/log";
 import { invoicePaymentIntentId } from "@/lib/payments/invoicing";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
+import { refundFailureReasonOf } from "@/lib/payments/refund-failure-reason";
 import { demoStripeAccount, platformKeyIsLive } from "@/lib/payments/stripe-keys";
 import { type StripeWebhookEvent, verifyStripeWebhook } from "@/lib/payments/webhook";
 
@@ -115,7 +116,9 @@ const refundObjectSchema = z.object({
   amount: z.number().int().nonnegative(),
   currency: z.string().min(1),
   status: z.string().nullable().optional(),
-  failure_reason: z.string().nullable().optional(),
+  // Narrowed to Stripe's documented codes: the row is kept through an erasure
+  // on the promise that it holds no free text.
+  failure_reason: z.unknown().optional().transform(refundFailureReasonOf),
   payment_intent: z
     .union([z.string().min(1), z.object({ id: z.string().min(1) })])
     .nullable()
