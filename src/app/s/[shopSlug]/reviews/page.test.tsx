@@ -32,7 +32,8 @@ vi.mock("@/i18n/request", () => ({
   requestTranslator: vi.fn(async () => ({ locale: "en-US", t: diverTranslator("en-US") })),
 }));
 
-const { listPublishedShopReviewsPage } = await import("@/db/reviews");
+const { getShopRatingDistribution, getShopReviewAggregate, listPublishedShopReviewsPage } =
+  await import("@/db/reviews");
 const { shopBySlugCached } = await import("@/db/shops-cached");
 const { default: PublicReviewsPage } = await import("./page");
 
@@ -106,5 +107,56 @@ describe("a shop that switched reviews off", () => {
       reviewsEnabled: false,
     } as never);
     await expect(renderPage(1, 1)).rejects.toThrow(/NEXT_HTTP_ERROR_FALLBACK;404/);
+  });
+});
+
+/**
+ * **A distribution with empty bars reads as fabricated** (UX review
+ * 2026-10-10, item 17): "83 reviews" over three zero bars and four written
+ * reviews. A bar shows once it has a count, and the line names ratings and
+ * written reviews apart.
+ */
+describe("the rating summary", () => {
+  async function renderSummary(written: number) {
+    vi.mocked(getShopReviewAggregate).mockResolvedValueOnce({ average: 4.3, count: 83 } as never);
+    vi.mocked(getShopRatingDistribution).mockResolvedValueOnce(
+      new Map([
+        [5, 28],
+        [4, 54],
+        [3, 1],
+      ]),
+    );
+    vi.mocked(listPublishedShopReviewsPage).mockResolvedValue({
+      reviews: [],
+      page: 1,
+      pageCount: 1,
+      pageSize: 20,
+      total: written,
+    } as never);
+    render(
+      await PublicReviewsPage({
+        params: Promise.resolve({ shopSlug: "blue-mantis" }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+  }
+
+  it("draws a bar only for a star count somebody gave", async () => {
+    await renderSummary(4);
+    expect(screen.getByText("5 out of 5 stars")).toBeInTheDocument();
+    expect(screen.getByText("3 out of 5 stars")).toBeInTheDocument();
+    expect(screen.queryByText("2 out of 5 stars")).toBeNull();
+    expect(screen.queryByText("1 out of 5 stars")).toBeNull();
+  });
+
+  it("counts ratings and written reviews apart", async () => {
+    await renderSummary(4);
+    expect(screen.getByText("83 ratings · 4 reviews")).toBeInTheDocument();
+    expect(screen.queryByText("83 reviews")).toBeNull();
+  });
+
+  it("says ratings alone when nobody wrote anything", async () => {
+    await renderSummary(0);
+    expect(screen.getByText("83 ratings")).toBeInTheDocument();
   });
 });

@@ -702,14 +702,14 @@ export default async function TripDetailPage({
                 names a card — which of the day's sites go deeper than that card
                 covers. Facts the shop already publishes (issue #1479); the beat
                 stays time-neutral, since durations promise no clock. */}
-            {/* Its run closes itself, except over a pitch that opens on its
-                door's own rule (pixel-craft class 6). */}
+            {/* Its run closes itself, unless a pitch opens on its rule (pixel-craft class 6). */}
             <TripDayPlan
               briefings={diveBriefings}
               nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew)}
               sightings={seenBySite}
               shop={shop}
               locale={locale}
+              logEntry={inPast ? undefined : { startsAt: trip.startsAt, isCourse: !!trip.course }}
               profile={{
                 rhythm: shop,
                 depthUnit: shop.depthUnit,

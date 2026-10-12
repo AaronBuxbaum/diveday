@@ -316,7 +316,14 @@ export function effectiveReleaseForRiderSeat(input: {
 export type ShopWaiverStatus =
   | { state: "none" }
   /** Signed, clean, against current terms, and inside the validity window. */
-  | { state: "current"; signedAt: Date; expiresAt: Date; medical: MedicalWaiverMark | null }
+  | {
+      state: "current";
+      /** The signed record itself, so the diver record can open it (UX review 2026-10-10, item 27). */
+      recordId: string;
+      signedAt: Date;
+      expiresAt: Date;
+      medical: MedicalWaiverMark | null;
+    }
   /**
    * Signed before, but the signature no longer stands — aged past the validity
    * window, or given against terms the shop has since edited. Either way the
@@ -413,6 +420,7 @@ export function shopWaiverStatus(input: {
   if (clean) {
     return {
       state: "current",
+      recordId: clean.id,
       signedAt: new Date(signatureTime(clean)),
       expiresAt: new Date(signatureTime(clean) + WAIVER_SIGNATURE_VALIDITY_MS),
       medical: medicalWaiverMark(clean, input.personSignedWaivers),
