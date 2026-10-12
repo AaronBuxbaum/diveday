@@ -193,7 +193,8 @@
   "remove": {
     "removePersonSummary": "Delete {name}",
     "removing": "Deleting…",
-    "removeDiver": "Delete diver"
+    "removeDiver": "Delete diver",
+    "staffWarning": "They also work here. Deleting them takes them off the team, and they can no longer sign in."
   },
   "removed": {
     "badge": "Deleted",
@@ -441,6 +442,7 @@
     "noCertificationNothingToClear": "Nothing to clear. This diver’s record no longer says they have no certification.",
     "notAuthorizedCards": "Your account can’t change certifications for this shop any more. Ask an owner or manager to check your access.",
     "notAuthorizedDelete": "Deleting a diver is limited to owners and managers. Ask one of them to do it.",
+    "removeCrewUpcoming": "They are crew on a departure still ahead. Take them off those boats, then delete.",
     "notAuthorizedDetails": "Your account can’t edit this diver for this shop any more. Ask an owner or manager to check your access.",
     "notAuthorizedErase": "Erasing a diver’s personal data is limited to the shop owner. Ask them to do it.",
     "notAuthorizedFit": "Changing a diver’s stated rental fit is limited to owners, managers, instructors, and divemasters. You can still flag them for hands-on fitting at check-in.",

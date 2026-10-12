@@ -4,6 +4,7 @@ import { canPersonDeleteDiver, canPersonErasePersonalData, canPersonMergeDiver }
 import { DIVER_MERGE_FIELDS, type DiverMergeChoices, mergeDiverRecords } from "@/db/diver-merge";
 import { deleteDiver, getDiverProfile, restoreDiver } from "@/db/divers";
 import { eraseGuardianEmail } from "@/db/guardian-erasure";
+import { countUpcomingCrewDepartures } from "@/db/trips";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
@@ -84,6 +85,13 @@ export async function deletePersonAction(shopSlug: string, personId: string, _fo
   // owner/manager only (H-14, ADR 20260724-role-authorization).
   if (!(await canPersonDeleteDiver(db, staff.user.shopId, staff.user.personId))) {
     revalidateAndRedirect(base, backTo(base, "not-authorized-delete", "remove"));
+    return;
+  }
+  // Someone who also works here and is still crew on a boat ahead would stay
+  // on that manifest, and in its crew ratio, after leaving every picker and
+  // sign-in. They come off those boats first.
+  if ((await countUpcomingCrewDepartures(db, staff.user.shopId, personId)) > 0) {
+    revalidateAndRedirect(base, backTo(base, "remove-crew-upcoming", "remove"));
     return;
   }
   const deleted = await deleteDiver(db, staff.user.shopId, personId);
