@@ -105,6 +105,18 @@ export const tripSeries = pgTable(
      * (`rollAllSeriesForward`). Written on every attempt, including a failed one.
      */
     lastRolledAt: timestamp("last_rolled_at", { withTimezone: true }),
+    /**
+     * **The run has a standing crew**: every date the horizon roll adds is
+     * crewed like the furthest-out date already on the board, the same way it
+     * already copies that date's boat, legs and price. Set by "Apply this
+     * date's details" with its crew switch on, which also gives every upcoming
+     * date that crew. Each date is still checked on its own: a person already
+     * on another boat in those hours, or no longer on the staff, is left off
+     * that date, and the staffing week's gap and clash warnings read every date
+     * as they always have (ADR 20260810-open-ended-recurring-trips, addendum
+     * 2026-10-12).
+     */
+    standingCrew: boolean("standing_crew").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

@@ -169,6 +169,11 @@ type ActivityParamShapes = {
   departure_copied: { actor: string };
   departure_deleted: { actor: string };
   /**
+   * The departure came off the board with the rest of its repeating run
+   * ("Cancel every upcoming date"), through the blow-out cascade.
+   */
+  series_cancelled: { actor: string };
+  /**
    * An erasure ran over this line.
    *
    * A code rather than a blanked payload, so the row reads the same way it
@@ -255,6 +260,7 @@ export const ACTIVITY_CODES = [
   "departure_moved",
   "departure_copied",
   "departure_deleted",
+  "series_cancelled",
   "redacted",
   "demo_charter_confirmed",
   "demo_second_dive_moved",

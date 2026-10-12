@@ -454,6 +454,8 @@ export type TripBlowoutEmailInput = {
   tripTitle: string;
   startsAt: Date;
   timezone: string;
+  /** Weather unless the shop cancelled a repeating trip's upcoming dates together. */
+  cause?: "weather" | "run_ended";
   /** Codes, not amounts — see the kind's schema (docs ADR 20260804-blowout-cascade). */
   paymentStory: "none" | "deposit" | "paid" | "refunded" | "refund_owed";
   /** Soonest-first, admission-filtered for this diver; empty is a real answer. */
@@ -499,12 +501,17 @@ export function tripBlowoutEmail(input: TripBlowoutEmailInput): NotificationEmai
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
-  const body = t("notifications.tripBlowout.body", {
+  // A run the shop stopped is not the weather, and the diver is told which.
+  const bodyKey =
+    input.cause === "run_ended"
+      ? "notifications.tripBlowout.bodyRunEnded"
+      : "notifications.tripBlowout.body";
+  const body = t(bodyKey, {
     shopName: input.shopName,
     tripTitle: input.tripTitle,
     date,
   });
-  const bodyHtml = t("notifications.tripBlowout.body", {
+  const bodyHtml = t(bodyKey, {
     shopName: escapeHtml(input.shopName),
     tripTitle: `<strong>${escapeHtml(input.tripTitle)}</strong>`,
     date: escapeHtml(date),

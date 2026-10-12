@@ -173,6 +173,10 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // from a year the shop never named.
       "season_start_month",
       "season_start_day",
+      // The day the shop says it is back on the water, typed beside the
+      // season start in Settings. Exported for the same reason: a restore
+      // must not quietly drop the date its off-season page promises.
+      "reopens_on",
       // When somebody is at the desk, a window the shop chose (the
       // after-hours ping, `src/lib/desk-hours.ts`). Exported for the reason
       // the season is: a restore must not quietly move the shop's hours.
@@ -237,6 +241,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         JSON.stringify(shop.emergencyReference),
         shop.seasonStartMonth,
         shop.seasonStartDay,
+        shop.reopensOn,
         shop.deskOpensMinute,
         shop.deskClosesMinute,
         shop.searchListingOptOutAt,
@@ -691,6 +696,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "anchor_date",
       "ends_on",
       "occurrence_count",
+      // Whether the run's crew follows it onto new dates; the shop's own
+      // choice, so its backup carries it.
+      "standing_crew",
       "last_rolled_at",
       "created_at",
     ],
@@ -707,6 +715,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.anchorDate,
         row.endsOn,
         row.occurrenceCount,
+        row.standingCrew,
         row.lastRolledAt,
         row.createdAt,
       ]),

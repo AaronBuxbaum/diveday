@@ -482,7 +482,7 @@ export type TripActivityEntry =
       cleared: string;
     }
   | { code: "crew_assigned" | "crew_removed"; crew: string }
-  | { code: "blowout_called" | "booking_link_requested" | "seat_claimed" };
+  | { code: "blowout_called" | "series_cancelled" | "booking_link_requested" | "seat_claimed" };
 
 export async function recordTripActivity(
   db: DbExecutor,

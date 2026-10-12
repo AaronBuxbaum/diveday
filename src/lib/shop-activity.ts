@@ -66,6 +66,7 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   departure_moved: "departures",
   departure_copied: "departures",
   departure_deleted: "departures",
+  series_cancelled: "departures",
   order_refunded: "money",
   seat_refunded: "money",
   payment_waived: "money",

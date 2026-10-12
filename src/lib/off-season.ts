@@ -1,3 +1,5 @@
+import { type CalendarDate, calendarDateInTimezone, isValidCalendarDate } from "./calendar-date";
+
 /**
  * **The off-season as a designed state** (N-45).
  *
@@ -12,11 +14,14 @@
  * honestly say about when it is not.** Codes and instants —
  * never sentences.
  *
- * **Nothing new is stored.** A departure the shop put on the board is the
- * strongest possible statement that it is running that day. A second place to
- * say "we open in March" would be the one nobody remembers to update, and a
- * storefront confidently naming a date the shop has moved on from is worse
- * than one that names none.
+ * **A departure outranks anything typed.** A departure the shop put on the
+ * board is the strongest possible statement that it is running that day, so it
+ * is always the date named when there is one. Only a board with nothing on it
+ * at all falls back to the date the shop typed in Settings
+ * (`shops.reopens_on`, 2026-10-12): a shop between seasons, with next year not
+ * yet scheduled, could otherwise tell nobody when it reopens. That date speaks
+ * only while it is still ahead, so one nobody updated goes quiet by itself the
+ * day it passes rather than naming a reopening that has come and gone.
  */
 
 /**
@@ -41,6 +46,12 @@ export type OffSeason = {
    * then no departure to name, and inventing a date is not this module's job.
    */
   opensAt: Date | null;
+  /**
+   * The shop's own "back out on" date, only while the board is empty outright
+   * and the date is still ahead of the shop's today. Null whenever `opensAt` is
+   * set: a scheduled departure is the fact, and the typed date only a plan.
+   */
+  reopensOn: CalendarDate | null;
 };
 
 /**
@@ -55,13 +66,27 @@ export type OffSeason = {
 export function offSeason({
   now,
   firstDeparture,
+  reopensOn = null,
+  timeZone,
   quietDays = OFF_SEASON_QUIET_DAYS,
 }: {
   now: Date;
   firstDeparture: Date | null;
+  /** `shops.reopens_on`: the shop's typed date, a shop-local calendar date. */
+  reopensOn?: CalendarDate | null;
+  /** The shop's zone, which decides whether `reopensOn` is still ahead. */
+  timeZone: string;
   quietDays?: number;
 }): OffSeason {
   const quiet =
     firstDeparture === null || firstDeparture.getTime() - now.getTime() > quietDays * DAY_MS;
-  return { quiet, opensAt: quiet ? firstDeparture : null };
+  const typed =
+    quiet &&
+    firstDeparture === null &&
+    reopensOn !== null &&
+    isValidCalendarDate(reopensOn) &&
+    reopensOn > calendarDateInTimezone(now, timeZone)
+      ? reopensOn
+      : null;
+  return { quiet, opensAt: quiet ? firstDeparture : null, reopensOn: typed };
 }

@@ -15,7 +15,7 @@ import { summarizeTripDiveSites } from "@/lib/trip-dives";
 import { hasReturned } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
 import { canPersonConfigureTrips } from "./authz";
-import { hasTripBlowout } from "./blowouts";
+import { tripBlowoutCause } from "./blowouts";
 import type { AppDb } from "./client";
 import { listDiveSites } from "./dive-sites";
 import { listDepartureBoardedByTrip } from "./manifests";
@@ -125,7 +125,7 @@ export async function getTripOverview(
     // Whether this trip's cancellation was a called blow-out — the cascade record
     // is the surface a weather morning is worked from, so the trip page must
     // always offer the way back to it (ADR 20260804-blowout-cascade).
-    hasTripBlowout(db, shop.id, tripId),
+    tripBlowoutCause(db, shop.id, tripId),
     bookedDiverLanguages(db, shop.id, tripId),
     // The pulse's facts, read only while the trip is still ahead. All go through
     // the readers their destination surfaces already trust — the roster's own

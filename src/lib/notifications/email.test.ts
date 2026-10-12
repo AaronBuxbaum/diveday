@@ -310,6 +310,20 @@ describe("tripBlowoutEmail", () => {
     expect(email.html).toContain('href="https://diveday.example/s/blue-mantis/trips/trip-2"');
   });
 
+  it("says a run the shop stopped is a run that stopped, never the weather", () => {
+    const email = tripBlowoutEmail({
+      ...base,
+      cause: "run_ended",
+      paymentStory: "refunded",
+      alternatives: [],
+      scheduleUrl: "https://diveday.example/s/blue-mantis",
+    });
+    expect(email.text).toContain("has stopped running Two-Tank Reef for now");
+    expect(email.text).not.toContain("weather");
+    expect(email.html).toContain("<strong>Two-Tank Reef</strong>");
+    expect(email.text).toContain("You’ve been refunded in full");
+  });
+
   it("tells a refunded diver the money is already on its way back", () => {
     const email = tripBlowoutEmail({
       ...base,

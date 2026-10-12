@@ -8,7 +8,11 @@ import {
   shiftCalendarDate,
 } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import type { TripCrewRole } from "@/lib/crew-roles";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
+import type { NotificationProvider } from "@/lib/notifications";
+import { capturedPaymentStatuses } from "@/lib/payment-source";
+import type { CheckoutProvider } from "@/lib/payments/checkout";
 import {
   isValidWeeklyPattern,
   SERIES_HORIZON_DAYS,
@@ -19,15 +23,18 @@ import {
 } from "@/lib/recurrence";
 import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import { utcToWallTime, type WallTime, wallTimeToUtc } from "@/lib/zoned";
+import { callDayBlowout } from "./blowouts";
 import type { AppDb, AppTransaction } from "./client";
 import { flushUrgentCrewNotices, recordCrewCalledOff } from "./crew-notices";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { queryAll } from "./query-helpers";
 import {
   boats,
+  bookingPayments,
   bookings,
   rollCallEvents,
   shops,
+  tripAssignments,
   tripDives,
   tripScheduleDays,
   tripSeries,
@@ -44,6 +51,7 @@ import {
   type TripScheduleDayInput,
   validateDiveSites,
 } from "./trips-create";
+import { getTripCrewAssignments, seatStandingCrew, setTripCrew } from "./trips-crew";
 import { liveTrip } from "./trips-live";
 import { boatCertifiedPassengers } from "./trips-queries";
 
@@ -72,6 +80,8 @@ import { boatCertifiedPassengers } from "./trips-queries";
 /** Where a materialization pass reads its per-occurrence shape from. */
 type InstanceTemplate = {
   trip: typeof trips.$inferSelect;
+  /** Who crews it, for a run with a standing crew (`trip_series.standing_crew`). */
+  crew: Array<{ personId: string; tripRole: TripCrewRole | null }>;
   days: Array<{ startsAt: Date; endsAt: Date }>;
   drafts: Array<{
     diveNumber: number;
@@ -155,8 +165,13 @@ async function loadTemplate(
     .from(tripDives)
     .where(eq(tripDives.tripId, trip.id))
     .orderBy(asc(tripDives.diveNumber));
+  const crew = await tx
+    .select({ personId: tripAssignments.personId, tripRole: tripAssignments.tripRole })
+    .from(tripAssignments)
+    .where(eq(tripAssignments.tripId, trip.id));
   return {
     trip,
+    crew,
     days: days.length > 0 ? days : [{ startsAt: trip.startsAt, endsAt: trip.endsAt }],
     drafts: dives.map((dive) => ({
       diveNumber: dive.diveNumber,
@@ -260,43 +275,53 @@ async function materializeWindow(
     const first = days[0];
     const last = days.at(-1);
     if (!first || !last) continue;
-    created.push(
-      await insertTripInstance(tx, {
+    const instance = await insertTripInstance(tx, {
+      shopId: series.shopId,
+      seriesId: series.id,
+      seriesOccurrenceDate: occurrenceDate,
+      courseId: template.trip.courseId ?? undefined,
+      course,
+      title: template.trip.title,
+      description: template.trip.description ?? undefined,
+      startsAt: first.startsAt,
+      endsAt: last.endsAt,
+      capacity: seats.capacity,
+      plannedDives: template.trip.plannedDives,
+      priceCents: template.trip.priceCents,
+      depositCents: template.trip.depositCents,
+      // Every Saturday sells the same snorkel and ride-along seats.
+      snorkelerPriceCents: template.trip.snorkelerPriceCents,
+      riderPriceCents: template.trip.riderPriceCents,
+      diverCapacity: seats.diverCapacity,
+      cancellationWindowHours: template.trip.cancellationWindowHours,
+      isPrivate: template.trip.isPrivate,
+      // The case this matters most for: a standing weekly self-guided charter
+      // would otherwise raise `uncrewed_departure` on every instance the
+      // nightly horizon roll materializes, forever (issue #973).
+      selfGuided: template.trip.selfGuided,
+      diveMode: template.trip.diveMode,
+      // Every Saturday carries the same trip tag, so every instance inherits
+      // it exactly as it inherits the hull and the legs. Dropping it here
+      // meant a shop that tagged a repeating departure lost the tag on every
+      // occurrence the nightly roll materialized, and the public tag rail
+      // under-reported the shop's own board.
+      lensId: template.trip.lensId,
+      boatId: template.trip.boatId,
+      drafts: template.drafts,
+      scheduleDays: days,
+    });
+    created.push(instance);
+    // A run with a standing crew sails with it on the new date too, each
+    // person asked again of this date's hours (`seatStandingCrew`).
+    if (series.standingCrew && template.crew.length > 0) {
+      await seatStandingCrew(tx, {
         shopId: series.shopId,
-        seriesId: series.id,
-        seriesOccurrenceDate: occurrenceDate,
-        courseId: template.trip.courseId ?? undefined,
-        course,
-        title: template.trip.title,
-        description: template.trip.description ?? undefined,
-        startsAt: first.startsAt,
-        endsAt: last.endsAt,
-        capacity: seats.capacity,
-        plannedDives: template.trip.plannedDives,
-        priceCents: template.trip.priceCents,
-        depositCents: template.trip.depositCents,
-        // Every Saturday sells the same snorkel and ride-along seats.
-        snorkelerPriceCents: template.trip.snorkelerPriceCents,
-        riderPriceCents: template.trip.riderPriceCents,
-        diverCapacity: seats.diverCapacity,
-        cancellationWindowHours: template.trip.cancellationWindowHours,
-        isPrivate: template.trip.isPrivate,
-        // The case this matters most for: a standing weekly self-guided charter
-        // would otherwise raise `uncrewed_departure` on every instance the
-        // nightly horizon roll materializes, forever (issue #973).
-        selfGuided: template.trip.selfGuided,
-        diveMode: template.trip.diveMode,
-        // Every Saturday carries the same trip tag, so every instance inherits
-        // it exactly as it inherits the hull and the legs. Dropping it here
-        // meant a shop that tagged a repeating departure lost the tag on every
-        // occurrence the nightly roll materialized, and the public tag rail
-        // under-reported the shop's own board.
-        lensId: template.trip.lensId,
-        boatId: template.trip.boatId,
-        drafts: template.drafts,
-        scheduleDays: days,
-      }),
-    );
+        tripId: instance.id,
+        courseSession: Boolean(instance.courseId),
+        days,
+        crew: template.crew,
+      });
+    }
   }
   if (created.length > 0) {
     await tx
@@ -659,11 +684,97 @@ export async function getTripSeriesSummary(
     // Same reasoning as the skips read above: the shop condition travels with
     // the query, not with the caller's confidence in the series id.
     .where(and(eq(trips.seriesId, row.series.id), eq(trips.shopId, shopId), liveTrip()));
+  // Who "Cancel every upcoming date" would reach, and how many of them have
+  // money with the shop: the confirm says both before anybody taps it.
+  const [reach] = await db
+    .select({
+      divers: sql<number>`count(${bookings.id})::int`,
+      paid: sql<number>`count(${bookings.id}) filter (where ${inArray(bookingPayments.status, [...capturedPaymentStatuses])})::int`,
+    })
+    .from(bookings)
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+    .leftJoin(
+      bookingPayments,
+      and(eq(bookingPayments.bookingId, bookings.id), eq(bookingPayments.shopId, shopId)),
+    )
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.seriesId, row.series.id),
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        gte(trips.startsAt, now),
+        eq(bookings.shopId, shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    );
   return {
     ...row.series,
     scheduledCount: counts?.scheduled ?? 0,
     futureScheduledCount: counts?.future ?? 0,
+    futureBookedCount: reach?.divers ?? 0,
+    futurePaidCount: reach?.paid ?? 0,
   };
+}
+
+/** A repeating trip the public schedule can say keeps running past its horizon. */
+export type RunningPublicSeries = {
+  /** The furthest-out public date's title: what the board calls it now. */
+  title: string;
+  intervalWeeks: number;
+  weekdayMask: WeekdaySet;
+};
+
+/**
+ * **What keeps running past the board's last month** (UX review 2026-10-11,
+ * item 11). The public schedule's month rail ends where the horizon ends, and
+ * a shop whose boat runs every Saturday with no end looks, from October, like
+ * one that stops in February. These are the runs that let the last month say
+ * otherwise: open-ended (`ends_on` null), with a cadence that can generate,
+ * and with at least one public, scheduled, live date still ahead — a private
+ * charter's run or one whose dates are all cancelled is not the stranger's to
+ * plan around. At most `limit`, soonest-running first.
+ */
+export async function listRunningPublicSeries(
+  db: AppDb,
+  shopId: string,
+  now: Date = nowDate(),
+  limit = 3,
+): Promise<RunningPublicSeries[]> {
+  const rows = await db
+    .select({
+      seriesId: tripSeries.id,
+      intervalWeeks: tripSeries.intervalWeeks,
+      weekdayMask: tripSeries.weekdayMask,
+      title: trips.title,
+      startsAt: trips.startsAt,
+    })
+    .from(tripSeries)
+    .innerJoin(trips, and(eq(trips.seriesId, tripSeries.id), eq(trips.shopId, tripSeries.shopId)))
+    .where(
+      and(
+        eq(tripSeries.shopId, shopId),
+        isNull(tripSeries.endsOn),
+        gt(tripSeries.weekdayMask, 0),
+        liveTrip(),
+        eq(trips.status, "scheduled"),
+        eq(trips.isPrivate, false),
+        gt(trips.startsAt, now),
+      ),
+    )
+    .orderBy(asc(trips.startsAt));
+  const bySeries = new Map<string, RunningPublicSeries>();
+  for (const row of rows) {
+    // Rows run soonest first, so the last one per run is its furthest date.
+    const entry = bySeries.get(row.seriesId);
+    if (!entry && bySeries.size >= limit) continue;
+    bySeries.set(row.seriesId, {
+      title: row.title,
+      intervalWeeks: row.intervalWeeks,
+      weekdayMask: row.weekdayMask,
+    });
+  }
+  return [...bySeries.values()];
 }
 
 /** The series row itself, scoped to a shop — cadence for a horizon-roll. */
@@ -924,60 +1035,192 @@ export async function setSeriesRepeat(
   return (await rollSeriesForward(db, shopId, seriesId, now)) ?? { created: 0 };
 }
 
+/** What "Cancel every upcoming date" did. */
+export type SeriesCancelResult = {
+  /** Dates taken off the board, each with its own cascade record. */
+  cancelled: number;
+  /** Dates that could not be called (underway, or the call failed) and still stand. */
+  skipped: number;
+  /** Booked divers the cancelled dates reached, one message each. */
+  divers: number;
+  /** The dates taken off the board, for their activity lines. */
+  tripIds: string[];
+};
+
 /**
  * Cancel every still-scheduled, not-yet-departed instance of a series in one
- * action — the series-wide counterpart to `setTripStatus` on a single date.
- * Past and already-cancelled dates are left untouched (history is never
- * rewritten), and each cancelled row can still be reinstated on its own trip
- * page.
+ * action — the series-wide counterpart to calling a single date off.
  *
- * **Also stops the series repeating.** Without that, a nightly roll would
- * cheerfully re-fill the horizon staff had just cleared, and "cancel every
- * upcoming date" would be a button that undoes itself by morning. Staff turn
- * the run back on from the same panel. Returns how many dates were taken off
- * the board.
+ * **Every date goes through the blow-out cascade** (`callDayBlowout`, ADR
+ * 20260804-blowout-cascade), the same path the day weather call takes: each
+ * date is cancelled, its booked divers are each sent one message saying the
+ * run has stopped (cause `run_ended`, never the weather), their card captures
+ * go back by themselves and anything that cannot is owed on Today
+ * (ADR 20260813-shop-cancellation-refunds-itself), its crew hear at once, and
+ * staff get a cascade record per date to work. Before 2026-10-12 this only
+ * flipped the status: the dates kept their bookings and their money, and
+ * nobody but the crew was told.
+ *
+ * Every date is set up before any message is written, so nobody is offered
+ * another date of the run being cancelled. Past and already-cancelled dates
+ * are left untouched (history is never rewritten).
+ *
+ * **Also stops the series repeating**, first: otherwise a nightly roll would
+ * re-fill the horizon staff had just cleared, and "cancel every upcoming date"
+ * would be a button that undoes itself by morning. Staff turn the run back on
+ * from the same panel.
+ *
+ * Returns null when the series is not this shop's.
  */
 export async function cancelFutureSeriesTrips(
   db: AppDb,
-  shopId: string,
-  seriesId: string,
-  now: Date = nowDate(),
-): Promise<number> {
-  const cancelled = await db.transaction(async (tx) => {
-    const rows = await tx
-      .update(trips)
-      .set({ status: "cancelled", cancelledAt: now })
-      .where(
-        and(
-          liveTrip(),
-          eq(trips.seriesId, seriesId),
-          eq(trips.shopId, shopId),
-          eq(trips.status, "scheduled"),
-          gte(trips.startsAt, now),
-        ),
-      )
-      .returning({ id: trips.id });
-    // The cancelled dates keep their bookings, so the booking cascade never
-    // frees the gear reserved against them.
-    await releaseUnclaimedGearReservationsForTrips(tx, {
-      shopId,
-      tripIds: rows.map((trip) => trip.id),
-    });
-    await recordCrewCalledOff(tx, {
-      shopId,
-      tripIds: rows.map((trip) => trip.id),
-      actorPersonId: null,
-      now,
-    });
-    return rows;
-  });
-  await flushUrgentCrewNotices(db, {
-    shopId,
-    tripIds: cancelled.map((trip) => trip.id),
+  input: {
+    shopId: string;
+    seriesId: string;
+    calledByPersonId: string;
+    now?: Date;
+    /** Injectable for tests; default to the configured provider and Stripe seam. */
+    provider?: NotificationProvider;
+    checkout?: CheckoutProvider;
+  },
+): Promise<SeriesCancelResult | null> {
+  const now = input.now ?? nowDate();
+  const stopped = await setSeriesRepeat(db, input.shopId, input.seriesId, false, now);
+  if (!stopped) return null;
+  const upcoming = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.seriesId, input.seriesId),
+        eq(trips.shopId, input.shopId),
+        eq(trips.status, "scheduled"),
+        gte(trips.startsAt, now),
+      ),
+    )
+    .orderBy(asc(trips.startsAt));
+  if (upcoming.length === 0) return { cancelled: 0, skipped: 0, divers: 0, tripIds: [] };
+  const results = await callDayBlowout(db, {
+    shopId: input.shopId,
+    tripIds: upcoming.map((trip) => trip.id),
+    calledByPersonId: input.calledByPersonId,
+    cause: "run_ended",
     now,
+    provider: input.provider,
+    checkout: input.checkout,
   });
-  await setSeriesRepeat(db, shopId, seriesId, false, now);
-  return cancelled.length;
+  const tripIds: string[] = [];
+  let divers = 0;
+  for (const { tripId, outcome } of results) {
+    if (!outcome.ok) continue;
+    tripIds.push(tripId);
+    divers += outcome.total;
+  }
+  return { cancelled: tripIds.length, skipped: results.length - tripIds.length, divers, tripIds };
+}
+
+export type SeriesCrewApplyResult = { updated: number; skipped: number };
+
+/**
+ * **Give a run a standing crew** (ADR 20260810-open-ended-recurring-trips,
+ * addendum 2026-10-12): this date's crew, with the job each does on it, onto
+ * every upcoming still-scheduled date of the series, and on every date the
+ * horizon roll adds from now on (`trip_series.standing_crew`).
+ *
+ * Each date goes through `setTripCrew`, the crew editor's own write door, so
+ * nothing is assumed from the source date: a date where somebody on this crew
+ * is already crewing another departure in those hours, where a course session
+ * would be left without an instructor, or whose crew cannot be changed
+ * because a named crew member has roll-call history on it, keeps its own crew
+ * and is counted as skipped. Ratios stay what they are everywhere else: an
+ * over-ratio crew is recorded and surfaced per date, never refused. Every crew
+ * member who comes on or off a date is told in their crew digest.
+ *
+ * `standing: false` turns the standing crew off and changes no date's crew.
+ * Returns null when the source trip is not part of this series in this shop.
+ */
+export async function setSeriesStandingCrew(
+  db: AppDb,
+  input: {
+    shopId: string;
+    seriesId: string;
+    sourceTripId: string;
+    standing: boolean;
+    actorPersonId: string | null;
+    now?: Date;
+  },
+): Promise<SeriesCrewApplyResult | null> {
+  const now = input.now ?? nowDate();
+  const [source] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .innerJoin(tripSeries, eq(tripSeries.id, trips.seriesId))
+    .where(
+      and(
+        eq(trips.id, input.sourceTripId),
+        eq(trips.shopId, input.shopId),
+        eq(trips.seriesId, input.seriesId),
+        eq(tripSeries.shopId, input.shopId),
+        liveTrip(),
+      ),
+    )
+    .limit(1);
+  if (!source) return null;
+  const crew = input.standing
+    ? await getTripCrewAssignments(db, input.shopId, input.sourceTripId)
+    : [];
+  // A date with nobody on it has no crew to stand: turning it "on" from there
+  // would strip every upcoming date's own crew, so it stays off instead.
+  const standing = input.standing && crew.length > 0;
+  await db
+    .update(tripSeries)
+    .set({ standingCrew: standing })
+    .where(and(eq(tripSeries.id, input.seriesId), eq(tripSeries.shopId, input.shopId)));
+  if (!standing) return { updated: 0, skipped: 0 };
+
+  const siblings = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.seriesId, input.seriesId),
+        eq(trips.shopId, input.shopId),
+        eq(trips.status, "scheduled"),
+        gte(trips.startsAt, now),
+        ne(trips.id, input.sourceTripId),
+      ),
+    )
+    .orderBy(asc(trips.startsAt));
+  const wanted = crewKey(crew);
+  let updated = 0;
+  let skipped = 0;
+  for (const sibling of siblings) {
+    // A date already crewed exactly so is left alone: no write, no news.
+    if (crewKey(await getTripCrewAssignments(db, input.shopId, sibling.id)) === wanted) {
+      updated += 1;
+      continue;
+    }
+    const saved = await setTripCrew(
+      db,
+      input.shopId,
+      sibling.id,
+      crew.map((member) => ({ personId: member.personId, tripRole: member.tripRole })),
+      { actorPersonId: input.actorPersonId, now },
+    );
+    if (saved) updated += 1;
+    else skipped += 1;
+  }
+  return { updated, skipped };
+}
+
+/** A crew as one comparable string: who, and the job each does. */
+function crewKey(crew: readonly { personId: string; tripRole: TripCrewRole | null }[]): string {
+  return crew
+    .map((member) => `${member.personId}:${member.tripRole ?? ""}`)
+    .sort()
+    .join(",");
 }
 
 export type SeriesDetailApplyResult = { updated: number; skipped: number };
