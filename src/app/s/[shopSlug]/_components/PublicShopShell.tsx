@@ -85,13 +85,38 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
   // ordinary render is untouched. Gated on `!isEmbed` like every other band in
   // this component: an embed is framed by the shop's own site, which has already
   // told the visitor whose page they are on (ADR 20260726-schedule-embed).
-  const languageFallback = isEmbed ? null : await requestLanguageFallback(locale);
+  //
+  // **One wave after the shop row** (code review 2026-10-11, item 25), as
+  // `ShopChrome` reads the staff shell: the fallback, the demo roles, the two
+  // nav probes and the session each need only the shop, so none waits on
+  // another; the live staff check rides its session read. They used to be five
+  // waves one after another under this band's `<Suspense>`.
+  const [languageFallback, present, [teaches, packagesOnSale], { session, showStaffBar }] =
+    await Promise.all([
+      isEmbed ? null : requestLanguageFallback(locale),
+      showBanner && shop ? listShopRolesPresent(db, shop.id) : null,
+      // The nav's two existence probes (below), skipped for an embed, which
+      // drops the header anyway.
+      !isEmbed && shop
+        ? Promise.all([hasActiveCourses(db, shop.id), listPackagesOnSale(db, shop.id)])
+        : ([false, []] as const),
+      // Staff are no longer redirected off their own shop's public pages — this
+      // is the page divers buy from, and staff need to be able to look at it. A
+      // slim bar says "you work here" and points back at the operations board,
+      // so nobody is stranded on a diver surface with no staff chrome (task
+      // 153). Live-checked (issue #966): it discloses nothing sensitive, but
+      // the same stale-JWT gap the other public surfaces had is worth closing
+      // uniformly.
+      auth().then(async (session) => ({
+        session,
+        showStaffBar: !isEmbed && shop !== null && (await isLiveShopStaff(db, shop.id, session)),
+      })),
+    ]);
 
   // Owner and diver (public guest) are always offered; instructor/divemaster/
   // captain only appear when this shop actually seeded someone in that role.
   let availableRoles: string[] = ["owner", "diver"];
-  if (showBanner && shop) {
-    const present = await listShopRolesPresent(db, shop.id);
+  if (present) {
     availableRoles = [
       "owner",
       ...(["instructor", "divemaster", "captain"] as const).filter((role) => present.has(role)),
@@ -107,13 +132,8 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
   const navItems: PublicShopNavItem[] = [];
   if (!isEmbed && shop) {
     navItems.push({ href: publicSchedulePath(shop.slug), label: t("schedule.title") });
-    // The same probe, and two reads at once rather than one after the other.
     // Packages earns a tab only while one is on sale: a shop that has never
     // defined one, or whose packages have all lapsed, shows no such door.
-    const [teaches, packagesOnSale] = await Promise.all([
-      hasActiveCourses(db, shop.id),
-      listPackagesOnSale(db, shop.id),
-    ]);
     if (teaches) {
       navItems.push({ href: publicCoursesPath(shop.slug), label: t("courses.index.title") });
     }
@@ -122,7 +142,6 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
     }
   }
 
-  const session = await auth();
   let currentRole: "owner" | "instructor" | "divemaster" | "captain" | "diver" = "diver";
   if (session?.user) {
     if (session.user.roles.includes("owner") || session.user.roles.includes("manager")) {
@@ -136,13 +155,6 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
     }
   }
 
-  // Staff are no longer redirected off their own shop's public pages — this is
-  // the page divers buy from, and staff need to be able to look at it. A slim
-  // bar says "you work here" and points back at the operations board, so
-  // nobody is stranded on a diver surface with no staff chrome (task 153).
-  // Live-checked (issue #966): it discloses nothing sensitive, but the same
-  // stale-JWT gap the other public surfaces had is worth closing uniformly.
-  const showStaffBar = !isEmbed && shop !== null && (await isLiveShopStaff(db, shop.id, session));
   const staffT = staffTranslator(locale);
   // Each language named in itself (src/i18n/language-labels.ts): the reader
   // reaching for this is the one who cannot read the page around it.

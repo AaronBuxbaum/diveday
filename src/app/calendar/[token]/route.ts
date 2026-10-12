@@ -1,4 +1,4 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { after, type NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import {
   FEED_FUTURE_DAYS,
@@ -12,6 +12,7 @@ import {
 import { toDiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
+import { reportRenderQueries, withQueryStats } from "@/lib/observability/query-timing";
 
 /**
  * The staff calendar subscription feed (docs ADR
@@ -23,7 +24,19 @@ import { nowDate } from "@/lib/clock";
  * without cookies, so every decision it depends on is re-derived here per
  * fetch rather than trusted from the moment the link was minted.
  */
-export async function GET(
+export async function GET(request: NextRequest, context: { params: Promise<{ token: string }> }) {
+  // **What a poll costs, on the same line every page writes** (code review
+  // 2026-10-11, item 35). A route handler has no render pass to count in, so
+  // the feed opens a scope of its own and names it by the route template —
+  // never the URL, which is the capability.
+  const { result } = await withQueryStats(async () => {
+    reportRenderQueries("/calendar/[token]", after);
+    return calendarFeed(request, context);
+  });
+  return result;
+}
+
+async function calendarFeed(
   _request: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {

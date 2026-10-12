@@ -86,7 +86,6 @@ import { requestLocale } from "@/i18n/request";
 import { THREAD_STEP_STATE_KEYS, THREAD_STEP_TITLE_KEYS } from "@/i18n/thread-labels";
 import { claimLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
-import { seatListPriceCents } from "@/lib/deposits";
 import {
   formatMoneyCents,
   formatRelativeDay,
@@ -941,29 +940,6 @@ export default async function DiverReadinessPage({
    * same verified `bookingId`, the same shop scope.
    */
   const threadBody = (async () => {
-    // The organizer's claim panel, when this booking leads a party (docs ADR
-    // 20260804-seat-claim-links): the readiness link is the durable one from
-    // the confirmation email, so "who still hasn't claimed?" has an answer the
-    // night before, not only in the minutes after booking. Authorized by the
-    // verified `readiness` capability above; the query only ever walks seats
-    // led by this booking, so a member's own /ready renders no panel.
-    const partySeatClaims = await issuePartySeatClaims(db, {
-      shopId: shop.id,
-      leadBookingId: bookingId,
-    });
-    const claimOrigin = publicAppUrl();
-    const partySeats = partySeatClaims.map((seat) => ({
-      bookingId: seat.bookingId,
-      seatName: seat.seatName,
-      claimed: seat.claimed,
-      waiverSigned: seat.waiverSigned,
-      claimUrl: seat.claim
-        ? claimOrigin
-          ? new URL(claimLinkPath(seat.claim.token), `${claimOrigin}/`).toString()
-          : claimLinkPath(seat.claim.token)
-        : null,
-    }));
-
     // The trip itself, as the public trip page reads it.
     //
     // This page used to carry a five-line header and a thumbnail strip of site
@@ -980,7 +956,7 @@ export default async function DiverReadinessPage({
     // One round trip, not two: the trip reads are scoped by `shop.id`, which the
     // verified capability already resolved, so none of them has to wait on the
     // shop row `PackingSection` needs for its units and rental catalogue.
-    const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage] = await Promise.all([
+    const threadTripReads = Promise.all([
       getShopBySlug(db, shop.slug),
       getTripWithBooked(db, shop.id, data.trip.id),
       listTripDives(db, shop.id, data.trip.id),
@@ -996,6 +972,58 @@ export default async function DiverReadinessPage({
       // cleared cannot follow a diver into next week.
       latestTripStage(db, shop.id, data.trip.id),
     ]);
+    // The organizer's claim panel, when this booking leads a party (docs ADR
+    // 20260804-seat-claim-links): the readiness link is the durable one from
+    // the confirmation email, so "who still hasn't claimed?" has an answer the
+    // night before, not only in the minutes after booking. Authorized by the
+    // verified `readiness` capability above; the query only ever walks seats
+    // led by this booking, so a member's own /ready renders no panel. One wave with
+    // the rest: each needs only the verified booking, shop and person (review 2026-10-11).
+    const [partySeatClaims, tripReads, paymentReceipt, courseForms, packageDivesLeft] =
+      await Promise.all([
+        issuePartySeatClaims(db, { shopId: shop.id, leadBookingId: bookingId }),
+        threadTripReads,
+        // What this booking has been charged. Read on every visit, because "what did
+        // I pay?" is a question the night before too — and it is what the Pay step's
+        // settled line says, now that the receipt panel that used to say it above
+        // the checklist is gone (ADR 20260827-the-divers-thread, decision 3).
+        //
+        // The emails line went with that panel. It claimed, in the minutes after a
+        // submit, that two messages were on their way — a third statement of the
+        // booking's status in one screenful, on a page whose status is now said once
+        // by the spine. `EmbedBookedNotice` still carries it where it is the *only*
+        // thing the reader gets, which is the embed's confirmation and not this page.
+        resolvePaymentReceipt(
+          db,
+          shop.id,
+          bookingId,
+          // The two ways a diver arrives here straight off Stripe's hosted page:
+          // paying at booking (`bookSpot`'s success_url) and paying later
+          // (`payFromReady`'s). Both are the moment the webhook may still be in
+          // flight; every other arrival is not.
+          justBooked || pay === "paid",
+          data.trip.seatPriceCents,
+          toShopCurrency(shop.currency),
+        ),
+        // Asked whatever `COURSE_FORMS_BLOCK_BOARDING` says: warn-only raises no blocker (#2266).
+        data.trip.course ? getCourseFormsForBooking(db, shop.id, bookingId) : null,
+        countSpendableDives(db, shop.id, data.person.id),
+      ]);
+    const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage] = tripReads;
+    const courseFormsOwed = (courseForms?.outstanding.length ?? 0) > 0;
+    const claimOrigin = publicAppUrl();
+    const partySeats = partySeatClaims.map((seat) => ({
+      bookingId: seat.bookingId,
+      seatName: seat.seatName,
+      claimed: seat.claimed,
+      waiverSigned: seat.waiverSigned,
+      claimUrl: seat.claim
+        ? claimOrigin
+          ? new URL(claimLinkPath(seat.claim.token), `${claimOrigin}/`).toString()
+          : claimLinkPath(seat.claim.token)
+        : null,
+    }));
+
     // The boat's own line, composed here: word order and where the site sits in
     // the sentence are the locale's choice, and `liveStageOf` is what stops a
     // stage nobody cleared speaking for a departure that ended yesterday.
@@ -1019,33 +1047,8 @@ export default async function DiverReadinessPage({
     // then quotes nothing rather than guessing — see `resolvePaymentReceipt`,
     // which takes the same figure to work out a balance after a deposit.
     // This seat's price: a snorkeler pays the snorkeler fare (ADR
-    // 20261007-participant-types).
-    const fullPriceCents = fullTrip
-      ? seatListPriceCents(fullTrip, fullTrip.course, data.participantType)
-      : null;
-
-    // What this booking has been charged. Read on every visit, because "what did
-    // I pay?" is a question the night before too — and it is what the Pay step's
-    // settled line says, now that the receipt panel that used to say it above
-    // the checklist is gone (ADR 20260827-the-divers-thread, decision 3).
-    //
-    // The emails line went with that panel. It claimed, in the minutes after a
-    // submit, that two messages were on their way — a third statement of the
-    // booking's status in one screenful, on a page whose status is now said once
-    // by the spine. `EmbedBookedNotice` still carries it where it is the *only*
-    // thing the reader gets, which is the embed's confirmation and not this page.
-    const paymentReceipt = await resolvePaymentReceipt(
-      db,
-      shop.id,
-      bookingId,
-      // The two ways a diver arrives here straight off Stripe's hosted page:
-      // paying at booking (`bookSpot`'s success_url) and paying later
-      // (`payFromReady`'s). Both are the moment the webhook may still be in
-      // flight; every other arrival is not.
-      justBooked || pay === "paid",
-      fullPriceCents,
-      toShopCurrency(shop.currency),
-    );
+    // 20261007-participant-types), as `getReadyPageData` read it.
+    const fullPriceCents = fullTrip ? data.trip.seatPriceCents : null;
 
     // Dive 1 first, in the dive plan's own order: where a site names its own
     // time in the water, that is what the day's rhythm counts rather than the
@@ -1150,10 +1153,6 @@ export default async function DiverReadinessPage({
     const carriedFacts =
       data.rentalFit?.fitStatedAt != null && data.rentalFit.fitStatedAt < data.bookingCreatedAt;
 
-    // Asked whatever `COURSE_FORMS_BLOCK_BOARDING` says: warn-only raises no blocker (#2266).
-    const courseFormsOwed = data.trip.course
-      ? ((await getCourseFormsForBooking(db, shop.id, bookingId))?.outstanding.length ?? 0) > 0
-      : false;
     const spine = buildThreadSteps({
       checklist: items,
       // Money is owed, or money has settled. The receipt matters on its own:
@@ -1178,7 +1177,6 @@ export default async function DiverReadinessPage({
 
     /** A money figure in the currency it was actually charged in, never today's shop setting. */
     const money = (cents: number, currency: string) => formatMoneyCents(cents, currency, locale);
-    const packageDivesLeft = await countSpendableDives(db, shop.id, data.person.id);
     const { paidLine, depositBalanceLine } = payStepLines(
       t,
       money,
