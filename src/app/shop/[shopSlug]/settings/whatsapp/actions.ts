@@ -14,7 +14,7 @@ import { completeWhatsAppSignup, type WhatsAppSignupOutcome } from "@/db/whatsap
 import { diverTranslator } from "@/i18n/messages";
 import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { type NoticeRedirect, revalidateWithNotice } from "@/lib/navigation";
 import {
   DEFAULT_WHATSAPP_TEMPLATE_NAME,
   metaLanguageCode,
@@ -22,7 +22,7 @@ import {
 } from "@/lib/notifications/whatsapp";
 import { whatsAppSignupConfigFromEnvironment } from "@/lib/notifications/whatsapp-signup";
 import { requireStaffSession } from "@/lib/session";
-import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { shopPath } from "@/lib/staff-notices";
 
 /**
  * Connect, test, and disconnect a shop's own WhatsApp Business sender (docs ADR
@@ -99,12 +99,8 @@ async function settingsPath(): Promise<{ shopId: string; personId: string; path:
  * in its own snake_case domain spelling; `noticeUrl` normalises it to the kebab
  * the bundle key uses, so the refusal arrives worded rather than silent.
  */
-function done(
-  path: string,
-  notice: Notice | WhatsAppConnectRefusal | WhatsAppSignupOutcome,
-): never {
-  revalidateAndRedirect(path, noticeUrl(path, notice));
-}
+const done: NoticeRedirect<Notice | WhatsAppConnectRefusal | WhatsAppSignupOutcome> =
+  revalidateWithNotice;
 
 /**
  * Finish an Embedded Signup: exchange Meta's one-time code for the shop's

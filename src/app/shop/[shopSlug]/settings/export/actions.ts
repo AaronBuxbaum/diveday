@@ -13,7 +13,7 @@ import {
 } from "@/features/backup-export";
 import { toDiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { type NoticeRedirect, revalidateWithNotice } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
@@ -93,9 +93,7 @@ async function backupContext(): Promise<{
  * silent. `reason` is a delivery error code, not a notice — it keeps its own
  * spelling (`backup.deliveryError.<code>`) and simply drops out when absent.
  */
-function done(path: string, notice: Notice | SaveBackupDestinationRefusal, reason?: string): never {
-  revalidateAndRedirect(path, noticeUrl(path, notice, { reason }));
-}
+const done: NoticeRedirect<Notice | SaveBackupDestinationRefusal> = revalidateWithNotice;
 
 export async function saveBackupDestinationAction(formData: FormData): Promise<void> {
   const { session, shopId, personId, shopSlug, path } = await backupContext();
@@ -157,7 +155,7 @@ export async function testBackupAction(): Promise<void> {
   });
 
   if (result.status === "delivered") done(path, "test-delivered");
-  if (result.status === "failed") done(path, "test-failed", result.errorCode);
+  if (result.status === "failed") done(path, "test-failed", { reason: result.errorCode });
   done(path, "no-destination");
 }
 

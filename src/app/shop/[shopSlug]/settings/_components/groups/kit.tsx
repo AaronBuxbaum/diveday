@@ -7,7 +7,7 @@ import { GroupLabel } from "@/components/ui/ledger";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { requireShopSurface } from "@/lib/session";
 import { type ShopFeature, shopOffers } from "@/lib/shop-features";
-import { noticeRole } from "@/lib/staff-notices";
+import { type NoticeMessage, noticeRole } from "@/lib/staff-notices";
 import { SETTINGS_GROUPS, type SectionId } from "../../settings-groups";
 import { saveShopFeatureAction } from "../../shop-actions";
 import { SettingsRow } from "../SettingsRows";
@@ -21,8 +21,6 @@ import { SettingsRow } from "../SettingsRows";
  */
 export type SettingsShop = Awaited<ReturnType<typeof requireShopSurface>>["shop"];
 
-export type SettingsBanner = { tone: "success" | "danger" | "warning"; text: string };
-
 export type SettingsView = {
   shop: SettingsShop;
   shopSlug: string;
@@ -30,7 +28,7 @@ export type SettingsView = {
   /** The negotiated request locale, for every figure and date. */
   locale: string;
   /** The `?notice=` this request carries, already worded. */
-  banner: SettingsBanner | undefined;
+  banner: NoticeMessage | undefined;
   /** The row `?saved=` names, which comes back open with its notice inside. */
   activeSection: SectionId | null;
   /**
@@ -87,7 +85,7 @@ export function SectionNotice({
   section,
   active,
 }: {
-  banner: SettingsBanner | undefined;
+  banner: NoticeMessage | undefined;
   section: SectionId;
   active: SectionId | null;
 }) {

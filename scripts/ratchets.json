@@ -19,7 +19,6 @@
         }
       }
     ],
-    "src/app/shop/[shopSlug]/_components/ShopChrome.tsx": 1,
     "src/lib/auth.ts": 3,
     "src/lib/credentials.ts": 1,
     "src/lib/dive-declaration.ts": 1,
@@ -356,7 +355,7 @@
     "src/app/shop/[shopSlug]/schedule/board/page.tsx": 987,
     "src/app/shop/[shopSlug]/settings/import/page.tsx": 508,
     "src/app/shop/[shopSlug]/settings/integrations/page.tsx": 496,
-    "src/app/shop/[shopSlug]/settings/team/page.tsx": 873,
+    "src/app/shop/[shopSlug]/settings/team/page.tsx": 871,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 626,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1134,

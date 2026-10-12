@@ -439,7 +439,8 @@ spring half, 18c's roster half and 18f wait on it.
   group, with Undo running the same path reversed. **Shipped 2026-09-07.** Rows are tracked by DOM
   identity rather than by a key attribute, so a list opts in by wrapping and nothing labels its
   children. The home's station, the wait list and the board's day are the same wrapper and follow;
-  the manifest roster waits on H-69 c.
+  the manifest roster waits on H-69 c. **Removed 2026-10-12**: its last list, the trip's Check-in
+  tab, folded into Divers on 2026-10-05, and the component went with it.
 - **18d** — the sheet follows the thumb: `useDragSheet`, on the dock's More sheet, with the grab
   handle. **Shipped 2026-09-07.** The release decision is a pure function (`dismissOnRelease`)
   because a hand's *speed* is the one input a DOM test cannot express, and a velocity guard stops a

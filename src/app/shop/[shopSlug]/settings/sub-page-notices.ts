@@ -1,5 +1,5 @@
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { NoticeTone } from "@/lib/staff-notices";
+import type { NoticeMessages } from "@/lib/staff-notices";
 import type { BillingNotice } from "./billing/actions";
 
 /**
@@ -19,8 +19,6 @@ import type { BillingNotice } from "./billing/actions";
  * negotiated locale rather than freezing to whichever locale first imported this
  * file.
  */
-type NoticeMessages = Record<string, { tone: NoticeTone; text: string }>;
-
 /** `/settings/boats` — `createBoatAction`, `updateBoatAction`, `deleteBoatAction`. */
 export function boatNoticeMessages(t: StaffTranslator): NoticeMessages {
   return {
@@ -96,9 +94,7 @@ export function divePackageNoticeMessages(t: StaffTranslator): NoticeMessages {
  * and Checkout's own success redirect. Typed against the actions' `BillingNotice`
  * so a code added there without words here is a compile error.
  */
-export function billingNoticeMessages(
-  t: StaffTranslator,
-): Record<BillingNotice, { tone: NoticeTone; text: string }> {
+export function billingNoticeMessages(t: StaffTranslator): NoticeMessages<BillingNotice> {
   return {
     "card-added": { tone: "success", text: t("billing.notice.cardAdded") },
     "not-configured": { tone: "danger", text: t("billing.notice.notConfigured") },

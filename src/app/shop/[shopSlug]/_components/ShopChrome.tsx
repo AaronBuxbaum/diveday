@@ -1,4 +1,3 @@
-import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { cache } from "react";
@@ -13,7 +12,7 @@ import { getDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { countGearItems } from "@/db/gear";
-import { people, personRoles } from "@/db/schema";
+import { listShopRolesPresent } from "@/db/shop-roles";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { countBlockedDiversNextBoatDay, todayNextDepartureTripId } from "@/db/today";
 import { countWorkOrders } from "@/db/work-orders";
@@ -122,15 +121,7 @@ const loadShopChrome = cache(async (shopSlug: string) => {
   // the role switcher never presents a card that would no-op.
   let availableRoles: string[] = ["owner", "diver"];
   if (showBanner && shop) {
-    const present = new Set(
-      (
-        await db
-          .selectDistinct({ role: personRoles.role })
-          .from(personRoles)
-          .innerJoin(people, eq(people.id, personRoles.personId))
-          .where(eq(people.shopId, shop.id))
-      ).map((row) => row.role),
-    );
+    const present = await listShopRolesPresent(db, shop.id);
     availableRoles = [
       "owner",
       ...(["instructor", "divemaster", "captain"] as const).filter((role) => present.has(role)),

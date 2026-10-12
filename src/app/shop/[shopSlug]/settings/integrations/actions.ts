@@ -25,7 +25,7 @@ import {
   xeroAuthorizationUrl,
   xeroConfigFromEnvironment,
 } from "@/features/integrations";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { type NoticeRedirect, revalidateWithNotice } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
 import { requireStaffSession } from "@/lib/session";
@@ -63,13 +63,7 @@ function secureStorageNotice(): "encryption-key-unset" | "encryption-key-invalid
   return result.status === "unset" ? "encryption-key-unset" : "encryption-key-invalid";
 }
 
-function done(
-  path: string,
-  notice: Notice,
-  extra?: Record<string, string | number | undefined>,
-): never {
-  revalidateAndRedirect(path, noticeUrl(path, notice, extra));
-}
+const done: NoticeRedirect<Notice> = revalidateWithNotice;
 
 export async function startShopifyConnectionAction(formData: FormData): Promise<void> {
   const { db, session, path } = await integrationContext();
