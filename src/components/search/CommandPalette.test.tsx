@@ -283,6 +283,28 @@ describe("CommandPalette settings shortcuts", () => {
     expect(await screen.findByRole("option", { name: /Desk hours/ })).toBeInTheDocument();
   });
 
+  it("names a row after its group when a destination already carries its label", async () => {
+    // "Crew schedule" is both the staffing destination and a Settings row
+    // (the switch that turns the schedule on). Two options with one name is
+    // one too many for a reader and for a locator (e2e/search.spec.ts), so the
+    // rail's row carries its group in its accessible name.
+    stubEmptySearch();
+    renderPalette([
+      ...SHORTCUTS,
+      {
+        id: "crewSchedule",
+        label: "Crew schedule",
+        group: "Rarely changed",
+        href: "/shop/blue-mantis/settings#crew-schedule",
+      },
+    ]);
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    await userEvent.type(screen.getByRole("combobox"), "crew schedule");
+    const option = await screen.findByRole("option", { name: "Crew schedule · Rarely changed" });
+    expect(option).toHaveTextContent("Crew schedule");
+    expect(screen.queryByRole("option", { name: "Crew schedule" })).toBeNull();
+  });
+
   it("never offers a page twice when it is already a destination", async () => {
     stubEmptySearch();
     renderPalette(SHORTCUTS);
