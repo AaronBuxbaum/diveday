@@ -239,7 +239,6 @@
     "src/db/seed-more-trips.ts#seedMoreTrips": 747,
     "src/db/seed-trips.ts#seedTrips": 582,
     "src/db/seed.ts#resetDemoSchedule": 452,
-    "src/db/today.ts#getTodayWork": 1446,
     "src/lib/import.ts#prepareContactImport": 638
   },
   "live-people": {

@@ -20,7 +20,8 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
-import { courseCrewCountsByTrip, NO_SUPERVISION } from "./today";
+import { courseCrewCountsByTrip } from "./today";
+import { NO_SUPERVISION } from "./today-shared";
 import { listStaff, type StaffPerson } from "./trips-crew";
 import { liveTrip } from "./trips-live";
 import { bookedDiversCount } from "./trips-queries";

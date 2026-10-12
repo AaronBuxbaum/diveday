@@ -1,101 +1,25 @@
 import { and, asc, desc, eq, gt, gte, inArray, lte, ne } from "drizzle-orm";
-import { boatSafetyNoticeText } from "@/i18n/boat-safety-labels";
-import { gearServiceKindLabel } from "@/i18n/gear-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
-  crewBelowTargetDetailText,
-  crewClashDetailText,
-  crewClashSailedDetailText,
-  failedPhotoDeletionDetailText,
-  gearDueBackDetailText,
-  gearDueBackSubjectText,
-  gearNeverPickedUpDetailText,
-  gearOverdueDetailText,
-  gearServiceDueDetailText,
-  helpRequestActionText,
-  helpRequestDetailText,
   highWindAlertDetailText,
-  instructorMissingDetailText,
-  inviteFromWaitlistActionText,
-  lastMinuteFillDetailText,
-  mediaDeletionKindText,
-  missingContactDetailText,
-  missingContactNamedDetailText,
-  missingFitDetailText,
-  missingFitNamedDetailText,
-  openBoatCheckActionText,
-  openBoatsActionText,
-  openCrewActionText,
-  openDataSettingsActionText,
-  openDiverActionText,
-  openGearRegisterActionText,
-  openGearUnitActionText,
-  openGuestsActionText,
-  openInboxActionText,
-  openLastMinuteDealActionText,
-  openOrderActionText,
-  openOrdersActionText,
-  openPrepListActionText,
-  openRentalsActionText,
-  openReviewsActionText,
-  openRollCallActionText,
-  openStaffingActionText,
   openTripActionText,
   openUnitsActionText,
-  openWorkOrderActionText,
-  overRatioDetailText,
-  overRatioIntroDetailText,
-  paymentDisputeDetailText,
-  paymentDisputeSubjectText,
-  ratingLapsedDetailText,
-  rentalFitConfirmDetailText,
-  reviewsPendingSubjectText,
-  rollCallGapDetailText,
-  staffCredentialDueDetailText,
-  stuckOperationKindText,
-  stuckPaymentOperationDetailText,
-  unansweredMessagesSubjectText,
-  uncrewedCourseDetailText,
-  uncrewedDepartureDetailText,
-  ungatedNitroxDetailText,
-  ungatedNitroxNamedDetailText,
   unitsUnconfirmedDetailText,
   unitsUnconfirmedSubjectText,
-  waitlistSeatDetailText,
-  workOrderLateDetailText,
-  workOrderUncollectedDetailText,
 } from "@/i18n/today-labels";
-import { sayHelloSentences } from "@/i18n/welcome-cue-labels";
 import type { Role } from "@/lib/authz";
-import {
-  calendarDateInTimezone,
-  calendarDateToUtcMidnight,
-  formatCalendarDate,
-  isCalendarDateExpired,
-  isValidCalendarDate,
-} from "@/lib/calendar-date";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
-import { courseCrewGap } from "@/lib/course-ratios";
 import {
   countBothClaims,
   effectiveCrewRoles,
   groupCrewAssignments,
-  type InWaterCrewCount,
-  type LapsedRung,
   lapsedRungs,
   lastDayOfDeparture,
   rungLostToLapse,
 } from "@/lib/crew-roles";
 import type { DiveIntentCount } from "@/lib/dive-intent";
-import {
-  DEFAULT_DIVERS_PER_DIVEMASTER,
-  divemasterRatioGap,
-  inWaterDivemasterCount,
-} from "@/lib/divemaster-ratio";
-import { PREP_SECTION_ID } from "@/lib/element-id";
-import { formatDateTimeTz, formatMoneyCents, formatShortDate, formatTime } from "@/lib/format";
-import { cachedListFormat } from "@/lib/intl-cache";
-import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
+import { DEFAULT_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
 import {
   type CrewIncompleteReason,
   rollCallCheckpoints,
@@ -108,27 +32,18 @@ import {
   shouldShowAutomatedForecast,
 } from "@/lib/marine-forecast";
 import { operationalWindow, shopDayWindow } from "@/lib/operational-window";
-import { publicTripPath } from "@/lib/public-routes";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import {
-  collapseDiverActions,
-  collapseEmailDeliveries,
-  collapseOwedRefunds,
-  crewClashPhase,
   filterActionsForRoles,
   isBlockedAboard,
-  ROLL_CALL_GAP_KINDS,
   type RollCallGapReason,
-  rollCallGapUrgency,
   type TodayAction,
-  urgencyFor,
 } from "@/lib/today";
 import { type TripPhase, tripPhaseOf } from "@/lib/trip-phase";
 import { liveStageOf, type TripStageReading } from "@/lib/trip-stages";
 import { DEPARTURE_BUFFER_MS, hasReturned, hasSailed } from "@/lib/trips";
-import { welcomeCueFor } from "@/lib/welcome-cue";
-import { shopDayBounds, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { shopDayBounds } from "@/lib/zoned";
 import {
   blockedOnNextBoatDay,
   type HorizonReadinessEvidence,
@@ -178,9 +93,15 @@ import {
 } from "./schema";
 import { listStaffCredentials, ratingCredentialsByPerson } from "./staff-credentials";
 import { canAcceptPayments, shopStripeAccountForRender } from "./stripe-accounts";
+import { pushDepartureRows } from "./today-departure-rows";
+import { pushEquipmentRows } from "./today-equipment-rows";
+import { pushRollCallRows } from "./today-roll-call-rows";
+import type { TodayRowsContext } from "./today-rows-context";
+import { at, type SupervisionCrewCount, shopDay } from "./today-shared";
+import { pushShopRows } from "./today-shop-rows";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { latestTripStagesByTrip } from "./trip-stages";
-import { type CrewClash, countShopTrips, crewClashesByTrip, listStaff } from "./trips";
+import { countShopTrips, crewClashesByTrip, listStaff } from "./trips";
 import { liveTrip } from "./trips-live";
 import { sharedWelcomeSeatsByTrip } from "./welcome-cues";
 import { listWorkOrdersNeedingAttention } from "./work-order-follow-up";
@@ -382,14 +303,6 @@ export type TodayWork = {
   crewedSessions: CrewedSessionSummary[];
   availableStaff: { id: string; fullName: string; roles: string[] }[];
 };
-
-function shopDay(date: Date, timeZone: string): string {
-  return toDateInputValue(utcToWallTime(date, timeZone));
-}
-
-function at(date: Date, timeZone: string, locale: string): string {
-  return formatTime(date, locale, timeZone);
-}
 
 /**
  * How long an unclosed head count is still *dock work* (DOM-H3). Two days: long
@@ -1313,26 +1226,6 @@ function byNameThenId(
 }
 
 /**
- * The supervision claim for one departure: the in-water counts with every
- * rostered professional's recorded ratings read, the roster's claim beside it
- * (the same count with none read), and who a lapse took down a rung and which
- * rung (issue #1853). A surface says a gap is a lapse's only when the two
- * claims disagree about that gap.
- */
-export type SupervisionCrewCount = InWaterCrewCount & {
-  roster: InWaterCrewCount;
-  lapsed: { personId: string; fullName: string; lost: LapsedRung }[];
-};
-
-/** A departure nobody is rostered on: nobody in the water, nobody lapsed. */
-export const NO_SUPERVISION: SupervisionCrewCount = {
-  instructorCount: 0,
-  assistantCount: 0,
-  roster: { instructorCount: 0, assistantCount: 0 },
-  lapsed: [],
-};
-
-/**
  * Everything the Today queue needs, in one pass. Every signal is derived from a
  * source-of-truth model, so this never becomes a second place where operational
  * state is decided.
@@ -1865,103 +1758,46 @@ async function highWindActions(
   return filterActionsForRoles(rows, context.roles).visibleActions;
 }
 
-export async function getTodayWork(
+/** What the Today queue's one wave of reads answers. */
+export type TodayWave = Awaited<ReturnType<typeof readTodayWave>>;
+
+// **One wave.** Every read below takes only the shop, the window and the
+// clock, so none waits on another: they used to run as this fan-out plus
+// thirteen single reads one after another further down, each a round trip
+// on the shop's most-opened page (code review 2026-10-10, item 2). The rows
+// are still pushed in the order they always were; only the reads moved.
+async function readTodayWave(
   db: AppDb,
   shopId: string,
-  shopSlug: string,
-  timeZone: string,
-  now: Date = nowDate(),
-  /** When set, the result carries which in-window trips this person crews. */
-  personId?: string,
-  /**
-   * Resolves the blocked-diver rows' `detail`/`actionLabel` text
-   * (`collapseDiverActions`, `src/lib/today.ts`). Defaults to English so every
-   * pre-existing caller (tests included) keeps working unchanged; the page
-   * passes its own request-locale translator.
-   */
-  t: StaffTranslator = staffTranslator("en-US"),
-  /** Formats every departure time (`at()`); defaults alongside `t` for the same reason. */
-  locale = "en-US",
-  /**
-   * Stuck Stripe operations and failed photo-deletion retries (task 157) are
-   * owner/manager chores — the same accountable gate Reports' monthly view
-   * already uses (ADR 20260723-owner-reporting) — so they only join the queue
-   * when a caller that has already checked `canViewShopReports` passes true.
-   * Defaults false so every pre-existing caller (tests included) keeps
-   * getting the diver-blocker-only queue.
-   */
-  includeOpsAlerts = false,
-  /**
-   * Precomputed horizon evidence from `inHorizonReadiness` (`./blockers`),
-   * when the caller already ran the pass for another readiness surface in the
-   * same request — the shop home passes it so its by-departure view doesn't
-   * pay for the pipeline twice. Omitted, the queue runs its own.
-   */
-  evidence?: HorizonReadinessEvidence,
-  /**
-   * The shop's own divemaster target (`shops.divers_per_divemaster`), for the
-   * `uncrewed_departure`/`crew_below_target` rows (issue #732). Defaults to
-   * `DEFAULT_DIVERS_PER_DIVEMASTER` alongside `t`/`locale` above, for the same
-   * reason: every pre-existing caller (tests included) keeps working
-   * unchanged. The close-out surface's own read of this queue
-   * (`src/db/closeout.ts`) accepts that default rather than threading the
-   * shop row the rest of the way down its call chain for a queue it only
-   * reads as leftovers.
-   */
-  diversPerDivemaster: number | null = DEFAULT_DIVERS_PER_DIVEMASTER,
-  /**
-   * The viewer's roles, for filtering the action queue to the relevant audience
-   * (issue #715). Multi-role viewers see the union; owners and managers see all.
-   * Omitted, all actions are returned (withheldCount = 0).
-   */
-  roles?: readonly Role[],
-): Promise<TodayWork> {
-  // The one horizon every readiness surface shares (src/lib/operational-window.ts).
-  const { to: horizon } = operationalWindow(now);
-  // One batched readiness pass for the whole window, not one per trip. The
-  // per-trip call issues about ten queries of its own, so a six-departure
-  // morning was sixty round trips to render the shop's most-visited page;
-  // `inHorizonReadiness` bounds the fetch with the already-existing keyset
-  // page and answers readiness for every trip at once.
+  input: {
+    now: Date;
+    horizon: Date;
+    timeZone: string;
+    inWindow: HorizonReadinessEvidence["trips"];
+    todayTrips: HorizonReadinessEvidence["trips"];
+    todayTripIds: string[];
+    todayLocal: string;
+    bookingIdsByTrip: Map<string, string[]>;
+    includeOpsAlerts: boolean;
+    personId: string | undefined;
+    owingBookingIds: string[];
+    noOpenOrders: Map<string, { id: string; hostedInvoiceUrl: string | null }>;
+  },
+) {
   const {
-    trips: inWindow,
-    upcoming,
-    readinessByTrip,
-  } = evidence ?? (await inHorizonReadiness(db, shopId, now));
-  const today = shopDay(now, timeZone);
-  const todayTrips = inWindow.filter((trip) => shopDay(trip.startsAt, timeZone) === today);
-  const bookingIdsByTrip = new Map(
-    inWindow.map((trip) => [
-      trip.id,
-      (readinessByTrip.get(trip.id) ?? []).map((row) => row.booking.id),
-    ]),
-  );
-
-  // The shop's own calendar day, for the register, boat-papers and bench reads.
-  const todayLocal = calendarDateInTimezone(now, timeZone);
-  const todayTripIds = todayTrips.map((trip) => trip.id);
-
-  // The marine forecast for every booked departure inside the provider's
-  // window, started here and **never awaited by the queue**: the high-wind rows
-  // it raises go back as a promise of their own (`highWindActions`). Departures
-  // to one site share one request (`fetchAutomatedMarineForecast` keys its
-  // cache and its in-flight promise by site), and a failed or slow provider
-  // answers null.
-  const owingBookingIds = owingSeatIds(inWindow, readinessByTrip);
-  const noOpenOrders = new Map<string, { id: string; hostedInvoiceUrl: string | null }>();
-  const highWind = highWindActions(inWindow, forecastsForDepartures(inWindow, now), {
-    shopSlug,
+    now,
+    horizon,
     timeZone,
-    locale,
-    t,
-    roles,
-  });
-
-  // **One wave.** Every read below takes only the shop, the window and the
-  // clock, so none waits on another: they used to run as this fan-out plus
-  // thirteen single reads one after another further down, each a round trip
-  // on the shop's most-opened page (code review 2026-10-10, item 2). The rows
-  // are still pushed in the order they always were; only the reads moved.
+    inWindow,
+    todayTrips,
+    todayTripIds,
+    todayLocal,
+    bookingIdsByTrip,
+    includeOpsAlerts,
+    personId,
+    owingBookingIds,
+    noOpenOrders,
+  } = input;
   const [
     departureRollCall,
     departureCrewRollCall,
@@ -2150,6 +1986,166 @@ export async function getTodayWork(
             : noOpenOrders,
         ),
   ]);
+  return {
+    departureRollCall,
+    departureCrewRollCall,
+    missingFit,
+    ungatedNitrox,
+    missingContact,
+    waitlisted,
+    courseCrewCounts,
+    deliveryIssues,
+    neverSentLastMinuteDeal,
+    lastMinuteWindows,
+    rollCallGaps,
+    stagesByTrip,
+    crewClashState,
+    boardedAnywhere,
+    sharedWelcomeSeats,
+    helpRequests,
+    rawStaff,
+    credentialRows,
+    diveIntents,
+    boatNames,
+    crewByTrip,
+    boatsOut,
+    opsAlerts,
+    reviewsAwaiting,
+    unanswered,
+    shopUnits,
+    overdueGear,
+    dueBackGear,
+    gearServiceDueRows,
+    fitAdjustedReturns,
+    boatSafety,
+    workOrdersNeedingAttention,
+    crewedAssignments,
+    openOrders,
+  };
+}
+
+export async function getTodayWork(
+  db: AppDb,
+  shopId: string,
+  shopSlug: string,
+  timeZone: string,
+  now: Date = nowDate(),
+  /** When set, the result carries which in-window trips this person crews. */
+  personId?: string,
+  /**
+   * Resolves the blocked-diver rows' `detail`/`actionLabel` text
+   * (`collapseDiverActions`, `src/lib/today.ts`). Defaults to English so every
+   * pre-existing caller (tests included) keeps working unchanged; the page
+   * passes its own request-locale translator.
+   */
+  t: StaffTranslator = staffTranslator("en-US"),
+  /** Formats every departure time (`at()`); defaults alongside `t` for the same reason. */
+  locale = "en-US",
+  /**
+   * Stuck Stripe operations and failed photo-deletion retries (task 157) are
+   * owner/manager chores — the same accountable gate Reports' monthly view
+   * already uses (ADR 20260723-owner-reporting) — so they only join the queue
+   * when a caller that has already checked `canViewShopReports` passes true.
+   * Defaults false so every pre-existing caller (tests included) keeps
+   * getting the diver-blocker-only queue.
+   */
+  includeOpsAlerts = false,
+  /**
+   * Precomputed horizon evidence from `inHorizonReadiness` (`./blockers`),
+   * when the caller already ran the pass for another readiness surface in the
+   * same request — the shop home passes it so its by-departure view doesn't
+   * pay for the pipeline twice. Omitted, the queue runs its own.
+   */
+  evidence?: HorizonReadinessEvidence,
+  /**
+   * The shop's own divemaster target (`shops.divers_per_divemaster`), for the
+   * `uncrewed_departure`/`crew_below_target` rows (issue #732). Defaults to
+   * `DEFAULT_DIVERS_PER_DIVEMASTER` alongside `t`/`locale` above, for the same
+   * reason: every pre-existing caller (tests included) keeps working
+   * unchanged. The close-out surface's own read of this queue
+   * (`src/db/closeout.ts`) accepts that default rather than threading the
+   * shop row the rest of the way down its call chain for a queue it only
+   * reads as leftovers.
+   */
+  diversPerDivemaster: number | null = DEFAULT_DIVERS_PER_DIVEMASTER,
+  /**
+   * The viewer's roles, for filtering the action queue to the relevant audience
+   * (issue #715). Multi-role viewers see the union; owners and managers see all.
+   * Omitted, all actions are returned (withheldCount = 0).
+   */
+  roles?: readonly Role[],
+): Promise<TodayWork> {
+  // The one horizon every readiness surface shares (src/lib/operational-window.ts).
+  const { to: horizon } = operationalWindow(now);
+  // One batched readiness pass for the whole window, not one per trip. The
+  // per-trip call issues about ten queries of its own, so a six-departure
+  // morning was sixty round trips to render the shop's most-visited page;
+  // `inHorizonReadiness` bounds the fetch with the already-existing keyset
+  // page and answers readiness for every trip at once.
+  const {
+    trips: inWindow,
+    upcoming,
+    readinessByTrip,
+  } = evidence ?? (await inHorizonReadiness(db, shopId, now));
+  const today = shopDay(now, timeZone);
+  const todayTrips = inWindow.filter((trip) => shopDay(trip.startsAt, timeZone) === today);
+  const bookingIdsByTrip = new Map(
+    inWindow.map((trip) => [
+      trip.id,
+      (readinessByTrip.get(trip.id) ?? []).map((row) => row.booking.id),
+    ]),
+  );
+
+  // The shop's own calendar day, for the register, boat-papers and bench reads.
+  const todayLocal = calendarDateInTimezone(now, timeZone);
+  const todayTripIds = todayTrips.map((trip) => trip.id);
+
+  // The marine forecast for every booked departure inside the provider's
+  // window, started here and **never awaited by the queue**: the high-wind rows
+  // it raises go back as a promise of their own (`highWindActions`). Departures
+  // to one site share one request (`fetchAutomatedMarineForecast` keys its
+  // cache and its in-flight promise by site), and a failed or slow provider
+  // answers null.
+  const owingBookingIds = owingSeatIds(inWindow, readinessByTrip);
+  const noOpenOrders = new Map<string, { id: string; hostedInvoiceUrl: string | null }>();
+  const highWind = highWindActions(inWindow, forecastsForDepartures(inWindow, now), {
+    shopSlug,
+    timeZone,
+    locale,
+    t,
+    roles,
+  });
+
+  // **One wave** (`readTodayWave`): every read takes only the shop, the
+  // window and the clock, so none waits on another.
+  const wave = await readTodayWave(db, shopId, {
+    now,
+    horizon,
+    timeZone,
+    inWindow,
+    todayTrips,
+    todayTripIds,
+    todayLocal,
+    bookingIdsByTrip,
+    includeOpsAlerts,
+    personId,
+    owingBookingIds,
+    noOpenOrders,
+  });
+  const {
+    departureRollCall,
+    departureCrewRollCall,
+    stagesByTrip,
+    crewClashState,
+    helpRequests,
+    rawStaff,
+    diveIntents,
+    boatNames,
+    crewByTrip,
+    boatsOut,
+    shopUnits,
+    crewedAssignments,
+  } = wave;
 
   const helpRequestsByTrip = new Map<string, typeof helpRequests>();
   for (const request of helpRequests) {
@@ -2165,779 +2161,35 @@ export async function getTodayWork(
   }));
 
   const actions: TodayAction[] = [];
+  const rows: TodayRowsContext = {
+    wave,
+    inWindow,
+    upcoming,
+    readinessByTrip,
+    todayTrips,
+    today,
+    todayLocal,
+    todayTripIds,
+    bookingIdsByTrip,
+    horizon,
+    shopSlug,
+    timeZone,
+    locale,
+    t,
+    now,
+    diversPerDivemaster,
+    roles,
+    personId,
+    helpRequestsByTrip,
+    availableStaff,
+    includeOpsAlerts,
+  };
 
-  // Blocked divers aboard a boat that has left the horizon but is not back
-  // (issue #2064). Only the boarded ones, and only as `blocked_aboard` rows:
-  // an ashore blocker on a boat that has gone is noise.
-  for (const trip of boatsOut.out) {
-    const label = `${trip.title} · ${at(trip.startsAt, timeZone, locale)}`;
-    const aboard = boatsOut.blocked
-      .filter((row) => row.booking.tripId === trip.id)
-      .map((row) => ({
-        bookingId: row.booking.id,
-        personId: row.person.id,
-        fullName: row.person.fullName,
-        tripId: trip.id,
-        tripTitle: label,
-        startsAt: trip.startsAt,
-        blockers: row.readiness.blockers,
-        aboard: true,
-      }));
-    // A diver whose only open blocker is money keeps no row here: that is the
-    // one blocker that changes nothing in the water, and `collapseDiverActions`
-    // would file it as an ordinary payment row for a boat nobody can reach.
-    actions.push(
-      ...collapseDiverActions(aboard, shopSlug, now, t).filter(
-        (action) => action.kind === "blocked_aboard",
-      ),
-    );
-  }
+  pushRollCallRows(actions, rows);
 
-  // Somebody on a boat's list is not accounted for (DOM-H3). The after-dive
-  // rows are the only ones on this queue that can mean a diver is still in the
-  // water, so they lead: top `KIND_SEVERITY`, pinned to the top urgency band,
-  // and dated at the moment the trip tied up — always in the past for a boat
-  // that is home, so they also sort ahead of every still-upcoming row inside
-  // that band. Urgency is set rather than derived because there is no "before
-  // it sails" left to derive from; the departure it would hang off has already
-  // happened.
-  //
-  // The dock-count rows (`departure_uncounted`, `no_roll_call`) ride the same
-  // path with their own kind, tone, urgency and words — never the after-dive
-  // wording. One string for both would say "a person may be in the water" on
-  // every trip where two walk-aways were never tapped, and a warning that fires
-  // on most trips is a warning nobody reads.
-  for (const gap of rollCallGaps) {
-    const checkpoint = gap.diveNumber >= 1 ? `after_dive_${gap.diveNumber}` : "departure";
-    actions.push({
-      id: `roll-call:${gap.tripId}:${gap.reason}:${checkpoint}`,
-      kind: ROLL_CALL_GAP_KINDS[gap.reason],
-      urgency: rollCallGapUrgency(gap.reason, gap.stale),
-      subject: gap.title,
-      // The safety-event timestamp format, with its timezone spelled out: a
-      // bare time would read as "this morning" for a boat that returned last
-      // night, which is the case this row exists for.
-      context: formatDateTimeTz(gap.endsAt, locale, timeZone),
-      // Its own header even when the same boat has morning work queued: the
-      // return moment is a different moment than the departure.
-      departure: {
-        tripId: gap.tripId,
-        label: `${gap.title} · ${formatDateTimeTz(gap.endsAt, locale, timeZone)}`,
-      },
-      aboutDeparture: true,
-      detail: rollCallGapDetailText(t, gap),
-      actionLabel: openRollCallActionText(t),
-      // Straight to the checkpoint that is open, not the manifest's default
-      // departure tab — one tap from the queue to the count that closes it.
-      href: `/shop/${shopSlug}/trips/${gap.tripId}/manifest?checkpoint=${checkpoint}`,
-      dueAt: gap.endsAt,
-    });
-  }
+  pushDepartureRows(actions, rows);
 
-  // **Crew rostered on two departures at once** (H-80, issues #1776 and
-  // #1814). A clash is the one crew fault invisible on both boats — each shows
-  // a full crew list — so Today says it, on each of the two departures, in one
-  // of two rows decided per leg by `crewClashPhase`:
-  //
-  // - `crew_clash` while the clashing leg is still to sail: there are hours
-  //   left to ring somebody, and the fix is on the crew editor.
-  // - `crew_clash_sailed` while it is out: the question from ashore is who is
-  //   actually aboard, so it points at the roll call.
-  //
-  // Information, never a gate (#1345).
-  //
-  // **A missing diver always leads the sailed row** (dive-domain-expert review,
-  // 2026-10-06). Needs you ranks tone first (`sortStationRows`), and every
-  // after-dive roll-call row is danger where this row is a warning. The row is
-  // also dated no earlier than the latest open after-dive count, so the
-  // ordering holds on dates alone, should a tone ever move.
-  const latestOpenAfterDiveCount = Math.max(
-    0,
-    ...rollCallGaps
-      .filter((gap) => gap.diveNumber >= 1 && !gap.stale)
-      .map((gap) => gap.endsAt.getTime()),
-  );
-  for (const trip of crewClashState.departures) {
-    const clashes = crewClashState.clashes.get(trip.id) ?? [];
-    if (clashes.length === 0) continue;
-    const crewAnswered = crewClashState.crew.get(trip.id) ?? new Map<string, string>();
-    const recorded =
-      [...(crewClashState.divers.get(trip.id)?.values() ?? [])].some(
-        (state) => state === "boarded",
-      ) || [...crewAnswered.values()].some((state) => state === "boarded");
-    const ahead: { clash: CrewClash; startsAt: Date }[] = [];
-    const out: { clash: CrewClash; endsAt: Date }[] = [];
-    for (const clash of clashes) {
-      const standing = crewClashPhase({
-        legs: clash.legs,
-        departureStartsAt: trip.startsAt,
-        departureRollCallRecorded: recorded,
-        now,
-      });
-      // Once this person has a result at this departure's own checkpoint,
-      // "confirm who is aboard" is answered for them (review N2), so the
-      // sailed row stops naming them.
-      if (standing?.phase === "out" && !crewAnswered.has(clash.personId)) {
-        out.push({ clash, endsAt: standing.leg.endsAt });
-      }
-      if (standing?.phase === "ahead") ahead.push({ clash, startsAt: standing.leg.startsAt });
-    }
-    const when = at(trip.startsAt, timeZone, locale);
-    const departure = { tripId: trip.id, label: `${trip.title} · ${when}` };
-    if (out.length > 0) {
-      const returns = Math.max(...out.map((entry) => entry.endsAt.getTime()));
-      actions.push({
-        id: `crew-clash-sailed:${trip.id}`,
-        kind: "crew_clash_sailed",
-        urgency: "imminent",
-        subject: trip.title,
-        context: when,
-        departure,
-        aboutDeparture: true,
-        detail: crewClashSailedDetailText(
-          t,
-          locale,
-          out.map((entry) => entry.clash),
-        ),
-        actionLabel: openRollCallActionText(t),
-        href: `/shop/${shopSlug}/trips/${trip.id}/manifest`,
-        dueAt: new Date(Math.max(returns, latestOpenAfterDiveCount)),
-      });
-    }
-    if (ahead.length > 0) {
-      const sails = new Date(Math.min(...ahead.map((entry) => entry.startsAt.getTime())));
-      actions.push({
-        id: `crew-clash:${trip.id}`,
-        kind: "crew_clash",
-        urgency: urgencyFor(sails, now),
-        subject: trip.title,
-        context: when,
-        departure,
-        aboutDeparture: true,
-        detail: crewClashDetailText(
-          t,
-          locale,
-          ahead.map((entry) => entry.clash),
-        ),
-        actionLabel: openCrewActionText(t),
-        href: `/shop/${shopSlug}/trips/${trip.id}?view=details#crew`,
-        dueAt: sails,
-      });
-    }
-  }
-
-  for (const trip of inWindow) {
-    const tripHref = `/shop/${shopSlug}/trips/${trip.id}`;
-    const when = at(trip.startsAt, timeZone, locale);
-    // Every row this trip contributes shares one departure header in the
-    // queue; the rows themselves then never repeat the boat's name.
-    const departure = { tripId: trip.id, label: `${trip.title} · ${when}` };
-
-    for (const request of helpRequestsByTrip.get(trip.id) ?? []) {
-      actions.push({
-        id: `help-request:${request.id}`,
-        kind: "help_request",
-        urgency: urgencyFor(trip.startsAt, now),
-        subject: request.personName,
-        context: when,
-        departure,
-        detail: helpRequestDetailText(t, {
-          personName: request.personName,
-          kind: request.kind,
-          status: request.status,
-        }),
-        actionLabel: helpRequestActionText(t, request.status),
-        href: `${tripHref}#booking-${request.bookingId}`,
-        helpRequest: { requestId: request.id, status: request.status },
-        dueAt: trip.startsAt,
-      });
-    }
-
-    const blockedDivers = (readinessByTrip.get(trip.id) ?? [])
-      .filter((row) => row.readiness.status === "blocked")
-      .map((row) => ({
-        bookingId: row.booking.id,
-        personId: row.person.id,
-        fullName: row.person.fullName,
-        tripId: trip.id,
-        tripTitle: `${trip.title} · ${when}`,
-        startsAt: trip.startsAt,
-        blockers: row.readiness.blockers,
-        aboard: boardedAnywhere.get(trip.id)?.has(row.booking.id) === true,
-      }));
-    actions.push(...collapseDiverActions(blockedDivers, shopSlug, now, t));
-
-    // **Say hello** (issue #1182, delight report D22). One row per departure,
-    // never one per diver: the row is about the boat's roster, and five rows
-    // saying "greet this person" would be a queue of pleasantries above the
-    // work. It disappears on its own an hour after the boat is home, because
-    // `welcomeCueFor` stops returning a cue there — nothing here has to
-    // remember to stop.
-    const welcomeCues = (sharedWelcomeSeats.get(trip.id) ?? []).flatMap((seat) => {
-      const cue = welcomeCueFor({
-        sharedAt: seat.sharedAt,
-        lastDivedAt: seat.lastDivedAt,
-        tripEndsAt: trip.endsAt,
-        now,
-      });
-      return cue ? [{ name: seat.personName, cue }] : [];
-    });
-    if (welcomeCues.length > 0) {
-      actions.push({
-        id: `say-hello:${trip.id}`,
-        kind: "say_hello",
-        urgency: urgencyFor(trip.startsAt, now),
-        subject: trip.title,
-        context: when,
-        departure,
-        aboutDeparture: true,
-        detail: sayHelloSentences(t, locale, welcomeCues).join(" "),
-        actionLabel: openGuestsActionText(t),
-        href: tripHref,
-        dueAt: trip.startsAt,
-      });
-    }
-
-    // One diver is a row about that person, named; several stay one row about
-    // the boat — the same rule as the emergency-contact row below.
-    const withoutFit = missingFit.get(trip.id) ?? [];
-    if (withoutFit.length > 0) {
-      const lone = withoutFit.length === 1 ? withoutFit[0] : undefined;
-      actions.push({
-        id: `prep:${trip.id}`,
-        kind: "dive_prep",
-        urgency: urgencyFor(trip.startsAt, now),
-        subject: lone ? lone.fullName : trip.title,
-        context: when,
-        departure,
-        ...(lone ? {} : { aboutDeparture: true }),
-        detail: lone ? missingFitNamedDetailText(t) : missingFitDetailText(t, withoutFit.length),
-        actionLabel: openPrepListActionText(t),
-        href: `${tripHref}/prep#${PREP_SECTION_ID}`,
-        dueAt: trip.startsAt,
-      });
-    }
-
-    const ungated = ungatedNitrox.get(trip.id) ?? [];
-    if (ungated.length > 0) {
-      const lone = ungated.length === 1 ? ungated[0] : undefined;
-      actions.push({
-        id: `nitrox:${trip.id}`,
-        kind: "nitrox_gate",
-        urgency: urgencyFor(trip.startsAt, now),
-        subject: lone ? lone.fullName : trip.title,
-        context: when,
-        departure,
-        ...(lone ? {} : { aboutDeparture: true }),
-        detail: lone ? ungatedNitroxNamedDetailText(t) : ungatedNitroxDetailText(t, ungated.length),
-        actionLabel: openPrepListActionText(t),
-        href: `${tripHref}/prep#${PREP_SECTION_ID}`,
-        dueAt: trip.startsAt,
-      });
-    }
-
-    // The one "course crew gap" computation (Lens 17 task 151) — also
-    // consumed by the trip page and the staffing coverage list, and all three
-    // report its two codes separately, so a session Today flags as over its
-    // ratio can neither read as "Covered" on staffing nor be filed there under
-    // "needs an instructor" when it already has one.
-    const counts = courseCrewCounts.get(trip.id) ?? NO_SUPERVISION;
-    const crewGap = courseCrewGap({
-      course: trip.course,
-      instructorCount: counts.instructorCount,
-      assistantCount: counts.assistantCount,
-      booked: trip.booked,
-    });
-    // The shop's own divemaster target is resolved before either row is
-    // pushed, because the zero-crew case outranks the instructor gap and needs
-    // this answer to know whether it applies (issue #1338, and the matching
-    // walk in `staffingWeek`, src/db/staffing.ts).
-    const ratioGap = divemasterRatioGap({
-      divers: trip.bookedDivers,
-      divemasterCount: inWaterDivemasterCount(counts),
-      diversPerDivemaster,
-      // A departure the shop has marked self-guided raises neither of the
-      // two rows below. Read here rather than branched on afterwards, so
-      // this queue and the trip page cannot disagree (issue #973).
-      selfGuided: trip.selfGuided,
-    });
-    // **No divemaster outranks the instructor gap.** A course session
-    // with no crew at all satisfies both rules, and issue #732 settled that a
-    // departure carries one row for one underlying fact — but that rule is
-    // about the count, not about which code wins. The course gap winning
-    // outright meant an empty boat said "This course session has no instructor
-    // assigned", a sentence that mentions no divemaster and so reads as though
-    // one is already aboard.
-    //
-    // `divemasterRatioGap` decides rather than a bare `inWaterDivemasterCount
-    // === 0`, because the count alone is also true where "no crew" would be
-    // the wrong thing to say: a self-guided departure wants no supervisor, and
-    // one with nobody booked has no one to supervise. Both keep the instructor
-    // sentence, which stays true and actionable for them — a session without
-    // an instructor cannot take an enrolment however empty it is.
-    //
-    // Two things this is safe because of, neither obvious from the code.
-    // `over_ratio` can never be the suppressed code: it requires
-    // `instructorCount >= 1` (src/lib/course-ratios.ts), which forces a
-    // non-zero in-water count, so `uncrewed` is always false when it fires and
-    // a ratio breach can never hide behind a zero-crew row. And the shop's own
-    // `diversPerDivemaster` cannot route a departure between these rows —
-    // with divers aboard and nobody in the water, `ceil(divers / ratio) >= 1`
-    // across the whole legal range (`MIN_`/`MAX_DIVERS_PER_DIVEMASTER`), so
-    // `under_target` always holds and only the two exemptions decide. A
-    // shop-set preference deciding whether a supervision signal appears would
-    // be alarming; it cannot.
-    const uncrewed = ratioGap.code === "under_target" && ratioGap.divemasterCount === 0;
-    // **A gap a lapse opened says so, and only that gap** (issue #1853).
-    // `counts` reads each rostered professional's recorded ratings, so a crew
-    // list with an instructor's name on it can still raise these rows. The
-    // same three answers are taken again on the roster's claim, and a row
-    // carries the lapse only when the roster would not have raised it: a
-    // divemaster's lapsed card beside a session nobody rostered an instructor
-    // on is not why it has no instructor (dive-domain review). Never a refusal
-    // — the booking gate still reads the roster's claim (H-59).
-    const rosterCrewGap = courseCrewGap({
-      course: trip.course,
-      instructorCount: counts.roster.instructorCount,
-      assistantCount: counts.roster.assistantCount,
-      booked: trip.booked,
-    });
-    const rosterRatioGap = divemasterRatioGap({
-      divers: trip.bookedDivers,
-      divemasterCount: inWaterDivemasterCount(counts.roster),
-      diversPerDivemaster,
-      selfGuided: trip.selfGuided,
-    });
-    const rosterUncrewed =
-      rosterRatioGap.code === "under_target" && rosterRatioGap.divemasterCount === 0;
-    const lapseNote =
-      counts.lapsed.length > 0 ? ratingLapsedDetailText(t, locale, counts.lapsed) : null;
-    const explainedIf = (opened: boolean, detail: string) =>
-      opened && lapseNote ? `${detail} ${lapseNote}` : detail;
-    // Who lost the instructor rung — the only people who can be why a session
-    // reads as having no instructor.
-    const lostInstructor = counts.lapsed.filter((member) => member.lost === "instructor");
-    if (crewGap.code !== "none" && !uncrewed) {
-      const opened = rosterCrewGap.code !== crewGap.code || rosterUncrewed;
-      actions.push({
-        id: `instructor:${trip.id}`,
-        kind: "instructor_missing",
-        urgency: urgencyFor(trip.startsAt, now),
-        subject: trip.title,
-        context: when,
-        departure,
-        aboutDeparture: true,
-        detail:
-          crewGap.code === "over_ratio"
-            ? // An intro session's cap is PADI's Discover Scuba open-water
-              // figure (2 per instructor, HD-6) and an assistant does not raise
-              // it, so the entry-level wording — which cites the Open Water
-              // 8-plus-2 and tells staff to add an assistant — would both
-              // misquote a standard and prescribe a fix that changes nothing.
-              // Each rule gets its own sentence.
-              explainedIf(
-                opened,
-                crewGap.ratio === "intro"
-                  ? overRatioIntroDetailText(t, crewGap.booked, crewGap.capacity)
-                  : overRatioDetailText(t, crewGap.booked, crewGap.capacity),
-              )
-            : // "No instructor assigned" is false beside a lapsed instructor's
-              // name, so when one lost the rung the lapse is the whole
-              // sentence. When nobody did, the session has no instructor
-              // rostered at all, and that is what it says.
-              opened && lostInstructor.length > 0
-              ? ratingLapsedDetailText(t, locale, lostInstructor)
-              : instructorMissingDetailText(t),
-        actionLabel: openCrewActionText(t),
-        // The trip's crew editor, not the bare Overview it used to land on
-        // (Lens 17 task 139) — the fix for either gap lives right there.
-        href: `${tripHref}?view=details#crew`,
-        dueAt: trip.startsAt,
-      });
-    }
-
-    // The shop's own target (`divemasterRatioGap`, src/lib/divemaster-ratio.ts)
-    // — every dive the shop runs, course session or fun dive alike, unlike
-    // `courseCrewGap` above, which is an agency-published training ratio and
-    // only ever fires for a course (issue #732). It reuses `counts`: the same
-    // crew count `courseCrewGap` read, never a second query or a second
-    // definition of who is in the water (`countInWaterCrew`,
-    // src/lib/crew-roles.ts). Binds nothing — informs only, as on the trip page.
-    //
-    // Still one row per departure. The below-target row is suppressed when the
-    // instructor gap was placed above, because that gap is the more precise
-    // statement of the same shortfall and firing both would name one fact in
-    // two vocabularies (the wallpaper failure DOM-H3 designs against). The
-    // zero-crew row is not suppressed — it *replaced* the instructor row
-    // rather than joining it. `courseCrewGap` returns `"none"` for every fun
-    // dive by construction, so a fun dive reaches both rows exactly as before.
-    if (ratioGap.code === "under_target" && (uncrewed || crewGap.code === "none")) {
-      // Two different sentences for two different problems, not one branching
-      // on count: "nobody is rostered at all" and "one short of your target"
-      // read as different severities because they are. The zero-crew case
-      // gets its own kind and rank, above `nitrox_gate`; the below-target
-      // case gets a quieter one, ranked with the other purely-advisory rows
-      // (`KIND_SEVERITY`, src/lib/today.ts).
-      if (ratioGap.divemasterCount === 0) {
-        // Which of the two zero-crew rows is the course/fun-dive split, read
-        // off `crewGap` rather than off `trip.course` so the two cannot
-        // disagree: with nobody in the water `instructorCount` is 0, so
-        // `courseCrewGap` returns `no_instructor` for exactly the sessions
-        // that have a course attached. The course row says both words —
-        // "No crew" alone would send a manager looking for any divemaster,
-        // and only an instructor closes a course gap.
-        const course = crewGap.code === "no_instructor";
-        actions.push({
-          id: `uncrewed:${trip.id}`,
-          kind: course ? "uncrewed_course" : "uncrewed_departure",
-          urgency: urgencyFor(trip.startsAt, now),
-          subject: trip.title,
-          context: when,
-          departure,
-          aboutDeparture: true,
-          detail: explainedIf(
-            !rosterUncrewed,
-            course
-              ? uncrewedCourseDetailText(t, ratioGap.divers)
-              : uncrewedDepartureDetailText(t, ratioGap.divers),
-          ),
-          actionLabel: openCrewActionText(t),
-          href: `${tripHref}?view=details#crew`,
-          dueAt: trip.startsAt,
-        });
-      } else {
-        actions.push({
-          id: `crew-target:${trip.id}`,
-          kind: "crew_below_target",
-          urgency: urgencyFor(trip.startsAt, now),
-          subject: trip.title,
-          context: when,
-          departure,
-          aboutDeparture: true,
-          detail: explainedIf(
-            rosterRatioGap.code === "none",
-            crewBelowTargetDetailText(
-              t,
-              ratioGap.divers,
-              ratioGap.divemasterCount,
-              // Never null here: a null target reports no gap at all.
-              diversPerDivemaster ?? DEFAULT_DIVERS_PER_DIVEMASTER,
-            ),
-          ),
-          actionLabel: openCrewActionText(t),
-          href: `${tripHref}?view=details#crew`,
-          dueAt: trip.startsAt,
-        });
-      }
-    }
-
-    // Emergency contact is a dock-settleable nudge, not a blocker, and only
-    // worth surfacing once a boat is close (within three days). Beyond that it
-    // is queue noise a diver still has time to fill in themselves.
-    const withoutContact =
-      urgencyFor(trip.startsAt, now) !== "later" ? (missingContact.get(trip.id) ?? []) : [];
-    if (withoutContact.length > 0) {
-      // One diver is a row about that person — named, like every other
-      // single-diver row. Several stay one row about the boat.
-      const lone = withoutContact.length === 1 ? withoutContact[0] : undefined;
-      actions.push({
-        id: `contact:${trip.id}`,
-        kind: "emergency_contact",
-        urgency: urgencyFor(trip.startsAt, now),
-        subject: lone ? lone.fullName : trip.title,
-        context: when,
-        departure,
-        ...(lone ? {} : { aboutDeparture: true }),
-        detail: lone
-          ? missingContactNamedDetailText(t)
-          : missingContactDetailText(t, withoutContact.length),
-        actionLabel: openTripActionText(t),
-        href: tripHref,
-        dueAt: trip.startsAt,
-      });
-    }
-
-    // A trip within 3 days that's under capacity and has never had a
-    // last-minute deal sent is lost revenue staff can still act on. One-shot
-    // per trip: once any blast has gone out, Today stops nudging even if
-    // seats are still open — a shop that's already tried isn't nagged, but
-    // can always resend from the trip page itself (docs ADR
-    // 20260727-last-minute-fill-promos).
-    const openSeats = Math.max(0, trip.capacity - trip.booked);
-    // The reach test goes last on purpose: it is the only clause that scans a
-    // list, and the three before it rule out most departures for free.
-    //
-    // Why it is there at all — a shop with an empty last-minute list, or one
-    // whose members all stated dates that miss this departure, was being told
-    // to "fill these seats" and handed a panel whose only content was an empty
-    // state. The Trip surface now hides that panel outright when nobody
-    // matches, so this row's own `#last-minute-deal` anchor would land on
-    // nothing. A queue row must be work someone can actually do
-    // (design/principles.md #10).
-    if (
-      openSeats > 0 &&
-      urgencyFor(trip.startsAt, now) !== "later" &&
-      neverSentLastMinuteDeal.has(trip.id) &&
-      lastMinuteWindows.some((entry) =>
-        lastMinuteEntryMatchesTripDate(entry, shopDay(trip.startsAt, timeZone)),
-      )
-    ) {
-      actions.push({
-        id: `last-minute-fill:${trip.id}`,
-        kind: "last_minute_fill",
-        urgency: urgencyFor(trip.startsAt, now),
-        subject: trip.title,
-        context: when,
-        departure,
-        aboutDeparture: true,
-        detail: lastMinuteFillDetailText(t, openSeats),
-        actionLabel: openLastMinuteDealActionText(t),
-        href: `${tripHref}?view=details#last-minute-deal`,
-        dueAt: trip.startsAt,
-      });
-    }
-
-    const front = waitlisted.get(trip.id);
-    const waiting = front?.count ?? 0;
-    if (front && waiting > 0 && openSeats > 0) {
-      actions.push({
-        id: `waitlist:${trip.id}`,
-        kind: "waitlist_seat",
-        urgency: urgencyFor(trip.startsAt, now),
-        subject: trip.title,
-        context: when,
-        departure,
-        aboutDeparture: true,
-        detail: waitlistSeatDetailText(t, openSeats, waiting),
-        // One tap invites the longest-waiting diver without leaving Today; the href
-        // stays the row's real destination — a pre-hydration tap, a middle-click
-        // or an open-in-new-tab lands on the trip's wait-list section.
-        actionLabel: inviteFromWaitlistActionText(t),
-        href: `${tripHref}#waitlist`,
-        invite: {
-          tripId: trip.id,
-          entryId: front.entryId,
-          personName: front.personName,
-          personEmail: front.personEmail,
-          invitedAt: front.invitedAt,
-          bookingPath: publicTripPath(shopSlug, trip.id),
-          tripTitle: trip.title,
-          tripWhen: when,
-        },
-        dueAt: trip.startsAt,
-      });
-    }
-  }
-
-  actions.push(
-    ...collapseEmailDeliveries(
-      deliveryIssues.map((issue) => ({
-        deliveryId: issue.delivery.id,
-        bookingId: issue.booking.id,
-        fullName: issue.person.fullName,
-        isWaiver: issue.delivery.kind !== "booking_confirmation",
-        status: issue.delivery.status,
-        trip: {
-          id: issue.trip.id,
-          startsAt: issue.trip.startsAt,
-          label: `${issue.trip.title} · ${at(issue.trip.startsAt, timeZone, locale)}`,
-        },
-      })),
-      shopSlug,
-      now,
-      t,
-    ),
-  );
-
-  // A payment row only gets the inline "copy link"/"resend invoice" control
-  // once we know the booking was actually invoiced through Stripe: a diver
-  // who owes at the counter has no invoice to act on, and a shop with no
-  // connected Stripe account has nothing to resend either. Both cases keep
-  // the row's `href` fallback to the roster instead of a dead button.
-  if (actions.some((action) => action.payment)) {
-    for (const action of actions) {
-      if (!action.payment) continue;
-      const order = openOrders.get(action.payment.bookingId);
-      action.payment = order
-        ? {
-            bookingId: action.payment.bookingId,
-            orderId: order.id,
-            hostedInvoiceUrl: order.hostedInvoiceUrl,
-          }
-        : undefined;
-    }
-  }
-
-  // Platform-health chores (task 157, UX persona lens 17): stuck Stripe
-  // operations and photo deletions that never finished used to surface only
-  // on the owner-only monthly Reports page — urgent work buried behind a
-  // report nobody opens daily. Forced `urgency: "now"` (not derived from a
-  // departure — there isn't one) so they land in today's queue the same day
-  // they go stale; `dueAt: null` still sorts them after every dated row
-  // within that band, matching the "undated work never jumps the line"
-  // invariant every other action kind already follows. The full panels these
-  // rows mirror moved off Reports with the surface consolidation — payments to
-  // Orders, deletions to Settings' Data group — and each row's `href` points at
-  // wherever its panel now is.
-  if (opsAlerts) {
-    const [stuckOperations, pendingDeletions, owedRefunds, openDisputes] = opsAlerts;
-
-    // A diver's bank is taking a charge back (ADR
-    // 20261009-stripe-reversals-reach-diveday). One row per undecided dispute,
-    // from the day Stripe reports it until it is decided: the amount and the
-    // day Stripe stops taking evidence are what the owner acts on. The door is
-    // the order it was raised against, or the departure a checkout paid for.
-    for (const dispute of openDisputes) {
-      actions.push({
-        id: `payment-dispute:${dispute.id}`,
-        kind: "payment_dispute",
-        urgency: "now",
-        subject: dispute.personName ?? paymentDisputeSubjectText(t),
-        context: dispute.tripTitle,
-        detail: paymentDisputeDetailText(t, {
-          amount: formatMoneyCents(dispute.amountCents, dispute.currency, locale),
-          due: dispute.evidenceDueBy
-            ? formatShortDate(dispute.evidenceDueBy, locale, timeZone)
-            : null,
-        }),
-        actionLabel: dispute.orderId
-          ? openOrderActionText(t)
-          : dispute.tripId
-            ? openTripActionText(t)
-            : openOrdersActionText(t),
-        href: dispute.orderId
-          ? `/shop/${shopSlug}/orders/${dispute.orderId}`
-          : dispute.tripId
-            ? `/shop/${shopSlug}/trips/${dispute.tripId}`
-            : `/shop/${shopSlug}/orders`,
-        // Undated on purpose, like every row here: the deadline is in the
-        // sentence, and a dated row would sort against departures it is not
-        // about.
-        dueAt: null,
-      });
-    }
-
-    for (const op of stuckOperations) {
-      const when = formatShortDate(op.intent.startedAt, locale, timeZone);
-      actions.push({
-        id: `stuck-payment-op:${op.intent.id}`,
-        kind: "stuck_payment_operation",
-        urgency: "now",
-        subject: op.personName ?? op.tripTitle ?? stuckOperationKindText(t, op.intent.kind),
-        context: op.personName && op.tripTitle ? op.tripTitle : null,
-        // No Stripe object id here: it belongs on the Orders queue, where the
-        // object it names is (principle 4 — never surface the implementation).
-        detail: stuckPaymentOperationDetailText(t, op.intent.kind, when),
-        // Points at the trip roster when there's one to point at; otherwise
-        // Orders, which carries the reconciliation detail (Stripe id, exact
-        // timestamp) to act from. That panel used to live on Reports.
-        actionLabel: op.tripId ? openTripActionText(t) : openOrdersActionText(t),
-        href: op.tripId ? `/shop/${shopSlug}/trips/${op.tripId}` : `/shop/${shopSlug}/orders`,
-        dueAt: null,
-      });
-    }
-
-    for (const attempt of pendingDeletions) {
-      actions.push({
-        id: `media-deletion:${attempt.id}`,
-        kind: "failed_photo_deletion",
-        urgency: "now",
-        subject: mediaDeletionKindText(t, attempt.kind),
-        context: null,
-        // The kind is this row's own subject and the queued-at date is
-        // bookkeeping, so the sentence carries only what a staffer cannot see
-        // without it: the file outlived the record.
-        detail: failedPhotoDeletionDetailText(t),
-        // Settings' "Data" group — the retry button for a stuck
-        // deletion lives there now, at the group anchor this href lands on.
-        actionLabel: openDataSettingsActionText(t),
-        href: `/shop/${shopSlug}/settings#data`,
-        dueAt: null,
-      });
-    }
-
-    // Money the shop owes a diver for a departure it cancelled and could not
-    // put back on the card. Mirrored here, not owned here: the panel on the
-    // Orders index is where these live and where staff act on them, the same
-    // arrangement the two queues above use.
-    //
-    // This is the one platform-health row with a person waiting on the other
-    // end of it — every one of these divers has already had an email saying the
-    // shop will be in touch.
-    //
-    // **One row per departure, not per seat.** A shop that pulls a charter owes
-    // every paid seat on it, so five rows would repeat one sentence five times
-    // (principle 9); `collapseOwedRefunds` keeps the lone case exactly as it
-    // was and groups the rest under the boat, naming who is waiting. The
-    // departure's Trip surface is the door either way — it is both where the
-    // seats are and where each payment gets marked refunded once the cash is
-    // back in a hand.
-    for (const owed of collapseOwedRefunds(
-      owedRefunds.map((row) => ({
-        bookingId: row.bookingId,
-        diverName: row.diverName,
-        tripId: row.tripId,
-        tripTitle: row.tripTitle,
-        when: formatShortDate(row.tripStartsAt, locale, timeZone),
-        amountCents: row.amountCents,
-        currency: row.currency,
-      })),
-      shopSlug,
-      locale,
-      t,
-    )) {
-      actions.push(owed);
-    }
-  }
-
-  // Reviews waiting on moderation. This used to be a count badge on a nav row;
-  // when Reviews left the header, the signal moved here — the queue is the one
-  // page that ranks pending work, and a badge on a menu was the only signal in
-  // the app that never said what to do about itself. One row for the whole
-  // queue (never one per review), `later` urgency and `dueAt: null` because
-  // nothing sails or refunds on a review — it informs, it never nags.
-  // At a count of exactly 1 the row lands on that review's own anchor rather
-  // than the top of the index, since there is a single "the" review to open;
-  // at 2 or more there is not, and the destination stays the bare list. The
-  // anchor id is the reviews list's own `review-<id>`, the same fragment a
-  // refused hide already redirects back to.
-  if (reviewsAwaiting.count > 0) {
-    const reviewsHref = `/shop/${shopSlug}/reviews`;
-    actions.push({
-      id: "reviews:pending",
-      kind: "reviews_pending",
-      urgency: "later",
-      subject: reviewsPendingSubjectText(t, reviewsAwaiting.count),
-      context: null,
-      // The count is the row (see `reviewsPendingSubjectText`).
-      detail: "",
-      actionLabel: openReviewsActionText(t),
-      href: reviewsAwaiting.onlyId
-        ? `${reviewsHref}#review-${reviewsAwaiting.onlyId}`
-        : reviewsHref,
-      dueAt: null,
-    });
-  }
-
-  // Divers who wrote back and are still waiting (ADR 20260907-two-way-inbox).
-  // One row for the whole inbox rather than one per message, `later` urgency
-  // and `dueAt: null` — the shape the reviews row above already has, and for
-  // the same reason: nothing sails on an unanswered message, and a row per
-  // message would be the inbox rendered twice. Nothing at all at zero.
-  if (unanswered > 0) {
-    actions.push({
-      id: "inbox:unanswered",
-      kind: "unanswered_messages",
-      urgency: "later",
-      subject: unansweredMessagesSubjectText(t, unanswered),
-      context: null,
-      // The count is the row (see `unansweredMessagesSubjectText`).
-      detail: "",
-      actionLabel: openInboxActionText(t),
-      href: `/shop/${shopSlug}/inbox`,
-      dueAt: null,
-    });
-  }
+  pushShopRows(actions, rows);
 
   // **The one first-run question a trading shop can still have open.**
   //
@@ -2986,267 +2238,7 @@ export async function getTodayWork(
     });
   }
 
-  // The gear register's chase list (ADR 20260815-minimal-gear-register): what
-  // never came home, what is due back before tonight, and which bench clock
-  // runs out this week. Mirrored here, not owned here — the register readers
-  // are the owning surface's own, so the queue and the register can never
-  // disagree — and self-gating: a shop with no fleet produces no rows.
-  // A calendar date's instant on the shop's own clock — midnight opening the
-  // day (a service deadline), or midnight closing it (a return due by tonight).
-  const localMidnight = (day: string, plusDays = 0) => {
-    const [year, month, dayOfMonth] = day.split("-").map(Number);
-    return wallTimeToUtc(
-      { year: year ?? 0, month: month ?? 1, day: (dayOfMonth ?? 1) + plusDays, hour: 0, minute: 0 },
-      timeZone,
-    );
-  };
-  // One row per diver, not per unit (Aaron, 2026-10-06): a BCD, a regulator
-  // and a wetsuit that never came home are one phone call to one person, and
-  // three rows under one name read as three people to chase. The units still
-  // all show — in the detail, grouped by chase and by day.
-  for (const rows of groupByPerson(overdueGear)) {
-    const first = rows[0];
-    if (!first) continue;
-    // Two different chases wearing one kind: a checked-out unit is out with a
-    // diver (a phone call), a never-collected one hangs on the wall and wants
-    // its stale claim released — saying "out with" about the second would
-    // teach staff to skim the rows that matter. Each day and each chase keeps
-    // its own sentence, so no date is averaged into one it never had.
-    const sentences = new Map<string, { out: boolean; dueOn: string; unitLabels: string[] }>();
-    for (const row of rows) {
-      const out = row.checkedOutAt !== null;
-      const key = `${out}:${row.reservedUntil}`;
-      const sentence = sentences.get(key) ?? { out, dueOn: row.reservedUntil, unitLabels: [] };
-      sentence.unitLabels.push(row.label);
-      sentences.set(key, sentence);
-    }
-    actions.push({
-      id: `gear-overdue:${first.personId}`,
-      kind: "gear_overdue",
-      // Forced: the window already closed, so there is no future instant to
-      // derive urgency from — this is today's work however old the date is.
-      urgency: "now",
-      subject: first.personName,
-      context: tripTitlesContext(rows, locale),
-      detail: [...sentences.values()]
-        .map(({ out, dueOn, unitLabels }) =>
-          (out ? gearOverdueDetailText : gearNeverPickedUpDetailText)(t, locale, {
-            unitLabels,
-            dueOn: formatCalendarDate(dueOn, locale),
-          }),
-        )
-        .join(" "),
-      actionLabel: openGearRegisterActionText(t),
-      href: `/shop/${shopSlug}/gear`,
-      // The earliest closed window's end, in the past — the longest-out diver
-      // leads. The reader orders by `reservedUntil`, so the first row is it.
-      dueAt: localMidnight(first.reservedUntil, 1),
-    });
-  }
-  // **One row for every return due today** (Aaron, 2026-10-09): a return is
-  // not a chase, so the people bringing gear back share a line, and the unit
-  // tags stay on the Rentals list the row opens. Overdue gear keeps a row per
-  // person above, because each of those is its own phone call.
-  const dueBackPeople = groupByPerson(dueBackGear).flatMap((rows) => rows.slice(0, 1));
-  const [firstDueBack] = dueBackPeople;
-  if (firstDueBack) {
-    // Due by the end of the shop's own day: "now" all day, sharpening to
-    // "imminent" as the evening runs out.
-    const dueAt = localMidnight(firstDueBack.reservedUntil, 1);
-    actions.push({
-      id: "gear-due-back",
-      kind: "gear_due_back",
-      urgency: urgencyFor(dueAt, now),
-      subject: gearDueBackSubjectText(
-        t,
-        locale,
-        dueBackPeople.map((row) => row.personName),
-      ),
-      context: null,
-      detail: gearDueBackDetailText(t),
-      actionLabel: openRentalsActionText(t),
-      href: `/shop/${shopSlug}/gear?view=rentals`,
-      dueAt,
-    });
-  }
-  for (const row of gearServiceDueRows) {
-    if (row.state.state !== "overdue" && row.state.state !== "due_soon") continue;
-    const dueAt = localMidnight(row.state.nextDueOn);
-    actions.push({
-      id: `gear-service:${row.gearItemId}`,
-      kind: "gear_service_due",
-      // An expired clock has no future instant to derive urgency from; it is
-      // counter work today, never "imminent" — that band means boats and people.
-      urgency: row.state.state === "overdue" ? "now" : urgencyFor(dueAt, now),
-      subject: row.label,
-      context: null,
-      detail: gearServiceDueDetailText(t, {
-        clockLabel: gearServiceKindLabel(t, row.state.kind),
-        overdue: row.state.state === "overdue",
-        dueOn: formatCalendarDate(row.state.nextDueOn, locale),
-      }),
-      actionLabel: openGearUnitActionText(t),
-      href: `/shop/${shopSlug}/gear/${row.gearItemId}`,
-      dueAt,
-    });
-  }
-  // **The boat and its emergency kit** (roadmap N-08, N-10; dive-domain review
-  // 2026-10-09). Two kinds of row from one read:
-  //
-  // - On each departure sailing today, the life-safety kit: no O2 kit or AED
-  //   aboard, or oxygen, AED or flares run out or about to. Danger, every
-  //   role, under that departure's header and pointing at its Boat tab — the
-  //   crew loading the boat are who can fix it before it leaves. It gates
-  //   nothing: roll call and boarding go on.
-  // - The owner's errands: a paper inside its window (escalating once it
-  //   lapses), and kit that ran out ashore or on a boat not sailing today.
-  //
-  // The sentences are the pre-departure check's own, so the owner, the crew
-  // and the manifest read the same words. Self-gating like the register.
-  const todayTripsById = new Map(todayTrips.map((trip) => [trip.id, trip]));
-  for (const row of boatSafety.departures) {
-    const trip = todayTripsById.get(row.tripId);
-    if (!trip) continue;
-    const when = at(trip.startsAt, timeZone, locale);
-    actions.push({
-      id: `boat-safety-kit:${row.tripId}`,
-      kind: "boat_safety_kit",
-      urgency: urgencyFor(trip.startsAt, now),
-      subject: row.boatName,
-      context: when,
-      departure: { tripId: trip.id, label: `${trip.title} · ${when}` },
-      detail: row.notices.map((notice) => boatSafetyNoticeText(t, notice)).join(" · "),
-      actionLabel: openBoatCheckActionText(t),
-      href: `/shop/${shopSlug}/trips/${trip.id}/manifest`,
-      dueAt: trip.startsAt,
-    });
-  }
-  for (const row of boatSafety.errands) {
-    const detail = row.notices.map((notice) => boatSafetyNoticeText(t, notice)).join(" · ");
-    actions.push(
-      row.subject === "boat"
-        ? {
-            id: `boat-safety:boat:${row.boatId}`,
-            kind: row.expired ? "boat_safety_expired" : "boat_papers_due",
-            urgency: row.expired ? "now" : "later",
-            subject: row.name,
-            context: null,
-            detail,
-            actionLabel: openBoatsActionText(t),
-            href: `/shop/${shopSlug}/settings/boats`,
-            dueAt: null,
-          }
-        : {
-            id: `boat-safety:kit:${row.gearItemId}`,
-            kind: "boat_safety_expired",
-            urgency: "now",
-            subject: row.label,
-            context: null,
-            detail,
-            actionLabel: openGearUnitActionText(t),
-            href: `/shop/${shopSlug}/gear/${row.gearItemId}`,
-            dueAt: null,
-          },
-    );
-  }
-  // The bench (ADR 20261008-work-order-follow-up): a ticket still being
-  // worked after the day the shop promised it, and one ready for a week that
-  // nobody has collected. A different question from the register's service
-  // clocks above — those are the shop's own units coming due, these are
-  // promises made at the counter — so a unit on the bench can carry both.
-  for (const row of workOrdersNeedingAttention) {
-    const late = row.reason === "past_promise";
-    actions.push({
-      id: `work-order-${late ? "late" : "uncollected"}:${row.workOrderId}`,
-      kind: late ? "work_order_late" : "work_order_uncollected",
-      // Both dates are already behind the shop: today's counter work, never
-      // "imminent" — that band means boats and people.
-      urgency: late ? "now" : "later",
-      subject: row.subject,
-      context: null,
-      detail: late
-        ? workOrderLateDetailText(t, { promisedOn: formatCalendarDate(row.since, locale) })
-        : workOrderUncollectedDetailText(t, { readyOn: formatCalendarDate(row.since, locale) }),
-      actionLabel: openWorkOrderActionText(t),
-      href: `/shop/${shopSlug}/gear/work-orders/${row.workOrderId}`,
-      dueAt: localMidnight(row.since, late ? 1 : 0),
-    });
-  }
-  // **What the day taught the shop about a diver's size** (issue #1174, D14).
-  // A question, not a problem: the desk already confirmed the swap at the
-  // counter, and this asks once whether to keep it. `href` is the diver's own
-  // record, where the same edit can be made by hand.
-  for (const row of fitAdjustedReturns) {
-    actions.push({
-      id: `rental-fit:${row.reservationId}`,
-      kind: "rental_fit_confirm",
-      urgency: "later",
-      subject: row.personName,
-      context: row.tripTitle,
-      detail: rentalFitConfirmDetailText(t, {
-        personName: row.personName,
-        unitLabel: row.unitLabel,
-        size: row.size,
-      }),
-      actionLabel: openDiverActionText(t),
-      href: `/shop/${shopSlug}/divers/${row.personId}`,
-      rentalFit: { reservationId: row.reservationId },
-      dueAt: row.tripEndsAt,
-    });
-  }
-
-  const credentialHorizon = now.getTime() + 30 * 24 * HOUR_MS;
-  // One row per staffer, the same reasoning as the gear rows above: a
-  // divemaster whose first aid and insurance both lapse this month is one
-  // conversation, and each credential keeps its own sentence and date.
-  const credentialsByPerson = new Map<
-    string,
-    { name: string; dueAt: Date; overdue: boolean; sentences: string[] }
-  >();
-  for (const row of credentialRows) {
-    const renewsAt = row.credential.renewsAt;
-    if (!renewsAt || !isValidCalendarDate(renewsAt)) continue;
-    const dueAt = calendarDateToUtcMidnight(renewsAt);
-    if (dueAt.getTime() > credentialHorizon) continue;
-    // A renewal date is a calendar date, not an instant. Comparing its UTC
-    // midnight against `now` marked a credential overdue for the whole of the
-    // day it actually renews in every shop west of Greenwich -- in Cancun, from
-    // 19:00 the evening before. CR-009: a date-only expiry is good through the
-    // end of its own local day.
-    const overdue = isCalendarDateExpired(renewsAt, todayLocal);
-    const sentence = staffCredentialDueDetailText(t, {
-      credential: row.credential.name,
-      dueOn: formatCalendarDate(renewsAt, locale),
-      overdue,
-    });
-    const entry = credentialsByPerson.get(row.person.id);
-    if (!entry) {
-      credentialsByPerson.set(row.person.id, {
-        name: row.person.fullName,
-        dueAt,
-        overdue,
-        sentences: [sentence],
-      });
-      continue;
-    }
-    entry.sentences.push(sentence);
-    entry.overdue ||= overdue;
-    if (dueAt < entry.dueAt) entry.dueAt = dueAt;
-  }
-  for (const [personId, entry] of credentialsByPerson) {
-    actions.push({
-      id: `staff-credential:${personId}`,
-      kind: "staff_credential_due",
-      staffPersonId: personId,
-      urgency: entry.overdue ? "now" : urgencyFor(entry.dueAt, now),
-      subject: entry.name,
-      context: null,
-      detail: entry.sentences.join(" "),
-      actionLabel: openStaffingActionText(t),
-      href: `/shop/${shopSlug}/settings/team#credentials`,
-      dueAt: entry.dueAt,
-    });
-  }
+  pushEquipmentRows(actions, rows);
 
   const departures = summarizeDepartures(
     todayTrips,
@@ -3310,26 +2302,4 @@ export async function getTodayWork(
     crewedSessions,
     availableStaff,
   };
-}
-
-/** Rows grouped by diver, each group in the reader's own order. */
-function groupByPerson<T extends { personId: string }>(rows: readonly T[]): T[][] {
-  const groups = new Map<string, T[]>();
-  for (const row of rows) {
-    const group = groups.get(row.personId);
-    if (group) group.push(row);
-    else groups.set(row.personId, [row]);
-  }
-  return [...groups.values()];
-}
-
-/** The departures a diver's units went out on, each named once. */
-function tripTitlesContext(
-  rows: readonly { tripTitle: string | null }[],
-  locale: string,
-): string | null {
-  const titles = [...new Set(rows.flatMap((row) => (row.tripTitle ? [row.tripTitle] : [])))];
-  return titles.length > 0
-    ? cachedListFormat(locale, { type: "conjunction" }).format(titles)
-    : null;
 }
