@@ -235,13 +235,22 @@ export default async function CoursesPage({
 
       {formsAwaitingText[0] ? (
         <ShopNotice tone="warning" className="mt-6">
-          {st("courses.list.formsAwaitingTextSummary", { count: formsAwaitingText.length })}{" "}
-          <Link
-            href={`/shop/${shop.slug}/courses/${formsAwaitingText[0].slug}/edit#forms`}
-            className="font-medium underline"
-          >
-            {st("courses.list.formsAwaitingTextDoor", { title: formsAwaitingText[0].title })}
-          </Link>
+          {st("courses.list.formsAwaitingTextSummary", { count: formsAwaitingText.length })}
+          {/* The editor draws its Forms section only for a staffer who may
+              configure courses (`canSetVisibility` there, the same read as
+              `canSchedule` here), so the door is theirs alone: anyone else
+              would land on an editor with no Forms in it. */}
+          {canSchedule ? (
+            <>
+              {" "}
+              <Link
+                href={`/shop/${shop.slug}/courses/${formsAwaitingText[0].slug}/edit#forms`}
+                className="font-medium underline"
+              >
+                {st("courses.list.formsAwaitingTextDoor", { title: formsAwaitingText[0].title })}
+              </Link>
+            </>
+          ) : null}
         </ShopNotice>
       ) : null}
 
