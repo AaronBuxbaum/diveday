@@ -36,7 +36,7 @@ import type { ConfirmRentalFitOutcome } from "@/db/rental-fit";
 import { canPersonViewShopReports, getMonthlyReport } from "@/db/reporting";
 import { seasonScale } from "@/db/season-scale";
 import { shopByIdCached } from "@/db/shops";
-import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { canAcceptPayments, shopStripeAccountForRender } from "@/db/stripe-accounts";
 import { getShopDayDepartures, getTodayWork } from "@/db/today";
 import { countShopTrips } from "@/db/trips";
 import { dismissOrientation, isOrientationDismissed } from "@/db/user-accounts";
@@ -350,7 +350,7 @@ async function TodayBody({
     // first-bookable moment's count, below. A demo shop sits out of both, so it is never asked.
     shop.isDemo ? null : countShopTrips(db, shop.id),
     // The setup ledger's Stripe step and the desk's payments row; a demo shop shows neither.
-    shop.isDemo ? null : getShopStripeAccount(db, shop.id),
+    shop.isDemo ? null : shopStripeAccountForRender(db, shop.id),
     shop.isDemo ? true : shopHasEverTakenAnOrder(db, shop.id),
     shop.isDemo ? null : shopFirstBooking(db, shop.id, now),
     seasonScale(db, shop.id, shop.timezone, seasonStartInstant(now, shop.timezone, season), now),
@@ -914,6 +914,7 @@ async function TodayBody({
       ) : (
         <DaySpine
           spine={spine}
+          highWind={work.highWind}
           shopSlug={shopSlug}
           shopName={shop.name}
           locale={locale}

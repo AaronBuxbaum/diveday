@@ -109,6 +109,7 @@ import {
 } from "@/lib/marine-forecast";
 import { operationalWindow, shopDayWindow } from "@/lib/operational-window";
 import { publicTripPath } from "@/lib/public-routes";
+import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import {
   collapseDiverActions,
@@ -176,7 +177,7 @@ import {
   tripWaitlistEntries,
 } from "./schema";
 import { listStaffCredentials, ratingCredentialsByPerson } from "./staff-credentials";
-import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
+import { canAcceptPayments, shopStripeAccountForRender } from "./stripe-accounts";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { latestTripStagesByTrip } from "./trip-stages";
 import { type CrewClash, countShopTrips, crewClashesByTrip, listStaff } from "./trips";
@@ -339,6 +340,14 @@ export type CrewedSessionSummary = {
 export type TodayWork = {
   departures: DepartureSummary[];
   actions: TodayAction[];
+  /**
+   * The high-wind rows, still arriving: the marine forecast is the one read
+   * here that is not the database, so the queue answers without it and the
+   * page streams these under their own `<Suspense>` (`highWindActions`).
+   * Already filtered for the reader's roles; never rejects. Not in
+   * {@link actions}, so no count on the page includes them.
+   */
+  highWind: Promise<TodayAction[]>;
   /**
    * Departures that have started and are not home: every started departure
    * the crew-clash read saw (issue #1814), plus every boat still out by its
@@ -1782,6 +1791,61 @@ async function forecastsForDepartures(
   return new Map(wanted.map((entry, index) => [entry.tripId, forecasts[index] ?? null]));
 }
 
+/**
+ * **The high-wind rows, off the page's critical path** (code review
+ * 2026-10-11, item 1). The forecast is the one read on Today that is not the
+ * database: two outbound requests with four-second timeouts and a cache that
+ * lives as long as one lambda. The queue used to await it inside its wave, so a
+ * cold lambda held the shop's most-opened page for as long as Open-Meteo took.
+ *
+ * Now the queue returns these rows as a promise beside its answer, and the page
+ * streams them under their own `<Suspense>` (`DaySpine`'s `highWind`), the way
+ * both trip pages stream their conditions line. Filtered for the reader's
+ * roles like every other row, and never rejected: a provider that fails
+ * answers null per site, which raises no row, as it always did.
+ */
+async function highWindActions(
+  trips: readonly DepartureTrip[],
+  forecastsByTrip: Promise<Map<string, AutomatedMarineForecast | null>>,
+  context: {
+    shopSlug: string;
+    timeZone: string;
+    locale: string;
+    t: StaffTranslator;
+    roles: readonly Role[] | undefined;
+  },
+): Promise<TodayAction[]> {
+  const forecasts = await forecastsByTrip.catch(
+    () => new Map<string, AutomatedMarineForecast | null>(),
+  );
+  const { shopSlug, timeZone, locale, t } = context;
+  const rows: TodayAction[] = [];
+  for (const trip of trips) {
+    const forecast = forecasts.get(trip.id) ?? null;
+    if (!forecast?.wind || !isHighWind(forecast.wind)) continue;
+    const when = at(trip.startsAt, timeZone, locale);
+    rows.push({
+      id: `high-wind:${trip.id}`,
+      kind: "high_wind_alert",
+      urgency: "now",
+      subject: trip.title,
+      context: when,
+      departure: { tripId: trip.id, label: `${trip.title} · ${when}` },
+      aboutDeparture: true,
+      detail: highWindAlertDetailText(
+        t,
+        forecast.wind.speedKnots,
+        forecast.wind.gustsKnots,
+        forecast.wind.direction ? forecast.wind.direction.toUpperCase() : null,
+      ),
+      actionLabel: openTripActionText(t),
+      href: `/shop/${shopSlug}/trips/${trip.id}`,
+      dueAt: trip.startsAt,
+    });
+  }
+  return filterActionsForRoles(rows, context.roles).visibleActions;
+}
+
 export async function getTodayWork(
   db: AppDb,
   shopId: string,
@@ -1859,12 +1923,30 @@ export async function getTodayWork(
   const todayTripIds = todayTrips.map((trip) => trip.id);
 
   // The marine forecast for every booked departure inside the provider's
-  // window, started before the database wave so the outbound request runs
-  // beside it rather than once per trip inside the loop below. Departures to
-  // one site share one request (`fetchAutomatedMarineForecast` keys its cache
-  // and its in-flight promise by site), and a failed or slow provider answers
-  // null — exactly what the loop used to read when it asked one trip at a time.
-  const forecastsByTrip = forecastsForDepartures(inWindow, now);
+  // window, started here and **never awaited by the queue**: the high-wind rows
+  // it raises go back as a promise of their own (`highWindActions`). Departures
+  // to one site share one request (`fetchAutomatedMarineForecast` keys its
+  // cache and its in-flight promise by site), and a failed or slow provider
+  // answers null.
+  // Every seat a payment row could be about: a blocked one in the window that
+  // owes money (`collapseDiverActions` raises a payment row from no other).
+  const owingBookingIds = inWindow.flatMap((trip) =>
+    (readinessByTrip.get(trip.id) ?? [])
+      .filter(
+        (row) =>
+          row.readiness.status === "blocked" &&
+          row.readiness.blockers.some((blocker) => BLOCKER_CATEGORY[blocker.code] === "payment"),
+      )
+      .map((row) => row.booking.id),
+  );
+  const noOpenOrders = new Map<string, { id: string; hostedInvoiceUrl: string | null }>();
+  const highWind = highWindActions(inWindow, forecastsForDepartures(inWindow, now), {
+    shopSlug,
+    timeZone,
+    locale,
+    t,
+    roles,
+  });
 
   // **One wave.** Every read below takes only the shop, the window and the
   // clock, so none waits on another: they used to run as this fan-out plus
@@ -1900,7 +1982,7 @@ export async function getTodayWork(
     boatSafety,
     workOrdersNeedingAttention,
     crewedAssignments,
-    forecasts,
+    openOrders,
   ] = await Promise.all([
     // Each booking's latest departure result, not just a head count. The card
     // needs to tell "already aboard" from "still ashore" from "never left the
@@ -2044,7 +2126,20 @@ export async function getTodayWork(
             ),
           )
       : null,
-    forecastsByTrip,
+    // The payment rows' invoice controls (below): the open order behind each
+    // owing seat, read only when the shop's own Stripe account can take a
+    // charge. Every payment row is an owing seat in this window, so those
+    // seats are the whole set to ask about, known before the wave —
+    // this used to be two reads one after another after it (code review
+    // 2026-10-11, item 26). The account is the page's own read, shared per
+    // render (`shopStripeAccountForRender`).
+    owingBookingIds.length === 0
+      ? noOpenOrders
+      : shopStripeAccountForRender(db, shopId).then((account) =>
+          canAcceptPayments(account)
+            ? openOrdersForBookings(db, shopId, owingBookingIds)
+            : noOpenOrders,
+        ),
   ]);
 
   const helpRequestsByTrip = new Map<string, typeof helpRequests>();
@@ -2527,28 +2622,6 @@ export async function getTodayWork(
       }
     }
 
-    const forecast = forecasts.get(trip.id) ?? null;
-    if (forecast && isHighWind(forecast.wind) && forecast.wind) {
-      actions.push({
-        id: `high-wind:${trip.id}`,
-        kind: "high_wind_alert",
-        urgency: "now",
-        subject: trip.title,
-        context: when,
-        departure,
-        aboutDeparture: true,
-        detail: highWindAlertDetailText(
-          t,
-          forecast.wind.speedKnots,
-          forecast.wind.gustsKnots,
-          forecast.wind.direction ? forecast.wind.direction.toUpperCase() : null,
-        ),
-        actionLabel: openTripActionText(t),
-        href: tripHref,
-        dueAt: trip.startsAt,
-      });
-    }
-
     // Emergency contact is a dock-settleable nudge, not a blocker, and only
     // worth surfacing once a boat is close (within three days). Beyond that it
     // is queue noise a diver still has time to fill in themselves.
@@ -2672,14 +2745,7 @@ export async function getTodayWork(
   // who owes at the counter has no invoice to act on, and a shop with no
   // connected Stripe account has nothing to resend either. Both cases keep
   // the row's `href` fallback to the roster instead of a dead button.
-  const paymentBookingIds = actions
-    .map((action) => action.payment?.bookingId)
-    .filter((id): id is string => Boolean(id));
-  if (paymentBookingIds.length > 0) {
-    const account = await getShopStripeAccount(db, shopId);
-    const openOrders = canAcceptPayments(account)
-      ? await openOrdersForBookings(db, shopId, paymentBookingIds)
-      : new Map<string, { id: string; hostedInvoiceUrl: string | null }>();
+  if (actions.some((action) => action.payment)) {
     for (const action of actions) {
       if (!action.payment) continue;
       const order = openOrders.get(action.payment.bookingId);
@@ -3216,6 +3282,7 @@ export async function getTodayWork(
   return {
     departures,
     actions: visibleActions,
+    highWind,
     outTripIds: [
       ...new Set([...crewClashState.outTripIds, ...boatsOut.out.map((trip) => trip.id)]),
     ],

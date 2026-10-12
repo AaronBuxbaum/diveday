@@ -488,7 +488,12 @@ const CHROME_CEILING = 20;
 // (`listExpiredBoatSafety`, roadmap N-08) reads the fleet's paper dates and the
 // safety-kit units. Their clocks are a third read, skipped while the register
 // holds no safety kit, as the seeded shop's does not.
-const TODAY_CEILING = 66;
+// 66 → 67, in this replay only: Today's queue reads the Stripe account inside
+// its wave whenever a seat in the window owes money, rather than after it when a
+// payment row was raised (code review 2026-10-11, item 26). In a render that is
+// the page's own read, shared through `shopStripeAccountForRender`'s `cache()`;
+// here `cache()` calls straight through, so the replay counts it twice.
+const TODAY_CEILING = 67;
 // 49 → 50: the roster reads each diver's unspent package dives for the payment
 // control (`spendableDivesForTrip`, H-79, issue #1697). The held seat's
 // last-dive-day read beside it (`lastDiveDaysHere`, #1789) skips itself when no
@@ -507,7 +512,11 @@ const TRIP_CEILING = 50;
 // 7 → 8: not a new wait, an old one made visible. The marine provider now
 // answers after the database goes quiet, as a real one does, and Today's queue
 // awaited it inside its wave (code review 2026-10-11, item 1).
-const TODAY_PHASE_CEILING = 8;
+// 8 → 5 (code review 2026-10-11): the high-wind rows stream beside the page
+// instead (item 1), the readiness pass reads payments, course forms and the
+// evidence in one wave (item 13), and the payment rows' Stripe reads joined the
+// queue's wave (item 26).
+const TODAY_PHASE_CEILING = 5;
 const TRIP_PHASE_CEILING = 10;
 
 /**
