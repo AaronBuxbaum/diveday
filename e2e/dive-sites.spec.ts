@@ -82,9 +82,17 @@ test.describe("staff", () => {
     // than a swipeable deck of photo cards behind a door (slice 7c): "The day"
     // names the dives and their sites, and the shop's own words about each site
     // follow it. The site names itself in a `<span>` inside its ledger row, so
-    // it is read as text.
+    // it is read as text, off the dive list: the log-entry preview under it
+    // names the day's sites too.
     await expect(page.getByRole("heading", { name: "The day" })).toBeVisible();
-    await expect(page.getByText(siteName)).toBeVisible();
+    await expect(
+      page
+        .locator("section")
+        .filter({ has: page.getByRole("heading", { name: "The day" }) })
+        .getByRole("list")
+        .first()
+        .getByText(siteName),
+    ).toBeVisible();
     // What the staffer typed into "What might divers see?" and "Underwater
     // briefing" above. This is the assertion that matters in this spec: a shop
     // writes a site's briefing once and every departure at that site carries it
