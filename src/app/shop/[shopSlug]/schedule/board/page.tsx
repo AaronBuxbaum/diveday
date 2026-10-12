@@ -321,6 +321,7 @@ export default async function ScheduleBoardPage({
     noPriceSetAria: st.raw("schedule.builder.noPriceSetAria"),
     noPriceSetAll: st("schedule.builder.noPriceSetAll"),
     noBoats: st("schedule.week.noBoats"),
+    quietDays: st.raw("schedule.week.quietDays"),
     asked: st("schedule.week.asked"),
     addDeparture: st("requests.addDeparture"),
     rollCallOpen: st.raw("schedule.builder.rollCallOpen"),
