@@ -48,7 +48,7 @@ async function as(email: string) {
   vi.mocked(requireStaffSession).mockResolvedValue(
     staffSession({ shopId: shop.id, shopSlug: shop.slug, personId }),
   );
-  return { shopId: shop.id, back: shopPath(shop.slug, "orders") };
+  return { shopId: shop.id, personId, back: shopPath(shop.slug, "orders") };
 }
 
 function form(checkoutId: string) {
@@ -67,14 +67,16 @@ describe("refundPaidAfterCloseAction", () => {
   });
 
   it("refunds an owner's checkout in the owner's own shop", async () => {
-    const { shopId, back } = await as(SEEDED_OWNER_EMAIL);
+    const { shopId, personId, back } = await as(SEEDED_OWNER_EMAIL);
     expect(await redirectedTo(() => refundPaidAfterCloseAction(form(CHECKOUT_ID)))).toBe(
       noticeUrl(back, "paid-after-close-refunded"),
     );
+    // The staffer who sent it is who the activity log names.
     expect(refundPaidAfterCloseCheckout).toHaveBeenCalledWith(
       expect.anything(),
       shopId,
       CHECKOUT_ID,
+      personId,
     );
   });
 

@@ -306,6 +306,7 @@ describe("recordStripeRefundFailure on a checkout", () => {
       db,
       shop.id,
       start.checkout.id,
+      "00000000-0000-4000-8000-0000000000aa",
       fakeCheckout({
         async refundCheckoutSession() {
           return { status: "refunded", refundId: "re_late" };

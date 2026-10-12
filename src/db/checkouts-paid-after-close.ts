@@ -18,6 +18,7 @@ import {
   people,
   trips,
 } from "./schema";
+import { recordShopActivity } from "./shop-activity";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { checkoutProviderFromEnvironment } from "./stripe-providers";
 
@@ -149,6 +150,8 @@ export async function refundPaidAfterCloseCheckout(
   db: AppDb,
   shopId: string,
   checkoutId: string,
+  /** The staffer sending it back, named on the departure's activity log. */
+  actorPersonId: string,
   checkout: CheckoutProvider = checkoutProviderFromEnvironment(),
   options: { staleBefore?: Date } = {},
 ): Promise<PaidAfterCloseRefundOutcome> {
@@ -225,5 +228,10 @@ export async function refundPaidAfterCloseCheckout(
     .where(and(eq(bookingCheckouts.id, row.id), eq(bookingCheckouts.shopId, shopId)));
   await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
   log("checkout.paid_after_close_refunded", "info", { shopId, checkoutId: row.id });
+  await recordShopActivity(db, {
+    shopId,
+    actorPersonId,
+    write: { code: "paid_after_close_refunded", checkoutId: row.id },
+  });
   return { status: "refunded", amountCents: owedCents };
 }

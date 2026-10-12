@@ -43,7 +43,7 @@ export async function refundPaidAfterCloseAction(formData: FormData) {
   const parsed = parseForm(refundForm, formData);
   const checkoutId = (parsed.ok && uuidParam(parsed.data.checkoutId)) || "";
   const outcome = checkoutId
-    ? await refundPaidAfterCloseCheckout(db, session.user.shopId, checkoutId)
+    ? await refundPaidAfterCloseCheckout(db, session.user.shopId, checkoutId, session.user.personId)
     : ({ status: "failed" } as const);
   revalidateAndRedirect(back, noticeUrl(back, NOTICE_FOR[outcome.status]));
 }

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeCheckout } from "@/test/fakes";
+import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { createBookingParty } from "./bookings";
 import {
   markCheckoutExpiredBySessionId,
@@ -16,7 +17,7 @@ import {
 } from "./checkouts-paid-after-close";
 import { getBookingPayment } from "./payments";
 import { recordStripeChargeRefund } from "./refunds";
-import { bookingCheckouts, paymentOperationIntents } from "./schema";
+import { activityEvents, bookingCheckouts, paymentOperationIntents } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts, updateTrip } from "./trips";
 
@@ -27,6 +28,9 @@ import { upcomingTripsWithCounts, updateTrip } from "./trips";
  */
 
 const ctx = fileScopedShopContext();
+
+/** Nobody in the shop: the refund still moves, and no activity line names them. */
+const ACTOR = "00000000-0000-4000-8000-0000000000aa";
 
 async function closedCheckout() {
   const { db, shop } = ctx;
@@ -160,7 +164,8 @@ describe("refundPaidAfterCloseCheckout", () => {
       },
     });
 
-    const outcome = await refundPaidAfterCloseCheckout(db, shop.id, checkout.id, provider);
+    const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    const outcome = await refundPaidAfterCloseCheckout(db, shop.id, checkout.id, owner, provider);
 
     expect(outcome).toEqual({ status: "refunded", amountCents: 17_500 });
     expect(calls).toEqual([
@@ -183,8 +188,21 @@ describe("refundPaidAfterCloseCheckout", () => {
       );
     expect(intent?.status).toBe("succeeded");
     expect(intent?.stripeObjectId).toBe("re_late");
+    // Who sent the money back, on the departure's activity log.
+    const lines = await db
+      .select()
+      .from(activityEvents)
+      .where(
+        and(
+          eq(activityEvents.shopId, shop.id),
+          eq(activityEvents.code, "paid_after_close_refunded"),
+        ),
+      );
+    expect(lines).toEqual([
+      expect.objectContaining({ actorPersonId: owner, tripId: checkout.tripId }),
+    ]);
 
-    expect(await refundPaidAfterCloseCheckout(db, shop.id, checkout.id, provider)).toEqual({
+    expect(await refundPaidAfterCloseCheckout(db, shop.id, checkout.id, ACTOR, provider)).toEqual({
       status: "not_owed",
     });
     expect(calls).toHaveLength(1);
@@ -197,6 +215,7 @@ describe("refundPaidAfterCloseCheckout", () => {
       db,
       shop.id,
       checkout.id,
+      ACTOR,
       fakeCheckout({
         async refundCheckoutSession() {
           return { status: "failed" };
@@ -210,7 +229,9 @@ describe("refundPaidAfterCloseCheckout", () => {
 
   it("refuses a checkout that was never paid after closing", async () => {
     const { db, shop, checkout } = await closedCheckout();
-    expect(await refundPaidAfterCloseCheckout(db, shop.id, checkout.id, fakeCheckout())).toEqual({
+    expect(
+      await refundPaidAfterCloseCheckout(db, shop.id, checkout.id, ACTOR, fakeCheckout()),
+    ).toEqual({
       status: "not_owed",
     });
   });
@@ -223,6 +244,7 @@ describe("refundPaidAfterCloseCheckout", () => {
         db,
         "00000000-0000-4000-8000-000000000000",
         checkout.id,
+        ACTOR,
         fakeCheckout(),
       ),
     ).toEqual({ status: "not_owed" });
@@ -236,7 +258,9 @@ describe("refundPaidAfterCloseCheckout", () => {
       payoutsEnabled: false,
       detailsSubmitted: true,
     });
-    expect(await refundPaidAfterCloseCheckout(db, shop.id, checkout.id, fakeCheckout())).toEqual({
+    expect(
+      await refundPaidAfterCloseCheckout(db, shop.id, checkout.id, ACTOR, fakeCheckout()),
+    ).toEqual({
       status: "not_connected",
     });
   });
@@ -247,7 +271,9 @@ describe("refundPaidAfterCloseCheckout", () => {
     await db
       .insert(paymentOperationIntents)
       .values({ shopId: shop.id, kind: "refund", checkoutId: checkout.id });
-    expect(await refundPaidAfterCloseCheckout(db, shop.id, checkout.id, fakeCheckout())).toEqual({
+    expect(
+      await refundPaidAfterCloseCheckout(db, shop.id, checkout.id, ACTOR, fakeCheckout()),
+    ).toEqual({
       status: "in_progress",
     });
   });
