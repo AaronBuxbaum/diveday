@@ -99,8 +99,9 @@ test.describe("staff", () => {
   test("a site deeper than a diver's card warns staff but never refuses the booking", async ({
     page,
   }) => {
-    // Give the reef site a depth past an Open Water diver's 18 m ceiling.
-    await setSiteDepth(page, "Molasses Reef", "32", /Maximum depth/);
+    // Give the reef site a depth past an Open Water diver's 60 ft ceiling: the
+    // Key Largo demo works in feet, so 105 ft (32 m) is what the field takes.
+    await setSiteDepth(page, "Molasses Reef", "105", /Maximum depth/);
 
     const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
     await page.goto(`${tripPath}`);
