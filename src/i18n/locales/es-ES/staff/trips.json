@@ -85,6 +85,7 @@
     "newWaiverSent": "Nueva exención enviada. La plaza sigue bloqueada hasta que la firme.",
     "newWaiverReady": "Lista para una nueva exención. Envíala desde su fila; la plaza sigue bloqueada hasta que la firme.",
     "newWaiverFailed": "No se pudo enviar la nueva exención. Verifica que la reserva sigue en esta salida.",
+    "sendLimit": "Has enviado muchos enlaces en esta hora. Vuelve a intentarlo en un rato.",
     "certified": "Certificado. Puede reservar el siguiente nivel sin más revisión.",
     "certifiedAwaitingCard": "Registrado. No abrirá ninguna puerta hasta que alguien lo confirme con la tarjeta delante.",
     "certifyFailed": "Eso no se guardó. Verifica que sigue en esta salida y que elegiste el nivel, luego inténtalo de nuevo.",

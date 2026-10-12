@@ -12,6 +12,12 @@ import { auth, getAuth } from "@/lib/auth";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { demoLandingFrom, demoLandingPath } from "@/lib/demo-landings";
 import type { DemoRoleId } from "@/lib/demo-roles";
+import {
+  DEMO_SEAT_COOKIE,
+  DEMO_SEAT_MAX_AGE_SECONDS,
+  isDemoSeatFor,
+  signDemoSeat,
+} from "@/lib/demo-seat";
 import { eventSource } from "@/lib/funnel";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { isQuietDemoDevice, QUIET_DEMO_COOKIE } from "@/lib/quiet-demo-device";
@@ -50,6 +56,21 @@ const SWITCHABLE_DEMO_ROLES = new Set<string>([
   "captain",
   "diver",
 ]);
+
+/**
+ * Leave this browser a seat in demo shop `shopId` (`src/lib/demo-seat.ts`): the
+ * only proof the diver preview, which has no session, keeps of which shop it
+ * may switch back to staff in.
+ */
+async function takeDemoSeat(shopId: string): Promise<void> {
+  (await cookies()).set(DEMO_SEAT_COOKIE, signDemoSeat(shopId), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: DEMO_SEAT_MAX_AGE_SECONDS,
+  });
+}
 
 /**
  * A demo form submits a `source` tag and, from the in-demo role switcher, a
@@ -120,6 +141,9 @@ export async function enterDemoAction(formData?: FormData) {
   const quiet = isQuietDemoDevice((await cookies()).get(QUIET_DEMO_COOKIE)?.value);
   if (!quiet) after(() => announceDemoEntry({ slug, role, source }));
 
+  const shop = await getShopBySlug(db, slug);
+  if (shop) await takeDemoSeat(shop.id);
+
   // The diver pick previews the customer view — the public schedule needs no
   // sign-in at all, so it skips straight there instead of minting a session.
   if (role === "diver") {
@@ -128,7 +152,6 @@ export async function enterDemoAction(formData?: FormData) {
 
   let targetEmail = ownerEmail;
   if (role !== "owner") {
-    const shop = await getShopBySlug(db, slug);
     // Every minted demo seeds exactly one instructor, divemaster, and captain
     // (src/db/seed.ts), so this always resolves in practice; the owner
     // fallback just means a picker click can never dead-end even if that changes.
@@ -163,6 +186,14 @@ export async function resetDemoAction() {
  * Works for both seeded and dynamically created trials.
  */
 export async function switchDemoRoleAction(role: string, shopSlug: string) {
+  // The slug is the caller's word, and every demo slug is three dictionary
+  // words: throttle per IP before it is looked up, so the space cannot be
+  // walked.
+  const ip = await clientIp();
+  if (!(await checkRateLimit(rateLimitKey("demo-switch", ip), RATE_LIMITS.demoSwitch)).allowed) {
+    redirect("/");
+  }
+
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop?.isDemo) redirect("/");
@@ -174,6 +205,9 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
 
   if (role === "diver") {
     const session = await auth();
+    // Only a browser already in this shop leaves with a seat in it; a stranger
+    // previewing the diver view is still welcome to, without one.
+    if (session?.user?.shopId === shop.id) await takeDemoSeat(shop.id);
     if (session) {
       try {
         const instance = await getAuth();
@@ -193,6 +227,15 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
     // preview would have gone nowhere, silently (scripts/lint-rules/redirectInTry.grit).
     redirect(publicSchedulePath(shopSlug));
   } else {
+    // A staff seat is only for somebody already in this shop: signed in here,
+    // or holding the seat entering the demo or its diver preview left behind.
+    // A session elsewhere, or none, cannot name a slug and become its owner.
+    const session = await auth();
+    const seated =
+      session?.user?.shopId === shop.id ||
+      isDemoSeatFor((await cookies()).get(DEMO_SEAT_COOKIE)?.value, shop.id);
+    if (!seated) redirect("/");
+
     // Look the target person up by their role *within this shop* rather than by
     // hardcoded seed emails, so role-switching works on any seeded demo tenant
     // (not just Blue Mantis). owner/manager both resolve to the shop's owner.

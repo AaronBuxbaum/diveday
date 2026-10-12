@@ -26,7 +26,14 @@ vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("@/db/bookings", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/bookings")>();
-  return { ...actual, confirmBookingIdentity: vi.fn(), splitBookingIdentity: vi.fn() };
+  return {
+    ...actual,
+    confirmBookingIdentity: vi.fn(),
+    splitBookingIdentity: vi.fn(),
+    // The seat is on this departure (../roster-booking.ts); this file is about
+    // what happens once it is.
+    getShopBookingTripId: vi.fn(async () => "33333333-3333-4333-8333-333333333333"),
+  };
 });
 vi.mock("@/db/waiver-issue", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/waiver-issue")>();

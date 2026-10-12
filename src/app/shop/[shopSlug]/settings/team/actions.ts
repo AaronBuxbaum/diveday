@@ -32,9 +32,23 @@ import { isValidCalendarDate } from "@/lib/calendar-date";
 import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { requireStaffSession } from "@/lib/session";
 import { COMMON_SPOKEN_LANGUAGES } from "@/lib/spoken-languages";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+
+/**
+ * An invite is an email to an address the staffer typed, so each kind of send
+ * is bounded per staff member (`RATE_LIMITS.staffSendByActor`). Checked after
+ * the gate and before anything is written or sent.
+ */
+async function withinInviteSendLimit(kind: "invite" | "invite-resend", personId: string) {
+  const result = await checkRateLimit(
+    rateLimitKey("staff-send", kind, personId),
+    RATE_LIMITS.staffSendByActor,
+  );
+  return result.allowed;
+}
 
 /**
  * This page's own path, with the slug escaped. It arrives on the session, but
@@ -135,6 +149,9 @@ export async function inviteStaffAction(formData: FormData) {
   if (!parsed.success || roles.length === 0) {
     redirect(noticeUrl(path, "invite-invalid"));
   }
+  if (!(await withinInviteSendLimit("invite", session.user.personId))) {
+    redirect(noticeUrl(path, "send-limit"));
+  }
 
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -187,6 +204,9 @@ export async function resendInviteAction(formData: FormData) {
   const userAccountId = String(formData.get("userAccountId") ?? "");
   const member = await findTeamMember(session.user.shopId, userAccountId);
   if (member?.accountStatus !== "invited") redirect(path);
+  if (!(await withinInviteSendLimit("invite-resend", session.user.personId))) {
+    redirect(noticeUrl(path, "send-limit"));
+  }
 
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);

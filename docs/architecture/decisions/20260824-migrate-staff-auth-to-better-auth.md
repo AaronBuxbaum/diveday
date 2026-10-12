@@ -33,7 +33,8 @@ Postgres/PGlite this app already runs. No new infrastructure.
   by Better Auth's core `user` model, otherwise unused — the real display name is
   `people.full_name`). New tables: `account_sessions` (Better Auth's `session` model, with
   `personId`/`shopId`/`shopSlug`/`roles`/`name` snapshotted once at sign-in — exactly what
-  next-auth's `jwt()` callback used to do) and functionally-unused
+  next-auth's `jwt()` callback used to do; since 2026-10-12 its `token` column holds the
+  token's SHA-256, hashed by a wrapper around the adapter, `src/lib/session-token-hash.ts`) and functionally-unused
   `auth_provider_accounts`/`auth_verifications` (required adapter scaffolding; no OAuth, and
   email verification/password reset/invites all still run through the pre-existing, untouched
   `src/db/account-tokens.ts`). *Amended 2026-09-09 (issue #1588):* scaffolding is not the same as

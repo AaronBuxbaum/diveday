@@ -332,6 +332,8 @@ const NOTICE_KEYS: DiverNoticeMap = {
   "reply-empty-body": { form: "reply", tone: "danger", key: "inbox.notices.emptyBody" },
   "reply-body-too-long": { form: "reply", tone: "danger", key: "inbox.notices.tooLong" },
   "reply-message-not-found": { form: "reply", tone: "danger", key: "inbox.notices.notFound" },
+  // Refused by the per-staff send bound (`RATE_LIMITS.staffSendByActor`).
+  "reply-send-limit": { form: "reply", tone: "warning", key: "inbox.notices.sendLimit" },
   "reply-channel-unsupported": {
     form: "reply",
     tone: "danger",

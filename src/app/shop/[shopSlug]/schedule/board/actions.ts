@@ -44,7 +44,7 @@ import {
   type WeekdaySet,
   weekdaySetFrom,
 } from "@/lib/recurrence";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { tripDetailsPatch } from "@/lib/trip-details";
@@ -72,11 +72,12 @@ const removeDepartureForm = z.object({ tripId: z.uuid() });
  * page. Creating is one place; editing is the other.
  * -------------------------------------------------------------------------- */
 
-// `shopPath`, not a template literal. Every exported action in this file takes
-// `shopSlug` as its first argument — client-supplied — and `requireBoardAuthor`
-// authorizes against `session.user.shopId` without ever comparing the two, so
-// an unescaped slug traverses out of the `/shop/` namespace, and one carrying a
-// `?` swallows the `?builder=` code appended after it (src/lib/staff-notices.ts).
+// `shopPath`, not a template literal. Every writing action in this file takes
+// `shopSlug` as its first argument — client-supplied. `requireBoardAuthor`
+// refuses a slug that is not the session's shop, and the escaping stays as the
+// second layer: an unescaped slug traverses out of the `/shop/` namespace, and
+// one carrying a `?` swallows the `?builder=` code appended after it
+// (src/lib/staff-notices.ts).
 const boardPath = (shopSlug: string) => shopPath(shopSlug, "schedule", "board");
 
 /**
@@ -85,13 +86,13 @@ const boardPath = (shopSlug: string) => shopPath(shopSlug, "schedule", "board");
  * from the session's JWT.
  */
 async function requireBoardAuthor(shopSlug: string) {
-  const session = await requireStaffSession();
-  const db = await getDb();
+  // `requireShopSurface`, not `requireStaffSession`: the slug is the caller's
+  // word, and every redirect and revalidation below is built from it, so a
+  // slug that is not this session's shop ends here (scripts/check-slug-actions.mjs).
+  const { session, db, shop } = await requireShopSurface(shopSlug);
   if (!(await canPersonConfigureTrips(db, session.user.shopId, session.user.personId))) {
     redirect(`${boardPath(shopSlug)}?builder=not-authorized`);
   }
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) redirect(boardPath(shopSlug));
   return { session, db, shop };
 }
 

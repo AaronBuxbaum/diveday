@@ -1065,7 +1065,10 @@ export async function applyDetailsToFutureSeries(
               createdAt: rollCallEvents.createdAt,
             })
             .from(rollCallEvents)
-            .where(inArray(rollCallEvents.tripId, siblingIds))
+            // Shop first, for the table's only index (item 27, 2026-10-11).
+            .where(
+              and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, siblingIds)),
+            )
         : [];
     const checkpointsByTrip = new Map<string, typeof siblingCheckpoints>();
     for (const row of siblingCheckpoints) {

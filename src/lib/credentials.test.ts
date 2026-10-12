@@ -52,6 +52,33 @@ describe("verifyCredentials (in-memory PGlite)", () => {
     expect(await verifyCredentials(db, "nobody@example.com", "whatever")).toBeNull();
   });
 
+  it("rejects a staff member whose person was removed as a diver", async () => {
+    // A dual-role person (staff who also dives) can be removed from the diver
+    // list, which soft-deletes the person row. Sign-in must not admit them and
+    // leave `authz.ts` to bounce the session afterwards. The seed has no
+    // dual-role person, so the captain is given the diver role here.
+    const db = await seededTestDb();
+    const { email, password } = DEV_STAFF_LOGINS.captain;
+    const { personRoles, people } = await import("@/db/schema");
+    const { deleteDiver } = await import("@/db/divers");
+    const [account] = await db
+      .select({ personId: userAccounts.personId })
+      .from(userAccounts)
+      .where(eq(userAccounts.email, email));
+    if (!account) throw new Error("seeded captain account missing");
+    const [person] = await db
+      .select({ shopId: people.shopId })
+      .from(people)
+      .where(eq(people.id, account.personId));
+    if (!person) throw new Error("seeded captain missing");
+    await db.insert(personRoles).values({ personId: account.personId, role: "diver" });
+    expect(await verifyCredentials(db, email, password)).not.toBeNull();
+
+    expect(await deleteDiver(db, person.shopId, account.personId)).toBe(true);
+
+    expect(await verifyCredentials(db, email, password)).toBeNull();
+  });
+
   it("rejects a disabled account even with the right password", async () => {
     const db = await seededTestDb();
     const { email, password } = DEV_STAFF_LOGINS.instructor;

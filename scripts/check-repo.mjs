@@ -59,6 +59,8 @@ const checks = [
   ["rental-fit-caps", "check-rental-fit-caps.mjs"],
   ["icu-plurals", "check-icu-plurals.mjs"],
   ["live-trips", "check-live-trips.mjs"],
+  ["live-people", "check-live-people.mjs"],
+  ["slug-actions", "check-slug-actions.mjs"],
   ["trip-revision", "check-trip-revision.mjs"],
   ["time-id-order", "check-time-id-order.mjs"],
   ["departure-buffer", "check-departure-buffer.mjs"],

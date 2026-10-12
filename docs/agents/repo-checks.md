@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 45 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 47 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, live-trip-read, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, infra-ASCII, CI-change-detection and Node-version safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, live-trip-read, live-people-read, slug-action, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, infra-ASCII, CI-change-detection and Node-version safeguards.
 
 ## The guards worth reading about
 
@@ -275,6 +275,14 @@ Writing it found two live defects, which is the argument for it: a single publis
 ### live-trip-read
 
 The live-trip-read one (`scripts/check-live-trips.mjs`) fails any read of `trips` — a `.from(trips)`, or a join from one of the child tables that now survives a delete — that neither carries `liveTrip()` (`src/db/trips-live.ts`) nor says `diveday:allow-deleted-trips: <why>`. Deleting a departure stamps `trips.deleted_at` and leaves the row and its five children in place, and the table is read from 91 places; a reader that forgets the filter does not throw and does not fail a test written before the column existed, it shows an anonymous visitor a departure the shop took off the board. Joins from `bookings`, `tripWaitlistEntries` and the roll-call tables are outside the gate on purpose — `deleteTrip` refuses a departure carrying any of those, so no such row exists to arrive through.
+
+### live-people-read
+
+The live-people-read one (`scripts/check-live-people.mjs`) fails a `.from(people)` that carries neither `livePerson()` (`src/db/trips-live.ts`), the same clause spelled `isNull(people.deletedAt)` (src/lib takes only types from src/db, so `src/lib/credentials.ts` spells it out), nor `diveday:allow-deleted-people: <why>`, inside the query and before the next `.from(people)`. Removing a diver stamps `people.deleted_at` and leaves the row, and a staff member who also dives holds the `diver` role, so a removed person can still hold a staff role. The 2026-10-11 review found the staff list behind every crew picker, the crew-change eligibility read and sign-in all admitting one; the seed has no dual-role person, which is why no test had noticed. Unlike `trips`, most unfiltered reads of `people` are right as they are (a by-id read in a transaction that already proved the person, a name for an activity line), so the reads written before the guard are a per-file ratchet in `scripts/ratchets.json` rather than sixty exemption comments: a count may only fall (`--write`), and a new unfiltered read anywhere fails.
+
+### slug-action
+
+The slug-action one (`scripts/check-slug-actions.mjs`) fails a `"use server"` module whose exported action takes `shopSlug` and reaches `requireStaffSession(`, in its own body or through a function of the same module it calls. A server action's arguments are whatever the browser posts, a slug bound into a form included. The writes behind these actions are scoped by `session.user.shopId`, so a foreign slug never reached another tenant's rows, but it steered the rest: `revalidatePath` on another shop's board, Today and public course page, and the redirect that carries a notice. `requireShopSurface(shopSlug)` (`src/lib/session.ts`) is a 404 for a slug that is not the session's shop; an action that takes no slug builds its paths from `session.user.shopSlug` and keeps `requireStaffSession`. #2367 fixed the diver record by hand; the 2026-10-11 review found fifteen more actions in five files with the same shape, and writing the guard found four more (`resendInvoiceAction`, `resendConfirmationAction`, both seat-diver actions), which is the argument for a guard over a sweep. It reads text, not a syntax tree: top-level declarations at column zero, with comments and string contents blanked first so a doc comment naming the gate is not a call.
 
 ### trip-revision
 

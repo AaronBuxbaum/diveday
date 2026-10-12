@@ -1,0 +1,48 @@
+import { redirect } from "next/navigation";
+import { getShopBookingTripId } from "@/db/bookings";
+import type { AppDb } from "@/db/client";
+import { shopPath } from "@/lib/staff-notices";
+import { uuidParam } from "@/lib/uuid";
+
+/**
+ * **A roster row's booking belongs to the roster it was posted from.**
+ *
+ * Every roster door on a departure — a note, a removal, a waiver, an identity,
+ * a payment, a check-in — reads its `bookingId` from the form. Each write is
+ * scoped by the session's shop, so no other tenant's seat is reachable, but a
+ * booking of the *same* shop on another departure was: a stale tab could cancel
+ * a seat on tomorrow's boat from today's roster, and the activity line and the
+ * revalidation would then describe the departure in the URL rather than the
+ * one that changed. On a manifest, that is the record of who was taken off
+ * which boat.
+ *
+ * One check, shared, so a new roster action cannot forget half of it:
+ * the id is well-formed, it is a booking of this shop, and it sits on
+ * `tripId`. Plain module rather than `"use server"`: exported from an action
+ * file it would be an endpoint.
+ */
+
+/** The departure page every roster door sends the staffer back to. */
+export const tripPath = (shopSlug: string, tripId: string) => shopPath(shopSlug, "trips", tripId);
+
+/** True only for a well-formed id of a booking of `shopId` on `tripId`. */
+export async function isRosterBooking(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  bookingId: string,
+): Promise<boolean> {
+  if (!uuidParam(bookingId) || !uuidParam(tripId)) return false;
+  return (await getShopBookingTripId(db, shopId, bookingId)) === tripId;
+}
+
+/** {@link isRosterBooking}, or back to `back` without writing anything. */
+export async function requireRosterBooking(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  bookingId: string,
+  back: string,
+): Promise<void> {
+  if (!(await isRosterBooking(db, shopId, tripId, bookingId))) redirect(back);
+}

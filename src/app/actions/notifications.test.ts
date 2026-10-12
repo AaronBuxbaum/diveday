@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
 vi.mock("@/lib/session", () => ({
-  requireStaffSession: vi.fn(async () => ({ user: { shopId: "shop-1", roles: ["owner"] } })),
+  requireShopSurface: vi.fn(async () => ({
+    session: { user: { shopId: "shop-1", roles: ["owner"] } },
+  })),
 }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("@/db/notifications", () => ({

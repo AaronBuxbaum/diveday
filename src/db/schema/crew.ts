@@ -126,7 +126,13 @@ export const tripAssignments = pgTable(
      */
     tripRole: tripAssignmentRole("trip_role"),
   },
-  (table) => [primaryKey({ columns: [table.tripId, table.personId] })],
+  (table) => [
+    primaryKey({ columns: [table.tripId, table.personId] }),
+    // The crew-clash reads ask "which departures is this person on?", by
+    // person first; the primary key leads with the trip (code review
+    // 2026-10-11, item 27).
+    index("trip_assignments_person_idx").on(table.personId),
+  ],
 );
 
 /** A dated working window; trip assignments remain the authoritative crew list. */

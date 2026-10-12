@@ -24,6 +24,7 @@ import { APP_ORIGIN, publicAppUrl } from "@/lib/notifications/app-url";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { readSessionCookieCache } from "@/lib/session-cookie-cache";
+import { withHashedSessionTokens } from "@/lib/session-token-hash";
 
 /**
  * Our own credentials chokepoint as a better-auth plugin, rather than
@@ -160,6 +161,11 @@ function diveDayCredentialsPlugin() {
   } satisfies BetterAuthPlugin;
 }
 
+/** better-auth's adapter factory, with every adapter it builds hashing session tokens. */
+function hashedSessionAdapter<O, A extends object>(factory: (options: O) => A) {
+  return (options: O) => withHashedSessionTokens(factory(options));
+}
+
 /**
  * The whole better-auth instance for one database handle. Exported so the
  * schema test can build the real thing over a test database: since 1.7.3 the
@@ -174,15 +180,19 @@ export function createAuth(db: AppDb) {
     // fallback is the compiled-in production origin; APP_HOST still lets
     // local, preview, and self-hosted deployments opt into their own host.
     baseURL: publicAppUrl() ?? APP_ORIGIN,
-    database: drizzleAdapter(db, {
-      provider: "pg",
-      schema: {
-        user: userAccounts,
-        session: accountSessions,
-        account: authProviderAccounts,
-        verification: authVerifications,
-      },
-    }),
+    // The session token is stored as its SHA-256 (src/lib/session-token-hash.ts);
+    // better-auth and the cookie only ever see the raw token.
+    database: hashedSessionAdapter(
+      drizzleAdapter(db, {
+        provider: "pg",
+        schema: {
+          user: userAccounts,
+          session: accountSessions,
+          account: authProviderAccounts,
+          verification: authVerifications,
+        },
+      }),
+    ),
     user: {
       additionalFields: {
         personId: { type: "string", required: true, input: false },

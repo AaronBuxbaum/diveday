@@ -35,9 +35,28 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+// `requireShopSurface` is the gate these actions take; it stands on
+// `requireStaffSession`, which is the seam this file steers. The slug check
+// itself is exercised against the real gate in `src/app/shop/[shopSlug]/slug-actions.authz.test.ts`.
+vi.mock("@/db/bookings", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/bookings")>();
+  return { ...actual, getShopBookingTripId: vi.fn() };
+});
+vi.mock("@/db/check-in", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/check-in")>();
+  return { ...actual, checkInBooking: vi.fn() };
+});
+vi.mock("@/lib/session", () => {
+  const requireStaffSession = vi.fn();
+  return {
+    requireStaffSession,
+    requireShopSurface: vi.fn(async () => ({ session: await requireStaffSession() })),
+  };
+});
 
 const { getDb } = await import("@/db/client");
+const { getShopBookingTripId } = await import("@/db/bookings");
+const { checkInBooking } = await import("@/db/check-in");
 const { requireStaffSession } = await import("@/lib/session");
 const { checkInAction, markNoShowAction, undoCheckInAction, undoNoShowAction } = await import(
   "./actions"
@@ -87,5 +106,22 @@ describe("a malformed booking id at the counter", () => {
 
     expect(to).toBe(noticeUrl(counterQueuePath(SHOP_SLUG, FOCUS_TRIP_ID), "invalid"));
     expect(getDb).not.toHaveBeenCalled();
+  });
+});
+
+describe("a booking that sits on another departure", () => {
+  it("is not checked in at this departure's counter", async () => {
+    // A well-formed id of the shop's own booking, on another boat: a stale
+    // tab. Refused through the roster's shared check (../roster-booking.ts).
+    signIn();
+    vi.mocked(getDb).mockResolvedValue({} as never);
+    vi.mocked(getShopBookingTripId).mockResolvedValue("66666666-6666-4666-8666-666666666666");
+
+    const to = await redirectedTo(() =>
+      checkInAction(SHOP_SLUG, FOCUS_TRIP_ID, bookingForm("55555555-5555-4555-8555-555555555555")),
+    );
+
+    expect(to).toBe(noticeUrl(counterQueuePath(SHOP_SLUG, FOCUS_TRIP_ID), "invalid"));
+    expect(checkInBooking).not.toHaveBeenCalled();
   });
 });
