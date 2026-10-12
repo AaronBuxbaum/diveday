@@ -510,6 +510,62 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     expect(within(row).getByRole("button", { name: "Mark boarded" })).toBeEnabled();
   });
 
+  /**
+   * **The diver's own "running late" on the dock copy** (#2319): the one
+   * phone at the rail with no signal is where a missing name most needs it.
+   * Quiet text, gone once this device boards them, and never at a checkpoint
+   * after a dive.
+   */
+  it("says a diver is running late on the dock row, until they are boarded", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "departure" });
+    const saved = richEnvelope("trip-1", { runningLateAt: "2026-08-01T11:42:00.000Z" });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    const row = document.getElementById("offline-roll-call-diver-priya");
+    if (!row) throw new Error("Priya's row missing");
+    const line = within(row).getByText("Running late, said 7:42 AM");
+    expect(line.className).toContain("text-muted");
+    // It is a line, never the row's state: the pill still says nobody called.
+    expect(within(row).queryByText(/^Boarded/)).toBeNull();
+    cleanup();
+
+    const boarded: OfflineManifestEnvelope = {
+      ...saved,
+      events: [
+        {
+          clientEventId: "evt-late",
+          snapshotId: saved.snapshot.snapshotId,
+          snapshotSavedAt: saved.snapshot.savedAt,
+          tripId: "trip-1",
+          bookingId: "diver-priya",
+          checkpoint: "departure",
+          status: "boarded",
+          occurredAt: new Date(FROZEN_MS).toISOString(),
+          syncStatus: "pending",
+        },
+      ],
+    };
+    vi.mocked(loadOfflineManifest).mockResolvedValue(boarded);
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    expect(screen.queryByText(/^Running late/)).toBeNull();
+  });
+
+  it("never says running late after a dive", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(
+      richEnvelope("trip-1", { runningLateAt: "2026-08-01T11:42:00.000Z" }),
+    );
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    expect(screen.queryByText(/^Running late/)).toBeNull();
+  });
+
   it("says nothing on a copy where nobody was written off", async () => {
     searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "departure" });
     vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));

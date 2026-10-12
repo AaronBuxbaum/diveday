@@ -116,7 +116,11 @@
   (`trips.dive_mode`). A party organizer's statement — a tap or a reply — covers the party's seats
   (`partyLeadBookingId`), and a text covers every seat on that boat under the same number. The arrivals list (Today's arrival lookup and
   the Divers tab once arrivals open) says "Running late, said 7:42" in the shop's zone on that row
-  until the diver checks in, which clears it. **It gates nothing** and it is not a **no-show**: the
+  until the diver checks in, which clears it. The boat manifest says it too, live and on the
+  **offline copy**, so the rail does not call missing a diver who said they are on the way: at the
+  departure checkpoint only, and hidden on a row already boarded, checked in or released
+  (`runningLateOnManifest`, #2319); after a dive the question is who came back, and the word is
+  gone. A row the crew recorded as not boarded keeps it. **It gates nothing** and it is not a **no-show**: the
   diver still has to arrive, and a diver who said it and never came is still the desk's call.
 - **No-show** — one staffer's recorded statement that a booked diver did not come. The status is
   `bookings.status = "no_show"`, written only by `markBookingNoShow` (`src/db/no-show.ts`), behind
@@ -585,7 +589,9 @@
   whatever the forms missed**: it sells at most the lower of the departure's `capacity` and the
   certificate, read under the trip-row lock (`sellableCapacity`), as do an undo, a no-show undo and
   the wait list's "go and book it"; a copy and a series roll start the new departure at the
-  certificate, and "apply to the rest of the series" skips a date on a hull certified for fewer.
+  certificate, and "apply to the rest of the series" gives a date on a smaller hull the details
+  with its seats capped at the certificate; only a date holding more seats than that, or with a
+  roll call past the new dive count, is left alone.
   The field reads **passengers only, not crew**, the same people capacity counts: everyone aboard
   but the crew. A boat saved over it before H-107 keeps sailing, its fleet row says so in danger
   ink, and its next save must fix it (`src/lib/boat-safety.ts`).
@@ -622,16 +628,38 @@
   unfinished dock count rather than a statement about a person, and the departure's own status is
   already saying so (`departure_uncounted`). `not_boarded` at an *after-dive* checkpoint is the
   opposite fact and subtracts nothing: that diver sailed, and is the one the day is still looking
-  for. The dock still wins where it *spoke*, which is what keeps the ashore-then-boarded-later seat
+  for, and a diver's story says "not counted back aboard" over that seat, never an ordinary
+  "sailed". The dock still wins where it *spoke*, which is what keeps the ashore-then-boarded-later seat
   out of a count that asks how many the vessel left with; for one slice its *silence* won too, and
   the evening read "0 out, 0 back" over a boat carrying a missing diver (issue #1704). It is **not**
   `booked`, and the two must not be collapsed — every question about seats *sold* still reads the
   roster, because a released seat never came back to the shelf. Its reader is the evening's
   **souls on board** line, whose crew half is the same idea: assigned crew less the ones a human
-  recorded ashore at the dock.
+  recorded ashore at the dock. A finished departure's Divers tab files its record by the same rule,
+  seat by seat, so the record and the evening count never disagree about one diver: a diver picked
+  up at the second site with a standing after-dive result is under "Sailed". Silence there is not
+  counted as sailing: a seat nobody spoke for is **Not counted at the dock** or **No roll call
+  taken**, never "Sailed" and never **Didn't sail**.
   A **crew sailing** is one crew member on one departure that is home, unless the crew marked
   them ashore at the dock; the Safety tab reads each against the crew member's credentials as they
   stand today, on the departure's last day.
+- **Didn't sail** — a finished departure's record band for the seats somebody *said* did not go:
+  the crew's `not_boarded` at the `departure` roll-call checkpoint, or a released seat (`no_show`)
+  nobody counted aboard at any checkpoint. Only a statement files a seat here (`seatSailed`,
+  `src/lib/closeout.ts`; `recordGroups` in the trip's `roster-model.ts`). It used to take every seat
+  without a dock `boarded` once one seat boarded, which filed a diver picked up at a later site, and
+  a seat nobody counted, as not having sailed (dive-domain review of UX batch 1). Spanish: "No
+  zarparon".
+- **Not counted at the dock** — a finished departure's record band for a seat with no dock result,
+  no standing after-dive result and no `no_show`, on a departure whose dock roll call *was* taken.
+  It names a gap in the count, not a fact about the diver: nobody said they sailed and nobody said
+  they stayed. Spanish: "Sin contar en el muelle".
+- **No roll call taken** — the same silence on a departure with no dock roll call at all, under a
+  band that says so rather than a guess. Whether a roll call was taken is read from the events
+  themselves (`departureRollCallTakenTripIds`, `src/db/manifests.ts`: any `departure` checkpoint
+  event recording `boarded` or `not_boarded`), never from whether a seat reads boarded now, so a
+  departure whose whole roster stayed ashore, or whose boarded seats were later cancelled, never
+  reads it. Spanish: "Sin pase de lista".
 - **Souls on board** — the industry's (and the coast guard's) term for how many *people* a vessel
   left with: passengers (divers, snorkelers and riders) plus crew, one number, no distinction
   between who paid and who works. It is
@@ -825,8 +853,11 @@
   buddy's row red before anyone had said a word about them — on every row of every surface interval,
   which is how a crew learns to stop reading an alert
   ([20260827-the-departure-is-two-working-surfaces](../../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md),
-  decision 4). At the dock the heads-up keeps its old reading: there the crew is *assembling* a
-  boat, so anyone not yet aboard is genuinely still to gather. The offline manifest shows teams read-only by name and states that the split-team read
+  decision 4), and its words say so: "Buddy not back aboard" (es "Compañero sin regresar a bordo"),
+  never "unaccounted for", which undersold a statement a human made. At the dock the heads-up reads
+  "Buddy not aboard yet" (es "Compañero aún no a bordo"): there the crew is *assembling* a boat, so a
+  teammate with no result yet is genuinely still to gather, and a teammate the crew recorded staying
+  ashore (`isRecordedAshore`) raises nothing, because that is a decision already made. The offline manifest shows teams read-only by name and states that the split-team read
   belongs to the live roll call — a saved snapshot cannot know who came back.
   Buddy teams are **divers only**: a snorkeler or a rider on a departure can be on no team, and a
   booking that is on one cannot be changed away from diving until it leaves the team.
@@ -959,7 +990,7 @@
   points (Today's departure card, the command palette's "Boarding" jump) open the manifest on that
   checkpoint. Crew, emergency contacts, after-dive roll call, print, and the offline snapshot are all
   on the same page.
-- **Trip phase** — which kind of work a departure is in, for staff only: Prep, Check-in, Aboard or Back, drawn as the stage pill above the departure's four tabs (ADR [20261001-logbook](../../architecture/decisions/20261001-logbook.md), decision 3; `src/lib/trip-phase.ts`). Not a **trip stage**: a stage is a word the crew said and DiveDay publishes, so it is never inferred; a phase is orientation on the crew's own screen, so it falls back to the clock when nobody has tapped. The crew's tap still wins: any stage but `home` reads Aboard until the return day ends, and `home` reads Back. It reads the raw tap rather than `liveStageOf`, because a late boat is exactly when the stepper must not say Back. A cancelled departure has no phase.
+- **Trip phase** — which kind of work a departure is in, for staff only: Prep, Check-in, Aboard or Back (ADR [20261001-logbook](../../architecture/decisions/20261001-logbook.md), decision 3; `src/lib/trip-phase.ts`). Never printed: every chip that names where a boat is shows the **trip stage** through `boatStageOf`, so Today's card, the departure header and the manifest strip say one word (UX review 2026-10-10, item 1). A phase is orientation a surface lays itself out by (a departure that is Back shows its Divers tab as the record of who sailed) and falls back to the clock when nobody has tapped. The crew's tap still wins while it speaks, and the chip and the phase read one rule (`readTap`): any stage but `home` reads Aboard until the return day is over *and* the hour past the scheduled return (`hasReturned`) has gone, whichever is later, and a `home` from the departure's last day reads Back. **A tap never finishes a departure sooner than silence would**: a word that has stopped speaking hands the question back to the clock, so a 20:00 to 23:30 night boat tapped Underway still reads Aboard, and its chip Underway, at 00:15. On a multi-day course (`starts_at`/`ends_at` bound the whole run) a word from an earlier day, `home` included, speaks only on the day it was said and finishes nothing: day two never reads "Underway since 10:30" with yesterday's time. Today's boats-out list (`outTripIds`) and its blocked-aboard reader both read the phase, so one rule gives one answer. It reads the raw tap rather than `liveStageOf`, because a late boat is exactly when it must not turn Back. A cancelled departure has no phase.
 - **Trip stage** — where a departure is, in the crew's own word: one of five (`boarding`,
   `underway`, `surface`, `heading_in`, `home`) tapped on the **manifest** and then repeated, with
   the time it was tapped, everywhere DiveDay draws that boat — the shop home's station chip, the
@@ -971,9 +1002,13 @@
   staff member of that shop, on a live departure, records one (`recordTripStage`,
   `src/db/trip-stages.ts`), and records rather than edits: `trip_stage_events` is append-only, a
   crew that taps the wrong word taps the right one, and the newest row wins. **A stage goes stale
-  rather than wrong** — it stops speaking two late-arrival buffers past the departure's own end
-  (`liveStageOf`, `STAGE_STALE_AFTER_MS`), because a crew that tapped *Underway* and then got busy
-  would otherwise leave a diver's family reading "out on the reef" at midnight. `home` alone carries
+  rather than wrong** — on the anonymous surfaces (the storefront, the follow link, the diver link)
+  it stops speaking two late-arrival buffers past the departure's own end (`liveStageOf`,
+  `STAGE_STALE_AFTER_MS`), because a crew that tapped *Underway* and then got busy would otherwise
+  leave a diver's family reading "out on the reef" at midnight. The staff surfaces (the departure
+  header, the shop home's station chip) read `boatStageOf` instead, whose staleness is the end of
+  the return shop day, as the **trip phase** entry says: a crew is told its own boat is still out
+  until someone taps *Home*. `home` alone carries
   the roll call's success tone, and `home` alone is withheld from the anonymous surfaces: the diver
   who was aboard reads it on their own link, a storefront panel about tomorrow does not. It was a
   display word until issue #1480 made it load-bearing — the **close-out** reads a live `home` as a
@@ -1214,7 +1249,7 @@
 - **First-timer track** — the night-before brief in a softer, what-happens-on-the-boat voice for a
   diver with no prior non-cancelled booking on a departed trip with the shop. Same data, extra
   reassurance; the signal is derived at send time, not stored.
-- **Desk hours** and the **after-hours ping** — when somebody is at the shop's desk: one window every day in the shop's own zone (`shops.desk_opens_minute`, `shops.desk_closes_minute`, 08:00–18:00 until the shop changes it under Settings → Messages). A diver message filed by the inbound email or WhatsApp webhook while the desk is closed sends a `desk_after_hours` email to each staffer who wants it: on by default for an owner or a manager, off for everyone else, and each staffer's own answer (`user_accounts.after_hours_ping`) wins, from their Email settings. At most one per person per half hour (`user_accounts.after_hours_pinged_at`, claimed by one conditional update), naming how many divers (distinct senders) wrote in since the desk closed and are still unanswered, with a link to the Inbox. Never the sender, the subject or a word of the message. Staff operational mail under H-09: no unsubscribe, no postal footer, not queued for retry, and never from a demo shop. Rule in `src/lib/desk-hours.ts`, reads and the send in `src/db/desk-pings.ts`.
+- **Desk hours** and the **after-hours ping** — when somebody is at the shop's desk: one window every day in the shop's own zone (`shops.desk_opens_minute`, `shops.desk_closes_minute`, 08:00–18:00 until the shop changes it under Settings → Messages). A diver message filed by the inbound email or WhatsApp webhook while the desk is closed sends a `desk_after_hours` email to each staffer who wants it: on by default for an owner or a manager, off for everyone else, and each staffer's own answer (`user_accounts.after_hours_ping`) wins, from their Email settings. At most one per person per half hour (`user_accounts.after_hours_pinged_at`, claimed by one conditional update), naming how many divers (distinct senders) wrote in since the desk closed and are still unanswered, with a link to the Inbox. Only a message whose sender the channel vouched for (`inbound_messages.sender_authenticated`) and that SES did not flag as spam (`inbound_messages.spam_flagged`) pings or is counted. A message batched behind a ping gets one trailing catch-up from the hourly `/api/cron/desk-pings` sweep once that staffer's half hour has run out, if it is still unanswered and the desk is still closed. The webhooks run the ping after they have answered (`after()`). Never the sender, the subject or a word of the message. Staff operational mail under H-09: no unsubscribe, no postal footer, not queued for retry, and never from a demo shop. Rule in `src/lib/desk-hours.ts`, reads and the send in `src/db/desk-pings.ts`.
 - **Monday email** (weekly digest) — the owner's service email about their own shop's week, sent once per person per shop-local week on Monday between 08:00 and 20:00 shop time (`/api/cron/weekly-digest`, hourly). Sections, each a count and a link into the staff app, appear only when they have something to say: last week's bookings made and seats filled against capacity (Reports' own query), this week's departures and seat fill and the divers still owing a waiver (the shared readiness horizon), reviews received and waiting on moderation, date requests still waiting, and Today rows that are past due. A week with none of these sends nothing. Last week's figures and Today's money and platform chores go only to someone Reports' gate admits (`canViewShopReports`, read from live roles); anyone else who opts in gets the rest. On by default for an owner, off for everyone else, and each staffer's own answer (`user_accounts.weekly_digest`) wins; it is turned off from the staffer's Email settings or the email's own one-click link. Transactional under H-09 (staff, about their own operation), so it carries no commercial postal footer. Demo shops never send; any staffer can preview this week's at `/shop/<slug>/settings/email/preview`. Logic in `src/lib/weekly-digest.ts`, reads and the send claim (`weekly_digest_sends`) in `src/db/weekly-digest.ts`.
 - **Post-trip recap** — the per-diver-per-trip reading of the day, delivered once per booking as the
   `trip_recap` kind no earlier than four hours after the departure ends. It rides the same

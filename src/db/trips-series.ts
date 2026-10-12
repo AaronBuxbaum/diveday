@@ -1,5 +1,5 @@
 import { and, asc, count, desc, eq, gt, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
-import { passengersAboveCertificate, seatsWithinCertificate } from "@/lib/boat-safety";
+import { seatsWithinCertificate } from "@/lib/boat-safety";
 import {
   type CalendarDate,
   calendarDateInTimezone,
@@ -45,7 +45,7 @@ import {
   validateDiveSites,
 } from "./trips-create";
 import { liveTrip } from "./trips-live";
-import { boatCertifiedPassengers } from "./trips-queries";
+import { boatCertifiedPassengers, liveBookingJoin } from "./trips-queries";
 
 /**
  * Recurring series: a `trip_series` row plus one fully-formed, independent trip
@@ -1001,10 +1001,11 @@ export type SeriesDetailApplyResult = { updated: number; skipped: number };
  * title, description, capacity, dive count, pricing, cancellation window, and
  * dive plan onto every future still-scheduled sibling; the per-instance date,
  * time, conditions, crew, roster, and status are deliberately left alone. A
- * sibling already carrying more divers than the new capacity is skipped rather
- * than stranding a booking, and so is one sailing on a boat whose certificate
- * is below the new capacity (H-107); the count is reported so staff can follow
- * up. Returns null when the source trip is not part of this series in this shop.
+ * sibling sailing on a boat whose certificate is below the new capacity takes
+ * every detail with its seats lowered to the certificate (H-107, #2322). A
+ * sibling holding more seats than that number is skipped rather than stranding
+ * a booking; the count is reported so staff can follow up. Returns null when
+ * the source trip is not part of this series in this shop.
  */
 export async function applyDetailsToFutureSeries(
   db: AppDb,
@@ -1040,27 +1041,41 @@ export async function applyDetailsToFutureSeries(
       travelMinutes: dive.travelMinutes,
     }));
 
+    const siblingScope = and(
+      eq(trips.seriesId, seriesId),
+      eq(trips.shopId, shopId),
+      eq(trips.status, "scheduled"),
+      gte(trips.startsAt, now),
+      ne(trips.id, sourceTripId),
+    );
+    // **Hold every sibling before counting its seats** (dive-domain review of
+    // #2322): the seat check below and the write after it must see the same
+    // bookings, so the dates are locked the way every seat writer locks a trip
+    // (`for no key update`, the #2324 order), in id order so two applies to
+    // one series cannot take them crosswise. A separate read because Postgres
+    // will not lock the rows of a grouped query.
+    await tx
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(liveTrip(), siblingScope))
+      .orderBy(asc(trips.id))
+      .for("no key update");
     const siblings = await tx
       .select({
         id: trips.id,
         diveSiteId: trips.diveSiteId,
+        diverCapacity: trips.diverCapacity,
         certifiedPassengers: boats.certifiedPassengers,
         booked: count(bookings.id),
       })
       .from(trips)
       .leftJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, trips.shopId)))
-      .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
-      .where(
-        and(
-          liveTrip(),
-          eq(trips.seriesId, seriesId),
-          eq(trips.shopId, shopId),
-          eq(trips.status, "scheduled"),
-          gte(trips.startsAt, now),
-          ne(trips.id, sourceTripId),
-        ),
-      )
-      .groupBy(trips.id, boats.id);
+      // The seats somebody is holding, as everywhere else: a no-show has
+      // released theirs (`seatHeld`).
+      .leftJoin(bookings, liveBookingJoin)
+      .where(and(liveTrip(), siblingScope))
+      .groupBy(trips.id, boats.id)
+      .orderBy(asc(trips.id));
 
     // Same operational-history invariant updateTrip enforces for a single
     // trip (CR-006) — a bulk apply must not silently orphan a sibling's
@@ -1115,14 +1130,14 @@ export async function applyDetailsToFutureSeries(
     let updated = 0;
     let skipped = 0;
     for (const sibling of siblings) {
-      if (source.capacity < sibling.booked) {
-        skipped += 1;
-        continue;
-      }
-      // A later date can sail on another hull (H-107): the source's seats are
-      // not pushed onto a boat whose certificate is lower. Skipped like a
-      // sibling already fuller than the new number, and counted the same way.
-      if (passengersAboveCertificate(source.capacity, sibling.certifiedPassengers)) {
+      // A later date can sail on another hull (H-107): it takes every detail,
+      // but its seats stop at that hull's certificate, and its divers-only
+      // limit comes down with them (#2322).
+      const seats = seatsWithinCertificate(
+        { capacity: source.capacity, diverCapacity: sibling.diverCapacity },
+        sibling.certifiedPassengers,
+      );
+      if (seats.capacity < sibling.booked) {
         skipped += 1;
         continue;
       }
@@ -1142,7 +1157,8 @@ export async function applyDetailsToFutureSeries(
           ...(siteListMoved ? { revision: sql`${trips.revision} + 1` } : {}),
           title: source.title,
           description: source.description,
-          capacity: source.capacity,
+          capacity: seats.capacity,
+          diverCapacity: seats.diverCapacity,
           plannedDives: source.plannedDives,
           priceCents: source.priceCents,
           depositCents: source.depositCents,

@@ -401,6 +401,7 @@ describe("answering a diver from their record", () => {
 
   async function waitingMessage(db: AppDb, shopId: string, fromAddress: string) {
     const result = await recordInboundMessage(db, {
+      senderAuthenticated: true,
       shopId,
       channel: "email",
       fromAddress,

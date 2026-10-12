@@ -1127,7 +1127,7 @@ export const stripeRefundFailures = pgTable(
     currency: text("currency").notNull(),
     /** Stripe's refund status, verbatim: `failed` or `canceled`. */
     refundStatus: text("refund_status").notNull(),
-    /** Stripe's `failure_reason` (`expired_or_canceled_card`, …), verbatim, when it gives one. */
+    /** Stripe's `failure_reason` (`expired_or_canceled_card`, …) when it gives one, narrowed to its documented codes (`refundFailureReasonOf`). */
     failureReason: text("failure_reason"),
     owedUntilRefundedCents: integer("owed_until_refunded_cents").notNull(),
     failedAt: timestamp("failed_at", { withTimezone: true }).notNull(),

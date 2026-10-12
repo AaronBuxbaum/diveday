@@ -4,7 +4,8 @@ import { render } from "@testing-library/react";
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { listCheckInQueue } from "@/db/check-in";
-import { bookings, trips } from "@/db/schema";
+import { createCertification } from "@/db/readiness";
+import { bookings, certifications, nitroxCertifications, trips } from "@/db/schema";
 import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -24,7 +25,16 @@ async function firstTimerAtTheCounter() {
     const inputs = await welcomeCueInputsByBooking(db, shop.id, row.tripId, now);
     if (inputs.get(row.bookingId)?.lastDivedAt === null) {
       const [trip] = await db.select().from(trips).where(eq(trips.id, row.tripId));
-      if (trip) return { db, shop, now, trip, bookingId: row.bookingId };
+      if (trip)
+        return {
+          db,
+          shop,
+          now,
+          trip,
+          bookingId: row.bookingId,
+          personId: row.personId,
+          personName: row.personName,
+        };
     }
   }
   throw new Error("no first-timer is booked on a boat inside the arrivals window");
@@ -56,12 +66,68 @@ describe("the counter's welcome word (UX audit 2026-10-07, item 46)", () => {
     expect(await belowFor(seat)).toHaveTextContent("first time with us");
   });
 
+  it("puts the dock line under the cue: the first name to say and the card they hold (UX review 2026-10-10, item 36)", async () => {
+    const seat = await firstTimerAtTheCounter();
+    await seat.db
+      .update(bookings)
+      .set({ welcomeSharedAt: seat.now })
+      .where(eq(bookings.id, seat.bookingId));
+    const below = await belowFor(seat);
+    const first = seat.personName.trim().split(/\s+/)[0];
+    expect(below).toHaveTextContent(new RegExp(`Say hello to ${first}[:.]`));
+    // Never the booking's free-text note or what the diver came for: those
+    // stay behind the row's note count and the departure's tally.
+    expect(below.querySelectorAll("p")).toHaveLength(2);
+  });
+
+  /**
+   * **A card a staffer typed and nobody has verified is what the diver says**
+   * (dive-domain review of the demo layer). It carries no self-declared stamp,
+   * and the line used to read it as a plain "Open Water" in muted text: a
+   * checked card, to the crew greeting them. Nitrox never rides the line.
+   */
+  it("says a pending card a staffer typed is the diver's word, in the warning tone", async () => {
+    const seat = await firstTimerAtTheCounter();
+    await seat.db
+      .update(bookings)
+      .set({ welcomeSharedAt: seat.now })
+      .where(eq(bookings.id, seat.bookingId));
+    await seat.db
+      .update(certifications)
+      .set({ deletedAt: seat.now })
+      .where(eq(certifications.personId, seat.personId));
+    await createCertification(seat.db, {
+      shopId: seat.shop.id,
+      personId: seat.personId,
+      agency: "padi",
+      level: "open_water",
+      identifier: "OW-DOCK-1",
+    });
+    await seat.db.insert(nitroxCertifications).values({
+      shopId: seat.shop.id,
+      personId: seat.personId,
+      agency: "padi",
+      identifier: "EAN-DOCK-1",
+      status: "verified",
+    });
+    const below = await belowFor(seat);
+    const first = seat.personName.trim().split(/\s+/)[0];
+    const line = [...below.querySelectorAll("p")].find((p) =>
+      p.textContent?.startsWith("Say hello"),
+    );
+    expect(line).toHaveTextContent(`Say hello to ${first}: says Open Water.`);
+    expect(line).not.toHaveTextContent(/nitrox/i);
+    expect(line?.className).toContain("text-warning-strong");
+  });
+
   it("says nothing for a diver who never shared it", async () => {
     const seat = await firstTimerAtTheCounter();
     await seat.db
       .update(bookings)
       .set({ welcomeSharedAt: null })
       .where(eq(bookings.id, seat.bookingId));
-    expect(await belowFor(seat)).not.toHaveTextContent("first time with us");
+    const below = await belowFor(seat);
+    expect(below).not.toHaveTextContent("first time with us");
+    expect(below).not.toHaveTextContent("Say hello");
   });
 });

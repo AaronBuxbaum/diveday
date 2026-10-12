@@ -105,6 +105,7 @@ export function DepartureNoteForm({
         aside={<span className="text-xs text-muted tabular-nums">{fill(copy.left, { left })}</span>}
       >
         <textarea
+          rows={2}
           name="body"
           value={body}
           onChange={(event) => setBody(event.target.value)}

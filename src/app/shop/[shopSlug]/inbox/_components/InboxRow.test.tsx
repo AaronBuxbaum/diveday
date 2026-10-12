@@ -26,6 +26,8 @@ const MESSAGE: InboxMessageRow["message"] = {
   emailMessageId: null,
   inReplyToDeliveryId: null,
   keywordIntent: null,
+  senderAuthenticated: true,
+  spamFlagged: false,
   deletedAt: null,
   createdAt: new Date("2026-07-21T13:30:00.000Z"),
 };

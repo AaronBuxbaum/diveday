@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { LostItemRow } from "@/components/lost-found/LostItemRow";
 import { lostItemRowCopy } from "@/components/lost-found/lost-found-copy";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { proseLinkClass } from "@/components/ui/button";
 import { listOpenLostItems } from "@/db/lost-items";
 import { fill } from "@/i18n/fill";
 import { requestLocale } from "@/i18n/request";
@@ -56,7 +57,7 @@ export default async function LostFoundPage({ params }: { params: Promise<{ shop
         </ul>
       )}
       <p className="mt-6 text-sm text-muted">
-        <Link href={shopPath(shopSlug, "schedule", "board")} className="underline">
+        <Link href={shopPath(shopSlug, "schedule", "board")} className={proseLinkClass}>
           {t("desk.lostFound.whereToAdd")}
         </Link>
       </p>

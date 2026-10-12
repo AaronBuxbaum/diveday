@@ -742,6 +742,7 @@ describe("writes aimed at a record merged away", () => {
     // The kept record takes the address, and the deleted row still holds it too.
     expect((await merge(f, { choices: { email: "source" } })).ok).toBe(true);
     const result = await recordInboundMessage(f.db, {
+      senderAuthenticated: true,
       shopId: f.shop.id,
       channel: "email",
       fromAddress: "maya.rivera+dive@gmail.com",

@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "68df381e-f73d-4f31-9854-8a89eee1ec95",
+  "id": "e10685b9-08eb-4448-a23e-e59bdca90b5a",
   "prevIds": [
-    "076b2a5f-64d6-4427-bb60-b8071d074e48"
+    "083f37db-181e-4ae5-87fd-d5b66630879e"
   ],
   "ddl": [
     {
@@ -31,6 +31,7 @@
         "waiver_send",
         "last_minute_deal",
         "waitlist_invite",
+        "trip_rescheduled",
         "departure_note"
       ],
       "name": "held_send_kind",
@@ -792,7 +793,8 @@
         "trip_recap",
         "trip_blowout",
         "trip_minimum_not_met",
-        "booking_cancelled"
+        "booking_cancelled",
+        "trip_rescheduled"
       ],
       "name": "notification_kind",
       "entityType": "enums",
@@ -15079,6 +15081,32 @@
       "table": "inbound_messages"
     },
     {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "sender_authenticated",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbound_messages"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "spam_flagged",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbound_messages"
+    },
+    {
       "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": false,
@@ -21860,6 +21888,19 @@
       "generated": null,
       "identity": null,
       "name": "revision",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trips"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "divers_told_starts_at",
       "entityType": "columns",
       "schema": "public",
       "table": "trips"

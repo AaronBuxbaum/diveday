@@ -82,7 +82,7 @@ describe("the hero renders only what the shop authored", () => {
       />,
     );
 
-    expect(visibleText(screen.getByRole("paragraph"))).toBe("4.3 · 83 reviews");
+    expect(visibleText(screen.getByRole("paragraph"))).toBe("4.3 · 83 ratings");
   });
 
   it("sets the dot as its own hidden fragment, so the row's gap falls evenly either side", () => {
@@ -101,7 +101,7 @@ describe("the hero renders only what the shop authored", () => {
     const dot = screen.getByText("·");
     expect(dot).toHaveAttribute("aria-hidden", "true");
     expect(dot.parentElement).toBe(screen.getByRole("paragraph"));
-    expect(screen.getByText("83 reviews").textContent).toBe("83 reviews");
+    expect(screen.getByText("83 ratings").textContent).toBe("83 ratings");
   });
 
   it("formats the figure for the reader's own locale", () => {

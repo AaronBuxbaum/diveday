@@ -1,6 +1,8 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
+import { createDiverFromSearchAction } from "@/app/actions/divers";
+import { setLocaleAction } from "@/app/actions/set-locale";
 import { PublicShopMainContent } from "@/app/s/[shopSlug]/_components/PublicShopMainContent";
 import {
   PublicShopBrand,
@@ -8,13 +10,17 @@ import {
   PublicShopChromePlaceholder,
   PublicShopFooterSection,
 } from "@/app/s/[shopSlug]/_components/PublicShopShell";
+import { ShopSearchField } from "@/components/ShopNav";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
+import { shopBySlugCached } from "@/db/shops-cached";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { auth } from "@/lib/auth";
+import { staffDestinationGates } from "@/lib/authz";
 import { REFUSED_SHOP_SLUG_HEADER, REQUEST_PATH_HEADER } from "@/lib/embed-routes";
 import { publicSchedulePath, shopSlugFromPublicPath } from "@/lib/public-routes";
 import { staffHomeSlug } from "@/lib/staff-home";
@@ -144,18 +150,37 @@ function DiveDayNotFound({ locale, isShell }: { locale: Locale; isShell?: boolea
 }
 
 /**
- * The staff refusal: the same heading as DiveDay's, in the staff bundle, and
- * one door to Today. No sentence under the heading: "check the address" is
- * advice for someone who typed a URL, and a staffer arrives here by a link.
+ * The staff refusal: the same heading as DiveDay's, in the staff bundle, one
+ * door to Today, and the ⌘K search under it, so a dead link is a door rather
+ * than a dead end (UX review 2026-10-10, item 38). No sentence under the
+ * heading: "check the address" is advice for someone who typed a URL, and a
+ * staffer arrives here by a link.
+ *
+ * The search is the bar's own palette with the reader's own gates: this page
+ * renders under the root layout, where the staff shell (and its bar) never
+ * runs. `staffHomeSlug` has already proved a staff session for this shop.
  */
-function StaffNotFound({ shopSlug, locale }: { shopSlug: string; locale: Locale }) {
+async function StaffNotFound({ shopSlug, locale }: { shopSlug: string; locale: Locale }) {
   const t = staffTranslator(locale);
+  const [session, shop] = await Promise.all([auth(), shopBySlugCached(shopSlug)]);
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-6 py-16 text-center">
       <h1 className={`${SHELL_TITLE_CLASS} text-balance`}>{t("shared.notFound.heading")}</h1>
       <Link href={shopPath(shopSlug)} className={buttonClass({ className: "mt-6" })}>
         {t("shared.notFound.backToToday")}
       </Link>
+      {session?.user && shop ? (
+        <div className="mt-8 w-full">
+          <ShopSearchField
+            shopSlug={shopSlug}
+            navGates={staffDestinationGates(session.user.roles)}
+            crewSchedule={shop.crewScheduleEnabled}
+            locale={locale ?? DEFAULT_DIVER_LOCALE}
+            setLocale={setLocaleAction}
+            createDiverAction={createDiverFromSearchAction}
+          />
+        </div>
+      ) : null}
     </main>
   );
 }

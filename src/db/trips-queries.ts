@@ -74,6 +74,13 @@ export async function countShopTrips(db: DbExecutor, shopId: string): Promise<nu
 export type TripWithBookedCount = typeof trips.$inferSelect & {
   booked: number;
   /**
+   * The seats this departure may actually sell (H-107, #2321): `capacity`
+   * capped at its boat's certificate (`sellableSeats`). Every seats-left a
+   * diver reads is measured against this; `capacity` stays the stated number
+   * the details form edits.
+   */
+  sellableCapacity: number;
+  /**
    * The divers among `booked` (ADR 20261007-participant-types): what the
    * divemaster ratio supervises. Capacity and headcount stay on `booked`.
    */
@@ -106,6 +113,7 @@ export async function upcomingTripsWithCounts(
       diveSite: diveSites,
       booked: count(bookings.id),
       bookedDivers: bookedDiversCount(),
+      certifiedPassengers: tripBoatCertifiedPassengers(),
     })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
@@ -123,8 +131,8 @@ export async function upcomingTripsWithCounts(
     // The paged board's own order, so the two never disagree over same-minute boats.
     .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
 
-  return rows.map(({ trip, course, diveSite, booked, bookedDivers }) => ({
-    ...trip,
+  return rows.map(({ trip, course, diveSite, booked, bookedDivers, certifiedPassengers }) => ({
+    ...withSellableCapacity(trip, certifiedPassengers),
     course,
     diveSite,
     booked,
@@ -268,7 +276,37 @@ function upcomingTripScope(
  * of the row as functionally dependent on it.
  */
 function hasSpaceHaving(hasSpace: boolean | undefined) {
-  return hasSpace ? sql`count(${bookings.id}) < ${trips.capacity}` : undefined;
+  return hasSpace ? sql`count(${bookings.id}) < ${sellableSeatsSql()}` : undefined;
+}
+
+/**
+ * The departure's boat's certificate passenger limit, as a scalar subquery on
+ * the trip row: null with no boat or no certificate recorded. Scoped to the
+ * trip's own shop, and a deleted boat's certificate still binds — the same
+ * answer `boatCertifiedPassengers` gives one trip at a time. A subquery rather
+ * than a join, so no grouped read has to add the boat to its `group by`.
+ */
+export const tripBoatCertifiedPassengers = () =>
+  sql<
+    number | null
+  >`(select ${boats.certifiedPassengers} from ${boats} where ${boats.id} = ${trips.boatId} and ${boats.shopId} = ${trips.shopId})`;
+
+/**
+ * `sellableSeats` spelled in SQL, for the one place the number has to be
+ * compared inside the query: `hasSpace`'s `having`, which a page of results
+ * cannot filter after the fact. Every row read returns the number through
+ * `sellableSeats` itself; `certificate-ceiling.test.ts` pins the two together.
+ */
+function sellableSeatsSql() {
+  return sql`least(${trips.capacity}, coalesce(${tripBoatCertifiedPassengers()}, ${trips.capacity}))`;
+}
+
+/** A counted trip row with its seats on sale beside its stated capacity. */
+function withSellableCapacity<T extends { capacity: number }>(
+  trip: T,
+  certifiedPassengers: number | null,
+): T & { sellableCapacity: number } {
+  return { ...trip, sellableCapacity: sellableSeats(trip.capacity, certifiedPassengers) };
 }
 
 /**
@@ -432,6 +470,7 @@ export async function pagedUpcomingTripsWithCounts(
       diveSite: diveSites,
       booked: count(bookings.id),
       bookedDivers: bookedDiversCount(),
+      certifiedPassengers: tripBoatCertifiedPassengers(),
     })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
@@ -463,13 +502,15 @@ export async function pagedUpcomingTripsWithCounts(
     .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id))
     .limit(limit + 1);
 
-  const page = rows.slice(0, limit).map(({ trip, course, diveSite, booked, bookedDivers }) => ({
-    ...trip,
-    course,
-    diveSite,
-    booked,
-    bookedDivers,
-  }));
+  const page = rows
+    .slice(0, limit)
+    .map(({ trip, course, diveSite, booked, bookedDivers, certifiedPassengers }) => ({
+      ...withSellableCapacity(trip, certifiedPassengers),
+      course,
+      diveSite,
+      booked,
+      bookedDivers,
+    }));
   const last = page.at(-1);
   return {
     trips: page,
@@ -550,6 +591,7 @@ export async function offsetUpcomingTripsWithCounts(
           diveSite: diveSites,
           booked: count(bookings.id),
           bookedDivers: bookedDiversCount(),
+          certifiedPassengers: tripBoatCertifiedPassengers(),
         })
         .from(trips)
         .leftJoin(courses, eq(courses.id, trips.courseId))
@@ -564,13 +606,15 @@ export async function offsetUpcomingTripsWithCounts(
   });
 
   return {
-    trips: paged.rows.map(({ trip, course, diveSite, booked, bookedDivers }) => ({
-      ...trip,
-      course,
-      diveSite,
-      booked,
-      bookedDivers,
-    })),
+    trips: paged.rows.map(
+      ({ trip, course, diveSite, booked, bookedDivers, certifiedPassengers }) => ({
+        ...withSellableCapacity(trip, certifiedPassengers),
+        course,
+        diveSite,
+        booked,
+        bookedDivers,
+      }),
+    ),
     page: paged.page,
     pageCount: paged.pageCount,
     pageSize: paged.pageSize,
@@ -869,7 +913,11 @@ export async function listUpcomingSessionsForCourse(
   now: Date = nowDate(),
 ) {
   const rows = await db
-    .select({ trip: trips, booked: count(bookings.id) })
+    .select({
+      trip: trips,
+      booked: count(bookings.id),
+      certifiedPassengers: tripBoatCertifiedPassengers(),
+    })
     .from(trips)
     .leftJoin(bookings, liveBookingJoin)
     .where(
@@ -884,7 +932,12 @@ export async function listUpcomingSessionsForCourse(
     )
     .groupBy(trips.id)
     .orderBy(asc(trips.startsAt));
-  return rows.map(({ trip, booked }) => ({ ...trip, booked }));
+  // A diver-only read: `capacity` here is the seats on sale (#2321).
+  return rows.map(({ trip, booked, certifiedPassengers }) => ({
+    ...trip,
+    capacity: sellableSeats(trip.capacity, certifiedPassengers),
+    booked,
+  }));
 }
 
 /**

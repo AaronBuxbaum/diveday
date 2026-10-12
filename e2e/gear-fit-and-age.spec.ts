@@ -382,7 +382,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     // The confirmation heading greets by first name only ("...boat, Late!").
     await expect(
       page.getByRole("heading", {
-        name: new RegExp(`You’re on the boat, ${diverName.split(" ")[0]}`),
+        name: new RegExp(`You’ve got a seat, ${diverName.split(" ")[0]}`),
       }),
     ).toBeVisible();
 
@@ -498,11 +498,17 @@ test.describe("the prep list on a phone", () => {
     const kit = page.getByRole("region", { name: "Rental kit" });
     const bcdCard = kit.getByRole("listitem").filter({ hasText: "BCD" }).first();
     await expect(bcdCard).toBeVisible();
-    // Every column the table carried is still on the card, each behind its own
-    // label rather than positionally — the count is the number the packer
-    // loads from, so it must never be the thing that gets truncated.
-    await expect(bcdCard.getByRole("term").filter({ hasText: "Size" })).toBeVisible();
-    await expect(bcdCard.getByRole("term").filter({ hasText: "For" })).toBeVisible();
+    // Every column the table carried is still on the row (UX review
+    // 2026-10-10, item 13): the piece with its size beside it, who it is for,
+    // and the count the packer loads from, which must never be truncated.
+    const [piece, forWhom, count] = [0, 1, 2].map((cell) =>
+      bcdCard.locator(":scope > p").nth(cell),
+    );
+    await expect(piece).toHaveText(/^BCD (XS|S|M|L)$/);
+    await expect(bcdCard.locator("[data-size-missing]")).toHaveCount(0);
+    await expect(forWhom).not.toBeEmpty();
+    await expect(forWhom).toBeVisible();
+    await expect(count).toHaveText(/^Qty \d+$/);
 
     // The flagged diver still reads as "fit at check-in" here, not as a
     // substitute size — same refusal the table makes (see above).

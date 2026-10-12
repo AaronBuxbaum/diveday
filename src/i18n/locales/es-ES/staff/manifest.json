@@ -100,6 +100,7 @@
   "checkpointRollCallHeading": "Pase de lista · {checkpoint}",
   "checkedInPill": "Registrado",
   "notHerePill": "No vino",
+  "runningLate": "Llega tarde, avisó a las {time}",
   "diverNotesHeading": "Notas del buceador",
   "noteAppliesAcrossDepartures": "Se aplica a todas las salidas",
   "age": "{age} años",

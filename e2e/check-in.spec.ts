@@ -41,6 +41,8 @@ function deskRow(page: Page, name: string): Locator {
 
 /** "Checked in · n" — the group a settled arrival sinks into. */
 const CHECKED_IN_BAND = /^Checked in · \d+$/;
+/** A finished departure's record band for the seats the roll call counted aboard. */
+const SAILED_BAND = /^Sailed · \d+$/;
 
 /** A seeded boat still ahead of the frozen clock and inside the counter's window. */
 const OPEN_BOAT = "Two-Tank Reef — Molasses & French";
@@ -133,9 +135,8 @@ test("a ready diver checks in with one tap, sinks into the checked-in group, and
  * not this spec.
  *
  * What it pins is the instrument itself: the count leading the roster, taps at
- * the dock test's 44px floor, "Add a diver" as one search field, and — on a
- * boat that has already sailed — the receipts and the divers who still cannot
- * board, apart.
+ * the dock test's 44px floor, "Add a diver" as one search field, and that a
+ * boat already home is no instrument at all but its record.
  */
 test("the counter reads as an instrument at the tablet on the desk", async ({ page }) => {
   await page.setViewportSize({ width: 820, height: 1180 });
@@ -161,31 +162,21 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
   await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Add diver", exact: true })).toHaveCount(0);
 
-  // A boat that has already sailed is read rather than worked: its receipts
-  // stand in their own group.
+  // A boat that is home is read rather than worked: its Divers tab is the
+  // record, every seat filed by the crew's roll call (UX review 2026-10-10,
+  // item 10). The seeded dawn boat boarded everyone, so they all stand under
+  // "Sailed", and nothing of the live counter is drawn: no count, no taps,
+  // nothing still to clear.
   await page.goto(counterPath("blue-mantis", sailedId));
-  await expect(page.getByRole("heading", { name: CHECKED_IN_BAND })).toBeVisible();
+  await expect(page.getByRole("heading", { name: SAILED_BAND })).toBeVisible();
+  await expect(page.getByText(/^\d+ of \d+ here$/)).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: CHECKED_IN_BAND })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: /^Still to clear/ })).toHaveCount(0);
+  await expect(
+    page.locator("#roster").getByRole("button", { name: /^(Check in|Undo check-in for) / }),
+  ).toHaveCount(0);
   // Nobody can be seated on a boat that has left, so its door is not drawn.
   await expect(page.getByRole("link", { name: "Add as a walk-in" })).toHaveCount(0);
-
-  // **And it is not all-clear, because some of the divers aboard are blocked.**
-  // Every diver on this boat is `checked_in`, which used to be the whole
-  // condition for the coral line — so the instrument painted the earned moment
-  // over divers readiness will not clear. The line needs "nobody blocked" as
-  // well, the count says how many cannot board, and those rows stay in "Still
-  // to clear" wearing their reasons instead of sinking into the receipts.
-  await expect(page.getByRole("status").filter({ hasText: "Everyone’s checked in" })).toHaveCount(
-    0,
-  );
-  await expect(page.getByText(/can’t board yet/)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Still to clear" })).toBeVisible();
-  await expect(
-    page
-      .locator('#roster li[id^="booking-"]')
-      .filter({ visible: true })
-      .filter({ hasText: "Blocked" })
-      .first(),
-  ).toBeVisible();
 });
 
 test("a counter walk-in books straight onto a boat with no email required", async ({ page }) => {

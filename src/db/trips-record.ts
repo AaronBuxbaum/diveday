@@ -1,5 +1,6 @@
 import { and, asc, count, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
+import { sellableSeats } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
 import type { TripCrewRole } from "@/lib/crew-roles";
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
@@ -32,6 +33,7 @@ import {
   trips,
   userAccounts,
 } from "./schema";
+import { recordShopActivityWithin } from "./shop-activity";
 import { recordTripChangeEvent } from "./trip-change-events";
 import {
   normalizedDiveCount,
@@ -43,7 +45,12 @@ import {
   validateDiveSites,
 } from "./trips-create";
 import { liveTrip, notRehearsal } from "./trips-live";
-import { bookedDiversCount, heldSeatCounts, seatHeld } from "./trips-queries";
+import {
+  bookedDiversCount,
+  heldSeatCounts,
+  seatHeld,
+  tripBoatCertifiedPassengers,
+} from "./trips-queries";
 
 /**
  * One departure's own record: read it, edit its details, its dives, its
@@ -95,7 +102,12 @@ export async function tripExistsForShop(
   return rows.length > 0;
 }
 
-/** Trip scoped to a shop (staff pages must never cross tenants), with booked count. */
+/**
+ * Trip scoped to a shop (staff pages must never cross tenants), with booked
+ * count and `sellableCapacity` — its seats on sale under the boat's
+ * certificate (H-107, #2321), which every seats-left reads. `capacity` stays
+ * the stated number the details form edits.
+ */
 export async function getTripWithBooked(db: AppDb, shopId: string, tripId: string) {
   const rows = await db
     .select({
@@ -104,6 +116,7 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
       diveSite: diveSites,
       booked: count(bookings.id),
       bookedDivers: bookedDiversCount(),
+      certifiedPassengers: tripBoatCertifiedPassengers(),
     })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
@@ -116,6 +129,7 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
   return row
     ? {
         ...row.trip,
+        sellableCapacity: sellableSeats(row.trip.capacity, row.certifiedPassengers),
         course: row.course,
         diveSite: row.diveSite,
         booked: row.booked,
@@ -471,6 +485,8 @@ export async function updateTrip(
         // Read so a moved start time is told to the crew of a running
         // departure only (#2283).
         status: trips.status,
+        // Read so a changed return time files the activity line too (#2313).
+        endsAt: trips.endsAt,
         diveSiteId: trips.diveSiteId,
         meetingPointLabel: trips.meetingPointLabel,
         meetingPointAddress: trips.meetingPointAddress,
@@ -685,6 +701,20 @@ export async function updateTrip(
         now: changedAt,
       });
       timeMoved = true;
+    }
+    // The line the schedule builder's move files, for the same act made from
+    // the departure's own form (#2313). Only when the times actually moved, in
+    // this transaction, and in its own savepoint so the line can never undo the
+    // edit.
+    const timesMoved =
+      existing.startsAt.getTime() !== patch.startsAt.getTime() ||
+      existing.endsAt.getTime() !== patch.endsAt.getTime();
+    if (timesMoved && patch.changeActorPersonId) {
+      await recordShopActivityWithin(tx, {
+        shopId,
+        actorPersonId: patch.changeActorPersonId,
+        write: { code: "departure_moved", tripId },
+      });
     }
     return { ok: true, trip, startMoved };
   });

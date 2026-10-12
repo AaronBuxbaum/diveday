@@ -67,7 +67,7 @@ import {
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { absoluteUrl, scheduleJsonLd } from "@/lib/structured-data";
 import { resolveLens } from "@/lib/trip-lenses";
-import { capacityLabel, nextBookableDeparture } from "@/lib/trips";
+import { capacityLabel, nextBookableDeparture, seatsOnSale } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { CoursesShelf } from "./_components/CoursesShelf";
 import { DayJumpStrip } from "./_components/DayJumpStrip";
@@ -288,7 +288,7 @@ export default async function SchedulePage({
       tripType: tripTypeFilter,
       publicOnly: true,
       lensId: activeLens?.id,
-    }),
+    }).then((page) => ({ ...page, trips: page.trips.map(seatsOnSale) })),
   );
   const rangeRead = upcomingScheduleRange(db, shop.id, now, { publicOnly: true });
   const [

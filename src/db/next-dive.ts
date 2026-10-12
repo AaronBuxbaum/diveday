@@ -119,7 +119,7 @@ export async function nextDiveForBooking(
       siteName: trip.diveSite?.name ?? null,
       lensId: trip.lensId,
       requiredLevel: siteRequirement?.minimumCertificationLevel ?? null,
-      seatsLeft: Math.max(0, trip.capacity - trip.booked),
+      seatsLeft: Math.max(0, trip.sellableCapacity - trip.booked),
     });
   }
 

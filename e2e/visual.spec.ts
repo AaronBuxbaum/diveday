@@ -1936,7 +1936,7 @@ async function bookAVisualRegressionSeat(page: Page, scheme: "light" | "dark") {
   await page.getByLabel("Name", { exact: true }).fill("Visual Regression Diver");
   await page.getByLabel("Email", { exact: true }).fill(`visual-regression-${scheme}@example.com`);
   await page.getByRole("button", { name: /^Book/ }).click();
-  await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
+  await page.getByRole("heading", { name: /You’ve got a seat/ }).waitFor();
   await expect(page).toHaveURL(/\/ready\//);
 }
 
@@ -2554,7 +2554,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Name", { exact: true }).fill("Embed Regression Diver");
         await page.getByLabel("Email", { exact: true }).fill(`embed-visual-${scheme}@example.com`);
         await page.getByRole("button", { name: /^Book/ }).click();
-        await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
+        await page.getByRole("heading", { name: /You’ve got a seat/ }).waitFor();
         // Still framed, and still on the trip page — the assertion that this
         // capture is of the embed branch and not a `/ready` that leaked in.
         await expect(page).toHaveURL(/embed=1/);
@@ -3075,7 +3075,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       /**
        * The moment the whole public funnel exists for: `/ready` as it looks in
-       * the seconds after a seat is taken — the "You're on the boat" earned
+       * the seconds after a seat is taken — the "You've got a seat" earned
        * moment, the emails line, and the checklist under it (ADR
        * 20260820-one-page-after-booking). It was a branch of the trip page
        * until 2026-08-20; the capture keeps its name, because what it is a
@@ -3339,7 +3339,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Diver 2 name").fill("Sam Reyes");
         await page.getByLabel("Use the main contact’s email for this diver").check();
         await page.getByRole("button", { name: /^Book/ }).click();
-        await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
+        await page.getByRole("heading", { name: /You’ve got a seat/ }).waitFor();
         await expect(page).toHaveURL(/\/ready\//);
         await page.getByRole("heading", { name: "Your group’s seats" }).waitFor();
         await capture(page, "party-organizer-confirmation", scheme);
@@ -3871,6 +3871,24 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today-arrival-lookup-running-late", scheme);
       });
 
+      // The captain's half of the same statement (#2319): a quiet line under
+      // the name on the dock roll call, for a diver nobody has called yet.
+      test(`a running-late diver on the manifest renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?runningLate=1");
+        const { runningLate } = (await seeded.json()) as { runningLate?: { tripId: string } };
+        if (!runningLate) throw new Error("seed-trouble-states found no seat to say it on");
+        await page.goto(`/shop/blue-mantis/trips/${runningLate.tripId}/manifest`);
+        await page.getByRole("heading", { name: "Roll call" }).waitFor();
+        await page
+          .getByText(/^Running late, said /)
+          .first()
+          .waitFor();
+        await capture(page, "manifest-running-late", scheme);
+      });
+
       /**
        * **The identity menu, open** — the shop's name in the chrome bar opens
        * Settings, the language choices and Sign out (`ShopIdentityMenu` with
@@ -4077,28 +4095,20 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-desk", scheme);
       });
 
-      // The desk's settled state, which is a whole reading of the surface
-      // rather than one row's styling: a departure that has already sailed
-      // says so beside its hours, and its arrivals stand in their own "Checked
-      // in" group under the count. Reading the seeded state keeps this capture
-      // independent of the mutable check-in action while the functional spec
-      // covers the toggle itself.
-      //
-      // **No earned line in this frame, and that is the point of it.** Every
-      // diver on this boat is `checked_in`, which used to be the whole
-      // condition for the counter's one coral moment (ADR
-      // 20260827-clearwater-surface-language, decision 11) — so the shipped
-      // capture showed the instrument painting all-clear over three divers
-      // readiness will not clear. What it holds now is the honest reading: a
-      // red band on the meter, "3 people can't board yet", and those three
-      // still in "Still to clear" with their badges and their reasons. The
-      // coral moment itself is pinned by `CounterInstrument.test.tsx`, which
-      // can put a genuinely clear boat in front of it.
+      // The desk's settled state: a departure that is home. Its Divers tab is
+      // no longer the desk but the record (UX review 2026-10-10, item 10),
+      // every seat filed by the crew's roll call under "Sailed", "Didn't
+      // sail", "Not counted at the dock" or "No roll call taken". The seeded
+      // dawn boat boarded everyone, so the frame holds one "Sailed" band and
+      // no count, no taps and nothing still to clear: a record never asks for
+      // action. Reading the seeded state keeps this capture independent of
+      // the mutable roll-call action. The capture keeps its name so the
+      // baseline diff reads as this surface changing, not a new one.
       test(`the desk's settled boat renders true to the design (${scheme})`, async ({ page }) => {
         const tripId = await seededTripId(page, "blue-mantis", SAILED_TRIP);
         await page.goto(counterPath("blue-mantis", tripId));
         await page.getByRole("heading", { level: 1, name: SAILED_TRIP }).waitFor();
-        await page.getByRole("heading", { name: /^Checked in · \d+$/ }).waitFor();
+        await page.getByRole("heading", { name: /^Sailed · \d+$/ }).waitFor();
         await capture(page, "trip-desk-checked", scheme);
       });
 
@@ -7601,7 +7611,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("dialog")
           .getByRole("button", { name: "Close person details" })
           .click();
-        await expect(tomRow.getByText("Someone unaccounted for")).toBeVisible();
+        await expect(tomRow.getByText("Buddy not back aboard")).toBeVisible();
         await page.mouse.move(0, 0);
         await capture(page, "manifest-buddy-divergence", scheme);
       });
@@ -7662,7 +7672,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/dive-sites");
         await page.getByRole("link", { name: "Molasses Reef" }).first().click();
         await page.waitForURL(/\/dive-sites\//);
-        await page.getByLabel(/Maximum depth/).fill("32");
+        await page.getByLabel(/Maximum depth/).fill("105");
         await page.getByRole("button", { name: "Save dive site" }).click();
         await page.getByText("Dive site saved.").waitFor();
 

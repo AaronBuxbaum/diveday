@@ -1,7 +1,6 @@
 import { hasReturned, hasSailed } from "@/lib/trips";
 import { nowDate } from "./clock";
 import { type CrewRollCallSubject, crewIsAccountedFor, crewRollCallCounts } from "./manifests";
-import { type OpenSeatsDebrief, openSeatsDebrief } from "./open-seats";
 import type { PlanChangeReason } from "./plan-change";
 import type { MonthlyReport } from "./reporting";
 import { rollCallCheckpoints } from "./roll-call";
@@ -225,8 +224,9 @@ export type CloseoutTripInput = {
    * #1689).
    *
    * Its own field rather than a narrowing of `booked`, because the readers
-   * either side of it want the roster: `openSeatsDebrief` subtracts seats from
-   * capacity, and a released seat never came back to the shelf. The homecoming
+   * either side of it want the roster: the departure's open-seats debrief
+   * (`src/db/open-seats.ts`) subtracts seats from capacity, and a released
+   * seat never came back to the shelf. The homecoming
    * sentence is the one reader asking who was *aboard*, and it counted a diver
    * left standing on the dock as having gone out and come home because both
    * questions shared one number.
@@ -236,7 +236,7 @@ export type CloseoutTripInput = {
    * input rather than optional.
    */
   sailed: number;
-  /** Seats the departure had, for the evening's open-seats reading. */
+  /** Seats the departure had. */
   capacity: number;
   /** Decides the closing checkpoint the crew are counted at. */
   plannedDives: number;
@@ -255,12 +255,6 @@ export type CloseoutTripInput = {
    * stops speaking, and a stale one must not move this reading either way.
    */
   stage?: TripStageReading | null;
-  /** Newest non-cancelled booking on this departure. Null when nobody booked. */
-  lastBookingAt?: Date | null;
-  /** Whether a last-minute deal ever went out on this departure. */
-  dealSent?: boolean;
-  /** The most recent same-title departure that filled, if there is one. */
-  comparable?: { title: string; startsAt: Date; samePrice: boolean } | null;
   /** Dives whose actual site was not the planned one. */
   planChanges?: readonly CloseoutPlanChange[];
   /**
@@ -319,12 +313,6 @@ export type CloseoutDeparture = {
   plannedDives: number;
   /** See `CloseoutTripInput.crew` — the assigned crew, at the closing checkpoint. */
   crew: readonly CrewRollCallSubject[];
-  /**
-   * The open-seats reading, already answered — the ingredients never travel
-   * past this point, so no surface can reach a second answer from them. Null
-   * when the boat filled, when it never sailed, and when nothing is known.
-   */
-  openSeats: OpenSeatsDebrief | null;
   planChanges: readonly CloseoutPlanChange[];
   status: CloseoutDepartureStatus;
   /** The headline gap when `status` is `unreconciled`/`count_open`. */
@@ -455,18 +443,6 @@ export function assembleDayCloseout(input: {
       capacity: trip.capacity,
       plannedDives: trip.plannedDives,
       crew: trip.crew,
-      openSeats: openSeatsDebrief(
-        {
-          capacity: trip.capacity,
-          booked: trip.booked,
-          startsAt: trip.startsAt,
-          timeZone: input.timeZone,
-          lastBookingAt: trip.lastBookingAt ?? null,
-          dealSent: trip.dealSent ?? false,
-          comparable: trip.comparable ?? null,
-        },
-        now,
-      ),
       planChanges: trip.planChanges ?? [],
       recapShoutout: trip.recapShoutout,
       recapSentAt: trip.recapSentAt ?? null,
@@ -586,8 +562,6 @@ export type StationClose = {
   crewAccountedFor: boolean;
   /** Crew who sailed and whom the closing checkpoint brought back. */
   crewBack: number;
-  /** See `CloseoutDeparture.openSeats`. Null when the boat filled. */
-  openSeats: OpenSeatsDebrief | null;
   /** Dives whose actual site was not the planned one. */
   planChanges: readonly CloseoutPlanChange[];
   recapSentAt: Date | null;
@@ -721,7 +695,6 @@ export function assembleEveningClose(
         crewSailed,
         crewAccountedFor: crewIsAccountedFor(closingCheckpoint, departure.crew),
         crewBack: Math.max(0, crewSailed - crewCounts.crewNotBackAboard),
-        openSeats: departure.openSeats,
         planChanges: departure.planChanges,
         recapSentAt: departure.recapSentAt,
         ended: departure.ended,

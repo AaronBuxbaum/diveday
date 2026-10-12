@@ -1296,6 +1296,34 @@ describe("offline manifest policy", () => {
     expect(quiet.manifests[0]?.divers[0]?.notHere).toBeUndefined();
   });
 
+  it("carries a diver's own running-late word to the dock as an instant, and nothing when silent", () => {
+    // #2319. The captain at the rail with no signal is exactly who needs to
+    // know a missing name said they are on the way. One instant, no channel,
+    // no message text: the viewer words it and hides it once they board.
+    const shop = {
+      slug: "blue-mantis",
+      name: "Blue Mantis",
+      timezone: "America/New_York",
+      emergencyReference: EMPTY_EMERGENCY_REFERENCE,
+    };
+    const base = baseManifest();
+    const late: TripManifest = {
+      ...base,
+      divers: [
+        {
+          ...base.divers[0],
+          runningLateAt: new Date("2026-07-20T11:42:00.000Z"),
+        } as TripManifest["divers"][number],
+      ],
+    };
+    const payload = serializeManifests([late], shop, (blocker) => blocker.code);
+    expect(payload.manifests[0]?.divers[0]?.runningLateAt).toBe("2026-07-20T11:42:00.000Z");
+    // Absent rather than null, so a copy with nobody late serializes to
+    // exactly what it did before the field.
+    const quiet = serializeManifests([baseManifest()], shop, (blocker) => blocker.code);
+    expect(quiet.manifests[0]?.divers[0]).not.toHaveProperty("runningLateAt");
+  });
+
   it("carries a buddy as a name only — never an id, never a computed divergence", () => {
     // The dock copy *displays* buddy teams; whether a pair is split is a
     // live-roll-call read, and a snapshot cannot know who came back (ADR
