@@ -8,6 +8,7 @@ import {
 import { addPartySeat, selfCancelBooking } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import { recordDiverSelfCancel } from "@/db/operations";
 import {
   planReadinessLinkRescue,
   type ReadinessLinkRescue,
@@ -116,6 +117,21 @@ export async function cancelMyBookingAction(token: string) {
     }
   } catch (error) {
     log("booking.self_cancel_refund_failed", "error", {
+      bookingId: ctx.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+  }
+  // The departure's trail names the diver, so the owner's "who refunded what"
+  // has an answer that is not a staffer. Caught for the same reason as the
+  // refund: the cancellation has already happened.
+  try {
+    await recordDiverSelfCancel(ctx.db, {
+      shopId: ctx.data.shop.id,
+      bookingId: ctx.bookingId,
+      refunded: refund.status === "refunded",
+    });
+  } catch (error) {
+    log("booking.self_cancel_activity_failed", "error", {
       bookingId: ctx.bookingId,
       errorCode: error instanceof Error ? error.name : "unknown_error",
     });

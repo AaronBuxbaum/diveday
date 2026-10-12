@@ -138,6 +138,18 @@ export type TripCapacity = {
   booked: number;
 };
 
+/**
+ * **A departure as a diver is shown it** (H-107, #2321): `capacity` becomes
+ * the seats on sale — the stated seats capped at the boat's certificate, which
+ * is all the booking transaction will sell. A public page maps its rows
+ * through this once, where it reads them, so every seats-left, "Full", party
+ * limit and structured-data count on it follows; a staff page that edits the
+ * stated number never does.
+ */
+export function seatsOnSale<T extends { capacity: number; sellableCapacity: number }>(trip: T): T {
+  return { ...trip, capacity: trip.sellableCapacity };
+}
+
 export function spotsRemaining({ capacity, booked }: TripCapacity): number {
   return Math.max(0, capacity - booked);
 }

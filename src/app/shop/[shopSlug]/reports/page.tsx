@@ -27,7 +27,6 @@ import {
   type MonthRef,
   monthKey,
   monthLabel,
-  monthsNewestFirst,
   parseMonthKey,
 } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
@@ -51,8 +50,13 @@ import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DepartureLedger, type DepartureRow } from "./_components/DepartureLedger";
 import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
-import { MonthJump } from "./_components/MonthJump";
-import { MoneyByLine, MonthDetailLines } from "./_components/MonthMoneyDetail";
+import {
+  MoneyByLine,
+  MonthDetailLines,
+  MonthFootnotes,
+  MonthPayouts,
+  QuietMonth,
+} from "./_components/MonthMoneyDetail";
 import { ReportRangeTabs } from "./_components/ReportRangeTabs";
 import { YearReport } from "./_components/YearReport";
 
@@ -186,7 +190,7 @@ export default async function ReportsPage({
   const todayWall = utcToWallTime(now, tz);
   const thisMonth: MonthRef = { year: todayWall.year, month: todayWall.month };
   // The oldest month this shop could have anything to report on. It is the
-  // floor of both the picker and the back arrow: walking further back only ever
+  // floor of the back arrow and of a hand-edited `?month=`: walking further back only ever
   // renders identical empty months, and `?month=0001-01` should land somewhere
   // real rather than querying the year 1. An imported payment/refund is a
   // genuine financial fact even without a DiveDay departure, so its earliest
@@ -280,6 +284,7 @@ export default async function ReportsPage({
   // one more month's worth of trips, bookings and payments, never a second
   // pass over the shop's whole history. See the PR description for the
   // measured cost.
+  const shopMoney = { currency, timeZone: tz };
   const [input, tripPage, baselineInput, moneyDetail] = await Promise.all([
     getMonthlyReport(db, shop.id, monthStart, monthEnd, { currency, timeZone: tz }),
     // A non-numeric or missing `?page=` reads as page 1; the query clamps it
@@ -296,7 +301,7 @@ export default async function ReportsPage({
       : Promise.resolve(null),
     // The money by line, the package dives still owed, and the returning
     // divers (owner decision 2026-10-09) — `src/lib/report-lines.ts`.
-    getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now),
+    getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now, shopMoney, current),
   ]);
   const report = summarizeMonth(input);
   const money = (cents: number) => formatReportMoney(cents, currency, locale);
@@ -412,9 +417,7 @@ export default async function ReportsPage({
   // `secondary`, with no `text-foreground` override: two `text-<color>`
   // utilities resolve by stylesheet order rather than by the order they are
   // written, and `globals.css` declares `--color-primary` after
-  // `--color-foreground`, so an override there is inert. That makes these the
-  // same construction as the "Go" button between them, which is what the
-  // navigator wanted all along.
+  // `--color-foreground`, so an override there is inert.
   const navClass = buttonClass({ variant: "secondary", size: "icon" });
   // The far edge of the range: decorative and `aria-hidden`, so it wears the
   // same box and is made inert rather than merely restyled. `pointer-events-none`
@@ -541,97 +544,76 @@ export default async function ReportsPage({
       <ReportRangeTabs shopSlug={shopSlug} range="month" t={t} className="mb-6" />
 
       {/*
-        Month navigator — server-rendered arrows for neighbouring months, and
-        between them a list that applies on change for a far one (`MonthJump`,
-        UX audit item 22): the shop's first month to this one or the month on
-        screen, newest first, in the shop's language (#1983). The arrows are
-        48px `icon` squares, level with the 48px select.
+        Month navigator — the period between its two arrows, and nothing else
+        (UX review 2026-10-10, item 32). The arrows are links, so a tap is the
+        change; the month list that sat between them was a third control for
+        the same choice. The This month / This year switch above stays because
+        the year is its own report, not a further month. The arrows are 48px
+        `icon` squares.
       */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h2 className={SECTION_TITLE_CLASS}>
+      <nav aria-label={t("reports.chooseMonth")} className="mb-6 flex items-center gap-3">
+        {prevMonthKey ? (
+          <Link
+            href={`/shop/${shopSlug}/reports?month=${prevMonthKey}`}
+            aria-label={t("reports.previousMonth")}
+            className={`${navClass} shrink-0`}
+            scroll={false}
+          >
+            <DiveDayIcon name="arrow-left" className="size-4" />
+          </Link>
+        ) : (
+          <span
+            aria-hidden="true"
+            title={t("reports.earliestMonthTitle")}
+            className={`${navDisabledClass} shrink-0`}
+          >
+            <DiveDayIcon name="arrow-left" className="size-4" />
+          </span>
+        )}
+        <h2 className={`${SECTION_TITLE_CLASS} min-w-0 tabular-nums`}>
           {monthLabel(current, locale)}
           {isThisMonth ? (
             <span className="ms-2 text-sm font-normal text-muted">{t("reports.soFar")}</span>
           ) : null}
         </h2>
-        <nav aria-label={t("reports.chooseMonth")} className="flex flex-wrap items-center gap-2">
-          {prevMonthKey ? (
-            <Link
-              href={`/shop/${shopSlug}/reports?month=${prevMonthKey}`}
-              aria-label={t("reports.previousMonth")}
-              className={navClass}
-              scroll={false}
-            >
-              <DiveDayIcon name="arrow-left" className="size-4" />
-            </Link>
-          ) : (
-            <span
-              aria-hidden="true"
-              title={t("reports.earliestMonthTitle")}
-              className={navDisabledClass}
-            >
-              <DiveDayIcon name="arrow-left" className="size-4" />
-            </span>
-          )}
-          <MonthJump
-            value={monthKey(current)}
-            months={monthsNewestFirst(
-              floorMonth,
-              compareMonths(current, thisMonth) > 0 ? current : thisMonth,
-            ).map((month) => ({ value: monthKey(month), label: monthLabel(month, locale) }))}
-            label={t("reports.monthPicker.label")}
-          />
-          {nextMonthKey ? (
-            <Link
-              href={`/shop/${shopSlug}/reports?month=${nextMonthKey}`}
-              aria-label={t("reports.nextMonth")}
-              className={navClass}
-              scroll={false}
-            >
-              <DiveDayIcon name="arrow-right" className="size-4" />
-            </Link>
-          ) : (
-            <span
-              aria-hidden="true"
-              title={t("reports.currentMonthTitle")}
-              className={navDisabledClass}
-            >
-              <DiveDayIcon name="arrow-right" className="size-4" />
-            </span>
-          )}
-        </nav>
-      </div>
+        {nextMonthKey ? (
+          <Link
+            href={`/shop/${shopSlug}/reports?month=${nextMonthKey}`}
+            aria-label={t("reports.nextMonth")}
+            className={`${navClass} shrink-0`}
+            scroll={false}
+          >
+            <DiveDayIcon name="arrow-right" className="size-4" />
+          </Link>
+        ) : (
+          <span
+            aria-hidden="true"
+            title={t("reports.currentMonthTitle")}
+            className={`${navDisabledClass} shrink-0`}
+          >
+            <DiveDayIcon name="arrow-right" className="size-4" />
+          </span>
+        )}
+      </nav>
 
       {!hasMonthlyActivity ? (
-        // A month with no departures is this page's rest state, not news about
-        // it: `ShopNotice` is the vocabulary for something that *happened*
-        // (a save, a refusal, a permission bounce), and wearing it here made an
-        // ordinary quiet January read as a warning. No figure row either — five
-        // zeroes over an empty ledger is a month described wrongly, not
-        // described quietly (`monthHasActivity`).
-        <EmptyState title={isFuture ? t("reports.noTripsFuture") : t("reports.noTripsPast")} />
+        <QuietMonth
+          title={isFuture ? t("reports.noTripsFuture") : t("reports.noTripsPast")}
+          detail={moneyDetail}
+          t={t}
+          money={money}
+        />
       ) : (
         <>
           <MonthFigures label={t("reports.numbersLabel")} figures={figures} />
 
-          {/* The month's two quiet doors on one line: what Stripe Tax took out
-              of the revenue figure above, and the CSV an owner sends their
-              accountant (issue #700 — the full-shop export is the right tool
-              for a bookkeeper and the wrong one for "just this month"). Tax
-              used to be the sixth tile; it is a footnote to net revenue, not a
-              headline beside it. */}
-          <p className="mt-3 text-end text-sm text-muted tabular-nums">
-            {t("reports.taxLine", {
-              amount: formatReportMoney(report.taxCents, currency, locale),
-            })}
-            {" · "}
-            <a
-              href={`/shop/${shopSlug}/reports/download?month=${monthKey(current)}`}
-              className="font-medium text-primary hover:underline"
-            >
-              {t("reports.downloadCsv")}
-            </a>
-          </p>
+          <MonthFootnotes
+            taxCents={report.taxCents}
+            csvHref={`/shop/${shopSlug}/reports/download?month=${monthKey(current)}`}
+            detail={moneyDetail}
+            t={t}
+            money={money}
+          />
 
           {report.importedFinancialRecordCount > 0 ? (
             <section aria-label={t("reports.importedHistory.sectionLabel")} className="mt-6">
@@ -655,6 +637,7 @@ export default async function ReportsPage({
 
           <MonthDetailLines report={report} detail={moneyDetail} t={t} money={money} />
           <MoneyByLine detail={moneyDetail} t={t} money={money} />
+          <MonthPayouts detail={moneyDetail} t={t} locale={locale} timeZone={tz} />
 
           {report.tripCount > 0 ? (
             <DepartureLedger

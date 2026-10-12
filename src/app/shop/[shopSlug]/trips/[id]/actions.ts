@@ -43,6 +43,7 @@ import {
   type TripInvitationDelivery,
 } from "@/db/trip-invitations";
 import { getTripLens } from "@/db/trip-lenses";
+import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
@@ -52,6 +53,7 @@ import {
   listTripDiverContacts,
   reinstateTripClearingMinimum,
   setSeriesRepeat,
+  setSeriesStandingCrew,
   setTripParticipantTerms,
   setTripStatus,
   type TripCrewChange,
@@ -78,6 +80,8 @@ import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
 import { depthToMeters, maxEnteredVisibility } from "@/lib/depth-units";
 import { parseForm } from "@/lib/form-parse";
+import { log } from "@/lib/log";
+import { meetingPointMoved, meetingPointOfRows } from "@/lib/meeting-point";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
@@ -153,6 +157,9 @@ const detailsSchema = z.object({
   // else moves: an agency training ratio still refuses a seat, and readiness,
   // admission and capacity never see this (issue #973).
   selfGuided: z.preprocess((value) => value === "on", z.boolean()),
+  // The dives went past no-decompression limits: the recap then says nothing
+  // about flying (H-84, issue #1555). Nothing else reads it.
+  exceedsNoDecoLimits: z.preprocess((value) => value === "on", z.boolean()),
   // How many consecutive days this departure meets on (src/lib/trip-days.ts).
   // Absent from an older cached form is one day, the shape every trip had
   // before multi-day existed.
@@ -398,6 +405,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     lensId,
     isPrivate,
     selfGuided,
+    exceedsNoDecoLimits,
   } = parsed.data;
   const dbi = await getDb();
   const shopNow = await getShopById(dbi, s.user.shopId);
@@ -522,6 +530,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     lensId: lensId ?? null,
     isPrivate,
     selfGuided,
+    exceedsNoDecoLimits,
     priceCents: details.patch.priceCents,
     depositCents: details.patch.depositCents,
     cancellationWindowHours: details.patch.cancellationWindowHours,
@@ -562,7 +571,31 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
       url: previousArrivalPhotoUrl,
     });
   }
-  revalidateAndRedirect(back, noticeUrl(back, "saved"));
+  // **A retime tells the divers** (ux review 2026-10-11, item 1), the same
+  // held send the board's move takes, and says where too when the meeting
+  // point moved in the same save.
+  const notice =
+    tripNow && tripNow.startsAt.getTime() !== details.patch.startsAt.getTime()
+      ? await holdRescheduleNotice(dbi, {
+          shopId: s.user.shopId,
+          tripId,
+          movedFrom: tripNow.startsAt,
+          meetingPointMoved: meetingPointMoved(
+            meetingPointOfRows(shopNow, tripNow),
+            meetingPointOfRows(shopNow, {
+              meetingPointLabel: meetingPointLabel || null,
+              meetingPointAddress: meetingPointAddress || null,
+              arrivalLandmark: null,
+              arrivalParkingNote: null,
+            }),
+          ),
+          actorPersonId: s.user.personId,
+        })
+      : null;
+  revalidateAndRedirect(
+    back,
+    noticeUrl(back, "saved", notice ? { held: notice.id, tell: notice.told } : undefined),
+  );
 }
 
 export async function saveConditionsAction(shopSlug: string, tripId: string, formData: FormData) {
@@ -692,25 +725,103 @@ export async function reinstateTripAction(shopSlug: string, tripId: string) {
 // can manage the whole run without touching every date by hand. Each settles
 // back on the source trip's Overview, the one page the series banner lives on.
 
-/** Push this date's editable details across every upcoming date in the series. */
-export async function applySeriesDetailsAction(shopSlug: string, tripId: string, seriesId: string) {
+/**
+ * Push this date's editable details across every upcoming date in the series,
+ * and, when the confirm's crew switch was on the form, its crew as the run's
+ * standing crew too (`setSeriesStandingCrew`). The switch is only on the form
+ * when this date has a crew to stand; absent, the run's standing crew is left
+ * as it was.
+ */
+export async function applySeriesDetailsAction(
+  shopSlug: string,
+  tripId: string,
+  seriesId: string,
+  formData: FormData,
+) {
   const back = backPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
-  const result = await applyDetailsToFutureSeries(await getDb(), s.user.shopId, seriesId, tripId);
-  const notice = !result
-    ? "series-error"
-    : result.skipped > 0
-      ? "series-applied-partial"
-      : "series-applied";
-  revalidateAndRedirect(back, noticeUrl(back, notice));
+  const db = await getDb();
+  const result = await applyDetailsToFutureSeries(db, s.user.shopId, seriesId, tripId);
+  const crew =
+    result && formData.get("crewSwitch") === "shown"
+      ? await setSeriesStandingCrew(db, {
+          shopId: s.user.shopId,
+          seriesId,
+          sourceTripId: tripId,
+          standing: formData.get("standingCrew") === "on",
+          actorPersonId: s.user.personId,
+        })
+      : null;
+  if (!result) {
+    revalidateAndRedirect(back, noticeUrl(back, "series-error"));
+    return;
+  }
+  revalidatePath(shopPath(shopSlug, "staffing"));
+  revalidatePath(shopPath(shopSlug));
+  revalidateAndRedirect(
+    back,
+    crew && crew.skipped > 0
+      ? noticeUrl(back, "series-applied-crew-partial", { count: crew.skipped })
+      : result.skipped > 0
+        ? noticeUrl(back, "series-applied-partial")
+        : crew && crew.updated > 0
+          ? noticeUrl(back, "series-applied-crew")
+          : noticeUrl(back, "series-applied"),
+  );
 }
 
-/** Cancel every upcoming date in the series at once; each stays reinstatable. */
+/**
+ * Cancel every upcoming date in the series at once, each through the blow-out
+ * cascade: its divers are told the run has stopped, card payments go back by
+ * themselves, and what cannot is owed on Today (`cancelFutureSeriesTrips`).
+ *
+ * Config-gated like the rest of the series acts: a single date's call is the
+ * crew's, a whole run's is the schedule's. The series id is a bound argument,
+ * so the write is scoped by the session's shop, never by the id alone.
+ */
 export async function cancelSeriesAction(shopSlug: string, tripId: string, seriesId: string) {
   const back = backPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
-  const cancelled = await cancelFutureSeriesTrips(await getDb(), s.user.shopId, seriesId);
-  revalidateAndRedirect(back, noticeUrl(back, cancelled > 0 ? "series-cancelled" : "series-error"));
+  const db = await getDb();
+  const now = nowDate();
+  const result = await cancelFutureSeriesTrips(db, {
+    shopId: s.user.shopId,
+    seriesId,
+    calledByPersonId: s.user.personId,
+    now,
+  });
+  // Null is the only failure: the run was not this shop's, and nothing
+  // changed. Anything else stopped the repeat, so the notice says what the
+  // dates did — a date that was underway still stands (review 2a, D3).
+  if (!result) {
+    revalidateAndRedirect(back, noticeUrl(back, "series-error"));
+    return;
+  }
+  // One line on each date's own log, so a departure that disappeared from the
+  // board says who took it and why.
+  for (const tripOfRun of result.tripIds) {
+    try {
+      await recordTripActivity(db, {
+        shopId: s.user.shopId,
+        tripId: tripOfRun,
+        actorPersonId: s.user.personId,
+        entry: { code: "series_cancelled" },
+      });
+    } catch (error) {
+      log("series.cancel_activity_failed", "error", {
+        tripId: tripOfRun,
+        errorCode: error instanceof Error ? error.name : "unknown_error",
+      });
+    }
+  }
+  revalidatePath(shopPath(shopSlug, "schedule", "board"));
+  revalidatePath(shopPath(shopSlug));
+  revalidateAndRedirect(
+    back,
+    result.skipped > 0
+      ? noticeUrl(back, "series-cancelled-partly", { count: result.skipped })
+      : noticeUrl(back, "series-cancelled", { count: result.divers }),
+  );
 }
 
 /**
@@ -797,7 +908,13 @@ export async function cancelOffCadenceSeriesAction(
 ) {
   const back = backPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
-  const cancelled = await cancelOffCadenceSeriesTrips(await getDb(), s.user.shopId, seriesId);
+  const cancelled = await cancelOffCadenceSeriesTrips(
+    await getDb(),
+    s.user.shopId,
+    seriesId,
+    nowDate(),
+    { actorPersonId: s.user.personId },
+  );
   const notice = cancelled > 0 ? "series-off-cadence-cancelled" : "series-error";
   revalidateAndRedirect(back, noticeUrl(back, notice));
 }

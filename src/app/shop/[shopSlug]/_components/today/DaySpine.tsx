@@ -6,6 +6,7 @@ import {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { sendHoldCopy } from "@/components/send-hold-copy";
 import { buttonClass } from "@/components/ui/button";
@@ -18,16 +19,18 @@ import type { DayTakings as DayTakingsReading, EveningClose } from "@/lib/closeo
 import { FORM_DRAFT_LABEL_KEYS, type FormDraftKind } from "@/lib/form-drafts";
 import { formatMoneyScanned, formatMonthDay, formatShortDate, formatTime } from "@/lib/format";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
+import type { StaffDestinationId } from "@/lib/staff-destinations";
 import {
   ACTION_KIND_META,
   type DaySpine as DaySpineData,
   type DayStation as DayStationData,
   type FactOfScale,
   getSeasonalBriefing,
+  type NeedsYouReading,
+  readNeedsYou,
   sortStationRows,
   spineJobCount,
   type TodayAction,
-  todaysBoatsAreClear,
 } from "@/lib/today";
 import { ClosingStation } from "./ClosingStation";
 import { DayStation } from "./DayStation";
@@ -81,7 +84,9 @@ import { WaiverSendControl } from "./WaiverSendControl";
  * **One coral element, ever.** This surface has four candidates and they are
  * resolved here, in one place, in one order: the recorded close (a panel, the
  * moment kept), then the evening's all-boats-home line, then the shop's first
- * booking ever, then the morning all-clear. More than one can be true at once —
+ * booking ever, then the morning all-clear (drawn in success, not coral, since
+ * UX review 2026-10-10 item 3, but still resolved here so two good-news lines
+ * never stack). More than one can be true at once —
  * a day whose boats are all clear *and* all home; a first booking on Saturday
  * while today's empty boat comes home — and the ADR's coral table allows a
  * surface exactly one, so the later moment wins and, between two moments of the
@@ -169,13 +174,90 @@ function rowKey(action: TodayAction): string {
 const HORIZON_PANEL_CLASS =
   "sm:rounded-panel sm:bg-surface-sunken sm:px-5 sm:py-1 sm:inset-ring sm:inset-ring-transparent sm:[@media(hover:hover)]:has-[>summary:hover,>li:hover]:inset-ring-border-strong";
 
-/** The status family's shape for each kind tone, and the ink it takes. */
-const ROW_GLYPH = { danger: "danger", warning: "warning", neutral: "pending" } as const;
+/** The status family's shape for a row that is wrong, and the ink it takes. */
+const ROW_GLYPH = { danger: "danger", warning: "warning" } as const;
 const ROW_GLYPH_INK = {
   danger: "text-danger",
   warning: "text-warning-strong",
   neutral: "text-muted",
 } as const;
+
+/** Every job kind whose tone is quiet: the rows that lead with their category. */
+type QuietKind = {
+  [K in keyof typeof ACTION_KIND_META]: (typeof ACTION_KIND_META)[K]["tone"] extends "neutral"
+    ? K
+    : never;
+}[keyof typeof ACTION_KIND_META];
+
+/** The small drawings a quiet row may lead with: a staff destination's, or the boat. */
+type RowIconName = StaffDestinationId | "boat";
+
+/**
+ * **A quiet row leads with what it is about, not with an empty circle** (UX
+ * review 2026-10-10, item 6). The hollow ring read as a checkbox: the desk
+ * tapped it expecting to tick the job off, and nothing happened. A danger or
+ * warning row keeps its status shape (the triangle the Waiver row wears); a
+ * quiet one wears the drawing of the place its fix lives, from the same
+ * family the sidebar draws, so nothing on the row looks pressable that is
+ * not. A full record over the quiet kinds, so a new one is a type error until
+ * it has a picture.
+ */
+const QUIET_ROW_ICON: Record<QuietKind, RowIconName> = {
+  dive_prep: "gear",
+  help_request: "inbox",
+  payment: "orders",
+  email_delivery: "inbox",
+  waitlist_seat: "divers",
+  last_minute_fill: "board",
+  emergency_contact: "divers",
+  crew_below_target: "staffing",
+  reviews_pending: "reviews",
+  unanswered_messages: "inbox",
+  gear_due_back: "gear",
+  gear_service_due: "workOrders",
+  boat_papers_due: "boat",
+  work_order_uncollected: "workOrders",
+  units_unconfirmed: "settings",
+  say_hello: "divers",
+  rental_fit_confirm: "gear",
+};
+
+/**
+ * **Good news wears the good-news tone** (UX review 2026-10-10, item 3). The
+ * morning all-clear wore the coral wash, which read as the amber of a warning
+ * on a phone in the sun; amber is rationed for things that need a hand, and a
+ * crew taught that amber can mean "all clear" stops reading amber.
+ */
+function BoatsClearLine({ children }: { children: React.ReactNode }) {
+  return (
+    <p
+      role="status"
+      className="flex items-center gap-2 rounded-lg border border-success/30 bg-success-tint px-3 py-2 text-sm font-semibold text-success-strong"
+    >
+      <StatusMark variant="success" size="sm" />
+      {children}
+    </p>
+  );
+}
+
+/** The quiet icon for a kind, or none for a kind that is not quiet. */
+function quietIcon(kind: TodayAction["kind"]): RowIconName | undefined {
+  return (QUIET_ROW_ICON as Partial<Record<TodayAction["kind"], RowIconName>>)[kind];
+}
+
+/** A row's leading mark: the status shape when something is wrong, the category drawing when not. */
+function RowGlyph({ tone, icon }: { tone: LedgerRowKindTone; icon?: RowIconName }) {
+  if (tone === "neutral") {
+    return (
+      <DiveDayIcon
+        name={icon ?? "today"}
+        className={`size-5 shrink-0 ${ROW_GLYPH_INK.neutral}`}
+        strokeWidth={1.6}
+      />
+    );
+  }
+  return <StatusMark variant={ROW_GLYPH[tone]} size="md" className={ROW_GLYPH_INK[tone]} />;
+}
 
 /**
  * **A spine row's anatomy, owned once**: the glyph, one word of kind, the one
@@ -190,6 +272,7 @@ const ROW_GLYPH_INK = {
  */
 function SpineRow({
   tone,
+  icon,
   kind,
   trailing,
   closed = true,
@@ -197,6 +280,8 @@ function SpineRow({
   children,
 }: {
   tone: LedgerRowKindTone;
+  /** A quiet row's category drawing; ignored on a row that is wrong. */
+  icon?: RowIconName;
   /** One word of kind, in the row's own type. */
   kind: string;
   /** The row's fix when it performs one — a real control beside the words. */
@@ -226,7 +311,7 @@ function SpineRow({
       // family and never from the illustration hand: a status glyph is a
       // status, and the ADR keeps drawings out of that job. The kind word
       // beside it carries the meaning; the glyph is what a scan reads first.
-      leading={<StatusMark variant={ROW_GLYPH[tone]} size="md" className={ROW_GLYPH_INK[tone]} />}
+      leading={<RowGlyph tone={tone} icon={icon} />}
       kind={{ word: kind, tone }}
       trailing={trailing}
       closed={closed}
@@ -368,6 +453,7 @@ function StationRow({
   return (
     <SpineRow
       tone={tone}
+      icon={quietIcon(action.kind)}
       kind={t(ACTION_KIND_KEYS[action.kind])}
       trailing={control}
       closed={closed}
@@ -481,6 +567,49 @@ export type EveningReading = {
   firstEver: boolean;
 };
 
+/** The desk's "take card payments" row, for a shop with no Stripe account yet. */
+function DeskPaymentsRow({ shopSlug, t }: { shopSlug: string; t: StaffTranslator }) {
+  return (
+    <SpineRow
+      tone="neutral"
+      icon="orders"
+      kind={t("shopHome.spine.deskPaymentsKind")}
+      door={{
+        href: `/shop/${shopSlug}/settings#stripe`,
+        linkLabel: t("shopHome.spine.deskPaymentsAction"),
+      }}
+    >
+      <span className="text-muted">{t("shopHome.spine.deskPaymentsRow")}</span>
+    </SpineRow>
+  );
+}
+
+/**
+ * **What the divers left the reader's boats** (UX review 2026-10-11, item 18):
+ * paid tips on the boats this reader crewed this week (`crewTipsOnBoats`), in
+ * the shop's minor units. The diver was told the shop passes tips on to the
+ * crew; this is the crew seeing that it did. A plain line, not a coral moment:
+ * it is money, and the coral table never carries money. Zero renders nothing.
+ */
+function CrewTipsLine({
+  cents,
+  currency,
+  locale,
+  t,
+}: {
+  cents: number;
+  currency: string;
+  locale: string;
+  t: StaffTranslator;
+}) {
+  if (cents <= 0) return null;
+  return (
+    <p className="text-sm text-muted tabular-nums">
+      {t("shopHome.spine.crewTips", { amount: formatMoneyScanned(cents, currency, locale) })}
+    </p>
+  );
+}
+
 export function DaySpine({
   spine,
   shopSlug,
@@ -497,8 +626,11 @@ export function DaySpine({
   firstRun,
   firstBooking,
   factOfScale,
+  crewTipsCents = 0,
   sessions,
   evening,
+  needsYou: needsYouRead,
+  blocked = 0,
   now,
 }: {
   spine: DaySpineData;
@@ -550,10 +682,16 @@ export function DaySpine({
    * renders, and on most days it is null.
    */
   factOfScale?: FactOfScale | null;
+  /** Paid tips on the reader's boats this week (`CrewTipsLine`). */
+  crewTipsCents?: number;
   /** The instructor lens's own labeled group, above the first station. */
   sessions?: React.ReactNode;
   /** The day's closing state. Omitted, the spine renders its morning reading alone. */
   evening?: EveningReading;
+  /** The page's `readNeedsYou`, which the date's sentence counted (UX review 2026-10-10, item 2). */
+  needsYou?: NeedsYouReading;
+  /** The day sentence's blocked figure, for the all-clear line when `needsYou` is omitted. */
+  blocked?: number;
   now: Date;
 }) {
   const t = staffTranslator(locale);
@@ -642,44 +780,23 @@ export function DaySpine({
   // boarding blocker, which is the day a shop most deserves to be told it is
   // on its four hundredth diver.
   const factOfScaleLine = !allHomeLine && !firstBookingMark && factOfScale != null;
+  const needsYouReading =
+    needsYouRead ??
+    readNeedsYou(spine, {
+      crewedTripIds: crewedTripIds ?? [],
+      readerPersonId,
+      drafts: drafts.length,
+      paymentsRow: showPaymentsRow,
+      blocked,
+      now,
+    });
   const boatsClearLine =
-    !allHomeLine && !firstBookingMark && !factOfScaleLine && todaysBoatsAreClear(spine);
+    !allHomeLine && !firstBookingMark && !factOfScaleLine && needsYouReading.boatsClear;
   const closing = evening?.close.closing === true;
-  // **One "Needs you" list** (ADR 20261001-logbook, decision 4): every job on
-  // today's boats and at the desk, ranked together — danger first, then by
-  // when it is due — rather than filed under each boat. A row names its own
-  // boat, so nothing is lost by lifting it out of the card.
-  const needsYou = sortStationRows([
-    ...spine.stations.flatMap((station) => station.rows),
-    ...spine.desk,
-  ]);
-  // **A crew reader's lens** (UX audit 2026-10-07, item 7): for a captain or
-  // divemaster who crews one of today's boats, the list leads with that boat's
-  // rows, and every other row folds into one line. A danger row about any boat
-  // never folds: a diver unaccounted for is everyone's to see. Nor does a row
-  // about the reader themself, such as their own credential coming due.
-  const crewsToday = spine.stations.some((station) => crewed.has(station.tripId));
-  const leads = (action: TodayAction) =>
-    !crewsToday ||
-    ACTION_KIND_META[action.kind].tone === "danger" ||
-    (action.departure != null && crewed.has(action.departure.tripId)) ||
-    (readerPersonId != null && action.staffPersonId === readerPersonId);
-  const lead = needsYou.filter(leads);
-  const folded = needsYou.filter((action) => !leads(action));
-  const deskFold = crewsToday && (folded.length > 0 || showPaymentsRow) ? folded : null;
+  // **One "Needs you" list**, read once (`readNeedsYou`) with the header's sentence.
+  const { lead, folded: deskFold, count: needsYouCount } = needsYouReading;
   const paymentsRows = showPaymentsRow ? 1 : 0;
-  const paymentsRow = showPaymentsRow ? (
-    <SpineRow
-      tone="neutral"
-      kind={t("shopHome.spine.deskPaymentsKind")}
-      door={{
-        href: `/shop/${shopSlug}/settings#stripe`,
-        linkLabel: t("shopHome.spine.deskPaymentsAction"),
-      }}
-    >
-      <span className="text-muted">{t("shopHome.spine.deskPaymentsRow")}</span>
-    </SpineRow>
-  ) : null;
+  const paymentsRow = showPaymentsRow ? <DeskPaymentsRow shopSlug={shopSlug} t={t} /> : null;
 
   return (
     <div className="flex flex-col gap-10">
@@ -720,7 +837,7 @@ export function DaySpine({
           })}
         </EarnedMomentLine>
       ) : boatsClearLine ? (
-        <EarnedMomentLine>{t("today.todayQueue.boatsClear")}</EarnedMomentLine>
+        <BoatsClearLine>{t("today.todayQueue.boatsClear")}</BoatsClearLine>
       ) : null}
 
       {/* **One fact of scale, on the day it is true** (ADR
@@ -753,6 +870,8 @@ export function DaySpine({
           </span>
         </EarnedMomentLine>
       ) : null}
+
+      <CrewTipsLine cents={crewTipsCents} currency={currency} locale={locale} t={t} />
 
       {/* **The first booking ever, and then never again.** The word, the coral
           dot, and the seat itself — one row, because the moment *is* that
@@ -851,7 +970,7 @@ export function DaySpine({
         </LedgerGroup>
       ) : null}
 
-      {needsYou.length > 0 || showPaymentsRow || drafts.length > 0 ? (
+      {lead.length + (deskFold?.length ?? 0) > 0 || showPaymentsRow || drafts.length > 0 ? (
         <LedgerGroup
           as="h2"
           label={t("shopHome.spine.needsYouLabel")}
@@ -859,9 +978,7 @@ export function DaySpine({
           // summary under the date counts what is due before the next boat and
           // the badge counts blocked divers, so the list carries its own total
           // rather than leaving the reader to reconcile three numbers.
-          meta={t("shopHome.spine.needsYouCount", {
-            count: lead.length + drafts.length + (deskFold ? 0 : paymentsRows),
-          })}
+          meta={t("shopHome.spine.needsYouCount", { count: needsYouCount })}
         >
           <ul>
             {lead.map((action) => (
@@ -873,6 +990,7 @@ export function DaySpine({
               <SpineRow
                 key={`draft:${draft.form}`}
                 tone="neutral"
+                icon="activity"
                 kind={t("today.unfinished.label")}
                 door={{ href: draft.href, linkLabel: t("today.unfinished.resume") }}
               >
@@ -931,7 +1049,13 @@ export function DaySpine({
       {/* **What today made** (issue #1930). While one boat is out there is no
           day to have made anything yet. */}
       {closing && evening?.takings ? (
-        <DayTakings takings={evening.takings} currency={currency} locale={locale} t={t} />
+        <DayTakings
+          takings={evening.takings}
+          currency={currency}
+          locale={locale}
+          timeZone={timeZone}
+          t={t}
+        />
       ) : null}
 
       {/* The two horizons, collapsed. Tomorrow expands in place through the

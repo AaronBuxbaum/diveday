@@ -256,7 +256,7 @@ describe("the merge preview", () => {
     expect(preview?.sharedDepartures).toEqual([
       expect.objectContaining({ tripId: f.trip.id, title: f.trip.title, keptSeatOver: false }),
     ]);
-    expect(await merge(f)).toEqual({ ok: false, reason: "booking_conflict" });
+    expect(await merge(f)).toMatchObject({ ok: false, reason: "booking_conflict" });
   });
 
   it("says when the kept record's seat is the cancelled one, so the fix is keeping the other", async () => {
@@ -742,6 +742,7 @@ describe("writes aimed at a record merged away", () => {
     // The kept record takes the address, and the deleted row still holds it too.
     expect((await merge(f, { choices: { email: "source" } })).ok).toBe(true);
     const result = await recordInboundMessage(f.db, {
+      senderAuthenticated: true,
       shopId: f.shop.id,
       channel: "email",
       fromAddress: "maya.rivera+dive@gmail.com",

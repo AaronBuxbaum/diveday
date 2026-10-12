@@ -454,3 +454,45 @@ describe("flySafeMessageKey", () => {
     }
   });
 });
+
+/**
+ * **A departure that went past no-decompression limits gets no number** (H-84,
+ * issue #1555). DAN's preflight guidance covers no-decompression diving and
+ * declines to give a figure for a dive that took stops, so the recap says
+ * nothing about flying rather than quoting the recreational interval beside
+ * DAN's name. Every other route to an answer is overruled by it.
+ */
+describe("flySafeFrom — a departure past no-decompression limits (H-84)", () => {
+  const exit = new Date("2026-07-25T20:10:00.000Z");
+  const base: FlySafeInput = {
+    executedDives: [{ diveNumber: 1, exitedAt: exit }],
+    plannedDives: 1,
+    endsAt,
+    divedRecently: false,
+    now: home,
+    hours,
+  };
+
+  it("answers nothing for a flagged departure, whatever the record holds", () => {
+    expect(flySafeFrom({ ...base, exceedsNoDecoLimits: true })).toBeNull();
+    expect(
+      flySafeFrom({
+        ...base,
+        executedDives: [],
+        plannedDives: 2,
+        divedRecently: true,
+        exceedsNoDecoLimits: true,
+      }),
+    ).toBeNull();
+  });
+
+  it("answers nothing after an earlier flagged departure in the window, though this one is not", () => {
+    expect(flySafeFrom({ ...base, decompressionRecently: true })).toBeNull();
+    expect(flySafeFrom({ ...base, decompressionRecently: false })).toEqual(flySafeFrom(base));
+  });
+
+  it("answers as before for a departure that is not flagged, or says nothing about it", () => {
+    expect(flySafeFrom({ ...base, exceedsNoDecoLimits: false })).toEqual(flySafeFrom(base));
+    expect(flySafeFrom(base)).not.toBeNull();
+  });
+});

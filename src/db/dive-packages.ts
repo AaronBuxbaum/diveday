@@ -42,23 +42,6 @@ export async function listPackagesOnSale(db: DbExecutor, shopId: string, now = n
   return (await listDivePackages(db, shopId)).filter((pkg) => packageOnSale(pkg, now));
 }
 
-/**
- * Whether this shop sells packages at all.
- *
- * The register is **opt-in by presence**, the shape the gear register uses
- * (ADR 20260815-minimal-gear-register): a shop that has never defined one sees
- * no package UI anywhere, and defining the first turns it on. Every surface
- * asks this before rendering anything.
- */
-export async function shopSellsPackages(db: DbExecutor, shopId: string): Promise<boolean> {
-  const [row] = await db
-    .select({ id: divePackages.id })
-    .from(divePackages)
-    .where(and(eq(divePackages.shopId, shopId), isNull(divePackages.deletedAt)))
-    .limit(1);
-  return Boolean(row);
-}
-
 export async function createDivePackage(
   db: AppDb,
   input: DivePackageDefinition & { shopId: string; name: string; createdByPersonId?: string },

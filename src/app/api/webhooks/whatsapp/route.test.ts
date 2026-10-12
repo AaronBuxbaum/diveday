@@ -12,14 +12,27 @@ vi.mock("@/db/inbound-messages", () => ({ recordInboundMessage: vi.fn() }));
 // 20260909-reply-keywords).
 vi.mock("@/db/reply-keywords", () => ({ handleInboundReplyKeyword: vi.fn() }));
 vi.mock("@/db/desk-pings", () => ({ pingDeskAfterHoursSafely: vi.fn() }));
-vi.mock("@/db/whatsapp-accounts", () => ({ shopIdForWhatsAppWaba: vi.fn() }));
+// The ping runs after the response (#2311); the test runs what was deferred.
+vi.mock("next/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/server")>();
+  return { ...actual, after: vi.fn() };
+});
+vi.mock("@/db/whatsapp-accounts", () => ({ shopIdForWhatsAppEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { applyProviderEmailEvent } = await import("@/db/notifications");
 const { recordInboundMessage } = await import("@/db/inbound-messages");
 const { handleInboundReplyKeyword } = await import("@/db/reply-keywords");
 const { pingDeskAfterHoursSafely } = await import("@/db/desk-pings");
-const { shopIdForWhatsAppWaba } = await import("@/db/whatsapp-accounts");
+const { after } = await import("next/server");
+
+/** Run whatever the route handed to `after()`, as Next does once it has answered. */
+async function runDeferred() {
+  for (const [task] of vi.mocked(after).mock.calls) {
+    await (typeof task === "function" ? task() : task);
+  }
+}
+const { shopIdForWhatsAppEvent } = await import("@/db/whatsapp-accounts");
 const { POST } = await import("./route");
 
 const APP_SECRET = "diveday-meta-app-secret";
@@ -38,10 +51,17 @@ function webhookRequest(payload: string, signature = sign(payload)) {
   });
 }
 
-function payloadFor(value: Record<string, unknown>, wabaId = "waba-1") {
+function payloadFor(value: Record<string, unknown>, wabaId = "waba-1", phoneNumberId = "pn-1") {
   return JSON.stringify({
     object: "whatsapp_business_account",
-    entry: [{ id: wabaId, changes: [{ field: "messages", value }] }],
+    entry: [
+      {
+        id: wabaId,
+        changes: [
+          { field: "messages", value: { metadata: { phone_number_id: phoneNumberId }, ...value } },
+        ],
+      },
+    ],
   });
 }
 
@@ -52,13 +72,14 @@ beforeEach(() => {
   vi.mocked(recordInboundMessage)
     .mockReset()
     .mockResolvedValue({ status: "recorded", id: "m1", personId: "p1" });
-  vi.mocked(shopIdForWhatsAppWaba).mockReset().mockResolvedValue(SHOP_ID);
+  vi.mocked(shopIdForWhatsAppEvent).mockReset().mockResolvedValue(SHOP_ID);
   vi.mocked(handleInboundReplyKeyword).mockReset().mockResolvedValue("not_a_keyword");
   vi.mocked(pingDeskAfterHoursSafely).mockReset();
+  vi.mocked(after).mockReset();
 });
 
 describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbox)", () => {
-  it("files a diver's text against the shop the WABA resolves to", async () => {
+  it("files a diver's text against the shop its number resolves to", async () => {
     const payload = payloadFor({
       messages: [
         {
@@ -72,7 +93,10 @@ describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbo
     });
     const response = await POST(webhookRequest(payload));
     expect(response.status).toBe(200);
-    expect(shopIdForWhatsAppWaba).toHaveBeenCalledWith(FAKE_DB, "waba-1");
+    expect(shopIdForWhatsAppEvent).toHaveBeenCalledWith(FAKE_DB, {
+      phoneNumberId: "pn-1",
+      wabaId: "waba-1",
+    });
     expect(recordInboundMessage).toHaveBeenCalledWith(FAKE_DB, {
       shopId: SHOP_ID,
       channel: "whatsapp",
@@ -81,7 +105,11 @@ describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbo
       mediaCount: 0,
       receivedAt: new Date(1785672000 * 1000),
       providerMessageId: "wamid.in1",
+      senderAuthenticated: true,
     });
+    // After the webhook has answered (#2311): Meta retries a slow 200 too.
+    expect(pingDeskAfterHoursSafely).not.toHaveBeenCalled();
+    await runDeferred();
     expect(pingDeskAfterHoursSafely).toHaveBeenCalledWith(FAKE_DB, {
       shopId: SHOP_ID,
       receivedAt: new Date(1785672000 * 1000),
@@ -89,8 +117,8 @@ describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbo
     expect(applyProviderEmailEvent).not.toHaveBeenCalled();
   });
 
-  it("drops a message for a WABA no shop has connected rather than filing it unscoped", async () => {
-    vi.mocked(shopIdForWhatsAppWaba).mockResolvedValue(null);
+  it("drops a message no shop's number or WABA resolves to rather than filing it unscoped", async () => {
+    vi.mocked(shopIdForWhatsAppEvent).mockResolvedValue(null);
     const payload = payloadFor({
       messages: [{ from: "13055551234", id: "wamid.in2", type: "text", text: { body: "hi" } }],
     });
@@ -127,10 +155,12 @@ describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbo
 
     vi.mocked(handleInboundReplyKeyword).mockClear();
     vi.mocked(pingDeskAfterHoursSafely).mockClear();
+    vi.mocked(after).mockClear();
     vi.mocked(recordInboundMessage).mockResolvedValue({ status: "duplicate" });
     expect((await POST(webhookRequest(payload))).status).toBe(200);
     expect(handleInboundReplyKeyword).not.toHaveBeenCalled();
     // Nor does a redelivery ping the desk a second time.
+    await runDeferred();
     expect(pingDeskAfterHoursSafely).not.toHaveBeenCalled();
   });
 
@@ -155,8 +185,8 @@ describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbo
       occurredAt: new Date(1785672000 * 1000),
       shopId: SHOP_ID,
     });
-    // One lookup for both halves: the WABA is the same.
-    expect(shopIdForWhatsAppWaba).toHaveBeenCalledTimes(1);
+    // One lookup for both halves: the number and the WABA are the same.
+    expect(shopIdForWhatsAppEvent).toHaveBeenCalledTimes(1);
   });
 
   /**
@@ -169,7 +199,7 @@ describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbo
    * nothing and stops one shop's "delivered" landing on another's row
    * (security review, 2026-09-12).
    */
-  it("drops a delivery status whose entry names no WABA", async () => {
+  it("drops a delivery status whose entry names neither a number nor a WABA", async () => {
     const payload = JSON.stringify({
       object: "whatsapp_business_account",
       entry: [
@@ -185,8 +215,65 @@ describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbo
         },
       ],
     });
+    vi.mocked(shopIdForWhatsAppEvent).mockResolvedValue(null);
     expect((await POST(webhookRequest(payload))).status).toBe(200);
-    expect(shopIdForWhatsAppWaba).not.toHaveBeenCalled();
+    expect(shopIdForWhatsAppEvent).toHaveBeenCalledWith(FAKE_DB, {
+      phoneNumberId: null,
+      wabaId: null,
+    });
     expect(applyProviderEmailEvent).not.toHaveBeenCalled();
+  });
+
+  /**
+   * **Two shops of one chain share a WABA** (H-83, issue #1767): one delivery
+   * can carry changes for both numbers, and each shop gets only its own.
+   */
+  it("files each message on a shared WABA under the shop its own number belongs to", async () => {
+    const NORTH = "11111111-1111-4111-8111-111111111111";
+    const SOUTH = "22222222-2222-4222-8222-222222222222";
+    vi.mocked(shopIdForWhatsAppEvent).mockImplementation(async (_db, event) =>
+      event.phoneNumberId === "pn-north"
+        ? NORTH
+        : event.phoneNumberId === "pn-south"
+          ? SOUTH
+          : null,
+    );
+    const payload = JSON.stringify({
+      object: "whatsapp_business_account",
+      entry: [
+        {
+          id: "waba-chain",
+          changes: [
+            {
+              field: "messages",
+              value: {
+                metadata: { phone_number_id: "pn-north" },
+                messages: [{ from: "1", id: "wamid.n", type: "text", text: { body: "north" } }],
+              },
+            },
+            {
+              field: "messages",
+              value: {
+                metadata: { phone_number_id: "pn-south" },
+                messages: [{ from: "2", id: "wamid.s", type: "text", text: { body: "south" } }],
+                statuses: [{ id: "wamid.out", status: "delivered", timestamp: "1785672000" }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect((await POST(webhookRequest(payload))).status).toBe(200);
+    const filed = vi
+      .mocked(recordInboundMessage)
+      .mock.calls.map(([, row]) => [row.body, row.shopId]);
+    expect(filed).toEqual([
+      ["north", NORTH],
+      ["south", SOUTH],
+    ]);
+    expect(applyProviderEmailEvent).toHaveBeenCalledWith(
+      FAKE_DB,
+      expect.objectContaining({ providerMessageId: "wamid.out", shopId: SOUTH }),
+    );
   });
 });

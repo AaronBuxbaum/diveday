@@ -1,4 +1,5 @@
 import type { DbExecutor } from "@/db/client";
+import { orderHasIntegrationEvent } from "@/db/integration-events";
 import {
   getIntegrationSyncRecord,
   markIntegrationHealthy,
@@ -402,7 +403,21 @@ export async function deliverXeroEvent(
   config: XeroConfig,
   fetchImpl: typeof fetch = fetch,
 ): Promise<{ status: "delivered" } | { status: "failed"; code: string; retryable: boolean }> {
+  if (event.eventType === "order.voided") {
+    return deleteXeroReceiveTransaction(db, integration, event, config, fetchImpl);
+  }
   if (event.eventType !== "order.paid" && event.eventType !== "order.refunded") {
+    return { status: "delivered" };
+  }
+  if (
+    event.eventType === "order.paid" &&
+    (await orderHasIntegrationEvent(db, {
+      shopId: integration.shopId,
+      orderId: event.entityId,
+      eventType: "order.voided",
+    }))
+  ) {
+    // The void went first and found nothing to undo; booking the sale now would leave it standing.
     return { status: "delivered" };
   }
   const salesAccountCode = integration.settings.salesAccountCode?.trim();
@@ -463,6 +478,57 @@ export async function deliverXeroEvent(
     sourceId: syncSourceId,
     operation,
     externalId,
+  });
+  await markIntegrationHealthy(db, integration.id);
+  return { status: "delivered" };
+}
+
+/**
+ * Take back the receive transaction this order booked (issue #2309). Xero has
+ * no void for a bank transaction: it is deleted, by posting it back with
+ * `Status: DELETED`. Xero refuses that for one already reconciled against a
+ * bank statement, and the refusal stays on the integration for a human: the
+ * bookkeeper unreconciles it, or reverses it by hand. An order never booked
+ * here (no `receive_transaction` record) has nothing to undo, and a
+ * `void_transaction` record makes a redelivery a no-op.
+ */
+async function deleteXeroReceiveTransaction(
+  db: DbExecutor,
+  integration: ShopIntegration,
+  event: IntegrationEvent,
+  config: XeroConfig,
+  fetchImpl: typeof fetch,
+): Promise<{ status: "delivered" } | { status: "failed"; code: string; retryable: boolean }> {
+  const lookup = {
+    shopId: integration.shopId,
+    provider: integration.provider,
+    sourceType: "xero_bank_transaction",
+    sourceId: event.entityId,
+  };
+  const booked = await getIntegrationSyncRecord(db, {
+    ...lookup,
+    operation: "receive_transaction",
+  });
+  if (!booked) return { status: "delivered" };
+  if (await getIntegrationSyncRecord(db, { ...lookup, operation: "void_transaction" })) {
+    return { status: "delivered" };
+  }
+  const result = await xeroRequest(
+    db,
+    integration,
+    config,
+    {
+      resource: `BankTransactions/${encodeURIComponent(booked.externalId)}`,
+      idempotencyKey: event.id,
+      body: { BankTransactions: [{ BankTransactionID: booked.externalId, Status: "DELETED" }] },
+    },
+    fetchImpl,
+  );
+  if (result.status !== "ok") return result;
+  await upsertIntegrationSyncRecord(db, {
+    ...lookup,
+    operation: "void_transaction",
+    externalId: booked.externalId,
   });
   await markIntegrationHealthy(db, integration.id);
   return { status: "delivered" };

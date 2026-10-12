@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray, isNull, lt, lte, or, sql } from "drizzle-o
 import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
 import {
+  bookings,
   type IntegrationEvent,
   integrationDeliveries,
   integrationEvents,
@@ -9,6 +10,7 @@ import {
   orders,
   people,
   shopIntegrations,
+  trips,
 } from "./schema";
 
 /**
@@ -63,12 +65,19 @@ async function loadOrderIntegrationPayload(
   > = {},
 ): Promise<OrderIntegrationPayload | null> {
   const [row] = await db
-    .select({ order: orders, person: { id: people.id } })
+    .select({ order: orders, person: { id: people.id }, isRehearsal: trips.isRehearsal })
     .from(orders)
     .innerJoin(people, eq(people.id, orders.personId))
+    // An order tied to a seat names that seat's departure; one that is not
+    // tied to a seat has no departure to ask about.
+    .leftJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
+    // diveday:allow-rehearsal: read only to refuse; a rehearsal's order never
+    // reaches an integration (ADR 20261012-rehearsal-departures). Orders on a
+    // rehearsal seat are refused at creation as well, so this is the second wall.
+    .leftJoin(trips, eq(trips.id, bookings.tripId))
     .where(and(eq(orders.shopId, shopId), eq(orders.id, orderId)))
     .limit(1);
-  if (!row) return null;
+  if (!row || row.isRehearsal === true) return null;
 
   const lineItems = await db
     .select({
@@ -172,7 +181,7 @@ export async function enqueueOrderIntegrationEvent(
   input: {
     shopId: string;
     orderId: string;
-    eventType: "order.created" | "order.paid" | "order.refunded";
+    eventType: "order.created" | "order.paid" | "order.refunded" | "order.voided";
     idempotencyKey: string;
     status?: string;
     amountPaidCents?: number;
@@ -190,6 +199,32 @@ export async function enqueueOrderIntegrationEvent(
     idempotencyKey: input.idempotencyKey,
     payload: payload as unknown as Record<string, unknown>,
   });
+}
+
+/**
+ * Whether an order already has an event of this type queued.
+ *
+ * The accounting adapters ask it before booking a sale: an `order.voided`
+ * delivered while the `order.paid` before it was still retrying found nothing
+ * to undo, so the sale must never be booked after it (issue #2309).
+ */
+export async function orderHasIntegrationEvent(
+  db: DbExecutor,
+  input: { shopId: string; orderId: string; eventType: "order.voided" },
+): Promise<boolean> {
+  const [found] = await db
+    .select({ id: integrationEvents.id })
+    .from(integrationEvents)
+    .where(
+      and(
+        eq(integrationEvents.shopId, input.shopId),
+        eq(integrationEvents.entityType, "order"),
+        eq(integrationEvents.entityId, input.orderId),
+        eq(integrationEvents.eventType, input.eventType),
+      ),
+    )
+    .limit(1);
+  return Boolean(found);
 }
 
 /**

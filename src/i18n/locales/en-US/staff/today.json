@@ -214,12 +214,6 @@
     "openUnits": "Open units",
     "openDiver": "Open diver record"
   },
-  "greeting": {
-    "morning": "Good morning, {name}",
-    "afternoon": "Good afternoon, {name}",
-    "evening": "Good evening, {name}",
-    "night": "Working late, {name}"
-  },
   "seasonalBriefing": {
     "summer": "Enjoy the surface interval. Grab some shade{hasShop, select, true { at {shopName}} other {}}, drink some water, and we’ll see you on the next boat.",
     "autumn": "Enjoy the surface interval. Grab a warm towel{hasShop, select, true { at {shopName}} other {}}, check the breeze, and we’ll see you on the next boat.",

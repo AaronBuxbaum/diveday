@@ -1,4 +1,4 @@
-import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
+import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
 import { expect, signedInAs, test } from "./fixtures";
 import { openSettingsRow } from "./helpers";
 

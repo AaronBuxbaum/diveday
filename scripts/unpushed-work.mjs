@@ -18,8 +18,11 @@
  *      way it may stop.
  *   3. The closing message is a handoff or a question. A turn that ends on
  *      "shall I push this?" is a fine ending; the user is about to answer.
- *   4. Every local commit is on some remote branch (`git rev-list HEAD --not
- *      --remotes` is empty).
+ *   4. Nothing is unpushed: the branch's upstream holds every local commit
+ *      (`@{upstream}..HEAD` is empty), or, for a branch with no upstream yet,
+ *      every commit is on some remote branch (`HEAD --not --remotes`). A
+ *      detached HEAD has nothing to push to and counts nothing — the same
+ *      measure `session-context.mjs` prints at session start.
  *
  * Only when all four fail does it block, naming the count and the push command.
  * A session that has a reason not to push says so in its closing message and stops
@@ -63,12 +66,38 @@ export function reasonFor({ unpushed, branch }) {
 }
 
 function git(args) {
-  return readBounded("git", args, {
-    cwd: process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
-    encoding: "utf8",
-    timeoutMs: SUBPROCESS_TIMEOUTS.git,
-    stdio: ["ignore", "pipe", "ignore"],
-  }).trim();
+  try {
+    return readBounded("git", args, {
+      cwd: process.env.CLAUDE_PROJECT_DIR ?? process.cwd(),
+      encoding: "utf8",
+      timeoutMs: SUBPROCESS_TIMEOUTS.git,
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Commits that exist nowhere else, measured the way `session-context.mjs`
+ * measures them. Against the branch's own upstream when it has one: against
+ * every remote ref at once (`--not --remotes`), a container whose
+ * `origin/main` was days old reported hundreds of phantom commits (issue
+ * #2355). A branch with no upstream yet is the one case `--not --remotes`
+ * answers honestly. A detached HEAD has nothing to push to.
+ *
+ * @param {(args: string[]) => string | null} run git, `null` on failure
+ * @returns {number}
+ */
+export function countUnpushed(run) {
+  const branch = run(["rev-parse", "--abbrev-ref", "HEAD"]);
+  if (!branch || branch === "HEAD") return 0;
+  const upstream = run(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
+  const raw = upstream
+    ? run(["rev-list", "--count", "@{u}..HEAD"])
+    : run(["rev-list", "--count", "HEAD", "--not", "--remotes"]);
+  const count = Number(raw);
+  return raw !== null && Number.isFinite(count) ? count : 0;
 }
 
 function readHookInput() {
@@ -90,7 +119,7 @@ function main() {
   const remote = process.env.CLAUDE_CODE_REMOTE === "true";
   if (!remote || input.stop_hook_active) return 0;
 
-  const unpushed = Number(git(["rev-list", "--count", "HEAD", "--not", "--remotes"]));
+  const unpushed = countUnpushed(git);
   if (!shouldBlock({ remote, reentry: false, closing: closingMessage(input), unpushed })) return 0;
 
   const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);

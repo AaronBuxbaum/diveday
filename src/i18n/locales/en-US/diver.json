@@ -13,6 +13,7 @@
     "backToSchedule": "Back to the schedule",
     "needHelpContact": "Need help? <link>Contact {shop}</link>.",
     "needHelpPlain": "Need help? Contact {shop} directly.",
+    "diveDayDoor": "Go to DiveDay",
     "perDiver": "per diver",
     "optional": "(optional)",
     "name": "Name",
@@ -84,6 +85,15 @@
       "back": "We’re back out {date}.",
       "requestHeading": "Ask us for a day"
     },
+    "horizon": {
+      "heading": "Later dates",
+      "runs": "{title} runs {cadence}.",
+      "cadenceDaily": "every day",
+      "cadenceWeekly": "every {days}",
+      "cadenceEveryNWeeks": "{weeks, plural, one {every week on {days}} other {every # weeks on {days}}}",
+      "later": "Later dates open as the season goes.",
+      "requestHeading": "Planning further out? Ask us for a day"
+    },
     "filters": {
       "disclosure": "Filter",
       "tripType": "Trip type",
@@ -124,6 +134,11 @@
     "poweredByDiveDay": "Powered by DiveDay",
     "moreWaysHeading": "Other ways we can help",
     "boatsHeading": "The boats",
+    "monthSeen": {
+      "heading": "What you might see in {month}",
+      "line": "Seen on {seen} of the {trips, plural, one {# {month} trip} other {# {month} trips}} our crews logged",
+      "honest": "What our crews logged on {month} trips, in every season on record. It says what was seen, not what you will see."
+    },
     "boatSeats": "{count, plural, one {# diver} other {# divers}}"
   },
   "trip": {
@@ -219,8 +234,7 @@
     "seen": {
       "heading": "Seen here this month",
       "line": "{species} on {seen} of {dives, plural, one {# logged dive} other {# logged dives}}",
-      "lastSeen": "Last seen {date}",
-      "honest": "What the crew logged, and when. It says what was seen, not what you will see."
+      "lastSeen": "Last seen {date}"
     },
     "dayProfile": {
       "bottomTime": "Usually {minutes, plural, one {# minute} other {# minutes}} in the water",
@@ -309,7 +323,8 @@
       "crew": "Crew"
     },
     "pitchDoor": "The rest of the briefing",
-    "pitchDoorSpecies": "{count, plural, one {# species} other {# species}}"
+    "pitchDoorSpecies": "{count, plural, one {# species} other {# species}}",
+    "logEntryWaiting": "After you dive, your log entry is waiting for you."
   },
   "factSource": {
     "forecast": "Forecast",
@@ -376,7 +391,7 @@
     "holdBody": "See the conditions update above. Divers who already booked keep their seats and can follow it live here.",
     "certBelowRequirement": "This trip is for {required} divers. Bring your certification card and we’ll check it at the shop.",
     "certNoneOnGatedTrip": "This trip is for certified divers. Book if you like, then talk to the shop: they run courses and easier dives too.",
-    "confirmedHeading": "You’re on the boat, {name}!",
+    "confirmedHeading": "You’ve got a seat, {name}.",
     "confirmedDockCall": "{date}, {time}. Be at the dock {minutes, plural, one {# minute} other {# minutes}} early and we’ll take it from there.",
     "paymentDepositBalance": "Your seat’s locked in. The {balance} balance is due at the dock.",
     "paymentStillOpen": "Your spot is safe and payment’s still open",
@@ -584,6 +599,7 @@
     "ratingLegend": "Your rating",
     "ratingOption": "{rating} out of 5 stars",
     "anonymousReviewer": "A diver",
+    "replyFrom": "Reply from {shop}",
     "commentLabel": "Anything you’d tell another diver?",
     "commentPlaceholder": "The crew, the sites, how the day ran",
     "submit": "Leave my review",
@@ -594,7 +610,8 @@
     "savedError": "That didn’t save. Pick a rating and try again.",
     "yourRating": "You rated this {rating} out of 5.",
     "average": "{average} out of 5",
-    "count": "{count, plural, one {# review} other {# reviews}}",
+    "ratingsCount": "{count, plural, one {# rating} other {# ratings}}",
+    "ratingsAndReviews": "{ratings, plural, one {# rating} other {# ratings}} · {reviews, plural, one {# review} other {# reviews}}",
     "allTitle": "All reviews",
     "allDescription": "Read what divers who were on the boat said about their day.",
     "allEmptyHeading": "No written reviews yet",
@@ -616,7 +633,7 @@
     "seenOnTheDay": "Seen on the day",
     "yourPhotos": "Your photos",
     "captionLabel": "Add a caption (optional)",
-    "tipCrew": "Tip your crew",
+    "tipCrew": "Tip the crew",
     "unavailableHeading": "This recap link isn’t available",
     "unavailableBody": "Ask your dive shop for a fresh link.",
     "didNotDiveBody": "There’s no recap for this booking to rate or add a photo to.",
@@ -635,11 +652,11 @@
     "tipCancelled": "No worries, the tip wasn’t charged.",
     "tipRange": "Enter a tip amount between $1 and $500.",
     "tipFailed": "That didn’t go through. Try again in a moment.",
-    "tipThanksNotice": "Thanks for tipping your crew!",
+    "tipThanksNotice": "Thanks for the tip. The shop passes it on to the crew.",
     "tipConfirming": "Confirming your payment, which usually takes a few seconds. Refresh if it doesn’t update.",
     "photoLimit": "That’s the most photos one recap holds ({max}).",
-    "tipPaid": "Thanks. Your tip goes straight to {shop}. They’ll make sure the crew hears about it.",
-    "tipAllGoes": "100% goes to {shop}, with nothing held back and no account needed.",
+    "tipPaid": "Thanks. Your tip goes to {shop}, and they pass it on to the crew.",
+    "tipAllGoes": "It goes to {shop}, and they pass it on to the crew. No account needed.",
     "tipFinish": "Finish your {amount} tip",
     "tipLeave": "Leave a tip",
     "fromYourCrew": "From your crew",
@@ -733,6 +750,7 @@
     "agencyLabel": "Agency",
     "agencyNone": "Not certified yet",
     "levelLabel": "Level",
+    "levelPlaceholder": "Choose your level",
     "identifierLabel": "Card number",
     "sizesHeading": "Your sizes",
     "sizesHint": "Only if you rent from us. It saves a fitting at the counter.",
@@ -750,6 +768,7 @@
   "packages": {
     "title": "Dive packages",
     "navLabel": "Packages",
+    "none": "No packages right now",
     "metaDescription": "Prepaid dives at {shopName}: pay once, then book the dives as you go.",
     "dives": "{count, plural, one {# dive} other {# dives}}",
     "perDive": "{amount} a dive",
@@ -865,6 +884,7 @@
     "certInvalid": "Check the agency, level, and certification number, then try again.",
     "certOptional": "Optional",
     "keepThisPage": "This page is yours to keep. Bookmark it, and it stays up to date until you sail.",
+    "logEntryWaiting": "After you dive, your log entry is waiting here.",
     "offlineCopy": "No signal: this is the copy your phone saved. Anything you change here needs signal.",
     "gearOnFile": "Your sizes are with the crew.",
     "packageDivesLeft": "{line} · {count, plural, one {# package dive left} other {# package dives left}}",
@@ -947,8 +967,27 @@
     "savedCourseForms": "Course forms signed."
   },
   "thread": {
-    "stepsDoneSuffix": "of {total} done",
-    "nextStep": "Next: {step}",
+    "stepsDone": "{done} of {total} done",
+    "next": {
+      "signWaiver": "Next: sign your waiver.",
+      "signGuardian": "Next: a parent or guardian signs the waiver.",
+      "freshWaiver": "Next: get a fresh waiver link.",
+      "signForms": "Next: sign your course forms.",
+      "signFormsGuardian": "Next: a parent or guardian signs your course forms.",
+      "askForWaiver": "Next: ask the shop for your waiver.",
+      "medical": "Next: talk to the shop about your medical answers.",
+      "certification": "Next: add your certification.",
+      "certificationLevel": "Next: check your certification level with the shop.",
+      "specialty": "Next: add your specialty card.",
+      "nitrox": "Next: add your Nitrox card.",
+      "certificationMultiple": "Next: add the cards this dive needs.",
+      "certificationInTraining": "Next: finish your course.",
+      "cardWithShop": "Next: nothing from you. The shop is checking your card.",
+      "pay": "Next: pay for this trip.",
+      "gear": "Next: your gear, renting or bringing your own?",
+      "changes": "Next: check that nothing has changed.",
+      "dayof": "Next: a few details for the day."
+    },
     "withShopHead": "Nothing on your side. The shop is finishing up.",
     "stepSign": "Sign",
     "stepCertification": "Your certification",
@@ -1085,7 +1124,7 @@
     "expiredBody": "Whoever sent you this link can tell you what’s happened with the seat.",
     "errors": {
       "checkFields": "Check the highlighted fields and try again.",
-      "alreadyBooked": "You already have your own spot on this trip, so this seat stays with your organizer.",
+      "unable": "This seat can’t be claimed with these details. Contact the shop and they can sort it out.",
       "coursePrerequisite": "This session is a course with its own prerequisites, and the shop needs a verified certification on file before the seat can change hands. Contact the shop and they can sort it out."
     },
     "claimedNotice": "This seat is yours now, and everything on this page is about you. Your organizer can see it’s claimed.",
@@ -2626,28 +2665,28 @@
     "switchToAria": "Switch to {role}",
     "roles": {
       "owner": {
-        "title": "Admin / Owner",
-        "desc": "Full business control. Create trips, manage staff, and view operational reports.",
-        "tryThis": "Check the Reports dashboard or schedule a trip."
+        "title": "Owner",
+        "desc": "You’re steering the whole shop. Today is your work queue: bookings, blockers, and today’s departures in one place.",
+        "tryThis": "Open Schedule to see this week’s departures."
       },
       "instructor": {
         "title": "Instructor",
-        "desc": "Assigned to teach courses, and makes sure a student is certified for what they are about to dive.",
-        "tryThis": "Open a Discover Scuba course trip to see staff assignments."
+        "desc": "You’re teaching and certifying divers. Divers holds every diver’s certification records and specialty history.",
+        "tryThis": "Open Divers to check a certification record before class."
       },
       "divemaster": {
         "title": "Divemaster",
-        "desc": "Guides divers, verifies waiver paperwork, and keeps rental fit up to date.",
-        "tryThis": "Check Waivers, or open a trip’s prep list to see what to pull."
+        "desc": "You’re getting divers ready to board. Today lists every diver who can’t board yet, with the one tap that fixes each one.",
+        "tryThis": "Open Today to see who still needs prep."
       },
       "captain": {
         "title": "Captain",
-        "desc": "Runs the boat: boarding, the manifest, and the final roll call before departure.",
-        "tryThis": "Open an upcoming trip manifest and run the passenger roll call."
+        "desc": "You’re running the boat. The manifest is your boarding pass and roll call, built for wet hands and spotty signal.",
+        "tryThis": "Open today’s manifest to see who’s on the boat."
       },
       "diver": {
         "title": "Diver",
-        "desc": "What your customers see: book a trip, sign the waiver, request rental gear.",
+        "desc": "You’re booking a dive. This is what the shop’s divers see: the schedule, the booking, the waiver.",
         "tryThis": "Pick a trip on the schedule and book a spot."
       }
     }
@@ -2714,7 +2753,7 @@
       "priceLine": "One flat price of {price} {cadence}, locked for two years for founding shops.",
       "seeIncluded": "See what’s included →",
       "contactTitle": "Ask us first",
-      "contactBody": "Write in with whatever would decide it for you. A real person reads it.",
+      "contactBody": "Write in with whatever would decide it for you.",
       "contactCta": "Email {email}",
       "stepLink": "{name} →"
     },
@@ -4037,7 +4076,7 @@
       "firstTimer": "First boat dive? The crew walks everyone through the gear and the plan before you get in, so you’ll never be handed kit and left to figure it out. Come with questions.",
       "conditionsLabel": "Conditions:",
       "bringLabel": "What to bring:",
-      "whoToText": "Questions on the day? Text the shop at {phone}."
+      "whoToText": "Questions on the day? Text us at {phone}."
     },
     "reminderAction": {
       "waiverPending": "Sign your waiver",
@@ -4056,14 +4095,14 @@
       "confirmCancel": "{tripTitle}, {date} at {time}. Reply {code} in the next half hour to give up your seat. Nothing has changed yet.",
       "cancelled": "Your seat on {tripTitle}, {date}, is canceled.",
       "refundOnItsWay": "Your refund is on its way.",
-      "cancelRefused": "That seat could not be released. {shopName} will pick this up.",
-      "codeMismatch": "That code did not match, so nothing has changed. {shopName} will pick this up.",
-      "nothingToCancel": "We could not find a seat to cancel. {shopName} will pick this up.",
-      "ambiguous": "You have more than one departure booked. {shopName} will pick this up so the right seat comes off.",
-      "moveHandoff": "{shopName} will get back to you about moving your seat.",
+      "cancelRefused": "That seat could not be released. We’ll pick this up.",
+      "codeMismatch": "That code did not match, so nothing has changed. We’ll pick this up.",
+      "nothingToCancel": "We could not find a seat to cancel. We’ll pick this up.",
+      "ambiguous": "You have more than one departure booked. We’ll pick this up so the right seat comes off.",
+      "moveHandoff": "We’ll get back to you about moving your seat.",
       "lateOffer": "Running late? Reply LATE.",
-      "lateNoted": "Thanks. {shopName} can see you are running late.",
-      "lateNothing": "We couldn’t match this to a departure of yours in the next day, so nothing was marked. Your message is with {shopName}."
+      "lateNoted": "Thanks. We can see you are running late.",
+      "lateNothing": "We couldn’t match this to a departure of yours in the next day, so nothing was marked. Your message is with us."
     },
     "common": {
       "greeting": "Hi {firstName},",
@@ -4078,34 +4117,35 @@
     },
     "tripConditionsHold": {
       "subject": "Conditions hold — {tripTitle}",
-      "body": "{shopName} has placed {tripTitle} on a conditions hold for {date}. Your seat is still held while the crew makes the final weather call.",
+      "body": "We’ve placed {tripTitle} on a conditions hold for {date}. Your seat is still held while the crew makes the final weather call.",
       "crewNoteLabel": "Crew note:",
       "seeUpdate": "See the live trip update"
     },
     "tripMinimumNotMet": {
       "subject": "Trip canceled — {tripTitle}",
-      "body": "{shopName} runs {tripTitle} on {date} with at least {minimum, plural, one {# diver} other {# divers}}, and it had {booked, plural, one {# booking} other {# bookings}} by the time they said they’d decide, so it’s off. Your seat is released, and there’s nothing you need to do.",
+      "body": "We run {tripTitle} on {date} with at least {minimum, plural, one {# diver} other {# divers}}, and it had {booked, plural, one {# booking} other {# bookings}} by the time we said we’d decide, so it’s off. Your seat is released, and there’s nothing you need to do.",
       "moneyRefunded": "You’ve been refunded in full. The money is on its way back to the card you paid with, and can take a few days to land.",
-      "moneyRefundOwed": "You’re owed a full refund, and {shopName} will be in touch to get it back to you.",
+      "moneyRefundOwed": "You’re owed a full refund, and we’ll be in touch to get it back to you.",
       "findAnother": "See what else is running"
     },
     "bookingCancelled": {
       "subject": "Booking canceled: {tripTitle}",
       "bodyByDiver": "Your booking for {tripTitle} on {date} is canceled, and your seat is released.",
-      "bodyByShop": "{shopName} has canceled your booking for {tripTitle} on {date}, and your seat is released.",
+      "bodyByShop": "We’ve canceled your booking for {tripTitle} on {date}, and your seat is released.",
       "moneyRefunded": "{amount} is on its way back to the card you paid with, and can take a few days to land.",
-      "moneyForfeit": "It was canceled after {shopName}’s free-cancellation window closed, so under their policy nothing is refunded.",
-      "moneyFollowUp": "{shopName} will be in touch about what you paid.",
+      "moneyForfeit": "It was canceled after our free-cancellation window closed, so under our policy nothing is refunded.",
+      "moneyFollowUp": "We’ll be in touch about what you paid.",
       "findAnother": "See what else is running"
     },
     "tripBlowout": {
       "subject": "Trip canceled — {tripTitle}",
-      "body": "{shopName} has had to cancel {tripTitle} on {date} because of the weather. Your seat is released, and there’s nothing you need to do.",
+      "body": "We’ve had to cancel {tripTitle} on {date} because of the weather. Your seat is released, and there’s nothing you need to do.",
+      "bodyRunEnded": "We’ve stopped running {tripTitle} for now, so the departure on {date} is canceled. Your seat is released, and there’s nothing you need to do.",
       "moneyNone": "You haven’t been charged anything for this trip.",
-      "moneyDeposit": "Your deposit is safe. {shopName} will be in touch to move it to a new date or arrange your refund.",
-      "moneyPaid": "Your payment is safe. {shopName} will be in touch to move it to a new date or arrange your refund.",
+      "moneyDeposit": "Your deposit is safe. We’ll be in touch to move it to a new date or arrange your refund.",
+      "moneyPaid": "Your payment is safe. We’ll be in touch to move it to a new date or arrange your refund.",
       "moneyRefunded": "You’ve been refunded in full. The money is on its way back to the card you paid with, and can take a few days to land.",
-      "moneyRefundOwed": "You’re owed a full refund, and {shopName} will be in touch to get it back to you.",
+      "moneyRefundOwed": "You’re owed a full refund, and we’ll be in touch to get it back to you.",
       "alternativesIntro": "Want to get back in the water? Here are upcoming trips you already qualify for:",
       "alternativeLine": "{title} — {when}",
       "noAlternatives": "None of the upcoming departures match your certifications right now, but new trips are added all the time.",
@@ -4114,27 +4154,30 @@
     "bookingConfirmation": {
       "subject": "You’re on the boat — {tripTitle}",
       "confirmed": "Your spot on {tripTitle} is confirmed.",
-      "dockNote": "Please be at the dock {dock} early. {shopName} will take it from there.",
+      "dockNote": "Please be at the dock {dock} early. We’ll take it from there.",
       "waiverStep": "First, sign your waiver. {shopName} needs it before you board.",
       "waiverLink": "Sign your waiver",
-      "packingHeading": "Pre-Trip Checklist Reminder:"
+      "packingHeading": "Bring",
+      "moneyOnline": "Your seat: {amount}, by card online.",
+      "moneyDeposit": "Your seat: {deposit} by card online, then {balance} at the dock on {date}.",
+      "moneyAtShop": "Your seat: {amount}, due at the shop."
     },
     "waitlistInvite": {
       "subject": "A spot opened up on {tripTitle}",
-      "body": "A seat just opened on {tripTitle} with {shopName}, and the shop is offering it to you.",
+      "body": "A seat just opened on {tripTitle}, and we’re offering it to you.",
       "claim": "Claim it before it’s gone",
       "claimLink": "Claim your spot",
       "footer": "The seat isn’t held for you, so don’t wait too long. See you on the boat!"
     },
     "tripInvitation": {
       "subject": "An invitation from {shopName}: {tripTitle}",
-      "body": "{shopName} has planned {tripTitle} and would like to invite you.",
+      "body": "We’ve planned {tripTitle} and would like to invite you.",
       "note": "This is an invitation, not a booking, so no seat is held yet.",
       "link": "See the trip and book your spot"
     },
     "lastMinuteDeal": {
       "subject": "{discount} off {tripTitle} — last-minute deal",
-      "body": "{shopName} just opened up {discount} off {tripTitle}.",
+      "body": "We just opened up {discount} off {tripTitle}.",
       "useCode": "Use code {code} at booking:",
       "bookLink": "Book {tripTitle}",
       "expiry": "The code expires {expires} (departure) or once seats run out, whichever comes first.",
@@ -4142,19 +4185,19 @@
     },
     "checkoutRecovery": {
       "subject": "Finish booking {tripTitle}?",
-      "body": "Your spot on {tripTitle} with {shopName} is still held. You just haven’t finished paying.",
+      "body": "Your spot on {tripTitle} is still held. You just haven’t finished paying.",
       "pickUp": "Pick up right where you left off",
       "finishPaying": "Finish paying"
     },
     "tripReminder": {
       "weekSubject": "You sail this week — {tripTitle}",
-      "weekBody": "A quick reminder that {tripTitle} with {shopName} sails this week.",
+      "weekBody": "A quick reminder that {tripTitle} sails this week.",
       "weekSubjectCourse": "Your course starts this week: {tripTitle}",
-      "weekBodyCourse": "A quick reminder that {tripTitle} with {shopName} starts this week.",
+      "weekBodyCourse": "A quick reminder that {tripTitle} starts this week.",
       "dockNote": "Please be at the dock {dock} early.",
       "daySubject": "You sail tomorrow — {tripTitle}",
-      "dayOpenerFirstTimer": "You dive with {shopName} tomorrow. Everything you need for the day is below.",
-      "dayOpenerReturning": "A quick reminder that {tripTitle} with {shopName} sails tomorrow.",
+      "dayOpenerFirstTimer": "You dive with us tomorrow. Everything you need for the day is below.",
+      "dayOpenerReturning": "A quick reminder that {tripTitle} sails tomorrow.",
       "arrival": "Aim to be at the dock by {time}, {dock} before we sail.",
       "hotelPickupArrival": "Your morning pickup is scheduled for {time} at {location}.",
       "hotelNotSet": "your hotel"
@@ -4168,13 +4211,13 @@
     },
     "tripRecap": {
       "subject": "Your dive with {shopName} — {tripTitle}",
-      "thanks": "Thanks for diving {tripTitle} with {shopName} on {date}.",
+      "thanks": "Thanks for diving {tripTitle} with us on {date}.",
       "dived": "You dived {sites}.",
-      "flySafeAfterDive": "{shopName} asks you to wait at least until {when} before flying: {count, plural, one {# hour} other {# hours}} after your last dive with us, following DAN’s guidance.",
-      "flySafeAfterDiveEarlierDay": "{shopName} asks you to wait at least until {when} before flying: our records show another dive day in the last two days, so {count, plural, one {# hour} other {# hours}} after your last dive with us, following DAN’s guidance.",
-      "flySafeAfterReturn": "{shopName} asks you to wait at least until {when} before flying: {count, plural, one {# hour} other {# hours}} after the day was due to end, following DAN’s guidance.",
-      "flySafeAfterReturnDivesPlanned": "{shopName} asks you to wait at least until {when} before flying: we planned more than one dive, so {count, plural, one {# hour} other {# hours}} after the day was due to end, following DAN’s guidance.",
-      "flySafeAfterReturnEarlierDay": "{shopName} asks you to wait at least until {when} before flying: our records show another dive day in the last two days, so {count, plural, one {# hour} other {# hours}} after the day was due to end, following DAN’s guidance.",
+      "flySafeAfterDive": "We ask you to wait at least until {when} before flying: {count, plural, one {# hour} other {# hours}} after your last dive with us, following DAN’s guidance.",
+      "flySafeAfterDiveEarlierDay": "We ask you to wait at least until {when} before flying: our records show another dive day in the last two days, so {count, plural, one {# hour} other {# hours}} after your last dive with us, following DAN’s guidance.",
+      "flySafeAfterReturn": "We ask you to wait at least until {when} before flying: {count, plural, one {# hour} other {# hours}} after the day was due to end, following DAN’s guidance.",
+      "flySafeAfterReturnDivesPlanned": "We ask you to wait at least until {when} before flying: we planned more than one dive, so {count, plural, one {# hour} other {# hours}} after the day was due to end, following DAN’s guidance.",
+      "flySafeAfterReturnEarlierDay": "We ask you to wait at least until {when} before flying: our records show another dive day in the last two days, so {count, plural, one {# hour} other {# hours}} after the day was due to end, following DAN’s guidance.",
       "seeRecap": "See the recap of your day",
       "footer": "If you loved it, the best thing you can do is bring a buddy next time. See you in the water!"
     },
@@ -4279,21 +4322,21 @@
     "waiverRequest": {
       "subject": "Complete your waiver for {tripTitle}",
       "genericSubject": "Complete your waiver",
-      "body": "{shopName} needs your waiver for {tripTitle}.",
-      "genericBody": "{shopName} needs your waiver.",
+      "body": "We need your waiver for {tripTitle}.",
+      "genericBody": "We need your waiver.",
       "completeText": "Complete it here",
       "completeLink": "Complete your waiver",
       "expiry": "This private link expires {expiresAt}."
     },
     "readinessLink": {
       "subject": "Your trip-prep link for {tripTitle}",
-      "body": "Here is a fresh link to what’s left before you sail with {shopName} on {tripTitle}. The one you had has expired.",
+      "body": "Here is a fresh link to what’s left before you sail with us on {tripTitle}. The one you had has expired.",
       "openLink": "Open your trip prep",
       "expiry": "This private link expires {expiresAt}."
     },
     "bookingHandoff": {
       "subject": "Book {tripTitle} with your details already in",
-      "body": "You started booking {tripTitle} with {shopName}. Open the page from this link and what {shopName} already has on file for you comes with you: your card, your waiver, your sizes.",
+      "body": "You started booking {tripTitle} with us. Open the page from this link and what we already have on file for you comes with you: your card, your waiver, your sizes.",
       "openLink": "Book with your details",
       "expiry": "This private link expires {expiresAt}."
     },
@@ -4310,7 +4353,9 @@
       "waiver": "{shopName}: please sign your dive release before you dive — {url}",
       "waiverForTrip": "{shopName}: please sign your dive release for {tripTitle} — {url}",
       "stopLine": "Reply STOP to opt out.",
-      "courseForms": "{shopName}: please sign your course forms for {tripTitle} — {url}"
+      "courseForms": "{shopName}: please sign your course forms for {tripTitle} — {url}",
+      "readyLink": "Your trip prep: {url}",
+      "rescheduled": "{shopName}: we moved {tripTitle} to {date}, {time}. It was {previous}."
     },
     "whatsappTemplate": {
       "body": "Hi! An update from '{{1}}': '{{2}}'",
@@ -4374,6 +4419,7 @@
       "subjectRefused": "{shopName}: You couldn’t be added to {tripTitle}, {when}",
       "subjectRoleChanged": "{shopName}: New role on {tripTitle}, {when}",
       "subjectCalledOff": "{shopName}: {tripTitle}, {when}, is called off",
+      "subjectTimeMoved": "{shopName}: {tripTitle} now leaves {when}",
       "subjectMany": "Your boats at {shopName} changed",
       "intro": "Your boats at {shopName} changed:",
       "assigned": "You’re crewing {tripTitle}, {when}.",
@@ -4384,6 +4430,7 @@
       "roleChanged": "Your role on {tripTitle}, {when}, is now {role}.",
       "roleChangedNoRole": "Your role on {tripTitle}, {when}, changed.",
       "calledOff": "{tripTitle}, {when}, was called off. You’re not needed for it.",
+      "timeMoved": "{tripTitle} now leaves {when}, not {previousWhen}.",
       "asRole": "You’re on as {role}.",
       "roles": {
         "instructor": "instructor",
@@ -4408,6 +4455,33 @@
       "subject": "Course forms to sign for {tripTitle}",
       "body": "{shopName} asks every student on {tripTitle} to sign the course forms. Your release is already signed, so these are all that’s left.",
       "openLink": "Sign your course forms"
+    },
+    "meetingPoint": {
+      "landmark": "Landmark: {landmark}",
+      "parking": "Parking: {parking}"
+    },
+    "tripRescheduled": {
+      "subject": "New time for {tripTitle}",
+      "body": "We moved {tripTitle}. Here is the new time.",
+      "was": "It was {when}.",
+      "meetingPointMoved": "We meet somewhere new, too.",
+      "cantMakeIt": "Can’t make the new time? Get in touch and we’ll sort it out."
+    },
+    "departureNote": {
+      "subject": "A note about {tripTitle}",
+      "intro": "{shopName} sent a note to everyone on {tripTitle}, {date}:",
+      "readyLink": "Your booking"
+    },
+    "smsDepartureNote": {
+      "body": "{shopName}, {tripTitle}: {note}",
+      "withLink": "{shopName}, {tripTitle}: {note} Your booking: {url}"
+    },
+    "lostItem": {
+      "subject": "Left aboard after {tripTitle}",
+      "body": "The crew found this aboard after {tripTitle} on {date}: {item}. {shopName} is holding it for you."
+    },
+    "smsLostItem": {
+      "body": "{shopName}: the crew found this aboard after {tripTitle}: {item}. We’re holding it for you."
     }
   },
   "brand": {

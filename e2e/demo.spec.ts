@@ -31,7 +31,7 @@ test("demo role switcher moves from owner to instructor and back", async ({ page
   await page.goto("/");
   await page.getByRole("button", { name: "Try the live demo" }).first().click();
   await expect(page.getByText("Demo shop")).toBeVisible();
-  await expect(page.locator("p", { hasText: /Viewing as/ })).toContainText("Admin / Owner");
+  await expect(page.locator("p", { hasText: /Viewing as/ })).toContainText("Owner");
 
   // Switch to the instructor seeded in this shop, then back to the owner.
   await page.getByRole("button", { name: /^Switch role/ }).click();
@@ -39,8 +39,8 @@ test("demo role switcher moves from owner to instructor and back", async ({ page
   await expect(page.locator("p", { hasText: /Viewing as/ })).toContainText("Instructor");
 
   await page.getByRole("button", { name: /^Switch role/ }).click();
-  await page.getByRole("button", { name: "Switch to Admin / Owner" }).click();
-  await expect(page.locator("p", { hasText: /Viewing as/ })).toContainText("Admin / Owner");
+  await page.getByRole("button", { name: "Switch to Owner" }).click();
+  await expect(page.locator("p", { hasText: /Viewing as/ })).toContainText("Owner");
 });
 
 // The homepage's pre-entry role picker is deliberately gone: it put five more

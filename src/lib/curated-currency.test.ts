@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { NO_LOCAL_CURRENCY, shopDefaultsForTimeZone, ZONE_CURRENCY } from "./curated-defaults";
+import {
+  NO_LOCAL_CURRENCY,
+  shopDefaults,
+  shopDefaultsForTimeZone,
+  ZONE_COUNTRY,
+  ZONE_CURRENCY,
+} from "./curated-defaults";
 import { isShopCurrency, SHOP_CURRENCIES } from "./money";
 import { CURATED_TIMEZONE_GROUPS, type CuratedTimeZone } from "./timezones";
 
@@ -76,10 +82,12 @@ describe("what a shop's timezone starts it on", () => {
     expect(shopDefaultsForTimeZone("America/Cancun")).toEqual({
       currency: "mxn",
       depthUnit: "meters",
+      temperatureUnit: "celsius",
     });
     expect(shopDefaultsForTimeZone("America/New_York")).toEqual({
       currency: "usd",
       depthUnit: "feet",
+      temperatureUnit: "fahrenheit",
     });
   });
 
@@ -98,6 +106,7 @@ describe("what a shop's timezone starts it on", () => {
     expect(shopDefaultsForTimeZone("Europe/Warsaw")).toEqual({
       currency: "usd",
       depthUnit: "meters",
+      temperatureUnit: "celsius",
     });
   });
 
@@ -121,5 +130,63 @@ describe("what a shop's timezone starts it on", () => {
       "America/Puerto_Rico",
       "Pacific/Honolulu",
     ]);
+  });
+});
+
+/**
+ * **Units follow the shop's country** (UX review 2026-10-10, item 5). A Key
+ * Largo shop read "6–12 m" and "27°C" to Florida divers, and a fresh US shop
+ * was guessed into feet but left on Celsius. One rule now: the country decides
+ * depth, temperature and currency together, and a shop that has only told us
+ * its timezone gets the country that zone is in.
+ */
+describe("what a shop's country starts it on", () => {
+  it("starts a US shop on feet, Fahrenheit and dollars", () => {
+    expect(shopDefaults({ country: "US", timeZone: "America/New_York" })).toEqual({
+      currency: "usd",
+      depthUnit: "feet",
+      temperatureUnit: "fahrenheit",
+    });
+    // Lowercase and padded the way a typed address might arrive.
+    expect(shopDefaults({ country: " us ", timeZone: "Europe/Warsaw" }).depthUnit).toBe("feet");
+  });
+
+  it("starts most other countries metric", () => {
+    expect(shopDefaults({ country: "MX", timeZone: "America/Cancun" })).toEqual({
+      currency: "mxn",
+      depthUnit: "meters",
+      temperatureUnit: "celsius",
+    });
+    expect(shopDefaults({ country: "AU", timeZone: "Australia/Sydney" })).toMatchObject({
+      depthUnit: "meters",
+      temperatureUnit: "celsius",
+    });
+  });
+
+  it("lets the country win over a zone that says otherwise", () => {
+    // A Cozumel shop whose owner set the clock to New York is still in Mexico.
+    expect(shopDefaults({ country: "MX", timeZone: "America/New_York" })).toMatchObject({
+      currency: "mxn",
+      depthUnit: "meters",
+      temperatureUnit: "celsius",
+    });
+  });
+
+  it("falls back to the zone's country when none is on file", () => {
+    expect(shopDefaults({ country: null, timeZone: "Pacific/Honolulu" })).toEqual(
+      shopDefaultsForTimeZone("Pacific/Honolulu"),
+    );
+    expect(shopDefaults({ timeZone: "Pacific/Honolulu" }).temperatureUnit).toBe("fahrenheit");
+  });
+
+  it("names a country for every curated zone", () => {
+    expect(curatedZones.filter((zone) => !/^[A-Z]{2}$/.test(ZONE_COUNTRY[zone] ?? ""))).toEqual([]);
+  });
+
+  it("never splits depth and temperature for a curated zone", () => {
+    for (const zone of curatedZones) {
+      const { depthUnit, temperatureUnit } = shopDefaultsForTimeZone(zone);
+      expect(temperatureUnit === "fahrenheit", zone).toBe(depthUnit === "feet");
+    }
   });
 });

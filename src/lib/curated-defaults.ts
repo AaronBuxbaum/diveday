@@ -1,5 +1,6 @@
 import type { DepthUnit } from "./depth-units";
 import { DEFAULT_SHOP_CURRENCY, isShopCurrency, type ShopCurrency } from "./money";
+import type { TemperatureUnit } from "./temperature-units";
 import type { CuratedTimeZone } from "./timezones";
 
 /**
@@ -88,13 +89,50 @@ export const NO_LOCAL_CURRENCY: Partial<Record<CuratedTimeZone, string>> = {
   "Pacific/Fiji": "Stripe does not operate in Fiji, so no shop there can settle in FJD.",
 };
 
+/** The country each curated zone is in (ISO 3166-1 alpha-2). */
+export const ZONE_COUNTRY: Record<CuratedTimeZone, string> = {
+  "America/New_York": "US",
+  "America/Chicago": "US",
+  "America/Denver": "US",
+  "America/Los_Angeles": "US",
+  "Pacific/Honolulu": "US",
+  "America/Cancun": "MX",
+  "America/Belize": "BZ",
+  "America/Tegucigalpa": "HN",
+  "America/Cayman": "KY",
+  "America/Nassau": "BS",
+  "America/Puerto_Rico": "PR",
+  "America/Curacao": "CW",
+  "Europe/London": "GB",
+  "Africa/Cairo": "EG",
+  "Indian/Maldives": "MV",
+  "Asia/Bangkok": "TH",
+  "Asia/Jakarta": "ID",
+  "Asia/Singapore": "SG",
+  "Asia/Makassar": "ID",
+  "Asia/Manila": "PH",
+  "Pacific/Palau": "PW",
+  "Pacific/Fiji": "FJ",
+  "Australia/Sydney": "AU",
+  "Pacific/Auckland": "NZ",
+};
+
+/** Each curated country's currency, read off the zone tables above. */
+const COUNTRY_CURRENCY: ReadonlyMap<string, string> = new Map(
+  (Object.keys(ZONE_COUNTRY) as CuratedTimeZone[]).map((zone) => [
+    ZONE_COUNTRY[zone],
+    ZONE_CURRENCY[zone],
+  ]),
+);
+
 /**
- * **Where a dive briefing is given in feet.**
+ * **Where a dive briefing is given in feet, and the water in Fahrenheit.**
  *
  * Deliberately narrow: the US and its territories, where feet is the standard
- * unit on the boat, the agency card and the dive computer. Everywhere else gets
- * metres, which is the rest of the diving world's unit and DiveDay's storage
- * unit besides.
+ * unit on the boat, the agency card and the dive computer, and the water
+ * temperature is read in Fahrenheit. Everywhere else gets metres and Celsius,
+ * which is the rest of the diving world's units and DiveDay's storage units
+ * besides.
  *
  * It is tempting to widen this to the Caribbean, where shops serving US divers
  * often brief in feet — and that is exactly the guess this table should not
@@ -102,33 +140,41 @@ export const NO_LOCAL_CURRENCY: Partial<Record<CuratedTimeZone, string>> = {
  * depths tripled, and the checklist step exists to catch the ones the table
  * gets wrong rather than to be right about every shop on earth.
  */
-const FEET_ZONES: ReadonlySet<string> = new Set([
-  "America/New_York",
-  "America/Chicago",
-  "America/Denver",
-  "America/Los_Angeles",
-  "Pacific/Honolulu",
-  "America/Puerto_Rico",
-]);
+const IMPERIAL_COUNTRIES: ReadonlySet<string> = new Set(["US", "PR", "GU", "VI", "AS", "MP"]);
+
+export type ShopDefaults = {
+  currency: ShopCurrency;
+  depthUnit: DepthUnit;
+  temperatureUnit: TemperatureUnit;
+};
 
 /**
- * The currency and depth unit to start a shop on, from the timezone it just
- * chose. A zone the tables do not know — anything outside the curated
- * shortcuts, since the picker still offers every IANA zone — falls back to
- * today's defaults, unchanged.
+ * **The one rule for a shop's starting units**: depth, water temperature and
+ * currency all follow the shop's country (US → feet, Fahrenheit, dollars; most
+ * others metric). A shop that has told DiveDay only its timezone — sign-up asks
+ * for nothing else — gets the country that zone is in. A country or zone the
+ * tables do not know falls back to metres, Celsius and DiveDay's default
+ * currency, which the setup checklist then asks the shop to confirm.
  *
  * A zone on `NO_LOCAL_CURRENCY` also falls back to USD, and that is the honest
  * answer rather than a gap: Stripe does not operate in those countries at all,
  * so a shop there cannot settle in its own currency whatever DiveDay offers.
  */
-export function shopDefaultsForTimeZone(timeZone: string): {
-  currency: ShopCurrency;
-  depthUnit: DepthUnit;
-} {
-  const derived = ZONE_CURRENCY[timeZone as CuratedTimeZone];
+export function shopDefaults({
+  country,
+  timeZone,
+}: {
+  country?: string | null;
+  timeZone: string;
+}): ShopDefaults {
+  const typed = country?.trim().toUpperCase() || null;
+  const iso = typed ?? ZONE_COUNTRY[timeZone as CuratedTimeZone] ?? null;
+  const imperial = iso !== null && IMPERIAL_COUNTRIES.has(iso);
+  const derived = (iso && COUNTRY_CURRENCY.get(iso)) ?? (imperial ? "usd" : undefined);
   return {
     currency: isShopCurrency(derived) ? derived : DEFAULT_SHOP_CURRENCY,
-    depthUnit: FEET_ZONES.has(timeZone) ? "feet" : "meters",
+    depthUnit: imperial ? "feet" : "meters",
+    temperatureUnit: imperial ? "fahrenheit" : "celsius",
   };
 }
 
@@ -153,4 +199,9 @@ export function siteCatalogIsLocal(shop: {
   const region = shop.addressRegion?.trim().toUpperCase();
   if (region) return region === "FL" || region === "FLORIDA";
   return shop.timezone === "America/New_York";
+}
+
+/** `shopDefaults` for a shop that has told DiveDay only its timezone (sign-up). */
+export function shopDefaultsForTimeZone(timeZone: string): ShopDefaults {
+  return shopDefaults({ timeZone });
 }

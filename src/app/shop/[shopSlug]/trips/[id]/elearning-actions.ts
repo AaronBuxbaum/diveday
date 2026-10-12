@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import { recordCourseMaterialsDone } from "@/db/course-materials";
 import { seatForElearningCheck } from "@/db/elearning-check";
 import { ELEARNING_PAGE_TEXT_MAX_LENGTH, judgeElearningPage } from "@/lib/elearning-check";
+import { formValue, readForm, text } from "@/lib/form-parse";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
@@ -20,6 +22,16 @@ export type ElearningCheckResult =
   | { ok: true; verdict: "not_complete"; evidence: string }
   | { ok: true; verdict: "no_record" | "unreadable" }
   | { ok: false; reason: "invalid" };
+
+/**
+ * The check's fields as posted: the seat, whether this is an undo, and the
+ * page text the staffer pasted, each read as `FormData.get` read it.
+ */
+const elearningForm = z.object({
+  bookingId: text(),
+  intent: formValue(),
+  pageText: formValue(),
+});
 
 /**
  * **Tick a student's learning materials done from PADI's own eLearning page**
@@ -44,9 +56,10 @@ export async function elearningCheckAction(
   _previous: ElearningCheckResult,
   formData: FormData,
 ): Promise<ElearningCheckResult> {
+  const fields = readForm(elearningForm, formData);
   const staff = (await requireShopSurface(shopSlug)).session;
   const trip = uuidParam(tripId);
-  const bookingId = uuidParam(String(formData.get("bookingId") ?? ""));
+  const bookingId = uuidParam(fields.bookingId);
   if (!trip || !bookingId) return { ok: false, reason: "invalid" };
   const shopId = staff.user.shopId;
   const db = await getDb();
@@ -55,7 +68,7 @@ export async function elearningCheckAction(
   const seat = await seatForElearningCheck(db, { shopId, tripId: trip, bookingId });
   if (!seat) return { ok: false, reason: "invalid" };
 
-  if (formData.get("intent") === "undo") {
+  if (fields.intent === "undo") {
     // Undo takes back only a tick that is still this staffer's: a colleague
     // who ticked or re-ticked since keeps theirs.
     if (!seat.materialsDone) return { ok: true, verdict: "undone" };
@@ -71,7 +84,7 @@ export async function elearningCheckAction(
   }
 
   if (seat.materialsDone) return { ok: true, verdict: "already_done" };
-  const pageText = formData.get("pageText");
+  const pageText = fields.pageText;
   if (typeof pageText !== "string") return { ok: false, reason: "invalid" };
   const judged = judgeElearningPage({
     ...seat.query,

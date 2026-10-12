@@ -11,13 +11,7 @@
     "gear": "Gear",
     "details": "Details"
   },
-  "phases": {
-    "label": "Stage",
-    "prep": "Prep",
-    "checkin": "Check-in",
-    "aboard": "Aboard",
-    "back": "Back"
-  },
+  "stageLabel": "Stage",
   "about": {
     "add": "Add",
     "addDiverJump": "Jump to add a diver",
@@ -38,6 +32,14 @@
     "perSeat": "per seat",
     "cancel": "Cancel this departure",
     "more": "More for this departure"
+  },
+  "openSeats": {
+    "label": "Unsold seats",
+    "sentence": "{seats, plural, one {# seat went unsold} other {# seats went unsold}}: {facts}.",
+    "lastBooking": "{days, plural, =0 {the last booking came in on the day} one {the last booking came in # day out} other {the last booking came in # days out}}",
+    "noDeal": "no last-minute deal went out",
+    "comparableSamePrice": "{title} on {date} filled at the same price",
+    "comparableOtherPrice": "{title} on {date} filled at a different price"
   },
   "notices": {
     "nextStepSaved": "Next step saved.",
@@ -186,7 +188,7 @@
     "cancelConfirm": "Yes, cancel this departure",
     "weatherBlowout": "Weather blow-out…",
     "dayBlowout": "Weather blow-out for the whole day…",
-    "viewBlowout": "View the blow-out cascade"
+    "viewBlowout": "{cause, select, run_ended {See who was told} other {View the blow-out cascade}}"
   },
   "details": {
     "titleLabel": "Title",
@@ -200,6 +202,8 @@
     "capacityLabel": "Capacity",
     "dayCountLabel": "Days",
     "priceLabel": "Price per diver",
+    "exceedsNoDecoLabel": "Decompression diving",
+    "exceedsNoDecoHint": "These dives go past no-decompression limits, so the recap says nothing about when divers may fly.",
     "payAtBookingLegend": "Pay at booking",
     "payAtBookingDescription": "Optional. Leave the deposit blank to charge the full fare when a diver books online.",
     "depositLabel": "Deposit per diver",
@@ -482,6 +486,10 @@
     "groupCheckedIn": "Checked in",
     "groupNotHere": "Not here",
     "groupStillToClear": "Still to clear",
+    "groupSailed": "Sailed",
+    "groupDidNotSail": "Didn’t sail",
+    "groupNotCounted": "Not counted at the dock",
+    "groupNoRollCall": "No roll call taken",
     "groupWaiting": "Waiting for a seat",
     "heading": "Divers",
     "hotelNotSpecified": "Lodging not specified",
@@ -536,7 +544,7 @@
     "signedPaper": "Signed {date} · recorded from a paper copy",
     "signedPlain": "Signed {date}",
     "viewSignedRecord": "View signed record",
-    "earlierRefusal": "A physician did not clear this diver on {date} (earlier waiver).",
+    "earlierRefusal": "A physician did not clear this person on {date} (earlier waiver).",
     "referralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file.",
     "viewReferral": "View the referral",
     "waiverColumnHeading": "Waiver",
@@ -640,5 +648,11 @@
     "checkedLabel": "Checked — press to clear",
     "uncheckedLabel": "Not checked — press to mark checked",
     "summary": "Before you leave the dock: {checked} of {total} checked"
+  },
+  "rehearsal": {
+    "label": "Rehearsal",
+    "title": "Practice departure for training day",
+    "body": "Nothing about it is sent, charged, shown publicly or counted in reports. It is deleted {days, plural, one {# day} other {# days}} after it comes home, once no later boat counts its dives toward the wait before flying.",
+    "kept": "This rehearsal has a roll call or a logged dive, so it is not deleted on its own."
   }
 }

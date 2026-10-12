@@ -59,7 +59,7 @@ afterEach(cleanup);
 describe("EmbedBookedNotice", () => {
   it("greets the diver by their first name", () => {
     renderNotice();
-    expect(screen.getByRole("heading", { name: /You’re on the boat, Ingrid/ })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /You’ve got a seat, Ingrid/ })).toBeVisible();
   });
 
   /**

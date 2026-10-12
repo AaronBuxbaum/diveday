@@ -58,6 +58,8 @@ function noticeMessages(
     "timezone-saved": { tone: "success", text: t("settings.main.notice.timezoneSaved") },
     "season-saved": { tone: "success", text: t("settings.main.notice.seasonSaved") },
     "season-invalid": { tone: "danger", text: t("settings.main.notice.seasonInvalid") },
+    "reopens-saved": { tone: "success", text: t("settings.main.notice.reopensSaved") },
+    "reopens-invalid": { tone: "danger", text: t("settings.main.notice.reopensInvalid") },
     "timezone-invalid": { tone: "danger", text: t("settings.main.notice.timezoneInvalid") },
     "package-saved": { tone: "success", text: t("settings.main.notice.packageSaved") },
     "package-deleted": { tone: "success", text: t("settings.main.notice.packageDeleted") },
@@ -69,6 +71,14 @@ function noticeMessages(
     "pass-through-saved": { tone: "success", text: t("settings.main.notice.passThroughSaved") },
     "pass-through-invalid": { tone: "danger", text: t("settings.main.notice.passThroughInvalid") },
     "rental-terms-saved": { tone: "success", text: t("settings.main.notice.rentalTermsSaved") },
+    "regulator-service-saved": {
+      tone: "success",
+      text: t("settings.main.notice.regulatorServiceSaved"),
+    },
+    "regulator-service-invalid": {
+      tone: "danger",
+      text: t("settings.main.notice.regulatorServiceInvalid"),
+    },
     "rental-terms-invalid": {
       tone: "danger",
       text: t("settings.main.notice.rentalTermsInvalid"),

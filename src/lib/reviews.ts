@@ -181,3 +181,37 @@ export function reviewerDisplayName(fullName: string): string {
   const last = rest[rest.length - 1];
   return last ? `${first} ${last[0].toUpperCase()}.` : first;
 }
+
+/**
+ * **How long the shop's public reply under a review may be** (batch 4, K2).
+ *
+ * Short on purpose: a reply is a thank-you or a sentence of context, not a
+ * rebuttal, and it sits under somebody else's words on the shop's own page.
+ * 400 characters is three plain sentences. The schema's check
+ * (`review_replies_body_length`) holds the same number, so a writer that
+ * skipped this function would be refused by the database rather than stored.
+ */
+export const MAX_REVIEW_REPLY_LENGTH = 400;
+
+/** A reply as typed, made storable — or the reason it cannot be. */
+export type ReviewReplyText =
+  | { ok: true; body: string }
+  | { ok: false; reason: "empty" | "too_long" };
+
+// biome-ignore lint/suspicious/noControlCharactersInRegex: stripping them is the point.
+const CONTROL_CHARACTERS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+
+/**
+ * A staffer's reply, normalized the way a diver's comment is: whitespace
+ * collapsed to single spaces (one plain paragraph, nothing to lay out), control
+ * characters dropped, trimmed. Too long is **refused, not truncated**: a
+ * diver's comment is clipped because the diver is gone by then, but the staffer
+ * is still at the form and can say it shorter.
+ */
+export function normalizeReviewReply(value: unknown): ReviewReplyText {
+  if (typeof value !== "string") return { ok: false, reason: "empty" };
+  const body = value.replace(CONTROL_CHARACTERS, "").replace(/\s+/g, " ").trim();
+  if (!body) return { ok: false, reason: "empty" };
+  if (body.length > MAX_REVIEW_REPLY_LENGTH) return { ok: false, reason: "too_long" };
+  return { ok: true, body };
+}

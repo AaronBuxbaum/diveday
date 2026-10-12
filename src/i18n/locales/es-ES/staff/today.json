@@ -214,12 +214,6 @@
     "openUnits": "Abrir unidades",
     "openDiver": "Abrir ficha del buceador"
   },
-  "greeting": {
-    "morning": "Buenos días, {name}",
-    "afternoon": "Buenas tardes, {name}",
-    "evening": "Buenas noches, {name}",
-    "night": "Trabajando hasta tarde, {name}"
-  },
   "seasonalBriefing": {
     "summer": "Aprovecha el intervalo de superficie. Busca sombra{hasShop, select, true { en {shopName}} other {}}, bebe agua y nos vemos en el próximo barco.",
     "autumn": "Aprovecha el intervalo de superficie. Toma una toalla calentita{hasShop, select, true { en {shopName}} other {}}, revisa la brisa y nos vemos en el próximo barco.",

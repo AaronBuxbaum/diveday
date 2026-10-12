@@ -562,6 +562,18 @@ export const blowoutMessageStatus = pgEnum("blowout_message_status", [
 ]);
 
 /**
+ * Why the shop called a departure off, which is what the diver's message says
+ * happened. `weather` is the blow-out proper (glossary **Blow-out**);
+ * `run_ended` is a repeating trip's "Cancel every upcoming date", which sends
+ * each of those dates through the same cascade (refunds, one message each, the
+ * record) but must not tell anybody it was the weather (ADR
+ * 20260810-open-ended-recurring-trips, addendum 2026-10-12).
+ */
+export const blowoutCause = pgEnum("trip_blowout_cause", ["weather", "run_ended"]);
+
+export type BlowoutCause = (typeof blowoutCause.enumValues)[number];
+
+/**
  * A shop-called weather cancellation of one departure ("blow-out", glossary)
  * and the cascade it triggered. One per trip, ever (`trip_id` unique): calling
  * the blow-out again *resumes* the same cascade rather than double-messaging
@@ -582,6 +594,8 @@ export const tripBlowouts = pgTable(
       .notNull()
       .references(() => people.id),
     calledAt: timestamp("called_at", { withTimezone: true }).notNull(),
+    /** What the diver is told the cancellation was; see `blowoutCause`. */
+    cause: blowoutCause("cause").notNull().default("weather"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

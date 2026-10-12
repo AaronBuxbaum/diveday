@@ -19,6 +19,12 @@
   cancelled" gets `false` for all twelve people who drove to the dock and were sent home. The
   diver's own thread therefore says the departure was cancelled on its own authority, the **dive
   day** count excludes the date, and there is no **after-state** for a day that never happened.
+  **The same cascade cancels a run.** A repeating trip's "Cancel every upcoming date" sends each of
+  those dates through it (`trip_blowouts.cause` = `run_ended`), so the record, the refunds and the
+  one message per diver are the blow-out's, and the message says the shop stopped running the trip
+  rather than blaming the weather. Staff see that record as **Canceled with its run**, never as a
+  weather call. A date blown out, reinstated and then cancelled with its run takes the newer cause,
+  and is still refused while it is underway.
 - **Conditions hold** — a reversible crew call while weather or sea state is uncertain. Existing
   bookings remain valid, new bookings pause, and booked divers are notified. It is not a
   cancellation and never implies a refund.
@@ -51,3 +57,39 @@
   after the boat is due back (two weeks at most). A load that is not the live page (a cancelled
   seat, a departure called off, an expired link) clears it. Read-only: offline the page says it is
   the saved copy and that changes need signal. Rules in `src/worker/ready-page-cache.ts`.
+- **Dock rider** — a non-diving passenger a captain adds from the Boat tab while the boat is still
+  at the dock (no stage recorded, or **boarding**): a name, an optional phone, an emergency
+  contact, an optional date of birth (so a minor shows the minor badge at once), and whether they
+  ride along or snorkel. It is a seat like any other, sold through the one seating path
+  (`seatDiver` → `createBooking`), so the certificate ceiling and the hull's capacity refuse it
+  exactly as they refuse a seat sold at the desk; it counts in the head count and roll call at once
+  and writes the `rider_added_at_dock` activity line. **A seat is not boarding**: the rider still
+  owes the release and medical statement (and payment, where the shop asks for it and names no
+  rider price), the notice says so and hands over the release link, and the dock gate refuses
+  **Boarded** until they are ready. There is no offline path: at a dock with no signal the rider
+  goes on the paper manifest. Never onto a course session, a canceled or sailed departure, or beside
+  somebody of the same name already aboard (`src/db/dock-rider.ts`).
+- **Departure note** — one short operational message ("Marina lot closed, park at the Elks") sent
+  once to every held seat on a departure by that diver's usual channel: email when they have an
+  address, otherwise the shop's WhatsApp or SMS. Transactional, so it is held to that: at most
+  200 characters on one line, no link of any kind except the diver's own `/ready` link DiveDay
+  adds, at most three per departure, and never to a canceled or sailed departure. Sent as a
+  **held send** with the same eight-second Undo every held send has; the checks run at the hold
+  and again when it drains. Recorded in `departure_notes` and on the activity trail
+  (`src/lib/departure-notes.ts`, `src/db/departure-notes.ts`).
+- **Lost item** — something the crew found aboard after a departure, written down on its Boat tab
+  ("Blue mask, seat 4"), optionally tied to the seat it was found at, and so to that diver. One
+  tap tells the diver by their usual channel, once. It is **open** until it goes home
+  (**returned**) or the shop gives up on it (**discarded**); open items across every departure
+  are listed at Lost and found. Resolved items are pruned after 90 days, and an erasure deletes
+  the diver's items outright (`src/db/lost-items.ts`).
+- **Dock line** — the one sentence under a consented first-timer's "first time with us" on the
+  arrivals roster: the first name to greet and the level they hold ("Say hello to Priya: Open
+  Water."). It names a level only when a card at that level is **verified** (`verifiedLevel` on
+  `listCertificationSummaries`, `src/db/self-declared-cards.ts`); any card nobody has verified,
+  whether the diver typed it or a staffer did, is what the diver *says* ("says Open Water", es
+  "dice Open Water"), and a stated "no card" is "Not certified yet". Either of those wears the
+  warning tone the certification phrase wears everywhere (`welcomeDockLineUnchecked`,
+  `src/i18n/welcome-cue-labels.ts`). **Nitrox is never on it**: a greeting is not a fill
+  clearance, and enriched air is the fill station's question. It informs and gates nothing; the
+  boarding gate is readiness.

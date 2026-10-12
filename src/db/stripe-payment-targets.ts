@@ -1,14 +1,12 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { log } from "@/lib/log";
-import {
-  type PaymentSourceLookup,
-  paymentSourceLookupFromEnvironment,
-} from "@/lib/payments/payment-sources";
+import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { recordCheckoutPaymentIntent } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
 import { recordOrderPaymentIntent, stripeInvoiceOf } from "./orders";
 import type { BookingCheckout, Order } from "./schema";
 import { bookingCheckouts, orders, tips } from "./schema";
+import { paymentSourceLookupFromEnvironment } from "./stripe-providers";
 
 /**
  * What a Stripe charge DiveDay is told about was for: one of its own orders

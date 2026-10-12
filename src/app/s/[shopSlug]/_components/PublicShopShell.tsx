@@ -35,7 +35,7 @@ import { SkipLink } from "@/components/SkipLink";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
-import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
+import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { listPackagesOnSale } from "@/db/dive-packages";
 import { listShopRolesPresent } from "@/db/shop-roles";
 import { shopBySlugCached } from "@/db/shops-cached";

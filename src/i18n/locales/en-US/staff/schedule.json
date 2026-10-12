@@ -6,7 +6,7 @@
     "crew": "Crew"
   },
   "viewPublicPage": "View public page",
-  "scheduleTrip": "Schedule a trip",
+  "scheduleTrip": "Add a departure",
   "notices": {
     "added": "It’s on the board.",
     "moved": "Moved.",
@@ -23,6 +23,7 @@
     "addedNamed": "“{title}” is on the board.",
     "addedSeries": "“{title}” is on the board: {count, plural, one {# trip} other {# trips}} scheduled.",
     "capacityAboveBoat": "That capacity is above what the assigned boat holds.",
+    "rehearsalRepeats": "A rehearsal is a single departure. Untick Repeat, or leave Rehearsal off.",
     "capacityAboveCertificate": "That capacity is above the passenger limit on the boat’s certificate.",
     "capacityAboveCertificateCount": "{count, plural, one {The boat’s certificate allows # passenger. Pick a capacity no higher.} other {The boat’s certificate allows # passengers. Pick a capacity no higher.}}"
   },
@@ -87,8 +88,8 @@
     "impactBoatClash": "{boat} is already out on {departure} at that time.",
     "impactCrewClash": "{name} is already rostered on {departure} at that time.",
     "impactCrewAway": "{name} has told you they are away then.",
-    "impactToldOne": "{count} diver has already been told this date. Moving it sends nothing.",
-    "impactToldOther": "{count} divers have already been told this date. Moving it sends nothing.",
+    "impactToldOne": "{count} diver has already been told this date. Moving it tells them the new one.",
+    "impactToldOther": "{count} divers have already been told this date. Moving it tells them the new one.",
     "impactGearOne": "{count} reserved unit travels with it; anything the new dates already have spoken for is released.",
     "impactGearOther": "{count} reserved units travel with it; anything the new dates already have spoken for is released.",
     "impactPaidOne": "{count} seat is already paid.",
@@ -112,6 +113,8 @@
     "descriptionPlaceholder": "Sites, conditions, who it’s for, required certs.",
     "isPrivateLabel": "Private charter",
     "isPrivateHint": "Off the public schedule. Anyone with the link can see the departure and book a seat.",
+    "isRehearsalLabel": "Rehearsal for training day",
+    "isRehearsalHint": "Nobody is charged, told, or counted. People you seat here are test divers.",
     "selfGuidedLabel": "Self-guided dive",
     "selfGuidedHint": "Buddy pairs go in without a guide, so DiveDay stops asking you to roster one.",
     "daysLabel": "How many days",
@@ -174,6 +177,7 @@
     "seats": "{booked} of {capacity}",
     "seatTally": "{taken} of {total, plural, one {# seat} other {# seats}}",
     "noBoats": "No boats",
+    "quietDays": "{first} to {last}",
     "runsDays": "{days, plural, one {# day} other {# days}}",
     "sailed": "Sailed"
   },

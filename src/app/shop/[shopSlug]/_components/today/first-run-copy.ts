@@ -17,7 +17,7 @@ export function firstRunChecklistCopy(
 ): FirstRunChecklistCopy {
   return {
     groupLabel: t("shopHome.firstRun.groupLabel"),
-    subtitle: t("shopHome.firstRun.subtitle", { count: FIRST_RUN_STEP_COUNT }),
+    subtitle: t("shopHome.firstRun.subtitle"),
     progress: t("shopHome.firstRun.progress", {
       done: counts.doneCount,
       total: FIRST_RUN_STEP_COUNT,

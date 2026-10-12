@@ -135,6 +135,26 @@ export type CommandPaletteCopy = {
   goToOfflineRollCall: string;
 };
 
+// ⌘K / Ctrl-K from anywhere toggles the palette. Returns true once the
+// listener is attached: the trigger publishes it as the staff surfaces'
+// `data-hydrated` flag, so a test that presses ⌘K on a fresh page can wait for
+// it rather than lose the keypress to the server-rendered button (issue #2366).
+function useCommandKey(setOpen: (update: (current: boolean) => boolean) => void): boolean {
+  const [listening, setListening] = useState(false);
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setOpen((current) => !current);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    setListening(true);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [setOpen]);
+  return listening;
+}
+
 /**
  * Global search for the front desk: "pull up Priya" without navigating to a
  * list first. Opened by ⌘K / Ctrl-K or the nav button. A hand-rolled combobox
@@ -242,7 +262,14 @@ export function CommandPalette({
   createDiverAction,
   settingsShortcuts = NO_SETTINGS_SHORTCUTS,
   copy,
+  variant = "bar",
 }: {
+  /**
+   * `bar` is the shell's own control, a field from `sm` and an icon below it.
+   * `field` is the same palette as a full-width field at every width, for a
+   * page with no shell to hold the bar (the staff 404).
+   */
+  variant?: "bar" | "field";
   shopSlug: string;
   boatBoardingHref?: string;
   /**
@@ -291,17 +318,7 @@ export function CommandPalette({
     exitMs: motionMs("base"),
   });
 
-  // ⌘K / Ctrl-K from anywhere opens the palette.
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setOpen((current) => !current);
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  const listening = useCommandKey(setOpen);
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
@@ -623,52 +640,13 @@ export function CommandPalette({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-keyshortcuts="Meta+K Control+K"
-        aria-label={copy.search}
-        // **The transition names its two properties rather than saying
-        // `transition-colors`.** That shorthand covers `border-color`, and the
-        // border below arrives at `sm` — so crossing that breakpoint started
-        // four longhand transitions (one per side) on the very resize
-        // `capture()` performs, and a screenshot taken during the fade catches
-        // a half-drawn border. `e2e/visual.spec.ts`'s capture-harness canary is
-        // what found it. Hover changes the text and the background and nothing
-        // else, so those are what may move.
-        //
-        // **A field's box only where it is a field.** From `sm` up this reads
-        // as one — a magnifier, the word, the shortcut, bordered like an
-        // input. Below it the word and the ⌘K hide and the border stayed, a
-        // box drawn around a bare icon and the one control in the bar that did
-        // not match the date beside it (`Tide.dc.html` draws both as plain
-        // strokes). So the border, the padding and the auto width all arrive
-        // at `sm` together with the text that earns them.
-        className="inline-flex size-11 shrink-0 items-center justify-center gap-2 rounded-full text-sm font-medium text-muted transition-[color,background-color] hover:bg-surface-sunken hover:text-foreground sm:size-auto sm:min-h-11 sm:justify-start sm:rounded-lg sm:border sm:border-border sm:px-3"
-      >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          // 20px beside the date, 16px beside its own word. `Tide.dc.html`
-          // sizes the two the same way — the pocket's marks at 22px, the desk
-          // bar's magnifier at 18px next to "Search anyone, any day" — because
-          // an icon standing alone is the control and an icon labelling a
-          // field is punctuation.
-          className="size-5 sm:size-4"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path d="m21 21-4.3-4.3" />
-        </svg>
-        <span className="hidden sm:inline">{copy.search}</span>
-        <kbd className="hidden rounded border border-border bg-surface-sunken px-1.5 text-xs font-semibold text-muted sm:inline">
-          ⌘K
-        </kbd>
-      </button>
+      <PaletteTrigger
+        variant={variant}
+        onOpen={() => setOpen(true)}
+        hydrated={listening}
+        search={copy.search}
+        placeholder={copy.placeholder}
+      />
 
       {mounted
         ? createPortal(
@@ -865,5 +843,102 @@ export function CommandPalette({
           )
         : null}
     </>
+  );
+}
+
+/**
+ * The control that opens the palette. `bar` is the shell's own, a field from
+ * `sm` and an icon below it; `field` is the same palette as a full-width field
+ * at every width, for a page with no shell to hold the bar (the staff 404).
+ */
+function PaletteTrigger({
+  variant,
+  onOpen,
+  hydrated,
+  search,
+  placeholder,
+}: {
+  variant: "bar" | "field";
+  onOpen: () => void;
+  search: string;
+  placeholder: string;
+  /** True once the ⌘K listener is attached; drawn as `data-hydrated`. */
+  hydrated: boolean;
+}) {
+  return variant === "field" ? (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-keyshortcuts="Meta+K Control+K"
+      aria-label={search}
+      data-hydrated={hydrated ? "true" : undefined}
+      className="flex min-h-11 w-full items-center gap-2 rounded-lg border border-border bg-surface px-3 text-start text-sm text-muted transition-[color,background-color] hover:bg-surface-sunken hover:text-foreground"
+    >
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="size-4 shrink-0"
+      >
+        <circle cx="11" cy="11" r="7" />
+        <path d="m21 21-4.3-4.3" />
+      </svg>
+      <span className="min-w-0 flex-1 truncate">{placeholder}</span>
+      <kbd className="hidden rounded border border-border bg-surface-sunken px-1.5 text-xs font-semibold text-muted sm:inline">
+        ⌘K
+      </kbd>
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-keyshortcuts="Meta+K Control+K"
+      aria-label={search}
+      data-hydrated={hydrated ? "true" : undefined}
+      // **The transition names its two properties rather than saying
+      // `transition-colors`.** That shorthand covers `border-color`, and the
+      // border below arrives at `sm` — so crossing that breakpoint started
+      // four longhand transitions (one per side) on the very resize
+      // `capture()` performs, and a screenshot taken during the fade catches
+      // a half-drawn border. `e2e/visual.spec.ts`'s capture-harness canary is
+      // what found it. Hover changes the text and the background and nothing
+      // else, so those are what may move.
+      //
+      // **A field's box only where it is a field.** From `sm` up this reads
+      // as one — a magnifier, the word, the shortcut, bordered like an
+      // input. Below it the word and the ⌘K hide and the border stayed, a
+      // box drawn around a bare icon and the one control in the bar that did
+      // not match the date beside it (`Tide.dc.html` draws both as plain
+      // strokes). So the border, the padding and the auto width all arrive
+      // at `sm` together with the text that earns them.
+      className="inline-flex size-11 shrink-0 items-center justify-center gap-2 rounded-full text-sm font-medium text-muted transition-[color,background-color] hover:bg-surface-sunken hover:text-foreground sm:size-auto sm:min-h-11 sm:justify-start sm:rounded-lg sm:border sm:border-border sm:px-3"
+    >
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        // 20px beside the date, 16px beside its own word. `Tide.dc.html`
+        // sizes the two the same way — the pocket's marks at 22px, the desk
+        // bar's magnifier at 18px next to "Search anyone, any day" — because
+        // an icon standing alone is the control and an icon labelling a
+        // field is punctuation.
+        className="size-5 sm:size-4"
+      >
+        <circle cx="11" cy="11" r="7" />
+        <path d="m21 21-4.3-4.3" />
+      </svg>
+      <span className="hidden sm:inline">{search}</span>
+      <kbd className="hidden rounded border border-border bg-surface-sunken px-1.5 text-xs font-semibold text-muted sm:inline">
+        ⌘K
+      </kbd>
+    </button>
   );
 }

@@ -301,6 +301,8 @@ the instrument line's figures roll as a check-in lands, the sinking row's neighb
 
 ### The public schedule — `/s/[shopSlug]`
 
+**Extended 2026-10-12** (UX review 2026-10-11, items 11 and 12). The board's last month no longer reads as the shop's last month: under it, each open-ended public run says it keeps going in its own cadence words ("Saturday Two-Tank runs every Saturday. Later dates open as the season goes.") and the date request stands open there, its collapsed row under "More ways" standing down. On an empty board, the off-season card can now name a date the shop typed in Settings ("Back on the water", beside Season start); a scheduled departure always outranks it, and it says nothing once the date has passed (`src/lib/off-season.ts`).
+
 **Widened 2026-10-03.** From `lg` up the next boat with space (and any other band panel) stands in a 20rem column beside the photograph, as ADR 20260827-clearwater-surface-language decision 8 drew it. Stacked, the photograph, its name band and the card filled the first screen at 1280×900 and the schedule started 1,220px down; now it starts on the first screen. A shop with no panel keeps the full-width photograph, and a phone keeps the stack.
 
 **Cut 2026-10-02** ([ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 7): the boat that is out left the identity band with follow-the-boat, and the "Yours" group and "Your card clears this" lines left with the diver's shelf. The entries below that describe them are history.

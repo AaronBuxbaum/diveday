@@ -11,7 +11,7 @@ import { ShopNav, ShopNavSidebar } from "@/components/ShopNav";
 import { SkipLink } from "@/components/SkipLink";
 import { getDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
-import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
+import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { countGearItems } from "@/db/gear";
 import { people, personRoles } from "@/db/schema";
 import { shopBySlugCached } from "@/db/shops-cached";

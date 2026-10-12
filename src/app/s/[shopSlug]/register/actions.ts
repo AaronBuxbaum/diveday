@@ -8,6 +8,7 @@ import { deliverSelfRegistrationWaiver, registerDiverAtShop } from "@/db/self-re
 import { getShopBySlug } from "@/db/shops";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { blankAsAbsent, parseForm } from "@/lib/form-parse";
 import { log } from "@/lib/log";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
@@ -22,20 +23,21 @@ import {
 import { selfRegistrationReleaseDelivery } from "@/lib/self-registration-delivery";
 
 const registrationSchema = z.object({
-  fullName: z.string().trim().min(1).max(120),
-  email: z.email().max(200).optional(),
-  phone: z.string().trim().max(30).optional(),
-  agency: z.enum(SELF_DECLARED_AGENCIES).optional(),
-  level: z.enum(SELF_DECLARED_LEVELS).optional(),
-  identifier: z.string().trim().max(120).optional(),
+  // Blank reads as absent, and a name is required.
+  fullName: z.preprocess((value) => value || undefined, z.string().trim().min(1).max(120)),
+  email: blankAsAbsent(z.email().max(200)),
+  phone: blankAsAbsent(z.string().trim().max(30)),
+  agency: blankAsAbsent(z.enum(SELF_DECLARED_AGENCIES)),
+  level: blankAsAbsent(z.enum(SELF_DECLARED_LEVELS)),
+  identifier: blankAsAbsent(z.string().trim().max(120)),
   // The fit forms' own cap, imported rather than restated: these three sizes
   // land in `rental_fit_profiles` (`registerDiverAtShop`), and every later
   // reader of those columns caps at `RENTAL_FIT_TEXT_LIMITS.size` and re-posts
   // what is stored — so a wider bound here would store a size the diver's own
   // gear form could not save back (issue #1754).
-  wetsuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
-  bootSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
-  finSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  wetsuitSize: blankAsAbsent(z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size)),
+  bootSize: blankAsAbsent(z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size)),
+  finSize: blankAsAbsent(z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size)),
 });
 
 export type { SelfRegistrationFormState };
@@ -98,18 +100,8 @@ export async function registerAtShopAction(
     return { error: t("common.rateLimited") };
   }
 
-  const parsed = registrationSchema.safeParse({
-    fullName: formData.get("fullName") || undefined,
-    email: formData.get("email") || undefined,
-    phone: formData.get("phone") || undefined,
-    agency: formData.get("agency") || undefined,
-    level: formData.get("level") || undefined,
-    identifier: formData.get("identifier") || undefined,
-    wetsuitSize: formData.get("wetsuitSize") || undefined,
-    bootSize: formData.get("bootSize") || undefined,
-    finSize: formData.get("finSize") || undefined,
-  });
-  if (!parsed.success) return { error: t("register.invalid") };
+  const parsed = parseForm(registrationSchema, formData);
+  if (!parsed.ok) return { error: t("register.invalid") };
   if (!hasContactPath(parsed.data)) return { error: t("register.contactRequired") };
 
   const db = await getDb();

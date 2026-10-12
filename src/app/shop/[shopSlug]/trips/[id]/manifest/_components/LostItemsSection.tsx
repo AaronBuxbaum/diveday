@@ -1,0 +1,53 @@
+import { lostItemRowAction, recordLostItemAction } from "@/app/actions/lost-items";
+import { LostItemForm } from "@/components/lost-found/LostItemForm";
+import { LostItemRow } from "@/components/lost-found/LostItemRow";
+import { lostItemFormCopy, lostItemRowCopy } from "@/components/lost-found/lost-found-copy";
+import { SectionCard } from "@/components/ui/card";
+import { getDb } from "@/db/client";
+import { listTripLostItems } from "@/db/lost-items";
+import type { StaffTranslator } from "@/i18n/staff-messages";
+
+/**
+ * **Left aboard** (batch 4, J2), on the Boat tab: what the crew found after
+ * the departure, and the form to add to it. Drawn once the boat has sailed,
+ * or whenever something is already recorded.
+ */
+export async function LostItemsSection({
+  t,
+  shopId,
+  tripId,
+  sailed,
+  seats,
+}: {
+  t: StaffTranslator;
+  shopId: string;
+  tripId: string;
+  sailed: boolean;
+  seats: { bookingId: string; name: string }[];
+}) {
+  const items = await listTripLostItems(await getDb(), shopId, tripId);
+  if (!sailed && items.length === 0) return null;
+  const rowAction = lostItemRowAction.bind(null, tripId);
+  const rowCopy = lostItemRowCopy(t);
+  return (
+    <SectionCard
+      id="found-aboard"
+      className="scroll-mt-24"
+      title={t("desk.lostFound.heading")}
+      description={t("desk.lostFound.lead")}
+    >
+      {items.length > 0 ? (
+        <ul className="mb-4 divide-y divide-border">
+          {items.map((item) => (
+            <LostItemRow key={item.id} item={item} action={rowAction} copy={rowCopy} />
+          ))}
+        </ul>
+      ) : null}
+      <LostItemForm
+        action={recordLostItemAction.bind(null, tripId)}
+        seats={seats}
+        copy={lostItemFormCopy(t)}
+      />
+    </SectionCard>
+  );
+}

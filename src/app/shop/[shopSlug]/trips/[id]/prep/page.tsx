@@ -14,7 +14,7 @@ import { PREP_SECTION_ID, scopedId } from "@/lib/element-id";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
-import { tripPhaseOf } from "@/lib/trip-phase";
+import { departureStage } from "@/lib/trip-phase";
 import { uuidParam } from "@/lib/uuid";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
 import { TripStageBadge, TripTabs } from "../_components/TripTabs";
@@ -60,6 +60,8 @@ export default async function TripPrepPage({
   params: Promise<{ shopSlug: string; id: string }>;
   searchParams: Promise<{
     notice?: string;
+    /** The number a counted gear notice names (`noticeCountParam`). */
+    count?: string;
     /** Which grouping; anything unrecognised reads as the by-item default. */
     group?: string;
     /**
@@ -73,7 +75,7 @@ export default async function TripPrepPage({
   }>;
 }) {
   const { shopSlug, id: tripId } = await params;
-  const { notice, group, idPrefix: requestedIdPrefix } = await searchParams;
+  const { notice, count, group, idPrefix: requestedIdPrefix } = await searchParams;
   const idPrefix = uuidParam(requestedIdPrefix ?? "") ?? undefined;
   const grouping: PrepGrouping = isPrepGrouping(group) ? group : "item";
   // An unparseable id names no row. Guarded here rather than in the query
@@ -92,7 +94,8 @@ export default async function TripPrepPage({
   if (!prep) notFound();
   const { trip } = prep;
   const now = nowDate();
-  const phase = tripPhaseOf({
+  // The crew's word for the header chip, and whether the departure is home.
+  const { shown: shownStage, finished } = departureStage({
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     now,
@@ -103,7 +106,7 @@ export default async function TripPrepPage({
 
   return (
     <>
-      <FlashParams params={["notice"]} />
+      <FlashParams params={["notice", "count"]} />
       <TripPageHeader
         boardHref={shopPath(shopSlug, "schedule", "board")}
         backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
@@ -112,9 +115,10 @@ export default async function TripPrepPage({
         timeZone={shop.timezone}
         badge={
           <>
-            <TripStageBadge phase={phase} copy={tripTabsCopy(t)} />
+            <TripStageBadge stage={shownStage?.stage ?? null} copy={tripTabsCopy(t)} />
             <TripCapacityBadge
               trip={trip}
+              finished={finished}
               cancelledLabel={t("trips.detail.cancelledBadge")}
               t={t}
             />
@@ -133,6 +137,7 @@ export default async function TripPrepPage({
           tripId={tripId}
           rentalItems={shop.rentalItems}
           notice={notice}
+          noticeCount={count}
           grouping={grouping}
           cancelled={trip.status === "cancelled"}
           groupPath={shopPath(shopSlug, "trips", tripId, "prep")}

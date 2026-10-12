@@ -12,9 +12,10 @@ import {
   verifiedCancelNotice,
 } from "@/app/ready/[token]/_components/cancel-notices";
 import { DayOfDetails } from "@/app/ready/[token]/_components/DayOfDetails";
-import { ExpiredLink } from "@/app/ready/[token]/_components/ExpiredLink";
+import { ExpiredLink, UnavailableReadyLink } from "@/app/ready/[token]/_components/ExpiredLink";
 import { PartySection } from "@/app/ready/[token]/_components/PartySection";
 import { payStepLines } from "@/app/ready/[token]/_components/pay-step-lines";
+import { ReadyBookedPage, ReadyMastheadMeta } from "@/app/ready/[token]/_components/ReadyMasthead";
 import { ReadyOfflineCopy } from "@/app/ready/[token]/_components/ReadyOfflineCopy";
 import { ReadyThreadBodySkeleton } from "@/app/ready/[token]/_components/ReadyThreadBodySkeleton";
 import { RunningLate } from "@/app/ready/[token]/_components/RunningLate";
@@ -33,13 +34,12 @@ import {
 } from "@/app/recap/[token]/actions";
 import { PackingSection } from "@/app/s/[shopSlug]/trips/[id]/_components/PackingSection";
 import { RentalFitForm } from "@/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm";
-import { TripActions } from "@/app/s/[shopSlug]/trips/[id]/_components/TripActions";
 import { TripCrewLine } from "@/app/s/[shopSlug]/trips/[id]/_components/TripCrewLine";
 import { TripTerms } from "@/app/s/[shopSlug]/trips/[id]/_components/TripTerms";
 import { type DoorGlyphId, EntryDone } from "@/components/account/EntryShell";
-import { EarnedMoment } from "@/components/EarnedMoment";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { FlashParams } from "@/components/FlashParams";
+import { LogEntryPreview } from "@/components/LogEntryPreview";
 import { RecapWaitingCard } from "@/components/RecapWaitingCard";
 import { RememberBooker } from "@/components/RememberBooker";
 import { ShopNotice } from "@/components/ShopPageHeader";
@@ -52,19 +52,18 @@ import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import {
   resolveRevokedBookingCapability,
   staleBookingCapabilityForToken,
   verifyBookingCapability,
 } from "@/db/booking-capabilities";
 import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
-import { getDb } from "@/db/client";
+import { type AppDb, getDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
 import { countSpendableDives } from "@/db/dive-packages";
 import { departureRollCallForBooking } from "@/db/manifests";
 import { getBookingPayment } from "@/db/payments";
-import { getReadyPageData } from "@/db/ready";
+import { getBookedCard, getReadyPageData } from "@/db/ready";
 import { departureAfterLateBoarding, getRecapPageState } from "@/db/recap";
 import { certificationAgency, certificationLevel, type DiveSpecialty } from "@/db/schema";
 import { issuePartySeatClaims } from "@/db/seat-claims";
@@ -83,27 +82,20 @@ import {
 } from "@/i18n/readiness-labels";
 import { checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
-import { THREAD_STEP_STATE_KEYS, THREAD_STEP_TITLE_KEYS } from "@/i18n/thread-labels";
+import {
+  THREAD_STEP_STATE_KEYS,
+  THREAD_STEP_TITLE_KEYS,
+  threadNextKey,
+} from "@/i18n/thread-labels";
 import { claimLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { seatListPriceCents } from "@/lib/deposits";
-import {
-  formatMoneyCents,
-  formatRelativeDay,
-  formatShortDate,
-  formatTime,
-  formatTimeRangeTz,
-} from "@/lib/format";
+import { formatMoneyCents, formatShortDate, formatTime } from "@/lib/format";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { seatRentalItems } from "@/lib/participant-types";
-import {
-  publicSchedulePath,
-  publicTripArrivalCardPath,
-  publicTripCalendarPath,
-  publicTripPath,
-} from "@/lib/public-routes";
+import { publicSchedulePath, publicTripArrivalCardPath } from "@/lib/public-routes";
 import { combineCertRequirements, type ReadinessBlockerCode } from "@/lib/readiness";
 import { buildDiverChecklist, type DiverChecklistItem } from "@/lib/readiness-summary";
 import { readyCopyKeepUntil } from "@/lib/ready-offline";
@@ -624,7 +616,7 @@ function cancelledNotice(
 // See ADR 20260804-instant-navigation.
 export const instant = true;
 
-export default async function DiverReadinessPage({
+export default async function ReadyTokenPage({
   params,
   searchParams,
 }: {
@@ -759,15 +751,71 @@ export default async function DiverReadinessPage({
     // Nothing resolved at all (garbage, or a token that was never ours). There
     // is no shop to attribute it to without weakening the guarantee the model
     // rests on — a bearer token reveals only its own record.
-    return (
-      <ExpiredLinkCard
-        title={anonT("ready.unavailableHeading")}
-        text={anonT("ready.unavailableBody")}
-      />
-    );
+    return <UnavailableReadyLink t={anonT} />;
   }
-  const { bookingId } = capability;
+  const { bookingId, shopId: capabilityShopId } = capability;
 
+  /**
+   * **The booked card in the first paint** (UX review 2026-10-10, items 7 and
+   * 34). Straight after a booking POST the diver used to land on this route's
+   * whole-page skeleton until the full loader had read the departure's entire
+   * readiness roster, at the one moment they were waiting to be told it
+   * worked. The card needs one row: `getBookedCard` reads it, the card paints,
+   * and everything else streams in under it behind the thread's own skeleton.
+   * Only while the card would be true: a seat or departure already gone, or a
+   * boat already home, falls through to the full path, which owns those cards.
+   * Never gated on readiness: the card claims a seat, never boarding (see
+   * `getBookedCard`), and a held diver reads the hold in the thread under it.
+   */
+  const found = justBooked
+    ? await getBookedCard(db, { shopId: capabilityShopId, bookingId })
+    : null;
+  const card =
+    found && !found.bookingCancelled && !found.departureCancelled && !theBoatIsHome(found.trip)
+      ? found
+      : null;
+  const thread = (
+    <DiverReadinessPage
+      db={db}
+      token={token}
+      bookingId={bookingId}
+      search={{ saved, error, pay, justBooked }}
+      anonT={anonT}
+      underBookedHeader={card !== null}
+    />
+  );
+  if (!card) return thread;
+  return (
+    <ReadyBookedPage card={card} locale={await requestLocale(card.shop.defaultLocale)}>
+      <Suspense fallback={<ReadyThreadBodySkeleton />}>{thread}</Suspense>
+    </ReadyBookedPage>
+  );
+}
+
+/**
+ * The page for a verified booking: the full loader, the terminal cards a
+ * cancelled seat or a finished day gets, and the thread.
+ *
+ * `underBookedHeader` is the booked fast path above: the card, the shell and
+ * the provider have already painted, so this renders only what sits under
+ * them. The fast path declines whenever a terminal card could apply, so in
+ * that mode those branches are reached only by a race with a staff cancel.
+ */
+async function DiverReadinessPage({
+  db,
+  token,
+  bookingId,
+  search: { saved, error, pay, justBooked },
+  anonT,
+  underBookedHeader,
+}: {
+  db: AppDb;
+  token: string;
+  bookingId: string;
+  search: { saved?: string; error?: string; pay?: string; justBooked: boolean };
+  anonT: DiverTranslator;
+  underBookedHeader: boolean;
+}) {
   const data = await getReadyPageData(db, bookingId);
   if (!data) {
     // `ready.unavailableBody`, not the waiver subtree's identical sentence,
@@ -775,50 +823,13 @@ export default async function DiverReadinessPage({
     // nothing on screen moves — but `/waivers` and `/ready` are different
     // surfaces with different rescues, and a reword of one should not be able
     // to reach the other by accident.
-    return (
-      <ExpiredLinkCard
-        title={anonT("ready.unavailableHeading")}
-        text={anonT("ready.unavailableBody")}
-      />
-    );
+    return <UnavailableReadyLink t={anonT} />;
   }
 
   const { detail, shop, person } = data;
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
-  const firstName = data.greetingName.split(" ")[0] || t("ready.namelessFallback");
-  // Every date, time, and relative phrase on this page formats for `locale` —
-  // the *negotiated* one. These four used to pass `shop.defaultLocale`
-  // straight into the formatter, so a diver reading Spanish prose got the
-  // shop's own language for the one thing they most need to read at a glance:
-  // when to show up (AGENTS.md — never hard-code a locale in the UI).
-  const when = formatShortDate(detail.trip.startsAt, locale, detail.shop.timezone);
-  const timeRange = formatTimeRangeTz(
-    detail.trip.startsAt,
-    detail.trip.endsAt,
-    locale,
-    detail.shop.timezone,
-  );
-  // Task 46: the day-before email already tells a diver when to be at the
-  // dock (`dockCallPhrase` in src/lib/notifications/email.ts) — this page
-  // never did, so a diver re-checking it after reading the email couldn't
-  // find the one number that actually matters that morning.
-  const dockCallAt = new Date(detail.trip.startsAt.getTime() - shop.dockCallMinutes * 60_000);
-  const dockCallLine = t("ready.dockCallLine", {
-    time: formatTime(dockCallAt, locale, detail.shop.timezone),
-    dock: t("notifications.common.dockCallMinutes", { minutes: shop.dockCallMinutes }),
-  });
-  // Task 47: "in 2 days" / "tomorrow" / "today" — the page a diver opens the
-  // night before should read at least as rich as the email that sent them
-  // here, and a bare date is easy to misjudge at a glance the way a full
-  // relative phrase isn't.
   const cancelPreviewKey = CANCEL_PREVIEW_KEY[data.cancelPreview];
-  const relativeWhen = formatRelativeDay(
-    detail.trip.startsAt,
-    nowDate(),
-    locale,
-    detail.shop.timezone,
-  );
 
   if (detail.cancelled) {
     // The shop took this seat off the boat and this diver still holds a live
@@ -913,14 +924,6 @@ export default async function DiverReadinessPage({
     saved ? `saved-${saved}` : error ? `error-${error}` : pay ? `pay-${pay}` : undefined,
     READY_NOTICES,
   );
-
-  // Absolute where a canonical origin is configured — this one exists to be
-  // pasted into a group chat — with the relative fallback the claim links above
-  // use, so a missing APP_HOST shares a working same-origin link rather than a
-  // broken one. Never `window.location.href`: see `TripActions`' `shareUrl`.
-  const shareOrigin = publicAppUrl();
-  const tripPath = publicTripPath(shop.slug, data.trip.id);
-  const shareTripUrl = shareOrigin ? new URL(tripPath, `${shareOrigin}/`).toString() : tripPath;
 
   /**
    * The departure is today. From 00:00 in the shop's own zone, not twenty-four
@@ -1171,6 +1174,7 @@ export default async function DiverReadinessPage({
 
     /** "Everyone's set — see you at the dock." The rule is `partyIsAllSet`'s. */
     const ownSignStep = spine.steps.find((step) => step.id === "sign");
+    const currentStep = spine.steps.find((step) => step.id === spine.current);
     const partyAllSet = partyIsAllSet({
       seats: partySeatClaims,
       ownSignSettled: !ownSignStep || ownSignStep.state === "done",
@@ -1362,18 +1366,15 @@ export default async function DiverReadinessPage({
               <BoatStageLine sentence={stageLine.sentence} said={stageLine.said} />
             ) : null}
             <ThreadStatus
-              done={spine.done}
-              doneSuffix={t("thread.stepsDoneSuffix", { total: spine.countable })}
-              settled={spine.done === spine.countable}
-              trailing={
+              lead={
                 spine.done === spine.countable
                   ? t("ready.allSetHeading")
-                  : spine.current
-                    ? t("thread.nextStep", {
-                        step: t(THREAD_STEP_TITLE_KEYS[spine.current]),
-                      })
+                  : currentStep
+                    ? t(threadNextKey(currentStep))
                     : t("thread.withShopHead")
               }
+              progress={t("thread.stepsDone", { done: spine.done, total: spine.countable })}
+              settled={spine.done === spine.countable}
             />
             <ThreadSpine steps={spineSteps} />
           </>
@@ -1457,6 +1458,19 @@ export default async function DiverReadinessPage({
               locale={locale}
             />
           ) : null}
+          {/* Where the day ends up (UX review 2026-10-10, item 35): the recap's
+                  log entry is the keepsake this same link turns into once the
+                  boat is home, and nothing on the page said so. One line and a
+                  miniature of the card, drawn from what is already true. */}
+          <LogEntryPreview
+            line={t("ready.logEntryWaiting")}
+            date={formatShortDate(detail.trip.startsAt, locale, detail.shop.timezone)}
+            siteNames={tripDives
+              .map(({ diveSite }) => diveSite?.name)
+              .filter((name): name is string => Boolean(name))}
+            isCourse={Boolean(fullTrip?.course)}
+            t={t}
+          />
           {/* The diver may release their own seat; moving it is the shop's
                   (ADR 20260821-the-diver-may-release-their-own-seat). It sits last,
                   under everything the page is actually for, and above the shop card
@@ -1497,14 +1511,54 @@ export default async function DiverReadinessPage({
     );
   })();
 
-  return (
+  /**
+   * What sits under the opening: the one-shot flash cleanup, the notice, the
+   * device memory of who just booked, and the thread. Under the booked card
+   * (`underBookedHeader`) this is the whole of what this function renders: the
+   * card, the shell and the provider already painted from the booking's own row.
+   */
+  const below = (
+    <>
+      {/* `booked` among them: the celebration is the moment a seat was taken,
+          not a property of the link. Leaving it in the URL would replay
+          "You've got a seat" every time a diver reopened this page from
+          their history three days later. */}
+      <FlashParams params={["saved", "error", "pay", "booked"]} />
+      {notice ? (
+        <div className="mt-6">
+          <ShopNotice tone={notice.tone} role={noticeRole(notice.tone)}>
+            {t(notice.key)}
+          </ShopNotice>
+        </div>
+      ) : null}
+      {/* Client-only, per-device convenience (task 27): remember who just
+          booked, never on a held seat (#2125), to prefill their next visit. */}
+      {justBooked && person.email && !data.identityHeld ? (
+        <RememberBooker fullName={detail.person.fullName} email={person.email} />
+      ) : null}
+      {/* Keep this page on the phone for the marina with no signal, on both
+          openings (the booked card and the ordinary masthead), and date the
+          copy by the live page itself (security review of layer 8, D2). */}
+      <ReadyOfflineCopy
+        offlineNote={t("ready.offlineCopy")}
+        keepUntil={readyCopyKeepUntil(detail.trip)}
+      />
+      {/* The spine, the arrival card, the packing list and the cancel door
+          read seven more things between them, and arrive behind a body-shaped
+          fallback rather than holding the opening above them (UX audit #5). */}
+      <Suspense fallback={<ReadyThreadBodySkeleton />}>{threadBody}</Suspense>
+    </>
+  );
+
+  return underBookedHeader ? (
+    below
+  ) : (
     // The whole page under the provider, not just the one Client Component
     // that needs it today: a `useTranslations` call in a client child without
     // it throws during the server render and takes the entire page down to a
     // blank 200 (which is exactly how RentalFitForm broke this surface once).
-    // Its namespaces are "rental" (RentalFitForm's own copy), "common"
-    // ("common.optional", shared with several field hints), and "trip"
-    // (TripActions' add-to-calendar and share-with-a-buddy row).
+    // Its namespaces are "rental" (RentalFitForm), "common" (shared field
+    // hints) and "trip" (TripActions), the same list the booked path mounts.
     <DiverIntlProvider
       locale={locale}
       timeZone={detail.shop.timezone}
@@ -1514,96 +1568,24 @@ export default async function DiverReadinessPage({
         shopName={detail.shop.name}
         title={detail.trip.title}
         meta={
-          <>
-            <p className="mt-1 text-base text-muted">
-              {when} · {timeRange} · {relativeWhen}
-            </p>
-            {/* Today. Said once, above the only number that matters this
-                morning — plain ink, no motion: the thread's three coral
-                moments are booked, paperwork done, and welcome home, and
-                "your boat is today" is none of them. */}
-            {diveDay ? (
-              <p className={`mt-2 ${ITEM_TITLE_CLASS}`}>{t("thread.diveDayLine")}</p>
-            ) : null}
-            {/* The one number that matters on the morning of the trip — a
-                shade stronger than the meta line above it, never shouting.
-                When a hotel pickup is scheduled, that time leads ahead of dock
-                call. */}
-            {data.pickupTime ? (
-              <p className="mt-1 text-base font-medium">
-                {t("ready.hotelPickupHeaderLine", {
-                  time: data.pickupTime,
-                  location: data.hotelPickupLocation ?? t("ready.hotelPickupLocationNotSet"),
-                })}
-              </p>
-            ) : (
-              <p className="mt-1 text-base font-medium">{dockCallLine}</p>
-            )}
-            {/* Put the day in a calendar, and send the trip to whoever is
-                coming — the same ghost-weight row, in the same place under the
-                masthead, as the public trip page carries.
-
-                `shareUrl` is the **public trip page**, never this one: this URL
-                *is* a bearer capability that can cancel the booking and move
-                its refund, and "share with a buddy" must not hand that to a
-                group chat (docs/engineering/capability-telemetry-runbook.md). */}
-            <TripActions
-              calendarUrl={publicTripCalendarPath(shop.slug, data.trip.id)}
-              shareUrl={shareTripUrl}
-            />
-            {/* What this page *is*, said once, at the top. Divers arrive here
-                from a booking submit or an emailed link, and both of those
-                read as a confirmation — a thing you look at once and close.
-                This one is not: it is the same URL all week, it is where the
-                cards and the gear answers go, and it restates itself every
-                time the shop moves. */}
-            <p className="mt-3 text-sm text-muted">{t("ready.keepThisPage")}</p>
-            <ReadyOfflineCopy
-              offlineNote={t("ready.offlineCopy")}
-              keepUntil={readyCopyKeepUntil(detail.trip)}
-            />
-          </>
+          <ReadyMastheadMeta
+            facts={{
+              shop: {
+                name: detail.shop.name,
+                slug: shop.slug,
+                timezone: detail.shop.timezone,
+                dockCallMinutes: shop.dockCallMinutes,
+              },
+              trip: detail.trip,
+              pickup: { time: data.pickupTime, location: data.hotelPickupLocation },
+            }}
+            locale={locale}
+            now={nowDate()}
+            t={t}
+          />
         }
       >
-        {/* `booked` among them: the celebration is the moment a seat was taken,
-            not a property of the link. Leaving it in the URL would replay
-            "You're on the boat" every time a diver reopened this page from
-            their history three days later. */}
-        <FlashParams params={["saved", "error", "pay", "booked"]} />
-        {notice ? (
-          <div className="mt-6">
-            <ShopNotice tone={notice.tone} role={noticeRole(notice.tone)}>
-              {t(notice.key)}
-            </ShopNotice>
-          </div>
-        ) : null}
-        {/* Client-only, per-device convenience (task 27): remember who just
-            booked, never on a held seat (#2125), to prefill their next visit. */}
-        {justBooked && person.email && !data.identityHeld ? (
-          <RememberBooker fullName={detail.person.fullName} email={person.email} />
-        ) : null}
-        {/* **The thread's first coral moment, and the only one this page
-            spends** (ADR 20260827-the-divers-thread, decision 6): a seat was
-            just taken. The all-set state is *not* a second one — it settles
-            into the plain success line inside the status head below, because
-            "paperwork done" is the waiver page's moment and one moment does
-            not fire twice. Title only, no body: the header three lines up
-            already says the date, the time and the dock call. */}
-        {justBooked ? (
-          <EarnedMoment
-            className="mt-8"
-            inset="card"
-            title={t("booking.confirmedHeading", { name: firstName })}
-          />
-        ) : null}
-        {/* **The confirmation in the first paint** (UX audit #5). Everything
-            above this line (the masthead, the notice and the "You're on the
-            boat" moment) needs only the verified booking, so it streams the
-            moment that read lands; the spine, the arrival card, the packing
-            list and the cancel door read seven more things between them, and
-            arrive behind a body-shaped fallback instead of holding the whole
-            page on `loading.tsx`'s skeleton. */}
-        <Suspense fallback={<ReadyThreadBodySkeleton />}>{threadBody}</Suspense>
+        {below}
       </ThreadShell>
     </DiverIntlProvider>
   );

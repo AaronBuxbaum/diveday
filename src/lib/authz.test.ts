@@ -17,9 +17,11 @@ import {
   canManageWaiverTemplates,
   canOverrideCertBlock,
   canOverrideGearRequest,
+  canReadEveryIncidentReport,
   canReadMedicalClearanceDocument,
   canReadPrivateRecapPulse,
   canRefund,
+  canReplyToReviews,
   canViewShopActivity,
   canViewShopReports,
   isStaff,
@@ -66,6 +68,8 @@ describe("accountable-role gates (export/import/reports)", () => {
     // physician's letter above, and promised to the diver in as many words —
     // the roster below holds the promise to the role set.
     ["canReadPrivateRecapPulse", canReadPrivateRecapPulse],
+    // K2: the shop's public reply under a review speaks in the shop's name.
+    ["canReplyToReviews", canReplyToReviews],
     // D5: the activity log names each staffer's own work across the team.
     ["canViewShopActivity", canViewShopActivity],
   ] as const;
@@ -136,6 +140,19 @@ describe("canConfigureTrips (H-14 — owner/manager/instructor)", () => {
   it("rejects empty and undefined roles", () => {
     expect(canConfigureTrips([])).toBe(false);
     expect(canConfigureTrips(undefined)).toBe(false);
+  });
+});
+
+describe("canReadEveryIncidentReport (owner or manager)", () => {
+  it("admits owners and managers, and nobody who only works the water", () => {
+    expect(canReadEveryIncidentReport(["owner"])).toBe(true);
+    expect(canReadEveryIncidentReport(["manager"])).toBe(true);
+    expect(canReadEveryIncidentReport(["captain", "manager"])).toBe(true);
+    for (const role of ["instructor", "divemaster", "captain", "crew", "diver"] as const) {
+      expect(canReadEveryIncidentReport([role])).toBe(false);
+    }
+    expect(canReadEveryIncidentReport([])).toBe(false);
+    expect(canReadEveryIncidentReport(undefined)).toBe(false);
   });
 });
 

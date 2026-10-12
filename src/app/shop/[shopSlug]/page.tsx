@@ -10,6 +10,7 @@ import {
   type EveningReading,
   type SpineDraft,
 } from "@/app/shop/[shopSlug]/_components/today/DaySpine";
+import { readDayMoney } from "@/app/shop/[shopSlug]/_components/today/day-money";
 import { FirstBookableCard } from "@/app/shop/[shopSlug]/_components/today/FirstBookableCard";
 import { FirstRunChecklist } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
 import { firstRunChecklistCopy } from "@/app/shop/[shopSlug]/_components/today/first-run-copy";
@@ -35,7 +36,7 @@ import { shopFirstBooking } from "@/db/first-booking";
 import { listFreshFormDrafts } from "@/db/form-drafts";
 import { shopHasEverTakenAnOrder } from "@/db/orders";
 import type { ConfirmRentalFitOutcome } from "@/db/rental-fit";
-import { canPersonViewShopReports, getMonthlyReport } from "@/db/reporting";
+import { canPersonViewShopReports } from "@/db/reporting";
 import { seasonScale } from "@/db/season-scale";
 import { shopByIdCached } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -52,7 +53,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { daySpineSummaryText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
-import { assembleEveningClose, dayTakings } from "@/lib/closeout";
+import { assembleEveningClose } from "@/lib/closeout";
 import { shopCrewTarget } from "@/lib/crew-schedule";
 import { FORM_DRAFT_RESUME_SUFFIX } from "@/lib/form-drafts";
 import {
@@ -67,7 +68,6 @@ import { publicAppUrl } from "@/lib/notifications";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { recapAutoSendAt } from "@/lib/recap-schedule";
-import { summarizeMonth } from "@/lib/reporting";
 import { seasonStartInstant } from "@/lib/season";
 import { requireStaffSession } from "@/lib/session";
 import {
@@ -79,14 +79,12 @@ import {
 } from "@/lib/staff-notices";
 import {
   assembleDaySpine,
-  type DayStation,
   factOfScaleFor,
-  pressingRows,
+  readNeedsYou,
   roleLensFor,
   spineIsQuiet,
   spineJobCount,
 } from "@/lib/today";
-import { hasSailed } from "@/lib/trips";
 import { shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { AUTH_NOTICES } from "./_components/auth-notices";
 import {
@@ -390,23 +388,9 @@ async function TodayBody({
   // gate is checked against the database rather than the session's roles so a demotion takes effect
   // at once, and resolved once here rather than per station.
   //
-  // **What today made** — the evening's one money reading (issue #1930; ADR 20260919-one-idea,
-  // decision I · Tide: "money is what the day made"). It renders above the closing block and inside
-  // nothing; `DayTakings.tsx` carries the placement and its decision.
-  //
-  // **The month's own derivation, over the day's bounds.** `getMonthlyReport` is window-shaped —
-  // nothing in it is month-specific but its name — and it anchors every figure to `trips.startsAt`,
-  // so the day is the same query with `shopDayBounds` in place of `shopMonthBounds`. That is
-  // deliberate rather than convenient: a second derivation would let tonight's figure and the same
-  // day inside `/reports` disagree, and which of them a shop then believed would be a coin toss.
-  // `reporting.test.ts` pins the two together by summing the days of a month against the month
-  // itself.
-  //
-  // **Gated before it is read.** `canReadShopMoney` is the live role read resolved in the first
-  // wave, so a reader who may not have the number never causes the query that would produce it —
-  // and the whole thing is skipped until the day is closing, so the ordinary morning render pays
-  // nothing for it.
-  const [work, tomorrowDepartures, [headCountCloses, canOpenLog], sailedBefore, dayMonthReport] =
+  // **The day's money** (`readDayMoney`): what today made, gated on `canReadShopMoney` (the live
+  // role read of the first wave) and the day closing; and the tips on the reader's own boats.
+  const [work, tomorrowDepartures, [headCountCloses, canOpenLog], sailedBefore, dayMoney] =
     await Promise.all([
       getTodayWork(
         db,
@@ -432,19 +416,17 @@ async function TodayBody({
               shop.id,
               eveningClose.stations
                 .filter((station) => station.status === "all_home")
-                .map((station) => station.tripId),
+                .map(({ tripId, crewAccountedFor }) => ({ tripId, crewClosed: crewAccountedFor })),
             ),
             canPersonExportIncidentRecord(db, shop.id, session.user.personId),
           ])
         : ([new Map(), false] as [Map<string, { closedAt: Date; closedBy: string }>, boolean]),
       // The once-ever wording, asked for only in the moment it could apply.
       eveningClose.allHome ? shopHasSailedBefore(db, shop.id, dayBounds.from) : true,
-      eveningClose.closing && canReadShopMoney
-        ? getMonthlyReport(db, shop.id, dayBounds.from, dayBounds.to, {
-            currency: shop.currency,
-            timeZone: shop.timezone,
-          })
-        : null,
+      readDayMoney(db, shop, dayBounds, {
+        personId: session.user.personId,
+        withTakings: eveningClose.closing && canReadShopMoney,
+      }),
     ]);
   const { actions, withheldCount, nextDeparture, crewedTripIds, crewedSessions } = work;
   const spine = assembleDaySpine(work, { departures: tomorrowDepartures, actions: [] });
@@ -544,15 +526,19 @@ async function TodayBody({
   const blockedToday = work.departures.reduce((sum, departure) => sum + departure.blocked, 0);
   const urgentJobs = actions.filter((action) => action.urgency === "now").length;
   after(() => trackEvent({ name: "blockers_surfaced", count: blockedToday, urgent: urgentJobs }));
-  // The next boat that has not gone yet, carrying the standing one-hour
-  // late-arrival buffer every "has it sailed" question in this app carries.
-  const nextStation: DayStation | undefined = spine.stations.find(
-    (station) => !hasSailed(station.startsAt, now),
-  );
-  // "3 boats today. 2 things need you before the 7:00 AM leaves the dock." The
-  // count is what is still open on the boat the sentence names, because that
-  // is what "before it leaves" means; once every boat is away it counts what
-  // is open across the day instead.
+  // **One reading of Needs you for every role** (UX review 2026-10-10, item 2):
+  // the sentence under the date counts the rows of the reader's own list about
+  // the boat it names, and the spine is handed the same reading for its count
+  // and its all-clear line.
+  const blockedFigures = daySummaryBlocked(evidence, shop.timezone, now, work.blockedAboard);
+  const needsYou = readNeedsYou(spine, {
+    crewedTripIds: lens === "boat" ? crewedTripIds : [],
+    readerPersonId: session.user.personId,
+    drafts: spineDrafts.length,
+    paymentsRow: showPaymentsRow,
+    blocked: blockedFigures.blocked,
+    now,
+  });
   const daySummaryText = showFirstRunChecklist
     ? null
     : daySpineSummaryText(t, {
@@ -560,17 +546,14 @@ async function TodayBody({
         // has three boats on it, and the line under the date says what the day
         // *is* before it says what is left of it.
         boats: dayDepartures.length,
-        ...daySummaryBlocked(evidence, shop.timezone, now, work.blockedAboard),
-        jobs: nextStation
-          ? pressingRows(nextStation.rows)
-          : spine.stations.reduce((total, station) => total + pressingRows(station.rows), 0) +
-            pressingRows(spine.desk),
-        nextDepartureTime: nextStation
-          ? formatTime(nextStation.startsAt, locale, shop.timezone)
+        ...blockedFigures,
+        jobs: needsYou.dueBeforeNext,
+        nextDepartureTime: needsYou.next
+          ? formatTime(needsYou.next.startsAt, locale, shop.timezone)
           : null,
       });
   // What today made: the second wave's last read, gated there.
-  const dayTakingsReading = dayMonthReport ? dayTakings(summarizeMonth(dayMonthReport)) : null;
+  const dayTakingsReading = dayMoney.takings;
   // The whole page is empty at once, and collapses to a heading, one sentence
   // and the one act available — never a spine of empty groups. Every clause of
   // that rule lives with the spine (`spineIsQuiet`), first-run included: the
@@ -717,18 +700,9 @@ async function TodayBody({
           ) : null
         }
       >
-        {/* The day's own line is in the sky above this, so the only sentence
-              left here is first-run's, which carries the address a diver would
-              use and the count of what is left to do — neither of which the
-              band says (issue #711). */}
-        {showFirstRunChecklist ? (
-          <p className="max-w-2xl text-lg text-muted">
-            {t.rich("shopHome.firstRun.pageIntro", {
-              address: (chunks) => <address className="inline not-italic">{chunks}</address>,
-              url: publicScheduleUrl,
-            })}
-          </p>
-        ) : null}
+        {/* First run says nothing here (UX review 2026-10-10, item 29): the
+            checklist below counts what is left, and its share row carries the
+            address as a copy control rather than a URL printed in prose. */}
         {/* A day with no boats answers its follow-up question right here. */}
         {!quietDay && spine.stations.length === 0 && nextDeparture ? (
           <p className="mt-1 max-w-2xl text-muted">
@@ -932,7 +906,9 @@ async function TodayBody({
           showPaymentsRow={showPaymentsRow}
           firstBooking={firstBooking}
           factOfScale={factOfScale}
+          crewTipsCents={dayMoney.crewTipsCents}
           evening={evening}
+          needsYou={needsYou}
           now={now}
           sessions={
             lens === "sessions" ? (

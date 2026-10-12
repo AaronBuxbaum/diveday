@@ -5,6 +5,7 @@ import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import {
   ChoiceRow,
   controlClass,
+  DateField,
   Field,
   FieldActions,
   FieldGrid,
@@ -16,7 +17,7 @@ import { toShopCurrency } from "@/lib/money";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { saveDivingOptionsAction } from "../../boat-actions";
 import { savePassThroughFeeAction } from "../../money-actions";
-import { saveSeasonStartAction } from "../../shop-actions";
+import { saveReopensOnAction, saveSeasonStartAction } from "../../shop-actions";
 import { saveSearchListingAction } from "../../website-actions";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
 import { RARELY_CHANGED_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
@@ -113,6 +114,26 @@ export function RarelyChangedGroup({
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("settings.main.season.submit")}
+              </SubmitButton>
+            </FieldActions>
+          </FieldGrid>
+          {/* The other date a season has: when the boat goes back out. Only
+              the public page's empty board reads it (`src/lib/off-season.ts`),
+              and only while it is still ahead, so it is its own small form
+              rather than a third field the counting would have to ignore. */}
+          <FieldGrid as="form" action={saveReopensOnAction} columns={2} className="mt-6">
+            <Field
+              label={t("settings.main.season.reopensLabel")}
+              description={t("settings.main.season.reopensHint")}
+            >
+              <DateField name="reopensOn" defaultValue={shop.reopensOn ?? ""} />
+            </Field>
+            <FieldActions>
+              <SubmitButton
+                pendingLabel={t("settings.main.season.submitting")}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("settings.main.season.reopensSubmit")}
               </SubmitButton>
             </FieldActions>
           </FieldGrid>

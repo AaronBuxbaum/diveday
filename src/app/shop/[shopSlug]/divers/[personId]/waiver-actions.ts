@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { paperGuardianFrom, paperWaiverRefused } from "@/app/actions/paper-waiver-fields";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import {
@@ -8,10 +9,24 @@ import {
   recordInPersonWaiver,
   recordMedicalEvaluation,
 } from "@/db/waivers";
+import { checkbox, formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import type { PaperWaiverFormState } from "@/lib/paper-waiver-form";
 import { storeMedicalClearanceDocument } from "@/lib/storage";
 import { backTo, requireDiverActionContext, successUrl } from "./action-helpers";
+
+const medicalAttestedField = z.object({ medicalAttested: checkbox() });
+
+/**
+ * A clearance as posted. The outcome is narrowed by the action itself, so a
+ * missing or unknown one is refused before any file is stored.
+ */
+const evaluationForm = z.object({
+  outcome: text(),
+  evaluatedOn: trimmedText(),
+  physicianName: trimmedText(),
+  medicalClearanceDocument: formValue(),
+});
 
 /**
  * "This diver signed on paper", recorded from their own record.
@@ -45,7 +60,7 @@ export async function markWaiverInPersonAction(
     shopId: staff.user.shopId,
     subject: { personId },
     recordedByPersonId: staff.user.personId,
-    medicalAttested: formData.get("medicalAttested") === "on",
+    medicalAttested: readForm(medicalAttestedField, formData).medicalAttested,
     // A minor's paper release names its co-signer (ADR
     // 20260907-guardian-co-signature). Passed as typed; `recordInPersonWaiver`
     // decides from the date of birth on file whether it is needed at all, and
@@ -123,7 +138,8 @@ export async function recordMedicalClearanceAction(
     return;
   }
 
-  const posted = String(formData.get("outcome") ?? "");
+  const evaluation = readForm(evaluationForm, formData);
+  const posted = evaluation.outcome;
   if (posted !== "cleared" && posted !== "not_cleared") {
     // Refused before the upload, like the no-hold check above it: a missing or
     // unrecognised outcome must never store a file, and it must never be
@@ -134,10 +150,10 @@ export async function recordMedicalClearanceAction(
   }
   const outcome: MedicalEvaluationOutcome = posted;
 
-  const evaluatedOn = String(formData.get("evaluatedOn") ?? "").trim();
-  const physicianName = String(formData.get("physicianName") ?? "").trim();
+  const evaluatedOn = evaluation.evaluatedOn;
+  const physicianName = evaluation.physicianName;
 
-  const upload = formData.get("medicalClearanceDocument");
+  const upload = evaluation.medicalClearanceDocument;
   let documentUrl: string | null = null;
   if (upload instanceof File && upload.size > 0) {
     const stored = await storeMedicalClearanceDocument({

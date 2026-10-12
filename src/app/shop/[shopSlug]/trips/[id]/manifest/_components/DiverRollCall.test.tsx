@@ -2,7 +2,12 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { RollCallCheckpoint, RollCallRecord, TripManifest } from "@/lib/manifests";
+import {
+  buddyAlertFor,
+  type RollCallCheckpoint,
+  type RollCallRecord,
+  type TripManifest,
+} from "@/lib/manifests";
 import { DiverRollCall } from "./DiverRollCall";
 import { rollCallScrollMargin } from "./RollCallControls";
 
@@ -208,11 +213,13 @@ describe("the screen worries only with reason (decision 4)", () => {
           rollCall: boardedAt(),
         }),
         // Readiness never gates boarding after a dive — the diver is already
-        // aboard — so a desk blocker is not an alarm at the rail.
+        // aboard — so a desk blocker is not an alarm at the rail. Boarded at
+        // the dock: a row that cannot say so keeps its blocker (#2286).
         diver({
           bookingId: "00000000-0000-4000-8000-000000000003",
           fullName: "Amara Osei",
           readiness: { status: "blocked", blockers: [{ code: "certification_missing" }] },
+          boardedEarlier: true,
         }),
       ],
     });
@@ -456,6 +463,25 @@ describe("asserting aboard over a missing mark is never the cheap direction", ()
     expect(retract).toBeDefined();
   });
 
+  /**
+   * **Both controls wear an opaque fill** (issue #2341). A translucent
+   * `bg-<hue>/N` takes its contrast from whatever is under it, and these are
+   * the two controls read in direct sunlight with someone possibly in the
+   * water.
+   */
+  it("paints both directions on an opaque tint, never a see-through one", () => {
+    renderList({ divers: [diver({ rollCall: notBackAt() })] });
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    const sheet = screen.getByRole("dialog");
+    const backAboard = within(sheet).getByRole("button", { name: /^Mark back aboard/ });
+    const retract = within(sheet).getByRole("button", { name: "Not back aboard" });
+    expect(backAboard.className).toContain("bg-success-tint");
+    expect(retract.className).toContain("bg-danger-tint");
+    for (const control of [backAboard, retract]) {
+      expect(control.className).not.toMatch(/\bbg-[a-z]+\/\d+/);
+    }
+  });
+
   it("still says a diver is blocked at the dock, where readiness does gate boarding", () => {
     const { container } = renderList({
       checkpoint: "departure",
@@ -560,6 +586,31 @@ describe("the earlier-refusal capsule", () => {
     );
   });
 
+  it("gives way to a rider's riding-only warning, which the row and its details both say (H-109)", () => {
+    // A clean release over an older "no", and a later "no" the rider boards
+    // under: both warnings stand, and the riding-only one takes the row.
+    const { container } = renderList({
+      divers: [
+        diver({
+          participantType: "rider",
+          medicalWaiver: refusedBefore,
+          riderMedicalHold: {
+            kind: "not_cleared",
+            at: new Date("2026-09-05T12:00:00.000Z"),
+            evaluatedOn: "2026-09-04",
+          },
+        }),
+      ],
+    });
+    expect(capsuleOf(container)).toHaveTextContent("Physician did not clear: riding only");
+    expect(capsuleOf(container)).not.toHaveTextContent(CAPSULE);
+    expect(container.textContent).toMatch(
+      /A physician did not clear this person on Sep\s4,\s2026: riding only, not in the water/,
+    );
+    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
+    expect(within(printed as HTMLElement).getByText(CAPSULE)).toBeDefined();
+  });
+
   it("is short in Spanish too", () => {
     const { container } = renderList({
       divers: [diver({ medicalWaiver: refusedBefore })],
@@ -580,7 +631,7 @@ describe("the earlier-refusal capsule", () => {
         }),
       ],
     });
-    expect(capsuleOf(split.container)).toHaveTextContent("Someone unaccounted for");
+    expect(capsuleOf(split.container)).toHaveTextContent("Buddy not back aboard");
     expect(capsuleOf(split.container)).not.toHaveTextContent(CAPSULE);
     split.unmount();
 
@@ -613,6 +664,66 @@ describe("the earlier-refusal capsule", () => {
     expect(screen.getAllByText("Minor · age 13").length).toBeGreaterThan(0);
   });
 
+  /**
+   * **A minor with a physician's earlier "no", recorded not back aboard**
+   * (issue #2307). The alarm takes the row on screen and nothing sits beside
+   * it: no refusal capsule and no minor capsule. The facts still reach the
+   * reader: the age in the person's own panel, and on paper the refusal
+   * sentence with the minor flag beside it.
+   */
+  it("gives a not-back minor's refusal no capsule on screen, the age in the panel, and the sentence on paper", () => {
+    const { container } = renderList({
+      divers: [
+        diver({
+          medicalWaiver: refusedBefore,
+          age: 13,
+          minor: true,
+          boardedEarlier: true,
+          rollCall: notBackAt(),
+        }),
+      ],
+    });
+    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
+    if (!printed) throw new Error("no printed block");
+    const onScreen = (text: string | RegExp) =>
+      screen.queryAllByText(text).filter((element) => !printed.contains(element));
+    expect(capsuleOf(container)).toBeNull();
+    expect(onScreen(CAPSULE)).toHaveLength(0);
+    expect(onScreen(/Minor/)).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    expect(within(screen.getByRole("dialog")).getByText("Minor · age 13")).toBeDefined();
+
+    expect(printed).toHaveTextContent(
+      /A physician did not clear this person on .* \(earlier waiver\)/,
+    );
+    expect(printed).toHaveTextContent(CAPSULE);
+    expect(printed).toHaveTextContent("Minor · age 13");
+  });
+
+  /**
+   * **What paper restates is decided by the capsule the row actually drew**
+   * (issue #2307). A buddy alert with no team to name draws no buddy capsule,
+   * so the refusal takes the row; paper must not then print the refusal a
+   * second time beside the one already on the summary line.
+   */
+  it("prints the refusal once when a teamless buddy alert gives it the row", () => {
+    const { container } = renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          medicalWaiver: refusedBefore,
+          buddyAlert: "separated_dock",
+          buddyTeam: null,
+          rollCall: boardedAt(),
+        }),
+      ],
+    });
+    expect(capsuleOf(container)).toHaveTextContent(CAPSULE);
+    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
+    expect(within(printed as HTMLElement).queryAllByText(CAPSULE)).toHaveLength(0);
+  });
+
   it("dates the refusal by the physician's evaluation, with the year", () => {
     const evaluated = {
       ...refusedBefore,
@@ -623,7 +734,7 @@ describe("the earlier-refusal capsule", () => {
       },
     } as TripManifest["divers"][number]["medicalWaiver"];
     const { container } = renderList({ divers: [diver({ medicalWaiver: evaluated })] });
-    expect(container.textContent).toMatch(/did not clear this diver on Aug\s3,\s2026/);
+    expect(container.textContent).toMatch(/did not clear this person on Aug\s3,\s2026/);
   });
 });
 
@@ -668,6 +779,60 @@ describe("an unanswered referral's warning", () => {
     ).toBeGreaterThanOrEqual(1);
   });
 
+  it("links the earlier refusal to its record from the on-screen facts, and paper stays unlinked", () => {
+    const refusedBefore = {
+      at: new Date("2026-09-01T12:00:00.000Z"),
+      source: "digital",
+      overriddenReferralAt: null,
+      overriddenReferral: null,
+      overriddenRefusal: {
+        recordId: "w-refused",
+        personId: "p-refused",
+        at: new Date("2026-08-20T12:00:00.000Z"),
+      },
+      clearance: null,
+      guardian: null,
+    } as unknown as TripManifest["divers"][number]["medicalWaiver"];
+    const { container } = renderList({ divers: [diver({ medicalWaiver: refusedBefore })] });
+    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
+    expect(printed).toHaveTextContent(/A physician did not clear this person/);
+    expect(within(printed as HTMLElement).queryAllByRole("link")).toHaveLength(0);
+    expect(screen.queryByRole("link", { name: "View the refusal" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    const links = screen.getAllByRole("link", { name: "View the refusal" });
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/p-refused/waivers/w-refused",
+    );
+    expect(screen.queryByRole("link", { name: "View the referral" })).toBeNull();
+  });
+
+  it("links neither warning on a held seat, whose medical history is the matched person's", () => {
+    renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
+          readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
+          medicalWaiver: {
+            ...referredBefore,
+            overriddenRefusal: {
+              recordId: "w-refused",
+              personId: "p-referred",
+              at: new Date("2026-08-10T12:00:00.000Z"),
+            },
+          } as TripManifest["divers"][number]["medicalWaiver"],
+        }),
+      ],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Maria" }));
+    expect(screen.queryByRole("link", { name: "View the referral" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "View the refusal" })).toBeNull();
+    expect(screen.getByRole("dialog")).not.toHaveTextContent(/physician/);
+  });
+
   it("draws no link for a release with no referral behind it", () => {
     renderList({ divers: [diver()] });
     fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
@@ -683,6 +848,50 @@ describe("an unanswered referral's warning", () => {
  * for, and the head count above already says so. Only a split team after a
  * dive outranks the blocker.
  */
+/**
+ * **The split-team chip names the buddy, on the row of the one aboard** (UX
+ * review 2026-10-10, item 23). It read "Someone not aboard" on the diver who
+ * *was* aboard, which a crew read as that diver missing. The alert belongs on
+ * the boarded diver's row (`buddyAlertFor`), so the words have to say whose
+ * absence it is; the teammate still ashore wears no chip, because their own
+ * row already says they are not aboard.
+ */
+describe("a buddy team split at the dock", () => {
+  it("says the buddy is not aboard yet on the boarded row, and nothing on the ashore one", () => {
+    const team = { teamId: "t-1", others: [] };
+    const aboard = boardedAt();
+    const ashore = undefined;
+    renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          fullName: "Meera Iyer",
+          rollCall: aboard,
+          buddyAlert: buddyAlertFor("departure", aboard, [ashore]),
+          buddyTeam: team,
+        }),
+        diver({
+          bookingId: "00000000-0000-4000-8000-000000000002",
+          fullName: "Ravi Iyer",
+          rollCall: ashore,
+          buddyAlert: buddyAlertFor("departure", ashore, [aboard]),
+          buddyTeam: team,
+        }),
+      ],
+    });
+    const rows = screen.getAllByRole("listitem");
+    const rowOf = (name: string) => {
+      const row = rows.find((item) => within(item).queryByText(name));
+      if (!row) throw new Error(`no row for ${name}`);
+      return row;
+    };
+    expect(within(rowOf("Meera Iyer")).getAllByText("Buddy not aboard yet").length).toBeGreaterThan(
+      0,
+    );
+    expect(within(rowOf("Ravi Iyer")).queryByText(/not aboard yet|Someone/)).toBeNull();
+  });
+});
+
 describe("a blocked diver marked aboard at the dock", () => {
   const blocked: TripManifest["divers"][number]["readiness"] = {
     status: "blocked",
@@ -738,7 +947,7 @@ describe("a blocked diver marked aboard at the dock", () => {
         }),
       ],
     });
-    expect(onScreen("Someone unaccounted for").length).toBeGreaterThan(0);
+    expect(onScreen("Buddy not back aboard").length).toBeGreaterThan(0);
     expect(onScreen("Blocked")).toHaveLength(0);
   });
 });
@@ -784,13 +993,115 @@ describe("the unresolved-referral capsule", () => {
 
 /**
  * **The capsule has the whole row's width** (issue #2008). A Badge never wraps,
- * and the longest capsule ("Someone unaccounted for", "Alguien sin
- * contabilizar") is wider than the name column at 390px, so beside the name it
+ * and the longest capsule ("Buddy not back aboard", "Compañero sin
+ * regresar a bordo") is wider than the name column at 390px, so beside the name it
  * would spill over the caret and the mark. It takes its own line under the
  * row, from the index's edge to the caret's, still inside the name button:
  * the tap target and what the button opens are unchanged. jsdom has no
  * layout, so this pins the structure that gives it the room.
  */
+/**
+ * **A rider boarding under a medical hold, riding only** (H-109). The hold is
+ * never a blocker, so the row's capsule says it: below a desk blocker and a
+ * team that did not come back after a dive, above the minor, depth and
+ * birthday capsules, and at every checkpoint, since a rider back aboard after
+ * a dive is still not to go in the water.
+ */
+describe("the rider's riding-only capsule", () => {
+  const NOT_CLEARED = "Physician did not clear: riding only";
+  const REFERRAL = "Medical referral open: riding only";
+  const notCleared = {
+    kind: "not_cleared",
+    at: new Date("2026-08-20T12:00:00.000Z"),
+    evaluatedOn: "2026-08-19",
+  } as TripManifest["divers"][number]["riderMedicalHold"];
+  const referral = {
+    kind: "referral",
+    at: new Date("2026-08-20T12:00:00.000Z"),
+  } as TripManifest["divers"][number]["riderMedicalHold"];
+  const rider = (overrides: Partial<TripManifest["divers"][number]> = {}) =>
+    diver({
+      participantType: "rider",
+      medicalWaiver: null,
+      riderMedicalHold: notCleared,
+      ...overrides,
+    });
+
+  function capsuleOf(container: HTMLElement) {
+    return container.querySelector(".basis-full");
+  }
+
+  it("says an open referral on the row, and in the dated sentence the details and paper both carry", () => {
+    const { container } = renderList({ divers: [rider({ riderMedicalHold: referral })] });
+    expect(capsuleOf(container)).toHaveTextContent(REFERRAL);
+    const sentence =
+      /Referred to a physician on Aug\s20,\s2026 with no answer on file: riding only, not in the water/;
+    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
+    expect(printed).toHaveTextContent(sentence);
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    expect(within(screen.getByRole("dialog")).getByText(sentence)).toBeDefined();
+  });
+
+  it("yields to Blocked at the dock", () => {
+    const { container } = renderList({
+      checkpoint: "departure",
+      divers: [
+        rider({
+          readiness: { status: "blocked", blockers: [{ code: "certification_missing" }] },
+        }),
+      ],
+    });
+    expect(capsuleOf(container)).toHaveTextContent("Blocked");
+    expect(capsuleOf(container)).not.toHaveTextContent(NOT_CLEARED);
+  });
+
+  it("yields to a team that did not come back after a dive", () => {
+    const { container } = renderList({
+      divers: [
+        rider({
+          buddyAlert: "separated_after_dive",
+          buddyTeam: { teamId: "t-1", others: [] },
+        }),
+      ],
+    });
+    expect(capsuleOf(container)).toHaveTextContent("Buddy not back aboard");
+    expect(capsuleOf(container)).not.toHaveTextContent(NOT_CLEARED);
+  });
+
+  it("outranks the minor, depth and birthday capsules", () => {
+    const { container } = renderList({
+      divers: [
+        rider({
+          age: 13,
+          minor: true,
+          depthAdvisory: {
+            status: "exceeds",
+            limitDepth: 18,
+            siteDepth: 30,
+            unit: "meters",
+            basis: "certification",
+            level: "open_water",
+          },
+          birthday: { status: "today" },
+        } as unknown as Partial<TripManifest["divers"][number]>),
+      ],
+    });
+    expect(capsuleOf(container)).toHaveTextContent(NOT_CLEARED);
+    expect(capsuleOf(container)).not.toHaveTextContent("Minor");
+  });
+
+  it("stays on the row after a dive, for a rider counted aboard", () => {
+    for (const checkpoint of ["after_dive_1", "after_dive_2"] as const) {
+      const { container, unmount } = renderList({
+        checkpoint,
+        divers: [rider({ boardedEarlier: true, rollCall: boardedAt() })],
+      });
+      expect(capsuleOf(container), checkpoint).toHaveTextContent(NOT_CLEARED);
+      unmount();
+    }
+  });
+});
+
 describe("the exception capsule's line", () => {
   function capsuleLine(row: HTMLElement, text: string) {
     const pill = within(row).getByText(text);
@@ -875,6 +1186,65 @@ describe("the welcome word", () => {
     });
     expect(welcomeLine(container, "first time with us")).toBeDefined();
     expect(container.textContent).toContain("Birthday today");
+  });
+});
+
+/**
+ * **"Running late, said 7:42"** (#2319): the diver's own word on the dock row,
+ * so the rail does not call missing someone who said they are on the way.
+ * Quiet text under the name, never a capsule and never in the mark, and gone
+ * the moment the crew board them.
+ */
+describe("a diver who said they are running late", () => {
+  const saidAt = new Date("2026-09-11T11:42:00.000Z"); // 7:42 AM in New York
+  const lateLine = (container: HTMLElement) =>
+    [...container.querySelectorAll<HTMLElement>("span")].find((element) =>
+      element.textContent?.startsWith("Running late"),
+    );
+
+  it("says so, in the shop's zone, on a dock row nobody has called", () => {
+    const { container } = renderList({
+      divers: [diver({ runningLateAt: saidAt })],
+      checkpoint: "departure",
+    });
+    const line = lateLine(container);
+    // `formatTime` keeps "7:42 AM" whole with a no-break space.
+    expect(line?.textContent?.replace(/\s/g, " ")).toBe("Running late, said 7:42 AM");
+    expect(line?.className).toContain("text-muted");
+    expect(line?.className).not.toMatch(/rounded-full|border|text-danger|text-warning/);
+  });
+
+  it("is gone once the diver is boarded", () => {
+    const { container } = renderList({
+      divers: [diver({ runningLateAt: saidAt, rollCall: boardedAt() })],
+      checkpoint: "departure",
+    });
+    expect(lateLine(container)).toBeUndefined();
+  });
+
+  it("is not said after a dive, or on a seat the desk released or checked in", () => {
+    for (const [checkpoint, extra] of [
+      ["after_dive_1", {}],
+      ["departure", { notHere: true }],
+      ["departure", { checkedIn: true }],
+    ] as const) {
+      const { container } = renderList({
+        divers: [diver({ runningLateAt: saidAt, ...extra })],
+        checkpoint,
+      });
+      expect(lateLine(container)).toBeUndefined();
+      cleanup();
+    }
+  });
+
+  it("speaks Spanish on a Spanish manifest", () => {
+    const { container } = renderList({
+      divers: [diver({ runningLateAt: saidAt })],
+      checkpoint: "departure",
+      locale: "es-ES",
+    });
+    expect(lateLine(container)).toBeUndefined();
+    expect(container.textContent).toContain("Llega tarde, avisó a las 7:42");
   });
 });
 
@@ -1091,7 +1461,7 @@ describe("the person panel's spacing", () => {
   });
 
   /**
-   * **The rule under "Resolve blockers on Guests →" sits as far from the link's
+   * **The rule under "Resolve blockers on Divers →" sits as far from the link's
    * words as from the next line's** (pixel-craft class 4, K-362). The link is a
    * 44px target round a 24px line, so about 15px of its box is already air under
    * its words; the rule's `my-3` added 12px more above and 12 below — 27px of
@@ -1333,7 +1703,7 @@ describe("a diver with no earlier boarding, after a dive", () => {
       ],
     });
     const onScreen = screen
-      .queryAllByText("Someone unaccounted for")
+      .queryAllByText("Buddy not back aboard")
       .filter((element) => !element.closest(".hidden.print\\:block"));
     expect(onScreen.length).toBeGreaterThan(0);
   });

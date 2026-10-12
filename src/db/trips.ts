@@ -71,7 +71,7 @@ export {
   type TripGuestsFilters,
   type TripGuestsShop,
 } from "./trips-guests";
-export { liveTrip } from "./trips-live";
+export { liveTrip, notRehearsal } from "./trips-live";
 export {
   cancelDeparturesBelowMinimum,
   listDeparturesAwaitingMinimumDecision,
@@ -156,19 +156,25 @@ export {
   cancelOffCadenceSeriesTrips,
   createTripSeries,
   getLatestSeriesInstance,
+  getSeriesStandingCrew,
   getTripSeriesById,
   getTripSeriesSummary,
   listOffCadenceSeriesTrips,
+  listRunningPublicSeries,
   type NewTripSeries,
   type OffCadenceSeriesTrip,
+  type RunningPublicSeries,
   rollAllSeriesForward,
   rollSeriesForward,
   type SeriesCadencePatch,
   type SeriesCadenceUpdate,
+  type SeriesCancelResult,
+  type SeriesCrewApplyResult,
   type SeriesDetailApplyResult,
   type SeriesRollResult,
   type SeriesSweepResult,
   setSeriesRepeat,
+  setSeriesStandingCrew,
   updateSeriesCadence,
 } from "./trips-series";
 export { loadTripSharedReads, type TripSharedReads } from "./trips-shared-reads";

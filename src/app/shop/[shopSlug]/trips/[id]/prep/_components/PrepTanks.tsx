@@ -65,6 +65,13 @@ export function PrepTanks({ view, showNitrox }: { view: PrepView; showNitrox: bo
             <ShopStat label={t("tripPrep.total")} value={checklist.tanks.total} />
           )}
         </div>
+        {/* What the Nitrox tile counts, beside the tile the crew packs
+            cylinders from: seats that asked and hold a verified card, not
+            cylinders analyzed. The analysis itself is never logged here
+            (dive-domain review of UX item 26). */}
+        {showNitrox ? (
+          <p className="mt-2 text-sm text-muted print:hidden">{t("tripPrep.nitroxCountNote")}</p>
+        ) : null}
         <p className="mt-2 hidden text-base font-semibold tabular-nums print:block">
           {(showNitrox
             ? [
@@ -75,7 +82,6 @@ export function PrepTanks({ view, showNitrox }: { view: PrepView; showNitrox: bo
             : [`${t("tripPrep.total")} ${checklist.tanks.total}`]
           ).join(" · ")}
         </p>
-        <p className="mt-2 text-sm text-muted">{t("tripPrep.noGasAnalysisNote")}</p>
       </section>
 
       {showNitrox && checklist.nitroxBlockers.length > 0 ? (

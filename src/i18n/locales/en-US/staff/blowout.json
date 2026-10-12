@@ -12,6 +12,7 @@
   },
   "record": {
     "title": "Blow-out cascade",
+    "titleRunEnded": "Canceled with its run",
     "calledBy": "Called by {name} · {when}",
     "notified": "Notified",
     "rebooked": "Rebooked",

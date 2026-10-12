@@ -18,6 +18,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { onTheWaterByRollCall } from "./manifests";
 import { activityEvents, bookings, courses, people, trips } from "./schema";
+import { lockSeatDeparture } from "./seat-locks";
 import { departureOpenToDiver } from "./trip-invitations";
 import { getTripWaitlist, pagedUpcomingTripsWithCounts } from "./trips";
 import { liveTrip } from "./trips-live";
@@ -131,6 +132,9 @@ export async function markBookingNoShow(
     const recorder = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
     if (!recorder) return { ok: false, reason: "staff_not_found" };
 
+    // The departure, then the seat (`lockSeatDeparture`).
+    const tripId = await lockSeatDeparture(tx, input.shopId, input.bookingId);
+    if (!tripId) return { ok: false, reason: "not_found" };
     const [seat] = await tx
       .select({
         id: bookings.id,
@@ -143,9 +147,15 @@ export async function markBookingNoShow(
       .from(bookings)
       .innerJoin(trips, and(eq(trips.id, bookings.tripId), liveTrip()))
       .innerJoin(people, eq(people.id, bookings.personId))
-      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.tripId, tripId),
+        ),
+      )
       .limit(1)
-      .for("update");
+      .for("update", { of: [bookings, people] });
     // Another shop's booking id, or one whose departure has been taken off the
     // board, is simply not found — a staff surface must never learn that a row
     // it may not see exists.
@@ -204,9 +214,10 @@ export async function markBookingNoShow(
  * Not a plain status flip, because the release was real: by the time somebody
  * taps Undo the shop may have sold the seat to the diver who was waiting for
  * it, and putting the first one back would overfill the boat. So the seat
- * count re-runs under the trip's own lock — the same `FOR UPDATE` on `trips`
- * that `restoreBooking` and `bookSpot` take — and a seat that is gone refuses
- * rather than quietly oversells.
+ * count re-runs under the trip's own lock — `FOR NO KEY UPDATE`, taken by
+ * `lockSeatDeparture` before the booking (#2324's order), which still
+ * serializes against `restoreBooking` and `bookSpot`'s `FOR UPDATE` — and a
+ * seat that is gone refuses rather than quietly oversells.
  *
  * "Gone" means gone under **both** limits every seat-granting path applies, the
  * same pair `restoreBooking` checks and for the same reason: the trip's own
@@ -249,6 +260,10 @@ export async function undoBookingNoShow(
     const recorder = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
     if (!recorder) return { ok: false, reason: "staff_not_found" };
 
+    // The departure, then the seat (`lockSeatDeparture`): this used to lock
+    // the seat first and deadlock against a participant-type change (#2324).
+    const tripId = await lockSeatDeparture(tx, input.shopId, input.bookingId);
+    if (!tripId) return { ok: false, reason: "not_found" };
     const [seat] = await tx
       .select({
         id: bookings.id,
@@ -259,12 +274,19 @@ export async function undoBookingNoShow(
       })
       .from(bookings)
       .innerJoin(people, eq(people.id, bookings.personId))
-      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.tripId, tripId),
+        ),
+      )
       .limit(1)
-      .for("update");
+      .for("update", { of: [bookings, people] });
     if (!seat) return { ok: false, reason: "not_found" };
     if (seat.status !== "no_show") return { ok: false, reason: "not_marked" };
 
+    // Already locked above; read under that lock.
     const [trip] = await tx
       .select({
         id: trips.id,
@@ -277,8 +299,7 @@ export async function undoBookingNoShow(
       })
       .from(trips)
       .where(and(eq(trips.id, seat.tripId), eq(trips.shopId, input.shopId), liveTrip()))
-      .limit(1)
-      .for("update");
+      .limit(1);
     if (!trip) return { ok: false, reason: "not_found" };
     if (trip.status === "cancelled") return { ok: false, reason: "trip_cancelled" };
 

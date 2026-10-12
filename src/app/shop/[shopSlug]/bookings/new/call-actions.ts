@@ -6,6 +6,7 @@ import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/actions";
 import { recordCourseInquiry } from "@/db/course-inquiries";
 import { discardFormDraft } from "@/db/form-drafts";
 import { isValidCalendarDate } from "@/lib/calendar-date";
+import { blankAsAbsent, formValue, parseForm, readForm, single } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { requireShopSurface } from "@/lib/session";
@@ -36,15 +37,16 @@ const calendarDate = z.string().refine(isValidCalendarDate);
  * apart.
  */
 const callSchema = z.object({
-  fullName: diverNameSchema,
-  email: blankableDiverEmailSchema.optional(),
-  phone: diverPhoneSchema.optional(),
-  tripId: z.uuid().optional(),
-  interest: z.string().trim().max(200).optional(),
-  preferredDate: calendarDate.optional(),
-  divers: z.coerce.number().int().min(1).max(12).optional(),
-  message: z.string().trim().max(1500).optional(),
+  fullName: single(diverNameSchema),
+  email: blankAsAbsent(blankableDiverEmailSchema),
+  phone: blankAsAbsent(diverPhoneSchema),
+  tripId: blankAsAbsent(z.uuid()),
+  interest: blankAsAbsent(z.string().trim().max(200)),
+  preferredDate: blankAsAbsent(calendarDate),
+  divers: blankAsAbsent(z.coerce.number().int().min(1).max(12)),
+  message: blankAsAbsent(z.string().trim().max(1500)),
 });
+const callOutcomeForm = z.object({ outcome: formValue() });
 
 const REFUSAL_NOTICE: Record<CallRefusal, string> = {
   name: "call-name",
@@ -73,21 +75,12 @@ function refuse(shopSlug: string, notice: string, outcome: CallOutcome | null): 
 
 export async function tookACallAction(shopSlug: string, formData: FormData): Promise<void> {
   const { db, shop, session } = await requireShopSurface(shopSlug);
-  const rawOutcome = formData.get("outcome");
+  const rawOutcome = readForm(callOutcomeForm, formData).outcome;
   const outcome = isCallOutcome(rawOutcome) ? rawOutcome : null;
   if (!outcome) refuse(shopSlug, "call-invalid", null);
 
-  const parsed = callSchema.safeParse({
-    fullName: formData.get("fullName"),
-    email: formData.get("email") || undefined,
-    phone: formData.get("phone") || undefined,
-    tripId: formData.get("tripId") || undefined,
-    interest: formData.get("interest") || undefined,
-    preferredDate: formData.get("preferredDate") || undefined,
-    divers: formData.get("divers") || undefined,
-    message: formData.get("message") || undefined,
-  });
-  if (!parsed.success) refuse(shopSlug, "call-invalid", outcome);
+  const parsed = parseForm(callSchema, formData);
+  if (!parsed.ok) refuse(shopSlug, "call-invalid", outcome);
 
   const refusal = callRefusal(outcome, parsed.data);
   if (refusal) refuse(shopSlug, REFUSAL_NOTICE[refusal], outcome);

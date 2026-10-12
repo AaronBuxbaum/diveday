@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  appendOfflineRollCall,
   listOfflineManifests,
   loadOfflineManifest,
   readDiscardedOfflineRecords,
@@ -226,7 +227,9 @@ describe("OfflineManifestView — one column, one text edge", () => {
     // where the list began.
     expect(row).toHaveClass("ring-1", "ring-danger/40");
     const box = screen.getByRole("region", { name: "Crew aboard" });
-    expect(box).toHaveClass("border-danger", "bg-danger/10");
+    // An opaque tint, not a see-through one (dive-domain review of #2341).
+    expect(box).toHaveClass("border-danger", "bg-danger-tint");
+    expect(box.className).not.toMatch(/\bbg-danger\/\d+/);
     expect(box).not.toHaveClass("ring-1");
     expect(box).not.toHaveClass("ring-inset");
   });
@@ -360,6 +363,25 @@ describe("OfflineManifestView — one column, one text edge", () => {
     }
   });
 
+  /**
+   * **The dock copy answers a refused press the way the live page does**
+   * (issue #2328): the same guard, the same cue on the control, the same line.
+   */
+  it("says to tap again with one finger when a palm's press is refused, and records nothing", async () => {
+    await renderTrip(richEnvelope("trip-1"));
+    const mark = within(priyaRow()).getByRole("button", { name: "Mark boarded" });
+    const touch = (type: "pointerDown" | "pointerUp", pointerId: number) =>
+      fireEvent[type](document, { pointerId, pointerType: "touch" });
+    touch("pointerDown", 1);
+    touch("pointerDown", 2);
+    fireEvent.click(mark);
+    touch("pointerUp", 2);
+    touch("pointerUp", 1);
+    expect(mark).toHaveAttribute("data-touch-refused");
+    expect(await screen.findByText("Tap again with one finger.")).toHaveAttribute("role", "status");
+    expect(vi.mocked(appendOfflineRollCall)).not.toHaveBeenCalled();
+  });
+
   // K-594: Spanish paragraphs ended on one word, and "Diego / Alvarez" split.
   it("wraps the notes prettily and never splits a buddy's name", async () => {
     await renderTrip(dressed(richEnvelope("trip-1")));
@@ -388,7 +410,7 @@ describe("OfflineManifestView — the empty panels sit on the panel rung", () =>
     searchParams = new URLSearchParams();
     vi.mocked(listOfflineManifests).mockResolvedValue([]);
     render(<OfflineManifestView />);
-    const hint = await screen.findByText(/open any shop page/);
+    const hint = await screen.findByText(/kept here/);
     expect(hint.parentElement).toHaveClass("rounded-panel");
     expect(hint.parentElement).not.toHaveClass("rounded-3xl");
   });

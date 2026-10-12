@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  CUSTOMER_REGULATOR_SERVICE_MONTHS,
   canMoveWorkOrder,
   customerDueField,
   customerDueFields,
+  isCustomerRegulatorServiceMonths,
   isOpenWorkOrderStatus,
   isWorkOrderOutcome,
   isWorkOrderStatus,
@@ -140,6 +142,58 @@ describe("the next-due date a Work done row is prefilled with", () => {
         performedOn: "2026-09-01",
       }),
     ).toBe("2027-09-01");
+  });
+
+  it("counts a customer's regulator from the shop's own interval, 12 months unless it says 24", () => {
+    const base = {
+      subject: "customer",
+      itemKind: "regulator",
+      careKind: "service",
+      performedOn: "2026-09-01",
+    } as const;
+    expect(suggestCareDueOn(base)).toBe("2027-09-01");
+    expect(suggestCareDueOn({ ...base, customerRegulatorMonths: 12 })).toBe("2027-09-01");
+    expect(suggestCareDueOn({ ...base, customerRegulatorMonths: 24 })).toBe("2028-09-01");
+  });
+
+  it("reads the shop's regulator interval for a customer's regulator only", () => {
+    // A customer's BCD keeps the register's convention.
+    expect(
+      suggestCareDueOn({
+        subject: "customer",
+        itemKind: "bcd",
+        careKind: "service",
+        performedOn,
+        customerRegulatorMonths: 24,
+      }),
+    ).toBe("2027-10-08");
+    // The shop's own regulator never reads it: with no history it borrows the
+    // register's convention, and with history it carries its own clock.
+    expect(
+      suggestCareDueOn({
+        subject: "unit",
+        itemKind: "regulator",
+        careKind: "service",
+        performedOn,
+        customerRegulatorMonths: 24,
+      }),
+    ).toBe("2027-10-08");
+    expect(
+      suggestCareDueOn({
+        subject: "unit",
+        itemKind: "regulator",
+        careKind: "service",
+        performedOn,
+        previous: { servicedOn: "2026-01-15", nextDueOn: "2026-07-15" },
+        customerRegulatorMonths: 24,
+      }),
+    ).toBe("2027-04-08");
+  });
+
+  it("offers a shop two regulator intervals, 12 and 24 months", () => {
+    expect(CUSTOMER_REGULATOR_SERVICE_MONTHS).toEqual([12, 24]);
+    expect(isCustomerRegulatorServiceMonths(24)).toBe(true);
+    expect(isCustomerRegulatorServiceMonths(18)).toBe(false);
   });
 
   it("never suggests a date for a cylinder, customer's or the shop's", () => {

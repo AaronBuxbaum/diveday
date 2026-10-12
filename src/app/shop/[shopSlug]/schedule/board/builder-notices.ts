@@ -25,6 +25,8 @@ export const BUILDER_NOTICE_KEYS: Record<
   "already-sailed": { tone: "warning", key: "schedule.notices.alreadySailed" },
   "has-roster": { tone: "warning", key: "schedule.notices.hasRoster" },
   "capacity-above-boat": { tone: "danger", key: "schedule.notices.capacityAboveBoat" },
+  // A rehearsal is one departure, never a repeating one (ADR 20261012-rehearsal-departures).
+  "rehearsal-repeats": { tone: "danger", key: "schedule.notices.rehearsalRepeats" },
   // H-107: the certificate's limit is a ceiling too.
   "capacity-above-certificate": {
     tone: "danger",

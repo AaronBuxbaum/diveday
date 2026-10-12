@@ -1,4 +1,31 @@
 import { SectionCard } from "@/components/ui/card";
+import type { DiverTranslator } from "@/i18n/messages";
+import { formatCalendarDate } from "@/lib/calendar-date";
+import { formatShortDate } from "@/lib/format";
+import type { OffSeason } from "@/lib/off-season";
+
+/**
+ * The one sentence the card is allowed, already zoned and already worded.
+ *
+ * `formatShortDate` for the departure (a real instant, read in the shop's own
+ * zone, the same words the week rows use). The shop's own typed "back on the
+ * water" date only on an empty board (`offSeason`), as a calendar date with its
+ * year: it can be most of a year away.
+ */
+export function offSeasonLine(
+  t: DiverTranslator,
+  quiet: Pick<OffSeason, "opensAt" | "reopensOn">,
+  locale: string,
+  timeZone: string,
+): string | null {
+  if (quiet.opensAt) {
+    return t("schedule.offSeason.back", { date: formatShortDate(quiet.opensAt, locale, timeZone) });
+  }
+  if (quiet.reopensOn) {
+    return t("schedule.offSeason.back", { date: formatCalendarDate(quiet.reopensOn, locale) });
+  }
+  return null;
+}
 
 /**
  * **The off-season, said out loud** (N-45).

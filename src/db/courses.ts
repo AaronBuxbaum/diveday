@@ -14,7 +14,7 @@ import { type CourseContent, canonicalAgency } from "@/lib/courses";
 import { REFRESHER_TEMPLATE_SLUGS } from "@/lib/re-entry";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
-import { attachStandardCourseForms } from "./course-forms";
+import { attachStandardCourseForms, courseFormsAwaitingTextByCourse } from "./course-forms";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import type { Course } from "./schema";
 import { courses, shops } from "./schema";
@@ -299,6 +299,31 @@ export async function pagedCourses(
     pageSize: paged.pageSize,
     total: paged.total,
   };
+}
+
+/**
+ * **Every course on the roster still waiting on its agency's form wording**,
+ * in the roster's own order (UX review 2026-10-10, item 16). The roster says
+ * it once, above the list, with a door to the first, rather than in amber
+ * under nearly every row: a shop that has not pasted the PDFs yet had a list
+ * it could not read. Shop-wide, never the page's slice, so the count is the
+ * same on every page of the roster and the door can point past it.
+ */
+export async function coursesAwaitingFormText(
+  db: AppDb,
+  shopId: string,
+): Promise<{ id: string; slug: string; title: string }[]> {
+  const roster = await db
+    .select({ id: courses.id, slug: courses.slug, title: courses.title })
+    .from(courses)
+    .where(eq(courses.shopId, shopId))
+    .orderBy(...progressionOrder);
+  const awaiting = await courseFormsAwaitingTextByCourse(
+    db,
+    shopId,
+    roster.map((course) => course.id),
+  );
+  return roster.filter((course) => awaiting.has(course.id));
 }
 
 export async function updateCourse(

@@ -2,7 +2,7 @@ import { expect, READ_ONLY, signedInAs, signedInAsOwner, test } from "./fixtures
 
 /**
  * READ_ONLY holds here: the monthly report is a read of trips that already sailed, and
- * the month picker is a GET form. Nothing on this surface writes.
+ * the month arrows are plain links. Nothing on this surface writes.
  */
 
 // Owner reporting (ADR 20260723-owner-reporting): "how's my month" over data the
@@ -47,25 +47,24 @@ test.describe("owner", () => {
     await expect(page.getByRole("region", { name: "Trips this month" })).toBeVisible();
   });
 
-  test("the month picker jumps straight to a far month", { tag: READ_ONLY }, async ({ page }) => {
-    // The arrows are one month per click, so reaching last spring used to be a
-    // dozen page loads. One month box, applied the moment a month is picked
-    // (UX audit item 22: no "Go" button).
-    await page.goto("/shop/blue-mantis/reports");
-    const box = page.getByLabel("Jump to a month");
-    await expect(box).toHaveAttribute("data-hydrated", "true");
-    await box.selectOption("2026-03");
-
-    await expect(page).toHaveURL(/reports\?month=2026-03$/);
-    await expect(page.getByRole("heading", { level: 2, name: "March 2026" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "This month’s numbers" })).toBeVisible();
+  test("the month sits between its arrows, which are the only way to change it", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
+    // UX review 2026-10-10, item 32: arrows alone, the period between them.
+    await page.goto("/shop/blue-mantis/reports?month=2026-03");
+    const nav = page.getByRole("navigation", { name: "Choose month" });
+    await expect(nav.getByRole("heading", { level: 2, name: "March 2026" })).toBeVisible();
+    await expect(nav.getByRole("combobox")).toHaveCount(0);
+    await nav.getByRole("link", { name: "Next month" }).click();
+    await expect(page).toHaveURL(/reports\?month=2026-04$/);
+    await expect(page.getByRole("heading", { level: 2, name: "April 2026" })).toBeVisible();
   });
 
   test("a month before the shop's first departure is clamped, not rendered as the year 1", {
     tag: READ_ONLY,
   }, async ({ page }) => {
     // `?month=` is hand-editable and bookmarkable. The page clamps to the same
-    // floor the picker's `min` offers, so a nonsense month lands somewhere real.
+    // floor the back arrow stops at, so a nonsense month lands somewhere real.
     await page.goto("/shop/blue-mantis/reports?month=0001-01");
     const heading = page.getByRole("heading", { level: 2 }).first();
     await expect(heading).toHaveText(/\b20\d{2}\b/);
@@ -95,7 +94,7 @@ test.describe("owner", () => {
   test("the shop's very first reportable month has no baseline to compare against", {
     tag: READ_ONLY,
   }, async ({ page }) => {
-    // The same floor the month picker itself clamps to (see the "clamped, not
+    // The same floor the back arrow stops at (see the "clamped, not
     // rendered as the year 1" test) — nothing precedes it, so nothing can back
     // a comparison, and the absence must stay absent rather than a manufactured
     // "0%" or "—".
@@ -141,6 +140,8 @@ test.describe("owner", () => {
     const body = await response.text();
     expect(body).toContain("Net revenue");
     expect(body).toContain("Crew assigned");
+    // The page's "Money in, by line", from the same query (issue #2305).
+    expect(body).toContain('"Money in, by line",This month');
   });
 
   test("the month and its numbers lead the page, above the departures ledger", {

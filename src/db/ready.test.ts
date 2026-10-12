@@ -1,6 +1,9 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { diverTranslator } from "@/i18n/messages";
+import { DIVER_LOCALES } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
+import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
 import {
   addPartySeat,
@@ -10,11 +13,19 @@ import {
   setBookingLastDived,
 } from "./bookings";
 import { setBookingPayment } from "./payments";
-import { carriedPreparationForDiver, getReadyPageData } from "./ready";
+import {
+  createCertification,
+  getBookingReadiness,
+  reviewCertification,
+  upsertTripRequirements,
+} from "./readiness";
+import { carriedPreparationForDiver, getBookedCard, getReadyPageData } from "./ready";
 import { getRentalFit, toDiverRentalFit } from "./rental-fit";
-import { bookings, people, shops } from "./schema";
+import { bookings, people, shops, waiverRecords } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
+import { completeWaiver } from "./waivers";
+import { issueWaiverRequest } from "./waivers-requests";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -438,5 +449,151 @@ describe("carriedPreparationForDiver", () => {
         hasRentalFit: false,
       }),
     ).toEqual([]);
+  });
+});
+
+/**
+ * **The booked card's own read** (UX review 2026-10-10, item 7). `/ready`
+ * after a booking used to wait on the whole thread's reads, the trip's entire
+ * readiness roster among them, before it could say the seat was taken. This is
+ * the one narrow read the first paint makes instead, so it must agree with the
+ * full loader on every fact the masthead prints.
+ */
+describe("getBookedCard", () => {
+  it("states the masthead's facts exactly as the full loader does", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    const card = await getBookedCard(db, { shopId: shop.id, bookingId });
+    const data = await getReadyPageData(db, bookingId);
+    if (!card || !data) throw new Error("expected both reads to resolve");
+    expect(card.trip).toEqual({
+      id: data.detail.trip.id,
+      title: data.detail.trip.title,
+      startsAt: data.detail.trip.startsAt,
+      endsAt: data.detail.trip.endsAt,
+    });
+    expect(card.shop).toMatchObject({
+      name: data.detail.shop.name,
+      slug: data.shop.slug,
+      timezone: data.detail.shop.timezone,
+      defaultLocale: data.shop.defaultLocale,
+      dockCallMinutes: data.shop.dockCallMinutes,
+    });
+    expect(card.greetingName).toBe(data.greetingName);
+    expect(card.greetingName).toBe("Nora Quinn");
+    expect(card.pickup).toEqual({
+      time: data.pickupTime,
+      location: data.hotelPickupLocation,
+    });
+    expect(card.bookingCancelled).toBe(false);
+    expect(card.departureCancelled).toBe(false);
+  });
+
+  it("says when the seat or the departure is gone, so the page can decline the fast path", async () => {
+    const { db, shop, open, bookingId } = await unpaidBooking();
+    await cancelBooking(db, shop.id, bookingId);
+    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.bookingCancelled).toBe(true);
+    await setTripStatus(db, shop.id, open.id, "cancelled");
+    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.departureCancelled).toBe(
+      true,
+    );
+  });
+
+  it("greets a held identity by the name it was booked as, never the matched record's", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "N. Q." })
+      .where(eq(bookings.id, bookingId));
+    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.greetingName).toBe("N. Q.");
+  });
+
+  /**
+   * **The card is a seat claim, never a boarding claim** (dive-domain review,
+   * 2026-10-12). The fast path paints it from this one row and deliberately
+   * reads no readiness, so a diver held for medical review or short a
+   * certification level gets it too, with the hold in the thread directly
+   * under it. The heading it greets them with must therefore be true of every
+   * live booking: "You've got a seat", not "You're on the boat".
+   */
+  it("still resolves for a medical_review or certification_insufficient booking, and its heading claims only the seat", async () => {
+    const { db, shop, open, bookingId } = await unpaidBooking();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
+    if (!issued.ok) throw new Error(`waiver issue failed: ${issued.reason}`);
+    const signed = await completeWaiver(db, issued.token, {
+      signerName: "Nora Quinn",
+      agreed: true,
+      medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
+    });
+    if (!signed.ok) throw new Error("waiver completion failed");
+    await db
+      .update(waiverRecords)
+      .set({ status: "medical_review" })
+      .where(eq(waiverRecords.bookingId, bookingId));
+    await upsertTripRequirements(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      requiresWaiver: true,
+      minimumCertificationLevel: "rescue",
+      requiredSpecialties: [],
+      requiresNitrox: false,
+      requiresPayment: false,
+    });
+    const [nora] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    if (!nora) throw new Error("booking row missing");
+    const lowerCard = await createCertification(db, {
+      shopId: shop.id,
+      personId: nora.personId,
+      agency: "padi",
+      level: "open_water",
+      identifier: "PADI-OW-SEAT-CLAIM",
+    });
+    if (!lowerCard) throw new Error("expected certification to insert");
+    await reviewCertification(db, {
+      shopId: shop.id,
+      certificationId: lowerCard.id,
+      status: "verified",
+    });
+
+    const readiness = await getBookingReadiness(db, shop.id, bookingId);
+    expect(readiness?.status).toBe("blocked");
+    expect(readiness?.blockers).toContainEqual(expect.objectContaining({ code: "medical_review" }));
+    expect(readiness?.blockers).toContainEqual(
+      expect.objectContaining({ code: "certification_insufficient" }),
+    );
+
+    const card = await getBookedCard(db, { shopId: shop.id, bookingId });
+    expect(card?.bookingCancelled).toBe(false);
+    for (const locale of DIVER_LOCALES) {
+      const heading = diverTranslator(locale)("booking.confirmedHeading", {
+        name: card?.greetingName.split(" ")[0] ?? "",
+      });
+      expect(heading, locale).not.toMatch(/on the boat|a bordo|aboard/i);
+    }
+    expect(diverTranslator("en-US")("booking.confirmedHeading", { name: "Nora" })).toBe(
+      "You’ve got a seat, Nora.",
+    );
+    expect(diverTranslator("es-ES")("booking.confirmedHeading", { name: "Nora" })).toBe(
+      "Tu plaza está reservada, Nora.",
+    );
+  });
+
+  it("resolves nothing for a booking that does not exist", async () => {
+    const { db, shop } = await unpaidBooking();
+    expect(
+      await getBookedCard(db, {
+        shopId: shop.id,
+        bookingId: "00000000-0000-4000-8000-000000000000",
+      }),
+    ).toBeNull();
+  });
+
+  it("resolves nothing for a booking under another shop, whatever id the caller holds", async () => {
+    const { db, bookingId } = await unpaidBooking();
+    expect(
+      await getBookedCard(db, { shopId: "00000000-0000-4000-8000-000000000000", bookingId }),
+    ).toBeNull();
   });
 });

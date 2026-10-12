@@ -3,7 +3,7 @@ import { shopDayBounds } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import { bookings, people, trips } from "./schema";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * **The season's scale, as three facts** — ADR 20260904-reef-all-the-way-down,
@@ -62,6 +62,7 @@ export async function seasonScale(
     eq(bookings.shopId, shopId),
     inArray(bookings.status, [...LIVE_BOOKING_STATUSES]),
     liveTrip(),
+    notRehearsal(),
   );
 
   const [before, today, earliest] = await queryAll(db, [
@@ -69,6 +70,7 @@ export async function seasonScale(
       db
         .select({ divers: countDistinct(bookings.personId) })
         .from(bookings)
+        // diveday:allow-rehearsal: `seatIsLive` carries the filter.
         .innerJoin(trips, eq(bookings.tripId, trips.id))
         .where(and(seatIsLive, gte(trips.startsAt, seasonStart), lt(trips.startsAt, from))),
     () =>
@@ -87,11 +89,13 @@ export async function seasonScale(
               and earlier.shop_id = ${shopId}
               and earlier.status in ('booked', 'checked_in')
               and earlier_trip.deleted_at is null
+              and not earlier_trip.is_rehearsal
               and earlier_trip.starts_at >= ${seasonStart}
               and earlier_trip.starts_at < ${from}
           )`,
         })
         .from(bookings)
+        // diveday:allow-rehearsal: `seatIsLive` carries the filter.
         .innerJoin(trips, eq(bookings.tripId, trips.id))
         .innerJoin(people, eq(bookings.personId, people.id))
         .where(and(seatIsLive, gte(trips.startsAt, from), lt(trips.startsAt, to)))
@@ -127,6 +131,7 @@ export async function seasonScale(
           and(
             eq(trips.shopId, shopId),
             liveTrip(),
+            notRehearsal(),
             gte(trips.startsAt, seasonStart),
             lt(trips.startsAt, to),
           ),

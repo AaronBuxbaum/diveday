@@ -4,13 +4,13 @@ import { describePostgres, postgresTestDb } from "@/test/postgres";
 import type { AppDb, DbExecutor } from "./client";
 import { shops } from "./schema";
 import {
-  claimWhatsAppWaba,
+  claimWhatsAppNumber,
   connectShopWhatsAppAccount,
-  shopIdForWhatsAppWaba,
+  shopIdForWhatsAppEvent,
 } from "./whatsapp-accounts";
 
 /**
- * The WhatsApp Connect race (issue #1769, H-83), on two real connections.
+ * The WhatsApp Connect race (issues #1769 and #1767, H-83), on two real connections.
  *
  * PGlite is single-connection, so `whatsapp-accounts.test.ts` can show the
  * outcome but not that the *advisory locks* produced it. Here the first
@@ -33,10 +33,10 @@ async function shop(db: AppDb, slug: string) {
   return row.id;
 }
 
-function connectInput(shopId: string, wabaId: string) {
+function connectInput(shopId: string, wabaId: string, phoneNumberId: string) {
   return {
     shopId,
-    phoneNumberId: `${randomBytes(4).readUInt32BE()}`,
+    phoneNumberId,
     accessToken: "EAAG-token",
     templateName: "diveday_courtesy_update",
     templateLanguage: "en_US",
@@ -45,9 +45,12 @@ function connectInput(shopId: string, wabaId: string) {
 }
 
 const wabaName = () => `waba_${randomBytes(4).toString("hex")}`;
+const numberName = () => `${randomBytes(4).readUInt32BE()}`;
+
+type Claim = { shopId: string; wabaId: string; phoneNumberId: string };
 
 /** A claim whose Meta calls finish when the test says so. */
-function heldClaim(db: AppDb, shopId: string, wabaId: string, registered: string[]) {
+function heldClaim(db: AppDb, claim: Claim, registered: string[]) {
   let finish: () => void = () => undefined;
   const metaDone = new Promise<void>((resolve) => {
     finish = resolve;
@@ -56,60 +59,86 @@ function heldClaim(db: AppDb, shopId: string, wabaId: string, registered: string
   const inside = new Promise<void>((resolve) => {
     entered = resolve;
   });
-  const result = claimWhatsAppWaba(db, { shopId, wabaId }, async (tx: DbExecutor) => {
-    registered.push(`${shopId}:${wabaId}`);
+  const result = claimWhatsAppNumber(db, claim, async (tx: DbExecutor) => {
+    registered.push(`${claim.shopId}:${claim.phoneNumberId}`);
     entered();
     await metaDone;
-    return connectShopWhatsAppAccount(tx, connectInput(shopId, wabaId), { key });
+    return connectShopWhatsAppAccount(
+      tx,
+      connectInput(claim.shopId, claim.wabaId, claim.phoneNumberId),
+      { key },
+    );
   });
   return { result, inside, finish };
 }
 
-describePostgres("claimWhatsAppWaba under real concurrency", () => {
-  it("refuses a second shop's Connect on the same WABA at once, without registering", async () => {
+describePostgres("claimWhatsAppNumber under real concurrency", () => {
+  it("refuses a second shop's Connect on the same number at once, without registering", async () => {
     const pg = await postgresTestDb();
     const first = await shop(pg.db, "first");
     const second = await shop(pg.db, "second");
     const wabaId = wabaName();
+    const phoneNumberId = numberName();
     const registered: string[] = [];
 
-    const winner = heldClaim(pg.connect(), first, wabaId, registered);
+    const winner = heldClaim(pg.connect(), { shopId: first, wabaId, phoneNumberId }, registered);
     await winner.inside;
 
-    const loser = await claimWhatsAppWaba(
+    const loser = await claimWhatsAppNumber(
       pg.connect(),
-      { shopId: second, wabaId },
+      { shopId: second, wabaId, phoneNumberId },
       async (tx: DbExecutor) => {
-        registered.push(`${second}:${wabaId}`);
-        return connectShopWhatsAppAccount(tx, connectInput(second, wabaId), { key });
+        registered.push(`${second}:${phoneNumberId}`);
+        return connectShopWhatsAppAccount(tx, connectInput(second, wabaId, phoneNumberId), {
+          key,
+        });
       },
     );
     expect(loser).toEqual({ status: "busy" });
 
     winner.finish();
     expect((await winner.result).status).toBe("claimed");
-    expect(registered).toEqual([`${first}:${wabaId}`]);
-    expect(await shopIdForWhatsAppWaba(pg.db, wabaId)).toBe(first);
+    expect(registered).toEqual([`${first}:${phoneNumberId}`]);
+    expect(await shopIdForWhatsAppEvent(pg.db, { phoneNumberId, wabaId })).toBe(first);
 
     // Pressing Connect again once the first has landed reads its row.
-    const again = await claimWhatsAppWaba(pg.connect(), { shopId: second, wabaId }, async () => {
-      registered.push("again");
-    });
+    const again = await claimWhatsAppNumber(
+      pg.connect(),
+      { shopId: second, wabaId, phoneNumberId },
+      async () => {
+        registered.push("again");
+      },
+    );
     expect(again).toEqual({ status: "held_elsewhere" });
     expect(registered).toHaveLength(1);
+
+    // A number of its own under the same WABA is the chain's ordinary shape (H-83).
+    const ownNumber = numberName();
+    const sibling = await claimWhatsAppNumber(
+      pg.connect(),
+      { shopId: second, wabaId, phoneNumberId: ownNumber },
+      (tx: DbExecutor) =>
+        connectShopWhatsAppAccount(tx, connectInput(second, wabaId, ownNumber), { key }),
+    );
+    expect(sibling.status === "claimed" && sibling.value.status).toBe("connected");
+    expect(await shopIdForWhatsAppEvent(pg.db, { phoneNumberId: ownNumber, wabaId })).toBe(second);
   });
 
-  it("refuses one shop's second Connect on a different WABA while the first is in flight", async () => {
+  it("refuses one shop's second Connect on a different number while the first is in flight", async () => {
     const pg = await postgresTestDb();
     const only = await shop(pg.db, "only");
     const registered: string[] = [];
 
-    const first = heldClaim(pg.connect(), only, wabaName(), registered);
+    const first = heldClaim(
+      pg.connect(),
+      { shopId: only, wabaId: wabaName(), phoneNumberId: numberName() },
+      registered,
+    );
     await first.inside;
 
-    const second = await claimWhatsAppWaba(
+    const second = await claimWhatsAppNumber(
       pg.connect(),
-      { shopId: only, wabaId: wabaName() },
+      { shopId: only, wabaId: wabaName(), phoneNumberId: numberName() },
       async () => {
         registered.push("second");
       },
