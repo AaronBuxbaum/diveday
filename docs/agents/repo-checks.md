@@ -896,7 +896,10 @@ inside that direction are enforced too (ratcheted in `scripts/ratchets.json`): `
 `src/app` imports `drizzle-orm` (a query is a named `src/db` function), and everything outside
 `src/db` reaches the trips modules through the `@/db/trips` barrel. Test files and the e2e fixture
 routes under `src/app/api/test/` are exempt. Inside `src/db`, a module imports the `trips-*` sibling
-it needs rather than the barrel, so the barrel never closes an import cycle.
+it needs rather than the barrel, so the barrel never closes an import cycle. The guard is a hand-written
+import reader on purpose: dependency-cruiser found the same violations, but it cannot parse imports
+with TypeScript 7 and cannot check the feature README or run the ratchet (ADR
+20261012-architecture-guard-stays-hand-written).
 
 #### Read time through the clock
 
