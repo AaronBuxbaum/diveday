@@ -174,6 +174,51 @@ describe("groupRoster", () => {
     expect(groups.hereMeta).toBe(t("checkIn.settledAllBoarded"));
   });
 
+  /**
+   * **A finished departure's tab is its record** (UX review 2026-10-10, item
+   * 10): who the crew boarded and who did not, nothing to clear.
+   */
+  it("in the record, files the boarded as Sailed and everyone else as Didn't sail", () => {
+    const rows = rowsFor([seat("aboard"), seat("ashore"), seat("gone", { status: "no_show" })], {
+      aboard: readiness("ready"),
+      ashore: readiness("blocked"),
+      gone: readiness("ready"),
+    });
+    const groups = groupRoster({
+      t,
+      rows,
+      requiresPayment: true,
+      arrival: undefined,
+      controls: waiverControls(t),
+      record: { sailed: new Set(["aboard", "gone"]) },
+    });
+    expect(ids(groups.sailed)).toEqual(["aboard"]);
+    // A released seat did not sail, whatever a stray tap says.
+    expect(ids(groups.didNotSail)).toEqual(["ashore", "gone"]);
+    expect(groups.unrecorded).toEqual([]);
+    expect(groups.stillToClear).toEqual([]);
+    expect(groups.ready).toEqual([]);
+    expect(groups.blockedCount).toBe(0);
+  });
+
+  it("in the record with no roll call taken, guesses nothing", () => {
+    const rows = rowsFor([seat("a"), seat("gone", { status: "no_show" })], {
+      a: readiness("ready"),
+      gone: readiness("ready"),
+    });
+    const groups = groupRoster({
+      t,
+      rows,
+      requiresPayment: false,
+      arrival: undefined,
+      controls: waiverControls(t),
+      record: { sailed: new Set() },
+    });
+    expect(groups.sailed).toEqual([]);
+    expect(ids(groups.didNotSail)).toEqual(["gone"]);
+    expect(ids(groups.unrecorded)).toEqual(["a"]);
+  });
+
   it("files a released seat as an ordinary seat when the desk is not open", () => {
     const rows = rowsFor([seat("gone", { status: "no_show" })], { gone: readiness("ready") });
     const groups = groupRoster({

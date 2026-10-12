@@ -44,10 +44,10 @@ import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type FormNotice, noticeForForm, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
-import { tripPhaseOf } from "@/lib/trip-phase";
+import { departureStage } from "@/lib/trip-phase";
 import { acceptsNewDivers, isFull } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
-import { buildArrivalDesk } from "./_arrivals/arrival-desk";
+import { diversTabState } from "./_arrivals/departure-record";
 import { DESK_NOTICES } from "./_arrivals/notices";
 import { BlowoutDoors } from "./_components/BlowoutDoors";
 import { ConditionsOutlookSlot, ConditionsSection } from "./_components/ConditionsSection";
@@ -60,7 +60,7 @@ import { DetailsSection } from "./_components/DetailsSection";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
 import { participantTermsRows } from "./_components/ParticipantTermsSection";
 import { PrintTripBundleButton } from "./_components/PrintTripBundleButton";
-import { PulseFacts } from "./_components/PulseFacts";
+import { PulseFacts, shownPulseFacts } from "./_components/PulseFacts";
 import { RequirementsSection } from "./_components/RequirementsSection";
 import {
   recurrenceSummaryText,
@@ -467,7 +467,7 @@ export default async function ManageTripPage({
   const rosterPageNotice = tripNotice && tripNotice.form === "roster" ? tripNotice : undefined;
   const now = nowDate();
   const acceptsDivers = acceptsNewDivers(trip, now);
-  const phase = tripPhaseOf({
+  const { shown: shownStage, finished } = departureStage({
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     now,
@@ -475,26 +475,20 @@ export default async function ManageTripPage({
     stage: stageReading,
     cancelled,
   });
-  // The desk, on the Divers tab of a departure whose arrivals are open; null
-  // otherwise, and the roster is exactly what it is the rest of the week.
-  const desk = showDetails
-    ? null
-    : await buildArrivalDesk({
-        db,
-        shopId: shop.id,
-        shopSlug,
-        tripId,
-        trip,
-        now,
-        locale,
-        timeZone: shop.timezone,
-        t,
-      });
-  // The count leads the desk and says "1 person can't board yet" itself, so the
-  // pulse's door to the same rows stands down while it is on screen.
-  const shownPulseFacts = desk?.arrival.instrument
-    ? pulseFacts.filter((fact) => !fact.href.endsWith("#roster"))
-    : pulseFacts;
+  // The desk while arrivals are open, or a finished departure's record.
+  const { desk, record } = await diversTabState({
+    db,
+    shopId: shop.id,
+    shopSlug,
+    tripId,
+    trip,
+    now,
+    locale,
+    timeZone: shop.timezone,
+    t,
+    onDivers: !showDetails,
+    finished,
+  });
 
   const siteNames = diveSites.sites.map((site) => site.name);
   const planSummary = siteNames.length > 0 ? siteNames.join(" + ") : t("trips.about.noneSet");
@@ -669,9 +663,10 @@ export default async function ManageTripPage({
           timeZone={shop.timezone}
           badge={
             <>
-              <TripStageBadge phase={phase} copy={tabsCopy} />
+              <TripStageBadge stage={shownStage?.stage ?? null} copy={tabsCopy} />
               <TripCapacityBadge
                 trip={trip}
+                finished={finished}
                 cancelledLabel={t("trips.detail.cancelledBadge")}
                 t={t}
               />
@@ -1119,7 +1114,7 @@ export default async function ManageTripPage({
               refreshing: t("checkIn.pullToRefresh.refreshing"),
             }}
           >
-            {pulseNeeded ? (
+            {pulseNeeded && !finished ? (
               <MinimumSeatsBand
                 trip={trip}
                 booked={trip.booked}
@@ -1130,12 +1125,13 @@ export default async function ManageTripPage({
             ) : null}
 
             <PulseFacts
-              facts={shownPulseFacts}
+              facts={shownPulseFacts(pulseFacts, { desk, finished })}
               foldLabel={(count) => t("trips.pulse.toSort", { count })}
             />
 
             <TripRosterContent
               arrival={desk?.arrival}
+              record={record}
               walkInOpen={desk?.walkInOpen}
               acceptsDivers={acceptsDivers}
               guests={guests}

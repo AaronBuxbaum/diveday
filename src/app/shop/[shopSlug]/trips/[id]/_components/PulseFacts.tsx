@@ -70,3 +70,17 @@ export function PulseFacts({
     </div>
   );
 }
+
+/**
+ * The facts the Divers tab shows. None on a finished departure, whose tab is
+ * its record (UX review 2026-10-10, item 10). While the desk's count is on
+ * screen it says "1 person can't board yet" itself, so the pulse's door to
+ * the same rows stands down.
+ */
+export function shownPulseFacts(
+  facts: readonly TripPulseFact[],
+  { desk, finished }: { desk: { arrival: { instrument?: unknown } } | null; finished: boolean },
+): readonly TripPulseFact[] {
+  if (finished) return [];
+  return desk?.arrival.instrument ? facts.filter((fact) => !fact.href.endsWith("#roster")) : facts;
+}

@@ -197,19 +197,20 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   /**
-   * **The stage pill reads the crew's tap before the clock** (ADR
-   * 20261001-logbook, decision 4): a boat the crew says is boarding is Aboard
-   * on Today even before its scheduled hour, and the clock speaks otherwise.
+   * **The stage pill is the crew's word, never the clock's** (UX review
+   * 2026-10-10, item 1): a departure nobody has tapped carries no stage, and
+   * one the crew says is boarding says Boarding — the word the manifest strip
+   * has selected, by the same `boatStageOf`.
    */
-  it("gives each departure its phase, the crew's tap first", async () => {
+  it("gives each departure the crew's stage and nothing the clock made up", async () => {
     const { db, shop } = ctx;
-    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    const departure = before.departures[0];
-    if (!departure) throw new Error("demo departure missing");
-    expect(departure.phase).not.toBeNull();
-
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("demo staff missing");
+    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const untapped = before.departures.find((row) => row.stage === null);
+    const departure = untapped ?? before.departures[0];
+    if (!departure) throw new Error("demo departure missing");
+
     const recorded = await recordTripStage(db, {
       shopId: shop.id,
       tripId: departure.tripId,
@@ -220,7 +221,9 @@ describe("today's work queue (in-memory PGlite)", () => {
     expect(recorded.ok).toBe(true);
 
     const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    expect(after.departures.find((row) => row.tripId === departure.tripId)?.phase).toBe("aboard");
+    expect(after.departures.find((row) => row.tripId === departure.tripId)?.stage?.stage).toBe(
+      "boarding",
+    );
   });
 
   /**

@@ -11,13 +11,7 @@
     "gear": "Gear",
     "details": "Details"
   },
-  "phases": {
-    "label": "Stage",
-    "prep": "Prep",
-    "checkin": "Check-in",
-    "aboard": "Aboard",
-    "back": "Back"
-  },
+  "stageLabel": "Stage",
   "about": {
     "add": "Add",
     "addDiverJump": "Jump to add a diver",
@@ -482,6 +476,9 @@
     "groupCheckedIn": "Checked in",
     "groupNotHere": "Not here",
     "groupStillToClear": "Still to clear",
+    "groupSailed": "Sailed",
+    "groupDidNotSail": "Didn’t sail",
+    "groupNoRollCall": "No roll call taken",
     "groupWaiting": "Waiting for a seat",
     "heading": "Divers",
     "hotelNotSpecified": "Lodging not specified",

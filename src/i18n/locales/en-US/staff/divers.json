@@ -529,7 +529,8 @@
     "viewRefusedRecord": "View signed record",
     "referralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file. Record one, or ask.",
     "viewReferralRecord": "View the referral",
-    "openClearanceDocument": "Open the physician’s evaluation"
+    "openClearanceDocument": "Open the physician’s evaluation",
+    "openSignedRecord": "Open the signed waiver"
   },
   "details": {
     "label": "Contact details",

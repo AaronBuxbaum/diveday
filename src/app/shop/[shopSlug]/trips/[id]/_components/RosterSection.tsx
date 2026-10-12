@@ -77,18 +77,28 @@ export function RosterSection({
 }) {
   const { locale, shopTimezone, booked, capacity, compact = false } = trip;
   const showSummaryHeading = trip.showSummaryHeading ?? true;
-  const { waitingGroup, invitedGroup, addDiverGroup, arrival } = slots;
+  const { waitingGroup, invitedGroup, addDiverGroup, arrival, record } = slots;
   const { roster } = rows;
   const t = staffTranslator(locale);
   const controls = waiverControls(t);
-  const groups = groupRoster({ t, rows, requiresPayment: trip.requiresPayment, arrival, controls });
+  const groups = groupRoster({
+    t,
+    rows,
+    requiresPayment: trip.requiresPayment,
+    arrival,
+    controls,
+    record,
+  });
   const { stillToClear, ready, here, notHere, hereMeta, blockedCount, sharedFacts } = groups;
+  // A record never celebrates a clearance: there was nothing left to clear.
+  const showAllClear = roster.length > 0 && !record;
   const context: RosterRowContext = {
     t,
     trip,
     rows,
     actions,
     arrival,
+    record: Boolean(record),
     sharedAdvisoryTexts: groups.sharedAdvisoryTexts,
     waiverControls: controls,
     paymentStatusCopy: rosterPaymentStatusCopy(t),
@@ -125,12 +135,12 @@ export function RosterSection({
             for why that has to be decided in the browser rather than here.
             Held back on an empty roster: "everyone is cleared" about nobody
             is not a finished thing. */}
-          {roster.length > 0 ? (
+          {showAllClear ? (
             <RosterAllClear blockedCount={blockedCount} label={t("trips.roster.allClear")} />
           ) : null}
         </div>
       ) : null}
-      {!showSummaryHeading && roster.length > 0 ? (
+      {!showSummaryHeading && showAllClear ? (
         <RosterAllClear blockedCount={blockedCount} label={t("trips.roster.allClear")} />
       ) : null}
       {roster.length > 0 || hasTail ? (
@@ -149,6 +159,26 @@ export function RosterSection({
               to exist: a `<Link>` transition does not run the browser's own
               fragment scroll. */}
           <ScrollToHash />
+          {/* The record's groups (UX review 2026-10-10, item 10): empty
+              unless the departure is finished, and then the only ones. */}
+          <RosterSeatGroup
+            label={t("trips.roster.groupSailed")}
+            entries={groups.sailed}
+            settled
+            context={context}
+          />
+          <RosterSeatGroup
+            label={t("trips.roster.groupDidNotSail")}
+            entries={groups.didNotSail}
+            settled={false}
+            context={context}
+          />
+          <RosterSeatGroup
+            label={t("trips.roster.groupNoRollCall")}
+            entries={groups.unrecorded}
+            settled={false}
+            context={context}
+          />
           <RosterSeatGroup
             label={t("trips.roster.groupStillToClear")}
             entries={stillToClear}

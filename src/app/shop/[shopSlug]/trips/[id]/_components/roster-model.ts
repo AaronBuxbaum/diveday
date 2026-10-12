@@ -225,6 +225,14 @@ export type RosterArrival = {
   boarded: ReadonlySet<string>;
 };
 
+/**
+ * **A finished departure's Divers tab is its record** (UX review 2026-10-10,
+ * item 10): once the boat is home there is nothing to clear, check in or sell,
+ * so the list says who sailed and who did not. `sailed` is every booking the
+ * crew boarded at the departure roll call (`listDepartureBoardedBookingIds`).
+ */
+export type RosterRecord = { sailed: ReadonlySet<string> };
+
 /** What the page slots into the ledger beneath the seats. */
 export type RosterSlots = {
   /**
@@ -246,6 +254,8 @@ export type RosterSlots = {
    * roster is exactly what it was.
    */
   arrival?: RosterArrival;
+  /** The departure is finished: the ledger is its record, never the desk. */
+  record?: RosterRecord;
 };
 
 /** Everything the enum holds — for a staffer who may write money off. */
@@ -381,14 +391,17 @@ export function groupRoster({
   requiresPayment,
   arrival,
   controls,
+  record,
 }: {
   t: StaffTranslator;
   rows: Pick<RosterRows, "roster" | "readinessByBooking" | "waiverByBooking">;
   requiresPayment: boolean;
   arrival: RosterArrival | undefined;
   controls: WaiverControls;
+  record?: RosterRecord;
 }) {
   const { roster, readinessByBooking, waiverByBooking } = rows;
+  if (record) return recordGroups(roster, record);
   const WAIVER_CONTROLS = controls;
   // A depth advisory whose sentence renders identically for much of the boat
   // is one fact about the dive plan, not N facts about N divers (principle 9):
@@ -538,6 +551,44 @@ export function groupRoster({
     blockedCount,
     sharedFacts,
     sharedAdvisoryTexts,
+    sailed: [] as RosterEntry[],
+    didNotSail: [] as RosterEntry[],
+    unrecorded: [] as RosterEntry[],
+  };
+}
+
+/**
+ * **The record's groups**: who the crew boarded, who did not sail, and, when
+ * no roll call was taken at all, everyone else under a band that says so
+ * rather than a guess. A released seat (`no_show`) did not sail whatever the
+ * roll call says. Nothing is still to clear, nothing is blocked, and no
+ * shared advisory is said: the dive is over (dive-domain rule: a record never
+ * asks for action).
+ */
+function recordGroups(roster: RosterEntry[], record: RosterRecord) {
+  const boarded = ({ booking }: RosterEntry) =>
+    booking.status !== "no_show" && record.sailed.has(booking.id);
+  const rollCallTaken = roster.some(boarded);
+  const sailed = roster.filter(boarded);
+  const didNotSail = roster.filter(
+    (entry) => !boarded(entry) && (rollCallTaken || entry.booking.status === "no_show"),
+  );
+  const unrecorded = roster.filter(
+    (entry) => !rollCallTaken && !boarded(entry) && entry.booking.status !== "no_show",
+  );
+  return {
+    stillToClear: [] as RosterEntry[],
+    ready: [] as RosterEntry[],
+    here: [] as RosterEntry[],
+    notHere: [] as RosterEntry[],
+    deskWorkOpen: false,
+    hereMeta: undefined as string | undefined,
+    blockedCount: 0,
+    sharedFacts: [] as { sentence: string; count: number }[],
+    sharedAdvisoryTexts: new Set<string>(),
+    sailed,
+    didNotSail,
+    unrecorded,
   };
 }
 

@@ -11,13 +11,7 @@
     "gear": "Equipo",
     "details": "Detalles"
   },
-  "phases": {
-    "label": "Etapa",
-    "prep": "Preparación",
-    "checkin": "Check-in",
-    "aboard": "A bordo",
-    "back": "De vuelta"
-  },
+  "stageLabel": "Etapa",
   "about": {
     "add": "Añadir",
     "addDiverJump": "Ir a añadir un buceador",
@@ -482,6 +476,9 @@
     "groupCheckedIn": "Registrados",
     "groupNotHere": "No vinieron",
     "groupStillToClear": "Pendientes de resolver",
+    "groupSailed": "Zarparon",
+    "groupDidNotSail": "No zarparon",
+    "groupNoRollCall": "Sin pase de lista",
     "groupWaiting": "En espera de plaza",
     "heading": "Buceadores",
     "hotelNotSpecified": "Alojamiento no indicado",

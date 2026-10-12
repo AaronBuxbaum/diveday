@@ -136,6 +136,20 @@ describe("the guests ledger (slice 5d)", () => {
     expect(screen.queryByRole("navigation", { name: /filter/i })).toBeNull();
   });
 
+  /**
+   * **A finished departure's Divers tab is its record** (UX review
+   * 2026-10-10, item 10): "Sailed" and "Didn't sail", never "Still to clear",
+   * "Ready" or a Blocked capsule on a boat that is home.
+   */
+  it("files a finished departure as who sailed and who did not, with nothing to clear", () => {
+    renderRoster({ ...fixtures, record: { sailed: new Set([ready.booking.id]) } });
+    expect(screen.getByRole("heading", { name: "Sailed · 1" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Didn’t sail · 1" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: /Still to clear|Ready/ })).toBeNull();
+    expect(screen.queryByText("Blocked")).toBeNull();
+    expect(screen.queryByText("No certification is on file for this trip.")).toBeNull();
+  });
+
   it("makes add diver the terminal ledger group, including on an empty roster", () => {
     const { container } = renderRoster({
       roster: [],

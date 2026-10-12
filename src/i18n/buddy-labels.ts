@@ -14,9 +14,12 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
  * alert fires on an awaiting teammate too, and it must not put words in the
  * crew's mouth (dive-domain review, 2026-08-04).
  *
- * The words say "someone", not a count: a team of four with two unaccounted
+ * The words name the buddy, not a count: a team of four with two unaccounted
  * for is the same instruction as a pair with one, and naming a number here
- * would invite reading it as a severity scale it is not.
+ * would invite reading it as a severity scale it is not. They say "Buddy",
+ * never "Someone": the chip sits on the row of the diver who *is* aboard,
+ * and "Someone not aboard" on that row read as this diver being missing
+ * (UX review 2026-10-10, item 23).
  */
 const BUDDY_ALERT_KEYS: Record<BuddyAlert, StaffMessageKey> = {
   separated_dock: "shared.buddyTeam.separatedDock",
