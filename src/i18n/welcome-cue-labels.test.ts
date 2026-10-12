@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { catchUpSentences } from "./desk-event-labels";
 import { staffTranslator } from "./staff-messages";
-import { sayHelloSentences, welcomeCueText } from "./welcome-cue-labels";
+import { sayHelloSentences, welcomeCueText, welcomeDockLine } from "./welcome-cue-labels";
 
 const en = staffTranslator("en-US");
 const es = staffTranslator("es-ES");
@@ -98,5 +98,53 @@ describe("catchUpSentences", () => {
     // The names are joined live, so an erasure empties the group — and an empty
     // list is a sentence with a hole in it rather than a fact.
     expect(catchUpSentences(en, "en-US", [{ kind: "arrival", names: [] }])).toEqual([]);
+  });
+});
+
+describe("welcomeDockLine", () => {
+  const card = {
+    level: "open_water" as const,
+    levelSelfDeclared: false,
+    noCertificationDeclared: false,
+    nitrox: false,
+    nitroxSelfDeclared: false,
+  };
+
+  it("names the diver by first name and the card they hold, in both locales", () => {
+    expect(welcomeDockLine(en, "en-US", { personName: "Priya Sharma", certification: card })).toBe(
+      "Say hello to Priya: Open Water.",
+    );
+    expect(
+      welcomeDockLine(es, "es-ES", { personName: "Priya Sharma", certification: card }),
+    ).toMatch(/^Saluda a Priya: .+\.$/);
+  });
+
+  it("says when the level is only the diver's word", () => {
+    const line = welcomeDockLine(en, "en-US", {
+      personName: "Priya Sharma",
+      certification: { ...card, levelSelfDeclared: true },
+    });
+    expect(line).toContain("Open Water");
+    expect(line).not.toBe("Say hello to Priya: Open Water.");
+  });
+
+  it("says 'not certified yet' for a diver who said so, which is the safety-relevant answer", () => {
+    const line = welcomeDockLine(en, "en-US", {
+      personName: "Priya Sharma",
+      certification: { ...card, level: null, noCertificationDeclared: true },
+    });
+    expect(line).toMatch(/^Say hello to Priya: .*not certified/i);
+  });
+
+  it("greets without a card when the shop holds none and the diver said nothing", () => {
+    expect(welcomeDockLine(en, "en-US", { personName: "Priya Sharma", certification: null })).toBe(
+      "Say hello to Priya.",
+    );
+  });
+
+  it("falls back to the whole name when there is no first name to take", () => {
+    expect(welcomeDockLine(en, "en-US", { personName: "Cher", certification: null })).toBe(
+      "Say hello to Cher.",
+    );
   });
 });

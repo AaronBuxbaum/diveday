@@ -1,5 +1,7 @@
 import { cachedListFormat } from "@/lib/intl-cache";
+import { firstNameOf } from "@/lib/person-name";
 import type { WelcomeCue } from "@/lib/welcome-cue";
+import { type CertificationSummaryShape, certificationSummaryText } from "./readiness-labels";
 import type { StaffTranslator } from "./staff-messages";
 
 /**
@@ -52,4 +54,36 @@ export function sayHelloSentences(
     sentences.push(t("today.sayHello.returning", { name: entry.name, years: entry.cue.years }));
   }
   return sentences;
+}
+
+/**
+ * **The dock line under "first time with us"** (UX review 2026-10-10, item
+ * 36): the one sentence that makes the hello easy, on the arrivals roster row
+ * the crew is looking at when the diver walks up. The name to say and the card
+ * they hold, in the same words the waitlist and the deal list use for a card
+ * (`certificationSummaryText`), so a level that is only the diver's word says
+ * so here too.
+ *
+ * Only the card. What a diver said they came for stays the departure's count
+ * and names nobody (ADR 20260904-reef-all-the-way-down, D12), and a booking's
+ * free-text note can carry anything, medical included, so it stays behind the
+ * row's own note count. A diver who gave the shop no card at all gets the
+ * hello without one: "level not said" is a desk task, not a greeting.
+ */
+export function welcomeDockLine(
+  t: StaffTranslator,
+  locale: string,
+  {
+    personName,
+    certification,
+  }: { personName: string; certification: CertificationSummaryShape | null },
+): string {
+  const name = firstNameOf(personName, personName);
+  if (!certification?.level && !certification?.noCertificationDeclared) {
+    return t("shared.welcomeCue.dockLineNoCard", { name });
+  }
+  return t("shared.welcomeCue.dockLine", {
+    name,
+    card: certificationSummaryText(t, certification, locale),
+  });
 }

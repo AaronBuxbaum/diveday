@@ -513,7 +513,9 @@
   },
   "welcomeCue": {
     "firstTrip": "primera vez con nosotros",
-    "returning": "de vuelta tras {years, plural, one {# año} other {# años}}"
+    "returning": "de vuelta tras {years, plural, one {# año} other {# años}}",
+    "dockLine": "Saluda a {name}: {card}.",
+    "dockLineNoCard": "Saluda a {name}."
   },
   "diveIntent": {
     "aboardToday": "Hoy a bordo: {list}",

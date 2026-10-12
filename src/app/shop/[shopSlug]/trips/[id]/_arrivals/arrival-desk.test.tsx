@@ -24,7 +24,8 @@ async function firstTimerAtTheCounter() {
     const inputs = await welcomeCueInputsByBooking(db, shop.id, row.tripId, now);
     if (inputs.get(row.bookingId)?.lastDivedAt === null) {
       const [trip] = await db.select().from(trips).where(eq(trips.id, row.tripId));
-      if (trip) return { db, shop, now, trip, bookingId: row.bookingId };
+      if (trip)
+        return { db, shop, now, trip, bookingId: row.bookingId, personName: row.personName };
     }
   }
   throw new Error("no first-timer is booked on a boat inside the arrivals window");
@@ -56,12 +57,28 @@ describe("the counter's welcome word (UX audit 2026-10-07, item 46)", () => {
     expect(await belowFor(seat)).toHaveTextContent("first time with us");
   });
 
+  it("puts the dock line under the cue: the first name to say and the card they hold (UX review 2026-10-10, item 36)", async () => {
+    const seat = await firstTimerAtTheCounter();
+    await seat.db
+      .update(bookings)
+      .set({ welcomeSharedAt: seat.now })
+      .where(eq(bookings.id, seat.bookingId));
+    const below = await belowFor(seat);
+    const first = seat.personName.trim().split(/\s+/)[0];
+    expect(below).toHaveTextContent(new RegExp(`Say hello to ${first}[:.]`));
+    // Never the booking's free-text note or what the diver came for: those
+    // stay behind the row's note count and the departure's tally.
+    expect(below.querySelectorAll("p")).toHaveLength(2);
+  });
+
   it("says nothing for a diver who never shared it", async () => {
     const seat = await firstTimerAtTheCounter();
     await seat.db
       .update(bookings)
       .set({ welcomeSharedAt: null })
       .where(eq(bookings.id, seat.bookingId));
-    expect(await belowFor(seat)).not.toHaveTextContent("first time with us");
+    const below = await belowFor(seat);
+    expect(below).not.toHaveTextContent("first time with us");
+    expect(below).not.toHaveTextContent("Say hello");
   });
 });
