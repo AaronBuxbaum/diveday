@@ -43,9 +43,11 @@ test("a diver's bare rating publishes straight away and reaches the public page"
   // 20260827-clearwater-surface-language, decision 8).
   // The average and count are separate inline spans so each can carry its own
   // typography; assert the composed paragraph rather than a text node that
-  // cannot cross those element boundaries.
+  // cannot cross those element boundaries. The hero counts every star given
+  // ("N ratings"); the written ones are counted apart in the archive (UX
+  // review 2026-10-10, item 17).
   const aggregate = page.locator("p").filter({
-    hasText: /\d+(?:\.\d+)?\s*·\s*\d+ reviews/,
+    hasText: /\d+(?:\.\d+)?\s*·\s*\d+ ratings?/,
   });
   await expect(aggregate).toHaveCount(1);
 });
