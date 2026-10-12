@@ -416,6 +416,10 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // revision to compare it against and the number would mean nothing on the
     // far side. Same class as `pending_checkout_intent_id`.
     "revision",
+    // A pending "the divers still have the old time" between a move and its
+    // notice: in-flight messaging state on this installation, cleared by the
+    // send, and a re-imported departure has no divers who were told anything.
+    "divers_told_starts_at",
   ],
   trip_change_events: ["shop_id"],
   trip_stage_events: ["shop_id"],

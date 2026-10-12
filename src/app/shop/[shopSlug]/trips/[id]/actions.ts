@@ -572,7 +572,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
       ? await holdRescheduleNotice(dbi, {
           shopId: s.user.shopId,
           tripId,
-          previousStartsAt: tripNow.startsAt,
+          movedFrom: tripNow.startsAt,
           meetingPointMoved: meetingPointMoved(
             meetingPointOfRows(shopNow, tripNow),
             meetingPointOfRows(shopNow, {

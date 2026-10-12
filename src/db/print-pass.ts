@@ -55,8 +55,10 @@ export async function getPassBooking(
       arrivalParkingNote: trips.arrivalParkingNote,
     })
     .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    // The diver and the departure are read within the caller's shop too, as
+    // the reschedule reader does: the name on the paper is this shop's record.
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
     .leftJoin(boats, eq(boats.id, trips.boatId))
     .where(
       and(

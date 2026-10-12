@@ -1,0 +1,1 @@
+ALTER TABLE "trips" ADD COLUMN "divers_told_starts_at" timestamp with time zone;

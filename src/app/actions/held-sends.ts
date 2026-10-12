@@ -4,12 +4,13 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { HeldTicket } from "@/components/SendHold";
 import { canPersonConfigureTrips, canPersonManagePaymentSettings } from "@/db/authz";
-import { getDb } from "@/db/client";
+import { type AppDb, getDb } from "@/db/client";
 import {
   claimHeldSend,
   executeHeldSend,
   type HeldSendOutcome,
   holdSend,
+  pendingHeldSend,
   undoHeldSend,
 } from "@/db/held-sends";
 import { getShopById } from "@/db/shops";
@@ -81,21 +82,45 @@ function payloadFromForm(formData: FormData, currency: string): HeldSendPayload 
             ...dealDiscountFromForm(formData, currency),
             recipientPersonIds: uuidList(formData, "recipientPersonIds"),
           }
-        : kind === "trip_rescheduled"
-          ? {
-              kind,
-              tripId: optional("tripId"),
-              previousStartsAt: optional("previousStartsAt"),
-              meetingPointMoved: formData.get("meetingPointMoved") === "true",
-            }
-          : { kind, tripId: optional("tripId"), entryId: optional("entryId") };
+        : { kind, tripId: optional("tripId"), entryId: optional("entryId") };
   return heldSendPayloadSchema.parse(raw);
 }
+
+/**
+ * "Tell them" after an Undo names the departure and nothing else about the
+ * move: the time the divers were last told is the server's record
+ * (`trips.divers_told_starts_at`), never a form field, so a posted
+ * `previousStartsAt` is not read at all.
+ */
+const tellThemForm = z.object({
+  tripId: z.uuid(),
+  meetingPointMoved: z.boolean(),
+});
 
 export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
   const session = await requireStaffSession();
   const db = await getDb();
   // The shop's currency, only to read a fixed-amount deal's major units.
+  if (formData.get("holdKind") === "trip_rescheduled") {
+    // "Tell them" after an Undo: the same gate as the move that held it, and
+    // the same hold, so a second tap folds into the first rather than sending
+    // twice. The recipients are read off the trip at send time, never here.
+    if (!(await canPersonConfigureTrips(db, session.user.shopId, session.user.personId))) {
+      throw new Error("not_authorized");
+    }
+    const form = tellThemForm.parse({
+      tripId: formData.get("tripId"),
+      meetingPointMoved: formData.get("meetingPointMoved") === "true",
+    });
+    const held = await holdRescheduleNotice(db, {
+      shopId: session.user.shopId,
+      tripId: form.tripId,
+      meetingPointMoved: form.meetingPointMoved,
+      actorPersonId: session.user.personId,
+    });
+    if (!held) throw new Error("nothing_to_send");
+    return ticketFor(held);
+  }
   const currency = toShopCurrency((await getShopById(db, session.user.shopId))?.currency);
   const payload = payloadFromForm(formData, currency);
   if (payload.kind === "last_minute_deal") {
@@ -108,34 +133,23 @@ export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
     );
     if (!allowed) throw new Error("not_authorized");
   }
-  if (payload.kind === "trip_rescheduled") {
-    // "Tell them" after an Undo: the same gate as the move that held it, and
-    // the same hold, so a second tap folds into the first rather than sending
-    // twice. The recipients are read off the trip at send time, never here.
-    if (!(await canPersonConfigureTrips(db, session.user.shopId, session.user.personId))) {
-      throw new Error("not_authorized");
-    }
-    const held = await holdRescheduleNotice(db, {
+  // A reschedule notice is only ever held by a move or by "Tell them" above,
+  // both of which take the "before" time from the server's record.
+  if (payload.kind === "trip_rescheduled") throw new Error("nothing_to_send");
+  return ticketFor(
+    await holdSend(db, {
       shopId: session.user.shopId,
-      tripId: payload.tripId,
-      previousStartsAt: new Date(payload.previousStartsAt),
-      meetingPointMoved: payload.meetingPointMoved,
+      payload,
       actorPersonId: session.user.personId,
-    });
-    if (!held) throw new Error("nothing_to_send");
-    return {
-      id: held.id,
-      runAt: held.runAt.getTime(),
-      holdMs: Math.max(0, held.runAt.getTime() - nowMs()),
-    };
-  }
-  const held = await holdSend(db, {
-    shopId: session.user.shopId,
-    payload,
-    actorPersonId: session.user.personId,
-  });
-  // `holdMs` on the server's own clock, so the client counts it down on its
-  // own — the two are never compared (see `HeldTicket`).
+    }),
+  );
+}
+
+/**
+ * `holdMs` on the server's own clock, so the client counts it down on its
+ * own — the two are never compared (see `HeldTicket`).
+ */
+function ticketFor(held: { id: string; runAt: Date }): HeldTicket {
   return {
     id: held.id,
     runAt: held.runAt.getTime(),
@@ -143,9 +157,37 @@ export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
   };
 }
 
+/**
+ * Undo and an early release re-run the gate the hold stood behind, read off
+ * the held row's own kind: a crew member who sees a manager's `?held=` id may
+ * not take back the manager's reschedule notice or deal blast, nor send it
+ * sooner. A row that is gone or not this shop's passes through to the store,
+ * which answers it as it always has.
+ */
+async function assertMayActOnHeld(
+  db: AppDb,
+  session: { user: { shopId: string; personId: string } },
+  id: string,
+): Promise<void> {
+  const row = await pendingHeldSend(db, session.user.shopId, id);
+  if (!row) return;
+  const gate =
+    row.kind === "trip_rescheduled"
+      ? canPersonConfigureTrips
+      : row.kind === "last_minute_deal"
+        ? canPersonManagePaymentSettings
+        : null;
+  if (gate && !(await gate(db, session.user.shopId, session.user.personId))) {
+    throw new Error("not_authorized");
+  }
+}
+
 export async function undoHeldSendAction(id: string): Promise<boolean> {
   const session = await requireStaffSession();
-  return undoHeldSend(await getDb(), session.user.shopId, z.uuid().parse(id));
+  const db = await getDb();
+  const heldId = z.uuid().parse(id);
+  await assertMayActOnHeld(db, session, heldId);
+  return undoHeldSend(db, session.user.shopId, heldId);
 }
 
 export type ReleasedSend =
@@ -161,8 +203,10 @@ export type ReleasedSend =
 export async function releaseHeldSendAction(id: string): Promise<ReleasedSend> {
   const session = await requireStaffSession();
   const db = await getDb();
+  const heldId = z.uuid().parse(id);
+  await assertMayActOnHeld(db, session, heldId);
   // The actor's own countdown is the clock (see `claimHeldSend`).
-  const claim = await claimHeldSend(db, session.user.shopId, z.uuid().parse(id), undefined, {
+  const claim = await claimHeldSend(db, session.user.shopId, heldId, undefined, {
     early: true,
   });
   if (claim.status !== "claimed") return { status: claim.status };

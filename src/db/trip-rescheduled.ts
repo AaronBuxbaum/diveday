@@ -86,31 +86,52 @@ export async function rescheduleAudienceCount(
 
 export type HeldRescheduleNotice = { id: string; runAt: Date; told: number };
 
+/** The divers know the current time again: nothing is owed them. */
+async function clearDiversTold(db: AppDb, shopId: string, tripId: string) {
+  await db
+    .update(trips)
+    .set({ diversToldStartsAt: null })
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)));
+}
+
 /**
- * Hold the notice for a move that just happened. Null, and nothing held, when
- * there is nobody to tell or nothing to say: no booked seat, a departure that
- * is not live and scheduled, or a move that put it back where the divers were
- * last told it was. A second move inside the hold replaces the first hold
+ * Hold the notice for a move. Null, and nothing held, when there is nobody to
+ * tell or nothing to say: no booked seat, a departure that is not live and
+ * scheduled, or a departure back where the divers were last told it was. A
+ * second move inside the hold replaces the first hold
  * (`mergeRescheduleHolds`), so a staffer who drags a departure twice sends one
  * message with the time the divers actually had.
+ *
+ * **The "before" time is the server's own** (`trips.divers_told_starts_at`).
+ * A move passes `movedFrom`, the start its own transaction replaced, and it is
+ * recorded only when nothing older is: a second move before anybody was told
+ * keeps the first. "Tell them" after an Undo passes nothing and reads the
+ * recorded time back, so no form can put words like "It was 6am" into a
+ * diver's inbox; with no record of a move, there is nothing to hold.
  */
 export async function holdRescheduleNotice(
   db: AppDb,
   input: {
     shopId: string;
     tripId: string;
-    previousStartsAt: Date;
+    /** The start a server-side move just replaced. Absent for "Tell them". */
+    movedFrom?: Date;
     meetingPointMoved: boolean;
     actorPersonId: string | null;
     now?: Date;
   },
 ): Promise<HeldRescheduleNotice | null> {
   const [trip] = await db
-    .select({ startsAt: trips.startsAt, status: trips.status })
+    .select({
+      startsAt: trips.startsAt,
+      status: trips.status,
+      diversToldStartsAt: trips.diversToldStartsAt,
+    })
     .from(trips)
     .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
     .limit(1);
   if (trip?.status !== "scheduled") return null;
+  const toldStartsAt = trip.diversToldStartsAt ?? input.movedFrom ?? null;
 
   const pendingRows = await db
     .select({ id: heldSends.id, payload: heldSends.payload })
@@ -123,16 +144,18 @@ export async function holdRescheduleNotice(
       if (parsed.data.tripId === input.tripId) pending.push({ id: row.id, payload: parsed.data });
     }
   }
-  const merged = mergeRescheduleHolds(
-    pending.map((held) => held.payload),
-    {
-      kind: "trip_rescheduled",
-      tripId: input.tripId,
-      previousStartsAt: input.previousStartsAt.toISOString(),
-      meetingPointMoved: input.meetingPointMoved,
-    },
-    trip.startsAt,
-  );
+  const merged = toldStartsAt
+    ? mergeRescheduleHolds(
+        pending.map((held) => held.payload),
+        {
+          kind: "trip_rescheduled",
+          tripId: input.tripId,
+          previousStartsAt: toldStartsAt.toISOString(),
+          meetingPointMoved: input.meetingPointMoved,
+        },
+        trip.startsAt,
+      )
+    : null;
   // The earlier holds are folded into this one, or there is nothing left to
   // say; either way they must not leave on their own.
   if (pending.length > 0) {
@@ -146,10 +169,24 @@ export async function holdRescheduleNotice(
       ),
     );
   }
-  if (!merged) return null;
+  // Back where the divers were told (or never moved): they know the time.
+  if (!merged) {
+    if (trip.diversToldStartsAt) await clearDiversTold(db, input.shopId, input.tripId);
+    return null;
+  }
 
   const told = await rescheduleAudienceCount(db, input.shopId, input.tripId);
-  if (told === 0) return null;
+  // Nobody on the boat holds the old time; whoever books next sees the new one.
+  if (told === 0) {
+    if (trip.diversToldStartsAt) await clearDiversTold(db, input.shopId, input.tripId);
+    return null;
+  }
+  if (trip.diversToldStartsAt?.getTime() !== toldStartsAt?.getTime()) {
+    await db
+      .update(trips)
+      .set({ diversToldStartsAt: toldStartsAt })
+      .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)));
+  }
   const held = await holdSend(db, {
     shopId: input.shopId,
     payload: merged,
@@ -227,6 +264,19 @@ export async function sendRescheduleNotices(
       outcome.identityHeld += 1;
       continue;
     }
+    const phone = smsRecipient(person.phone);
+    // Nowhere to send it: recorded, and no readiness capability minted for a
+    // link nobody will receive (the order `src/db/reminders.ts` keeps).
+    if (!person.email && !phone) {
+      await recordNotificationDelivery(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        kind: "trip_rescheduled",
+        delivery: { status: "not_configured" },
+      });
+      outcome.failed += 1;
+      continue;
+    }
     const locale = recipientLocale(person.locale, shop.defaultLocale);
     const t = diverTranslator(locale);
     const capability = origin
@@ -240,7 +290,6 @@ export async function sendRescheduleNotices(
     const readinessUrl = capability
       ? new URL(readinessLinkPath(capability.token), `${origin}/`).toString()
       : undefined;
-    const phone = smsRecipient(person.phone);
     const smsBody = [
       t("notifications.sms.rescheduled", {
         shopName: shop.name,
@@ -310,15 +359,9 @@ export async function sendRescheduleNotices(
       });
       if (delivery.status === "sent") outcome.told += 1;
       else outcome.failed += 1;
-    } else {
-      await recordNotificationDelivery(db, {
-        shopId: shop.id,
-        bookingId: booking.id,
-        kind: "trip_rescheduled",
-        delivery: { status: "not_configured" },
-      });
-      outcome.failed += 1;
     }
   }
+  // The divers have the new time now; a later move starts from this one.
+  if (outcome.told > 0) await clearDiversTold(db, shop.id, trip.id);
   return outcome;
 }

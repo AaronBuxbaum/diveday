@@ -29,19 +29,17 @@ export type RescheduleHoldCopy = {
  * the board and the trip page draw for it under their saved notice: "Telling
  * 6 divers the new time…" with Undo, then what the send did. After an Undo the
  * row says the divers still have the old time and offers "Tell them", which
- * holds the same notice again. The recipients are never on this form: the
- * server reads them off the trip when the hold drains.
+ * holds the same notice again. Neither the recipients nor the time the divers
+ * were last told are on this form: the server reads both off the trip.
  */
 export function RescheduleHold({
   ticket,
   tripId,
-  previousStartsAt,
   meetingPointMoved,
   copy,
 }: {
   ticket: HeldTicket | null;
   tripId: string;
-  previousStartsAt: string;
   meetingPointMoved: boolean;
   copy: RescheduleHoldCopy;
 }) {
@@ -82,7 +80,6 @@ export function RescheduleHold({
     >
       <input type="hidden" name="holdKind" value="trip_rescheduled" />
       <input type="hidden" name="tripId" value={tripId} />
-      <input type="hidden" name="previousStartsAt" value={previousStartsAt} />
       <input type="hidden" name="meetingPointMoved" value={meetingPointMoved ? "true" : "false"} />
       <span className="text-sm">{copy.notTold}</span>
       <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>

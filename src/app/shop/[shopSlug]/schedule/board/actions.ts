@@ -818,7 +818,7 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
   const notice = await holdRescheduleNotice(db, {
     shopId: shop.id,
     tripId: parsed.data.tripId,
-    previousStartsAt: outcome.previousStartsAt,
+    movedFrom: outcome.previousStartsAt,
     meetingPointMoved: false,
     actorPersonId: session.user.personId,
   });

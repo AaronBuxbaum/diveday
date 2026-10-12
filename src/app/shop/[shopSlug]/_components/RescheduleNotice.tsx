@@ -41,7 +41,6 @@ export async function RescheduleNotice({
         holdMs: Math.max(0, row.runAt.getTime() - nowMs()),
       }}
       tripId={row.payload.tripId}
-      previousStartsAt={row.payload.previousStartsAt}
       meetingPointMoved={row.payload.meetingPointMoved}
       copy={rescheduleHoldCopy(t, count.data)}
     />

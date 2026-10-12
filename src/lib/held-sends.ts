@@ -75,7 +75,8 @@ const waitlistInvitePayload = z.object({
  * 1). Held by the move itself (the board's move and the trip page's retime),
  * not by a button: the staffer sees "Telling 6 divers the new time" with Undo
  * where the saved notice stands. `previousStartsAt` is the time the divers
- * were last told; the executor reads everything else, the recipients
+ * were last told, written by the server from `trips.divers_told_starts_at`
+ * and never read off a form; the executor reads everything else, the recipients
  * included, off the trip at send time.
  */
 const tripRescheduledPayload = z.object({

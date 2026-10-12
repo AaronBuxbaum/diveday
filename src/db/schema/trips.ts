@@ -501,6 +501,18 @@ export const trips = pgTable(
      */
     revision: integer("revision").notNull().default(0),
     /**
+     * **The start the booked divers last heard, while it differs from
+     * `starts_at`** (ux review 2026-10-11, item 1; `src/db/trip-rescheduled.ts`).
+     *
+     * Null means the divers know the current time. A move with seats on it
+     * fills it with the pre-move start unless it is already set (a second move
+     * before anybody was told keeps the first), a sent reschedule notice clears
+     * it, and a move back to this instant clears it. The notice's "It was
+     * <time>" line and staff's "Tell them" after an Undo read the previous
+     * time from here and nowhere else: never from a form.
+     */
+    diversToldStartsAt: timestamp("divers_told_starts_at", { withTimezone: true }),
+    /**
      * Set when staff delete an empty departure (ADR 20260820-every-delete-is-soft).
      *
      * `deleteTrip` still refuses a departure with any roster, wait-list entry or
