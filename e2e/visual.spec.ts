@@ -7519,7 +7519,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/dive-sites");
         await page.getByRole("link", { name: "Molasses Reef" }).first().click();
         await page.waitForURL(/\/dive-sites\//);
-        await page.getByLabel(/Maximum depth/).fill("32");
+        await page.getByLabel(/Maximum depth/).fill("105");
         await page.getByRole("button", { name: "Save dive site" }).click();
         await page.getByText("Dive site saved.").waitFor();
 
