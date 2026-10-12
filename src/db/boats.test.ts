@@ -9,6 +9,7 @@ import {
   getBoatForHistory,
   listBoats,
   updateBoat,
+  updateBoatWithinCertificate,
 } from "./boats";
 import { trips } from "./schema";
 import { setShopDivingOptions } from "./shops";
@@ -188,5 +189,91 @@ describe("deleting a boat", () => {
 
     expect(await updateBoat(db, shop.id, boat.id, "New Name", 10)).toBeNull();
     expect((await getBoatForHistory(db, shop.id, boat.id))?.name).toBe("Old Faithful");
+  });
+});
+
+/**
+ * **The certificate check and the save are one transaction** (H-107, #2324):
+ * the fleet row's save decides against the departures it has locked, and
+ * writes nothing when it refuses.
+ */
+describe("updateBoatWithinCertificate", () => {
+  const NOW = new Date("2030-05-01T12:00:00.000Z");
+  const papers = (certifiedPassengers: number | null) => ({
+    certifiedPassengers,
+    inspectionDueOn: null,
+    registrationExpiresOn: null,
+    insuranceExpiresOn: null,
+  });
+  const save = (
+    db: typeof ctx.db,
+    shopId: string,
+    boatId: string,
+    capacity: number,
+    certifiedPassengers: number | null,
+  ) =>
+    updateBoatWithinCertificate(db, {
+      shopId,
+      boatId,
+      name: "Certified Hull",
+      capacity,
+      description: null,
+      papers: papers(certifiedPassengers),
+      timeZone: "America/New_York",
+      now: NOW,
+    });
+
+  async function hullWithADeparture(db: typeof ctx.db, shopId: string, seats: number) {
+    const boat = await createBoat(db, shopId, "Certified Hull", 6);
+    const trip = await createTrip(db, {
+      shopId,
+      title: "On the hull",
+      startsAt: new Date("2030-06-01T12:00:00.000Z"),
+      endsAt: new Date("2030-06-01T16:00:00.000Z"),
+      capacity: seats,
+      boatId: boat.id,
+    });
+    if (!trip) throw new Error("trip not created");
+    return boat;
+  }
+
+  it("refuses a certificate below a departure's seats and leaves the hull as it was", async () => {
+    const { db, shop } = ctx;
+    const boat = await hullWithADeparture(db, shop.id, 4);
+
+    expect(await save(db, shop.id, boat.id, 2, 2)).toMatchObject({
+      ok: false,
+      reason: "certificate",
+      refusal: { code: "departures_above_certificate", departures: 1, limit: 2 },
+    });
+    expect(await getBoatById(db, shop.id, boat.id)).toMatchObject({
+      capacity: 6,
+      certifiedPassengers: null,
+    });
+  });
+
+  it("refuses seats on sale above the certificate it is given", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Certified Hull", 6);
+    expect(await save(db, shop.id, boat.id, 6, 4)).toMatchObject({
+      ok: false,
+      refusal: { code: "seats_above_certificate", capacity: 6, limit: 4 },
+    });
+  });
+
+  it("saves a certificate every departure fits under", async () => {
+    const { db, shop } = ctx;
+    const boat = await hullWithADeparture(db, shop.id, 4);
+    expect(await save(db, shop.id, boat.id, 4, 4)).toMatchObject({
+      ok: true,
+      boat: { capacity: 4, certifiedPassengers: 4 },
+    });
+  });
+
+  it("will not save a hull the shop has deleted", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Certified Hull", 6);
+    await deleteBoat(db, shop.id, boat.id);
+    expect(await save(db, shop.id, boat.id, 4, null)).toEqual({ ok: false, reason: "not_found" });
   });
 });

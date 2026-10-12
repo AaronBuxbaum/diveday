@@ -44,6 +44,7 @@ import {
   tripAssignments,
   trips,
 } from "./schema";
+import { lockSeatDeparture } from "./seat-locks";
 import { getShopById } from "./shops";
 import { crewClashes } from "./trips-crew";
 import { liveTrip } from "./trips-live";
@@ -1467,15 +1468,18 @@ export async function recordRollCall(
       if (existing) return { ok: true, eventId: existing.id, duplicate: true };
     }
 
-    // `FOR UPDATE`, on the same join shape `markBookingNoShow` locks — bookings
-    // then trips, in one statement, so neither transaction ends up holding what
-    // the other is waiting for. This booking row is the one object the desk and
-    // the rail share, and until this lock existed they did not share it: the
-    // counter took it `FOR UPDATE` while this read was plain, so "the diver is
-    // aboard" and "the diver never came" were decided against the same
-    // pre-state, and the boat could sail carrying a body whose seat the shop
-    // had put back on sale. Raced for real in `roll-call.postgres.test.ts`,
-    // which is red the moment this is removed.
+    // The departure, then the seat — the one order every seat writer takes
+    // (`lockSeatDeparture`, #2324), so neither this nor the desk ends up
+    // holding what the other is waiting for. The booking row `FOR UPDATE` is
+    // the one object the desk and the rail share, and until this lock existed
+    // they did not share it: the counter took it `FOR UPDATE` while this read
+    // was plain, so "the diver is aboard" and "the diver never came" were
+    // decided against the same pre-state, and the boat could sail carrying a
+    // body whose seat the shop had put back on sale. Raced for real in
+    // `roll-call.postgres.test.ts`, which is red the moment this is removed,
+    // and `seat-lock-order.postgres.test.ts`, red on the old booking-first order.
+    const lockedTripId = await lockSeatDeparture(tx, input.shopId, input.bookingId);
+    if (lockedTripId !== input.tripId) return { ok: false, reason: "booking_unavailable" };
     const [booking] = await tx
       .select({
         id: bookings.id,
@@ -1495,7 +1499,7 @@ export async function recordRollCall(
         ),
       )
       .limit(1)
-      .for("update");
+      .for("update", { of: bookings });
     if (!booking) return { ok: false, reason: "booking_unavailable" };
     if (!isRollCallCheckpoint(checkpoint, booking.plannedDives)) {
       return { ok: false, reason: "invalid_checkpoint" };
@@ -1874,9 +1878,10 @@ export async function recordCrewRollCall(
     //
     // The lookup is a probe of `bookings_trip_person_unique`, so the ordinary
     // crew member — who holds no seat — pays one index miss and locks nothing.
-    // Ahead of the insert, the locks this transaction takes stay in the order
-    // the counter takes them (the booking, then the trip through the event's
-    // foreign key), which is what keeps the pair out of a deadlock.
+    // Ahead of the insert this holds the booking and then needs only a
+    // `KEY SHARE` on the trip, through the event's foreign key. The counter
+    // takes the trip first but `for no key update` (`lockSeatDeparture`), which
+    // a `KEY SHARE` passes, so the pair stays out of a deadlock.
     const seat = standingResultMeansSailed(checkpoint, input.status)
       ? ((
           await tx
