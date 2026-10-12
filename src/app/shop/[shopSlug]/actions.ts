@@ -37,7 +37,10 @@ import { uuidParam } from "@/lib/uuid";
  * They are module-level rather than closures because a settled station binds
  * the recap acts. None of them takes a shop from its caller — every one
  * resolves the tenant from the session, which is what makes them safe to bind
- * anywhere.
+ * anywhere. A bound id is a claim (`.bind` arguments are not encrypted), so
+ * every id is shape-checked with `uuidParam` before it reaches a query: a
+ * crafted one gets the same refusal as a missing one, not a Postgres cast
+ * error (security review of layer C2).
  */
 
 /** The evening acts' forms, read through one parser (issue #2233). */
@@ -81,6 +84,7 @@ export async function updateHelpRequestAction(
  */
 export async function saveRecapNoteAction(tripId: string, formData: FormData) {
   const { staff, home } = await shopHome();
+  if (!uuidParam(tripId)) revalidateAndRedirect(home, noticeUrl(home, "invalid"));
   const actionDb = await getDb();
   if (await hasSentTripRecap(actionDb, staff.user.shopId, tripId)) {
     revalidateAndRedirect(home, noticeUrl(home, "recap-locked", { noted: tripId }));
@@ -94,6 +98,7 @@ export async function saveRecapNoteAction(tripId: string, formData: FormData) {
 
 export async function deleteRecapPhotoAction(tripId: string, formData: FormData) {
   const { staff, home } = await shopHome();
+  if (!uuidParam(tripId)) redirect(home);
   const parsed = parseForm(photoForm, formData);
   if (!parsed.ok || !parsed.data.photoId) redirect(home);
   const { photoId } = parsed.data;
@@ -116,6 +121,7 @@ export async function deleteRecapPhotoAction(tripId: string, formData: FormData)
 /** Store a staff image on the departure and share it with every diver recap. */
 export async function uploadCrewRecapPhotoAction(tripId: string, formData: FormData) {
   const { staff, home } = await shopHome();
+  if (!uuidParam(tripId)) revalidateAndRedirect(home, noticeUrl(home, "invalid"));
   const db = await getDb();
   if (await hasSentTripRecap(db, staff.user.shopId, tripId)) {
     revalidateAndRedirect(home, noticeUrl(home, "recap-locked", { noted: tripId }));
@@ -165,6 +171,7 @@ export async function uploadCrewRecapPhotoAction(tripId: string, formData: FormD
 
 export async function deleteCrewRecapPhotoAction(tripId: string, formData: FormData) {
   const { staff, home } = await shopHome();
+  if (!uuidParam(tripId)) redirect(home);
   const parsed = parseForm(photoForm, formData);
   if (!parsed.ok || !parsed.data.photoId) redirect(home);
   const { photoId } = parsed.data;
@@ -187,6 +194,7 @@ export async function deleteCrewRecapPhotoAction(tripId: string, formData: FormD
  */
 export async function sendRecapAction(tripId: string) {
   const { staff, home } = await shopHome();
+  if (!uuidParam(tripId)) revalidateAndRedirect(home, noticeUrl(home, "invalid"));
   const result = await sendTripRecaps(await getDb(), { shopId: staff.user.shopId, tripId });
   // Somebody on the boat is still "not back aboard" (#2123): nothing went out,
   // and the staffer is told why rather than that it failed.
@@ -245,7 +253,7 @@ export async function keepRentalFitAction(reservationId: string) {
 export async function toggleRecapAutoSendPauseAction(formData: FormData) {
   const { staff, home } = await shopHome();
   const parsed = parseForm(recapPauseForm, formData);
-  if (!parsed.ok || !parsed.data.tripId) redirect(home);
+  if (!parsed.ok || !uuidParam(parsed.data.tripId)) redirect(home);
   const { tripId } = parsed.data;
   const paused = parsed.data.paused === "true";
   const db = await getDb();
