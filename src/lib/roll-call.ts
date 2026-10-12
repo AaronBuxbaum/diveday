@@ -53,6 +53,16 @@ export function rollCallCheckpoints(plannedDives: number): RollCallCheckpoint[] 
   ];
 }
 
+/**
+ * A checkpoint's place in the day: the dock is 0, after dive N is N. "Earlier"
+ * is read off this, never off where a checkpoint happens to sit in a list.
+ */
+export function rollCallCheckpointOrdinal(checkpoint: RollCallCheckpoint): number {
+  if (checkpoint === "departure") return 0;
+  const dive = Number(checkpoint.slice("after_dive_".length));
+  return Number.isFinite(dive) ? dive : Number.POSITIVE_INFINITY;
+}
+
 export function isRollCallCheckpoint(
   value: string,
   plannedDives: number,
@@ -263,12 +273,13 @@ export function boardedBefore(
  * fill, and on the live page the blocked capsule and the list of blockers.
  *
  * At the dock always: readiness is the thing to fix before they board. After a
- * dive only for someone with no earlier boarding (`boardedEarlier === false`),
+ * dive only for someone with no earlier boarding (`boardedEarlier` not true),
  * because a `boarded` there is their first — they joined at the second site —
  * so the row reads as the dock's would (domain review of #2123). Never on a row
  * recorded not back aboard: that row is the alarm, and no paperwork word may
- * sit on it (DD9). Absent `boardedEarlier` reads as boarded, saying nothing it
- * cannot back.
+ * sit on it (DD9). Absent `boardedEarlier` reads as not boarded: a row that
+ * cannot say whether anyone boarded them keeps its blocker in view rather than
+ * hiding it (dive-domain review of #2286).
  *
  * One predicate for the live manifest and the offline copy (issue #2286), so
  * the same boat never shows two safety pictures depending on signal.
@@ -281,5 +292,5 @@ export function blockedAtRail(input: {
 }): boolean {
   if (input.ready) return false;
   if (input.isDeparture) return true;
-  return input.boardedEarlier === false && !input.notBackAboard;
+  return input.boardedEarlier !== true && !input.notBackAboard;
 }

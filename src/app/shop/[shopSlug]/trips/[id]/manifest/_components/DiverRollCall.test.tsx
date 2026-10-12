@@ -208,11 +208,13 @@ describe("the screen worries only with reason (decision 4)", () => {
           rollCall: boardedAt(),
         }),
         // Readiness never gates boarding after a dive — the diver is already
-        // aboard — so a desk blocker is not an alarm at the rail.
+        // aboard — so a desk blocker is not an alarm at the rail. Boarded at
+        // the dock: a row that cannot say so keeps its blocker (#2286).
         diver({
           bookingId: "00000000-0000-4000-8000-000000000003",
           fullName: "Amara Osei",
           readiness: { status: "blocked", blockers: [{ code: "certification_missing" }] },
+          boardedEarlier: true,
         }),
       ],
     });

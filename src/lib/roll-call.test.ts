@@ -9,6 +9,7 @@ import {
   ROLL_CALL_NOTE_MAX,
   type RollCallCheckpoint,
   type RollCallRecord,
+  rollCallCheckpointOrdinal,
   rollCallCheckpoints,
   rollCallNoteAllowed,
 } from "./roll-call";
@@ -172,8 +173,9 @@ describe("blockedAtRail", () => {
         notBackAboard: false,
       }),
     ).toBe(false);
-    // Absent says nothing it cannot back: an older copy, or a hand-built manifest.
-    expect(blockedAtRail({ ready: false, isDeparture: false, notBackAboard: false })).toBe(false);
+    // Absent fails toward the blocker: a row that cannot say whether anyone
+    // boarded them keeps it in view.
+    expect(blockedAtRail({ ready: false, isDeparture: false, notBackAboard: false })).toBe(true);
   });
 
   it("never puts a paperwork word on a row recorded not back aboard", () => {
@@ -185,6 +187,16 @@ describe("blockedAtRail", () => {
         notBackAboard: true,
       }),
     ).toBe(false);
+  });
+});
+
+describe("rollCallCheckpointOrdinal", () => {
+  it("orders the dock before every dive, and dives by number", () => {
+    expect(
+      (["after_dive_2", "departure", "after_dive_1"] as const)
+        .slice()
+        .sort((a, b) => rollCallCheckpointOrdinal(a) - rollCallCheckpointOrdinal(b)),
+    ).toEqual(["departure", "after_dive_1", "after_dive_2"]);
   });
 });
 

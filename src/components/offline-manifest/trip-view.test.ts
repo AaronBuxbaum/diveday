@@ -36,6 +36,15 @@ describe("offlineTripView — blocked at the rail after a dive", () => {
     expect(view?.blockedAtRail).toEqual([false]);
   });
 
+  it("reads earlier by checkpoint order, not by where the copy lists it", () => {
+    const envelope = richEnvelope("trip-1", { readiness: "blocked" }, { events: [boardedAtDock] });
+    const reversed = {
+      ...envelope,
+      snapshot: { ...envelope.snapshot, manifests: [...envelope.snapshot.manifests].reverse() },
+    };
+    expect(offlineTripView(reversed, "after_dive_1")?.blockedAtRail).toEqual([false]);
+  });
+
   it("does not mark a ready diver, and marks a blocked one at the dock", () => {
     expect(offlineTripView(richEnvelope("trip-1"), "after_dive_1")?.blockedAtRail).toEqual([false]);
     expect(

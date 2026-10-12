@@ -43,6 +43,7 @@ export {
   isRollCallCheckpoint,
   RETRACTION_SUPERSEDED,
   ROLL_CALL_NOTE_MAX,
+  rollCallCheckpointOrdinal,
   rollCallCheckpoints,
   rollCallNoteAllowed,
   standingResultMeansSailed,
