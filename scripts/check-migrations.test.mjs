@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { auditMigration, foldersToAudit, gitBaseFolders, maskSql } from "./check-migrations.mjs";
+import {
+  auditMigration,
+  declaredProperty,
+  foldersToAudit,
+  gitBaseFolders,
+  maskSql,
+  schemaSourceAt,
+} from "./check-migrations.mjs";
 
 /**
  * The destructive-DDL guard, exercised statement by statement.
@@ -16,7 +23,7 @@ import { auditMigration, foldersToAudit, gitBaseFolders, maskSql } from "./check
  */
 
 /** Just the messages, which is what a session reads off the failure. */
-const problems = (sql) => auditMigration(sql).map((problem) => problem.message);
+const problems = (sql, options) => auditMigration(sql, options).map((problem) => problem.message);
 const ruleIdsFor = (sql) => problems(sql).map((message) => message.split(":")[0]);
 
 describe("statements the expand/contract rule forbids", () => {
@@ -430,6 +437,80 @@ describe("which migrations get audited", () => {
     expect(gitBaseFolders(run)).toEqual({
       folders: ["20260805033500_pre-guard"],
       how: "merge-base origin/main HEAD",
+      commit: fork,
     });
+  });
+});
+
+describe("a drop-column marker while a serving release still declares the column", () => {
+  // H-49 ("there is no legacy") is about old *data*, never deploy order. The
+  // migration runs inside the build while the previous release is serving, and
+  // every whole-row select() or returning() on that release names each column
+  // its Drizzle schema declares — so a drop it still declares breaks it for
+  // the deploy window, whatever the marker's reason says (issue #2336).
+  const reason = "release 4 of the rename; nothing has read it since #391";
+  const sql = `-- diveday:allow-destructive drop-column people.full_name: ${reason}\nALTER TABLE "people" DROP COLUMN "full_name";`;
+  const declaring = [
+    "export const people = pgTable(",
+    '  "people",',
+    "  {",
+    '    id: uuid("id").primaryKey(),',
+    '    fullName: text("full_name").notNull(),',
+    "  },",
+    ");",
+    'export const crew = pgTable("crew", { nickname: text("nickname") });',
+  ].join("\n");
+  const dropped = declaring.replace('    fullName: text("full_name").notNull(),\n', "");
+
+  it("names the Drizzle property a schema declares for the column", () => {
+    expect(declaredProperty(declaring, "people", "full_name")).toBe("fullName");
+    expect(declaredProperty(dropped, "people", "full_name")).toBeNull();
+  });
+
+  it("reads only the named table, not a same-named column on another", () => {
+    expect(declaredProperty(declaring, "people", "nickname")).toBeNull();
+    expect(declaredProperty(declaring, "crew", "nickname")).toBe("nickname");
+  });
+
+  it("refuses the marker when the previous release still declares the column", () => {
+    const found = problems(sql, { schemas: [{ label: "previous release", source: declaring }] });
+    expect(found).toHaveLength(1);
+    expect(found[0]).toContain("previous release");
+    expect(found[0]).toContain("people.fullName");
+  });
+
+  it("refuses the marker when this branch still declares the column", () => {
+    const found = problems(sql, {
+      schemas: [
+        { label: "previous release", source: dropped },
+        { label: "this branch", source: declaring },
+      ],
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0]).toContain("this branch");
+  });
+
+  it("passes once the last release that read the column has stopped declaring it", () => {
+    expect(
+      problems(sql, {
+        schemas: [
+          { label: "previous release", source: dropped },
+          { label: "this branch", source: dropped },
+        ],
+      }),
+    ).toEqual([]);
+  });
+
+  it("reads the previous release's schema straight out of git", () => {
+    const run = (args) =>
+      ({
+        "ls-tree -r --name-only abc -- src/db/schema": {
+          ok: true,
+          out: "src/db/schema/core.ts\nsrc/db/schema/README.md\n",
+        },
+        "show abc:src/db/schema/core.ts": { ok: true, out: declaring },
+      })[args.join(" ")] ?? { ok: false, out: "fatal: stub miss" };
+    expect(schemaSourceAt("abc", run)).toBe(declaring);
+    expect(schemaSourceAt("missing", run)).toBeNull();
   });
 });

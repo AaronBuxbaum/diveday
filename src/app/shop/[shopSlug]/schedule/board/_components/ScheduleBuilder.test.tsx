@@ -61,8 +61,9 @@ const COPY: BuilderCopy = {
   impactBoatClash: "{boat} is already out on {departure} at that time.",
   impactCrewClash: "{name} is already rostered on {departure} at that time.",
   impactCrewAway: "{name} has told you they are away then.",
-  impactToldOne: "{count} diver has already been told this date. Moving it sends nothing.",
-  impactToldOther: "{count} divers have already been told this date. Moving it sends nothing.",
+  impactToldOne: "{count} diver has already been told this date. Moving it tells them the new one.",
+  impactToldOther:
+    "{count} divers have already been told this date. Moving it tells them the new one.",
   impactGearOne: "{count} reserved unit travels with it.",
   impactGearOther: "{count} reserved units travel with it.",
   impactPaidOne: "{count} seat is already paid.",
@@ -139,6 +140,8 @@ const COPY: BuilderCopy = {
   selfGuidedHint: "Buddy pairs go in without a guide.",
   isPrivateHint:
     "Off the public schedule. Anyone with the link can see the departure and book a seat.",
+  isRehearsalLabel: "Rehearsal for training day",
+  isRehearsalHint: "Practice only.",
   daysLabel: "How many days",
   daysDescription: "Most departures are one day.",
   payAtBookingLegend: "Pay at booking",
@@ -2180,7 +2183,7 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
 
     expect(
       await screen.findByText(
-        "4 divers have already been told this date. Moving it sends nothing.",
+        "4 divers have already been told this date. Moving it tells them the new one.",
       ),
     ).toBeInTheDocument();
     // Singular and plural both resolved server-side, picked here by count.
@@ -2347,7 +2350,9 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
     expect(screen.getByRole("button", { name: COPY.moveIt })).toBeEnabled();
     // The facts survive the refusal — they are why it is worth reading.
     expect(
-      screen.getByText("6 divers have already been told this date. Moving it sends nothing."),
+      screen.getByText(
+        "6 divers have already been told this date. Moving it tells them the new one.",
+      ),
     ).toBeInTheDocument();
   });
 

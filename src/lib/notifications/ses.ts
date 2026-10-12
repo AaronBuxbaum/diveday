@@ -8,6 +8,7 @@ import type { NotificationProvider } from "./provider";
 import { reservedTestRecipientDelivery } from "./provider";
 import { messageFor } from "./render";
 import { SES_KIND_TAG, SES_SHOP_TAG } from "./ses-tags";
+import { fromAddressFor } from "./shop-voice";
 
 /**
  * The AWS SES adapter — DiveDay's sole email provider (ADR
@@ -226,7 +227,9 @@ export function sesNotificationProvider(
       try {
         const result = await client.send(
           new SendEmailCommand({
-            FromEmailAddress: config.from,
+            // "{Shop} via DiveDay" when the shop is the voice, on the same
+            // verified address either way (`fromAddressFor`).
+            FromEmailAddress: fromAddressFor(config.from, notification),
             Destination: { ToAddresses: [to] },
             // A reply to a booking confirmation is a diver writing to the
             // shop, and `noreply@ses.dive.day` is a dead letter box. The

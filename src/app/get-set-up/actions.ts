@@ -2,10 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { after } from "next/server";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import { countSetupRequestsSince, recordSetupRequest } from "@/db/funnel";
 import { requestLocale } from "@/i18n/request";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import { formValue, parseForm } from "@/lib/form-parse";
 import { eventSource, SET_UP_SENT_PATH } from "@/lib/funnel";
 import { log } from "@/lib/log";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -24,6 +26,20 @@ import { announceSetupRequest } from "./announce";
 
 /** Long enough for any honest answer; a value past it is refused by the parser anyway. */
 const ECHO_MAX = 400;
+
+/**
+ * The form as `FormData.get` reads it, field by field: what the reader typed
+ * (narrowed and validated by `parseSetupRequest`), the honeypot and where the
+ * reader came from.
+ */
+const setupForm = z.object({
+  ...(Object.fromEntries(SETUP_FIELDS.map((field) => [field, formValue()])) as Record<
+    SetupField,
+    ReturnType<typeof formValue>
+  >),
+  [SETUP_HONEYPOT_FIELD]: formValue(),
+  source: formValue(),
+});
 
 /**
  * Store one set-up request and send the reader to the thank-you page (ADR
@@ -48,9 +64,12 @@ export async function submitSetupRequestAction(
   _prev: SetupRequestFormState,
   formData: FormData,
 ): Promise<SetupRequestFormState> {
+  const form = parseForm(setupForm, formData);
+  // Every field of the schema takes any value, so the read cannot refuse.
+  if (!form.ok) throw new Error("the set-up form's schema refused a form");
   const values = Object.fromEntries(
     SETUP_FIELDS.map((field) => {
-      const value = formData.get(field);
+      const value = form.data[field];
       return [field, typeof value === "string" ? value.slice(0, ECHO_MAX) : ""];
     }),
   ) as Record<SetupField, string>;
@@ -62,7 +81,7 @@ export async function submitSetupRequestAction(
   );
   if (!byIp.allowed) return { formError: "rate_limited", values };
 
-  if (trippedHoneypot(formData.get(SETUP_HONEYPOT_FIELD))) {
+  if (trippedHoneypot(form.data[SETUP_HONEYPOT_FIELD])) {
     // A count, so a bot wave shows in the drain; nothing it typed is logged.
     log("setup_request.honeypot_tripped", "info");
     redirect(SET_UP_SENT_PATH);
@@ -85,7 +104,7 @@ export async function submitSetupRequestAction(
 
   const row = await recordSetupRequest(db, {
     ...parsed.data,
-    source: eventSource(formData.get("source")),
+    source: eventSource(form.data.source),
     locale: await requestLocale(),
   });
   after(() => announceSetupRequest(row));

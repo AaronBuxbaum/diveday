@@ -9,8 +9,8 @@ import {
 } from "./participant-types";
 import type { ReadinessResult } from "./readiness";
 import type { RollCallCheckpoint, RollCallRecord } from "./roll-call";
-import { isNotBackAboard } from "./roll-call";
-import type { MedicalWaiverMark } from "./waivers";
+import { isNotBackAboard, isRollCallCheckpoint } from "./roll-call";
+import type { MedicalWaiverMark, RiderMedicalHold } from "./waivers";
 import type { WelcomeCue } from "./welcome-cue";
 
 /**
@@ -36,11 +36,14 @@ function unavailableReadiness(): ReadinessResult {
 }
 
 export {
+  blockedAtRail,
+  boardedBefore,
   carryForwardNotBoarded,
   isNotBackAboard,
   isRollCallCheckpoint,
   RETRACTION_SUPERSEDED,
   ROLL_CALL_NOTE_MAX,
+  rollCallCheckpointOrdinal,
   rollCallCheckpoints,
   rollCallNoteAllowed,
   standingResultMeansSailed,
@@ -215,11 +218,24 @@ export type ManifestDiverInput = {
    */
   medicalWaiver?: MedicalWaiverMark | null;
   /**
+   * A rider boarding, riding only, on a release a referral or a physician's
+   * "no" holds (H-109, `riderMedicalHold`): never a blocker, always a warning
+   * at the rail. A person fact, so a held seat drops it with the medical mark.
+   */
+  riderMedicalHold?: RiderMedicalHold | null;
+  /**
    * Lodging / hotel location stated by diver on /ready (marker only, not a checkpoint).
    */
   hotelPickupLocation?: string | null;
   /** Staff-set pickup time for this booking (e.g. "07:15"). */
   pickupTime?: string | null;
+  /**
+   * When the diver said they were running late (J3, #2319), already through
+   * `runningLateShown`, so it is null on a seat that has arrived or been
+   * released. Display only: `runningLateOnManifest` (src/lib/running-late.ts)
+   * decides the row's line, and nothing in this file reads it.
+   */
+  runningLateAt?: Date | null;
   rollCall?: RollCallRecord;
   /**
    * The buddy team staff put this diver on, when they did
@@ -860,6 +876,11 @@ export type TripManifest = {
      * existed. It is not a licence to omit it from a real manifest.
      */
     capacity?: number;
+    /**
+     * A rehearsal (ADR 20261012-rehearsal-departures): the paper manifest says
+     * so beside souls on board. Optional for the same reason as `capacity`.
+     */
+    isRehearsal?: boolean;
   };
   checkpoint: RollCallCheckpoint;
   crew: (ManifestCrewMember & {
@@ -1013,6 +1034,21 @@ export function splitBuddyTeamIds(manifest: TripManifest, alert: BuddyAlert): Se
     for (const team of member.buddyTeams ?? []) consider(team, member.rollCall);
   }
   return split;
+}
+
+/**
+ * The manifest at one roll-call checkpoint, or `null` when the trip has no
+ * such checkpoint (an `after_dive_3` on a two-dive boat, or junk from a URL).
+ * The one rule for "which checkpoint is this", shared by `getTripManifest`
+ * and the manifest page, which already holds every checkpoint's manifest.
+ */
+export function manifestAtCheckpoint(
+  manifests: readonly TripManifest[],
+  checkpoint: string,
+): TripManifest | null {
+  const plannedDives = manifests[0]?.trip.plannedDives ?? 0;
+  if (!isRollCallCheckpoint(checkpoint, plannedDives)) return null;
+  return manifests.find((manifest) => manifest.checkpoint === checkpoint) ?? null;
 }
 
 /**

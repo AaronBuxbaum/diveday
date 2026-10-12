@@ -1,10 +1,15 @@
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openTripAbout, openTripMore, signInAsOwner } from "./helpers";
+import { daysFromNow, e2eNow, openTripAbout, openTripMore } from "./helpers";
 
 test.describe("staff", () => {
   signedInAsOwner();
 
-  test("staff reuses a dive-site briefing on a trip that divers can explore", async ({ page }) => {
+  test("staff reuses a dive-site briefing on a trip that divers can explore", async ({
+    page: staff,
+    browser,
+    workerBaseURL,
+  }) => {
+    let page = staff;
     // Longest single test in this file: create a site, copy it, wire a trip
     // to it, and exercise the crew-prediction flow — each step its own
     // navigation or status-toast wait. Same aggregate-cost reasoning as
@@ -65,9 +70,13 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction published");
 
-    // Staff are routed to the trip editor; view the public diver briefing signed
-    // out, then sign back in to finish the staff-side edits below.
-    await page.context().clearCookies();
+    // Staff are routed to the trip editor, so the public diver briefing is read
+    // from a signed-out context of its own. Clearing this page's cookies and
+    // signing back in through the form cost the test seconds of its budget
+    // for a sign-in nothing here asserts on (issue #2366).
+    const staffPage = page;
+    const visitorContext = await browser.newContext({ baseURL: workerBaseURL });
+    page = makeActivitySafe(await visitorContext.newPage());
     await page.goto("/s/blue-mantis");
     // Scoped to the trip list itself, the page's one stable anchor for
     // departures — day rules and other lists on the page never carry a
@@ -124,8 +133,11 @@ test.describe("staff", () => {
     expect(noteText).toMatch(/Updated /);
     expect(noteText).not.toMatch(/\d{1,2}:\d{2}:\d{2}/);
 
-    await signInAsOwner(page);
-    await page.goto(manageTripUrl);
+    await visitorContext.close();
+    page = staffPage;
+    // Straight to the Details tab: `openTripAbout` from the trip root is a
+    // second navigation of its own.
+    await page.goto(`${manageTripUrl}?view=details`);
     // Published, so the disclosure reads "Edit"; the clear control sits inside.
     await openTripAbout(page);
     await page.getByText("Edit crew prediction", { exact: true }).click();
@@ -604,6 +616,7 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/dive-sites");
     await page.getByRole("link", { name: "Molasses Reef", exact: true }).first().click();
     await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
+    const site = new URL(page.url()).pathname;
 
     const note = page.getByLabel("What to remember about running this site");
     await expect(note).toHaveValue("");
@@ -635,9 +648,10 @@ test.describe("staff", () => {
       page.getByText("The mooring ball moved south. Brief the swim-through first."),
     ).toHaveCount(0);
 
-    // Taking it back takes it off the row.
-    await page.goto("/shop/blue-mantis/dive-sites");
-    await page.getByRole("link", { name: "Molasses Reef", exact: true }).first().click();
+    // Taking it back takes it off the row. Straight to the site: the library's
+    // link to it was proven above, and a second walk through it was budget
+    // spent on nothing new (issue #2366).
+    await page.goto(site);
     await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
     const cleared = page.getByLabel("What to remember about running this site");
     await cleared.fill("");
@@ -761,109 +775,114 @@ test("the same saved field guide reads in Spanish for a Spanish-speaking diver",
   await expect(page.getByText("Stoplight parrotfish")).toHaveCount(0);
 });
 
-test("a shop writes its own landmarks and picks its own field guide", async ({ page }) => {
-  await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/dive-sites");
-  // Pickles Reef is the seeded site with an empty field guide — the state a
-  // real shop's brand-new site is in, and the one this form had no way out of
-  // until the picker existed.
-  await page
-    .getByRole("link", { name: /Pickles Reef/ })
-    .first()
-    .click();
-  await page.waitForURL(/\/dive-sites\/[0-9a-f-]{36}/);
+// Signed in through the worker's cached owner session rather than the sign-in
+// form: two sign-ins through the UI were seconds of each test's 15-second
+// budget spent on something no assertion here is about (issue #2366).
+test.describe("an owner's own library", () => {
+  signedInAsOwner();
 
-  // Pick a species from DiveDay's catalog. The card is a preview, not a form:
-  // the name, the category and the sentence are DiveDay's, written in every
-  // language and resolved for whoever reads the briefing (ADR
-  // 20260813-marine-life-is-diveday-copy). What the shop chooses is which
-  // faces this site shows, and in what order.
-  const guide = page.locator('fieldset:has-text("Field guide")');
-  await page.getByLabel("Find a species").fill("Hogfish");
-  await page.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(guide.getByText("Pez perro")).toHaveCount(0);
-  await expect(guide.getByText("Hogfish")).toBeVisible();
-  await expect(guide.getByText("Reef fish")).toBeVisible();
-  // Nothing on the card can be typed into.
-  await expect(guide.getByRole("textbox", { name: "Category" })).toHaveCount(0);
+  test("a shop writes its own landmarks and picks its own field guide", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/dive-sites");
+    // Pickles Reef is the seeded site with an empty field guide — the state a
+    // real shop's brand-new site is in, and the one this form had no way out of
+    // until the picker existed.
+    await page
+      .getByRole("link", { name: /Pickles Reef/ })
+      .first()
+      .click();
+    await page.waitForURL(/\/dive-sites\/[0-9a-f-]{36}/);
 
-  // A species DiveDay has no words for is refused rather than added blank —
-  // half a translated guide reads worse than one species fewer. The refusal is
-  // a door rather than a dead end: the ask lands in `marine_life_requests`,
-  // which is how DiveDay decides what the catalog grows by next.
-  await page.getByLabel("Find a species").fill("Pygmy seahorse");
-  await page.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(guide.getByText(/Not in DiveDay’s catalog/)).toBeVisible();
-  await page.getByRole("button", { name: "Tell DiveDay about it" }).click();
-  await expect(guide.getByText(/we have noted Pygmy seahorse/)).toBeVisible();
+    // Pick a species from DiveDay's catalog. The card is a preview, not a form:
+    // the name, the category and the sentence are DiveDay's, written in every
+    // language and resolved for whoever reads the briefing (ADR
+    // 20260813-marine-life-is-diveday-copy). What the shop chooses is which
+    // faces this site shows, and in what order.
+    const guide = page.locator('fieldset:has-text("Field guide")');
+    await page.getByLabel("Find a species").fill("Hogfish");
+    await page.getByRole("button", { name: "Add", exact: true }).click();
+    await expect(guide.getByText("Pez perro")).toHaveCount(0);
+    await expect(guide.getByText("Hogfish")).toBeVisible();
+    await expect(guide.getByText("Reef fish")).toBeVisible();
+    // Nothing on the card can be typed into.
+    await expect(guide.getByRole("textbox", { name: "Category" })).toHaveCount(0);
 
-  // A landmark, with the shop's own note on it. Pickles Reef ships with two, so
-  // the new row is the last one — `.last()` throughout, and the round-trip
-  // assertions below read that same row back after the save.
-  await page.getByRole("button", { name: "Add a landmark" }).click();
-  // The section's legend is its name now, not a sentence — the editor rail
-  // beside the form says the same word (ADR 20260827-the-shops-shelves).
-  const landmarks = page.locator('fieldset:has-text("Landmarks")');
-  await landmarks.getByRole("textbox", { name: "Landmark" }).last().fill("The barrel casks");
-  await landmarks
-    .getByRole("textbox", { name: "What to say about it" })
-    .last()
-    .fill("Cement that hardened in its barrels and outlasted the ship.");
-  await landmarks.getByLabel("What kind").last().selectOption("reefHistory");
+    // A species DiveDay has no words for is refused rather than added blank —
+    // half a translated guide reads worse than one species fewer. The refusal is
+    // a door rather than a dead end: the ask lands in `marine_life_requests`,
+    // which is how DiveDay decides what the catalog grows by next.
+    await page.getByLabel("Find a species").fill("Pygmy seahorse");
+    await page.getByRole("button", { name: "Add", exact: true }).click();
+    await expect(guide.getByText(/Not in DiveDay’s catalog/)).toBeVisible();
+    await page.getByRole("button", { name: "Tell DiveDay about it" }).click();
+    await expect(guide.getByText(/we have noted Pygmy seahorse/)).toBeVisible();
 
-  await page.getByRole("button", { name: "Save dive site" }).click();
-  await expect(page.getByText("Dive site saved.")).toBeVisible();
+    // A landmark, with the shop's own note on it. Pickles Reef ships with two, so
+    // the new row is the last one — `.last()` throughout, and the round-trip
+    // assertions below read that same row back after the save.
+    await page.getByRole("button", { name: "Add a landmark" }).click();
+    // The section's legend is its name now, not a sentence — the editor rail
+    // beside the form says the same word (ADR 20260827-the-shops-shelves).
+    const landmarks = page.locator('fieldset:has-text("Landmarks")');
+    await landmarks.getByRole("textbox", { name: "Landmark" }).last().fill("The barrel casks");
+    await landmarks
+      .getByRole("textbox", { name: "What to say about it" })
+      .last()
+      .fill("Cement that hardened in its barrels and outlasted the ship.");
+    await landmarks.getByLabel("What kind").last().selectOption("reefHistory");
 
-  // Round-trips: the chosen species and the landmark come back as the shop
-  // left them, and the refused one never landed.
-  await expect(guide.getByText("Hogfish")).toBeVisible();
-  await expect(guide.getByText(/Pygmy seahorse/)).toHaveCount(0);
-  await expect(landmarks.getByRole("textbox", { name: "Landmark" }).last()).toHaveValue(
-    "The barrel casks",
-  );
-  await expect(landmarks.getByLabel("What kind").last()).toHaveValue("reefHistory");
-});
+    await page.getByRole("button", { name: "Save dive site" }).click();
+    await expect(page.getByText("Dive site saved.")).toBeVisible();
 
-test("a template can be read in full before it is imported", async ({ page }) => {
-  await signInAsOwner(page);
-  // Journey L5 of the shelves canvas, from its first step: the catalog is
-  // reached through the door at the library ledger's tail (ADR
-  // 20260827-the-shops-shelves), never a peer destination.
-  await page.goto("/shop/blue-mantis/dive-sites");
-  await page.getByRole("link", { name: "Browse the DiveDay catalog" }).click();
-  await expect(page).toHaveURL(/\/dive-sites\?view=catalog$/);
-  // The catalog pages, ordered by distance — this one is on the first page and
-  // carries both of the things a one-tap import used to hand a shop sight
-  // unseen: a cert gate, and a field guide. The row **is** the preview door
-  // now, so it is the row's own link that opens it rather than a button beside
-  // an Import the shop had not decided on yet.
-  await page.getByRole("link", { name: "Eagle Wreck", exact: true }).click();
-  await page.waitForURL(/template=eagle-wreck/);
+    // Round-trips: the chosen species and the landmark come back as the shop
+    // left them, and the refused one never landed.
+    await expect(guide.getByText("Hogfish")).toBeVisible();
+    await expect(guide.getByText(/Pygmy seahorse/)).toHaveCount(0);
+    await expect(landmarks.getByRole("textbox", { name: "Landmark" }).last()).toHaveValue(
+      "The barrel casks",
+    );
+    await expect(landmarks.getByLabel("What kind").last()).toHaveValue("reefHistory");
+  });
 
-  await expect(page.getByRole("heading", { name: "Eagle Wreck", level: 1 })).toBeVisible();
-  await expect(page.getByText("Advanced Open Water")).toBeVisible();
-  await expect(page.getByText("Wheelhouse and mast")).toBeVisible();
-  await expect(page.getByRole("img", { name: "Goliath grouper" })).toBeVisible();
+  test("a template can be read in full before it is imported", async ({ page }) => {
+    // Journey L5 of the shelves canvas, from its first step: the catalog is
+    // reached through the door at the library ledger's tail (ADR
+    // 20260827-the-shops-shelves), never a peer destination.
+    await page.goto("/shop/blue-mantis/dive-sites");
+    await page.getByRole("link", { name: "Browse the DiveDay catalog" }).click();
+    await expect(page).toHaveURL(/\/dive-sites\?view=catalog$/);
+    // The catalog pages, ordered by distance — this one is on the first page and
+    // carries both of the things a one-tap import used to hand a shop sight
+    // unseen: a cert gate, and a field guide. The row **is** the preview door
+    // now, so it is the row's own link that opens it rather than a button beside
+    // an Import the shop had not decided on yet.
+    await page.getByRole("link", { name: "Eagle Wreck", exact: true }).click();
+    await page.waitForURL(/template=eagle-wreck/);
 
-  await page.getByRole("button", { name: "Import to my library" }).click();
-  await page.waitForURL(/\/dive-sites\/[0-9a-f-]{36}/);
-  // The field guide came with it — a template that arrived without one left a
-  // shop to retype the half of the briefing it could not see.
-  await expect(
-    page.locator('fieldset:has-text("Field guide")').getByText("Goliath grouper"),
-  ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Eagle Wreck", level: 1 })).toBeVisible();
+    await expect(page.getByText("Advanced Open Water")).toBeVisible();
+    await expect(page.getByText("Wheelhouse and mast")).toBeVisible();
+    await expect(page.getByRole("img", { name: "Goliath grouper" })).toBeVisible();
 
-  // L5's last step: the site is now a row in her own ledger, filed under the
-  // difficulty the template published, and its words are hers to edit.
-  await page.getByRole("main").getByRole("link", { name: "Dive sites", exact: true }).click();
-  await expect(page).toHaveURL(/\/dive-sites$/);
-  const row = page.getByRole("link", { name: "Eagle Wreck", exact: true });
-  await expect(row).toHaveCount(1);
-  await expect(page.getByRole("heading", { level: 2, name: "Advanced" })).toBeVisible();
-  // Advanced Open Water is above the floor, so the row says so; a site asking
-  // only for Open Water says nothing at all (pinned in
-  // `SiteLibraryLedger.test.tsx`).
-  await expect(page.getByText(/Advanced Open Water/).first()).toBeVisible();
+    await page.getByRole("button", { name: "Import to my library" }).click();
+    await page.waitForURL(/\/dive-sites\/[0-9a-f-]{36}/);
+    // The field guide came with it — a template that arrived without one left a
+    // shop to retype the half of the briefing it could not see.
+    await expect(
+      page.locator('fieldset:has-text("Field guide")').getByText("Goliath grouper"),
+    ).toBeVisible();
+
+    // L5's last step: the site is now a row in her own ledger, filed under the
+    // difficulty the template published, and its words are hers to edit.
+    await page.getByRole("main").getByRole("link", { name: "Dive sites", exact: true }).click();
+    await expect(page).toHaveURL(/\/dive-sites$/);
+    const row = page.getByRole("link", { name: "Eagle Wreck", exact: true });
+    await expect(row).toHaveCount(1);
+    await expect(page.getByRole("heading", { level: 2, name: "Advanced" })).toBeVisible();
+    // Advanced Open Water is above the floor, so the row says so; a site asking
+    // only for Open Water says nothing at all (pinned in
+    // `SiteLibraryLedger.test.tsx`).
+    await expect(page.getByText(/Advanced Open Water/).first()).toBeVisible();
+  });
 });
 
 /**
@@ -975,13 +994,13 @@ test("staff read a dive_sites.csv back into the library", async ({ page, private
   await page.waitForURL(/notice=imported-\d+-1-0-0/);
   await expect(page.getByRole("status")).toContainText("created 1 new one");
 
-  await page.goto(`/shop/${privateShop.slug}/dive-sites`);
-  await expect(page.getByText("Lantern Wall")).toBeVisible();
+  // Each import lands back on this tab, form and all, so the next upload goes
+  // from here and the library is read once at the end: a navigation between
+  // every step put this test on its 15-second budget (issue #2366).
 
   // The field guide travels in a second file of the same bundle and comes back
   // in the same upload, joined on the id the sites file carried (issue #1841).
   // A species DiveDay no longer lists is left out and counted, never stored.
-  await page.goto(`/shop/${privateShop.slug}/settings/import?what=dive-sites`);
   const siteId = "3f0b6a2e-9c41-4d7e-8f15-2a6c9b1d4e70";
   await page.getByLabel("Choose CSV files").setInputFiles([
     {
@@ -1005,7 +1024,6 @@ test("staff read a dive_sites.csv back into the library", async ({ page, private
   // half-way: this reads the export's own columns, so a column it does not know
   // is either one a later DiveDay wrote or one the shop added by hand, and
   // both are a restore that quietly loses a fact.
-  await page.goto(`/shop/${privateShop.slug}/settings/import?what=dive-sites`);
   await page.getByLabel("Choose CSV files").setInputFiles({
     name: "dive_sites.csv",
     mimeType: "text/csv",
@@ -1018,5 +1036,6 @@ test("staff read a dive_sites.csv back into the library", async ({ page, private
   // announcer, which wins the match on a fresh navigation.
   await expect(page.getByText(/column DiveDay does not recognize/)).toBeVisible();
   await page.goto(`/shop/${privateShop.slug}/dive-sites`);
+  await expect(page.getByText("Lantern Wall")).toBeVisible();
   await expect(page.getByText("Somewhere Else")).toHaveCount(0);
 });

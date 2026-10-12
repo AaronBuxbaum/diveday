@@ -182,5 +182,6 @@ its manifest line and its danger-toned fleet row stand, and its next save must f
 transaction is the ceiling that holds regardless: it sells at most the lower of the departure's
 `capacity` and the hull's certificate, read under the trip-row lock (`sellableCapacity`), and so do
 `restoreBooking`, `undoBookingNoShow` and the wait list's full/not-full answer. A copy and a series
-roll start the new departure at the certificate; "apply to the rest of the series" skips a date on
-a hull certified for fewer. Nothing here touches admission, readiness or the roll call.
+roll start the new departure at the certificate; "apply to the rest of the series" gives a date on
+a smaller hull the details with its seats capped at the certificate, and only a date holding more
+seats than that, or with a roll call past the new dive count, is left alone (#2322). Nothing here touches admission, readiness or the roll call.

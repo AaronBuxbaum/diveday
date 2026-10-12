@@ -17,7 +17,6 @@ import {
   courseFormTextChanged,
   fillCourseFormText,
   normalizeCourseFormText,
-  outstandingCourseForms,
   type RequiredCourseForm,
 } from "@/lib/course-forms";
 import {
@@ -404,12 +403,23 @@ export async function attachStandardCourseForms(
   let position = current.reduce((max, row) => Math.max(max, row.position + 1), 0);
   let created = 0;
   let attached = 0;
+  // `listCourseForms` reads oldest first, and every row a transaction writes
+  // shares its `now()`, so each new form is stamped a millisecond after the
+  // shop's newest: the forms list in the order the course names them, not by
+  // random id.
+  const [newest] = await db
+    .select({ createdAt: courseForms.createdAt })
+    .from(courseForms)
+    .where(eq(courseForms.shopId, input.shopId))
+    .orderBy(desc(courseForms.createdAt))
+    .limit(1);
+  let stamp = Math.max(nowDate().getTime(), (newest?.createdAt.getTime() ?? 0) + 1);
   for (const title of titles) {
     let formId = formByTitle.get(titleKey(title));
     if (!formId) {
       const [form] = await db
         .insert(courseForms)
-        .values({ shopId: input.shopId })
+        .values({ shopId: input.shopId, createdAt: new Date(stamp++) })
         .returning({ id: courseForms.id });
       if (!form) throw new Error("attachStandardCourseForms: insert returned no row");
       await db.insert(courseFormVersions).values({
@@ -1188,58 +1198,6 @@ export async function recordPaperCourseForm(
       guardian,
     });
   });
-}
-
-/**
- * Which forms each booking on these trips still owes, by booking id — the
- * course roster's and the trip roster's view, read whatever
- * `COURSE_FORMS_BLOCK_BOARDING` says, so a shop sees what is owed even when
- * it does not block.
- */
-export async function owedCourseFormsByBooking(
-  db: DbExecutor,
-  shopId: string,
-  tripIds: readonly string[],
-  now: Date = nowDate(),
-): Promise<Map<string, RequiredCourseForm[]>> {
-  const result = new Map<string, RequiredCourseForm[]>();
-  const requiredByTrip = await requiredCourseFormsForTrips(db, shopId, tripIds, now);
-  if (requiredByTrip.size === 0) return result;
-  const seats = await db
-    .select({
-      bookingId: bookings.id,
-      personId: bookings.personId,
-      tripId: bookings.tripId,
-      dateOfBirth: people.dateOfBirth,
-      timezone: shops.timezone,
-    })
-    .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .innerJoin(shops, eq(shops.id, bookings.shopId))
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        inArray(bookings.tripId, [...requiredByTrip.keys()]),
-        ne(bookings.status, "cancelled"),
-      ),
-    );
-  const signatures = await courseFormSignaturesForBookings(
-    db,
-    shopId,
-    seats.map((seat) => seat.bookingId),
-  );
-  for (const seat of seats) {
-    const owed = outstandingCourseForms({
-      shopId,
-      bookingId: seat.bookingId,
-      personId: seat.personId,
-      required: requiredByTrip.get(seat.tripId) ?? [],
-      signatures,
-      signer: { dateOfBirth: seat.dateOfBirth, timezone: seat.timezone },
-    });
-    if (owed.length > 0) result.set(seat.bookingId, owed);
-  }
-  return result;
 }
 
 /** How many students, on how many sessions, a change to forms reaches. */

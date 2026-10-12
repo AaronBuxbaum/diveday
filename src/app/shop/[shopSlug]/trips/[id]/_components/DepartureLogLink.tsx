@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonExportIncidentRecord } from "@/db/authz";
-import type { DbExecutor } from "@/db/client";
+import { getDb } from "@/db/client";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { shopPath } from "@/lib/staff-notices";
 
 /**
@@ -15,27 +17,22 @@ import { shopPath } from "@/lib/staff-notices";
  * again, so this render is never the only gate.
  */
 export async function DepartureLogLink({
-  db,
-  shopId,
+  shop,
   personId,
-  shopSlug,
   tripId,
-  label,
 }: {
-  db: DbExecutor;
-  shopId: string;
+  shop: { id: string; slug: string; defaultLocale: string };
   personId: string;
-  shopSlug: string;
   tripId: string;
-  label: string;
 }) {
-  if (!(await canPersonExportIncidentRecord(db, shopId, personId))) return null;
+  if (!(await canPersonExportIncidentRecord(await getDb(), shop.id, personId))) return null;
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
   return (
     <Link
-      href={shopPath(shopSlug, "trips", tripId, "log")}
+      href={shopPath(shop.slug, "trips", tripId, "log")}
       className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
     >
-      {label}
+      {t("incidentExport.openLink")}
     </Link>
   );
 }

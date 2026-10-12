@@ -15,7 +15,10 @@ import {
   syncDemoStripeAccount,
   upsertShopStripeAccount,
 } from "./stripe-accounts";
-import { stripeKeySourceFromEnvironment } from "./stripe-providers";
+import {
+  paymentSourceLookupFromEnvironment,
+  stripeKeySourceFromEnvironment,
+} from "./stripe-providers";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -360,6 +363,23 @@ describe("the demo and the live platform key", () => {
     expect(
       await stripeKeySourceFromEnvironment({ db: async () => db })?.secretKeyFor(DEMO_ACCOUNT),
     ).toBe(DEMO_KEY);
+    vi.unstubAllEnvs();
+  });
+
+  // Issue #2296: the webhook's charge-source lookup takes the same per-account key.
+  it("asks Stripe about the canonical demo's charge with the demo's test key", async () => {
+    const { db, shop } = await shopContext();
+    liveDeploymentWithDemo();
+    await connected(db, shop.id, DEMO_ACCOUNT);
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ data: [] })));
+    const lookup = paymentSourceLookupFromEnvironment(process.env, fetchImpl as never, {
+      livemode: false,
+      db: async () => db,
+    });
+
+    expect(await lookup.findSource(DEMO_ACCOUNT, "pi_demo")).toEqual({ status: "none" });
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(init.headers).toMatchObject({ Authorization: `Bearer ${DEMO_KEY}` });
     vi.unstubAllEnvs();
   });
 

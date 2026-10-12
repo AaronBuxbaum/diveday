@@ -152,7 +152,7 @@ type GraphCall = { ok: true; body: unknown } | ({ ok: false } & GraphFailure);
  * How long one Graph call may take, body included.
  *
  * Steps 2–4 run while the caller holds a database transaction and an advisory
- * lock on the WABA (`claimWhatsAppWaba`, issue #1769), so a Graph call that
+ * lock on the number (`claimWhatsAppNumber`, issue #1769), so a Graph call that
  * never answers is a pooled connection that never comes back. Ten seconds is
  * many times Meta's ordinary latency and short enough that three calls fit
  * inside the transaction's own idle bound.
@@ -304,6 +304,43 @@ export async function confirmWabaAccess(
   const body = wabaResponseSchema.safeParse(read.body);
   if (!body.success || body.data.id !== wabaId)
     return { status: "failed", step: "exchange", errorCode: "waba_not_visible" };
+  return { status: "visible" };
+}
+
+const wabaNumbersSchema = z.object({
+  data: z.array(z.object({ id: z.string().min(1) }).loose()),
+});
+
+/**
+ * **Step 1c: is the posted number one of that WABA's?** (issue #1767, H-83).
+ *
+ * The phone number id is the tenant key now, and it arrives as its own form
+ * field beside the WABA, so the same oracle {@link confirmWabaAccess} closes
+ * for the WABA would reopen for the number: post another shop's number id with
+ * a valid code for your own account and read off whether a DiveDay shop holds
+ * it. Listing the WABA's numbers with the exchanged token proves the number
+ * belongs to an account that token reaches. Failed as an exchange failure,
+ * word for word, for the same reason. Changes nothing at Meta.
+ */
+export async function confirmNumberInWaba(
+  wabaId: string,
+  phoneNumberId: string,
+  accessToken: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ status: "visible" } | Extract<WhatsAppSignupResult, { status: "failed" }>> {
+  const url = new URL(graphUrl(`${encodeURIComponent(wabaId)}/phone_numbers`));
+  url.searchParams.set("fields", "id");
+  // Meta caps a WABA's numbers far below this, so one page is all of them.
+  url.searchParams.set("limit", "100");
+  const read = await graphRequest(fetchImpl, url.toString(), {
+    method: "GET",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!read.ok) return failed("exchange", read);
+  const body = wabaNumbersSchema.safeParse(read.body);
+  if (!body.success || !body.data.data.some((number) => number.id === phoneNumberId)) {
+    return { status: "failed", step: "exchange", errorCode: "number_not_in_waba" };
+  }
   return { status: "visible" };
 }
 

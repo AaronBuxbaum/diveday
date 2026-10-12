@@ -31,6 +31,13 @@
   diver climbs the ladder talking about. Informs and gates nothing, and it is an ornament rather than
   evidence — an unusable slug is dropped so the dive record still saves. Null means nobody said,
   never "all good".
+- **What you might see** — the shopfront's shelf of the species this shop's crews logged most
+  often in the current calendar month, across every past season, read on the shop's clock
+  (`monthSightings`, `src/lib/month-sightings.ts`). Each line is a frequency over the month's
+  departures that left a record, "Seen on 6 of our 9 March trips", never a promise. Silent until at
+  least eight such departures exist (`MIN_MONTH_TRIPS`, so one departure moves a rate by at most
+  12.5 points) and a species was seen on at least two; at most four species. Deleted departures and
+  rehearsals are not evidence.
 - **Sighting** — a species the crew tapped after a dive, tallied per **departure** and per **dive
   site** (`trip_sightings`, slice 20r). One live row per species per site per departure carrying a
   count: the first tap writes it at one, a second tap on the same chip counts a second animal. The
@@ -78,9 +85,13 @@
   it, because DAN publishes 12 and 18 and a shop may sit above them. The lead-in states the interval
   for the same reason. It read "Fly-safe from {when}:" until issue #1433, and DAN's interval is a
   minimum that lowers DCS risk without removing it, so "safe" was the one word in the sentence that
-  read as a verdict — in Spanish twice over, where "Puedes volar" is literally *you can fly*. Three
-  things it deliberately cannot know: whether a dive took decompression stops, which DAN says needs
-  substantially longer than 18 hours; any dive not booked at this shop, so a week with another
+  read as a verdict — in Spanish twice over, where "Puedes volar" is literally *you can fly*. A
+  departure the shop marks as **decompression diving** (`trips.exceeds_no_deco_limits`, H-84,
+  issue #1555) gets no earliest flight at all, because DAN gives no figure for a dive that took
+  stops, and neither does a later departure for a diver who sailed on a marked one earlier in the
+  same lookback window (a morning decompression boat before an afternoon one); one nobody marked is
+  read as no-decompression. Two things it deliberately cannot know:
+  any dive not booked at this shop, so a week with another
   operator is invisible; and that two days belong to one diver when the bookings carry no email — a
   walk-up is a fresh `people` row each time. Informs and gates nothing; never computed from a depth
   profile, which is a dive computer's job.

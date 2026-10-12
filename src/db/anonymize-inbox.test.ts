@@ -37,6 +37,7 @@ describe("anonymizeDiver — the inbox", () => {
     await db.insert(personRoles).values({ personId: diver.id, role: "diver" });
 
     const matched = await recordInboundMessage(db, {
+      senderAuthenticated: true,
       shopId: shop.id,
       channel: "email",
       fromAddress: "erased.diver@example.org",

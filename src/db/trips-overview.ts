@@ -96,6 +96,32 @@ export async function getTripOverview(
   // fill or blockers to clear.
   const pulseNeeded = !cancelled && !departed;
 
+  // Every read below is one wave. The reads that wait on an answer from it —
+  // the crew's ratings and shifts on who is crewing, the off-cadence list on
+  // the series and the permission — chain off their own input inside the wave
+  // rather than after the whole of it (issue #2353), and the two clash reads
+  // need nothing but the departure.
+  const crewAssignmentsRead = getTripCrewAssignments(db, shop.id, tripId);
+  const canConfigureRead = canPersonConfigureTrips(db, shop.id, actorPersonId);
+  const seriesRead = getTripSeriesSummary(db, shop.id, tripId);
+  const crewEvidenceRead = crewAssignmentsRead.then(async (assignments) => {
+    const ids = assignments.map((entry) => entry.personId);
+    const [credentials, shiftCoverage] = await Promise.all([
+      ratingCredentialsByPerson(db, shop.id, ids),
+      // No shifts exist to cover anybody while the crew schedule is off.
+      shop.crewScheduleEnabled ? crewShiftCoverage(db, shop.id, trip, ids) : null,
+    ]);
+    return { credentials, shiftCoverage };
+  });
+  // Only ever non-empty right after staff narrowed this run's cadence, and only
+  // for someone who can act on it — a second query rather than a field on the
+  // summary, because it is the one thing here that costs a join and is empty
+  // almost always.
+  const offCadenceRead = Promise.all([canConfigureRead, seriesRead]).then(
+    ([mayConfigure, summary]) =>
+      mayConfigure && summary ? listOffCadenceSeriesTrips(db, shop.id, summary.id) : [],
+  );
+
   const [
     staff,
     crewAssignments,
@@ -112,16 +138,20 @@ export async function getTripOverview(
     pulsePrepDivers,
     pulseBoardedByTrip,
     pulseOpenOrders,
+    crewEvidence,
+    offCadence,
+    clashes,
+    hullClashes,
   ] = await Promise.all([
     listStaff(db, shop.id),
-    getTripCrewAssignments(db, shop.id, tripId),
+    crewAssignmentsRead,
     shared ? shared.requirement : getTripRequirements(db, shop.id, tripId),
     listDiveSites(db, shop.id),
     listTripDives(db, shop.id, tripId),
     shared ? shared.siteRequirement : getTripSiteRequirement(db, shop.id, tripId),
-    getTripSeriesSummary(db, shop.id, tripId),
+    seriesRead,
     listTripScheduleDays(db, shop.id, tripId),
-    canPersonConfigureTrips(db, shop.id, actorPersonId),
+    canConfigureRead,
     // Whether this trip's cancellation was a called blow-out — the cascade record
     // is the surface a weather morning is worked from, so the trip page must
     // always offer the way back to it (ADR 20260804-blowout-cascade).
@@ -142,14 +172,13 @@ export async function getTripOverview(
     // it. `countOpenTripOrders` asks the Orders index's own question so this
     // number and the filtered index the fact opens can never disagree.
     pulseNeeded ? countOpenTripOrders(db, shop.id, tripId) : 0,
+    crewEvidenceRead,
+    offCadenceRead,
+    // Who on this crew is on another departure whose hours overlap this one,
+    // and the hull's own clash — see the crew panel's note below.
+    crewClashes(db, shop.id, trip.id),
+    boatClashes(db, shop.id, trip.id),
   ]);
-
-  // Only ever non-empty right after staff narrowed this run's cadence, and only
-  // for someone who can act on it — a second query rather than a field on the
-  // summary, because it is the one thing here that costs a join and is empty
-  // almost always.
-  const offCadence =
-    canConfigure && series ? await listOffCadenceSeriesTrips(db, shop.id, series.id) : [];
 
   // Where this departure goes, composed from the dives already loaded above — no
   // second query, and the same answer the public schedule card gives.
@@ -196,7 +225,7 @@ export async function getTripOverview(
   // professional's recorded ratings against the departure's last shop-local
   // day, as Today and the staffing week do (issue #1853). The booking gate on
   // this same trip does not: it sells on the roster's claim (H-59).
-  const credentials = await ratingCredentialsByPerson(db, shop.id, crewIds);
+  const { credentials, shiftCoverage } = crewEvidence;
   const divesOn = lastDayOfDeparture(trip.endsAt, shop.timezone);
   const crewMembers = assignedCrew.map((entry) => ({
     person: entry.person,
@@ -257,12 +286,7 @@ export async function getTripOverview(
   // asked by the same overlap predicate. The Details form writes `boat_id` and
   // the window with no read of either, so this is the only place that door
   // gets an answer.
-  const [shiftCoverage, clashes, hullClashes] = await Promise.all([
-    // No shifts exist to cover anybody while the crew schedule is off.
-    shop.crewScheduleEnabled ? crewShiftCoverage(db, shop.id, trip, crewIds) : null,
-    crewClashes(db, shop.id, trip.id),
-    boatClashes(db, shop.id, trip.id),
-  ]);
+  // (All three are read in the wave above.)
 
   return {
     trip,

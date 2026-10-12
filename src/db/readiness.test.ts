@@ -4,11 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking, createBookingParty } from "./bookings";
-import {
-  createNitroxCertification,
-  listShopNitroxCertifications,
-  reviewNitroxCertification,
-} from "./nitrox";
+import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
 import {
   createCertification,
   createSpecialtyCertification,
@@ -33,6 +29,7 @@ import {
   certifications,
   courses,
   diveSites,
+  nitroxCertifications,
   people,
   shops,
   specialtyCertifications,
@@ -443,7 +440,14 @@ describe("trip readiness (in-memory PGlite)", () => {
     // Pick a booked diver who has no nitrox card on file yet.
     const roster = await getTripRoster(db, shop.id, reef.id);
     const nitroxHolders = new Set(
-      (await listShopNitroxCertifications(db, shop.id)).map((r) => r.certification.personId),
+      (
+        await db
+          .select({ personId: nitroxCertifications.personId })
+          .from(nitroxCertifications)
+          .where(
+            and(eq(nitroxCertifications.shopId, shop.id), isNull(nitroxCertifications.deletedAt)),
+          )
+      ).map((r) => r.personId),
     );
     const entry = roster.find((r) => !nitroxHolders.has(r.person.id));
     if (!entry) throw new Error("expected a booked diver without a nitrox card");
@@ -916,7 +920,14 @@ describe("site cert gate across the whole itinerary (DOM-C1)", () => {
     // A booked diver with no nitrox card on file, so the blocker is unambiguous.
     const roster = await getTripRoster(db, shop.id, reef.id);
     const nitroxHolders = new Set(
-      (await listShopNitroxCertifications(db, shop.id)).map((r) => r.certification.personId),
+      (
+        await db
+          .select({ personId: nitroxCertifications.personId })
+          .from(nitroxCertifications)
+          .where(
+            and(eq(nitroxCertifications.shopId, shop.id), isNull(nitroxCertifications.deletedAt)),
+          )
+      ).map((r) => r.personId),
     );
     const entry = roster.find((r) => !nitroxHolders.has(r.person.id));
     if (!entry) throw new Error("expected a booked diver without a nitrox card");

@@ -149,7 +149,7 @@ export default async function WalkInDiverPage({
           date: formatShortDate(trip.startsAt, locale, shop.timezone),
           time: formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone),
           booked: trip.booked,
-          capacity: trip.capacity,
+          capacity: trip.sellableCapacity,
         })}
       />
 

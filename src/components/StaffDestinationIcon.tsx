@@ -270,6 +270,13 @@ const ICON_PATHS: Record<StaffDestinationId, ReactNode> = {
       <path d="M16 12v-1.5" />
     </>
   ),
+  // Lost and found: a tagged item — a luggage tag on its string.
+  lostFound: (
+    <>
+      <path d="M20 12.6 12.6 20a2 2 0 0 1-2.8 0L4 14.2a2 2 0 0 1-.6-1.4V5a2 2 0 0 1 2-2h7.8a2 2 0 0 1 1.4.6L20 9.8a2 2 0 0 1 0 2.8Z" />
+      <circle cx="8" cy="8" r="1.5" />
+    </>
+  ),
   // Courses: teaching — an open book.
   courses: (
     <>
@@ -359,6 +366,13 @@ const ICON_PATHS: Record<StaffDestinationId, ReactNode> = {
       <rect x="5" y="12" width="4" height="6" rx="1" />
       <rect x="11" y="7" width="4" height="11" rx="1" />
       <rect x="17" y="9" width="4" height="9" rx="1" />
+    </>
+  ),
+  // Safety: the month's safety record — a shield.
+  safety: (
+    <>
+      <path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.2 7.5 9.5 4.4-1.3 7.5-4.9 7.5-9.5V6L12 3Z" />
+      <path d="m8.8 12 2.2 2.2 4.2-4.4" />
     </>
   ),
   // Team: the people who work here.

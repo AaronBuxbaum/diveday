@@ -71,7 +71,7 @@ and the only one whose missing data is treated as breaching rather than as quiet
 | Alarm | Fires at | What it means | First move |
 | --- | --- | --- | --- |
 | `diveday-app-errors` | 3 in 15 min | Handled errors — the ones the app caught and decided about. Sentry never sees these. | Open the "Errors, newest first" saved query and read the codes. |
-| `diveday-money-path-refusals` | 1 in 15 min | A payment arrived the booking record cannot accept: mismatched Connect account, disqualified checkout, settled total over the asked amount, a paid-for cancelled seat. | Find the checkout or order id in the line and reconcile against the Stripe dashboard by hand, before the shop notices. |
+| `diveday-money-path-refusals` | 1 in 15 min | A payment arrived the booking record cannot accept: mismatched Connect account, disqualified checkout, settled total over the asked amount, a paid-for cancelled seat. | Find the checkout or order id in the line and reconcile against the Stripe dashboard by hand, before the shop notices. A disqualified checkout is already on the shop's Orders index as money owed back, with a Refund. |
 | `diveday-notification-send-failures` | 1 in 1 h | Waiver links, reminders, password resets or staff invites are not leaving. Invisible from inside DiveDay — the booking still looks fine, and no staff screen lists a lost account email. | Read the event code: a provider's `*_send_failed` goes to its runbook (SES / SMS / WhatsApp); the retry queue's own codes are in [When a notification is given up](#when-a-notification-is-given-up). |
 | `diveday-cron-pass-failures` | 1 in 24 h | A scheduled pass ran and did not do its work. Distinct from Sentry's cron monitors, which answer "did it run at all". | The line names the scan. Every pass is idempotent, so re-running the route by hand is safe. |
 | `diveday-database-unavailable` | 1 in 5 min | The health check could not reach Postgres. | Neon console first — an exhausted free-tier compute allowance suspends the endpoint, which looks exactly like this. Then [incident-response-runbook.md](incident-response-runbook.md). |
@@ -158,17 +158,20 @@ wifi.
 
 Every staff page, every page under `/s/[shopSlug]/`, and the waiver, readiness and recap links
 write one `render.db_queries` line after their response has gone: the route template, the number
-of database statements the render sent (`queries`), and the wall time from its first statement to
-the end of the response (`ms`). `ms` is not time inside the database; read it beside `queries`, and
-a page whose `ms` moves while its `queries` stays flat is waiting on something else. The line is
+of database statements the render sent (`queries`), the time those statements took summed
+(`db_ms`), and the wall time from its first statement to the end of the response (`ms`). `db_ms` is
+timed around each statement at the driver (`src/db/client.ts`), so statements sent together each
+count in full and `db_ms` can exceed `ms`. A page whose `ms` moves while its `db_ms` stays flat is
+waiting on something other than the database; one whose `db_ms` moves while its `queries` stays
+flat has a slow query. The line is
 armed by `reportRenderQueries` (`src/lib/observability/query-timing.ts`), which a public or token
 page calls through `await connectionForRoute("<route>")` in place of `await connection()`; a page
 that does not arm its own name is reported under its layout's fallback, `/shop/**` or `/s/**`.
 
 Where to read it:
 
-- **The trend**: the dashboard's **Server render cost (p95)** graph, from the `RenderDbQueries`
-  and `RenderDbMs` metrics. One metric each, undimensioned, for the reason mutation duration has
+- **The trend**: the dashboard's **Server render cost (p95)** graph, from the `RenderDbQueries`,
+  `RenderDbStatementMs` (`db_ms`) and `RenderDbMs` (`ms`) metrics. One metric each, undimensioned, for the reason mutation duration has
   none: a `Route` dimension would bill one metric per route template, and there are over a
   hundred.
 - **Which page**: the **Heaviest renders by route (p95)** widget below it, or the saved query
@@ -246,7 +249,7 @@ does not depend on the account's age or plan. What that covers, and what this st
 
 | Always free, per month | Used | Billed |
 | --- | --- | --- |
-| 10 custom metrics | 19 (11 signals + 5 web vitals + mutation duration + 2 render cost) | 9 × $0.30 = **$2.70** |
+| 10 custom metrics | 20 (11 signals + 5 web vitals + mutation duration + 3 render cost) | 10 × $0.30 = **$3.00** |
 | 10 standard-resolution alarms | 14 (8 alarmed signals + 3 alarmed vitals + 2 SES reputation rates + the external uptime alarm) | 4 × $0.10 = **$0.40** |
 | 3 dashboards | 1 | **$0.00** (a 4th would be $3.00) |
 | 5 GB log ingestion + archive + Insights scan | well under | $0.50/GB ingested, $0.12/GB scanned beyond |
@@ -258,7 +261,7 @@ One cost in this stack is not CloudWatch's: the Route 53 health check the uptime
 matching. It is the only signal that survives a total outage, and the reasoning is in ADR
 [20260907-external-uptime-monitor](../architecture/decisions/20260907-external-uptime-monitor.md).
 
-So the fixed monthly cost of everything in this runbook is about **$3.10**, plus that check. A counter-only signal
+So the fixed monthly cost of everything in this runbook is about **$3.40**, plus that check. A counter-only signal
 added to the registry costs **$0.30**; an alarmed signal costs **$0.40** — $0.30 for the metric plus
 $0.10 for the alarm.
 

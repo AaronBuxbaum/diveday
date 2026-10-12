@@ -119,6 +119,26 @@ export type CommandPaletteCopy = {
   goToOfflineRollCall: string;
 };
 
+// ⌘K / Ctrl-K from anywhere toggles the palette. Returns true once the
+// listener is attached: the trigger publishes it as the staff surfaces'
+// `data-hydrated` flag, so a test that presses ⌘K on a fresh page can wait for
+// it rather than lose the keypress to the server-rendered button (issue #2366).
+function useCommandKey(setOpen: (update: (current: boolean) => boolean) => void): boolean {
+  const [listening, setListening] = useState(false);
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setOpen((current) => !current);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    setListening(true);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [setOpen]);
+  return listening;
+}
+
 /**
  * Global search for the front desk: "pull up Priya" without navigating to a
  * list first. Opened by ⌘K / Ctrl-K or the nav button. A hand-rolled combobox
@@ -188,17 +208,7 @@ export function CommandPalette({
     exitMs: motionMs("base"),
   });
 
-  // ⌘K / Ctrl-K from anywhere opens the palette.
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setOpen((current) => !current);
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  const listening = useCommandKey(setOpen);
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
@@ -551,6 +561,7 @@ export function CommandPalette({
       <PaletteTrigger
         variant={variant}
         onOpen={() => setOpen(true)}
+        hydrated={listening}
         search={copy.search}
         placeholder={copy.placeholder}
       />
@@ -761,6 +772,7 @@ export function CommandPalette({
 function PaletteTrigger({
   variant,
   onOpen,
+  hydrated,
   search,
   placeholder,
 }: {
@@ -768,6 +780,8 @@ function PaletteTrigger({
   onOpen: () => void;
   search: string;
   placeholder: string;
+  /** True once the ⌘K listener is attached; drawn as `data-hydrated`. */
+  hydrated: boolean;
 }) {
   return variant === "field" ? (
     <button
@@ -775,6 +789,7 @@ function PaletteTrigger({
       onClick={onOpen}
       aria-keyshortcuts="Meta+K Control+K"
       aria-label={search}
+      data-hydrated={hydrated ? "true" : undefined}
       className="flex min-h-11 w-full items-center gap-2 rounded-lg border border-border bg-surface px-3 text-start text-sm text-muted transition-[color,background-color] hover:bg-surface-sunken hover:text-foreground"
     >
       <svg
@@ -801,6 +816,7 @@ function PaletteTrigger({
       onClick={onOpen}
       aria-keyshortcuts="Meta+K Control+K"
       aria-label={search}
+      data-hydrated={hydrated ? "true" : undefined}
       // **The transition names its two properties rather than saying
       // `transition-colors`.** That shorthand covers `border-color`, and the
       // border below arrives at `sm` — so crossing that breakpoint started

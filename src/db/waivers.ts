@@ -75,7 +75,6 @@ export {
 export {
   getCurrentWaiverGeneration,
   getCurrentWaiverTemplate,
-  listWaiverTemplateHistory,
   type SaveWaiverTemplateInput,
   type SaveWaiverTemplateResult,
   type StandingWaiverExposure,

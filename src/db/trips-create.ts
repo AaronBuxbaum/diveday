@@ -43,10 +43,14 @@ export type NewTrip = {
   isPrivate?: boolean;
   /** The shop's own divemaster target does not apply to this departure (issue #973). */
   selfGuided?: boolean;
+  /** The dives went past no-decompression limits (H-84); the recap says nothing about flying. */
+  exceedsNoDecoLimits?: boolean;
   diveMode?: "boat" | "shore" | "pool";
   boatId?: string | null;
   /** The shop's own word for this kind of day (ADR 20260904-reef-all-the-way-down). */
   lensId?: string | null;
+  /** A practice departure for training day (ADR 20261012-rehearsal-departures). */
+  isRehearsal?: boolean;
 };
 
 export type TripScheduleDayInput = {
@@ -227,11 +231,24 @@ export async function insertTripInstance(
     isPrivate?: boolean;
     /** The shop's own divemaster target does not apply to this departure (issue #973). */
     selfGuided?: boolean;
+    exceedsNoDecoLimits?: boolean;
     diveMode?: "boat" | "shore" | "pool";
     boatId?: string | null;
     lensId?: string | null;
+    /** A practice departure (ADR 20261012-rehearsal-departures). Never part of a series. */
+    isRehearsal?: boolean;
   },
 ) {
+  // **A rehearsal is coerced, not trusted** (ADR 20261012-rehearsal-departures).
+  // It is private, so every public listing that already leaves private
+  // departures out leaves it out (and `trips_rehearsal_is_private` holds that
+  // in the database); it has no price, deposit or minimum, so no money path and
+  // no minimum-seats sweep has anything to act on; and it is never an instance
+  // of a series, which would re-mint it nightly.
+  const rehearsal = params.isRehearsal === true;
+  if (rehearsal && params.seriesId) {
+    throw new Error("insertTripInstance: a rehearsal is never part of a series");
+  }
   const [trip] = await tx
     .insert(trips)
     .values({
@@ -244,17 +261,18 @@ export async function insertTripInstance(
       startsAt: params.startsAt,
       endsAt: params.endsAt,
       capacity: params.capacity,
-      priceCents: params.priceCents,
-      depositCents: params.depositCents,
-      snorkelerPriceCents: params.snorkelerPriceCents ?? null,
-      riderPriceCents: params.riderPriceCents ?? null,
+      priceCents: rehearsal ? null : params.priceCents,
+      depositCents: rehearsal ? null : params.depositCents,
+      snorkelerPriceCents: rehearsal ? null : (params.snorkelerPriceCents ?? null),
+      riderPriceCents: rehearsal ? null : (params.riderPriceCents ?? null),
       diverCapacity: params.diverCapacity ?? null,
-      cancellationWindowHours: params.cancellationWindowHours,
-      minimumBookings: params.minimumBookings,
-      minimumDecisionHours: params.minimumDecisionHours,
+      cancellationWindowHours: rehearsal ? null : params.cancellationWindowHours,
+      minimumBookings: rehearsal ? null : params.minimumBookings,
+      minimumDecisionHours: rehearsal ? null : params.minimumDecisionHours,
       plannedDives: params.plannedDives,
       diveSiteId: primaryDiveSiteId(params.drafts),
-      isPrivate: params.isPrivate ?? false,
+      isPrivate: rehearsal ? true : (params.isPrivate ?? false),
+      isRehearsal: rehearsal,
       // **A course session is never self-guided** (issue #1342).
       //
       // The mark silences the shop's own advisory divemaster target for one
@@ -290,6 +308,7 @@ export async function insertTripInstance(
       // parameter and must never grow one (ADR
       // 20260827-self-guided-departures).
       selfGuided: params.courseId ? false : (params.selfGuided ?? false),
+      exceedsNoDecoLimits: params.exceedsNoDecoLimits ?? false,
       diveMode: params.diveMode ?? "boat",
       boatId: params.boatId ?? null,
       lensId: params.lensId ?? null,
@@ -359,8 +378,10 @@ export async function createTrip(db: DbExecutor, input: NewTrip) {
       scheduleDays: input.scheduleDays,
       isPrivate: input.isPrivate,
       selfGuided: input.selfGuided,
+      exceedsNoDecoLimits: input.exceedsNoDecoLimits,
       diveMode: input.diveMode,
       boatId: input.boatId,
+      isRehearsal: input.isRehearsal,
     });
   });
 }

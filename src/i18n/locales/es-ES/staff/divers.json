@@ -431,6 +431,7 @@
     "mergeAnonymized": "Estos registros no se pueden fusionar porque uno ya fue borrado.",
     "mergeAssessmentChanged": "Algo cambió en estos registros desde que abriste esta comparación. Revísala de nuevo antes de fusionar. No se movió nada.",
     "mergeBookingConflict": "Ambos registros tienen un lugar en la misma salida, lo que suele indicar dos personas. No se movió nada.",
+    "mergeBookingConflictOn": "Ambos registros tienen un lugar en {departure}, lo que suele indicar dos personas. No se movió nada.",
     "mergeDepartureUnderway": "Uno de estos registros está en una salida que está en el agua ahora. Fusiona cuando el barco haya vuelto.",
     "mergeDifferentPeopleUnacknowledged": "Verifica que estos registros son de la misma persona antes de fusionar. No se movió nada.",
     "mergeInvalid": "Elige uno de los posibles registros duplicados e inténtalo de nuevo.",

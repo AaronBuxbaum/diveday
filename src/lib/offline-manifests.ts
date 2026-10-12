@@ -360,6 +360,19 @@ export type OfflineManifestPayload = {
            */
           notHere?: boolean;
           /**
+           * **The diver's own "running late"** (#2319), as an ISO instant:
+           * when they said it, and nothing else — no channel, no message.
+           * Already cleared from an arrived or released seat at save time;
+           * the viewer words it in the shop's zone and hides it once this
+           * device boards them (`runningLateOnManifest`). Display only, like
+           * the live line: no count on the dock copy reads it.
+           *
+           * Optional and additive (no record-version bump), and absent rather
+           * than null when the diver said nothing, so a copy with nobody late
+           * serializes to exactly what it did before.
+           */
+          runningLateAt?: string;
+          /**
            * **The two medical warnings the live roll call shows** (issue
            * #2163), as calendar days in the shop's zone and nothing else: the
            * day a physician refused an earlier release this one stands over
@@ -394,6 +407,14 @@ export type OfflineManifestPayload = {
             /** The physician's evaluation day, else the day the "no" was recorded. */
             refusedOn?: CalendarDate;
             referredOn?: CalendarDate;
+            /**
+             * A rider boarding riding only under a standing "no" or an open
+             * referral (H-109, `riderMedicalHold`): the same least-that-warns
+             * rule, one day and no record. Optional and additive, no version
+             * bump.
+             */
+            ridingNotClearedOn?: CalendarDate;
+            ridingReferredOn?: CalendarDate;
           };
           /** Dropped at save time; the dock does not need it (kept for shape parity). */
           email: null;
@@ -930,9 +951,10 @@ export function serializeManifests(
         bookedAs: diver.bookedAs,
         checkedIn: diver.checkedIn,
         notHere: diver.notHere,
+        ...(diver.runningLateAt ? { runningLateAt: diver.runningLateAt.toISOString() } : {}),
         // Dates only, and absent when there is nothing to warn about: see the
         // allow-list type above.
-        ...offlineMedicalWarnings(diver.medicalWaiver, shop.timezone),
+        ...offlineMedicalWarnings(diver.medicalWaiver, shop.timezone, diver.riderMedicalHold),
         // Names only, never a teammate's booking or person id — the dock copy
         // displays teams and must stay unable to compute divergence from a
         // snapshot.
@@ -964,16 +986,17 @@ export function serializeManifests(
 }
 
 /**
- * The dock copy's medical warnings for one diver (issue #2163): the two days
- * the live roll call warns on, and nothing else of the mark. An empty object
- * when there is neither, so the spread writes no field.
+ * The dock copy's medical warnings for one diver (issue #2163, and H-109's
+ * riding-only pair): the days the live roll call warns on, and nothing else of
+ * the mark. An empty object when there are none, so the spread writes no field.
  */
 function offlineMedicalWarnings(
   mark: TripManifest["divers"][number]["medicalWaiver"],
   timeZone: string,
+  riderHold: TripManifest["divers"][number]["riderMedicalHold"],
 ): { medicalWarnings?: NonNullable<OfflineDiverRow["medicalWarnings"]> } {
-  const days = medicalWarningDays(mark, timeZone);
-  return days.refusedOn || days.referredOn ? { medicalWarnings: days } : {};
+  const days = medicalWarningDays(mark, timeZone, riderHold);
+  return Object.keys(days).length > 0 ? { medicalWarnings: days } : {};
 }
 
 type OfflineDiverRow = OfflineManifestPayload["manifests"][number]["divers"][number];

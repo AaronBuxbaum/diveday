@@ -3,18 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { HeldTicket } from "@/components/SendHold";
-import { canPersonManagePaymentSettings } from "@/db/authz";
-import { getDb } from "@/db/client";
+import { canPersonConfigureTrips, canPersonManagePaymentSettings } from "@/db/authz";
+import { type AppDb, getDb } from "@/db/client";
 import {
   claimHeldSend,
   executeHeldSend,
   type HeldSendOutcome,
   holdSend,
+  pendingHeldSend,
   undoHeldSend,
 } from "@/db/held-sends";
 import { getShopById } from "@/db/shops";
+import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import { trackEvent } from "@/lib/analytics";
 import { nowMs } from "@/lib/clock";
+import { formValue, parseForm, trimmedText } from "@/lib/form-parse";
 import { type HeldSendPayload, heldSendPayloadSchema } from "@/lib/held-sends";
 import { majorToMinor, toShopCurrency } from "@/lib/money";
 import { requireStaffSession } from "@/lib/session";
@@ -35,9 +38,38 @@ const LAST_MINUTE_NOTICE = {
   stripe_failed: "last-minute-stripe-failed",
 } as const;
 
-const uuidList = (formData: FormData, name: string) => [
-  ...new Set(formData.getAll(name).map(String).filter(Boolean)),
-];
+/** Every value a repeated id field sent, once each and blanks dropped, as `getAll` read it. */
+const idList = () =>
+  z
+    .unknown()
+    .optional()
+    .transform((value) => {
+      const values = value === undefined ? [] : Array.isArray(value) ? value : [value];
+      return [...new Set(values.map(String).filter(Boolean))];
+    });
+
+/** Text that is absent when blank: a blank or missing box is `undefined`, the rest trimmed. */
+const optionalText = () => trimmedText().transform((value) => value || undefined);
+
+/**
+ * Every field a hold posts, read raw: `heldSendPayloadSchema` is the one that
+ * decides what a hold may carry, so this only gathers the form into its shape.
+ */
+const heldSendForm = z.object({
+  holdKind: formValue().transform((value) => String(value ?? "")),
+  bookingId: idList(),
+  recipientPersonIds: idList(),
+  personId: optionalText(),
+  channel: optionalText(),
+  surface: optionalText(),
+  tripId: optionalText(),
+  ticketId: optionalText(),
+  entryId: optionalText(),
+  discount: formValue(),
+  discountPercent: formValue(),
+  discountKind: formValue(),
+});
+type HeldSendForm = z.infer<typeof heldSendForm>;
 
 /**
  * A deal's discount off the form: a percent, or a fixed amount the staffer
@@ -46,49 +78,82 @@ const uuidList = (formData: FormData, name: string) => [
  * is the older single-box spelling and still reads as a percent.
  */
 function dealDiscountFromForm(
-  formData: FormData,
+  form: HeldSendForm,
   currency: string,
 ): { discountPercent?: number; discountAmountCents?: number } {
-  const raw = formData.get("discount") ?? formData.get("discountPercent");
+  const raw = form.discount ?? form.discountPercent;
   const value = Number(String(raw ?? "").trim());
-  if (formData.get("discountKind") === "amount") {
+  if (form.discountKind === "amount") {
     return { discountAmountCents: Number.isFinite(value) ? majorToMinor(value, currency) : value };
   }
   return { discountPercent: value };
 }
 
 function payloadFromForm(formData: FormData, currency: string): HeldSendPayload {
-  const kind = String(formData.get("holdKind") ?? "");
-  const optional = (name: string) => String(formData.get(name) ?? "").trim() || undefined;
+  const parsed = parseForm(heldSendForm, formData);
+  if (!parsed.ok) throw new Error("unreadable hold form");
+  const form = parsed.data;
+  const kind = form.holdKind;
   const raw =
     kind === "waiver_send"
       ? {
           kind,
-          bookingIds: uuidList(formData, "bookingId"),
-          personId: optional("personId"),
+          bookingIds: form.bookingId,
+          personId: form.personId,
           // The diver record's three delivery buttons are three submitters on
           // one form, so the channel is the submitter's own name/value pair;
           // anything else is email, as every older caller meant.
-          channel: optional("channel") ?? "email",
-          surface: optional("surface") ?? "today",
-          tripId: optional("tripId"),
-          ticketId: optional("ticketId"),
+          channel: form.channel ?? "email",
+          surface: form.surface ?? "today",
+          tripId: form.tripId,
+          ticketId: form.ticketId,
         }
       : kind === "last_minute_deal"
         ? {
             kind,
-            tripId: optional("tripId"),
-            ...dealDiscountFromForm(formData, currency),
-            recipientPersonIds: uuidList(formData, "recipientPersonIds"),
+            tripId: form.tripId,
+            ...dealDiscountFromForm(form, currency),
+            recipientPersonIds: form.recipientPersonIds,
           }
-        : { kind, tripId: optional("tripId"), entryId: optional("entryId") };
+        : { kind, tripId: form.tripId, entryId: form.entryId };
   return heldSendPayloadSchema.parse(raw);
 }
+
+/**
+ * "Tell them" after an Undo names the departure and nothing else about the
+ * move: the time the divers were last told is the server's record
+ * (`trips.divers_told_starts_at`), never a form field, so a posted
+ * `previousStartsAt` is not read at all.
+ */
+const tellThemForm = z.object({
+  tripId: z.uuid(),
+  meetingPointMoved: z.boolean(),
+});
 
 export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
   const session = await requireStaffSession();
   const db = await getDb();
   // The shop's currency, only to read a fixed-amount deal's major units.
+  if (formData.get("holdKind") === "trip_rescheduled") {
+    // "Tell them" after an Undo: the same gate as the move that held it, and
+    // the same hold, so a second tap folds into the first rather than sending
+    // twice. The recipients are read off the trip at send time, never here.
+    if (!(await canPersonConfigureTrips(db, session.user.shopId, session.user.personId))) {
+      throw new Error("not_authorized");
+    }
+    const form = tellThemForm.parse({
+      tripId: formData.get("tripId"),
+      meetingPointMoved: formData.get("meetingPointMoved") === "true",
+    });
+    const held = await holdRescheduleNotice(db, {
+      shopId: session.user.shopId,
+      tripId: form.tripId,
+      meetingPointMoved: form.meetingPointMoved,
+      actorPersonId: session.user.personId,
+    });
+    if (!held) throw new Error("nothing_to_send");
+    return ticketFor(held);
+  }
   const currency = toShopCurrency((await getShopById(db, session.user.shopId))?.currency);
   const payload = payloadFromForm(formData, currency);
   if (payload.kind === "last_minute_deal") {
@@ -101,13 +166,23 @@ export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
     );
     if (!allowed) throw new Error("not_authorized");
   }
-  const held = await holdSend(db, {
-    shopId: session.user.shopId,
-    payload,
-    actorPersonId: session.user.personId,
-  });
-  // `holdMs` on the server's own clock, so the client counts it down on its
-  // own — the two are never compared (see `HeldTicket`).
+  // A reschedule notice is only ever held by a move or by "Tell them" above,
+  // both of which take the "before" time from the server's record.
+  if (payload.kind === "trip_rescheduled") throw new Error("nothing_to_send");
+  return ticketFor(
+    await holdSend(db, {
+      shopId: session.user.shopId,
+      payload,
+      actorPersonId: session.user.personId,
+    }),
+  );
+}
+
+/**
+ * `holdMs` on the server's own clock, so the client counts it down on its
+ * own — the two are never compared (see `HeldTicket`).
+ */
+function ticketFor(held: { id: string; runAt: Date }): HeldTicket {
   return {
     id: held.id,
     runAt: held.runAt.getTime(),
@@ -115,9 +190,37 @@ export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
   };
 }
 
+/**
+ * Undo and an early release re-run the gate the hold stood behind, read off
+ * the held row's own kind: a crew member who sees a manager's `?held=` id may
+ * not take back the manager's reschedule notice or deal blast, nor send it
+ * sooner. A row that is gone or not this shop's passes through to the store,
+ * which answers it as it always has.
+ */
+async function assertMayActOnHeld(
+  db: AppDb,
+  session: { user: { shopId: string; personId: string } },
+  id: string,
+): Promise<void> {
+  const row = await pendingHeldSend(db, session.user.shopId, id);
+  if (!row) return;
+  const gate =
+    row.kind === "trip_rescheduled"
+      ? canPersonConfigureTrips
+      : row.kind === "last_minute_deal"
+        ? canPersonManagePaymentSettings
+        : null;
+  if (gate && !(await gate(db, session.user.shopId, session.user.personId))) {
+    throw new Error("not_authorized");
+  }
+}
+
 export async function undoHeldSendAction(id: string): Promise<boolean> {
   const session = await requireStaffSession();
-  return undoHeldSend(await getDb(), session.user.shopId, z.uuid().parse(id));
+  const db = await getDb();
+  const heldId = z.uuid().parse(id);
+  await assertMayActOnHeld(db, session, heldId);
+  return undoHeldSend(db, session.user.shopId, heldId);
 }
 
 export type ReleasedSend =
@@ -154,8 +257,10 @@ function waiverSendPath(
 export async function releaseHeldSendAction(id: string): Promise<ReleasedSend> {
   const session = await requireStaffSession();
   const db = await getDb();
+  const heldId = z.uuid().parse(id);
+  await assertMayActOnHeld(db, session, heldId);
   // The actor's own countdown is the clock (see `claimHeldSend`).
-  const claim = await claimHeldSend(db, session.user.shopId, z.uuid().parse(id), undefined, {
+  const claim = await claimHeldSend(db, session.user.shopId, heldId, undefined, {
     early: true,
   });
   if (claim.status !== "claimed") return { status: claim.status };

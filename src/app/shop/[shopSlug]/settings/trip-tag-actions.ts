@@ -1,14 +1,22 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import { createTripLens, deleteTripLens, renameTripLens } from "@/db/trip-lenses";
+import { formValue, readForm, trimmedText } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { LENS_NAME_MAX } from "@/lib/trip-lenses";
 import { uuidParam } from "@/lib/uuid";
 import { settingsBlock } from "./action-helpers";
+
+/** A tag's name as typed, trimmed and cut to the longest a tag may be. */
+const lensName = () => trimmedText().transform((name) => name.slice(0, LENS_NAME_MAX));
+const createLensForm = z.object({ name: lensName() });
+const renameLensForm = z.object({ lensId: formValue(), name: lensName() });
+const lensIdForm = z.object({ lensId: formValue() });
 
 /**
  * **The shop's trip tags** — ADR
@@ -23,9 +31,7 @@ export async function createTripLensAction(formData: FormData) {
   const page = shopPath(session.user.shopSlug, "settings", "trip-tags");
   await settingsBlock(session);
 
-  const name = String(formData.get("name") ?? "")
-    .trim()
-    .slice(0, LENS_NAME_MAX);
+  const { name } = readForm(createLensForm, formData);
   if (!name) {
     redirect(noticeUrl(page, "lens-invalid"));
   }
@@ -42,11 +48,8 @@ export async function updateTripLensAction(formData: FormData) {
   const page = shopPath(session.user.shopSlug, "settings", "trip-tags");
   await settingsBlock(session);
 
-  const rawLensId = formData.get("lensId");
+  const { lensId: rawLensId, name } = readForm(renameLensForm, formData);
   const lensId = typeof rawLensId === "string" ? uuidParam(rawLensId) : null;
-  const name = String(formData.get("name") ?? "")
-    .trim()
-    .slice(0, LENS_NAME_MAX);
   if (!lensId || !name) {
     redirect(noticeUrl(page, "lens-invalid"));
   }
@@ -63,7 +66,7 @@ export async function deleteTripLensAction(formData: FormData) {
   const page = shopPath(session.user.shopSlug, "settings", "trip-tags");
   await settingsBlock(session);
 
-  const rawLensId = formData.get("lensId");
+  const rawLensId = readForm(lensIdForm, formData).lensId;
   const lensId = typeof rawLensId === "string" ? uuidParam(rawLensId) : null;
   if (!lensId) {
     redirect(noticeUrl(page, "lens-invalid"));

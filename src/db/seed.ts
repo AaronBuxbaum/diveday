@@ -10,7 +10,9 @@ import { demoEmail } from "@/lib/simulator-email";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
+import { deleteHeldSendsAndDeskRows } from "./departure-notes";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
+import { deleteDemoSafetyTrail } from "./incident-reports";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   accountSecurity,
@@ -50,7 +52,6 @@ import {
   gearItems,
   gearReservations,
   gearServiceEvents,
-  heldSends,
   importedPaymentHistory,
   inboundMessages,
   integrationDeliveries,
@@ -80,8 +81,7 @@ import {
   recapPulses,
   rentalFitProfiles,
   reviewModerationEvents,
-  rollCallCrewEvents,
-  rollCallEvents,
+  reviewReplies,
   shopPromoCodes,
   shopPromoRedemptions,
   shopStripeAccounts,
@@ -90,6 +90,7 @@ import {
   staffCredentials,
   staffReplies,
   staffShifts,
+  stripeRefundFailures,
   tips,
   tripAssignments,
   tripBlowoutDivers,
@@ -1206,6 +1207,15 @@ export async function seedDemoSchedule(
 }
 
 /**
+ * A card dispute (ADR 20261009-stripe-reversals-reach-diveday) and a failed
+ * refund (issue #2291) each name the order or checkout they are about, and a
+ * failed refund its seat, so both go before those.
+ */
+async function deleteStripeReversals(db: DbExecutor, shopId: string): Promise<void> {
+  await db.delete(paymentDisputes).where(eq(paymentDisputes.shopId, shopId));
+  await db.delete(stripeRefundFailures).where(eq(stripeRefundFailures.shopId, shopId));
+}
+/**
  * Restore the demo playground to its seeded state. Wipes everything a visitor
  * can touch — trips and their sessions, bookings and everything hanging off
  * them (waivers, roll call), the course catalog, cards, rental fit,
@@ -1236,8 +1246,7 @@ export async function resetDemoSchedule(
   // and a spec that checked somebody in would otherwise leave that arrival
   // standing for the next one (ADR 20260907-the-counter-survives-offline).
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
-  await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
-  await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+  await deleteDemoSafetyTrail(db, shopId);
   await db.delete(executedDives).where(eq(executedDives.shopId, shopId));
   // The crew's own tally of what the day saw, beside the dive log it sits under
   // on the manifest — per-departure history keyed on trips that are about to
@@ -1255,7 +1264,7 @@ export async function resetDemoSchedule(
   // against them are schedule-scoped operational history.
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
-  await db.delete(heldSends).where(eq(heldSends.shopId, shopId));
+  await deleteHeldSendsAndDeskRows(db, shopId);
   await db.delete(formDrafts).where(eq(formDrafts.shopId, shopId));
   // Neither of these is seeded — both are written only by what a visitor does
   // (a staff note on a diver, the activity trail `seat-diver.ts` appends), and
@@ -1338,8 +1347,8 @@ export async function resetDemoSchedule(
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
   // The shared close-out photo album also references its trip and uploader.
   await db.delete(tripRecapPhotos).where(eq(tripRecapPhotos.shopId, shopId));
-  // The moderation trail references the review it describes, so it goes first
-  // (ADR 20260813-review-moderation-has-a-floor).
+  // Both name their review, so go first (ADR 20260813-review-moderation-has-a-floor).
+  await db.delete(reviewReplies).where(eq(reviewReplies.shopId, shopId));
   await db.delete(reviewModerationEvents).where(eq(reviewModerationEvents.shopId, shopId));
   // Reviews reference bookings, trips, and people — all three parents below.
   await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));
@@ -1363,9 +1372,7 @@ export async function resetDemoSchedule(
   // bookings, orders, and booking_checkouts — so both go before booking_checkouts.
   await db.delete(bookingCheckoutBookings).where(eq(bookingCheckoutBookings.shopId, shopId));
   await db.delete(paymentOperationIntents).where(eq(paymentOperationIntents.shopId, shopId));
-  // A card dispute references the order or checkout it is about (ADR
-  // 20261009-stripe-reversals-reach-diveday), so it goes before both.
-  await db.delete(paymentDisputes).where(eq(paymentDisputes.shopId, shopId));
+  await deleteStripeReversals(db, shopId);
   // A redemption points at the checkout that spent the code, so it goes first
   // (docs ADR 20260729-shop-promo-codes). The codes themselves are shop config
   // and survive a schedule reset.

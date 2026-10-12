@@ -327,18 +327,18 @@ export function AddPanel({
           a label, and `items-center` hung the box between the words and their
           hint rather than on the words (K-13). The wrapper carries `hidden`,
           as the field did. */}
-      <div className={expanded ? undefined : "hidden"}>
-        <ChoiceRow
-          type="checkbox"
-          name="isPrivate"
-          value="true"
-          disabled={!expanded}
-          className="text-sm font-medium"
-        >
-          <span className="block">{copy.isPrivateLabel}</span>
-          <span className="block text-xs font-normal text-muted">{copy.isPrivateHint}</span>
-        </ChoiceRow>
-      </div>
+      <ExpandedBox
+        expanded={expanded}
+        name="isPrivate"
+        label={copy.isPrivateLabel}
+        hint={copy.isPrivateHint}
+      />
+      <ExpandedBox
+        expanded={expanded}
+        name="isRehearsal"
+        label={copy.isRehearsalLabel}
+        hint={copy.isRehearsalHint}
+      />
       <FieldGrid columns={3} className="gap-y-4">
         <Field label={copy.date}>
           {/* Read here as well as submitted: the repeat fieldset below pre-checks
@@ -865,5 +865,36 @@ export function AddPanel({
         </button>
       </div>
     </FieldGrid>
+  );
+}
+
+/**
+ * One of More options' boxes. The wrapper carries `hidden` and the box is
+ * `disabled` while collapsed, so a collapsed form submits nothing from it.
+ */
+function ExpandedBox({
+  expanded,
+  name,
+  label,
+  hint,
+}: {
+  expanded: boolean;
+  name: string;
+  label: string;
+  hint: string;
+}) {
+  return (
+    <div className={expanded ? undefined : "hidden"}>
+      <ChoiceRow
+        type="checkbox"
+        name={name}
+        value="true"
+        disabled={!expanded}
+        className="text-sm font-medium"
+      >
+        <span className="block">{label}</span>
+        <span className="block text-xs font-normal text-muted">{hint}</span>
+      </ChoiceRow>
+    </div>
   );
 }

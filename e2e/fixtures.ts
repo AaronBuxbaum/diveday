@@ -405,11 +405,22 @@ export const test = base.extend<
     };
     await signInAs(page, { email: minted.ownerEmail, password: minted.password });
     await use({ slug: minted.slug, ownerEmail: minted.ownerEmail });
-    // Best-effort: a teardown failure must not turn a passing test red, and
-    // the next reset would clear the shop regardless.
-    await request
-      .delete(`/api/test/seed-private-shop?slug=${encodeURIComponent(minted.slug)}`)
-      .catch(() => {});
+    // Best-effort: a teardown failure must not turn a passing test red. But it
+    // says so here: a cascade that cannot finish leaves the minted shop for
+    // `purgeMintedDemoShops`, which then 500s every later reset on the same FK
+    // and turns a whole shard red far from the spec that left the rows.
+    const teardownUrl = `/api/test/seed-private-shop?slug=${encodeURIComponent(minted.slug)}`;
+    try {
+      const teardown = await request.delete(teardownUrl);
+      if (!teardown.ok()) {
+        const body = await teardown.text().catch(() => "");
+        console.warn(
+          `private shop teardown failed: DELETE ${teardownUrl} returned ${teardown.status()}. ${body}`,
+        );
+      }
+    } catch (error) {
+      console.warn(`private shop teardown failed: DELETE ${teardownUrl} threw. ${String(error)}`);
+    }
   },
 
   // Pin the browser clock to the same instant the server is frozen at

@@ -277,6 +277,7 @@ async function runHalf(half) {
     return bankCounts({
       root: ROOT,
       guard: half.guard,
+      script: "check-page-length",
       counts: nextBaseline(counts, half.limit),
       allowed: baseline,
       exists,

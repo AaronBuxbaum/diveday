@@ -2348,6 +2348,23 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **"What you might see in July"** (batch 4, K4): the shopfront's shelf of
+       * what the shop's crews logged this month in earlier seasons, which stays
+       * silent below eight recorded departures. The demo has one season, so
+       * the opt-in `?monthSightings=1` state logs eight past ones.
+       */
+      test(`the shopfront says what the crews have seen this month (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?monthSightings=1");
+        expect(seeded.ok()).toBe(true);
+        await page.goto("/s/blue-mantis");
+        await page.getByRole("heading", { name: /^What you might see in / }).waitFor();
+        await capture(page, "shopfront-month-sightings", scheme);
+      });
+
+      /**
        * **The off-season** (N-45) — the storefront a shop between seasons shows
        * a stranger, which no existing capture can be: `blue-mantis` exists to
        * have a full board, so this one empties it first.
@@ -3854,6 +3871,24 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today-arrival-lookup-running-late", scheme);
       });
 
+      // The captain's half of the same statement (#2319): a quiet line under
+      // the name on the dock roll call, for a diver nobody has called yet.
+      test(`a running-late diver on the manifest renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?runningLate=1");
+        const { runningLate } = (await seeded.json()) as { runningLate?: { tripId: string } };
+        if (!runningLate) throw new Error("seed-trouble-states found no seat to say it on");
+        await page.goto(`/shop/blue-mantis/trips/${runningLate.tripId}/manifest`);
+        await page.getByRole("heading", { name: "Roll call" }).waitFor();
+        await page
+          .getByText(/^Running late, said /)
+          .first()
+          .waitFor();
+        await capture(page, "manifest-running-late", scheme);
+      });
+
       /**
        * **The identity menu, open** — the shop's name in the chrome bar opens
        * Settings, the language choices and Sign out (`ShopIdentityMenu` with
@@ -4377,6 +4412,21 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/staffing?week=2026-07-27");
         await page.getByRole("link", { name: "This week" }).waitFor();
         await capture(page, "staffing-week-next", scheme);
+      });
+
+      // **Lost and found** (batch 4, J2): one item the crew wrote down on the
+      // dawn boat's Boat tab, on the shop's open list with its departure and
+      // its three doors. Recorded through the form, as a crew would.
+      test(`lost and found lists what crews found aboard (${scheme})`, async ({ page }) => {
+        const tripId = await seededTripId(page, "blue-mantis", SAILED_TRIP);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}/manifest`);
+        const form = page.getByTestId("lost-item-form");
+        await form.getByLabel("What was found").fill("Blue mask in a black case");
+        await form.getByRole("button", { name: "Record" }).click();
+        await page.getByTestId("lost-item").first().waitFor();
+        await page.goto("/shop/blue-mantis/lost-found");
+        await page.getByTestId("lost-item").first().waitFor();
+        await capture(page, "lost-found", scheme);
       });
 
       /**
@@ -5801,6 +5851,22 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **A rehearsal says so above the departure** (ADR
+       * 20261012-rehearsal-departures), through the opt-in `?rehearsal=1`
+       * state: a training-day departure with one test diver.
+       */
+      test(`a rehearsal's trip page carries its banner (${scheme})`, async ({ page, request }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?rehearsal=1");
+        expect(seeded.ok()).toBe(true);
+        const { rehearsal } = (await seeded.json()) as { rehearsal?: { tripId: string } };
+        if (!rehearsal) throw new Error("seed-trouble-states could not put a rehearsal on");
+        await page.goto(`/shop/blue-mantis/trips/${rehearsal.tripId}`);
+        await page.locator("[data-rehearsal-banner]").waitFor();
+        await page.getByRole("navigation", { name: "Departure" }).waitFor();
+        await capture(page, "trip-rehearsal", scheme);
+      });
+
+      /**
        * **A crew member another boat also claims, said once** (issue #2217,
        * PR #2202). At the dock the Boat tab says the instruction once above
        * the crew list and each clashing row reads only "Also rostered on …
@@ -5949,6 +6015,32 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`${tripPath}/log`);
         await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
         await capture(page, "departure-log", scheme);
+      });
+
+      // A fresh incident report, opened from the departure's Details tab (ADR
+      // 20261012-incident-reports): the draft's three cards, every yes/no
+      // unanswered rather than defaulted to "no", the people list, and the
+      // filing card naming what a report needs before it can be filed.
+      test(`a new incident report renders true to the design (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        await openTripAbout(page);
+        await page
+          .getByRole("region", { name: "Incident reports" })
+          .getByRole("button", { name: "Report an incident" })
+          .click();
+        await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
+        await page.getByRole("region", { name: "File the report" }).waitFor();
+        await capture(page, "incident-report-draft", scheme);
+      });
+
+      // The month's Safety tab beside Reports: roll calls, dock marks, card
+      // checks written past, crew credentials and the month's incident
+      // reports, read from what the shop already records.
+      test(`the Safety tab renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/reports/safety");
+        await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
+        await page.getByRole("region", { name: "Roll calls left open" }).waitFor();
+        await capture(page, "reports-safety", scheme);
       });
 
       // The same document at its widest. The roster and crew tables are three
@@ -6610,6 +6702,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/orders");
         await page.getByRole("region", { name: "Payments that need a check" }).waitFor();
         await page.getByRole("region", { name: "Refunds you still owe" }).waitFor();
+        await page.getByRole("region", { name: "Paid after the checkout closed" }).waitFor();
+        await page.getByRole("region", { name: "Refunds that failed" }).waitFor();
         await capture(page, "orders-unconfirmed-and-owed", scheme);
       });
 
@@ -7123,6 +7217,33 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/s/blue-mantis/reviews");
         await page.getByRole("heading", { level: 1, name: "All reviews" }).waitFor();
         await capture(page, "public-reviews", scheme);
+      });
+
+      /**
+       * **The shop's reply under a review** (batch 4, K2), signed with the
+       * shop's name, through the opt-in `?reviewReply=1` state.
+       */
+      test(`a review with the shop's reply renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?reviewReply=1");
+        expect(seeded.ok()).toBe(true);
+        await page.goto("/s/blue-mantis/reviews");
+        await page.locator("[data-review-reply]").first().waitFor();
+        await capture(page, "public-reviews-reply", scheme);
+      });
+
+      /**
+       * The reply editor open on a published review: the field, its limit and
+       * the two acts, where the row's own words already are.
+       */
+      test(`the review reply editor opens under its review (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/reviews");
+        const published = page.getByRole("region", { name: /^Published/ });
+        await published.getByRole("button", { name: "Reply in public" }).first().click();
+        await published.getByLabel("Your reply").waitFor();
+        await capture(page, "staff-reviews-reply-editor", scheme);
       });
 
       /**
@@ -8130,6 +8251,12 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the command palette renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/calendar");
         await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
+        // The keypress is lost if it lands before the palette's listener is
+        // attached; its trigger says when it is (issue #2366).
+        await expect(page.getByRole("button", { name: "Search", exact: true })).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
         await page.keyboard.press("ControlOrMeta+k");
         const box = page.getByRole("combobox", { name: /Search divers/ });
         await expect(box).toBeFocused();
@@ -8148,6 +8275,12 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await page.goto("/shop/blue-mantis/settings/calendar");
         await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
+        // The keypress is lost if it lands before the palette's listener is
+        // attached; its trigger says when it is (issue #2366).
+        await expect(page.getByRole("button", { name: "Search", exact: true })).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
         await page.keyboard.press("ControlOrMeta+k");
         const box = page.getByRole("combobox", { name: /Search divers/ });
         await expect(box).toBeFocused();

@@ -124,6 +124,7 @@ export type StaffDestinationId =
   | "board"
   | "addBooking"
   | "staffing"
+  | "lostFound"
   | "diveSites"
   | "gear"
   | "workOrders"
@@ -136,6 +137,7 @@ export type StaffDestinationId =
   | "orders"
   | "waivers"
   | "reports"
+  | "safety"
   | "promoCodes"
   | "settings"
   | "team"
@@ -184,6 +186,7 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   board: "shared.shopNavLinks.board",
   addBooking: "shared.shopNavLinks.addBooking",
   staffing: "shared.shopNavLinks.staffing",
+  lostFound: "shared.shopNavLinks.lostFound",
   diveSites: "shared.shopNavLinks.diveSites",
   gear: "shared.shopNavLinks.gear",
   workOrders: "shared.shopNavLinks.workOrders",
@@ -196,6 +199,7 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   orders: "shared.shopNavLinks.orders",
   waivers: "shared.shopNavLinks.waivers",
   reports: "shared.shopNavLinks.reports",
+  safety: "shared.shopNavLinks.safety",
   promoCodes: "shared.shopNavLinks.promoCodes",
   settings: "shared.shopNavLinks.settings",
   team: "shared.shopNavLinks.team",
@@ -268,6 +272,11 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // registry is the only place a destination may be declared.
   { id: "addBooking", suffix: "/bookings/new", section: "schedule", inPalette: true },
   { id: "staffing", suffix: "/staffing", section: "schedule", inPalette: true },
+  // What crews found aboard after their departures and has not gone home yet
+  // (batch 4, J2). Filed with the board because every item belongs to a
+  // departure, and each departure's Boat tab is where it was written down.
+  // Ungated: whoever is at the counter when the diver comes back hands it over.
+  { id: "lostFound", suffix: "/lost-found", section: "schedule", inPalette: true },
   // Everything a diver says to the shop is one section: messages, days asked
   // for, and reviews. Each is ungated — the
   // person best placed to answer is whoever is at the counter (issues #1505,
@@ -280,6 +289,15 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // them and the discounts that shaped them.
   { id: "orders", suffix: "/orders", section: "money", inPalette: true },
   { id: "reports", suffix: "/reports", section: "money", inPalette: true, gate: "reports" },
+  // The month's safety beside its money (ADR 20261012-incident-reports): the
+  // same owner/manager gate, and the longer path wins it from Reports.
+  {
+    id: "safety",
+    suffix: "/reports/safety",
+    section: "money",
+    inPalette: true,
+    gate: "reports",
+  },
   { id: "promoCodes", suffix: "/promos", section: "money", inPalette: true, gate: "reports" },
   { id: "courses", suffix: "/courses", section: "courses", inPalette: true },
   // The rental fleet (ADR 20260815-minimal-gear-register) and the bench beside
@@ -334,7 +352,7 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
 export const STAFF_SECTION_TABS = {
   gear: ["gear", "workOrders"],
   inbox: ["inbox", "requests", "reviews"],
-  money: ["orders", "promoCodes", "reports"],
+  money: ["orders", "promoCodes", "reports", "safety"],
 } as const satisfies Partial<Record<StaffSection, readonly StaffDestinationId[]>>;
 
 export type TabbedStaffSection = keyof typeof STAFF_SECTION_TABS;

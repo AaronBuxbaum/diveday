@@ -158,11 +158,33 @@ export function ReviewLedger({
           {review.comment ? <p className="mt-1.5 text-base text-pretty">{review.comment}</p> : null}
           <p className="mt-1.5 text-sm text-muted">
             {review.reviewer || t("reviews.anonymousReviewer")}
-            {showTrip ? ` · ${review.tripTitle}` : null} ·{" "}
+            {showTrip && review.tripTitle ? ` · ${review.tripTitle}` : null} ·{" "}
             {formatShortDate(review.divedAt, locale, timezone)}
           </p>
+          {review.reply ? <ReviewReply reply={review.reply} t={t} /> : null}
         </LedgerRow>
       ))}
     </ul>
+  );
+}
+
+/**
+ * **The shop's answer, under the diver's words** (batch 4, K2). Indented
+ * behind a hairline so it reads as a reply rather than a second review, and
+ * signed with the shop's name, which is who is answering. The words are a
+ * plain text child: React escapes them, and nothing here is ever markup.
+ */
+function ReviewReply({
+  reply,
+  t,
+}: {
+  reply: NonNullable<PublicReview["reply"]>;
+  t: DiverTranslator;
+}) {
+  return (
+    <div className="mt-2 border-s-2 border-border ps-3" data-review-reply="">
+      <p className="text-sm font-medium">{t("reviews.replyFrom", { shop: reply.shopName })}</p>
+      <p className="mt-0.5 break-words text-sm text-muted text-pretty">{reply.body}</p>
+    </div>
   );
 }

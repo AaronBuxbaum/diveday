@@ -93,7 +93,8 @@
   },
   "capacity": {
     "full": "Full",
-    "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}"
+    "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}",
+    "certificateCap": "Certificate: {sellable} of {stated} seats"
   },
   "compass": {
     "n": "N",
@@ -232,7 +233,10 @@
     "language": "Language",
     "signOut": "Sign out",
     "signOutConfirm": "Sign out? Confirm",
-    "signOutPending": "Signing out…"
+    "signOutPending": "Signing out…",
+    "tellUs": "Tell us",
+    "tellUsSubject": "DiveDay note from {shop}",
+    "tellUsBody": "Page: {path}\n\n"
   },
   "shopNavLinks": {
     "badgeBlocked": "{count, plural, one {# person blocked, aboard or on the next boats} other {# people blocked, aboard or on the next boats}}",
@@ -241,6 +245,7 @@
     "board": "Schedule",
     "addBooking": "Add a booking",
     "staffing": "Crew schedule",
+    "lostFound": "Lost and found",
     "diveSites": "Dive sites",
     "gear": "Gear",
     "registerTab": "Register",
@@ -254,6 +259,7 @@
     "orders": "Orders",
     "waivers": "Waivers",
     "reports": "Reports",
+    "safety": "Safety",
     "promoCodes": "Discounts",
     "settings": "Settings",
     "team": "Team",
@@ -536,6 +542,13 @@
   "sendHold": {
     "sendingNow": "Sending…",
     "undo": "Undo"
+  },
+  "rescheduleHold": {
+    "telling": "{count, plural, one {Telling # diver the new time…} other {Telling # divers the new time…}}",
+    "told": "{count, plural, one {Told # diver the new time.} other {Told # divers the new time.}}",
+    "someMissed": "{count, plural, one {# diver could not be reached by email or text.} other {# divers could not be reached by email or text.}}",
+    "notTold": "Not told. The divers still have the old time.",
+    "tellThem": "Tell them"
   },
   "formDraft": {
     "pickedUp": "Picked up from the desk, {time}.",

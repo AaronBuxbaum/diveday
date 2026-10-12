@@ -61,7 +61,7 @@ const NOTICE_TONE = {
   "signup-failed-subscribe": "danger",
   "signup-failed-template": "danger",
   "signup-busy": "danger",
-  "waba-already-connected": "danger",
+  "phone-number-already-connected": "danger",
 } as const satisfies Record<NoticeCodeOf<Notice | WhatsAppConnectRefusal>, NoticeTone>;
 
 type NoticeCode = keyof typeof NOTICE_TONE;

@@ -17,7 +17,6 @@ import {
   listPackagesOnSale,
   listSpendableEntitlements,
   releaseEntitlementsForBooking,
-  shopSellsPackages,
   spendableDivesForTrip,
 } from "./dive-packages";
 import { setBookingPayment } from "./payments";
@@ -80,24 +79,6 @@ async function packageContext() {
 }
 
 describe("a shop's package price list", () => {
-  it("is opt-in by presence, like the gear register", async () => {
-    // Zero packages means no package UI anywhere; defining the first turns it
-    // on (ADR 20260815-minimal-gear-register's shape).
-    const { db, shop } = await packageContext();
-    expect(await shopSellsPackages(db, shop.id)).toBe(false);
-
-    await createDivePackage(db, {
-      shopId: shop.id,
-      name: "Ten dives",
-      diveCount: 10,
-      priceCents: 90_000,
-      scope: "all",
-      validUntil: null,
-    });
-
-    expect(await shopSellsPackages(db, shop.id)).toBe(true);
-  });
-
   it("keeps a diver's dives when the shop stops selling the product", async () => {
     // The softness is load-bearing here rather than conventional: the
     // entitlements reference the package row and must outlive it. A diver who

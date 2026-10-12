@@ -2,6 +2,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
 import type { DiverLocale } from "@/i18n/settings";
+import { deriveBrandTheme, deriveDarkBrandTheme } from "@/lib/brand";
 import { type CalendarDate, calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { COURSE_INQUIRY_EXPERIENCE_KEYS, type CourseInquiryExperience } from "@/lib/course-inquiry";
 import { type CourseLearningMaterial, isLearningMaterialLink } from "@/lib/courses";
@@ -18,6 +19,7 @@ import {
 } from "@/lib/format";
 import type { ShopMilestone } from "@/lib/founder-metrics";
 import { escapeHtml } from "@/lib/html";
+import { googleMapsUrl } from "@/lib/maps";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReminderActionCode } from "@/lib/readiness-summary";
 import type { SetupCurrentSystem } from "@/lib/setup-requests";
@@ -46,7 +48,29 @@ type BookingConfirmationEmailInput = {
   packingList?: string[];
   /** A course session's learning materials, already read through `readLearningMaterials`. */
   learningMaterials?: CourseLearningMaterial[];
+  /** Where to go (`meetingPointOf`), drawn as its own panel. */
+  meetingPoint?: MeetingPoint;
+  /** The departure's public `.ics`, for "Add to calendar". */
+  calendarUrl?: string;
+  /** This seat's money as the booking form showed it. */
+  money?: ConfirmationMoney;
+  /** When free cancellation closes, in the shop's zone. */
+  freeCancellationUntil?: Date;
 };
+
+/** Where to go, as a message carries it (`meetingPointForMessage`). */
+type MeetingPoint = {
+  label: string;
+  address?: string | null;
+  landmark?: string | null;
+  parking?: string | null;
+  mapQuery?: string | null;
+};
+
+/** A seat's money, minor units and an ISO currency (`seatMoneyTerms`). */
+type ConfirmationMoney =
+  | { due: "at_shop" | "online"; amountCents: number; currency: string }
+  | { due: "deposit"; depositCents: number; balanceCents: number; currency: string };
 
 type WaiverRequestEmailInput = {
   locale: DiverLocale;
@@ -211,6 +235,8 @@ type TripReminderEmailInput = {
   scheduleDays?: { startsAt: Date; endsAt: Date }[];
   /** A course session: the week-out note says it starts, and names no dock. */
   courseSession?: boolean;
+  /** Where to go (`meetingPointOf`), drawn as its own panel. */
+  meetingPoint?: MeetingPoint;
   /**
    * Whether this message can be replied to with a keyword (ADR
    * 20260909-reply-keywords). Decided by the sender, because it is a fact
@@ -255,8 +281,6 @@ const DARK_PRIMARY_COLOR = "#4fbcd8";
 const DARK_PANEL_COLOR = "#162129";
 const DARK_BORDER_COLOR = "#25333c";
 
-const EMAIL_HEAD_STYLE = `<style>:root{color-scheme:light dark;}a{color:${BRAND_PRIMARY_COLOR};}.dd-btn{background-color:${BRAND_PRIMARY_COLOR}!important;color:#ffffff!important;}@media (prefers-color-scheme:dark){.dd-page{background-color:${DARK_PAGE_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-card{background-color:${DARK_PANEL_COLOR}!important;border-color:${DARK_BORDER_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-shop{color:${DARK_PRIMARY_COLOR}!important;}.dd-panel{background-color:${DARK_PANEL_COLOR}!important;border-left-color:${DARK_PRIMARY_COLOR}!important;}.dd-btn{background-color:${DARK_PRIMARY_COLOR}!important;color:#0f171c!important;}a{color:${DARK_PRIMARY_COLOR}!important;}}</style>`;
-
 /**
  * Bulletproof email call-to-action button, table-wrapped to render consistently
  * across Outlook, Apple Mail, Gmail, and mobile clients.
@@ -291,16 +315,104 @@ const EMAIL_MARK_HTML =
   '<td width="4" height="24" valign="top" style="width: 4px;"><div style="width: 4px; height: 4px; border-radius: 50%; background-color: #ff6b6b; font-size: 1px; line-height: 1px;">&nbsp;</div></td>' +
   "</tr></table>";
 
+/** The fill behind a panel (a packing list, course materials, where to meet). */
+const PANEL_FILL_COLOR = "#f3f4f6";
+
+/**
+ * One tinted panel: a heading and what sits under it. The one shape every
+ * template's side box takes, so the wrapper can recolour all of them for a
+ * shop's brand at once, and the `dd-panel` class its dark rules reach is never
+ * forgotten on a new one.
+ */
+export function emailPanel(headingHtml: string, innerHtml: string): string {
+  return `<div class="dd-panel" style="margin-top: 20px; padding: 15px; border-left: 4px solid ${BRAND_PRIMARY_COLOR}; background-color: ${PANEL_FILL_COLOR}; border-radius: 8px;"><strong>${headingHtml}</strong>${innerHtml}</div>`;
+}
+
+/**
+ * What the wrapper needs to dress a message as the shop's own (ux review
+ * 2026-10-11, item 3). Absent for a message DiveDay sends in its own name.
+ */
+export type EmailShopBrand = {
+  /** An absolute `https:` URL, already vetted as first-party (`emailLogoUrl`). */
+  logoUrl?: string;
+  /** `#rrggbb`; absent keeps DiveDay's own teal. */
+  color?: string;
+  /** The credit line at the foot, in the recipient's language ("Bookings by DiveDay"). */
+  credit: string;
+};
+
+/**
+ * The shop's colour as the email's accents: moved until it reads on white in
+ * the light document and on the dark panel at depth (`deriveBrandTheme` and
+ * `deriveDarkBrandTheme`, the same rule the storefront wears), so a pale brand
+ * never becomes an unreadable link in somebody's inbox.
+ */
+function emailPalette(color: string | undefined) {
+  if (!color) {
+    return {
+      primary: BRAND_PRIMARY_COLOR,
+      panel: PANEL_FILL_COLOR,
+      darkPrimary: DARK_PRIMARY_COLOR,
+      darkOnPrimary: DARK_PAGE_COLOR,
+    };
+  }
+  const light = deriveBrandTheme(color, { surface: BRAND_CONTAINER_COLOR });
+  const dark = deriveDarkBrandTheme(color);
+  return {
+    primary: light.primary,
+    panel: light.primaryTint,
+    darkPrimary: dark.primary,
+    darkOnPrimary: dark.primaryForeground,
+  };
+}
+
+/**
+ * Recolour the body's accents for the shop. Only inside `style="…"`
+ * attributes, which a template writes and a diver's or shop's words never can
+ * (every value is escaped, so a literal `"` in free text arrives as `&quot;`).
+ */
+function recolor(html: string, palette: ReturnType<typeof emailPalette>): string {
+  return html.replace(/style="[^"]*"/g, (attribute) =>
+    attribute
+      .replaceAll(BRAND_PRIMARY_COLOR, palette.primary)
+      .replaceAll(PANEL_FILL_COLOR, palette.panel),
+  );
+}
+
+function headStyle(palette: ReturnType<typeof emailPalette>): string {
+  return `<style>:root{color-scheme:light dark;}a{color:${palette.primary};}.dd-btn{background-color:${palette.primary}!important;color:#ffffff!important;}@media (prefers-color-scheme:dark){.dd-page{background-color:${DARK_PAGE_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-card{background-color:${DARK_PANEL_COLOR}!important;border-color:${DARK_BORDER_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-shop{color:${palette.darkPrimary}!important;}.dd-panel{background-color:${DARK_PANEL_COLOR}!important;border-left-color:${palette.darkPrimary}!important;}.dd-btn{background-color:${palette.darkPrimary}!important;color:${palette.darkOnPrimary}!important;}a{color:${palette.darkPrimary}!important;}}</style>`;
+}
+
 /**
  * Wraps a template's inner body fragment in a real HTML document — doctype,
- * `<html lang>`, a viewport meta tag, the brand palette from `docs/design/brand.md`,
- * and the table-safe bubble mark beside the shop name.
+ * `<html lang>`, a viewport meta tag, the brand palette from `docs/design/brand.md`.
+ *
+ * **Sent as a shop** (`brand` present), the message is the shop's: its logo
+ * and name lead, its colour is every accent, and DiveDay is a small credit at
+ * the foot — "a credit, not a headline", the rule the link-preview cards
+ * already keep (`ogCredit`). The logo is an `<img>` with an empty `alt`
+ * *beside* the shop's name in text, never instead of it: a client that blocks
+ * images by default (most of them, until the reader opts in) shows the name
+ * and nothing broken. Sent as DiveDay, the bubble mark leads as it always has.
  */
 export function wrapEmailHtml(
   bodyHtml: string,
-  options: { shopName: string; locale: string },
+  options: { shopName: string; locale: string; brand?: EmailShopBrand },
 ): string {
-  return `<!doctype html><html lang="${escapeHtml(options.locale)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">${EMAIL_HEAD_STYLE}</head><body class="dd-page" style="margin: 0; padding: 0; background-color: ${BRAND_PAGE_COLOR}; color: ${BRAND_INK_COLOR}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;"><div style="max-width: 560px; margin: 0 auto; padding: 32px 20px;"><div class="dd-card" style="background-color: ${BRAND_CONTAINER_COLOR}; border: 1px solid ${BRAND_BORDER_COLOR}; border-radius: 16px; padding: 32px 24px;"><table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom: 24px;"><tr><td style="vertical-align: middle;">${EMAIL_MARK_HTML}</td><td style="vertical-align: middle;"><p class="dd-shop" style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: ${BRAND_PRIMARY_COLOR};">${escapeHtml(options.shopName)}</p></td></tr></table><div style="font-size: 15px; line-height: 1.6;">${bodyHtml}</div></div></div></body></html>`;
+  const { brand } = options;
+  const palette = emailPalette(brand?.color);
+  const name = `<p class="dd-shop" style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: ${palette.primary};">${escapeHtml(options.shopName)}</p>`;
+  const lead = brand
+    ? brand.logoUrl
+      ? `<img src="${escapeHtml(brand.logoUrl)}" alt="" height="40" style="display: block; height: 40px; width: auto; max-width: 160px; border: 0; margin-right: 12px;">`
+      : ""
+    : EMAIL_MARK_HTML;
+  const header = `<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom: 24px;"><tr>${lead ? `<td style="vertical-align: middle;">${lead}</td>` : ""}<td style="vertical-align: middle;">${name}</td></tr></table>`;
+  const credit = brand
+    ? `<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin: 16px auto 0; opacity: 0.7;"><tr><td style="vertical-align: middle;">${EMAIL_MARK_HTML}</td><td style="vertical-align: middle; font-size: 12px;">${escapeHtml(brand.credit)}</td></tr></table>`
+    : "";
+  const body = brand ? recolor(bodyHtml, palette) : bodyHtml;
+  return `<!doctype html><html lang="${escapeHtml(options.locale)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">${headStyle(palette)}</head><body class="dd-page" style="margin: 0; padding: 0; background-color: ${BRAND_PAGE_COLOR}; color: ${BRAND_INK_COLOR}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;"><div style="max-width: 560px; margin: 0 auto; padding: 32px 20px;"><div class="dd-card" style="background-color: ${BRAND_CONTAINER_COLOR}; border: 1px solid ${BRAND_BORDER_COLOR}; border-radius: 16px; padding: 32px 24px;">${header}<div style="font-size: 15px; line-height: 1.6;">${body}</div></div>${credit}</div></body></html>`;
 }
 
 export function tripConditionsHoldEmail(input: TripConditionsHoldEmailInput): NotificationEmail {
@@ -546,6 +658,59 @@ function dockCallPhrase(t: DiverTranslator, dockCallMinutes: number | undefined)
   return t("notifications.common.dockCallMinutes", { minutes: dockCallMinutes ?? 30 });
 }
 
+/**
+ * **Where to go** (ux review 2026-10-11, items 4 and 27): the meeting point,
+ * its address, the landmark and the parking note, and a link to a maps app —
+ * the panel the public trip page and `/ready` already draw, carried into the
+ * mail the diver actually has open at the dock. The map link is built here
+ * from the query, never passed in, so only a maps URL can become this `href`.
+ */
+function meetingPointSection(t: DiverTranslator, point: MeetingPoint | undefined) {
+  if (!point) return { text: "", html: "" };
+  const heading = t("trip.arrivalHeading");
+  const lines = [
+    point.label,
+    point.address,
+    point.landmark ? t("notifications.meetingPoint.landmark", { landmark: point.landmark }) : null,
+    point.parking ? t("notifications.meetingPoint.parking", { parking: point.parking }) : null,
+  ].filter((line): line is string => Boolean(line));
+  const mapUrl = point.mapQuery ? googleMapsUrl(point.mapQuery) : null;
+  const openMap = t("trip.openArrivalMap");
+  return {
+    text: `\n\n${heading}\n${lines.join("\n")}${mapUrl ? `\n${openMap}: ${mapUrl}` : ""}`,
+    html: emailPanel(
+      escapeHtml(heading),
+      `<p style="margin: 8px 0 0;">${lines.map(escapeHtml).join("<br>")}</p>${
+        mapUrl
+          ? `<p style="margin: 8px 0 0;"><a href="${escapeHtml(mapUrl)}" target="_blank">${escapeHtml(openMap)}</a></p>`
+          : ""
+      }`,
+    ),
+  };
+}
+
+/** The confirmation's money line, in the words the booking form used. */
+function confirmationMoneyLine(
+  t: DiverTranslator,
+  money: ConfirmationMoney,
+  input: { locale: DiverLocale; startsAt: Date; timezone: string },
+): string {
+  const amount = (cents: number) => formatMoneyCents(cents, money.currency, input.locale);
+  if (money.due === "deposit") {
+    return t("notifications.bookingConfirmation.moneyDeposit", {
+      deposit: amount(money.depositCents),
+      balance: amount(money.balanceCents),
+      date: formatShortDate(input.startsAt, input.locale, input.timezone),
+    });
+  }
+  return t(
+    money.due === "online"
+      ? "notifications.bookingConfirmation.moneyOnline"
+      : "notifications.bookingConfirmation.moneyAtShop",
+    { amount: amount(money.amountCents) },
+  );
+}
+
 /** The diver's outstanding items as one bullet list, or empty when nothing's left. */
 function outstandingLines(
   t: DiverTranslator,
@@ -595,7 +760,10 @@ function materialsSection(t: DiverTranslator, materials: CourseLearningMaterial[
   });
   return {
     text: `\n\n${heading}\n${textLines.join("\n")}\n`,
-    html: `<div class="dd-panel" style="margin-top: 20px; padding: 15px; border-left: 4px solid ${BRAND_PRIMARY_COLOR}; background-color: #f3f4f6; border-radius: 8px;"><strong>${escapeHtml(heading)}</strong><ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">${htmlItems.join("")}</ul></div>`,
+    html: emailPanel(
+      escapeHtml(heading),
+      `<ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">${htmlItems.join("")}</ul>`,
+    ),
   };
 }
 
@@ -713,7 +881,10 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
     ? `\n\n${packingHeading}\n${packingItems.map((item) => `- ${item}`).join("\n")}\n`
     : "";
   const reminderHtml = packingItems.length
-    ? `<div class="dd-panel" style="margin-top: 20px; padding: 15px; border-left: 4px solid ${BRAND_PRIMARY_COLOR}; background-color: #f3f4f6; border-radius: 8px;"><strong>${packingHeading}</strong><ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">${packingItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`
+    ? emailPanel(
+        escapeHtml(packingHeading),
+        `<ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">${packingItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`,
+      )
     : "";
 
   const confirmed = t("notifications.bookingConfirmation.confirmed", {
@@ -730,11 +901,29 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
   // A course's learning materials, above the packing list: the eLearning is
   // the one thing on this page with a deadline weeks before the boat.
   const materials = materialsSection(t, input.learningMaterials);
+  const where = meetingPointSection(t, input.meetingPoint);
+  // The terms the diver agreed to, under the time (ux review 2026-10-11, item
+  // 5): what they pay and where, and until when they can walk away for free.
+  const terms = [
+    input.money ? confirmationMoneyLine(t, input.money, input) : null,
+    input.freeCancellationUntil
+      ? t("trip.freeCancellationUntil", {
+          when: formatDateTimeTz(input.freeCancellationUntil, input.locale, input.timezone),
+        })
+      : null,
+  ].filter((line): line is string => Boolean(line));
+  const termsText = terms.length ? `\n\n${terms.join("\n")}` : "";
+  const termsHtml = terms.length ? `<p>${terms.map(escapeHtml).join("<br>")}</p>` : "";
+  const addToCalendar = t("trip.addToCalendar");
+  const calendarText = input.calendarUrl ? `\n${addToCalendar}:\n${input.calendarUrl}` : "";
+  const calendarHtml = input.calendarUrl
+    ? `<p><a href="${escapeHtml(input.calendarUrl)}">${escapeHtml(addToCalendar)}</a></p>`
+    : "";
 
   return {
     subject: t("notifications.bookingConfirmation.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${confirmed}\n\n${date}\n${time}\n\n${dockNote}${readyText}${materials.text}${reminderText}`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${confirmedHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${dockNoteHtml}</p>${readyHtml}${materials.html}${reminderHtml}`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${confirmed}\n\n${date}\n${time}${termsText}\n\n${dockNote}${where.text}${readyText}${calendarText}${materials.text}${reminderText}`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${confirmedHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${termsHtml}<p>${dockNoteHtml}</p>${where.html}${readyHtml}${calendarHtml}${materials.html}${reminderHtml}`,
   };
 }
 
@@ -911,6 +1100,9 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
   const keywordHtml = keywordOffer
     ? `<p style="font-size: 13px; opacity: 0.8;">${escapeHtml(keywordOffer)}</p>`
     : "";
+  // Where to go, on both leads (ux review 2026-10-11, item 4): the week-out
+  // note is the one a diver books a taxi from.
+  const where = meetingPointSection(t, input.meetingPoint);
 
   // The 7-day reminder stays a light nudge. The night-before (day) lead becomes
   // the full brief: conditions, what to bring, a concrete arrival time, and who
@@ -940,8 +1132,8 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
         });
     return {
       subject: t("notifications.tripReminder.daySubject", { tripTitle: input.tripTitle }),
-      text: `${t("notifications.common.greeting", { firstName })}\n\n${opener}\n\n${when.text}${brief.text}${todo.text}${readyText}${keywordText}`,
-      html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${openerHtml}</p>${when.html}${brief.html}${todo.html}${readyHtml}${keywordHtml}`,
+      text: `${t("notifications.common.greeting", { firstName })}\n\n${opener}\n\n${when.text}${brief.text}${where.text}${todo.text}${readyText}${keywordText}`,
+      html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${openerHtml}</p>${when.html}${brief.html}${where.html}${todo.html}${readyHtml}${keywordHtml}`,
     };
   }
 
@@ -964,8 +1156,59 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
         : "notifications.tripReminder.weekSubject",
       { tripTitle: input.tripTitle },
     ),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${weekBody}\n\n${when.text}${dockNote ? `\n\n${dockNote}` : ""}${todo.text}${materials.text}${readyText}${keywordText}`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${weekBodyHtml}</p>${when.html}${dockNote ? `<p>${dockNote}</p>` : ""}${todo.html}${materials.html}${readyHtml}${keywordHtml}`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${weekBody}\n\n${when.text}${dockNote ? `\n\n${dockNote}` : ""}${where.text}${todo.text}${materials.text}${readyText}${keywordText}`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${weekBodyHtml}</p>${when.html}${dockNote ? `<p>${dockNote}</p>` : ""}${where.html}${todo.html}${materials.html}${readyHtml}${keywordHtml}`,
+  };
+}
+
+type TripRescheduledEmailInput = {
+  locale: DiverLocale;
+  diverName: string;
+  shopName: string;
+  tripTitle: string;
+  previousStartsAt: Date;
+  startsAt: Date;
+  endsAt: Date;
+  timezone: string;
+  /** Absent on a course session, which names no dock. */
+  dockCallMinutes?: number;
+  /** Present only when the meeting point moved with the time. */
+  meetingPoint?: MeetingPoint;
+  readinessUrl?: string;
+};
+
+/**
+ * **"Your departure moved"** (ux review 2026-10-11, item 1): the new date and
+ * time first, the old one under it so nobody wonders which is which, the
+ * meeting point only when it moved too, and the diver's own trip prep.
+ */
+export function tripRescheduledEmail(input: TripRescheduledEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const title = escapeHtml(input.tripTitle);
+  const when = whenLines(t, input);
+  const previous = formatDateTimeTz(input.previousStartsAt, input.locale, input.timezone);
+  const was = t("notifications.tripRescheduled.was", { when: previous });
+  const body = t("notifications.tripRescheduled.body", { tripTitle: input.tripTitle });
+  const bodyHtml = t("notifications.tripRescheduled.body", {
+    tripTitle: `<strong>${title}</strong>`,
+  });
+  const dockNote =
+    input.dockCallMinutes === undefined
+      ? null
+      : t("notifications.tripReminder.dockNote", {
+          dock: dockCallPhrase(t, input.dockCallMinutes),
+        });
+  const movedToo = input.meetingPoint ? t("notifications.tripRescheduled.meetingPointMoved") : null;
+  const where = meetingPointSection(t, input.meetingPoint);
+  const cantMakeIt = t("notifications.tripRescheduled.cantMakeIt");
+  const seeWhatsLeft = t("notifications.common.seeWhatsLeft");
+  const readyText = input.readinessUrl ? `\n\n${seeWhatsLeft}:\n${input.readinessUrl}\n` : "\n";
+  const readyHtml = input.readinessUrl ? emailButton(input.readinessUrl, seeWhatsLeft) : "";
+  return {
+    subject: t("notifications.tripRescheduled.subject", { tripTitle: input.tripTitle }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${when.text}\n${was}${dockNote ? `\n\n${dockNote}` : ""}${movedToo ? `\n\n${movedToo}` : ""}${where.text}\n\n${cantMakeIt}${readyText}`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${when.html}<p style="opacity: 0.8;">${escapeHtml(was)}</p>${dockNote ? `<p>${escapeHtml(dockNote)}</p>` : ""}${movedToo ? `<p>${escapeHtml(movedToo)}</p>` : ""}${where.html}<p>${escapeHtml(cantMakeIt)}</p>${readyHtml}`,
   };
 }
 

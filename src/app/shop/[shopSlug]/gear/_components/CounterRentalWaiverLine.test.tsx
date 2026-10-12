@@ -118,7 +118,7 @@ describe("CounterRentalWaiverLine", () => {
       />,
     );
     expect(
-      screen.getByText(/A physician did not clear this diver on Jul 18, 2026 \(earlier waiver\)/),
+      screen.getByText(/A physician did not clear this person on Jul 18, 2026 \(earlier waiver\)/),
     ).toBeVisible();
     expect(screen.getByRole("link", { name: "View signed record" })).toHaveAttribute(
       "href",

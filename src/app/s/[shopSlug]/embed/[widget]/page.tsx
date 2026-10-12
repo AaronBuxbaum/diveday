@@ -27,7 +27,7 @@ import {
   publicSchedulePath,
   publicTripPath,
 } from "@/lib/public-routes";
-import { capacityLabel } from "@/lib/trips";
+import { capacityLabel, seatsOnSale } from "@/lib/trips";
 import { EmbedHeightReporter } from "./_components/EmbedHeightReporter";
 
 // The widget is only ever framed, so it paints inside its own shell like every
@@ -96,8 +96,9 @@ export default async function EmbedWidgetPage({
     const parts = formatDayParts(startsAt, locale, tz);
     return `${parts.weekday} ${parts.day} ${parts.month} · ${formatTimeRange(startsAt, endsAt, locale, tz)}`;
   };
-  const seats = (trip: { capacity: number; booked: number }) => {
-    const label = capacityLabel(trip);
+  // Seats on sale under the boat's certificate, never the stated capacity (#2321).
+  const seats = (trip: { capacity: number; sellableCapacity: number; booked: number }) => {
+    const label = capacityLabel(seatsOnSale(trip));
     if (label.kind === "full") return t("fallback.full");
     return label.remaining <= 2
       ? t("schedule.spotsLeftUrgent", { count: label.remaining })
@@ -119,11 +120,12 @@ export default async function EmbedWidgetPage({
     // **Quiet below the shelf's own threshold.** The storefront's shelf renders
     // nothing until a rating is published, because an empty "no reviews yet"
     // panel reads as a warning; on someone else's page it would read worse.
-    // The frame then reports a height of nothing, and the loader folds it.
+    // The frame reports a height of exactly 0, and the loader folds it and
+    // its credit away (`public/embed.js`, #2317).
     if (!aggregate || aggregate.average === null || aggregate.count === 0) {
       return (
         <main className="w-full">
-          <EmbedHeightReporter />
+          <EmbedHeightReporter empty />
         </main>
       );
     }
@@ -166,7 +168,8 @@ export default async function EmbedWidgetPage({
         <ReviewLedger
           reviews={reviewPage?.reviews ?? []}
           // No trip titles on a third-party page: a private charter's name
-          // is not the shop's to publish (the archive hides them too).
+          // is not the shop's to publish (the archive hides them too, and
+          // `fetchPublicReviewRows` withholds it anyway, #2318).
           showTrip={false}
           locale={locale}
           timezone={tz}

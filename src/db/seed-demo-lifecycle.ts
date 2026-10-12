@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, lt, ne } from "drizzle-orm";
 import { DAY_MS, nowMs } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
+import { deleteHeldSendsAndDeskRows } from "./departure-notes";
 import {
   accountSecurity,
   accountSessions,
@@ -41,9 +42,11 @@ import {
   gearItems,
   gearReservations,
   gearServiceEvents,
-  heldSends,
   importedPaymentHistory,
   inboundMessages,
+  incidentReportAddenda,
+  incidentReportPeople,
+  incidentReports,
   integrationDeliveries,
   integrationEvents,
   integrationOauthStates,
@@ -72,6 +75,7 @@ import {
   recapPulses,
   rentalFitProfiles,
   reviewModerationEvents,
+  reviewReplies,
   rollCallCrewEvents,
   rollCallEvents,
   shopBackupDeliveries,
@@ -88,6 +92,7 @@ import {
   staffCredentials,
   staffReplies,
   staffShifts,
+  stripeRefundFailures,
   tips,
   tripAssignments,
   tripBlowoutDivers,
@@ -171,7 +176,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(integrationEvents).where(eq(integrationEvents.shopId, shopId));
   await db.delete(integrationOauthStates).where(eq(integrationOauthStates.shopId, shopId));
   await db.delete(shopIntegrations).where(eq(shopIntegrations.shopId, shopId));
-  await db.delete(heldSends).where(eq(heldSends.shopId, shopId));
+  await deleteHeldSendsAndDeskRows(db, shopId);
   await db.delete(formDrafts).where(eq(formDrafts.shopId, shopId));
 
   // Order/checkout/booking dependents first. A ticket's bill names its order
@@ -182,15 +187,17 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(paymentOperationIntents).where(eq(paymentOperationIntents.shopId, shopId));
   // A dispute references the order or checkout it is about, so it goes first.
   await db.delete(paymentDisputes).where(eq(paymentDisputes.shopId, shopId));
+  // So does a failed refund (issue #2291).
+  await db.delete(stripeRefundFailures).where(eq(stripeRefundFailures.shopId, shopId));
+  // The shop is going, so its prepaid dives go with it. Entitlements reference
+  // bookings, orders *and* the package they came from, so they go before all
+  // three (ADR 20260822-a-package-is-entitlements-not-money).
+  await db.delete(divePackageEntitlements).where(eq(divePackageEntitlements.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
   await db.delete(bookingCheckoutBookings).where(eq(bookingCheckoutBookings.shopId, shopId));
   // Redemptions reference checkouts; the codes themselves are referenced *by*
   // checkouts, so the codes go after them (docs ADR 20260729-shop-promo-codes).
   await db.delete(shopPromoRedemptions).where(eq(shopPromoRedemptions.shopId, shopId));
-  // The shop is going, so its prepaid dives go with it. Entitlements reference
-  // bookings, orders *and* the package they came from, so they go before all
-  // three (ADR 20260822-a-package-is-entitlements-not-money).
-  await db.delete(divePackageEntitlements).where(eq(divePackageEntitlements.shopId, shopId));
   await db.delete(divePackages).where(eq(divePackages.shopId, shopId));
   await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
   await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId));
@@ -201,6 +208,10 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // lever W) — two of them, and neither is deleted first — so it goes before them.
   await db.delete(bookingReferrals).where(eq(bookingReferrals.shopId, shopId));
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
+  // Incident reports name bookings, people and the departure, so they go first.
+  await db.delete(incidentReportAddenda).where(eq(incidentReportAddenda.shopId, shopId));
+  await db.delete(incidentReportPeople).where(eq(incidentReportPeople.shopId, shopId));
+  await db.delete(incidentReports).where(eq(incidentReports.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   // Events before the shop's own item list they reference.
@@ -213,6 +224,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(tripRecapPhotos).where(eq(tripRecapPhotos.shopId, shopId));
   // Before the reviews it describes: the trail's review_id FK carries no
   // ON DELETE CASCADE (ADR 20260813-review-moderation-has-a-floor).
+  await db.delete(reviewReplies).where(eq(reviewReplies.shopId, shopId));
   await db.delete(reviewModerationEvents).where(eq(reviewModerationEvents.shopId, shopId));
   await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));
   // The review's private sibling, on the same parents (D40).

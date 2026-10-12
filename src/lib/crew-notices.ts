@@ -22,8 +22,14 @@ import { MINUTE_MS } from "./clock";
  *    approval the boat then refused (ratio, course rules) is said as the
  *    refusal: they asked, and they are not on it.
  * 5. A decline is said unless an assignment on the same departure outranks it.
- * 6. A role change is said only to somebody who was aboard before and after.
- * 7. Everything left goes out as **one** message — a week copied onto five
+ * 6. A departure whose start time moved (#2283) is said to somebody aboard
+ *    before and after, from the time they last knew — the earliest
+ *    `previousStartsAt` in the batch — to the time it leaves now. It outranks
+ *    a role change, because a missed time is a missed boat; an assignment
+ *    already says the new time; and a move back to where it was is no news
+ *    (that is settled against the departure's own time when it is told).
+ * 7. A role change is said only to somebody who was aboard before and after.
+ * 8. Everything left goes out as **one** message — a week copied onto five
  *    departures is one email with five lines, not five emails.
  *
  * **Late news does not wait for the hour**: a change on a departure leaving
@@ -42,6 +48,7 @@ export const CREW_NOTICE_CHANGES = [
   "request_refused",
   "role_changed",
   "called_off",
+  "time_moved",
 ] as const;
 
 export type CrewNoticeChange = (typeof CREW_NOTICE_CHANGES)[number];
@@ -64,9 +71,20 @@ export const CREW_NOTICE_CRON_CRONTAB = "4 * * * *";
 /** A change on a departure leaving within this long is sent at once, not on the hour. */
 export const CREW_NOTICE_URGENT_MS = 24 * 60 * MINUTE_MS;
 
-export type CrewNoticeRow = { tripId: string; change: CrewNoticeChange; seq: number };
+export type CrewNoticeRow = {
+  tripId: string;
+  change: CrewNoticeChange;
+  seq: number;
+  /** On a `time_moved` row: when the departure left before that move. */
+  previousStartsAt?: Date | null;
+};
 
-export type CrewNews = { tripId: string; change: CrewNoticeChange };
+export type CrewNews = {
+  tripId: string;
+  change: CrewNoticeChange;
+  /** On `time_moved` news: when the departure left before the first move told. */
+  previousStartsAt?: Date;
+};
 
 /**
  * One person's settled notices, netted to what is still news — one entry per
@@ -94,6 +112,7 @@ export function netCrewNotices(rows: readonly CrewNoticeRow[]): CrewNews[] {
       (row) => row.change === "request_approved" || row.change === "request_declined",
     );
     const lastDecision = decisions.at(-1)?.change;
+    const firstMove = list.find((row) => row.change === "time_moved" && row.previousStartsAt);
 
     if (calledOff && !(last && last.seq > calledOff.seq)) {
       news.push({ tripId, change: "called_off" });
@@ -105,6 +124,8 @@ export function netCrewNotices(rows: readonly CrewNoticeRow[]): CrewNews[] {
       news.push({ tripId, change: "request_refused" });
     } else if (lastDecision === "request_declined" && isOn !== true) {
       news.push({ tripId, change: "request_declined" });
+    } else if (firstMove?.previousStartsAt && wasOn !== false && isOn !== false) {
+      news.push({ tripId, change: "time_moved", previousStartsAt: firstMove.previousStartsAt });
     } else if (has("role_changed") && wasOn !== false && isOn !== false) {
       news.push({ tripId, change: "role_changed" });
     }

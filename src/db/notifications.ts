@@ -39,12 +39,15 @@ import {
   recipientLocale,
   shopSenderOf,
 } from "@/lib/notifications";
+import { confirmationExtras } from "@/lib/notifications/confirmation-extras";
 import { ACTIONABLE_PROVIDER_STATUSES, type ProviderEmailStatus } from "@/lib/notifications/events";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { findCourtesyEmailRecipientByAddress } from "./courtesy-email";
+import { notificationHeldForRehearsal, REHEARSAL_HELD_DELIVERY } from "./rehearsals";
 import {
+  bookingPayments,
   bookings,
   courses,
   notificationDeliveries,
@@ -399,6 +402,8 @@ export async function shopSenderFor(
       addressPostalCode: shops.addressPostalCode,
       addressCountry: shops.addressCountry,
       isDemo: shops.isDemo,
+      logoUrl: shops.logoUrl,
+      brandColor: shops.brandColor,
     })
     .from(shops)
     .where(eq(shops.id, shopId))
@@ -451,6 +456,12 @@ export async function sendNotification(
     });
     return { status: "failed", retryable: false, errorCode: "invalid_notification" };
   }
+
+  // **A rehearsal sends nothing to anyone** (ADR 20261012-rehearsal-departures).
+  // Held here, at the one door every shop-scoped email passes through, before
+  // the provider is asked, and reported as a non-retryable code so it is never
+  // queued for a second try.
+  if (await notificationHeldForRehearsal(db, input)) return REHEARSAL_HELD_DELIVERY;
 
   let delivery: NotificationDelivery;
   try {
@@ -506,6 +517,12 @@ export async function sendNotificationBatch(
       const input = batch[index];
       const parsed = notificationSchema.safeParse(input);
       if (parsed.success) {
+        // A member about a rehearsal is held, not sent (ADR
+        // 20261012-rehearsal-departures); the rest of the fan-out goes on.
+        if (await notificationHeldForRehearsal(db, input)) {
+          results[index] = REHEARSAL_HELD_DELIVERY;
+          continue;
+        }
         sendable.push({ index, input });
         continue;
       }
@@ -942,7 +959,10 @@ export async function drainNotificationRetries(
     }
     let delivery: NotificationDelivery;
     try {
-      delivery = await notify(await withShopSender(db, notification, senders), provider);
+      // A queued retry about a rehearsal is held like a first send.
+      delivery = (await notificationHeldForRehearsal(db, notification))
+        ? REHEARSAL_HELD_DELIVERY
+        : await notify(await withShopSender(db, notification, senders), provider);
     } catch (error) {
       delivery = {
         status: "failed",
@@ -1249,13 +1269,19 @@ async function sendStoredBookingConfirmation(
       person: people,
       trip: trips,
       shop: shops,
-      courseMaterials: courses.learningMaterials,
+      course: courses,
+      /** Who took the money, when anyone has: "stripe" is a card checkout. */
+      paymentProvider: bookingPayments.provider,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, bookings.shopId)))
+    .leftJoin(
+      bookingPayments,
+      and(eq(bookingPayments.bookingId, bookings.id), eq(bookingPayments.shopId, bookings.shopId)),
+    )
     .where(
       and(
         eq(bookings.id, bookingId),
@@ -1265,7 +1291,7 @@ async function sendStoredBookingConfirmation(
     )
     .limit(1);
   if (!row?.person.email) return null;
-  const learningMaterials = readLearningMaterials(row.courseMaterials);
+  const learningMaterials = readLearningMaterials(row.course?.learningMaterials);
   if (options.onlyWithMaterials && learningMaterials.length === 0) return null;
   const origin = publicAppUrl();
   const readinessCapability = origin
@@ -1297,6 +1323,17 @@ async function sendStoredBookingConfirmation(
         ? new URL(readinessLinkPath(readinessCapability.token), `${origin}/`).toString()
         : undefined,
       ...(learningMaterials.length > 0 ? { learningMaterials } : {}),
+      // The same where, calendar, money and window the booking-time send
+      // carried (ux review 2026-10-11, items 4 and 5). Online when a card
+      // checkout took this seat's money; otherwise it is owed at the shop.
+      ...confirmationExtras({
+        shop: row.shop,
+        trip: row.trip,
+        course: row.course,
+        participantType: row.booking.participantType,
+        chargesOnline: row.paymentProvider === "stripe",
+        origin,
+      }),
       // A staff-triggered resend is a new logical send, not a replay of the
       // original booking confirmation's provider idempotency key.
       confirmedAt: nowDate(),
@@ -1336,7 +1373,7 @@ export async function applyProviderEmailEvent(
      * Optional because SES has nothing to scope by — its event names a message
      * id and nothing else, and those ids come from DiveDay's own single
      * account. A provider whose events *do* carry a tenant
-     * (WhatsApp names the WhatsApp Business Account) passes it, so a delivery
+     * (WhatsApp names the sending phone number, H-83) passes it, so a delivery
      * outcome can never land on another shop's row even if a provider message
      * id were ever guessable or reused.
      */

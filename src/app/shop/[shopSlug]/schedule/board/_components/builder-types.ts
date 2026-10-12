@@ -191,6 +191,8 @@ export type BuilderCopy = {
   descriptionPlaceholder: string;
   isPrivateLabel: string;
   isPrivateHint: string;
+  isRehearsalLabel: string;
+  isRehearsalHint: string;
   selfGuidedLabel: string;
   selfGuidedHint: string;
   daysLabel: string;

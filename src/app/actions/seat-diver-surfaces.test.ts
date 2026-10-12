@@ -3,7 +3,7 @@ import { SEAT_SURFACES, type SeatLanding, type SeatSurfaceId } from "./seat-dive
 
 /**
  * A `SeatLanding` is built from raw form fields precisely when zod *failed* —
- * `seatExistingDiverAction` falls back to `String(formData.get("tripId"))` so a
+ * `seatExistingDiverAction` falls back to the raw `tripId` field (`rawLanding`) so a
  * staffer still lands back on the page they submitted from. Every path below
  * therefore has to survive an id that is not a uuid.
  *

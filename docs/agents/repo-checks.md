@@ -34,7 +34,7 @@ The infra-ASCII one (`scripts/check-infra-ascii.mjs`) refuses any non-ASCII char
 
 ### destructive-migration
 
-The destructive-migration one (`scripts/check-migrations.mjs`, also run by `scripts/vercel-build.mjs` before `pnpm db:migrate`) refuses a `DROP`/rename/type-change in any migration newer than the previous release unless the SQL itself carries a `-- diveday:allow-destructive <rule> <table>.<column>: <why>` line — migrations apply inside the production build while the *previous* release is still serving, and there are no down migrations (ADR 20260806-destructive-migration-guard).
+The destructive-migration one (`scripts/check-migrations.mjs`, also run by `scripts/vercel-build.mjs` before `pnpm db:migrate`) refuses a `DROP`/rename/type-change in any migration newer than the previous release unless the SQL itself carries a `-- diveday:allow-destructive <rule> <table>.<column>: <why>` line — migrations apply inside the production build while the *previous* release is still serving, and there are no down migrations (ADR 20260806-destructive-migration-guard). A `drop-column` marker is refused outright while the previous release's or this branch's `src/db/schema/` still declares the column, because a declared column is named by every whole-row select on that release and no free-text reason can make that safe (issue #2336).
 
 ### migration-graph
 
@@ -410,6 +410,8 @@ Five guards that were one syntactic pattern each are rules in `pnpm lint` now: a
 
 The escape hatch is Biome's own, and its reason is required: `// biome-ignore lint/plugin/<rule>: <why>` on the line above. One with nothing after the rule name is itself an error, so the hatch cannot be taken silently. A file-wide exemption is a negated glob in the rule's `biome.json` override, with its reason in this section.
 
+**Three guards stay scripts, on evidence (issue #2359).** A GritQL rule sees one syntax node at a time and Biome's regex has no lookaround, so a port is only made when an injected corpus shows it refuses exactly the lines the script refuses. `check-tokens` fails that test both ways: its issue-citation exemption reads the text *before* a `#722` across node boundaries and per occurrence (`"issue #722 and #333"` refuses only `#333`), which a per-string pattern cannot, and the script scans all non-comment text, so a private field `this.#fed` is refused by the script and not by a string rule, while `"https://x//#fff"` is the reverse. `check-type-ramp` reads comment lines (its `diveday:allow-type-ramp:` marker on the line above, and a spelling inside a comment) and judges `LEAD_TITLE_CLASS` by the file's directory, none of which a GritQL pattern sees. `check-uuid-segments` judges a page by its directory path. Revisit when Biome's plugins can read trivia and paths.
+
 ### clock
 
 Refuses `new Date()` and `Date.now()` in `src/lib`, `src/db` and `src/features`, tests included; read time through `nowDate()` / `nowMs()` in `src/lib/clock.ts`. The demo seed is clock-anchored and dozens of surfaces render relative time, so a live wall-clock read in domain or data code is what makes visual baselines drift: the clock module is the one seam the e2e fleet freezes (`DIVEDAY_CLOCK`), and in production it is the native call byte for byte. `src/app` is out of scope because client components read the browser clock, which the e2e specs freeze with `page.clock`. Tests are in scope because dozens of them once drifted into depending on real time running ahead of the frozen instant (`new Date(Date.now() + 1000)` as an upper bound, a session placed relative to real time and read back against `nowMs()`), and failed as a mass the day the instant moved. Exempt: `src/lib/clock.ts`, and `src/lib/clock.test.ts`, whose assertion is bracketing `nowMs()` between two real readings.
@@ -766,7 +768,8 @@ migration spent on rows that have never had a reader. When in doubt the answer i
 while a migration runs inside the production build, and having no users does not help a shop
 watching its schedule mid-deploy — a destructive migration still carries its
 `-- diveday:allow-destructive <rule> <table>.<column>: <why>` line, where "pre-pilot, no users,
-H-49" is now a sufficient *why*. And **H-02's retention windows and the erasure path** are promises
+H-49" is now a sufficient *why* — except for a `drop-column` whose column the previous release
+still declares, which the guard refuses whatever the reason: the drop waits one release. And **H-02's retention windows and the erasure path** are promises
 about data we *will* hold; they stand. This rule expires the moment the first pilot shop has real
 divers in the system — Aaron will say so, and it is not an agent's call to make.
 
@@ -895,7 +898,10 @@ inside that direction are enforced too (ratcheted in `scripts/ratchets.json`): `
 `src/app` imports `drizzle-orm` (a query is a named `src/db` function), and everything outside
 `src/db` reaches the trips modules through the `@/db/trips` barrel. Test files and the e2e fixture
 routes under `src/app/api/test/` are exempt. Inside `src/db`, a module imports the `trips-*` sibling
-it needs rather than the barrel, so the barrel never closes an import cycle.
+it needs rather than the barrel, so the barrel never closes an import cycle. The guard is a hand-written
+import reader on purpose: dependency-cruiser found the same violations, but it cannot parse imports
+with TypeScript 7 and cannot check the feature README or run the ratchet (ADR
+20261012-architecture-guard-stays-hand-written).
 
 #### Read time through the clock
 

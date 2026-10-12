@@ -1,4 +1,18 @@
-import { and, countDistinct, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  countDistinct,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import {
   checkoutKeptRatio,
   type OrderLineKind,
@@ -15,15 +29,17 @@ import { queryAll } from "./query-helpers";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
+  bookingPayments,
   bookings,
   divePackageEntitlements,
   divePackages,
+  importedPaymentHistory,
   orderLineItems,
   orders,
   trips,
   workOrderBills,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * The three facts the Reports page adds under the month's headline figures
@@ -46,15 +62,20 @@ const ACTIVE_BOOKING_STATUSES = ["booked", "checked_in"] as const;
 /** An order the shop still holds money on; a fully refunded one holds none. */
 const KEPT_ORDER_STATUSES = ["paid", "partly_refunded"] as const;
 
+/** Money a staff member marked by hand: what the booking holds now, not a refunded or waived one. */
+const MARKED_PAYMENT_STATUSES = ["paid", "deposit_paid", "partly_refunded"] as const;
+
 export async function getMonthMoneyDetail(
   db: DbExecutor,
   shopId: string,
   startUtc: Date,
   endUtc: Date,
   now: Date,
+  /** The shop's currency and zone: imported history is counted in that currency, by its own calendar day. */
+  shopMoney: { currency: string; timeZone: string },
 ): Promise<MonthMoneyDetail> {
   const [lines, packageDivesOwed, divers] = await queryAll(db, [
-    () => moneyByLine(db, shopId, startUtc, endUtc),
+    () => moneyByLine(db, shopId, startUtc, endUtc, shopMoney),
     () => packageDivesOwedAt(db, shopId, endUtc < now ? endUtc : now),
     () => returningDivers(db, shopId, startUtc, endUtc),
   ]);
@@ -66,6 +87,7 @@ async function moneyByLine(
   shopId: string,
   startUtc: Date,
   endUtc: Date,
+  shopMoney: { currency: string; timeZone: string },
 ): Promise<Array<{ line: RevenueLine; cents: number }>> {
   // Every line of every invoice paid in the window. Whether the invoice bills
   // a gear-bench job, and whether its booking's departure is a course session,
@@ -83,6 +105,8 @@ async function moneyByLine(
     .from(orderLineItems)
     .innerJoin(orders, and(eq(orders.id, orderLineItems.orderId), eq(orders.shopId, shopId)))
     .leftJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
+    // diveday:allow-rehearsal: money only, and a rehearsal can never be
+    // invoiced (`issueOrder` refuses its seats).
     .leftJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
     .where(
       and(
@@ -114,6 +138,8 @@ async function moneyByLine(
         eq(bookingCheckouts.shopId, shopId),
       ),
     )
+    // diveday:allow-rehearsal: money only, and a rehearsal can never be
+    // checked out (`startBookingCheckout` refuses it).
     .innerJoin(trips, and(eq(trips.id, bookingCheckouts.tripId), eq(trips.shopId, shopId)))
     .where(
       and(
@@ -121,6 +147,58 @@ async function moneyByLine(
         eq(bookingCheckouts.status, "completed"),
         gte(bookingCheckouts.completedAt, startUtc),
         lt(bookingCheckouts.completedAt, endUtc),
+      ),
+    );
+
+  // Every booking a staff member marked paid by hand (cash at the desk, a
+  // transfer), on its departure's line, by the day the mark was last set
+  // (issue #2305). Only rows no provider wrote: a Stripe-settled seat is
+  // counted through its checkout or invoice above, and a prepaid package dive
+  // was money on the day the package sold. `amount_cents` is what the booking
+  // still holds, so a part refund is already off it.
+  const markedSeats = await db
+    .select({
+      amountCents: bookingPayments.amountCents,
+      courseTrip: sql<boolean>`${trips.courseId} is not null`,
+    })
+    .from(bookingPayments)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, bookingPayments.bookingId), eq(bookings.shopId, shopId)),
+    )
+    // diveday:allow-deleted-trips: a departure with a booking cannot be deleted (`deleteTrip`'s `has_roster`), and money marked is money taken; a cleared rehearsal is left out by `notRehearsal()`.
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId), notRehearsal()))
+    .where(
+      and(
+        eq(bookingPayments.shopId, shopId),
+        isNull(bookingPayments.provider),
+        inArray(bookingPayments.status, [...MARKED_PAYMENT_STATUSES]),
+        isNotNull(bookingPayments.amountCents),
+        gte(bookingPayments.updatedAt, startUtc),
+        lt(bookingPayments.updatedAt, endUtc),
+      ),
+    );
+
+  // History carried from the shop's previous system, net of its refunds, on
+  // the rule the month's Revenue already counts it by (`getMonthlyReport`):
+  // only amounts the import could read in the shop's own currency, on the
+  // shop's own calendar days. It names no line of its own, so it is one.
+  const [importedNet] = await db
+    .select({
+      cents: sql<string>`coalesce(sum(case when ${importedPaymentHistory.direction} = 'payment' then ${importedPaymentHistory.amountCents} else -${importedPaymentHistory.amountCents} end), 0)`,
+    })
+    .from(importedPaymentHistory)
+    .where(
+      and(
+        eq(importedPaymentHistory.shopId, shopId),
+        eq(importedPaymentHistory.currency, shopMoney.currency),
+        isNotNull(importedPaymentHistory.amountCents),
+        inArray(importedPaymentHistory.direction, ["payment", "refund"]),
+        gte(
+          importedPaymentHistory.occurredOn,
+          calendarDateInTimezone(startUtc, shopMoney.timeZone),
+        ),
+        lt(importedPaymentHistory.occurredOn, calendarDateInTimezone(endUtc, shopMoney.timeZone)),
       ),
     );
 
@@ -146,6 +224,14 @@ async function moneyByLine(
     });
     parts.push({ line: "rentals", cents: row.gearCents, keptRatio });
   }
+  for (const row of markedSeats) {
+    parts.push({
+      line: row.courseTrip ? "courses" : "funDives",
+      cents: row.amountCents ?? 0,
+      keptRatio: 1,
+    });
+  }
+  parts.push({ line: "imported", cents: Number(importedNet?.cents ?? 0), keptRatio: 1 });
   return revenueByLine(parts);
 }
 
@@ -239,6 +325,7 @@ async function returningDivers(
           and earlier_trip.shop_id = ${shopId}
           and earlier_trip.status = 'scheduled'
           and earlier_trip.deleted_at is null
+          and not earlier_trip.is_rehearsal
           and earlier_trip.starts_at < ${startUtc.toISOString()}::timestamptz
       ))`,
     })
@@ -250,6 +337,7 @@ async function returningDivers(
         inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
         ne(trips.status, "cancelled"),
         liveTrip(),
+        notRehearsal(),
         gte(trips.startsAt, startUtc),
         lt(trips.startsAt, endUtc),
       ),

@@ -5,6 +5,7 @@ import { reservedTestRecipientDelivery } from "@/lib/notifications/provider";
 import { DEMO_MAIL_DOMAIN, deliveryAddressFor, SES_SIMULATOR_DOMAIN } from "@/lib/simulator-email";
 import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
+import { waiverTemplateHistory } from "@/test/waiver-history";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
 import { shopSenderFor } from "./notifications";
@@ -39,7 +40,7 @@ import { inviteStaffMember } from "./staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { joinTripWaitlist } from "./waitlist";
-import { getCurrentWaiverTemplate, listWaiverTemplateHistory, saveWaiverTemplate } from "./waivers";
+import { getCurrentWaiverTemplate, saveWaiverTemplate } from "./waivers";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -253,7 +254,7 @@ describe("resetDemoSchedule", () => {
     // show.
     const { db, shop } = ctx;
     const before = await getCurrentWaiverTemplate(db, shop.id);
-    const seededHistory = await listWaiverTemplateHistory(db, shop.id);
+    const seededHistory = await waiverTemplateHistory(db, shop.id);
     expect(before?.version).toBe(seededHistory.length);
     expect(seededHistory.length).toBeGreaterThan(1);
 
@@ -270,7 +271,7 @@ describe("resetDemoSchedule", () => {
     expect(after?.version).toBe(seededHistory.length);
     expect(after?.title).toBe(before?.title);
     expect(after?.body).toBe(before?.body);
-    expect(await listWaiverTemplateHistory(db, shop.id)).toHaveLength(seededHistory.length);
+    expect(await waiverTemplateHistory(db, shop.id)).toHaveLength(seededHistory.length);
   });
 
   it("restores the seeded promo and its completed redemption, so a spec cannot leak promo state (#330)", async () => {

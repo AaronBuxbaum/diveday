@@ -1,6 +1,9 @@
+import { diverTranslator } from "@/i18n/messages";
+import { isDiverLocale } from "@/i18n/settings";
 import { escapeHtml } from "@/lib/html";
 import { crewScheduleChangeEmail } from "./crew-emails";
 import { deskAfterHoursEmail } from "./desk-emails";
+import { departureNoteEmail, lostItemEmail } from "./desk-notes";
 import {
   bookingCancelledEmail,
   bookingConfirmationEmail,
@@ -9,6 +12,7 @@ import {
   contactEmailConfirmationEmail,
   courseInquiryEmail,
   demoStartedAlertEmail,
+  type EmailShopBrand,
   founderDigestEmail,
   guardianReleaseCopyEmail,
   lastMinuteDealEmail,
@@ -26,6 +30,7 @@ import {
   tripMinimumNotMetEmail,
   tripRecapEmail,
   tripReminderEmail,
+  tripRescheduledEmail,
   usageCeilingAlertEmail,
   verifyAccountEmail,
   waitlistInviteEmail,
@@ -34,6 +39,7 @@ import {
   wrapEmailHtml,
 } from "./email";
 import type { Notification } from "./kinds";
+import { shopVoiceOf } from "./shop-voice";
 import { weeklyDigestEmail } from "./weekly-digest-email";
 import { gearServiceDueEmail, workOrderReadyEmail } from "./work-order-emails";
 
@@ -53,7 +59,16 @@ export function messageFor(notification: Notification): NotificationEmail {
   // document chrome (doctype, viewport, container) applies uniformly either way.
   const shopName = "shopName" in notification ? notification.shopName : "DiveDay";
   const locale = "locale" in notification ? notification.locale : "en";
-  return { ...message, html: wrapEmailHtml(message.html, { shopName, locale }) };
+  // Sent as the shop: its logo, its colour, DiveDay as the credit at the foot
+  // (`shopVoiceOf`, the same decision the `From` name reads).
+  const brand: EmailShopBrand | undefined = shopVoiceOf(notification)
+    ? {
+        logoUrl: notification.sender?.logoUrl,
+        color: notification.sender?.brandColor,
+        credit: diverTranslator(isDiverLocale(locale) ? locale : "en-US")("shopChrome.credit"),
+      }
+    : undefined;
+  return { ...message, html: wrapEmailHtml(message.html, { shopName, locale, brand }) };
 }
 
 /**
@@ -96,6 +111,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "trip_reminder_24h") {
     return tripReminderEmail({ ...notification, lead: "day" });
   }
+  if (notification.kind === "trip_rescheduled") return tripRescheduledEmail(notification);
   if (notification.kind === "trip_recap") return tripRecapEmail(notification);
   if (notification.kind === "trip_conditions_hold") return tripConditionsHoldEmail(notification);
   if (notification.kind === "trip_blowout") return tripBlowoutEmail(notification);
@@ -126,5 +142,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "gear_service_due") return gearServiceDueEmail(notification);
   if (notification.kind === "crew_schedule_change") return crewScheduleChangeEmail(notification);
   if (notification.kind === "desk_after_hours") return deskAfterHoursEmail(notification);
+  if (notification.kind === "departure_note") return departureNoteEmail(notification);
+  if (notification.kind === "lost_item_found") return lostItemEmail(notification);
   return passwordChangedEmail(notification);
 }
