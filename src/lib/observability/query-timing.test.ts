@@ -81,7 +81,7 @@ describe("timing a request's statements", () => {
     const { db, shop } = await timedShopContext();
     const { stats } = await withQueryStats(() =>
       db.transaction(async (tx) => {
-        await getShopById(tx, shop.id);
+        await tx.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shop.id));
       }),
     );
     // PGlite runs BEGIN and COMMIT itself; the read is the one statement
