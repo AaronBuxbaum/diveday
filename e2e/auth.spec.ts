@@ -48,3 +48,33 @@ test("staff sign-in lands on the shop dashboard and sign-out locks it again", {
   await page.goto("/shop");
   await expect(page).toHaveURL(/\/sign-in/);
 });
+
+/**
+ * The installed app opens on `/shop` (`start_url`, src/app/manifest.ts). With
+ * the cookie cache cold, which it is after five idle minutes, the edge proxy
+ * cannot say which shop to open and lets the request through. The server's
+ * `/shop` handler then decides from the session itself (issue #2342). Dropping
+ * the cache cookie is that cold start: the session cookie stays.
+ */
+test("/shop opens a signed-in staffer's shop even when the edge cannot decide", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  await page.goto("/sign-in");
+  await page.getByLabel("Email").fill(DEV_STAFF_LOGINS.owner.email);
+  await page.getByLabel("Password").fill(DEV_STAFF_LOGINS.owner.password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
+
+  await page.context().clearCookies({ name: "better-auth.session_data" });
+  const sessionCookies = (await page.context().cookies()).map((cookie) => cookie.name);
+  expect(sessionCookies).toContain("better-auth.session_token");
+  expect(sessionCookies).not.toContain("better-auth.session_data");
+
+  const response = await page.request.get("/shop", { maxRedirects: 0 });
+  expect(response.status()).toBe(307);
+  expect(response.headers().location).toMatch(/^\/shop\/[^/]+$/);
+
+  await page.goto("/shop");
+  await expect(page).toHaveURL(/\/shop\/[^/]+$/);
+  await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
+});
