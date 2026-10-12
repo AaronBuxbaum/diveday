@@ -3,7 +3,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { FIRST_RUN_STEP_COUNT } from "@/lib/onboarding";
-import { FirstRunChecklist, type FirstRunChecklistCopy } from "./FirstRunChecklist";
+import { FirstRunChecklist, type FirstRunChecklistCopy, schedulePathOf } from "./FirstRunChecklist";
 
 afterEach(() => {
   cleanup();
@@ -11,7 +11,7 @@ afterEach(() => {
 
 const COPY: FirstRunChecklistCopy = {
   groupLabel: "First morning",
-  subtitle: "Seven steps and divers can start booking.",
+  subtitle: "Finish these and divers can start booking.",
   progress: "2 of 7 done",
   contactTitle: "Add your contact details",
   contactBody: "Phone and email so divers and DiveDay can reach you.",
@@ -31,7 +31,7 @@ const COPY: FirstRunChecklistCopy = {
   siteDone: "{count} dive sites added.",
   tripTitle: "Schedule your first trip",
   tripBody: "Put a departure on the board — divers can’t book until one exists.",
-  tripAction: "Schedule a trip",
+  tripAction: "Add a departure",
   scheduleTitle: "Share your public schedule",
   scheduleBody: "The page divers actually book from.",
   scheduleCopy: "Copy link",
@@ -73,7 +73,7 @@ describe("FirstRunChecklist", () => {
       "href",
       "/shop/blue-mantis/dive-sites",
     );
-    expect(screen.getByRole("link", { name: "Schedule a trip" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Add a departure" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/schedule/board?add=1",
     );
@@ -81,7 +81,7 @@ describe("FirstRunChecklist", () => {
       "href",
       "/shop/blue-mantis/settings/connect",
     );
-    expect(screen.getByText("https://app.diveday.example/s/blue-mantis")).toBeInTheDocument();
+    expect(screen.getByText("/s/blue-mantis")).toBeInTheDocument();
   });
 
   it("marks a step done from real data instead of a dismiss flag", () => {
@@ -106,7 +106,7 @@ describe("FirstRunChecklist", () => {
     expect(screen.queryByRole("link", { name: "Connect Stripe" })).not.toBeInTheDocument();
     // The trip step is never done at render time — the whole checklist only
     // renders while the shop has no upcoming departure.
-    expect(screen.getByRole("link", { name: "Schedule a trip" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add a departure" })).toBeInTheDocument();
   });
 });
 
@@ -120,15 +120,44 @@ describe("FirstRunChecklist", () => {
  * typed under the wrong unit was converted on the way in. So the guess is put
  * in front of the shop before it has priced anything.
  */
+describe("the share row", () => {
+  it("shows the schedule's path, not the whole URL, and copies the whole URL", () => {
+    render(
+      <FirstRunChecklist
+        shopSlug="blue-mantis"
+        scheduleUrl="https://app.diveday.example/s/blue-mantis"
+        contactDone={false}
+        profileDone={false}
+        diveSiteCount={0}
+        unitsDone={false}
+        stripeDone={false}
+        copy={COPY}
+      />,
+    );
+    expect(screen.queryByText("https://app.diveday.example/s/blue-mantis")).toBeNull();
+    expect(screen.getByRole("link", { name: "/s/blue-mantis" })).toHaveAttribute(
+      "href",
+      "https://app.diveday.example/s/blue-mantis",
+    );
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument();
+  });
+
+  it("keeps a relative address as it is", () => {
+    expect(schedulePathOf("/s/blue-mantis")).toBe("/s/blue-mantis");
+  });
+});
+
 describe("the step count", () => {
   /**
-   * **The subtitle counts the steps, so something has to hold it to them.**
+   * **The progress counts the steps, so something has to hold it to them.**
    *
-   * It read "Five steps and divers can start booking" while the list grew a
-   * sixth (issue #712). The count is interpolated now, and this is what stops
-   * the constant behind it drifting from the list it describes.
+   * The subtitle read "Five steps and divers can start booking" while the list
+   * grew a sixth (issue #712), and later sat under a page intro that said
+   * "Three things" (UX review 2026-10-10, item 29). The subtitle counts nothing
+   * now; "0 of 5 done" is the one number, and this stops the constant behind it
+   * drifting from the list it describes.
    */
-  it("renders exactly the number of steps the subtitle promises", () => {
+  it("renders exactly the number of steps the progress counts", () => {
     render(
       <FirstRunChecklist
         shopSlug="blue-mantis"
@@ -196,7 +225,7 @@ describe("the one next thing", () => {
     });
     const primaries = container.querySelectorAll('[data-first-run-primary="true"]');
     expect(primaries).toHaveLength(1);
-    expect(primaries[0]).toHaveTextContent("Schedule a trip");
+    expect(primaries[0]).toHaveTextContent("Add a departure");
   });
 
   it("settles a finished step into a mark with no control left to press", () => {
@@ -296,7 +325,7 @@ describe("one primary, and the rest are the rows themselves", () => {
       ["Set up profile", "/shop/blue-mantis/settings/profile"],
       ["Check units", "/shop/blue-mantis/settings#units"],
       ["Add a dive site", "/shop/blue-mantis/dive-sites"],
-      ["Schedule a trip", "/shop/blue-mantis/schedule/board?add=1"],
+      ["Add a departure", "/shop/blue-mantis/schedule/board?add=1"],
     ] as const) {
       expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
       expect(screen.queryByText(name)).toBeNull();

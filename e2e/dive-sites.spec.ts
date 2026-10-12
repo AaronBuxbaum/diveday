@@ -25,7 +25,7 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/dive-sites");
     await page.getByRole("link", { name: "Add a dive site" }).click();
     await page.getByLabel("Name").fill(siteName);
-    await page.getByLabel("Location").fill("Key Largo");
+    await page.getByRole("textbox", { name: "Location" }).fill("Key Largo");
     await page.getByLabel("Latitude").fill("25.123");
     await page.getByLabel("Longitude").fill("-80.321");
     await page.getByLabel("What might divers see?").fill("Green turtles · spotted eagle rays");
@@ -65,8 +65,8 @@ test.describe("staff", () => {
     await page
       .getByLabel("Conditions overview")
       .fill("Warm water and an easy morning are expected.");
-    await page.getByLabel("Water temp °C").fill("27");
-    await page.getByLabel("Visibility m").fill("18");
+    await page.getByLabel("Water temp °F").fill("81");
+    await page.getByLabel("Visibility ft").fill("60");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction published");
 
@@ -91,9 +91,17 @@ test.describe("staff", () => {
     // than a swipeable deck of photo cards behind a door (slice 7c): "The day"
     // names the dives and their sites, and the shop's own words about each site
     // follow it. The site names itself in a `<span>` inside its ledger row, so
-    // it is read as text.
+    // it is read as text, off the dive list: the log-entry preview under it
+    // names the day's sites too.
     await expect(page.getByRole("heading", { name: "The day" })).toBeVisible();
-    await expect(page.getByText(siteName)).toBeVisible();
+    await expect(
+      page
+        .locator("section")
+        .filter({ has: page.getByRole("heading", { name: "The day" }) })
+        .getByRole("list")
+        .first()
+        .getByText(siteName),
+    ).toBeVisible();
     // What the staffer typed into "What might divers see?" and "Underwater
     // briefing" above. This is the assertion that matters in this spec: a shop
     // writes a site's briefing once and every departure at that site carries it
@@ -107,10 +115,11 @@ test.describe("staff", () => {
       page.getByText("Look along the sandy edge for turtles resting below the coral heads."),
     ).toBeVisible();
     // Each reading is one span carrying its own noun ("27°C water"), so an
-    // exact match on the number alone finds nothing. That the crew's numbers
+    // exact match on the number alone finds nothing. The demo is a Key Largo
+    // shop, so both read in its country's units. That the crew's numbers
     // and not the model's are on the page is what the note below asserts.
-    await expect(page.getByText("27°C water")).toBeVisible();
-    await expect(page.getByText("18 m visibility")).toBeVisible();
+    await expect(page.getByText("81°F water")).toBeVisible();
+    await expect(page.getByText("60 ft visibility")).toBeVisible();
     // **To the minute, not the second.** This line used to build its own
     // timestamp with a bare `toLocaleString`, whose default field set carries
     // seconds — so the sentence a diver reads to decide what to pack said
@@ -136,8 +145,8 @@ test.describe("staff", () => {
     await expect(page.getByRole("status")).toContainText("Crew prediction cleared");
     // The clear's own notice forces the disclosure open on the redirected
     // render — no click needed (and one would close it again).
-    await expect(page.getByLabel("Water temp °C")).toHaveValue("");
-    await expect(page.getByLabel("Visibility m")).toHaveValue("");
+    await expect(page.getByLabel("Water temp °F")).toHaveValue("");
+    await expect(page.getByLabel("Visibility ft")).toHaveValue("");
 
     // Cancel the trip — this leg exercises the cancel/reinstate controls
     // themselves; test isolation is already handled by the per-test demo
@@ -282,7 +291,9 @@ test.describe("staff", () => {
     await expect(page.locator("fieldset#briefing-photos")).toBeVisible();
 
     // One edit names its section by name; a second stops naming and counts.
-    await page.getByLabel("Location").fill("Key Largo National Marine Sanctuary");
+    await page
+      .getByRole("textbox", { name: "Location" })
+      .fill("Key Largo National Marine Sanctuary");
     await expect(page.getByText("Unsaved changes in The site")).toBeVisible();
     await page.getByLabel("Depth range").fill("20-45 ft");
     await expect(page.getByText("Unsaved changes in 2 sections")).toBeVisible();
@@ -367,7 +378,12 @@ test.describe("staff", () => {
     await page.getByRole("heading", { name: "The rest of the briefing" }).click();
     await expect(page.getByText("Ledge and back")).toBeVisible();
     await expect(page.getByText("Out along the ledge, home over the sand.")).toBeVisible();
-    await expect(page.getByTitle(`Terrain map of ${siteName}`)).toBeVisible();
+    // The e2e context refuses the map's reachability probe (fixtures.ts), so
+    // the frame keeps its box but stays hidden and the route draws alone, the
+    // way the page reads on a boat with no signal (MapFrame).
+    const terrain = page.getByTitle(`Terrain map of ${siteName}`);
+    await expect(terrain).toHaveAttribute("data-map-reachable", "false");
+    await expect(terrain).toBeHidden();
   });
 
   test("a half-entered GPS location is named as the reason, and nothing typed is lost", async ({
@@ -384,7 +400,7 @@ test.describe("staff", () => {
 
     await page.goto("/shop/blue-mantis/dive-sites/new");
     await page.getByLabel("Name").fill(siteName);
-    await page.getByLabel("Location").fill("Key Largo");
+    await page.getByRole("textbox", { name: "Location" }).fill("Key Largo");
     await page.getByLabel("What might divers see?").fill("Green turtles");
     await page.getByLabel("Latitude").fill("25.123"); // …and no longitude.
     await page.getByRole("button", { name: "Save dive site" }).click();
@@ -400,7 +416,7 @@ test.describe("staff", () => {
     // The whole point: still on the form, still filled in.
     await expect(page).toHaveURL(/\/dive-sites\/new$/);
     await expect(page.getByLabel("Name")).toHaveValue(siteName);
-    await expect(page.getByLabel("Location")).toHaveValue("Key Largo");
+    await expect(page.getByRole("textbox", { name: "Location" })).toHaveValue("Key Largo");
     await expect(page.getByLabel("What might divers see?")).toHaveValue("Green turtles");
     await expect(page.getByLabel("Latitude")).toHaveValue("25.123");
 
@@ -439,7 +455,7 @@ test.describe("staff", () => {
     // A second site reaching for the same name gets an answer, not a stack.
     await page.goto("/shop/blue-mantis/dive-sites/new");
     await page.getByLabel("Name").fill(taken);
-    await page.getByLabel("Location").fill("Key Largo");
+    await page.getByRole("textbox", { name: "Location" }).fill("Key Largo");
     await page.getByRole("button", { name: "Save dive site" }).click();
 
     // Not `getByRole("alert")` — Next's own route announcer is one too.
@@ -448,7 +464,7 @@ test.describe("staff", () => {
     await expect(page.locator("form").filter({ has: refusal })).toHaveCount(1);
     // Still on the form, still filled in — a rename is all it takes.
     await expect(page).toHaveURL(/\/dive-sites\/new$/);
-    await expect(page.getByLabel("Location")).toHaveValue("Key Largo");
+    await expect(page.getByRole("textbox", { name: "Location" })).toHaveValue("Key Largo");
     await page.getByLabel("Name").fill(`${taken} south`);
     await page.getByRole("button", { name: "Save dive site" }).click();
     await expect(page.getByRole("heading", { level: 1, name: `${taken} south` })).toBeVisible();

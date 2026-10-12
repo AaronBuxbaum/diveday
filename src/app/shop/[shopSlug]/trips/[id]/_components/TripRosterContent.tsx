@@ -24,7 +24,7 @@ import { AddDiverSection } from "./AddDiverSection";
 import { DepartureNoteSection } from "./DepartureNoteSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
-import type { RosterActions } from "./roster-model";
+import type { RosterActions, RosterRecord } from "./roster-model";
 import { TripInvitationGroup } from "./TripInvitationSection";
 import { TripNoticeBanner } from "./TripNoticeBanner";
 import { WaitlistGroup } from "./WaitlistSection";
@@ -87,6 +87,7 @@ export function TripRosterContent({
   compact = false,
   afterRoster = null,
   arrival,
+  record,
   walkInOpen = false,
   acceptsDivers,
   actions,
@@ -123,6 +124,8 @@ export function TripRosterContent({
   afterRoster?: ReactNode;
   /** The desk's taps and groups, once arrivals open — see `RosterSection`. */
   arrival?: RosterArrival;
+  /** The departure is finished: the ledger is its record (`RosterRecord`). */
+  record?: RosterRecord;
   /**
    * The counter can still seat a walk-in: the add-diver search's one door for
    * someone new is then "Add as a walk-in", a name-only seat for the person
@@ -273,6 +276,7 @@ export function TripRosterContent({
         }}
         slots={{
           arrival,
+          record,
           waitingGroup:
             waitlist.length > 0 ? (
               <WaitlistGroup

@@ -51,14 +51,19 @@ test("the day is named, said once, and followed by its departures and what needs
   // The day in one line, said once.
   await expect(page.getByText(/boats? today[.,]/)).toHaveCount(1);
 
-  // A departure still ahead wears its stage and says how ready its divers
-  // are; the seeded morning boat is already home, and reads as settled.
+  // A departure still ahead says how ready its divers are and wears no stage
+  // word: the demo stamps a crew's taps relative to each boat (boarding opens
+  // half an hour before she sails), so a boat hours out has had nothing tapped
+  // yet, and a word nobody has said is not shown (UX review 2026-10-10, item
+  // 4). The chip a tap puts there is `boat-stage.spec.ts`'s. The seeded
+  // morning boat is already home, and reads as settled.
   const live = page
     .locator("ol > li")
     .filter({ hasText: /\d+ of \d+ ready/ })
     .first();
-  await expect(live.getByText(/^(Prep|Check-in|Aboard|Back)$/)).toBeVisible();
   await expect(live.getByText(/^\d+ of \d+ ready$/)).toBeVisible();
+  await expect(live.getByText(/^(Boarding|Underway|Surface|Heading in|Home)$/)).toHaveCount(0);
+  await expect(page.locator("ol > li").filter({ hasText: /All home/ })).toHaveCount(1);
 
   // The demo's straggler is a job, and jobs are one list under the departures.
   const needsYou = page.getByRole("heading", { level: 2, name: "Needs you" });

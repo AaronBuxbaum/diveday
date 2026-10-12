@@ -128,7 +128,7 @@
   "medicalRidingOnlyReferral": "Referred to a physician on {date} with no answer on file: riding only, not in the water",
   "medicalReferralLink": "View the referral",
   "medicalRefusalLink": "View the refusal",
-  "resolveBlockersLink": "Resolve blockers on Guests →",
+  "resolveBlockersLink": "Resolve blockers on Divers →",
   "addNoteSummary": "Add a note",
   "rollCallRecordedByPlain": "{label} {date} by {name}",
   "carriedForwardFromDock": "Ashore since the dock",

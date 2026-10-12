@@ -86,6 +86,7 @@
     "eyebrow": "Work order",
     "ownUnitSubject": "Your own unit · {kind}",
     "statusHeading": "Status",
+    "moveTo": "Move to",
     "technicianNotes": "Bench notes",
     "technicianNotesHint": "(staff only)",
     "workPerformed": "Work performed",

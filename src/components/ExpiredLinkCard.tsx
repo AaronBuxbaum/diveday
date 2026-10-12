@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { type DoorGlyphId, EntryDone } from "@/components/account/EntryShell";
+import { buttonClass } from "@/components/ui/button";
 import type { Shop } from "@/db/schema";
 import type { DiverTranslator } from "@/i18n/messages";
 import { telHref } from "@/lib/contact-links";
@@ -40,6 +42,12 @@ import { telHref } from "@/lib/contact-links";
  * when it plainly has not. `cancelled` is the app's mark for those (the same
  * one `/ready`'s cancelled notice wears), and it defaults to `expired` so
  * every existing caller reads exactly as before.
+ *
+ * **A shopless card still has a door** (UX review 2026-10-10, item 11). With no
+ * shop to name, the card used to end on "Ask your dive shop for a fresh link"
+ * and nothing to tap, a dead end under DiveDay's own wordmark. Given `t`, it
+ * offers DiveDay's home as the one place it can honestly point; with a shop it
+ * offers that shop's contact instead and never DiveDay's sales page.
  */
 export function ExpiredLinkCard({
   title,
@@ -79,11 +87,17 @@ export function ExpiredLinkCard({
           : t("common.needHelpPlain", { shop: shop.name })}
       </p>
     ) : null;
+  const diveDayDoor =
+    !shop && t ? (
+      <Link href="/" className={buttonClass({ variant: "secondary" })}>
+        {t("common.diveDayDoor")}
+      </Link>
+    ) : null;
   return (
     <EntryDone
       // No shop to name: DiveDay's mark says whose page this is, so a diver on
-      // a dead link is not left on a blank screen (UX audit #28). The body's
-      // "ask your dive shop for a fresh link" is the door.
+      // a dead link is not left on a blank screen (UX audit #28), and the
+      // DiveDay door below is the way off it.
       wordmark={!shop}
       glyph={glyph}
       title={title}
@@ -93,10 +107,11 @@ export function ExpiredLinkCard({
         // margin: the pieces above the contact line come and go by branch, and
         // per-item margins are how a stack ends up spaced differently
         // depending on which of its parts happen to be there.
-        children || contact ? (
+        children || contact || diveDayDoor ? (
           <div className="flex flex-col items-center gap-4">
             {children}
             {contact}
+            {diveDayDoor}
           </div>
         ) : undefined
       }

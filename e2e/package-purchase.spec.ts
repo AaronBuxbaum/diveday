@@ -5,8 +5,8 @@ import { bookASeatAndOpenThread, payInvoiceThroughWebhook } from "./helpers";
  * **A diver buys a dive package online** (owner decision 2026-10-09; ADR
  * 20260822-a-package-is-entitlements-not-money).
  *
- * The public nav offers Packages only while one is on sale, the page is the
- * one form, and Buy raises an invoice on the shop's connected account. This
+ * The public nav offers Packages only while one is on sale (the page itself
+ * says "No packages right now" otherwise), the page is the one form, and Buy raises an invoice on the shop's connected account. This
  * fleet sets no `STRIPE_SECRET_KEY`, so the last step stops at "the payment
  * page didn't open" — which is the proof the action got as far as Stripe with
  * the package's own price, and that it says so rather than pretending.
@@ -25,13 +25,16 @@ test("a shop's packages earn a tab, and Buy goes to Stripe or says why not", asy
   const SHOP = privateShop.slug;
   const nav = page.getByRole("navigation", { name: /.+/ }).filter({ hasText: "Schedule" });
 
-  // Nothing on sale: no tab, and no page behind the URL either.
+  // Nothing on sale: no tab, and the URL answers quietly with a door to the
+  // schedule rather than a 404 (UX review 2026-10-10, item 18).
   await page.goto(`/s/${SHOP}`);
   await expect(nav.getByRole("link", { name: "Packages" })).toHaveCount(0);
-  // The page's own `notFound()`, the second layer behind the edge (the shop
-  // exists, so the proxy lets the URL through and the page refuses it).
   await page.goto(`/s/${SHOP}/packages`);
-  await expect(page.getByRole("heading", { name: "That page isn’t here any more" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No packages right now" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back to the schedule" })).toHaveAttribute(
+    "href",
+    `/s/${SHOP}`,
+  );
 
   await page.goto(`/shop/${SHOP}/promos/packages`);
   await page.getByLabel("What you call it").fill("Ten-dive card");

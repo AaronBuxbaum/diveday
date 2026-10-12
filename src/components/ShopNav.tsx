@@ -22,7 +22,7 @@ import {
   staffShopRoot,
 } from "@/lib/staff-destinations";
 import { type ShopSectionNavCopy, ShopSidebar, ShopTabBar } from "./ShopSectionNav";
-import { CommandPalette } from "./search/CommandPalette";
+import { CommandPalette, type CommandPaletteCopy } from "./search/CommandPalette";
 
 async function signOutAction() {
   "use server";
@@ -116,6 +116,77 @@ export function ShopNavSidebar({
   );
 }
 
+/** Every word the ⌘K palette speaks, wherever it is mounted. */
+function commandPaletteCopy(t: ReturnType<typeof staffTranslator>): CommandPaletteCopy {
+  return {
+    language: t("shared.shopNav.language"),
+    groupSession: t("shared.commandPalette.groupSession"),
+    signOut: t("shared.shopNav.signOut"),
+    search: t("shared.commandPalette.search"),
+    dialogAriaLabel: t("shared.commandPalette.dialogAriaLabel"),
+    comboboxAriaLabel: t("shared.commandPalette.comboboxAriaLabel"),
+    placeholder: t("shared.commandPalette.placeholder"),
+    emptyShort: t("shared.commandPalette.emptyShort"),
+    emptyNoMatches: t("shared.commandPalette.emptyNoMatches"),
+    groupDivers: t("shared.commandPalette.groupDivers"),
+    addDiver: t("shared.commandPalette.addDiver"),
+    groupTrips: t("shared.commandPalette.groupTrips"),
+    groupDiveSites: t("shared.commandPalette.groupDiveSites"),
+    groupCourses: t("shared.commandPalette.groupCourses"),
+    groupOrders: t("shared.commandPalette.groupOrders"),
+    groupGear: t("shared.commandPalette.groupGear"),
+    // Every status worded here, where the translator is: `src/db`
+    // returns the code (`src/i18n/gear-labels.ts` owns the words).
+    gearStatuses: gearStatusLabels(t),
+    groupGoTo: t("shared.commandPalette.groupGoTo"),
+    destinationLabels: destinationLabelsFor(t),
+    destinationTitles: destinationTitlesFor(t),
+    goToBoarding: t("shared.commandPalette.goToBoarding"),
+    goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
+    hintMove: t("shared.commandPalette.hintMove"),
+    hintOpen: t("shared.commandPalette.hintOpen"),
+    hintClose: t("shared.commandPalette.hintClose"),
+  };
+}
+
+/**
+ * **The ⌘K search as a field of its own**, for a page that stands outside the
+ * staff shell and so has no bar to put it in: the staff 404, which is a dead
+ * end without it (UX review 2026-10-10, item 38). The same palette, the same
+ * gates and the same words as the bar's, drawn as a full-width field.
+ */
+export function ShopSearchField({
+  shopSlug,
+  navGates,
+  crewSchedule,
+  locale,
+  setLocale,
+  createDiverAction,
+}: {
+  shopSlug: string;
+  navGates: StaffDestinationGates;
+  crewSchedule: boolean;
+  locale: string;
+  setLocale: (locale: string) => Promise<void>;
+  createDiverAction: (formData: FormData) => Promise<void>;
+}) {
+  const t = staffTranslator(locale);
+  return (
+    <CommandPalette
+      variant="field"
+      shopSlug={shopSlug}
+      gates={navGates}
+      crewSchedule={crewSchedule}
+      locale={locale}
+      languages={DIVER_LOCALES.map((value) => ({ locale: value, label: localeEndonym(value) }))}
+      setLocaleAction={setLocale}
+      signOutAction={signOutAction}
+      createDiverAction={createDiverAction}
+      copy={commandPaletteCopy(t)}
+    />
+  );
+}
+
 export function ShopNav({
   shopSlug,
   shopName,
@@ -158,8 +229,6 @@ export function ShopNav({
     locale: value,
     label: localeEndonym(value),
   }));
-  const destinationLabels = destinationLabelsFor(t);
-  const destinationTitles = destinationTitlesFor(t);
   const sectionCopy = sectionNavCopy(t, navCounts?.blockers ?? 0);
   return (
     <>
@@ -217,35 +286,7 @@ export function ShopNav({
               setLocaleAction={setLocale}
               signOutAction={signOutAction}
               createDiverAction={createDiverAction}
-              copy={{
-                language: t("shared.shopNav.language"),
-                groupSession: t("shared.commandPalette.groupSession"),
-                signOut: t("shared.shopNav.signOut"),
-                search: t("shared.commandPalette.search"),
-                dialogAriaLabel: t("shared.commandPalette.dialogAriaLabel"),
-                comboboxAriaLabel: t("shared.commandPalette.comboboxAriaLabel"),
-                placeholder: t("shared.commandPalette.placeholder"),
-                emptyShort: t("shared.commandPalette.emptyShort"),
-                emptyNoMatches: t("shared.commandPalette.emptyNoMatches"),
-                groupDivers: t("shared.commandPalette.groupDivers"),
-                addDiver: t("shared.commandPalette.addDiver"),
-                groupTrips: t("shared.commandPalette.groupTrips"),
-                groupDiveSites: t("shared.commandPalette.groupDiveSites"),
-                groupCourses: t("shared.commandPalette.groupCourses"),
-                groupOrders: t("shared.commandPalette.groupOrders"),
-                groupGear: t("shared.commandPalette.groupGear"),
-                // Every status worded here, where the translator is: `src/db`
-                // returns the code (`src/i18n/gear-labels.ts` owns the words).
-                gearStatuses: gearStatusLabels(t),
-                groupGoTo: t("shared.commandPalette.groupGoTo"),
-                destinationLabels,
-                destinationTitles,
-                goToBoarding: t("shared.commandPalette.goToBoarding"),
-                goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
-                hintMove: t("shared.commandPalette.hintMove"),
-                hintOpen: t("shared.commandPalette.hintOpen"),
-                hintClose: t("shared.commandPalette.hintClose"),
-              }}
+              copy={commandPaletteCopy(t)}
             />
           </>
         }

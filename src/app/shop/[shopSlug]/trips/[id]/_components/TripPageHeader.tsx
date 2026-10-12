@@ -18,13 +18,20 @@ import { capacityLabel, isFull, seatsOnSale, type TripCapacity } from "@/lib/tri
 export function TripCapacityBadge({
   trip,
   cancelledLabel,
+  finished = false,
   t,
 }: {
   trip: TripCapacity & { status: string; sellableCapacity: number };
   cancelledLabel: string;
+  /**
+   * The departure is back (`tripPhaseOf`): nothing is for sale, so "4 spots
+   * left" would be a live-day word on a record (UX review 2026-10-10, item 10).
+   */
+  finished?: boolean;
   t: StaffTranslator;
 }) {
   if (trip.status === "cancelled") return <Badge tone="danger">{cancelledLabel}</Badge>;
+  if (finished) return null;
   // **The seats the boat may sell, not the seats stated** (H-107, #2321): the
   // booking transaction stops at the certificate, so the desk counts there too.
   // When the certificate binds, the stated number rides beside it, so the

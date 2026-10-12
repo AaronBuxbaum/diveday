@@ -480,8 +480,8 @@
   },
   "buddyTeam": {
     "with": "Pareja: {names}",
-    "separatedDock": "Alguien no está a bordo",
-    "separatedAfterDive": "Alguien sin contabilizar"
+    "separatedDock": "Compañero aún no a bordo",
+    "separatedAfterDive": "Compañero sin regresar a bordo"
   },
   "payments": {
     "connect": "Conectar pagos"
@@ -518,7 +518,10 @@
   },
   "welcomeCue": {
     "firstTrip": "primera vez con nosotros",
-    "returning": "de vuelta tras {years, plural, one {# año} other {# años}}"
+    "returning": "de vuelta tras {years, plural, one {# año} other {# años}}",
+    "dockLine": "Saluda a {name}: {card}.",
+    "dockLineNoCard": "Saluda a {name}.",
+    "dockLineSays": "Saluda a {name}: dice {level}."
   },
   "diveIntent": {
     "aboardToday": "Hoy a bordo: {list}",

@@ -810,6 +810,38 @@ export async function listDepartureCrewRollCallByTrip(
 }
 
 /**
+ * **The departures whose dock roll call was taken at all**: any departure
+ * checkpoint event recording a result (`boarded` or `not_boarded`), whatever
+ * has happened to its booking since and whatever later undid it.
+ *
+ * Deliberately **not** the cancelled-booking-guarded readers above: they
+ * answer who is aboard, and a seat cancelled after it was boarded is nobody.
+ * This answers whether the crew stood at the dock and counted, which that
+ * cancel does not unsay. A finished departure's record reads it (UX review
+ * 2026-10-10, item 10), so a boat whose whole roster stayed ashore, or whose
+ * boarded seats were cancelled, never reads "No roll call taken".
+ */
+export async function departureRollCallTakenTripIds(
+  db: AppDb,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Set<string>> {
+  if (tripIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ tripId: rollCallEvents.tripId })
+    .from(rollCallEvents)
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        inArray(rollCallEvents.tripId, [...tripIds]),
+        eq(rollCallEvents.checkpoint, "departure"),
+        inArray(rollCallEvents.status, ["boarded", "not_boarded"]),
+      ),
+    );
+  return new Set(rows.map((row) => row.tripId));
+}
+
+/**
  * The flat view of {@link listDepartureBoardedByTrip}: every booking aboard
  * across the given trips. This is the manifest's half of the coupling task 149
  * closes from the other side (`checkedIn` on `ManifestDiverInput`) —

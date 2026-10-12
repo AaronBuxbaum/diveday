@@ -20,7 +20,7 @@ import {
   tripWaitlistEntries,
   waiverRecords,
 } from "./schema";
-import { at, nextCreatedAt } from "./seed-clock";
+import { at, DEMO_DAWN_BOAT, nextCreatedAt } from "./seed-clock";
 
 /** The returned demo departure that gives Close-Out a finished local-day dive. */
 export const DEMO_COMPLETED_TRIP_TITLE = "Dawn Two-Tank — Molasses Reef";
@@ -130,8 +130,8 @@ export async function seedMoreTrips(
       // This is deliberately on the shop's local day, not yesterday in UTC: the
       // close-out should show a real completed departure while the demo clock is
       // at its stable 09:30 local baseline.
-      startsAt: at(0, 5, 30),
-      endsAt: at(0, 8, 30),
+      startsAt: at(0, DEMO_DAWN_BOAT.sails.hour, DEMO_DAWN_BOAT.sails.minute),
+      endsAt: at(0, DEMO_DAWN_BOAT.docks.hour, DEMO_DAWN_BOAT.docks.minute),
       capacity: 12,
       siteName: "Molasses Reef",
       completedDemo: true,

@@ -123,7 +123,7 @@ export function RegisterForm({
           </Field>
           <Field label={t("register.levelLabel")} htmlFor="level">
             <select id="level" name="level" defaultValue="" className={controlClass}>
-              <option value="">—</option>
+              <option value="">{t("register.levelPlaceholder")}</option>
               {SELF_DECLARED_LEVELS.map((level) => (
                 <option key={level} value={level}>
                   {t(DIVER_CERT_LEVEL_KEYS[level])}

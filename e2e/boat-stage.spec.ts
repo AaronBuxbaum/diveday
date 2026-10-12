@@ -29,9 +29,17 @@ test("a tap on the manifest reaches the home and stays off the public schedule",
   // server sent back rather than an optimistic paint.
   await expect(headingIn).toHaveAttribute("aria-pressed", "true");
 
-  // The home's station chip carries the same word: "Heading in since 9:42 AM".
+  // The home's station card wears the same word as its pill, the manifest
+  // strip's own word, with "since 9:42 AM" beside it (UX review 2026-10-10,
+  // item 1). Scoped to this departure's card, the innermost list item that
+  // holds its title link.
   await page.goto("/shop/blue-mantis");
-  await expect(page.getByText(/Heading in since /).first()).toBeVisible();
+  const station = page
+    .locator("li")
+    .filter({ has: page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }) })
+    .last();
+  await expect(station.getByText("Heading in", { exact: true })).toBeVisible();
+  await expect(station.getByText(/^since \d/)).toBeVisible();
 
   const visitor = await page.context().browser()?.newContext();
   if (!visitor) throw new Error("no browser to open a signed-out context with");
