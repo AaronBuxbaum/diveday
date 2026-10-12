@@ -571,3 +571,14 @@ describe("a held seat after the dive", () => {
     expect(positionOf("<NoShowCard")).toBeGreaterThan(held);
   });
 });
+
+/** UX review 2026-10-11, item 13: "Add a seat" lives with the group's seats, and only when allowed. */
+describe("adding a seat from the diver's page", () => {
+  it("draws the control only when the booking may lead a seat, inside the party section", () => {
+    const section = positionOf('<div id="party-seats"');
+    const control = positionOf("<AddSeat action={addSeatFromReady.bind(null, token)}");
+    expect(section).toBeGreaterThan(-1);
+    expect(control).toBeGreaterThan(section);
+    expect(SOURCE).toMatch(/\{data\.canAddSeat \? \(\s*<AddSeat/);
+  });
+});

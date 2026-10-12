@@ -2,7 +2,13 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { cancelBooking, confirmCarriedFacts, createBooking, setBookingLastDived } from "./bookings";
+import {
+  addPartySeat,
+  cancelBooking,
+  confirmCarriedFacts,
+  createBooking,
+  setBookingLastDived,
+} from "./bookings";
 import { setBookingPayment } from "./payments";
 import { carriedPreparationForDiver, getReadyPageData } from "./ready";
 import { getRentalFit, toDiverRentalFit } from "./rental-fit";
@@ -90,6 +96,35 @@ describe("getReadyPageData", () => {
   // page renders it from — and `canCancelBooking` has to agree with
   // `selfCancelBooking`'s own pre-checks exactly, or the page offers a button
   // that can only come back refused.
+  /** UX review 2026-10-11, item 13: the page draws "Add a seat" only where it can work. */
+  it("offers a seat to add on a booking that may lead one, never on a party member's seat", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    expect((await getReadyPageData(db, bookingId))?.canAddSeat).toBe(true);
+    const added = await addPartySeat(db, {
+      shopId: shop.id,
+      leadBookingId: bookingId,
+      seatName: "Milo",
+    });
+    if (!added.ok) throw new Error("add failed");
+    expect((await getReadyPageData(db, bookingId))?.canAddSeat).toBe(true);
+    expect((await getReadyPageData(db, added.bookingId))?.canAddSeat).toBe(false);
+  });
+
+  it("offers no seat to add on a held seat or a canceled one", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "Nora Q" })
+      .where(eq(bookings.id, bookingId));
+    expect((await getReadyPageData(db, bookingId))?.canAddSeat).toBe(false);
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: null, identityBookedAs: null })
+      .where(eq(bookings.id, bookingId));
+    await cancelBooking(db, shop.id, bookingId);
+    expect((await getReadyPageData(db, bookingId))?.canAddSeat).toBe(false);
+  });
+
   it("offers the cancel for a plain booked seat on a future departure", async () => {
     const { db, bookingId } = await unpaidBooking();
     const data = await getReadyPageData(db, bookingId);

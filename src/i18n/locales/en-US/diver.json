@@ -1056,6 +1056,17 @@
     "waiverDone": "That’s the paperwork done"
   },
   "seatClaim": {
+    "addNameMissing": "Type their name to add a seat.",
+    "addPartyFull": "Your group has as many seats as one booking can hold. Ask the shop to add more.",
+    "addAskShop": "The shop needs to check who’s coming on this departure first. Contact them to add a seat.",
+    "addFull": "The boat is full, so there’s no seat to add. Ask the shop about another day.",
+    "addUnavailable": "A seat can’t be added to this booking now. Contact the shop and they can add one.",
+    "addedNotice": "Seat added. Send them the link under their name below.",
+    "addPending": "Adding…",
+    "addSubmit": "Add a seat",
+    "addNameLabel": "Their name",
+    "addBody": "Add a seat to your booking. They claim it from their own link, with their own waiver and payment.",
+    "addHeading": "Bring someone",
     "metaTitle": "Claim your seat",
     "heading": "A seat on {trip} is waiting for you",
     "body": "Your organizer booked this seat with {shop} and held it as “{seatName}”. Your waiver and trip prep will come straight to you instead of through them.",

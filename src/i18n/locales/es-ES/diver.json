@@ -1056,6 +1056,17 @@
     "waiverDone": "Papeleo terminado"
   },
   "seatClaim": {
+    "addNameMissing": "Escribe su nombre para agregar una plaza.",
+    "addPartyFull": "Tu grupo ya tiene todas las plazas que admite una reserva. Pide al centro que agregue más.",
+    "addAskShop": "El centro necesita revisar primero quién viene en esta salida. Contáctalo para agregar una plaza.",
+    "addFull": "El barco está lleno, así que no hay plaza que agregar. Pregunta al centro por otro día.",
+    "addUnavailable": "Ahora no se puede agregar una plaza a esta reserva. Contacta al centro y la agregan.",
+    "addedNotice": "Plaza agregada. Envíale el enlace que aparece bajo su nombre.",
+    "addPending": "Agregando…",
+    "addSubmit": "Agregar una plaza",
+    "addNameLabel": "Su nombre",
+    "addBody": "Agrega una plaza a tu reserva. La otra persona la reclama con su propio enlace, con su propia exención y su propio pago.",
+    "addHeading": "Trae a alguien",
     "metaTitle": "Reclama tu plaza",
     "heading": "Hay una plaza en {trip} esperándote",
     "body": "Quien organiza tu grupo reservó esta plaza con {shop} y la guardó como “{seatName}”. Tu exención y tu preparación llegarán directamente a ti, no a través de esa persona.",

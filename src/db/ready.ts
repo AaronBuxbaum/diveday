@@ -209,6 +209,14 @@ export type ReadyPageData = {
    */
   canCancelBooking: boolean;
   /**
+   * **"Add a seat"** (UX review 2026-10-11, item 13): this booking may lead a
+   * party seat added from the page. The same moment a seat may be released
+   * (`canCancelBooking`), never on a held seat, and never on a party member's
+   * own seat, so the page draws no control `addPartySeat` would only refuse
+   * for who is asking. Capacity and admission are its own to answer.
+   */
+  canAddSeat: boolean;
+  /**
    * **"Running late"** (J3). `open` is `canSayRunningLate` for this seat now —
    * booked, not checked in, from the night-before brief until a scheduled
    * departure has sailed — and `saidAt` is when the diver already said
@@ -279,6 +287,7 @@ export async function getReadyPageData(
       carriedFactsConfirmedAt: bookings.carriedFactsConfirmedAt,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       identityBookedAs: bookings.identityBookedAs,
+      partyLeadBookingId: bookings.partyLeadBookingId,
       slug: shops.slug,
       defaultLocale: shops.defaultLocale,
       currency: shops.currency,
@@ -371,6 +380,7 @@ export async function getReadyPageData(
 
   const canCancelBooking = row.status === "booked" && !hasSailed(trip.startsAt, now);
   const identityHeld = row.identityUnconfirmedAt !== null;
+  const canAddSeat = canCancelBooking && !identityHeld && row.partyLeadBookingId === null;
 
   return {
     detail,
@@ -426,6 +436,7 @@ export async function getReadyPageData(
     canPay,
     cancelPreview,
     canCancelBooking,
+    canAddSeat,
     runningLate: {
       open: canSayRunningLate({
         bookingStatus: row.status,

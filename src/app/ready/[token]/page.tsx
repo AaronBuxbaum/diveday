@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { AddSeat } from "@/app/ready/[token]/_components/AddSeat";
 import { HeldAfterDiveCard, NoShowCard } from "@/app/ready/[token]/_components/AfterDiveDoors";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
@@ -118,7 +119,7 @@ import {
   theBoatIsHome,
 } from "@/lib/thread-steps";
 import { liveStageOf, STAGE_SENTENCE_KEYS } from "@/lib/trip-stages";
-import { cancelMyBookingAction, payFromReady } from "./booking-actions";
+import { addSeatFromReady, cancelMyBookingAction, payFromReady } from "./booking-actions";
 import {
   saveCertificationFromReady,
   saveNitroxCertificationFromReady,
@@ -1427,17 +1428,22 @@ export default async function DiverReadinessPage({
           <CourseMaterials data={data} t={t} />
           {/* The party's panel and its all-set line are one section: the line
                   is the panel's close, 12px under it, not a section of its own. */}
-          {partySeats.length > 0 ? (
-            <div>
+          {partySeats.length > 0 || data.canAddSeat ? (
+            <div id="party-seats" className="scroll-mt-8 space-y-3">
               <PartyClaimPanel locale={locale} seats={partySeats} />
               {partyAllSet ? (
-                <p className="mt-3">
+                <p>
                   <SettledCheck
                     settled
                     label={t("thread.partyAllSet")}
                     className="text-sm text-muted"
                   />
                 </p>
+              ) : null}
+              {/* Bring a friend on this booking (UX review 2026-10-11, item
+                  13): the seat joins the panel above with its own claim link. */}
+              {data.canAddSeat ? (
+                <AddSeat action={addSeatFromReady.bind(null, token)} t={t} />
               ) : null}
             </div>
           ) : null}
