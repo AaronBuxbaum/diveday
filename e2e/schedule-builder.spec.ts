@@ -206,6 +206,10 @@ test.describe("schedule builder", () => {
       await chooseRowAction(page, "Move", title);
       await preview;
       await page.getByLabel("New date").waitFor();
+      // The preview's answer arriving is not the panel showing it: count the
+      // refusal line only once the panel has drawn its read, or a sailed
+      // departure reads as movable and "Move it" is refused (CI 2026-10-12).
+      await page.locator("[data-move-preflight]").waitFor({ state: "attached" });
       if ((await page.getByText("already counted heads").count()) === 0) {
         booked = title;
         break;
