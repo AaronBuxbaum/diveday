@@ -153,9 +153,25 @@ function gitPath(git, name) {
   return relative ? path.resolve(ROOT, relative) : null;
 }
 
-function tail(file, lines = 60) {
+/** Lines that name a failure in vitest, Playwright, tsc, Biome or `check:repo` output. */
+const FAILURE_LINE = /FAILED|\bFAIL\b|✗|×|error TS\d|^\s+\d+\) \[|Error:/;
+
+/**
+ * What a red step printed that a reader needs: the first failure and the lines after it, then
+ * the tail, where every runner here puts its summary. A long log's first failure is often above
+ * its last sixty lines (`check:repo` lists every guard's result after it).
+ */
+export function excerpt(text, lines = 40) {
+  const all = text.split("\n");
+  const first = all.findIndex((line) => FAILURE_LINE.test(line));
+  const tailStart = Math.max(0, all.length - lines);
+  if (first === -1 || first >= tailStart) return all.slice(tailStart).join("\n");
+  return [...all.slice(first, first + 20), "…", ...all.slice(tailStart)].join("\n");
+}
+
+function tail(file) {
   try {
-    return readFileSync(file, "utf8").split("\n").slice(-lines).join("\n");
+    return excerpt(readFileSync(file, "utf8"));
   } catch {
     return "";
   }

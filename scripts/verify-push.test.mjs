@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { plan, sourceScanTests } from "./verify-push.mjs";
+import { excerpt, plan, sourceScanTests } from "./verify-push.mjs";
 
 const names = (steps) => steps.map((step) => step.name);
 const base = { mergeBase: "abc", specs: [], scans: ["src/components/ui/form.test.tsx"] };
@@ -59,5 +59,27 @@ describe("the source scans", () => {
     ]) {
       expect(scans).toContain(file);
     }
+  });
+});
+
+describe("a red step's excerpt", () => {
+  it("shows the first failure even when the summary pushes it out of the tail", () => {
+    const log = [
+      "== check:a: ok ==",
+      "== check:context-budget (check-context-budget.mjs): FAILED (exit 1) ==",
+      "- AGENTS.md: over its budget",
+      ...Array.from({ length: 60 }, (_, i) => `== check:${i}: ok ==`),
+      "check:repo: one or more checks failed",
+    ].join("\n");
+    const shown = excerpt(log);
+    expect(shown).toContain("context-budget");
+    expect(shown).toContain("over its budget");
+    expect(shown).toContain("one or more checks failed");
+  });
+
+  it("is only the tail when the failure is already in it", () => {
+    expect(excerpt("a\nb\n FAIL src/x.test.ts\nTests 1 failed")).toBe(
+      "a\nb\n FAIL src/x.test.ts\nTests 1 failed",
+    );
   });
 });
