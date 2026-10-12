@@ -5254,8 +5254,15 @@ for (const scheme of ["light", "dark"] as const) {
        * what moves, and the one danger action. Reached the way a staffer
        * reaches it, from the duplicate made at the counter above; the per-test
        * reset removes the temporary record afterward.
+       *
+       * Both records print their "Added" date, a `defaultNow()` stamp from the
+       * database's wall clock, so `/api/test/pin-added-date` moves both onto
+       * the frozen clock before the preview renders (issue #2297).
        */
-      test(`the merge preview renders true to the design (${scheme})`, async ({ page }) => {
+      test(`the merge preview renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
         await page.goto("/shop/blue-mantis/divers/new");
         await page.getByRole("heading", { level: 1, name: "Add a diver" }).waitFor();
         await page.getByLabel("Full name").fill("Priya Sharma");
@@ -5266,6 +5273,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: /^Is this the same Priya Sharma\?/ }).waitFor();
         await page.getByRole("button", { name: "Create new diver anyway" }).click();
         await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
+        const pinned = await request.post("/api/test/pin-added-date", {
+          data: { fullName: "Priya Sharma" },
+        });
+        expect(await pinned.json()).toEqual({ pinned: 2 });
         await page.getByRole("link", { name: "Compare with Priya Sharma" }).first().click();
         await page.getByRole("heading", { level: 1, name: "Merge duplicate records" }).waitFor();
         // Swap so the seeded Priya, with her bookings and releases, is the
