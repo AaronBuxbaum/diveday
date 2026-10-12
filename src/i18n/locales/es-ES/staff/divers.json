@@ -506,7 +506,7 @@
   "story": {
     "heading": "La historia",
     "empty": "Todavía no hay visitas.",
-    "sailed": "zarpó",
+    "sailed": "salió",
     "dived": "buceó",
     "stayedAshore": "se quedó en tierra",
     "didNotDive": "no buceó",
@@ -517,6 +517,7 @@
     "canceled": "cancelada",
     "tripCalledOff": "salida suspendida",
     "noShow": "no se presentó",
+    "notCountedBack": "no se contó de vuelta a bordo",
     "showAll": "Ver las {count}",
     "newInvoice": "Nueva factura"
   },

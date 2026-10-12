@@ -148,6 +148,15 @@ describe("what the crew's silence and their after-dive word say", () => {
     expect(seatWentToSea(missing)).toBe(true);
     expect(seatMayBeFirstDive(missing)).toBe(false);
   });
+
+  it("says a diver recorded missing after a dive was not counted back aboard, with no credit", () => {
+    const missing = seat({ afterDive: "missing_after_dive", rented: ["bcd"], rating: 5 });
+    const firstSailed = { ahead: false, firstSailed: true };
+    expect(storyNotes(missing, firstSailed, t, "en-US")).toEqual(["not counted back aboard"]);
+    expect(storyNotes(missing, firstSailed, staffTranslator("es-ES"), "es-ES")).toEqual([
+      "no se contó de vuelta a bordo",
+    ]);
+  });
 });
 
 describe("a trip that is not a boat", () => {

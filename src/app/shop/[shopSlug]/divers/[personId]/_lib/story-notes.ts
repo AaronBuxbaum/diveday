@@ -39,18 +39,23 @@ type SeatOutcome =
   | "stayedAshore"
   | "joinedLater"
   | "noShow"
+  | "notCountedBack"
   | "sailed";
 
 function seatOutcome(entry: StoryNoteBooking): SeatOutcome {
   if (entry.booking.status === "cancelled") return "cancelled";
   if (entry.trip.status === "cancelled") return "tripCalledOff";
-  const { dock, afterDive } = entry.rollCall ?? { dock: null, afterDive: null };
+  const { dock, afterDive } = entry.rollCall;
   const sailed = seatSailed({
     noShow: entry.booking.status === "no_show",
     dockResult: dock,
     afterDiveResultStands: afterDive !== null,
   });
-  if (sailed) return "sailed";
+  // The crew's last word is that this diver was not back aboard after a dive.
+  // The seat still counts as sailed (the boat carried them out), but the story
+  // never says the ordinary "sailed" over it, nor credits gear, stars or a
+  // first dive to it.
+  if (sailed) return afterDive === "missing_after_dive" ? "notCountedBack" : "sailed";
   // Ashore at the dock is the crew's own statement, and it outranks the desk.
   // A later checkpoint that counted them aboard means they were picked up
   // after the boat left: not "sailed" (the vessel did not leave with them),
@@ -100,6 +105,8 @@ export function storyNotes(
       return [t(isBoat(entry) ? "divers.story.stayedAshore" : "divers.story.didNotDive")];
     case "joinedLater":
       return [t("divers.story.joinedLater")];
+    case "notCountedBack":
+      return [t("divers.story.notCountedBack")];
     case "sailed":
       break;
   }
@@ -121,7 +128,8 @@ export function storyNotes(
 
 /** Whether a seat behind the diver actually went out, by `seatSailed`. */
 export function seatWentToSea(entry: StoryNoteBooking): boolean {
-  return seatOutcome(entry) === "sailed";
+  const outcome = seatOutcome(entry);
+  return outcome === "sailed" || outcome === "notCountedBack";
 }
 
 /**
@@ -131,7 +139,6 @@ export function seatWentToSea(entry: StoryNoteBooking): boolean {
  * silence elsewhere still counts it as sailed.
  */
 export function seatMayBeFirstDive(entry: StoryNoteBooking): boolean {
-  if (!seatWentToSea(entry)) return false;
-  const { dock, afterDive } = entry.rollCall ?? { dock: null, afterDive: null };
-  return dock !== "not_boarded" && afterDive !== "missing_after_dive";
+  if (seatOutcome(entry) !== "sailed") return false;
+  return entry.rollCall.dock !== "not_boarded";
 }

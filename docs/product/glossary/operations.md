@@ -622,7 +622,8 @@
   unfinished dock count rather than a statement about a person, and the departure's own status is
   already saying so (`departure_uncounted`). `not_boarded` at an *after-dive* checkpoint is the
   opposite fact and subtracts nothing: that diver sailed, and is the one the day is still looking
-  for. The dock still wins where it *spoke*, which is what keeps the ashore-then-boarded-later seat
+  for, and a diver's story says "not counted back aboard" over that seat, never an ordinary
+  "sailed". The dock still wins where it *spoke*, which is what keeps the ashore-then-boarded-later seat
   out of a count that asks how many the vessel left with; for one slice its *silence* won too, and
   the evening read "0 out, 0 back" over a boat carrying a missing diver (issue #1704). It is **not**
   `booked`, and the two must not be collapsed — every question about seats *sold* still reads the
