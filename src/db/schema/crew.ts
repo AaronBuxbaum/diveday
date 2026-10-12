@@ -283,6 +283,8 @@ export const crewNoticeChange = pgEnum("crew_notice_change", [
   "role_changed",
   /** The departure itself was cancelled (a blow-out, a day call, a plain cancel). */
   "called_off",
+  /** The departure's start time moved (#2283); `previous_starts_at` is when it left before. */
+  "time_moved",
 ]);
 
 /**
@@ -328,6 +330,12 @@ export const crewNotices = pgTable(
       .notNull()
       .references(() => trips.id, { onDelete: "cascade" }),
     change: crewNoticeChange("change").notNull(),
+    /**
+     * On a `time_moved` row, when the departure left before that move, so the
+     * crew are told the time they knew beside the time it leaves now. Null on
+     * every other change.
+     */
+    previousStartsAt: timestamp("previous_starts_at", { withTimezone: true }),
     /** Who made the change; null when no person did (a seed, a system pass). */
     actorPersonId: uuid("actor_person_id").references(() => people.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

@@ -17,6 +17,8 @@
       "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
       "rentalTermsSaved": "Rental terms saved. Every rental ticket prints them.",
       "rentalTermsInvalid": "Keep rental terms under 1,500 characters.",
+      "regulatorServiceSaved": "Regulator service interval saved.",
+      "regulatorServiceInvalid": "Choose 12 or 24 months.",
       "contactSaved": "Contact details saved.",
       "contactConfirmationSent": "Contact details saved. Open the confirmation email we sent to that address so divers’ replies reach it.",
       "contactInvalid": "Use a complete email address, or empty the box to take it off your public pages.",
@@ -314,6 +316,14 @@
       "submitting": "Saving…",
       "value": "On every ticket"
     },
+    "regulatorService": {
+      "heading": "Customer regulator service",
+      "description": "When a customer’s regulator is due again after a service. Your own units keep their own clocks.",
+      "label": "Service every",
+      "months": "{months} months",
+      "submit": "Save service interval",
+      "submitting": "Saving…"
+    },
     "stripe": {
       "notConnectedHeading": "No Stripe account connected",
       "connect": "Connect Stripe",
@@ -596,7 +606,6 @@
   "safetyChecklist": {
     "title": "Pre-departure checklist",
     "description": "The lines your crew confirms before a boat leaves the dock.",
-    "gasAnalysisNote": "DiveDay logs no gas analysis: every mix is still analyzed and signed for at the fill station.",
     "listHeading": "Checklist",
     "empty": {
       "title": "Nothing on the list yet",

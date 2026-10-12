@@ -184,11 +184,6 @@ export default async function SafetyChecklistPage({
           </FieldActions>
         </FieldGrid>
       </SectionCard>
-
-      {/* What the checklist does not cover, said where the shop sets up its
-          safety lines rather than on every departure's Gear tab, where it
-          stood under the tank count (UX review 2026-10-10, item 26). */}
-      <p className="mt-4 text-sm text-muted">{t("settings.safetyChecklist.gasAnalysisNote")}</p>
     </main>
   );
 }

@@ -1145,7 +1145,7 @@ describe("offline manifest policy", () => {
    * **The two medical warnings the live roll call shows, and nothing else of
    * the medical mark** (issue #2163). A crew at the rail with no signal saw
    * neither "re-signed after a referral with no physician clearance" nor "a
-   * physician did not clear this diver (earlier waiver)". The copy carries the
+   * physician did not clear this person (earlier waiver)". The copy carries the
    * two dates, never the refused record's id, the release's source or date,
    * the guardian, or any answer.
    */

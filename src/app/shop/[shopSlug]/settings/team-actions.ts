@@ -1,4 +1,5 @@
 "use server";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import { setShopCrewSchedule } from "@/db/shops";
 import {
@@ -6,10 +7,16 @@ import {
   MAX_DIVERS_PER_DIVEMASTER,
   MIN_DIVERS_PER_DIVEMASTER,
 } from "@/lib/divemaster-ratio";
+import { checkbox, formValue, readForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { settingsBlock } from "./action-helpers";
+
+const crewScheduleForm = z.object({
+  crewScheduleEnabled: checkbox(),
+  diversPerDivemaster: formValue(),
+});
 
 /**
  * Turns the crew schedule on or off, with the divemaster target its nudges
@@ -21,8 +28,9 @@ export async function saveCrewScheduleAction(formData: FormData) {
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
 
-  const crewScheduleEnabled = formData.get("crewScheduleEnabled") === "on";
-  const diversPerDivemaster = parseDiversPerDivemaster(formData.get("diversPerDivemaster"));
+  const form = readForm(crewScheduleForm, formData);
+  const crewScheduleEnabled = form.crewScheduleEnabled;
+  const diversPerDivemaster = parseDiversPerDivemaster(form.diversPerDivemaster);
   if (diversPerDivemaster === "invalid") {
     revalidateAndRedirect(
       settings,

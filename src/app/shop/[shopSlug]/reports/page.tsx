@@ -50,7 +50,7 @@ import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DepartureLedger, type DepartureRow } from "./_components/DepartureLedger";
 import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
-import { MoneyByLine, MonthDetailLines } from "./_components/MonthMoneyDetail";
+import { MoneyByLine, MonthDetailLines, QuietMonth } from "./_components/MonthMoneyDetail";
 import { ReportRangeTabs } from "./_components/ReportRangeTabs";
 import { YearReport } from "./_components/YearReport";
 
@@ -294,7 +294,7 @@ export default async function ReportsPage({
       : Promise.resolve(null),
     // The money by line, the package dives still owed, and the returning
     // divers (owner decision 2026-10-09) — `src/lib/report-lines.ts`.
-    getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now),
+    getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now, { currency, timeZone: tz }),
   ]);
   const report = summarizeMonth(input);
   const money = (cents: number) => formatReportMoney(cents, currency, locale);
@@ -590,13 +590,12 @@ export default async function ReportsPage({
       </nav>
 
       {!hasMonthlyActivity ? (
-        // A month with no departures is this page's rest state, not news about
-        // it: `ShopNotice` is the vocabulary for something that *happened*
-        // (a save, a refusal, a permission bounce), and wearing it here made an
-        // ordinary quiet January read as a warning. No figure row either — five
-        // zeroes over an empty ledger is a month described wrongly, not
-        // described quietly (`monthHasActivity`).
-        <EmptyState title={isFuture ? t("reports.noTripsFuture") : t("reports.noTripsPast")} />
+        <QuietMonth
+          title={isFuture ? t("reports.noTripsFuture") : t("reports.noTripsPast")}
+          detail={moneyDetail}
+          t={t}
+          money={money}
+        />
       ) : (
         <>
           <MonthFigures label={t("reports.numbersLabel")} figures={figures} />

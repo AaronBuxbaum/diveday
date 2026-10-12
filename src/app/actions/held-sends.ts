@@ -15,6 +15,7 @@ import {
 import { getShopById } from "@/db/shops";
 import { trackEvent } from "@/lib/analytics";
 import { nowMs } from "@/lib/clock";
+import { formValue, parseForm, trimmedText } from "@/lib/form-parse";
 import { type HeldSendPayload, heldSendPayloadSchema } from "@/lib/held-sends";
 import { majorToMinor, toShopCurrency } from "@/lib/money";
 import { requireStaffSession } from "@/lib/session";
@@ -35,9 +36,38 @@ const LAST_MINUTE_NOTICE = {
   stripe_failed: "last-minute-stripe-failed",
 } as const;
 
-const uuidList = (formData: FormData, name: string) => [
-  ...new Set(formData.getAll(name).map(String).filter(Boolean)),
-];
+/** Every value a repeated id field sent, once each and blanks dropped, as `getAll` read it. */
+const idList = () =>
+  z
+    .unknown()
+    .optional()
+    .transform((value) => {
+      const values = value === undefined ? [] : Array.isArray(value) ? value : [value];
+      return [...new Set(values.map(String).filter(Boolean))];
+    });
+
+/** Text that is absent when blank: a blank or missing box is `undefined`, the rest trimmed. */
+const optionalText = () => trimmedText().transform((value) => value || undefined);
+
+/**
+ * Every field a hold posts, read raw: `heldSendPayloadSchema` is the one that
+ * decides what a hold may carry, so this only gathers the form into its shape.
+ */
+const heldSendForm = z.object({
+  holdKind: formValue().transform((value) => String(value ?? "")),
+  bookingId: idList(),
+  recipientPersonIds: idList(),
+  personId: optionalText(),
+  channel: optionalText(),
+  surface: optionalText(),
+  tripId: optionalText(),
+  ticketId: optionalText(),
+  entryId: optionalText(),
+  discount: formValue(),
+  discountPercent: formValue(),
+  discountKind: formValue(),
+});
+type HeldSendForm = z.infer<typeof heldSendForm>;
 
 /**
  * A deal's discount off the form: a percent, or a fixed amount the staffer
@@ -46,42 +76,44 @@ const uuidList = (formData: FormData, name: string) => [
  * is the older single-box spelling and still reads as a percent.
  */
 function dealDiscountFromForm(
-  formData: FormData,
+  form: HeldSendForm,
   currency: string,
 ): { discountPercent?: number; discountAmountCents?: number } {
-  const raw = formData.get("discount") ?? formData.get("discountPercent");
+  const raw = form.discount ?? form.discountPercent;
   const value = Number(String(raw ?? "").trim());
-  if (formData.get("discountKind") === "amount") {
+  if (form.discountKind === "amount") {
     return { discountAmountCents: Number.isFinite(value) ? majorToMinor(value, currency) : value };
   }
   return { discountPercent: value };
 }
 
 function payloadFromForm(formData: FormData, currency: string): HeldSendPayload {
-  const kind = String(formData.get("holdKind") ?? "");
-  const optional = (name: string) => String(formData.get(name) ?? "").trim() || undefined;
+  const parsed = parseForm(heldSendForm, formData);
+  if (!parsed.ok) throw new Error("unreadable hold form");
+  const form = parsed.data;
+  const kind = form.holdKind;
   const raw =
     kind === "waiver_send"
       ? {
           kind,
-          bookingIds: uuidList(formData, "bookingId"),
-          personId: optional("personId"),
+          bookingIds: form.bookingId,
+          personId: form.personId,
           // The diver record's three delivery buttons are three submitters on
           // one form, so the channel is the submitter's own name/value pair;
           // anything else is email, as every older caller meant.
-          channel: optional("channel") ?? "email",
-          surface: optional("surface") ?? "today",
-          tripId: optional("tripId"),
-          ticketId: optional("ticketId"),
+          channel: form.channel ?? "email",
+          surface: form.surface ?? "today",
+          tripId: form.tripId,
+          ticketId: form.ticketId,
         }
       : kind === "last_minute_deal"
         ? {
             kind,
-            tripId: optional("tripId"),
-            ...dealDiscountFromForm(formData, currency),
-            recipientPersonIds: uuidList(formData, "recipientPersonIds"),
+            tripId: form.tripId,
+            ...dealDiscountFromForm(form, currency),
+            recipientPersonIds: form.recipientPersonIds,
           }
-        : { kind, tripId: optional("tripId"), entryId: optional("entryId") };
+        : { kind, tripId: form.tripId, entryId: form.entryId };
   return heldSendPayloadSchema.parse(raw);
 }
 

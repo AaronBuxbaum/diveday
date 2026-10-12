@@ -95,8 +95,10 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Cancellation notice
 - Card dispute
 - Dashboard refund
+- Failed refund
 - First paid month
 - Free term
+- Paid after close
 - Pass-through fee
 - Subscription (DiveDay billing)
 

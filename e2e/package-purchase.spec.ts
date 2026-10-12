@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { bookASeatAndOpenThread, payInvoiceThroughWebhook } from "./helpers";
 
 /**
  * **A diver buys a dive package online** (owner decision 2026-10-09; ADR
@@ -64,4 +65,42 @@ test("a shop's packages earn a tab, and Buy goes to Stripe or says why not", asy
   await expect(
     page.getByText("The payment page didn’t open. Nothing was charged. Try again in a moment."),
   ).toBeVisible();
+});
+
+/**
+ * **"N package dives left" on the diver's own page** (owner decision
+ * 2026-10-09; issue #2306). The line rides on the Pay step's paid line, so the
+ * diver needs both a paid seat and package dives, and both arrive the way they
+ * do in production: one invoice for the seat and a ten-dive card, paid by a
+ * signed `invoice.paid` on the real webhook, which settles the seat and grants
+ * the dives.
+ */
+test("a paid package shows the dives left on the diver's page", async ({
+  page,
+  request,
+  privateShop,
+}) => {
+  test.setTimeout(90_000);
+  const SHOP = privateShop.slug;
+  const email = "pia.package@example.com";
+
+  // Booked before the shop is connected, so the seat is unpaid rather than sent to Stripe.
+  await page.goto(`/s/${SHOP}`);
+  await page.locator(`a[href^="/s/${SHOP}/trips/"]`).first().click();
+  await bookASeatAndOpenThread(page, "Pia Package", email);
+  const thread = page.url();
+  await expect(page.getByText(/package dives? left/)).toHaveCount(0);
+
+  const connected = await request.post(
+    `/api/test/seed-stripe-account?slug=${encodeURIComponent(SHOP)}`,
+  );
+  expect(connected.ok()).toBe(true);
+  const seeded = await request.post(
+    `/api/test/seed-open-package-invoice?slug=${encodeURIComponent(SHOP)}&email=${encodeURIComponent(email)}`,
+  );
+  expect(seeded.ok()).toBe(true);
+  await payInvoiceThroughWebhook(request, await seeded.json());
+
+  await page.goto(thread);
+  await expect(page.getByText("10 package dives left")).toBeVisible();
 });

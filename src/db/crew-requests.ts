@@ -11,6 +11,7 @@ import type {
 } from "@/lib/crew-requests";
 import { inWaterCrewRole, lapsedRungs, lastDayOfDeparture } from "@/lib/crew-roles";
 import type { AppDb, DbExecutor } from "./client";
+import { courseCrewCountsByTrip } from "./course-crew-counts";
 import { recordCrewNotices } from "./crew-notices";
 import {
   bookings,
@@ -23,7 +24,6 @@ import {
   trips,
 } from "./schema";
 import { ratingCredentialsByPerson } from "./staff-credentials";
-import { courseCrewCountsByTrip } from "./today";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -399,36 +399,6 @@ export async function requestCrewAssignment(
       .returning({ id: crewAssignmentRequests.id });
     if (!row) throw new Error("requestCrewAssignment: insert returned no row");
     return { ok: true, id: row.id };
-  });
-}
-
-/** Withdrawing an ask. Soft, and only ever your own. */
-export async function withdrawCrewAssignmentRequest(
-  db: AppDb,
-  input: { shopId: string; requestId: string; actorPersonId: string; now?: Date },
-): Promise<CrewWriteOutcome> {
-  const now = input.now ?? nowDate();
-  return db.transaction(async (tx): Promise<CrewWriteOutcome> => {
-    const [request] = await tx
-      .select({ id: crewAssignmentRequests.id, personId: crewAssignmentRequests.personId })
-      .from(crewAssignmentRequests)
-      .where(
-        and(
-          eq(crewAssignmentRequests.id, input.requestId),
-          eq(crewAssignmentRequests.shopId, input.shopId),
-          isNull(crewAssignmentRequests.deletedAt),
-        ),
-      )
-      .limit(1);
-    if (!request) return { ok: false, reason: "request_not_found" };
-    if (!(await mayWriteFor(tx, input.shopId, input.actorPersonId, request.personId, false))) {
-      return { ok: false, reason: "not_allowed" };
-    }
-    await tx
-      .update(crewAssignmentRequests)
-      .set({ deletedAt: now })
-      .where(eq(crewAssignmentRequests.id, request.id));
-    return { ok: true, id: request.id };
   });
 }
 

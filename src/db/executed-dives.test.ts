@@ -1,13 +1,14 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { HOUR_MS, MINUTE_MS } from "@/lib/clock";
+import { HOUR_MS, MINUTE_MS, nowDate } from "@/lib/clock";
+import { DEFAULT_FLY_SAFE_HOURS, flySafeFrom } from "@/lib/fly-safe";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { checkInBooking } from "./check-in";
 import type { AppDb } from "./client";
 import {
-  deleteExecutedDive,
+  diveDaysBefore,
   listExecutedDives,
   peopleWhoDivedBefore,
   upsertExecutedDive,
@@ -193,40 +194,6 @@ describe("upsertExecutedDive", () => {
       ok: true,
       dive: { observedConditions: { visibility: "20m", current: "mild" } },
     });
-  });
-});
-
-describe("deleteExecutedDive", () => {
-  it("takes a dive off the log and frees its number for a fresh entry", async () => {
-    const { db, shop, owner, trip } = await logFixture();
-    const saved = await upsertExecutedDive(db, {
-      shopId: shop.id,
-      tripId: trip.id,
-      diveNumber: 1,
-      maxDepthMeters: 18,
-      recordedByPersonId: owner.id,
-    });
-    if (!saved.ok) throw new Error("fixture write failed");
-
-    expect(
-      await deleteExecutedDive(db, {
-        shopId: shop.id,
-        tripId: trip.id,
-        diveNumber: 1,
-        deletedByPersonId: owner.id,
-      }),
-    ).toBe(true);
-    expect(await listExecutedDives(db, shop.id, trip.id)).toHaveLength(0);
-
-    // The unique index covers live rows only, so the number is available again.
-    const again = await upsertExecutedDive(db, {
-      shopId: shop.id,
-      tripId: trip.id,
-      diveNumber: 1,
-      maxDepthMeters: 21,
-      recordedByPersonId: owner.id,
-    });
-    expect(again).toMatchObject({ ok: true, dive: { maxDepthMeters: 21 } });
   });
 });
 
@@ -616,6 +583,56 @@ describe("peopleWhoDivedBefore", () => {
     expect((await (await twoDays(6)).ask()).size).toBe(1);
   });
 
+  /**
+   * **A decompression boat earlier in the day silences the later one's figure**
+   * (H-84; dive-domain review of #1555). DAN gives no preflight number after a
+   * dive that took stops, so a morning boat the shop marked past
+   * no-decompression limits leaves the afternoon recap with nothing to quote,
+   * even though the afternoon boat is not marked itself.
+   */
+  it("reports a flagged morning boat for the unflagged afternoon one, and flySafeFrom goes quiet", async () => {
+    const ctx = await twoDays(6);
+    await ctx.db
+      .update(trips)
+      .set({ exceedsNoDecoLimits: true })
+      .where(eq(trips.id, ctx.before.id));
+    const days = await diveDaysBefore(
+      ctx.db,
+      ctx.shop.id,
+      [ctx.personId],
+      ctx.after.startsAt,
+      ctx.shop.timezone,
+    );
+    expect([...days.dived]).toEqual([ctx.personId]);
+    expect([...days.decompression]).toEqual([ctx.personId]);
+    const afternoon = {
+      executedDives: [],
+      plannedDives: 1,
+      endsAt: ctx.after.endsAt,
+      divedRecently: days.dived.has(ctx.personId),
+      exceedsNoDecoLimits: false,
+      now: new Date(ctx.after.startsAt.getTime() + 8 * HOUR_MS),
+      hours: DEFAULT_FLY_SAFE_HOURS,
+    };
+    expect(flySafeFrom(afternoon)).not.toBeNull();
+    expect(
+      flySafeFrom({ ...afternoon, decompressionRecently: days.decompression.has(ctx.personId) }),
+    ).toBeNull();
+  });
+
+  it("reports no decompression day when the earlier boat was not flagged", async () => {
+    const ctx = await twoDays(6);
+    const days = await diveDaysBefore(
+      ctx.db,
+      ctx.shop.id,
+      [ctx.personId],
+      ctx.after.startsAt,
+      ctx.shop.timezone,
+    );
+    expect(days.dived.size).toBe(1);
+    expect(days.decompression.size).toBe(0);
+  });
+
   it("counts a departure the crew never logged a dive on", async () => {
     // Crews do not reliably log; `flySafeFrom` answers from `planned_dives`
     // for exactly that reason. Requiring a dive row here would let today's
@@ -842,12 +859,11 @@ describe("peopleWhoDivedBefore", () => {
     const { db, shop, owner, before, after, personId } = await twoDays();
     const [dive] = await listExecutedDives(db, shop.id, before.id);
     if (!dive) throw new Error("fixture dive missing");
-    await deleteExecutedDive(db, {
-      shopId: shop.id,
-      tripId: before.id,
-      diveNumber: dive.executed.diveNumber,
-      deletedByPersonId: owner.id,
-    });
+    // Struck straight on the row: no surface removes a logged dive yet.
+    await db
+      .update(executedDives)
+      .set({ deletedAt: nowDate(), deletedByPersonId: owner.id })
+      .where(eq(executedDives.id, dive.executed.id));
     const ask = () => peopleWhoDivedBefore(db, shop.id, [personId], after.startsAt, shop.timezone);
     expect((await ask()).size, "the departure still ran").toBe(1);
     await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, before.id));
@@ -950,6 +966,24 @@ describe("peopleWhoDivedBefore", () => {
       await callRoll(ctx, "boarded");
       await cancelSeat(ctx);
       expect([...(await ctx.ask())]).toEqual([ctx.personId]);
+    });
+
+    it("reports a flagged departure the roll call vouches for, past a cancelled seat", async () => {
+      const ctx = await twoDays(6, { logDive: false });
+      await ctx.db
+        .update(trips)
+        .set({ exceedsNoDecoLimits: true })
+        .where(eq(trips.id, ctx.before.id));
+      await callRoll(ctx, "boarded");
+      await cancelSeat(ctx);
+      const days = await diveDaysBefore(
+        ctx.db,
+        ctx.shop.id,
+        [ctx.personId],
+        ctx.after.startsAt,
+        ctx.shop.timezone,
+      );
+      expect([...days.decompression]).toEqual([ctx.personId]);
     });
 
     it("counts a departure marked cancelled after it ran with a roll call on it", async () => {

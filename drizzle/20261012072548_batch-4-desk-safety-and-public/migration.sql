@@ -94,6 +94,19 @@ CREATE TABLE "incident_reports" (
       ))
 );
 --> statement-breakpoint
+CREATE TABLE "review_replies" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+	"shop_id" uuid NOT NULL,
+	"review_id" uuid NOT NULL,
+	"body" text NOT NULL,
+	"written_by_person_id" uuid NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"deleted_at" timestamp with time zone,
+	CONSTRAINT "review_replies_body_length" CHECK (length(trim("body")) between 1 and 400)
+);
+--> statement-breakpoint
+ALTER TABLE "trips" ADD COLUMN "is_rehearsal" boolean DEFAULT false NOT NULL;--> statement-breakpoint
 CREATE INDEX "departure_notes_shop_trip_idx" ON "departure_notes" ("shop_id","trip_id","sent_at");--> statement-breakpoint
 CREATE INDEX "lost_items_shop_status_idx" ON "lost_items" ("shop_id","status","created_at");--> statement-breakpoint
 CREATE INDEX "lost_items_shop_trip_idx" ON "lost_items" ("shop_id","trip_id");--> statement-breakpoint
@@ -102,6 +115,8 @@ CREATE INDEX "incident_report_people_report_idx" ON "incident_report_people" ("r
 CREATE INDEX "incident_report_people_booking_idx" ON "incident_report_people" ("booking_id");--> statement-breakpoint
 CREATE INDEX "incident_reports_shop_trip_idx" ON "incident_reports" ("shop_id","trip_id","created_at");--> statement-breakpoint
 CREATE INDEX "incident_reports_shop_occurred_idx" ON "incident_reports" ("shop_id","occurred_at");--> statement-breakpoint
+CREATE UNIQUE INDEX "review_replies_review_live_unique" ON "review_replies" ("review_id") WHERE "deleted_at" is null;--> statement-breakpoint
+CREATE INDEX "review_replies_shop_idx" ON "review_replies" ("shop_id");--> statement-breakpoint
 ALTER TABLE "departure_notes" ADD CONSTRAINT "departure_notes_shop_id_shops_id_fkey" FOREIGN KEY ("shop_id") REFERENCES "shops"("id");--> statement-breakpoint
 ALTER TABLE "departure_notes" ADD CONSTRAINT "departure_notes_trip_id_trips_id_fkey" FOREIGN KEY ("trip_id") REFERENCES "trips"("id");--> statement-breakpoint
 ALTER TABLE "departure_notes" ADD CONSTRAINT "departure_notes_sent_by_person_id_people_id_fkey" FOREIGN KEY ("sent_by_person_id") REFERENCES "people"("id") ON DELETE SET NULL;--> statement-breakpoint
@@ -122,4 +137,8 @@ ALTER TABLE "incident_reports" ADD CONSTRAINT "incident_reports_shop_id_shops_id
 ALTER TABLE "incident_reports" ADD CONSTRAINT "incident_reports_trip_id_trips_id_fkey" FOREIGN KEY ("trip_id") REFERENCES "trips"("id");--> statement-breakpoint
 ALTER TABLE "incident_reports" ADD CONSTRAINT "incident_reports_dive_site_id_dive_sites_id_fkey" FOREIGN KEY ("dive_site_id") REFERENCES "dive_sites"("id");--> statement-breakpoint
 ALTER TABLE "incident_reports" ADD CONSTRAINT "incident_reports_created_by_person_id_people_id_fkey" FOREIGN KEY ("created_by_person_id") REFERENCES "people"("id");--> statement-breakpoint
-ALTER TABLE "incident_reports" ADD CONSTRAINT "incident_reports_filed_by_person_id_people_id_fkey" FOREIGN KEY ("filed_by_person_id") REFERENCES "people"("id");
+ALTER TABLE "incident_reports" ADD CONSTRAINT "incident_reports_filed_by_person_id_people_id_fkey" FOREIGN KEY ("filed_by_person_id") REFERENCES "people"("id");--> statement-breakpoint
+ALTER TABLE "review_replies" ADD CONSTRAINT "review_replies_shop_id_shops_id_fkey" FOREIGN KEY ("shop_id") REFERENCES "shops"("id");--> statement-breakpoint
+ALTER TABLE "review_replies" ADD CONSTRAINT "review_replies_review_id_trip_reviews_id_fkey" FOREIGN KEY ("review_id") REFERENCES "trip_reviews"("id");--> statement-breakpoint
+ALTER TABLE "review_replies" ADD CONSTRAINT "review_replies_written_by_person_id_people_id_fkey" FOREIGN KEY ("written_by_person_id") REFERENCES "people"("id");--> statement-breakpoint
+ALTER TABLE "trips" ADD CONSTRAINT "trips_rehearsal_is_private" CHECK (not "is_rehearsal" or "is_private");

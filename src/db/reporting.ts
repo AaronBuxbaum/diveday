@@ -817,7 +817,7 @@ export async function pagedMonthlyReportTrips(
  * a cost. DiveDay does not know what a shop pays anybody, so a thin departure
  * that sailed with a full crew is visible here as a fact about staffing, not
  * an inference about money (issue #700). One batched query rather than one
- * per row, the same shape `courseCrewCountsByTrip` (src/db/today.ts) uses for
+ * per row, the same shape `courseCrewCountsByTrip` (src/db/course-crew-counts.ts) uses for
  * the identical N+1 reason.
  *
  * `trip_assignments` carries no `shop_id` of its own (CR-007) — proven here by

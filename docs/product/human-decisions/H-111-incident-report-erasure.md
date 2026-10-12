@@ -1,4 +1,4 @@
-# H-109: When a diver asks to be erased, what happens to an incident report that names them?
+# H-111: When a diver asks to be erased, what happens to an incident report that names them?
 
 - **Status:** Open
 - **Human owner:** Product owner + counsel

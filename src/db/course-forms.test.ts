@@ -21,7 +21,6 @@ import {
   getCourseFormsForBooking,
   listCourseFormRequirements,
   listCourseForms,
-  owedCourseFormsByBooking,
   recordPaperCourseForm,
   saveCourseFormVersion,
   setCourseFormRequirements,
@@ -174,7 +173,9 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
     expect(readiness?.blockers.map((blocker) => blocker.code)).not.toContain(
       "course_form_unsigned",
     );
-    expect((await owedCourseFormsByBooking(ctx.db, ctx.shop.id, [ctx.seat.tripId])).size).toBe(0);
+    expect(
+      (await getCourseFormsForBooking(ctx.db, ctx.shop.id, ctx.seat.bookingId))?.outstanding,
+    ).toEqual([]);
     expect(
       await signCourseForm(ctx.db, {
         shopId: ctx.shop.id,
@@ -453,8 +454,8 @@ describe("course forms — signing and readiness (in-memory PGlite)", () => {
       code: "course_form_unsigned",
       params: { formTitle: "Course liability release" },
     });
-    const owed = await owedCourseFormsByBooking(ctx.db, ctx.shop.id, [ctx.seat.tripId]);
-    expect(owed.get(ctx.seat.bookingId)?.map((row) => row.formId)).toEqual([form.id]);
+    const owed = await getCourseFormsForBooking(ctx.db, ctx.shop.id, ctx.seat.bookingId);
+    expect(owed?.outstanding.map((row) => row.formId)).toEqual([form.id]);
 
     const signed = await signCourseForm(ctx.db, {
       shopId: ctx.shop.id,
@@ -980,12 +981,6 @@ describe("course forms — mid-course edits (in-memory PGlite)", () => {
     expect(
       (await getCourseFormsForBooking(ctx.db, ctx.shop.id, ctx.seat.bookingId))?.outstanding,
     ).toEqual([]);
-    // Other students on the session have not signed; this one is clear.
-    expect(
-      (await owedCourseFormsByBooking(ctx.db, ctx.shop.id, [ctx.seat.tripId])).has(
-        ctx.seat.bookingId,
-      ),
-    ).toBe(false);
   });
 
   it("still asks an unsigned student on a started session, who signs the current words", async () => {

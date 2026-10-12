@@ -17,6 +17,8 @@
       "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
       "rentalTermsSaved": "Condiciones de alquiler guardadas. Todas las boletas de alquiler las imprimen.",
       "rentalTermsInvalid": "Las condiciones de alquiler no pueden pasar de 1500 caracteres.",
+      "regulatorServiceSaved": "Intervalo de revisión de reguladores guardado.",
+      "regulatorServiceInvalid": "Elige 12 o 24 meses.",
       "contactSaved": "Datos de contacto guardados.",
       "contactConfirmationSent": "Datos de contacto guardados. Abre el correo de confirmación que enviamos a esa dirección para que lleguen allí las respuestas de los buceadores.",
       "contactInvalid": "Usa una dirección de correo completa, o vacía el campo para quitarla de tus páginas públicas.",
@@ -314,6 +316,14 @@
       "submitting": "Guardando…",
       "value": "En cada boleta"
     },
+    "regulatorService": {
+      "heading": "Revisión de reguladores de clientes",
+      "description": "Cuándo vuelve a tocar la revisión del regulador de un cliente. Tus propias unidades mantienen sus propios plazos.",
+      "label": "Revisar cada",
+      "months": "{months} meses",
+      "submit": "Guardar intervalo de revisión",
+      "submitting": "Guardando…"
+    },
     "stripe": {
       "notConnectedHeading": "Ninguna cuenta de Stripe conectada",
       "connect": "Conectar Stripe",
@@ -596,7 +606,6 @@
   "safetyChecklist": {
     "title": "Lista de verificación previa a la salida",
     "description": "Las líneas que tu tripulación confirma antes de que el barco zarpe.",
-    "gasAnalysisNote": "DiveDay no registra análisis de gas: cada mezcla se sigue analizando y firmando en la estación de carga.",
     "listHeading": "Lista de verificación",
     "empty": {
       "title": "Aún no hay nada en la lista",

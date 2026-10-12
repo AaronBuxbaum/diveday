@@ -27,6 +27,8 @@ export function MapFrame({
     if (typeof navigator !== "undefined" && navigator.onLine === false) return;
     let settled = false;
     const probe = new Image();
+    // Google learns that something asked, never which page.
+    probe.referrerPolicy = "no-referrer";
     probe.onload = () => {
       if (!settled) setReachable(true);
     };

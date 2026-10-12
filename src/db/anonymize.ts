@@ -2279,7 +2279,7 @@ async function scrubInbox(
 
 /**
  * **Incident reports keep the report and lose the diver** (ADR
- * 20261012-incident-reports, H-109).
+ * 20261012-incident-reports, H-111).
  *
  * A report is the shop's liability record for everybody in it, so erasing one
  * diver never deletes it. What goes is their identity:
@@ -2294,7 +2294,7 @@ async function scrubInbox(
  * The narrative sweep is shop-wide, like the internal-notes sweep, because a
  * diver can be named in a report they are not linked to. It shares that
  * sweep's word-boundary pattern and its refusal of a name too short to anchor.
- * A nickname or a first name alone is not reached: the residual H-109 states.
+ * A nickname or a first name alone is not reached: the residual H-111 states.
  * This is the one write a filed report ever takes.
  */
 async function scrubIncidentReports(

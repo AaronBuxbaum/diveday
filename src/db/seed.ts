@@ -89,6 +89,7 @@ import {
   staffCredentials,
   staffReplies,
   staffShifts,
+  stripeRefundFailures,
   tips,
   tripAssignments,
   tripBlowoutDivers,
@@ -1152,6 +1153,15 @@ export async function seedDemoSchedule(
 }
 
 /**
+ * A card dispute (ADR 20261009-stripe-reversals-reach-diveday) and a failed
+ * refund (issue #2291) each name the order or checkout they are about, and a
+ * failed refund its seat, so both go before those.
+ */
+async function deleteStripeReversals(db: DbExecutor, shopId: string): Promise<void> {
+  await db.delete(paymentDisputes).where(eq(paymentDisputes.shopId, shopId));
+  await db.delete(stripeRefundFailures).where(eq(stripeRefundFailures.shopId, shopId));
+}
+/**
  * Restore the demo playground to its seeded state. Wipes everything a visitor
  * can touch — trips and their sessions, bookings and everything hanging off
  * them (waivers, roll call), the course catalog, cards, rental fit,
@@ -1308,9 +1318,7 @@ export async function resetDemoSchedule(
   // bookings, orders, and booking_checkouts — so both go before booking_checkouts.
   await db.delete(bookingCheckoutBookings).where(eq(bookingCheckoutBookings.shopId, shopId));
   await db.delete(paymentOperationIntents).where(eq(paymentOperationIntents.shopId, shopId));
-  // A card dispute references the order or checkout it is about (ADR
-  // 20261009-stripe-reversals-reach-diveday), so it goes before both.
-  await db.delete(paymentDisputes).where(eq(paymentDisputes.shopId, shopId));
+  await deleteStripeReversals(db, shopId);
   // A redemption points at the checkout that spent the code, so it goes first
   // (docs ADR 20260729-shop-promo-codes). The codes themselves are shop config
   // and survive a schedule reset.

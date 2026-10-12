@@ -81,10 +81,10 @@ import {
  * a read to one shop — and, where the per-diver bundle reads the same table,
  * to one person or to that person's bookings.
  *
- * Both loaders in `./export.ts` read through this list:
- * `loadShopExportBundleInput` takes every entry by `shopColumn` alone, and
- * `loadDiverExportBundleInput` takes the entries it shares by `personColumn`
- * or `bookingColumn` *and* `shopColumn`. One list means the two bundles cannot
+ * Both bundles in `./export.ts` read through this list with one reader,
+ * {@link readScoped}: a shop scope takes every entry by `shopColumn` alone,
+ * and a diver scope takes the entries it shares by `personColumn` or
+ * `bookingColumn` *and* `shopColumn`. One list means the two bundles cannot
  * disagree about a table's row order, and a reader can see in one place which
  * tables a diver's own bundle draws on (`erasure-coverage.test.ts` holds that
  * set against the erasure path).
@@ -247,7 +247,7 @@ export const EXPORT_TABLES = {
     scope: { shopColumn: tripRequirements.shopId },
   },
   // Incident reports (ADR 20261012-incident-reports). Shop bundle only: the
-  // diver's own bundle leaves them out by decision (H-109).
+  // diver's own bundle leaves them out by decision (H-111).
   incidentReports: {
     table: incidentReports,
     order: [asc(incidentReports.createdAt), asc(incidentReports.id)],
@@ -615,47 +615,66 @@ async function readWhere<K extends ExportTableKey>(
   return rows as ExportTableRows<K>;
 }
 
-/** Every row of one table that belongs to `shopId`, in the entry's order. */
-export function readShopScoped<K extends ExportTableKey>(
-  db: DbExecutor,
-  key: K,
-  shopId: string,
-): Promise<ExportTableRows<K>> {
-  return readWhere(db, key, (scope) => eq(scope.shopColumn, shopId));
-}
+/**
+ * **Whose rows a bundle reads** (#2358): one shop's, or one diver's inside it.
+ * A diver scope carries the diver's own bookings, read once by the loader, so
+ * a table hanging off a seat is read by those seats and nothing wider.
+ */
+export type ExportScope =
+  | { kind: "shop"; shopId: string }
+  | { kind: "diver"; shopId: string; personId: string; bookingIds: readonly string[] };
 
-/** One person's rows of one table, inside `shopId`, in the entry's order. */
-export function readPersonScoped<K extends PersonScopedExportTable>(
-  db: DbExecutor,
-  key: K,
-  shopId: string,
-  personId: string,
-): Promise<ExportTableRows<K>> {
-  return readWhere(db, key, (scope) => {
-    if (!scope.personColumn) throw new Error(`${key} has no person scope`);
-    return and(eq(scope.shopColumn, shopId), eq(scope.personColumn, personId));
-  });
-}
+export type ShopExportScope = Extract<ExportScope, { kind: "shop" }>;
+export type DiverExportScope = Extract<ExportScope, { kind: "diver" }>;
+
+/** Entries a diver's own bundle may read: by their person id, or by their bookings. */
+export type DiverScopedExportTable = PersonScopedExportTable | BookingScopedExportTable;
 
 /**
- * The rows of one table hanging off `bookingIds`, inside `shopId`, in the
- * entry's order — and no query at all for a diver with no bookings, since an
- * empty `in ()` is not SQL.
+ * **The one scoped read** both bundles go through: every row of one table
+ * inside the scope, in the entry's order.
+ *
+ * A shop scope filters by the entry's `shopColumn`. A diver scope filters by
+ * `shopColumn` *and* the entry's `personColumn`, or its `bookingColumn` against
+ * the diver's bookings; an entry with neither cannot be read for a diver at
+ * all, which the types refuse and the read throws on, so a diver scope can
+ * never fall back to the whole shop. A diver with no bookings costs no query
+ * for a booking-scoped table, since an empty `in ()` is not SQL.
  */
-export async function readBookingScoped<K extends BookingScopedExportTable>(
+export function readScoped<K extends ExportTableKey>(
   db: DbExecutor,
   key: K,
-  shopId: string,
-  bookingIds: string[],
+  scope: ShopExportScope,
+): Promise<ExportTableRows<K>>;
+export function readScoped<K extends DiverScopedExportTable>(
+  db: DbExecutor,
+  key: K,
+  scope: ExportScope,
+): Promise<ExportTableRows<K>>;
+export async function readScoped<K extends ExportTableKey>(
+  db: DbExecutor,
+  key: K,
+  scope: ExportScope,
 ): Promise<ExportTableRows<K>> {
-  if (bookingIds.length === 0) return [];
-  return readWhere(db, key, (scope) => {
-    if (!scope.bookingColumn) throw new Error(`${key} has no booking scope`);
-    return and(eq(scope.shopColumn, shopId), inArray(scope.bookingColumn, bookingIds));
-  });
+  if (scope.kind === "shop") {
+    return readWhere(db, key, (columns) => eq(columns.shopColumn, scope.shopId));
+  }
+  const { personColumn, bookingColumn } = (EXPORT_TABLES[key] as ExportTableRead).scope;
+  if (personColumn) {
+    return readWhere(db, key, (columns) =>
+      and(eq(columns.shopColumn, scope.shopId), eq(personColumn, scope.personId)),
+    );
+  }
+  if (bookingColumn) {
+    if (scope.bookingIds.length === 0) return [];
+    return readWhere(db, key, (columns) =>
+      and(eq(columns.shopColumn, scope.shopId), inArray(bookingColumn, [...scope.bookingIds])),
+    );
+  }
+  throw new Error(`export: ${key} has no diver scope`);
 }
 
-/** How many rows {@link readShopScoped} would return — the settings page's cheap view. */
+/** How many rows {@link readScoped} would return for a shop — the settings page's cheap view. */
 export async function countShopScoped(
   db: DbExecutor,
   key: ExportTableKey,

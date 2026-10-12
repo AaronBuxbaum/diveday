@@ -1,8 +1,10 @@
 /**
  * **Where a month's money came from, line by line** (owner decision
  * 2026-10-09, the Reports brief). Pure: the db layer
- * (`src/db/report-lines.ts`) hands up each paid order line and each completed
- * booking checkout's per-seat amounts with the share the shop kept, and every
+ * (`src/db/report-lines.ts`) hands up each paid order line, each completed
+ * booking checkout's per-seat amounts, each booking a staff member marked paid
+ * by hand, and the month's imported history (issue #2305), with the share the
+ * shop kept, and every
  * rule about which line a charge belongs on and how a refund nets out lives
  * here.
  *
@@ -22,6 +24,7 @@ export const REVENUE_LINES = [
   "gearBench",
   "packages",
   "retail",
+  "imported",
 ] as const;
 export type RevenueLine = (typeof REVENUE_LINES)[number];
 

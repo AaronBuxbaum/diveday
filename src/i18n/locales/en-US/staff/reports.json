@@ -87,7 +87,8 @@
     "rentals": "Rentals",
     "gearBench": "Gear bench",
     "packages": "Dive packages",
-    "retail": "Retail and other"
+    "retail": "Retail and other",
+    "imported": "Unverified imported history"
   },
   "packagesOwed": "{dives, plural, one {# package dive} other {# package dives}} still to dive, worth {amount}",
   "returningDivers": "{returning} of {total, plural, one {# diver} other {# divers}} had dived with you before"

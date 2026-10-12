@@ -8,6 +8,7 @@ import { createOrder, type NewOrderLineItem } from "@/db/orders";
 import { orderLineItemKind } from "@/db/schema";
 import { getShopCurrency, getShopTaxEnabled } from "@/db/stripe-accounts";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
+import { formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { majorToMinor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { customerAddressFromForm } from "@/lib/payments/customer-address-form";
@@ -33,6 +34,15 @@ const orderDescriptionSchema = z.string().trim().max(200);
 // Sourced from the pg enum, not a hand-typed literal list, so it can never
 // drift from what the database will actually accept.
 const lineItemKindSchema = z.enum(orderLineItemKind.enumValues);
+
+/**
+ * The order's own fields, plus its line rows (`description-0`, `kind-0`,
+ * `quantity-0`, `unitAmount-0` …) on the catch-all, each read as `FormData.get`
+ * read it; the schemas above hold every value to its bounds.
+ */
+const orderForm = z
+  .object({ personId: text(), bookingId: trimmedText(), description: text() })
+  .catchall(formValue());
 
 /**
  * Raise an invoice for a diver.
@@ -66,13 +76,10 @@ export async function createOrderAction(formData: FormData) {
     redirect(stepUpChallengeUrl(session.user.shopSlug, "money", newOrder));
   }
 
-  const parsedPersonId = personIdSchema.safeParse(String(formData.get("personId") ?? ""));
-  const parsedBookingId = bookingIdSchema.safeParse(
-    String(formData.get("bookingId") ?? "").trim() || null,
-  );
-  const parsedDescription = orderDescriptionSchema.safeParse(
-    String(formData.get("description") ?? ""),
-  );
+  const form = readForm(orderForm, formData);
+  const parsedPersonId = personIdSchema.safeParse(form.personId);
+  const parsedBookingId = bookingIdSchema.safeParse(form.bookingId || null);
+  const parsedDescription = orderDescriptionSchema.safeParse(form.description);
   if (!parsedPersonId.success || !parsedBookingId.success || !parsedDescription.success) {
     redirect(noticeUrl(newOrder, "invalid"));
   }
@@ -100,12 +107,12 @@ export async function createOrderAction(formData: FormData) {
 
   const lineItems: NewOrderLineItem[] = [];
   for (let i = 0; i < LINE_ITEM_ROWS; i++) {
-    const rawDescription = String(formData.get(`description-${i}`) ?? "").trim();
+    const rawDescription = String(form[`description-${i}`] ?? "").trim();
     if (!rawDescription) continue;
     const itemDescription = lineDescriptionSchema.safeParse(rawDescription);
-    const kind = lineItemKindSchema.safeParse(formData.get(`kind-${i}`));
-    const quantity = quantitySchema.safeParse(formData.get(`quantity-${i}`) ?? "1");
-    const dollars = dollarsSchema.safeParse(formData.get(`unitAmount-${i}`));
+    const kind = lineItemKindSchema.safeParse(form[`kind-${i}`] ?? null);
+    const quantity = quantitySchema.safeParse(form[`quantity-${i}`] ?? "1");
+    const dollars = dollarsSchema.safeParse(form[`unitAmount-${i}`] ?? null);
     // A filled-in row with an out-of-bounds value fails the whole submission
     // rather than silently dropping the row — a staff member who typed four
     // line items should never end up with a three-line invoice unexplained.

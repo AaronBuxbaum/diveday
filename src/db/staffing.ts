@@ -10,6 +10,7 @@ import {
 } from "@/lib/divemaster-ratio";
 import { type StaffGapCode, staffGapForCourseGap, type TripMeeting } from "@/lib/staffing-week";
 import type { AppDb } from "./client";
+import { courseCrewCountsByTrip, NO_SUPERVISION } from "./course-crew-counts";
 import {
   bookings,
   courses,
@@ -20,7 +21,6 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
-import { courseCrewCountsByTrip, NO_SUPERVISION } from "./today";
 import { listStaff, type StaffPerson } from "./trips-crew";
 import { liveTrip } from "./trips-live";
 import { bookedDiversCount } from "./trips-queries";
@@ -45,7 +45,7 @@ import { bookedDiversCount } from "./trips-queries";
  * names, one computation, and only Today's could actually assign anyone —
  * the roster's rows dead-ended on a link. What survived that is this summary,
  * composed from the same readers Today's detection runs on
- * (`courseCrewCountsByTrip`, src/db/today.ts + `courseCrewGap`,
+ * (`courseCrewCountsByTrip`, src/db/course-crew-counts.ts + `courseCrewGap`,
  * src/lib/course-ratios.ts + `divemasterRatioGap`,
  * src/lib/divemaster-ratio.ts). There is still no second detector, and still no
  * second set of words: {@link StaffingGapTrip} hands back the very departures

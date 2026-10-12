@@ -30,15 +30,23 @@ import { log } from "@/lib/log";
  * fresh record nobody holds and is dropped. That is the whole "off" path: one
  * store lookup and one integer increment per statement, and nothing written.
  *
- * ## What `ms` is
+ * ## What `ms` and `db_ms` are
  *
- * Wall time from the first moment the pass asked for its record (its first
- * statement, or the gate that armed the report, whichever came first) to the
- * moment the response finished. It is *not* time spent inside the database —
- * Drizzle's logger fires before a statement is sent and is never told when it
- * returns, and timing it properly means wrapping the driver in
- * `src/db/client.ts`. Read it next to `queries`: a page whose `ms` moves while
- * its `queries` stays flat is waiting on something other than round trips.
+ * `ms` is wall time from the first moment the pass asked for its record (its
+ * first statement, or the gate that armed the report, whichever came first) to
+ * the moment the response finished.
+ *
+ * `db_ms` is time spent waiting on the database: each statement timed from the
+ * moment it is handed to the driver to the moment its answer comes back, and
+ * summed (issue #2352). Drizzle's logger fires before a statement is sent and
+ * is never told when it returns, so the timing is a wrapper around the
+ * driver's own `query()` ({@link withStatementTiming}, installed in
+ * `src/db/client.ts`). Statements sent together each count in full, so
+ * `db_ms` can exceed `ms` on a page that fans out. Read the two side by side:
+ * a page whose `ms` moves while its `db_ms` stays flat is waiting on
+ * something other than the database, and one whose `db_ms` moves while its
+ * `queries` stays flat has a slow statement.
+ *
  * `performance.now()` rather than the app clock, because the e2e fleet freezes
  * the clock and a frozen clock times everything at zero.
  *
@@ -48,6 +56,8 @@ import { log } from "@/lib/log";
 export type QueryStats = {
   /** Statements sent in this scope so far. */
   queries: number;
+  /** Milliseconds those statements took, each timed at the driver and summed. */
+  dbMs: number;
   /** `performance.now()` when the scope's record was first asked for. */
   startedAt: number;
   /** The route template the report names, once a gate has armed it. */
@@ -57,7 +67,7 @@ export type QueryStats = {
 };
 
 function freshStats(): QueryStats {
-  return { queries: 0, startedAt: performance.now(), route: null, armed: false };
+  return { queries: 0, dbMs: 0, startedAt: performance.now(), route: null, armed: false };
 }
 
 const explicitScope = new AsyncLocalStorage<QueryStats>();
@@ -79,6 +89,58 @@ export const queryTimingLogger = {
     currentQueryStats().queries += 1;
   },
 };
+
+/**
+ * Time one statement into the scope that sent it. The scope is read when the
+ * statement is handed over, in the caller's own async context, never when the
+ * driver answers, so a pooled connection's callbacks cannot move the time to
+ * another request.
+ */
+export function timeStatement<T>(send: () => Promise<T>): Promise<T> {
+  const stats = currentQueryStats();
+  const sentAt = performance.now();
+  return send().finally(() => {
+    stats.dbMs += performance.now() - sentAt;
+  });
+}
+
+/**
+ * **The driver, with every statement timed** — a proxy over a PGlite client
+ * or a `pg` pool that times `query()`, and hands back a timed client from the
+ * two doors a transaction goes through: PGlite's `transaction(callback)` and
+ * the pool's `connect()`. Everything else passes through to the driver itself.
+ * The proxy keeps the driver's prototype, so Drizzle's own "is this a pool?"
+ * check still answers the same.
+ */
+export function withStatementTiming<Client extends object>(client: Client): Client {
+  return new Proxy(client, {
+    get(target, property) {
+      const value = Reflect.get(target, property, target);
+      if (typeof value !== "function") return value;
+      if (property === "query") {
+        return (...args: unknown[]) =>
+          timeStatement(() => Reflect.apply(value, target, args) as Promise<unknown>);
+      }
+      if (property === "transaction") {
+        return (callback: (tx: object) => unknown, ...rest: unknown[]) =>
+          Reflect.apply(value, target, [
+            (tx: object) => callback(withStatementTiming(tx)),
+            ...rest,
+          ]);
+      }
+      if (property === "connect") {
+        return (...args: unknown[]) => {
+          const connected = Reflect.apply(value, target, args);
+          // The callback form (no promise) is never used by Drizzle; pass it through.
+          return connected instanceof Promise
+            ? connected.then((connection: object) => withStatementTiming(connection))
+            : connected;
+        };
+      }
+      return value.bind(target);
+    },
+  });
+}
 
 /**
  * Run `work` in a scope of its own and hand back what it cost alongside its
@@ -131,6 +193,7 @@ export function reportRenderQueries(
       log(QUERY_TIMING_EVENT, "info", {
         route: stats.route,
         queries: stats.queries,
+        db_ms: Math.round(stats.dbMs),
         ms: Math.round(performance.now() - stats.startedAt),
       });
     });

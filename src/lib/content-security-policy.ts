@@ -206,8 +206,12 @@ function mediaRegionalImageHosts(region: string | null | undefined): string[] {
  */
 const MAP_FRAME_HOSTS = ["https://maps.google.com", "https://www.google.com"];
 
-/** The origin of `MAP_REACHABILITY_PROBE`, one of the frame hosts above. */
-const MAP_PROBE_IMAGE_HOST = new URL(MAP_REACHABILITY_PROBE).origin;
+/**
+ * The one image the route maps may read from a frame host: the probe URL
+ * itself, path and all, so an injected `<img>` to any other path on that
+ * origin is still a violation.
+ */
+const MAP_PROBE_IMAGE_SOURCE = MAP_REACHABILITY_PROBE;
 
 /**
  * Sentry's ingest, as a belt to the tunnel's braces. `next.config.ts` sets
@@ -411,7 +415,7 @@ export function reportOnlyPolicy(options: CspOptions): string {
         ...mediaPublicImageHosts(options.mediaPublicUrlBase),
         // The one-pixel read the route maps make before showing their frame
         // (`MAP_REACHABILITY_PROBE`, src/lib/maps.ts): a frame host already.
-        MAP_PROBE_IMAGE_HOST,
+        MAP_PROBE_IMAGE_SOURCE,
       ],
     ],
     ["font-src", ["'self'", GOOGLE_FONTS_FILE_HOST]],

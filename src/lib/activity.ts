@@ -165,6 +165,11 @@ type ActivityParamShapes = {
    * customer's name lives on that row, where an erasure scrubs it.
    */
   order_refunded: { actor: string };
+  /**
+   * Money a card paid on a checkout DiveDay had already closed, sent back from
+   * the Orders index (issue #2335). On the departure the checkout was for.
+   */
+  paid_after_close_refunded: { actor: string };
   /** A removed seat's payment was refunded by card, inside the shop's window. */
   seat_refunded: { actor: string; diver: string };
   /** A seat was marked waived: a free place, the shop's call. */
@@ -273,6 +278,7 @@ export const ACTIVITY_CODES = [
   "medical_clearance_opened",
   "record_exported",
   "order_refunded",
+  "paid_after_close_refunded",
   "seat_refunded",
   "payment_waived",
   "payment_marked_refunded",

@@ -43,6 +43,8 @@ export type NewTrip = {
   isPrivate?: boolean;
   /** The shop's own divemaster target does not apply to this departure (issue #973). */
   selfGuided?: boolean;
+  /** The dives went past no-decompression limits (H-84); the recap says nothing about flying. */
+  exceedsNoDecoLimits?: boolean;
   diveMode?: "boat" | "shore" | "pool";
   boatId?: string | null;
   /** The shop's own word for this kind of day (ADR 20260904-reef-all-the-way-down). */
@@ -229,6 +231,7 @@ export async function insertTripInstance(
     isPrivate?: boolean;
     /** The shop's own divemaster target does not apply to this departure (issue #973). */
     selfGuided?: boolean;
+    exceedsNoDecoLimits?: boolean;
     diveMode?: "boat" | "shore" | "pool";
     boatId?: string | null;
     lensId?: string | null;
@@ -305,6 +308,7 @@ export async function insertTripInstance(
       // parameter and must never grow one (ADR
       // 20260827-self-guided-departures).
       selfGuided: params.courseId ? false : (params.selfGuided ?? false),
+      exceedsNoDecoLimits: params.exceedsNoDecoLimits ?? false,
       diveMode: params.diveMode ?? "boat",
       boatId: params.boatId ?? null,
       lensId: params.lensId ?? null,
@@ -374,6 +378,7 @@ export async function createTrip(db: DbExecutor, input: NewTrip) {
       scheduleDays: input.scheduleDays,
       isPrivate: input.isPrivate,
       selfGuided: input.selfGuided,
+      exceedsNoDecoLimits: input.exceedsNoDecoLimits,
       diveMode: input.diveMode,
       boatId: input.boatId,
       isRehearsal: input.isRehearsal,

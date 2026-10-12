@@ -118,7 +118,12 @@ export type DiverMergeWarning =
 
 export type DiverMergeResult =
   | { ok: true; survivorId: string; mergedPersonId: string }
-  | { ok: false; reason: DiverMergeRefusal };
+  | {
+      ok: false;
+      reason: DiverMergeRefusal;
+      /** The first departure a `booking_conflict` collided on, so the notice can name it (issue #2333). */
+      conflictTripId?: string;
+    };
 
 /**
  * One row per person by construction, so the blanket repoint below cannot move
@@ -1169,7 +1174,12 @@ export async function mergeDiverRecords(input: {
       }
 
       const assessment = await assessMerge(tx, input.shopId, source, survivor);
-      if (!assessment.ok) return { ok: false, reason: assessment.reason };
+      if (!assessment.ok) {
+        const conflictTripId = assessment.sharedDepartures[0]?.tripId;
+        return conflictTripId
+          ? { ok: false, reason: assessment.reason, conflictTripId }
+          : { ok: false, reason: assessment.reason };
+      }
       if (assessment.warnings.length > 0) {
         if (!input.acknowledged) return { ok: false, reason: "different_people_unacknowledged" };
         if (

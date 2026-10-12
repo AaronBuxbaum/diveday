@@ -4,6 +4,7 @@ import {
   E2E_APP_HOST,
   E2E_CRON_SECRET,
   E2E_FROZEN_CLOCK,
+  E2E_STRIPE_TEST_WEBHOOK_SECRET,
   E2E_TEST_ROUTE_SECRET,
   E2E_WORKER_COUNT,
   e2eBaseURL,
@@ -114,6 +115,10 @@ const serverEnv = {
   SES_SNS_TOPIC_ARN: "",
   STRIPE_SECRET_KEY: "",
   STRIPE_CONNECT_CLIENT_ID: "",
+  // Test mode only (E2E_STRIPE_TEST_WEBHOOK_SECRET in e2e/servers.ts): a spec
+  // pays an invoice through the real webhook. The live secret stays blank.
+  STRIPE_WEBHOOK_SECRET: "",
+  STRIPE_TEST_WEBHOOK_SECRET: E2E_STRIPE_TEST_WEBHOOK_SECRET,
   SNS_AWS_REGION: "",
   SNS_AWS_ACCESS_KEY_ID: "",
   SNS_AWS_SECRET_ACCESS_KEY: "",

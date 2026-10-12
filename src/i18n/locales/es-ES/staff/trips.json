@@ -200,6 +200,8 @@
     "capacityLabel": "Capacidad",
     "dayCountLabel": "Días",
     "priceLabel": "Precio por buceador",
+    "exceedsNoDecoLabel": "Buceo con descompresión",
+    "exceedsNoDecoHint": "Estas inmersiones superan los límites sin descompresión, así que el resumen no dice nada sobre cuándo pueden volar los buceadores.",
     "payAtBookingLegend": "Pago al reservar",
     "payAtBookingDescription": "Opcional. Deja el depósito en blanco para cobrar la tarifa completa cuando un buceador reserve en línea.",
     "depositLabel": "Depósito por buceador",

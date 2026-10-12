@@ -4,6 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { tripReservationWindow } from "@/lib/gear";
 import { shiftInstantByWallTimeDelta, utcToWallTime, wallTimeDeltaMs } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
+import { flushUrgentCrewNotices, recordCrewTimeMoved } from "./crew-notices";
 import { rewindowTripGearReservations } from "./gear";
 import { queryAll } from "./query-helpers";
 import type { Trip } from "./schema";
@@ -140,15 +141,22 @@ export async function countRollCallEvidence(
  * heads against that departure, and moving the date under a manifest already in
  * progress is not a schedule edit, it is a falsified record. Refuses a cancelled
  * trip for the same reason a cancelled trip is not on the board.
+ *
+ * **The crew hear it** (#2283): everyone on the departure but the staffer who
+ * moved it gets a `time_moved` crew notice with the time it left before, sent
+ * at once when either time is within a day and otherwise on the hour.
  */
 export async function moveTrip(
   db: AppDb,
   shopId: string,
   tripId: string,
   startsAt: Date,
+  options: { actorPersonId?: string | null; now?: Date } = {},
 ): Promise<MoveTripOutcome> {
   if (Number.isNaN(startsAt.getTime())) return { ok: false, reason: "invalid" };
-  return db.transaction(async (tx) => {
+  const now = options.now ?? nowDate();
+  let moved = false;
+  const outcome = await db.transaction(async (tx): Promise<MoveTripOutcome> => {
     const [existing] = await tx
       .select()
       .from(trips)
@@ -208,8 +216,19 @@ export async function moveTrip(
       tripId,
       window: tripReservationWindow(trip, shop.timezone),
     });
+    await recordCrewTimeMoved(tx, {
+      shopId,
+      tripId,
+      previousStartsAt: existing.startsAt,
+      actorPersonId: options.actorPersonId ?? null,
+      now,
+    });
+    moved = true;
     return { ok: true, trip, gearReleased: gear.released };
   });
+  // Late news goes now, not on the hour (`flushUrgentCrewNotices`).
+  if (moved) await flushUrgentCrewNotices(db, { shopId, tripIds: [tripId], now });
+  return outcome;
 }
 
 export type DeleteTripOutcome =
@@ -381,6 +400,8 @@ export async function duplicateTrip(
       // marked a charter self-guided and then copied it to next Saturday must
       // not find the copy raising the row the mark exists to silence.
       selfGuided: source.selfGuided,
+      // Copied too: a copy of a decompression charter is one (H-84).
+      exceedsNoDecoLimits: source.exceedsNoDecoLimits,
       diveMode: source.diveMode,
       // Copied outright, and deliberately *not* re-checked through
       // `getTripLens` the way `boatId` is below. A boat id is re-validated

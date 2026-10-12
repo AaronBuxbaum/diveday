@@ -1352,7 +1352,7 @@ export async function applyProviderEmailEvent(
      * Optional because SES has nothing to scope by — its event names a message
      * id and nothing else, and those ids come from DiveDay's own single
      * account. A provider whose events *do* carry a tenant
-     * (WhatsApp names the WhatsApp Business Account) passes it, so a delivery
+     * (WhatsApp names the sending phone number, H-83) passes it, so a delivery
      * outcome can never land on another shop's row even if a provider message
      * id were ever guessable or reused.
      */

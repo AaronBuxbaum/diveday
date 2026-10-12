@@ -256,7 +256,7 @@ describe("the merge preview", () => {
     expect(preview?.sharedDepartures).toEqual([
       expect.objectContaining({ tripId: f.trip.id, title: f.trip.title, keptSeatOver: false }),
     ]);
-    expect(await merge(f)).toEqual({ ok: false, reason: "booking_conflict" });
+    expect(await merge(f)).toMatchObject({ ok: false, reason: "booking_conflict" });
   });
 
   it("says when the kept record's seat is the cancelled one, so the fix is keeping the other", async () => {

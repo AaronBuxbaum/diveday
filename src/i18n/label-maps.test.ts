@@ -116,7 +116,6 @@ import {
   ACTION_KIND_KEYS,
   blockerActionLabelText,
   blockerRowText,
-  GREETING_KEYS,
   mediaDeletionKindText,
   seasonalBriefingText,
   stuckOperationKindText,
@@ -952,13 +951,6 @@ const CASES: readonly LabelMapCase[] = [
     map: "MEDIA_DELETION_KIND_KEYS",
     rows: codeRows(MEDIA_DELETION_KINDS, (locale, kind) =>
       mediaDeletionKindText(staffTranslator(locale), kind),
-    ),
-  },
-  {
-    module: "today-labels.ts",
-    map: "GREETING_KEYS",
-    rows: codeRows(keysOf(GREETING_KEYS), (locale, band) =>
-      staffTranslator(locale)(GREETING_KEYS[band], { name: "Priya" }),
     ),
   },
   {

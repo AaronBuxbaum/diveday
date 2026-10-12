@@ -28,12 +28,12 @@ access, export, retention and erasure are decided here.
   roles. Nothing is diver-facing.
 - **A record, not a gate.** No readiness, roll-call, booking or close-out path reads these tables.
 - **Export:** three files in the shop bundle, beside `waiver_records.csv`. The diver's own bundle
-  leaves them out (H-109).
+  leaves them out (H-111).
 - **Retention:** 7 years from the incident (2555 days); people and addenda cascade.
 - **Erasure:** `anonymizeDiver` keeps the report. The diver's links survive with the erased name,
   an outsider row with their name is redacted, and every word-boundary match of their name in the
   narrative fields and addenda becomes `[redacted]`. A filed report changes only through this.
-  The trade-off is H-109.
+  The trade-off is H-111.
 - **Safety tab:** an owner/manager tab beside Reports reads the month's existing records and
   lists its reports.
 
@@ -47,5 +47,5 @@ access, export, retention and erasure are decided here.
 ## Consequences
 
 The report survives a diver's erasure with their identity removed. Name matching misses a nickname
-or a first name alone; H-109 states that residual. Revisit if counsel asks for a different
+or a first name alone; H-111 states that residual. Revisit if counsel asks for a different
 retention period or full redaction on erasure.

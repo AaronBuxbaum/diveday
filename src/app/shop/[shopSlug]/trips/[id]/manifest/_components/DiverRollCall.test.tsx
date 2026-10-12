@@ -208,11 +208,13 @@ describe("the screen worries only with reason (decision 4)", () => {
           rollCall: boardedAt(),
         }),
         // Readiness never gates boarding after a dive — the diver is already
-        // aboard — so a desk blocker is not an alarm at the rail.
+        // aboard — so a desk blocker is not an alarm at the rail. Boarded at
+        // the dock: a row that cannot say so keeps its blocker (#2286).
         diver({
           bookingId: "00000000-0000-4000-8000-000000000003",
           fullName: "Amara Osei",
           readiness: { status: "blocked", blockers: [{ code: "certification_missing" }] },
+          boardedEarlier: true,
         }),
       ],
     });
@@ -579,6 +581,26 @@ describe("the earlier-refusal capsule", () => {
     );
   });
 
+  it("gives way to a rider's riding-only warning, which the row and its details both say (H-109)", () => {
+    const { container } = renderList({
+      divers: [
+        diver({
+          participantType: "rider",
+          medicalWaiver: null,
+          riderMedicalHold: {
+            kind: "not_cleared",
+            at: new Date("2026-08-20T12:00:00.000Z"),
+            evaluatedOn: "2026-08-19",
+          },
+        }),
+      ],
+    });
+    expect(capsuleOf(container)).toHaveTextContent("Physician did not clear: riding only");
+    expect(container.textContent).toMatch(
+      /A physician did not clear this person on Aug\s19,\s2026: riding only, not in the water/,
+    );
+  });
+
   it("is short in Spanish too", () => {
     const { container } = renderList({
       divers: [diver({ medicalWaiver: refusedBefore })],
@@ -663,7 +685,7 @@ describe("the earlier-refusal capsule", () => {
     expect(within(screen.getByRole("dialog")).getByText("Minor · age 13")).toBeDefined();
 
     expect(printed).toHaveTextContent(
-      /A physician did not clear this diver on .* \(earlier waiver\)/,
+      /A physician did not clear this person on .* \(earlier waiver\)/,
     );
     expect(printed).toHaveTextContent(CAPSULE);
     expect(printed).toHaveTextContent("Minor · age 13");
@@ -702,7 +724,7 @@ describe("the earlier-refusal capsule", () => {
       },
     } as TripManifest["divers"][number]["medicalWaiver"];
     const { container } = renderList({ divers: [diver({ medicalWaiver: evaluated })] });
-    expect(container.textContent).toMatch(/did not clear this diver on Aug\s3,\s2026/);
+    expect(container.textContent).toMatch(/did not clear this person on Aug\s3,\s2026/);
   });
 });
 
@@ -763,7 +785,7 @@ describe("an unanswered referral's warning", () => {
     } as unknown as TripManifest["divers"][number]["medicalWaiver"];
     const { container } = renderList({ divers: [diver({ medicalWaiver: refusedBefore })] });
     const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
-    expect(printed).toHaveTextContent(/A physician did not clear this diver/);
+    expect(printed).toHaveTextContent(/A physician did not clear this person/);
     expect(within(printed as HTMLElement).queryAllByRole("link")).toHaveLength(0);
     expect(screen.queryByRole("link", { name: "View the refusal" })).toBeNull();
 

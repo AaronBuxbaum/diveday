@@ -9,11 +9,13 @@ import { seatName } from "@/lib/held-seat";
 import { log } from "@/lib/log";
 import {
   type BuddyTeammate,
+  boardedBefore,
   buildTripManifest,
   carryForwardNotBoarded,
   isRollCallCheckpoint,
   type ManifestBuddyTeam,
   type ManifestCrewMember,
+  manifestAtCheckpoint,
   RETRACTION_SUPERSEDED,
   type RollCallCheckpoint,
   type RollCallRecord,
@@ -906,6 +908,9 @@ export async function getTripManifests(
       ] as const;
     }),
   );
+  const riderHoldByBooking = new Map(
+    readinessRows.map((row) => [row.booking.id, row.riderMedicalHold] as const),
+  );
   // Buddy teams, reduced to the members who are actually aboard. A member
   // whose seat was since cancelled stays listed (and dissolvable) on the teams
   // panel, but is dropped here: a cancelled seat is nobody (ADR
@@ -1001,6 +1006,7 @@ export async function getTripManifests(
       ),
       nitroxRequested: booking.wantsNitrox && certified.has(person.id),
       medicalWaiver: medicalByBooking.get(booking.id) ?? null,
+      riderMedicalHold: riderHoldByBooking.get(booking.id) ?? null,
       // Null/false whenever the shop holds no date of birth, so the captain's
       // list stays quiet rather than showing "unknown" down the whole boat.
       age: person.dateOfBirth ? ageOnDate(person.dateOfBirth, tripDate) : null,
@@ -1060,9 +1066,9 @@ export async function getTripManifests(
       divers: diverInputs.map((diver) => ({
         ...diver,
         rollCall: effectiveByBooking.get(diver.bookingId)?.[index],
-        boardedEarlier: (effectiveByBooking.get(diver.bookingId) ?? [])
-          .slice(0, index)
-          .some((record) => record?.state === "boarded"),
+        boardedEarlier: boardedBefore(
+          (effectiveByBooking.get(diver.bookingId) ?? []).slice(0, index),
+        ),
       })),
     }),
   );
@@ -1075,10 +1081,7 @@ export async function getTripManifest(
   checkpoint: RollCallCheckpoint = "departure",
 ): Promise<TripManifest | null> {
   const manifests = await getTripManifests(db, shopId, tripId);
-  if (!manifests || !isRollCallCheckpoint(checkpoint, manifests[0]?.trip.plannedDives ?? 0)) {
-    return null;
-  }
-  return manifests.find((manifest) => manifest.checkpoint === checkpoint) ?? null;
+  return manifests ? manifestAtCheckpoint(manifests, checkpoint) : null;
 }
 
 /**

@@ -1138,6 +1138,9 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
   await openTripTab(page, "Trip");
+  // Kept for the way back: the board crawl is this test's most expensive step,
+  // and walking it twice put the test on its 15-second budget (issue #2366).
+  const roster = page.url();
 
   const diver = page
     .locator("li")
@@ -1194,9 +1197,7 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
   await expect(waiverGroup.getByText("Medical review", { exact: true })).toHaveCount(0);
 
   // And the block is gone where it actually mattered — on the boat's roster.
-  await page.goto("/shop/blue-mantis/schedule/board");
-  await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
-  await openTripTab(page, "Trip");
+  await page.goto(roster);
   const cleared = page
     .locator("li")
     .filter({ has: page.getByText("Morgan Vale", { exact: true }) })

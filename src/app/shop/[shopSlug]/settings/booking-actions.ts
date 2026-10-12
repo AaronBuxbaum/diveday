@@ -1,19 +1,23 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import { setShopPackingList } from "@/db/shops";
+import { readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { settingsBlock } from "./action-helpers";
 
+const packingForm = z.object({ packingList: text() });
+
 export async function savePackingAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
-  const packingList = String(formData.get("packingList") ?? "")
-    .split("\n")
+  const packingList = readForm(packingForm, formData)
+    .packingList.split("\n")
     .map((item) => item.trim())
     .filter(Boolean);
   if (

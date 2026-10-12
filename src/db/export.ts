@@ -48,9 +48,9 @@ import { SHOP_EXPORT_FILES } from "./export-shop-files";
 import {
   buildExportTables,
   countShopScoped,
-  readBookingScoped,
-  readPersonScoped,
-  readShopScoped,
+  type DiverExportScope,
+  readScoped,
+  type ShopExportScope,
 } from "./export-tables";
 import { shopRehearsalIds } from "./rehearsals";
 import {
@@ -82,36 +82,88 @@ import {
   workOrderLines,
 } from "./schema";
 
-export async function loadShopExportBundleInput(
+/** Whose bundle to load: one shop's whole, or one diver's own inside it. */
+export type ExportBundleScope =
+  | { kind: "shop"; shopId: string }
+  | { kind: "diver"; shopId: string; personId: string };
+
+/**
+ * **The one bundle loader** (#2358): reads the scope's rows under one
+ * transaction and builds its bundle's files. The shop's files take the shop
+ * columns of each shared spec and the diver's the diver columns
+ * (`shopFile` / `diverFile`, `./export-shared-files`); every plain read goes
+ * through the same scoped reader (`readScoped`, `./export-tables`), so the
+ * two bundles differ only where their reads are written out on purpose — the
+ * diver's own bookings and buddy teams ordered by the boat (H-81), and the
+ * joins only one bundle needs. `null` for a shop, or a diver of this shop,
+ * that does not exist.
+ */
+export function loadExportBundleInput(
   db: AppDb,
-  shopId: string,
-  _now: Date = nowDate(),
-): Promise<ExportBundleInput | null> {
+  scope: Extract<ExportBundleScope, { kind: "shop" }>,
+): Promise<ExportBundleInput | null>;
+export function loadExportBundleInput(
+  db: AppDb,
+  scope: Extract<ExportBundleScope, { kind: "diver" }>,
+): Promise<DiverExportBundleInput | null>;
+export function loadExportBundleInput(
+  db: AppDb,
+  scope: ExportBundleScope,
+): Promise<ExportBundleInput | DiverExportBundleInput | null> {
   // One read-only repeatable-read transaction: the bundle is a relational
   // snapshot, and per-statement snapshots would let a booking that commits
   // mid-export show up in bookings.csv while its person is missing from
   // people.csv.
   return db.transaction(
-    async (tx) => {
-      const context = await loadShopExportContext(tx, shopId);
+    async (tx): Promise<ExportBundleInput | DiverExportBundleInput | null> => {
+      if (scope.kind === "shop") {
+        const context = await loadShopExportContext(tx, scope.shopId);
+        if (!context) return null;
+        return {
+          ...bundleHeading(context.shop, context.photoUrls),
+          // A rehearsal is practice, not the shop's record (ADR
+          // 20261012-rehearsal-departures): left out of every file at once.
+          tables: withoutRehearsals(
+            buildExportTables(SHOP_EXPORT_FILES, context),
+            await shopRehearsalIds(tx, scope.shopId),
+          ),
+        };
+      }
+      const context = await loadDiverExportContext(tx, scope.shopId, scope.personId);
       if (!context) return null;
-      const { shop, photoUrls } = context;
-      // A rehearsal is practice, not the shop's record (ADR
-      // 20261012-rehearsal-departures): left out of every file at once.
-      const tables = withoutRehearsals(
-        buildExportTables(SHOP_EXPORT_FILES, context),
-        await shopRehearsalIds(tx, shopId),
-      );
       return {
-        shopName: shop.name,
-        shopSlug: shop.slug,
-        timezone: shop.timezone,
-        tables,
-        photoUrls: [...new Set(photoUrls)].sort(),
+        ...bundleHeading(context.shop, context.photoUrls),
+        diverName: context.person.fullName,
+        tables: withoutRehearsals(
+          buildExportTables(DIVER_EXPORT_FILES, context),
+          await shopRehearsalIds(tx, scope.shopId),
+        ),
       };
     },
     { accessMode: "read only", isolationLevel: "repeatable read" },
   );
+}
+
+/** What both bundles say about the shop, and their photo list, deduped and sorted. */
+function bundleHeading(
+  shop: { name: string; slug: string; timezone: string },
+  photoUrls: readonly string[],
+) {
+  return {
+    shopName: shop.name,
+    shopSlug: shop.slug,
+    timezone: shop.timezone,
+    photoUrls: [...new Set(photoUrls)].sort(),
+  };
+}
+
+/** One shop's whole bundle — {@link loadExportBundleInput} with a shop scope. */
+export function loadShopExportBundleInput(
+  db: AppDb,
+  shopId: string,
+  _now: Date = nowDate(),
+): Promise<ExportBundleInput | null> {
+  return loadExportBundleInput(db, { kind: "shop", shopId });
 }
 
 /**
@@ -119,12 +171,12 @@ export async function loadShopExportBundleInput(
  * incident reports with their people and dated notes (ADR
  * 20261012-incident-reports — the shop bundle only, never a diver's own).
  */
-async function readSafetyRecordRows(tx: AppTransaction, shopId: string) {
+async function readSafetyRecordRows(tx: AppTransaction, scope: ShopExportScope) {
   return {
-    staffCredentialRows: await readShopScoped(tx, "staffCredentials", shopId),
-    incidentReportRows: await readShopScoped(tx, "incidentReports", shopId),
-    incidentPersonRows: await readShopScoped(tx, "incidentReportPeople", shopId),
-    incidentAddendumRows: await readShopScoped(tx, "incidentReportAddenda", shopId),
+    staffCredentialRows: await readScoped(tx, "staffCredentials", scope),
+    incidentReportRows: await readScoped(tx, "incidentReports", scope),
+    incidentPersonRows: await readScoped(tx, "incidentReportPeople", scope),
+    incidentAddendumRows: await readScoped(tx, "incidentReportAddenda", scope),
   };
 }
 
@@ -161,8 +213,9 @@ async function readReviewRowsWithReplies(tx: AppTransaction, shopId: string) {
 async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   const [shop] = await tx.select().from(shops).where(eq(shops.id, shopId)).limit(1);
   if (!shop) return null;
+  const scope: ShopExportScope = { kind: "shop", shopId };
 
-  const peopleRows = await readShopScoped(tx, "people", shopId);
+  const peopleRows = await readScoped(tx, "people", scope);
   const personName = new Map(peopleRows.map((row) => [row.id, row.fullName]));
 
   // Joined through people rather than an id list: a long-lived shop's
@@ -181,10 +234,10 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   const personRolesText = (personId: string) =>
     (rolesByPerson.get(personId) ?? []).sort().join("; ");
 
-  const siteRows = await readShopScoped(tx, "diveSites", shopId);
+  const siteRows = await readScoped(tx, "diveSites", scope);
   const siteName = new Map(siteRows.map((row) => [row.id, row.name]));
 
-  const creatureRows = await readShopScoped(tx, "diveSiteCreatures", shopId);
+  const creatureRows = await readScoped(tx, "diveSiteCreatures", scope);
 
   const cardById = new Map(
     fieldGuideCards(creatureRows, diverTranslator(shop.defaultLocale)).map((card) => [
@@ -193,9 +246,9 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     ]),
   );
 
-  const momentRows = await readShopScoped(tx, "diveSiteMoments", shopId);
+  const momentRows = await readScoped(tx, "diveSiteMoments", scope);
 
-  const recapPhotoRows = await readShopScoped(tx, "recapPhotos", shopId);
+  const recapPhotoRows = await readScoped(tx, "recapPhotos", scope);
 
   const tripRecapPhotoRows = await tx
     .select({
@@ -242,42 +295,38 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     .where(eq(recapPulses.shopId, shopId))
     .orderBy(asc(recapPulses.createdAt), asc(recapPulses.id));
 
-  const promoCodeRows = await readShopScoped(tx, "shopPromoCodes", shopId);
+  const promoCodeRows = await readScoped(tx, "shopPromoCodes", scope);
   const promoCodeText = new Map(promoCodeRows.map((row) => [row.id, row.code]));
 
-  const divePackageRows = await readShopScoped(tx, "divePackages", shopId);
-  const entitlementRows = await readShopScoped(tx, "divePackageEntitlements", shopId);
+  const divePackageRows = await readScoped(tx, "divePackages", scope);
+  const entitlementRows = await readScoped(tx, "divePackageEntitlements", scope);
 
-  const courseRows = await readShopScoped(tx, "courses", shopId);
+  const courseRows = await readScoped(tx, "courses", scope);
   const courseTitle = new Map(courseRows.map((row) => [row.id, row.title]));
 
-  const seriesRows = await readShopScoped(tx, "tripSeries", shopId);
+  const seriesRows = await readScoped(tx, "tripSeries", scope);
   const seriesTitle = new Map(seriesRows.map((row) => [row.id, row.title]));
 
-  const seriesSkipRows = await readShopScoped(tx, "tripSeriesSkips", shopId);
+  const seriesSkipRows = await readScoped(tx, "tripSeriesSkips", scope);
 
-  const waitlistRows = await readShopScoped(tx, "tripWaitlistEntries", shopId);
+  const waitlistRows = await readScoped(tx, "tripWaitlistEntries", scope);
 
-  const lastMinuteListRows = await readShopScoped(tx, "lastMinuteListEntries", shopId);
+  const lastMinuteListRows = await readScoped(tx, "lastMinuteListEntries", scope);
 
-  const lastMinutePromoRows = await readShopScoped(tx, "tripLastMinutePromos", shopId);
+  const lastMinutePromoRows = await readScoped(tx, "tripLastMinutePromos", scope);
 
-  const lastMinutePromoRecipientRows = await readShopScoped(
-    tx,
-    "tripLastMinutePromoRecipients",
-    shopId,
-  );
+  const lastMinutePromoRecipientRows = await readScoped(tx, "tripLastMinutePromoRecipients", scope);
 
-  const orderRows = await readShopScoped(tx, "orders", shopId);
+  const orderRows = await readScoped(tx, "orders", scope);
 
-  const orderLineRows = await readShopScoped(tx, "orderLineItems", shopId);
+  const orderLineRows = await readScoped(tx, "orderLineItems", scope);
 
-  const workOrderBillRows = await readShopScoped(tx, "workOrderBills", shopId);
+  const workOrderBillRows = await readScoped(tx, "workOrderBills", scope);
 
-  const customerGearReminderSettingRows = await readShopScoped(
+  const customerGearReminderSettingRows = await readScoped(
     tx,
     "customerGearReminderSettings",
-    shopId,
+    scope,
   );
 
   // diveday:allow-deleted-trips: the bundle is the shop taking everything it
@@ -293,9 +342,9 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   const tripTitle = new Map(tripRows.map((row) => [row.id, row.title]));
   const tripStartsAt = new Map(tripRows.map((row) => [row.id, row.startsAt]));
 
-  const tripChangeEventRows = await readShopScoped(tx, "tripChangeEvents", shopId);
+  const tripChangeEventRows = await readScoped(tx, "tripChangeEvents", scope);
 
-  const tripStageEventRows = await readShopScoped(tx, "tripStageEvents", shopId);
+  const tripStageEventRows = await readScoped(tx, "tripStageEvents", scope);
 
   const scheduleDayRows = await tx
     .select()
@@ -311,7 +360,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     .where(eq(trips.shopId, shopId))
     .orderBy(asc(tripDives.tripId), asc(tripDives.diveNumber));
 
-  const requirementRows = await readShopScoped(tx, "tripRequirements", shopId);
+  const requirementRows = await readScoped(tx, "tripRequirements", scope);
   const requirementsByTrip = new Map(requirementRows.map((row) => [row.tripId, row]));
   const orderedRequirementRows = tripRows
     .filter((trip) => requirementsByTrip.has(trip.id))
@@ -345,7 +394,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     .where(and(eq(crewAssignmentRequests.shopId, shopId), isNull(crewAssignmentRequests.deletedAt)))
     .orderBy(asc(crewAssignmentRequests.requestedAt), asc(crewAssignmentRequests.id));
 
-  const safetyRecordRows = await readSafetyRecordRows(tx, shopId);
+  const safetyRecordRows = await readSafetyRecordRows(tx, scope);
 
   // **`bookings.csv`'s row order, and why the diver's name is in it.**
   //
@@ -374,11 +423,11 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
   const bookingPerson = new Map(bookingRows.map((row) => [row.id, row.personId]));
 
-  const tripHelpRequestRows = await readShopScoped(tx, "tripHelpRequests", shopId);
+  const tripHelpRequestRows = await readScoped(tx, "tripHelpRequests", scope);
 
-  const tipRows = await readShopScoped(tx, "tips", shopId);
+  const tipRows = await readScoped(tx, "tips", scope);
 
-  const paymentRows = await readShopScoped(tx, "bookingPayments", shopId);
+  const paymentRows = await readScoped(tx, "bookingPayments", scope);
   const paymentByBooking = new Map(paymentRows.map((row) => [row.bookingId, row]));
 
   // The diver's link that brought a seat, folded into bookings.csv beside
@@ -389,34 +438,34 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     ),
   );
 
-  const paymentEventRows = await readShopScoped(tx, "bookingPaymentEvents", shopId);
+  const paymentEventRows = await readScoped(tx, "bookingPaymentEvents", scope);
 
-  const checkoutRows = await readShopScoped(tx, "bookingCheckouts", shopId);
+  const checkoutRows = await readScoped(tx, "bookingCheckouts", scope);
 
-  const executedDiveRows = await readShopScoped(tx, "executedDives", shopId);
+  const executedDiveRows = await readScoped(tx, "executedDives", scope);
 
-  const sightingRows = await readShopScoped(tx, "tripSightings", shopId);
+  const sightingRows = await readScoped(tx, "tripSightings", scope);
 
-  const checkoutBookingRows = await readShopScoped(tx, "bookingCheckoutBookings", shopId);
+  const checkoutBookingRows = await readScoped(tx, "bookingCheckoutBookings", scope);
 
-  const promoRedemptionRows = await readShopScoped(tx, "shopPromoRedemptions", shopId);
+  const promoRedemptionRows = await readScoped(tx, "shopPromoRedemptions", scope);
 
-  const noteRows = await readShopScoped(tx, "internalNotes", shopId);
+  const noteRows = await readScoped(tx, "internalNotes", scope);
 
-  const activityRows = await readShopScoped(tx, "activityEvents", shopId);
+  const activityRows = await readScoped(tx, "activityEvents", scope);
 
-  const notificationRows = await readShopScoped(tx, "notificationDeliveries", shopId);
+  const notificationRows = await readScoped(tx, "notificationDeliveries", scope);
 
-  const inquiryRows = await readShopScoped(tx, "courseInquiries", shopId);
+  const inquiryRows = await readScoped(tx, "courseInquiries", scope);
   const inquiryById = new Map(inquiryRows.map((row) => [row.id, row]));
 
-  const invitationRows = await readShopScoped(tx, "tripInvitations", shopId);
+  const invitationRows = await readScoped(tx, "tripInvitations", scope);
 
-  const arrivalRows = await readShopScoped(tx, "bookingArrivalEvents", shopId);
+  const arrivalRows = await readScoped(tx, "bookingArrivalEvents", scope);
 
-  const rollCallRows = await readShopScoped(tx, "rollCallEvents", shopId);
+  const rollCallRows = await readScoped(tx, "rollCallEvents", scope);
 
-  const crewRollCallRows = await readShopScoped(tx, "rollCallCrewEvents", shopId);
+  const crewRollCallRows = await readScoped(tx, "rollCallCrewEvents", scope);
 
   // **`buddy_pairs.csv` is a file a person reads** (H-81, issue #1795): teams
   // in the panel's order — formation time, then the members' names, then
@@ -425,67 +474,67 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   // order at all: every member of a team shares its `pair_id`, so the tie fell
   // through to whatever Postgres returned.
   const buddyPairRows = sortBuddyMemberRowsByTeam(
-    await readShopScoped(tx, "buddyPairMembers", shopId),
+    await readScoped(tx, "buddyPairMembers", scope),
     (row) => {
       const memberId = row.bookingId ? bookingPerson.get(row.bookingId) : row.crewPersonId;
       return (memberId ? personName.get(memberId) : undefined) ?? "";
     },
   );
 
-  const certificationRows = await readShopScoped(tx, "certifications", shopId);
+  const certificationRows = await readScoped(tx, "certifications", scope);
 
-  const specialtyRows = await readShopScoped(tx, "specialtyCertifications", shopId);
+  const specialtyRows = await readScoped(tx, "specialtyCertifications", scope);
 
-  const nitroxRows = await readShopScoped(tx, "nitroxCertifications", shopId);
+  const nitroxRows = await readScoped(tx, "nitroxCertifications", scope);
 
-  const templateRows = await readShopScoped(tx, "waiverTemplates", shopId);
+  const templateRows = await readScoped(tx, "waiverTemplates", scope);
 
-  const waiverMaterialityRows = await readShopScoped(tx, "waiverMaterialityDecisions", shopId);
+  const waiverMaterialityRows = await readScoped(tx, "waiverMaterialityDecisions", scope);
 
-  const waiverRows = await readShopScoped(tx, "waiverRecords", shopId);
+  const waiverRows = await readScoped(tx, "waiverRecords", scope);
 
-  const courseFormRows = await readShopScoped(tx, "courseForms", shopId);
-  const courseFormVersionRows = await readShopScoped(tx, "courseFormVersions", shopId);
-  const courseFormRequirementRows = await readShopScoped(tx, "courseFormRequirements", shopId);
-  const courseFormRecordRows = await readShopScoped(tx, "courseFormRecords", shopId);
+  const courseFormRows = await readScoped(tx, "courseForms", scope);
+  const courseFormVersionRows = await readScoped(tx, "courseFormVersions", scope);
+  const courseFormRequirementRows = await readScoped(tx, "courseFormRequirements", scope);
+  const courseFormRecordRows = await readScoped(tx, "courseFormRecords", scope);
 
-  const rentalFitRows = await readShopScoped(tx, "rentalFitProfiles", shopId);
+  const rentalFitRows = await readScoped(tx, "rentalFitProfiles", scope);
 
-  const gearItemRows = await readShopScoped(tx, "gearItems", shopId);
+  const gearItemRows = await readScoped(tx, "gearItems", scope);
   const gearItemLabel = new Map(gearItemRows.map((row) => [row.id, row.label]));
 
-  const gearServiceEventRows = await readShopScoped(tx, "gearServiceEvents", shopId);
+  const gearServiceEventRows = await readScoped(tx, "gearServiceEvents", scope);
 
-  const gearReservationRows = await readShopScoped(tx, "gearReservations", shopId);
+  const gearReservationRows = await readScoped(tx, "gearReservations", scope);
 
   // The bench (ADR 20261008-gear-work-orders): a diver's own pieces, the
   // tickets about them, and what each ticket cost.
-  const customerGearItemRows = await readShopScoped(tx, "customerGearItems", shopId);
+  const customerGearItemRows = await readScoped(tx, "customerGearItems", scope);
 
-  const workOrderRows = await readShopScoped(tx, "workOrders", shopId);
+  const workOrderRows = await readScoped(tx, "workOrders", scope);
 
-  const workOrderItemRows = await readShopScoped(tx, "workOrderItems", shopId);
+  const workOrderItemRows = await readScoped(tx, "workOrderItems", scope);
 
-  const workOrderLineRows = await readShopScoped(tx, "workOrderLines", shopId);
+  const workOrderLineRows = await readScoped(tx, "workOrderLines", scope);
 
-  const workOrderCareRows = await readShopScoped(tx, "workOrderCare", shopId);
+  const workOrderCareRows = await readScoped(tx, "workOrderCare", scope);
 
-  const workOrderEventRows = await readShopScoped(tx, "workOrderEvents", shopId);
+  const workOrderEventRows = await readScoped(tx, "workOrderEvents", scope);
 
-  const checklistItemRows = await readShopScoped(tx, "preDepartureChecklistItems", shopId);
+  const checklistItemRows = await readScoped(tx, "preDepartureChecklistItems", scope);
   const checklistItemLabel = new Map(checklistItemRows.map((row) => [row.id, row.label]));
 
-  const checklistEventRows = await readShopScoped(tx, "preDepartureCheckEvents", shopId);
+  const checklistEventRows = await readScoped(tx, "preDepartureCheckEvents", scope);
 
-  const priorVisitRows = await readShopScoped(tx, "priorVisits", shopId);
+  const priorVisitRows = await readScoped(tx, "priorVisits", scope);
 
-  const importedPaymentHistoryRows = await readShopScoped(tx, "importedPaymentHistory", shopId);
+  const importedPaymentHistoryRows = await readScoped(tx, "importedPaymentHistory", scope);
 
-  const boatRows = await readShopScoped(tx, "boats", shopId);
+  const boatRows = await readScoped(tx, "boats", scope);
 
   const boatName = new Map(boatRows.map((row) => [row.id, row.name]));
 
-  const tripLensRows = await readShopScoped(tx, "tripLenses", shopId);
+  const tripLensRows = await readScoped(tx, "tripLenses", scope);
 
   // Per-person rollups for contacts.csv. Archived cards never represent a
   // diver in a migration file; archived people still export, marked.
@@ -740,38 +789,19 @@ export type ShopExportContext = NonNullable<Awaited<ReturnType<typeof loadShopEx
  * by `shopId` alone, which carries no other column and is only ever looked
  * up by an id taken from the diver's own rows.
  */
-export async function loadDiverExportBundleInput(
+export function loadDiverExportBundleInput(
   db: AppDb,
   shopId: string,
   personId: string,
   _now: Date = nowDate(),
 ): Promise<DiverExportBundleInput | null> {
-  return db.transaction(
-    async (tx) => {
-      const context = await loadDiverExportContext(tx, shopId, personId);
-      if (!context) return null;
-      const { shop, person, photoUrls } = context;
-      const tables = withoutRehearsals(
-        buildExportTables(DIVER_EXPORT_FILES, context),
-        await shopRehearsalIds(tx, shopId),
-      );
-      return {
-        shopName: shop.name,
-        shopSlug: shop.slug,
-        timezone: shop.timezone,
-        diverName: person.fullName,
-        tables,
-        photoUrls: [...new Set(photoUrls)].sort(),
-      };
-    },
-    { accessMode: "read only", isolationLevel: "repeatable read" },
-  );
+  return loadExportBundleInput(db, { kind: "diver", shopId, personId });
 }
 
 /**
  * {@link loadShopExportContext}'s per-diver twin: every read here is scoped to
  * `shopId` **and** to `personId` (or to an id already proven to be theirs),
- * through `readPersonScoped` / `readBookingScoped` where the table is a plain
+ * through `readScoped` with a diver scope where the table is a plain
  * one and written out where it is not. `null` when the person is not this
  * shop's.
  */
@@ -812,6 +842,9 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, personId)))
     .orderBy(asc(bookings.createdAt), asc(trips.startsAt), asc(trips.title), asc(bookings.id));
   const bookingIds = bookingRows.map((row) => row.id);
+  // Every plain read below is this diver's: by their person id, or by these
+  // bookings (`readScoped`).
+  const scope: DiverExportScope = { kind: "diver", shopId, personId, bookingIds };
   const tripIds = [...new Set(bookingRows.map((row) => row.tripId))];
   const tripRows = tripIds.length
     ? await tx
@@ -822,7 +855,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
   const tripTitle = new Map(tripRows.map((row) => [row.id, row.title]));
   const tripStartsAt = new Map(tripRows.map((row) => [row.id, row.startsAt]));
 
-  const paymentRows = await readBookingScoped(tx, "bookingPayments", shopId, bookingIds);
+  const paymentRows = await readScoped(tx, "bookingPayments", scope);
   const paymentByBooking = new Map(paymentRows.map((row) => [row.bookingId, row]));
 
   // Everyone this bundle might need to *name* besides the diver — a
@@ -836,37 +869,27 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     .where(eq(people.shopId, shopId));
   const personName = new Map(staffRows.map((row) => [row.id, row.fullName]));
 
-  const certificationRows = await readPersonScoped(tx, "certifications", shopId, personId);
+  const certificationRows = await readScoped(tx, "certifications", scope);
 
-  const specialtyRows = await readPersonScoped(tx, "specialtyCertifications", shopId, personId);
+  const specialtyRows = await readScoped(tx, "specialtyCertifications", scope);
 
-  const nitroxRows = await readPersonScoped(tx, "nitroxCertifications", shopId, personId);
+  const nitroxRows = await readScoped(tx, "nitroxCertifications", scope);
 
-  const waitlistRows = await readPersonScoped(tx, "tripWaitlistEntries", shopId, personId);
+  const waitlistRows = await readScoped(tx, "tripWaitlistEntries", scope);
 
-  const invitationRows = await readPersonScoped(tx, "tripInvitations", shopId, personId);
+  const invitationRows = await readScoped(tx, "tripInvitations", scope);
 
-  const lastMinuteListRows = await readPersonScoped(tx, "lastMinuteListEntries", shopId, personId);
+  const lastMinuteListRows = await readScoped(tx, "lastMinuteListEntries", scope);
 
-  const lastMinutePromoRecipientRows = await readPersonScoped(
-    tx,
-    "tripLastMinutePromoRecipients",
-    shopId,
-    personId,
-  );
+  const lastMinutePromoRecipientRows = await readScoped(tx, "tripLastMinutePromoRecipients", scope);
 
-  const paymentEventRows = await readBookingScoped(tx, "bookingPaymentEvents", shopId, bookingIds);
+  const paymentEventRows = await readScoped(tx, "bookingPaymentEvents", scope);
 
-  const checkoutBookingRows = await readBookingScoped(
-    tx,
-    "bookingCheckoutBookings",
-    shopId,
-    bookingIds,
-  );
+  const checkoutBookingRows = await readScoped(tx, "bookingCheckoutBookings", scope);
 
-  const arrivalRows = await readBookingScoped(tx, "bookingArrivalEvents", shopId, bookingIds);
+  const arrivalRows = await readScoped(tx, "bookingArrivalEvents", scope);
 
-  const rollCallRows = await readBookingScoped(tx, "rollCallEvents", shopId, bookingIds);
+  const rollCallRows = await readScoped(tx, "rollCallEvents", scope);
 
   // Either this diver's own seat, or — if they are also a staff member —
   // a team they were recorded as crewing. Two rows can never collide: a
@@ -903,14 +926,9 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
       asc(buddyPairMembers.id),
     );
 
-  const notificationRows = await readBookingScoped(
-    tx,
-    "notificationDeliveries",
-    shopId,
-    bookingIds,
-  );
+  const notificationRows = await readScoped(tx, "notificationDeliveries", scope);
 
-  const orderRows = await readPersonScoped(tx, "orders", shopId, personId);
+  const orderRows = await readScoped(tx, "orders", scope);
   const orderIds = orderRows.map((row) => row.id);
   const orderLineRows = orderIds.length
     ? await tx
@@ -920,9 +938,9 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
         .orderBy(asc(orderLineItems.orderId), asc(orderLineItems.createdAt), asc(orderLineItems.id))
     : [];
 
-  const tipRows = await readBookingScoped(tx, "tips", shopId, bookingIds);
+  const tipRows = await readScoped(tx, "tips", scope);
 
-  const recapPhotoRows = await readBookingScoped(tx, "recapPhotos", shopId, bookingIds);
+  const recapPhotoRows = await readScoped(tx, "recapPhotos", scope);
 
   const reviewRows = await tx
     .select()
@@ -943,7 +961,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
         .orderBy(asc(reviewModerationEvents.occurredAt), asc(reviewModerationEvents.id))
     : [];
 
-  const entitlementRows = await readPersonScoped(tx, "divePackageEntitlements", shopId, personId);
+  const entitlementRows = await readScoped(tx, "divePackageEntitlements", scope);
   const packageIds = [...new Set(entitlementRows.map((row) => row.packageId))];
   const packageRows = packageIds.length
     ? await tx
@@ -953,7 +971,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     : [];
   const packageName = new Map(packageRows.map((row) => [row.id, row.name]));
 
-  const rentalFitRows = await readPersonScoped(tx, "rentalFitProfiles", shopId, personId);
+  const rentalFitRows = await readScoped(tx, "rentalFitProfiles", scope);
 
   const gearReservationRows = await tx
     .select()
@@ -983,9 +1001,9 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
 
   // The diver's own gear on file and the service tickets about it, with each
   // ticket's pieces and lines (ADR 20261008-gear-work-orders).
-  const customerGearItemRows = await readPersonScoped(tx, "customerGearItems", shopId, personId);
+  const customerGearItemRows = await readScoped(tx, "customerGearItems", scope);
 
-  const workOrderRows = await readPersonScoped(tx, "workOrders", shopId, personId);
+  const workOrderRows = await readScoped(tx, "workOrders", scope);
 
   const diverWorkOrderIds = workOrderRows.map((row) => row.id);
   const workOrderLineRows = diverWorkOrderIds.length
@@ -1013,20 +1031,15 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
         .orderBy(asc(workOrderCare.createdAt), asc(workOrderCare.id))
     : [];
 
-  const priorVisitRows = await readPersonScoped(tx, "priorVisits", shopId, personId);
+  const priorVisitRows = await readScoped(tx, "priorVisits", scope);
 
-  const importedPaymentHistoryRows = await readPersonScoped(
-    tx,
-    "importedPaymentHistory",
-    shopId,
-    personId,
-  );
+  const importedPaymentHistoryRows = await readScoped(tx, "importedPaymentHistory", scope);
 
-  const waiverRows = await readPersonScoped(tx, "waiverRecords", shopId, personId);
+  const waiverRows = await readScoped(tx, "waiverRecords", scope);
 
-  const courseFormRecordRows = await readPersonScoped(tx, "courseFormRecords", shopId, personId);
+  const courseFormRecordRows = await readScoped(tx, "courseFormRecords", scope);
 
-  const inquiryRows = await readPersonScoped(tx, "courseInquiries", shopId, personId);
+  const inquiryRows = await readScoped(tx, "courseInquiries", scope);
   const inquiryCourseIds = [
     ...new Set(inquiryRows.flatMap((row) => (row.courseId ? [row.courseId] : []))),
   ];

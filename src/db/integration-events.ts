@@ -181,7 +181,7 @@ export async function enqueueOrderIntegrationEvent(
   input: {
     shopId: string;
     orderId: string;
-    eventType: "order.created" | "order.paid" | "order.refunded";
+    eventType: "order.created" | "order.paid" | "order.refunded" | "order.voided";
     idempotencyKey: string;
     status?: string;
     amountPaidCents?: number;
@@ -199,6 +199,32 @@ export async function enqueueOrderIntegrationEvent(
     idempotencyKey: input.idempotencyKey,
     payload: payload as unknown as Record<string, unknown>,
   });
+}
+
+/**
+ * Whether an order already has an event of this type queued.
+ *
+ * The accounting adapters ask it before booking a sale: an `order.voided`
+ * delivered while the `order.paid` before it was still retrying found nothing
+ * to undo, so the sale must never be booked after it (issue #2309).
+ */
+export async function orderHasIntegrationEvent(
+  db: DbExecutor,
+  input: { shopId: string; orderId: string; eventType: "order.voided" },
+): Promise<boolean> {
+  const [found] = await db
+    .select({ id: integrationEvents.id })
+    .from(integrationEvents)
+    .where(
+      and(
+        eq(integrationEvents.shopId, input.shopId),
+        eq(integrationEvents.entityType, "order"),
+        eq(integrationEvents.entityId, input.orderId),
+        eq(integrationEvents.eventType, input.eventType),
+      ),
+    )
+    .limit(1);
+  return Boolean(found);
 }
 
 /**

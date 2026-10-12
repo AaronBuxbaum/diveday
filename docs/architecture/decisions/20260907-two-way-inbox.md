@@ -30,10 +30,10 @@ URL the app then acts on without checking it against what the stack provisioned.
    table is keyed by booking and purpose — one row per booking per kind — and a reply is keyed by
    a person and a message, of which there may be any number.
 2. **Attribution by address, inside the shop the message was sent to.** The receiving route
-   resolves the tenant first — the reply-to token for email, the WhatsApp Business Account for
-   WhatsApp — and only then matches the sender's address to a live person in that shop: an email
+   resolves the tenant first — the reply-to token for email, the shop's phone number id for
+   WhatsApp (H-83; an event naming no number is dropped) — and only then matches the sender's address to a live person in that shop: an email
    exactly, a phone by its digits. No match leaves `person_id` null and the row reads as an
-   unknown sender; nothing is guessed across shops, and a message for a token or a WABA no shop
+   unknown sender; nothing is guessed across shops, and a message for a token or a number no shop
    holds is dropped rather than filed unscoped. **And the address itself has to be one the
    provider vouched for.** Meta reports the number a WhatsApp message was sent from; email has no
    such guarantee, because the reply-to address is on every message a shop has ever sent and a

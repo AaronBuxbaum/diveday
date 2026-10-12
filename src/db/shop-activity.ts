@@ -13,6 +13,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import {
   activityEvents,
+  bookingCheckouts,
   bookings,
   orders,
   people,
@@ -297,6 +298,7 @@ export async function listShopActivityPeople(db: AppDb, shopId: string) {
  */
 export type ShopActivityWrite =
   | { code: "order_refunded"; orderId: string }
+  | { code: "paid_after_close_refunded"; checkoutId: string }
   | {
       code: "seat_refunded" | "payment_waived" | "payment_marked_refunded";
       bookingId: string;
@@ -376,6 +378,21 @@ async function writeShopActivity(
       bookingId: null,
       orderId: order.id,
       subjectPersonId: order.personId,
+      entry: { code: write.code, params: { actor: actor.name } },
+    };
+  } else if (write.code === "paid_after_close_refunded") {
+    if (!isUuid(write.checkoutId)) return false;
+    const [checkout] = await db
+      .select({ tripId: bookingCheckouts.tripId })
+      .from(bookingCheckouts)
+      .where(and(eq(bookingCheckouts.id, write.checkoutId), eq(bookingCheckouts.shopId, shopId)))
+      .limit(1);
+    if (!checkout) return false;
+    values = {
+      tripId: checkout.tripId,
+      bookingId: null,
+      orderId: null,
+      subjectPersonId: null,
       entry: { code: write.code, params: { actor: actor.name } },
     };
   } else if ("bookingId" in write) {

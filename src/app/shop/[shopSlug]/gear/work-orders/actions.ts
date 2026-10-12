@@ -20,6 +20,7 @@ import {
 } from "@/db/work-orders";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { parseForm, single } from "@/lib/form-parse";
 import {
   GEAR_KIND_ORDER,
   GEAR_SERVICE_KINDS,
@@ -270,19 +271,16 @@ function careRowsFrom(formData: FormData): Record<string, Record<string, string>
  */
 export async function recordWorkOrderWorkAction(formData: FormData) {
   const { session, board, order } = await requireWorkOrderSurface();
-  const parsed = orderActionSchema
-    .extend({
-      outcome: z.string(),
-      outcomeNote: z.string().trim().max(WORK_ORDER_TEXT_LIMITS.outcomeNote),
-      performedOn: z.string().trim().max(10),
-    })
-    .safeParse({
-      workOrderId: formData.get("workOrderId"),
-      outcome: formData.get("outcome") ?? "",
-      outcomeNote: formData.get("outcomeNote") ?? "",
-      performedOn: formData.get("performedOn") ?? "",
-    });
-  if (!parsed.success) revalidateAndRedirect(board, noticeUrl(board, "invalid"));
+  const parsed = parseForm(
+    z.object({
+      workOrderId: single(z.uuid()),
+      outcome: single(z.string(), ""),
+      outcomeNote: single(z.string().trim().max(WORK_ORDER_TEXT_LIMITS.outcomeNote), ""),
+      performedOn: single(z.string().trim().max(10), ""),
+    }),
+    formData,
+  );
+  if (!parsed.ok) revalidateAndRedirect(board, noticeUrl(board, "invalid"));
   const landing = order(parsed.data.workOrderId);
   const outcome = parsed.data.outcome;
   if (!isWorkOrderOutcome(outcome)) {

@@ -29,6 +29,7 @@
     "medical_clearance_opened": "{actor} abrió la evaluación médica de {diver}",
     "record_exported": "{actor} descargó una copia del registro de {diver}",
     "order_refunded": "{actor} reembolsó un pedido",
+    "paid_after_close_refunded": "{actor} reembolsó un pago hecho con el cobro ya cerrado",
     "seat_refunded": "{actor} quitó a {diver} y reembolsó la plaza con tarjeta",
     "payment_waived": "{actor} marcó la plaza de {diver} como exonerada",
     "payment_marked_refunded": "{actor} marcó la plaza de {diver} como reembolsada",
