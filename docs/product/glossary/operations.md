@@ -628,7 +628,28 @@
   `booked`, and the two must not be collapsed — every question about seats *sold* still reads the
   roster, because a released seat never came back to the shelf. Its reader is the evening's
   **souls on board** line, whose crew half is the same idea: assigned crew less the ones a human
-  recorded ashore at the dock.
+  recorded ashore at the dock. A finished departure's Divers tab files its record by the same rule,
+  seat by seat, so the record and the evening count never disagree about one diver: a diver picked
+  up at the second site with a standing after-dive result is under "Sailed". Silence there is not
+  counted as sailing: a seat nobody spoke for is **Not counted at the dock** or **No roll call
+  taken**, never "Sailed" and never **Didn't sail**.
+- **Didn't sail** — a finished departure's record band for the seats somebody *said* did not go:
+  the crew's `not_boarded` at the `departure` roll-call checkpoint, or a released seat (`no_show`)
+  nobody counted aboard at any checkpoint. Only a statement files a seat here (`seatSailed`,
+  `src/lib/closeout.ts`; `recordGroups` in the trip's `roster-model.ts`). It used to take every seat
+  without a dock `boarded` once one seat boarded, which filed a diver picked up at a later site, and
+  a seat nobody counted, as not having sailed (dive-domain review of UX batch 1). Spanish: "No
+  zarparon".
+- **Not counted at the dock** — a finished departure's record band for a seat with no dock result,
+  no standing after-dive result and no `no_show`, on a departure whose dock roll call *was* taken.
+  It names a gap in the count, not a fact about the diver: nobody said they sailed and nobody said
+  they stayed. Spanish: "Sin contar en el muelle".
+- **No roll call taken** — the same silence on a departure with no dock roll call at all, under a
+  band that says so rather than a guess. Whether a roll call was taken is read from the events
+  themselves (`departureRollCallTakenTripIds`, `src/db/manifests.ts`: any `departure` checkpoint
+  event recording `boarded` or `not_boarded`), never from whether a seat reads boarded now, so a
+  departure whose whole roster stayed ashore, or whose boarded seats were later cancelled, never
+  reads it. Spanish: "Sin pase de lista".
 - **Souls on board** — the industry's (and the coast guard's) term for how many *people* a vessel
   left with: passengers (divers, snorkelers and riders) plus crew, one number, no distinction
   between who paid and who works. It is
@@ -800,8 +821,11 @@
   buddy's row red before anyone had said a word about them — on every row of every surface interval,
   which is how a crew learns to stop reading an alert
   ([20260827-the-departure-is-two-working-surfaces](../../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md),
-  decision 4). At the dock the heads-up keeps its old reading: there the crew is *assembling* a
-  boat, so anyone not yet aboard is genuinely still to gather. The offline manifest shows teams read-only by name and states that the split-team read
+  decision 4), and its words say so: "Buddy not back aboard" (es "Compañero sin regresar a bordo"),
+  never "unaccounted for", which undersold a statement a human made. At the dock the heads-up reads
+  "Buddy not aboard yet" (es "Compañero aún no a bordo"): there the crew is *assembling* a boat, so a
+  teammate with no result yet is genuinely still to gather, and a teammate the crew recorded staying
+  ashore (`isRecordedAshore`) raises nothing, because that is a decision already made. The offline manifest shows teams read-only by name and states that the split-team read
   belongs to the live roll call — a saved snapshot cannot know who came back.
   Buddy teams are **divers only**: a snorkeler or a rider on a departure can be on no team, and a
   booking that is on one cannot be changed away from diving until it leaves the team.
@@ -928,7 +952,7 @@
   points (Today's departure card, the command palette's "Boarding" jump) open the manifest on that
   checkpoint. Crew, emergency contacts, after-dive roll call, print, and the offline snapshot are all
   on the same page.
-- **Trip phase** — which kind of work a departure is in, for staff only: Prep, Check-in, Aboard or Back (ADR [20261001-logbook](../../architecture/decisions/20261001-logbook.md), decision 3; `src/lib/trip-phase.ts`). Never printed: every chip that names where a boat is shows the **trip stage** through `boatStageOf`, so Today's card, the departure header and the manifest strip say one word (UX review 2026-10-10, item 1). A phase is orientation a surface lays itself out by (a departure that is Back shows its Divers tab as the record of who sailed) and falls back to the clock when nobody has tapped. The crew's tap still wins: any stage but `home` reads Aboard until the return day ends, and `home` reads Back. It reads the raw tap rather than `liveStageOf`, because a late boat is exactly when it must not turn Back. A cancelled departure has no phase.
+- **Trip phase** — which kind of work a departure is in, for staff only: Prep, Check-in, Aboard or Back (ADR [20261001-logbook](../../architecture/decisions/20261001-logbook.md), decision 3; `src/lib/trip-phase.ts`). Never printed: every chip that names where a boat is shows the **trip stage** through `boatStageOf`, so Today's card, the departure header and the manifest strip say one word (UX review 2026-10-10, item 1). A phase is orientation a surface lays itself out by (a departure that is Back shows its Divers tab as the record of who sailed) and falls back to the clock when nobody has tapped. The crew's tap still wins while it speaks, and the chip and the phase read one rule (`readTap`): any stage but `home` reads Aboard until the return day is over *and* the hour past the scheduled return (`hasReturned`) has gone, whichever is later, and a `home` from the departure's last day reads Back. **A tap never finishes a departure sooner than silence would**: a word that has stopped speaking hands the question back to the clock, so a 20:00 to 23:30 night boat tapped Underway still reads Aboard, and its chip Underway, at 00:15. On a multi-day course (`starts_at`/`ends_at` bound the whole run) a word from an earlier day, `home` included, speaks only on the day it was said and finishes nothing: day two never reads "Underway since 10:30" with yesterday's time. Today's boats-out list (`outTripIds`) and its blocked-aboard reader both read the phase, so one rule gives one answer. It reads the raw tap rather than `liveStageOf`, because a late boat is exactly when it must not turn Back. A cancelled departure has no phase.
 - **Trip stage** — where a departure is, in the crew's own word: one of five (`boarding`,
   `underway`, `surface`, `heading_in`, `home`) tapped on the **manifest** and then repeated, with
   the time it was tapped, everywhere DiveDay draws that boat — the shop home's station chip, the

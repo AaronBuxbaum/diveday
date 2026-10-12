@@ -180,3 +180,96 @@ describe("departureStage", () => {
     expect(at("2026-07-21T10:00:00.000Z", null)).toEqual({ shown: null, finished: false });
   });
 });
+
+/**
+ * A crew's tap must never finish a departure sooner than silence would (dive
+ * domain review of UX batch 1). A night boat back at 23:30 is still inside its
+ * hour's buffer at 00:05: the untapped twin reads Aboard by the clock, so the
+ * one the crew tapped Underway must too, and its chip must still speak.
+ */
+describe("a night boat across midnight", () => {
+  // 20:00 to 23:30 local on Tue Jul 21 2026.
+  const nightStarts = new Date("2026-07-22T00:00:00.000Z");
+  const nightEnds = new Date("2026-07-22T03:30:00.000Z");
+  // Tapped Underway at 21:00 local.
+  const underway = {
+    stage: "underway" as TripStage,
+    recordedAt: new Date("2026-07-22T01:00:00.000Z"),
+  };
+  const at = (now: string, stage: typeof underway | null) => ({
+    startsAt: nightStarts,
+    endsAt: nightEnds,
+    now: new Date(now),
+    timeZone: ZONE,
+    stage,
+    cancelled: false,
+  });
+
+  it("stays Aboard at 00:05 with the chip still saying Underway", () => {
+    expect(tripPhaseOf(at("2026-07-22T04:05:00.000Z", underway))).toBe("aboard");
+    expect(boatStageOf(at("2026-07-22T04:05:00.000Z", underway))?.stage).toBe("underway");
+    expect(departureStage(at("2026-07-22T04:05:00.000Z", underway)).finished).toBe(false);
+  });
+
+  it("is never finished sooner than its untapped twin", () => {
+    for (const now of [
+      "2026-07-22T03:59:00.000Z",
+      "2026-07-22T04:00:00.000Z",
+      "2026-07-22T04:05:00.000Z",
+      "2026-07-22T04:29:00.000Z",
+      "2026-07-22T04:30:00.000Z",
+      "2026-07-22T06:00:00.000Z",
+    ]) {
+      const silent = tripPhaseOf(at(now, null));
+      const tapped = tripPhaseOf(at(now, underway));
+      if (tapped === "back") expect(silent).toBe("back");
+    }
+  });
+
+  it("lets go once the hour's buffer and the return day are both over", () => {
+    expect(tripPhaseOf(at("2026-07-22T04:30:00.000Z", underway))).toBe("back");
+    expect(boatStageOf(at("2026-07-22T04:30:00.000Z", underway))).toBeNull();
+  });
+});
+
+/**
+ * `trips.starts_at`/`ends_at` bound the whole run of a multi-day course. A
+ * `home` tap after day one is the crew tying up for the night, not the course
+ * finishing, and yesterday's word is not today's.
+ */
+describe("a two-day course", () => {
+  // 08:00 Tue Jul 21 to 16:00 Wed Jul 22, local.
+  const courseStarts = new Date("2026-07-21T12:00:00.000Z");
+  const courseEnds = new Date("2026-07-22T20:00:00.000Z");
+  const at = (now: string, stage: TripStage | null, recordedAt: string) => ({
+    startsAt: courseStarts,
+    endsAt: courseEnds,
+    now: new Date(now),
+    timeZone: ZONE,
+    stage: stage ? { stage, recordedAt: new Date(recordedAt) } : null,
+    cancelled: false,
+  });
+  // Home at 17:00 local on day one.
+  const dayOneHome = "2026-07-21T21:00:00.000Z";
+
+  it("is not finished by a home tap on day one", () => {
+    expect(tripPhaseOf(at("2026-07-21T22:00:00.000Z", "home", dayOneHome))).toBe("aboard");
+    expect(departureStage(at("2026-07-21T22:00:00.000Z", "home", dayOneHome)).finished).toBe(false);
+    // Day two, mid-morning.
+    expect(tripPhaseOf(at("2026-07-22T14:30:00.000Z", "home", dayOneHome))).toBe("aboard");
+  });
+
+  it("says nothing on day two about a tap from day one", () => {
+    // Underway at 10:30 local on day one, read at 09:00 on day two.
+    const now = "2026-07-22T13:00:00.000Z";
+    expect(boatStageOf(at(now, "underway", "2026-07-21T14:30:00.000Z"))).toBeNull();
+    expect(boatStageOf(at(now, "home", dayOneHome))).toBeNull();
+    expect(tripPhaseOf(at(now, "underway", "2026-07-21T14:30:00.000Z"))).toBe("aboard");
+  });
+
+  it("is finished by a home tap on its last day", () => {
+    const home = "2026-07-22T20:30:00.000Z";
+    expect(tripPhaseOf(at("2026-07-22T20:45:00.000Z", "home", home))).toBe("back");
+    expect(boatStageOf(at("2026-07-22T20:45:00.000Z", "home", home))?.stage).toBe("home");
+  });
+});

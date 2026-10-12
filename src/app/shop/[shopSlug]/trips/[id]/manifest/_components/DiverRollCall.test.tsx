@@ -585,7 +585,7 @@ describe("the earlier-refusal capsule", () => {
         }),
       ],
     });
-    expect(capsuleOf(split.container)).toHaveTextContent("Buddy unaccounted for");
+    expect(capsuleOf(split.container)).toHaveTextContent("Buddy not back aboard");
     expect(capsuleOf(split.container)).not.toHaveTextContent(CAPSULE);
     split.unmount();
 
@@ -787,7 +787,7 @@ describe("a blocked diver marked aboard at the dock", () => {
         }),
       ],
     });
-    expect(onScreen("Buddy unaccounted for").length).toBeGreaterThan(0);
+    expect(onScreen("Buddy not back aboard").length).toBeGreaterThan(0);
     expect(onScreen("Blocked")).toHaveLength(0);
   });
 });
@@ -833,8 +833,8 @@ describe("the unresolved-referral capsule", () => {
 
 /**
  * **The capsule has the whole row's width** (issue #2008). A Badge never wraps,
- * and the longest capsule ("Buddy unaccounted for", "Compañero sin
- * contabilizar") is wider than the name column at 390px, so beside the name it
+ * and the longest capsule ("Buddy not back aboard", "Compañero sin
+ * regresar a bordo") is wider than the name column at 390px, so beside the name it
  * would spill over the caret and the mark. It takes its own line under the
  * row, from the index's edge to the caret's, still inside the name button:
  * the tap target and what the button opens are unchanged. jsdom has no
@@ -1382,7 +1382,7 @@ describe("a diver with no earlier boarding, after a dive", () => {
       ],
     });
     const onScreen = screen
-      .queryAllByText("Buddy unaccounted for")
+      .queryAllByText("Buddy not back aboard")
       .filter((element) => !element.closest(".hidden.print\\:block"));
     expect(onScreen.length).toBeGreaterThan(0);
   });

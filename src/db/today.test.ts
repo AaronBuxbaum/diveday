@@ -5,6 +5,7 @@ import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { assembleDaySpine, sortStationRows } from "@/lib/today";
+import { shopDayBounds } from "@/lib/zoned";
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { createBoat } from "./boats";
@@ -2608,6 +2609,90 @@ describe("unclosed roll call (DOM-H3)", () => {
         const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
         expect(rowsFor(work, trip.id)).toEqual([]);
         expect(work.outTripIds).not.toContain(trip.id);
+      });
+
+      it("keeps a night boat tapped Underway out past midnight, as long as its untapped twin", async () => {
+        // A crew's tap must never finish a departure sooner than silence would
+        // (dive-domain review of UX batch 1): back at 23:30, still inside the
+        // hour's buffer at 00:05, so the diver aboard on a hold stays listed.
+        const { db, shop } = ctx;
+        const midnight = shopDayBounds(new Date(nowMs()), shop.timezone).to.getTime();
+        const endsAt = midnight - 30 * 60 * 1000;
+        const fixture = await returnedTrip(db, shop.id, {
+          endedHoursAgo: (nowMs() - endsAt) / HOUR,
+          divers: 1,
+          title: "Blocked Aboard, night boat — Molasses",
+        });
+        const { trip, bookingIds, staffId } = fixture;
+        await boardAtDeparture(
+          db,
+          { shopId: shop.id, tripId: trip.id, staffId, bookingIds },
+          new Date(trip.startsAt.getTime() + 5 * 60 * 1000),
+        );
+        const recorded = await recordTripStage(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          stage: "underway",
+          recordedByPersonId: staffId,
+          recordedAt: new Date(trip.startsAt.getTime() + HOUR),
+        });
+        expect(recorded.ok).toBe(true);
+
+        const afterMidnight = new Date(midnight + 5 * 60 * 1000);
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, afterMidnight);
+        expect(rowsFor(work, trip.id).map((row) => row.kind)).toEqual(["blocked_aboard"]);
+        expect(work.outTripIds).toContain(trip.id);
+
+        // Both readers let go together once the hour past its return is over.
+        const later = new Date(endsAt + HOUR);
+        const home = await getTodayWork(db, shop.id, shop.slug, shop.timezone, later);
+        expect(rowsFor(home, trip.id)).toEqual([]);
+        expect(home.outTripIds).not.toContain(trip.id);
+      });
+
+      it("keeps a two-day course out on day two after its crew said home on day one", async () => {
+        // `starts_at`/`ends_at` bound the whole run: a `home` after day one is
+        // the crew tying up for the night, and only one from the last day ends it.
+        const { db, shop } = ctx;
+        const dayTwo = shopDayBounds(new Date(nowMs()), shop.timezone).from.getTime();
+        const [course] = await db
+          .insert(tripsTable)
+          .values({
+            shopId: shop.id,
+            title: "Open Water weekend — Molasses",
+            startsAt: new Date(dayTwo - 16 * HOUR),
+            endsAt: new Date(dayTwo + 16 * HOUR),
+            capacity: 8,
+            plannedDives: 2,
+            priceCents: 45000,
+          })
+          .returning();
+        if (!course) throw new Error("fixture trip insert returned no row");
+        const [staff] = await listStaff(db, shop.id);
+        if (!staff) throw new Error("seed staff missing");
+        const tap = (recordedAt: Date) =>
+          recordTripStage(db, {
+            shopId: shop.id,
+            tripId: course.id,
+            stage: "home",
+            recordedByPersonId: staff.person.id,
+            recordedAt,
+          });
+        expect((await tap(new Date(dayTwo - 7 * HOUR))).ok).toBe(true);
+
+        const dayTwoMorning = new Date(dayTwo + 10 * HOUR);
+        const out = await getTodayWork(db, shop.id, shop.slug, shop.timezone, dayTwoMorning);
+        expect(out.outTripIds).toContain(course.id);
+
+        expect((await tap(new Date(dayTwo + 15 * HOUR))).ok).toBe(true);
+        const home = await getTodayWork(
+          db,
+          shop.id,
+          shop.slug,
+          shop.timezone,
+          new Date(dayTwo + 15.5 * HOUR),
+        );
+        expect(home.outTripIds).not.toContain(course.id);
       });
 
       it("drops the row once the crew count the diver back aboard after the last dive", async () => {

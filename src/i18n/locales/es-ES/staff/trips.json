@@ -478,6 +478,7 @@
     "groupStillToClear": "Pendientes de resolver",
     "groupSailed": "Zarparon",
     "groupDidNotSail": "No zarparon",
+    "groupNotCounted": "Sin contar en el muelle",
     "groupNoRollCall": "Sin pase de lista",
     "groupWaiting": "En espera de plaza",
     "heading": "Buceadores",

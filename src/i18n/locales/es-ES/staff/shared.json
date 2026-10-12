@@ -475,8 +475,8 @@
   },
   "buddyTeam": {
     "with": "Pareja: {names}",
-    "separatedDock": "Compañero aún en tierra",
-    "separatedAfterDive": "Compañero sin contabilizar"
+    "separatedDock": "Compañero aún no a bordo",
+    "separatedAfterDive": "Compañero sin regresar a bordo"
   },
   "payments": {
     "connect": "Conectar pagos"

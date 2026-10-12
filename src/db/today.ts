@@ -939,16 +939,20 @@ async function standingCrewClashes(
       started.map((trip) => trip.id),
     ),
   ]);
-  // The crew's "home" tap beats the clock, as in `tripPhaseOf`, but only a tap
-  // from the departure's last shop day: a course whose crew said home after
-  // day one is still out on day two.
-  const saidHome = (trip: { id: string; endsAt: Date }) => {
-    const tap = stages.get(trip.id);
-    return (
-      tap?.stage === "home" &&
-      tap.recordedAt.getTime() >= shopDayBounds(trip.endsAt, timeZone).from.getTime()
-    );
-  };
+  // Out is the departure phase's own answer (`tripPhaseOf`), the rule
+  // `blockedAboardOnBoatsOut` reads too: one rule, one answer. A `home` from
+  // the last day brings a boat in; a course whose crew said home after day
+  // one is still out on day two. Every row here is short of `hasReturned`
+  // (the scan bound), where no other tap can turn a departure Back.
+  const isOut = (trip: { id: string; startsAt: Date; endsAt: Date }) =>
+    tripPhaseOf({
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      now,
+      timeZone,
+      stage: stages.get(trip.id) ?? null,
+      cancelled: false,
+    }) === "aboard";
   return {
     clashes,
     divers,
@@ -958,9 +962,7 @@ async function standingCrewClashes(
     // row about it at the desk once it has dropped out of the stations
     // (`assembleDaySpine`). Started is the departure's own `startsAt`, so a
     // course between two of its days still counts as out.
-    outTripIds: started
-      .filter((trip) => !hasReturned(trip.endsAt, now) && !saidHome(trip))
-      .map((trip) => trip.id),
+    outTripIds: started.filter(isOut).map((trip) => trip.id),
   };
 }
 

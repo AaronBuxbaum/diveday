@@ -176,47 +176,87 @@ describe("groupRoster", () => {
 
   /**
    * **A finished departure's tab is its record** (UX review 2026-10-10, item
-   * 10): who the crew boarded and who did not, nothing to clear.
+   * 10): who sailed and who did not, nothing to clear. Each seat is filed by
+   * `seatSailed` (src/lib/closeout.ts), the evening count's own rule, so the
+   * record and the close-out cannot disagree about one diver (dive-domain
+   * review of UX batch 1).
    */
-  it("in the record, files the boarded as Sailed and everyone else as Didn't sail", () => {
-    const rows = rowsFor([seat("aboard"), seat("ashore"), seat("gone", { status: "no_show" })], {
-      aboard: readiness("ready"),
-      ashore: readiness("blocked"),
-      gone: readiness("ready"),
-    });
-    const groups = groupRoster({
+  function recordOf(
+    dock: Record<string, "boarded" | "not_boarded">,
+    afterDive: string[] = [],
+    rollCallTaken = Object.keys(dock).length > 0,
+  ) {
+    return { dock: new Map(Object.entries(dock)), afterDive: new Set(afterDive), rollCallTaken };
+  }
+
+  function recordGroupsFor(seats: RosterEntry[], record: ReturnType<typeof recordOf>) {
+    const rows = rowsFor(
+      seats,
+      Object.fromEntries(seats.map((entry) => [entry.booking.id, readiness("ready")])),
+    );
+    return groupRoster({
       t,
       rows,
       requiresPayment: true,
       arrival: undefined,
       controls: waiverControls(t),
-      record: { sailed: new Set(["aboard", "gone"]) },
+      record,
     });
+  }
+
+  it("in the record, files only a dock not-boarded and a released seat as Didn't sail", () => {
+    const groups = recordGroupsFor(
+      [seat("aboard"), seat("ashore"), seat("gone", { status: "no_show" }), seat("unseen")],
+      recordOf({ aboard: "boarded", ashore: "not_boarded" }),
+    );
     expect(ids(groups.sailed)).toEqual(["aboard"]);
-    // A released seat did not sail, whatever a stray tap says.
     expect(ids(groups.didNotSail)).toEqual(["ashore", "gone"]);
+    // Nobody counted this seat at the dock: that is not "didn't sail".
+    expect(ids(groups.uncounted)).toEqual(["unseen"]);
     expect(groups.unrecorded).toEqual([]);
     expect(groups.stillToClear).toEqual([]);
     expect(groups.ready).toEqual([]);
     expect(groups.blockedCount).toBe(0);
   });
 
+  it("in the record, counts a diver picked up at a later site as sailed", () => {
+    const groups = recordGroupsFor(
+      [seat("aboard"), seat("pickedUp"), seat("chase", { status: "no_show" })],
+      // `pickedUp` has no dock result; `chase` was released at the desk and
+      // then counted aboard after dive one, which outranks the desk.
+      recordOf({ aboard: "boarded" }, ["pickedUp", "chase"]),
+    );
+    expect(ids(groups.sailed)).toEqual(["aboard", "pickedUp", "chase"]);
+    expect(groups.didNotSail).toEqual([]);
+    expect(groups.uncounted).toEqual([]);
+  });
+
+  it("in the record, a dock not-boarded outranks a later count, as the evening's does", () => {
+    const groups = recordGroupsFor([seat("left")], recordOf({ left: "not_boarded" }, ["left"]));
+    expect(ids(groups.didNotSail)).toEqual(["left"]);
+  });
+
   it("in the record with no roll call taken, guesses nothing", () => {
-    const rows = rowsFor([seat("a"), seat("gone", { status: "no_show" })], {
-      a: readiness("ready"),
-      gone: readiness("ready"),
-    });
-    const groups = groupRoster({
-      t,
-      rows,
-      requiresPayment: false,
-      arrival: undefined,
-      controls: waiverControls(t),
-      record: { sailed: new Set() },
-    });
+    const groups = recordGroupsFor([seat("a"), seat("gone", { status: "no_show" })], recordOf({}));
     expect(groups.sailed).toEqual([]);
     expect(ids(groups.didNotSail)).toEqual(["gone"]);
     expect(ids(groups.unrecorded)).toEqual(["a"]);
+    expect(groups.uncounted).toEqual([]);
+  });
+
+  it("in the record, takes the roll call's existence from its events, not from a boarded seat", () => {
+    // The whole roster marked not boarded, or the boarded seats since
+    // cancelled: a roll call was taken either way.
+    const notBoarded = recordGroupsFor(
+      [seat("a"), seat("b")],
+      recordOf({ a: "not_boarded", b: "not_boarded" }),
+    );
+    expect(ids(notBoarded.didNotSail)).toEqual(["a", "b"]);
+    expect(notBoarded.unrecorded).toEqual([]);
+
+    const cancelledBoarded = recordGroupsFor([seat("a")], recordOf({}, [], true));
+    expect(ids(cancelledBoarded.uncounted)).toEqual(["a"]);
+    expect(cancelledBoarded.unrecorded).toEqual([]);
   });
 
   it("files a released seat as an ordinary seat when the desk is not open", () => {

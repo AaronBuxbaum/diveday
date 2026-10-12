@@ -46,7 +46,7 @@ describe("Badge geometry", () => {
     },
   );
 
-  // A pill that wraps is a two-line stadium ("Buddy unaccounted for" in the
+  // A pill that wraps is a two-line stadium ("Buddy not back aboard" in the
   // roll call, "Not sent" on the blow-out table at 390px, issue #2008). The
   // caller gives it the room; the pill never breaks its own words.
   it.each(TONES.flatMap((tone) => SIZES.map((size) => [tone, size] as const)))(

@@ -21,6 +21,7 @@ import { listAvailableGearUnits, reserveGearUnit } from "./gear";
 import { subscribeManifestEvents } from "./manifest-events";
 import {
   departureRollCallForBooking,
+  departureRollCallTakenTripIds,
   getTripManifest,
   getTripManifests,
   listDepartureBoardedBookingIds,
@@ -3349,6 +3350,55 @@ describe("boarded at an earlier checkpoint", () => {
     expect(at("departure", sailed.booking.id)).toBe(false);
     expect(at("after_dive_1", sailed.booking.id)).toBe(true);
     expect(at("after_dive_1", joined.booking.id)).toBe(false);
+  });
+});
+
+/**
+ * **Whether a departure roll call was taken at all** (dive-domain review of UX
+ * batch 1). A finished departure's record says "No roll call taken" only when
+ * the crew recorded nothing at the dock: never because nobody boarded, and
+ * never because the seats they boarded were cancelled afterwards.
+ */
+describe("departureRollCallTakenTripIds", () => {
+  async function dockEvent(
+    status: "boarded" | "not_boarded",
+    checkpoint: "departure" | "after_dive_1" = "departure",
+  ) {
+    const { db, shop, reef, staff } = await manifestContext();
+    const [first] = await getTripRoster(db, shop.id, reef.id);
+    if (!first) throw new Error("demo roster too small");
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: first.booking.id,
+      recordedByPersonId: staff.id,
+      status,
+      checkpoint,
+      occurredAt: reef.startsAt,
+    });
+    return { db, shop, reef, bookingId: first.booking.id };
+  }
+
+  it("names nothing before the crew record anything", async () => {
+    const { db, shop, reef } = await manifestContext();
+    expect(await departureRollCallTakenTripIds(db, shop.id, [reef.id])).toEqual(new Set());
+  });
+
+  it("names a departure whose roster the crew all marked not boarded", async () => {
+    const { db, shop, reef } = await dockEvent("not_boarded");
+    expect(await departureRollCallTakenTripIds(db, shop.id, [reef.id])).toEqual(new Set([reef.id]));
+  });
+
+  it("still names it once the seat the crew boarded is cancelled", async () => {
+    const { db, shop, reef, bookingId } = await dockEvent("boarded");
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
+    expect(await listDepartureBoardedBookingIds(db, shop.id, [reef.id])).toEqual(new Set());
+    expect(await departureRollCallTakenTripIds(db, shop.id, [reef.id])).toEqual(new Set([reef.id]));
+  });
+
+  it("does not count an after-dive count as a dock roll call", async () => {
+    const { db, shop, reef } = await dockEvent("boarded", "after_dive_1");
+    expect(await departureRollCallTakenTripIds(db, shop.id, [reef.id])).toEqual(new Set());
   });
 });
 

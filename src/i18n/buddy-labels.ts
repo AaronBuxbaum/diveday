@@ -8,11 +8,13 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
  * team can never read differently on two screens — the same rule
  * `src/i18n/readiness-labels.ts` states for Blocked/Ready.
  *
- * The after-dive words are deliberately "unaccounted for" — the glossary's
- * own umbrella for awaiting-or-stated-missing — never "not back aboard",
- * which is the taxonomy's phrase for a statement a human actually made. The
- * alert fires on an awaiting teammate too, and it must not put words in the
- * crew's mouth (dive-domain review, 2026-08-04).
+ * The after-dive words are "not back aboard", the taxonomy's phrase for a
+ * statement a human actually made, because that is now the only thing that
+ * raises the alert: `buddyAlertFor` fires after a dive only on a teammate the
+ * crew recorded as not back (ADR 20260827-the-departure-is-two-working-surfaces,
+ * decision 4), never on one merely uncalled. "Unaccounted for" undersold it
+ * (dive-domain review of UX batch 1). The dock words say "not aboard yet",
+ * never "ashore": a teammate the crew recorded staying ashore raises nothing.
  *
  * The words name the buddy, not a count: a team of four with two unaccounted
  * for is the same instruction as a pair with one, and naming a number here

@@ -115,7 +115,7 @@ export function Badge({
     // way (badge.test.tsx sweeps for one that does not).
     <span
       // `whitespace-nowrap`: a pill is one line, or it is a two-line stadium
-      // ("Buddy unaccounted for" on the roll call, issue #2008). Where a pill
+      // ("Buddy not back aboard" on the roll call, issue #2008). Where a pill
       // can be wider than its column, the caller gives it a line of its own.
       className={`inline-flex items-baseline rounded-full font-medium ${wraps ? "" : "whitespace-nowrap "}${
         mark ? "gap-1" : ""

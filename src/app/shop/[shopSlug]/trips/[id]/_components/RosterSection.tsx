@@ -174,6 +174,12 @@ export function RosterSection({
             context={context}
           />
           <RosterSeatGroup
+            label={t("trips.roster.groupNotCounted")}
+            entries={groups.uncounted}
+            settled={false}
+            context={context}
+          />
+          <RosterSeatGroup
             label={t("trips.roster.groupNoRollCall")}
             entries={groups.unrecorded}
             settled={false}
