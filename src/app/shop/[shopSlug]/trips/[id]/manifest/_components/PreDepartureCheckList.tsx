@@ -68,7 +68,7 @@ function PreDepartureCheckRow({
           <span className="flex flex-col">
             <span>{item.label}</span>
             {item.checkedByLine ? (
-              <span className="text-xs font-normal opacity-80">{item.checkedByLine}</span>
+              <span className="text-sm font-normal">{item.checkedByLine}</span>
             ) : null}
             <span className="sr-only">{checked ? copy.checkedLabel : copy.uncheckedLabel}</span>
           </span>

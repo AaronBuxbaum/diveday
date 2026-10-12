@@ -48,9 +48,9 @@
   "undoAriaLabel": "Deshacer el check-in de {name}",
   "undoing": "Deshaciendo…",
   "notice": {
-    "offerUnavailable": "Esa salida no puede recibir una oferta ahora: ya no existe o ya tiene plaza en ella.",
-    "offerOptedOut": "No se envió nada: desactivó los correos del centro. Llámala con la fecha.",
-    "offerNotSent": "No se envió nada: no hay correo registrado o el correo no está configurado. Llámala con la fecha.",
+    "offerUnavailable": "No se envió nada: esa salida ya no existe o está completa, o no puede reservarla.",
+    "offerOptedOut": "No se envió nada: desactivó los correos del centro. Avísale por teléfono de la fecha.",
+    "offerNotSent": "No se envió nada: no hay correo registrado o el correo no está configurado. Avísale por teléfono de la fecha.",
     "offerSent": "Oferta enviada por correo. La persona reserva su plaza desde el enlace.",
     "notReady": "Algo ha cambiado y todavía no puede embarcar. Su fila dice qué lo impide.",
     "notBookable": "Esa reserva ya no está disponible para el check-in.",

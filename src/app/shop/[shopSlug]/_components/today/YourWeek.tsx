@@ -5,6 +5,7 @@ import { type CrewWeekLine, crewWeekFor } from "@/db/crew-week";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabel } from "@/i18n/staff-role-labels";
 import { formatShortDate, formatTime } from "@/lib/format";
+import { GAP_TONE } from "@/lib/staffing-week";
 import { addCalendarDays, shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 /** Tomorrow and the six days after it: the week a crew member checks the night before. */
@@ -86,7 +87,13 @@ export function YourWeekList({
                 {line.tripRole ? staffRoleLabel(t, line.tripRole) : t("today.yourWeek.roleUnset")}
               </p>
               {line.gap ? (
-                <p className="mt-1 text-sm font-medium text-warning-strong">{gapWords[line.gap]}</p>
+                <p
+                  className={`mt-1 text-sm font-medium ${
+                    GAP_TONE[line.gap] === "warning" ? "text-warning-strong" : "text-muted"
+                  }`}
+                >
+                  {gapWords[line.gap]}
+                </p>
               ) : null}
             </div>
           </LedgerRow>

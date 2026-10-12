@@ -182,9 +182,13 @@
   counter points at the departure's own invite control rather than growing a second sender beside
   it. The second offer is about the **diver**, not the seat: a departure cannot take a seat on
   another departure, so it names the person and links to the door that seats them on a **similar
-  departure**. The third is said plainly, because a surface that invents an offer here is worse than
-  one that says nobody is waiting. No branch moves money; the money is one sentence and a link to
-  that diver's orders.
+  departure**, and beside each day carries a one-tap **direct invitation** to it
+  (`offerDepartureToDiver`, `src/db/trip-invitations.ts`): the diver books the seat themselves from
+  the link, and a diver who turned off shop email is not emailed. Only a day that diver could book
+  is named or sent: open, not private, not yet left, with a sellable seat, and one their cards admit
+  them to (`departureOpenToDiver`). The third is said plainly, because a surface that invents an
+  offer here is worse than one that says nobody is waiting. No branch seats anyone or moves money;
+  the money is one sentence and a link to that diver's orders.
 - **Crew schedule** — whether a shop plans its crew in DiveDay (`shops.crew_schedule_enabled`, Settings
   → Team, **off for a new shop**). On, the shop has the Crew view of Schedule (working shifts, days
   away, crew asking for a departure), the crew line on the week, and the nudges measured against

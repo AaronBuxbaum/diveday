@@ -184,7 +184,7 @@ export function PersonSheet({
                         {entry.label}
                       </span>
                       {entry.note ? (
-                        <span className="mt-0.5 block text-sm text-muted">{entry.note}</span>
+                        <span className="mt-0.5 block text-base text-muted">{entry.note}</span>
                       ) : null}
                     </span>
                     <span className="shrink-0 text-base text-muted tabular-nums">

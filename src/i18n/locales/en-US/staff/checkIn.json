@@ -48,7 +48,7 @@
   "undoAriaLabel": "Undo check-in for {name}",
   "undoing": "Undoing…",
   "notice": {
-    "offerUnavailable": "That departure can’t take an offer now: it’s gone, or they already have a seat on it.",
+    "offerUnavailable": "Nothing was sent: that departure is gone or full, or they can’t book it.",
     "offerOptedOut": "Nothing was sent: they turned off emails from the shop. Call them with the date.",
     "offerNotSent": "Nothing was sent: there’s no email on file for them, or email isn’t set up. Call them with the date.",
     "offerSent": "Offer emailed. They book the seat themselves from the link.",
