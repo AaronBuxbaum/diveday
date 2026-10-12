@@ -398,6 +398,8 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   shop_whatsapp_accounts:
     "the shop’s own WhatsApp sender: a number, a template and sealed credentials",
   shop_stripe_accounts: "the shop’s Connect account and what it is enabled for",
+  stripe_payouts:
+    "the shop’s own money leaving its Connect account for its bank: one row per Stripe payout, its amount, fees and the days it covers. No diver is named on a payout; the payments it settles are censused on their orders",
   shop_subscriptions:
     "what the shop pays DiveDay: Stripe ids on DiveDay’s own account, a status and a few dates. The business is the customer, never a diver",
   shop_integrations: "a provider connection the shop made, and the sealed credentials behind it",
@@ -645,6 +647,11 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     why: "Stripe's dispute about a payment already censused on its order or checkout; the evidence and the cardholder's bank details live at Stripe under that payment, and DiveDay stores none of them",
   },
   "payment_disputes.stripe_account_id": { held: "shop", why: "as orders.stripe_account_id" },
+  "stripe_payouts.stripe_payout_id": {
+    held: "shop",
+    why: "the `po_…` of the shop's own transfer to its bank; Stripe holds the shop's balance under it, nothing about a diver",
+  },
+  "stripe_payouts.stripe_account_id": { held: "shop", why: "as orders.stripe_account_id" },
   "stripe_refund_failures.stripe_refund_id": {
     held: "copy",
     why: "the `re_…` of a refund on a payment already censused on the order or checkout the row points at; Stripe holds nothing under it that the payment does not",
