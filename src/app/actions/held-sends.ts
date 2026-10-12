@@ -72,6 +72,7 @@ function payloadFromForm(formData: FormData, currency: string): HeldSendPayload 
           channel: optional("channel") ?? "email",
           surface: optional("surface") ?? "today",
           tripId: optional("tripId"),
+          ticketId: optional("ticketId"),
         }
       : kind === "last_minute_deal"
         ? {
@@ -129,6 +130,27 @@ export type ReleasedSend =
       };
     };
 
+/**
+ * The page a waiver send was made from, refreshed once it lands. A counter
+ * send refreshes the rental ticket it was made on, or the new-rental form
+ * when the person was still choosing gear (issue #2346).
+ */
+function waiverSendPath(
+  slug: string,
+  payload: Extract<HeldSendPayload, { kind: "waiver_send" }>,
+): string {
+  if (payload.surface === "today") return shopPath(slug);
+  if (payload.surface === "roster" && payload.tripId) {
+    return shopPath(slug, "trips", payload.tripId);
+  }
+  if (payload.surface === "counter") {
+    return payload.ticketId
+      ? shopPath(slug, "gear", "rentals", payload.ticketId)
+      : shopPath(slug, "gear", "rentals", "new");
+  }
+  return shopPath(slug, "divers", ...(payload.personId ? [payload.personId] : []));
+}
+
 export async function releaseHeldSendAction(id: string): Promise<ReleasedSend> {
   const session = await requireStaffSession();
   const db = await getDb();
@@ -144,13 +166,7 @@ export async function releaseHeldSendAction(id: string): Promise<ReleasedSend> {
   const { payload } = row;
 
   if (payload.kind === "waiver_send") {
-    const path =
-      payload.surface === "today"
-        ? shopPath(shop.slug)
-        : payload.surface === "roster" && payload.tripId
-          ? shopPath(shop.slug, "trips", payload.tripId)
-          : shopPath(shop.slug, "divers", ...(payload.personId ? [payload.personId] : []));
-    revalidatePath(path);
+    revalidatePath(waiverSendPath(shop.slug, payload));
     if (outcome.kind === "waiver_send" && outcome.sent.length > 0) {
       await trackEvent({ name: "staff_recovery", kind: "waiver_sent", surface: payload.surface });
     }

@@ -394,6 +394,14 @@ export type OfflineManifestPayload = {
             /** The physician's evaluation day, else the day the "no" was recorded. */
             refusedOn?: CalendarDate;
             referredOn?: CalendarDate;
+            /**
+             * A rider boarding riding only under a standing "no" or an open
+             * referral (H-109, `riderMedicalHold`): the same least-that-warns
+             * rule, one day and no record. Optional and additive, no version
+             * bump.
+             */
+            ridingNotClearedOn?: CalendarDate;
+            ridingReferredOn?: CalendarDate;
           };
           /** Dropped at save time; the dock does not need it (kept for shape parity). */
           email: null;
@@ -932,7 +940,7 @@ export function serializeManifests(
         notHere: diver.notHere,
         // Dates only, and absent when there is nothing to warn about: see the
         // allow-list type above.
-        ...offlineMedicalWarnings(diver.medicalWaiver, shop.timezone),
+        ...offlineMedicalWarnings(diver.medicalWaiver, shop.timezone, diver.riderMedicalHold),
         // Names only, never a teammate's booking or person id — the dock copy
         // displays teams and must stay unable to compute divergence from a
         // snapshot.
@@ -964,16 +972,17 @@ export function serializeManifests(
 }
 
 /**
- * The dock copy's medical warnings for one diver (issue #2163): the two days
- * the live roll call warns on, and nothing else of the mark. An empty object
- * when there is neither, so the spread writes no field.
+ * The dock copy's medical warnings for one diver (issue #2163, and H-109's
+ * riding-only pair): the days the live roll call warns on, and nothing else of
+ * the mark. An empty object when there are none, so the spread writes no field.
  */
 function offlineMedicalWarnings(
   mark: TripManifest["divers"][number]["medicalWaiver"],
   timeZone: string,
+  riderHold: TripManifest["divers"][number]["riderMedicalHold"],
 ): { medicalWarnings?: NonNullable<OfflineDiverRow["medicalWarnings"]> } {
-  const days = medicalWarningDays(mark, timeZone);
-  return days.refusedOn || days.referredOn ? { medicalWarnings: days } : {};
+  const days = medicalWarningDays(mark, timeZone, riderHold);
+  return Object.keys(days).length > 0 ? { medicalWarnings: days } : {};
 }
 
 type OfflineDiverRow = OfflineManifestPayload["manifests"][number]["divers"][number];

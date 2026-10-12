@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "df03572e-0e56-49a5-8cd4-40bf533dd891",
+  "id": "076b2a5f-64d6-4427-bb60-b8071d074e48",
   "prevIds": [
-    "0d3464e2-b4ca-494d-aad4-2cf99b1d8fc9"
+    "081315d8-1c02-4719-9fae-07ac9e9f789e"
   ],
   "ddl": [
     {
@@ -353,7 +353,8 @@
         "request_declined",
         "request_refused",
         "role_changed",
-        "called_off"
+        "called_off",
+        "time_moved"
       ],
       "name": "crew_notice_change",
       "entityType": "enums",
@@ -857,7 +858,8 @@
         "order_refunded",
         "cancellation_refund",
         "shop_cancellation_refund",
-        "stripe_dashboard_refund"
+        "stripe_dashboard_refund",
+        "refund_failed"
       ],
       "name": "payment_event_operation",
       "entityType": "enums",
@@ -1714,6 +1716,12 @@
     {
       "isRlsEnabled": false,
       "name": "shop_stripe_accounts",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "stripe_refund_failures",
       "entityType": "tables",
       "schema": "public"
     },
@@ -8724,6 +8732,19 @@
       "generated": null,
       "identity": null,
       "name": "change",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "crew_notices"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "previous_starts_at",
       "entityType": "columns",
       "schema": "public",
       "table": "crew_notices"
@@ -16076,6 +16097,32 @@
     {
       "type": "timestamp with time zone",
       "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "paid_after_close_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "booking_checkouts"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "paid_after_close_cents",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "booking_checkouts"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
       "default": "now()",
@@ -18152,6 +18199,188 @@
       "entityType": "columns",
       "schema": "public",
       "table": "shop_stripe_accounts"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "stripe_account_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "stripe_refund_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "order_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "checkout_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "booking_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "amount_cents",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "currency",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "refund_status",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "failure_reason",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "owed_until_refunded_cents",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "failed_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "stripe_refund_failures"
     },
     {
       "type": "text",
@@ -20385,6 +20614,19 @@
       "generated": null,
       "identity": null,
       "name": "planned_dives",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trips"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "exceeds_no_deco_limits",
       "entityType": "columns",
       "schema": "public",
       "table": "trips"
@@ -28190,7 +28432,7 @@
       "nameExplicit": true,
       "columns": [
         {
-          "value": "waba_id",
+          "value": "phone_number_id",
           "isExpression": false,
           "asc": true,
           "nullsFirst": false,
@@ -28202,7 +28444,28 @@
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "shop_whatsapp_accounts_waba_unique",
+      "name": "shop_whatsapp_accounts_phone_number_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "shop_whatsapp_accounts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "waba_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "shop_whatsapp_accounts_waba_idx",
       "entityType": "indexes",
       "schema": "public",
       "table": "shop_whatsapp_accounts"
@@ -29151,6 +29414,55 @@
       "entityType": "indexes",
       "schema": "public",
       "table": "shop_stripe_accounts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "stripe_refund_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "stripe_refund_failures_refund_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "failed_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "stripe_refund_failures_shop_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "stripe_refund_failures"
     },
     {
       "nameExplicit": true,
@@ -35815,6 +36127,74 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
+      "name": "stripe_refund_failures_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "order_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "orders",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "stripe_refund_failures_order_id_orders_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "checkout_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "booking_checkouts",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "stripe_refund_failures_checkout_id_booking_checkouts_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "booking_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "bookings",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "stripe_refund_failures_booking_id_bookings_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
       "name": "tips_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -38534,6 +38914,16 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "stripe_refund_failures_pkey",
+      "schema": "public",
+      "table": "stripe_refund_failures",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "stripe_webhook_events_pkey",
       "schema": "public",
       "table": "stripe_webhook_events",
@@ -39417,6 +39807,20 @@
       "table": "booking_checkout_bookings"
     },
     {
+      "value": "(\"paid_after_close_at\" is null) = (\"paid_after_close_cents\" is null)",
+      "name": "booking_checkouts_paid_after_close_pair",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "booking_checkouts"
+    },
+    {
+      "value": "\"paid_after_close_cents\" is null or \"paid_after_close_cents\" >= 0",
+      "name": "booking_checkouts_paid_after_close_nonnegative",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "booking_checkouts"
+    },
+    {
       "value": "\"refunded_cents\" >= 0",
       "name": "booking_checkouts_refunded_nonnegative",
       "entityType": "checks",
@@ -39646,6 +40050,27 @@
       "entityType": "checks",
       "schema": "public",
       "table": "shop_promo_codes"
+    },
+    {
+      "value": "\"amount_cents\" >= 0",
+      "name": "stripe_refund_failures_amount_nonnegative",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "value": "(\"order_id\" is null) <> (\"checkout_id\" is null)",
+      "name": "stripe_refund_failures_one_target",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "stripe_refund_failures"
+    },
+    {
+      "value": "\"refund_status\" in ('failed', 'canceled')",
+      "name": "stripe_refund_failures_status",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "stripe_refund_failures"
     },
     {
       "value": "\"amount_cents\" > 0",

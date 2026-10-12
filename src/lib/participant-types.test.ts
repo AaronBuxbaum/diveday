@@ -7,6 +7,7 @@ import {
   hasNonDivers,
   holdsRegisterKind,
   isDiver,
+  isHeldToMedical,
   isParticipantType,
   joinedDiving,
   joinPassengerSplit,
@@ -33,6 +34,14 @@ describe("participant types", () => {
     expect(isDiver("rider")).toBe(false);
     expect(isParticipantType("snorkeller")).toBe(false);
     expect(isParticipantType("rider")).toBe(true);
+  });
+
+  it("holds every seat but a rider's to the medical, an absent type included (H-109)", () => {
+    expect(isHeldToMedical(undefined)).toBe(true);
+    expect(isHeldToMedical(null)).toBe(true);
+    expect(isHeldToMedical("diver")).toBe(true);
+    expect(isHeldToMedical("snorkeler")).toBe(true);
+    expect(isHeldToMedical("rider")).toBe(false);
   });
 
   it("binds a diver limit only when it is below the boat's capacity", () => {

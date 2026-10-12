@@ -562,6 +562,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // The shop's own answer about this departure, not a derived fact,
       // so it leaves with the shop (issue #973).
       "self_guided",
+      "exceeds_no_deco_limits",
       // The bundle carries deleted departures (they are still the shop's
       // rows), so it has to carry the stamp that says which — a file that
       // hands back a deleted departure looking live is worse than one
@@ -613,6 +614,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.arrivalPhotoUrl,
         row.isPrivate,
         row.selfGuided,
+        row.exceedsNoDecoLimits,
         row.deletedAt,
         row.createdAt,
       ]),
@@ -1065,6 +1067,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "expires_at",
       "completed_at",
       "async_payment_failed_at",
+      "paid_after_close_at",
+      "paid_after_close_cents",
       "created_at",
     ],
     rows: ({ tripTitle, tripStartsAt, checkoutRows }) =>
@@ -1094,6 +1098,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.expiresAt,
         row.completedAt,
         row.asyncPaymentFailedAt,
+        row.paidAfterCloseAt,
+        row.paidAfterCloseCents,
         row.createdAt,
       ]),
     note: EXPORT_FILE_NOTES["booking_checkouts.csv"],

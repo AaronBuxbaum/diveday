@@ -1,4 +1,5 @@
 import type { DbExecutor } from "@/db/client";
+import { orderHasIntegrationEvent } from "@/db/integration-events";
 import {
   getIntegrationSyncRecord,
   markIntegrationHealthy,
@@ -239,10 +240,12 @@ async function quickBooksRequest(
   integration: ShopIntegration,
   config: QuickBooksConfig,
   input: {
-    method: "POST";
+    method: "GET" | "POST";
     resource: string;
+    /** Extra query, ahead of the version and request id (`operation=void`). */
+    query?: string;
     requestId: string;
-    body: Record<string, unknown>;
+    body?: Record<string, unknown>;
   },
   fetchImpl: typeof fetch,
 ): Promise<
@@ -271,7 +274,7 @@ async function quickBooksRequest(
 
   const request = async (token: string) =>
     fetchImpl(
-      `${quickBooksApiOrigin(config.environment)}/v3/company/${encodeURIComponent(integration.externalAccountId as string)}/${input.resource}?minorversion=75&requestid=${encodeURIComponent(input.requestId)}`,
+      `${quickBooksApiOrigin(config.environment)}/v3/company/${encodeURIComponent(integration.externalAccountId as string)}/${input.resource}?${input.query ? `${input.query}&` : ""}minorversion=75&requestid=${encodeURIComponent(input.requestId)}`,
       {
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         method: input.method,
@@ -280,7 +283,7 @@ async function quickBooksRequest(
           accept: "application/json",
           "content-type": "application/json",
         },
-        body: JSON.stringify(input.body),
+        body: input.body ? JSON.stringify(input.body) : undefined,
       },
     ).catch(() => null);
 
@@ -410,7 +413,21 @@ export async function deliverQuickBooksEvent(
   config: QuickBooksConfig,
   fetchImpl: typeof fetch = fetch,
 ): Promise<{ status: "delivered" } | { status: "failed"; code: string; retryable: boolean }> {
+  if (event.eventType === "order.voided") {
+    return voidQuickBooksSalesReceipt(db, integration, event, config, fetchImpl);
+  }
   if (event.eventType !== "order.paid" && event.eventType !== "order.refunded") {
+    return { status: "delivered" };
+  }
+  if (
+    event.eventType === "order.paid" &&
+    (await orderHasIntegrationEvent(db, {
+      shopId: integration.shopId,
+      orderId: event.entityId,
+      eventType: "order.voided",
+    }))
+  ) {
+    // The void went first and found nothing to undo; booking the sale now would leave it standing.
     return { status: "delivered" };
   }
   const incomeAccountId = integration.settings.incomeAccountId?.trim();
@@ -483,6 +500,71 @@ export async function deliverQuickBooksEvent(
     sourceId: syncSourceId,
     operation,
     externalId,
+  });
+  await markIntegrationHealthy(db, integration.id);
+  return { status: "delivered" };
+}
+
+/**
+ * Void the sales receipt this order booked (issue #2309). QuickBooks voids in
+ * place, zeroing the receipt and keeping it for the audit trail; it wants the
+ * receipt's current `SyncToken`, so it is read first. An order whose sale was
+ * never booked here (no `sales_receipt` record) has nothing to undo, and a
+ * `sales_receipt_void` record makes a redelivery a no-op. The void's own
+ * request id is the event's, so a retry after a lost answer is not a second
+ * void either.
+ */
+async function voidQuickBooksSalesReceipt(
+  db: DbExecutor,
+  integration: ShopIntegration,
+  event: IntegrationEvent,
+  config: QuickBooksConfig,
+  fetchImpl: typeof fetch,
+): Promise<{ status: "delivered" } | { status: "failed"; code: string; retryable: boolean }> {
+  const lookup = {
+    shopId: integration.shopId,
+    provider: integration.provider,
+    sourceType: "quickbooks_order",
+    sourceId: event.entityId,
+  };
+  const booked = await getIntegrationSyncRecord(db, { ...lookup, operation: "sales_receipt" });
+  if (!booked) return { status: "delivered" };
+  if (await getIntegrationSyncRecord(db, { ...lookup, operation: "sales_receipt_void" })) {
+    return { status: "delivered" };
+  }
+  const read = await quickBooksRequest(
+    db,
+    integration,
+    config,
+    {
+      method: "GET",
+      resource: `salesreceipt/${encodeURIComponent(booked.externalId)}`,
+      requestId: `${event.id}:read`,
+    },
+    fetchImpl,
+  );
+  if (read.status !== "ok") return read;
+  const receipt = read.data.SalesReceipt as { SyncToken?: unknown } | undefined;
+  if (typeof receipt?.SyncToken !== "string")
+    return { status: "failed", code: "quickbooks_receipt_missing_sync_token", retryable: false };
+  const voided = await quickBooksRequest(
+    db,
+    integration,
+    config,
+    {
+      method: "POST",
+      resource: "salesreceipt",
+      query: "operation=void",
+      requestId: event.id,
+      body: { Id: booked.externalId, SyncToken: receipt.SyncToken, sparse: true },
+    },
+    fetchImpl,
+  );
+  if (voided.status !== "ok") return voided;
+  await upsertIntegrationSyncRecord(db, {
+    ...lookup,
+    operation: "sales_receipt_void",
+    externalId: booked.externalId,
   });
   await markIntegrationHealthy(db, integration.id);
   return { status: "delivered" };

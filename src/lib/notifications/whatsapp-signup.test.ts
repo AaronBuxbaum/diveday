@@ -261,6 +261,38 @@ describe("completeEmbeddedSignup", () => {
     });
   });
 
+  // Issue #2334: neither Meta's free-text message nor a thrown one comes back
+  // in the failure; the step, the status and Meta's code say what happened.
+  it("keeps Meta's free-text message out of a failed step", async () => {
+    const fetchImpl = fetchSequence({
+      1: json(400, {
+        error: { message: "Phone +13055550199 is owned by Nora Quinn", code: 133005 },
+      }),
+    });
+    const result = await completeEmbeddedSignup(input, config, fetchImpl);
+
+    expect(result).toMatchObject({ status: "failed", step: "register", errorCode: "133005" });
+    expect(result).not.toHaveProperty("detail");
+    expect(JSON.stringify(result)).not.toContain("Nora Quinn");
+  });
+
+  it("records a thrown Graph call by its cause's code, never its message", async () => {
+    const fetchImpl = vi.fn().mockRejectedValue(
+      new TypeError("fetch failed for EAAG-business-token", {
+        cause: Object.assign(new Error("getaddrinfo ENOTFOUND"), { code: "ENOTFOUND" }),
+      }),
+    );
+    const result = await completeEmbeddedSignup(input, config, fetchImpl);
+
+    expect(result).toMatchObject({
+      status: "failed",
+      step: "exchange",
+      errorCode: "network_error",
+      detail: "ENOTFOUND",
+    });
+    expect(JSON.stringify(result)).not.toContain("EAAG");
+  });
+
   it("survives a network failure without throwing", async () => {
     const fetchImpl = vi.fn().mockRejectedValue(new Error("socket hang up"));
     const result = await completeEmbeddedSignup(input, config, fetchImpl);

@@ -290,6 +290,32 @@ describe("the pricing FAQ promises the import preview once", () => {
 });
 
 /**
+ * The homepage's close says a person reads it once (issue #2299). The note
+ * under "Get set up" (`common.setUpNote`) and the "Ask us first" line beneath
+ * it (`home.contactBody`) sit a few lines apart, and both used to promise a
+ * real person. The set-up note keeps it, because there it says what the button
+ * leads to: a person sets the shop up. The contact line gives it up.
+ */
+describe("the homepage close says a person reads it once", () => {
+  const person = {
+    "en-US": /person reads/i,
+    "es-ES": /\bpersona\b/i,
+  } as const;
+
+  for (const locale of DIVER_LOCALES) {
+    it(`keeps it in the set-up note in ${locale}`, () => {
+      expect(marketingMessages(locale)["marketing.common.setUpNote"]).toMatch(person[locale]);
+    });
+
+    it(`leaves it out of the contact line beneath in ${locale}`, () => {
+      const body = marketingMessages(locale)["marketing.home.contactBody"];
+      expect(body).toBeDefined();
+      expect(body).not.toMatch(person[locale]);
+    });
+  }
+});
+
+/**
  * `feesNote` names the one cost the flat price does not cover — processing fees,
  * which stay with the shop's own provider — and stops there. Its second
  * sentence ("if an integration ever costs extra, we'll say so before you turn

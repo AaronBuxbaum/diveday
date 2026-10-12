@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { ChoiceFieldset, ChoiceRow, controlClass, Field } from "@/components/ui/form";
 
@@ -43,6 +43,12 @@ import { ChoiceFieldset, ChoiceRow, controlClass, Field } from "@/components/ui/
  * the concern is open. Never automatic — a scratched mask and a free-flowing
  * regulator are both concerns, and auto-pulling every one would turn the flag
  * into a pager nobody trusts. Absent, the pane asks nothing extra.
+ *
+ * **An open concern is the only answer on offer** (dive-domain review). With
+ * the note and the boxes open, "All good" and "Fit adjusted" are hidden: a tap
+ * on either used to post the set as fine and throw away the typed concern and
+ * every tick. The way out is Cancel, which closes the concern and brings the
+ * fast answers back.
  */
 export function GearReturnPane({
   fields,
@@ -59,11 +65,26 @@ export function GearReturnPane({
     allGood: string;
     fitAdjusted: string;
     serviceConcern: string;
+    /** Closes an open concern, discarding its note and ticks. */
+    cancelConcern: string;
     noteLabel: string;
     notePlaceholder: string;
   };
 }) {
   const [concernOpen, setConcernOpen] = useState(false);
+  const noteRef = useRef<HTMLInputElement>(null);
+  const openerRef = useRef<HTMLButtonElement>(null);
+  // Focus follows the act: into the note when the concern opens (its opener
+  // is gone), back to the opener when it is cancelled. Skipped on first render.
+  const opened = useRef(false);
+  useEffect(() => {
+    if (concernOpen) {
+      opened.current = true;
+      noteRef.current?.focus();
+    } else if (opened.current) {
+      openerRef.current?.focus();
+    }
+  }, [concernOpen]);
 
   return (
     <form action={action} className="mt-2 flex flex-col gap-2 print:hidden">
@@ -71,47 +92,45 @@ export function GearReturnPane({
         <input key={name} type="hidden" name={name} value={value} />
       ))}
       {children}
-      <div className="flex flex-wrap items-center gap-2">
-        {/* `formNoValidate` on both fast answers, and it is load-bearing:
-            arming the concern puts a `required` note in the same form, and
-            without this the browser refuses to submit "All good" until that
-            field is filled — the fast path held hostage by a control the
-            staffer opened and thought better of. Caught by the e2e, which taps
-            the concern first on purpose. */}
-        <button
-          type="submit"
-          name="outcome"
-          value="all_good"
-          formNoValidate
-          className={buttonClass({ size: "sm" })}
-        >
-          {labels.allGood}
-        </button>
-        <button
-          type="submit"
-          name="outcome"
-          value="fit_adjusted"
-          formNoValidate
-          className={buttonClass({ variant: "secondary", size: "sm" })}
-        >
-          {labels.fitAdjusted}
-        </button>
-        {/* Quiet until armed, then a box: one box either way, since `ghost`
-            carries `secondary`'s border, transparent (`button.ts`), so the
-            label does not move as the note opens. */}
-        <button
-          type="button"
-          onClick={() => setConcernOpen(!concernOpen)}
-          aria-expanded={concernOpen}
-          className={buttonClass({ variant: concernOpen ? "secondary" : "ghost", size: "sm" })}
-        >
-          {labels.serviceConcern}
-        </button>
-      </div>
+      {concernOpen ? null : (
+        <div className="flex flex-wrap items-center gap-2">
+          {/* `formNoValidate` on both fast answers: harmless now that they are
+              hidden while the concern's `required` note is open, and kept so
+              a fast answer can never be held hostage by a control in the same
+              form. */}
+          <button
+            type="submit"
+            name="outcome"
+            value="all_good"
+            formNoValidate
+            className={buttonClass({ size: "sm" })}
+          >
+            {labels.allGood}
+          </button>
+          <button
+            type="submit"
+            name="outcome"
+            value="fit_adjusted"
+            formNoValidate
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {labels.fitAdjusted}
+          </button>
+          <button
+            ref={openerRef}
+            type="button"
+            onClick={() => setConcernOpen(true)}
+            className={buttonClass({ variant: "ghost", size: "sm" })}
+          >
+            {labels.serviceConcern}
+          </button>
+        </div>
+      )}
       {concernOpen ? (
         <div className="flex flex-col gap-2">
           <Field label={labels.noteLabel}>
             <input
+              ref={noteRef}
               name="note"
               required
               maxLength={400}
@@ -134,7 +153,7 @@ export function GearReturnPane({
               ))}
             </ChoiceFieldset>
           ) : null}
-          <div>
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="submit"
               name="outcome"
@@ -142,6 +161,13 @@ export function GearReturnPane({
               className={buttonClass({ size: "sm" })}
             >
               {labels.serviceConcern}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConcernOpen(false)}
+              className={buttonClass({ variant: "ghost", size: "sm" })}
+            >
+              {labels.cancelConcern}
             </button>
           </div>
         </div>

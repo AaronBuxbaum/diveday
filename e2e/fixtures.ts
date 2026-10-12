@@ -523,6 +523,11 @@ export const test = base.extend<
         body: "<!doctype html><title></title>",
       }),
     );
+    // The route maps' reachability read (`MAP_REACHABILITY_PROBE`,
+    // src/lib/maps.ts) is refused, so every capture draws the route alone over
+    // the panel, the way it reads where the map cannot load, and no test
+    // leaves this worker for it.
+    await context.route("https://www.google.com/favicon.ico", (route) => route.abort());
     // The storefront's brand display face is a Google Fonts stylesheet (see
     // src/lib/brand.ts). Answering it with an empty sheet keeps every capture
     // on the same fallback face wherever the fleet runs — a font that arrives

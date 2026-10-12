@@ -12,6 +12,14 @@
  * and a surface marked `data-roll-call-surface` (the offline manifest, whose
  * marks are plain buttons) has every click inside it dropped at the document,
  * in the capture phase, before React sees it.
+ *
+ * **A refusal is never silent** (issue #2328). Both ways in answer it through
+ * {@link refusePress}: the control the press landed on carries
+ * `data-touch-refused` for a moment (the outline in globals.css), and a
+ * {@link TOUCH_REFUSED_EVENT} bubbles from it to the surface's
+ * `RollCallTouchCue`, which says "Tap again with one finger". Nothing is
+ * retried: a mark written from an accidental palm is the failure this guard
+ * exists to prevent, so the crew taps again or nobody does.
  */
 const down = new Set<number>();
 let most = 0;
@@ -44,6 +52,7 @@ function listen() {
       if (!target?.closest("[data-roll-call-surface]")) return;
       event.preventDefault();
       event.stopPropagation();
+      refusePress(target.closest("button") ?? target);
     },
     { capture: true },
   );
@@ -59,6 +68,19 @@ function listen() {
   };
   document.addEventListener("pointerup", lift, { capture: true });
   document.addEventListener("pointercancel", lift, { capture: true });
+  // **A lift the page never heard** (dive-domain review of #2328). Leaving
+  // the app mid-touch can swallow the pointerup and the pointercancel both,
+  // and a contact left counted makes every later single tap read as a palm.
+  // Every way out of the page forgets what was down: no finger survives it.
+  const forget = () => {
+    down.clear();
+    most = 0;
+  };
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") forget();
+  });
+  window.addEventListener("blur", forget);
+  window.addEventListener("pagehide", forget);
 }
 
 /** Starts counting contacts; idempotent, and a no-op on the server. */
@@ -69,4 +91,32 @@ export function watchRollCallTouches(): void {
 /** Whether the gesture behind the press now landing had more than one contact. */
 export function wasMultiTouch(): boolean {
   return most > 1;
+}
+
+/** The event a refused press sends up from its control (issue #2328). */
+export const TOUCH_REFUSED_EVENT = "diveday:roll-call-touch-refused";
+/** The attribute a refused control wears while its cue shows. */
+export const TOUCH_REFUSED_ATTRIBUTE = "data-touch-refused";
+/** How long the control wears it: long enough to see, gone by the next name. */
+export const TOUCH_REFUSED_CUE_MS = 1200;
+
+const clearCue = new WeakMap<Element, ReturnType<typeof setTimeout>>();
+
+/**
+ * Answers a press this guard refused: the cue on the control, and the event
+ * the surface's words listen for. The one place either happens, so the live
+ * control and the offline copy cannot drift. It submits nothing.
+ */
+export function refusePress(control: Element): void {
+  const pending = clearCue.get(control);
+  if (pending) clearTimeout(pending);
+  control.setAttribute(TOUCH_REFUSED_ATTRIBUTE, "");
+  clearCue.set(
+    control,
+    setTimeout(() => {
+      control.removeAttribute(TOUCH_REFUSED_ATTRIBUTE);
+      clearCue.delete(control);
+    }, TOUCH_REFUSED_CUE_MS),
+  );
+  control.dispatchEvent(new CustomEvent(TOUCH_REFUSED_EVENT, { bubbles: true }));
 }

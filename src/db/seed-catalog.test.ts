@@ -1,6 +1,10 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { COURSE_TEMPLATES } from "@/content/course-templates";
+import { nowDate } from "@/lib/clock";
 import { courseSlug } from "@/lib/courses";
+import { seededShopContext } from "@/test/db";
+import { courseForms, courseFormVersions } from "./schema";
 import { courseTemplateDisplayTitle } from "./seed-catalog";
 
 /**
@@ -51,4 +55,29 @@ describe("course template display titles", () => {
     expect(courseSlug("Search and Recovery Diver")).toBe("search-and-recovery-diver");
     expect(courseSlug("Search & Recovery Diver")).toBe("search-recovery-diver");
   });
+});
+
+/**
+ * **The course forms' dates come off the frozen clock** (issue #2297). The
+ * waivers page prints each form's "version N · {date}" from its version row's
+ * `created_at`, a `defaultNow()` column that Postgres stamps from the wall
+ * clock, which `DIVEDAY_CLOCK` does not reach. So three visual captures of
+ * that page changed every midnight; the seed pins the stamp instead.
+ */
+describe("seeded course forms", () => {
+  it("are stamped with the app's clock, not the database's", async () => {
+    const { db, shop } = await seededShopContext();
+    const forms = await db
+      .select({ created: courseForms.createdAt })
+      .from(courseForms)
+      .where(eq(courseForms.shopId, shop.id));
+    const versions = await db
+      .select({ created: courseFormVersions.createdAt })
+      .from(courseFormVersions)
+      .where(eq(courseFormVersions.shopId, shop.id));
+
+    expect(versions.length).toBeGreaterThan(0);
+    const now = nowDate().getTime();
+    expect([...forms, ...versions].filter((row) => row.created.getTime() !== now)).toEqual([]);
+  }, 60_000);
 });

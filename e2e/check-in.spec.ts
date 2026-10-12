@@ -274,6 +274,11 @@ test("a walk-in seated off the name prompt is confirmed and checked in without l
   await expect(
     row.getByText("Confirm this booking is Zoe Bennett?", { exact: false }),
   ).toBeVisible();
+  // The evidence the confirm is weighed against (H-79, issue #1789): the
+  // matched diver's last dive day here, not counting this departure. The seed
+  // checks Zoe Bennett in on this morning's dawn boat, 05:30 shop time on the
+  // frozen clock's day, so the line names that day.
+  await expect(row.getByText(/^Last dive day here: Tue, Jul\s21$/)).toBeVisible();
   await row.getByRole("button", { name: "Yes, this is them" }).click();
 
   // It lands in place — still this boat's Divers tab — and the row it landed

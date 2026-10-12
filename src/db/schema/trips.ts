@@ -349,6 +349,16 @@ export const trips = pgTable(
     diverCapacity: integer("diver_capacity"),
     /** Drives the after-dive roll-call checkpoints; recreational charters are commonly two-tank. */
     plannedDives: integer("planned_dives").notNull().default(2),
+    /**
+     * **This departure's dives went past no-decompression limits** — staged
+     * decompression, extended range (H-84, issue #1555). DAN's preflight
+     * guidance covers no-decompression diving and declines to give a number for
+     * a dive that took stops, so `flySafeFrom` (src/lib/fly-safe.ts) answers
+     * nothing for a departure carrying it and the recap says nothing about
+     * flying. Defaults to no, so a shop that never sets it keeps the ordinary
+     * sentence; it changes no gate, no ratio and no manifest.
+     */
+    exceedsNoDecoLimits: boolean("exceeds_no_deco_limits").notNull().default(false),
     /** Per-diver price; null means unpriced — an order made from this trip needs a manual amount. */
     priceCents: integer("price_cents"),
     /**

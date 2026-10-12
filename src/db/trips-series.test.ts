@@ -7,6 +7,7 @@ import { listDiveSites } from "./dive-sites";
 import {
   bookings,
   courses,
+  crewNotices,
   people,
   rollCallEvents,
   tripRequirements,
@@ -32,6 +33,7 @@ import {
   rollAllSeriesForward,
   rollSeriesForward,
   setSeriesRepeat,
+  setTripCrew,
   setTripStatus,
   updateSeriesCadence,
   updateTrip,
@@ -562,6 +564,52 @@ describe("recurring trip series (in-memory PGlite)", () => {
     const before = await occurrenceDatesOf(db, result.series.id);
     await rollAllSeriesForward(db, now);
     expect(await occurrenceDatesOf(db, result.series.id)).toEqual(before);
+  });
+
+  // Issue #2284: cancelling a run is a staffer's act, not a system pass, so
+  // its call-off news names them, and (like every crew notice) the staffer
+  // who did it is not told about their own act.
+  it("names the staffer who cancelled the run, in both of a series' call-offs", async () => {
+    const { db, shop } = ctx;
+    const now = at("2030-09-30T12:00:00.000Z");
+    const staffIds = [...new Set((await listStaff(db, shop.id)).map((row) => row.person.id))];
+    const [actorId, otherId] = staffIds;
+    if (!actorId || !otherId) throw new Error("seed staff missing");
+    const actor = { id: actorId };
+    const other = { id: otherId };
+    const calledOff = async (tripId: string) =>
+      db
+        .select({ personId: crewNotices.personId, actorPersonId: crewNotices.actorPersonId })
+        .from(crewNotices)
+        .where(and(eq(crewNotices.tripId, tripId), eq(crewNotices.change, "called_off")));
+
+    const offCadence = await createTripSeries(
+      db,
+      seriesInput({ shopId: shop.id, weekdays: weekdaySetFrom([WED, SAT]) }),
+    );
+    if (!offCadence) throw new Error("series not created");
+    await updateSeriesCadence(
+      db,
+      shop.id,
+      offCadence.series.id,
+      { intervalWeeks: 1, weekdays: weekdaySetFrom([SAT]), endsOn: null },
+      now,
+    );
+    const [orphan] = await listOffCadenceSeriesTrips(db, shop.id, offCadence.series.id, now);
+    if (!orphan) throw new Error("expected an off-cadence date");
+    await setTripCrew(db, shop.id, orphan.id, [actor.id, other.id]);
+    await cancelOffCadenceSeriesTrips(db, shop.id, offCadence.series.id, now, {
+      actorPersonId: actor.id,
+    });
+    expect(await calledOff(orphan.id)).toEqual([{ personId: other.id, actorPersonId: actor.id }]);
+
+    const whole = await createTripSeries(db, seriesInput({ shopId: shop.id }));
+    if (!whole) throw new Error("series not created");
+    const upcoming = whole.trips.find((trip) => trip.startsAt > now);
+    if (!upcoming) throw new Error("expected an upcoming date");
+    await setTripCrew(db, shop.id, upcoming.id, [actor.id, other.id]);
+    await cancelFutureSeriesTrips(db, shop.id, whole.series.id, now, { actorPersonId: actor.id });
+    expect(await calledOff(upcoming.id)).toEqual([{ personId: other.id, actorPersonId: actor.id }]);
   });
 
   it("stops and restarts a repeat without disturbing the dates already on the board", async () => {

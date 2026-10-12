@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { EditorSection } from "./EditorSection";
@@ -32,7 +32,8 @@ describe("EditorSection", () => {
 
     expect(legend?.tagName).toBe("LEGEND");
     // The full measure, so the hairline spans the column as a section's does.
-    expect(legend).toHaveClass("w-full", "border-t", "border-border", "pt-6");
+    // `lg:pt-6`: below `lg` the header is a 48px button carrying its own air.
+    expect(legend).toHaveClass("w-full", "border-t", "border-border", "lg:pt-6");
     expect(shellTokens(fieldset)).toEqual([]);
   });
 
@@ -89,6 +90,109 @@ describe("EditorSection", () => {
     );
     const shell = container.firstElementChild;
     expect(shell?.tagName).toBe("SECTION");
-    expect(shell).toHaveClass("border-t", "border-border", "pt-6");
+    expect(shell).toHaveClass("border-t", "border-border", "lg:pt-6");
+  });
+});
+
+/**
+ * **A long editor folds on a phone** (UX review 2026-10-10, item 15): 7,440px
+ * and 8,098px of form under a rail of pills four rows deep. Below `lg` each
+ * section is a header naming it, with a line saying what is in it, and one
+ * section stands open at a time, the first by default. What was typed in a
+ * folded section is still there and still posts: the body is hidden by a
+ * class, never unmounted.
+ */
+describe("an editor section on a phone", () => {
+  function Form() {
+    return (
+      <form>
+        <EditorSection id="pitch" label="The pitch" lead>
+          <input aria-label="Subhead" name="subhead" defaultValue="Learn to dive" />
+        </EditorSection>
+        <EditorSection id="pricing" label="Pricing" as="fieldset">
+          <input aria-label="Price" name="price" type="number" defaultValue="450" />
+          <select aria-label="Currency" name="currency" defaultValue="usd">
+            <option value="">Pick one</option>
+            <option value="usd">US dollars</option>
+          </select>
+          <input aria-label="Secret" type="hidden" name="secret" value="x" />
+        </EditorSection>
+        <EditorSection id="faq" label="Questions">
+          <input aria-label="Question" name="q" required />
+        </EditorSection>
+      </form>
+    );
+  }
+  const header = (name: RegExp) => screen.getByRole("button", { name });
+  const body = (id: string) => document.getElementById(`${id}-body`);
+
+  it("opens the first section and folds the rest, keeping their fields in the form", () => {
+    render(<Form />);
+    expect(header(/The pitch/)).toHaveAttribute("aria-expanded", "true");
+    expect(header(/Pricing/)).toHaveAttribute("aria-expanded", "false");
+    expect(header(/Pricing/)).toHaveAttribute("aria-controls", "pricing-body");
+    expect(body("pitch")).not.toHaveClass("max-lg:hidden");
+    expect(body("pricing")).toHaveClass("max-lg:hidden");
+    // Folded, not gone: the value is in the DOM and posts with Save.
+    const form = document.querySelector("form") as HTMLFormElement;
+    expect(new FormData(form).get("price")).toBe("450");
+  });
+
+  it("is a header only below lg, the plain label above it, and named by the label alone", () => {
+    render(<Form />);
+    expect(header(/Pricing/)).toHaveClass("lg:hidden");
+    expect(document.getElementById("pricing-label")).toHaveClass("max-lg:hidden");
+    expect(screen.getByRole("group", { name: "Pricing" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "The pitch" })).toBeInTheDocument();
+  });
+
+  it("says what a folded section holds, in its own words, and nothing for a hidden payload", () => {
+    render(<Form />);
+    expect(header(/Pricing/)).toHaveTextContent("450 · US dollars");
+    expect(header(/Pricing/)).not.toHaveTextContent("x");
+    // An open section shows its fields instead.
+    expect(header(/The pitch/).querySelector("[data-section-preview]")).toHaveTextContent("");
+  });
+
+  it("opens one section at a time", () => {
+    render(<Form />);
+    fireEvent.click(header(/Pricing/));
+    expect(header(/Pricing/)).toHaveAttribute("aria-expanded", "true");
+    expect(header(/The pitch/)).toHaveAttribute("aria-expanded", "false");
+    expect(body("pitch")).toHaveClass("max-lg:hidden");
+    fireEvent.click(header(/Pricing/));
+    expect(header(/Pricing/)).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("opens the section a link jumps to", () => {
+    render(
+      <>
+        <a href="#faq">Questions</a>
+        <Form />
+      </>,
+    );
+    fireEvent.click(screen.getByRole("link", { name: "Questions" }));
+    expect(header(/Questions/)).toHaveAttribute("aria-expanded", "true");
+    expect(header(/The pitch/)).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("opens a folded section the browser refuses a required field in", () => {
+    render(<Form />);
+    act(() => {
+      (document.querySelector("form") as HTMLFormElement).checkValidity();
+    });
+    expect(body("faq")).not.toHaveClass("max-lg:hidden");
+    expect(header(/Questions/)).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("opens the section holding a refused save's field before the focus lands", () => {
+    render(
+      <>
+        <Form />
+        <FieldErrorFocus field="faq" />
+      </>,
+    );
+    expect(body("faq")).not.toHaveClass("max-lg:hidden");
+    expect(document.activeElement).toBe(document.getElementById("faq"));
   });
 });

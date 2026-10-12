@@ -1066,7 +1066,7 @@
     "expiredBody": "Whoever sent you this link can tell you what’s happened with the seat.",
     "errors": {
       "checkFields": "Check the highlighted fields and try again.",
-      "alreadyBooked": "You already have your own spot on this trip, so this seat stays with your organizer.",
+      "unable": "This seat can’t be claimed with these details. Contact the shop and they can sort it out.",
       "coursePrerequisite": "This session is a course with its own prerequisites, and the shop needs a verified certification on file before the seat can change hands. Contact the shop and they can sort it out."
     },
     "claimedNotice": "This seat is yours now, and everything on this page is about you. Your organizer can see it’s claimed.",
@@ -2695,7 +2695,7 @@
       "priceLine": "One flat price of {price} {cadence}, locked for two years for founding shops.",
       "seeIncluded": "See what’s included →",
       "contactTitle": "Ask us first",
-      "contactBody": "Write in with whatever would decide it for you. A real person reads it.",
+      "contactBody": "Write in with whatever would decide it for you.",
       "contactCta": "Email {email}",
       "stepLink": "{name} →"
     },

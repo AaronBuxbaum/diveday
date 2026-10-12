@@ -1,5 +1,6 @@
 import { randomInt } from "node:crypto";
 import { z } from "zod";
+import { thrownErrorToken } from "@/lib/error-token";
 import { log } from "@/lib/log";
 import { safeJson } from "@/lib/safe-json";
 import { GRAPH_API_ORIGIN, GRAPH_API_VERSION } from "./whatsapp";
@@ -123,9 +124,9 @@ type GraphFailure = {
   subcode?: number;
 };
 
+/** Meta's error envelope, without its free-text `message` (issue #2334). */
 const graphErrorSchema = z.object({
   error: z.object({
-    message: z.string().optional(),
     code: z.number().optional(),
     error_subcode: z.number().optional(),
   }),
@@ -140,7 +141,6 @@ function graphFailure(status: number, rawBody: string): GraphFailure {
     httpStatus: status,
     errorCode:
       code === undefined ? undefined : subcode === undefined ? `${code}` : `${code}/${subcode}`,
-    detail: error?.message?.slice(0, 500),
     code,
     subcode,
   };
@@ -177,7 +177,8 @@ async function graphRequest(
       ok: false,
       errorCode:
         error instanceof Error && error.name === "TimeoutError" ? "timeout" : "network_error",
-      detail: error instanceof Error ? error.message.slice(0, 500) : undefined,
+      // The cause's code or the class, never the thrown message (issue #2334).
+      detail: thrownErrorToken(error),
     };
   }
 }

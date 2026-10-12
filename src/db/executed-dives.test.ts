@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS, MINUTE_MS } from "@/lib/clock";
+import { DEFAULT_FLY_SAFE_HOURS, flySafeFrom } from "@/lib/fly-safe";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
@@ -8,6 +9,7 @@ import { checkInBooking } from "./check-in";
 import type { AppDb } from "./client";
 import {
   deleteExecutedDive,
+  diveDaysBefore,
   listExecutedDives,
   peopleWhoDivedBefore,
   upsertExecutedDive,
@@ -616,6 +618,56 @@ describe("peopleWhoDivedBefore", () => {
     expect((await (await twoDays(6)).ask()).size).toBe(1);
   });
 
+  /**
+   * **A decompression boat earlier in the day silences the later one's figure**
+   * (H-84; dive-domain review of #1555). DAN gives no preflight number after a
+   * dive that took stops, so a morning boat the shop marked past
+   * no-decompression limits leaves the afternoon recap with nothing to quote,
+   * even though the afternoon boat is not marked itself.
+   */
+  it("reports a flagged morning boat for the unflagged afternoon one, and flySafeFrom goes quiet", async () => {
+    const ctx = await twoDays(6);
+    await ctx.db
+      .update(trips)
+      .set({ exceedsNoDecoLimits: true })
+      .where(eq(trips.id, ctx.before.id));
+    const days = await diveDaysBefore(
+      ctx.db,
+      ctx.shop.id,
+      [ctx.personId],
+      ctx.after.startsAt,
+      ctx.shop.timezone,
+    );
+    expect([...days.dived]).toEqual([ctx.personId]);
+    expect([...days.decompression]).toEqual([ctx.personId]);
+    const afternoon = {
+      executedDives: [],
+      plannedDives: 1,
+      endsAt: ctx.after.endsAt,
+      divedRecently: days.dived.has(ctx.personId),
+      exceedsNoDecoLimits: false,
+      now: new Date(ctx.after.startsAt.getTime() + 8 * HOUR_MS),
+      hours: DEFAULT_FLY_SAFE_HOURS,
+    };
+    expect(flySafeFrom(afternoon)).not.toBeNull();
+    expect(
+      flySafeFrom({ ...afternoon, decompressionRecently: days.decompression.has(ctx.personId) }),
+    ).toBeNull();
+  });
+
+  it("reports no decompression day when the earlier boat was not flagged", async () => {
+    const ctx = await twoDays(6);
+    const days = await diveDaysBefore(
+      ctx.db,
+      ctx.shop.id,
+      [ctx.personId],
+      ctx.after.startsAt,
+      ctx.shop.timezone,
+    );
+    expect(days.dived.size).toBe(1);
+    expect(days.decompression.size).toBe(0);
+  });
+
   it("counts a departure the crew never logged a dive on", async () => {
     // Crews do not reliably log; `flySafeFrom` answers from `planned_dives`
     // for exactly that reason. Requiring a dive row here would let today's
@@ -950,6 +1002,24 @@ describe("peopleWhoDivedBefore", () => {
       await callRoll(ctx, "boarded");
       await cancelSeat(ctx);
       expect([...(await ctx.ask())]).toEqual([ctx.personId]);
+    });
+
+    it("reports a flagged departure the roll call vouches for, past a cancelled seat", async () => {
+      const ctx = await twoDays(6, { logDive: false });
+      await ctx.db
+        .update(trips)
+        .set({ exceedsNoDecoLimits: true })
+        .where(eq(trips.id, ctx.before.id));
+      await callRoll(ctx, "boarded");
+      await cancelSeat(ctx);
+      const days = await diveDaysBefore(
+        ctx.db,
+        ctx.shop.id,
+        [ctx.personId],
+        ctx.after.startsAt,
+        ctx.shop.timezone,
+      );
+      expect([...days.decompression]).toEqual([ctx.personId]);
     });
 
     it("counts a departure marked cancelled after it ran with a roll call on it", async () => {
