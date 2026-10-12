@@ -23,6 +23,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
+import { DIVE_SITE_TEMPLATES } from "@/content/dive-site-templates";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { daySummaryBlocked, sharedInHorizonReadiness } from "@/db/blockers";
 import { hasArrivals, listCheckInQueue } from "@/db/check-in";
@@ -52,6 +53,7 @@ import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { assembleEveningClose, dayTakings } from "@/lib/closeout";
 import { shopCrewTarget } from "@/lib/crew-schedule";
+import { siteCatalogIsLocal } from "@/lib/curated-defaults";
 import { FORM_DRAFT_RESUME_SUFFIX } from "@/lib/form-drafts";
 import {
   formatDateTimeTz,
@@ -983,7 +985,9 @@ async function TodayBody({
                   unitsAction: t("shopHome.firstRun.unitsAction"),
                   unitsDone: t("shopHome.firstRun.unitsDone"),
                   siteTitle: t("shopHome.firstRun.siteTitle"),
-                  siteBody: t("shopHome.firstRun.siteBody"),
+                  siteBody: siteCatalogIsLocal(shop)
+                    ? t("shopHome.firstRun.siteBody", { count: DIVE_SITE_TEMPLATES.length })
+                    : t("shopHome.firstRun.siteBodyOwn"),
                   siteAction: t("shopHome.firstRun.siteAction"),
                   siteDone: t("shopHome.firstRun.siteDone", {
                     count: firstRunDiveSites?.length ?? 0,

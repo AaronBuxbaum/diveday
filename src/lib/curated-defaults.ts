@@ -131,3 +131,26 @@ export function shopDefaultsForTimeZone(timeZone: string): {
     depthUnit: FEET_ZONES.has(timeZone) ? "feet" : "meters",
   };
 }
+
+/**
+ * **Whether DiveDay's starting dive-site catalog is near this shop.** The
+ * catalog is Florida Keys sites (`src/content/dive-site-templates.ts`), so the
+ * first-run line that offers it only makes sense to a Florida shop; a shop in
+ * Bonaire or Cancun is told to add its own first site instead (UX review
+ * 2026-10-11, item 15).
+ *
+ * The address wins when the shop has given one: a country other than the US,
+ * or a US region other than Florida, is not local. With no address yet, the
+ * Eastern zone is the best guess the timezone allows.
+ */
+export function siteCatalogIsLocal(shop: {
+  timezone: string;
+  addressCountry?: string | null;
+  addressRegion?: string | null;
+}): boolean {
+  const country = shop.addressCountry?.trim().toUpperCase();
+  if (country && country !== "US") return false;
+  const region = shop.addressRegion?.trim().toUpperCase();
+  if (region) return region === "FL" || region === "FLORIDA";
+  return shop.timezone === "America/New_York";
+}
