@@ -21,6 +21,9 @@ describe("the new-rental form", () => {
     expect(cards).toContain("<RentalCardSeen");
     expect(cards).toContain("<CounterRentalWaiverLine");
     expect(cards).not.toContain("ticketId=");
+    // The whole status, so a clean release standing over a physician's
+    // earlier "not cleared" is said here too (dive-domain review, H-98).
+    expect(cards).toContain("status={waivers?.get(person.id)}");
     const line = CODE.indexOf("<CounterRentalWaiverLine");
     const afterLine = CODE.slice(CODE.indexOf("/>", line));
     expect(afterLine).not.toMatch(/waiver/i);

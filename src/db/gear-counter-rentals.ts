@@ -844,12 +844,16 @@ function groupCounterRentals(rows: readonly CounterRentalRow[]): CounterRentalTi
  * sent from their record — so a counter has had a person's waiver to read all
  * along. Shop-scoped on every read; a person id from another shop answers
  * nothing, which the caller reads as "say nothing".
+ *
+ * The whole status, not just its state: a current release can stand over a
+ * physician's earlier "not cleared" or an open referral (H-98 as amended),
+ * and the counter says that warning as the manifest does.
  */
 export async function counterRentalWaiverStandings(
   db: AppDb,
   input: { shopId: string; timezone: string; personIds: readonly string[] },
-): Promise<Map<string, ShopWaiverStatus["state"]>> {
-  const standings = new Map<string, ShopWaiverStatus["state"]>();
+): Promise<Map<string, ShopWaiverStatus>> {
+  const standings = new Map<string, ShopWaiverStatus>();
   const personIds = [...new Set(input.personIds)];
   if (personIds.length === 0) return standings;
   const [holders, signed, template] = await Promise.all([
@@ -873,7 +877,7 @@ export async function counterRentalWaiverStandings(
         personSignedWaivers: signed.get(holder.id) ?? [],
         currentTemplateVersion: template?.materialGeneration ?? null,
         signer: { dateOfBirth: holder.dateOfBirth, timezone: input.timezone },
-      }).state,
+      }),
     );
   }
   return standings;

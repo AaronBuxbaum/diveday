@@ -20,7 +20,7 @@ import { nowDate } from "@/lib/clock";
 import { reservationPhase } from "@/lib/gear";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { type NoticeTone, noticeCountParam, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { GearReturnPane } from "../../../trips/[id]/prep/_components/GearReturnPane";
 import { CounterRentalWaiverLine } from "../../_components/CounterRentalWaiverLine";
@@ -39,7 +39,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
+/** `counted`: the sentence names `?count=`, and without a readable one says nothing. */
+const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey; counted?: true }> = {
   rented: { tone: "success", key: "counterRentals.ticket.notice.rented" },
   "rented-invoiced": { tone: "success", key: "counterRentals.ticket.notice.rentedInvoiced" },
   "rented-paid": { tone: "success", key: "counterRentals.ticket.notice.rentedPaid" },
@@ -54,7 +55,11 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "handed-over": { tone: "success", key: "counterRentals.ticket.notice.handedOver" },
   returned: { tone: "success", key: "counterRentals.ticket.notice.returned" },
   "returned-flagged": { tone: "warning", key: "counterRentals.ticket.notice.returnedFlagged" },
-  "returned-pulled": { tone: "success", key: "counterRentals.ticket.notice.returnedPulled" },
+  "returned-pulled": {
+    tone: "success",
+    key: "counterRentals.ticket.notice.returnedPulled",
+    counted: true,
+  },
   invoiced: { tone: "warning", key: "counterRentals.ticket.notice.invoiced" },
   released: { tone: "success", key: "counterRentals.ticket.notice.released" },
   "not-found": { tone: "warning", key: "counterRentals.ticket.notice.notFound" },
@@ -87,10 +92,10 @@ export default async function CounterRentalTicketPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; ticketId: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; count?: string }>;
 }) {
   const { shopSlug, ticketId: rawTicketId } = await params;
-  const { notice } = await searchParams;
+  const { notice, count } = await searchParams;
   // An unparseable literal raises in Postgres rather than missing; narrow it
   // first so a mistyped URL is this page's 404, not a 500.
   const ticketId = uuidParam(rawTicketId);
@@ -111,7 +116,9 @@ export default async function CounterRentalTicketPage({
   ]);
 
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
-  const banner = noticeFromParam(notice, NOTICES);
+  const noticeCount = noticeCountParam(count);
+  const found = noticeFromParam(notice, NOTICES);
+  const banner = found && (!found.counted || noticeCount !== null) ? found : undefined;
   const onWall = ticket.units.filter((unit) => !unit.checkedOutAt && !unit.returnedAt);
   const out = ticket.units.filter((unit) => unit.checkedOutAt && !unit.returnedAt);
   const window =
@@ -121,7 +128,7 @@ export default async function CounterRentalTicketPage({
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["notice"]} />
+      <FlashParams params={["notice", "count"]} />
       <div id="rental-ticket">
         <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
           <div>
@@ -147,7 +154,9 @@ export default async function CounterRentalTicketPage({
 
         {banner ? (
           <div className="print:hidden">
-            <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
+            <StaffNoticeBanner tone={banner.tone}>
+              {t(banner.key, { count: noticeCount ?? 0 })}
+            </StaffNoticeBanner>
           </div>
         ) : null}
 
@@ -156,9 +165,12 @@ export default async function CounterRentalTicketPage({
             gear, not a note about them. */}
         <CounterRentalWaiverLine
           t={t}
-          state={waivers.get(ticket.personId)}
+          status={waivers.get(ticket.personId)}
           personId={ticket.personId}
           ticketId={ticket.ticketId}
+          shopSlug={shopSlug}
+          locale={locale}
+          timezone={shop.timezone}
           className="mt-6 print:hidden"
         />
 
@@ -227,6 +239,7 @@ export default async function CounterRentalTicketPage({
                   allGood: t("gear.prep.returnAllGood"),
                   fitAdjusted: t("gear.prep.returnFitAdjusted"),
                   serviceConcern: t("gear.prep.returnServiceConcern"),
+                  cancelConcern: t("gear.prep.returnCancelConcern"),
                   noteLabel: t("gear.prep.returnNoteLabel"),
                   notePlaceholder: t("gear.prep.returnNotePlaceholder"),
                 }}

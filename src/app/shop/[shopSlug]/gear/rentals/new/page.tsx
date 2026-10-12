@@ -271,8 +271,11 @@ export default async function RentOutPage({
                 ) : null}
                 <CounterRentalWaiverLine
                   t={t}
-                  state={waivers?.get(person.id)}
+                  status={waivers?.get(person.id)}
                   personId={person.id}
+                  shopSlug={shopSlug}
+                  locale={locale}
+                  timezone={shop.timezone}
                   className="mt-3"
                 />
               </>

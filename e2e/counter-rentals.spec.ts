@@ -123,16 +123,18 @@ test.describe("staff", () => {
     await expect(page.getByRole("status").filter({ hasText: "Handed over." })).toBeVisible();
 
     await page.getByRole("button", { name: "Service concern" }).click();
+    // An open concern hides the fast answers: "All good" would drop the note.
+    await expect(page.getByRole("button", { name: "All good" })).toHaveCount(0);
     const bench = page.getByRole("group", { name: "Pull for service" });
     // Every box starts unticked: pulling is never automatic (#2205).
     await expect(bench.getByRole("checkbox")).toHaveCount(2);
     for (const box of await bench.getByRole("checkbox").all()) await expect(box).not.toBeChecked();
     await page.getByLabel("What to tell the technician").fill("Mask skirt torn");
     await bench.getByRole("checkbox", { name: "Mask #2" }).check();
-    // The armed concern's own submit, below the boxes.
-    await page.getByRole("button", { name: "Service concern" }).last().click();
+    // The open concern's own submit, below the boxes, beside Cancel.
+    await page.getByRole("button", { name: "Service concern" }).click();
     await expect(
-      page.getByRole("status").filter({ hasText: "Back. Pulled for service." }),
+      page.getByRole("status").filter({ hasText: "Back. 1 pulled for service." }),
     ).toBeVisible();
   });
 

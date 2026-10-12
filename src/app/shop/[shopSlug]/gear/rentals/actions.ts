@@ -408,7 +408,9 @@ export async function returnCounterRentalAction(formData: FormData) {
         : "returned";
   revalidateAndRedirect(
     shopPath(session.user.shopSlug, "gear"),
-    noticeUrl(ticket, outcome.ok ? returned : outcome.reason),
+    noticeUrl(ticket, outcome.ok ? returned : outcome.reason, {
+      count: outcome.ok && outcome.pulled > 0 ? outcome.pulled : undefined,
+    }),
   );
 }
 

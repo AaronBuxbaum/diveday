@@ -89,4 +89,11 @@ describe("the counter-rental ticket", () => {
     expect(pane).toMatch(/units: out\.map\(/);
     expect(SOURCE).toContain('"returned-pulled": {');
   });
+
+  it("names how many units were pulled, and says nothing on a count it cannot read", () => {
+    expect(SOURCE).toMatch(/"returned-pulled": \{[^}]*counted: true/);
+    expect(SOURCE).toContain("noticeCountParam(count)");
+    expect(SOURCE).toContain("!found.counted || noticeCount !== null");
+    expect(SOURCE).toContain('<FlashParams params={["notice", "count"]} />');
+  });
 });

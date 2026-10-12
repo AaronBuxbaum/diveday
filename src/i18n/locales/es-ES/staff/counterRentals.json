@@ -94,7 +94,7 @@
       "notFound": "No queda nada en este alquiler a lo que hacerle eso.",
       "concernNeedsWords": "Un problema de mantenimiento necesita una línea que diga qué pasó, para que un técnico pueda actuar.",
       "returnedFlagged": "De vuelta, y marcado para el taller.",
-      "returnedPulled": "De vuelta. Enviado a mantenimiento.",
+      "returnedPulled": "De vuelta. {count, plural, one {# enviado a mantenimiento.} other {# enviados a mantenimiento.}}",
       "invoiced": "Este alquiler tiene un pago. Anúlalo primero en Pedidos y luego libéralo.",
       "rentedPaid": "Alquilado. Pago registrado.",
       "rentedNotRecorded": "Alquilado, pero el pago no se guardó. Libera el alquiler y vuelve a alquilarlo."

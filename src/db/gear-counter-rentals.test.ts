@@ -1,6 +1,9 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowMs } from "@/lib/clock";
 import { counterRentalWaiverFlag } from "@/lib/counter-rentals";
+import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { unseededTestDb } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
@@ -49,7 +52,14 @@ import {
   userAccounts,
 } from "./schema";
 import { createTrip } from "./trips-create";
-import { recordInPersonWaiver, saveWaiverTemplate } from "./waivers";
+import {
+  completeWaiver,
+  issueWaiverRequest,
+  recordInPersonWaiver,
+  recordMedicalEvaluation,
+  retireMedicalRefusal,
+  saveWaiverTemplate,
+} from "./waivers";
 
 /** A setup reservation: a hand pick whose staffer already said "Assign anyway". */
 const SETUP_PICK = { proposed: false, assignAnyway: true } as const;
@@ -1325,7 +1335,7 @@ describe("counterRentalWaiverStandings", () => {
       timezone: shop.timezone,
       personIds: [ana.id],
     });
-    expect(standings.get(ana.id)).toBe("none");
+    expect(standings.get(ana.id)?.state).toBe("none");
     expect(counterRentalWaiverFlag("none")).toEqual({ offerLink: true });
   });
 
@@ -1347,8 +1357,91 @@ describe("counterRentalWaiverStandings", () => {
       timezone: shop.timezone,
       personIds: [ana.id],
     });
-    expect(standings.get(ana.id)).toBe("current");
+    expect(standings.get(ana.id)?.state).toBe("current");
     expect(counterRentalWaiverFlag("current")).toBeNull();
+  });
+
+  /**
+   * H-98 as amended (issues #2158, #2195): a later clean release stands over a
+   * physician's "not cleared", as a warning. The counter carries the medical
+   * mark so the new-rental form and the ticket can say it, never gate on it.
+   */
+  it("carries a physician's earlier refusal under a later clean release", async () => {
+    const { db, shop } = await rentalShop();
+    await saveWaiverTemplate(db, { shopId: shop.id, title: "Release", body: "The terms." });
+    const desk = await staffer(db, shop.id);
+    const startsAt = new Date(nowMs() + 3 * 24 * 3_600_000);
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Reef",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
+      capacity: 6,
+    });
+    if (!trip) throw new Error("trip insert failed");
+    const booking = await createBooking(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      actor: "staff",
+      fullName: "Rafa Referred",
+      email: "rafa@example.com",
+    });
+    if (!booking.ok) throw new Error("booking failed");
+    const clear = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
+    const referral = { ...clear, responses: { ...clear.responses, q3: true } };
+    const t0 = nowMs() - 3 * 3_600_000;
+
+    const first = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.bookingId,
+      now: new Date(t0),
+    });
+    if (!first.ok) throw new Error(`link refused: ${first.reason}`);
+    await completeWaiver(db, first.token, {
+      signerName: "Rafa Referred",
+      agreed: true,
+      medicalAnswers: referral,
+      now: new Date(t0),
+    });
+    await recordMedicalEvaluation(db, {
+      outcome: "not_cleared",
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: desk.id,
+      evaluatedOn: calendarDateInTimezone(new Date(t0), shop.timezone),
+      physicianName: "Dr. Imani Reyes",
+      now: new Date(t0 + 60_000),
+    });
+    await retireMedicalRefusal(db, {
+      shopId: shop.id,
+      bookingId: booking.bookingId,
+      actorPersonId: desk.id,
+      now: new Date(t0 + 120_000),
+    });
+    const fresh = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.bookingId,
+      now: new Date(t0 + 120_000),
+    });
+    if (!fresh.ok) throw new Error(`fresh link refused: ${fresh.reason}`);
+    await completeWaiver(db, fresh.token, {
+      signerName: "Rafa Referred",
+      agreed: true,
+      medicalAnswers: clear,
+      now: new Date(t0 + 180_000),
+    });
+
+    const standing = (
+      await counterRentalWaiverStandings(db, {
+        shopId: shop.id,
+        timezone: shop.timezone,
+        personIds: [booking.personId],
+      })
+    ).get(booking.personId);
+    expect(standing?.state).toBe("current");
+    expect(standing?.state === "current" ? standing.medical?.overriddenRefusal : null).toEqual(
+      expect.objectContaining({ recordId: expect.any(String) }),
+    );
   });
 
   it("answers nothing for another shop's person", async () => {

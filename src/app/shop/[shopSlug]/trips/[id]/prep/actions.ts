@@ -313,6 +313,7 @@ export async function returnTripGearSetAction(formData: FormData) {
         : outcome.reason === "not_found"
           ? "gear-nothing-out"
           : RESERVATION_ACTION_NOTICE[outcome.reason],
+      { count: outcome.ok && outcome.pulled > 0 ? outcome.pulled : undefined },
     ),
   );
 }
