@@ -33,22 +33,69 @@ function countOf(marker: string): number {
   return SOURCE.split(marker).length - 1;
 }
 
+const MASTHEAD = readFileSync(join(__dirname, "_components/ReadyMasthead.tsx"), "utf8");
+
+/** The thread's own boundary: the last one in the file, inside `DiverReadinessPage`. */
+const THREAD_SUSPENSE = "<Suspense fallback={<ReadyThreadBodySkeleton />}>{threadBody}</Suspense>";
+
 /**
- * **The confirmation in the first paint** (UX audit #5). After a booking POST
- * the diver used to land on a whole-page skeleton while the spine's seven reads
- * ran, at the one moment they were waiting to be told it worked. The masthead
- * and the earned moment need only the verified booking, so they render before
- * a `<Suspense>` boundary and the thread streams into it.
+ * **The confirmation in the first paint** (UX audit #5, then UX review
+ * 2026-10-10, item 7). After a booking POST the diver used to land on a
+ * whole-page skeleton while the page's reads ran, at the one moment they were
+ * waiting to be told it worked. The masthead and the moment once moved above
+ * the thread's boundary, but still waited on the full loader, which reads the
+ * departure's whole readiness roster. Now the booked card paints from one
+ * narrow row (`getBookedMoment`) and everything else streams under it.
  */
 describe("the confirmation paints before the thread", () => {
-  it("renders the earned moment outside the thread's boundary", () => {
-    const suspense = positionOf("<Suspense fallback={<ReadyThreadBodySkeleton />}>");
-    expect(suspense).toBeGreaterThan(-1);
-    expect(positionOf("<EarnedMoment")).toBeLessThan(suspense);
-    // The thread's reads live in the promise the boundary renders, never above it.
+  const page = positionOf("export default async function ReadyTokenPage");
+  const readyThread = positionOf("async function DiverReadinessPage(");
+
+  it("paints the booked card from the booking's own row, before any of the thread's reads", () => {
+    expect(page).toBeGreaterThan(-1);
+    expect(readyThread).toBeGreaterThan(page);
+    // From the verified capability on: the dead-link branches above it read
+    // what they need to name a shop, and are not the first paint after a booking.
+    const fastPath = SOURCE.slice(positionOf("const { bookingId } = capability;"), readyThread);
+    expect(fastPath).toContain("await getBookedMoment(db, bookingId)");
+    // The card is the shell's header; the rest is a streamed child under it.
+    const opening = fastPath.indexOf("<ReadyBookedPage");
+    expect(opening).toBeGreaterThan(-1);
+    expect(fastPath.slice(opening)).toContain(
+      "<Suspense fallback={<ReadyThreadBodySkeleton />}>{thread}</Suspense>",
+    );
+    expect(fastPath.indexOf("<DiverReadinessPage")).toBeGreaterThan(-1);
+    // Inside the booked page, the card is the shell's header.
+    const shell = MASTHEAD.slice(MASTHEAD.indexOf("export function ReadyBookedPage"));
+    expect(shell.indexOf("header={")).toBeLessThan(shell.indexOf("<ReadyBookedHeader"));
+    expect(shell.indexOf("<ReadyBookedHeader")).toBeLessThan(shell.indexOf("{children}"));
+    for (const read of [
+      "getReadyPageData(",
+      "issuePartySeatClaims(",
+      "resolvePaymentReceipt(",
+      "listTripDives(",
+      "countSpendableDives(",
+    ]) {
+      expect(fastPath).not.toContain(read);
+    }
+  });
+
+  it("declines the fast path wherever a terminal card could apply", () => {
+    const fastPath = SOURCE.slice(page, readyThread);
+    for (const guard of [
+      "!found.bookingCancelled",
+      "!found.departureCancelled",
+      "!theBoatIsHome(found.trip)",
+    ]) {
+      expect(fastPath).toContain(guard);
+    }
+  });
+
+  it("keeps the thread's reads inside the promise its own boundary renders", () => {
     const body = positionOf("const threadBody = (async () => {");
-    expect(body).toBeGreaterThan(-1);
-    const page = positionOf("export default async function DiverReadinessPage");
+    expect(body).toBeGreaterThan(readyThread);
+    const suspense = positionOf(THREAD_SUSPENSE);
+    expect(suspense).toBeGreaterThan(body);
     const thread = SOURCE.slice(body, suspense);
     for (const read of [
       "issuePartySeatClaims(",
@@ -56,7 +103,7 @@ describe("the confirmation paints before the thread", () => {
       "listTripDives(",
       "countSpendableDives(",
     ]) {
-      expect(SOURCE.slice(page, body)).not.toContain(read);
+      expect(SOURCE.slice(readyThread, body)).not.toContain(read);
       expect(thread).toContain(read);
     }
     expect(positionOf("<ThreadSpine")).toBeGreaterThan(body);
@@ -66,14 +113,16 @@ describe("the confirmation paints before the thread", () => {
     // `threadBody` starts running when it is built (it mints party claim
     // tokens and refreshes a Stripe checkout), so an early return or throw
     // after it would run those effects for a page that never shows them and
-    // drop the promise unhandled. At the page's own indent, the only exit
-    // between the promise and its boundary is the final render.
+    // drop the promise unhandled. At the function's own indent, the only exit
+    // after the promise is the final render, and it carries the boundary.
     const body = positionOf("const threadBody = (async () => {");
     const bodyEnd = SOURCE.indexOf("\n  })();", body);
-    const suspense = positionOf("<Suspense fallback={<ReadyThreadBodySkeleton />}>");
+    const finalReturn = positionOf("  return underBookedHeader ? (");
     expect(bodyEnd).toBeGreaterThan(body);
-    const exits = SOURCE.slice(bodyEnd, suspense).match(/\n {2}(return|throw)\b/g) ?? [];
-    expect(exits).toEqual(["\n  return"]);
+    expect(finalReturn).toBeGreaterThan(positionOf(THREAD_SUSPENSE));
+    const exits = SOURCE.slice(bodyEnd, finalReturn).match(/\n {2}(return|throw)\b/g) ?? [];
+    expect(exits).toEqual([]);
+    expect(SOURCE.slice(finalReturn).match(/\n {2}(return|throw)\b/g) ?? []).toEqual([]);
   });
 });
 
@@ -136,10 +185,16 @@ describe("the thread column's cards", () => {
     }
   });
 
-  it("sets the booked moment above them at the same inset", () => {
-    const moments = SOURCE.match(/<EarnedMoment\b[^>]*>/g) ?? [];
+  it("opens the page with the booked moment rather than stacking it among them", () => {
+    // It used to head the column of cards at their `md` inset (K-52), under a
+    // masthead that had already said the departure and the date. Since UX
+    // review 2026-10-10, item 34, it *is* the opening, at the moment rung the
+    // recap's "Welcome back" opens on, and the page's `<h1>`.
+    expect(SOURCE).not.toContain("<EarnedMoment");
+    const moments = MASTHEAD.match(/<EarnedMoment\b[\s\S]*?>/g) ?? [];
     expect(moments).toHaveLength(1);
-    expect(moments[0]).toContain('inset="card"');
+    expect(moments[0]).toContain('as="h1"');
+    expect(moments[0]).not.toContain('inset="card"');
   });
 });
 
@@ -298,14 +353,16 @@ describe("status is said once", () => {
 
 describe("the coral budget", () => {
   it("renders one earned moment, and only on ?booked=1", () => {
-    expect(countOf("<EarnedMoment")).toBe(1);
-    // The moment sits inside the `justBooked` branch and nothing else opens
-    // it: `?booked=1` is flashed straight back out of the URL, so reopening
-    // the link three days later replays nothing.
-    const moment = positionOf("<EarnedMoment");
-    const guard = SOURCE.lastIndexOf("{justBooked ? (", moment);
-    expect(guard).toBeGreaterThan(-1);
-    expect(moment - guard).toBeLessThan(900);
+    expect(countOf("<ReadyBookedPage")).toBe(1);
+    expect(MASTHEAD.split("<EarnedMoment").length - 1).toBe(1);
+    expect(MASTHEAD.split("<ReadyBookedHeader").length - 1).toBe(1);
+    // The card is read only on `justBooked`, and nothing else opens it:
+    // `?booked=1` is flashed straight back out of the URL, so reopening the
+    // link three days later replays nothing.
+    expect(SOURCE).toContain(
+      "const found = justBooked ? await getBookedMoment(db, bookingId) : null;",
+    );
+    expect(SOURCE).toContain("if (!moment) return thread;");
   });
 
   it("settles the all-set state into the status head rather than a second moment", () => {
@@ -361,7 +418,8 @@ describe("anything changed", () => {
   it("spends no coral and prints no observed fact", () => {
     // The thread's three moments are booked, paperwork done and welcome home;
     // "you confirmed your sizes" is none of them.
-    expect(countOf("<EarnedMoment")).toBe(1);
+    expect(countOf("<EarnedMoment")).toBe(0);
+    expect(MASTHEAD.split("<EarnedMoment").length - 1).toBe(1);
     // Only a recap may print Observed as what happened (Budget rule 5).
     expect(SOURCE).not.toContain('kind="observed"');
   });
@@ -550,7 +608,10 @@ describe("the sign step's actions", () => {
  */
 describe("a held seat's greeting", () => {
   it("greets the booked-as name while held, and remembers nobody", () => {
-    expect(SOURCE).toContain('const firstName = data.greetingName.split(" ")[0]');
+    // The booked card greets `getBookedMoment`'s name, which applies the held
+    // rule itself (src/db/ready.test.ts holds it to the full loader's).
+    expect(MASTHEAD).toContain("greetingName={moment.greetingName}");
+    expect(MASTHEAD).toContain('greetingName.split(" ")[0]');
     expect(SOURCE).toContain("justBooked && person.email && !data.identityHeld ? (");
     expect(countOf("detail.person.fullName")).toBe(1);
   });

@@ -203,7 +203,7 @@
     "src/app/api/test/seed-trouble-states/route.ts#POST": 405,
     "src/app/api/webhooks/stripe/route.ts#POST": 501,
     "src/app/ready/[token]/_components/AfterState.tsx#AfterState": 476,
-    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 989,
+    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 792,
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 1101,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 503,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 615,
@@ -228,7 +228,7 @@
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.tsx#DiverRollCall": 755,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx#TripManifestPage": 918,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 1047,
-    "src/app/waivers/[token]/page.tsx#WaiverPage": 791,
+    "src/app/waivers/[token]/page.tsx#WaiverPage": 781,
     "src/components/BookingPartyFields.tsx#BookingPartyFields": 416,
     "src/components/DateRequestForm.tsx#DateRequestForm": 418,
     "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 537,
@@ -296,7 +296,7 @@
     "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 592,
     "src/app/pricing/page.tsx": 468,
-    "src/app/ready/[token]/page.tsx": 1614,
+    "src/app/ready/[token]/page.tsx": 1593,
     "src/app/s/[shopSlug]/page.tsx": 1336,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 867,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
@@ -320,7 +320,7 @@
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1134,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1183,
-    "src/app/waivers/[token]/page.tsx": 916
+    "src/app/waivers/[token]/page.tsx": 905
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

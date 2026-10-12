@@ -307,7 +307,8 @@
       "crew": "Crew"
     },
     "pitchDoor": "The rest of the briefing",
-    "pitchDoorSpecies": "{count, plural, one {# species} other {# species}}"
+    "pitchDoorSpecies": "{count, plural, one {# species} other {# species}}",
+    "logEntryWaiting": "After the dive, your log entry is waiting for you."
   },
   "factSource": {
     "forecast": "Forecast",
@@ -374,7 +375,7 @@
     "holdBody": "See the conditions update above. Divers who already booked keep their seats and can follow it live here.",
     "certBelowRequirement": "This trip is for {required} divers. Bring your certification card and we’ll check it at the shop.",
     "certNoneOnGatedTrip": "This trip is for certified divers. Book if you like, then talk to the shop: they run courses and easier dives too.",
-    "confirmedHeading": "You’re on the boat, {name}!",
+    "confirmedHeading": "You’re on the boat, {name}.",
     "confirmedDockCall": "{date}, {time}. Be at the dock {minutes, plural, one {# minute} other {# minutes}} early and we’ll take it from there.",
     "paymentDepositBalance": "Your seat’s locked in. The {balance} balance is due at the dock.",
     "paymentStillOpen": "Your spot is safe and payment’s still open",
@@ -859,6 +860,7 @@
     "certInvalid": "Check the agency, level, and certification number, then try again.",
     "certOptional": "Optional",
     "keepThisPage": "This page is yours to keep. Bookmark it, and it stays up to date until you sail.",
+    "logEntryWaiting": "After the dive, your log entry is waiting here.",
     "gearOnFile": "Your sizes are with the crew.",
     "packageDivesLeft": "{line} · {count, plural, one {# package dive left} other {# package dives left}}",
     "changesSizesLabel": "Sizes",
@@ -940,8 +942,16 @@
     "savedCourseForms": "Course forms signed."
   },
   "thread": {
-    "stepsDoneSuffix": "of {total} done",
-    "nextStep": "Next: {step}",
+    "stepsDone": "{done} of {total} done",
+    "next": {
+      "signWaiver": "Next: sign your waiver, about two minutes.",
+      "signForms": "Next: sign your course forms.",
+      "certification": "Next: add your certification.",
+      "pay": "Next: pay for this trip.",
+      "gear": "Next: tell the crew your sizes.",
+      "changes": "Next: check that nothing has changed.",
+      "dayof": "Next: a few details for the day."
+    },
     "withShopHead": "Nothing on your side. The shop is finishing up.",
     "stepSign": "Sign",
     "stepCertification": "Your certification",

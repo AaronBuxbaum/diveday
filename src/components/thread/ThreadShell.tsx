@@ -60,33 +60,46 @@ export const THREAD_FOOT_SECTION_CLASS = "border-t border-border pt-6";
  * it over, because the four pages' meta genuinely differs and this component
  * has no opinion about which of it leads.
  */
-export function ThreadShell({
-  shopName,
-  title,
-  meta,
-  children,
-}: {
-  /** The eyebrow — the shop's own name, always. */
-  shopName: string;
-  /** The `<h1>`: the trip's title, or the state's own headline. */
-  title: ReactNode;
-  /** The quiet line(s) under the title, rendered as given. */
-  meta?: ReactNode;
-  children?: ReactNode;
-}) {
+export function ThreadShell(
+  props: {
+    children?: ReactNode;
+  } & (
+    | {
+        /** The eyebrow — the shop's own name, always. */
+        shopName: string;
+        /** The `<h1>`: the trip's title, or the state's own headline. */
+        title: ReactNode;
+        /** The quiet line(s) under the title, rendered as given. */
+        meta?: ReactNode;
+      }
+    | {
+        /**
+         * A page opening of the page's own, in place of eyebrow, title and meta,
+         * which must still carry the shop's name and the page's `<h1>`: `/ready`
+         * right after a booking, which opens on the booked moment itself (UX
+         * review 2026-10-10, item 34).
+         */
+        header: ReactNode;
+      }
+  ),
+) {
   return (
     <main className={THREAD_MEASURE_CLASS}>
-      <header>
-        <p className={EYEBROW_CLASS}>{shopName}</p>
-        {/* `text-balance` because the titles that wrap here are trip names
-            ("Two-Tank Reef — Molasses & French"), and an even two lines reads
-            better on a phone than a full line plus one orphaned word. */}
-        <h1 className={`mt-2 ${SHELL_TITLE_CLASS} text-balance`}>
-          {typeof title === "string" ? bindTitleDash(title) : title}
-        </h1>
-        {meta}
-      </header>
-      {children}
+      {"header" in props ? (
+        props.header
+      ) : (
+        <header>
+          <p className={EYEBROW_CLASS}>{props.shopName}</p>
+          {/* `text-balance` because the titles that wrap here are trip names
+              ("Two-Tank Reef — Molasses & French"), and an even two lines reads
+              better on a phone than a full line plus one orphaned word. */}
+          <h1 className={`mt-2 ${SHELL_TITLE_CLASS} text-balance`}>
+            {typeof props.title === "string" ? bindTitleDash(props.title) : props.title}
+          </h1>
+          {props.meta}
+        </header>
+      )}
+      {props.children}
     </main>
   );
 }

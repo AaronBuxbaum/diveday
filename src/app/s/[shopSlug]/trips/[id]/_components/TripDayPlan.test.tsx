@@ -16,7 +16,7 @@ import type { DiveBriefing } from "./types";
 
 afterEach(cleanup);
 
-const SHOP = { slug: "blue-mantis", timezone: "America/New_York" };
+const SHOP = { slug: "blue-mantis", timezone: "America/New_York", name: "Blue Mantis Divers" };
 
 function briefing(overrides: Partial<DiveBriefing> = {}): DiveBriefing {
   return {
@@ -241,6 +241,36 @@ describe("TripDayPlan's profile", () => {
     expect(screen.getByText("Seen here this month")).toBeInTheDocument();
     expect(screen.queryByText(/what was seen/)).not.toBeInTheDocument();
     expect(screen.queryByText(/What the crew logged/)).not.toBeInTheDocument();
+  });
+
+  it("ends the day on the log entry waiting after it, and closes the run over it", () => {
+    // UX review 2026-10-10, item 35: the recap's log entry is the keepsake a
+    // booking turns into, and the page selling the day never said so.
+    render(
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        locale={DEFAULT_DIVER_LOCALE}
+        nextOpensOnRule
+        logEntry={{
+          startsAt: new Date("2026-07-21T18:30:00Z"),
+          isCourse: false,
+        }}
+      />,
+    );
+    expect(screen.getByText("After the dive, your log entry is waiting for you.")).toBeVisible();
+    const preview = screen.getByTestId("log-entry-preview");
+    expect(preview).toHaveAttribute("aria-hidden", "true");
+    expect(within(preview).getByText("Dive log entry")).toBeInTheDocument();
+    expect(within(preview).getByText("French Reef")).toBeInTheDocument();
+    expect(within(preview).getByText("Recorded by Blue Mantis Divers")).toBeInTheDocument();
+    // A line follows the run, so the run closes itself even over a door.
+    for (const line of lines()) expect(line).toHaveClass("last:border-b");
+  });
+
+  it("says nothing about a log entry on a day that has sailed", () => {
+    render(<TripDayPlan briefings={[briefing()]} shop={SHOP} locale={DEFAULT_DIVER_LOCALE} />);
+    expect(screen.queryByTestId("log-entry-preview")).not.toBeInTheDocument();
   });
 
   it("says nothing about a surface interval on a one-tank day", () => {

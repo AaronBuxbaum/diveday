@@ -4,7 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { cancelBooking, confirmCarriedFacts, createBooking, setBookingLastDived } from "./bookings";
 import { setBookingPayment } from "./payments";
-import { carriedPreparationForDiver, getReadyPageData } from "./ready";
+import { carriedPreparationForDiver, getBookedMoment, getReadyPageData } from "./ready";
 import { getRentalFit, toDiverRentalFit } from "./rental-fit";
 import { bookings, people, shops } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
@@ -374,5 +374,64 @@ describe("carriedPreparationForDiver", () => {
         hasRentalFit: false,
       }),
     ).toEqual([]);
+  });
+});
+
+/**
+ * **The booked moment's own read** (UX review 2026-10-10, item 7). `/ready`
+ * after a booking used to wait on the whole thread's reads, the trip's entire
+ * readiness roster among them, before it could say the seat was taken. This is
+ * the one narrow read the first paint makes instead, so it must agree with the
+ * full loader on every fact the masthead prints.
+ */
+describe("getBookedMoment", () => {
+  it("states the masthead's facts exactly as the full loader does", async () => {
+    const { db, bookingId } = await unpaidBooking();
+    const moment = await getBookedMoment(db, bookingId);
+    const data = await getReadyPageData(db, bookingId);
+    if (!moment || !data) throw new Error("expected both reads to resolve");
+    expect(moment.trip).toEqual({
+      id: data.detail.trip.id,
+      title: data.detail.trip.title,
+      startsAt: data.detail.trip.startsAt,
+      endsAt: data.detail.trip.endsAt,
+    });
+    expect(moment.shop).toMatchObject({
+      name: data.detail.shop.name,
+      slug: data.shop.slug,
+      timezone: data.detail.shop.timezone,
+      defaultLocale: data.shop.defaultLocale,
+      dockCallMinutes: data.shop.dockCallMinutes,
+    });
+    expect(moment.greetingName).toBe(data.greetingName);
+    expect(moment.greetingName).toBe("Nora Quinn");
+    expect(moment.pickup).toEqual({
+      time: data.pickupTime,
+      location: data.hotelPickupLocation,
+    });
+    expect(moment.bookingCancelled).toBe(false);
+    expect(moment.departureCancelled).toBe(false);
+  });
+
+  it("says when the seat or the departure is gone, so the page can decline the fast path", async () => {
+    const { db, shop, open, bookingId } = await unpaidBooking();
+    await cancelBooking(db, shop.id, bookingId);
+    expect((await getBookedMoment(db, bookingId))?.bookingCancelled).toBe(true);
+    await setTripStatus(db, shop.id, open.id, "cancelled");
+    expect((await getBookedMoment(db, bookingId))?.departureCancelled).toBe(true);
+  });
+
+  it("greets a held identity by the name it was booked as, never the matched record's", async () => {
+    const { db, bookingId } = await unpaidBooking();
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "N. Q." })
+      .where(eq(bookings.id, bookingId));
+    expect((await getBookedMoment(db, bookingId))?.greetingName).toBe("N. Q.");
+  });
+
+  it("resolves nothing for a booking that does not exist", async () => {
+    const { db } = ctx;
+    expect(await getBookedMoment(db, "00000000-0000-4000-8000-000000000000")).toBeNull();
   });
 });

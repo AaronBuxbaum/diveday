@@ -404,7 +404,7 @@ test("a returning diver is asked once, and answering one fact leaves the others 
   // first thing on this diver — the waiver. The question is a step of the
   // thread, not a thing that jumps the queue.
   await expect(threadStatus(page)).toContainText("of 4 done");
-  await expect(threadStatus(page)).toContainText("Next: Sign");
+  await expect(threadStatus(page)).toContainText("Next: sign your waiver");
 
   const changes = await openThreadStep(page, "changes");
   await expect(changes.getByText("Sizes")).toBeVisible();

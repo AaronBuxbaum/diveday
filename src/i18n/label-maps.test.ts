@@ -111,7 +111,11 @@ import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES, type DiverLocale } from "./setting
 import { staffTranslator } from "./staff-messages";
 import { STAFF_ROLE_LABEL_KEYS, staffRoleLabel } from "./staff-role-labels";
 import { suitChoiceLabel } from "./suit-choice-labels";
-import { THREAD_STEP_STATE_KEYS, THREAD_STEP_TITLE_KEYS } from "./thread-labels";
+import {
+  THREAD_STEP_NEXT_KEYS,
+  THREAD_STEP_STATE_KEYS,
+  THREAD_STEP_TITLE_KEYS,
+} from "./thread-labels";
 import {
   ACTION_KIND_KEYS,
   blockerActionLabelText,
@@ -895,6 +899,13 @@ const CASES: readonly LabelMapCase[] = [
     map: "THREAD_STEP_TITLE_KEYS",
     rows: codeRows(keysOf(THREAD_STEP_TITLE_KEYS), (locale, step) =>
       diverTranslator(locale)(THREAD_STEP_TITLE_KEYS[step]),
+    ),
+  },
+  {
+    module: "thread-labels.ts",
+    map: "THREAD_STEP_NEXT_KEYS",
+    rows: codeRows(keysOf(THREAD_STEP_NEXT_KEYS), (locale, step) =>
+      diverTranslator(locale)(THREAD_STEP_NEXT_KEYS[step]),
     ),
   },
   {

@@ -28,11 +28,91 @@ import {
   type RentalFitItem,
   toDiverRentalFit,
 } from "./rental-fit";
-import { bookings, certifications, people, shops } from "./schema";
+import { bookings, certifications, people, shops, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getTripWithBooked } from "./trips";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
 import { welcomeCueInputsByBooking } from "./welcome-cues";
+
+/**
+ * **What `/ready` says in the first paint after a booking**, and nothing else
+ * (UX review 2026-10-10, item 7).
+ *
+ * The page after a booking POST used to hold the diver on a whole-page
+ * skeleton until {@link getReadyPageData} had finished, and that loader reads
+ * the departure's entire readiness roster before it returns. The masthead and
+ * the "You're on the boat" card need none of it: whose shop, which departure,
+ * when, when to be at the dock, and who to greet. That is one row, so the page
+ * paints it from this read and streams the thread in under it.
+ *
+ * Keyed by a booking id the caller has already verified through the readiness
+ * capability; it reads only that booking's own row, its departure and its
+ * shop, and authorizes nothing. The two `Cancelled` flags are there so the page
+ * can decline the fast path for a seat or departure that is already gone and
+ * fall through to the full loader, which owns those terminal cards.
+ *
+ * The greeting follows {@link getReadyPageData}'s rule word for word: a booking
+ * whose identity is held greets the name it was booked under, never the
+ * matched record's (`src/db/ready.test.ts` holds the two to each other).
+ */
+export type BookedMoment = {
+  shop: {
+    name: string;
+    slug: string;
+    timezone: string;
+    defaultLocale: (typeof shops.$inferSelect)["defaultLocale"];
+    dockCallMinutes: number;
+  };
+  trip: { id: string; title: string; startsAt: Date; endsAt: Date };
+  greetingName: string;
+  pickup: { time: string | null; location: string | null };
+  bookingCancelled: boolean;
+  departureCancelled: boolean;
+};
+
+export async function getBookedMoment(db: AppDb, bookingId: string): Promise<BookedMoment | null> {
+  const [row] = await db
+    .select({
+      status: bookings.status,
+      pickupTime: bookings.pickupTime,
+      hotelPickupLocation: bookings.hotelPickupLocation,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      identityBookedAs: bookings.identityBookedAs,
+      personName: people.fullName,
+      tripId: trips.id,
+      tripTitle: trips.title,
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+      tripStatus: trips.status,
+      shopName: shops.name,
+      slug: shops.slug,
+      timezone: shops.timezone,
+      defaultLocale: shops.defaultLocale,
+      dockCallMinutes: shops.dockCallMinutes,
+    })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .innerJoin(shops, eq(shops.id, bookings.shopId))
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+  if (!row) return null;
+  const identityHeld = row.identityUnconfirmedAt !== null;
+  return {
+    shop: {
+      name: row.shopName,
+      slug: row.slug,
+      timezone: row.timezone,
+      defaultLocale: row.defaultLocale,
+      dockCallMinutes: row.dockCallMinutes,
+    },
+    trip: { id: row.tripId, title: row.tripTitle, startsAt: row.startsAt, endsAt: row.endsAt },
+    greetingName: identityHeld ? row.identityBookedAs?.trim() || "" : row.personName,
+    pickup: { time: row.pickupTime, location: row.hotelPickupLocation },
+    bookingCancelled: row.status === "cancelled",
+    departureCancelled: row.tripStatus !== "scheduled",
+  };
+}
 
 /**
  * Everything the transactional `/ready` page needs, gathered from the same

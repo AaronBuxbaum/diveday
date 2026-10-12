@@ -307,7 +307,8 @@
       "crew": "Tripulación"
     },
     "pitchDoor": "El resto del briefing",
-    "pitchDoorSpecies": "{count, plural, one {# especie} other {# especies}}"
+    "pitchDoorSpecies": "{count, plural, one {# especie} other {# especies}}",
+    "logEntryWaiting": "Después de la inmersión, tu registro te espera."
   },
   "factSource": {
     "forecast": "Pronóstico",
@@ -374,7 +375,7 @@
     "holdBody": "Consulta arriba la actualización de condiciones. Quien ya reservó conserva su plaza y puede seguirlo aquí en directo.",
     "certBelowRequirement": "Esta salida es para buceadores con certificación {required}: trae tu tarjeta y la verificamos en el centro.",
     "certNoneOnGatedTrip": "Esta salida es para buceadores certificados. Reserva si quieres y habla con el centro: también hacen cursos e inmersiones más sencillas.",
-    "confirmedHeading": "¡Estás a bordo, {name}!",
+    "confirmedHeading": "Estás a bordo, {name}.",
     "confirmedDockCall": "{date}, {time}. Preséntate en el muelle {minutes, plural, one {# minuto} other {# minutos}} antes y nos encargamos del resto.",
     "paymentDepositBalance": "Tu plaza está asegurada. Los {balance} restantes se pagan en el muelle.",
     "paymentStillOpen": "Tu plaza está a salvo y el pago sigue abierto",
@@ -859,6 +860,7 @@
     "certInvalid": "Revisa la agencia, el nivel y el número de certificación, e inténtalo de nuevo.",
     "certOptional": "Opcional",
     "keepThisPage": "Esta página es tuya: guárdala en favoritos y seguirá al día hasta que zarpes.",
+    "logEntryWaiting": "Después de la inmersión, tu registro te espera aquí.",
     "gearOnFile": "La tripulación ya tiene tus tallas.",
     "packageDivesLeft": "{line} · {count, plural, one {te queda # inmersión del paquete} other {te quedan # inmersiones del paquete}}",
     "changesSizesLabel": "Tallas",
@@ -940,8 +942,16 @@
     "savedCourseForms": "Formularios del curso firmados."
   },
   "thread": {
-    "stepsDoneSuffix": "de {total, plural, one {# paso completado} other {# pasos completados}}",
-    "nextStep": "Siguiente: {step}",
+    "stepsDone": "{done} de {total, plural, one {# paso completado} other {# pasos completados}}",
+    "next": {
+      "signWaiver": "Siguiente: firma tu exención, unos dos minutos.",
+      "signForms": "Siguiente: firma los formularios del curso.",
+      "certification": "Siguiente: agrega tu certificación.",
+      "pay": "Siguiente: paga esta salida.",
+      "gear": "Siguiente: dile a la tripulación tus tallas.",
+      "changes": "Siguiente: confirma que nada cambió.",
+      "dayof": "Siguiente: unos detalles para el día."
+    },
     "withShopHead": "No queda nada de tu parte. El centro lo está terminando.",
     "stepSign": "Firma",
     "stepCertification": "Tu certificación",

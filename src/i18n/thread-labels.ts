@@ -1,4 +1,4 @@
-import type { ThreadStepId, ThreadStepState } from "@/lib/thread-steps";
+import type { ThreadStep, ThreadStepId, ThreadStepState } from "@/lib/thread-steps";
 import type { DiverMessageKey } from "./messages";
 
 /**
@@ -39,3 +39,26 @@ export const THREAD_STEP_STATE_KEYS: Record<Exclude<ThreadStepState, "done">, Di
   your_turn: "ready.stateAction",
   with_shop: "ready.stateWaiting",
 };
+
+/**
+ * **What the thread asks next, as a sentence** (UX review 2026-10-10, item 9).
+ *
+ * The status head leads with this line, so it says the act rather than naming
+ * the step ("Next: sign your waiver, about two minutes.", not "Next: Sign").
+ * The sign step speaks for two things: the release, and the course forms an
+ * enrollment can still owe once the release is on file (issue #2266). Only
+ * the release is promised at two minutes; a diver whose release is signed and
+ * whose forms are not is asked for the forms by name.
+ */
+export const THREAD_STEP_NEXT_KEYS: Record<Exclude<ThreadStepId, "sign">, DiverMessageKey> = {
+  certification: "thread.next.certification",
+  pay: "thread.next.pay",
+  gear: "thread.next.gear",
+  changes: "thread.next.changes",
+  dayof: "thread.next.dayof",
+};
+
+export function threadNextKey(step: Pick<ThreadStep, "id" | "item">): DiverMessageKey {
+  if (step.id !== "sign") return THREAD_STEP_NEXT_KEYS[step.id];
+  return step.item?.state === "done" ? "thread.next.signForms" : "thread.next.signWaiver";
+}

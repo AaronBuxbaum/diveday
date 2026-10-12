@@ -142,8 +142,9 @@ export async function bookASeatAndOpenThread(page: Page, name: string, email?: s
 }
 
 /**
- * The thread page's **one status statement** — "2 of 4 done · Next: Gear and
- * sizes" (ADR 20260827-the-divers-thread, decision 3, slice 7c).
+ * The thread page's **one status statement** — "Next: tell the crew your
+ * sizes." over "2 of 4 done" (ADR 20260827-the-divers-thread, decision 3,
+ * slice 7c; the sentence leads since UX review 2026-10-10, item 9).
  *
  * The stable anchor for "the prep state has rendered". Specs used to wait on
  * the heading "Your pre-trip checklist", which went with the card that carried

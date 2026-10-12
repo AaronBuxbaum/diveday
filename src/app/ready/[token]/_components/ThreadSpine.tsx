@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { SETTLED_CHECK_TEXT_INSET } from "@/components/ui/settled-mark";
-import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
+import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import type { ThreadStepId, ThreadStepState } from "@/lib/thread-steps";
 
 /**
@@ -29,54 +29,53 @@ import type { ThreadStepId, ThreadStepState } from "@/lib/thread-steps";
 export const THREAD_STATUS_TEST_ID = "thread-status";
 
 /**
- * **The page's one status statement.** A figure and what is next, and nothing
- * else on the page may say either.
+ * **The page's one status statement.** What is next, then how far along, and
+ * nothing else on the page may say either.
  *
- * The count leads as a *figure* rather than as another line of `text-sm`
- * (Clearwater decision 3), and there is no bar: the spine's steps are all
- * finishable, so the number can always reach its total, but a bar would only
- * re-draw what the two words beside it already say.
+ * **The next step leads, as a sentence** (UX review 2026-10-10, item 9). The
+ * count used to lead as a large figure, so a diver who had just paid opened
+ * the thread on a big "0" beside "of 4 done · Next: Sign": the first number
+ * after paying read as a failing grade, and the one thing they could do was the
+ * smallest text in the row. Now "Next: sign your waiver, about two minutes."
+ * is the line they read, and "0 of 4 done" is the quiet line under it. There
+ * is still no bar: the steps are all finishable, and a bar would only re-draw
+ * what the small line already says.
  */
 export function ThreadStatus({
-  done,
-  doneSuffix,
-  trailing,
+  lead,
+  progress,
   settled = false,
 }: {
-  done: number;
+  /** "Next: sign your waiver, about two minutes.", the nothing-on-your-side line, or the all-set words. */
+  lead: string;
   /**
-   * "of 4 done" — the total lives in these words rather than in a second
-   * number of its own, so the figure and its denominator read as one sentence
-   * to a screen reader. No `role="progressbar"`: this is a statement, not a
-   * widget, and the bar it replaced is gone.
+   * "0 of 4 done", one phrase so a screen reader hears the figure and its
+   * denominator as one sentence. No `role="progressbar"`: this is a
+   * statement, not a widget.
    */
-  doneSuffix: string;
-  /** "Next: Gear and sizes", the nothing-on-your-side line, or the all-set words. */
-  trailing: string;
-  /** Everything is done: `trailing` renders as a settled success line, never coral. */
+  progress: string;
+  /** Everything is done: `lead` renders as a settled success line, never coral. */
   settled?: boolean;
 }) {
   return (
-    <p
-      data-testid={THREAD_STATUS_TEST_ID}
-      className="mt-8 flex flex-wrap items-baseline gap-x-3 gap-y-1"
-    >
-      <span className={FIGURE_LARGE_CLASS}>{done}</span>
-      <span className="text-base font-medium text-muted">{doneSuffix}</span>
+    <div data-testid={THREAD_STATUS_TEST_ID} className="mt-8">
       {settled ? (
         // Plain success ink, deliberately not an `EarnedMoment`: the thread
         // spends coral exactly three times (booked, the waiver's completed
         // state, welcome home), and "you have finished your paperwork" is the
         // waiver page's moment already. One moment does not fire twice.
-        <SettledCheck
-          settled
-          label={trailing}
-          className="ms-auto text-sm font-semibold text-success-strong"
-        />
+        <p>
+          <SettledCheck
+            settled
+            label={lead}
+            className={`${ITEM_TITLE_CLASS} text-success-strong`}
+          />
+        </p>
       ) : (
-        <span className="ms-auto text-sm text-muted">{trailing}</span>
+        <p className={`${ITEM_TITLE_CLASS} text-pretty`}>{lead}</p>
       )}
-    </p>
+      <p className="mt-1 text-sm text-muted tabular-nums">{progress}</p>
+    </div>
   );
 }
 

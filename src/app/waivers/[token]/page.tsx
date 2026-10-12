@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { DiveSitesPeek } from "@/components/DiveSitesPeek";
 import { EarnedMoment } from "@/components/EarnedMoment";
-import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -39,7 +38,7 @@ import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { completeWaiverAction, saveWaiverDraftAction } from "./actions";
 import { MedicalQuestionnaireFields } from "./MedicalQuestionnaireFields";
 import { QuestionnaireProgress } from "./QuestionnaireProgress";
-import { ExpiredLink, HeldWaiverCard } from "./WaiverDoorCards";
+import { ExpiredLink, HeldWaiverCard, UnavailableWaiverLink } from "./WaiverDoorCards";
 import { WaiverPacing } from "./WaiverPacing";
 import {
   WAIVER_RAIL_TOTAL,
@@ -182,13 +181,7 @@ export default async function WaiverPage({
     // link long since replaced) — there is no shop to attribute it to
     // without weakening the token model's own guarantee that a bearer token
     // reveals only its own record.
-    return (
-      <ExpiredLinkCard
-        title={anonT("waiver.unavailableHeading")}
-        text={anonT("waiver.unavailableBody")}
-        t={anonT}
-      />
-    );
+    return <UnavailableWaiverLink t={anonT} />;
   }
 
   // Every remaining state carries a real record, so the shop it belongs to
@@ -196,13 +189,7 @@ export default async function WaiverPage({
   // bail out before the shop (and so its contact info) was ever loaded.
   const shop = await getShopById(db, state.record.shopId);
   if (!shop) {
-    return (
-      <ExpiredLinkCard
-        title={anonT("waiver.unavailableHeading")}
-        text={anonT("waiver.unavailableBody")}
-        t={anonT}
-      />
-    );
+    return <UnavailableWaiverLink t={anonT} />;
   }
   const shopName = shop.name;
   const locale = await requestLocale(shop.defaultLocale);

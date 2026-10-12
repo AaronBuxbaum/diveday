@@ -84,6 +84,14 @@ test.describe("staff", () => {
     // links to (ADR 20260820-one-page-after-booking).
     await expect(page).toHaveURL(/\/ready\//);
     await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
+    // The booked card is the page's opening (UX review 2026-10-10, items 7 and
+    // 34): its `<h1>`, in the Logbook register, with the next step leading the
+    // thread under it and the log entry the day turns into at its foot.
+    await expect(
+      page.getByRole("heading", { level: 1, name: "You’re on the boat, Nora." }),
+    ).toBeVisible();
+    await expect(threadStatus(page)).toContainText("Next: sign your waiver, about two minutes.");
+    await expect(page.getByText("After the dive, your log entry is waiting here.")).toBeVisible();
 
     // No email provider is configured in the e2e fleet, so nothing left the
     // building — and the page must not claim two emails are coming when they

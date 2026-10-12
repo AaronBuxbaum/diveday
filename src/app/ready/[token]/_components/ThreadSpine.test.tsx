@@ -34,11 +34,31 @@ function step(overrides: Partial<ThreadSpineStep> & Pick<ThreadSpineStep, "id">)
 }
 
 describe("ThreadStatus", () => {
-  it("says the figure and what is next, in one element", () => {
-    render(<ThreadStatus done={2} doneSuffix="of 4 done" trailing="Next: Gear and sizes" />);
+  it("says what is next and how far along, in one element", () => {
+    render(
+      <ThreadStatus lead="Next: sign your waiver, about two minutes." progress="0 of 4 done" />,
+    );
     const statements = screen.getAllByTestId(THREAD_STATUS_TEST_ID);
     expect(statements).toHaveLength(1);
-    expect(statements[0]?.textContent).toBe("2of 4 doneNext: Gear and sizes");
+    expect(statements[0]?.textContent).toBe(
+      "Next: sign your waiver, about two minutes.0 of 4 done",
+    );
+  });
+
+  it("leads with the next step, and keeps the count as the small line under it", () => {
+    // UX review 2026-10-10, item 9: a diver who had just paid opened the
+    // thread on a large "0" beside the smallest text in the row. The sentence
+    // is the line to read; the count is quiet and never a figure.
+    render(
+      <ThreadStatus lead="Next: sign your waiver, about two minutes." progress="0 of 4 done" />,
+    );
+    const [lead, progress] = [...screen.getByTestId(THREAD_STATUS_TEST_ID).children];
+    expect(lead?.textContent).toBe("Next: sign your waiver, about two minutes.");
+    expect(lead?.className).toContain("font-semibold");
+    expect(progress?.textContent).toBe("0 of 4 done");
+    expect(progress?.className).toContain("text-sm");
+    expect(progress?.className).toContain("text-muted");
+    expect(screen.getByTestId(THREAD_STATUS_TEST_ID).innerHTML).not.toMatch(/text-3xl/);
   });
 
   it("settles into plain success ink, never coral", () => {
@@ -48,7 +68,7 @@ describe("ThreadStatus", () => {
     // 20260827-clearwater-surface-language's decision 11). "You're all set" is
     // none of them: it used to fire a second `EarnedMoment` on this page.
     const { container } = render(
-      <ThreadStatus done={4} doneSuffix="of 4 done" trailing="You’re all set" settled />,
+      <ThreadStatus lead="You’re all set" progress="4 of 4 done" settled />,
     );
     expect(screen.getByText("You’re all set")).toBeVisible();
     expect(container.querySelector("[class*='accent']")).toBeNull();
