@@ -3,7 +3,15 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { bodyProblems, reviewAnswered, reviewsNeeded, reviewsSection } from "./check-pr-body.mjs";
+import {
+  bodyProblems,
+  closedByBody,
+  closesProblems,
+  issuesClaimedBy,
+  reviewAnswered,
+  reviewsNeeded,
+  reviewsSection,
+} from "./check-pr-body.mjs";
 
 const TEMPLATE = readFileSync(
   path.join(import.meta.dirname, "../.github/pull_request_template.md"),
@@ -25,6 +33,10 @@ describe("which reviewer a diff needs", () => {
       "src/db/schema/certifications.ts",
       "src/components/MedicalClearanceControl.tsx",
       "src/db/seat-diver.ts",
+      "src/db/bookings.ts",
+      "src/db/waivers.ts",
+      "src/lib/waivers.ts",
+      "src/db/waivers-medical.ts",
     ]) {
       expect(reviewsNeeded([file]).map((r) => r.agent)).toContain("dive-domain-expert");
     }
@@ -39,6 +51,11 @@ describe("which reviewer a diff needs", () => {
       "src/db/export.ts",
       "src/db/schema/accounts.ts",
       "src/features/backup-export/index.ts",
+      "src/db/waivers.ts",
+      "src/lib/waiver-tokens.ts",
+      "src/lib/payments/checkout.ts",
+      "src/app/api/webhooks/stripe/route.ts",
+      "src/app/api/webhooks/sms/route.ts",
     ]) {
       expect(reviewsNeeded([file]).map((r) => r.agent)).toContain("security-reviewer");
     }
@@ -54,6 +71,8 @@ describe("which reviewer a diff needs", () => {
         "src/app/shop/[shopSlug]/gear/page.tsx",
         "src/app/ready/[token]/_components/TipAmountPicker.tsx",
         "scripts/check-pr-body.mjs",
+        "src/db/bookings-history.ts",
+        "src/app/shop/[shopSlug]/waivers/page.tsx",
       ]),
     ).toEqual([]);
   });
@@ -67,12 +86,15 @@ describe("reading the body", () => {
     expect(reviewAnswered(section, "dive-domain-expert")).toBe(false);
   });
 
-  it("counts a finding or a reasoned 'not needed' as an answer, never a placeholder", () => {
+  it("counts a launch, a finding or a reasoned 'not needed' as an answer, never a placeholder", () => {
     expect(
       reviewAnswered(
-        "- `dive-domain-expert`: ran; flagged DSD counts, fixed",
+        "- `dive-domain-expert`: launched; found DSD counts off, fixed",
         "dive-domain-expert",
       ),
+    ).toBe(true);
+    expect(
+      reviewAnswered("- `dive-domain-expert`: nothing found on abc123", "dive-domain-expert"),
     ).toBe(true);
     expect(
       reviewAnswered(
@@ -84,6 +106,16 @@ describe("reading the body", () => {
       false,
     );
     expect(reviewAnswered("- `dive-domain-expert`: yes/no", "dive-domain-expert")).toBe(false);
+    // The two that passed before 2026-10-12 and said nothing.
+    expect(reviewAnswered("- `dive-domain-expert`: yes", "dive-domain-expert")).toBe(false);
+    expect(reviewAnswered("- `dive-domain-expert`: n/a", "dive-domain-expert")).toBe(false);
+    expect(reviewAnswered("- `dive-domain-expert`: ran, clean", "dive-domain-expert")).toBe(false);
+    expect(reviewAnswered("- `dive-domain-expert`: not launched", "dive-domain-expert")).toBe(
+      false,
+    );
+    expect(reviewAnswered("- `dive-domain-expert`: not needed because", "dive-domain-expert")).toBe(
+      false,
+    );
     expect(reviewAnswered("- `security-reviewer`: ran, clean", "dive-domain-expert")).toBe(false);
   });
 });
@@ -105,16 +137,57 @@ describe("the whole check", () => {
 
   it("passes once each needed reviewer is answered", () => {
     expect(
-      bodyProblems({ body: filled("ran on abc123, no findings", ""), files: manifest }),
+      bodyProblems({ body: filled("launched on abc123, nothing found", ""), files: manifest }),
     ).toEqual([]);
     expect(
-      bodyProblems({ body: filled("ran, fixed the DSD count", "ran, clean"), files: both }),
+      bodyProblems({
+        body: filled("launched, found the DSD count off; fixed", "launched, found nothing"),
+        files: both,
+      }),
     ).toEqual([]);
-    expect(bodyProblems({ body: filled("ran", ""), files: both })).toHaveLength(1);
+    expect(bodyProblems({ body: filled("launched", ""), files: both })).toHaveLength(1);
   });
 
   it("does not read a reviewer named outside the Reviews section", () => {
-    const body = "## What\n\n- dive-domain-expert: ran\n\n## Reviews launched\n\n- none\n";
+    const body = "## What\n\n- dive-domain-expert: launched\n\n## Reviews launched\n\n- none\n";
     expect(bodyProblems({ body, files: manifest })).toHaveLength(1);
+  });
+});
+
+describe("closing the issues this branch claimed", () => {
+  // #2241's claim, verbatim in shape: the sweep wrote "closes with #2326" in a comment, the PR
+  // body never said Closes, and the issue stayed open after the merge.
+  const claim = (branch) => ({
+    body: `## Claim\n\n- Branch: \`${branch}\` (sub-branch \`${branch}-l2\`)\n- Worktree: \`/w\`\n- Started: 2026-10-10T08:20Z\n`,
+    createdAt: "2026-10-10T08:21:23Z",
+  });
+  const issues = [
+    { number: 2241, comments: [claim("claude/project-thread-f9bes8")] },
+    { number: 2233, comments: [claim("claude/elsewhere")] },
+    { number: 1785, comments: [{ body: "working on it", createdAt: "2026-10-10T08:00:00Z" }] },
+  ];
+
+  it("finds the issues whose newest claim names the head branch", () => {
+    expect(issuesClaimedBy(issues, "claude/project-thread-f9bes8")).toEqual([2241]);
+    expect(issuesClaimedBy(issues, "")).toEqual([]);
+  });
+
+  it("reads every closing keyword, one per issue", () => {
+    expect([...closedByBody("Closes #1\nfixes #2\nResolved: #3\nSee #4\nCloses #5, #6")]).toEqual([
+      1, 2, 3, 5,
+    ]);
+  });
+
+  it("asks for a Closes line for each claimed issue the body leaves open", () => {
+    const head = "claude/project-thread-f9bes8";
+    const [problem] = closesProblems({
+      body: "## Follow-ups filed\n\nnone",
+      claimed: [2241],
+      head,
+    });
+    expect(problem).toMatch(/#2241 is claimed by this branch/);
+    expect(problem).toContain('"Closes #2241"');
+    expect(closesProblems({ body: "Closes #2241", claimed: [2241], head })).toEqual([]);
+    expect(closesProblems({ body: "", claimed: [], head })).toEqual([]);
   });
 });

@@ -7,6 +7,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import {
   findIssueProblems,
   missingTouchedProblem,
+  readyIssueProblems,
   SKIPPED_EXIT,
   TOUCHED_TIMEOUT,
   touchedPathAccepted,
@@ -408,6 +409,27 @@ describe("a glob in Touches", () => {
   });
 });
 
+describe("readyIssueProblems, the Touches check after triage", () => {
+  const root = path.join(import.meta.dirname, "..");
+
+  it("names a path a ready-for-agent issue points at that is not in the tree", async () => {
+    const issue = {
+      number: 2356,
+      title: "Split the waivers index",
+      body: "**Touches:** `src/db/waivers-index.ts`, `scripts/claims.mjs`\n\nAn agent brief.",
+    };
+    const problems = await readyIssueProblems(root, issue);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toMatch(/#2356 .*src\/db\/waivers-index\.ts/);
+  });
+
+  it("leaves alone a triaged body with no Touches line or with every path present", async () => {
+    expect(await readyIssueProblems(root, { number: 1, title: "t", body: "## Brief" })).toEqual([]);
+    const present = { number: 2, title: "t", body: "**Touches:** `scripts/claims.mjs:60`" };
+    expect(await readyIssueProblems(root, present)).toEqual([]);
+  });
+});
+
 /**
  * The three outcomes, at the process boundary rather than through
  * `findIssueProblems` — because the thing under test *is* the exit code, and the
@@ -415,7 +437,8 @@ describe("a glob in Touches", () => {
  * indistinguishable to `check-repo.mjs`, which reads nothing else.
  *
  * Each case supplies its own `gh` on a private PATH: absent, malformed, or
- * answering with a real issue. `PATH=/usr/bin:/bin` is not enough on its own —
+ * answering with a real issue. The stub answers every `gh api` call (the
+ * `needs-triage` list and the `ready-for-agent` list) with the same document. `PATH=/usr/bin:/bin` is not enough on its own —
  * a machine that happens to have `gh` in `/usr/bin` would silently run the
  * network case and hang.
  */

@@ -50,15 +50,23 @@ const FIELDS = /** @type {const} */ ({
   branch: "Branch",
   worktree: "Worktree",
   startedAt: "Started",
-  owns: "Owns",
+  owns: "Owns|Owned paths",
   alsoTouches: "Also touches",
 });
 
 const straight = (text) => text.replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
 
-/** `**Field:** value` on its own line, tolerant of the bold markers being absent. */
+/**
+ * `Field: value` on its own line, in any of the three spellings claims are written in:
+ * `**Field:** value`, `- Field: value` and `- **Field:** value` (the bullet forms are what
+ * sessions actually post; #2241, #2233 and #1785 all used `- Branch:`). `label` may be an
+ * alternation of synonyms.
+ */
 function field(body, label) {
-  const pattern = new RegExp(`^\\s*\\*{0,2}${label}:\\*{0,2}\\s*(.+?)\\s*$`, "im");
+  const pattern = new RegExp(
+    `^\\s*(?:[-*+]\\s+)?\\*{0,2}(?:${label}):\\*{0,2}\\s*(.+?)\\s*$`,
+    "im",
+  );
   const value = pattern.exec(body)?.[1];
   if (!value) return null;
   // A field left as the template's own placeholder is not an answer.
@@ -85,8 +93,9 @@ export function parseClaim(body) {
   const text = straight(body ?? "");
   if (!/^\s*#{1,4}\s*Claim\s*$/im.test(text)) return null;
 
-  const branch = field(text, FIELDS.branch);
-  const worktree = field(text, FIELDS.worktree);
+  // A branch is one ref name; anything after it (`(sub-branch …)`) is commentary.
+  const branch = field(text, FIELDS.branch)?.split(/\s+/)[0] ?? null;
+  const worktree = field(text, FIELDS.worktree)?.split(/\s+/)[0] ?? null;
   const startedAt = field(text, FIELDS.startedAt);
   if (!branch || !worktree || !startedAt) return null;
 

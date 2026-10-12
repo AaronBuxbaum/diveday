@@ -2,7 +2,7 @@ import { access, glob, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
-import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { tracker } from "./tracker.mjs";
 
 /**
  * The agent follow-up register is a GitHub issue tracker, not a folder — every idea,
@@ -33,7 +33,7 @@ import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
  * not replacements for it.
  *
  * **This is the one guard that makes a network call, so it is not in `pnpm check:repo`.**
- * `gh issue list` needs GitHub reachable and authenticated. It ran inside `check:repo` until
+ * Reading the tracker (`scripts/tracker.mjs`, over `gh api`) needs GitHub reachable and authenticated. It ran inside `check:repo` until
  * 2026-10-07, which made the live tracker a property of every branch: one malformed issue
  * (#2036) turned every open pull request red for a problem none of them contained. It runs on
  * a schedule instead (.github/workflows/follow-ups.yml, with the repository token) and as
@@ -61,6 +61,7 @@ import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 export const SKIPPED_EXIT = 2;
 
 export const LABEL = "needs-triage";
+export const READY_LABEL = "ready-for-agent";
 export const WAITING_LABEL = "waiting-on-external";
 export const PARKED_LABEL = "parked";
 
@@ -273,7 +274,7 @@ function fencedBlocks(body) {
 }
 
 /**
- * @param issue `{ number, title, body }` from `gh issue list --json number,title,body,labels`
+ * @param issue `{ number, title, body }` from `tracker().listIssues()`
  * @param options `waiting: true` for an issue also carrying `waiting-on-external`, which
  *   demands a **Waiting on:** line instead of the ordinary flow; `parked: true` for one also
  *   carrying `parked`, which demands a **Parked:** line
@@ -366,44 +367,50 @@ export function findIssueProblems(issue, { waiting = false, parked = false } = {
   return { problems, touched };
 }
 
-/** `gh issue list --label <label> --state <state>`, bounded and JSON. Returns `null`
- *  (never throws) when `gh` cannot answer — unreachable, unauthenticated, not installed — so
- *  every caller can fail open rather than blocking on network state. `what` names the caller
- *  in the warning, since three different reports now share this reader.
+/** Issues carrying `label`, read through `scripts/tracker.mjs` (GitHub REST). Returns `null`
+ *  (never throws) when GitHub cannot answer — unreachable, unauthenticated, `gh` not installed
+ *  — so every caller can fail open rather than blocking on network state. `what` names the
+ *  caller in the warning, since several reports share this reader. `comments: true` also reads
+ *  each issue's comments (the claims gate).
  *
  *  `state` defaults to `open`, which is every caller inside `pnpm check`. The weekly persona
  *  walk (`scripts/persona-bots.mjs`) is the one that asks for `closed`: a finding whose issue
  *  a human has already ended is never filed again, and the closed list is the only way to
  *  know that. */
-export function listIssuesByLabel(root, { label, fields, what, state = "open" }) {
-  let raw;
+export function listIssuesByLabel(_root, { label, what, state = "open", comments = false }) {
   try {
-    raw = readBounded(
-      "gh",
-      ["issue", "list", "--label", label, "--state", state, "--limit", "500", "--json", fields],
-      { cwd: root, encoding: "utf8", timeoutMs: SUBPROCESS_TIMEOUTS.ghCli },
-    );
+    return tracker().listIssues({ label, state, comments });
   } catch (error) {
     console.warn(
-      `${what}: could not reach \`gh issue list\` (${error.code === "ETIMEDOUT" ? "timed out" : "gh failed"}) — skipping. ${error.message ?? ""}`.trim(),
+      `${what}: could not read label:${label} from GitHub — skipping. ${error.message ?? ""}`.trim(),
     );
-    return null;
-  }
-  try {
-    return JSON.parse(raw);
-  } catch {
-    console.warn(`${what}: \`gh issue list\` returned unparseable JSON — skipping.`);
     return null;
   }
 }
 
 /** The follow-up inbox: every open `needs-triage` issue, with the body the content check reads. */
 export function listOpenFollowUps(root) {
-  return listIssuesByLabel(root, {
-    label: LABEL,
-    fields: "number,title,body,labels,createdAt",
-    what: "follow-ups",
-  });
+  return listIssuesByLabel(root, { label: LABEL, what: "follow-ups" });
+}
+
+/**
+ * The `**Touches:**` problems of an issue that has left the inbox. Triage moves a follow-up to
+ * `ready-for-agent` and the format check stops applying (a triaged body may be rewritten as an
+ * agent brief), but a path that does not exist still sends the next session to read nothing: on
+ * 2026-10-11, 7 of 70 `ready-for-agent` issues named a path missing on main. So the existence
+ * half runs over them too. An issue with no `**Touches:**` line is left alone here.
+ */
+export async function readyIssueProblems(root, issue) {
+  const touches = metadata(straight(issue.body ?? ""), "Touches");
+  if (!touches) return [];
+  const problems = [];
+  for (const match of touches.matchAll(/`([^`]+)`/g)) {
+    if (!looksLikeAPath(match[1])) continue;
+    const token = withoutLineSuffix(match[1]);
+    if (touchedPathAccepted(await touchedPathExists(root, token))) continue;
+    problems.push(`#${issue.number} “${issue.title}”: ${missingTouchedProblem(token)}`);
+  }
+  return problems;
 }
 
 /**
@@ -574,9 +581,10 @@ async function main() {
 
   const root = process.cwd();
   const issues = listOpenFollowUps(root);
+  const ready = listIssuesByLabel(root, { label: READY_LABEL, what: "ready-for-agent" });
   // Fail open, but say so — see the module doc comment. The warning naming the reason has
   // already been printed by `listIssuesByLabel`.
-  if (issues === null) {
+  if (issues === null || ready === null) {
     process.exit(SKIPPED_EXIT);
   }
 
@@ -594,9 +602,11 @@ async function main() {
     }
   }
 
+  for (const issue of ready) problems.push(...(await readyIssueProblems(root, issue)));
+
   if (problems.length > 0) {
     console.error(
-      `Follow-up issues (label:${LABEL}):\n${problems.map((item) => `- ${item}`).join("\n")}`,
+      `Follow-up issues (label:${LABEL}, and **Touches:** under label:${READY_LABEL}):\n${problems.map((item) => `- ${item}`).join("\n")}`,
     );
     console.error(
       "Each entry is a task a human runs cold, months later — see docs/agents/issue-tracker.md's Filing a follow-up section.",
@@ -604,7 +614,7 @@ async function main() {
     // The one thing the list above does not say: these are problems in the *tracker*, not in
     // any branch. This check reads the live issue list, so nothing in a diff caused them.
     console.error(
-      "These are tracker problems, not branch problems: edit the issues named above. Nothing in any branch caused them. File through `node scripts/file-follow-up.mjs` — it composes the body and refuses to call `gh` when it would not pass — or draft a body to a file and run `node scripts/check-follow-ups.mjs --body <path>` before filing, to avoid adding to this.",
+      "These are tracker problems, not branch problems: edit the issues named above. Nothing in any branch caused them. File through `node scripts/file-follow-up.mjs` — it composes the body and refuses to file when it would not pass — or draft a body to a file and run `node scripts/check-follow-ups.mjs --body <path>` before filing, to avoid adding to this.",
     );
     process.exit(1);
   }
@@ -613,7 +623,7 @@ async function main() {
     (issue.labels ?? []).some((label) => label.name === WAITING_LABEL),
   ).length;
   console.log(
-    `follow-ups: ${issues.length} open under label:${LABEL} (${waitingCount} waiting on somebody else)`,
+    `follow-ups: ${issues.length} open under label:${LABEL} (${waitingCount} waiting on somebody else); every **Touches:** path resolves under label:${READY_LABEL} (${ready.length})`,
   );
 }
 

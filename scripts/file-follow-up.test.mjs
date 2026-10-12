@@ -9,7 +9,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
@@ -173,7 +173,9 @@ describe("the refusal, at the process boundary", () => {
 
   writeFileSync(
     path.join(stubDir, "gh"),
-    `#!/bin/sh\necho called >> "${marker}"\necho https://github.com/AaronBuxbaum/diveday/issues/9999\n`,
+    // Answers as `gh api --method POST repos/…/issues` does, and records its argv so the
+    // test can see the request went to REST rather than `gh issue create` (GraphQL).
+    `#!/bin/sh\necho "$*" >> "${marker}"\necho '{"number":9999,"html_url":"https://github.com/AaronBuxbaum/diveday/issues/9999"}'\n`,
     { mode: 0o755 },
   );
 
@@ -331,6 +333,9 @@ describe("the refusal, at the process boundary", () => {
     expect(result.status).toBe(0);
     expect(result.spawnedGh).toBe(true);
     expect(result.stdout).toMatch(/issues\/9999/);
+    expect(readFileSync(marker, "utf8")).toMatch(
+      /^api --method POST repos\/AaronBuxbaum\/diveday\/issues --input -$/m,
+    );
   });
 
   it("prints the body and files nothing under --dry-run", () => {

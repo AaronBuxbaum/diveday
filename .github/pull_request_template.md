@@ -18,9 +18,10 @@
 
 ## Reviews launched
 
-<!-- Each line: what the agent found and what changed, or "not needed because <reason>".
-     A diff touching manifests, roll call, readiness, cert gating, medical or erasure must name
-     dive-domain-expert; auth, tokens, personal data or export/import must name security-reviewer.
+<!-- Each line: "launched" and what it found and what changed, or "not needed because <reason>".
+     A diff touching manifests, roll call, readiness, cert gating, medical, waivers, erasure or
+     src/db/bookings.ts must name dive-domain-expert; auth, tokens, personal data, waivers,
+     src/lib/payments/, src/app/api/webhooks/ or export/import must name security-reviewer.
      CI's "Pull request body names its reviews" step (scripts/check-pr-body.mjs) reads these lines. -->
 
 - `dive-domain-expert`:
@@ -32,7 +33,8 @@
 
 ## Follow-ups filed
 
-<!-- Issue numbers, one per line, or "none". -->
+<!-- Issue numbers, one per line, or "none". Then "Closes #n", one per line, for every issue
+     whose ## Claim names this branch; CI refuses the body without it. -->
 
 ## ADRs and glossary
 

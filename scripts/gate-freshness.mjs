@@ -173,7 +173,7 @@ export function parseThirtyDayList(markdown) {
 }
 
 /**
- * One follow-up issue, read from `gh issue list`'s JSON. The date comes from GitHub's own
+ * One follow-up issue, as `scripts/tracker.mjs` reads it. The date comes from GitHub's own
  * `createdAt` — exact, always present, and unaffected by a shallow clone the way `git blame`
  * is.
  */
@@ -195,7 +195,7 @@ export function parseFollowUpIssue(issue) {
 }
 
 /**
- * Every issue in `issues` (`gh issue list --json number,title,body,labels,createdAt`), aged
+ * Every issue in `issues` (`tracker().listIssues()`), aged
  * against `now` and sorted oldest first, ties broken by id so the report is stable run to run.
  */
 export function ageFollowUps(issues, now) {
@@ -574,9 +574,7 @@ async function main() {
 
   const followUpIssues = listOpenFollowUps(ROOT);
   if (followUpIssues === null) {
-    console.log(
-      `\nFollow-up issues (label:${LABEL}) — could not reach \`gh issue list\`, skipped.`,
-    );
+    console.log(`\nFollow-up issues (label:${LABEL}) — could not read GitHub, skipped.`);
   } else {
     const waiting = followUpIssues.filter((issue) =>
       (issue.labels ?? []).some((label) => label.name === WAITING_LABEL),
@@ -597,12 +595,12 @@ async function main() {
 
   const claimIssues = listIssuesByLabel(ROOT, {
     label: IN_PROGRESS_LABEL,
-    fields: "number,title,labels,createdAt,comments",
+    comments: true,
     what: "claims",
   });
   if (claimIssues === null) {
     console.log(
-      `\nClaimed — in flight (label:${IN_PROGRESS_LABEL}) — could not reach \`gh issue list\`, skipped.`,
+      `\nClaimed — in flight (label:${IN_PROGRESS_LABEL}) — could not read GitHub, skipped.`,
     );
   } else {
     const facts = readGitFacts(ROOT);

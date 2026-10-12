@@ -69,7 +69,8 @@ either build it or say why you are not.
    repository's rules and will confidently propose changes `pnpm check:repo` refuses — check before
    acting (AGENTS.md's Hard rules). A thread you never read is a pull request that is not done, and
    under this routine nobody else is coming back for it.
-3. **Pick.** `gh issue list --label ready-for-agent --state open`, skipping anything already
+3. **Pick.** `gh api "repos/AaronBuxbaum/diveday/issues?labels=ready-for-agent&state=open&per_page=100"`
+   (REST; `gh issue` is GraphQL and refused in cloud sessions), skipping anything already
    labelled `in-progress`. Read `pnpm gates`' "Claimed — in flight" section first: a claim it
    reports **stale** is a dead session, not a reservation, so that work is free to take.
 4. **Refuse the ones that are not yours.** If the body carries a *Blocked by* section naming a
@@ -93,8 +94,8 @@ either build it or say why you are not.
    touched, and *look at* every surface you changed, in light (both schemes only for colour work).
    Read each visual diff against the actual image before writing a word about it —
    `pnpm visual:report --commit <sha>` writes the PNGs.
-9. **Finish the PR you already opened** at step 7 — body, position line, diff explanation — and
-   `gh pr ready` it. **Then go back to step 1** — fetch, re-read the queue, take the next one. Do
+9. **Finish the PR you already opened** at step 7 — body, position line, diff explanation, and
+   `Closes #n` under "## Follow-ups filed" for the ticket you claimed — and `gh pr ready` it. **Then go back to step 1** — fetch, re-read the queue, take the next one. Do
    not summarise, do not ask whether to continue, and do not wait for the pull request you just
    opened to merge: it is the human's to merge, and the next ticket does not depend on it.
 

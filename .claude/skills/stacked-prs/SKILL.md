@@ -271,3 +271,8 @@ test is part of the work applies per layer.
 
 Claims follow the issue, not the stack: [docs/agents/issue-tracker.md](../../../docs/agents/issue-tracker.md)'s
 "Claiming an issue" says which branch a claim names.
+
+## Closing what you claimed
+
+Each layer's body lists `Closes #n`, one per line under "## Follow-ups filed", for every issue whose
+claim names that layer's branch; `scripts/check-pr-body.mjs` refuses the body without it.

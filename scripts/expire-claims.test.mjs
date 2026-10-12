@@ -47,12 +47,40 @@ describe("when a claim expires", () => {
     ).toMatchObject({ expire: false, reason: "open pull request" });
   });
 
-  it("leaves a label with no parseable claim to a human", () => {
+  it("keeps a label with no parseable claim while its date is unknown", () => {
     expect(claimVerdict({ number: 2, comments: [{ body: "working on it" }] }, facts())).toEqual({
       expire: false,
       days: null,
       reason: "labelled in-progress with no claim comment",
     });
+  });
+
+  it("keeps a young label with no claim yet, so a session that labels first is not raced", () => {
+    const issue = { number: 2, comments: [], labelledAt: "2026-10-09T12:00:00Z" };
+    expect(claimVerdict(issue, facts())).toMatchObject({ expire: false, days: 1 });
+  });
+
+  it("expires a label with no parseable claim once it is older than MAX_CLAIM_DAYS", () => {
+    const issue = { number: 2, comments: [{ body: "on it" }], labelledAt: "2026-09-30T12:00:00Z" };
+    const verdict = claimVerdict(issue, facts());
+    expect(verdict).toMatchObject({ expire: true, days: 10 });
+    expect(verdict.reason).toMatch(/no parseable `## Claim` comment/);
+  });
+
+  // #2233, verbatim: the bullet-form claim the 2026-10-10 sweep posted, on a branch that merged
+  // and left origin. Before claims.mjs read the bullet form this was "no claim" and stayed.
+  it("expires the real bullet-form claim whose branch left origin", () => {
+    const issue = {
+      number: 2233,
+      comments: [
+        {
+          createdAt: "2026-10-10T09:46:10Z",
+          body: "## Claim\n\n- Branch: `claude/project-thread-f9bes8` (sub-branch `claude/project-thread-f9bes8-l2-core`)\n- Worktree: `/home/claude/wt-rfa8-core`\n- Started: 2026-10-10T09:46Z\n- Owned paths: server actions under src/app (formData.get -> parseForm), src/lib/form-parse.ts\n",
+        },
+      ],
+    };
+    const verdict = claimVerdict(issue, { ...facts(), now: new Date("2026-10-12T12:00:00Z") });
+    expect(verdict).toMatchObject({ expire: true, branch: "claude/project-thread-f9bes8" });
   });
 
   it("says why on the issue and how to re-claim", () => {
