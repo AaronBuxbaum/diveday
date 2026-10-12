@@ -213,8 +213,11 @@ function main() {
   }
   if (reachRun.length > 0) console.log(`  reached: ${reachRun.join(" ")}`);
   if (args.includes("--plan")) {
-    for (const step of steps)
-      console.log(`  step ${step.name}: ${step.command} ${step.args.join(" ")}`);
+    for (const step of steps) {
+      const shown =
+        step.name === "source scans" ? [`<${step.args.length - 4} test files>`] : step.args;
+      console.log(`  step ${step.name}: ${step.command} ${shown.join(" ")}`);
+    }
     return;
   }
 
