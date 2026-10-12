@@ -586,6 +586,7 @@ export default async function TripDetailPage({
         "common",
         "course",
         "fallback",
+        "findMyBooking",
         "participants",
         "party",
         "rental",

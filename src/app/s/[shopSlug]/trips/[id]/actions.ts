@@ -116,6 +116,14 @@ function embedParam(embed: boolean | undefined, delimiter: "&" | "?"): string {
 export type BookingFormState = {
   error?: string;
   fieldErrors?: Record<string, string>;
+  /**
+   * The address the "already on this trip" refusal was about, as the diver
+   * typed it, so the refusal can offer "Send me my link" to that inbox (UX
+   * review 2026-10-11, item 8). It goes through `requestFindMyBookingAction`,
+   * which answers the same whatever the address holds and mails only the
+   * address on file, so echoing it back reveals nothing the refusal did not.
+   */
+  alreadyBookedEmail?: string;
 };
 
 const bookSchema = z.object({
@@ -428,7 +436,9 @@ export async function bookSpot(
       code === "unavailable" && shopNow.contactEmail
         ? t("booking.errors.unavailableWithContact", { contact: shopNow.contactEmail })
         : t(ERROR_MESSAGE_KEYS[code]);
-    return { error: message, fieldErrors: memberFieldErrors };
+    const alreadyBookedEmail =
+      code === "already" ? validParty[outcome.failedIndex ?? 0]?.email || undefined : undefined;
+    return { error: message, fieldErrors: memberFieldErrors, alreadyBookedEmail };
   }
   await trackEvent({ name: "booking_completed", source: "diver", partySize: validParty.length });
   // The shop's first booking through its own public pages is an activation

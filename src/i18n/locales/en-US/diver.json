@@ -407,6 +407,10 @@
     },
     "confirmationOnTheWay": "Your confirmation is on its way by email.",
     "confirmationWithWaiverOnTheWay": "Your confirmation is on its way by email. Signing your waiver is its first step.",
+    "alreadyDoor": {
+      "sendLink": "Send me my link",
+      "addSeat": "Bringing someone? Open your link and add a seat for them there."
+    },
     "embedPayNext": "Your seat’s held. Paying opens on DiveDay’s secure page, outside this window.",
     "continueToPayment": "Continue to payment",
     "alsoOnTheSchedule": "Also on the schedule",

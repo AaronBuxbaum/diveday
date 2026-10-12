@@ -201,3 +201,33 @@ describe("what this dive is for, and what would help", () => {
     expect(requests?.[0]?.reEntryAsk).toBeUndefined();
   });
 });
+
+/**
+ * **The already-booked refusal names the inbox its door sends to** (UX review
+ * 2026-10-11, item 8): the party member it was about, as typed, and nothing
+ * for any other refusal.
+ */
+describe("the already-booked refusal", () => {
+  it("hands back the address of the member already on the list", async () => {
+    vi.mocked(createBookingParty).mockResolvedValue({
+      ok: false,
+      reason: "already_booked",
+      failedIndex: 1,
+    } as never);
+
+    const state = await bookSpot(
+      ref(TRIP_ID),
+      {},
+      submission([{ email: "lead@example.com" }, { email: "repeat@example.com" }]),
+    );
+
+    expect(state.alreadyBookedEmail).toBe("repeat@example.com");
+    expect(state.fieldErrors?.["email-1"]).toBeTruthy();
+  });
+
+  it("hands back no address for any other refusal", async () => {
+    const state = await bookSpot(ref(TRIP_ID), {}, submission([{ email: "lead@example.com" }]));
+    expect(state.error).toBeTruthy();
+    expect(state.alreadyBookedEmail).toBeUndefined();
+  });
+});
