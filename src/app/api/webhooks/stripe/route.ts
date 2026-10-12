@@ -689,19 +689,14 @@ export async function POST(request: Request) {
       // Never let the release mask the original failure. A claim we could not
       // give back is the one case a redelivery cannot self-heal, so it is
       // reported in its own right.
-      Sentry.captureException(releaseError, {
-        tags: { stripe_webhook_event_type: event.type, stripe_webhook_stage: "claim_release" },
-      });
+      reportToSentry(releaseError, event.type, "claim_release");
       log("stripe_webhook.claim_release_failed", "error", {
         eventId: event.id,
         eventType: event.type,
         account: accountId,
       });
     }
-    // The original error, unwrapped and unreplaced, is what reaches Sentry.
-    Sentry.captureException(error, {
-      tags: { stripe_webhook_event_type: event.type, stripe_webhook_stage: "handler" },
-    });
+    reportToSentry(error, event.type, "handler");
     logOutcome("handler_failed", { claimReleased: released });
     return new Response(null, { status: 500 });
   }
@@ -711,9 +706,7 @@ export async function POST(request: Request) {
     // the retry must reach the handler. A release that fails is the one case a
     // retry cannot heal, so it is reported like the failure path reports it.
     const released = await releaseStripeWebhookEventClaim(db, event.id).catch((releaseError) => {
-      Sentry.captureException(releaseError, {
-        tags: { stripe_webhook_event_type: event.type, stripe_webhook_stage: "claim_release" },
-      });
+      reportToSentry(releaseError, event.type, "claim_release");
       return false;
     });
     logOutcome("deferred", { claimReleased: released });
@@ -721,6 +714,31 @@ export async function POST(request: Request) {
   }
 
   return new Response(null, { status: 200 });
+}
+
+/**
+ * Report a webhook failure to Sentry without its message (issue #2334).
+ * Sentry's `beforeSend` (`redactEvent` in src/app/observability.ts) scrubs
+ * capability URLs and headers, not exception text, and a handler's or a
+ * database's error can quote the row it refused: a diver's name or email. So
+ * Sentry gets a stand-in with a fixed message, the original's stack frames
+ * (where it broke, not what it said), and the original's class as a tag. The
+ * original is never attached as `cause`, which Sentry would send in full.
+ */
+function reportToSentry(error: unknown, eventType: string, stage: "handler" | "claim_release") {
+  const scrubbed = new Error(`Stripe webhook ${stage} failed`);
+  scrubbed.name = "StripeWebhookError";
+  if (error instanceof Error && error.stack) {
+    const frames = error.stack.split("\n").filter((line) => /^\s+at /.test(line));
+    scrubbed.stack = [`${scrubbed.name}: ${scrubbed.message}`, ...frames].join("\n");
+  }
+  Sentry.captureException(scrubbed, {
+    tags: {
+      stripe_webhook_event_type: eventType,
+      stripe_webhook_stage: stage,
+      error_class: error instanceof Error ? error.name : "unknown_error",
+    },
+  });
 }
 
 /** Whether this deployment moves real money: any one sign is enough. */

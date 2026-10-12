@@ -30,7 +30,7 @@ export type DeleteCustomerResult =
   | { status: "already_deleted" }
   /** No Stripe secret key configured — the deployment cannot reach Stripe at all. */
   | { status: "not_configured" }
-  /** The call was made and did not succeed. `error` is a short code/message for the ledger. */
+  /** The call was made and did not succeed. `error` is the HTTP status and Stripe code for the ledger. */
   | { status: "failed"; error: string };
 
 export interface CustomerProvider {
@@ -61,27 +61,34 @@ const deletedResponseSchema = z.object({
   deleted: z.literal(true),
 });
 
-/** Stripe's error envelope, for a message worth putting in front of an owner. */
+/**
+ * Stripe's error envelope. Only `code` and `type` are read: both come from
+ * Stripe's fixed vocabulary (`resource_missing`, `invalid_request_error`).
+ * `message` is free text that can quote the object or input Stripe refused, so
+ * it is never parsed at all (issue #2334).
+ */
 const errorResponseSchema = z.object({
-  error: z.object({ message: z.string().optional(), code: z.string().optional() }).optional(),
+  error: z.object({ code: z.string().optional(), type: z.string().optional() }).optional(),
 });
 
+/** A Stripe code or type is a short snake_case token; anything else is dropped. */
+const STRIPE_ERROR_TOKEN = /^[a-z0-9_]{1,64}$/;
+
 /**
- * A short, non-identifying reason for the ledger's `last_error`. Stripe error
- * messages describe the *call*, not the diver, so nothing here reintroduces the
- * identity the erasure just removed — but it is truncated anyway, because an
- * unbounded provider string does not belong in a column an owner reads.
+ * A short, non-identifying reason for the ledger's `last_error`: the HTTP
+ * status, plus Stripe's error code (or, without one, its error type) when that
+ * is a plain token. Never Stripe's `message`, which this column must not hold.
  */
 async function failureFrom(response: Response): Promise<{ status: "failed"; error: string }> {
   let detail = `HTTP ${response.status}`;
   try {
     const body = errorResponseSchema.safeParse(await response.json());
-    const message = body.success ? (body.data.error?.code ?? body.data.error?.message) : undefined;
-    if (message) detail = `${detail}: ${message}`;
+    const token = body.success ? (body.data.error?.code ?? body.data.error?.type) : undefined;
+    if (token && STRIPE_ERROR_TOKEN.test(token)) detail = `${detail}: ${token}`;
   } catch {
     // A non-JSON body (a gateway's HTML error page) leaves the status alone.
   }
-  return { status: "failed", error: detail.slice(0, 200) };
+  return { status: "failed", error: detail };
 }
 
 export function stripeCustomerProvider(
