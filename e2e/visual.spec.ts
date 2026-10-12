@@ -4041,28 +4041,20 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-desk", scheme);
       });
 
-      // The desk's settled state, which is a whole reading of the surface
-      // rather than one row's styling: a departure that has already sailed
-      // says so beside its hours, and its arrivals stand in their own "Checked
-      // in" group under the count. Reading the seeded state keeps this capture
-      // independent of the mutable check-in action while the functional spec
-      // covers the toggle itself.
-      //
-      // **No earned line in this frame, and that is the point of it.** Every
-      // diver on this boat is `checked_in`, which used to be the whole
-      // condition for the counter's one coral moment (ADR
-      // 20260827-clearwater-surface-language, decision 11) — so the shipped
-      // capture showed the instrument painting all-clear over three divers
-      // readiness will not clear. What it holds now is the honest reading: a
-      // red band on the meter, "3 people can't board yet", and those three
-      // still in "Still to clear" with their badges and their reasons. The
-      // coral moment itself is pinned by `CounterInstrument.test.tsx`, which
-      // can put a genuinely clear boat in front of it.
+      // The desk's settled state: a departure that is home. Its Divers tab is
+      // no longer the desk but the record (UX review 2026-10-10, item 10),
+      // every seat filed by the crew's roll call under "Sailed", "Didn't
+      // sail", "Not counted at the dock" or "No roll call taken". The seeded
+      // dawn boat boarded everyone, so the frame holds one "Sailed" band and
+      // no count, no taps and nothing still to clear: a record never asks for
+      // action. Reading the seeded state keeps this capture independent of
+      // the mutable roll-call action. The capture keeps its name so the
+      // baseline diff reads as this surface changing, not a new one.
       test(`the desk's settled boat renders true to the design (${scheme})`, async ({ page }) => {
         const tripId = await seededTripId(page, "blue-mantis", SAILED_TRIP);
         await page.goto(counterPath("blue-mantis", tripId));
         await page.getByRole("heading", { level: 1, name: SAILED_TRIP }).waitFor();
-        await page.getByRole("heading", { name: /^Checked in · \d+$/ }).waitFor();
+        await page.getByRole("heading", { name: /^Sailed · \d+$/ }).waitFor();
         await capture(page, "trip-desk-checked", scheme);
       });
 

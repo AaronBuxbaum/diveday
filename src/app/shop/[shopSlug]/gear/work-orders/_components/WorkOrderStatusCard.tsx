@@ -1,6 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { ChoiceFieldset } from "@/components/ui/form";
 import type { WorkOrder } from "@/db/schema";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { workOrderStatusLabel } from "@/i18n/work-order-labels";
@@ -63,30 +64,31 @@ export function WorkOrderStatusCard({
 
   return (
     <SectionCard title={t("workOrders.detail.statusHeading")} padding="lg">
-      <fieldset className="m-0 min-w-0 border-0 p-0">
-        <legend className="mb-3 p-0 text-sm text-muted">{t("workOrders.detail.moveTo")}</legend>
-        <div className="flex flex-wrap gap-3">
-          {forward ? (
-            <MoveButton workOrderId={workOrder.id} status={forward} primary t={t}>
-              {label(forward)}
-            </MoveButton>
-          ) : null}
-          {others.map((status) => (
-            <MoveButton
-              key={status}
-              workOrderId={workOrder.id}
-              status={status}
-              primary={false}
-              confirmMessage={
-                status === "picked_up" ? t("workOrders.detail.pickedUpConfirm") : undefined
-              }
-              t={t}
-            >
-              {label(status)}
-            </MoveButton>
-          ))}
-        </div>
-      </fieldset>
+      <ChoiceFieldset
+        legend={t("workOrders.detail.moveTo")}
+        className="min-w-0"
+        bodyClassName="flex flex-wrap gap-3"
+      >
+        {forward ? (
+          <MoveButton workOrderId={workOrder.id} status={forward} primary t={t}>
+            {label(forward)}
+          </MoveButton>
+        ) : null}
+        {others.map((status) => (
+          <MoveButton
+            key={status}
+            workOrderId={workOrder.id}
+            status={status}
+            primary={false}
+            confirmMessage={
+              status === "picked_up" ? t("workOrders.detail.pickedUpConfirm") : undefined
+            }
+            t={t}
+          >
+            {label(status)}
+          </MoveButton>
+        ))}
+      </ChoiceFieldset>
     </SectionCard>
   );
 }
