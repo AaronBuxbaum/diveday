@@ -3,6 +3,7 @@ import { BoatSafetyNotices } from "@/components/BoatSafetyNotices";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { RollCallTouchCue } from "@/components/RollCallTouchCue";
 import { SkipLink } from "@/components/SkipLink";
 import { buttonClass } from "@/components/ui/button";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
@@ -121,6 +122,8 @@ export function OfflineTripScreen({
 
         <OfflineTripFoot view={view} controls={controls} tripId={tripId} />
       </PullToRefresh>
+      {/* The words for a press the touch guard refused (issue #2328). */}
+      <RollCallTouchCue message={t("manifest.touchRefused")} />
     </main>
   );
 }

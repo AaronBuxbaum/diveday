@@ -427,6 +427,14 @@ const PROTOCOL_SLACK_MS = 5_000;
 const PAINT_STALL_MS = PAGE_SIDE_BUDGET_MS + PROTOCOL_SLACK_MS;
 const FONTS_STALL_MS = FONTS_WAIT_MS + PROTOCOL_SLACK_MS;
 const ANIMATION_STALL_MS = ANIMATION_WAIT_MS + PROTOCOL_SLACK_MS;
+/**
+ * The pending-reveal tripwire at the end of `paintWholeDocument`: one
+ * `querySelectorAll` count, so protocol slack is its whole budget. It was the
+ * one evaluate there left unbounded, and on 2026-10-12 a wedged renderer hung
+ * inside it until the test's own ceiling, with no "wedged, not slow" verdict
+ * for CI's rerun gate to read.
+ */
+const TRIPWIRE_STALL_MS = PROTOCOL_SLACK_MS;
 /** How long the is-the-renderer-alive probe gets to answer after a stall. */
 const RENDERER_PROBE_MS = 5_000;
 /**
@@ -494,17 +502,17 @@ const SCREENSHOT_GIVE_UP_MS = SCREENSHOT_TIMEOUT_MS + PROTOCOL_SLACK_MS;
  * — a browser that is gone, not a surface that is slow. Nothing here is a knob
  * to widen when one test starts timing out.
  */
-const PAINT_BUDGET_MS = PAINT_STALL_MS + FONTS_STALL_MS + ANIMATION_STALL_MS;
+const PAINT_BUDGET_MS = PAINT_STALL_MS + FONTS_STALL_MS + ANIMATION_STALL_MS + TRIPWIRE_STALL_MS;
 /**
  * The bounded waits that each pay one `RENDERER_PROBE_MS` diagnostic on the
  * path that has already given up: `paintWholeDocument`'s scroll-through/image
- * settle, font settle and entrance-animation settle, plus
+ * settle, font settle, entrance-animation settle and pending-reveal tripwire, plus
  * `screenshotOrGiveUp`'s probe on a screenshot that never returned.
  *
  * This is *per viewport*, and that is the correction. The ceiling below is
  * documented as the sum of the work it bounds, but the overhead term used to
  * budget two probes total while a fully-wedged capture pays one per wait per
- * viewport — four. The missing 10s came out of the same term's allowance for
+ * viewport — four then, five since the tripwire was bounded. The missing 10s came out of the same term's allowance for
  * the resizes and the navigation, leaving those unfunded, so the honest
  * worst case (both viewports wedged, both screenshots timing out on their own
  * ceiling) landed just past the total and surfaced as a test timeout inside
@@ -535,7 +543,7 @@ const PAINT_BUDGET_MS = PAINT_STALL_MS + FONTS_STALL_MS + ANIMATION_STALL_MS;
  * refusing to answer rather than anything a rerun could mask. Any failure
  * *without* that verdict stays red on the first attempt, exactly as before.
  */
-const STALL_PROBES_PER_VIEWPORT = 4;
+const STALL_PROBES_PER_VIEWPORT = 5;
 const STALL_PROBE_BUDGET_MS = RENDERER_PROBE_MS * STALL_PROBES_PER_VIEWPORT * VIEWPORTS.length;
 /** The viewport resizes and the navigation that preceded them. */
 const CAPTURE_OVERHEAD_MS = 10_000;
@@ -1061,15 +1069,26 @@ async function paintWholeDocument(page: Page) {
   // Re-queried rather than reusing the count from the evaluate above, because
   // the font settle and the animation settle both run in between, and a late
   // hydration landing in that window is precisely the race being closed.
-  const stillPending = await page.evaluate(
-    // Same "hides something" count as the sweep above, and for the same reason:
-    // a zero-area section keeps the class forever and conceals nothing.
-    (selector) =>
-      Array.from(document.querySelectorAll(selector)).filter((element) => {
-        const box = element.getBoundingClientRect();
-        return box.width > 0 && box.height > 0;
-      }).length,
-    PENDING_REVEAL_SELECTOR,
+  //
+  // Bounded like every renderer-dependent call (`TRIPWIRE_STALL_MS`). On a
+  // stall it reads as nothing pending: a renderer that cannot count elements
+  // cannot photograph them either, and `screenshotOrGiveUp` fails that shot
+  // with the verdict CI's rerun gate reads.
+  const stillPending = await withRendererBound(
+    page,
+    "the pending-reveal tripwire",
+    TRIPWIRE_STALL_MS,
+    page.evaluate(
+      // Same "hides something" count as the sweep above, and for the same reason:
+      // a zero-area section keeps the class forever and conceals nothing.
+      (selector) =>
+        Array.from(document.querySelectorAll(selector)).filter((element) => {
+          const box = element.getBoundingClientRect();
+          return box.width > 0 && box.height > 0;
+        }).length,
+      PENDING_REVEAL_SELECTOR,
+    ),
+    0,
   );
   if (stillPending > 0) {
     throw new Error(
@@ -4132,7 +4151,9 @@ for (const scheme of ["light", "dark"] as const) {
        * in this file photographs: `InlineConfirm`'s message mode replaces the
        * trigger with a bordered `role="alert"` block carrying a sentence and
        * two buttons, *inside* a blocked roster row that already holds a badge
-       * and a reason. The unarmed half is `trip-guests-identity`, so the armed
+       * and a reason. Since issue #1789 (H-79) the armed block also carries
+       * the matched diver's last dive day here, or "No dive days here yet",
+       * which `e2e/check-in.spec.ts` asserts. The unarmed half is `trip-guests-identity`, so the armed
        * state is the one worth a baseline here.
        *
        * Seeded through `/api/test/seed-trouble-states?identityHeld=1` rather
@@ -5252,8 +5273,15 @@ for (const scheme of ["light", "dark"] as const) {
        * what moves, and the one danger action. Reached the way a staffer
        * reaches it, from the duplicate made at the counter above; the per-test
        * reset removes the temporary record afterward.
+       *
+       * Both records print their "Added" date, a `defaultNow()` stamp from the
+       * database's wall clock, so `/api/test/pin-added-date` moves both onto
+       * the frozen clock before the preview renders (issue #2297).
        */
-      test(`the merge preview renders true to the design (${scheme})`, async ({ page }) => {
+      test(`the merge preview renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
         await page.goto("/shop/blue-mantis/divers/new");
         await page.getByRole("heading", { level: 1, name: "Add a diver" }).waitFor();
         await page.getByLabel("Full name").fill("Priya Sharma");
@@ -5264,6 +5292,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: /^Is this the same Priya Sharma\?/ }).waitFor();
         await page.getByRole("button", { name: "Create new diver anyway" }).click();
         await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
+        const pinned = await request.post("/api/test/pin-added-date", {
+          data: { fullName: "Priya Sharma" },
+        });
+        expect(await pinned.json()).toEqual({ pinned: 2 });
         await page.getByRole("link", { name: "Compare with Priya Sharma" }).first().click();
         await page.getByRole("heading", { level: 1, name: "Merge duplicate records" }).waitFor();
         // Swap so the seeded Priya, with her bookings and releases, is the
@@ -6608,7 +6640,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        await request.post("/api/test/seed-trouble-states");
+        await request.post("/api/test/seed-trouble-states?owedRefund=1");
         await page.goto("/shop/blue-mantis/orders");
         await page.getByRole("region", { name: "Payments that need a check" }).waitFor();
         await page.getByRole("region", { name: "Refunds you still owe" }).waitFor();
@@ -7823,7 +7855,8 @@ for (const scheme of ["light", "dark"] as const) {
       // Renting gear out at the counter (ADR 20260815-minimal-gear-register,
       // amended 2026-10-08; redrawn 2026-10-09): the person chosen, today's
       // window, the free units of one kind as tiles, the bill with its total,
-      // and how they pay.
+      // and how they pay. Priya has signed nothing, so the person step also
+      // holds the unsigned waiver line and its Send waiver (issue #2346).
       test(`the rent-out form renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
         await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();

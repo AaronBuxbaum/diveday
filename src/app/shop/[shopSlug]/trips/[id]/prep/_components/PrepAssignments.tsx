@@ -233,6 +233,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                       allGood: t("gear.prep.returnAllGood"),
                       fitAdjusted: t("gear.prep.returnFitAdjusted"),
                       serviceConcern: t("gear.prep.returnServiceConcern"),
+                      cancelConcern: t("gear.prep.returnCancelConcern"),
                       noteLabel: t("gear.prep.returnNoteLabel"),
                       notePlaceholder: t("gear.prep.returnNotePlaceholder"),
                     }}

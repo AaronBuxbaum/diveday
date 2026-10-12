@@ -36,7 +36,7 @@ export function OfflineCrewRollCall({
       aria-labelledby="offline-crew-heading"
       className={`mt-3 overflow-hidden rounded-inset border ${
         crewMissing
-          ? "border-danger bg-danger/10"
+          ? "border-danger bg-danger-tint"
           : completeness.crewAccountedFor
             ? "border-success/40 bg-success/10"
             : "border-border-strong bg-surface"

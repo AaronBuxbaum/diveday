@@ -609,6 +609,8 @@ export function overriddenRefusal(
  */
 export type OverriddenRefusal = {
   recordId: string;
+  /** Whose record it is: the record's page lives under the person (issue #2348). */
+  personId: string;
   at: Date;
   /** Optional so a mark built by hand (a test, an older fixture) still types. */
   evaluatedOn?: CalendarDate | null;
@@ -658,6 +660,7 @@ function unansweredRefusal(
     if (!answered && refusal.medicalClearanceDeclinedAt) {
       return {
         recordId: refusal.id,
+        personId: refusal.personId,
         at: refusal.medicalClearanceDeclinedAt,
         evaluatedOn: isValidCalendarDate(refusal.medicalClearanceEvaluatedOn ?? "")
           ? (refusal.medicalClearanceEvaluatedOn ?? null)

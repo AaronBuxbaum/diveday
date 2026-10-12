@@ -2,6 +2,11 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  TOUCH_REFUSED_ATTRIBUTE,
+  TOUCH_REFUSED_CUE_MS,
+  TOUCH_REFUSED_EVENT,
+} from "@/components/roll-call-touch-guard";
 import type { RollCallAction, RollCallButtonCopy, RollCallResult } from "./RollCallButton";
 import { RollCallButton } from "./RollCallButton";
 
@@ -145,6 +150,35 @@ describe("RollCallButton", () => {
       touch("pointerUp", 1);
       await Promise.resolve();
       expect(action).not.toHaveBeenCalled();
+    });
+
+    /**
+     * **The refusal shows on the control and is said aloud** (issue #2328),
+     * and the guard still holds: nothing is posted, and nothing is posted
+     * later on the crew's behalf either.
+     */
+    it("puts the cue on the refused control and never submits it afterwards", async () => {
+      vi.useFakeTimers();
+      try {
+        const action = mockAction({ ok: true });
+        setup(action);
+        const heard = vi.fn();
+        document.addEventListener(TOUCH_REFUSED_EVENT, heard);
+        const button = screen.getByRole("button", { name: "Board" });
+        touch("pointerDown", 1);
+        touch("pointerDown", 2);
+        fireEvent.click(button);
+        touch("pointerUp", 2);
+        touch("pointerUp", 1);
+        expect(button).toHaveAttribute(TOUCH_REFUSED_ATTRIBUTE);
+        expect(heard).toHaveBeenCalledOnce();
+        await vi.advanceTimersByTimeAsync(TOUCH_REFUSED_CUE_MS * 4);
+        expect(button).not.toHaveAttribute(TOUCH_REFUSED_ATTRIBUTE);
+        expect(action).not.toHaveBeenCalled();
+        document.removeEventListener(TOUCH_REFUSED_EVENT, heard);
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("submits a single deliberate touch, and a mouse or keyboard press", async () => {

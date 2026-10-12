@@ -7,6 +7,7 @@ import {
   redactBreadcrumb,
   redactCapabilityUrl,
   redactEvent,
+  SENTRY_DATA_COLLECTION,
 } from "./observability";
 
 const APP_DIR = dirname(fileURLToPath(import.meta.url));
@@ -259,6 +260,44 @@ describe("redactEvent", () => {
   it("leaves an ordinary query string as it was", () => {
     const event = redactEvent({ type: undefined, request: { query_string: "from=pricing" } });
     expect(event.request?.query_string).toBe("from=pricing");
+  });
+
+  // Issue #2334, security review. The SDK collects request bodies, cookies and
+  // headers by default; a Stripe webhook body carries a customer's name, email
+  // and address, a server action's carries a form, and a cookie is a session.
+  // `SENTRY_DATA_COLLECTION` turns collection off, and this is the second layer
+  // for anything an integration attaches anyway.
+  it("drops the request body, the cookies and the credential headers", () => {
+    const event = redactEvent({
+      type: undefined,
+      request: {
+        url: "https://app.example/api/webhooks/stripe",
+        data: '{"customer_details":{"email":"nora@example.com"}}',
+        cookies: { "better-auth.session_token": "secret-session" },
+        headers: {
+          Cookie: "better-auth.session_token=secret-session",
+          authorization: "Bearer secret-key",
+          "Stripe-Signature": "t=1,v1=abc",
+          "user-agent": "Stripe/1.0",
+        },
+      },
+    });
+    expect(event.request?.data).toBeUndefined();
+    expect(event.request?.cookies).toBeUndefined();
+    expect(event.request?.headers).toEqual({ "user-agent": "Stripe/1.0" });
+    expect(JSON.stringify(event)).not.toMatch(/nora@example.com|secret-session|secret-key|v1=abc/);
+  });
+});
+
+describe("SENTRY_DATA_COLLECTION", () => {
+  it("collects no bodies, cookies, user info, frame variables or query data", () => {
+    expect(SENTRY_DATA_COLLECTION).toMatchObject({
+      httpBodies: [],
+      cookies: false,
+      userInfo: false,
+      stackFrameVariables: false,
+      databaseQueryData: false,
+    });
   });
 });
 

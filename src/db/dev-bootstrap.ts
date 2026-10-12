@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
-import { DEMO_SHOP_SLUG } from "./dev-credentials";
+import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { shops } from "./schema";
 
 // The demo bootstrap `getDb()` runs on a database's first open: the seeded demo
