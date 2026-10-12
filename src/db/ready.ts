@@ -70,7 +70,10 @@ export type BookedMoment = {
   departureCancelled: boolean;
 };
 
-export async function getBookedMoment(db: AppDb, bookingId: string): Promise<BookedMoment | null> {
+export async function getBookedMoment(
+  db: AppDb,
+  { shopId, bookingId }: { shopId: string; bookingId: string },
+): Promise<BookedMoment | null> {
   const [row] = await db
     .select({
       status: bookings.status,
@@ -94,7 +97,7 @@ export async function getBookedMoment(db: AppDb, bookingId: string): Promise<Boo
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
-    .where(eq(bookings.id, bookingId))
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .limit(1);
   if (!row) return null;
   const identityHeld = row.identityUnconfirmedAt !== null;

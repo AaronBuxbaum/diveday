@@ -56,8 +56,13 @@ describe("the confirmation paints before the thread", () => {
     expect(readyThread).toBeGreaterThan(page);
     // From the verified capability on: the dead-link branches above it read
     // what they need to name a shop, and are not the first paint after a booking.
-    const fastPath = SOURCE.slice(positionOf("const { bookingId } = capability;"), readyThread);
-    expect(fastPath).toContain("await getBookedMoment(db, bookingId)");
+    const fastPath = SOURCE.slice(
+      positionOf("const { bookingId, shopId: capabilityShopId } = capability;"),
+      readyThread,
+    );
+    expect(fastPath).toContain(
+      "await getBookedMoment(db, { shopId: capabilityShopId, bookingId })",
+    );
     // The card is the shell's header; the rest is a streamed child under it.
     const opening = fastPath.indexOf("<ReadyBookedPage");
     expect(opening).toBeGreaterThan(-1);
@@ -360,7 +365,7 @@ describe("the coral budget", () => {
     // `?booked=1` is flashed straight back out of the URL, so reopening the
     // link three days later replays nothing.
     expect(SOURCE).toContain(
-      "const found = justBooked ? await getBookedMoment(db, bookingId) : null;",
+      "const found = justBooked\n    ? await getBookedMoment(db, { shopId: capabilityShopId, bookingId })\n    : null;",
     );
     expect(SOURCE).toContain("if (!moment) return thread;");
   });

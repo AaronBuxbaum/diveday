@@ -386,8 +386,8 @@ describe("carriedPreparationForDiver", () => {
  */
 describe("getBookedMoment", () => {
   it("states the masthead's facts exactly as the full loader does", async () => {
-    const { db, bookingId } = await unpaidBooking();
-    const moment = await getBookedMoment(db, bookingId);
+    const { db, shop, bookingId } = await unpaidBooking();
+    const moment = await getBookedMoment(db, { shopId: shop.id, bookingId });
     const data = await getReadyPageData(db, bookingId);
     if (!moment || !data) throw new Error("expected both reads to resolve");
     expect(moment.trip).toEqual({
@@ -416,22 +416,38 @@ describe("getBookedMoment", () => {
   it("says when the seat or the departure is gone, so the page can decline the fast path", async () => {
     const { db, shop, open, bookingId } = await unpaidBooking();
     await cancelBooking(db, shop.id, bookingId);
-    expect((await getBookedMoment(db, bookingId))?.bookingCancelled).toBe(true);
+    expect((await getBookedMoment(db, { shopId: shop.id, bookingId }))?.bookingCancelled).toBe(
+      true,
+    );
     await setTripStatus(db, shop.id, open.id, "cancelled");
-    expect((await getBookedMoment(db, bookingId))?.departureCancelled).toBe(true);
+    expect((await getBookedMoment(db, { shopId: shop.id, bookingId }))?.departureCancelled).toBe(
+      true,
+    );
   });
 
   it("greets a held identity by the name it was booked as, never the matched record's", async () => {
-    const { db, bookingId } = await unpaidBooking();
+    const { db, shop, bookingId } = await unpaidBooking();
     await db
       .update(bookings)
       .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "N. Q." })
       .where(eq(bookings.id, bookingId));
-    expect((await getBookedMoment(db, bookingId))?.greetingName).toBe("N. Q.");
+    expect((await getBookedMoment(db, { shopId: shop.id, bookingId }))?.greetingName).toBe("N. Q.");
   });
 
   it("resolves nothing for a booking that does not exist", async () => {
-    const { db } = ctx;
-    expect(await getBookedMoment(db, "00000000-0000-4000-8000-000000000000")).toBeNull();
+    const { db, shop } = await unpaidBooking();
+    expect(
+      await getBookedMoment(db, {
+        shopId: shop.id,
+        bookingId: "00000000-0000-4000-8000-000000000000",
+      }),
+    ).toBeNull();
+  });
+
+  it("resolves nothing for a booking under another shop, whatever id the caller holds", async () => {
+    const { db, bookingId } = await unpaidBooking();
+    expect(
+      await getBookedMoment(db, { shopId: "00000000-0000-4000-8000-000000000000", bookingId }),
+    ).toBeNull();
   });
 });

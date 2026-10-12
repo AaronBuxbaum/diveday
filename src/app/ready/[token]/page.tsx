@@ -752,7 +752,7 @@ export default async function ReadyTokenPage({
     // rests on — a bearer token reveals only its own record.
     return <UnavailableReadyLink t={anonT} />;
   }
-  const { bookingId } = capability;
+  const { bookingId, shopId: capabilityShopId } = capability;
 
   /**
    * **The booked card in the first paint** (UX review 2026-10-10, items 7 and
@@ -767,7 +767,9 @@ export default async function ReadyTokenPage({
    * owns those terminal cards; a hand-edited `?booked=1` on an old link moves
    * nothing but which opening renders, exactly as before.
    */
-  const found = justBooked ? await getBookedMoment(db, bookingId) : null;
+  const found = justBooked
+    ? await getBookedMoment(db, { shopId: capabilityShopId, bookingId })
+    : null;
   const moment =
     found && !found.bookingCancelled && !found.departureCancelled && !theBoatIsHome(found.trip)
       ? found
