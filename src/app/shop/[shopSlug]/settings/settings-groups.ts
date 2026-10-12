@@ -3,7 +3,9 @@ import type { StaffMessageKey } from "@/i18n/staff-messages";
 /**
  * The settings hub's one list of groups, in render order: the ten of ADR
  * 20261001-logbook, each named for what a shop is setting up rather than for
- * where the row happened to be built. Both of the hub's
+ * where the row happened to be built, plus Notifications (every row that
+ * decides where mail goes, once three rows in three groups) and Rarely
+ * changed (the rows a shop sets once, kept out of the weekly groups). Both of the hub's
  * `SettingsPage.tsx` renders its sections from this one list. It remains a
  * registry rather than three local constants so a new section cannot drift
  * from the hub's section order or its test coverage.
@@ -24,9 +26,11 @@ export const SETTINGS_GROUPS = [
   { id: "rental-gear", labelKey: "settings.main.groups.rentals" },
   { id: "money", labelKey: "settings.main.groups.money" },
   { id: "messages", labelKey: "settings.main.groups.messages" },
+  { id: "notifications", labelKey: "settings.main.groups.notifications" },
   { id: "website", labelKey: "settings.main.groups.website" },
   { id: "data", labelKey: "settings.main.groups.data" },
   { id: "account", labelKey: "settings.main.groups.account" },
+  { id: "rarely-changed", labelKey: "settings.main.groups.rarelyChanged" },
 ] as const satisfies readonly { id: string; labelKey: StaffMessageKey }[];
 
 export type SettingsGroupId = (typeof SETTINGS_GROUPS)[number]["id"];
@@ -170,22 +174,10 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "section", id: "timezone" },
   },
   {
-    id: "season",
-    labelKey: "settings.main.season.heading",
-    group: "shop",
-    target: { kind: "section", id: "season" },
-  },
-  {
     id: "units",
     labelKey: "settings.main.units.heading",
     group: "shop",
     target: { kind: "section", id: "units" },
-  },
-  {
-    id: "contact",
-    labelKey: "settings.main.contact.heading",
-    group: "shop",
-    target: { kind: "section", id: "contact" },
   },
   {
     id: "address",
@@ -208,6 +200,12 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     gate: "team",
   },
   {
+    id: "activity",
+    labelKey: "activity.log.title",
+    group: "team",
+    target: { kind: "route", path: "/settings/activity" },
+  },
+  {
     id: "boats",
     labelKey: "boats.heading",
     group: "boats-sites",
@@ -219,12 +217,6 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.diveSites.heading",
     group: "boats-sites",
     target: { kind: "route", path: "/dive-sites" },
-  },
-  {
-    id: "divingOptions",
-    labelKey: "boats.divingOptionsHeading",
-    group: "boats-sites",
-    target: { kind: "section", id: "divingOptions" },
   },
   {
     id: "safetyChecklist",
@@ -243,12 +235,6 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.dockCall.heading",
     group: "boats-sites",
     target: { kind: "route", path: "/settings/dock-day" },
-  },
-  {
-    id: "tripTags",
-    labelKey: "lenses.heading",
-    group: "boats-sites",
-    target: { kind: "route", path: "/settings/trip-tags" },
   },
   {
     id: "waivers",
@@ -304,13 +290,6 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     gate: "payments",
   },
   {
-    id: "passThrough",
-    labelKey: "settings.main.passThrough.heading",
-    group: "money",
-    target: { kind: "section", id: "passThrough" },
-    gate: "payments",
-  },
-  {
     id: "tips",
     labelKey: "settings.main.features.tips.heading",
     group: "money",
@@ -338,17 +317,29 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "section", id: "reviewLink" },
   },
   {
-    id: "deskHours",
-    labelKey: "settings.main.deskHours.heading",
-    group: "messages",
-    target: { kind: "section", id: "deskHours" },
-  },
-  {
     id: "whatsapp",
     labelKey: "settings.main.whatsapp.heading",
     group: "messages",
     target: { kind: "route", path: "/settings/whatsapp" },
     gate: "messaging",
+  },
+  {
+    id: "contact",
+    labelKey: "settings.main.contact.heading",
+    group: "notifications",
+    target: { kind: "section", id: "contact" },
+  },
+  {
+    id: "deskHours",
+    labelKey: "settings.main.deskHours.heading",
+    group: "notifications",
+    target: { kind: "section", id: "deskHours" },
+  },
+  {
+    id: "email",
+    labelKey: "emailSettings.title",
+    group: "notifications",
+    target: { kind: "route", path: "/settings/email" },
   },
   {
     id: "profile",
@@ -361,12 +352,6 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.shopPhotos.heading",
     group: "website",
     target: { kind: "section", id: "shopPhotos" },
-  },
-  {
-    id: "searchListing",
-    labelKey: "settings.main.searchListing.heading",
-    group: "website",
-    target: { kind: "section", id: "searchListing" },
   },
   {
     id: "dateRequests",
@@ -385,12 +370,6 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.embed.heading",
     group: "website",
     target: { kind: "route", path: "/settings/embed" },
-  },
-  {
-    id: "activity",
-    labelKey: "activity.log.title",
-    group: "data",
-    target: { kind: "route", path: "/settings/activity" },
   },
   {
     id: "integrations",
@@ -432,17 +411,42 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "route", path: "/settings/calendar" },
   },
   {
-    id: "email",
-    labelKey: "emailSettings.title",
-    group: "account",
-    target: { kind: "route", path: "/settings/email" },
-  },
-  {
     id: "billing",
     labelKey: "billing.title",
     group: "account",
     target: { kind: "route", path: "/settings/billing" },
     gate: "billing",
+  },
+  {
+    id: "season",
+    labelKey: "settings.main.season.heading",
+    group: "rarely-changed",
+    target: { kind: "section", id: "season" },
+  },
+  {
+    id: "divingOptions",
+    labelKey: "boats.divingOptionsHeading",
+    group: "rarely-changed",
+    target: { kind: "section", id: "divingOptions" },
+  },
+  {
+    id: "tripTags",
+    labelKey: "lenses.heading",
+    group: "rarely-changed",
+    target: { kind: "route", path: "/settings/trip-tags" },
+  },
+  {
+    id: "passThrough",
+    labelKey: "settings.main.passThrough.heading",
+    group: "rarely-changed",
+    target: { kind: "section", id: "passThrough" },
+    gate: "payments",
+  },
+  {
+    id: "searchListing",
+    labelKey: "settings.main.searchListing.heading",
+    group: "rarely-changed",
+    target: { kind: "section", id: "searchListing" },
   },
 ];
 

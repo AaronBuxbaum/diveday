@@ -242,9 +242,10 @@ night (`BrandPreview`), and the contrast note reports whichever scheme moved the
 **Shipped 2026-08-28** (slice 6g) — same ADR and canvas. The phone keeps grouped lists.
 
 - **One idea:** every switch in the shop, findable in one look.
-- **The question it arrives with:** "where do I change X?" — answered by the rail: all ten groups
-  (Shop, Team, Boats & sites, Bookings & waivers, Rentals, Money, Messages, Website, Data, Account;
-  ADR 20261001-logbook) in the pane's own order, with the group being read named at the top of the column (its label is
+- **The question it arrives with:** "where do I change X?" — answered by the rail: all twelve groups
+  (Shop, Team, Boats & sites, Bookings & waivers, Rentals, Money, Messages, Notifications, Website,
+  Data, Account, Rarely changed; the ten of ADR 20261001-logbook plus the mail rows gathered and the
+  set-once rows kept last) in the pane's own order, with the group being read named at the top of the column (its label is
   sticky inside the rail's scroll area) and the group holding the current row tinted. Forty rows
   do not fit beside the bar on any viewport at a legible row height, so the rail scrolls in its own
   right; what it must never do is let a reader believe the groups below the first are not there.

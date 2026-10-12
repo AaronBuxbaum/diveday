@@ -2,14 +2,14 @@ import { ImageFileInput } from "@/components/ImageFileInput";
 import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovablePhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { ChoiceRow, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import {
   MAX_IMAGE_MB,
   MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE,
   MAX_SHOPFRONT_PHOTOS,
 } from "@/lib/storage/limits";
-import { saveSearchListingAction, saveShopPhotosAction } from "../../website-actions";
+import { saveShopPhotosAction } from "../../website-actions";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
 import { featureRow, SectionNotice, SettingsGroup, type SettingsView, WEBSITE_GROUP } from "./kit";
 
@@ -91,41 +91,6 @@ export function WebsiteGroup({ view }: { view: SettingsView }) {
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("settings.main.shopPhotos.submit")}
-              </SubmitButton>
-            </FieldActions>
-          </FieldGrid>
-        </SettingsRow>
-
-        {/* A shop is listed by default and the box says so; unticking it drops the shop out of
-          sitemap.xml *and* makes its public pages emit robots: noindex
-          (ADR 20260813-search-listing-is-a-choice). */}
-        <SettingsRow
-          heading={t("settings.main.searchListing.heading")}
-          value={
-            shop.searchListingOptOutAt
-              ? t("settings.main.searchListing.valueHidden")
-              : t("settings.main.searchListing.valueListed")
-          }
-          detail={t("settings.main.searchListing.detail")}
-          sectionId="searchListing"
-          activeSection={activeSection}
-        >
-          <SectionNotice banner={banner} section="searchListing" active={activeSection} />
-          <FieldGrid as="form" action={saveSearchListingAction} columns={1} className="mt-4">
-            <ChoiceRow
-              name="searchListed"
-              type="checkbox"
-              defaultChecked={!shop.searchListingOptOutAt}
-              className="text-sm"
-            >
-              {t("settings.main.searchListing.label")}
-            </ChoiceRow>
-            <FieldActions>
-              <SubmitButton
-                pendingLabel={t("settings.main.searchListing.submitting")}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {t("settings.main.searchListing.submit")}
               </SubmitButton>
             </FieldActions>
           </FieldGrid>

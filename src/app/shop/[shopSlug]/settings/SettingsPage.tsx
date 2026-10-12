@@ -33,6 +33,8 @@ import { DataGroup } from "./_components/groups/DataGroup";
 import { DATA_GROUP, SettingsGroup, type SettingsView } from "./_components/groups/kit";
 import { MessagesGroup } from "./_components/groups/MessagesGroup";
 import { MoneyGroup } from "./_components/groups/MoneyGroup";
+import { NotificationsGroup } from "./_components/groups/NotificationsGroup";
+import { RarelyChangedGroup } from "./_components/groups/RarelyChangedGroup";
 import { RentalsGroup } from "./_components/groups/RentalsGroup";
 import { ShopGroup } from "./_components/groups/ShopGroup";
 import { TeamGroup } from "./_components/groups/TeamGroup";
@@ -256,7 +258,7 @@ export default async function SettingsPage({
           addressLookupEnabled={isAddressLookupConfigured()}
         />
 
-        {canManageTeam ? <TeamGroup view={view} canManageTeam={canManageTeam} /> : null}
+        <TeamGroup view={view} canManageTeam={canManageTeam} />
 
         <BoatsSitesGroup view={view} />
 
@@ -273,6 +275,8 @@ export default async function SettingsPage({
 
         <MessagesGroup view={view} canManageMessaging={canManageMessaging} />
 
+        <NotificationsGroup view={view} />
+
         <WebsiteGroup view={view} />
 
         <Suspense fallback={<GroupFallback group={DATA_GROUP} label={t(DATA_GROUP.labelKey)} />}>
@@ -286,6 +290,8 @@ export default async function SettingsPage({
         </Suspense>
 
         <AccountGroup view={view} canViewBilling={canViewBilling} />
+
+        <RarelyChangedGroup view={view} canPayments={canPayments} />
 
         {/* The stack's last child, so it sits a section's 40px under the last
             card like every section above it; on its own `mt-12` it sat 48px

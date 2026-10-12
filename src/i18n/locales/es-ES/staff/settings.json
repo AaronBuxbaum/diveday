@@ -368,9 +368,11 @@
       "rentals": "Alquiler",
       "money": "Dinero",
       "messages": "Mensajes",
+      "notifications": "Avisos",
       "website": "Sitio web",
       "data": "Datos",
-      "account": "Cuenta"
+      "account": "Cuenta",
+      "rarelyChanged": "Se cambia poco"
     },
     "rail": {
       "ariaLabel": "Secciones de configuración"

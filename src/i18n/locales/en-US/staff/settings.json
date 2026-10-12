@@ -368,9 +368,11 @@
       "rentals": "Rentals",
       "money": "Money",
       "messages": "Messages",
+      "notifications": "Notifications",
       "website": "Website",
       "data": "Data",
-      "account": "Account"
+      "account": "Account",
+      "rarelyChanged": "Rarely changed"
     },
     "rail": {
       "ariaLabel": "Settings sections"
