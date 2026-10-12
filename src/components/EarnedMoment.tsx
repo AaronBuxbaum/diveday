@@ -76,7 +76,7 @@ export function EarnedMomentLine({
  * welcome home): a step wider than that, `p-6 sm:p-7`, started the recap's
  * welcome text 4px right of every card under it (K-109). `card` is
  * `SectionCard`'s `md` inset, for a moment that heads a column of cards: on
- * /ready "You’re on the boat" sat 8px inside "Where to go" and the party
+ * /ready "You’ve got a seat" sat 8px inside "Where to go" and the party
  * panel's title (K-52, TOKEN-2-07). The test reads both rungs from card.tsx,
  * so neither can drift.
  */

@@ -147,7 +147,7 @@ describe("the reviews widget", () => {
     expect(screen.getByText("Calm crew, and the turtle at the second site")).toBeInTheDocument();
     expect(screen.getAllByText(/Marta R\./)[0]).toBeInTheDocument();
     expect(screen.getByText("4.5")).toBeInTheDocument();
-    expect(screen.getByText("4 reviews")).toBeInTheDocument();
+    expect(screen.getByText("4 ratings")).toBeInTheDocument();
     // The one way on leaves the frame for the archive.
     const all = screen.getByRole("link", { name: "All reviews" });
     expect(all).toHaveAttribute("href", "/s/blue-mantis/reviews");

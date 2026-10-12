@@ -346,7 +346,7 @@ test.describe("as owner", () => {
     // (docs ADR 20260721-checkout-at-booking). The seat is what's asserted;
     // the discount arithmetic is Stripe's and is unit-tested in
     // src/lib/promo-codes.ts (`discountedAmountCents`).
-    await expect(page.getByRole("heading", { name: /You’re on the boat, Promo/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /You’ve got a seat, Promo/ })).toBeVisible();
     await expect(page.getByText("That code isn’t active.")).toHaveCount(0);
   });
 
@@ -385,7 +385,7 @@ test.describe("as owner", () => {
     await expect(refusal).toBeVisible();
     // Refused *before* the party is booked, so the diver is still on the form
     // with everything they typed — never a seat taken on a code that failed.
-    await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).toHaveCount(0);
     await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Refused Diver");
     const spentMessage = await refusal.textContent();
 
@@ -395,7 +395,7 @@ test.describe("as owner", () => {
     await bookButton.click();
     await expect(refusal).toBeVisible();
     expect(await refusal.textContent()).toBe(spentMessage);
-    await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).toHaveCount(0);
   });
 
   /**

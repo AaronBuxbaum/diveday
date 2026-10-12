@@ -62,7 +62,7 @@ test("a brand-new shop is bookable within the four-screen budget, and is shown t
   // Exactly one open step carries the page's one primary (ADR
   // 20260827-first-light, decision 6).
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveCount(1);
-  await page.getByRole("link", { name: "Schedule a trip" }).click();
+  await page.getByRole("link", { name: "Add a departure" }).click();
 
   // ── Screen 3: the board's add panel — four required fields, everything
   // else has a default, is optional, or is behind "More options" (ADR

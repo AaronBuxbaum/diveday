@@ -69,17 +69,13 @@ export function liveStageOf(
   return reading;
 }
 
-/** The staff bundle's word for each stage, as keys rather than sentences. */
+/**
+ * **The staff word for each stage, once.** The manifest strip's five buttons
+ * and every chip that names a boat's stage (Today's card, the departure
+ * header) read these same keys, so a staffer reads the word the crew tapped
+ * (UX review 2026-10-10, item 1). Keys rather than sentences.
+ */
 export const STAGE_WORD_KEYS = {
-  boarding: "shopHome.spine.stage.boarding",
-  underway: "shopHome.spine.stage.underway",
-  surface: "shopHome.spine.stage.surface",
-  heading_in: "shopHome.spine.stage.headingIn",
-  home: "shopHome.spine.stage.home",
-} as const;
-
-/** The manifest's five buttons. */
-export const STAGE_TAP_KEYS = {
   boarding: "manifest.stage.tapBoarding",
   underway: "manifest.stage.tapUnderway",
   surface: "manifest.stage.tapSurface",
