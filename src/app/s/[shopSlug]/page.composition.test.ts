@@ -118,7 +118,10 @@ describe("the lens rail's place", () => {
     // `FilterChips` renders a `<nav>`, and `e2e/schedule-embed.spec.ts` asserts
     // the widget has literally zero navigation landmarks.
     expect(SOURCE).toContain("hasUpcoming && !isEmbed && lenses.length > 0");
-    expect(SOURCE).toContain("isEmbed ? Promise.resolve([]) : listTripLenses(");
+    // The page's reads live in `readSchedulePage`, which the page calls once.
+    const reads = readFileSync(join(__dirname, "_components/schedule-reads.ts"), "utf8");
+    expect(countOf("await readSchedulePage(")).toBe(1);
+    expect(reads).toContain("isEmbed ? Promise.resolve([]) : listTripLenses(");
   });
 });
 
