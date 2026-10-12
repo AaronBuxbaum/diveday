@@ -514,7 +514,6 @@
   "src/components/haptics.test.ts": 652,
   "src/components/illustration/SiteMark.test.tsx": 1300,
   "src/components/offline-manifest/saved-copy.test.ts": 61,
-  "src/components/offline-manifest/sections.test.tsx": 1578,
   "src/components/person/rows.test.tsx": 1075,
   "src/components/roll-call-touch-guard.test.ts": 1032,
   "src/components/row-tones.test.ts": 48,
