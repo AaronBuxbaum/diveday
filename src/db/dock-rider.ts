@@ -1,8 +1,11 @@
 import { and, eq, ne, sql } from "drizzle-orm";
+import { isPlausibleDateOfBirth } from "@/lib/age";
+import { isValidCalendarDate } from "@/lib/calendar-date";
+import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import type { AppDb } from "./client";
-import { publishManifestEvent } from "./manifest-events";
+import { getBookingReadiness } from "./readiness";
 import { bookings, people } from "./schema";
-import { type SeatDiverRefusal, seatDiver } from "./seat-diver";
+import { type SeatDiverRefusal, type SeatDiverWaiver, seatDiver } from "./seat-diver";
 import { latestTripStage } from "./trip-stages";
 
 /**
@@ -32,6 +35,23 @@ import { latestTripStage } from "./trip-stages";
  *   the name as typed, ignoring case and outer spaces; two genuinely
  *   different riders sharing a full name is rarer than a double tap, and the
  *   crew can still add one with a distinguishing name.
+ *
+ * Both are read **outside** the booking transaction, before it opens: a stage
+ * recorded, or a namesake seated, in the instant between the read and the
+ * seat is not caught here. The limits that matter for safety (capacity, the
+ * certificate, a sailed or canceled departure) are all read inside it, under
+ * the trip-row lock; these two are a convenience for the crew, not a gate.
+ *
+ * **A seat is not boarding.** The rider still owes whatever the departure asks
+ * of everybody aboard — the release and its medical statement, and payment
+ * where the shop takes it before boarding and names no rider price — and the
+ * roll call refuses Boarded until readiness clears them, exactly as for a seat
+ * sold at the desk. What they still owe comes back as `owes`, with the release
+ * link to open on the crew's phone (`waiverPath`), so the door can say so.
+ *
+ * The emergency contact and an optional date of birth are written onto the
+ * new person row inside the booking's own transaction (`freshPerson`), so a
+ * minor shows as one on the manifest at once.
  */
 
 export type DockRiderInput = {
@@ -43,16 +63,34 @@ export type DockRiderInput = {
   phone?: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
+  /** `YYYY-MM-DD`; absent when the crew did not ask. */
+  dateOfBirth?: string;
+  /** Riding along, or snorkeling. Never a diver: a diver goes through the desk. */
+  participantType?: "rider" | "snorkeler";
 };
 
-export type DockRiderRefusal = SeatDiverRefusal | "departed" | "already_aboard";
+export type DockRiderRefusal = SeatDiverRefusal | "departed" | "already_aboard" | "invalid";
+
+/** What the rider still owes before the rail will take them. */
+export type DockRiderOwes = "release" | "payment" | "other";
 
 export type DockRiderResult =
-  | { ok: true; bookingId: string; personId: string }
+  | {
+      ok: true;
+      bookingId: string;
+      personId: string;
+      waiver: SeatDiverWaiver;
+      waiverPath?: string;
+      owes: DockRiderOwes[];
+    }
   | { ok: false; reason: DockRiderRefusal };
 
 export async function addDockRider(db: AppDb, input: DockRiderInput): Promise<DockRiderResult> {
   const fullName = input.fullName.trim();
+  const dateOfBirth = input.dateOfBirth?.trim() || undefined;
+  if (dateOfBirth && !(isValidCalendarDate(dateOfBirth) && isPlausibleDateOfBirth(dateOfBirth))) {
+    return { ok: false, reason: "invalid" };
+  }
 
   const stage = await latestTripStage(db, input.shopId, input.tripId);
   if (stage && stage.stage !== "boarding") return { ok: false, reason: "departed" };
@@ -60,7 +98,7 @@ export async function addDockRider(db: AppDb, input: DockRiderInput): Promise<Do
   const [namesake] = await db
     .select({ id: bookings.id })
     .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
     .where(
       and(
         eq(bookings.shopId, input.shopId),
@@ -78,24 +116,36 @@ export async function addDockRider(db: AppDb, input: DockRiderInput): Promise<Do
     actorPersonId: input.actorPersonId,
     // No email, ever: a rider added at the dock always gets a fresh person row
     // (`createBooking` matches an existing person by email only), so the
-    // emergency contact written below can never land on somebody else's record.
-    diver: { fullName, phone: input.phone?.trim() || undefined },
+    // emergency contact and date of birth below can never land on somebody
+    // else's record.
+    diver: {
+      fullName,
+      phone: input.phone?.trim() || undefined,
+      freshPerson: {
+        emergencyContactName: input.emergencyContactName.trim(),
+        emergencyContactPhone: input.emergencyContactPhone.trim(),
+        dateOfBirth,
+      },
+    },
     entry: "dock",
     refusals: "specific",
-    participantType: "rider",
+    participantType: input.participantType ?? "rider",
   });
   if (!seated.ok) return { ok: false, reason: seated.reason };
 
-  await db
-    .update(people)
-    .set({
-      emergencyContactName: input.emergencyContactName.trim(),
-      emergencyContactPhone: input.emergencyContactPhone.trim(),
-    })
-    .where(and(eq(people.id, seated.personId), eq(people.shopId, input.shopId)));
-  // `seatDiver` already woke the manifests; once more so a phone that
-  // refreshed in between picks up the emergency contact too.
-  await publishManifestEvent(db, input.shopId, input.tripId);
+  const readiness = await getBookingReadiness(db, input.shopId, seated.bookingId);
+  const owes = new Set<DockRiderOwes>();
+  for (const blocker of readiness?.blockers ?? []) {
+    const category = BLOCKER_CATEGORY[blocker.code];
+    owes.add(category === "waiver" ? "release" : category === "payment" ? "payment" : "other");
+  }
 
-  return { ok: true, bookingId: seated.bookingId, personId: seated.personId };
+  return {
+    ok: true,
+    bookingId: seated.bookingId,
+    personId: seated.personId,
+    waiver: seated.waiver,
+    waiverPath: seated.waiverPath,
+    owes: (["release", "payment", "other"] as const).filter((kind) => owes.has(kind)),
+  };
 }

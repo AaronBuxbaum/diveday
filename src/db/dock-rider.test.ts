@@ -2,14 +2,26 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { addDockRider, type DockRiderInput } from "./dock-rider";
-import { getTripManifests } from "./manifests";
-import { activityEvents, boats, bookings, courses, people, personRoles, shops } from "./schema";
+import { getTripManifests, recordRollCall } from "./manifests";
+import { getBookingReadiness, upsertTripRequirements } from "./readiness";
+import {
+  activityEvents,
+  boats,
+  bookings,
+  courses,
+  people,
+  personRoles,
+  shops,
+  trips,
+} from "./schema";
 import { recordTripStage } from "./trip-stages";
 import { createTrip, heldSeatCounts, setTripStatus } from "./trips";
+import { completeWaiver } from "./waivers";
 
 /**
  * **A rider added at the boat goes through the one seating path** (batch 4,
@@ -315,4 +327,116 @@ describe("addDockRider", () => {
     expect(result.ok).toBe(false);
     expect(await liveSeats(db, session.id)).toEqual([]);
   });
+
+  it("says a rider on a waiver-gated departure owes the release, and the rail refuses them until signed", async () => {
+    const { db, shop } = ctx;
+    const actor = await staffActor(db, shop.id);
+    const trip = await departure(db, shop.id);
+    await gate(db, shop.id, trip.id, { requiresWaiver: true, requiresPayment: false });
+
+    const result = await addDockRider(db, rider(shop.id, trip.id, actor));
+    if (!result.ok) throw new Error(`refused: ${result.reason}`);
+    expect(result.owes).toEqual(["release"]);
+    expect(result.waiverPath).toMatch(/^\/waivers\//);
+    expect((await getBookingReadiness(db, shop.id, result.bookingId))?.status).toBe("blocked");
+    const board = () =>
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: result.bookingId,
+        recordedByPersonId: actor,
+        status: "boarded",
+        checkpoint: "departure",
+      });
+    expect(await board()).toMatchObject({ ok: false, reason: "not_ready" });
+
+    const token = result.waiverPath?.replace("/waivers/", "") ?? "";
+    await completeWaiver(db, token, {
+      signerName: "Sam Rider",
+      agreed: true,
+      medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
+    });
+    expect((await getBookingReadiness(db, shop.id, result.bookingId))?.status).toBe("ready");
+    expect(await board()).toMatchObject({ ok: true });
+  });
+
+  it("says the seat needs settling when the departure takes payment and names no rider price", async () => {
+    const { db, shop } = ctx;
+    const actor = await staffActor(db, shop.id);
+    const trip = await departure(db, shop.id);
+    await gate(db, shop.id, trip.id, { requiresWaiver: false, requiresPayment: true });
+
+    const result = await addDockRider(db, rider(shop.id, trip.id, actor));
+    if (!result.ok) throw new Error(`refused: ${result.reason}`);
+    expect(result.owes).toEqual(["payment"]);
+  });
+
+  it("owes nothing on a payment-gated departure that states riders free", async () => {
+    const { db, shop } = ctx;
+    const actor = await staffActor(db, shop.id);
+    const trip = await departure(db, shop.id);
+    // A rider who comes free, stated by the shop (ADR 20261007-participant-types).
+    await db.update(trips).set({ riderPriceCents: 0 }).where(eq(trips.id, trip.id));
+    await gate(db, shop.id, trip.id, { requiresWaiver: false, requiresPayment: true });
+
+    const result = await addDockRider(db, rider(shop.id, trip.id, actor));
+    if (!result.ok) throw new Error(`refused: ${result.reason}`);
+    expect(result.owes).toEqual([]);
+  });
+
+  it("shows a minor rider as a minor on the manifest at once", async () => {
+    const { db, shop } = ctx;
+    const actor = await staffActor(db, shop.id);
+    const trip = await departure(db, shop.id);
+    const twelve = nowDate().getUTCFullYear() - 12;
+
+    const result = await addDockRider(db, {
+      ...rider(shop.id, trip.id, actor),
+      dateOfBirth: `${twelve}-03-01`,
+    });
+    if (!result.ok) throw new Error(`refused: ${result.reason}`);
+    const [manifest] = (await getTripManifests(db, shop.id, trip.id)) ?? [];
+    const row = manifest?.divers.find((diver) => diver.bookingId === result.bookingId);
+    expect(row?.minor).toBe(true);
+  });
+
+  it("refuses a date of birth that is not one", async () => {
+    const { db, shop } = ctx;
+    const actor = await staffActor(db, shop.id);
+    const trip = await departure(db, shop.id);
+    expect(
+      await addDockRider(db, { ...rider(shop.id, trip.id, actor), dateOfBirth: "1990-02-31" }),
+    ).toEqual({ ok: false, reason: "invalid" });
+    expect(await liveSeats(db, trip.id)).toEqual([]);
+  });
+
+  it("seats a snorkeler when the crew says they will snorkel", async () => {
+    const { db, shop } = ctx;
+    const actor = await staffActor(db, shop.id);
+    const trip = await departure(db, shop.id);
+    const result = await addDockRider(db, {
+      ...rider(shop.id, trip.id, actor),
+      participantType: "snorkeler",
+    });
+    if (!result.ok) throw new Error(`refused: ${result.reason}`);
+    expect(await liveSeats(db, trip.id)).toEqual([
+      { id: result.bookingId, type: "snorkeler", personId: result.personId },
+    ]);
+  });
 });
+
+async function gate(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  flags: { requiresWaiver: boolean; requiresPayment: boolean },
+) {
+  await upsertTripRequirements(db, {
+    shopId,
+    tripId,
+    ...flags,
+    minimumCertificationLevel: null,
+    requiredSpecialties: [],
+    requiresNitrox: false,
+  });
+}

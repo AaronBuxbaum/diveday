@@ -23,7 +23,7 @@ function at(day: string, hhmm: string): Date {
 }
 
 function person(overrides: Partial<WarningPerson> = {}): WarningPerson {
-  return { personId: "p-1", name: "Keiko Tanaka", shifts: [], credentials: [], ...overrides };
+  return { personId: "p-1", name: "Keiko Tanaka", credentials: [], ...overrides };
 }
 
 function departure(overrides: Partial<WarningDeparture> = {}): WarningDeparture {
@@ -202,14 +202,19 @@ describe("staffingWarnings: aboard credentials", () => {
 });
 
 describe("staffingWarnings: long days", () => {
-  it("warns past twelve hours of shifts and departures in one day", () => {
-    const captain = person({
-      shifts: [{ startsAt: at("2026-10-14", "06:00"), endsAt: at("2026-10-14", "14:00") }],
+  /** A departure on 2026-10-14 between two local wall times. */
+  function boat(tripId: string, from: string, to: string, crew = ["p-1"]): WarningDeparture {
+    return departure({
+      tripId,
+      title: tripId,
+      meetings: [{ startsAt: at("2026-10-14", from), endsAt: at("2026-10-14", to) }],
+      crew,
     });
-    const late = departure({
-      meetings: [{ startsAt: at("2026-10-14", "15:00"), endsAt: at("2026-10-14", "20:00") }],
-    });
-    expect(warn({ departures: [late], people: [captain] })).toEqual([
+  }
+
+  it("warns past twelve hours of crewed departures in one day", () => {
+    const departures = [boat("dawn", "06:00", "14:00"), boat("dusk", "15:00", "20:00")];
+    expect(warn({ departures, people: [person()] })).toEqual([
       {
         code: "long_day",
         personId: "p-1",
@@ -221,32 +226,38 @@ describe("staffingWarnings: long days", () => {
   });
 
   it("is quiet at exactly twelve hours", () => {
-    const captain = person({
-      shifts: [{ startsAt: at("2026-10-14", "06:00"), endsAt: at("2026-10-14", "18:00") }],
-    });
     expect(LONG_DAY_HOURS).toBe(12);
-    expect(warn({ people: [captain] })).toEqual([]);
+    const departures = [boat("dawn", "06:00", "12:00"), boat("noon", "12:00", "18:00")];
+    expect(warn({ departures, people: [person()] })).toEqual([]);
   });
 
-  it("does not count a departure inside the shift twice", () => {
-    const captain = person({
-      shifts: [{ startsAt: at("2026-10-14", "06:00"), endsAt: at("2026-10-14", "17:00") }],
-    });
-    expect(warn({ departures: [departure()], people: [captain] })).toEqual([]);
+  it("does not count an availability shift as duty", () => {
+    // A shift says when somebody can be called on, not that they are working:
+    // fourteen hours available around one four-hour boat is a four-hour day.
+    // The type carries no shifts; a caller that passes the staffing view's
+    // person through whole must still not have them counted.
+    const available = {
+      ...person(),
+      shifts: [{ startsAt: at("2026-10-14", "06:00"), endsAt: at("2026-10-14", "20:00") }],
+    } as WarningPerson;
+    expect(warn({ departures: [departure()], people: [available] })).toEqual([]);
+  });
+
+  it("counts overlapping departures once", () => {
+    const departures = [boat("long", "06:00", "17:00"), boat("inside", "08:00", "16:00")];
+    expect(warn({ departures, people: [person()] })).toEqual([]);
   });
 
   it("counts somebody else's departure for nobody", () => {
-    const captain = person({
-      shifts: [{ startsAt: at("2026-10-14", "06:00"), endsAt: at("2026-10-14", "12:00") }],
-    });
-    expect(warn({ departures: [departure({ crew: ["p-9"] })], people: [captain] })).toEqual([]);
+    const departures = [boat("dawn", "06:00", "14:00"), boat("dusk", "15:00", "20:00", ["p-9"])];
+    expect(warn({ departures, people: [person()] })).toEqual([]);
   });
 
   it("says nothing about a day already behind", () => {
-    const captain = person({
-      shifts: [{ startsAt: at("2026-10-11", "05:00"), endsAt: at("2026-10-11", "20:00") }],
+    const past = departure({
+      meetings: [{ startsAt: at("2026-10-11", "05:00"), endsAt: at("2026-10-11", "20:00") }],
     });
-    expect(warn({ people: [captain] })).toEqual([]);
+    expect(warn({ departures: [past], people: [person()] })).toEqual([]);
   });
 });
 
@@ -276,6 +287,16 @@ describe("staffingWarnings: expired credentials", () => {
     expect(warn({ departures: [departure()], people: [lapsing] }).map((w) => w.code)).toEqual([
       "credential_expired",
     ]);
+  });
+
+  it("leaves a lapsed dive-professional rating to the crew editor's lapse badge", () => {
+    // The supervision claim (`lapsedRungs`) already marks an instructor or
+    // assistant whose rating lapsed, on the departure itself; a second line
+    // here would say the same lapse twice.
+    for (const kind of ["instructor_rating", "assistant_instructor_rating", "divemaster_rating"]) {
+      const lapsed = person({ credentials: [{ kind, renewsAt: "2026-09-30" }] });
+      expect(warn({ departures: [departure()], people: [lapsed] })).toEqual([]);
+    }
   });
 
   it("is quiet for somebody expired who crews nothing", () => {

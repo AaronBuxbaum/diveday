@@ -15,21 +15,19 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 export async function LostItemsSection({
   t,
   shopId,
-  shopSlug,
   tripId,
   sailed,
   seats,
 }: {
   t: StaffTranslator;
   shopId: string;
-  shopSlug: string;
   tripId: string;
   sailed: boolean;
   seats: { bookingId: string; name: string }[];
 }) {
   const items = await listTripLostItems(await getDb(), shopId, tripId);
   if (!sailed && items.length === 0) return null;
-  const rowAction = lostItemRowAction.bind(null, { shopSlug, tripId });
+  const rowAction = lostItemRowAction.bind(null, tripId);
   const rowCopy = lostItemRowCopy(t);
   return (
     <SectionCard
@@ -46,7 +44,7 @@ export async function LostItemsSection({
         </ul>
       ) : null}
       <LostItemForm
-        action={recordLostItemAction.bind(null, { shopSlug, tripId })}
+        action={recordLostItemAction.bind(null, tripId)}
         seats={seats}
         copy={lostItemFormCopy(t)}
       />

@@ -31,7 +31,18 @@ test("a captain adds a rider at the dock, who counts at once and only once", asy
   await form.getByLabel("Emergency contact", { exact: true }).fill("Jo Rider");
   await form.getByLabel("Emergency contact phone").fill("+1 305 555 0199");
   await form.getByRole("button", { name: "Add rider" }).click();
-  await expect(page.getByText("Sam Rider is on the manifest.")).toBeVisible();
+  // A seat is not boarding: the demo shop asks for its release, so the notice
+  // says the rider still owes it and hands the release over.
+  await expect(
+    page.getByText(
+      "Sam Rider is on the manifest and still needs to sign the release before boarding.",
+      { exact: false },
+    ),
+  ).toBeVisible();
+  await expect(form.getByRole("link", { name: "open the release on this phone" })).toHaveAttribute(
+    "href",
+    /^\/waivers\//,
+  );
   await expect(manifestRow(page, "Sam Rider")).toBeVisible();
 
   // The same name again is a second tap, not a second rider.

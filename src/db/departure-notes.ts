@@ -1,8 +1,9 @@
-import { and, asc, count, eq, isNull } from "drizzle-orm";
+import { and, asc, count, eq, isNull, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import {
+  DEPARTURE_NOTES_PER_DEPARTURE,
   type DepartureNoteBlock,
   type DepartureNoteProblem,
   departureNoteBlock,
@@ -71,7 +72,7 @@ export async function departureNoteAudience(
   const [row] = await db
     .select({ n: count(bookings.id) })
     .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
     .where(
       and(
         eq(bookings.shopId, shopId),
@@ -83,10 +84,35 @@ export async function departureNoteAudience(
   return row?.n ?? 0;
 }
 
-/** Whether this note may go to this departure now; the one check the hold and the send share. */
+/** Notes to this departure still inside their hold, not yet sent or undone. */
+export async function departureNotesHeld(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<number> {
+  const [row] = await db
+    .select({ n: count(heldSends.id) })
+    .from(heldSends)
+    .where(
+      and(
+        eq(heldSends.shopId, shopId),
+        eq(heldSends.kind, "departure_note"),
+        sql`${heldSends.payload}->>'tripId' = ${tripId}`,
+      ),
+    );
+  return row?.n ?? 0;
+}
+
+/**
+ * Whether this note may go to this departure now; the one check the hold and
+ * the send share. `countHeld` is the hold's: a note still inside its eight
+ * seconds counts against the cap, so a fourth tap is refused at the box
+ * rather than when the hold drains. The send itself counts only what was sent
+ * (its own held row is already claimed by then).
+ */
 export async function checkDepartureNote(
   db: DbExecutor,
-  input: { shopId: string; tripId: string; body: string; now?: Date },
+  input: { shopId: string; tripId: string; body: string; now?: Date; countHeld?: boolean },
 ): Promise<DepartureNoteCheck> {
   const problem = departureNoteProblem(input.body);
   if (problem) return { ok: false, reason: problem };
@@ -96,7 +122,9 @@ export async function checkDepartureNote(
     .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
     .limit(1);
   if (!trip) return { ok: false, reason: "not_found" };
-  const sent = await departureNotesSent(db, input.shopId, input.tripId);
+  const sent =
+    (await departureNotesSent(db, input.shopId, input.tripId)) +
+    (input.countHeld ? await departureNotesHeld(db, input.shopId, input.tripId) : 0);
   const block = departureNoteBlock(trip, sent, input.now ?? nowDate());
   if (block) return { ok: false, reason: block };
   return { ok: true, body: foldDepartureNote(input.body), trip };
@@ -112,44 +140,74 @@ export type SendDepartureNoteOutcome =
   | { ok: true; noteId: string; recipients: number; delivered: number }
   | { ok: false; reason: DepartureNoteRefusal };
 
+/**
+ * Check the note and write its row in one transaction, under the same
+ * `FOR UPDATE` on the departure that `createBooking` takes, so two sends
+ * racing for the last of the cap serialize. The insert is conditional on the
+ * count as well: on a single connection (PGlite) the lock cannot exhibit the
+ * race, and the one statement still cannot pass the cap. Nothing leaves the
+ * building inside the transaction; the messages go after it commits.
+ */
+async function claimDepartureNote(
+  db: AppDb,
+  input: { shopId: string; tripId: string; body: string; actorPersonId: string | null },
+) {
+  return db.transaction(async (tx) => {
+    const problem = departureNoteProblem(input.body);
+    if (problem) return { ok: false as const, reason: problem };
+    const [trip] = await tx
+      .select()
+      .from(trips)
+      .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
+      .limit(1)
+      .for("update");
+    if (!trip) return { ok: false as const, reason: "not_found" as const };
+    const now = nowDate();
+    const block = departureNoteBlock(
+      trip,
+      await departureNotesSent(tx, input.shopId, trip.id),
+      now,
+    );
+    if (block) return { ok: false as const, reason: block };
+    const body = foldDepartureNote(input.body);
+    const seats = await tx
+      .select({ booking: bookings, person: people })
+      .from(bookings)
+      .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
+      .where(
+        and(
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.tripId, trip.id),
+          seatHeld,
+          isNull(people.deletedAt),
+        ),
+      );
+    const inserted = await tx.execute(sql`
+      insert into departure_notes (shop_id, trip_id, body, sent_by_person_id, recipients, sent_at)
+      select ${input.shopId}::uuid, ${trip.id}::uuid, ${body}, ${input.actorPersonId}::uuid,
+        ${seats.length}, ${now.toISOString()}::timestamptz
+      where (
+        select count(*) from departure_notes
+        where shop_id = ${input.shopId}::uuid and trip_id = ${trip.id}::uuid
+      ) < ${DEPARTURE_NOTES_PER_DEPARTURE}
+      returning id`);
+    const note = (inserted.rows as { id: string }[])[0];
+    if (!note) return { ok: false as const, reason: "limit" as const };
+    return { ok: true as const, trip, body, seats, note };
+  });
+}
+
 /** Send one checked note to every held seat on the departure, and record it. */
 export async function sendDepartureNote(
   db: AppDb,
   input: { shopId: string; tripId: string; body: string; actorPersonId: string | null },
   providers: DepartureNoteProviders = {},
 ): Promise<SendDepartureNoteOutcome> {
-  const check = await checkDepartureNote(db, input);
-  if (!check.ok) return check;
-  const { trip, body } = check;
-
   const [shop] = await db.select().from(shops).where(eq(shops.id, input.shopId)).limit(1);
   if (!shop) return { ok: false, reason: "not_found" };
-
-  const seats = await db
-    .select({ booking: bookings, person: people })
-    .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .where(
-      and(
-        eq(bookings.shopId, input.shopId),
-        eq(bookings.tripId, trip.id),
-        seatHeld,
-        isNull(people.deletedAt),
-      ),
-    );
-
-  const [note] = await db
-    .insert(departureNotes)
-    .values({
-      shopId: input.shopId,
-      tripId: trip.id,
-      body,
-      sentByPersonId: input.actorPersonId,
-      recipients: seats.length,
-      sentAt: nowDate(),
-    })
-    .returning({ id: departureNotes.id });
-  if (!note) throw new Error("departure note was not written");
+  const claimed = await claimDepartureNote(db, input);
+  if (!claimed.ok) return claimed;
+  const { trip, body, seats, note } = claimed;
 
   const origin = publicAppUrl();
   const emailProvider = notificationProviderForDb(providers.emailProvider);

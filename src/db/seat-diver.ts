@@ -2,7 +2,7 @@ import { trackEvent } from "@/lib/analytics";
 import { log } from "@/lib/log";
 import type { ParticipantType } from "@/lib/participant-types";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
-import { type BookingOutcome, createBooking } from "./bookings";
+import { type BookingOutcome, createBooking, type FreshPersonDetails } from "./bookings";
 import type { AppDb } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { publishManifestEvent } from "./manifest-events";
@@ -72,7 +72,7 @@ export type SeatDiverPerson =
    * decision (H-79, issue #1790; `BookingPerson.fromNameMatch`).
    */
   | { personId: string; fromNameMatch?: { typedName: string } }
-  | { fullName: string; email?: string; phone?: string };
+  | { fullName: string; email?: string; phone?: string; freshPerson?: FreshPersonDetails };
 
 export type SeatDiverInput = {
   shopId: string;
@@ -123,6 +123,13 @@ export type SeatDiverResult =
       personId: string;
       personName: string;
       waiver: SeatDiverWaiver;
+      /**
+       * The release link to hand over when `waiver` is `not_delivered` — the
+       * bearer path the crew can open on their own phone for the person in
+       * front of them to sign. Absent whenever nothing is owed or it went by
+       * email.
+       */
+      waiverPath?: string;
       /**
        * The seat is held: `createBooking` attached it to an existing person on
        * something short of proof and stamped `identityUnconfirmedAt`, so the
@@ -232,11 +239,16 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
   await trackEvent({ name: "booking_completed", source: "staff", partySize: 1 });
 
   let waiver: SeatDiverWaiver;
+  let waiverPath: string | undefined;
   try {
     // Uses the resolved booking, so a returning diver picked by identity gets
     // the same waiver-on-join a hand-entered walk-in does. Idempotent: a
     // diver already holding a link or a signature is skipped, not re-sent.
-    waiver = waiverOutcome(await issueWaiverOnJoin(db, input.shopId, outcome.bookingId));
+    const issued = await issueWaiverOnJoin(db, input.shopId, outcome.bookingId);
+    waiver = waiverOutcome(issued);
+    if (issued?.ok && issued.delivery !== "sent") {
+      waiverPath = issued.path ?? `/waivers/${issued.token}`;
+    }
   } catch (error) {
     log("booking.waiver_on_join_failed", "error", {
       bookingId: outcome.bookingId,
@@ -296,6 +308,7 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
     personId: outcome.personId,
     personName: outcome.personName,
     waiver,
+    waiverPath,
     identityUnconfirmed: outcome.identityUnconfirmed,
   };
 }

@@ -5,7 +5,7 @@ import {
   isValidCalendarDate,
   shiftCalendarDate,
 } from "./calendar-date";
-import { lastDayOfDeparture } from "./crew-roles";
+import { lastDayOfDeparture, RUNG_EVIDENCE_KINDS } from "./crew-roles";
 import { hasReturned } from "./trips";
 import { parseWallTime, wallTimeToUtc } from "./zoned";
 
@@ -14,13 +14,19 @@ import { parseWallTime, wallTimeToUtc } from "./zoned";
  * crew a manager building the week would want to see before the morning, and
  * nothing that refuses anything.
  *
- * - **A departure with nobody first-aid ready aboard.** No crew member holds a
- *   current `oxygen_provider` (or `first_aid_cpr`) credential on the day it
- *   runs.
- * - **A long day.** One person's shifts and crewed departures cover more than
- *   {@link LONG_DAY_HOURS} hours of one shop-local day.
+ * - **A departure with nobody first-aid ready aboard.** Two separate checks:
+ *   no crew member holds a current `oxygen_provider` credential on the day it
+ *   runs, and no crew member holds a current `first_aid_cpr` one. Each is its
+ *   own warning.
+ * - **A long day.** The departures one person crews cover more than
+ *   {@link LONG_DAY_HOURS} hours of one shop-local day. Only crewed departures
+ *   count: a shift is availability (when somebody can be called on), not duty,
+ *   so a long shift around one short boat is a short day.
  * - **An expired credential on somebody crewing.** Any recorded credential of
- *   theirs whose every record of that kind has lapsed by the day they crew.
+ *   theirs whose every record of that kind has lapsed by the day they crew,
+ *   except the dive-professional ratings ({@link RUNG_EVIDENCE_KINDS}): the
+ *   supervision claim already marks those lapsed on the departure's crew, and
+ *   one lapse said twice is noise.
  *
  * Warning-only, like every reading of `staff_credentials` (H-59): the booking
  * gate and the crew editor never call this. Codes, never sentences; the words
@@ -47,7 +53,7 @@ export type AboardCredentialKind = (typeof ABOARD_CREDENTIAL_KINDS)[number];
 /** One recorded credential, as much of it as currency needs. */
 export type WarningCredential = { kind: string; renewsAt: string | null };
 
-/** A window somebody is working: a shift, or one meeting of a departure they crew. */
+/** One meeting of a departure: a window somebody crewing it is on duty. */
 export type WorkWindow = { startsAt: Date; endsAt: Date };
 
 export type WarningDeparture = {
@@ -62,7 +68,6 @@ export type WarningDeparture = {
 export type WarningPerson = {
   personId: string;
   name: string;
-  shifts: readonly WorkWindow[];
   credentials: readonly WarningCredential[];
 };
 
@@ -143,7 +148,7 @@ function daysTouched(window: WorkWindow, timeZone: string): CalendarDate[] {
   const first = calendarDateInTimezone(window.startsAt, timeZone);
   const last = calendarDateInTimezone(new Date(window.endsAt.getTime() - 1), timeZone);
   const days: CalendarDate[] = [];
-  // Bounded: a shift or a departure meeting is never longer than a few days,
+  // Bounded: a departure meeting is never longer than a few days,
   // and the guard keeps a corrupt row from spinning.
   for (let day = first; day <= last && days.length < 31; day = shiftCalendarDate(day, 1)) {
     days.push(day);
@@ -153,7 +158,7 @@ function daysTouched(window: WorkWindow, timeZone: string): CalendarDate[] {
 
 /**
  * Minutes of `day` covered by the **union** of `windows`, not their sum: a
- * captain's 07:00–15:00 shift and the 08:00–12:00 boat they skipper are eight
+ * captain's 07:00–15:00 departure and an 08:00–12:00 one they also crew are eight
  * hours on duty, not twelve.
  */
 export function minutesOnDuty(
@@ -246,11 +251,9 @@ export function staffingWarnings(input: {
   for (const person of people) {
     const crewing = upcoming.filter((departure) => departure.crew.includes(person.personId));
 
-    // Long days: every day this person works, from today on.
-    const windows: WorkWindow[] = [
-      ...person.shifts,
-      ...crewing.flatMap((departure) => departure.meetings),
-    ];
+    // Long days: every day this person crews, from today on. Shifts are
+    // availability, not duty, and never count.
+    const windows: WorkWindow[] = crewing.flatMap((departure) => departure.meetings);
     const days = [...new Set(windows.flatMap((window) => daysTouched(window, timeZone)))]
       .filter((day) => day >= today)
       .sort();
@@ -275,6 +278,7 @@ export function staffingWarnings(input: {
       if (!last) continue;
       const day = lastDayOfDeparture(last.endsAt, timeZone);
       for (const expired of expiredKinds(person.credentials, day)) {
+        if (RUNG_EVIDENCE_KINDS.includes(expired.kind)) continue;
         if (said.has(expired.kind)) continue;
         said.add(expired.kind);
         warnings.push({

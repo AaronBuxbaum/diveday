@@ -33,12 +33,21 @@ export function staffingWarningText(
         hours: LONG_DAY_HOURS,
         day: formatCalendarDate(warning.day, context.locale),
       });
-    case "credential_expired":
-      return t("desk.staffingWarnings.credentialExpired", {
+    case "credential_expired": {
+      // The kind labels are list headings ("Liability insurance"), so the
+      // sentence sets one off after a colon rather than splicing it into a
+      // possessive; "Other" names nothing and is said as "a credential".
+      const values = {
         name: warning.name,
-        credential: context.credentialWord(warning.kind),
         date: formatCalendarDate(warning.renewsAt, context.locale),
         title: warning.title,
-      });
+      };
+      return warning.kind === "other"
+        ? t("desk.staffingWarnings.credentialExpiredOther", values)
+        : t("desk.staffingWarnings.credentialExpired", {
+            ...values,
+            credential: context.credentialWord(warning.kind),
+          });
+    }
   }
 }

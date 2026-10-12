@@ -33,7 +33,7 @@ export async function holdDepartureNoteAction(
   const body = String(formData.get("body") ?? "");
   const db = await getDb();
   const shopId = session.user.shopId;
-  const check = await checkDepartureNote(db, { shopId, tripId, body });
+  const check = await checkDepartureNote(db, { shopId, tripId, body, countHeld: true });
   if (!check.ok) return { ok: false, reason: check.reason };
   if ((await departureNoteAudience(db, shopId, tripId)) === 0) {
     return { ok: false, reason: "no_recipients" };

@@ -248,6 +248,62 @@ describe("tellLostItemOwner", () => {
     expect(email.sent).toHaveLength(1);
   });
 
+  it("sends once when two taps race", async () => {
+    const { db, shop } = ctx;
+    const { trip, booked } = await sailedWithSeat(db, shop.id, { email: "owner-race@example.com" });
+    const result = await recordLostItem(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: booked.bookingId,
+      description: "Computer",
+      actorPersonId: null,
+    });
+    if (!result.ok) throw new Error(result.reason);
+    const email = fakeEmail();
+    const tell = () =>
+      tellLostItemOwner(
+        db,
+        { shopId: shop.id, itemId: result.item.id },
+        { emailProvider: email.provider },
+      );
+    const outcomes = await Promise.all([tell(), tell()]);
+    expect(outcomes).toContainEqual({ ok: true, channel: "email" });
+    expect(outcomes).toContainEqual({ ok: false, reason: "already_told" });
+    expect(email.sent).toHaveLength(1);
+  });
+
+  it("lets the crew tap again when the message did not go", async () => {
+    const { db, shop } = ctx;
+    const { trip, booked } = await sailedWithSeat(db, shop.id, { email: "owner-fail@example.com" });
+    const result = await recordLostItem(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: booked.bookingId,
+      description: "Hood",
+      actorPersonId: null,
+    });
+    if (!result.ok) throw new Error(result.reason);
+    const failing = fakeEmail({ status: "failed", errorCode: "provider_down" });
+    expect(
+      await tellLostItemOwner(
+        db,
+        { shopId: shop.id, itemId: result.item.id },
+        { emailProvider: failing.provider },
+      ),
+    ).toEqual({ ok: false, reason: "failed" });
+    const [after] = await db.select().from(lostItems).where(eq(lostItems.id, result.item.id));
+    expect(after).toMatchObject({ toldAt: null, toldChannel: null });
+
+    const working = fakeEmail();
+    expect(
+      await tellLostItemOwner(
+        db,
+        { shopId: shop.id, itemId: result.item.id },
+        { emailProvider: working.provider },
+      ),
+    ).toEqual({ ok: true, channel: "email" });
+  });
+
   it("texts an owner with no email", async () => {
     const { db, shop } = ctx;
     const { trip, booked } = await sailedWithSeat(db, shop.id, { phone: "+13055550123" });

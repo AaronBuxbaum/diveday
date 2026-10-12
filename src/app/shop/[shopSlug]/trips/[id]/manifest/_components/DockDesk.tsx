@@ -15,7 +15,6 @@ import { LostItemsSection } from "./LostItemsSection";
 export function DockDesk({
   t,
   shopId,
-  shopSlug,
   tripId,
   isDeparture,
   startsAt,
@@ -24,7 +23,6 @@ export function DockDesk({
 }: {
   t: StaffTranslator;
   shopId: string;
-  shopSlug: string;
   tripId: string;
   isDeparture: boolean;
   startsAt: Date;
@@ -37,7 +35,7 @@ export function DockDesk({
     <>
       {atTheDock ? (
         <DockRiderForm
-          action={addDockRiderAction.bind(null, { shopSlug, tripId })}
+          action={addDockRiderAction.bind(null, tripId)}
           copy={{
             door: t("desk.dockRider.door"),
             name: t("desk.dockRider.name"),
@@ -45,9 +43,18 @@ export function DockDesk({
             optional: t("desk.dockRider.optional"),
             emergencyName: t("desk.dockRider.emergencyName"),
             emergencyPhone: t("desk.dockRider.emergencyPhone"),
+            dateOfBirth: t("desk.dockRider.dateOfBirth"),
+            aboardAs: t("desk.dockRider.aboardAs"),
+            ridesAlong: t("desk.dockRider.ridesAlong"),
+            snorkels: t("desk.dockRider.snorkels"),
             submit: t("desk.dockRider.submit"),
             pending: t("desk.dockRider.pending"),
             added: t.raw("desk.dockRider.added"),
+            addedOwesRelease: t.raw("desk.dockRider.addedOwesRelease"),
+            releaseHandOver: t("desk.dockRider.releaseHandOver"),
+            openRelease: t("desk.dockRider.openRelease"),
+            owesPayment: t("desk.dockRider.owesPayment"),
+            owesOther: t("desk.dockRider.owesOther"),
             refusals: {
               trip_full: t("desk.dockRider.refusals.tripFull"),
               trip_unavailable: t("desk.dockRider.refusals.tripUnavailable"),
@@ -63,7 +70,6 @@ export function DockDesk({
       <LostItemsSection
         t={t}
         shopId={shopId}
-        shopSlug={shopSlug}
         tripId={tripId}
         sailed={sailed}
         seats={seats.map((seat) => ({ bookingId: seat.bookingId, name: seat.fullName }))}

@@ -28,6 +28,12 @@ describe("containsLink", () => {
     "map at example.co.uk",
     "tienda.es",
     "javascript://alert",
+    // Dots a phone still links: ideographic, halfwidth and fullwidth.
+    "evil。example",
+    "evil｡example",
+    "evil．example",
+    // Fullwidth letters fold to the ASCII a browser resolves.
+    "ｅｖｉｌ.ｃｏｍ",
   ])("catches %s", (text) => {
     expect(containsLink(text)).toBe(true);
   });

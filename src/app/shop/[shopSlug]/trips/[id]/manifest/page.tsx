@@ -862,7 +862,6 @@ export default async function TripManifestPage({
         <DockDesk
           t={t}
           shopId={shop.id}
-          shopSlug={shopSlug}
           tripId={tripId}
           isDeparture={isDeparture}
           startsAt={departureManifest.trip.startsAt}

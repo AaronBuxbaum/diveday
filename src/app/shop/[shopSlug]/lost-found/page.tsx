@@ -49,7 +49,7 @@ export default async function LostFoundPage({ params }: { params: Promise<{ shop
                 title: item.tripTitle,
                 date: formatShortDate(item.tripStartsAt, locale, shop.timezone),
               })}
-              action={lostItemRowAction.bind(null, { shopSlug, tripId: item.tripId })}
+              action={lostItemRowAction.bind(null, item.tripId)}
               copy={copy}
             />
           ))}

@@ -4,7 +4,15 @@ import { useActionState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
-import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  ChoicePill,
+  controlClass,
+  Field,
+  FieldActions,
+  FieldGrid,
+  FormStatus,
+} from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
 import type { DockRiderState } from "../dock-rider-actions";
 
@@ -15,10 +23,20 @@ export type DockRiderCopy = {
   optional: string;
   emergencyName: string;
   emergencyPhone: string;
+  dateOfBirth: string;
+  aboardAs: string;
+  ridesAlong: string;
+  snorkels: string;
   submit: string;
   pending: string;
-  /** A template: `{name}` is filled here with whoever was just added. */
+  /** Templates: `{name}` is filled here with whoever was just added. */
   added: string;
+  addedOwesRelease: string;
+  /** The hand-over when no email took the release: sign on paper, or here. */
+  releaseHandOver: string;
+  openRelease: string;
+  owesPayment: string;
+  owesOther: string;
   refusals: {
     trip_full: string;
     trip_unavailable: string;
@@ -37,10 +55,14 @@ function refusalText(copy: DockRiderCopy, reason: string): string {
 }
 
 /**
- * **Add somebody who turned up at the boat to ride along** (batch 4, D6). A
- * quiet disclosure under the crew list: it is the rare case at the rail, and
- * the roll call above it stays the page's subject. Riders only — a diver who
- * walks on goes through the desk, where the certification checks are.
+ * **Add somebody who turned up at the boat** (batch 4, D6). A quiet disclosure
+ * under the crew list: it is the rare case at the rail, and the roll call
+ * above it stays the page's subject. Riding along or snorkeling only — a diver
+ * who walks on goes through the desk, where the certification checks are.
+ *
+ * A seat is not boarding: the notice says what they still owe before the rail
+ * takes them (the release, payment), and where the release can be signed
+ * right here, on the crew's own phone.
  */
 export function DockRiderForm({
   action,
@@ -50,6 +72,7 @@ export function DockRiderForm({
   copy: DockRiderCopy;
 }) {
   const [state, formAction] = useActionState(action, undefined);
+  const added = state?.status === "added" ? state : null;
   return (
     <CompactDisclosureRow
       id="dock-rider"
@@ -63,7 +86,7 @@ export function DockRiderForm({
         as="form"
         action={formAction}
         columns={2}
-        key={state?.status === "added" ? state.name : "form"}
+        key={added ? added.bookingId : "form"}
         data-testid="dock-rider-form"
       >
         <Field label={copy.name}>
@@ -103,6 +126,19 @@ export function DockRiderForm({
             className={controlClass}
           />
         </Field>
+        <Field label={copy.dateOfBirth} hint={copy.optional}>
+          <input name="dateOfBirth" type="date" className={controlClass} />
+        </Field>
+        <ChoiceFieldset legend={copy.aboardAs}>
+          <div className="flex flex-wrap gap-2">
+            <ChoicePill type="radio" name="participantType" value="rider" defaultChecked>
+              {copy.ridesAlong}
+            </ChoicePill>
+            <ChoicePill type="radio" name="participantType" value="snorkeler">
+              {copy.snorkels}
+            </ChoicePill>
+          </div>
+        </ChoiceFieldset>
         <FieldActions>
           <SubmitButton
             pendingLabel={copy.pending}
@@ -110,8 +146,23 @@ export function DockRiderForm({
           >
             {copy.submit}
           </SubmitButton>
-          {state?.status === "added" ? (
-            <FormStatus tone="success">{fill(copy.added, { name: state.name })}</FormStatus>
+          {added ? (
+            <FormStatus tone={added.owes.length === 0 ? "success" : "warning"}>
+              {fill(added.owes.includes("release") ? copy.addedOwesRelease : copy.added, {
+                name: added.name,
+              })}
+              {added.owes.includes("release") && added.waiverPath ? (
+                <>
+                  {" "}
+                  {copy.releaseHandOver}{" "}
+                  <a href={added.waiverPath} target="_blank" rel="noreferrer" className="underline">
+                    {copy.openRelease}
+                  </a>
+                </>
+              ) : null}
+              {added.owes.includes("payment") ? ` ${copy.owesPayment}` : null}
+              {added.owes.includes("other") ? ` ${copy.owesOther}` : null}
+            </FormStatus>
           ) : state?.status === "refused" ? (
             <FormStatus>{refusalText(copy, state.reason)}</FormStatus>
           ) : null}

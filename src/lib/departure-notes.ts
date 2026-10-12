@@ -33,9 +33,15 @@ export function foldDepartureNote(body: string): string {
  * scheme, a `www.`, an address, or a bare domain (`elks.org`, `bit.ly/x`). A
  * dot between two letter runs is enough, so "park at the Elks.Meet" is refused
  * too; the fix is the space the sentence wanted anyway. "a.m." and "e.g."
- * pass, because the part after the last dot is one letter.
+ * pass, because the part after the last dot is one letter. Unicode look-alikes
+ * are folded first (NFKC, and `。` `｡` `．` as dots), so `evil。example` is a
+ * link too.
  */
-export function containsLink(text: string): boolean {
+export function containsLink(raw: string): boolean {
+  // Read as a phone's linkifier would: compatibility forms folded (fullwidth
+  // letters, `．`), and the ideographic and halfwidth full stops, which some
+  // resolvers accept as a domain's dot, read as dots.
+  const text = raw.normalize("NFKC").replace(/[\u3002\uFF61\uFF0E]/g, ".");
   return (
     /[a-z][a-z0-9+.-]*:\/\//i.test(text) ||
     /\bwww\./i.test(text) ||

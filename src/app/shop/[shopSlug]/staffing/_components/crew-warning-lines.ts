@@ -48,7 +48,6 @@ export async function crewWarningLines(input: {
     people: view.staff.map((member) => ({
       personId: member.person.id,
       name: member.person.fullName,
-      shifts: member.shifts,
       credentials: credentials.get(member.person.id) ?? [],
     })),
     timeZone: input.timeZone,

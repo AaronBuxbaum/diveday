@@ -170,6 +170,57 @@ describe("sendDepartureNote", () => {
     expect(email.sent).toHaveLength(DEPARTURE_NOTES_PER_DEPARTURE);
   });
 
+  it("holds the cap when sends race: exactly the cap is written and sent", async () => {
+    const { db, shop } = ctx;
+    const trip = await departure(db, shop.id);
+    await book(db, shop.id, trip.id, { email: "note-race-a@example.com" });
+    await book(db, shop.id, trip.id, { email: "note-race-b@example.com" });
+    const email = fakeEmail();
+
+    const outcomes = await Promise.all(
+      Array.from({ length: DEPARTURE_NOTES_PER_DEPARTURE + 2 }, (_, i) =>
+        sendDepartureNote(
+          db,
+          { shopId: shop.id, tripId: trip.id, body: `${NOTE} ${i}`, actorPersonId: null },
+          { emailProvider: email.provider },
+        ),
+      ),
+    );
+
+    expect(outcomes.filter((o) => o.ok)).toHaveLength(DEPARTURE_NOTES_PER_DEPARTURE);
+    expect(outcomes.filter((o) => !o.ok)).toEqual([
+      { ok: false, reason: "limit" },
+      { ok: false, reason: "limit" },
+    ]);
+    const rows = await db.select().from(departureNotes).where(eq(departureNotes.tripId, trip.id));
+    expect(rows).toHaveLength(DEPARTURE_NOTES_PER_DEPARTURE);
+    expect(email.sent).toHaveLength(DEPARTURE_NOTES_PER_DEPARTURE * 2);
+  });
+
+  it("counts notes still held against the cap at the hold", async () => {
+    const { db, shop } = ctx;
+    const trip = await departure(db, shop.id);
+    for (let i = 0; i < DEPARTURE_NOTES_PER_DEPARTURE; i += 1) {
+      await holdSend(db, {
+        shopId: shop.id,
+        payload: { kind: "departure_note", tripId: trip.id, body: `${NOTE} ${i}` },
+        actorPersonId: null,
+      });
+    }
+    expect(
+      await checkDepartureNote(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        body: NOTE,
+        countHeld: true,
+      }),
+    ).toEqual({ ok: false, reason: "limit" });
+    // The send itself counts only what was sent.
+    expect(
+      (await checkDepartureNote(db, { shopId: shop.id, tripId: trip.id, body: NOTE })).ok,
+    ).toBe(true);
+  });
+
   it("cannot reach another shop's departure", async () => {
     const { db, shop } = ctx;
     const trip = await departure(db, shop.id);

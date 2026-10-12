@@ -156,7 +156,10 @@ export async function tellLostItemOwner(
   const [row] = await db
     .select({ item: lostItems, trip: trips, shop: shops })
     .from(lostItems)
-    .innerJoin(trips, and(eq(trips.id, lostItems.tripId), liveTrip()))
+    .innerJoin(
+      trips,
+      and(eq(trips.id, lostItems.tripId), eq(trips.shopId, input.shopId), liveTrip()),
+    )
     .innerJoin(shops, eq(shops.id, lostItems.shopId))
     .where(and(eq(lostItems.id, input.itemId), eq(lostItems.shopId, input.shopId)))
     .limit(1);
@@ -172,57 +175,90 @@ export async function tellLostItemOwner(
     .limit(1);
   if (!person) return { ok: false, reason: "no_owner" };
 
+  const phone = person.email ? null : smsRecipient(person.phone);
+  if (!person.email && !phone) return { ok: false, reason: "no_contact" };
+
+  // Claim the tell before anything is sent: of two taps racing, one row comes
+  // back and the other is `already_told` without a message going out.
   const toldAt = nowDate();
+  const [claim] = await db
+    .update(lostItems)
+    .set({ toldAt, updatedAt: toldAt })
+    .where(
+      and(
+        eq(lostItems.id, item.id),
+        eq(lostItems.shopId, shop.id),
+        eq(lostItems.status, "open"),
+        isNull(lostItems.toldAt),
+      ),
+    )
+    .returning({ id: lostItems.id });
+  if (!claim) return { ok: false, reason: "already_told" };
+  // A message that did not go gives the claim back, so the crew can tap again.
+  const release = async (): Promise<TellLostItemOutcome> => {
+    await db
+      .update(lostItems)
+      .set({ toldAt: null, toldChannel: null })
+      .where(and(eq(lostItems.id, item.id), eq(lostItems.shopId, shop.id)));
+    return { ok: false, reason: "failed" };
+  };
+
   const locale = recipientLocale(person.locale, shop.defaultLocale);
   let channel: "email" | "sms" | "whatsapp";
-  if (person.email) {
-    const delivery = await sendNotification(
-      db,
-      {
-        kind: "lost_item_found",
-        itemId: item.id,
-        shopId: shop.id,
-        to: person.email,
-        locale,
-        diverName: person.fullName,
-        shopName: shop.name,
-        tripTitle: trip.title,
-        startsAt: trip.startsAt,
-        timezone: shop.timezone,
-        description: item.description,
-        toldAt,
-      },
-      notificationProviderForDb(providers.emailProvider),
-    );
-    if (delivery.status !== "sent") return { ok: false, reason: "failed" };
-    channel = "email";
-  } else {
-    const phone = smsRecipient(person.phone);
-    if (!phone) return { ok: false, reason: "no_contact" };
-    const senders = providers.whatsAppProviders ?? (await whatsAppProvidersForShops(db, [shop.id]));
-    const sms = stopListedSmsProvider(db, providers.smsProvider ?? smsProviderFromEnvironment());
-    const t = diverTranslator(locale);
-    const sent = await sendCourtesyMessage(
-      {
-        to: phone,
-        body: lostItemText({
+  try {
+    if (person.email) {
+      const delivery = await sendNotification(
+        db,
+        {
+          kind: "lost_item_found",
+          itemId: item.id,
+          shopId: shop.id,
+          to: person.email,
           locale,
+          diverName: person.fullName,
           shopName: shop.name,
           tripTitle: trip.title,
+          startsAt: trip.startsAt,
+          timezone: shop.timezone,
           description: item.description,
-        }),
-        smsStopLine: t("notifications.sms.stopLine"),
-        shopName: shop.name,
-      },
-      { sms, whatsapp: senders.get(shop.id) ?? null },
-    );
-    if (sent.delivery.status !== "sent") return { ok: false, reason: "failed" };
-    channel = sent.channel;
+          toldAt,
+        },
+        notificationProviderForDb(providers.emailProvider),
+      );
+      if (delivery.status !== "sent") return await release();
+      channel = "email";
+    } else if (phone) {
+      const senders =
+        providers.whatsAppProviders ?? (await whatsAppProvidersForShops(db, [shop.id]));
+      const sms = stopListedSmsProvider(db, providers.smsProvider ?? smsProviderFromEnvironment());
+      const t = diverTranslator(locale);
+      const sent = await sendCourtesyMessage(
+        {
+          to: phone,
+          body: lostItemText({
+            locale,
+            shopName: shop.name,
+            tripTitle: trip.title,
+            description: item.description,
+          }),
+          smsStopLine: t("notifications.sms.stopLine"),
+          shopName: shop.name,
+        },
+        { sms, whatsapp: senders.get(shop.id) ?? null },
+      );
+      if (sent.delivery.status !== "sent") return await release();
+      channel = sent.channel;
+    } else {
+      return await release();
+    }
+  } catch (error) {
+    await release();
+    throw error;
   }
 
   await db
     .update(lostItems)
-    .set({ toldAt, toldChannel: channel, updatedAt: toldAt })
+    .set({ toldChannel: channel })
     .where(and(eq(lostItems.id, item.id), eq(lostItems.shopId, shop.id)));
   return { ok: true, channel };
 }
