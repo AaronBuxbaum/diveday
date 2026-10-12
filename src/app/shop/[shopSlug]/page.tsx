@@ -12,6 +12,7 @@ import {
 } from "@/app/shop/[shopSlug]/_components/today/DaySpine";
 import { FirstBookableCard } from "@/app/shop/[shopSlug]/_components/today/FirstBookableCard";
 import { FirstRunChecklist } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
+import { firstRunChecklistCopy } from "@/app/shop/[shopSlug]/_components/today/first-run-copy";
 import { RecapNoteEditor } from "@/app/shop/[shopSlug]/_components/today/RecapNoteEditor";
 import {
   RoleOrientationCard,
@@ -24,7 +25,6 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
-import { DIVE_SITE_TEMPLATES } from "@/content/dive-site-templates";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { daySummaryBlocked, sharedInHorizonReadiness } from "@/db/blockers";
 import { hasArrivals, listCheckInQueue } from "@/db/check-in";
@@ -54,7 +54,6 @@ import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { assembleEveningClose, dayTakings } from "@/lib/closeout";
 import { shopCrewTarget } from "@/lib/crew-schedule";
-import { siteCatalogIsLocal } from "@/lib/curated-defaults";
 import { FORM_DRAFT_RESUME_SUFFIX } from "@/lib/form-drafts";
 import {
   formatDateTimeTz,
@@ -66,7 +65,6 @@ import {
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
-import { FIRST_RUN_STEP_COUNT } from "@/lib/onboarding";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { recapAutoSendAt } from "@/lib/recap-schedule";
 import { summarizeMonth } from "@/lib/reporting";
@@ -963,54 +961,10 @@ async function TodayBody({
                 diveSiteCount={firstRunDiveSites?.length ?? 0}
                 unitsDone={Boolean(shop.unitsConfirmedAt)}
                 stripeDone={canAcceptPayments(firstRunStripeAccount)}
-                copy={{
-                  groupLabel: t("shopHome.firstRun.groupLabel"),
-                  subtitle: t("shopHome.firstRun.subtitle", { count: FIRST_RUN_STEP_COUNT }),
-                  progress: t("shopHome.firstRun.progress", {
-                    done: firstRunDoneCount,
-                    total: FIRST_RUN_STEP_COUNT,
-                  }),
-                  contactTitle: t("shopHome.firstRun.contactTitle"),
-                  contactBody: t("shopHome.firstRun.contactBody"),
-                  contactAction: t("shopHome.firstRun.contactAction"),
-                  contactDone: t("shopHome.firstRun.contactDone"),
-                  profileTitle: t("shopHome.firstRun.profileTitle"),
-                  profileBody: t("shopHome.firstRun.profileBody"),
-                  profileAction: t("shopHome.firstRun.profileAction"),
-                  profileDone: t("shopHome.firstRun.profileDone"),
-                  unitsTitle: t("shopHome.firstRun.unitsTitle"),
-                  unitsBody: t("shopHome.firstRun.unitsBody", {
-                    currency: shop.currency.toUpperCase(),
-                    depth: t(
-                      shop.depthUnit === "feet"
-                        ? "shopHome.firstRun.unitsFeet"
-                        : "shopHome.firstRun.unitsMeters",
-                    ),
-                  }),
-                  unitsAction: t("shopHome.firstRun.unitsAction"),
-                  unitsDone: t("shopHome.firstRun.unitsDone"),
-                  siteTitle: t("shopHome.firstRun.siteTitle"),
-                  siteBody: siteCatalogIsLocal(shop)
-                    ? t("shopHome.firstRun.siteBody", { count: DIVE_SITE_TEMPLATES.length })
-                    : t("shopHome.firstRun.siteBodyOwn"),
-                  siteAction: t("shopHome.firstRun.siteAction"),
-                  siteDone: t("shopHome.firstRun.siteDone", {
-                    count: firstRunDiveSites?.length ?? 0,
-                  }),
-                  tripTitle: t("shopHome.firstRun.tripTitle"),
-                  tripBody: t("shopHome.firstRun.tripBody"),
-                  tripAction: t("shopHome.firstRun.tripAction"),
-                  scheduleTitle: t("shopHome.firstRun.scheduleTitle"),
-                  scheduleBody: t("shopHome.firstRun.scheduleBody"),
-                  scheduleCopy: t("shopHome.firstRun.scheduleCopy"),
-                  scheduleCopied: t("shopHome.firstRun.scheduleCopied"),
-                  scheduleCopyFailed: t("shopHome.firstRun.scheduleCopyFailed"),
-                  stripeTitle: t("shopHome.firstRun.stripeTitle"),
-                  stripeBody: t("shopHome.firstRun.stripeBody"),
-                  stripeAction: t("shopHome.firstRun.stripeAction"),
-                  stripeDone: t("shopHome.firstRun.stripeDone"),
-                  doneBadge: t("shopHome.firstRun.doneBadge"),
-                }}
+                copy={firstRunChecklistCopy(t, shop, {
+                  diveSiteCount: firstRunDiveSites?.length ?? 0,
+                  doneCount: firstRunDoneCount,
+                })}
               />
             ) : null
           }
