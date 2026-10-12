@@ -1,0 +1,89 @@
+{
+  "staffingWarnings": {
+    "heading": "Avisos de tripulación",
+    "missingOxygen": "Nadie con proveedor de oxígeno en {title}, {when}",
+    "missingFirstAid": "Nadie con primeros auxilios / RCP en {title}, {when}",
+    "longDay": "{name} trabaja más de {hours, plural, one {# hora} other {# horas}} el {day}",
+    "credentialExpired": "{credential} de {name} venció el {date} y forma parte de la tripulación de {title}"
+  },
+  "dockRider": {
+    "door": "Agregar un acompañante",
+    "name": "Nombre",
+    "phone": "Teléfono",
+    "optional": "(opcional)",
+    "emergencyName": "Contacto de emergencia",
+    "emergencyPhone": "Teléfono del contacto de emergencia",
+    "submit": "Agregar acompañante",
+    "pending": "Agregando…",
+    "added": "{name} ya está en el manifiesto.",
+    "refusals": {
+      "tripFull": "El barco está lleno.",
+      "tripUnavailable": "Esta salida no admite a nadie ahora.",
+      "courseSession": "Una salida de curso no lleva acompañantes.",
+      "departed": "El barco ya salió del muelle.",
+      "alreadyAboard": "Ya hay alguien a bordo con ese nombre.",
+      "invalid": "Revisa el nombre y el contacto de emergencia.",
+      "other": "No se pudo agregar."
+    }
+  },
+  "departureNote": {
+    "heading": "Aviso a todos",
+    "description": "Un mensaje breve a cada buceador reservado, por correo o mensaje de texto. Sin enlaces: cada buceador recibe el enlace de su propia reserva.",
+    "label": "Aviso",
+    "left": "Quedan {left}",
+    "submit": "Enviar a todos los reservados",
+    "sent": "Enviado. {delivered} de {recipients} entregados.",
+    "sentLine": "{when} · {name} · {delivered} de {recipients} entregados",
+    "someone": "Personal",
+    "refusals": {
+      "empty": "Escribe el aviso primero.",
+      "tooLong": "Máximo 200 caracteres.",
+      "link": "Quita el enlace. Cada buceador recibe el enlace de su propia reserva.",
+      "cancelled": "Esta salida está cancelada.",
+      "past": "Esta salida ya zarpó.",
+      "limit": "Esta salida ya tuvo {max, plural, one {su # aviso} other {sus # avisos}}.",
+      "noRecipients": "Todavía no hay nadie reservado.",
+      "other": "No se pudo enviar."
+    },
+    "sentCount": "{count, plural, one {# enviado} other {# enviados}}"
+  },
+  "lostFound": {
+    "heading": "Olvidado a bordo",
+    "lead": "Lo que la tripulación encontró después de la salida. Elige el puesto y DiveDay puede avisar a ese buceador.",
+    "description": "Qué se encontró",
+    "seat": "De qué puesto",
+    "noSeat": "No se sabe",
+    "submit": "Registrar",
+    "pending": "Registrando…",
+    "recorded": "Registrado.",
+    "tell": "Avisar a {name}",
+    "told": "avisado por {channel}",
+    "channels": {
+      "email": "correo",
+      "sms": "mensaje de texto",
+      "whatsapp": "WhatsApp"
+    },
+    "returned": "Devuelto",
+    "discarded": "Descartado",
+    "reopen": "Reabrir",
+    "unclaimed": "Sin dueño",
+    "statusReturned": "devuelto",
+    "statusDiscarded": "descartado",
+    "tripLine": "{title}, {date}",
+    "empty": "No hay nada esperando a su dueño.",
+    "whereToAdd": "Los objetos se registran en la pestaña Barco de cada salida.",
+    "refusals": {
+      "empty": "Indica qué se encontró.",
+      "tooLong": "Máximo 120 caracteres.",
+      "link": "Quita el enlace.",
+      "notFound": "Ese objeto o esa salida ya no existe.",
+      "seatNotOnTrip": "Ese puesto no es de esta salida.",
+      "notOpen": "Ese objeto ya está resuelto.",
+      "noOwner": "Este objeto no tiene dueño asignado.",
+      "alreadyTold": "Ya se le avisó.",
+      "noContact": "No tiene email ni teléfono registrados.",
+      "failed": "No se pudo enviar. Inténtalo de nuevo en un minuto.",
+      "other": "No funcionó."
+    }
+  }
+}

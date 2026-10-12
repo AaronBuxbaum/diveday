@@ -9,6 +9,7 @@ import {
 } from "@/lib/held-sends";
 import { log } from "@/lib/log";
 import type { AppDb } from "./client";
+import { type SendDepartureNoteOutcome, sendDepartureNote } from "./departure-notes";
 import { heldSends } from "./schema";
 import { type SendLastMinuteDealOutcome, sendLastMinuteDealBlast } from "./trip-promos";
 import { inviteWaitlistDiver } from "./waitlist";
@@ -36,7 +37,8 @@ export type HeldSendRow = {
 export type HeldSendOutcome =
   | ({ kind: "waiver_send" } & WaiverBatchOutcome)
   | { kind: "last_minute_deal"; outcome: SendLastMinuteDealOutcome }
-  | { kind: "waitlist_invite"; result: "sent" | "fallback" };
+  | { kind: "waitlist_invite"; result: "sent" | "fallback" }
+  | { kind: "departure_note"; outcome: SendDepartureNoteOutcome };
 
 export async function holdSend(
   db: AppDb,
@@ -164,6 +166,17 @@ export async function executeHeldSend(db: AppDb, row: HeldSendRow): Promise<Held
         recipientPersonIds: payload.recipientPersonIds,
       });
       return { kind: "last_minute_deal", outcome };
+    }
+    // Checked again inside: a departure cancelled or sailed during the hold
+    // is refused here and nobody is messaged (`sendDepartureNote`).
+    case "departure_note": {
+      const outcome = await sendDepartureNote(db, {
+        shopId: row.shopId,
+        tripId: payload.tripId,
+        body: payload.body,
+        actorPersonId: row.actorPersonId,
+      });
+      return { kind: "departure_note", outcome };
     }
     case "waitlist_invite": {
       const result = await inviteWaitlistDiver(db, {

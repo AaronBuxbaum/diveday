@@ -35,6 +35,7 @@ import checkIn from "./checkIn.json";
 import closeout from "./closeout.json";
 import counterRentals from "./counterRentals.json";
 import courses from "./courses.json";
+import desk from "./desk.json";
 import divers from "./divers.json";
 import diveSites from "./diveSites.json";
 import emailSettings from "./emailSettings.json";
@@ -115,6 +116,7 @@ const staff = {
   lenses,
   participants,
   workOrders,
+  desk,
 };
 
 export default staff;

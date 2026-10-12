@@ -4366,6 +4366,21 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staffing-week-next", scheme);
       });
 
+      // **Lost and found** (batch 4, J2): one item the crew wrote down on the
+      // dawn boat's Boat tab, on the shop's open list with its departure and
+      // its three doors. Recorded through the form, as a crew would.
+      test(`lost and found lists what crews found aboard (${scheme})`, async ({ page }) => {
+        const tripId = await seededTripId(page, "blue-mantis", SAILED_TRIP);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}/manifest`);
+        const form = page.getByTestId("lost-item-form");
+        await form.getByLabel("What was found").fill("Blue mask in a black case");
+        await form.getByRole("button", { name: "Record" }).click();
+        await page.getByTestId("lost-item").first().waitFor();
+        await page.goto("/shop/blue-mantis/lost-found");
+        await page.getByTestId("lost-item").first().waitFor();
+        await capture(page, "lost-found", scheme);
+      });
+
       /**
        * A second, louder day: a departure the shop *had* crewed and no longer
        * has, rendering in its own day cell with the warning word and the

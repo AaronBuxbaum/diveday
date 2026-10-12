@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray, lt, ne } from "drizzle-orm";
 import { DAY_MS, nowMs } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
+import { deleteHeldSendsAndDeskRows } from "./departure-notes";
 import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import {
   accountSecurity,
@@ -41,7 +42,6 @@ import {
   gearItems,
   gearReservations,
   gearServiceEvents,
-  heldSends,
   importedPaymentHistory,
   inboundMessages,
   integrationDeliveries,
@@ -171,7 +171,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(integrationEvents).where(eq(integrationEvents.shopId, shopId));
   await db.delete(integrationOauthStates).where(eq(integrationOauthStates.shopId, shopId));
   await db.delete(shopIntegrations).where(eq(shopIntegrations.shopId, shopId));
-  await db.delete(heldSends).where(eq(heldSends.shopId, shopId));
+  await deleteHeldSendsAndDeskRows(db, shopId);
   await db.delete(formDrafts).where(eq(formDrafts.shopId, shopId));
 
   // Order/checkout/booking dependents first. A ticket's bill names its order

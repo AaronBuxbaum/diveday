@@ -1,0 +1,89 @@
+{
+  "staffingWarnings": {
+    "heading": "Crew warnings",
+    "missingOxygen": "No oxygen provider on {title}, {when}",
+    "missingFirstAid": "No first aid / CPR on {title}, {when}",
+    "longDay": "{name} is on duty over {hours, plural, one {# hour} other {# hours}} on {day}",
+    "credentialExpired": "{name}’s {credential} expired {date}, and they crew {title}"
+  },
+  "dockRider": {
+    "door": "Add a rider",
+    "name": "Name",
+    "phone": "Phone",
+    "optional": "(optional)",
+    "emergencyName": "Emergency contact",
+    "emergencyPhone": "Emergency contact phone",
+    "submit": "Add rider",
+    "pending": "Adding…",
+    "added": "{name} is on the manifest.",
+    "refusals": {
+      "tripFull": "The boat is full.",
+      "tripUnavailable": "This departure isn’t taking anyone now.",
+      "courseSession": "A course session carries no riders.",
+      "departed": "The boat has left the dock.",
+      "alreadyAboard": "Someone by that name is already aboard.",
+      "invalid": "Check the name and the emergency contact.",
+      "other": "Couldn’t add them."
+    }
+  },
+  "departureNote": {
+    "heading": "Note to everyone",
+    "description": "One short message to every booked diver, by email or text. No links: each diver’s own booking link goes with it.",
+    "label": "Note",
+    "left": "{left} left",
+    "submit": "Send to everyone booked",
+    "sent": "Sent. {delivered} of {recipients} delivered.",
+    "sentLine": "{when} · {name} · {delivered} of {recipients} delivered",
+    "someone": "Staff",
+    "refusals": {
+      "empty": "Write the note first.",
+      "tooLong": "Keep it to 200 characters.",
+      "link": "Take the link out. Each diver gets their own booking link.",
+      "cancelled": "This departure is canceled.",
+      "past": "This departure has sailed.",
+      "limit": "This departure has had its {max, plural, one {# note} other {# notes}}.",
+      "noRecipients": "Nobody is booked yet.",
+      "other": "Couldn’t send it."
+    },
+    "sentCount": "{count, plural, one {# sent} other {# sent}}"
+  },
+  "lostFound": {
+    "heading": "Left aboard",
+    "lead": "What the crew found after the trip. Pick the seat and DiveDay can tell that diver.",
+    "description": "What was found",
+    "seat": "Whose seat",
+    "noSeat": "Not sure",
+    "submit": "Record",
+    "pending": "Recording…",
+    "recorded": "Recorded.",
+    "tell": "Tell {name}",
+    "told": "told by {channel}",
+    "channels": {
+      "email": "email",
+      "sms": "text",
+      "whatsapp": "WhatsApp"
+    },
+    "returned": "Returned",
+    "discarded": "Discarded",
+    "reopen": "Reopen",
+    "unclaimed": "Unclaimed",
+    "statusReturned": "returned",
+    "statusDiscarded": "discarded",
+    "tripLine": "{title}, {date}",
+    "empty": "Nothing is waiting to go home.",
+    "whereToAdd": "Items are recorded on each departure’s Boat tab.",
+    "refusals": {
+      "empty": "Say what was found.",
+      "tooLong": "Keep it to 120 characters.",
+      "link": "Take the link out.",
+      "notFound": "That item or departure is gone.",
+      "seatNotOnTrip": "That seat isn’t on this departure.",
+      "notOpen": "That item is already resolved.",
+      "noOwner": "Nobody is tied to this item.",
+      "alreadyTold": "They’ve already been told.",
+      "noContact": "No email or phone on file for them.",
+      "failed": "Couldn’t send. Try again in a minute.",
+      "other": "That didn’t work."
+    }
+  }
+}

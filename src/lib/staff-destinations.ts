@@ -124,6 +124,7 @@ export type StaffDestinationId =
   | "board"
   | "addBooking"
   | "staffing"
+  | "lostFound"
   | "diveSites"
   | "gear"
   | "workOrders"
@@ -184,6 +185,7 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   board: "shared.shopNavLinks.board",
   addBooking: "shared.shopNavLinks.addBooking",
   staffing: "shared.shopNavLinks.staffing",
+  lostFound: "shared.shopNavLinks.lostFound",
   diveSites: "shared.shopNavLinks.diveSites",
   gear: "shared.shopNavLinks.gear",
   workOrders: "shared.shopNavLinks.workOrders",
@@ -268,6 +270,11 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // registry is the only place a destination may be declared.
   { id: "addBooking", suffix: "/bookings/new", section: "schedule", inPalette: true },
   { id: "staffing", suffix: "/staffing", section: "schedule", inPalette: true },
+  // What crews found aboard after their departures and has not gone home yet
+  // (batch 4, J2). Filed with the board because every item belongs to a
+  // departure, and each departure's Boat tab is where it was written down.
+  // Ungated: whoever is at the counter when the diver comes back hands it over.
+  { id: "lostFound", suffix: "/lost-found", section: "schedule", inPalette: true },
   // Everything a diver says to the shop is one section: messages, days asked
   // for, and reviews. Each is ungated — the
   // person best placed to answer is whoever is at the counter (issues #1505,

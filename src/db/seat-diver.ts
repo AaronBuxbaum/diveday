@@ -45,7 +45,7 @@ export type SeatDiverRefusal = BookingRefusalReason | "unavailable";
  * How the trip's activity trail describes the seating. Same event either way;
  * the crew reading the feed at the dock cares which door it came through.
  */
-export type SeatDiverEntry = "roster" | "walk_in";
+export type SeatDiverEntry = "roster" | "walk_in" | "dock";
 
 /**
  * How much of a refusal a surface repeats back.
@@ -166,9 +166,15 @@ export type SeatDiverResult =
  * sentence, and the one name it needs.
  */
 function activityEntry(entry: SeatDiverEntry, personName: string): TripActivityEntry {
-  return entry === "walk_in"
-    ? { code: "seat_added_walk_in", diver: personName }
-    : { code: "seat_added", diver: personName };
+  switch (entry) {
+    case "walk_in":
+      return { code: "seat_added_walk_in", diver: personName };
+    // A rider the crew added at the boat (`src/db/dock-rider.ts`).
+    case "dock":
+      return { code: "rider_added_at_dock", diver: personName };
+    case "roster":
+      return { code: "seat_added", diver: personName };
+  }
 }
 
 function collapse(reason: BookingRefusalReason, detail: SeatDiverRefusalDetail): SeatDiverRefusal {

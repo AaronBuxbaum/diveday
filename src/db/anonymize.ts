@@ -101,6 +101,7 @@ import {
   internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
+  lostItems,
   nitroxCertifications,
   notificationDeliveries,
   notificationDeliveryAttempts,
@@ -882,6 +883,11 @@ async function scrubPersonOnlyRows(
   await tx
     .delete(tripWaitlistEntries)
     .where(and(eq(tripWaitlistEntries.shopId, shopId), eq(tripWaitlistEntries.personId, personId)));
+  // Something found aboard with this diver's name on it (batch 4, J2). The
+  // description is free text about their belongings, so the row goes whole.
+  await tx
+    .delete(lostItems)
+    .where(and(eq(lostItems.shopId, shopId), eq(lostItems.personId, personId)));
 
   const listEntries = await tx
     .select({ id: lastMinuteListEntries.id })

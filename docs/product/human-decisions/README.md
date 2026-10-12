@@ -166,6 +166,7 @@ A status change is made in the file and here; `pnpm gates` reads the files, not 
 | [H-106](H-106-padi-elearning-check.md) | Implemented | 2026-10-08 | May the extension read a student's PADI eLearning and mark their course materials done? | Decided 2026-10-08 (Aaron Buxbaum, in the project thread): build it on a best guess of PADI's page and test it later; a finished course ticks the materials, with Undo. |
 | [H-107](H-107-certificate-caps-seats.md) | Implemented | 2026-10-09 | Does the boat's certificate passenger limit refuse seats, or only inform? | Decided 2026-10-09 (Aaron Buxbaum, in the project thread): it refuses. No boat or departure saves seats above the certificate; a row already over it keeps working until its next save. |
 | [H-108](H-108-counter-rental-waiver-informs.md) | Implemented | 2026-10-09 | How does a counter rental check the person's waiver? | Decided 2026-10-09 (Aaron Buxbaum, in the project thread on #2261): option (b). The ticket and the Rentals list say the person's waiver standing when it is short of signed, the ticket offers the waiver link, and the rental never waits on it. |
+| [H-109](H-109-departure-note-limits.md) | Ready | 2026-10-12 | Who may send a note to everyone on a departure, and how much may it say? | Shipped with the recommended defaults (batch 4, J4): any staff, 200 characters, three per departure, no links but the diver’s own `/ready` link, never to a canceled or sailed departure, held eight seconds with Undo. Awaiting confirmation. |
 
 ## Human verification queue
 

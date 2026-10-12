@@ -247,7 +247,7 @@ describe("what each consumer derives", () => {
         .filter((destination) => destination.section === section)
         .map((destination) => destination.id);
     expect(bySection("today")).toEqual(["today"]);
-    expect(bySection("schedule")).toEqual(["board", "addBooking", "staffing"]);
+    expect(bySection("schedule")).toEqual(["board", "addBooking", "staffing", "lostFound"]);
     expect(bySection("divers")).toEqual(["divers"]);
     expect(bySection("inbox")).toEqual(["inbox", "requests", "reviews"]);
     expect(bySection("money")).toEqual(["orders", "reports", "promoCodes"]);

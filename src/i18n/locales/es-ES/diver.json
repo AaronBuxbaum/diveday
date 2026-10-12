@@ -4387,6 +4387,22 @@
       "subject": "Formularios del curso por firmar para {tripTitle}",
       "body": "{shopName} pide a cada estudiante de {tripTitle} que firme los formularios del curso. Tu exención ya está firmada, así que solo faltan estos.",
       "openLink": "Firmar los formularios del curso"
+    },
+    "departureNote": {
+      "subject": "Una nota sobre {tripTitle}",
+      "intro": "{shopName} envió una nota a todos los de {tripTitle}, {date}:",
+      "readyLink": "Tu reserva"
+    },
+    "smsDepartureNote": {
+      "body": "{shopName}, {tripTitle}: {note}",
+      "withLink": "{shopName}, {tripTitle}: {note} Tu reserva: {url}"
+    },
+    "lostItem": {
+      "subject": "Olvidado a bordo después de {tripTitle}",
+      "body": "La tripulación encontró esto a bordo después de {tripTitle} el {date}: {item}. {shopName} lo guarda para ti."
+    },
+    "smsLostItem": {
+      "body": "{shopName}: la tripulación encontró esto a bordo después de {tripTitle}: {item}. Lo guardamos para ti."
     }
   },
   "brand": {

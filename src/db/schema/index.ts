@@ -18,6 +18,7 @@ export * from "./core";
 export * from "./course-forms";
 export * from "./courses";
 export * from "./crew";
+export * from "./departure-desk";
 export * from "./dive-day";
 export * from "./dive-sites";
 export * from "./erasure";

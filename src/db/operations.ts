@@ -468,7 +468,8 @@ export type TripActivityEntry =
         | "identity_confirmed"
         | "identity_split"
         | "seat_added"
-        | "seat_added_walk_in";
+        | "seat_added_walk_in"
+        | "rider_added_at_dock";
       diver: string;
     }
   | {
@@ -482,7 +483,9 @@ export type TripActivityEntry =
       cleared: string;
     }
   | { code: "crew_assigned" | "crew_removed"; crew: string }
-  | { code: "blowout_called" | "booking_link_requested" | "seat_claimed" };
+  | {
+      code: "blowout_called" | "booking_link_requested" | "seat_claimed" | "departure_note_sent";
+    };
 
 export async function recordTripActivity(
   db: DbExecutor,

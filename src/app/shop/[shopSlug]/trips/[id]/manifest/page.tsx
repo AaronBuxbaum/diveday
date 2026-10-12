@@ -9,7 +9,7 @@ import {
   OfflineManifestManager,
   type OfflineManifestManagerCopy,
 } from "@/components/OfflineManifestManager";
-import { PushOptIn, type PushOptInCopy } from "@/components/PushOptIn";
+import { PushOptIn } from "@/components/PushOptIn";
 import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -67,6 +67,7 @@ import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CrewRollCall } from "./_components/CrewRollCall";
 import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
+import { DockDesk } from "./_components/DockDesk";
 import { departureBoatSafetySection } from "./_components/departure-boat-safety";
 import { type ExecutedDiveLabels, ExecutedDiveLog } from "./_components/ExecutedDiveLog";
 import { ManifestMoreMenu } from "./_components/ManifestMoreMenu";
@@ -77,6 +78,7 @@ import {
   printedBoatProcedureCopy,
 } from "./_components/PrintedBoatProcedure";
 import { personTrailIndex } from "./_components/person-trail";
+import { pushOptInCopy } from "./_components/push-opt-in-copy";
 import { SeenGroup } from "./_components/SeenGroup";
 import { StageStrip } from "./_components/StageStrip";
 import { SummaryPanel } from "./_components/SummaryPanel";
@@ -857,6 +859,16 @@ export default async function TripManifestPage({
           buddyTeamLabel={buddyTeamLabel}
           t={t}
         />
+        <DockDesk
+          t={t}
+          shopId={shop.id}
+          shopSlug={shopSlug}
+          tripId={tripId}
+          isDeparture={isDeparture}
+          startsAt={departureManifest.trip.startsAt}
+          stage={stage}
+          seats={departureManifest.divers}
+        />
 
         {/* **The plan** (issue #1184, D24).
             At the dock only: after a dive the log below owns this ground, and a
@@ -1061,20 +1073,7 @@ export default async function TripManifestPage({
                 unsubscribeAction={unsubscribePushAction.bind(null, tripId)}
                 isSubscribedAction={isPushSubscribedAction.bind(null, tripId)}
                 isSubscribedAnyAction={isPushSubscribedAnywhereAction}
-                copy={
-                  {
-                    heading: t("trips.offlineManifestManager.pushHeading"),
-                    body: t("trips.offlineManifestManager.pushBody"),
-                    enable: t("trips.offlineManifestManager.pushEnable"),
-                    enabling: t("trips.offlineManifestManager.pushEnabling"),
-                    disable: t("trips.offlineManifestManager.pushDisable"),
-                    on: t("trips.offlineManifestManager.pushOn"),
-                    unsupported: t("trips.offlineManifestManager.pushUnsupported"),
-                    homeScreenHint: t("trips.offlineManifestManager.pushHomeScreenHint"),
-                    denied: t("trips.offlineManifestManager.pushDenied"),
-                    error: t("trips.offlineManifestManager.pushError"),
-                  } satisfies PushOptInCopy
-                }
+                copy={pushOptInCopy(t)}
               />
             </div>
 

@@ -1375,3 +1375,10 @@
   their own password, which flips the account to **active**. A shop may never end up with zero
   people holding the `owner` role: removing, disabling, or demoting the shop's last owner is
   refused. See [20260726-staff-invite-accounts](../../architecture/decisions/20260726-staff-invite-accounts.md).
+- **Crew warning** — a line above the staffing week that informs and never blocks: a departure
+  whose rostered crew holds no current oxygen-provider (or first aid / CPR) credential, a person
+  whose shifts and crewed departures run past 12 hours in one shop-local day, or somebody crewing
+  this week whose credential has expired. A credential with no renewal date counts as current, a
+  renewal date is good through the end of that day, and a kind the shop has never recorded for
+  anybody raises nothing. Pure logic in `src/lib/staffing-warnings.ts`; words in
+  `src/i18n/staffing-warning-labels.ts`.

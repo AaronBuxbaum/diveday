@@ -4387,6 +4387,22 @@
       "subject": "Course forms to sign for {tripTitle}",
       "body": "{shopName} asks every student on {tripTitle} to sign the course forms. Your release is already signed, so these are all that’s left.",
       "openLink": "Sign your course forms"
+    },
+    "departureNote": {
+      "subject": "A note about {tripTitle}",
+      "intro": "{shopName} sent a note to everyone on {tripTitle}, {date}:",
+      "readyLink": "Your booking"
+    },
+    "smsDepartureNote": {
+      "body": "{shopName}, {tripTitle}: {note}",
+      "withLink": "{shopName}, {tripTitle}: {note} Your booking: {url}"
+    },
+    "lostItem": {
+      "subject": "Left aboard after {tripTitle}",
+      "body": "The crew found this aboard after {tripTitle} on {date}: {item}. {shopName} is holding it for you."
+    },
+    "smsLostItem": {
+      "body": "{shopName}: the crew found this aboard after {tripTitle}: {item}. We’re holding it for you."
     }
   },
   "brand": {

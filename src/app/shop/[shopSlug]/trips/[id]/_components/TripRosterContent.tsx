@@ -21,6 +21,7 @@ import { isFull, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { recordPaperCourseFormAction } from "../course-actions";
 import { AddDiverSection } from "./AddDiverSection";
+import { DepartureNoteSection } from "./DepartureNoteSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
 import type { RosterActions } from "./roster-model";
@@ -356,7 +357,7 @@ export function TripPromoteAndActivity({
   shopSlug: string;
   locale: string;
   /** Its zone for every time here; its currency for a fixed-amount last-minute deal. */
-  shop: { timezone: string; currency: string | null };
+  shop: { id: string; timezone: string; currency: string | null };
   tripNotice?: FormNotice;
   mayDiscount: boolean;
   /** "More for this departure" (`TripMoreDisclosure`), between the two. */
@@ -420,6 +421,8 @@ export function TripPromoteAndActivity({
           </div>
         </AutoOpenDetails>
       ) : null}
+
+      <DepartureNoteSection locale={locale} shop={shop} trip={trip} />
 
       {more}
 

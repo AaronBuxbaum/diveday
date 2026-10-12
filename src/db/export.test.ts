@@ -242,6 +242,14 @@ const EXCLUDED_TABLES = [
   // exactly the reason notification_delivery_attempts is.
   "waiver_deliveries",
   "notification_send_queue", // operational retry state, not shop records
+  // Batch 4's two desk records. A note sent to a whole departure is
+  // correspondence, out for the reason staff_replies is: the bundle has no file
+  // for a message yet, and the 400-day window bounds it like the delivery trail
+  // beside it. A found item is a shelf the shop is holding for somebody, pruned
+  // 90 days after it goes home; there is nothing in it another system would
+  // import. Both are follow-ups with their own file shape if a shop asks.
+  "departure_notes",
+  "lost_items",
   // What the bench told a customer and how it went (ADR
   // 20261008-work-order-follow-up): a kind, a channel and a delivery status,
   // the same plumbing notification_delivery_attempts is. The ticket and the
