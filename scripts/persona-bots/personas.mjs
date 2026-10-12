@@ -21,8 +21,10 @@
  * unit-tested without a network.
  */
 
+import demoShop from "../../src/db/demo-shop.json" with { type: "json" };
+
 /** The demo shop every surface below belongs to. Never a real shop. */
-export const DEMO_SHOP_SLUG = "blue-mantis";
+export const DEMO_SHOP_SLUG = demoShop.slug;
 
 /**
  * A trip id that is well-formed and belongs to nobody — the "this departure is

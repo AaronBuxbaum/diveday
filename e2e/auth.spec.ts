@@ -3,9 +3,11 @@ import { expect, READ_ONLY, test } from "./fixtures";
 import { STAFF_DAY_HEADING, signOut } from "./helpers";
 
 /**
- * READ_ONLY holds here: a session is a JWT in a cookie (`session: { strategy: "jwt" }`,
- * src/lib/auth.config.ts) — signing in, failing to sign in, and signing out all write
- * no row, and the fleet disables the rate limiter that would otherwise keep counters.
+ * A session is a database row under Better Auth (`account_sessions`, the `session` model in
+ * `src/lib/auth.ts`): a live sign-in through the form inserts one and signing out deletes it.
+ * So READ_ONLY holds only where no sign-in succeeds. The redirect reads nothing, and a refused
+ * password reads the account and writes nothing, since the fleet disables the rate limiter
+ * that would otherwise keep counters. The sign-in-and-out test writes, and carries no tag.
  */
 
 test("unauthenticated /shop redirects to sign-in", { tag: READ_ONLY }, async ({ page }) => {
@@ -29,9 +31,7 @@ test("wrong password shows a friendly error and stays signed out", { tag: READ_O
   await expect(page).toHaveURL(/\/sign-in/);
 });
 
-test("staff sign-in lands on the shop dashboard and sign-out locks it again", {
-  tag: READ_ONLY,
-}, async ({ page }) => {
+test("staff sign-in lands on the shop dashboard and sign-out locks it again", async ({ page }) => {
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill(DEV_STAFF_LOGINS.owner.email);
   await page.getByLabel("Password").fill(DEV_STAFF_LOGINS.owner.password);

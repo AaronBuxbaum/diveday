@@ -2,7 +2,7 @@ import { and, asc, eq, gt, gte, isNull, lt, sql } from "drizzle-orm";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
-import { DEMO_SHOP_SLUG } from "./dev-credentials";
+import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { shops, trips } from "./schema";
 import { demoTodayDepartureStart } from "./seed-clock";
 import { seedRecentRecaps } from "./seed-recent-recaps";

@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
-import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
+import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { submitRecapPulse } from "@/db/recap-pulses";
 import { bookings } from "@/db/schema";
 import { DEMO_RECAP_BOOKING_ID } from "@/db/seed";

@@ -1,6 +1,6 @@
 # H-79: What does an unconfirmed identity withhold, and what does it cost to confirm?
 
-- **Status:** Chosen
+- **Status:** Implemented
 - **Human owner:** Product owner
 
 ## Decision or approval needed
@@ -14,5 +14,7 @@ One posture, and the reasoning recorded wherever a surface is left deliberately 
 ## Unblocks / follow-up
 
 **Decided 2026-09-16 (Aaron Buxbaum, ready-for-human decision deck): asymmetric — fix the leak and the evidence, leave the search list unflagged.** A staffer who typed a diver's whole name into the search list is performing a deliberate act, not a guess, so that door does not raise the flag; the reasoning goes in the docblock so the next reviewer inherits it instead of re-raising it (#1790). Three things do change. **#1690 ships on its own as a privacy fix**: the boat manifest's roll call still prints a matched person's emergency contact and "Minor · age N" under an unverified name, which the trips roster already stopped doing — the offline manifest payload and the print view are checked in the same change. #1789 carries the matched person's last dive day into the armed confirm block, which widens no disclosure gate: same fact, same person, same staffer, one screen later than the seating prompt already shows it. #1698 adds date of birth to the candidate row. #1697: the fare stands, and the seat's payment control gains a line showing the diver holds unspent package dives so the situation stops arising — refunding counter cash is not a path the code has. #1702: the counter may mark a blocked diver not here, since `noShowGate` deliberately says nothing about readiness. #1657: lower the kiosk budget to what a real morning is worth on the busiest day rather than ten times a twelve-diver boat. #1778's per-IP rate limit on the diver's own stop-the-code door is a straight bug and is keyed on the booking.
+
+**Implemented 2026-10-10.** #1690 shipped in #2150, #1702 in #2083, and #1698, #1789, #1697 and #1790 in #2343. #1657 was closed not planned on 2026-10-03: the kiosk whose guessing budget it sized was deleted in #2032, so that part of the ruling is moot, not unbuilt.
 
 Part of the [human decision log](README.md#decision-register).

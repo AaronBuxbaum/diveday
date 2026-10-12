@@ -121,6 +121,12 @@ const routes: SeedRoute[] = [
     },
   },
   {
+    slug: "pin-added-date",
+    // Body first past the guard. It rewrites when a person was added, which on
+    // a misconfigured deployment would be falsifying a real shop's records.
+    expectPastTheGuard: expectInvalidBody,
+  },
+  {
     slug: "seed-trouble-states",
     // Same shape as seed-stripe-account: no body, so reaching the database is
     // what proves the guard let it through. This one writes a stuck payment
