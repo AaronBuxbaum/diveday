@@ -114,6 +114,57 @@ describe("one seat, one row", () => {
   });
 });
 
+/**
+ * Each row says what was notable about its trip, not the norm: "waiver
+ * signed" down every boat ahead told staff nothing (UX review 2026-10-10,
+ * item 28).
+ */
+describe("what each row says about its trip", () => {
+  const EARLIER_AT = new Date("2026-05-02T13:00:00.000Z");
+
+  it("leaves 'waiver signed' off a boat ahead", () => {
+    renderStory(diver({ bookings: [AHEAD] }));
+    expect(screen.getByRole("listitem").textContent).not.toMatch(/waiver/i);
+  });
+
+  it("marks the earliest seat that sailed as the first dive with the shop, and only that one", () => {
+    const earlier = booking("b-early", "First reef", EARLIER_AT);
+    renderStory(diver({ bookings: [BEHIND, earlier] }));
+    const [later, first] = screen.getAllByRole("listitem");
+    expect(first?.textContent).toContain("first dive with us");
+    expect(later?.textContent).not.toContain("first dive with us");
+    expect(later?.textContent).toContain("sailed");
+  });
+
+  it("skips a canceled seat when choosing the first dive", () => {
+    const canceled = booking("b-early", "Called-off reef", EARLIER_AT, {
+      bookingStatus: "cancelled",
+    });
+    renderStory(diver({ bookings: [BEHIND, canceled] }));
+    const [sailed, called] = screen.getAllByRole("listitem");
+    expect(sailed?.textContent).toContain("first dive with us");
+    expect(called?.textContent).toContain("canceled");
+    expect(called?.textContent).not.toContain("sailed");
+  });
+
+  it("claims no first dive when the old system remembers visits before it", () => {
+    renderStory(
+      diver({
+        bookings: [BEHIND],
+        priorVisits: [
+          { id: "v-1", visitedOn: "2025-01-04", title: "Imported reef", sourceLabel: null },
+        ],
+      }),
+    );
+    expect(document.body.textContent).not.toContain("first dive with us");
+  });
+
+  it("says the stars the diver gave a trip they reviewed", () => {
+    renderStory(diver({ bookings: [{ ...BEHIND, reviewRating: 5 }] }));
+    expect(screen.getByRole("listitem").textContent).toContain("rated it 5 of 5");
+  });
+});
+
 describe("money is a fact of the row", () => {
   it("says what one seat's invoice stands at, with its amount", () => {
     renderStory(

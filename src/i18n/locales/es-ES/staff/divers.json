@@ -506,7 +506,12 @@
     "heading": "La historia",
     "empty": "Todavía no hay visitas.",
     "sailed": "zarpó",
-    "waiverSigned": "exención firmada",
+    "firstDive": "primera inmersión con nosotros",
+    "rented": "alquiló {items}",
+    "rated": "le dio {rating} de 5",
+    "canceled": "cancelada",
+    "tripCalledOff": "salida suspendida",
+    "noShow": "no se presentó",
     "showAll": "Ver las {count}",
     "newInvoice": "Nueva factura"
   },

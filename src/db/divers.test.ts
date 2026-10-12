@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT } from "@/lib/anonymization";
@@ -330,6 +330,30 @@ describe("person-first diver records", () => {
     const detail = await getDiverProfile(db, shop.id, priya.id);
     expect(detail?.rentalFit).toMatchObject({ bcdSize: "M", finSize: "L", rentsRegulator: false });
     expect(detail?.certifications).toHaveLength(1);
+  });
+
+  it("carries the stars a diver gave each seat they reviewed, and none on the rest", async () => {
+    const { db, shop } = ctx;
+    const seats = await db
+      .select({ id: bookings.id, personId: bookings.personId, tripId: bookings.tripId })
+      .from(bookings)
+      .leftJoin(tripReviews, eq(tripReviews.bookingId, bookings.id))
+      .where(and(eq(bookings.shopId, shop.id), isNull(tripReviews.id)));
+    const reviewed = seats[0];
+    if (!reviewed) throw new Error("seed has no unreviewed booking");
+    await db.insert(tripReviews).values({
+      shopId: shop.id,
+      bookingId: reviewed.id,
+      tripId: reviewed.tripId,
+      personId: reviewed.personId,
+      rating: 4,
+    });
+
+    const detail = await getDiverProfile(db, shop.id, reviewed.personId);
+    const rows = detail?.bookings ?? [];
+    expect(rows.find((row) => row.booking.id === reviewed.id)?.reviewRating).toBe(4);
+    // One review per booking: the join never repeats a seat.
+    expect(new Set(rows.map((row) => row.booking.id)).size).toBe(rows.length);
   });
 
   it("can add a returning diver before a booking and rejects staff-only records", async () => {

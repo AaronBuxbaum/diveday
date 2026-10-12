@@ -506,7 +506,12 @@
     "heading": "The story",
     "empty": "No visits yet.",
     "sailed": "sailed",
-    "waiverSigned": "waiver signed",
+    "firstDive": "first dive with us",
+    "rented": "rented {items}",
+    "rated": "rated it {rating} of 5",
+    "canceled": "canceled",
+    "tripCalledOff": "trip called off",
+    "noShow": "no-show",
     "showAll": "Show all {count}",
     "newInvoice": "New invoice"
   },
