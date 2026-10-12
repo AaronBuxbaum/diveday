@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { connection } from "next/server";
 import { EntryDone, EntryShell } from "@/components/account/EntryShell";
 import {
   passwordConfirmErrorField,
@@ -14,6 +13,7 @@ import { checkAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { connectionForRoute } from "@/lib/observability/render-connection";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/onboarding";
 import { submitPasswordReset } from "./actions";
 
@@ -41,7 +41,7 @@ export default async function ResetPasswordPage({
   params: Promise<{ token: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  await connection();
+  await connectionForRoute("/reset-password/[token]");
   const { token } = await params;
   const { error } = await searchParams;
   const t = diverTranslator(await requestLocale());

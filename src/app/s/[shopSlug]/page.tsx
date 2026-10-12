@@ -290,6 +290,7 @@ export default async function SchedulePage({
     }),
   );
   const rangeRead = upcomingScheduleRange(db, shop.id, now, { publicOnly: true });
+  const activeCoursesRead = isEmbed ? Promise.resolve([]) : listActiveCourses(db, shop.id);
   const [
     lenses,
     activeLens,
@@ -300,6 +301,7 @@ export default async function SchedulePage({
     boats,
     everHadDeparture,
     [diveSitesByTrip, requirementsByTrip],
+    shelfNextStarts,
   ] = await Promise.all([
     lensesRead,
     activeLensRead,
@@ -308,7 +310,7 @@ export default async function SchedulePage({
     // A shop that switched reviews off shows no stars anywhere, not an empty rating (ADR
     // 20261005-optional-shop-features).
     isEmbed || !shop.reviewsEnabled ? EMPTY_REVIEW_AGGREGATE : getShopReviewAggregate(db, shop.id),
-    isEmbed ? [] : listActiveCourses(db, shop.id),
+    activeCoursesRead,
     // The fleet, for the storefront's boats section (Harbor). Not in the widget: an embed is the
     // list-first window and names no hulls.
     isEmbed ? [] : listBoats(db, shop.id),
@@ -319,6 +321,19 @@ export default async function SchedulePage({
         shop.id,
         listed.map((trip) => trip.id),
       ),
+    ),
+    // The course shelf's next start dates, chained on the courses it shows rather than read
+    // after the batch (code review 2026-10-11, item 35). A diver reads this shelf, so a private
+    // session is not a date they may turn up to.
+    activeCoursesRead.then((courses) =>
+      isEmbed
+        ? new Map<string, Date>()
+        : nextSessionStartByCourse(
+            db,
+            shop.id,
+            courses.slice(0, 3).map((course) => course.id),
+            "storefront",
+          ),
     ),
   ]);
   // The view a diver has built — month, embed mode, the lens, and every list filter — must survive
@@ -628,16 +643,6 @@ export default async function SchedulePage({
   // is the rest. `{depth18}` markers resolve into the shop's own unit before
   // anything reads a field, the same one-shot pass the catalog makes.
   const depthFormat = courseDepthFormat(t, shop.depthUnit);
-  const shelfNextStarts = isEmbed
-    ? new Map<string, Date>()
-    : await nextSessionStartByCourse(
-        db,
-        shop.id,
-        activeCourses.slice(0, 3).map((course) => course.id),
-        // A diver reads this shelf, so a private session is not a date they
-        // may turn up to.
-        "storefront",
-      );
   const shelfCourses = activeCourses.slice(0, 3).map((stored) => {
     const course = resolveCourseContentDepths(stored, depthFormat);
     const total = courseTotalCents(course);
