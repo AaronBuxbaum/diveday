@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
+  allValues,
   blankAsAbsent,
   checkbox,
   formFields,
@@ -201,5 +202,24 @@ describe("single with a reading for an absent field", () => {
       data: { note: "", code: "x" },
     });
     expect(parseForm(schema, new FormData())).toMatchObject({ ok: false, fields: ["code"] });
+  });
+});
+
+describe("allValues", () => {
+  it("reads every value of a repeated field in order, and none as empty", () => {
+    const schema = z.object({ unit: allValues(), none: allValues() });
+    expect(
+      parseForm(
+        schema,
+        form([
+          ["unit", "a"],
+          ["unit", "b"],
+        ]),
+      ),
+    ).toEqual({
+      ok: true,
+      data: { unit: ["a", "b"], none: [] },
+    });
+    expect(parseForm(schema, form([["unit", "a"]]))).toMatchObject({ data: { unit: ["a"] } });
   });
 });

@@ -32,6 +32,7 @@ import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/sch
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
 import { judgeAgencyPage, PAGE_TEXT_MAX_LENGTH } from "@/lib/agency-check";
 import { isPlausibleCardNumber } from "@/lib/card-number";
+import { formValue, readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { noticeUrl } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
@@ -85,6 +86,24 @@ const sightingSchema = z.object({
  * like any other, never trusted from the row it is about to overwrite.
  */
 const levelSightingSchema = sightingSchema.extend({ level: levelSchema });
+
+/**
+ * Every field the card forms post, each read as `FormData.get` read it: the
+ * schemas above, and the review rules below, are what narrow them.
+ */
+const cardForm = z.object({
+  agency: formValue(),
+  card: text(),
+  cardType: formValue(),
+  certificationId: text(),
+  identifier: formValue(),
+  intent: formValue(),
+  pageText: formValue(),
+  sightedAgency: formValue(),
+  sightedIdentifier: formValue(),
+  sightedLevel: formValue(),
+});
+
 /**
  * The card a submit names, narrowed to something a `uuid` column can actually
  * be compared against — or `undefined`, which every caller below already
@@ -104,7 +123,8 @@ const levelSightingSchema = sightingSchema.extend({ level: levelSchema });
  * query.
  */
 function cardIdFromForm(formData: FormData): string | undefined {
-  return uuidParam(String(formData.get("certificationId") ?? ""));
+  const fields = readForm(cardForm, formData);
+  return uuidParam(fields.certificationId);
 }
 
 /**
@@ -128,9 +148,10 @@ function cardIdFromForm(formData: FormData): string | undefined {
  * come from a hand-built post and keeps the generic refusal.
  */
 function sightedNumberRefused(formData: FormData): boolean {
+  const fields = readForm(cardForm, formData);
   return (
     formData.has("sightedIdentifier") &&
-    !cardNumberSchema.safeParse(formData.get("sightedIdentifier")).success
+    !cardNumberSchema.safeParse(fields.sightedIdentifier).success
   );
 }
 
@@ -139,12 +160,13 @@ async function liveStaffName(db: AppDb, shopId: string, personId: string) {
 }
 
 export async function addCardAction(shopSlug: string, personId: string, formData: FormData) {
+  const fields = readForm(cardForm, formData);
   const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
   personId = context.personId;
   const { base, db, staff } = context;
-  const card = String(formData.get("card") ?? "");
-  const identifier = cardNumberSchema.safeParse(formData.get("identifier"));
-  const agency = agencySchema.safeParse(formData.get("agency"));
+  const card = fields.card;
+  const identifier = cardNumberSchema.safeParse(fields.identifier);
+  const agency = agencySchema.safeParse(fields.agency);
   if (!identifier.success || !agency.success) redirect(backTo(base, "invalid", "cards"));
   const common = {
     shopId: staff.user.shopId,
@@ -230,10 +252,11 @@ export async function reviewAction(shopSlug: string, personId: string, formData:
  * silent fall-through to the shop's first enum member.
  */
 function sightingFromForm(formData: FormData): CardSighting | undefined {
+  const fields = readForm(cardForm, formData);
   if (!formData.has("sightedIdentifier")) return undefined;
   const parsed = sightingSchema.safeParse({
-    agency: formData.get("sightedAgency"),
-    identifier: formData.get("sightedIdentifier"),
+    agency: fields.sightedAgency,
+    identifier: fields.sightedIdentifier,
   });
   return parsed.success ? parsed.data : undefined;
 }
@@ -248,11 +271,12 @@ function sightingFromForm(formData: FormData): CardSighting | undefined {
  * already on the row, is precisely the diver's own claim being promoted.
  */
 function levelSightingFromForm(formData: FormData): LevelCardSighting | undefined {
+  const fields = readForm(cardForm, formData);
   if (!formData.has("sightedIdentifier")) return undefined;
   const parsed = levelSightingSchema.safeParse({
-    agency: formData.get("sightedAgency"),
-    identifier: formData.get("sightedIdentifier"),
-    level: formData.get("sightedLevel"),
+    agency: fields.sightedAgency,
+    identifier: fields.sightedIdentifier,
+    level: fields.sightedLevel,
   });
   return parsed.success ? parsed.data : undefined;
 }
@@ -271,6 +295,7 @@ export async function reviewSpecialtyAction(
   personId: string,
   formData: FormData,
 ) {
+  const fields = readForm(cardForm, formData);
   const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
   personId = context.personId;
   const { base, db, staff } = context;
@@ -286,7 +311,7 @@ export async function reviewSpecialtyAction(
   // still asks for the card in the staffer's hand — this tap authorizes a gas
   // fill, and nobody has seen anything yet.
   const outcome = certificationId
-    ? formData.get("cardType") === "nitrox"
+    ? fields.cardType === "nitrox"
       ? await reviewNitroxCertification(db, {
           shopId: staff.user.shopId,
           certificationId,
@@ -416,11 +441,12 @@ export async function deleteSpecialtyAction(
   personId: string,
   formData: FormData,
 ) {
+  const fields = readForm(cardForm, formData);
   const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
   personId = context.personId;
   const { base, db, staff } = context;
   const certificationId = cardIdFromForm(formData);
-  const cardType = formData.get("cardType") === "nitrox" ? "nitrox" : "specialty";
+  const cardType = fields.cardType === "nitrox" ? "nitrox" : "specialty";
   const deleted = certificationId
     ? cardType === "nitrox"
       ? await deleteNitroxCertification(db, {
@@ -459,11 +485,12 @@ type CardType = z.infer<typeof cardTypeSchema>;
  * being clobbered (readiness.ts).
  */
 export async function restoreCardAction(shopSlug: string, personId: string, formData: FormData) {
+  const fields = readForm(cardForm, formData);
   const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
   personId = context.personId;
   const { base, db, staff } = context;
   const certificationId = cardIdFromForm(formData);
-  const cardType = cardTypeSchema.safeParse(formData.get("cardType"));
+  const cardType = cardTypeSchema.safeParse(fields.cardType);
   if (!certificationId || !cardType.success) redirect(base);
   const input = { shopId: staff.user.shopId, certificationId };
   const restored =
@@ -531,15 +558,16 @@ export async function markCertifiedAction(
   _previous: MarkCertifiedResult,
   formData: FormData,
 ): Promise<MarkCertifiedResult> {
+  const fields = readForm(cardForm, formData);
   const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
   personId = context.personId;
   const { base, db, staff } = context;
   const certificationId = cardIdFromForm(formData);
-  const cardType = cardTypeSchema.safeParse(formData.get("cardType"));
+  const cardType = cardTypeSchema.safeParse(fields.cardType);
   if (!certificationId || !cardType.success) return { ok: false, reason: "invalid" };
   const input = { shopId: staff.user.shopId, certificationId };
 
-  if (formData.get("intent") === "undo") {
+  if (fields.intent === "undo") {
     const undone =
       cardType.data === "level"
         ? await unreviewCertification(db, input)
@@ -630,6 +658,7 @@ export async function agencyCheckAction(
   _previous: AgencyCheckResult,
   formData: FormData,
 ): Promise<AgencyCheckResult> {
+  const fields = readForm(cardForm, formData);
   const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
   personId = context.personId;
   const { base, db, staff } = context;
@@ -637,7 +666,7 @@ export async function agencyCheckAction(
   if (!certificationId) return { ok: false, reason: "invalid" };
   const shopId = staff.user.shopId;
 
-  if (formData.get("intent") === "undo") {
+  if (fields.intent === "undo") {
     // Only the review a check made, on this diver: never a sighting or a
     // one-tap review, which have their own Undo.
     if (!(await isAgencyCheckedCard(db, { shopId, personId, certificationId }))) {
@@ -648,7 +677,7 @@ export async function agencyCheckAction(
     return undone.ok ? { ok: true, verdict: "undone" } : { ok: false, reason: "not-undoable" };
   }
 
-  const pageText = formData.get("pageText");
+  const pageText = fields.pageText;
   if (typeof pageText !== "string") return { ok: false, reason: "invalid" };
   const card = await certificationForAgencyCheck(db, { shopId, personId, certificationId });
   if (!card) return { ok: false, reason: "invalid" };

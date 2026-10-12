@@ -87,6 +87,21 @@ export function text() {
 }
 
 /**
+ * Every value a repeated field sent, in form order, as `FormData.getAll` read
+ * it: `[]` when the form sent none.
+ */
+export function allValues() {
+  return z
+    .unknown()
+    .optional()
+    .transform((value): FormDataEntryValue[] =>
+      (value === undefined ? [] : Array.isArray(value) ? value : [value]).filter(
+        (entry): entry is FormDataEntryValue => typeof entry === "string" || entry instanceof File,
+      ),
+    );
+}
+
+/**
  * A text box read as `String(formData.get(name) ?? "").trim()` read it: its
  * first value trimmed, and `""` when the form sent nothing. For an action that
  * measures the text itself, so it can point at the box that is wrong.
