@@ -9,8 +9,8 @@ import { createTrip, daysFromNow, e2eNow, openTripFromBoard, seededTripId } from
  *
  * Three things worth knowing before reading the assertions:
  *
- * - The seed gives **every** staff member one 12-hour shift *today*
- *   (`src/db/seed.ts`, `SEEDED_SHIFT` below), and the frozen clock puts today at
+ * - The seed gives **every** staff member one shift *today*, around the reef
+ *   boat (`src/db/seed.ts`, `SEEDED_SHIFT` below), and the frozen clock puts today at
  *   Tuesday 21 July 2026, 09:30 in the shop's own zone — so the default week
  *   is Mon 20 – Sun 26 July and it is never empty.
  * - Paging is `?week=<ISO Monday>`, the schedule board's own grammar
@@ -32,10 +32,14 @@ const STAFFING = "/shop/blue-mantis/staffing";
  * The seeded shift every member of the cast works today (`seedStaffShifts`,
  * `src/db/seed.ts`), read by its hours: it carries no note, since a seed label
  * on every chip read as a fixture rather than a shop (UX audit 2026-10-07,
- * item 34). An hour before today's reef boat (2:30 PM at the frozen 9:30 AM
- * clock) and twelve hours long.
+ * item 34). An hour before today's reef boat sails (2:30 PM at the frozen
+ * 9:30 AM clock) until an hour after it is back (`demoTodayShift`,
+ * `src/db/seed-clock.ts`): it used to be a flat twelve hours, which put an
+ * evening boat's crew on until 5:30 AM (UX review 2026-10-10, item 4). The
+ * dawn boat's crew also hold a 4:30 – 9:30 AM shift, which is why the
+ * assertions below take `.first()`.
  */
-const SEEDED_SHIFT = "1:30 PM – 1:30 AM";
+const SEEDED_SHIFT = "1:30 PM – 7:00 PM";
 
 /**
  * The Add-a-shift door's form, scoped by the disclosure's own id — the
