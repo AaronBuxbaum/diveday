@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { type StoryNoteBooking, seatWentToSea, storyNotes } from "./story-notes";
+import {
+  type StoryNoteBooking,
+  seatMayBeFirstDive,
+  seatWentToSea,
+  storyNotes,
+} from "./story-notes";
 
 const t = staffTranslator("en-US");
 
@@ -10,6 +15,9 @@ function seat(
     tripStatus?: string;
     rented?: string[];
     rating?: number | null;
+    diveMode?: "boat" | "shore" | "pool";
+    dock?: "boarded" | "not_boarded" | null;
+    afterDive?: "boarded" | "missing_after_dive" | null;
   } = {},
 ): StoryNoteBooking {
   return {
@@ -18,8 +26,9 @@ function seat(
       status: overrides.status ?? "booked",
       paidRentalKinds: overrides.rented ?? [],
     },
-    trip: { status: overrides.tripStatus ?? "scheduled" },
+    trip: { status: overrides.tripStatus ?? "scheduled", diveMode: overrides.diveMode ?? "boat" },
     reviewRating: overrides.rating ?? null,
+    rollCall: { dock: overrides.dock ?? null, afterDive: overrides.afterDive ?? null },
   };
 }
 
@@ -75,5 +84,84 @@ describe("which seats count toward the first dive", () => {
     expect(seatWentToSea(seat({ status: "cancelled" }))).toBe(false);
     expect(seatWentToSea(seat({ status: "no_show" }))).toBe(false);
     expect(seatWentToSea(seat({ tripStatus: "cancelled" }))).toBe(false);
+  });
+});
+
+/**
+ * **The crew's word on the boat outranks the booking's status** (dive-domain
+ * review of the demo layer). The story read "sailed" off the booking and the
+ * trip alone, so a seat the crew marked `not_boarded` at the dock read
+ * "sailed", could be the diver's "first dive with us", and was credited with
+ * the gear and the stars. The rule is `seatSailed` (src/lib/closeout.ts), the
+ * one every count of who the boat carried already reads.
+ */
+describe("a seat the crew marked ashore at the dock", () => {
+  const ashore = seat({ dock: "not_boarded", rented: ["bcd"], rating: 5 });
+
+  it("says it stayed ashore, and is never credited with gear, stars or a first dive", () => {
+    expect(storyNotes(ashore, { ahead: false, firstSailed: true }, t, "en-US")).toEqual([
+      "stayed ashore",
+    ]);
+    expect(seatWentToSea(ashore)).toBe(false);
+    expect(seatMayBeFirstDive(ashore)).toBe(false);
+  });
+
+  it("outranks a booking still marked checked in", () => {
+    expect(
+      storyNotes(seat({ status: "checked_in", dock: "not_boarded" }), behind, t, "en-US"),
+    ).toEqual(["stayed ashore"]);
+  });
+
+  it("says it in Spanish too", () => {
+    expect(storyNotes(ashore, behind, staffTranslator("es-ES"), "es-ES")).toEqual([
+      "se quedó en tierra",
+    ]);
+  });
+});
+
+describe("a seat the crew marked ashore at the dock and counted aboard later", () => {
+  const pickedUp = seat({ dock: "not_boarded", afterDive: "boarded", rented: ["bcd"] });
+
+  it("says it joined later, never 'sailed', and is never the first dive", () => {
+    expect(storyNotes(pickedUp, { ahead: false, firstSailed: true }, t, "en-US")).toEqual([
+      "joined later",
+    ]);
+    expect(seatWentToSea(pickedUp)).toBe(false);
+    expect(seatMayBeFirstDive(pickedUp)).toBe(false);
+  });
+});
+
+describe("what the crew's silence and their after-dive word say", () => {
+  it("counts a seat nobody spoke for as sailed, per the glossary", () => {
+    expect(seatWentToSea(seat())).toBe(true);
+    expect(seatMayBeFirstDive(seat())).toBe(true);
+  });
+
+  it("counts a seat boarded at the dock as sailed, over the desk's no-show", () => {
+    const boarded = seat({ status: "no_show", dock: "boarded" });
+    expect(storyNotes(boarded, behind, t, "en-US")).toEqual(["sailed"]);
+    expect(seatWentToSea(boarded)).toBe(true);
+  });
+
+  it("counts a diver recorded missing after a dive as sailed, but never as a first dive", () => {
+    const missing = seat({ afterDive: "missing_after_dive" });
+    expect(seatWentToSea(missing)).toBe(true);
+    expect(seatMayBeFirstDive(missing)).toBe(false);
+  });
+});
+
+describe("a trip that is not a boat", () => {
+  it("says the diver dived, not sailed, on a pool session or a shore dive", () => {
+    expect(storyNotes(seat({ diveMode: "pool" }), behind, t, "en-US")).toEqual(["dived"]);
+    expect(storyNotes(seat({ diveMode: "shore" }), behind, t, "en-US")).toEqual(["dived"]);
+    expect(
+      storyNotes(seat({ diveMode: "pool" }), behind, staffTranslator("es-ES"), "es-ES"),
+    ).toEqual(["buceó"]);
+  });
+
+  it("says a diver recorded out of a pool session did not dive, not that they stayed ashore", () => {
+    expect(storyNotes(seat({ diveMode: "pool", dock: "not_boarded" }), behind, t, "en-US")).toEqual(
+      ["did not dive"],
+    );
   });
 });

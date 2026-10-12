@@ -11,7 +11,7 @@ import { bookingIsAhead } from "@/lib/diver-status";
 import { formatMoneyCents, formatShortDate, formatTime } from "@/lib/format";
 import { SHOP_HISTORY_PREVIEW_COUNT } from "@/lib/prior-visits";
 import { canRaiseInvoiceFor } from "../_lib/invoice-door";
-import { seatWentToSea, storyNotes } from "../_lib/story-notes";
+import { seatMayBeFirstDive, storyNotes } from "../_lib/story-notes";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import { bookingMoney, bookingMoneyStatusKey, type DiverProfile, type Shop } from "./shared";
 
@@ -170,12 +170,13 @@ export function DiverStory({
 } & DiverStoryActs) {
   const entries: StoryEntry[] = [];
   // The diver's first boat with the shop, unless the shop's previous system
-  // remembers visits that may have come before it.
+  // remembers visits that may have come before it. Chosen only from seats the
+  // crew's roll call lets sail (`seatSailed`) with no `not_boarded` on them.
   const firstSailedId =
     diver.priorVisits.length > 0
       ? undefined
       : diver.bookings
-          .filter((entry) => !bookingIsAhead(entry, now) && seatWentToSea(entry))
+          .filter((entry) => !bookingIsAhead(entry, now) && seatMayBeFirstDive(entry))
           .reduce<(typeof diver.bookings)[number] | undefined>(
             (first, entry) => (!first || entry.trip.startsAt < first.trip.startsAt ? entry : first),
             undefined,

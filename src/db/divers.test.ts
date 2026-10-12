@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT } from "@/lib/anonymization";
@@ -354,6 +354,62 @@ describe("person-first diver records", () => {
     expect(rows.find((row) => row.booking.id === reviewed.id)?.reviewRating).toBe(4);
     // One review per booking: the join never repeats a seat.
     expect(new Set(rows.map((row) => row.booking.id)).size).toBe(rows.length);
+  });
+
+  /**
+   * The crew's standing word rides on each seat, so the story can never read
+   * "sailed" over a diver the crew left on the dock (dive-domain review of the
+   * demo layer). The rule over it is `seatSailed`; this only proves the db
+   * hands it the dock and the after-dive results, superseded the way every
+   * reader of the trail supersedes them.
+   */
+  it("carries the crew's standing dock and after-dive result on each seat", async () => {
+    const { db, shop } = ctx;
+    const [diver] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, shop.id), ne(bookings.status, "cancelled")))
+      .limit(1);
+    if (!diver) throw new Error("seed has no booking");
+    const before = await getDiverProfile(db, shop.id, diver.personId);
+    const [ashore, pickedUp, silent] = (before?.bookings ?? []).filter(
+      (row) => row.booking.status !== "cancelled",
+    );
+    if (!ashore || !pickedUp) throw new Error("seed diver has fewer than two live seats");
+    const [crew] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.shopId, shop.id))
+      .limit(1);
+    if (!crew) throw new Error("seed shop has nobody");
+    const event = (
+      bookingId: string,
+      tripId: string,
+      status: "boarded" | "not_boarded" | "cleared",
+      checkpoint: string,
+      at: number,
+    ) => ({
+      shopId: shop.id,
+      tripId,
+      bookingId,
+      recordedByPersonId: crew.id,
+      status,
+      checkpoint,
+      occurredAt: new Date(Date.UTC(2026, 0, 1, 8, at)),
+    });
+    await db.insert(rollCallEvents).values([
+      // Boarded, then corrected to ashore: the newest word stands.
+      event(ashore.booking.id, ashore.trip.id, "boarded", "departure", 0),
+      event(ashore.booking.id, ashore.trip.id, "not_boarded", "departure", 1),
+      event(pickedUp.booking.id, pickedUp.trip.id, "not_boarded", "departure", 0),
+      event(pickedUp.booking.id, pickedUp.trip.id, "boarded", "after_dive_1", 2),
+    ]);
+
+    const rows = (await getDiverProfile(db, shop.id, diver.personId))?.bookings ?? [];
+    const byId = (id: string) => rows.find((row) => row.booking.id === id)?.rollCall;
+    expect(byId(ashore.booking.id)).toEqual({ dock: "not_boarded", afterDive: null });
+    expect(byId(pickedUp.booking.id)).toEqual({ dock: "not_boarded", afterDive: "boarded" });
+    if (silent) expect(byId(silent.booking.id)).toEqual({ dock: null, afterDive: null });
   });
 
   it("can add a returning diver before a booking and rejects staff-only records", async () => {

@@ -21,6 +21,7 @@ import { shopWaiverStatus } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import { diveDay } from "./dive-days";
+import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import { listOrdersForPerson } from "./orders";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { listPersonBookingPayments } from "./payments";
@@ -790,6 +791,17 @@ export async function getDiverProfile(
     db.select({ timezone: shops.timezone }).from(shops).where(eq(shops.id, shopId)).limit(1),
   ]);
   const shopTimezone = shopRows[0]?.timezone ?? "UTC";
+  // **The crew's standing word on each of this diver's seats** (dive-domain
+  // review of the demo layer). The story decided "sailed" off the booking and
+  // the trip alone, so a seat the crew marked `not_boarded` at the dock read
+  // as a dive, and could be the diver's first. Read through the manifest's own
+  // readers, which already apply the supersession every reader of the trail
+  // applies; the rule over them is `seatSailed` (src/lib/closeout.ts).
+  const diverTripIds = [...new Set(bookingRows.map((row) => row.trip.id))];
+  const [dockResults, afterDiveResults] = await Promise.all([
+    listDepartureRollCallByTrip(db, shopId, diverTripIds),
+    listAfterDiveRollCallByTrip(db, shopId, diverTripIds),
+  ]);
 
   return {
     person: personRow.person,
@@ -806,7 +818,13 @@ export async function getDiverProfile(
       reviewedByName,
     })),
     rentalFit: profile[0] ?? null,
-    bookings: bookingRows,
+    bookings: bookingRows.map((row) => ({
+      ...row,
+      rollCall: {
+        dock: dockResults.get(row.trip.id)?.get(row.booking.id) ?? null,
+        afterDive: afterDiveResults.get(row.trip.id)?.get(row.booking.id) ?? null,
+      },
+    })),
     orders: personOrders,
     bookingPayments: personBookingPayments,
     priorVisits: visitRows,

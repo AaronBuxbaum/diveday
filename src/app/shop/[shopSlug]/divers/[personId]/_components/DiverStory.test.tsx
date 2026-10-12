@@ -17,16 +17,23 @@ function booking(
   id: string,
   title: string,
   startsAt: Date,
-  overrides: { bookingStatus?: string; tripStatus?: string } = {},
+  overrides: {
+    bookingStatus?: string;
+    tripStatus?: string;
+    dock?: "boarded" | "not_boarded" | null;
+    diveMode?: "boat" | "shore" | "pool";
+  } = {},
 ) {
   return {
     booking: { id, status: overrides.bookingStatus ?? "confirmed" },
+    rollCall: { dock: overrides.dock ?? null, afterDive: null },
     trip: {
       id: `trip-${id}`,
       title,
       startsAt,
       endsAt: startsAt,
       status: overrides.tripStatus ?? "scheduled",
+      diveMode: overrides.diveMode ?? "boat",
     },
     course: null,
   };
@@ -145,6 +152,26 @@ describe("what each row says about its trip", () => {
     expect(sailed?.textContent).toContain("first dive with us");
     expect(called?.textContent).toContain("canceled");
     expect(called?.textContent).not.toContain("sailed");
+  });
+
+  it("never makes a seat the crew left on the dock the first dive, nor says it sailed", () => {
+    const ashore = booking("b-early", "Missed the boat", EARLIER_AT, { dock: "not_boarded" });
+    renderStory(diver({ bookings: [BEHIND, ashore] }));
+    const [sailed, left] = screen.getAllByRole("listitem");
+    expect(sailed?.textContent).toContain("first dive with us");
+    expect(left?.textContent).toContain("stayed ashore");
+    expect(left?.textContent).not.toContain("sailed");
+    expect(left?.textContent).not.toContain("first dive with us");
+  });
+
+  it("says a pool session was dived, not sailed", () => {
+    const boat = booking("b-early", "First reef", EARLIER_AT);
+    const pool = booking("b-pool", "Pool session", BEHIND_AT, { diveMode: "pool" });
+    renderStory(diver({ bookings: [boat, pool] }));
+    const [session, reef] = screen.getAllByRole("listitem");
+    expect(session?.textContent).toContain("dived");
+    expect(session?.textContent).not.toContain("sailed");
+    expect(reef?.textContent).toContain("first dive with us");
   });
 
   it("claims no first dive when the old system remembers visits before it", () => {
