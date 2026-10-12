@@ -25,6 +25,9 @@
     "waitingDoor": "Abrir la lista de espera",
     "rebook": "No hay nadie esperando. Ofrécele otro día a {name}.",
     "rebookDoor": "Añadirlo a {title}, {when}",
+    "offerSend": "Enviarle esta fecha por correo",
+    "offerSending": "Enviando…",
+    "offerAriaLabel": "Enviar a {name} una oferta para {title}, {when}",
     "nothing": "No hay nadie esperando y ninguna salida parecida tiene sitio para él.",
     "money": "Marcar que alguien no vino no cobra ni reembolsa nada.",
     "moneyDoor": "Abrir sus pedidos"
@@ -45,6 +48,10 @@
   "undoAriaLabel": "Deshacer el check-in de {name}",
   "undoing": "Deshaciendo…",
   "notice": {
+    "offerUnavailable": "Esa salida no puede recibir una oferta ahora: ya no existe o ya tiene plaza en ella.",
+    "offerOptedOut": "No se envió nada: desactivó los correos del centro. Llámala con la fecha.",
+    "offerNotSent": "No se envió nada: no hay correo registrado o el correo no está configurado. Llámala con la fecha.",
+    "offerSent": "Oferta enviada por correo. La persona reserva su plaza desde el enlace.",
     "notReady": "Algo ha cambiado y todavía no puede embarcar. Su fila dice qué lo impide.",
     "notBookable": "Esa reserva ya no está disponible para el check-in.",
     "alreadyCheckedIn": "Ese buceador ya había hecho el check-in.",

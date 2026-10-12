@@ -315,3 +315,65 @@ export async function deliverTripInvitation(
   });
   return delivery.status === "sent" ? "sent" : "fallback";
 }
+
+/**
+ * **"Send them this date"** on the counter's no-show panel (UX review
+ * 2026-10-11, item 14). The desk already knows the fix for the diver who
+ * missed the boat — another departure with room — and this sends it to them
+ * in one tap: a direct invitation to that departure, delivered the way every
+ * direct invitation is (`deliverTripInvitation`), so the diver books the seat
+ * themselves from the link and a diver who turned off shop email is not
+ * emailed. Nothing is seated and nothing is charged.
+ *
+ * An invitation already standing for this diver and departure is sent again
+ * rather than refused, so a second tap after "no email" was fixed works.
+ * `unavailable` covers every reason there is nobody to invite: the departure
+ * is gone, the person is not this shop's diver, or they already hold a seat
+ * on it.
+ */
+export async function offerDepartureToDiver(
+  db: AppDb,
+  input: {
+    shopId: string;
+    shopSlug: string;
+    tripId: string;
+    personId: string;
+    createdByPersonId: string;
+  },
+): Promise<TripInvitationDelivery | "unavailable"> {
+  await createDirectTripInvitation(db, input);
+  const [standing] = await db
+    .select({ id: tripInvitations.id })
+    .from(tripInvitations)
+    .innerJoin(trips, eq(trips.id, tripInvitations.tripId))
+    .where(
+      and(
+        eq(tripInvitations.shopId, input.shopId),
+        eq(tripInvitations.tripId, input.tripId),
+        eq(tripInvitations.personId, input.personId),
+        eq(tripInvitations.source, "direct"),
+        liveTrip(),
+      ),
+    )
+    .limit(1);
+  if (!standing) return "unavailable";
+  const [seat] = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.tripId, input.tripId),
+        eq(bookings.personId, input.personId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .limit(1);
+  if (seat) return "unavailable";
+  return deliverTripInvitation(db, {
+    shopId: input.shopId,
+    shopSlug: input.shopSlug,
+    tripId: input.tripId,
+    invitationId: standing.id,
+  });
+}

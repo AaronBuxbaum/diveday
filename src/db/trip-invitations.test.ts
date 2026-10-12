@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
+import { createBooking } from "./bookings";
 import { recordCourseInquiry } from "./course-inquiries";
 import { getCourseBySlug } from "./courses";
 import { listBookableDivers } from "./divers";
@@ -10,6 +12,7 @@ import {
   createDirectTripInvitation,
   createTripRequestInvitations,
   listTripInvitations,
+  offerDepartureToDiver,
   recordTripInvitation,
 } from "./trip-invitations";
 import { getTripRoster, getTripWithBooked, upcomingTripsWithCounts } from "./trips";
@@ -192,5 +195,79 @@ describe("trip invitations", () => {
     ).resolves.toBe(0);
     expect(await listTripInvitations(db, otherShop.id, otherTrip.id)).toEqual([]);
     expect(await listTripInvitations(db, shop.id, firstTrip.id)).toEqual([]);
+  });
+
+  /** UX review 2026-10-11, item 14: the no-show's "another day", sent in one tap. */
+  it("offers a departure to a diver, again on a second tap, never seating them", async () => {
+    const { db, shop, author, firstTrip } = await invitationContext();
+    const [candidate] = await listBookableDivers(db, shop.id, firstTrip.id, {
+      query: "mail.example",
+    });
+    if (!candidate) throw new Error("expected a bookable seeded diver");
+    const input = {
+      shopId: shop.id,
+      shopSlug: shop.slug,
+      tripId: firstTrip.id,
+      personId: candidate.person.id,
+      createdByPersonId: author.id,
+    };
+    // No mail provider in tests: the honest answer is the fallback, never "sent".
+    await expect(offerDepartureToDiver(db, input)).resolves.toBe("fallback");
+    await expect(offerDepartureToDiver(db, input)).resolves.toBe("fallback");
+    const listed = await listTripInvitations(db, shop.id, firstTrip.id);
+    expect(listed).toHaveLength(1);
+    expect(listed[0]?.invitation.invitedAt).toBeInstanceOf(Date);
+    expect(await getTripRoster(db, shop.id, firstTrip.id)).toHaveLength(0);
+  });
+
+  it("does not email a diver who turned off shop email", async () => {
+    const { db, shop, author, firstTrip } = await invitationContext();
+    const [candidate] = await listBookableDivers(db, shop.id, firstTrip.id, {
+      query: "mail.example",
+    });
+    if (!candidate) throw new Error("expected a bookable seeded diver");
+    await db
+      .update(people)
+      .set({ courtesyEmailOptOutAt: nowDate() })
+      .where(eq(people.id, candidate.person.id));
+    await expect(
+      offerDepartureToDiver(db, {
+        shopId: shop.id,
+        shopSlug: shop.slug,
+        tripId: firstTrip.id,
+        personId: candidate.person.id,
+        createdByPersonId: author.id,
+      }),
+    ).resolves.toBe("opted_out");
+  });
+
+  it("offers nothing to a diver already on that departure, or to another shop's", async () => {
+    const { db, shop, author, firstTrip } = await invitationContext();
+    const booked = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: firstTrip.id,
+      fullName: "Already Aboard",
+      email: "already-aboard@example.com",
+    });
+    if (!booked.ok) throw new Error("booking failed");
+    await expect(
+      offerDepartureToDiver(db, {
+        shopId: shop.id,
+        shopSlug: shop.slug,
+        tripId: firstTrip.id,
+        personId: booked.personId,
+        createdByPersonId: author.id,
+      }),
+    ).resolves.toBe("unavailable");
+    await expect(
+      offerDepartureToDiver(db, {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        shopSlug: shop.slug,
+        tripId: firstTrip.id,
+        personId: booked.personId,
+        createdByPersonId: author.id,
+      }),
+    ).resolves.toBe("unavailable");
   });
 });

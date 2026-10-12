@@ -18,7 +18,13 @@ import { hasSailed } from "@/lib/trips";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import type { RosterArrival } from "../_components/RosterSection";
 import { ArrivalTap } from "./ArrivalTap";
-import { checkInAction, markNoShowAction, undoCheckInAction, undoNoShowAction } from "./actions";
+import {
+  checkInAction,
+  markNoShowAction,
+  offerAnotherDayAction,
+  undoCheckInAction,
+  undoNoShowAction,
+} from "./actions";
 import { CounterInstrument } from "./CounterInstrument";
 import { NoShowSalvage, NoShowScript } from "./NoShowScript";
 import { RowActionForm } from "./RowActionForm";
@@ -92,6 +98,7 @@ export async function buildArrivalDesk({
   const undo = undoCheckInAction.bind(null, shopSlug, tripId);
   const markNoShow = markNoShowAction.bind(null, shopSlug, tripId);
   const undoNoShow = undoNoShowAction.bind(null, shopSlug, tripId);
+  const offerAnotherDay = offerAnotherDayAction.bind(null, shopSlug, tripId);
 
   // **"Not here" opens when the boat leaves without them**, and says something
   // different once it is gone. `markBookingNoShow` runs the same gate again
@@ -138,6 +145,7 @@ export async function buildArrivalDesk({
         below.set(
           row.bookingId,
           <NoShowSalvage
+            offerAction={offerAnotherDay}
             copy={noShowSalvageCopy({
               t,
               offer: salvage,
