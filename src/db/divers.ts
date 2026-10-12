@@ -16,6 +16,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
@@ -702,6 +703,7 @@ export async function getDiverProfile(
     waiverRequest,
     waiverChannels,
     shopRows,
+    staffRoleRows,
   ] = await Promise.all([
     db
       .select({ card: certifications, reviewedByName: levelReviewer.fullName })
@@ -775,6 +777,13 @@ export async function getDiverProfile(
     // The shop's zone, for the guardian rule: a minor's solo signature reads as
     // its own standing here rather than as "Signed" (src/lib/guardian.ts).
     db.select({ timezone: shops.timezone }).from(shops).where(eq(shops.id, shopId)).limit(1),
+    // Whether this diver also works here: deleting them then takes them off
+    // the team and away from sign-in, and the Delete control says so.
+    db
+      .select({ role: personRoles.role })
+      .from(personRoles)
+      .where(and(eq(personRoles.personId, personId), inArray(personRoles.role, [...STAFF_ROLES])))
+      .limit(1),
   ]);
   const shopTimezone = shopRows[0]?.timezone ?? "UTC";
 
@@ -783,6 +792,8 @@ export async function getDiverProfile(
     noCertificationClearedByName: personRow.clearedByName,
     /** Who said, at a split, that this diver is 18 or older (H-100). */
     adultAttestedByName: personRow.adultAttestedByName,
+    /** This diver also holds a staff role at this shop. */
+    holdsStaffRole: staffRoleRows.length > 0,
     certifications: levelCards.map(({ card, reviewedByName }) => ({ ...card, reviewedByName })),
     specialtyCertifications: specialtyCards.map(({ card, reviewedByName }) => ({
       ...card,

@@ -817,6 +817,35 @@ export type TripCrewOutcome = { ok: true } | { ok: false; refusal: TripCrewRefus
  * ships a role picker: the fix for a mis-tap is to set the role again, in the
  * UI, rather than a value nobody can reach without SQL (review 20260803, D4/D5).
  */
+/**
+ * How many departures still ahead this person is crew on, in this shop. Removing
+ * a person takes them off every crew picker and away from sign-in
+ * (`livePerson()`), but an assignment already on a boat stays where it is, on
+ * the manifest and in the crew ratio; the diver record's Remove refuses while
+ * this is above zero, so nobody is left crewing a boat they can no longer see.
+ */
+export async function countUpcomingCrewDepartures(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+  now: Date = nowDate(),
+): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(distinct ${trips.id})::int` })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(tripAssignments.personId, personId),
+        liveTrip(),
+        ne(trips.status, "cancelled"),
+        sql`${trips.startsAt} > ${now}`,
+      ),
+    );
+  return row?.count ?? 0;
+}
+
 export async function changeTripCrewOutcome(
   db: AppDb,
   shopId: string,
@@ -835,7 +864,9 @@ export async function changeTripCrewOutcome(
           eq(trips.shopId, shopId),
           eq(people.shopId, shopId),
           eq(people.id, change.personId),
-          livePerson(),
+          // A removed person cannot be put on a boat, but must still be
+          // takeable off one they were already crewing.
+          change.operation === "assign" ? livePerson() : undefined,
           inArray(personRoles.role, [...STAFF_ROLES]),
         ),
       )
