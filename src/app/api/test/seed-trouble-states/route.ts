@@ -147,30 +147,9 @@ export async function POST(request: Request) {
     })
     .onConflictDoNothing();
 
-  // 2. Somebody is owed money: a departure the shop cancelled that still
-  //    carries a paid seat. `listOwedShopCancellationRefunds` joins a paid
-  //    booking_payment to a `cancelled` trip whose booking is *not* cancelled
-  //    (the forfeit carve-out), so cancelling the trip is the whole edit.
-  //    **Opt-in** (issue #2338): the departure it cancels is one of the demo's
-  //    upcoming boats, which Today, the board and the booking pages all read,
-  //    so running it on every call made every caller's picture depend on
-  //    whether this state had been seeded first.
-  const owedRefund = new URL(request.url).searchParams.get("owedRefund") === "1";
-  const [paidSeat] = owedRefund
-    ? await db
-        .select({ tripId: bookings.tripId })
-        .from(bookingPayments)
-        .innerJoin(bookings, eq(bookings.id, bookingPayments.bookingId))
-        .where(
-          and(
-            eq(bookingPayments.shopId, shop.id),
-            inArray(bookingPayments.status, ["paid", "deposit_paid"]),
-          ),
-        )
-        .limit(1)
-    : [];
-  if (paidSeat) {
-    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, paidSeat.tripId));
+  // 2. Somebody is owed money, on request only (`owedRefund`, below).
+  if (new URL(request.url).searchParams.get("owedRefund") === "1") {
+    await cancelADepartureSomebodyPaidFor(db, shop.id);
   }
 
   // 3. A photo delete the provider refused, and
@@ -1753,5 +1732,36 @@ async function hideEnoughReviewsToWithholdTheRating(
       recordedByPersonId,
       reason: "spam",
     });
+  }
+}
+
+/**
+ * **Somebody is owed money**: a departure the shop cancelled that still
+ * carries a paid seat. `listOwedShopCancellationRefunds` joins a paid
+ * booking_payment to a `cancelled` trip whose booking is *not* cancelled (the
+ * forfeit carve-out), so cancelling the trip is the whole edit.
+ *
+ * **Opt-in** (`?owedRefund=1`, issue #2338): the departure it cancels is one of
+ * the demo's upcoming boats, which Today, the board and the booking pages all
+ * read, so running it on every call made every caller's picture depend on
+ * whether this state had been seeded first.
+ */
+async function cancelADepartureSomebodyPaidFor(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+) {
+  const [paidSeat] = await db
+    .select({ tripId: bookings.tripId })
+    .from(bookingPayments)
+    .innerJoin(bookings, eq(bookings.id, bookingPayments.bookingId))
+    .where(
+      and(
+        eq(bookingPayments.shopId, shopId),
+        inArray(bookingPayments.status, ["paid", "deposit_paid"]),
+      ),
+    )
+    .limit(1);
+  if (paidSeat) {
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, paidSeat.tripId));
   }
 }
