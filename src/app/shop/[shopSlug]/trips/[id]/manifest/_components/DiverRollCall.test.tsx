@@ -1064,7 +1064,7 @@ describe("the rider's riding-only capsule", () => {
         }),
       ],
     });
-    expect(capsuleOf(container)).toHaveTextContent("Someone unaccounted for");
+    expect(capsuleOf(container)).toHaveTextContent("Buddy not back aboard");
     expect(capsuleOf(container)).not.toHaveTextContent(NOT_CLEARED);
   });
 
