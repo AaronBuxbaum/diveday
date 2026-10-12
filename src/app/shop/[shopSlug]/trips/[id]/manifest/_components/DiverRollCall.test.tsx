@@ -613,6 +613,66 @@ describe("the earlier-refusal capsule", () => {
     expect(screen.getAllByText("Minor · age 13").length).toBeGreaterThan(0);
   });
 
+  /**
+   * **A minor with a physician's earlier "no", recorded not back aboard**
+   * (issue #2307). The alarm takes the row on screen and nothing sits beside
+   * it: no refusal capsule and no minor capsule. The facts still reach the
+   * reader: the age in the person's own panel, and on paper the refusal
+   * sentence with the minor flag beside it.
+   */
+  it("gives a not-back minor's refusal no capsule on screen, the age in the panel, and the sentence on paper", () => {
+    const { container } = renderList({
+      divers: [
+        diver({
+          medicalWaiver: refusedBefore,
+          age: 13,
+          minor: true,
+          boardedEarlier: true,
+          rollCall: notBackAt(),
+        }),
+      ],
+    });
+    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
+    if (!printed) throw new Error("no printed block");
+    const onScreen = (text: string | RegExp) =>
+      screen.queryAllByText(text).filter((element) => !printed.contains(element));
+    expect(capsuleOf(container)).toBeNull();
+    expect(onScreen(CAPSULE)).toHaveLength(0);
+    expect(onScreen(/Minor/)).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    expect(within(screen.getByRole("dialog")).getByText("Minor · age 13")).toBeDefined();
+
+    expect(printed).toHaveTextContent(
+      /A physician did not clear this diver on .* \(earlier waiver\)/,
+    );
+    expect(printed).toHaveTextContent(CAPSULE);
+    expect(printed).toHaveTextContent("Minor · age 13");
+  });
+
+  /**
+   * **What paper restates is decided by the capsule the row actually drew**
+   * (issue #2307). A buddy alert with no team to name draws no buddy capsule,
+   * so the refusal takes the row; paper must not then print the refusal a
+   * second time beside the one already on the summary line.
+   */
+  it("prints the refusal once when a teamless buddy alert gives it the row", () => {
+    const { container } = renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          medicalWaiver: refusedBefore,
+          buddyAlert: "separated_dock",
+          buddyTeam: null,
+          rollCall: boardedAt(),
+        }),
+      ],
+    });
+    expect(capsuleOf(container)).toHaveTextContent(CAPSULE);
+    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
+    expect(within(printed as HTMLElement).queryAllByText(CAPSULE)).toHaveLength(0);
+  });
+
   it("dates the refusal by the physician's evaluation, with the year", () => {
     const evaluated = {
       ...refusedBefore,
@@ -666,6 +726,60 @@ describe("an unanswered referral's warning", () => {
     expect(
       screen.getAllByText(/re-signed with no physician clearance on file/).length,
     ).toBeGreaterThanOrEqual(1);
+  });
+
+  it("links the earlier refusal to its record from the on-screen facts, and paper stays unlinked", () => {
+    const refusedBefore = {
+      at: new Date("2026-09-01T12:00:00.000Z"),
+      source: "digital",
+      overriddenReferralAt: null,
+      overriddenReferral: null,
+      overriddenRefusal: {
+        recordId: "w-refused",
+        personId: "p-refused",
+        at: new Date("2026-08-20T12:00:00.000Z"),
+      },
+      clearance: null,
+      guardian: null,
+    } as unknown as TripManifest["divers"][number]["medicalWaiver"];
+    const { container } = renderList({ divers: [diver({ medicalWaiver: refusedBefore })] });
+    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
+    expect(printed).toHaveTextContent(/A physician did not clear this diver/);
+    expect(within(printed as HTMLElement).queryAllByRole("link")).toHaveLength(0);
+    expect(screen.queryByRole("link", { name: "View the refusal" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    const links = screen.getAllByRole("link", { name: "View the refusal" });
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/p-refused/waivers/w-refused",
+    );
+    expect(screen.queryByRole("link", { name: "View the referral" })).toBeNull();
+  });
+
+  it("links neither warning on a held seat, whose medical history is the matched person's", () => {
+    renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
+          readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
+          medicalWaiver: {
+            ...referredBefore,
+            overriddenRefusal: {
+              recordId: "w-refused",
+              personId: "p-referred",
+              at: new Date("2026-08-10T12:00:00.000Z"),
+            },
+          } as TripManifest["divers"][number]["medicalWaiver"],
+        }),
+      ],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Maria" }));
+    expect(screen.queryByRole("link", { name: "View the referral" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "View the refusal" })).toBeNull();
+    expect(screen.getByRole("dialog")).not.toHaveTextContent(/physician/);
   });
 
   it("draws no link for a release with no referral behind it", () => {

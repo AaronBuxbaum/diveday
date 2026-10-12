@@ -690,6 +690,7 @@ describe("overriddenRefusal", () => {
   it("names the refused record a clean new release stands over, retired or not", () => {
     const expected = {
       recordId: "refusal",
+      personId: "person-1",
       at: refusal().medicalClearanceDeclinedAt,
       evaluatedOn: null,
     };
@@ -803,6 +804,7 @@ describe("overriddenRefusal", () => {
     });
     expect(overriddenRefusal(earlyYes, [lateNo, earlyYes])).toEqual({
       recordId: "refusal",
+      personId: "person-1",
       at: lateNo.medicalClearanceDeclinedAt,
       evaluatedOn: "2026-07-10",
     });
@@ -976,6 +978,7 @@ describe("medicalWarningDays", () => {
   it("dates a refusal by the physician's evaluation, not by when it was typed in", () => {
     const refusal = {
       recordId: "r",
+      personId: "p",
       at: new Date("2026-05-20T13:00:00.000Z"),
       evaluatedOn: "2026-05-02" as const,
     };
@@ -986,7 +989,12 @@ describe("medicalWarningDays", () => {
 
   it("falls back to the shop's day the refusal was recorded", () => {
     // 01:00 UTC on May 3 is still May 2 in Miami.
-    const refusal = { recordId: "r", at: new Date("2026-05-03T01:00:00.000Z"), evaluatedOn: null };
+    const refusal = {
+      recordId: "r",
+      personId: "p",
+      at: new Date("2026-05-03T01:00:00.000Z"),
+      evaluatedOn: null,
+    };
     expect(medicalWarningDays(mark({ overriddenRefusal: refusal }), "America/New_York")).toEqual({
       refusedOn: "2026-05-02",
     });

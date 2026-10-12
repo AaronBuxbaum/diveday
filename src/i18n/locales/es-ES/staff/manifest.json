@@ -122,6 +122,7 @@
   "medicalReferralUnresolved": "Derivación médica del {date}; firmada de nuevo sin autorización de un médico registrada",
   "medicalReferralUnresolvedChip": "Derivación aún abierta",
   "medicalReferralLink": "Ver la derivación",
+  "medicalRefusalLink": "Ver el rechazo",
   "resolveBlockersLink": "Resolver bloqueos en Buceadores →",
   "addNoteSummary": "Añadir una nota",
   "rollCallRecordedByPlain": "{label} {date} por {name}",
