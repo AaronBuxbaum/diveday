@@ -969,7 +969,8 @@ export async function getTripManifests(
     // The seats this boat sells, carried so the manifest can say when the head
     // count has passed them (`summary.overCapacity`). Nothing on the boarding
     // path refuses, so this is the only place the boat being over gets said.
-    capacity: trip.capacity,
+    // Capped at the boat's certificate (#2321): over the certificate is over.
+    capacity: trip.sellableCapacity,
   };
   const diverInputs = roster.map(({ booking, person }) => {
     return {

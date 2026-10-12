@@ -32,6 +32,7 @@ import {
 import { markBookingNoShow } from "./no-show";
 import {
   activityEvents,
+  boats,
   bookings,
   people,
   personRoles,
@@ -531,6 +532,23 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       .update(trips)
       .set({ capacity: aboard - 1 })
       .where(eq(trips.id, reef.id));
+    expect((await getTripManifest(db, shop.id, reef.id))?.summary.overCapacity).toBe(1);
+
+    // Measured against what the boat may carry, not only what the departure
+    // states (#2321): back at the counted number, on a hull certified for one
+    // fewer, the line still says one over.
+    await db.update(trips).set({ capacity: aboard }).where(eq(trips.id, reef.id));
+    const [hull] = await db
+      .insert(boats)
+      .values({
+        shopId: shop.id,
+        name: "Certified hull",
+        capacity: aboard,
+        certifiedPassengers: aboard - 1,
+      })
+      .returning();
+    if (!hull) throw new Error("boat not inserted");
+    await db.update(trips).set({ boatId: hull.id }).where(eq(trips.id, reef.id));
     expect((await getTripManifest(db, shop.id, reef.id))?.summary.overCapacity).toBe(1);
   });
 

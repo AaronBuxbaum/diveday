@@ -7,7 +7,7 @@ import { perDiverBookingPriceCents } from "@/lib/courses";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { allowSvgRasterization } from "@/lib/og-rasterizer";
-import { spotsRemaining } from "@/lib/trips";
+import { seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 
 // i18n-exempt-file: link-preview card rendered for crawlers with no visitor
@@ -73,7 +73,8 @@ export default async function TripOpenGraphImage({
     perDiverPriceCents !== null ? formatMoneyCents(perDiverPriceCents, currency, locale) : null;
   // Honest availability only — a held or sold-out trip shows nothing here
   // rather than a stale seat count (mirrors `tripJsonLd`'s SoldOut handling).
-  const remaining = trip.conditionsHold ? 0 : spotsRemaining(trip);
+  // Seats on sale under the boat's certificate (#2321).
+  const remaining = trip.conditionsHold ? 0 : spotsRemaining(seatsOnSale(trip));
 
   // **The shop's card, not ours** (issue #810). The wordmark used to be the
   // largest, topmost element and the footer spliced the shop's own scarcity

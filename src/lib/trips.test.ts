@@ -7,6 +7,7 @@ import {
   hasSailed,
   isFull,
   nextBookableDeparture,
+  seatsOnSale,
   spotsRemaining,
 } from "./trips";
 
@@ -39,6 +40,18 @@ describe("capacityLabel", () => {
 
   it("returns the full code at capacity", () => {
     expect(capacityLabel({ capacity: 10, booked: 10 })).toEqual({ kind: "full" });
+  });
+});
+
+describe("seatsOnSale (#2321)", () => {
+  it("shows a diver the certificate's seats, not the departure's stated ones", () => {
+    const trip = { id: "t", capacity: 12, sellableCapacity: 8, booked: 7 };
+    const shown = seatsOnSale(trip);
+    expect(shown).toEqual({ id: "t", capacity: 8, sellableCapacity: 8, booked: 7 });
+    expect(capacityLabel(shown)).toEqual({ kind: "left", remaining: 1 });
+    expect(isFull(seatsOnSale({ ...trip, booked: 8 }))).toBe(true);
+    // The stated row is untouched — the staff form still edits 12.
+    expect(trip.capacity).toBe(12);
   });
 });
 

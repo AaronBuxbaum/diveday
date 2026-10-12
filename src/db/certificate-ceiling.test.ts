@@ -1,16 +1,24 @@
 // @vitest-environment node
 import { and, asc, eq, gt, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seatsOpen } from "@/lib/availability";
 import { weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext } from "@/test/db";
+import { publicAvailabilityTrips } from "./availability";
 import { cancelBooking, createBooking, restoreBooking } from "./bookings";
 import type { AppDb } from "./client";
-import { boats, trips } from "./schema";
+import { listUpcomingDeparturesForSite } from "./dive-sites";
+import { nextDiveForBooking } from "./next-dive";
+import { boats, courses, diveSites, people, trips } from "./schema";
 import {
   applyDetailsToFutureSeries,
   createTrip,
   createTripSeries,
   duplicateTrip,
+  getTripWithBooked,
+  listUpcomingSessionsForCourse,
+  offsetUpcomingTripsWithCounts,
+  pagedUpcomingTripsWithCounts,
   rollSeriesForward,
   setTripStatus,
   updateTrip,
@@ -265,5 +273,149 @@ describe("each path that writes a departure from another ends unable to sell abo
 
     await fillToCertificate(db, shop.id, trip.id);
     expect(await book(db, shop.id, trip.id)).toMatchObject({ ok: false, reason: "trip_full" });
+  });
+});
+
+/**
+ * **Every count a diver reads measures seats on sale, not seats stated**
+ * (#2321). An over-limit departure that the booking transaction refuses at
+ * the certificate must not be shown — on the schedule, the trip page, the
+ * site and course pages, the availability document, the recap's next-dive
+ * card or the staff picker — as having a seat past it.
+ */
+describe("every reader counts seats against the certificate", () => {
+  const SOON = at("2030-05-31T12:00:00.000Z");
+
+  async function overLimitWithOneSeated(db: AppDb, shopId: string) {
+    const boat = await certifiedBoat(db, shopId, LIMIT);
+    const trip = await overLimitTrip(db, shopId, boat.id);
+    const seated = await book(db, shopId, trip.id);
+    if (!seated.ok) throw new Error(`seat refused: ${seated.reason}`);
+    return trip;
+  }
+
+  it("the board's reads carry the sellable number beside the stated one, and hasSpace uses it", async () => {
+    const { db, shop } = ctx;
+    const trip = await overLimitWithOneSeated(db, shop.id);
+    const board = async () =>
+      (await pagedUpcomingTripsWithCounts(db, shop.id, { now: SOON, hasSpace: true })).trips;
+    const picker = async () =>
+      (await offsetUpcomingTripsWithCounts(db, shop.id, { now: SOON, hasSpace: true })).trips;
+
+    const [row] = (await board()).filter((t) => t.id === trip.id);
+    expect(row).toMatchObject({ capacity: STATED, sellableCapacity: LIMIT, booked: 1 });
+    expect((await picker()).some((t) => t.id === trip.id)).toBe(true);
+
+    expect((await book(db, shop.id, trip.id)).ok).toBe(true);
+    // Two of four stated seats are held; the certificate makes it full.
+    expect((await board()).some((t) => t.id === trip.id)).toBe(false);
+    expect((await picker()).some((t) => t.id === trip.id)).toBe(false);
+    const all = await offsetUpcomingTripsWithCounts(db, shop.id, { now: SOON });
+    expect(all.trips.find((t) => t.id === trip.id)?.sellableCapacity).toBe(LIMIT);
+  });
+
+  it("the single-departure read keeps the stated capacity for the form and adds the sellable one", async () => {
+    const { db, shop } = ctx;
+    const trip = await overLimitWithOneSeated(db, shop.id);
+    expect(await getTripWithBooked(db, shop.id, trip.id)).toMatchObject({
+      capacity: STATED,
+      sellableCapacity: LIMIT,
+      booked: 1,
+    });
+  });
+
+  it("a departure with no boat, or a boat with no certificate, sells what it states", async () => {
+    const { db, shop } = ctx;
+    const uncertified = await certifiedBoat(db, shop.id, null);
+    const onHull = await overLimitTrip(db, shop.id, uncertified.id);
+    const ashore = await createTrip(db, {
+      shopId: shop.id,
+      title: "No boat",
+      startsAt: at("2030-06-01T12:00:00.000Z"),
+      endsAt: at("2030-06-01T16:00:00.000Z"),
+      capacity: STATED,
+    });
+    if (!ashore) throw new Error("trip not created");
+    for (const id of [onHull.id, ashore.id]) {
+      expect((await getTripWithBooked(db, shop.id, id))?.sellableCapacity).toBe(STATED);
+    }
+  });
+
+  it("the availability document offers only the seats left under the certificate", async () => {
+    const { db, shop } = ctx;
+    const trip = await overLimitWithOneSeated(db, shop.id);
+    const rows = await publicAvailabilityTrips(db, shop, SOON);
+    const listed = rows.find((row) => row.id === trip.id);
+    expect(listed).toBeDefined();
+    if (!listed) return;
+    expect(seatsOpen(listed)).toBe(LIMIT - 1);
+  });
+
+  it("the recap's next-dive card says the seats left under the certificate", async () => {
+    const { db, shop } = ctx;
+    const trip = await overLimitWithOneSeated(db, shop.id);
+    const [diver] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.shopId, shop.id))
+      .limit(1);
+    if (!diver) throw new Error("seeded person missing");
+    const pick = await nextDiveForBooking(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      justDivedTripId: "00000000-0000-0000-0000-0000000000ff",
+      dayCourseId: null,
+      dayShoutout: null,
+      daySiteNames: [],
+      dayLensId: null,
+      now: SOON,
+    });
+    expect(pick).toMatchObject({ tripId: trip.id, seatsLeft: LIMIT - 1 });
+  });
+
+  it("a dive site's page counts its departures' seats against the certificate", async () => {
+    const { db, shop } = ctx;
+    const [site] = await db
+      .select({ id: diveSites.id })
+      .from(diveSites)
+      .where(and(eq(diveSites.shopId, shop.id), isNull(diveSites.deletedAt)))
+      .limit(1);
+    if (!site) throw new Error("seeded site missing");
+    const boat = await certifiedBoat(db, shop.id, LIMIT);
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Over the limit, at a site",
+      startsAt: at("2030-06-01T12:00:00.000Z"),
+      endsAt: at("2030-06-01T16:00:00.000Z"),
+      capacity: STATED,
+      boatId: boat.id,
+      diveSiteId: site.id,
+    });
+    if (!trip) throw new Error("trip not created");
+    const departures = await listUpcomingDeparturesForSite(db, shop.id, site.id, SOON);
+    expect(departures.find((d) => d.id === trip.id)?.capacity).toBe(LIMIT);
+  });
+
+  it("a course page counts its sessions' seats against the certificate", async () => {
+    const { db, shop } = ctx;
+    const [course] = await db
+      .select({ id: courses.id })
+      .from(courses)
+      .where(eq(courses.shopId, shop.id))
+      .limit(1);
+    if (!course) throw new Error("seeded course missing");
+    const boat = await certifiedBoat(db, shop.id, LIMIT);
+    const session = await createTrip(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      title: "Over the limit, a session",
+      startsAt: at("2030-06-01T12:00:00.000Z"),
+      endsAt: at("2030-06-01T16:00:00.000Z"),
+      capacity: STATED,
+      boatId: boat.id,
+    });
+    if (!session) throw new Error("session not created");
+    const sessions = await listUpcomingSessionsForCourse(db, shop.id, course.id, SOON);
+    expect(sessions.find((s) => s.id === session.id)?.capacity).toBe(LIMIT);
   });
 });

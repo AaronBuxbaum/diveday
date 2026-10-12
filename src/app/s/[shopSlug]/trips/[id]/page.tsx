@@ -59,7 +59,7 @@ import { isLiveShopStaff } from "@/lib/session";
 import { similarDepartures } from "@/lib/similar-departures";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { tripPageJsonLd } from "@/lib/structured-data";
-import { hasSailed, isFull, spotsRemaining } from "@/lib/trips";
+import { hasSailed, isFull, seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { worthALook } from "@/lib/worth-a-look";
 import { BookingFinePrint } from "./_components/BookingFinePrint";
@@ -205,7 +205,7 @@ export default async function TripDetailPage({
     />
   ) : null;
   const [trip, tripDives, meetingDays, crewLanguages, publicCrew] = await Promise.all([
-    getTripWithBooked(db, shop.id, tripId),
+    getTripWithBooked(db, shop.id, tripId).then((row) => row && seatsOnSale(row)),
     listTripDives(db, shop.id, tripId),
     // Shop-scoped by the query's own join on `trips.shop_id`, like every other
     // read on this page. A departure always has at least one of these rows.
@@ -473,7 +473,7 @@ export default async function TripDetailPage({
           hasSpace: true,
           publicOnly: true,
         })
-      ).trips;
+      ).trips.map(seatsOnSale);
   const alternatives = full
     ? similarDepartures({
         full: { tripId: trip.id, courseId: trip.courseId, diveSiteId: trip.diveSiteId },

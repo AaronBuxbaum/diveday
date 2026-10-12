@@ -27,7 +27,7 @@ import {
   publicSchedulePath,
   publicTripPath,
 } from "@/lib/public-routes";
-import { capacityLabel } from "@/lib/trips";
+import { capacityLabel, seatsOnSale } from "@/lib/trips";
 import { EmbedHeightReporter } from "./_components/EmbedHeightReporter";
 
 // The widget is only ever framed, so it paints inside its own shell like every
@@ -96,8 +96,9 @@ export default async function EmbedWidgetPage({
     const parts = formatDayParts(startsAt, locale, tz);
     return `${parts.weekday} ${parts.day} ${parts.month} · ${formatTimeRange(startsAt, endsAt, locale, tz)}`;
   };
-  const seats = (trip: { capacity: number; booked: number }) => {
-    const label = capacityLabel(trip);
+  // Seats on sale under the boat's certificate, never the stated capacity (#2321).
+  const seats = (trip: { capacity: number; sellableCapacity: number; booked: number }) => {
+    const label = capacityLabel(seatsOnSale(trip));
     if (label.kind === "full") return t("fallback.full");
     return label.remaining <= 2
       ? t("schedule.spotsLeftUrgent", { count: label.remaining })

@@ -13,6 +13,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { sellableSeats } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
 import {
   type DiveSiteDifficulty,
@@ -52,7 +53,7 @@ import {
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
-import { liveBookingJoin } from "./trips-queries";
+import { liveBookingJoin, tripBoatCertifiedPassengers } from "./trips-queries";
 
 export type DiveSiteInput = {
   shopId: string;
@@ -1337,6 +1338,7 @@ export type UpcomingSiteDeparture = {
   title: string;
   startsAt: Date;
   endsAt: Date;
+  /** The seats on sale: the departure's own, capped at its boat's certificate (#2321). */
   capacity: number;
   booked: number;
 };
@@ -1355,6 +1357,7 @@ export async function listUpcomingDeparturesForSite(
       endsAt: trips.endsAt,
       capacity: trips.capacity,
       booked: count(bookings.id),
+      certifiedPassengers: tripBoatCertifiedPassengers(),
     })
     .from(trips)
     .leftJoin(bookings, liveBookingJoin)
@@ -1375,7 +1378,11 @@ export async function listUpcomingDeparturesForSite(
     )
     .groupBy(trips.id)
     .orderBy(asc(trips.startsAt));
-  return rows;
+  // A diver-only read: `capacity` here is the seats on sale (#2321).
+  return rows.map(({ certifiedPassengers, ...row }) => ({
+    ...row,
+    capacity: sellableSeats(row.capacity, certifiedPassengers),
+  }));
 }
 
 /**

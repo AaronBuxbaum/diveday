@@ -1,5 +1,6 @@
 import { and, asc, count, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
+import { sellableSeats } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
 import type { TripCrewRole } from "@/lib/crew-roles";
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
@@ -43,7 +44,12 @@ import {
   validateDiveSites,
 } from "./trips-create";
 import { liveTrip } from "./trips-live";
-import { bookedDiversCount, heldSeatCounts, seatHeld } from "./trips-queries";
+import {
+  bookedDiversCount,
+  heldSeatCounts,
+  seatHeld,
+  tripBoatCertifiedPassengers,
+} from "./trips-queries";
 
 /**
  * One departure's own record: read it, edit its details, its dives, its
@@ -93,7 +99,12 @@ export async function tripExistsForShop(
   return rows.length > 0;
 }
 
-/** Trip scoped to a shop (staff pages must never cross tenants), with booked count. */
+/**
+ * Trip scoped to a shop (staff pages must never cross tenants), with booked
+ * count and `sellableCapacity` — its seats on sale under the boat's
+ * certificate (H-107, #2321), which every seats-left reads. `capacity` stays
+ * the stated number the details form edits.
+ */
 export async function getTripWithBooked(db: AppDb, shopId: string, tripId: string) {
   const rows = await db
     .select({
@@ -102,6 +113,7 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
       diveSite: diveSites,
       booked: count(bookings.id),
       bookedDivers: bookedDiversCount(),
+      certifiedPassengers: tripBoatCertifiedPassengers(),
     })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
@@ -114,6 +126,7 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
   return row
     ? {
         ...row.trip,
+        sellableCapacity: sellableSeats(row.trip.capacity, row.certifiedPassengers),
         course: row.course,
         diveSite: row.diveSite,
         booked: row.booked,
