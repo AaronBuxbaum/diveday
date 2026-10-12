@@ -685,7 +685,7 @@ describe("the earlier-refusal capsule", () => {
     expect(within(screen.getByRole("dialog")).getByText("Minor · age 13")).toBeDefined();
 
     expect(printed).toHaveTextContent(
-      /A physician did not clear this diver on .* \(earlier waiver\)/,
+      /A physician did not clear this person on .* \(earlier waiver\)/,
     );
     expect(printed).toHaveTextContent(CAPSULE);
     expect(printed).toHaveTextContent("Minor · age 13");
@@ -785,7 +785,7 @@ describe("an unanswered referral's warning", () => {
     } as unknown as TripManifest["divers"][number]["medicalWaiver"];
     const { container } = renderList({ divers: [diver({ medicalWaiver: refusedBefore })] });
     const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
-    expect(printed).toHaveTextContent(/A physician did not clear this diver/);
+    expect(printed).toHaveTextContent(/A physician did not clear this person/);
     expect(within(printed as HTMLElement).queryAllByRole("link")).toHaveLength(0);
     expect(screen.queryByRole("link", { name: "View the refusal" })).toBeNull();
 
