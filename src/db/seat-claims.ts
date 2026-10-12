@@ -299,25 +299,6 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
     .limit(1);
   const identityUnconfirmed = existing ? !personNamesMatch(existing.fullName, fullName) : false;
 
-  // One person, one seat: if the claimant already holds their own live seat
-  // on this trip, re-pointing this one would put them on the manifest twice
-  // (and violate bookings_trip_person_unique). The organizer's other seats
-  // stay untouched — this refusal is about the claimant, not the party.
-  if (existing && existing.id !== booking.personId) {
-    const [clash] = await tx
-      .select({ id: bookings.id })
-      .from(bookings)
-      .where(
-        and(
-          eq(bookings.tripId, trip.id),
-          eq(bookings.personId, existing.id),
-          ne(bookings.status, "cancelled"),
-        ),
-      )
-      .limit(1);
-    if (clash) return { ok: false, reason: "already_booked" };
-  }
-
   // On a course session the course's own card gate is the admission rule,
   // and it fails closed exactly as it does at booking (`createBookingRecord`'s
   // `course_prerequisite`): a claimant with no verified card at the course's
@@ -376,6 +357,28 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
   );
   if (!admission.admitted) {
     return { ok: false, reason: "trip_prerequisite", refusal: admission.refusal };
+  }
+
+  // One person, one seat: if the claimant already holds their own live seat
+  // on this trip, re-pointing this one would put them on the manifest twice
+  // (and violate bookings_trip_person_unique). The organizer's other seats
+  // stay untouched — this refusal is about the claimant, not the party.
+  // It runs after every gate, so a claimant the gates refuse hears the same
+  // refusal whether or not they hold a seat here, and the claim page words it
+  // so it never says who is on the trip (H-22, issue #2288).
+  if (existing && existing.id !== booking.personId) {
+    const [clash] = await tx
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.tripId, trip.id),
+          eq(bookings.personId, existing.id),
+          ne(bookings.status, "cancelled"),
+        ),
+      )
+      .limit(1);
+    if (clash) return { ok: false, reason: "already_booked" };
   }
 
   // Gates passed — now resolve for real. Under a racing insert for the same

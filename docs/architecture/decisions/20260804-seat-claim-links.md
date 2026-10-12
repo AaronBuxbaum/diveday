@@ -33,12 +33,14 @@ capability) — and only for still-unclaimed, non-cancelled member seats on a no
 **Claiming** (`claimPartySeat`, one transaction): verify token → lock the seat → resolve the
 claimant by email with `findOrCreatePerson` semantics — an email match reuses that person row, and
 a non-matching name stamps `identity_unconfirmed_at` exactly as the public booking form does
-(H-13), so nobody inherits verified evidence by typing an email — refuse `already_booked` if the
-claimant already holds a live seat on the trip, re-run the gates a fresh booking would face (on a
-course session the course's own card gate, fail-closed exactly as `createBookingRecord`'s
-`course_prerequisite`; otherwise `tripAdmissionFor` on the claimant's own evidence; course
-minimum age deliberately not re-checked — an age refusal keyed to a typed email is an oracle
-about someone else's record (H-22), and readiness still catches it), then re-point `person_id`,
+(H-13), so nobody inherits verified evidence by typing an email — re-run the gates a fresh
+booking would face (on a course session the course's own card gate, fail-closed exactly as
+`createBookingRecord`'s `course_prerequisite`; otherwise `tripAdmissionFor` on the claimant's own
+evidence; course minimum age deliberately not re-checked — an age refusal keyed to a typed email
+is an oracle about someone else's record (H-22), and readiness still catches it), then refuse
+`already_booked` if the claimant already holds a live seat on the trip — checked after the gates
+and worded on the page as a neutral "can't be claimed with these details, contact the shop", so
+the refusal never confirms that a typed email is on the trip (#2288) — then re-point `person_id`,
 stamp `claimed_at`, supersede any current waiver record on
 the booking that belongs to a different person (readiness's booking-scoped waiver join would
 otherwise let the claimant board on the placeholder's signature), and revoke **every** outstanding

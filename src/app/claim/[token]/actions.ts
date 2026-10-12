@@ -56,9 +56,12 @@ export async function claimSeatAction(token: string, formData: FormData) {
     // (or never did), so the page itself renders the uniform "this link
     // isn't available" notice — one honest answer for every dead-link cause.
     if (outcome.reason === "invalid") redirect(base);
+    // `already_booked` gets the neutral `unable`: the claimant typed an email,
+    // and a refusal that says "you already have a spot" would tell whoever
+    // holds the link that this email is on the trip (H-22, issue #2288).
     const code =
       outcome.reason === "already_booked"
-        ? "already"
+        ? "unable"
         : outcome.reason === "course_prerequisite"
           ? "course"
           : "requirement";
