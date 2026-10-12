@@ -1,19 +1,5 @@
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  gte,
-  inArray,
-  isNotNull,
-  isNull,
-  lt,
-  max,
-  ne,
-  notInArray,
-  sql,
-} from "drizzle-orm";
-import { HOUR_MS, nowDate } from "@/lib/clock";
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import { assembleDayCloseout, type DayCloseoutState, seatSailed } from "@/lib/closeout";
 import type { CrewRollCallSubject } from "@/lib/manifests";
 import { carryForwardNotBoarded, rollCallCheckpoints } from "@/lib/roll-call";
@@ -34,7 +20,6 @@ import {
   trips,
 } from "./schema";
 import { listRollCallGaps } from "./today";
-import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { latestTripStagesByTrip } from "./trip-stages";
 import { liveTrip } from "./trips-live";
 
@@ -73,99 +58,6 @@ function crewSubjectsAtClose(
     });
     return { rollCall: carryForwardNotBoarded(perCheckpoint).at(-1) };
   });
-}
-
-/**
- * How far back the evening looks for a departure to compare a short boat with
- * (issue #1207, D47). A season, roughly — far enough that a weekly charter has
- * run a dozen times, near enough that the comparison is about this year's
- * market rather than last year's. One constant, deliberately: it is the
- * implementing session's call rather than the issue's, and it is meant to be
- * easy to move.
- */
-const COMPARABLE_HORIZON_MS = 90 * 24 * HOUR_MS;
-
-/**
- * **The comparable departure** — the most recent same-title trip that filled,
- * per departure of today.
- *
- * One query, one `where`, one `having`: the capacity comparison rides inside
- * the same grouped read that produces the row, so the count and the row can
- * never disagree about which departures qualify. Splitting them is the classic
- * bug on exactly this kind of view, and #1207's triage names it.
- *
- * **It carries no crew, no rank and no rate**, and it must not grow any. D47's
- * boundary is that the evening states facts about seats, never a scoreboard
- * about people, and the surest way to keep it one is to have nothing here that
- * could become one.
- */
-async function comparableDepartures(
-  db: AppDb,
-  shopId: string,
-  today: readonly { id: string; title: string; startsAt: Date; priceCents: number | null }[],
-): Promise<Map<string, { title: string; startsAt: Date; samePrice: boolean } | null>> {
-  const answer = new Map<string, { title: string; startsAt: Date; samePrice: boolean } | null>(
-    today.map((trip) => [trip.id, null]),
-  );
-  if (today.length === 0) return answer;
-  const startTimes = today.map((trip) => trip.startsAt.getTime());
-  const horizon = new Date(Math.min(...startTimes) - COMPARABLE_HORIZON_MS);
-  const latest = new Date(Math.max(...startTimes));
-
-  const candidates = await db
-    .select({
-      title: trips.title,
-      startsAt: trips.startsAt,
-      endsAt: trips.endsAt,
-      priceCents: trips.priceCents,
-    })
-    .from(trips)
-    .leftJoin(
-      bookings,
-      and(
-        eq(bookings.tripId, trips.id),
-        eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
-      ),
-    )
-    .where(
-      and(
-        liveTrip(),
-        eq(trips.shopId, shopId),
-        eq(trips.status, "scheduled"),
-        inArray(trips.title, [...new Set(today.map((trip) => trip.title))]),
-        lt(trips.endsAt, latest),
-        gte(trips.endsAt, horizon),
-        notInArray(
-          trips.id,
-          today.map((trip) => trip.id),
-        ),
-      ),
-    )
-    .groupBy(trips.id)
-    .having(sql`count(${bookings.id}) >= ${trips.capacity}`)
-    .orderBy(desc(trips.endsAt));
-
-  for (const trip of today) {
-    const match = candidates.find(
-      (candidate) =>
-        candidate.title === trip.title && candidate.endsAt.getTime() < trip.startsAt.getTime(),
-    );
-    answer.set(
-      trip.id,
-      match
-        ? {
-            title: match.title,
-            startsAt: match.startsAt,
-            // Both null reads as the same price, which is honest: two
-            // departures that both say "ask the shop" are priced alike as far
-            // as anything on the board is concerned.
-            samePrice: match.priceCents === trip.priceCents,
-          }
-        : null,
-    );
-  }
-  return answer;
 }
 
 /**
@@ -210,15 +102,12 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     recapDeliveries,
     crewRoster,
     crewResults,
-    lastBookings,
-    neverSentDeal,
-    comparables,
     planChangeRows,
     stagesByTrip,
   ] = await Promise.all([
     // **Two counts off one roster, because the evening and the shelf ask
     // different questions** (issue #1689). `booked` is the seats this
-    // departure sold — what `openSeatsDebrief` subtracts from capacity, since
+    // departure sold — what the open-seats debrief subtracts from capacity, since
     // a released seat never came back to the shelf. `sailed` is the divers the
     // day actually carried, and the homecoming line counted a diver left
     // standing on the dock out *and* home because both numbers came off the
@@ -328,22 +217,6 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
         asc(rollCallCrewEvents.createdAt),
         asc(rollCallCrewEvents.seq),
       ),
-    // **D47's first clause** — when the last seat sold.
-    db
-      .select({ tripId: bookings.tripId, lastBookingAt: max(bookings.createdAt) })
-      .from(bookings)
-      .where(
-        and(
-          eq(bookings.shopId, shopId),
-          inArray(bookings.tripId, tripIds),
-          ne(bookings.status, "cancelled"),
-        ),
-      )
-      .groupBy(bookings.tripId),
-    // **D47's second** — the deal that never went out, answered by the module
-    // that owns last-minute deals rather than by a second query here.
-    tripIdsNeverSentLastMinuteDeal(db, shopId, tripIds),
-    comparableDepartures(db, shopId, rows),
     // **D24** — dives whose actual site was not the planned one. A dive with no
     // planned site is deliberately not a change: there was no plan to depart
     // from, and "the plan changed" would be the surface inventing one.
@@ -447,9 +320,6 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     if (event.status === "cleared") standingCrewResult.delete(key);
     else standingCrewResult.set(key, event.status);
   }
-  const lastBookingByTrip = new Map(
-    lastBookings.map((row) => [row.tripId, row.lastBookingAt ?? null]),
-  );
   const planChangesByTrip = new Map<string, typeof planChangeRows>();
   for (const change of planChangeRows) {
     const list = planChangesByTrip.get(change.tripId) ?? [];
@@ -472,11 +342,6 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
       crewByTrip.get(row.id) ?? [],
       (personId, checkpoint) => standingCrewResult.get(`${row.id}\0${personId}\0${checkpoint}`),
     ),
-    lastBookingAt: lastBookingByTrip.get(row.id) ?? null,
-    // The reader answers "never sent", so a trip *absent* from that set is one
-    // whose deal went out.
-    dealSent: !neverSentDeal.has(row.id),
-    comparable: comparables.get(row.id) ?? null,
     planChanges: (planChangesByTrip.get(row.id) ?? []).map((change) => ({
       diveNumber: change.diveNumber,
       siteName: change.siteName,

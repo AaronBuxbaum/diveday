@@ -122,7 +122,7 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
     // charter does not — so this is one more control the scan above covers.
     await acceptAgeAttestation(page);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-    await expect(page.getByRole("heading", { name: /You’re on the boat, Ada/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /You’ve got a seat, Ada/ })).toBeVisible();
     await expectNoA11yViolations(page);
   });
 
@@ -690,7 +690,7 @@ test.describe("automated accessibility scans of the diver bearer-token surfaces"
     await page.getByLabel("Diver 2 name").fill("Tem Okafor");
     await page.getByLabel("Use the main contact’s email for this diver").check();
     await page.getByRole("button", { name: "Book these spots" }).click();
-    await expect(page.getByRole("heading", { name: /You’re on the boat, Iris/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /You’ve got a seat, Iris/ })).toBeVisible();
 
     // Booking lands on the readiness page itself now (ADR
     // 20260820-one-page-after-booking), so the claim link is read off the group

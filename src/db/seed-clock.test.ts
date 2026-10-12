@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
-import { demoTodayDepartureStart } from "./seed-clock";
+import { demoTodayDepartureStart, demoTodayShift, demoTodayShifts } from "./seed-clock";
 
 describe("demoTodayDepartureStart", () => {
   const TZ = "America/New_York";
@@ -52,5 +52,77 @@ describe("demoTodayDepartureStart", () => {
     const start = demoTodayDepartureStart(now, TZ);
     expect(start.getTime()).toBeGreaterThan(now.getTime());
     expect(localDay(start)).toBe(localDay(now));
+  });
+});
+
+/**
+ * **A shift sits on the boat's own local day** (UX review 2026-10-10, item 4).
+ * Every demo shift read "5:30 PM – 5:30 AM": a fixed twelve hours from an hour
+ * before the departure, straight across the shop's midnight.
+ */
+describe("demoTodayShift", () => {
+  const TZ = "America/New_York";
+  const localDay = (date: Date) => toDateInputValue(utcToWallTime(date, TZ));
+  const wall = (date: Date) => {
+    const w = utcToWallTime(date, TZ);
+    return `${String(w.hour).padStart(2, "0")}:${String(w.minute).padStart(2, "0")}`;
+  };
+
+  it("covers the evening boat from an hour before she sails to an hour after she is back", () => {
+    const now = new Date("2026-10-10T17:18:00Z"); // 1:18 PM EDT → a 6:30 PM boat
+    const shift = demoTodayShift(now, TZ);
+    expect(wall(shift.startsAt)).toBe("17:30");
+    expect(wall(shift.endsAt)).toBe("23:00");
+    expect(localDay(shift.endsAt)).toBe(localDay(shift.startsAt));
+  });
+
+  it("starts the morning crew at eight for a nine o'clock boat", () => {
+    const now = new Date("2026-07-20T04:30:00Z"); // 12:30 AM EDT → the 9:00 AM boat
+    const shift = demoTodayShift(now, TZ);
+    expect(wall(shift.startsAt)).toBe("08:00");
+    expect(wall(shift.endsAt)).toBe("13:30");
+  });
+
+  it("never runs a shift past the shop's midnight", () => {
+    const now = new Date("2026-07-20T22:34:00Z"); // 6:34 PM EDT → the 11:30 PM boat
+    const shift = demoTodayShift(now, TZ);
+    expect(localDay(shift.startsAt)).toBe(localDay(now));
+    expect(localDay(new Date(shift.endsAt.getTime() - 1))).toBe(localDay(now));
+    expect(shift.endsAt.getTime()).toBeGreaterThan(shift.startsAt.getTime());
+  });
+});
+
+/**
+ * **The dawn boat's crew are on shift for the dawn boat** (dive-domain review
+ * of the demo layer). The captain, the divemaster and the assistant crew the
+ * 5:30 AM first-light boat, but every shift started an hour before *today's*
+ * departure, which never sails before 9:00; the staffing week flagged the
+ * demo's own crew as working a boat off shift.
+ */
+describe("demoTodayShifts", () => {
+  const TZ = "America/New_York";
+  const wall = (date: Date) => {
+    const w = utcToWallTime(date, TZ);
+    return `${String(w.hour).padStart(2, "0")}:${String(w.minute).padStart(2, "0")}`;
+  };
+  const spans = (shifts: { startsAt: Date; endsAt: Date }[]) =>
+    shifts.map((shift) => `${wall(shift.startsAt)}-${wall(shift.endsAt)}`);
+
+  it("gives everyone off the dawn boat the one shift around today's departure", () => {
+    const now = new Date("2026-07-20T04:30:00Z"); // 12:30 AM EDT → the 9:00 AM boat
+    expect(spans(demoTodayShifts(now, TZ, { dawnCrew: false }))).toEqual(["08:00-13:30"]);
+  });
+
+  it("starts the dawn crew at 4:30, an hour before the 5:30 boat, through the morning boat", () => {
+    const now = new Date("2026-07-20T04:30:00Z"); // → the 9:00 AM boat, whose shift starts at 8:00
+    expect(spans(demoTodayShifts(now, TZ, { dawnCrew: true }))).toEqual(["04:30-13:30"]);
+  });
+
+  it("gives the dawn crew a 4:30 to 9:30 shift of its own when today's boat sails in the evening", () => {
+    const now = new Date("2026-10-10T17:18:00Z"); // 1:18 PM EDT → a 6:30 PM boat
+    expect(spans(demoTodayShifts(now, TZ, { dawnCrew: true }))).toEqual([
+      "04:30-09:30",
+      "17:30-23:00",
+    ]);
   });
 });

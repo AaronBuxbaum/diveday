@@ -92,7 +92,7 @@ test.describe("as owner", () => {
       page.getByText(/This charter is for divers with Advanced Open Water or higher, so we could/),
     ).toBeVisible();
     await expect(page.getByText(/isn’t taking bookings right now/)).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).toHaveCount(0);
   });
 
   test("a diver the shop knows nothing about is not screened at the sale", async ({ page }) => {
@@ -414,7 +414,9 @@ test.describe("with Accept-Language: es", () => {
     // route, so a locale that survived the booking form but was renegotiated
     // from scratch after the redirect would show up as English right here.
     await expect(page).toHaveURL(/\/ready\//);
-    await expect(page.getByRole("heading", { name: /¡Estás a bordo, Nora/ })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Tu plaza está reservada, Nora/ }),
+    ).toBeVisible();
     // The step spine replaced the checklist and its heading with it (slice 7c):
     // a step's title is a `<span>` inside a `<summary>`, which must be phrasing
     // content. `data-thread-step` is the spine's own e2e hook, and this keeps

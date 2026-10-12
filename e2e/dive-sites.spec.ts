@@ -60,8 +60,8 @@ test.describe("staff", () => {
     await page
       .getByLabel("Conditions overview")
       .fill("Warm water and an easy morning are expected.");
-    await page.getByLabel("Water temp °C").fill("27");
-    await page.getByLabel("Visibility m").fill("18");
+    await page.getByLabel("Water temp °F").fill("81");
+    await page.getByLabel("Visibility ft").fill("60");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction published");
 
@@ -98,10 +98,11 @@ test.describe("staff", () => {
       page.getByText("Look along the sandy edge for turtles resting below the coral heads."),
     ).toBeVisible();
     // Each reading is one span carrying its own noun ("27°C water"), so an
-    // exact match on the number alone finds nothing. That the crew's numbers
+    // exact match on the number alone finds nothing. The demo is a Key Largo
+    // shop, so both read in its country's units. That the crew's numbers
     // and not the model's are on the page is what the note below asserts.
-    await expect(page.getByText("27°C water")).toBeVisible();
-    await expect(page.getByText("18 m visibility")).toBeVisible();
+    await expect(page.getByText("81°F water")).toBeVisible();
+    await expect(page.getByText("60 ft visibility")).toBeVisible();
     // **To the minute, not the second.** This line used to build its own
     // timestamp with a bare `toLocaleString`, whose default field set carries
     // seconds — so the sentence a diver reads to decide what to pack said
@@ -124,8 +125,8 @@ test.describe("staff", () => {
     await expect(page.getByRole("status")).toContainText("Crew prediction cleared");
     // The clear's own notice forces the disclosure open on the redirected
     // render — no click needed (and one would close it again).
-    await expect(page.getByLabel("Water temp °C")).toHaveValue("");
-    await expect(page.getByLabel("Visibility m")).toHaveValue("");
+    await expect(page.getByLabel("Water temp °F")).toHaveValue("");
+    await expect(page.getByLabel("Visibility ft")).toHaveValue("");
 
     // Cancel the trip — this leg exercises the cancel/reinstate controls
     // themselves; test isolation is already handled by the per-test demo

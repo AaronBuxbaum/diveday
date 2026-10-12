@@ -1,19 +1,18 @@
 import Link from "next/link";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { LedgerRow, ledgerRowRoomClass } from "@/components/ui/ledger";
+import { ledgerRowRoomClass } from "@/components/ui/ledger";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { FIGURE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import {
   CLOSEOUT_STATUS_KEYS,
   closeoutDepartureDetailText,
-  openSeatsDebriefText,
   planChangeText,
 } from "@/i18n/closeout-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { openRollCallActionText } from "@/i18n/today-labels";
 import { CLOSEOUT_STATUS_TONES, type StationClose } from "@/lib/closeout";
-import { formatShortDate, formatTime } from "@/lib/format";
+import { formatTime } from "@/lib/format";
 
 /**
  * **A station that has settled** — the evening reading of the shop home's day
@@ -106,16 +105,12 @@ export function ClosingStation({
         : t("shopHome.spine.close.back", { back: close.back, sailed: close.sailed })
     : closeoutDepartureDetailText(t, close, detailTime);
   const checkpoint = close.diveNumber >= 1 ? `after_dive_${close.diveNumber}` : "departure";
-  // Two quiet readings the day already contains, each rendering nothing when
-  // there is no factual answer (ADR 20260904-reef-all-the-way-down, slice 16h).
+  // A quiet reading the day already contains, rendering nothing when there is
+  // no factual answer (ADR 20260904-reef-all-the-way-down, slice 16h). The
+  // unsold-seats debrief beside it moved to the departure's Details tab (UX
+  // review 2026-10-10, item 31): a post-mortem about selling is not work the
+  // day spine is asking the desk to do.
   const planChanged = planChangeText(t, locale, close.planChanges);
-  const openSeats = close.openSeats
-    ? openSeatsDebriefText(t, locale, close.openSeats, {
-        comparableDate: close.openSeats.comparable
-          ? formatShortDate(close.openSeats.comparable.startsAt, locale, timeZone)
-          : "",
-      })
-    : null;
 
   return (
     // The same panel the live station is (ADR 20260904-reef-all-the-way-down,
@@ -207,44 +202,11 @@ export function ClosingStation({
           </Link>
         ) : null}
       </div>
-      {/* **The open-seats debrief** (issue #1207, D47). Facts the shop already
-          owns, said once, on the one evening they are still worth acting on.
-          No trailing door: the station's own title is a link to this
-          departure, and a second path to the same page from the same panel is
-          what copy-restraint deletes. */}
-      {/* A desktop reading: on a phone the evening's work is the recap, and a
-          paragraph about why seats went unsold sat between the head count and
-          it on every sailed boat. */}
-      {openSeats ? (
-        <ul className="mt-3 max-sm:hidden">
-          <LedgerRow
-            stacked
-            kind={{ word: t("shopHome.spine.close.openSeats.label"), tone: "neutral" }}
-          >
-            <p className="text-sm text-muted">{openSeats}</p>
-          </LedgerRow>
-        </ul>
-      ) : null}
-      {/* **One hairline between the parts of a settled station, never two.**
-          The recap draws no rule of its own, so this is the only place the
-          separator is decided: after the unsold-seats row that row's own
-          closing hairline already is it, and a second one twelve pixels below
-          drew an empty band with nothing at all in it. And nothing renders
-          when there is no recap to write — a rule under thin air is the same
-          defect from the other side. Drawn here, it keeps the ledger's room,
-          so it is as long as the unsold-seats row's rule it stands in for. */}
+      {/* **One hairline between the station and its recap**, drawn here
+          because the recap draws no rule of its own; and nothing renders when
+          there is no recap to write, since a rule under thin air is a defect. */}
       {children ? (
-        <div
-          className={
-            openSeats
-              ? // Below `sm` the unsold-seats row is not drawn, so its rule is
-                // this block's again.
-                `pt-3 max-sm:mt-3 max-sm:border-t max-sm:border-border ${ledgerRowRoomClass}`
-              : `mt-3 border-t border-border pt-3 ${ledgerRowRoomClass}`
-          }
-        >
-          {children}
-        </div>
+        <div className={`mt-3 border-t border-border pt-3 ${ledgerRowRoomClass}`}>{children}</div>
       ) : null}
     </SectionCard>
   );

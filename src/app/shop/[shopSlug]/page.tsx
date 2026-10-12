@@ -78,14 +78,12 @@ import {
 } from "@/lib/staff-notices";
 import {
   assembleDaySpine,
-  type DayStation,
   factOfScaleFor,
-  pressingRows,
+  readNeedsYou,
   roleLensFor,
   spineIsQuiet,
   spineJobCount,
 } from "@/lib/today";
-import { hasSailed } from "@/lib/trips";
 import { shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { AUTH_NOTICES } from "./_components/auth-notices";
 import {
@@ -539,15 +537,19 @@ async function TodayBody({
   const blockedToday = work.departures.reduce((sum, departure) => sum + departure.blocked, 0);
   const urgentJobs = actions.filter((action) => action.urgency === "now").length;
   after(() => trackEvent({ name: "blockers_surfaced", count: blockedToday, urgent: urgentJobs }));
-  // The next boat that has not gone yet, carrying the standing one-hour
-  // late-arrival buffer every "has it sailed" question in this app carries.
-  const nextStation: DayStation | undefined = spine.stations.find(
-    (station) => !hasSailed(station.startsAt, now),
-  );
-  // "3 boats today. 2 things need you before the 7:00 AM leaves the dock." The
-  // count is what is still open on the boat the sentence names, because that
-  // is what "before it leaves" means; once every boat is away it counts what
-  // is open across the day instead.
+  // **One reading of Needs you for every role** (UX review 2026-10-10, item 2):
+  // the sentence under the date counts the rows of the reader's own list about
+  // the boat it names, and the spine is handed the same reading for its count
+  // and its all-clear line.
+  const blockedFigures = daySummaryBlocked(evidence, shop.timezone, now, work.blockedAboard);
+  const needsYou = readNeedsYou(spine, {
+    crewedTripIds: lens === "boat" ? crewedTripIds : [],
+    readerPersonId: session.user.personId,
+    drafts: spineDrafts.length,
+    paymentsRow: showPaymentsRow,
+    blocked: blockedFigures.blocked,
+    now,
+  });
   const daySummaryText = showFirstRunChecklist
     ? null
     : daySpineSummaryText(t, {
@@ -555,13 +557,10 @@ async function TodayBody({
         // has three boats on it, and the line under the date says what the day
         // *is* before it says what is left of it.
         boats: dayDepartures.length,
-        ...daySummaryBlocked(evidence, shop.timezone, now, work.blockedAboard),
-        jobs: nextStation
-          ? pressingRows(nextStation.rows)
-          : spine.stations.reduce((total, station) => total + pressingRows(station.rows), 0) +
-            pressingRows(spine.desk),
-        nextDepartureTime: nextStation
-          ? formatTime(nextStation.startsAt, locale, shop.timezone)
+        ...blockedFigures,
+        jobs: needsYou.dueBeforeNext,
+        nextDepartureTime: needsYou.next
+          ? formatTime(needsYou.next.startsAt, locale, shop.timezone)
           : null,
       });
   // What today made: the second wave's last read, gated there.
@@ -712,18 +711,9 @@ async function TodayBody({
           ) : null
         }
       >
-        {/* The day's own line is in the sky above this, so the only sentence
-              left here is first-run's, which carries the address a diver would
-              use and the count of what is left to do — neither of which the
-              band says (issue #711). */}
-        {showFirstRunChecklist ? (
-          <p className="max-w-2xl text-lg text-muted">
-            {t.rich("shopHome.firstRun.pageIntro", {
-              address: (chunks) => <address className="inline not-italic">{chunks}</address>,
-              url: publicScheduleUrl,
-            })}
-          </p>
-        ) : null}
+        {/* First run says nothing here (UX review 2026-10-10, item 29): the
+            checklist below counts what is left, and its share row carries the
+            address as a copy control rather than a URL printed in prose. */}
         {/* A day with no boats answers its follow-up question right here. */}
         {!quietDay && spine.stations.length === 0 && nextDeparture ? (
           <p className="mt-1 max-w-2xl text-muted">
@@ -928,6 +918,7 @@ async function TodayBody({
           firstBooking={firstBooking}
           factOfScale={factOfScale}
           evening={evening}
+          needsYou={needsYou}
           now={now}
           sessions={
             lens === "sessions" ? (
@@ -958,7 +949,7 @@ async function TodayBody({
                 stripeDone={canAcceptPayments(firstRunStripeAccount)}
                 copy={{
                   groupLabel: t("shopHome.firstRun.groupLabel"),
-                  subtitle: t("shopHome.firstRun.subtitle", { count: FIRST_RUN_STEP_COUNT }),
+                  subtitle: t("shopHome.firstRun.subtitle"),
                   progress: t("shopHome.firstRun.progress", {
                     done: firstRunDoneCount,
                     total: FIRST_RUN_STEP_COUNT,

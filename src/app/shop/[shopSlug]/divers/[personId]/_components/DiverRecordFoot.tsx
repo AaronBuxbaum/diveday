@@ -69,26 +69,26 @@ export function DiverRecordFoot({
           status={noticeForForm(notice, "guardian-email")}
         />
       ) : null}
-      <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
-        {canExport ? (
-          <DownloadDiverExportButton
-            href={`/shop/${shopSlug}/divers/${personId}/export`}
-            idleLabel={t("divers.export.downloadButton.idle")}
-            acknowledgedLabel={t("divers.export.downloadButton.acknowledged")}
-          />
-        ) : null}
-        {/* Nothing to delete twice: a removed diver gets the Restore panel at
-            the top of the record instead. */}
-        {canDelete && !removed ? (
-          <RemoveDiver
-            diver={diver}
-            shopSlug={shopSlug}
-            personId={personId}
-            t={t}
-            status={noticeForForm(notice, "remove")}
-          />
-        ) : null}
-      </div>
+      {canExport ? (
+        <DownloadDiverExportButton
+          href={`/shop/${shopSlug}/divers/${personId}/export`}
+          idleLabel={t("divers.export.downloadButton.idle")}
+          acknowledgedLabel={t("divers.export.downloadButton.acknowledged")}
+        />
+      ) : null}
+      {/* Delete on a line of its own, never beside "Download record": two
+          quiet buttons in one row, one of them red, were one slip apart (UX
+          review 2026-10-10, item 37). Nothing to delete twice: a removed diver
+          gets the Restore panel at the top of the record instead. */}
+      {canDelete && !removed ? (
+        <RemoveDiver
+          diver={diver}
+          shopSlug={shopSlug}
+          personId={personId}
+          t={t}
+          status={noticeForForm(notice, "remove")}
+        />
+      ) : null}
       {/* **Erasure is offered on a deleted record and nowhere else.** It is
           the one control in the product with no undo, and it used to sit at
           the foot of every diver's record — including the diver a staffer
