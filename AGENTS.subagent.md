@@ -9,7 +9,7 @@ live and the rules a change must keep. Read `foo.test.ts` before `foo.ts`; tests
 | You need | Go to |
 | --- | --- |
 | Domain terms | `docs/product/glossary.md` (index) and the domain files in `docs/product/glossary/` |
-| Decisions | `docs/architecture/decisions/README.md` indexes every ADR |
+| Decisions | grep `docs/architecture/decisions/` for the ADR id (each record is `<id>.md`) or a word of the decision; skip the README's index |
 | Staff pages (auth-gated, all of `/shop/**`) | `src/app/shop/`, gated by `requireShopSurface` in `src/lib/session.ts` |
 | Public shop pages (no auth anywhere) | `src/app/s/[shopSlug]/` |
 | Bearer-token pages (the URL is the capability) | `src/app/waivers/[token]`, `ready/[token]`, `recap/[token]`, `verify/[token]`, `reset-password/[token]`, `calendar/[token]` |

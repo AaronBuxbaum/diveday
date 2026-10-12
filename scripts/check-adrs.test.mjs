@@ -76,12 +76,23 @@ describe("the generated index", () => {
     const table = indexTable([
       { id: "0001-a", title: "A | B", status: "Accepted", supersededBy: "" },
       { id: "0002-b", title: "B", status: "Superseded", supersededBy: "0003-c" },
+      {
+        id: "0003-c",
+        title: "Use full-stack Next.js with no separate backend",
+        status: "Accepted",
+        supersededBy: "",
+      },
+      { id: "0004-d", title: "D", status: "Proposed", supersededBy: "" },
+      { id: "0005-e", title: "E", status: "Deprecated", supersededBy: "" },
     ]);
     expect(table.split("\n")).toEqual([
-      "| ADR | Decision | Status | Superseded by |",
-      "| --- | --- | --- | --- |",
-      "| [0001-a](0001-a.md) | A \\| B | Accepted |  |",
-      "| [0002-b](0002-b.md) | B | Superseded | [0003-c](0003-c.md) |",
+      "| ADR | Decision |",
+      "| --- | --- |",
+      "| 0001-a | A \\| B |",
+      "| 0002-b | ~~B~~ → 0003-c |",
+      "| 0003-c | Use full-stack Next.js with no… |",
+      "| 0004-d | D (proposed) |",
+      "| 0005-e | ~~E~~ (deprecated) |",
     ]);
     const readme = `# ADRs\n\nprose\n\n${START}\nold\n${END}\n\ntail\n`;
     const next = withIndex(readme, "T");
