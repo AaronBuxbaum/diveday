@@ -1,4 +1,4 @@
-import { isNull } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 import { trips } from "./schema";
 
 /**
@@ -25,3 +25,17 @@ import { trips } from "./schema";
  * deleted departures itself.
  */
 export const liveTrip = () => isNull(trips.deletedAt);
+
+/**
+ * **"This departure is a real one, not a rehearsal"** (ADR
+ * 20261012-rehearsal-departures).
+ *
+ * Every read that faces outward — a public page or feed, a report, the
+ * export, the availability answer, a message about to be sent, an integration
+ * — carries this beside {@link liveTrip}. Staff operations reads do not: a
+ * rehearsal is meant to be seated, checked in and rolled-called like the real
+ * thing. `src/db/rehearsal-coverage.test.ts` walks the outward modules and
+ * fails any read of `trips` in them that carries neither this nor a
+ * `diveday:allow-rehearsal: <why>` comment.
+ */
+export const notRehearsal = () => eq(trips.isRehearsal, false);

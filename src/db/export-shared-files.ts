@@ -1466,11 +1466,13 @@ export const TRIP_REVIEWS_CSV = sharedFile<ShopRow<"reviewRows">>({
     { header: "published_at", in: "both", value: ({ review }) => review.publishedAt },
     { header: "created_at", in: "both", value: ({ review }) => review.createdAt },
     { header: "updated_at", in: "shop", value: ({ review }) => review.updatedAt },
+    // The shop's live public reply under the review (`review_replies`, folded).
+    { header: "shop_reply", in: "shop", value: ({ replyBody }) => replyBody },
   ],
   shop: { rows: ({ reviewRows }) => reviewRows, note: EXPORT_FILE_NOTES["trip_reviews.csv"] },
   diver: {
     rows: ({ reviewRows, person }) =>
-      reviewRows.map((review) => ({ review, diverName: person.fullName })),
+      reviewRows.map((review) => ({ review, diverName: person.fullName, replyBody: null })),
     note: "This diver's own trip reviews.",
   },
 });

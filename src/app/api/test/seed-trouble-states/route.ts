@@ -1,4 +1,4 @@
-import { and, count, eq, gt, gte, inArray, isNull, lt, ne } from "drizzle-orm";
+import { and, count, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { requestCrewAssignment } from "@/db/crew-requests";
@@ -10,6 +10,7 @@ import { queueMediaDeletion, STALE_PENDING_AFTER_MS } from "@/db/media-deletions
 import { recordNotificationDelivery } from "@/db/notifications";
 import { STALE_AFTER_MS } from "@/db/payment-operations";
 import { recordProcessorErasureObligations } from "@/db/processor-erasure";
+import { writeReviewReply } from "@/db/review-replies";
 import { getShopReviewAggregate, setReviewPublished } from "@/db/reviews";
 import { markBookingRunningLate } from "@/db/running-late";
 import {
@@ -31,13 +32,14 @@ import {
   specialtyCertifications,
   tripAssignments,
   tripReviews,
+  tripSightings,
   trips,
   waiverRecords,
   workOrders,
 } from "@/db/schema";
 import { seatDiver } from "@/db/seat-diver";
 import { getShopBySlug } from "@/db/shops";
-import { heldSeatCounts, moveTrip, setTripParticipantTerms } from "@/db/trips";
+import { createTrip, heldSeatCounts, moveTrip, setTripParticipantTerms } from "@/db/trips";
 import { completeWaiver, issueWaiverRequest, recordWaiverDelivery } from "@/db/waivers";
 import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
@@ -91,9 +93,9 @@ export async function POST(request: Request) {
   if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
 
   const now = nowDate();
-  // One of the shop's own people, for the two rows that name who acted. Which
-  // one does not matter to any of these panels; that it belongs to this shop
-  // does, and every row below is written against `shop.id` for the same reason.
+  // One of the shop's own people, for the two rows that name who acted. Which one does not matter
+  // to any of these panels; that it belongs to this shop does, and every row below is written
+  // against `shop.id` for the same reason.
   const [actor] = await db
     .select({ id: people.id })
     .from(people)
@@ -102,11 +104,10 @@ export async function POST(request: Request) {
     .limit(1);
   if (!actor) return NextResponse.json({ error: "not_seeded" }, { status: 409 });
 
-  // 6. A diver who said they hold no card, so the record's warning panel and
-  // its staff eraser can be exercised without putting a permanent warning in
-  // the demo seed. Nadia Petrov is a healthy, uncarded fixture diver; the
-  // exact name keeps this state deterministic and prevents the first-person
-  // ordering above from coupling unrelated trouble panels to it.
+  // 6. A diver who said they hold no card, so the record's warning panel and its staff eraser can
+  // be exercised without putting a permanent warning in the demo seed. Nadia Petrov is a healthy,
+  // uncarded fixture diver; the exact name keeps this state deterministic and prevents the
+  // first-person ordering above from coupling unrelated trouble panels to it.
   const [nadia] = await db
     .select({ id: people.id })
     .from(people)
@@ -147,10 +148,9 @@ export async function POST(request: Request) {
     })
     .onConflictDoNothing();
 
-  // 2. Somebody is owed money: a departure the shop cancelled that still
-  //    carries a paid seat. `listOwedShopCancellationRefunds` joins a paid
-  //    booking_payment to a `cancelled` trip whose booking is *not* cancelled
-  //    (the forfeit carve-out), so cancelling the trip is the whole edit.
+  // 2. Somebody is owed money: a departure the shop cancelled that still carries a paid seat.
+  //    `listOwedShopCancellationRefunds` joins a paid booking_payment to a `cancelled` trip whose
+  //    booking is *not* cancelled (the forfeit carve-out): cancelling the trip is the whole edit.
   const [paidSeat] = await db
     .select({ tripId: bookings.tripId })
     .from(bookingPayments)
@@ -470,8 +470,10 @@ export async function POST(request: Request) {
       ? await letTheReefBoatsKitLapse(db, shop.id, now, shop.timezone)
       : null;
 
+  const batchFour = await batchFourStates(request, db, shop, actor.id, now);
   return NextResponse.json({
     ok: true,
+    ...batchFour,
     ...(boatSafety ? { boatSafety } : {}),
     ...(introOverRatio ? { introOverRatio } : {}),
     ...(unitsNeedingCare ? { unitsNeedingCare } : {}),
@@ -1747,4 +1749,173 @@ async function hideEnoughReviewsToWithholdTheRating(
       reason: "spam",
     });
   }
+}
+
+/**
+ * **A rehearsal tomorrow, with one test diver seated by staff** (ADR
+ * 20261012-rehearsal-departures). Through the real doors: `createTrip` makes it
+ * private and unpriced, and `seatDiver` is the staff seat. Idempotent by title.
+ */
+const REHEARSAL_TITLE = "Training day drill";
+
+async function putARehearsalOnTomorrow(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  actorPersonId: string,
+  now: Date,
+): Promise<{ tripId: string } | null> {
+  const [existing] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.title, REHEARSAL_TITLE),
+        eq(trips.isRehearsal, true),
+        isNull(trips.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (existing) return { tripId: existing.id };
+  const startsAt = new Date(now.getTime() + 24 * HOUR_MS);
+  const trip = await createTrip(db, {
+    shopId,
+    title: REHEARSAL_TITLE,
+    startsAt,
+    endsAt: new Date(startsAt.getTime() + 3 * HOUR_MS),
+    capacity: 6,
+    isRehearsal: true,
+  });
+  if (!trip) return null;
+  await seatDiver(db, {
+    shopId,
+    tripId: trip.id,
+    actorPersonId,
+    diver: { fullName: "Test Diver" },
+    entry: "walk_in",
+    refusals: "coarse",
+  });
+  return { tripId: trip.id };
+}
+
+/**
+ * **Eight past seasons' worth of this month, logged** — one departure on the
+ * same day of this month in each of eight earlier years, each with the species
+ * its crew tapped. Green sea turtles on every one, southern stingrays on six,
+ * nurse sharks on three: the shelf's three lines, in order. Idempotent by title.
+ */
+const PAST_SEASON_TITLE = "Two-Tank Reef — past season";
+const PAST_SEASON_SPECIES = (season: number) => [
+  "green-sea-turtle",
+  ...(season < 6 ? ["southern-stingray"] : []),
+  ...(season < 3 ? ["nurse-shark"] : []),
+];
+
+async function logPastSeasonsOfThisMonth(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  actorId: string,
+  now: Date,
+  timeZone: string,
+): Promise<{ trips: number } | null> {
+  const [already] = await db
+    .select({ n: count() })
+    .from(trips)
+    .where(and(eq(trips.shopId, shopId), eq(trips.title, PAST_SEASON_TITLE)));
+  if ((already?.n ?? 0) > 0) return { trips: Number(already?.n) };
+  const [site] = await db
+    .select({ id: diveSites.id, name: diveSites.name })
+    .from(diveSites)
+    .where(and(eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
+    .limit(1);
+  if (!site) return null;
+  const today = calendarDateInTimezone(now, timeZone);
+  for (let season = 0; season < 8; season += 1) {
+    // Midday on the 10th of this month, `season + 1` years back.
+    const [year, month] = today.split("-").map(Number);
+    const startsAt = new Date(Date.UTC(year - season - 1, month - 1, 10, 15));
+    const trip = await createTrip(db, {
+      shopId,
+      title: PAST_SEASON_TITLE,
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * HOUR_MS),
+      capacity: 8,
+      diveSiteId: site.id,
+    });
+    if (!trip) return null;
+    await db.insert(tripSightings).values(
+      PAST_SEASON_SPECIES(season).map((speciesSlug) => ({
+        shopId,
+        tripId: trip.id,
+        diveSiteId: site.id,
+        diveSiteName: site.name,
+        speciesSlug,
+        count: 1,
+        recordedByPersonId: actorId,
+      })),
+    );
+  }
+  return { trips: 8 };
+}
+
+/**
+ * **The shop's reply under its newest published review with words** (batch 4,
+ * K2), through `writeReviewReply`, which edits rather than stacks on a second
+ * call.
+ */
+async function answerTheNewestReview(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  actorPersonId: string,
+): Promise<{ reviewId: string } | null> {
+  const [review] = await db
+    .select({ id: tripReviews.id })
+    .from(tripReviews)
+    .where(
+      and(
+        eq(tripReviews.shopId, shopId),
+        eq(tripReviews.isPublished, true),
+        isNotNull(tripReviews.comment),
+      ),
+    )
+    .orderBy(desc(tripReviews.createdAt))
+    .limit(1);
+  if (!review) return null;
+  const written = await writeReviewReply(db, {
+    shopId,
+    reviewId: review.id,
+    personId: actorPersonId,
+    body: "Thank you for diving with us. The turtles will be waiting next time.",
+  });
+  return written.ok ? { reviewId: review.id } : null;
+}
+
+/**
+ * The three opt-in states batch 4's captures ask for: `?rehearsal=1`,
+ * `?monthSightings=1` and `?reviewReply=1`. Each is a surface the demo must
+ * not carry by default — a rehearsal on the board, eight invented past
+ * seasons, a reply the shop never wrote.
+ */
+async function batchFourStates(
+  request: Request,
+  db: Awaited<ReturnType<typeof getDb>>,
+  shop: { id: string; timezone: string },
+  actorId: string,
+  now: Date,
+) {
+  const asked = (flag: string) => new URL(request.url).searchParams.get(flag) === "1";
+  const rehearsal = asked("rehearsal")
+    ? await putARehearsalOnTomorrow(db, shop.id, actorId, now)
+    : null;
+  const monthSightings = asked("monthSightings")
+    ? await logPastSeasonsOfThisMonth(db, shop.id, actorId, now, shop.timezone)
+    : null;
+  const reviewReply = asked("reviewReply")
+    ? await answerTheNewestReview(db, shop.id, actorId)
+    : null;
+  return {
+    ...(rehearsal ? { rehearsal } : {}),
+    ...(monthSightings ? { monthSightings } : {}),
+    ...(reviewReply ? { reviewReply } : {}),
+  };
 }

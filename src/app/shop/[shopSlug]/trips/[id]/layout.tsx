@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { uuidParam } from "@/lib/uuid";
+import { RehearsalBanner } from "./_components/RehearsalBanner";
 import { TRIP_SHELL_CLASS } from "./_components/trip-shell";
 
 // Restored after CI. ARCH-7 removed this as provably-unread by
@@ -32,7 +34,7 @@ export default async function TripLayout({
   children: React.ReactNode;
   params: Promise<{ shopSlug: string; id: string }>;
 }) {
-  const { id } = await params;
+  const { shopSlug, id } = await params;
   // The layout runs before every trip child page. Reject malformed ids here so
   // the activity-count query never compares arbitrary text with a UUID column
   // and turns a normal typo into the trip error boundary.
@@ -42,6 +44,13 @@ export default async function TripLayout({
     // #10) — the trip family sat at the in-between `max-w-4xl` the principles
     // call legacy, and a redesign is the sanctioned moment to move to a tier.
     // The day's packet wears the same shell, for the same paper gutter.
-    <main className={TRIP_SHELL_CLASS}>{children}</main>
+    <main className={TRIP_SHELL_CLASS}>
+      {/* A rehearsal says so above every trip surface (ADR
+          20261012-rehearsal-departures); nothing for an ordinary departure. */}
+      <Suspense fallback={null}>
+        <RehearsalBanner shopSlug={shopSlug} tripId={id} />
+      </Suspense>
+      {children}
+    </main>
   );
 }

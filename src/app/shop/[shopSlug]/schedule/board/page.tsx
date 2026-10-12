@@ -154,18 +154,15 @@ export default async function ScheduleBoardPage({
   const st = staffTranslator(locale);
   const now = nowDate();
   const todayIso = toDateInputValue(utcToWallTime(now, tz));
-  // Which week the desktop grid draws. Total by construction: a malformed or
-  // missing `?week=` lands on the one the shop is in rather than refusing the
-  // page (`src/lib/week-board.ts`).
+  // Which week the desktop grid draws. Total by construction: a malformed or missing `?week=`
+  // lands on the one the shop is in rather than refusing the page (`src/lib/week-board.ts`).
   const weekStartIso = resolveWeekStart(week, todayIso);
 
-  // The board works off one keyset page of departures, same as the public
-  // list — a shop with hundreds of upcoming departures still loads one page,
-  // not the whole future.
-  // The add panel's course and dive-site options are deliberately *not* here:
-  // they are two queries and a whole catalogue of client props for two selects
-  // inside a panel that is closed by default, so they load when it opens
-  // (`loadBuilderOptionsAction`).
+  // The board works off one keyset page of departures, same as the public list — a shop with
+  // hundreds of upcoming departures still loads one page, not the whole future.
+  // The add panel's course and dive-site options are deliberately *not* here: they are two queries
+  // and a whole catalogue of client props for two selects inside a panel that is closed by
+  // default, so they load when it opens (`loadBuilderOptionsAction`).
   //
   // **One wave** (code review 2026-10-10, item 25): the week's crew and the request rows are
   // chained onto the reads they need inside the batch, not awaited one at a time after it.
@@ -400,6 +397,8 @@ export default async function ScheduleBoardPage({
     selfGuidedLabel: st("schedule.builder.selfGuidedLabel"),
     selfGuidedHint: st("schedule.builder.selfGuidedHint"),
     isPrivateHint: st("schedule.builder.isPrivateHint"),
+    isRehearsalLabel: st("schedule.builder.isRehearsalLabel"),
+    isRehearsalHint: st("schedule.builder.isRehearsalHint"),
     daysLabel: st("schedule.builder.daysLabel"),
     daysDescription: st("schedule.builder.daysDescription"),
     payAtBookingLegend: st("schedule.builder.payAtBookingLegend"),

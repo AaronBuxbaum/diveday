@@ -715,6 +715,20 @@ async function nameMatchLeavesIdentityInDoubt(
   return namesakes.length > 0;
 }
 
+/**
+ * Whether this departure takes a seat from this actor at all: still scheduled,
+ * not held for conditions, not sailed — and, for a rehearsal, only from staff,
+ * who seat its test divers (ADR 20261012-rehearsal-departures).
+ */
+function tripTakesSeatFrom(
+  trip: typeof trips.$inferSelect | undefined,
+  actor: BookingRequest["actor"],
+): trip is typeof trips.$inferSelect {
+  if (trip?.status !== "scheduled" || trip.conditionsHold) return false;
+  if (hasSailed(trip.startsAt, nowDate())) return false;
+  return actor === "staff" || !trip.isRehearsal;
+}
+
 async function createBookingRecord(
   db: DbExecutor,
   req: BookingRequest,
@@ -738,9 +752,7 @@ async function createBookingRecord(
     .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId), liveTrip()))
     .limit(1)
     .for("update");
-  if (trip?.status !== "scheduled" || trip.conditionsHold || hasSailed(trip.startsAt, nowDate())) {
-    return { ok: false, reason: "trip_unavailable" };
-  }
+  if (!tripTakesSeatFrom(trip, req.actor)) return { ok: false, reason: "trip_unavailable" };
   const participantType: ParticipantType = req.participantType ?? "diver";
   // A course session is diving by definition, and its admission rule, its
   // ratio and its minimum age are all about the student in the water. Recording

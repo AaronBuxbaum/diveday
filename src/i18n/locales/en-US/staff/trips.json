@@ -640,5 +640,10 @@
     "checkedLabel": "Checked — press to clear",
     "uncheckedLabel": "Not checked — press to mark checked",
     "summary": "Before you leave the dock: {checked} of {total} checked"
+  },
+  "rehearsal": {
+    "label": "Rehearsal",
+    "title": "Practice departure for training day",
+    "body": "Nothing about it is sent, charged, shown publicly or counted in reports. It is deleted the night after it comes home."
   }
 }

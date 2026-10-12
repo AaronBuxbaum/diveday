@@ -640,5 +640,10 @@
     "checkedLabel": "Verificado — presiona para quitar la marca",
     "uncheckedLabel": "Sin verificar — presiona para marcarlo",
     "summary": "Antes de salir del muelle: {checked} de {total, plural, one {# verificado} other {# verificados}}"
+  },
+  "rehearsal": {
+    "label": "Ensayo",
+    "title": "Salida de práctica para el día de formación",
+    "body": "Nada de esta salida se envía, se cobra, se muestra en público ni cuenta en los informes. Se elimina la noche después de volver."
   }
 }

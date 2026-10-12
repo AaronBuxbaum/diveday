@@ -63,7 +63,7 @@ export default async function TripOpenGraphImage({
   if (!shop) return genericCard();
 
   const trip = await getTripWithBooked(db, shop.id, tripId);
-  if (!trip) return genericCard();
+  if (!trip || trip.isRehearsal) return genericCard();
 
   const locale = shop.defaultLocale;
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);

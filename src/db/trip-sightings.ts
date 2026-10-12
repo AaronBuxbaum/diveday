@@ -18,7 +18,7 @@ import {
   tripSightings,
   trips,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * **The living reef** — what a crew saw, per departure and per site, and what a
@@ -87,6 +87,8 @@ export async function recordTripSighting(
     const [trip] = await tx
       .select({ id: trips.id, startsAt: trips.startsAt })
       .from(trips)
+      // diveday:allow-rehearsal: staff log a sighting on a rehearsal for practice;
+      // every public read of sightings leaves rehearsals out.
       .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
       .limit(1);
     if (!trip) return { ok: false, reason: "unknown_trip" };
@@ -263,6 +265,7 @@ export async function siteSightings(
             isNull(executedDives.deletedAt),
             eq(trips.shopId, shopId),
             liveTrip(),
+            notRehearsal(),
             gte(trips.startsAt, since),
           ),
         ),
@@ -280,6 +283,7 @@ export async function siteSightings(
             isNull(tripSightings.deletedAt),
             eq(trips.shopId, shopId),
             liveTrip(),
+            notRehearsal(),
             gte(trips.startsAt, since),
           ),
         ),
@@ -301,6 +305,7 @@ export async function siteSightings(
             isNull(tripSightings.deletedAt),
             eq(trips.shopId, shopId),
             liveTrip(),
+            notRehearsal(),
             gte(trips.startsAt, since),
           ),
         )

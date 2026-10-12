@@ -20,6 +20,7 @@ import {
   canReadMedicalClearanceDocument,
   canReadPrivateRecapPulse,
   canRefund,
+  canReplyToReviews,
   canViewShopActivity,
   canViewShopReports,
   isStaff,
@@ -66,6 +67,8 @@ describe("accountable-role gates (export/import/reports)", () => {
     // physician's letter above, and promised to the diver in as many words —
     // the roster below holds the promise to the role set.
     ["canReadPrivateRecapPulse", canReadPrivateRecapPulse],
+    // K2: the shop's public reply under a review speaks in the shop's name.
+    ["canReplyToReviews", canReplyToReviews],
     // D5: the activity log names each staffer's own work across the team.
     ["canViewShopActivity", canViewShopActivity],
   ] as const;

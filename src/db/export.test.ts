@@ -197,6 +197,7 @@ const FOLDED_TABLES = [
   "person_roles", // people.csv / trip_assignments.csv `roles`
   "booking_payments", // bookings.csv payment_* columns
   "booking_referrals", // bookings.csv `referred_by_booking_id`
+  "review_replies", // trip_reviews.csv `shop_reply`, the one live reply per review
 ];
 
 /**
@@ -416,6 +417,10 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // revision to compare it against and the number would mean nothing on the
     // far side. Same class as `pending_checkout_intent_id`.
     "revision",
+    // A rehearsal never reaches the bundle at all (ADR
+    // 20261012-rehearsal-departures): every exported departure is a real one,
+    // so this column would read false on every row it could appear on.
+    "is_rehearsal",
   ],
   trip_change_events: ["shop_id"],
   trip_stage_events: ["shop_id"],

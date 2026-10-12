@@ -61,5 +61,23 @@
   "pulseCategoryBriefing": "Briefing",
   "pulseCategoryBoat": "Barco",
   "pulseCategoryTiming": "Tiempos",
-  "pulseCategoryOther": "Otra cosa"
+  "pulseCategoryOther": "Otra cosa",
+  "reply": {
+    "open": "Responder en público",
+    "yours": "Respuesta de {shop}",
+    "fieldLabel": "Tu respuesta",
+    "hint": "Se muestra bajo esta reseña en tus páginas públicas, firmada con el nombre de tu centro. Hasta {max, plural, one {# carácter} other {# caracteres}}.",
+    "save": "Guardar respuesta",
+    "edit": "Editar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "deleteConfirm": "Eliminar respuesta",
+    "replied": "Respuesta publicada.",
+    "edited": "Respuesta actualizada.",
+    "deleted": "Respuesta eliminada.",
+    "notAuthorized": "Responder a reseñas está reservado a propietarios y gerentes.",
+    "empty": "Escribe una respuesta antes de guardar.",
+    "tooLong": "La respuesta admite hasta {max, plural, one {# carácter} other {# caracteres}}.",
+    "notAnswerable": "Solo una reseña publicada con texto admite respuesta."
+  }
 }

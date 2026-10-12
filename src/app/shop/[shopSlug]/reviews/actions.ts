@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { canPersonReadPrivateRecapPulse } from "@/db/authz";
+import { canPersonReadPrivateRecapPulse, canPersonReplyToReviews } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { markRecapPulseAddressed } from "@/db/recap-pulses";
+import { deleteReviewReply, writeReviewReply } from "@/db/review-replies";
 import {
   REVIEW_MODERATION_REASONS,
   type ReviewModerationReason,
@@ -15,6 +16,7 @@ import {
 } from "@/db/reviews";
 import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { publicReviewsPath, publicSchedulePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { isUuid } from "@/lib/uuid";
@@ -239,4 +241,73 @@ export async function markPulseAddressedAction(formData: FormData) {
   // the code to kebab (src/lib/staff-notices.ts).
   if (!marked) redirect(noticeUrl(reviews, "error"));
   revalidateAndRedirect(reviews, noticeUrl(reviews, "pulse-addressed"));
+}
+
+const replyForm = z.object({
+  reviewId: z.string().default(""),
+  intent: z.enum(["save", "delete"]).default("save"),
+  body: z.string().default(""),
+});
+
+/** What a reply form did. `null` is "nothing yet". */
+export type ReviewReplyResult =
+  | { ok: true; reviewId: string; effect: "replied" | "edited" | "deleted" }
+  | {
+      ok: false;
+      reviewId: string;
+      reason: "not-authorized" | "empty" | "too-long" | "not-answerable" | "error";
+    }
+  | null;
+
+/**
+ * **Write, change or delete the shop's public reply under a review** (batch 4,
+ * K2). Settles in place like the row's other acts.
+ *
+ * Owner/manager only, checked here against live roles: a hidden form is not a
+ * gate, and a hand-made POST reaches this action all the same (ADR-0006). The
+ * shop comes from the session and is re-checked inside every write.
+ */
+export async function reviewReplyAction(
+  _prev: ReviewReplyResult,
+  formData: FormData,
+): Promise<ReviewReplyResult> {
+  const session = await requireStaffSession();
+  const parsed = parseForm(replyForm, formData);
+  if (!parsed.ok) return { ok: false, reviewId: "", reason: "error" };
+  const { reviewId, intent, body } = parsed.data;
+  if (!isUuid(reviewId)) return { ok: false, reviewId, reason: "error" };
+  const db = await getDb();
+  const { shopId, personId } = session.user;
+  if (!(await canPersonReplyToReviews(db, shopId, personId))) {
+    return { ok: false, reviewId, reason: "not-authorized" };
+  }
+
+  if (intent === "delete") {
+    const deleted = await deleteReviewReply(db, { shopId, reviewId, personId });
+    if (!deleted) return { ok: false, reviewId, reason: "error" };
+  } else {
+    const written = await writeReviewReply(db, { shopId, reviewId, personId, body });
+    if (!written.ok) {
+      const reason =
+        written.reason === "too_long"
+          ? "too-long"
+          : written.reason === "not_answerable"
+            ? "not-answerable"
+            : written.reason === "empty"
+              ? "empty"
+              : "error";
+      return { ok: false, reviewId, reason };
+    }
+    revalidateReviewSurfaces(session.user.shopSlug);
+    return { ok: true, reviewId, effect: written.effect };
+  }
+  revalidateReviewSurfaces(session.user.shopSlug);
+  return { ok: true, reviewId, effect: "deleted" };
+}
+
+/** The staff queue, and the public pages the reply renders on. */
+function revalidateReviewSurfaces(shopSlug: string) {
+  revalidatePath(shopPath(shopSlug, "reviews"));
+  revalidatePath(publicSchedulePath(shopSlug));
+  revalidatePath(publicReviewsPath(shopSlug));
 }

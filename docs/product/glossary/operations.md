@@ -1267,6 +1267,19 @@
   equality, not "at least", so a miscounted day does not blur a milestone — it skips it permanently.
   Primary ink, never coral (the thread spends its accent three times and this is not one of them),
   and on every other visit the plain ordinal line renders in its place.
+- **Rehearsal** — a departure staff add from the schedule builder for training day, to seat test
+  divers and practice the boat side: check-in, roll call, close-out. Set when it is created and
+  never changed (`trips.is_rehearsal`). It is always private, never priced, never part of a series,
+  and only staff seat anyone on it. Nothing about it is sent by any channel, shown in public,
+  charged, exported or counted in Reports, and it is deleted the night after it comes home. A
+  warning panel says so above every trip surface. See
+  [20261012-rehearsal-departures](../../architecture/decisions/20261012-rehearsal-departures.md).
+- **Review reply** — the shop's one public answer under a published review with words, written,
+  edited or deleted by an owner or manager on the staff Reviews page and signed with the shop's
+  name ("Reply from Blue Reef Divers"). Plain text, at most 400 characters
+  (`MAX_REVIEW_REPLY_LENGTH`), shown wherever the review is: the public reviews page, the
+  storefront's reviews and the reviews embed. It goes dark with its review if the review is
+  hidden, and is blanked when the reviewer is erased (`review_replies`, `src/db/review-replies.ts`).
 - **Review request** — a "Leave a review" section on the post-trip recap page, shown only when the
   shop has set a single, optional outbound link (`shops.review_url`) in Settings — DiveDay never
   integrates with a review platform's API, never tracks whether a diver actually left a review, and

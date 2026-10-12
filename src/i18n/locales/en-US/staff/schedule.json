@@ -23,6 +23,7 @@
     "addedNamed": "“{title}” is on the board.",
     "addedSeries": "“{title}” is on the board: {count, plural, one {# trip} other {# trips}} scheduled.",
     "capacityAboveBoat": "That capacity is above what the assigned boat holds.",
+    "rehearsalRepeats": "A rehearsal is a single departure. Untick Repeat, or leave Rehearsal off.",
     "capacityAboveCertificate": "That capacity is above the passenger limit on the boat’s certificate.",
     "capacityAboveCertificateCount": "{count, plural, one {The boat’s certificate allows # passenger. Pick a capacity no higher.} other {The boat’s certificate allows # passengers. Pick a capacity no higher.}}"
   },
@@ -112,6 +113,8 @@
     "descriptionPlaceholder": "Sites, conditions, who it’s for, required certs.",
     "isPrivateLabel": "Private charter",
     "isPrivateHint": "Off the public schedule. Anyone with the link can see the departure and book a seat.",
+    "isRehearsalLabel": "Rehearsal for training day",
+    "isRehearsalHint": "Practice only: nothing is sent, charged, shown publicly or counted in reports. Deleted the night after it comes home.",
     "selfGuidedLabel": "Self-guided dive",
     "selfGuidedHint": "Buddy pairs go in without a guide, so DiveDay stops asking you to roster one.",
     "daysLabel": "How many days",

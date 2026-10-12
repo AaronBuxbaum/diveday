@@ -23,6 +23,7 @@
     "addedNamed": "“{title}” ya está en el calendario.",
     "addedSeries": "“{title}” ya está en el calendario: {count, plural, one {# salida programada} other {# salidas programadas}}.",
     "capacityAboveBoat": "Esa capacidad supera lo que admite el barco asignado.",
+    "rehearsalRepeats": "Un ensayo es una sola salida. Quita la repetición o no lo marques como ensayo.",
     "capacityAboveCertificate": "Esa capacidad supera el límite de pasajeros del certificado del barco.",
     "capacityAboveCertificateCount": "{count, plural, one {El certificado del barco permite # pasajero. Elige una capacidad que no lo supere.} other {El certificado del barco permite # pasajeros. Elige una capacidad que no lo supere.}}"
   },
@@ -112,6 +113,8 @@
     "descriptionPlaceholder": "Sitios de buceo, condiciones, para quién es, certificaciones requeridas.",
     "isPrivateLabel": "Chárter privado",
     "isPrivateHint": "Fuera del calendario público. Cualquiera que tenga el enlace puede ver la salida y reservar una plaza.",
+    "isRehearsalLabel": "Ensayo para un día de formación",
+    "isRehearsalHint": "Solo para practicar: nada se envía, se cobra, se muestra en público ni cuenta en los informes. Se elimina la noche después de volver.",
     "selfGuidedLabel": "Inmersión autoguiada",
     "selfGuidedHint": "Las parejas entran sin guía, así que DiveDay deja de pedirte que asignes uno.",
     "daysLabel": "Cuántos días",

@@ -20,6 +20,7 @@ import {
   canReadMedicalClearanceDocument,
   canReadPrivateRecapPulse,
   canRefund,
+  canReplyToReviews,
   canRetireMedicalRefusal,
   canViewShopActivity,
   type Role,
@@ -231,6 +232,10 @@ export const canPersonRetireMedicalRefusal = (db: DbExecutor, shopId: string, pe
  */
 export const canPersonReadPrivateRecapPulse = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canReadPrivateRecapPulse);
+
+/** Live DB-checked companion of the review-reply gate (src/lib/authz.ts). */
+export const canPersonReplyToReviews = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canReplyToReviews);
 
 export const canPersonConfigureTrips = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canConfigureTrips);

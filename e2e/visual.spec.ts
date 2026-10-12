@@ -2329,6 +2329,23 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **"What you might see in July"** (batch 4, K4): the shopfront's shelf of
+       * what the shop's crews logged this month in earlier seasons, which stays
+       * silent below eight recorded departures. The demo has one season, so
+       * the opt-in `?monthSightings=1` state logs eight past ones.
+       */
+      test(`the shopfront says what the crews have seen this month (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?monthSightings=1");
+        expect(seeded.ok()).toBe(true);
+        await page.goto("/s/blue-mantis");
+        await page.getByRole("heading", { name: /^What you might see in / }).waitFor();
+        await capture(page, "shopfront-month-sightings", scheme);
+      });
+
+      /**
        * **The off-season** (N-45) — the storefront a shop between seasons shows
        * a stranger, which no existing capture can be: `blue-mantis` exists to
        * have a full board, so this one empties it first.
@@ -5777,6 +5794,22 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **A rehearsal says so above the departure** (ADR
+       * 20261012-rehearsal-departures), through the opt-in `?rehearsal=1`
+       * state: a training-day departure with one test diver.
+       */
+      test(`a rehearsal's trip page carries its banner (${scheme})`, async ({ page, request }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?rehearsal=1");
+        expect(seeded.ok()).toBe(true);
+        const { rehearsal } = (await seeded.json()) as { rehearsal?: { tripId: string } };
+        if (!rehearsal) throw new Error("seed-trouble-states could not put a rehearsal on");
+        await page.goto(`/shop/blue-mantis/trips/${rehearsal.tripId}`);
+        await page.locator("[data-rehearsal-banner]").waitFor();
+        await page.getByRole("navigation", { name: "Departure" }).waitFor();
+        await capture(page, "trip-rehearsal", scheme);
+      });
+
+      /**
        * **A crew member another boat also claims, said once** (issue #2217,
        * PR #2202). At the dock the Boat tab says the instruction once above
        * the crew list and each clashing row reads only "Also rostered on …
@@ -7094,6 +7127,33 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/s/blue-mantis/reviews");
         await page.getByRole("heading", { level: 1, name: "All reviews" }).waitFor();
         await capture(page, "public-reviews", scheme);
+      });
+
+      /**
+       * **The shop's reply under a review** (batch 4, K2), signed with the
+       * shop's name, through the opt-in `?reviewReply=1` state.
+       */
+      test(`a review with the shop's reply renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?reviewReply=1");
+        expect(seeded.ok()).toBe(true);
+        await page.goto("/s/blue-mantis/reviews");
+        await page.locator("[data-review-reply]").first().waitFor();
+        await capture(page, "public-reviews-reply", scheme);
+      });
+
+      /**
+       * The reply editor open on a published review: the field, its limit and
+       * the two acts, where the row's own words already are.
+       */
+      test(`the review reply editor opens under its review (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/reviews");
+        const published = page.getByRole("region", { name: /^Published/ });
+        await published.getByRole("button", { name: "Reply in public" }).first().click();
+        await published.getByLabel("Your reply").waitFor();
+        await capture(page, "staff-reviews-reply-editor", scheme);
       });
 
       /**

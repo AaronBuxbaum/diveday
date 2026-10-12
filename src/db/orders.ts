@@ -67,6 +67,7 @@ import {
   getShopTaxEnabled,
 } from "./stripe-accounts";
 import { invoicingProviderFromEnvironment } from "./stripe-providers";
+import { notRehearsal } from "./trips-live";
 
 export type NewOrderLineItem = {
   kind: OrderLineItemKind;
@@ -324,14 +325,19 @@ async function issueOrder(
     // reports the invoice paid, setBookingPaymentIfNotFinal marks THIS
     // booking paid — linking diver A's order to diver B's booking would mark
     // B's seat paid off A's money.
+    //
+    // A seat on a rehearsal is never billed (ADR 20261012-rehearsal-departures):
+    // the join reads its departure and refuses it like a foreign booking.
     const [booking] = await db
       .select({ id: bookings.id })
       .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
       .where(
         and(
           eq(bookings.id, input.bookingId),
           eq(bookings.shopId, input.shopId),
           eq(bookings.personId, input.personId),
+          notRehearsal(),
         ),
       )
       .limit(1);
