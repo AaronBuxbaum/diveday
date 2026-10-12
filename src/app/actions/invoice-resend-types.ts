@@ -6,6 +6,9 @@
 export type InvoiceResendState =
   | { status: "idle" }
   | { status: "sent" }
-  | { status: "error"; reason: "not_found" | "not_open" | "not_configured" | "failed" };
+  | {
+      status: "error";
+      reason: "not_found" | "not_open" | "not_configured" | "failed" | "rate_limited";
+    };
 
 export const IDLE_INVOICE_RESEND_STATE: InvoiceResendState = { status: "idle" };

@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { compare } from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { people, personRoles, shops, userAccounts } from "@/db/schema";
 import { isStaff, type Role } from "@/lib/authz";
@@ -89,7 +89,14 @@ export async function verifyCredentials(
   const account = found?.status === "active" ? found : undefined;
 
   const [person] = account
-    ? await db.select().from(people).where(eq(people.id, account.personId)).limit(1)
+    ? await db
+        .select()
+        .from(people)
+        // A person removed from the shop's lists signs in to nothing, rather
+        // than being admitted and bounced by the next gate (src/lib/authz.ts).
+        // `livePerson()` spelled out: src/lib takes only types from src/db.
+        .where(and(eq(people.id, account.personId), isNull(people.deletedAt)))
+        .limit(1)
     : [];
   const [shop] = person
     ? await db.select().from(shops).where(eq(shops.id, person.shopId)).limit(1)

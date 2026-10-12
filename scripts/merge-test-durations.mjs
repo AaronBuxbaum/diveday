@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
@@ -11,6 +12,7 @@ import { fileURLToPath } from "node:url";
  *
  *   node scripts/merge-test-durations.mjs durations/*.json
  *   node scripts/merge-test-durations.mjs shard-1.log shard-2.log shard-3.log shard-4.log
+ *   node scripts/merge-test-durations.mjs --prune
  *
  * Each input is either an artifact's JSON or a saved job log: the reporter
  * also prints its map as one line after `diveday-test-durations:`, because the
@@ -23,6 +25,11 @@ import { fileURLToPath } from "node:url";
  * shard of one green run: a file left out of the inputs drops out of the
  * committed set and falls back to its scaled estimate, which is harmless but
  * less even. A file named twice keeps the larger figure.
+ *
+ * Either way, a key whose test file is no longer on disk is dropped before the
+ * write: the run read may predate a rename or a split merged since, and a dead
+ * key only ever weighs a file the sequencer will never see. `--prune` with no
+ * inputs does that alone to the committed file.
  */
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -70,22 +77,44 @@ export function mergeDurations(maps) {
   return Object.fromEntries([...merged].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
 }
 
+/**
+ * The map without the keys `exists` rejects, and those keys. A key is a
+ * repo-relative test path, as the reporter writes it.
+ */
+export function pruneMissing(map, exists) {
+  const kept = {};
+  const pruned = [];
+  for (const [file, ms] of Object.entries(map)) {
+    if (exists(file)) kept[file] = ms;
+    else pruned.push(file);
+  }
+  return { kept, pruned };
+}
+
 // Imported by the test, which must not read argv or write the file.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const inputs = process.argv.slice(2);
-  if (inputs.length === 0) {
+  const args = process.argv.slice(2);
+  const pruneOnly = args.includes("--prune");
+  const inputs = args.filter((arg) => arg !== "--prune");
+  if (inputs.length === 0 && !pruneOnly) {
     console.error(
-      "usage: node scripts/merge-test-durations.mjs <shard-durations.json or shard job log…> — pass every unit shard of one green CI run.",
+      "usage: node scripts/merge-test-durations.mjs <shard-durations.json or shard job log…> — pass every unit shard of one green CI run; or --prune alone to drop the committed keys whose test file is gone.",
     );
     process.exit(2);
   }
-  const maps = await Promise.all(
-    inputs.map(async (file) => parseDurationsInput(await readFile(file, "utf8"), file)),
-  );
-  const merged = mergeDurations(maps);
-  await writeFile(DURATIONS_PATH, `${JSON.stringify(merged, null, 2)}\n`);
-  const total = Object.values(merged).reduce((sum, ms) => sum + ms, 0);
+  const merged =
+    inputs.length > 0
+      ? mergeDurations(
+          await Promise.all(
+            inputs.map(async (file) => parseDurationsInput(await readFile(file, "utf8"), file)),
+          ),
+        )
+      : JSON.parse(await readFile(DURATIONS_PATH, "utf8"));
+  const { kept, pruned } = pruneMissing(merged, (file) => existsSync(path.join(ROOT, file)));
+  await writeFile(DURATIONS_PATH, `${JSON.stringify(kept, null, 2)}\n`);
+  const total = Object.values(kept).reduce((sum, ms) => sum + ms, 0);
+  for (const file of pruned) console.log(`test-durations: dropped ${file} (no such file)`);
   console.log(
-    `test-durations: ${Object.keys(merged).length} files, ${Math.round(total / 1000)}s recorded → ${path.relative(ROOT, DURATIONS_PATH)}`,
+    `test-durations: ${Object.keys(kept).length} files, ${Math.round(total / 1000)}s recorded → ${path.relative(ROOT, DURATIONS_PATH)}`,
   );
 }

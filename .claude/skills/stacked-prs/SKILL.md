@@ -200,6 +200,11 @@ to its own change.
      layer at or below it, not that layer's own pixels.
   2. **Opening a layer above does not cancel the run below.** Only a new push to the same branch
      supersedes a run (per-ref concurrency in `ci.yml`).
+  3. **Push several layers a layer at a time, bottom first.** Push the bottom layer, wait until its
+     run's `Build` job has finished (about two minutes), then push the next, so no more than two
+     full runs overlap. Each layer is a ~25-job run against the account's 20-concurrent-job cap:
+     four layers pushed within 46 s on 2026-10-10 (runs 4558, 4559, 4562, 4563) queued jobs for up
+     to 740 s and took 23.0–28.4 min each, against 13.6–16.8 min for a run on its own.
 - **`pnpm test:changed` and the destructive-migration guard** anchor on
   `git merge-base origin/main HEAD`, which in a stack is the fork point of the whole stack. Upper
   layers re-run lower layers' affected tests and re-check their migrations. Slower, never wrong —

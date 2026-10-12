@@ -7,9 +7,10 @@ import { staffSession } from "@/test/staff-session";
  * **Every door on the counter takes a session first, and something notices if
  * one stops** (`security-reviewer` pass on issue #1696).
  *
- * The gate itself was never in doubt: all six exported actions open with
- * `requireStaffSession()`, the write is scoped by `session.user.shopId`, and the
- * slug only ever reaches `shopPath`'s escaping. What was missing is anything
+ * The gate itself was never in doubt: every exported action opens with
+ * `requireShopSurface(shopSlug)` (it was `requireStaffSession()` until a slug
+ * naming another shop was found to steer the redirect and the revalidation),
+ * and the write is scoped by `session.user.shopId`. What was missing is anything
  * that would *fail* if a gate were deleted. The folder's own tests mock
  * `@/lib/session` wholesale — which is right for what they test, and means a
  * gateless action passes them — the check-in folder had no authz roster, and no
@@ -33,7 +34,7 @@ import { staffSession } from "@/test/staff-session";
  *
  * There is no role list to check here. The counter's actions are the day's work
  * — arrivals, a seat given back, an identity attested — and `src/lib/authz.ts` is explicit that those stay open to every
- * live staff role; `requireStaffSession` re-reads the account on every call, so
+ * live staff role; `requireShopSurface` re-reads the account on every call, so
  * "live" is a fact and not a 30-day-old claim (issue #701).
  */
 
@@ -47,10 +48,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireShopSurface } = await import("@/lib/session");
 const { checkInAction, markNoShowAction, undoCheckInAction, undoNoShowAction } = await import(
   "./actions"
 );
@@ -63,11 +64,12 @@ const BOOKING_ID = "55555555-5555-4555-8555-555555555555";
 
 describe("who may run each action at the counter", () => {
   /**
-   * The only gate on this surface: a live staff session, re-read on every call.
-   * A second list would mean a second kind of gate, and there is none — a new
-   * one arrives as a new list here, not as an entry on this one.
+   * The only gate on this surface: a live staff session in the shop the slug
+   * names (`requireShopSurface`), re-read on every call. A second list would
+   * mean a second kind of gate, and there is none — a new one arrives as a new
+   * list here, not as an entry on this one.
    */
-  const STAFF_SESSION = [
+  const SHOP_SURFACE = [
     "checkInAction",
     "undoCheckInAction",
     "markNoShowAction",
@@ -98,10 +100,10 @@ describe("who may run each action at the counter", () => {
   /**
    * Which list an action's body puts it in, read from the source.
    *
-   * `requireShopSurface` is named as well as `requireStaffSession`, even though
-   * nothing here uses it: it is the *other* staff gate in the app (the roster's
-   * actions take it), and an action that switched to it would otherwise read as
-   * ungated to a scan looking for one spelling.
+   * `requireStaffSession` is named as well as `requireShopSurface`, so an
+   * action that went back to it is filed under its own list and fails the
+   * roster, rather than reading as ungated. A slug-bound action may not take it
+   * at all (`scripts/check-slug-actions.mjs`).
    */
   function gateInBody(body: string): string {
     if (/await requireShopSurface\(/.test(body)) return "SHOP_SURFACE";
@@ -111,7 +113,7 @@ describe("who may run each action at the counter", () => {
 
   it("files every exported action under the gate its own body carries", () => {
     const recorded = new Map<string, string>(
-      STAFF_SESSION.map((name) => [name, "STAFF_SESSION"] as const),
+      SHOP_SURFACE.map((name) => [name, "SHOP_SURFACE"] as const),
     );
     const bodies = actionBodies();
 
@@ -130,7 +132,7 @@ describe("who may run each action at the counter", () => {
    */
   it("takes the session before it reaches the database", () => {
     for (const [name, body] of actionBodies()) {
-      const gate = body.indexOf("requireStaffSession()");
+      const gate = body.indexOf("requireShopSurface(");
       const db = body.indexOf("getDb()");
       expect(gate, name).toBeGreaterThan(-1);
       if (db === -1) continue;
@@ -140,7 +142,7 @@ describe("who may run each action at the counter", () => {
 });
 
 /**
- * The same six, refused. `requireStaffSession` throws for a caller who is not
+ * The same six, refused. `requireShopSurface` throws for a caller who is not
  * this shop's live staff — a redirect to sign-in, or `notFound()` for a stale
  * tenant claim (`src/lib/session.ts`) — and an action that swallowed that, or
  * never called it, would read the database anyway.
@@ -167,7 +169,7 @@ describe("a refused session at the counter", () => {
     vi.mocked(getDb).mockImplementation(() => {
       throw new Error("a gated action must not reach the database");
     });
-    vi.mocked(requireStaffSession).mockRejectedValue(new Error("REDIRECT:/sign-in"));
+    vi.mocked(requireShopSurface).mockRejectedValue(new Error("REDIRECT:/sign-in"));
     const invoke = INVOKE[name];
     if (!invoke) throw new Error(`no invoker for ${name}`);
 
@@ -185,13 +187,13 @@ describe("a refused session at the counter", () => {
     vi.mocked(getDb).mockImplementation(() => {
       throw new Error("reached the database");
     });
-    vi.mocked(requireStaffSession).mockResolvedValue(
-      staffSession({
+    vi.mocked(requireShopSurface).mockResolvedValue({
+      session: staffSession({
         shopId: "11111111-1111-4111-8111-111111111111",
         shopSlug: SHOP_SLUG,
         personId: "22222222-2222-4222-8222-222222222222",
       }),
-    );
+    } as never);
     const invoke = INVOKE[name];
     if (!invoke) throw new Error(`no invoker for ${name}`);
 

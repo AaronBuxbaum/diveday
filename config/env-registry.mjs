@@ -218,6 +218,24 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
+      "The demo sign-in switch (ADR 20260724-per-visitor-demo-shops; read in",
+      "src/lib/demo-bypass.ts). Unset, the shared demo password signs in to a demo",
+      "shop's staff accounts, and only a demo shop's. `off` turns that off for a",
+      "deployment that should never have a demo tenant (a self-hosted install, a",
+      "compliance-scoped environment); `on` turns it back on. Anything else is read",
+      "as off, so a typo never reads as consent.",
+    ],
+    keys: [
+      {
+        key: "DIVEDAY_DEMO_BYPASS",
+        from: "manual",
+        targets: VERCEL,
+        absent: "the demo bypass is on",
+      },
+    ],
+  },
+  {
+    doc: [
       "SNS topic ARN for /api/webhooks/ses (SesEventNotificationsTopicArn output).",
       "Verified messages whose own TopicArn doesn't match this are rejected even if",
       "correctly signed, so a differently-sourced SNS message can't be replayed here.",

@@ -614,6 +614,9 @@ export const gearReservations = pgTable(
     index("gear_reservations_person_idx").on(table.personId),
     index("gear_reservations_order_idx").on(table.orderId),
     index("gear_reservations_shop_until_idx").on(table.shopId, table.reservedUntil),
+    // The counter-rental sweeps read a shop's units still out (code review
+    // 2026-10-11, item 27).
+    index("gear_reservations_shop_checked_out_idx").on(table.shopId, table.checkedOutAt),
     check("gear_reservations_window", sql`${table.reservedUntil} >= ${table.reservedFrom}`),
     check(
       "gear_reservations_dives_logged",

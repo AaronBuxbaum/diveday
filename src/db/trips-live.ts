@@ -1,5 +1,5 @@
 import { isNull } from "drizzle-orm";
-import { trips } from "./schema";
+import { people, trips } from "./schema";
 
 /**
  * "This departure is still on the board."
@@ -25,3 +25,19 @@ import { trips } from "./schema";
  * deleted departures itself.
  */
 export const liveTrip = () => isNull(trips.deletedAt);
+
+/**
+ * "This person is still on the shop's lists." The `liveTrip()` of `people`.
+ *
+ * Removing a diver sets `people.deleted_at` rather than deleting the row
+ * (`deleteDiver`, src/db/divers.ts), and a staff member who also dives holds
+ * the `diver` role, so a person can be removed while still holding a staff
+ * role. A read that lists people a staffer acts on (the staff list behind
+ * every crew picker), decides who may be put somewhere (crew eligibility), or
+ * lets somebody in (sign-in) carries this predicate. `scripts/check-live-people.mjs`
+ * holds the reads of `people` to it, with a baseline of the reads written
+ * before it existed; most of those are by-id reads inside a transaction, or a
+ * name looked up for an activity line, where a removed person is the right
+ * answer.
+ */
+export const livePerson = () => isNull(people.deletedAt);

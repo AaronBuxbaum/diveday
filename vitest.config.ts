@@ -174,7 +174,20 @@ export default defineConfig({
           globalSetup: ["./src/test/global-setup.ts"],
         },
       },
-      { extends: true, test: { name: "ui", include: only(groups.ui), environment: "jsdom" } },
+      // `vmForks`, not the root's `forks`: a fresh fork per file paid a jsdom
+      // boot per file, which was 47% of this project's time (305 s of 338
+      // files locally, 2026-10-12). A VM pool keeps one process per worker and
+      // gives each file a new VM context — its own module registry, so a
+      // file's `vi.mock` still dies with the file — and set the project at
+      // 99 s with every test passing. The PGlite reasoning above does not
+      // reach here: no `ui` file hydrates a database (those are `db`), and
+      // this is still one process per worker, not threads. The one
+      // difference a test can see — a VM context has no web streams — is
+      // filled in by src/test/setup.ts.
+      {
+        extends: true,
+        test: { name: "ui", include: only(groups.ui), environment: "jsdom", pool: "vmForks" },
+      },
       // Pure files share a worker: no fork and no re-import of the same modules
       // per file. Proven safe by running the project twice shuffled
       // (`pnpm test:lib --sequence.shuffle`); a file that leaks state belongs

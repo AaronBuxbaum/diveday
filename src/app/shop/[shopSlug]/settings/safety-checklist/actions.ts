@@ -10,7 +10,7 @@ import {
   listChecklistItems,
   reorderChecklistItems,
 } from "@/db/pre-departure-check";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 function backTo(shopSlug: string): string {
@@ -20,7 +20,7 @@ function backTo(shopSlug: string): string {
 const addSchema = z.object({ label: z.string().trim().min(1).max(200) });
 
 export async function addChecklistItemAction(shopSlug: string, formData: FormData): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = (await requireShopSurface(shopSlug)).session;
   const back = backTo(shopSlug);
   const parsed = addSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(back, "checklist-item-invalid"));
@@ -39,7 +39,7 @@ export async function deleteChecklistItemAction(
   shopSlug: string,
   formData: FormData,
 ): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = (await requireShopSurface(shopSlug)).session;
   const back = backTo(shopSlug);
   const parsed = itemSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(back, "checklist-item-invalid"));
@@ -62,7 +62,7 @@ const moveSchema = z.object({
  * that cheaper than a dedicated single-row move.
  */
 export async function moveChecklistItemAction(shopSlug: string, formData: FormData): Promise<void> {
-  const staff = await requireStaffSession();
+  const staff = (await requireShopSurface(shopSlug)).session;
   const back = backTo(shopSlug);
   const parsed = moveSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(back, "checklist-item-invalid"));

@@ -27,7 +27,7 @@ import {
 import { majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicCoursePath } from "@/lib/public-routes";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { storeCourseImage } from "@/lib/storage";
 import { MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
@@ -91,7 +91,7 @@ async function uploadImage(file: FormDataEntryValue | null) {
 export async function saveCourseContentAction(shopSlug: string, slug: string, formData: FormData) {
   const base = shopPath(shopSlug, "courses", slug, "edit");
   const courses = shopPath(shopSlug, "courses");
-  const staff = await requireStaffSession();
+  const staff = (await requireShopSurface(shopSlug)).session;
 
   const db = await getDb();
   const course = await getCourseBySlug(db, staff.user.shopId, slug);
@@ -314,7 +314,7 @@ export async function pullCourseTemplateUpdatesAction(
   _formData: FormData,
 ) {
   const base = shopPath(shopSlug, "courses", slug, "edit");
-  const staff = await requireStaffSession();
+  const staff = (await requireShopSurface(shopSlug)).session;
   const db = await getDb();
   const course = await getCourseBySlug(db, staff.user.shopId, slug);
   if (!course) redirect(noticeUrl(shopPath(shopSlug, "courses"), "invalid"));

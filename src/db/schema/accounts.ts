@@ -55,8 +55,16 @@ export const accountTokens = pgTable(
  * A signed-in session — better-auth's `session` model, mapped here by name
  * for consistency with `account_tokens` rather than better-auth's default
  * `session`. Unlike the JWT next-auth used (ADR-0006), this row is the
- * session: `token` is what the cookie carries, and revoking sign-in means
- * deleting or expiring this row rather than waiting out a JWT's lifetime.
+ * session, and revoking sign-in means deleting or expiring this row rather
+ * than waiting out a JWT's lifetime.
+ *
+ * **`token` holds the SHA-256 of what the cookie carries, never the token
+ * itself** (code review 2026-10-11, item 40). better-auth's adapter is wrapped
+ * (`withHashedSessionTokens`, src/lib/session-token-hash.ts) so it hashes the
+ * token on every write and lookup and only ever sees the raw value; a copy of
+ * this table hands its reader nothing a browser could present. The column
+ * keeps better-auth's field name because better-auth addresses it by that
+ * name.
  *
  * `personId`/`shopId`/`shopSlug`/`roles` are a snapshot taken once, at
  * sign-in, by the credentials plugin (src/lib/auth.ts) — exactly what
@@ -91,7 +99,11 @@ export const accountSessions = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("account_sessions_user_account_idx").on(table.userAccountId)],
+  (table) => [
+    index("account_sessions_user_account_idx").on(table.userAccountId),
+    // The retention prune deletes by `expires_at` (src/db/retention.ts; issue #2357).
+    index("account_sessions_expires_idx").on(table.expiresAt),
+  ],
 );
 
 /** Encrypted TOTP seed plus one-time recovery-code hashes for an account. */

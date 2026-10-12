@@ -405,6 +405,131 @@ describe("pruneExpiredRecords", () => {
     expect(left).toEqual([{ source: "pricing" }]);
   });
 
+  it("prunes only finished sends past their window, never one the drain could still offer", async () => {
+    const { db, shop } = await retentionContext();
+    const window = RETENTION_DAYS.notification_send_queue;
+    const old = daysAgo(window + 1);
+    const row = (key: string, status: "queued" | "processing" | "sent" | "failed", extra = {}) => ({
+      shopId: shop.id,
+      idempotencyKey: `retention-${key}`,
+      status,
+      payloadSealed: null as string | null,
+      nextAttemptAt: old,
+      createdAt: old,
+      updatedAt: old,
+      ...extra,
+    });
+    await db.insert(schema.notificationSendQueue).values([
+      row("sent-old", "sent"),
+      row("failed-old", "failed"),
+      row("sent-recent", "sent", { updatedAt: daysAgo(window - 1) }),
+      // Work in flight, and a parked row still holding its payload: neither is
+      // finished, whatever its age.
+      row("queued-old", "queued", { payloadSealed: "sealed" }),
+      row("processing-old", "processing", { payloadSealed: "sealed" }),
+      row("parked-old", "failed", {
+        payloadSealed: "sealed",
+        errorCode: "sealed_payload_unreadable",
+      }),
+    ]);
+
+    const summary = await pruneExpiredRecords(db, { now: NOW });
+    expect(outcomeFor(summary, "notification_send_queue").deleted).toBe(2);
+    const left = await db
+      .select({ key: schema.notificationSendQueue.idempotencyKey })
+      .from(schema.notificationSendQueue);
+    expect(
+      left
+        .map((r) => r.key)
+        .filter((k) => k.startsWith("retention-"))
+        .sort(),
+    ).toEqual([
+      "retention-parked-old",
+      "retention-processing-old",
+      "retention-queued-old",
+      "retention-sent-recent",
+    ]);
+  });
+
+  it("prunes a waiver link's delivery outcome past its window and keeps the recent one", async () => {
+    const { db, shop } = await retentionContext();
+    const [record] = await db
+      .select({ id: schema.waiverRecords.id })
+      .from(schema.waiverRecords)
+      .where(eq(schema.waiverRecords.shopId, shop.id))
+      .limit(1);
+    if (!record) throw new Error("seeded waiver record missing");
+    await db
+      .delete(schema.waiverDeliveries)
+      .where(eq(schema.waiverDeliveries.waiverRecordId, record.id));
+    const window = RETENTION_DAYS.waiver_deliveries;
+    await db.insert(schema.waiverDeliveries).values([
+      {
+        shopId: shop.id,
+        waiverRecordId: record.id,
+        channel: "email",
+        status: "failed",
+        detail: "Mailbox does not exist",
+        attemptedAt: daysAgo(window + 1),
+      },
+      {
+        shopId: shop.id,
+        waiverRecordId: record.id,
+        channel: "text",
+        status: "sent",
+        attemptedAt: daysAgo(window - 1),
+      },
+    ]);
+
+    const summary = await pruneExpiredRecords(db, { now: NOW });
+    expect(outcomeFor(summary, "waiver_deliveries").deleted).toBe(1);
+    const left = await db
+      .select({ channel: schema.waiverDeliveries.channel })
+      .from(schema.waiverDeliveries)
+      .where(eq(schema.waiverDeliveries.waiverRecordId, record.id));
+    expect(left).toEqual([{ channel: "text" }]);
+  });
+
+  it("prunes a set-up request past its window, with its setup link, and keeps a recent one", async () => {
+    const { db } = await retentionContext();
+    const window = RETENTION_DAYS.setup_requests;
+    const request = (shopName: string, createdAt: Date) => ({
+      shopName,
+      region: "Key Largo",
+      runsBoat: true,
+      currentSystem: "paper",
+      contactName: "Retention Lead",
+      email: `${shopName.toLowerCase().replace(/\s+/g, "-")}@example.invalid`,
+      source: "retention-test",
+      locale: "en-US",
+      createdAt,
+    });
+    const [stale, fresh] = await db
+      .insert(schema.setupRequests)
+      .values([request("Stale Lead", daysAgo(window + 1)), request("Fresh Lead", daysAgo(1))])
+      .returning({ id: schema.setupRequests.id });
+    if (!stale || !fresh) throw new Error("insert failed");
+    await db.insert(schema.shopSetupLinks).values({
+      tokenHash: "retention-stale-link",
+      setupRequestId: stale.id,
+      expiresAt: daysAgo(window - 7),
+    });
+
+    const summary = await pruneExpiredRecords(db, { now: NOW });
+    expect(outcomeFor(summary, "setup_requests").deleted).toBe(1);
+    expect(
+      await db
+        .select({ id: schema.shopSetupLinks.id })
+        .from(schema.shopSetupLinks)
+        .where(eq(schema.shopSetupLinks.setupRequestId, stale.id)),
+    ).toEqual([]);
+    const left = await db
+      .select({ shopName: schema.setupRequests.shopName })
+      .from(schema.setupRequests)
+      .where(eq(schema.setupRequests.source, "retention-test"));
+    expect(left).toEqual([{ shopName: "Fresh Lead" }]);
+  });
+
   it("reports a per-table outcome for every retained table, with the window applied", async () => {
     const { db } = await retentionContext();
     const summary = await pruneExpiredRecords(db, { now: NOW });
@@ -500,9 +625,6 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "imported_payment_history",
   "last_minute_list_entries",
   "course_inquiries",
-  // A shop asking to be set up: a person's contact details, kept until they
-  // ask for them gone like every other lead (ADR 20261007-setup-request-form).
-  "setup_requests",
   // The request's single-use setup link (ADR 20261009-single-use-setup-links):
   // a hash, an expiry and a spent instant, one per request, deleted with it.
   // Its own clock is the expiry, which closes it; there is nothing left in it
@@ -565,7 +687,6 @@ const OUTSIDE_RETENTION: readonly string[] = [
   // never an argument for expiring one on a clock.
   "waiver_records",
   "waiver_materiality_decisions",
-  "waiver_deliveries",
   // Course forms (ADR 20261008-course-forms): the same signed evidence as the
   // release, on the same footing. The forms, their versions and a course's
   // list of them are the shop's own configuration; a signed record is erased
@@ -618,10 +739,8 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "shop_whatsapp_accounts",
   "shop_backup_destinations",
   "shop_backup_deliveries",
-  // Queues that empty themselves. Both are argued in src/lib/retention.ts or
-  // in their own docblock: a finished send clears its payload and every
-  // handle, and a held send is deleted by whichever claimant reaches it first.
-  "notification_send_queue",
+  // A queue that empties itself: a held send is deleted by whichever claimant
+  // reaches it first (its own docblock).
   "held_sends",
   // An obligation, deleted when it is discharged. A window here would delete
   // exactly the rows that still owe something — the local blob whose provider

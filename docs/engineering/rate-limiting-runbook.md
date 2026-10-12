@@ -25,6 +25,7 @@ cannot see it.
 | "Get set up" request (the public set-up form; ADR 20261007-setup-request-form) | `src/app/get-set-up/actions.ts` | IP, checked first; then every IP together, checked only after the honeypot and validation pass | `RATE_LIMITS.setupRequestByIp` (5/hour) + `RATE_LIMITS.setupRequestGlobal` (30/hour). The global bucket is a per-instance first filter; the real cap is `SETUP_REQUESTS_PER_HOUR` (30), counted in `setup_requests` over the last hour before each insert, so it holds across instances |
 | "Try the live demo" (mints a seeded demo shop) | `src/app/actions/demo.ts` | IP | `RATE_LIMITS.demoCreate` (10/hour) |
 | Marking a browser as the founder's, so its demos send no alert | `src/app/api/demo/quiet/route.ts` | IP | `RATE_LIMITS.demoQuiet` (10/hour) |
+| The demo banner's role switch | `src/app/actions/demo.ts` `switchDemoRoleAction` | IP, checked before the slug is looked up | `RATE_LIMITS.demoSwitch` (30/hour); a staff role also needs a session in that shop or the signed demo seat (`src/lib/demo-seat.ts`) |
 | Sign-in | `src/lib/auth.ts` `authorize()` | IP **and** attempted email | `RATE_LIMITS.signInByIp` (20/15min) + `RATE_LIMITS.signInByEmail` (8/15min) |
 | Password-reset request | `src/app/forgot-password/actions.ts` | IP **and** requested email, checked concurrently | `RATE_LIMITS.passwordResetRequestByIp` (5/hour) + `RATE_LIMITS.passwordResetRequestByEmail` (3/15min) |
 | "Can't find your link?" request | `src/app/s/[shopSlug]/actions.ts` `requestFindMyBookingAction` (IP) + `src/db/find-my-booking.ts` `sendFindMyBookingLinks` (email) | IP, checked synchronously; requested email, checked only once at least one matching booking actually needs a fresh mint | `RATE_LIMITS.findMyBookingByIp` (5/hour) + `RATE_LIMITS.findMyBookingByEmail` (3/15min) |
@@ -55,6 +56,10 @@ cannot see it.
 | Emailing a fresh trip-prep link from a dead one | `src/app/ready/[token]/booking-actions.ts` | IP, **and** the booking whose inbox receives it | `RATE_LIMITS.capabilityAction` (60/hour) + `RATE_LIMITS.readinessLinkResendByBooking` (5/hour) |
 | Seat-claim link | `src/app/claim/[token]/actions.ts` | IP | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Address autocomplete in shop settings | `src/app/shop/[shopSlug]/settings/shop-actions.ts` | signed-in staff member | `RATE_LIMITS.addressLookup` (120/hour) |
+| A fresh waiver link from the roster | `src/app/shop/[shopSlug]/trips/[id]/actions.ts` `sendNewWaiverAction` | signed-in staff member | `RATE_LIMITS.staffSendByActor` (60/hour) — refused with the `send-limit` notice |
+| Replying to a diver | `src/app/shop/[shopSlug]/divers/[personId]/details-actions.ts` `replyToDiverAction` | signed-in staff member | `RATE_LIMITS.staffSendByActor` (60/hour) — refused with the `reply-send-limit` notice |
+| Inviting a staff member, or resending the invite | `src/app/shop/[shopSlug]/settings/team/actions.ts` `inviteStaffAction` / `resendInviteAction` | signed-in staff member, one bucket per action | `RATE_LIMITS.staffSendByActor` (60/hour) — refused with the `send-limit` notice |
+| Resending an invoice | `src/app/actions/invoices.ts` `resendInvoiceAction` | signed-in staff member | `RATE_LIMITS.staffSendByActor` (60/hour) — refused with the `rate_limited` reason |
 | Core Web Vitals beacon | `src/app/api/vitals/route.ts` | IP | `RATE_LIMITS.webVitalsBeacon` (300/hour) |
 | CSP violation report | `src/app/api/csp-report/route.ts` | IP | `RATE_LIMITS.cspReport` (120/hour) |
 

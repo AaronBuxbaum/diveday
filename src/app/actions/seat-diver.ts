@@ -7,7 +7,7 @@ import { type SeatDiverPerson, seatDiver } from "@/db/seat-diver";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PARTICIPANT_TYPES, type ParticipantType } from "@/lib/participant-types";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
@@ -188,7 +188,7 @@ export async function seatExistingDiverAction(
   formData: FormData,
 ) {
   const surface = surfaceFor(surfaceId);
-  const session = await requireStaffSession();
+  const session = (await requireShopSurface(shopSlug)).session;
   const parsed = existingDiverSchema.safeParse({
     tripId: formData.get("tripId"),
     personId: formData.get("personId"),
@@ -235,7 +235,7 @@ export async function seatNewDiverAction(
   formData: FormData,
 ) {
   const surface = surfaceFor(surfaceId);
-  const session = await requireStaffSession();
+  const session = (await requireShopSurface(shopSlug)).session;
   const parsed = newDiverSchema.safeParse({
     tripId: formData.get("tripId"),
     fullName: formData.get("fullName"),

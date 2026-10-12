@@ -6,7 +6,7 @@ import { listNotificationDeliveryIssues, retryBookingConfirmation } from "@/db/n
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { operationalWindow } from "@/lib/operational-window";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import type { ResendState } from "./notification-resend-types";
 
 /**
@@ -30,7 +30,7 @@ export async function resendConfirmationAction(
   _prev: ResendState,
   formData: FormData,
 ): Promise<ResendState> {
-  const session = await requireStaffSession();
+  const session = (await requireShopSurface(shopSlug)).session;
   // One booking, or every one a batched Today row stands for. Each retry is
   // scoped to the session's shop by `retryBookingConfirmation` itself.
   const bookingIds = [
