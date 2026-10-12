@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "6dd1c610-f077-4e98-a81a-88a35a9242ab",
+  "id": "9d6375ff-6152-4e81-904a-317f5065e5cc",
   "prevIds": [
-    "f411c55a-d9d7-4556-83cf-464239922f2a"
+    "f787450d-4eba-4640-b278-f8e7720668b9"
   ],
   "ddl": [
     {
@@ -15175,6 +15175,32 @@
       "generated": null,
       "identity": null,
       "name": "keyword_intent",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbound_messages"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "sender_authenticated",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbound_messages"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "spam_flagged",
       "entityType": "columns",
       "schema": "public",
       "table": "inbound_messages"

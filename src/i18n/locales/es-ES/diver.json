@@ -13,6 +13,7 @@
     "backToSchedule": "Volver al calendario",
     "needHelpContact": "¿Necesitas ayuda? <link>Contacta con {shop}</link>.",
     "needHelpPlain": "¿Necesitas ayuda? Contacta directamente con {shop}.",
+    "diveDayDoor": "Ir a DiveDay",
     "perDiver": "por buceador",
     "optional": "(opcional)",
     "name": "Nombre",
@@ -231,8 +232,7 @@
     "seen": {
       "heading": "Visto aquí este mes",
       "line": "{species} en {seen} de {dives, plural, one {# inmersión registrada} other {# inmersiones registradas}}",
-      "lastSeen": "Visto por última vez el {date}",
-      "honest": "Lo que registró la tripulación, y cuándo. Dice lo que se vio, no lo que verás."
+      "lastSeen": "Visto por última vez el {date}"
     },
     "dayProfile": {
       "bottomTime": "{minutes, plural, one {Alrededor de # minuto en el agua} other {Alrededor de # minutos en el agua}}",
@@ -321,7 +321,8 @@
       "crew": "Tripulación"
     },
     "pitchDoor": "El resto del briefing",
-    "pitchDoorSpecies": "{count, plural, one {# especie} other {# especies}}"
+    "pitchDoorSpecies": "{count, plural, one {# especie} other {# especies}}",
+    "logEntryWaiting": "Después de bucear, tu página de bitácora te espera."
   },
   "factSource": {
     "forecast": "Pronóstico",
@@ -388,7 +389,7 @@
     "holdBody": "Consulta arriba la actualización de condiciones. Quien ya reservó conserva su plaza y puede seguirlo aquí en directo.",
     "certBelowRequirement": "Esta salida es para buceadores con certificación {required}: trae tu tarjeta y la verificamos en el centro.",
     "certNoneOnGatedTrip": "Esta salida es para buceadores certificados. Reserva si quieres y habla con el centro: también hacen cursos e inmersiones más sencillas.",
-    "confirmedHeading": "¡Estás a bordo, {name}!",
+    "confirmedHeading": "Tu plaza está reservada, {name}.",
     "confirmedDockCall": "{date}, {time}. Preséntate en el muelle {minutes, plural, one {# minuto} other {# minutos}} antes y nos encargamos del resto.",
     "paymentDepositBalance": "Tu plaza está asegurada. Los {balance} restantes se pagan en el muelle.",
     "paymentStillOpen": "Tu plaza está a salvo y el pago sigue abierto",
@@ -602,7 +603,8 @@
     "savedError": "No se ha guardado. Elige una puntuación e inténtalo de nuevo.",
     "yourRating": "Le has puesto un {rating} sobre 5.",
     "average": "{average} sobre 5",
-    "count": "{count, plural, one {# opinión} other {# opiniones}}",
+    "ratingsCount": "{count, plural, one {# puntuación} other {# puntuaciones}}",
+    "ratingsAndReviews": "{ratings, plural, one {# puntuación} other {# puntuaciones}} · {reviews, plural, one {# opinión} other {# opiniones}}",
     "allTitle": "Todas las opiniones",
     "allDescription": "Lee lo que dijeron los buceadores que estuvieron en el barco.",
     "allEmptyHeading": "Todavía no hay opiniones escritas",
@@ -741,6 +743,7 @@
     "agencyLabel": "Agencia",
     "agencyNone": "Aún sin certificar",
     "levelLabel": "Nivel",
+    "levelPlaceholder": "Elige tu nivel",
     "identifierLabel": "Número de tarjeta",
     "sizesHeading": "Tus tallas",
     "sizesHint": "Solo si alquilas con nosotros. Te ahorra la prueba en el mostrador.",
@@ -758,6 +761,7 @@
   "packages": {
     "title": "Paquetes de inmersiones",
     "navLabel": "Paquetes",
+    "none": "Ahora mismo no hay paquetes",
     "metaDescription": "Inmersiones prepagadas en {shopName}: pagas una vez y reservas las inmersiones cuando quieras.",
     "dives": "{count, plural, one {# inmersión} other {# inmersiones}}",
     "perDive": "{amount} por inmersión",
@@ -873,6 +877,7 @@
     "certInvalid": "Revisa la agencia, el nivel y el número de certificación, e inténtalo de nuevo.",
     "certOptional": "Opcional",
     "keepThisPage": "Esta página es tuya: guárdala en favoritos y seguirá al día hasta que zarpes.",
+    "logEntryWaiting": "Después de bucear, tu página de bitácora te espera aquí.",
     "gearOnFile": "La tripulación ya tiene tus tallas.",
     "packageDivesLeft": "{line} · {count, plural, one {te queda # inmersión del paquete} other {te quedan # inmersiones del paquete}}",
     "changesSizesLabel": "Tallas",
@@ -954,8 +959,27 @@
     "savedCourseForms": "Formularios del curso firmados."
   },
   "thread": {
-    "stepsDoneSuffix": "de {total, plural, one {# paso completado} other {# pasos completados}}",
-    "nextStep": "Siguiente: {step}",
+    "stepsDone": "{done} de {total, plural, one {# paso completado} other {# pasos completados}}",
+    "next": {
+      "signWaiver": "Siguiente: firma tu exención.",
+      "signGuardian": "Siguiente: tu madre, padre o tutor firma la exención.",
+      "freshWaiver": "Siguiente: consigue un enlace nuevo para la exención.",
+      "signForms": "Siguiente: firma los formularios del curso.",
+      "signFormsGuardian": "Siguiente: tu madre, padre o tutor firma los formularios del curso.",
+      "askForWaiver": "Siguiente: pide tu exención al centro.",
+      "medical": "Siguiente: habla con el centro sobre tus respuestas médicas.",
+      "certification": "Siguiente: agrega tu certificación.",
+      "certificationLevel": "Siguiente: consulta tu nivel de certificación con el centro.",
+      "specialty": "Siguiente: agrega tu tarjeta de especialidad.",
+      "nitrox": "Siguiente: agrega tu tarjeta de nitrox.",
+      "certificationMultiple": "Siguiente: agrega las tarjetas que pide esta inmersión.",
+      "certificationInTraining": "Siguiente: termina tu curso.",
+      "cardWithShop": "Siguiente: nada de tu parte. El centro está revisando tu tarjeta.",
+      "pay": "Siguiente: paga esta salida.",
+      "gear": "Siguiente: tu equipo, ¿lo alquilas o traes el tuyo?",
+      "changes": "Siguiente: confirma que nada cambió.",
+      "dayof": "Siguiente: unos detalles para el día."
+    },
     "withShopHead": "No queda nada de tu parte. El centro lo está terminando.",
     "stepSign": "Firma",
     "stepCertification": "Tu certificación",

@@ -14,7 +14,7 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
-import { at, demoTodayDepartureStart } from "./seed-clock";
+import { at, DEMO_TODAY_DEPARTURE_MS, demoTodayDepartureStart } from "./seed-clock";
 
 /**
  * The three headline boats plus the rest of the week: each departure with its
@@ -92,7 +92,7 @@ export async function seedTrips(
         // today's board, so "morning" would read as a bug after lunch.
         description: "Double dip on the outer reef.",
         startsAt: todaySailStart, // sails today, so Today always has a board
-        endsAt: new Date(todaySailStart.getTime() + 3.5 * 60 * 60 * 1000),
+        endsAt: new Date(todaySailStart.getTime() + DEMO_TODAY_DEPARTURE_MS),
         // Nine divers, a snorkeler and a rider (`seed-mixed-boat.ts`), and the
         // three spots left that e2e reads to pick this trip off the schedule.
         capacity: 14,

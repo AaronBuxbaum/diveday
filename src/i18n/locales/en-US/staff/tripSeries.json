@@ -37,7 +37,7 @@
   },
   "notices": {
     "seriesApplied": "Those details now apply to every upcoming date in this series.",
-    "seriesAppliedPartial": "Applied to the upcoming dates. A few already had more divers than the new capacity, sail on a boat certified for fewer, or have a roll call past the new dive count, so those were left as they were.",
+    "seriesAppliedPartial": "Applied to the upcoming dates. Dates on a smaller boat took the details with seats capped at its certificate. A few already had more divers than that, or a roll call past the new dive count, so those were left as they were.",
     "seriesAppliedCrew": "Those details and this crew now apply to every upcoming date, and new dates get this crew too.",
     "seriesAppliedCrewPartial": "Applied. Some dates kept their own crew: somebody on this one is already on another boat then or no longer on the staff, or a course would lose its instructor.",
     "seriesAppliedCrewPartialCount": "{count, plural, one {Applied. # date kept its own crew: somebody on this one is already on another boat then or no longer on the staff, or a course would lose its instructor.} other {Applied. # dates kept their own crew: somebody on this one is already on another boat then or no longer on the staff, or a course would lose its instructor.}}",

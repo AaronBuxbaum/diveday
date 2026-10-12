@@ -122,6 +122,7 @@ export function IncidentDraftForm({
           description={t("incidents.form.whatHappenedHint")}
         >
           <textarea
+            rows={6}
             name="whatHappened"
             defaultValue={fields.whatHappened ?? ""}
             maxLength={INCIDENT_TEXT_MAX}
@@ -218,6 +219,7 @@ export function IncidentDraftForm({
           description={t("incidents.form.followUpHint")}
         >
           <textarea
+            rows={3}
             name="followUp"
             defaultValue={fields.followUp ?? ""}
             maxLength={INCIDENT_TEXT_MAX}

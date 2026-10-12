@@ -13,9 +13,12 @@ import {
 import { readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { formatCalendarDate } from "@/lib/calendar-date";
+import { formatTime } from "@/lib/format";
 import { isHeldSeat } from "@/lib/held-seat";
 import { rollCallLabel, rollCallRecordedTone, rollCallRowState } from "@/lib/manifests";
+import { latestOfflineArrival, offlineArrivalEvents } from "@/lib/offline-manifests";
 import { joinedDiving, leftDiving } from "@/lib/participant-types";
+import { runningLateOnManifest } from "@/lib/running-late";
 import type { OfflineTripControls } from "./controls";
 import { OfflineRollCallException } from "./RollCallException";
 import {
@@ -101,7 +104,8 @@ function OfflineDiverRow({
   // only board at departure once readiness clears them, so a blocked
   // diver's circle is a drawn held ring with no tap.
   const showBoardControl = ready || !isDeparture;
-  // The live roll call's two medical warnings (issue #2163), dates only. A
+  // The live roll call's four medical warnings, dates only: two riding-only
+  // (H-109), an earlier refusal (H-98) and a referral still open (#2163). A
   // held seat never carries them, and the facts block below says why instead.
   const withheld = diver.identityWithheld || isHeldSeat(diver);
   const medicalWarnings = withheld ? undefined : diver.medicalWarnings;
@@ -109,6 +113,22 @@ function OfflineDiverRow({
   // only (H-109), then an earlier refusal (H-98), then an open referral.
   const medicalChip = medicalWarnings ? medicalWarningChips(t, medicalWarnings)[0] : undefined;
   const warningDate = (day: string) => formatCalendarDate(day, locale);
+  // The diver's own "running late" (#2319), on the live page's terms: a dock
+  // row not boarded yet, with nothing from the counter on it — this device's
+  // queued arrival included, which is the counter's newest word here.
+  const arrived =
+    latestOfflineArrival(
+      view.envelope.snapshot,
+      diver.bookingId,
+      offlineArrivalEvents(view.envelope),
+    )?.state === "arrived";
+  const lateAt = runningLateOnManifest({
+    checkpoint,
+    runningLateAt: diver.runningLateAt ? new Date(diver.runningLateAt) : null,
+    rollCallState: state?.state,
+    checkedIn: arrived,
+    notHere: diver.notHere,
+  });
   const stateWord = `${rollCallLabelText(t, rollCallLabel(checkpoint, state))}${
     state?.pending ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}` : ""
   }`;
@@ -263,6 +283,15 @@ function OfflineDiverRow({
             row and writes the same observation twice, while the
             live manifest and the departure log carry the first
             one. */}
+          {/* Muted under the name, never a pill: the state pill above is
+            the row's answer, and this is only context for it (#2319). */}
+          {lateAt ? (
+            <p className="mt-1 text-base text-muted">
+              {t("manifest.runningLate", {
+                time: formatTime(lateAt, locale, view.envelope.snapshot.shop.timezone),
+              })}
+            </p>
+          ) : null}
           {state?.note ? <p className="mt-1 text-sm">{state.note}</p> : null}
           {/* The live manifest's "Contact & gear" disclosure, in the
             same clothes and under the same words — this copy and

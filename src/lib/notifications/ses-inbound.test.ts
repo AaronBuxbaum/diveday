@@ -37,6 +37,7 @@ describe("parseSesInboundNotification", () => {
       envelopeFrom: "priya@example.com",
       fromAuthenticated: true,
       envelopeAuthenticated: true,
+      spamFlagged: false,
       receivedAt: new Date("2026-07-21T12:59:58.000Z"),
     });
   });
@@ -87,6 +88,31 @@ describe("parseSesInboundNotification", () => {
       },
     });
     expect(parseSesInboundNotification(spam, NOW).kind).toBe("received");
+    // Kept, but said: the desk's after-hours ping never fires on it (#2311).
+    expect(parseSesInboundNotification(spam, NOW)).toMatchObject({ spamFlagged: true });
+  });
+
+  /**
+   * **Only a verdict SES actually passed is clean** (security review of
+   * #2311). GRAY, PROCESSING_FAILED, an unknown word or no verdict at all is a
+   * message nobody vouched for as not-spam: still filed, never a page.
+   */
+  it("flags every spam verdict but PASS, and a missing one", () => {
+    const spamVerdict = (status: string | undefined) =>
+      parseSesInboundNotification(
+        received({
+          receipt: {
+            ...(status === undefined ? {} : { spamVerdict: { status } }),
+            action: { type: "S3", bucketName: "b", objectKey: "k" },
+          },
+        }),
+        NOW,
+      );
+    expect(spamVerdict("PASS")).toMatchObject({ kind: "received", spamFlagged: false });
+    expect(spamVerdict("pass")).toMatchObject({ kind: "received", spamFlagged: false });
+    for (const status of ["FAIL", "GRAY", "PROCESSING_FAILED", "SOMETHING_NEW", undefined]) {
+      expect(spamVerdict(status)).toMatchObject({ kind: "received", spamFlagged: true });
+    }
   });
 
   it("ignores a delivery event, a non-S3 action, and garbage", () => {

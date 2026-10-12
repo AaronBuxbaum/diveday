@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { DoorChevron } from "@/components/ui/ledger";
 
 /**
  * **One door per file group, at every width.**
@@ -44,6 +46,7 @@ export function DiverFileGroupDisclosure({
   detail,
   open = false,
   stacked = false,
+  href,
   children,
 }: {
   id: string;
@@ -74,6 +77,13 @@ export function DiverFileGroupDisclosure({
   open?: boolean;
   /** Put a long summary on its own, label-aligned line below `sm`. */
   stacked?: boolean;
+  /**
+   * **A plain row that is a door to a page** (UX review 2026-10-10, item 27):
+   * a signed waiver has nothing to open onto, but it has its own record. With
+   * no `children`, the row becomes a link there and ends in the door's
+   * chevron, so it is not the one row in the file with no arrow.
+   */
+  href?: string;
   /**
    * What the group opens onto. **None means it is a plain row**, not a door:
    * a signed waiver with nothing to send or record opened onto one line that
@@ -202,7 +212,7 @@ export function DiverFileGroupDisclosure({
     return (
       <section
         aria-label={label}
-        className="-mx-2 border-b border-border px-2 first:border-t"
+        className={`${href ? "relative hover:bg-surface-sunken/50" : ""} -mx-2 border-b border-border px-2 first:border-t`}
         data-testid={`diver-file-group-${id}`}
       >
         <div
@@ -212,8 +222,19 @@ export function DiverFileGroupDisclosure({
               doors' labels sit on. */}
           <span aria-hidden="true" className="size-3 shrink-0" />
           <h2 id={id} className={`${labelFloorClass} flex-1 scroll-mt-24 text-base font-medium`}>
-            {label}
+            {href ? (
+              // Stretched over the row, so the whole row is the target.
+              <Link href={href} className="after:absolute after:inset-0">
+                {label}
+              </Link>
+            ) : (
+              label
+            )}
           </h2>
+          {/* Before the fact in the markup, so a stacked fact wraps under the
+              label on a phone and the arrow keeps the label's line; from
+              `sm` it ends the row. */}
+          {href ? <DoorChevron className="sm:order-last" /> : null}
           <span className={summaryFactClass}>{summary}</span>
           {detailLine}
         </div>

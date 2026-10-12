@@ -498,8 +498,10 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   Divers (`trips/[id]/page.tsx`, the roster, which is also the arrival desk inside the arrivals window:
   `_arrivals/arrival-desk.tsx`, its walk-in form at `walk-in/`), Boat (`manifest/`), Gear (`prep/`, the packing list) and Details (`trips/[id]?view=details`,
   the About panel). One component draws them, `_components/TripTabs.tsx`; every tab wears `TripPageHeader`, whose
-  stage pill's phase (Prep, Check-in, Aboard, Back) comes from `src/lib/trip-phase.ts`, where the crew's tap
-  on the manifest beats the clock. Add to a tab, never a fifth surface; a second list of the same divers is the duplicate this cut removed. A gear form redirects to
+  stage pill is the crew's own tap in the manifest strip's five words (`boatStageOf` in
+  `src/lib/trip-phase.ts`, the same reading Today's card and the strip use), or nothing; the clock's phase
+  (Prep, Check-in, Aboard, Back) is never printed and only decides that a departure is finished, when its
+  Divers tab becomes the record of who sailed. Add to a tab, never a fifth surface; a second list of the same divers is the duplicate this cut removed. A gear form redirects to
   `prep#{PREP_SECTION_ID}`; an About form redirects to the departure with its `form`, which opens
   Details. **A cancelled departure keeps its Boat tab and packs nothing**: the roll call is a
   record of people, the packing list an instruction about a check-in that is not happening

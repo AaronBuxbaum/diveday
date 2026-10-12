@@ -27,7 +27,7 @@ const shopRow = {
 vi.mock("@/db/shops-cached", () => ({ shopBySlugCached: vi.fn(async () => shopRow) }));
 vi.mock("@/db/reviews", () => ({
   getShopReviewAggregate: vi.fn(),
-  listPublishedShopReviews: vi.fn(),
+  listPublishedShopReviewsPage: vi.fn(),
 }));
 vi.mock("@/db/boats", () => ({ listBoats: vi.fn(async () => []) }));
 vi.mock("@/db/trips", () => ({
@@ -42,7 +42,7 @@ vi.mock("@/i18n/request", () => ({
 
 const { listActiveCourses } = await import("@/db/courses");
 const { shopBySlugCached } = await import("@/db/shops-cached");
-const { getShopReviewAggregate, listPublishedShopReviews } = await import("@/db/reviews");
+const { getShopReviewAggregate, listPublishedShopReviewsPage } = await import("@/db/reviews");
 const { default: EmbedWidgetPage } = await import("./page");
 
 afterEach(cleanup);
@@ -135,25 +135,32 @@ describe("the reviews widget", () => {
       average: 4.5,
       suppressedCount: 0,
     });
-    vi.mocked(listPublishedShopReviews).mockResolvedValue([
-      marta,
-      ...[2, 3, 4].map((n) => ({ ...marta, id: `review-${n}`, comment: `Quote ${n}` })),
-    ]);
+    // The page is the widget's three quotes; `total` is every written review.
+    vi.mocked(listPublishedShopReviewsPage).mockResolvedValue({
+      reviews: [
+        marta,
+        ...[2, 3].map((n) => ({ ...marta, id: `review-${n}`, comment: `Quote ${n}` })),
+      ],
+      page: 1,
+      pageCount: 2,
+      pageSize: 3,
+      total: 4,
+    });
     await renderReviews();
 
     // Three quotes, then the archive.
     expect(screen.getAllByRole("listitem")).toHaveLength(3);
-    expect(screen.queryByText("Quote 4")).toBeNull();
 
     expect(screen.getByText("Calm crew, and the turtle at the second site")).toBeInTheDocument();
     expect(screen.getAllByText(/Marta R\./)[0]).toBeInTheDocument();
     expect(screen.getByText("4.5")).toBeInTheDocument();
-    expect(screen.getByText("4 reviews")).toBeInTheDocument();
+    // Ratings and written reviews are two counts, the archive's own line.
+    expect(screen.getByText("4 ratings · 4 reviews")).toBeInTheDocument();
     // The one way on leaves the frame for the archive.
     const all = screen.getByRole("link", { name: "All reviews" });
     expect(all).toHaveAttribute("href", "/s/blue-mantis/reviews");
     expect(all).toHaveAttribute("target", "_top");
-    expect(listPublishedShopReviews).toHaveBeenCalledWith({}, "shop-1");
+    expect(listPublishedShopReviewsPage).toHaveBeenCalledWith({}, "shop-1", { limit: 3 });
   });
 
   it("renders nothing while the shop has no published rating", async () => {
@@ -162,7 +169,13 @@ describe("the reviews widget", () => {
       average: null,
       suppressedCount: 2,
     });
-    vi.mocked(listPublishedShopReviews).mockResolvedValue([]);
+    vi.mocked(listPublishedShopReviewsPage).mockResolvedValue({
+      reviews: [],
+      page: 1,
+      pageCount: 1,
+      pageSize: 3,
+      total: 0,
+    });
     const { container } = await renderReviews();
 
     expect(container.textContent).toBe("");
@@ -175,11 +188,11 @@ describe("the reviews widget", () => {
       reviewsEnabled: false,
     } as never);
     vi.mocked(getShopReviewAggregate).mockClear();
-    vi.mocked(listPublishedShopReviews).mockClear();
+    vi.mocked(listPublishedShopReviewsPage).mockClear();
     const { container } = await renderReviews();
 
     expect(container.textContent).toBe("");
     expect(getShopReviewAggregate).not.toHaveBeenCalled();
-    expect(listPublishedShopReviews).not.toHaveBeenCalled();
+    expect(listPublishedShopReviewsPage).not.toHaveBeenCalled();
   });
 });

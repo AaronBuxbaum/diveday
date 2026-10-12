@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { PulseFacts } from "./PulseFacts";
+import { PulseFacts, shownPulseFacts } from "./PulseFacts";
 
 afterEach(cleanup);
 
@@ -55,5 +55,27 @@ describe("PulseFacts (UX audit item 23)", () => {
     );
     const hazard = screen.getByRole("link", { name: "Needs an instructor" });
     expect(hazard.closest("details")).toBeNull();
+  });
+});
+
+describe("shownPulseFacts", () => {
+  const roster = { text: "1 blocked", href: "/shop/x/trips/t#roster", tone: "danger" as const };
+  const sizes = { text: "Sizes to take", href: "/shop/x/trips/t/gear" };
+
+  it("shows nothing on a finished departure, whose tab is its record", () => {
+    expect(shownPulseFacts([roster, sizes], { desk: null, finished: true })).toEqual([]);
+  });
+
+  it("drops the roster door while the desk's count says it", () => {
+    expect(
+      shownPulseFacts([roster, sizes], {
+        desk: { arrival: { instrument: () => null } },
+        finished: false,
+      }),
+    ).toEqual([sizes]);
+    expect(shownPulseFacts([roster, sizes], { desk: null, finished: false })).toEqual([
+      roster,
+      sizes,
+    ]);
   });
 });

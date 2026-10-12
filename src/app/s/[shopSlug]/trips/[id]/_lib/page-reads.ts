@@ -25,7 +25,7 @@ import { perDiverBookingPriceCents } from "@/lib/courses";
 import { publicAppUrl } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { isLiveShopStaff } from "@/lib/session";
-import { hasSailed } from "@/lib/trips";
+import { hasSailed, seatsOnSale } from "@/lib/trips";
 
 type Shop = NonNullable<Awaited<ReturnType<typeof shopBySlugCached>>>;
 
@@ -57,7 +57,8 @@ export async function readTripPage(
   // waiting for the whole wave before it. A cancelled departure, which renders
   // its own notice below, pays for the wave like any other; it is the rare
   // visit, and every booking visit used to pay a dozen round trips for it.
-  const tripRead = getTripWithBooked(db, shop.id, tripId);
+  // Seats on sale are capped at the boat's certificate (#2321).
+  const tripRead = getTripWithBooked(db, shop.id, tripId).then((row) => row && seatsOnSale(row));
   const tripDivesRead = listTripDives(db, shop.id, tripId);
   // The embed's short confirmation renders only from a verified `confirm`
   // capability — never from a raw booking id in the URL (design principle 6:
@@ -180,7 +181,7 @@ export async function readTripPage(
               hasSpace: true,
               publicOnly: true,
             })
-          ).trips
+          ).trips.map(seatsOnSale)
         : [],
     ),
     // The shop's rating rides along as the organizer's `aggregateRating` in

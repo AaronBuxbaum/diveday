@@ -1,5 +1,7 @@
 import { cachedListFormat } from "@/lib/intl-cache";
+import { firstNameOf } from "@/lib/person-name";
 import type { WelcomeCue } from "@/lib/welcome-cue";
+import { CERTIFICATION_LEVEL_KEYS, type CertificationSummaryShape } from "./readiness-labels";
 import type { StaffTranslator } from "./staff-messages";
 
 /**
@@ -52,4 +54,75 @@ export function sayHelloSentences(
     sentences.push(t("today.sayHello.returning", { name: entry.name, years: entry.cue.years }));
   }
   return sentences;
+}
+
+/**
+ * The card the dock line reads: the certification summary plus the highest
+ * level the shop has actually **verified** (`CertificationSummary.verifiedLevel`).
+ * Optional so a summary that never read it greets as unverified, which is the
+ * safe direction.
+ */
+export type DockLineCard = Pick<CertificationSummaryShape, "level" | "noCertificationDeclared"> & {
+  verifiedLevel?: CertificationSummaryShape["level"];
+};
+
+type DockLineFact =
+  | { kind: "verified"; level: NonNullable<CertificationSummaryShape["level"]> }
+  | { kind: "says"; level: NonNullable<CertificationSummaryShape["level"]> }
+  | { kind: "notCertified" };
+
+/**
+ * What the greeting may say about a card, strongest first. A verified level is
+ * said plainly; any level nobody has verified, whether the diver typed it or a
+ * staffer did, is what the diver *says*; a stated "no card" is "not certified
+ * yet". Nitrox is never here: a greeting is not a fill clearance, and the gas
+ * is the fill station's question.
+ */
+function dockLineFact(card: DockLineCard | null): DockLineFact | null {
+  if (card?.verifiedLevel) return { kind: "verified", level: card.verifiedLevel };
+  if (card?.level) return { kind: "says", level: card.level };
+  if (card?.noCertificationDeclared) return { kind: "notCertified" };
+  return null;
+}
+
+/**
+ * Whether the dock line is carrying a card nobody has verified, so the row can
+ * wear the same warning tone `certificationSummaryUnchecked` gives the phrase.
+ */
+export function welcomeDockLineUnchecked(card: DockLineCard | null): boolean {
+  const fact = dockLineFact(card);
+  return fact !== null && fact.kind !== "verified";
+}
+
+/**
+ * **The dock line under "first time with us"** (UX review 2026-10-10, item
+ * 36): the one sentence that makes the hello easy, on the arrivals roster row
+ * the crew is looking at when the diver walks up. The name to say and a level
+ * the shop has verified; any card nobody has verified is what the diver
+ * "says", whoever typed it (dive-domain review of the demo layer: a pending
+ * card a staffer typed carries no self-declared stamp, and read as checked).
+ *
+ * Only the card. What a diver said they came for stays the departure's count
+ * and names nobody (ADR 20260904-reef-all-the-way-down, D12), and a booking's
+ * free-text note can carry anything, medical included, so it stays behind the
+ * row's own note count. A diver who gave the shop no card at all gets the
+ * hello without one: "level not said" is a desk task, not a greeting.
+ */
+export function welcomeDockLine(
+  t: StaffTranslator,
+  { personName, certification }: { personName: string; certification: DockLineCard | null },
+): string {
+  const name = firstNameOf(personName, personName);
+  const fact = dockLineFact(certification);
+  if (!fact) return t("shared.welcomeCue.dockLineNoCard", { name });
+  if (fact.kind === "notCertified") {
+    return t("shared.welcomeCue.dockLine", {
+      name,
+      card: t("shared.certificationSummary.notCertified"),
+    });
+  }
+  const level = t(CERTIFICATION_LEVEL_KEYS[fact.level]);
+  return fact.kind === "verified"
+    ? t("shared.welcomeCue.dockLine", { name, card: level })
+    : t("shared.welcomeCue.dockLineSays", { name, level });
 }

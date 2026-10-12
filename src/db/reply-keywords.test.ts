@@ -90,7 +90,7 @@ async function inbound(
     body,
     receivedAt: options.receivedAt,
     providerMessageId: `provider-${sequence}`,
-    senderAuthenticated: options.senderAuthenticated,
+    senderAuthenticated: options.senderAuthenticated ?? true,
   });
   if (result.status !== "recorded") throw new Error(`unexpected ${result.status}`);
   return result.id;
@@ -296,6 +296,7 @@ describe("handleInboundReplyKeyword — what it refuses", () => {
     // redelivery answers `duplicate`, and the webhook only calls this for a
     // row it actually filed. This asserts the property the routes rely on.
     const first = await recordInboundMessage(db, {
+      senderAuthenticated: true,
       shopId: shop.id,
       channel: "email",
       fromAddress: DIVER.email,
@@ -304,6 +305,7 @@ describe("handleInboundReplyKeyword — what it refuses", () => {
       providerMessageId: "replayed-once",
     });
     const again = await recordInboundMessage(db, {
+      senderAuthenticated: true,
       shopId: shop.id,
       channel: "email",
       fromAddress: DIVER.email,

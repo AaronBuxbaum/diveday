@@ -271,7 +271,7 @@ const ERASURE_KEEPS: Record<string, string> = {
     "that an invitation was sent for a seat, by id. Its risk is not disclosure but #1616, where the foreign key aborts the erasure transaction outright",
   trip_read_marks: "how far a staff member has read a trip’s desk feed",
   stripe_refund_failures:
-    "a refund Stripe reported failed or canceled: an amount, Stripe's status and reason codes, and the order, checkout or seat it reverses, by id, with no name, address or free text; the diver is reached through that order or checkout, which the erasure redacts (issue #2291)",
+    "a refund Stripe reported failed or canceled: an amount, Stripe's status and reason codes (the reason narrowed at the webhook to Stripe's documented words by `refundFailureReasonOf`, anything else `unknown`), and the order, checkout or seat it reverses, by id, with no name, address or free text; the diver is reached through that order or checkout, which the erasure redacts (issue #2291)",
   payment_disputes:
     "a card dispute's amount, status and evidence deadline, pointing at its order or checkout by id with no name, address or free text; the diver is reached through that order or checkout, which the erasure redacts (ADR 20261009-stripe-reversals-reach-diveday)",
   booking_referrals:

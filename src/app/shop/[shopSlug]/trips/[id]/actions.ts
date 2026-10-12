@@ -560,15 +560,6 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     }
     redirect(noticeUrl(back, "invalid", { form: "details" }));
   }
-  // The board's move writes this line too: the log names whoever moved the
-  // departure, whichever screen they used (issue #2313).
-  if (outcome.startMoved) {
-    await recordShopActivity(dbi, {
-      shopId: s.user.shopId,
-      actorPersonId: s.user.personId,
-      write: { code: "departure_moved", tripId },
-    });
-  }
   if (
     nextArrivalPhotoUrl !== undefined &&
     previousArrivalPhotoUrl &&
