@@ -156,14 +156,17 @@ wifi.
 
 ### What a server render costs
 
-Every staff page, every page under `/s/[shopSlug]/`, and the waiver, readiness and recap links
-write one `render.db_queries` line after their response has gone: the route template, the number
+Every staff page, every page under `/s/[shopSlug]/`, the waiver, readiness and recap links, the
+email-verification and password-reset links, and the staff calendar feed write one
+`render.db_queries` line after their response has gone: the route template, the number
 of database statements the render sent (`queries`), and the wall time from its first statement to
 the end of the response (`ms`). `ms` is not time inside the database; read it beside `queries`, and
 a page whose `ms` moves while its `queries` stays flat is waiting on something else. The line is
 armed by `reportRenderQueries` (`src/lib/observability/query-timing.ts`), which a public or token
 page calls through `await connectionForRoute("<route>")` in place of `await connection()`; a page
-that does not arm its own name is reported under its layout's fallback, `/shop/**` or `/s/**`.
+that does not arm its own name is reported under its layout's fallback, `/shop/**` or `/s/**`. A
+route handler has no render pass to count in, so the one that reports, `/calendar/[token]`, opens
+its own scope with `withQueryStats` and arms the line inside it.
 
 Where to read it:
 
@@ -295,7 +298,7 @@ and a sampled count is a count that lies.
 | A preview deploy's lines are mixed in with production's | They are not — the stream name carries `VERCEL_ENV`. Filter by log stream. |
 | No `web_vital.reported` lines | The beacon only fires when the page is *hidden*, so a tab left open reports nothing. Check with DevTools → Application → Background services, or just switch tabs. Also confirm the browser has `navigator.sendBeacon` (every current one does). |
 | No `mutation_duration.reported` lines | Only settled `SubmitButton` actions report, and the beacon requires `navigator.sendBeacon`. Check the browser network panel and the action's `observabilityAction`; the server still answers 204 when telemetry is malformed or rate-limited. |
-| No `render.db_queries` lines | The line is written by `after()` once the response has gone, only from a render that armed it (`reportRenderQueries`), and never from a server action, route handler or cron. A page with no line of its own is reported under its layout's `/shop/**` or `/s/**` label. |
+| No `render.db_queries` lines | The line is written by `after()` once the response has gone, only from a render that armed it (`reportRenderQueries`), and never from a server action, cron or route handler other than `/calendar/[token]`, which opens a scope of its own. A page with no line of its own is reported under its layout's `/shop/**` or `/s/**` label. |
 | Vitals arrive but a p75 looks impossibly good | Check the metric filter has no `DefaultValue`. Publishing a 0 for page views that reported no INP would drag the percentile down until the metric flattered the app; the infra test asserts it is absent. |
 | RUM records nothing | The app monitor's `domain` must match the origin the browser is on — RUM refuses events from anywhere else, and a preview URL is a different origin. Then check the four `NEXT_PUBLIC_RUM_*` values reached the *client* bundle (they must keep the prefix). |
 | RUM's bill is larger than expected | `NEXT_PUBLIC_RUM_SAMPLE_RATE`. If it is already low, look at the Cognito identity pool: it issues anonymous credentials by design, so an unexpected volume of `PutRumEvents` from outside the app's own origin is worth ruling out. |

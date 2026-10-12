@@ -73,16 +73,9 @@ export async function getTripGuests(
   if (!trip) return null;
 
   const diverQuery = filters.diverQuery?.trim() ?? "";
-  const [confirmMatches, diverCandidates] = await Promise.all([
-    filters.confirmName ? findSimilarDivers(db, shop.id, filters.confirmName) : [],
-    // The returning-diver picker only books, so it is skipped once the boat is
-    // full — hand-entry then wait-lists instead.
-    isFull(trip) || diverQuery === ""
-      ? []
-      : listBookableDivers(db, shop.id, tripId, { query: diverQuery }),
-  ]);
-
   const [
+    confirmMatches,
+    diverCandidates,
     roster,
     requirement,
     siteRequirement,
@@ -99,6 +92,12 @@ export async function getTripGuests(
     stripeAccount,
     courseNextStepByBooking,
   ] = await Promise.all([
+    filters.confirmName ? findSimilarDivers(db, shop.id, filters.confirmName) : [],
+    // The returning-diver picker only books, so it is skipped once the boat is
+    // full — hand-entry then wait-lists instead.
+    isFull(trip) || diverQuery === ""
+      ? []
+      : listBookableDivers(db, shop.id, tripId, { query: diverQuery }),
     getTripRoster(db, shop.id, tripId),
     shared ? shared.requirement : getTripRequirements(db, shop.id, tripId),
     shared ? shared.siteRequirement : getTripSiteRequirement(db, shop.id, tripId),
@@ -118,49 +117,84 @@ export async function getTripGuests(
     courseNextStepsByBooking(db, shop.id, tripId),
   ]);
 
-  // What "Different person" on a held seat can offer to move along with it:
-  // other held seats under the same name on the same matched diver, on other
-  // departures, named by departure (issue #2081).
-  const sameNameHeldSeats = await findSameNameHeldSeats(
-    db,
-    shop.id,
-    roster
-      .filter(({ booking }) => booking.identityUnconfirmedAt)
-      .map(({ booking }) => ({
+  // The last-minute pipeline: who said they are around on this date, who among
+  // them could actually be cleared for it, and in what order to offer the seat.
+  const tripDateIso = toDateInputValue(utcToWallTime(trip.startsAt, shop.timezone));
+  const lastMinuteMatched = lastMinuteList.filter(({ entry }) =>
+    lastMinuteEntryMatchesTripDate(entry, tripDateIso),
+  );
+  const waitlistPersonIds = waitlist.map(({ person }) => person.id);
+  const heldSeats = roster.filter(({ booking }) => booking.identityUnconfirmedAt);
+
+  // **One wave after the roster** (code review 2026-10-11, item 12): each of
+  // these takes only the roster, the trip, the wait list or the last-minute
+  // list, all in hand, so none waits on another. They used to be five reads
+  // one after another, most of the trip page's serial phases.
+  const [
+    sameNameHeldSeats,
+    heldLastDiveDays,
+    packageDivesByPerson,
+    certificationSummaries,
+    courseMaterialsDone,
+  ] = await Promise.all([
+    // What "Different person" on a held seat can offer to move along with it:
+    // other held seats under the same name on the same matched diver, on other
+    // departures, named by departure (issue #2081).
+    findSameNameHeldSeats(
+      db,
+      shop.id,
+      heldSeats.map(({ booking }) => ({
         bookingId: booking.id,
         personId: booking.personId,
         tripId,
         bookedAs: booking.identityBookedAs,
       })),
-  );
+    ),
+    // The fact a held seat's "Same person" confirm is weighed against: the
+    // matched diver's last dive day at this shop, the same line the name-match
+    // prompt shows staff who seat a diver (issue #1789). A staff-seated hold met
+    // it there already; an online hold (a public booking that reused an email
+    // under another name, H-13) met no prompt, so this is the first time any
+    // staffer sees it. Not this departure's: the seat on it is the claim, not
+    // evidence for it.
+    lastDiveDaysHere(
+      db,
+      shop.id,
+      heldSeats.map(({ booking }) => booking.personId),
+      { exceptTripId: tripId },
+    ),
+    // Unspent package dives this departure could take, per seat, so the payment
+    // control says so before anyone takes a fare (issue #1697, H-79).
+    spendableDivesForTrip(
+      db,
+      shop.id,
+      [...new Set(roster.map(({ booking }) => booking.personId))],
+      {
+        courseId: trip.courseId,
+      },
+    ),
+    listCertificationSummaries(db, shop.id, [
+      ...new Set([...lastMinuteMatched.map(({ person }) => person.id), ...waitlistPersonIds]),
+    ]),
+    // Who finished the course's materials, read across every departure of the
+    // course, so a tick on the pool weekend shows on the open-water one (ADR
+    // 20261008-course-learning-materials).
+    trip.courseId
+      ? courseMaterialsDoneByPerson(db, {
+          shopId: shop.id,
+          courseId: trip.courseId,
+          personIds: roster.map(({ person }) => person.id),
+          around: trip.startsAt,
+        })
+      : new Map<string, CourseMaterialsDone>(),
+  ]);
 
-  // The fact a held seat's "Same person" confirm is weighed against: the
-  // matched diver's last dive day at this shop, the same line the name-match
-  // prompt shows staff who seat a diver (issue #1789). A staff-seated hold met
-  // it there already; an online hold (a public booking that reused an email
-  // under another name, H-13) met no prompt, so this is the first time any
-  // staffer sees it. Not this departure's: the seat on it is the claim, not
-  // evidence for it.
-  const heldPersonIds = roster
-    .filter(({ booking }) => booking.identityUnconfirmedAt)
-    .map(({ booking }) => booking.personId);
-  const heldLastDiveDays = await lastDiveDaysHere(db, shop.id, heldPersonIds, {
-    exceptTripId: tripId,
-  });
   const heldSeatLastDiveDay = new Map<string, Date | null>(
-    roster
-      .filter(({ booking }) => booking.identityUnconfirmedAt)
-      .map(({ booking }) => [booking.id, heldLastDiveDays.get(booking.personId) ?? null] as const),
+    heldSeats.map(
+      ({ booking }) => [booking.id, heldLastDiveDays.get(booking.personId) ?? null] as const,
+    ),
   );
 
-  // Unspent package dives this departure could take, per seat, so the payment
-  // control says so before anyone takes a fare (issue #1697, H-79).
-  const packageDivesByPerson = await spendableDivesForTrip(
-    db,
-    shop.id,
-    [...new Set(roster.map(({ booking }) => booking.personId))],
-    { courseId: trip.courseId },
-  );
   const packageDivesByBooking = new Map<string, number>();
   for (const { booking } of roster) {
     const dives = packageDivesByPerson.get(booking.personId);
@@ -190,16 +224,6 @@ export async function getTripGuests(
     rows.sort((left, right) => left.note.createdAt.getTime() - right.note.createdAt.getTime());
   }
 
-  // The last-minute pipeline: who said they are around on this date, who among
-  // them could actually be cleared for it, and in what order to offer the seat.
-  const tripDateIso = toDateInputValue(utcToWallTime(trip.startsAt, shop.timezone));
-  const lastMinuteMatched = lastMinuteList.filter(({ entry }) =>
-    lastMinuteEntryMatchesTripDate(entry, tripDateIso),
-  );
-  const waitlistPersonIds = waitlist.map(({ person }) => person.id);
-  const certificationSummaries = await listCertificationSummaries(db, shop.id, [
-    ...new Set([...lastMinuteMatched.map(({ person }) => person.id), ...waitlistPersonIds]),
-  ]);
   const dealRequirement = combineCertRequirements(
     requirement ?? {
       minimumCertificationLevel: null,
@@ -247,18 +271,6 @@ export async function getTripGuests(
         [row.booking.id, { booking: row.booking, person: row.person, waiver: row.waiver }] as const,
     ),
   );
-
-  // Who finished the course's materials, read across every departure of the
-  // course, so a tick on the pool weekend shows on the open-water one (ADR
-  // 20261008-course-learning-materials).
-  const courseMaterialsDone = trip.courseId
-    ? await courseMaterialsDoneByPerson(db, {
-        shopId: shop.id,
-        courseId: trip.courseId,
-        personIds: roster.map(({ person }) => person.id),
-        around: trip.startsAt,
-      })
-    : new Map<string, CourseMaterialsDone>();
 
   return {
     trip,
