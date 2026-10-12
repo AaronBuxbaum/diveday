@@ -5,17 +5,19 @@ import { seatsOpen } from "@/lib/availability";
 import { weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext } from "@/test/db";
 import { publicAvailabilityTrips } from "./availability";
-import { cancelBooking, createBooking, restoreBooking } from "./bookings";
+import { cancelBooking, createBooking, createBookingParty, restoreBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { listUpcomingDeparturesForSite } from "./dive-sites";
 import { nextDiveForBooking } from "./next-dive";
-import { boats, courses, diveSites, people, trips } from "./schema";
+import { markBookingNoShow, undoBookingNoShow } from "./no-show";
+import { boats, bookings, courses, diveSites, people, trips } from "./schema";
 import {
   applyDetailsToFutureSeries,
   createTrip,
   createTripSeries,
   duplicateTrip,
   getTripWithBooked,
+  listStaff,
   listUpcomingSessionsForCourse,
   offsetUpcomingTripsWithCounts,
   pagedUpcomingTripsWithCounts,
@@ -417,5 +419,104 @@ describe("every reader counts seats against the certificate", () => {
     if (!session) throw new Error("session not created");
     const sessions = await listUpcomingSessionsForCourse(db, shop.id, course.id, SOON);
     expect(sessions.find((s) => s.id === session.id)?.capacity).toBe(LIMIT);
+  });
+});
+
+/**
+ * The paths H-107's first pass did not pin (#2323): handing a released seat
+ * back, a party that crosses the line partway, and a boat whose non-divers
+ * fill the certificate while the divers-only limit still looks open.
+ */
+describe("the certificate holds on the paths that hand back or split a seat", () => {
+  async function staffId(db: AppDb, shopId: string) {
+    const [staff] = await listStaff(db, shopId);
+    if (!staff) throw new Error("seeded staff missing");
+    return staff.person.id;
+  }
+
+  it("undoing a no-show on a departure already at its certificate is refused", async () => {
+    const { db, shop } = ctx;
+    const boat = await certifiedBoat(db, shop.id, LIMIT);
+    const trip = await overLimitTrip(db, shop.id, boat.id);
+    const [absent] = await fillToCertificate(db, shop.id, trip.id);
+    if (!absent) throw new Error("no seat");
+    const recordedByPersonId = await staffId(db, shop.id);
+
+    const marked = await markBookingNoShow(db, {
+      shopId: shop.id,
+      bookingId: absent,
+      recordedByPersonId,
+      now: trip.startsAt,
+    });
+    expect(marked).toMatchObject({ ok: true });
+    // The released seat is sold to someone at the desk.
+    expect((await book(db, shop.id, trip.id)).ok).toBe(true);
+
+    // The trip states 4 and holds 2: only the certificate makes this full.
+    expect(
+      await undoBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: absent,
+        recordedByPersonId,
+        now: trip.startsAt,
+      }),
+    ).toMatchObject({ ok: false, reason: "trip_full" });
+    const [row] = await db
+      .select({ status: bookings.status })
+      .from(bookings)
+      .where(eq(bookings.id, absent));
+    expect(row?.status).toBe("no_show");
+  });
+
+  it("a party that crosses the certificate partway through is refused whole", async () => {
+    const { db, shop } = ctx;
+    const boat = await certifiedBoat(db, shop.id, LIMIT);
+    const trip = await overLimitTrip(db, shop.id, boat.id);
+    expect((await book(db, shop.id, trip.id)).ok).toBe(true);
+
+    const party = await createBookingParty(
+      db,
+      ["Party Lead", "Party Two", "Party Three"].map((fullName, index) => ({
+        actor: "staff" as const,
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName,
+        email: `party-${index}-${seq}@example.com`,
+      })),
+    );
+    // The lead fits under the certificate; the second would be seat 3.
+    expect(party).toMatchObject({ ok: false, reason: "trip_full", failedIndex: 1 });
+    // Nobody from the party is left holding the one seat that did fit.
+    const held = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.tripId, trip.id), eq(bookings.status, "booked")));
+    expect(held).toHaveLength(1);
+    expect((await book(db, shop.id, trip.id)).ok).toBe(true);
+  });
+
+  it("snorkelers and riders filling the certificate block a diver the divers-only limit would admit", async () => {
+    const { db, shop } = ctx;
+    const boat = await certifiedBoat(db, shop.id, LIMIT);
+    const trip = await overLimitTrip(db, shop.id, boat.id);
+    // Three divers-only seats on a departure stating four: every one looks free.
+    await db.update(trips).set({ diverCapacity: 3 }).where(eq(trips.id, trip.id));
+
+    for (const participantType of ["snorkeler", "rider"] as const) {
+      seq += 1;
+      const seated = await createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: `Surface ${seq}`,
+        email: `surface-${seq}@example.com`,
+        participantType,
+      });
+      expect(seated).toMatchObject({ ok: true });
+    }
+
+    expect(await book(db, shop.id, trip.id)).toMatchObject({ ok: false, reason: "trip_full" });
+    const counted = await getTripWithBooked(db, shop.id, trip.id);
+    expect(counted).toMatchObject({ booked: LIMIT, bookedDivers: 0, sellableCapacity: LIMIT });
   });
 });
