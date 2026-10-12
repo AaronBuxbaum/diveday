@@ -1,3 +1,5 @@
+import { MAP_REACHABILITY_PROBE } from "./maps";
+
 /**
  * The app's Content-Security-Policy, in two halves.
  *
@@ -204,6 +206,9 @@ function mediaRegionalImageHosts(region: string | null | undefined): string[] {
  */
 const MAP_FRAME_HOSTS = ["https://maps.google.com", "https://www.google.com"];
 
+/** The origin of `MAP_REACHABILITY_PROBE`, one of the frame hosts above. */
+const MAP_PROBE_IMAGE_HOST = new URL(MAP_REACHABILITY_PROBE).origin;
+
 /**
  * Sentry's ingest, as a belt to the tunnel's braces. `next.config.ts` sets
  * `tunnelRoute: "/monitoring"`, so the browser SDK posts same-origin and
@@ -404,6 +409,9 @@ export function reportOnlyPolicy(options: CspOptions): string {
         ...MEDIA_IMAGE_HOSTS,
         ...mediaRegionalImageHosts(options.mediaRegion),
         ...mediaPublicImageHosts(options.mediaPublicUrlBase),
+        // The one-pixel read the route maps make before showing their frame
+        // (`MAP_REACHABILITY_PROBE`, src/lib/maps.ts): a frame host already.
+        MAP_PROBE_IMAGE_HOST,
       ],
     ],
     ["font-src", ["'self'", GOOGLE_FONTS_FILE_HOST]],

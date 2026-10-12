@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { MapFrame } from "./MapFrame";
 
 /**
  * A Google Maps embed whose route overlay can keep the provider's attribution
@@ -55,15 +56,13 @@ export function MapEmbed({
           is in frame percentages and would have been drawing on the wrong
           water. `calc(100% + 8rem)` resolves against the containing block —
           this box — so the growth stays symmetric and the centre stays put. */}
-      <iframe
+      <MapFrame
         title={title}
         src={src}
-        tabIndex={interactive ? undefined : -1}
+        interactive={interactive}
         className={`absolute -top-16 -left-16 ${iframeHeightClass} w-[calc(100%+8rem)] border-0 ${
           interactive ? "" : "pointer-events-none"
         }`}
-        loading="lazy"
-        referrerPolicy="strict-origin-when-cross-origin"
       />
       {showAttribution ? (
         <div className="absolute inset-x-0 top-0 h-[calc(100%-4rem)]">{children}</div>
