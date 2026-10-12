@@ -411,15 +411,17 @@ async function publicTripPageReads(db: AppDb, shopSlug: string, tripId: string) 
         ? getShopStripeAccount(db, shop.id)
         : null,
     ),
-    tripRead.then((found) =>
+    tripRead.then(async (found) =>
       !found || found.conditionsHold
         ? []
-        : pagedUpcomingTripsWithCounts(db, shop.id, {
-            now: nowDate(),
-            limit: 50,
-            hasSpace: true,
-            publicOnly: true,
-          }),
+        : (
+            await pagedUpcomingTripsWithCounts(db, shop.id, {
+              now: nowDate(),
+              limit: 50,
+              hasSpace: true,
+              publicOnly: true,
+            })
+          ).trips,
     ),
     shop.reviewsEnabled ? getShopReviewAggregate(db, shop.id) : null,
   ]);
