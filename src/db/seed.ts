@@ -9,6 +9,7 @@ import { demoEmail } from "@/lib/simulator-email";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
+import { deleteDemoSafetyTrail } from "./incident-reports";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   accountSecurity,
@@ -78,8 +79,6 @@ import {
   recapPulses,
   rentalFitProfiles,
   reviewModerationEvents,
-  rollCallCrewEvents,
-  rollCallEvents,
   shopPromoCodes,
   shopPromoRedemptions,
   shopStripeAccounts,
@@ -1181,8 +1180,7 @@ export async function resetDemoSchedule(
   // and a spec that checked somebody in would otherwise leave that arrival
   // standing for the next one (ADR 20260907-the-counter-survives-offline).
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
-  await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
-  await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+  await deleteDemoSafetyTrail(db, shopId);
   await db.delete(executedDives).where(eq(executedDives.shopId, shopId));
   // The crew's own tally of what the day saw, beside the dive log it sits under
   // on the manifest — per-departure history keyed on trips that are about to

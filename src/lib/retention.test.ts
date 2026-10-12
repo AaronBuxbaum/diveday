@@ -40,12 +40,19 @@ describe("retention windows", () => {
   // The money ledger DATA-M3 exists to provide must outlive the operational
   // trails; a shorter window there would quietly defeat the point of the table.
   it("keeps the local money ledger longest", () => {
+    // Incident reports are records kept on the same seven-year horizon, not a
+    // trail (ADR 20261012-incident-reports); the next test holds them to it.
     const others = (Object.keys(RETENTION_DAYS) as RetainedTable[]).filter(
-      (table) => table !== "booking_payment_events",
+      (table) => table !== "booking_payment_events" && table !== "incident_reports",
     );
     for (const table of others) {
       expect(RETENTION_DAYS.booking_payment_events).toBeGreaterThan(RETENTION_DAYS[table]);
     }
+  });
+
+  it("keeps an incident report seven years, as long as the money ledger", () => {
+    expect(RETENTION_DAYS.incident_reports).toBe(2555);
+    expect(RETENTION_DAYS.incident_reports).toBe(RETENTION_DAYS.booking_payment_events);
   });
 
   it("computes a cutoff that many days back", () => {

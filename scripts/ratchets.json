@@ -227,7 +227,7 @@
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 516,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.tsx#DiverRollCall": 755,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx#TripManifestPage": 918,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 1047,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 1041,
     "src/app/waivers/[token]/page.tsx#WaiverPage": 791,
     "src/components/BookingPartyFields.tsx#BookingPartyFields": 416,
     "src/components/DateRequestForm.tsx#DateRequestForm": 418,
@@ -242,7 +242,7 @@
     "src/db/seed-history.ts#seedHistory": 863,
     "src/db/seed-more-trips.ts#seedMoreTrips": 747,
     "src/db/seed-trips.ts#seedTrips": 582,
-    "src/db/seed.ts#resetDemoSchedule": 452,
+    "src/db/seed.ts#resetDemoSchedule": 451,
     "src/db/today.ts#getTodayWork": 1453,
     "src/lib/import.ts#prepareContactImport": 638
   },
@@ -319,7 +319,7 @@
     "src/app/shop/[shopSlug]/staffing/page.tsx": 626,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1134,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1183,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1178,
     "src/app/waivers/[token]/page.tsx": 916
   },
   "tokens": {

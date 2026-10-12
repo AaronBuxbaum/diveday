@@ -119,7 +119,8 @@ export type RetainedTable =
   | "inbound_messages"
   | "staff_replies"
   | "weekly_digest_sends"
-  | "crew_notices";
+  | "crew_notices"
+  | "incident_reports";
 
 /**
  * The append-only trails this mechanism deliberately leaves unbounded, as a
@@ -330,6 +331,16 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * "did the pass tell Ana?" and nothing more.
    */
   crew_notices: 30,
+  /**
+   * 2555 days (7 years), measured from when the incident happened (a draft
+   * that never said when is measured from when it was started). A record, not
+   * a trail, and listed here for the reason `booking_payment_events` is: the
+   * window is liability-driven, so "how long does a shop keep an incident
+   * report?" needs a stated answer (ADR 20261012-incident-reports). The people
+   * in a report and its addenda go with it by cascade. Erasure does not wait
+   * for this: `anonymizeDiver` redacts a diver's identity in a report at once.
+   */
+  incident_reports: 2555,
 };
 
 /**

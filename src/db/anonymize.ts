@@ -49,6 +49,7 @@
  */
 
 import { and, eq, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT, redactedUniqueValue } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
@@ -98,6 +99,9 @@ import {
   gearReservations,
   importedPaymentHistory,
   inboundMessages,
+  incidentReportAddenda,
+  incidentReportPeople,
+  incidentReports,
   internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
@@ -2242,6 +2246,85 @@ async function scrubInbox(
 }
 
 /**
+ * **Incident reports keep the report and lose the diver** (ADR
+ * 20261012-incident-reports, H-109).
+ *
+ * A report is the shop's liability record for everybody in it, so erasing one
+ * diver never deletes it. What goes is their identity:
+ *
+ * - the rows naming them by **booking** stay, and read the erased name through
+ *   the live join, which the people sweep above already rewrote;
+ * - an **outsider** row that carries their name is redacted, in case a staffer
+ *   typed the diver in by hand;
+ * - every word-boundary match of their name in the report's free text and its
+ *   addenda becomes `[redacted]`, and the rest of the account stays.
+ *
+ * The narrative sweep is shop-wide, like the internal-notes sweep, because a
+ * diver can be named in a report they are not linked to. It shares that
+ * sweep's word-boundary pattern and its refusal of a name too short to anchor.
+ * A nickname or a first name alone is not reached: the residual H-109 states.
+ * This is the one write a filed report ever takes.
+ */
+async function scrubIncidentReports(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId } = ctx;
+  const pattern = buddyMemberNameMatch(ctx.fullName);
+  if (!pattern) return [];
+  const scrubbed = (column: AnyPgColumn) =>
+    sql`regexp_replace(${column}, ${pattern}, ${REDACTED_TEXT}, 'gi')`;
+  const mentions = (column: AnyPgColumn) => sql`coalesce(${column} ~* ${pattern}, false)`;
+
+  const reports = await tx
+    .update(incidentReports)
+    .set({
+      whatHappened: scrubbed(incidentReports.whatHappened),
+      locationText: scrubbed(incidentReports.locationText),
+      handoverDetail: scrubbed(incidentReports.handoverDetail),
+      followUp: scrubbed(incidentReports.followUp),
+    })
+    .where(
+      and(
+        eq(incidentReports.shopId, shopId),
+        or(
+          mentions(incidentReports.whatHappened),
+          mentions(incidentReports.locationText),
+          mentions(incidentReports.handoverDetail),
+          mentions(incidentReports.followUp),
+        ),
+      ),
+    )
+    .returning({ id: incidentReports.id });
+  logFuzzyMatch(ctx, "incident_report_name", reports.length);
+
+  const outsiders = await tx
+    .update(incidentReportPeople)
+    .set({ outsiderName: REDACTED_TEXT })
+    .where(
+      and(
+        eq(incidentReportPeople.shopId, shopId),
+        sql`${incidentReportPeople.outsiderName} ~* ${pattern}`,
+      ),
+    )
+    .returning({ id: incidentReportPeople.id });
+  logFuzzyMatch(ctx, "incident_outsider_name", outsiders.length);
+
+  const addenda = await tx
+    .update(incidentReportAddenda)
+    .set({ body: scrubbed(incidentReportAddenda.body) })
+    .where(
+      and(
+        eq(incidentReportAddenda.shopId, shopId),
+        sql`${incidentReportAddenda.body} ~* ${pattern}`,
+      ),
+    )
+    .returning({ id: incidentReportAddenda.id });
+  logFuzzyMatch(ctx, "incident_addendum_name", addenda.length);
+  return [];
+}
+
+/**
  * Every sweep of the erasure, in the order it runs. Each takes the transaction
  * and the diver's context and hands back the Stripe objects it found standing
  * for them, which `scrub` raises as one ledger write at the end.
@@ -2270,6 +2353,7 @@ const SCRUB_SECTIONS = [
   scrubUnfinishedForms,
   scrubCourseInquiries,
   scrubInbox,
+  scrubIncidentReports,
 ] as const;
 
 async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult> {

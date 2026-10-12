@@ -163,7 +163,15 @@ describe("permission gating", () => {
     // distinguishing it the day the inbox began showing a stranger's address
     // and message to every live staff role.
     // The activity log (D5) takes the settings gate: owner and manager reading.
-    expect(gated).toEqual(["reports", "promoCodes", "waivers", "team", "activity", "settings"]);
+    expect(gated).toEqual([
+      "reports",
+      "safety",
+      "promoCodes",
+      "waivers",
+      "team",
+      "activity",
+      "settings",
+    ]);
 
     const visible = visibleStaffDestinations(crew).map((destination) => destination.id);
     // The two consumers: the nav's sections and the search.
@@ -250,7 +258,7 @@ describe("what each consumer derives", () => {
     expect(bySection("schedule")).toEqual(["board", "addBooking", "staffing"]);
     expect(bySection("divers")).toEqual(["divers"]);
     expect(bySection("inbox")).toEqual(["inbox", "requests", "reviews"]);
-    expect(bySection("money")).toEqual(["orders", "reports", "promoCodes"]);
+    expect(bySection("money")).toEqual(["orders", "reports", "safety", "promoCodes"]);
     expect(bySection("courses")).toEqual(["courses"]);
     expect(bySection("gear")).toEqual(["gear", "workOrders", "newWorkOrder", "rentOut"]);
     expect(bySection("settings")).toEqual([

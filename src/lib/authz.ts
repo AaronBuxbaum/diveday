@@ -332,6 +332,15 @@ export function canExportIncidentRecord(roles: readonly Role[] | undefined): boo
 }
 
 /**
+ * Read every incident report in the shop, whoever wrote it (ADR
+ * 20261012-incident-reports). Owners and managers. Anyone else on staff reads
+ * only the reports they started, which `src/lib/incident-reports.ts` decides.
+ */
+export function canReadEveryIncidentReport(roles: readonly Role[] | undefined): boolean {
+  return (roles ?? []).some((role) => role === "owner" || role === "manager");
+}
+
+/**
  * Create, edit, or set a trip's admission requirements — defining what the dive
  * *is* and who it admits. Opens to instructors as well, since course sessions
  * and their admission rules are instructor-owned, but stays closed to captains,

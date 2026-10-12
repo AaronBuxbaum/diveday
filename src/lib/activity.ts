@@ -127,6 +127,13 @@ type ActivityParamShapes = {
   crew_removed: { actor: string; crew: string };
   /** The weather called the day off. */
   blowout_called: { actor: string };
+  /**
+   * **An incident report was filed** on this departure (ADR
+   * 20261012-incident-reports), or an addendum added to one. The actor only:
+   * who was hurt and what happened stay in the report, behind its own gate.
+   */
+  incident_report_filed: { actor: string };
+  incident_report_addendum_added: { actor: string };
   /** A staffer seated a diver. */
   seat_added: { actor: string; diver: string };
   /** …as a walk-in, which is the same act with a different story behind it. */
@@ -240,6 +247,8 @@ export const ACTIVITY_CODES = [
   "crew_assigned",
   "crew_removed",
   "blowout_called",
+  "incident_report_filed",
+  "incident_report_addendum_added",
   "seat_added",
   "seat_added_walk_in",
   "booking_link_requested",

@@ -5927,6 +5927,32 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "departure-log", scheme);
       });
 
+      // A fresh incident report, opened from the departure's Details tab (ADR
+      // 20261012-incident-reports): the draft's three cards, every yes/no
+      // unanswered rather than defaulted to "no", the people list, and the
+      // filing card naming what a report needs before it can be filed.
+      test(`a new incident report renders true to the design (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        await openTripAbout(page);
+        await page
+          .getByRole("region", { name: "Incident reports" })
+          .getByRole("button", { name: "Report an incident" })
+          .click();
+        await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
+        await page.getByRole("region", { name: "File the report" }).waitFor();
+        await capture(page, "incident-report-draft", scheme);
+      });
+
+      // The month's Safety tab beside Reports: roll calls, dock marks, card
+      // checks written past, crew credentials and the month's incident
+      // reports, read from what the shop already records.
+      test(`the Safety tab renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/reports/safety");
+        await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
+        await page.getByRole("region", { name: "Roll calls left open" }).waitFor();
+        await capture(page, "reports-safety", scheme);
+      });
+
       // The same document at its widest. The roster and crew tables are three
       // columns plus one per roll-call checkpoint, and a checkpoint is a dive,
       // so the reef trip's two dives photograph six columns and nothing in this

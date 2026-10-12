@@ -107,6 +107,20 @@ export async function loadShopExportBundleInput(
 }
 
 /**
+ * The shop's safety records as the bundle carries them: crew credentials, and
+ * incident reports with their people and dated notes (ADR
+ * 20261012-incident-reports — the shop bundle only, never a diver's own).
+ */
+async function readSafetyRecordRows(tx: AppTransaction, shopId: string) {
+  return {
+    staffCredentialRows: await readShopScoped(tx, "staffCredentials", shopId),
+    incidentReportRows: await readShopScoped(tx, "incidentReports", shopId),
+    incidentPersonRows: await readShopScoped(tx, "incidentReportPeople", shopId),
+    incidentAddendumRows: await readShopScoped(tx, "incidentReportAddenda", shopId),
+  };
+}
+
+/**
  * Everything the shop bundle's files are built from, read once inside the
  * bundle's transaction: the plain per-table reads through `EXPORT_TABLES`
  * (`./export-tables`), the joined and filtered reads written out below, and
@@ -306,7 +320,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     .where(and(eq(crewAssignmentRequests.shopId, shopId), isNull(crewAssignmentRequests.deletedAt)))
     .orderBy(asc(crewAssignmentRequests.requestedAt), asc(crewAssignmentRequests.id));
 
-  const staffCredentialRows = await readShopScoped(tx, "staffCredentials", shopId);
+  const safetyRecordRows = await readSafetyRecordRows(tx, shopId);
 
   // **`bookings.csv`'s row order, and why the diver's name is in it.**
   //
@@ -562,7 +576,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     staffShiftRows,
     crewAwayRows,
     crewRequestRows,
-    staffCredentialRows,
+    ...safetyRecordRows,
     bookingRows,
     bookingPerson,
     tripHelpRequestRows,
@@ -1147,6 +1161,9 @@ export async function loadShopExportCounts(
     "executed_dives.csv": await countShopScoped(db, "executedDives", shopId),
     "trip_sightings.csv": await countShopScoped(db, "tripSightings", shopId),
     "internal_notes.csv": await countShopScoped(db, "internalNotes", shopId),
+    "incident_reports.csv": await countShopScoped(db, "incidentReports", shopId),
+    "incident_report_people.csv": await countShopScoped(db, "incidentReportPeople", shopId),
+    "incident_report_addenda.csv": await countShopScoped(db, "incidentReportAddenda", shopId),
     "activity_events.csv": await countShopScoped(db, "activityEvents", shopId),
     "notification_deliveries.csv": await countShopScoped(db, "notificationDeliveries", shopId),
     "shop_promo_redemptions.csv": await countShopScoped(db, "shopPromoRedemptions", shopId),

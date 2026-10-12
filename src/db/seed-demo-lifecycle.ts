@@ -44,6 +44,9 @@ import {
   heldSends,
   importedPaymentHistory,
   inboundMessages,
+  incidentReportAddenda,
+  incidentReportPeople,
+  incidentReports,
   integrationDeliveries,
   integrationEvents,
   integrationOauthStates,
@@ -201,6 +204,10 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // lever W) — two of them, and neither is deleted first — so it goes before them.
   await db.delete(bookingReferrals).where(eq(bookingReferrals.shopId, shopId));
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
+  // Incident reports name bookings, people and the departure, so they go first.
+  await db.delete(incidentReportAddenda).where(eq(incidentReportAddenda.shopId, shopId));
+  await db.delete(incidentReportPeople).where(eq(incidentReportPeople.shopId, shopId));
+  await db.delete(incidentReports).where(eq(incidentReports.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   // Events before the shop's own item list they reference.
