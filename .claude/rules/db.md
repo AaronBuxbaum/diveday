@@ -46,7 +46,9 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
 - **There is no legacy**: drop what nothing writes, delete code that only tolerates old rows, write
   no backfill or dual-read for pre-pilot data (H-49). It does not relax the destructive-migration
   guard (`-- diveday:allow-destructive <rule> <table>.<column>: <why>`) or H-02's retention and
-  erasure promises. It expires when Aaron says the first pilot shop has real divers.
+  erasure promises, and it never justifies dropping a column a serving release still reads: remove
+  the schema declaration in one release, drop the column in the next (the guard refuses a
+  `drop-column` marker while the previous release or this branch still declares it). It expires when Aaron says the first pilot shop has real divers.
 - **Every delete is soft**: `deleted_at`, a partial index over live rows, `deleted_at is null` in
   every live read (ADR 20260820-every-delete-is-soft). On screen the word is still "Delete"
   (the `softDelete` lint rule); a publish toggle is "Hidden". The exceptions are legal erasure

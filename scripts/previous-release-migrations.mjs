@@ -84,7 +84,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
  * injectable parameter so the decisions are testable without building
  * repositories.
  */
-function defaultRun(args) {
+export function runGit(args) {
   // Bounded: this script runs inside `pnpm check:repo`'s destructive-migration
   // guard and inside the production build, so a `git` wedged on an index lock
   // must become a failure rather than a build that never finishes.
@@ -106,10 +106,10 @@ function defaultRun(args) {
 /**
  * The commit whose `drizzle/` tree stands in for the previous release.
  *
- * @param {typeof defaultRun} [run]
+ * @param {typeof runGit} [run]
  * @returns {BaseCommit | Failure}
  */
-export function resolveBaseCommit(run = defaultRun) {
+export function resolveBaseCommit(run = runGit) {
   const head = run(["rev-parse", "HEAD"]);
   if (!head.ok) return { ok: false, reason: "not a git repository (git rev-parse HEAD failed)" };
   const headSha = head.out.trim();
@@ -142,10 +142,10 @@ export function resolveBaseCommit(run = defaultRun) {
  * The `drizzle/<folder>/migration.sql` paths present in a commit's tree.
  *
  * @param {string} commit
- * @param {typeof defaultRun} [run]
+ * @param {typeof runGit} [run]
  * @returns {MigrationPaths | Failure}
  */
-export function migrationPathsAt(commit, run = defaultRun) {
+export function migrationPathsAt(commit, run = runGit) {
   const listed = run(["ls-tree", "-r", "--name-only", commit, "--", "drizzle"]);
   if (!listed.ok) return { ok: false, reason: `git ls-tree failed at ${commit}: ${listed.out}` };
   const paths = listed.out
@@ -162,10 +162,10 @@ export function migrationPathsAt(commit, run = defaultRun) {
  *
  * @param {string} commit
  * @param {string} outDir
- * @param {typeof defaultRun} [run]
+ * @param {typeof runGit} [run]
  * @returns {Materialized | Failure}
  */
-export function materializeMigrations(commit, outDir, run = defaultRun) {
+export function materializeMigrations(commit, outDir, run = runGit) {
   const listed = migrationPathsAt(commit, run);
   if (!listed.ok) return listed;
   rmSync(outDir, { recursive: true, force: true });
@@ -184,10 +184,10 @@ export function materializeMigrations(commit, outDir, run = defaultRun) {
  * The whole job: resolve the base commit and lay its migrations out on disk.
  *
  * @param {string} outDir
- * @param {typeof defaultRun} [run]
+ * @param {typeof runGit} [run]
  * @returns {Extraction | Failure}
  */
-export function extractPreviousReleaseMigrations(outDir, run = defaultRun) {
+export function extractPreviousReleaseMigrations(outDir, run = runGit) {
   const base = resolveBaseCommit(run);
   if (!base.ok) return base;
   const written = materializeMigrations(base.commit, outDir, run);

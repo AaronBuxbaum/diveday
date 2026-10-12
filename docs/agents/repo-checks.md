@@ -34,7 +34,7 @@ The infra-ASCII one (`scripts/check-infra-ascii.mjs`) refuses any non-ASCII char
 
 ### destructive-migration
 
-The destructive-migration one (`scripts/check-migrations.mjs`, also run by `scripts/vercel-build.mjs` before `pnpm db:migrate`) refuses a `DROP`/rename/type-change in any migration newer than the previous release unless the SQL itself carries a `-- diveday:allow-destructive <rule> <table>.<column>: <why>` line — migrations apply inside the production build while the *previous* release is still serving, and there are no down migrations (ADR 20260806-destructive-migration-guard).
+The destructive-migration one (`scripts/check-migrations.mjs`, also run by `scripts/vercel-build.mjs` before `pnpm db:migrate`) refuses a `DROP`/rename/type-change in any migration newer than the previous release unless the SQL itself carries a `-- diveday:allow-destructive <rule> <table>.<column>: <why>` line — migrations apply inside the production build while the *previous* release is still serving, and there are no down migrations (ADR 20260806-destructive-migration-guard). A `drop-column` marker is refused outright while the previous release's or this branch's `src/db/schema/` still declares the column, because a declared column is named by every whole-row select on that release and no free-text reason can make that safe (issue #2336).
 
 ### migration-graph
 
@@ -764,7 +764,8 @@ migration spent on rows that have never had a reader. When in doubt the answer i
 while a migration runs inside the production build, and having no users does not help a shop
 watching its schedule mid-deploy — a destructive migration still carries its
 `-- diveday:allow-destructive <rule> <table>.<column>: <why>` line, where "pre-pilot, no users,
-H-49" is now a sufficient *why*. And **H-02's retention windows and the erasure path** are promises
+H-49" is now a sufficient *why* — except for a `drop-column` whose column the previous release
+still declares, which the guard refuses whatever the reason: the drop waits one release. And **H-02's retention windows and the erasure path** are promises
 about data we *will* hold; they stand. This rule expires the moment the first pilot shop has real
 divers in the system — Aaron will say so, and it is not an agent's call to make.
 
