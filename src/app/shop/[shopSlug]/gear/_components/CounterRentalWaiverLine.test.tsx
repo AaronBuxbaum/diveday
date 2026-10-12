@@ -110,6 +110,7 @@ describe("CounterRentalWaiverLine", () => {
         status={current({
           overriddenRefusal: {
             recordId: "refused-1",
+            personId: "person-1",
             at: new Date("2026-07-18T15:00:00Z"),
             evaluatedOn: "2026-07-18",
           },
