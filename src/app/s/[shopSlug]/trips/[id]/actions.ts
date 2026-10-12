@@ -500,16 +500,7 @@ export async function bookSpot(
     bookingId: primaryBookingId,
     purpose: "readiness",
   });
-  // The door remembers who opened it (ADR 20260906-before-you-ask, decision
-  // 3): the handoff this page was opened through is single-use, and the
-  // booking is its one use. A stale or forged value is a no-op.
-  const handoff = z
-    .string()
-    .regex(/^[A-Za-z0-9_-]{20,128}$/)
-    .safeParse(fields.handoff);
-  if (handoff.success) {
-    await consumeBookingHandoff(dbi, { shopId: shopNow.id, token: handoff.data });
-  }
+  await consumeHandoffFromForm(dbi, shopNow.id, fields.handoff);
   // This form is the diver's own — the public schedule page, submitted from
   // their device — so its `Accept-Language` is first-hand evidence of the
   // language the lead booker reads (docs ADR
@@ -751,6 +742,21 @@ export async function bookSpot(
  * Never throws. A seat is a seat whether or not the shop gets to count where it
  * came from.
  */
+/**
+ * The door remembers who opened it (ADR 20260906-before-you-ask, decision 3):
+ * the handoff this page was opened through is single-use, and the booking is
+ * its one use. A stale or forged value is a no-op.
+ */
+async function consumeHandoffFromForm(dbi: AppDb, shopId: string, value: unknown): Promise<void> {
+  const handoff = z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{20,128}$/)
+    .safeParse(value);
+  if (handoff.success) {
+    await consumeBookingHandoff(dbi, { shopId, token: handoff.data });
+  }
+}
+
 /**
  * The mail a completed booking sends, in order: the lead's confirmation, with
  * their waiver riding in it as its first step when one is owed, then every
