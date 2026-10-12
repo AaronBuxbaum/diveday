@@ -93,6 +93,25 @@ describe("remembering which public URLs exist", () => {
     expect(opened).toBe(2);
   });
 
+  it("never remembers a course, so hiding a live one refuses it at the edge at once", async () => {
+    const [course] = await db
+      .select({ id: courses.id, slug: courses.slug })
+      .from(courses)
+      .where(
+        eq(
+          courses.shopId,
+          (await db.select().from(shops).where(eq(shops.slug, slug)))[0]?.id ?? "",
+        ),
+      )
+      .limit(1);
+    if (!course) throw new Error("seed: no course");
+    const shape = { kind: "course" as const, shopSlug: slug, courseSlug: course.slug };
+    expect(await rememberedPublicRouteLookup(shape, open)).toMatchObject({ hidden: false });
+    await db.update(courses).set({ isActive: false }).where(eq(courses.id, course.id));
+    expect(await rememberedPublicRouteLookup(shape, open)).toMatchObject({ hidden: true });
+    expect(opened).toBe(2);
+  });
+
   it("never remembers a failure", async () => {
     const failing = async () => {
       opened += 1;
