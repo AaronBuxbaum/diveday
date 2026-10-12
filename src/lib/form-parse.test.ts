@@ -35,6 +35,31 @@ describe("formFields", () => {
   it("leaves a name the form never sent absent", () => {
     expect("note" in formFields(form([["bookingId", "b-1"]]))).toBe(false);
   });
+
+  it("reads a field named __proto__ as an ordinary field, never as the object's prototype", () => {
+    const fields = formFields(
+      form([
+        ["__proto__", "a"],
+        ["__proto__", "b"],
+        ["constructor", "c"],
+      ]),
+    );
+    expect(Object.getPrototypeOf(fields)).toBeNull();
+    expect(Object.keys(fields).sort()).toEqual(["__proto__", "constructor"]);
+    expect(Object.getOwnPropertyDescriptor(fields, "__proto__")?.value).toEqual(["a", "b"]);
+    expect(fields.constructor).toBe("c");
+    // A schema reading such a form still reads its own fields, and nothing leaks.
+    expect(
+      parseForm(
+        z.object({ name: text() }),
+        form([
+          ["__proto__", "x"],
+          ["name", "Ana"],
+        ]),
+      ),
+    ).toEqual({ ok: true, data: { name: "Ana" } });
+    expect(Object.getPrototypeOf({})).toBe(Object.prototype);
+  });
 });
 
 describe("parseForm", () => {

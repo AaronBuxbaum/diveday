@@ -32,7 +32,9 @@ export type FormParse<T> =
 export function formFields(
   formData: FormData,
 ): Record<string, FormDataEntryValue | FormDataEntryValue[]> {
-  const fields: Record<string, FormDataEntryValue | FormDataEntryValue[]> = {};
+  // No prototype: a field named `__proto__` is then an ordinary key, never a
+  // way for a hand-built post to swap the object's prototype.
+  const fields: Record<string, FormDataEntryValue | FormDataEntryValue[]> = Object.create(null);
   for (const name of new Set(formData.keys())) {
     const values = formData.getAll(name);
     fields[name] = values.length === 1 ? (values[0] as FormDataEntryValue) : values;
