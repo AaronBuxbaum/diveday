@@ -1333,6 +1333,7 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
     }
     expect(context).toEqual({
       tags: {
+        stripe_event_id: "evt_leaky",
         stripe_webhook_event_type: "invoice.paid",
         stripe_webhook_stage: "handler",
         error_class: "TypeError",
@@ -1388,6 +1389,65 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
     expect((await post(event)).status).toBe(200);
     expect(markCheckoutPaidBySessionId).toHaveBeenCalledTimes(1);
     expect(releaseStripeWebhookEventClaim).not.toHaveBeenCalled();
+  });
+
+  // A database error wraps the driver's own: its class and SQLSTATE say what
+  // went wrong without the bound parameters the outer message quotes.
+  it("tags and logs a failure by class and the driver's code, never a message", async () => {
+    const cause = Object.assign(new Error("Key (email)=(nora@example.com) already exists"), {
+      name: "PostgresError",
+      code: "23505",
+    });
+    vi.mocked(markOrderPaidByInvoiceId).mockRejectedValue(
+      new Error("Failed query: update orders params: nora@example.com", { cause }),
+    );
+    const releaseCause = Object.assign(new Error("terminating connection"), { code: "57P01" });
+    vi.mocked(releaseStripeWebhookEventClaim).mockRejectedValue(
+      new Error("Failed query: update stripe_webhook_events", { cause: releaseCause }),
+    );
+
+    expect(
+      (await post({ id: "evt_sql", type: "invoice.paid", data: { object: { id: "in_1" } } }))
+        .status,
+    ).toBe(500);
+
+    const tags = vi
+      .mocked(Sentry.captureException)
+      .mock.calls.map(([, context]) => (context as { tags: Record<string, string> }).tags);
+    expect(tags).toContainEqual({
+      stripe_event_id: "evt_sql",
+      stripe_webhook_event_type: "invoice.paid",
+      stripe_webhook_stage: "handler",
+      error_class: "Error",
+      cause_name: "PostgresError",
+      cause_code: "23505",
+    });
+    expect(tags).toContainEqual(
+      expect.objectContaining({ stripe_webhook_stage: "claim_release", cause_code: "57P01" }),
+    );
+
+    const lines = [
+      ...vi.mocked(console.log).mock.calls,
+      ...vi.mocked(console.error).mock.calls,
+    ].map((call) => JSON.parse(call[0] as string));
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        event: "stripe_webhook.handler_outcome",
+        outcome: "handler_failed",
+        errorCode: "Error",
+        causeName: "PostgresError",
+        causeCode: "23505",
+      }),
+    );
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        event: "stripe_webhook.claim_release_failed",
+        errorCode: "Error",
+        causeCode: "57P01",
+      }),
+    );
+    const written = JSON.stringify([lines, vi.mocked(Sentry.captureException).mock.calls]);
+    expect(written).not.toContain("nora@example.com");
   });
 
   it("a release that itself fails never masks the original error", async () => {
