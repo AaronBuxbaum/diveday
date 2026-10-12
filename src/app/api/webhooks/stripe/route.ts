@@ -133,10 +133,12 @@ const disputeObjectSchema = z.object({
  */
 const payoutObjectSchema = z.object({
   id: z.string().min(1),
-  amount: z.number().int(),
+  amount: z.number().int().nonnegative(),
   currency: z.string().min(1),
   arrival_date: z.number().int(),
-  status: z.string().min(1),
+  // The only two statuses a `payout.paid` / `payout.failed` event carries;
+  // anything else is refused rather than stored as "Paid out".
+  status: z.enum(["paid", "failed"]),
   automatic: z.boolean().optional(),
   failure_code: z.string().nullable().optional(),
 });

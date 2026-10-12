@@ -803,6 +803,38 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       expect(recordStripePayout).not.toHaveBeenCalled();
     });
 
+    it("refuses a payout whose status is neither paid nor failed, or whose amount is negative", async () => {
+      const object = {
+        id: "po_1",
+        amount: 100,
+        currency: "usd",
+        arrival_date: 1_800_000_000,
+        status: "paid",
+        automatic: true,
+      };
+      expect(
+        (
+          await post({
+            id: "evt_po_pending",
+            type: "payout.paid",
+            account: "acct_1",
+            data: { object: { ...object, status: "pending" } },
+          })
+        ).status,
+      ).toBe(200);
+      expect(
+        (
+          await post({
+            id: "evt_po_negative",
+            type: "payout.paid",
+            account: "acct_1",
+            data: { object: { ...object, amount: -100 } },
+          })
+        ).status,
+      ).toBe(200);
+      expect(recordStripePayout).not.toHaveBeenCalled();
+    });
+
     it("a deferred payout answers 503 and gives its claim back, without paging anyone", async () => {
       vi.mocked(recordStripePayout).mockResolvedValue({ status: "deferred" });
       const response = await post({

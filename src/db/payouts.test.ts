@@ -10,7 +10,7 @@ import {
   recordStripePayout,
 } from "./payouts";
 import { shops, stripePayouts } from "./schema";
-import { upsertShopStripeAccount } from "./stripe-accounts";
+import { disconnectShopStripeAccount, upsertShopStripeAccount } from "./stripe-accounts";
 
 const ctx = fileScopedShopContext();
 
@@ -85,6 +85,21 @@ describe("recordStripePayout", () => {
     const outcome = await recordStripePayout(
       db,
       payoutEvent({ account: "acct_nobodysAccount", at: "2026-10-03T01:00:00Z" }),
+      lookup,
+    );
+    expect(outcome).toEqual({ status: "not_found" });
+    expect(summarize).not.toHaveBeenCalled();
+    expect(await db.select().from(stripePayouts)).toHaveLength(0);
+  });
+
+  it("is no longer the business of a shop that disconnected the account", async () => {
+    const { db } = ctx;
+    await connected(db);
+    await disconnectShopStripeAccount(db, ACCOUNT);
+    const { lookup, summarize } = lookupAnswering(SUMMARIZED);
+    const outcome = await recordStripePayout(
+      db,
+      payoutEvent({ at: "2026-10-03T01:00:00Z" }),
       lookup,
     );
     expect(outcome).toEqual({ status: "not_found" });

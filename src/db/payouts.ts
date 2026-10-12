@@ -15,7 +15,7 @@ export type PayoutEvent = {
     id: string;
     amountCents: number;
     currency: string;
-    status: string;
+    status: "paid" | "failed";
     arrivalDate: Date;
     /** Stripe itemizes only an automatic payout's balance transactions. */
     automatic: boolean;
@@ -27,7 +27,7 @@ export type PayoutOutcome =
   | { status: "recorded"; payout: StripePayout }
   /** An older event than one already applied, or a paid event after a failure — nothing written. */
   | { status: "stale" }
-  /** No shop holds this connected account. */
+  /** No shop holds this connected account, or the one that did has disconnected it. */
   | { status: "not_found" }
   /** Stripe could not be asked what the payout carried; deliver the event again. */
   | { status: "deferred" };
@@ -36,8 +36,9 @@ export type PayoutOutcome =
  * **Record a payout Stripe made to a shop's bank** (ADR
  * 20261012-payouts-reach-diveday), from `payout.paid` or `payout.failed`.
  *
- * The shop is the one holding the event's connected account — never anything
- * in the payout body — and a row never moves to another account once written.
+ * The shop is the one holding the event's connected account, and still
+ * connected — never anything in the payout body — and a row never moves to
+ * another account once written.
  * One row per Stripe payout, upserted, ordered by the event's `created` time:
  * a replay changes nothing and a late `paid` never overwrites a `failed`
  * (Stripe can fail a payout after calling it paid, never the other way round).
@@ -55,7 +56,13 @@ export async function recordStripePayout(
   const [holder] = await db
     .select({ shopId: shopStripeAccounts.shopId })
     .from(shopStripeAccounts)
-    .where(eq(shopStripeAccounts.stripeAccountId, event.stripeAccountId))
+    .where(
+      and(
+        eq(shopStripeAccounts.stripeAccountId, event.stripeAccountId),
+        // A shop that deauthorized DiveDay stops accruing payouts here.
+        isNull(shopStripeAccounts.disconnectedAt),
+      ),
+    )
     .limit(1);
   if (!holder) return { status: "not_found" };
 
