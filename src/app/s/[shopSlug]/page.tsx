@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { submitInquiryAction } from "@/app/actions/inquiry";
@@ -7,7 +6,6 @@ import { DateRequestForm } from "@/components/DateRequestForm";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
 import { ShopReviews, ShopReviewsSkeleton } from "@/components/ShopReviews";
-import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { ITEM_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -45,6 +43,7 @@ import { MoreWaysRows } from "./_components/MoreWaysRows";
 import { NextBoatCard } from "./_components/NextBoatCard";
 import { OffSeasonPanel } from "./_components/OffSeasonPanel";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
+import { SchedulePagerRow } from "./_components/SchedulePagerRow";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
 import { ShopPhotoStrip } from "./_components/ShopPhotoStrip";
 import { readSchedulePage } from "./_components/schedule-reads";
@@ -62,7 +61,7 @@ import {
   scheduleSeatState,
   scheduleViewLinks,
 } from "./_components/schedule-view";
-import { WEEK_LEDGER_FOLLOWER_CLASS, WeekLedger } from "./_components/WeekLedger";
+import { WeekLedger } from "./_components/WeekLedger";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -624,37 +623,12 @@ export default async function SchedulePage({
           box. Under an empty state (a month or a filter with nothing in it)
           no room is handed back. */}
       {!isEmbed && (nextCursor || after || explicitMonth) ? (
-        <div
-          className={`flex flex-wrap items-center gap-3 ${showsWeekLedger ? WEEK_LEDGER_FOLLOWER_CLASS : "mt-5"}`}
-        >
-          {pager.earlier ? (
-            <Link
-              href={pager.earlier}
-              scroll={false}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("schedule.showEarlier")}
-            </Link>
-          ) : null}
-          {pager.later ? (
-            <Link
-              href={pager.later}
-              scroll={false}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("schedule.showLater")}
-            </Link>
-          ) : null}
-          {after || explicitMonth ? (
-            <Link
-              href={pager.backToNext}
-              scroll={false}
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              {t("schedule.backToNext")}
-            </Link>
-          ) : null}
-        </div>
+        <SchedulePagerRow
+          pager={pager}
+          showsBackToNext={Boolean(after || explicitMonth)}
+          followsWeekLedger={showsWeekLedger}
+          t={t}
+        />
       ) : null}
       {/* **The ask, promoted** (N-45). On a quiet board this is the page's one
           primary and its whole job, so it stands as its own section with the
@@ -789,16 +763,23 @@ export default async function SchedulePage({
           <h2 id="more-ways-heading" className={`font-brand-display ${SECTION_TITLE_CLASS}`}>
             {t("schedule.moreWaysHeading")}
           </h2>
-          <MoreWaysRows
-            shopSlug={shopSlug}
-            quiet={quiet.quiet}
-            dateRequestsEnabled={shop.dateRequestsEnabled}
-            lastMinuteListEnabled={shop.lastMinuteListEnabled}
-            everHadDeparture={everHadDeparture}
+          <DiverIntlProvider
             locale={locale}
-            tz={tz}
-            t={t}
-          />
+            timeZone={tz}
+            // `course` is where the diver-facing certification-level words live
+            // (`DIVER_CERTIFICATION_LEVEL_KEYS`), shared with the public course
+            // pages — `DiveDeclarationFields` inside the deal-list form reads them.
+            namespaces={["lastMinute", "findMyBooking", "inquiry", "common", "course"]}
+          >
+            <MoreWaysRows
+              shopSlug={shopSlug}
+              quiet={quiet.quiet}
+              dateRequestsEnabled={shop.dateRequestsEnabled}
+              lastMinuteListEnabled={shop.lastMinuteListEnabled}
+              everHadDeparture={everHadDeparture}
+              t={t}
+            />
+          </DiverIntlProvider>
         </section>
       ) : null}
       {isEmbed ? (

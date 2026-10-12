@@ -64,8 +64,10 @@ describe("the schedule's pager row", () => {
     // The list renders on that name, and on nothing else.
     expect(SOURCE).toMatch(/\{showsWeekLedger \? \(\s*<WeekLedger\b/);
     const pager = SOURCE.slice(positionOf("(nextCursor || after || explicitMonth) ? ("));
-    expect(pager).toMatch(
-      /^[^<]*<div\s+className=\{`flex flex-wrap items-center gap-3 \$\{showsWeekLedger \? WEEK_LEDGER_FOLLOWER_CLASS : "mt-5"\}`\}/,
+    expect(pager).toMatch(/^[^<]*<SchedulePagerRow\s[^>]*followsWeekLedger=\{showsWeekLedger\}/);
+    const row = readFileSync(join(__dirname, "_components/SchedulePagerRow.tsx"), "utf8");
+    expect(row).toMatch(
+      /<div\s+className=\{`flex flex-wrap items-center gap-3 \$\{followsWeekLedger \? WEEK_LEDGER_FOLLOWER_CLASS : "mt-5"\}`\}/,
     );
   });
 });

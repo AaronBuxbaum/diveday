@@ -5,9 +5,6 @@ import { diverTranslator } from "@/i18n/messages";
 import { MoreWaysRows } from "./MoreWaysRows";
 
 vi.mock("@/app/actions/inquiry", () => ({ submitInquiryAction: async () => {} }));
-vi.mock("@/i18n/DiverIntlProvider", () => ({
-  DiverIntlProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
 vi.mock("@/components/DateRequestForm", () => ({ DateRequestForm: () => <li>date-request</li> }));
 vi.mock("./LastMinuteListForm", () => ({ LastMinuteListForm: () => <li>deal-list</li> }));
 vi.mock("./FindMyBookingForm", () => ({ FindMyBookingForm: () => <li>find-booking</li> }));
@@ -24,8 +21,6 @@ function show(over: Partial<React.ComponentProps<typeof MoreWaysRows>> = {}) {
       dateRequestsEnabled
       lastMinuteListEnabled
       everHadDeparture
-      locale="en-US"
-      tz="America/New_York"
       t={t}
       {...over}
     />,
