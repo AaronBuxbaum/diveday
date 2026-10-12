@@ -376,7 +376,10 @@ async function readinessLinkForUpcomingSeat(plain: AppDb, shopId: string) {
   return issued.token;
 }
 
-/** The public booking page's reads, as the page awaits them. */
+/**
+ * The public booking page's reads, as the page awaits them: the shop, the
+ * fan-out, then one wave of everything else (code review 2026-10-11, item 2).
+ */
 async function publicTripPageReads(db: AppDb, shopSlug: string, tripId: string) {
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) throw new Error("no shop");
@@ -388,26 +391,26 @@ async function publicTripPageReads(db: AppDb, shopSlug: string, tripId: string) 
     tripPublicCrew(db, shop.id, tripId),
   ]);
   if (!trip) throw new Error("no trip");
-  await listTripChangeEvents(db, shop.id, tripId);
   const siteIds = tripDives
     .map(({ diveSite }) => diveSite?.id)
     .filter((id): id is string => Boolean(id));
-  await listDiveSiteBriefingExtras(db, shop.id, siteIds);
-  await siteSightings(db, shop.id, siteIds);
-  if (perDiverBookingPriceCents(trip, trip.course)) await getShopStripeAccount(db, shop.id);
   await Promise.all([
+    listTripChangeEvents(db, shop.id, tripId),
+    listDiveSiteBriefingExtras(db, shop.id, siteIds),
+    siteSightings(db, shop.id, siteIds),
+    perDiverBookingPriceCents(trip, trip.course) ? getShopStripeAccount(db, shop.id) : null,
     getTripRequirements(db, shop.id, tripId),
     getTripSiteRequirement(db, shop.id, tripId),
+    trip.conditionsHold
+      ? []
+      : pagedUpcomingTripsWithCounts(db, shop.id, {
+          now: nowDate(),
+          limit: 50,
+          hasSpace: true,
+          publicOnly: true,
+        }),
+    shop.reviewsEnabled ? getShopReviewAggregate(db, shop.id) : null,
   ]);
-  if (!trip.conditionsHold) {
-    await pagedUpcomingTripsWithCounts(db, shop.id, {
-      now: nowDate(),
-      limit: 50,
-      hasSpace: true,
-      publicOnly: true,
-    });
-  }
-  if (shop.reviewsEnabled) await getShopReviewAggregate(db, shop.id);
 }
 
 /** `/ready`'s reads on the night-before visit, as the page awaits them. */
@@ -532,5 +535,9 @@ const TRIP_PHASE_CEILING = 9;
  */
 const PUBLIC_TRIP_CEILING = 18;
 const READY_CEILING = 36;
-const PUBLIC_TRIP_PHASE_CEILING = 10;
+// 10 → 4: the shop, the fan-out, and one wave of everything else (item 2).
+// The live-staff check rides the fan-out, and `generateMetadata` shares the
+// trip row through `cache()` — a statement saved in a render, not in this
+// replay, which reads the body alone.
+const PUBLIC_TRIP_PHASE_CEILING = 4;
 const READY_PHASE_CEILING = 12;
