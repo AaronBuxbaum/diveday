@@ -37,6 +37,7 @@ describe("parseSesInboundNotification", () => {
       envelopeFrom: "priya@example.com",
       fromAuthenticated: true,
       envelopeAuthenticated: true,
+      spamFlagged: false,
       receivedAt: new Date("2026-07-21T12:59:58.000Z"),
     });
   });
@@ -87,6 +88,8 @@ describe("parseSesInboundNotification", () => {
       },
     });
     expect(parseSesInboundNotification(spam, NOW).kind).toBe("received");
+    // Kept, but said: the desk's after-hours ping never fires on it (#2311).
+    expect(parseSesInboundNotification(spam, NOW)).toMatchObject({ spamFlagged: true });
   });
 
   it("ignores a delivery event, a non-S3 action, and garbage", () => {

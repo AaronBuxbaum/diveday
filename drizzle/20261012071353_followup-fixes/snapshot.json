@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "68df381e-f73d-4f31-9854-8a89eee1ec95",
+  "id": "414185e6-490e-4bbf-9030-24ea7a4d4a52",
   "prevIds": [
-    "076b2a5f-64d6-4427-bb60-b8071d074e48"
+    "0d3464e2-b4ca-494d-aad4-2cf99b1d8fc9"
   ],
   "ddl": [
     {
@@ -30,8 +30,7 @@
       "values": [
         "waiver_send",
         "last_minute_deal",
-        "waitlist_invite",
-        "departure_note"
+        "waitlist_invite"
       ],
       "name": "held_send_kind",
       "entityType": "enums",
@@ -354,8 +353,7 @@
         "request_declined",
         "request_refused",
         "role_changed",
-        "called_off",
-        "time_moved"
+        "called_off"
       ],
       "name": "crew_notice_change",
       "entityType": "enums",
@@ -406,26 +404,6 @@
         "crew"
       ],
       "name": "trip_assignment_role",
-      "entityType": "enums",
-      "schema": "public"
-    },
-    {
-      "values": [
-        "open",
-        "returned",
-        "discarded"
-      ],
-      "name": "lost_item_status",
-      "entityType": "enums",
-      "schema": "public"
-    },
-    {
-      "values": [
-        "email",
-        "sms",
-        "whatsapp"
-      ],
-      "name": "lost_item_told_channel",
       "entityType": "enums",
       "schema": "public"
     },
@@ -661,38 +639,6 @@
     },
     {
       "values": [
-        "none",
-        "ems",
-        "hospital",
-        "chamber",
-        "diver",
-        "other"
-      ],
-      "name": "incident_handover_kind",
-      "entityType": "enums",
-      "schema": "public"
-    },
-    {
-      "values": [
-        "affected",
-        "witness",
-        "responder"
-      ],
-      "name": "incident_involvement",
-      "entityType": "enums",
-      "schema": "public"
-    },
-    {
-      "values": [
-        "draft",
-        "filed"
-      ],
-      "name": "incident_report_status",
-      "entityType": "enums",
-      "schema": "public"
-    },
-    {
-      "values": [
         "started",
         "succeeded",
         "failed"
@@ -911,8 +857,7 @@
         "order_refunded",
         "cancellation_refund",
         "shop_cancellation_refund",
-        "stripe_dashboard_refund",
-        "refund_failed"
+        "stripe_dashboard_refund"
       ],
       "name": "payment_event_operation",
       "entityType": "enums",
@@ -1414,18 +1359,6 @@
     },
     {
       "isRlsEnabled": false,
-      "name": "departure_notes",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "lost_items",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
       "name": "booking_arrival_events",
       "entityType": "tables",
       "schema": "public"
@@ -1577,24 +1510,6 @@
     {
       "isRlsEnabled": false,
       "name": "rental_fit_profiles",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "incident_report_addenda",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "incident_report_people",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "incident_reports",
       "entityType": "tables",
       "schema": "public"
     },
@@ -1804,12 +1719,6 @@
     },
     {
       "isRlsEnabled": false,
-      "name": "stripe_refund_failures",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
       "name": "stripe_webhook_events",
       "entityType": "tables",
       "schema": "public"
@@ -1835,12 +1744,6 @@
     {
       "isRlsEnabled": false,
       "name": "review_moderation_events",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "review_replies",
       "entityType": "tables",
       "schema": "public"
     },
@@ -6707,19 +6610,6 @@
       "table": "shops"
     },
     {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "12",
-      "generated": null,
-      "identity": null,
-      "name": "customer_regulator_service_months",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "shops"
-    },
-    {
       "type": "jsonb",
       "typeSchema": null,
       "notNull": true,
@@ -8826,19 +8716,6 @@
       "table": "crew_notices"
     },
     {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "previous_starts_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "crew_notices"
-    },
-    {
       "type": "uuid",
       "typeSchema": null,
       "notNull": false,
@@ -9266,292 +9143,6 @@
       "entityType": "columns",
       "schema": "public",
       "table": "trip_assignments"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "departure_notes"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "shop_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "departure_notes"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "trip_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "departure_notes"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "body",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "departure_notes"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "sent_by_person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "departure_notes"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "recipients",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "departure_notes"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "delivered",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "departure_notes"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "sent_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "departure_notes"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "shop_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "trip_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "booking_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "description",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "type": "lost_item_status",
-      "typeSchema": "public",
-      "notNull": true,
-      "dimensions": 0,
-      "default": "'open'",
-      "generated": null,
-      "identity": null,
-      "name": "status",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "recorded_by_person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "resolved_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "resolved_by_person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "told_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "type": "lost_item_told_channel",
-      "typeSchema": "public",
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "told_channel",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "lost_items"
     },
     {
       "type": "uuid",
@@ -13412,461 +13003,6 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
-      "table": "incident_report_addenda"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "shop_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_report_addenda"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "report_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_report_addenda"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "body",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_report_addenda"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "author_person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_report_addenda"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_report_addenda"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_report_people"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "shop_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_report_people"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "report_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_report_people"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "booking_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_report_people"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_report_people"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "outsider_name",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_report_people"
-    },
-    {
-      "type": "incident_involvement",
-      "typeSchema": "public",
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "involvement",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_report_people"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_report_people"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "shop_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "trip_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "incident_report_status",
-      "typeSchema": "public",
-      "notNull": true,
-      "dimensions": 0,
-      "default": "'draft'",
-      "generated": null,
-      "identity": null,
-      "name": "status",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "occurred_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "dive_site_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "location_text",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "what_happened",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "first_aid_given",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "oxygen_given",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "oxygen_minutes",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "emergency_services_called",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "incident_handover_kind",
-      "typeSchema": "public",
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "handover_kind",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "handover_detail",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "handed_over_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "follow_up",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "created_by_person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "filed_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "filed_by_person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
       "table": "calendar_feeds"
     },
     {
@@ -15074,6 +14210,32 @@
       "generated": null,
       "identity": null,
       "name": "keyword_intent",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbound_messages"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "sender_authenticated",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbound_messages"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "spam_flagged",
       "entityType": "columns",
       "schema": "public",
       "table": "inbound_messages"
@@ -16920,32 +16082,6 @@
       "generated": null,
       "identity": null,
       "name": "refunded_cents",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "booking_checkouts"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "paid_after_close_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "booking_checkouts"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "paid_after_close_cents",
       "entityType": "columns",
       "schema": "public",
       "table": "booking_checkouts"
@@ -19031,188 +18167,6 @@
       "table": "shop_stripe_accounts"
     },
     {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "shop_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "stripe_account_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "stripe_refund_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "order_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "checkout_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "booking_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "amount_cents",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "currency",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "refund_status",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "failure_reason",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "owed_until_refunded_cents",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "failed_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
       "type": "text",
       "typeSchema": null,
       "notNull": true,
@@ -19822,110 +18776,6 @@
       "entityType": "columns",
       "schema": "public",
       "table": "review_moderation_events"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "review_replies"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "shop_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "review_replies"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "review_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "review_replies"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "body",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "review_replies"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "written_by_person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "review_replies"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "review_replies"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "review_replies"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "deleted_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "review_replies"
     },
     {
       "type": "uuid",
@@ -21553,19 +20403,6 @@
       "table": "trips"
     },
     {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "false",
-      "generated": null,
-      "identity": null,
-      "name": "exceeds_no_deco_limits",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "trips"
-    },
-    {
       "type": "integer",
       "typeSchema": null,
       "notNull": false,
@@ -21873,19 +20710,6 @@
       "generated": null,
       "identity": null,
       "name": "deleted_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "trips"
-    },
-    {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "false",
-      "generated": null,
-      "identity": null,
-      "name": "is_rehearsal",
       "entityType": "columns",
       "schema": "public",
       "table": "trips"
@@ -26950,104 +25774,6 @@
           "opclass": null
         },
         {
-          "value": "sent_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "departure_notes_shop_trip_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "departure_notes"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "shop_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "status",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "created_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "lost_items_shop_status_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "shop_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "trip_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "lost_items_shop_trip_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "shop_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "trip_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
           "value": "booking_id",
           "isExpression": false,
           "asc": true,
@@ -28518,146 +27244,6 @@
       "nameExplicit": true,
       "columns": [
         {
-          "value": "report_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "created_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "incident_report_addenda_report_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "incident_report_addenda"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "report_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "created_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "incident_report_people_report_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "incident_report_people"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "booking_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "incident_report_people_booking_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "incident_report_people"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "shop_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "trip_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "created_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "incident_reports_shop_trip_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "shop_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "occurred_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "incident_reports_shop_occurred_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
           "value": "token_hash",
           "isExpression": false,
           "asc": true,
@@ -29617,7 +28203,7 @@
       "nameExplicit": true,
       "columns": [
         {
-          "value": "phone_number_id",
+          "value": "waba_id",
           "isExpression": false,
           "asc": true,
           "nullsFirst": false,
@@ -29629,28 +28215,7 @@
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "shop_whatsapp_accounts_phone_number_unique",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "shop_whatsapp_accounts"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "waba_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "shop_whatsapp_accounts_waba_idx",
+      "name": "shop_whatsapp_accounts_waba_unique",
       "entityType": "indexes",
       "schema": "public",
       "table": "shop_whatsapp_accounts"
@@ -30604,55 +29169,6 @@
       "nameExplicit": true,
       "columns": [
         {
-          "value": "stripe_refund_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": true,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "stripe_refund_failures_refund_unique",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "shop_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "failed_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "stripe_refund_failures_shop_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
           "value": "account",
           "isExpression": false,
           "asc": true,
@@ -30907,48 +29423,6 @@
       "entityType": "indexes",
       "schema": "public",
       "table": "review_moderation_events"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "review_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": true,
-      "where": "\"deleted_at\" is null",
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "review_replies_review_live_unique",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "review_replies"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "shop_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "review_replies_shop_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "review_replies"
     },
     {
       "nameExplicit": true,
@@ -34889,159 +33363,6 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
-      "name": "departure_notes_shop_id_shops_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "departure_notes"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "trip_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "trips",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "departure_notes_trip_id_trips_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "departure_notes"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "sent_by_person_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "people",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "name": "departure_notes_sent_by_person_id_people_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "departure_notes"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "shop_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "shops",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "lost_items_shop_id_shops_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "trip_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "trips",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "lost_items_trip_id_trips_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "booking_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "bookings",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "lost_items_booking_id_bookings_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "person_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "people",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "lost_items_person_id_people_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "recorded_by_person_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "people",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "name": "lost_items_recorded_by_person_id_people_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "resolved_by_person_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "people",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "name": "lost_items_resolved_by_person_id_people_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "shop_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "shops",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
       "name": "booking_arrival_events_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -36202,210 +34523,6 @@
       "entityType": "fks",
       "schema": "public",
       "table": "rental_fit_profiles"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "shop_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "shops",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "incident_report_addenda_shop_id_shops_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "incident_report_addenda"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "report_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "incident_reports",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "name": "incident_report_addenda_report_id_incident_reports_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "incident_report_addenda"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "author_person_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "people",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "incident_report_addenda_author_person_id_people_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "incident_report_addenda"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "shop_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "shops",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "incident_report_people_shop_id_shops_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "incident_report_people"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "report_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "incident_reports",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "name": "incident_report_people_report_id_incident_reports_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "incident_report_people"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "booking_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "bookings",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "incident_report_people_booking_id_bookings_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "incident_report_people"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "person_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "people",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "incident_report_people_person_id_people_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "incident_report_people"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "shop_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "shops",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "incident_reports_shop_id_shops_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "trip_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "trips",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "incident_reports_trip_id_trips_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "dive_site_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "dive_sites",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "incident_reports_dive_site_id_dive_sites_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "created_by_person_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "people",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "incident_reports_created_by_person_id_people_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "filed_by_person_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "people",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "incident_reports_filed_by_person_id_people_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "incident_reports"
     },
     {
       "nameExplicit": false,
@@ -37711,74 +35828,6 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
-      "name": "stripe_refund_failures_shop_id_shops_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "order_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "orders",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "stripe_refund_failures_order_id_orders_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "checkout_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "booking_checkouts",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "stripe_refund_failures_checkout_id_booking_checkouts_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "booking_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "bookings",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "stripe_refund_failures_booking_id_bookings_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "shop_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "shops",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
       "name": "tips_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -37987,57 +36036,6 @@
       "entityType": "fks",
       "schema": "public",
       "table": "review_moderation_events"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "shop_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "shops",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "review_replies_shop_id_shops_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "review_replies"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "review_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "trip_reviews",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "review_replies_review_id_trip_reviews_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "review_replies"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "written_by_person_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "people",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "review_replies_written_by_person_id_people_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "review_replies"
     },
     {
       "nameExplicit": false,
@@ -39959,26 +37957,6 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "departure_notes_pkey",
-      "schema": "public",
-      "table": "departure_notes",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "lost_items_pkey",
-      "schema": "public",
-      "table": "lost_items",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
       "name": "booking_arrival_events_pkey",
       "schema": "public",
       "table": "booking_arrival_events",
@@ -40222,36 +38200,6 @@
       "name": "rental_fit_profiles_pkey",
       "schema": "public",
       "table": "rental_fit_profiles",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "incident_report_addenda_pkey",
-      "schema": "public",
-      "table": "incident_report_addenda",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "incident_report_people_pkey",
-      "schema": "public",
-      "table": "incident_report_people",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "incident_reports_pkey",
-      "schema": "public",
-      "table": "incident_reports",
       "entityType": "pks"
     },
     {
@@ -40599,16 +38547,6 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "stripe_refund_failures_pkey",
-      "schema": "public",
-      "table": "stripe_refund_failures",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
       "name": "stripe_webhook_events_pkey",
       "schema": "public",
       "table": "stripe_webhook_events",
@@ -40652,16 +38590,6 @@
       "name": "review_moderation_events_pkey",
       "schema": "public",
       "table": "review_moderation_events",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "review_replies_pkey",
-      "schema": "public",
-      "table": "review_replies",
       "entityType": "pks"
     },
     {
@@ -41215,13 +39143,6 @@
       "table": "shops"
     },
     {
-      "value": "\"customer_regulator_service_months\" in (12, 24)",
-      "name": "shops_customer_regulator_service_months_choice",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "shops"
-    },
-    {
       "value": "\"desk_opens_minute\" >= 0 and \"desk_closes_minute\" <= 1440\n        and \"desk_opens_minute\" < \"desk_closes_minute\"",
       "name": "shops_desk_hours_in_day",
       "entityType": "checks",
@@ -41376,34 +39297,6 @@
       "table": "staff_shifts"
     },
     {
-      "value": "length(trim(\"body\")) between 1 and 200",
-      "name": "departure_notes_body_length",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "departure_notes"
-    },
-    {
-      "value": "length(trim(\"description\")) between 1 and 120",
-      "name": "lost_items_description_length",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "value": "(\"status\" = 'open') = (\"resolved_at\" is null)",
-      "name": "lost_items_resolved_matches_status",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
-      "value": "(\"booking_id\" is null) = (\"person_id\" is null)",
-      "name": "lost_items_seat_and_person_together",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "lost_items"
-    },
-    {
       "value": "(\"booking_id\" is not null) <> (\"crew_person_id\" is not null)",
       "name": "buddy_pair_members_one_subject",
       "entityType": "checks",
@@ -41502,48 +39395,6 @@
       "table": "rental_fit_profiles"
     },
     {
-      "value": "length(trim(\"body\")) > 0",
-      "name": "incident_report_addenda_body_not_blank",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "incident_report_addenda"
-    },
-    {
-      "value": "length(\"body\") <= 5000",
-      "name": "incident_report_addenda_body_length",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "incident_report_addenda"
-    },
-    {
-      "value": "num_nonnulls(\"booking_id\", \"person_id\", \"outsider_name\") = 1",
-      "name": "incident_report_people_one_subject",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "incident_report_people"
-    },
-    {
-      "value": "\"outsider_name\" is null or length(\"outsider_name\") <= 200",
-      "name": "incident_report_people_outsider_name_length",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "incident_report_people"
-    },
-    {
-      "value": "\"oxygen_minutes\" is null or (\"oxygen_given\" is true and \"oxygen_minutes\" between 1 and 1440)",
-      "name": "incident_reports_oxygen_minutes",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
-      "value": "\"status\" = 'draft' or (\n        \"filed_at\" is not null and \"filed_by_person_id\" is not null\n        and \"occurred_at\" is not null and \"what_happened\" is not null\n        and \"first_aid_given\" is not null and \"oxygen_given\" is not null\n        and \"emergency_services_called\" is not null\n        and (\"dive_site_id\" is not null or \"location_text\" is not null)\n        and (\"handover_kind\" is not null\n          or (\"emergency_services_called\" is false and \"oxygen_given\" is false))\n      )",
-      "name": "incident_reports_filed_complete",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "incident_reports"
-    },
-    {
       "value": "\"gear_cents\" >= 0",
       "name": "booking_checkout_bookings_gear_cents_nonnegative",
       "entityType": "checks",
@@ -41570,20 +39421,6 @@
       "entityType": "checks",
       "schema": "public",
       "table": "booking_checkout_bookings"
-    },
-    {
-      "value": "(\"paid_after_close_at\" is null) = (\"paid_after_close_cents\" is null)",
-      "name": "booking_checkouts_paid_after_close_pair",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "booking_checkouts"
-    },
-    {
-      "value": "\"paid_after_close_cents\" is null or \"paid_after_close_cents\" >= 0",
-      "name": "booking_checkouts_paid_after_close_nonnegative",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "booking_checkouts"
     },
     {
       "value": "\"refunded_cents\" >= 0",
@@ -41817,27 +39654,6 @@
       "table": "shop_promo_codes"
     },
     {
-      "value": "\"amount_cents\" >= 0",
-      "name": "stripe_refund_failures_amount_nonnegative",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "value": "(\"order_id\" is null) <> (\"checkout_id\" is null)",
-      "name": "stripe_refund_failures_one_target",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
-      "value": "\"refund_status\" in ('failed', 'canceled')",
-      "name": "stripe_refund_failures_status",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "stripe_refund_failures"
-    },
-    {
       "value": "\"amount_cents\" > 0",
       "name": "tips_amount_positive",
       "entityType": "checks",
@@ -41871,13 +39687,6 @@
       "entityType": "checks",
       "schema": "public",
       "table": "review_moderation_events"
-    },
-    {
-      "value": "length(trim(\"body\")) between 1 and 400",
-      "name": "review_replies_body_length",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "review_replies"
     },
     {
       "value": "\"rating\" between 1 and 5",
@@ -41948,13 +39757,6 @@
       "entityType": "checks",
       "schema": "public",
       "table": "trip_sightings"
-    },
-    {
-      "value": "not \"is_rehearsal\" or \"is_private\"",
-      "name": "trips_rehearsal_is_private",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "trips"
     },
     {
       "value": "\"capacity\" between 1 and 60",

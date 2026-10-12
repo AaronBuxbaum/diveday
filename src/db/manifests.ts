@@ -25,6 +25,7 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
+import { runningLateShown } from "@/lib/running-late";
 import { medicalWaiverMark } from "@/lib/waivers";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import { standingArrivalStatus } from "./arrival-provenance";
@@ -46,6 +47,7 @@ import {
   tripAssignments,
   trips,
 } from "./schema";
+import { lockSeatDeparture } from "./seat-locks";
 import { getShopById } from "./shops";
 import { crewClashes } from "./trips-crew";
 import { liveTrip } from "./trips-live";
@@ -974,7 +976,8 @@ export async function getTripManifests(
     // The seats this boat sells, carried so the manifest can say when the head
     // count has passed them (`summary.overCapacity`). Nothing on the boarding
     // path refuses, so this is the only place the boat being over gets said.
-    capacity: trip.capacity,
+    // Capped at the boat's certificate (#2321): over the certificate is over.
+    capacity: trip.sellableCapacity,
     // Printed beside souls on board, so a practice sheet is never read as a boat.
     isRehearsal: trip.isRehearsal,
   };
@@ -1022,6 +1025,12 @@ export async function getTripManifests(
       depthAdvisory: depthByBooking.get(booking.id),
       hotelPickupLocation: booking.hotelPickupLocation,
       pickupTime: booking.pickupTime,
+      // The diver's own "running late" (#2319), cleared from an arrived or
+      // released seat the way the arrivals list clears it.
+      runningLateAt: runningLateShown({
+        bookingStatus: booking.status,
+        runningLateAt: booking.runningLateAt,
+      }),
       checkedIn: booking.status === "checked_in",
       // The other half of the same column, and the one the roster read could
       // not say before there was a writer for it (#1209): this seat was
@@ -1471,15 +1480,18 @@ export async function recordRollCall(
       if (existing) return { ok: true, eventId: existing.id, duplicate: true };
     }
 
-    // `FOR UPDATE`, on the same join shape `markBookingNoShow` locks — bookings
-    // then trips, in one statement, so neither transaction ends up holding what
-    // the other is waiting for. This booking row is the one object the desk and
-    // the rail share, and until this lock existed they did not share it: the
-    // counter took it `FOR UPDATE` while this read was plain, so "the diver is
-    // aboard" and "the diver never came" were decided against the same
-    // pre-state, and the boat could sail carrying a body whose seat the shop
-    // had put back on sale. Raced for real in `roll-call.postgres.test.ts`,
-    // which is red the moment this is removed.
+    // The departure, then the seat — the one order every seat writer takes
+    // (`lockSeatDeparture`, #2324), so neither this nor the desk ends up
+    // holding what the other is waiting for. The booking row `FOR UPDATE` is
+    // the one object the desk and the rail share, and until this lock existed
+    // they did not share it: the counter took it `FOR UPDATE` while this read
+    // was plain, so "the diver is aboard" and "the diver never came" were
+    // decided against the same pre-state, and the boat could sail carrying a
+    // body whose seat the shop had put back on sale. Raced for real in
+    // `roll-call.postgres.test.ts`, which is red the moment this is removed,
+    // and `seat-lock-order.postgres.test.ts`, red on the old booking-first order.
+    const lockedTripId = await lockSeatDeparture(tx, input.shopId, input.bookingId);
+    if (lockedTripId !== input.tripId) return { ok: false, reason: "booking_unavailable" };
     const [booking] = await tx
       .select({
         id: bookings.id,
@@ -1499,7 +1511,7 @@ export async function recordRollCall(
         ),
       )
       .limit(1)
-      .for("update");
+      .for("update", { of: bookings });
     if (!booking) return { ok: false, reason: "booking_unavailable" };
     if (!isRollCallCheckpoint(checkpoint, booking.plannedDives)) {
       return { ok: false, reason: "invalid_checkpoint" };
@@ -1878,9 +1890,10 @@ export async function recordCrewRollCall(
     //
     // The lookup is a probe of `bookings_trip_person_unique`, so the ordinary
     // crew member — who holds no seat — pays one index miss and locks nothing.
-    // Ahead of the insert, the locks this transaction takes stay in the order
-    // the counter takes them (the booking, then the trip through the event's
-    // foreign key), which is what keeps the pair out of a deadlock.
+    // Ahead of the insert this holds the booking and then needs only a
+    // `KEY SHARE` on the trip, through the event's foreign key. The counter
+    // takes the trip first but `for no key update` (`lockSeatDeparture`), which
+    // a `KEY SHARE` passes, so the pair stays out of a deadlock.
     const seat = standingResultMeansSailed(checkpoint, input.status)
       ? ((
           await tx

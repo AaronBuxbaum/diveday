@@ -769,6 +769,19 @@ function tripTakesSeatFrom(
   return actor === "staff" || !trip.isRehearsal;
 }
 
+/**
+ * **One lock order for a seat: the departure's trip row, then the booking
+ * row** (#2324). Every writer that touches both takes them in this order —
+ * `createBookingRecord` below, `restoreBooking`, `setBookingParticipantType`,
+ * and, through `lockSeatDeparture` (`./seat-locks.ts`), `markBookingNoShow`,
+ * `undoBookingNoShow`, `checkInBooking`, `undoCheckInBooking` and the rail's
+ * `recordRollCall`. Two writers taking the pair in opposite orders deadlock
+ * when they meet, and a staffer's tap fails. A path that goes on to lock an
+ * *existing* booking takes the trip `for no key update`, so a transaction
+ * that holds a booking and only needs a `KEY SHARE` on the trip (a roll-call
+ * or activity insert's foreign key) is never stuck behind it.
+ * `seat-lock-order.postgres.test.ts` races the pairs on a real server.
+ */
 async function createBookingRecord(
   db: DbExecutor,
   req: BookingRequest,
@@ -1680,14 +1693,15 @@ async function changeParticipantType(
 ): Promise<SetParticipantTypeOutcome> {
   const { shopId, tripId, bookingId, to, actorPersonId } = input;
   return db.transaction(async (tx): Promise<SetParticipantTypeOutcome> => {
-    // The trip first, then the seat: the order every seat-granting write
-    // locks in, so this cannot deadlock against a booking on the same boat.
+    // The trip first, then the seat — the order written down at
+    // `createBookingRecord` — and `no key update`, because the seat comes
+    // next and the rail may hold it (`lockSeatDeparture`).
     const [trip] = await tx
       .select()
       .from(trips)
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1)
-      .for("update");
+      .for("no key update");
     const [booking] = await tx
       .select({
         id: bookings.id,

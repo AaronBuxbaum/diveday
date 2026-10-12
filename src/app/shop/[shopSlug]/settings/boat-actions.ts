@@ -6,8 +6,7 @@ import {
   type BoatPapersInput,
   createBoat,
   deleteBoat,
-  upcomingBoatDepartures,
-  updateBoat,
+  updateBoatWithinCertificate,
 } from "@/db/boats";
 import { getDb } from "@/db/client";
 import {
@@ -255,23 +254,17 @@ export async function updateBoatAction(formData: FormData) {
   // H-107, on every save of the row: a hull already over its certificate
   // keeps sailing, but this is the save that has to put it right. Upcoming
   // departures are read too, so a certificate cannot be lowered under seats
-  // a departure is still selling.
-  certificateRefusal(
-    page,
+  // a departure is still selling — checked and written in one transaction.
+  const saved = await updateBoatWithinCertificate(db, {
+    shopId: session.user.shopId,
     boatId,
-    boatSeatsRefusal({
-      capacity,
-      ...papers,
-      upcomingDepartures: papers.certifiedPassengers
-        ? await upcomingBoatDepartures(db, {
-            shopId: session.user.shopId,
-            boatId,
-            timeZone: (await getShopById(db, session.user.shopId))?.timezone ?? "UTC",
-          })
-        : [],
-    }),
-  );
-  await updateBoat(db, session.user.shopId, boatId, name, capacity, description, papers);
+    name,
+    capacity,
+    description,
+    papers,
+    timeZone: (await getShopById(db, session.user.shopId))?.timezone ?? "UTC",
+  });
+  if (!saved.ok && saved.reason === "certificate") certificateRefusal(page, boatId, saved.refusal);
 
   revalidateAndRedirect(page, noticeUrl(page, "boat-updated"));
 }

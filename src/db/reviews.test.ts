@@ -20,7 +20,7 @@ import {
   setReviewsPublished,
   submitTripReview,
 } from "./reviews";
-import { bookings, people, reviewModerationEvents } from "./schema";
+import { bookings, people, reviewModerationEvents, trips as tripsTable } from "./schema";
 import { setShopFeature } from "./shops";
 import { createTrip, upcomingTripsWithCounts } from "./trips";
 
@@ -200,6 +200,32 @@ describe("public review reads", () => {
       average: 4.5,
       suppressedCount: 0,
     });
+  });
+
+  it("lists a private charter's review without the charter's title, and a public trip's with it (#2318)", async () => {
+    const { db, shop, ownerId, bookingIds, tripId } = await reviewContext(["Marta Reyes"]);
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 5, comment: "Unreal vis" });
+    for (const review of (await listShopReviewsForStaff(db, shop.id)).reviews)
+      await setReviewPublished(db, shop.id, review.id, true, { recordedByPersonId: ownerId });
+    const [publicTrip] = await db
+      .select({ title: tripsTable.title })
+      .from(tripsTable)
+      .where(eq(tripsTable.id, tripId));
+    expect((await listPublishedShopReviews(db, shop.id))[0]?.tripTitle).toBe(publicTrip?.title);
+
+    await db
+      .update(tripsTable)
+      .set({ isPrivate: true, title: "Smith family charter" })
+      .where(eq(tripsTable.id, tripId));
+
+    const shelf = await listPublishedShopReviews(db, shop.id);
+    const archive = (await listPublishedShopReviewsPage(db, shop.id)).reviews;
+    for (const list of [shelf, archive]) {
+      // Still listed — the review is the diver's, not the charter's.
+      expect(list.map((review) => review.comment)).toEqual(["Unreal vis"]);
+      expect(list[0]?.tripTitle).toBeNull();
+      expect(JSON.stringify(list)).not.toContain("Smith family charter");
+    }
   });
 
   it("pages only written reviews while the distribution accounts for every rating", async () => {

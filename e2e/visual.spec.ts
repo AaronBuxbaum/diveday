@@ -3871,6 +3871,24 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today-arrival-lookup-running-late", scheme);
       });
 
+      // The captain's half of the same statement (#2319): a quiet line under
+      // the name on the dock roll call, for a diver nobody has called yet.
+      test(`a running-late diver on the manifest renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?runningLate=1");
+        const { runningLate } = (await seeded.json()) as { runningLate?: { tripId: string } };
+        if (!runningLate) throw new Error("seed-trouble-states found no seat to say it on");
+        await page.goto(`/shop/blue-mantis/trips/${runningLate.tripId}/manifest`);
+        await page.getByRole("heading", { name: "Roll call" }).waitFor();
+        await page
+          .getByText(/^Running late, said /)
+          .first()
+          .waitFor();
+        await capture(page, "manifest-running-late", scheme);
+      });
+
       /**
        * **The identity menu, open** — the shop's name in the chrome bar opens
        * Settings, the language choices and Sign out (`ShopIdentityMenu` with

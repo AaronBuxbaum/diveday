@@ -8,6 +8,7 @@ import {
   countWaitingSince,
   pingDeskAfterHours,
   readAfterHoursPingChoice,
+  sendTrailingDeskPings,
   setAfterHoursPingChoice,
   setShopDeskHours,
 } from "./desk-pings";
@@ -68,7 +69,11 @@ async function loginsWith(roles: ("owner" | "manager" | "crew" | "divemaster")[]
   return rows;
 }
 
-async function diverWrites(at: Date, from = `diver-${randomUUID()}@example.com`) {
+async function diverWrites(
+  at: Date,
+  from = `diver-${randomUUID()}@example.com`,
+  vouched: { senderAuthenticated?: boolean; spamFlagged?: boolean } = {},
+) {
   const { db, shop } = ctx;
   const result = await recordInboundMessage(db, {
     shopId: shop.id,
@@ -78,6 +83,7 @@ async function diverWrites(at: Date, from = `diver-${randomUUID()}@example.com`)
     body: "Is there room on Saturday’s night dive? My cert is in my bag.",
     receivedAt: at,
     providerMessageId: `ses-${randomUUID()}`,
+    ...vouched,
   });
   if (result.status !== "recorded") throw new Error("message not filed");
   return result.id;
@@ -227,6 +233,23 @@ describe("pingDeskAfterHours", () => {
     expect(await countWaitingSince(db, shop.id, since)).toBe(before + 1);
   });
 
+  /**
+   * **The count is no wider than the trigger** (#2311). The ping fires only on
+   * mail whose sender SES vouched for and did not flag as spam, so "3 divers
+   * waiting" must not count a spoofed or junk message that could never have
+   * pinged on its own.
+   */
+  it("counts only senders the channel vouched for, and nothing flagged as spam", async () => {
+    const { db, shop } = await context();
+    const since = new Date(NIGHT.getTime() - 60 * 60_000);
+    const before = await countWaitingSince(db, shop.id, since);
+    await diverWrites(NIGHT, "spoofed@example.com", { senderAuthenticated: false });
+    await diverWrites(NIGHT, "junk@example.com", { spamFlagged: true });
+    expect(await countWaitingSince(db, shop.id, since)).toBe(before);
+    await diverWrites(NIGHT, "real@example.com");
+    expect(await countWaitingSince(db, shop.id, since)).toBe(before + 1);
+  });
+
   it("never pings from a demo shop", async () => {
     const { db, shop } = await context();
     await db.update(shops).set({ isDemo: true }).where(eq(shops.id, shop.id));
@@ -241,6 +264,117 @@ describe("pingDeskAfterHours", () => {
     });
     expect(outcome.status).toBe("demo");
     expect(sent).toEqual([]);
+  });
+});
+
+/**
+ * **The trailing ping** (#2311). The batching clock keeps it to one email per
+ * staffer per half hour, which used to mean a message landing inside that
+ * half hour, with nothing after it, waited until morning. The hourly sweep
+ * sends one catch-up once the clock has run out, if anything that arrived
+ * after the last ping is still unanswered.
+ */
+describe("sendTrailingDeskPings", () => {
+  /** 23:00 ping for message one; message two at 23:10 is batched. */
+  async function batchedNight() {
+    const { db, shop } = await context();
+    await diverWrites(NIGHT);
+    const first = recorder();
+    await pingDeskAfterHours(db, {
+      shopId: shop.id,
+      receivedAt: NIGHT,
+      now: NIGHT,
+      origin: ORIGIN,
+      provider: first.provider,
+    });
+    const second = new Date(NIGHT.getTime() + 10 * 60_000);
+    const secondId = await diverWrites(second);
+    const batched = recorder();
+    await pingDeskAfterHours(db, {
+      shopId: shop.id,
+      receivedAt: second,
+      now: second,
+      origin: ORIGIN,
+      provider: batched.provider,
+    });
+    expect(batched.sent).toEqual([]);
+    return { db, shop, secondId, desk: await loginsWith(["owner", "manager"]) };
+  }
+  const sweepAt = (minutesAfterNight: number) => {
+    const { sent, provider } = recorder();
+    const now = new Date(NIGHT.getTime() + minutesAfterNight * 60_000);
+    return {
+      sent,
+      run: () => sendTrailingDeskPings(ctx.db, { now, origin: ORIGIN, provider }),
+    };
+  };
+
+  it("catches up once the clock runs out, naming everyone still waiting", async () => {
+    const { desk } = await batchedNight();
+    const sweep = sweepAt(45);
+    const outcome = await sweep.run();
+    expect(sweep.sent.map((n) => n.to).sort()).toEqual(desk.map((row) => row.email).sort());
+    expect(outcome).toMatchObject({ sent: desk.length, failed: 0 });
+    const [ping] = sweep.sent;
+    if (ping?.kind !== "desk_after_hours") throw new Error("wrong kind");
+    expect(ping.waiting).toBe(2);
+  });
+
+  it("sends the catch-up once, however many passes run", async () => {
+    await batchedNight();
+    await sweepAt(45).run();
+    const again = sweepAt(80);
+    await again.run();
+    expect(again.sent).toEqual([]);
+  });
+
+  it("waits while the clock is still running", async () => {
+    await batchedNight();
+    const early = sweepAt(20);
+    await early.run();
+    expect(early.sent).toEqual([]);
+  });
+
+  it("says nothing when the later message was answered, or nothing came after the ping", async () => {
+    const { db, shop, secondId } = await batchedNight();
+    await markInboundAnswered(db, shop.id, secondId, new Date(NIGHT.getTime() + 15 * 60_000));
+    const sweep = sweepAt(45);
+    await sweep.run();
+    expect(sweep.sent).toEqual([]);
+  });
+
+  it("never catches up on a message that could not have pinged by itself", async () => {
+    const { db, shop } = await context();
+    await diverWrites(NIGHT);
+    await pingDeskAfterHours(db, {
+      shopId: shop.id,
+      receivedAt: NIGHT,
+      now: NIGHT,
+      origin: ORIGIN,
+      provider: recorder().provider,
+    });
+    const soon = new Date(NIGHT.getTime() + 10 * 60_000);
+    await diverWrites(soon, "spoofed@example.com", { senderAuthenticated: false });
+    await diverWrites(soon, "junk@example.com", { spamFlagged: true });
+    const sweep = sweepAt(45);
+    await sweep.run();
+    expect(sweep.sent).toEqual([]);
+  });
+
+  it("leaves it to the desk once the desk has opened", async () => {
+    await batchedNight();
+    // 08:30 the next morning, local: the Inbox is in front of somebody.
+    const sweep = sweepAt(9 * 60 + 30);
+    await sweep.run();
+    expect(sweep.sent).toEqual([]);
+  });
+
+  it("never pings from a demo shop", async () => {
+    const { db, shop } = await batchedNight();
+    await db.update(shops).set({ isDemo: true }).where(eq(shops.id, shop.id));
+    const sweep = sweepAt(45);
+    await sweep.run();
+    expect(sweep.sent).toEqual([]);
   });
 });
 

@@ -229,6 +229,13 @@ export type ManifestDiverInput = {
   hotelPickupLocation?: string | null;
   /** Staff-set pickup time for this booking (e.g. "07:15"). */
   pickupTime?: string | null;
+  /**
+   * When the diver said they were running late (J3, #2319), already through
+   * `runningLateShown`, so it is null on a seat that has arrived or been
+   * released. Display only: `runningLateOnManifest` (src/lib/running-late.ts)
+   * decides the row's line, and nothing in this file reads it.
+   */
+  runningLateAt?: Date | null;
   rollCall?: RollCallRecord;
   /**
    * The buddy team staff put this diver on, when they did

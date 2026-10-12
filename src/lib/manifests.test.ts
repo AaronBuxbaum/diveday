@@ -1245,3 +1245,66 @@ describe("a seat the counter released", () => {
     expect(manifest.divers[0]?.notHere).toBeUndefined();
   });
 });
+
+/**
+ * **"Running late" changes nothing the head count reads** (#2319). The line is
+ * the diver's own word, carried for the captain to read; it must never
+ * become a roll-call result, close or open a checkpoint, or move a count.
+ */
+describe("a diver who said they are running late", () => {
+  const saidAt = new Date("2026-07-20T11:42:00.000Z");
+  const seat = (
+    bookingId: string,
+    extra: Partial<ManifestDiverInput> = {},
+  ): ManifestDiverInput => ({
+    bookingId,
+    fullName: bookingId,
+    email: null,
+    emergencyContactName: null,
+    emergencyContactPhone: null,
+    readiness: { status: "ready", blockers: [] },
+    rentalFit: { state: "own_kit" as const },
+    nitroxRequested: false,
+    checkedIn: false,
+    ...extra,
+  });
+  const roster = (late: boolean) => [
+    seat("uncalled", late ? { runningLateAt: saidAt } : {}),
+    seat("boarded", { rollCall: boardedAt(), ...(late ? { runningLateAt: saidAt } : {}) }),
+    seat("left-ashore", {
+      rollCall: notBoardedAt(),
+      ...(late ? { runningLateAt: saidAt } : {}),
+    }),
+    seat("blocked", {
+      readiness: { status: "blocked", blockers: [] },
+      ...(late ? { runningLateAt: saidAt } : {}),
+    }),
+    seat("released", { notHere: true, ...(late ? { runningLateAt: saidAt } : {}) }),
+  ];
+
+  for (const checkpoint of ["departure", "after_dive_1"] as const) {
+    it(`leaves every count, the completeness and each row's result as they were (${checkpoint})`, () => {
+      const quiet = buildTripManifest({ trip, checkpoint, crew: [], divers: roster(false) });
+      const late = buildTripManifest({ trip, checkpoint, crew: [], divers: roster(true) });
+      expect(late.summary).toEqual(quiet.summary);
+      expect(late.completeness).toEqual(quiet.completeness);
+      expect(late.divers.map((diver) => diver.rollCall)).toEqual(
+        quiet.divers.map((diver) => diver.rollCall),
+      );
+      expect(late.divers.map((diver) => diver.buddyAlert)).toEqual(
+        quiet.divers.map((diver) => diver.buddyAlert),
+      );
+    });
+  }
+
+  it("never makes a checkpoint of only late divers complete", () => {
+    const manifest = buildTripManifest({
+      trip,
+      crew: [],
+      divers: [seat("a", { runningLateAt: saidAt }), seat("b", { runningLateAt: saidAt })],
+    });
+    expect(manifest.summary.awaiting).toBe(2);
+    expect(manifest.summary.unaccountedFor).toBe(2);
+    expect(manifest.completeness.complete).toBe(false);
+  });
+});
