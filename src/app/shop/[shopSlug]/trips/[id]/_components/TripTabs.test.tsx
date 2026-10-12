@@ -7,8 +7,14 @@ import { TripStageBadge, TripTabs, type TripTabsCopy, tripTabHref } from "./Trip
 const copy: TripTabsCopy = {
   tabsLabel: "Departure",
   tabs: { divers: "Divers", boat: "Boat", gear: "Gear", details: "Details" },
-  phaseLabel: "Stage",
-  phases: { prep: "Prep", checkin: "Check-in", aboard: "Aboard", back: "Back" },
+  stageLabel: "Stage",
+  stages: {
+    boarding: "Boarding",
+    underway: "Underway",
+    surface: "Surface",
+    heading_in: "Heading in",
+    home: "Home",
+  },
 };
 
 describe("TripTabs", () => {
@@ -28,21 +34,30 @@ describe("TripTabs", () => {
   it("draws no stage stepper above the tabs", () => {
     render(<TripTabs shopSlug="s" tripId="t" current="divers" copy={copy} />);
     expect(screen.queryByRole("list", { name: "Stage" })).toBeNull();
-    expect(screen.queryByText("Aboard")).toBeNull();
+    expect(screen.queryByText("Boarding")).toBeNull();
   });
 });
 
 describe("TripStageBadge", () => {
   afterEach(cleanup);
 
-  it("says the stage in one word, named as the stage for a screen reader", () => {
-    render(<TripStageBadge phase="aboard" copy={copy} />);
-    expect(screen.getByText("Aboard")).toBeInTheDocument();
+  it("says the crew's word in one pill, named as the stage for a screen reader", () => {
+    render(<TripStageBadge stage="boarding" copy={copy} />);
+    expect(screen.getByText("Boarding")).toBeInTheDocument();
     expect(screen.getByText(/Stage:/)).toHaveClass("sr-only");
   });
 
-  it("draws nothing for a canceled departure", () => {
-    const { container } = render(<TripStageBadge phase={null} copy={copy} />);
+  it("wears success only for Home, and lagoon for a boat still out", () => {
+    const { container } = render(<TripStageBadge stage="home" copy={copy} />);
+    expect(container.firstElementChild?.className).toContain("success");
+    cleanup();
+    const out = render(<TripStageBadge stage="underway" copy={copy} />);
+    expect(out.container.firstElementChild?.className).not.toContain("success");
+    expect(out.container.firstElementChild?.className).not.toContain("warning");
+  });
+
+  it("draws nothing when the crew has said nothing", () => {
+    const { container } = render(<TripStageBadge stage={null} copy={copy} />);
     expect(container).toBeEmptyDOMElement();
   });
 });

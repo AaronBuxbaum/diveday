@@ -57,7 +57,6 @@ import { requireShopSurface } from "@/lib/session";
 import { seenChipSlugs, seenSiteFor } from "@/lib/sightings";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
-import { STAGE_TAP_KEYS, TRIP_STAGES } from "@/lib/trip-stages";
 import { hasSailed } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
@@ -80,6 +79,7 @@ import { personTrailIndex } from "./_components/person-trail";
 import { SeenGroup } from "./_components/SeenGroup";
 import { StageStrip } from "./_components/StageStrip";
 import { SummaryPanel } from "./_components/SummaryPanel";
+import { stageStripProps } from "./_components/stage-strip-props";
 import { TripPlanSection } from "./_components/TripPlanSection";
 import {
   addBuddyTeamMemberAction,
@@ -296,9 +296,9 @@ export default async function TripManifestPage({
     listDeskEventsSince(db, shop.id, tripId, session.user.personId),
     // Codes and counts, never a row per seat (#1183's boundary).
     diveIntentTallyForTrip(db, shop.id, tripId),
-    // The newest word the crew tapped, whatever its age: the strip shows the
-    // crew their own last answer even on a boat that is hours overdue. The
-    // staleness rule belongs to what a *diver* reads, not to the control.
+    // The newest word the crew tapped; `stageStripProps` reads it by the rule
+    // Today's card and the departure header print, so the strip still speaks
+    // on a boat that is hours overdue.
     latestTripStage(db, shop.id, tripId),
   ]);
   // Each live site's field guide, for the dive log's "one thing you saw"
@@ -737,21 +737,13 @@ export default async function TripManifestPage({
           drifts on the home and the storefront is deliberately not here. */}
       <StageStrip
         action={boundSetTripStageAction}
-        current={stage?.stage ?? null}
-        copy={{
-          legend: t("manifest.stage.legend"),
-          errorRefusal: t("manifest.stage.errorRefusal"),
-          taps: TRIP_STAGES.map((value) => ({
-            stage: value,
-            label: t(STAGE_TAP_KEYS[value]),
-          })),
-          recordedLine: stage
-            ? t("manifest.stage.recordedLine", {
-                name: stage.recordedByName ?? "",
-                time: formatTime(stage.recordedAt, locale, shop.timezone),
-              })
-            : undefined,
-        }}
+        {...stageStripProps(t, {
+          trip: departureManifest.trip,
+          stage,
+          now: nowDate(),
+          timeZone: shop.timezone,
+          locale,
+        })}
       />
 
       {/* A segmented control, not a row of buttons: the active checkpoint used

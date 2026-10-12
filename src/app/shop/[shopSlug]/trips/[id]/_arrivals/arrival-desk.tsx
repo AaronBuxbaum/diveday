@@ -6,9 +6,14 @@ import { FIGURE_HERO_CLASS } from "@/components/ui/typography";
 import { type CheckInQueueRow, listCheckInQueue } from "@/db/check-in";
 import type { AppDb } from "@/db/client";
 import { noShowSalvage } from "@/db/no-show";
+import { listCertificationSummaries } from "@/db/self-declared-cards";
 import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { welcomeCueText } from "@/i18n/welcome-cue-labels";
+import {
+  welcomeCueText,
+  welcomeDockLine,
+  welcomeDockLineUnchecked,
+} from "@/i18n/welcome-cue-labels";
 import { counterIsClear, counterTally, isNoShowAtCounter } from "@/lib/check-in";
 import { formatTime, formatWeekdayTime } from "@/lib/format";
 import { type NoShowClaim, noShowClaim, noShowGate } from "@/lib/no-show";
@@ -267,15 +272,46 @@ export async function buildArrivalDesk({
   // `welcomeCueFor` answers nothing without the diver's own consent stamp, and
   // nothing an hour after the boat is home. What a diver said they came for
   // stays a count (D12): it names nobody, which is what lets it be asked.
+  //
+  // Under a first-timer's cue, the dock line (UX review 2026-10-10, item 36):
+  // the name to say and the card they hold. One certification read, and only
+  // for the consented first-timers on this boat, which on most mornings is
+  // nobody and no query.
+  const cues = new Map(
+    rows.flatMap((row) => {
+      if (row.bookingStatus === "no_show") return [];
+      const inputs = welcomeInputs.get(row.bookingId);
+      const cue = inputs ? welcomeCueFor({ ...inputs, tripEndsAt: row.endsAt, now }) : null;
+      return cue ? [[row.bookingId, cue] as const] : [];
+    }),
+  );
+  const firstTimerIds = rows
+    .filter((row) => cues.get(row.bookingId)?.kind === "first_trip")
+    .map((row) => row.personId);
+  const cards = await listCertificationSummaries(db, shopId, firstTimerIds);
   for (const row of rows) {
-    if (row.bookingStatus === "no_show") continue;
-    const inputs = welcomeInputs.get(row.bookingId);
-    const cue = inputs ? welcomeCueFor({ ...inputs, tripEndsAt: row.endsAt, now }) : null;
+    const cue = cues.get(row.bookingId);
     if (!cue) continue;
     const line = (
-      <p key="welcome" className="mt-1 text-sm text-muted">
-        {welcomeCueText(t, cue)}
-      </p>
+      <div key="welcome" className="mt-1 text-sm text-muted">
+        <p>{welcomeCueText(t, cue)}</p>
+        {cue.kind === "first_trip" ? (
+          // A card nobody has verified wears the warning tone the phrase
+          // wears everywhere else (`certificationSummaryUnchecked`).
+          <p
+            className={
+              welcomeDockLineUnchecked(cards.get(row.personId) ?? null)
+                ? "text-warning-strong"
+                : undefined
+            }
+          >
+            {welcomeDockLine(t, {
+              personName: row.personName,
+              certification: cards.get(row.personId) ?? null,
+            })}
+          </p>
+        ) : null}
+      </div>
     );
     const existing = below.get(row.bookingId);
     below.set(

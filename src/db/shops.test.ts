@@ -103,6 +103,7 @@ describe("setShopTemperatureUnit", () => {
     // The combination the pre-column derivation could not express, and the
     // reason this is its own setting rather than a reading of `depth_unit`.
     const { db, shop } = ctx;
+    await setShopTemperatureUnit(db, shop.id, "celsius");
     await setShopDepthUnit(db, shop.id, "feet");
     const after = await getShopBySlug(db, shop.slug);
     expect(after?.depthUnit).toBe("feet");
