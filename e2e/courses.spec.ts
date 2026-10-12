@@ -26,6 +26,14 @@ import {
 const openMoreDetails = (page: Page) =>
   page.locator("summary").filter({ hasText: "More details" }).click();
 
+/**
+ * **The course editor's own hydration flag**, not "whatever carries
+ * `data-hydrated`". The staff header's Search button publishes the same flag
+ * (#2366), so a bare `[data-hydrated]` matches two elements and fails strict
+ * mode. The guard's wrapper is the one that holds the editor's fields.
+ */
+const editorHydrated = (page: Page) => page.locator('[data-hydrated="true"]:has([name="summary"])');
+
 test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba session and save rental preferences", async ({
   page,
 }) => {
@@ -616,7 +624,7 @@ test.describe("staff", () => {
     // that lands first is thrown away and the box goes back to the row's own
     // text. Here that is silent: the save succeeds on the text the writer did
     // not type, and the assertion that fails is the *next* one.
-    await expect(page.locator("[data-hydrated]")).toBeVisible();
+    await expect(editorHydrated(page)).toBeVisible();
     await page.getByLabel("Subhead").fill("Plan every dive to {depth18}");
     await page.getByRole("button", { name: "Save course page" }).click();
     await expect(page.getByRole("status")).toContainText("Course page saved");
@@ -637,7 +645,7 @@ test.describe("staff", () => {
     // marker was thrown away by hydration, the *valid* text from the save above
     // was posted instead, and the refusal this asserts never happened — so the
     // wait burned its eight seconds and reported the alert as simply absent.
-    await expect(page.locator("[data-hydrated]")).toBeVisible();
+    await expect(editorHydrated(page)).toBeVisible();
     await page.getByLabel("Subhead").fill("Plan every dive to {depth 18}");
     await page.getByRole("button", { name: "Save course page" }).click();
     // Filtered, not bare: Next's own route announcer is a `role="alert"` too.
@@ -663,7 +671,7 @@ test.describe("staff", () => {
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/shop/blue-mantis/courses/discover-scuba-diving/edit");
-    await expect(page.locator("[data-hydrated]")).toBeAttached();
+    await expect(editorHydrated(page)).toBeAttached();
     await expect(page.getByRole("navigation", { name: "Sections", exact: true })).toBeHidden();
 
     const pitch = page.getByRole("button", { name: /^The pitch/ });
@@ -717,7 +725,7 @@ test.describe("staff", () => {
     // renders `data-hydrated` for exactly this and the visual suite already waits
     // on the same signal; only this spec typed blind. Failed that way twice on CI
     // on 2026-09-11, on two different heads, passing on a re-run in between.
-    await expect(page.locator("[data-hydrated]")).toBeVisible();
+    await expect(editorHydrated(page)).toBeVisible();
 
     await page.getByLabel("Subhead").fill("Three days from pool to reef");
     await expect(page.getByText("Unsaved changes in The pitch")).toBeVisible();
@@ -1109,7 +1117,7 @@ test.describe("the course editor over a wander through the app", () => {
     // to the form — a native event the dirty flag never hears, so the bar
     // below never says "Unsaved changes". Wait for the guard to say it is
     // listening, the way the orders and counter searches are waited on.
-    await page.locator('[data-hydrated="true"]:has([name="summary"])').waitFor();
+    await editorHydrated(page).waitFor();
     await summary.fill("Half a thought, never saved");
     // The bar says so, pinned to the bottom edge rather than four thousand
     // pixels down where Save used to be the only sign this was a form — and it
