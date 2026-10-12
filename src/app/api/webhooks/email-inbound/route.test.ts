@@ -74,6 +74,7 @@ function receivedMessage(overrides: Record<string, unknown> = {}) {
     notificationType: "Received",
     receipt: {
       recipients: [`reply+${TOKEN}@inbound.ses.dive.day`],
+      spamVerdict: { status: "PASS" },
       virusVerdict: { status: "PASS" },
       spfVerdict: { status: "PASS" },
       dkimVerdict: { status: "PASS" },

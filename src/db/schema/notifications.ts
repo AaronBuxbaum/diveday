@@ -502,10 +502,11 @@ export const inboundMessages = pgTable(
      */
     senderAuthenticated: boolean("sender_authenticated").notNull().default(false),
     /**
-     * SES's spam verdict failed (#2311). Filed anyway — a diver's reply from
-     * hotel Wi-Fi trips it often enough that dropping it would lose real
-     * answers — but it never pages a staffer and is never counted as a diver
-     * waiting. False on every channel that gives no verdict.
+     * SES did not pass it as not-spam (#2311): FAIL, GRAY, PROCESSING_FAILED
+     * or no verdict at all. Filed anyway — a diver's reply from hotel Wi-Fi
+     * trips it often enough that dropping it would lose real answers — but it
+     * never pages a staffer and is never counted as a diver waiting. False on
+     * every other channel, which gives no verdict to read.
      */
     spamFlagged: boolean("spam_flagged").notNull().default(false),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),

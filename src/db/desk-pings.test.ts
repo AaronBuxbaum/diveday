@@ -370,6 +370,54 @@ describe("sendTrailingDeskPings", () => {
     expect(sweep.sent).toEqual([]);
   });
 
+  /**
+   * **Another shop's mail never pages this shop's staff** (security review
+   * of #2311). The sweep's "owed" test correlates a staffer's clock with
+   * messages; if it ever lost the shop, a diver writing to shop B would
+   * page shop A's owner. And the reverse still holds: A's own late message
+   * pings A.
+   */
+  it("never catches up on another shop's message, and still does on its own", async () => {
+    const { db, shop } = await context();
+    await diverWrites(NIGHT);
+    await pingDeskAfterHours(db, {
+      shopId: shop.id,
+      receivedAt: NIGHT,
+      now: NIGHT,
+      origin: ORIGIN,
+      provider: recorder().provider,
+    });
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Desk", slug: `other-desk-${randomUUID()}`, timezone: ZONE })
+      .returning({ id: shops.id });
+    if (!other) throw new Error("shop insert failed");
+    const soon = new Date(NIGHT.getTime() + 10 * 60_000);
+    const filed = await recordInboundMessage(db, {
+      shopId: other.id,
+      channel: "email",
+      fromAddress: "elsewhere@example.com",
+      body: "Room on Saturday?",
+      receivedAt: soon,
+      providerMessageId: `ses-${randomUUID()}`,
+      senderAuthenticated: true,
+    });
+    expect(filed.status).toBe("recorded");
+    const quiet = sweepAt(45);
+    expect(await quiet.run()).toMatchObject({ sent: 0 });
+    expect(quiet.sent).toEqual([]);
+
+    await diverWrites(new Date(NIGHT.getTime() + 15 * 60_000));
+    const owed = sweepAt(50);
+    await owed.run();
+    const desk = await loginsWith(["owner", "manager"]);
+    expect(owed.sent.map((n) => n.to).sort()).toEqual(desk.map((row) => row.email).sort());
+    for (const ping of owed.sent) {
+      if (ping.kind !== "desk_after_hours") throw new Error("wrong kind");
+      expect(ping.shopId).toBe(shop.id);
+    }
+  });
+
   it("never pings from a demo shop", async () => {
     const { db, shop } = await batchedNight();
     await db.update(shops).set({ isDemo: true }).where(eq(shops.id, shop.id));

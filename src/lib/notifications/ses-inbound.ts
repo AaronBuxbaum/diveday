@@ -60,8 +60,9 @@ export type SesInboundNotification =
       /** SES's SPF verdict passed: `envelopeFrom` is the domain it claims. */
       envelopeAuthenticated: boolean;
       /**
-       * SES's spam verdict failed. The message is still filed (see the note
-       * in the parser), but it never pages the desk after hours (#2311).
+       * SES's spam verdict was anything but PASS (absent included). The
+       * message is still filed (see the note in the parser), but it never
+       * pages the desk after hours (#2311).
        */
       spamFlagged: boolean;
       receivedAt: Date;
@@ -105,7 +106,9 @@ export function parseSesInboundNotification(message: string, now: Date): SesInbo
     envelopeFrom: mail.source ?? null,
     fromAuthenticated: passed(receipt.dmarcVerdict),
     envelopeAuthenticated: passed(receipt.spfVerdict),
-    spamFlagged: receipt.spamVerdict?.status?.toUpperCase() === "FAIL",
+    // Anything but a PASS — FAIL, GRAY, PROCESSING_FAILED, a word SES adds
+    // later, or no verdict — is mail nobody vouched for as not-spam.
+    spamFlagged: !passed(receipt.spamVerdict),
     receivedAt,
   };
 }
