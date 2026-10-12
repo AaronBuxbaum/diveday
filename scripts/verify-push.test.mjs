@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { excerpt, plan, sourceScanTests } from "./verify-push.mjs";
 
 const names = (steps) => steps.map((step) => step.name);
-const base = { mergeBase: "abc", specs: [], scans: ["src/components/ui/form.test.tsx"] };
+const base = { specs: [], scans: ["src/components/ui/form.test.tsx"] };
 
 describe("the pre-push plan", () => {
   it("runs every local check CI's red jobs came from, cheapest first", () => {
@@ -15,18 +15,18 @@ describe("the pre-push plan", () => {
       "check:repo",
       "guards",
       "source scans",
-      "changed tests",
+      "related tests",
       "e2e build",
       "e2e specs",
     ]);
-    expect(steps.find((s) => s.name === "changed tests").args).toContain("abc");
+    expect(steps.find((s) => s.name === "related tests").args).toContain("src/lib/x.ts");
     expect(steps.at(-1).args).toContain("e2e/a.spec.ts");
   });
 
   it("names the schema guards instead of a --changed run that would be the whole suite", () => {
     const steps = plan({ ...base, changed: ["src/db/schema/trips.ts"] });
     expect(names(steps)).toContain("schema guards");
-    expect(names(steps)).not.toContain("changed tests");
+    expect(names(steps)).not.toContain("related tests");
   });
 
   it("regenerates the export snapshot only when seed, schema or export changed", () => {
@@ -45,6 +45,20 @@ describe("the pre-push plan", () => {
       "check:repo",
       "guards",
     ]);
+  });
+});
+
+describe("the related tests", () => {
+  it("follow the changed code only, so a package.json edit does not select the whole suite", () => {
+    const steps = plan({
+      ...base,
+      changed: ["package.json", "scripts/a.mjs", "scripts/gone.mjs"],
+      existing: (f) => f !== "scripts/gone.mjs",
+    });
+    const related = steps.find((s) => s.name === "related tests");
+    expect(related.args).toContain("scripts/a.mjs");
+    expect(related.args).not.toContain("package.json");
+    expect(related.args).not.toContain("scripts/gone.mjs");
   });
 });
 

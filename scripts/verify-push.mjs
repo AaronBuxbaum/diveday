@@ -18,7 +18,7 @@
 // Steps, cheapest first; it stops at the first red one, because a later step on a broken tree
 // spends minutes saying the same thing:
 //
-//   regen → lint → typecheck → check:repo → guards → source scans → vitest --changed
+//   regen → lint → typecheck → check:repo → guards → source scans → vitest related
 //         → e2e build → affected Playwright specs → stamp
 //
 //   pnpm verify:push            run it
@@ -29,7 +29,15 @@
 // bodies record it as "cut short". Each step's output goes to a log under the git dir; a red
 // step prints only its tail.
 
-import { closeSync, mkdirSync, openSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -48,6 +56,9 @@ const DOCS_ONLY = /^(?:docs\/|\.claude\/|[^/]+\.md$)|\.md$/;
 
 /** Files whose change can move the export-bundle snapshot; then `regen` reruns it. */
 const SNAPSHOT_INPUTS = /^src\/db\/(?:schema\/|seed|export)/;
+
+/** Files `vitest related` follows imports from. */
+const CODE = /^(?:src|scripts|infra|e2e)\/.*\.(?:ts|tsx|mts|mjs|js)$/;
 
 /** A test that reads files off disk: what `vitest --changed` cannot select by import. */
 const READS_FILES = /\breadFileSync\s*\(|\breadFile\s*\(|\breaddirSync\s*\(|\bglobSync\s*\(/;
@@ -75,10 +86,10 @@ export function sourceScanTests(root = ROOT) {
 }
 
 /**
- * The steps for a diff. `changed` is the file list against the base, `mergeBase` the sha
- * `vitest --changed` diffs from, `specs` the Playwright files to run.
+ * The steps for a diff. `changed` is the file list against the base, `specs` the Playwright
+ * files to run, `scans` the source-scan tests, `existing` whether a changed path is still there.
  */
-export function plan({ changed, mergeBase, specs, scans }) {
+export function plan({ changed, specs, scans, existing = () => true }) {
   const docsOnly = changed.length > 0 && changed.every((file) => DOCS_ONLY.test(file));
   const schema = changed.some((file) => file.startsWith("src/db/schema/"));
   const snapshot = changed.some((file) => SNAPSHOT_INPUTS.test(file));
@@ -104,39 +115,34 @@ export function plan({ changed, mergeBase, specs, scans }) {
     command: "pnpm",
     args: ["exec", "vitest", "run", ...scans, "--reporter=dot"],
   });
-  // A schema module sits in nearly every import chain, so `--changed` would be the whole suite;
-  // the coverage guards that answer for a schema edit are named instead (verifying.md).
-  steps.push(
-    schema
-      ? {
-          name: "schema guards",
-          command: "pnpm",
-          args: [
-            "exec",
-            "vitest",
-            "run",
-            "src/db/export.test.ts",
-            "src/db/diver-merge.test.ts",
-            "src/db/delete-path-coverage.test.ts",
-            "src/db/retention.test.ts",
-            "src/db/export-bundle.snapshot.test.ts",
-            "--reporter=dot",
-          ],
-        }
-      : {
-          name: "changed tests",
-          command: "pnpm",
-          args: [
-            "exec",
-            "vitest",
-            "run",
-            "--changed",
-            mergeBase,
-            "--passWithNoTests",
-            "--reporter=dot",
-          ],
-        },
-  );
+  // A schema module sits in nearly every import chain, so an import-graph selection would be the
+  // whole suite; the coverage guards that answer for a schema edit are named instead
+  // (verifying.md). Otherwise `vitest related` over the changed code: `--changed` would do the
+  // same but for Vitest's forceRerunTriggers, which turn any package.json edit into all 1,490 files.
+  const code = changed.filter((file) => CODE.test(file) && existing(file));
+  if (schema) {
+    steps.push({
+      name: "schema guards",
+      command: "pnpm",
+      args: [
+        "exec",
+        "vitest",
+        "run",
+        "src/db/export.test.ts",
+        "src/db/diver-merge.test.ts",
+        "src/db/delete-path-coverage.test.ts",
+        "src/db/retention.test.ts",
+        "src/db/export-bundle.snapshot.test.ts",
+        "--reporter=dot",
+      ],
+    });
+  } else if (code.length > 0) {
+    steps.push({
+      name: "related tests",
+      command: "pnpm",
+      args: ["exec", "vitest", "related", ...code, "--run", "--passWithNoTests", "--reporter=dot"],
+    });
+  }
   if (specs.length > 0) {
     steps.push({ name: "e2e build", command: "pnpm", args: ["e2e:build"], build: true });
     steps.push({
@@ -206,7 +212,6 @@ function main() {
     console.error("verify:push: could not diff against a base (is origin/main fetched?).");
     process.exit(1);
   }
-  const mergeBase = git(["merge-base", selection.base, "HEAD"]);
   const record = durations(ROOT);
   const strong = [...selection.strong.keys()].sort();
   const room = Math.max(0, E2E_BUDGET_MS - estimateMs(strong, record));
@@ -214,7 +219,7 @@ function main() {
   const specs = [...strong, ...reachRun];
   const steps = plan({
     changed: selection.changed,
-    mergeBase,
+    existing: (file) => existsSync(path.join(ROOT, file)),
     specs,
     scans: sourceScanTests(ROOT),
   });

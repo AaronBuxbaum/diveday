@@ -80,8 +80,10 @@ the first red step, and writes a stamp naming HEAD into the git directory:
    tree: a generated file the diff left stale is committed, not discovered by CI.
 2. `pnpm lint`, `pnpm typecheck`, `check:repo`, and the `guards` project (seconds).
 3. Every `src/` test that reads files from disk, 157 of them, about two and a half minutes.
-4. `vitest --changed` from the merge base with the layer below; after a schema edit, the named
-   coverage guards instead, because the schema reaches the whole suite.
+4. `vitest related` over the changed code files, which follows imports as `--changed` does but
+   without Vitest's `forceRerunTriggers` (any `package.json` edit makes `--changed` all 1,490
+   files); after a schema edit, the named coverage guards instead, because the schema reaches
+   the whole suite.
 5. The Playwright specs `pnpm e2e:affected` selects, after an `e2e:build` it reuses while the
    tree is unchanged. *Strong*: specs the diff edits or whose helper it edits, specs quoting
    text the diff removed (a locale value, JSX text, a seed literal), and specs visiting a route

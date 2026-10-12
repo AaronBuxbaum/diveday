@@ -180,7 +180,7 @@ export function routePattern({ route, broad }) {
     .filter(Boolean)
     .map((segment) =>
       /^\[\[?\.\.\./.test(segment)
-        ? String.raw`${PARAM}(?:/${PARAM})*`
+        ? `${PARAM}(?:/${PARAM})*`
         : /^\[.*\]$/.test(segment)
           ? PARAM
           : segment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),

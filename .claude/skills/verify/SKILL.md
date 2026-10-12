@@ -29,7 +29,7 @@ Before every push:
 6. **`pnpm verify:push`**, in the background: everything above for the whole diff against the
    layer below, plus what CI kept catching that this list used to leave out — `pnpm regen` and a
    clean tree, the `guards` project, every unit test that reads source from disk (which
-   `vitest --changed` can never select), `vitest --changed`, and the Playwright specs the diff
+   `vitest --changed` can never select), `vitest related` over the changed code, and the Playwright specs the diff
    reaches (`pnpm e2e:affected` prints them and why). It stops at the first red step and prints
    that step's tail. Green, it stamps HEAD; `git push` is refused for a commit without a stamp
    (`scripts/guard-push.mjs`), so a merge from the layer below means another run. The reasons
