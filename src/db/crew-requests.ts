@@ -402,36 +402,6 @@ export async function requestCrewAssignment(
   });
 }
 
-/** Withdrawing an ask. Soft, and only ever your own. */
-export async function withdrawCrewAssignmentRequest(
-  db: AppDb,
-  input: { shopId: string; requestId: string; actorPersonId: string; now?: Date },
-): Promise<CrewWriteOutcome> {
-  const now = input.now ?? nowDate();
-  return db.transaction(async (tx): Promise<CrewWriteOutcome> => {
-    const [request] = await tx
-      .select({ id: crewAssignmentRequests.id, personId: crewAssignmentRequests.personId })
-      .from(crewAssignmentRequests)
-      .where(
-        and(
-          eq(crewAssignmentRequests.id, input.requestId),
-          eq(crewAssignmentRequests.shopId, input.shopId),
-          isNull(crewAssignmentRequests.deletedAt),
-        ),
-      )
-      .limit(1);
-    if (!request) return { ok: false, reason: "request_not_found" };
-    if (!(await mayWriteFor(tx, input.shopId, input.actorPersonId, request.personId, false))) {
-      return { ok: false, reason: "not_allowed" };
-    }
-    await tx
-      .update(crewAssignmentRequests)
-      .set({ deletedAt: now })
-      .where(eq(crewAssignmentRequests.id, request.id));
-    return { ok: true, id: request.id };
-  });
-}
-
 /**
  * The owner answers a request.
  *

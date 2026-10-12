@@ -513,22 +513,3 @@ export async function upsertExecutedDive(
     return { ok: true, dive: row };
   });
 }
-
-export async function deleteExecutedDive(
-  db: DbExecutor,
-  input: { shopId: string; tripId: string; diveNumber: number; deletedByPersonId: string },
-) {
-  const [row] = await db
-    .update(executedDives)
-    .set({ deletedAt: nowDate(), deletedByPersonId: input.deletedByPersonId, updatedAt: nowDate() })
-    .where(
-      and(
-        eq(executedDives.shopId, input.shopId),
-        eq(executedDives.tripId, input.tripId),
-        eq(executedDives.diveNumber, input.diveNumber),
-        isNull(executedDives.deletedAt),
-      ),
-    )
-    .returning({ id: executedDives.id });
-  return Boolean(row);
-}

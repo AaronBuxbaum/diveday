@@ -14,6 +14,7 @@ import {
   isRollCallCheckpoint,
   type ManifestBuddyTeam,
   type ManifestCrewMember,
+  manifestAtCheckpoint,
   RETRACTION_SUPERSEDED,
   type RollCallCheckpoint,
   type RollCallRecord,
@@ -1073,10 +1074,7 @@ export async function getTripManifest(
   checkpoint: RollCallCheckpoint = "departure",
 ): Promise<TripManifest | null> {
   const manifests = await getTripManifests(db, shopId, tripId);
-  if (!manifests || !isRollCallCheckpoint(checkpoint, manifests[0]?.trip.plannedDives ?? 0)) {
-    return null;
-  }
-  return manifests.find((manifest) => manifest.checkpoint === checkpoint) ?? null;
+  return manifests ? manifestAtCheckpoint(manifests, checkpoint) : null;
 }
 
 /**

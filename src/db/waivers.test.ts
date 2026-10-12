@@ -15,6 +15,7 @@ import {
   waiverState,
 } from "@/lib/waivers";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import { waiverTemplateHistory } from "@/test/waiver-history";
 import { anonymizeDiver } from "./anonymize";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
 import {
@@ -48,7 +49,6 @@ import {
   listSignedWaiversByPerson,
   listTripWaiverStatuses,
   listWaiverIntegrityAudit,
-  listWaiverTemplateHistory,
   recordInPersonWaiver,
   recordMedicalEvaluation,
   retireMedicalRefusal,
@@ -523,7 +523,7 @@ describe("waiver records (in-memory PGlite)", () => {
     // The newest version is always current.
     const currentNow = await getCurrentWaiverTemplate(db, shop.id);
     expect(currentNow?.id).toBe(next.template.id);
-    const history = await listWaiverTemplateHistory(db, shop.id);
+    const history = await waiverTemplateHistory(db, shop.id);
     // Newest first, gapless, all the way back to the shop's first release.
     expect(history.map((row) => row.version)).toEqual(
       Array.from({ length: seeded + 1 }, (_, index) => seeded + 1 - index),
@@ -556,7 +556,7 @@ describe("waiver records (in-memory PGlite)", () => {
       (x, y) => x - y,
     );
     expect(versions).toEqual([seeded + 1, seeded + 2, seeded + 3]);
-    const history = await listWaiverTemplateHistory(db, shop.id);
+    const history = await waiverTemplateHistory(db, shop.id);
     expect(history.map((row) => row.version)).toEqual(
       Array.from({ length: seeded + 3 }, (_, index) => seeded + 3 - index),
     );
@@ -1774,7 +1774,7 @@ describe("saving the waiver template", () => {
 
   it("writes no version at all when the body has not changed", async () => {
     const { db, shop, template } = await signedContext();
-    const before = await listWaiverTemplateHistory(db, shop.id);
+    const before = await waiverTemplateHistory(db, shop.id);
     const standing = (await standingWaiverExposure(db, shop.id, now)).divers;
 
     const result = await saveWaiverTemplate(db, {
@@ -1787,7 +1787,7 @@ describe("saving the waiver template", () => {
 
     expect(result.versioned).toBe(false);
     expect(result.template.id).toBe(template.id);
-    expect(await listWaiverTemplateHistory(db, shop.id)).toHaveLength(before.length);
+    expect(await waiverTemplateHistory(db, shop.id)).toHaveLength(before.length);
     // Every signature it would have invalidated is untouched, which is the
     // whole point — the history length above only proves nothing was inserted.
     expect(standing).toBeGreaterThan(0);
@@ -1924,7 +1924,7 @@ describe("saving the waiver template", () => {
       "Exención de responsabilidad: reconozco los riesgos del buceo, la inmersión " +
       "y la navegación, y participo de forma voluntaria bajo mi propia decisión médica.";
     await saveWaiverTemplate(db, { shopId: shop.id, body: spanish });
-    const before = await listWaiverTemplateHistory(db, shop.id);
+    const before = await waiverTemplateHistory(db, shop.id);
     expect(spanish.normalize("NFD")).not.toBe(spanish);
 
     const result = await saveWaiverTemplate(db, {
@@ -1933,7 +1933,7 @@ describe("saving the waiver template", () => {
     });
 
     expect(result.versioned).toBe(false);
-    expect(await listWaiverTemplateHistory(db, shop.id)).toHaveLength(before.length);
+    expect(await waiverTemplateHistory(db, shop.id)).toHaveLength(before.length);
   });
 
   it("carries the shop's own title forward instead of renaming its release", async () => {

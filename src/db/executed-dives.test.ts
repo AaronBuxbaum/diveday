@@ -1,17 +1,12 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { HOUR_MS, MINUTE_MS } from "@/lib/clock";
+import { HOUR_MS, MINUTE_MS, nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { checkInBooking } from "./check-in";
 import type { AppDb } from "./client";
-import {
-  deleteExecutedDive,
-  listExecutedDives,
-  peopleWhoDivedBefore,
-  upsertExecutedDive,
-} from "./executed-dives";
+import { listExecutedDives, peopleWhoDivedBefore, upsertExecutedDive } from "./executed-dives";
 import { recordCrewRollCall, recordRollCall } from "./manifests";
 import { MARINE_LIFE_CATALOG } from "./marine-life-catalog";
 import { markBookingNoShow } from "./no-show";
@@ -193,40 +188,6 @@ describe("upsertExecutedDive", () => {
       ok: true,
       dive: { observedConditions: { visibility: "20m", current: "mild" } },
     });
-  });
-});
-
-describe("deleteExecutedDive", () => {
-  it("takes a dive off the log and frees its number for a fresh entry", async () => {
-    const { db, shop, owner, trip } = await logFixture();
-    const saved = await upsertExecutedDive(db, {
-      shopId: shop.id,
-      tripId: trip.id,
-      diveNumber: 1,
-      maxDepthMeters: 18,
-      recordedByPersonId: owner.id,
-    });
-    if (!saved.ok) throw new Error("fixture write failed");
-
-    expect(
-      await deleteExecutedDive(db, {
-        shopId: shop.id,
-        tripId: trip.id,
-        diveNumber: 1,
-        deletedByPersonId: owner.id,
-      }),
-    ).toBe(true);
-    expect(await listExecutedDives(db, shop.id, trip.id)).toHaveLength(0);
-
-    // The unique index covers live rows only, so the number is available again.
-    const again = await upsertExecutedDive(db, {
-      shopId: shop.id,
-      tripId: trip.id,
-      diveNumber: 1,
-      maxDepthMeters: 21,
-      recordedByPersonId: owner.id,
-    });
-    expect(again).toMatchObject({ ok: true, dive: { maxDepthMeters: 21 } });
   });
 });
 
@@ -842,12 +803,11 @@ describe("peopleWhoDivedBefore", () => {
     const { db, shop, owner, before, after, personId } = await twoDays();
     const [dive] = await listExecutedDives(db, shop.id, before.id);
     if (!dive) throw new Error("fixture dive missing");
-    await deleteExecutedDive(db, {
-      shopId: shop.id,
-      tripId: before.id,
-      diveNumber: dive.executed.diveNumber,
-      deletedByPersonId: owner.id,
-    });
+    // Struck straight on the row: no surface removes a logged dive yet.
+    await db
+      .update(executedDives)
+      .set({ deletedAt: nowDate(), deletedByPersonId: owner.id })
+      .where(eq(executedDives.id, dive.executed.id));
     const ask = () => peopleWhoDivedBefore(db, shop.id, [personId], after.startsAt, shop.timezone);
     expect((await ask()).size, "the departure still ran").toBe(1);
     await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, before.id));

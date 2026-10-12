@@ -9,7 +9,7 @@ import {
 } from "./participant-types";
 import type { ReadinessResult } from "./readiness";
 import type { RollCallCheckpoint, RollCallRecord } from "./roll-call";
-import { isNotBackAboard } from "./roll-call";
+import { isNotBackAboard, isRollCallCheckpoint } from "./roll-call";
 import type { MedicalWaiverMark } from "./waivers";
 import type { WelcomeCue } from "./welcome-cue";
 
@@ -1012,6 +1012,21 @@ export function splitBuddyTeamIds(manifest: TripManifest, alert: BuddyAlert): Se
     for (const team of member.buddyTeams ?? []) consider(team, member.rollCall);
   }
   return split;
+}
+
+/**
+ * The manifest at one roll-call checkpoint, or `null` when the trip has no
+ * such checkpoint (an `after_dive_3` on a two-dive boat, or junk from a URL).
+ * The one rule for "which checkpoint is this", shared by `getTripManifest`
+ * and the manifest page, which already holds every checkpoint's manifest.
+ */
+export function manifestAtCheckpoint(
+  manifests: readonly TripManifest[],
+  checkpoint: string,
+): TripManifest | null {
+  const plannedDives = manifests[0]?.trip.plannedDives ?? 0;
+  if (!isRollCallCheckpoint(checkpoint, plannedDives)) return null;
+  return manifests.find((manifest) => manifest.checkpoint === checkpoint) ?? null;
 }
 
 /**
