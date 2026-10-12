@@ -561,6 +561,7 @@ export function CommandPalette({
       <PaletteTrigger
         variant={variant}
         onOpen={() => setOpen(true)}
+        hydrated={listening}
         search={copy.search}
         placeholder={copy.placeholder}
         hydrated={listening}
@@ -772,12 +773,14 @@ export function CommandPalette({
 function PaletteTrigger({
   variant,
   onOpen,
+  hydrated,
   search,
   placeholder,
   hydrated,
 }: {
   variant: "bar" | "field";
   onOpen: () => void;
+  hydrated: boolean;
   search: string;
   placeholder: string;
   /** True once the ⌘K listener is attached; drawn as `data-hydrated`. */
