@@ -43,7 +43,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "Look along the coral heads for schooling grunts and curious damselfish; rays often cruise the sandy channels.",
         difficultyLevel: "beginner",
-        depthRange: "6–12 m",
+        depthRange: "20–40 ft",
         maxDepthMeters: 12,
         currentNote: "Usually gentle.",
         divePlan:
@@ -86,8 +86,9 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         fitTone: "welcoming" as const,
         fitNote:
           "Shallow, bright and forgiving — a good first ocean dive after a pool course, and still worth a hundredth.",
+        // The elkhorn frame is the shop's cover photo, so the site leads with
+        // a frame of its own (UX review 2026-10-10, item 19).
         imageUrls: [
-          commonsImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
           commonsImage("French Angelfish Molasses Reef 20080309.jpg"),
           commonsImage("Blue Tangs Molasses Reef 1999.jpg"),
         ],
@@ -124,7 +125,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "Expect big silhouettes, moving schools, and changing light along the exterior decks.",
         difficultyLevel: "advanced",
-        depthRange: "18–40 m",
+        depthRange: "60–130 ft",
         maxDepthMeters: 40,
         currentNote: "Open-water current can be strong.",
         divePlan:
@@ -171,7 +172,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "A gentle route with lots to notice near the reef and plenty of light for photos.",
         difficultyLevel: "beginner",
-        depthRange: "5–8 m",
+        depthRange: "15–25 ft",
         maxDepthMeters: 8,
         currentNote: "Usually gentle.",
         divePlan:
@@ -196,7 +197,6 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         imageUrls: [
           commonsImage("French Angelfish Pickles Reef 20230713.jpg"),
           commonsImage("Blue Tang Pickles 20080310.jpg"),
-          commonsImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
         ],
         routePoints: [
           { x: 17, y: 68 },
@@ -220,11 +220,11 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "The hull is a fish apartment block: look into every gap and something is home.",
         difficultyLevel: "intermediate",
-        depthRange: "8–15 m",
+        depthRange: "25–50 ft",
         maxDepthMeters: 15,
         currentNote: "Mild, but the site sits in open water.",
         divePlan:
-          "Swim the length of the hull from bow to stern along the sand, then return over the plates at 9 meters (30 feet).",
+          "Swim the length of the hull from bow to stern along the sand, then return over the plates at 30 feet.",
         landmarks: [
           {
             name: "Bow section",
@@ -256,7 +256,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "The overhangs hide sleeping nurse sharks; check the ceilings, not just the sand.",
         difficultyLevel: "beginner",
-        depthRange: "6–14 m",
+        depthRange: "20–45 ft",
         maxDepthMeters: 14,
         currentNote: "Usually gentle.",
         divePlan:
@@ -303,7 +303,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "A resident goliath grouper often holds near the wheelhouse; look into the blue for jacks working the current.",
         difficultyLevel: "advanced",
-        depthRange: "15–37 m",
+        depthRange: "50–120 ft",
         maxDepthMeters: 37,
         currentNote: "Can run strong on the surface.",
         divePlan:
@@ -346,7 +346,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "Grazing parrotfish work the coral heads all day; blue tangs move through in loose, easy groups.",
         difficultyLevel: "beginner",
-        depthRange: "5–12 m",
+        depthRange: "15–40 ft",
         maxDepthMeters: 12,
         currentNote: "Usually gentle.",
         divePlan:
@@ -387,7 +387,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "By day it is a quiet scatter of steel; after dark the ribs fill with soldierfish and squirrelfish, octopus come out to hunt, and tarpon work the edge of your light.",
         difficultyLevel: "beginner",
-        depthRange: "5–8 m",
+        depthRange: "15–25 ft",
         maxDepthMeters: 8,
         currentNote: "Usually gentle on the inside of the reef; it can run along the outer edge.",
         divePlan:
@@ -524,7 +524,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
     christ
       ? {
           diveSiteId: christ.id,
-          caption: "Eight meters down — 25 feet — hands up, sunlight all the way to the sand.",
+          caption: "25 feet down, hands up, sunlight all the way to the sand.",
           imageUrl: commonsImage("French Angelfish Pickles Reef 20230713.jpg"),
           isPublished: true,
         }

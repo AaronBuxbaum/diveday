@@ -144,7 +144,9 @@ export default async function EmbedWidgetPage({
                 maximumFractionDigits: 1,
               }).format(average)}
             </span>
-            <span className="tabular-nums">{t("reviews.count", { count: aggregate.count })}</span>
+            <span className="tabular-nums">
+              {t("reviews.ratingsCount", { count: aggregate.count })}
+            </span>
           </p>
           <Link
             href={`${origin}${publicReviewsPath(shopSlug)}`}
