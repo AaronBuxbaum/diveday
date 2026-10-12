@@ -66,5 +66,12 @@ export function needsDatabaseTimeout(testPath: string | undefined): boolean {
   }
 }
 
-/** `@/test/db` from anywhere, or the relative spellings used inside `src/test`. */
-const IMPORTS_TEST_DB = /\bfrom\s+["'](?:@\/test\/db|(?:\.{1,2}\/)+(?:test\/)?db)["']/;
+/**
+ * `@/test/db` from anywhere, or the relative spellings used inside `src/test`;
+ * or a call to one of the factories that build a database without the fixture
+ * (`src/lib/auth-schema.test.ts` runs the whole migration chain through the
+ * client's own, and timed out at 20s on a loaded box). The factory half is the
+ * same pattern src/test/projects.ts uses to put a file in the `db` project.
+ */
+const IMPORTS_TEST_DB =
+  /\bfrom\s+["'](?:@\/test\/db|(?:\.{1,2}\/)+(?:test\/)?db)["']|\b(?:createTestDb|seededTestDb|unseededTestDb)\s*\(/;
