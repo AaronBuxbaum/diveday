@@ -334,10 +334,14 @@ describe("the trip page's order", () => {
     expect(SOURCE).toContain('const isEmbed = embed === "1";');
     expect(SOURCE).toContain("const structuredData = isEmbed\n    ? null");
     expect(SOURCE).toContain(
-      'isEmbed && bookingToken\n      ? await verifyBookingCapability(db, { token: bookingToken, purpose: "confirm" })',
+      'isEmbed && bookingToken\n      ? verifyBookingCapability(db, { token: bookingToken, purpose: "confirm" })',
+    );
+    // The booking behind it is read only off a capability that verified.
+    expect(SOURCE).toContain(
+      "(capability) => (capability ? getBookingForTrip(db, tripId, capability.bookingId) : null)",
     );
     expect(SOURCE).toContain(
-      "const reviewAggregate =\n    isEmbed || !shop.reviewsEnabled ? null :",
+      "isEmbed || !shop.reviewsEnabled ? null : getShopReviewAggregate(db, shop.id)",
     );
   });
 });

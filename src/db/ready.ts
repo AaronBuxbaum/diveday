@@ -28,7 +28,7 @@ import {
   type RentalFitItem,
   toDiverRentalFit,
 } from "./rental-fit";
-import { bookings, certifications, people, shops } from "./schema";
+import { bookings, certifications, people, shops, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getTripWithBooked } from "./trips";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
@@ -80,6 +80,12 @@ export type ReadyPageData = {
      * as "the shop's answer is the whole answer".
      */
     course: { nitroxCompatible: boolean } | null;
+    /**
+     * What this seat costs on this departure (`seatListPriceCents`): the fare
+     * for its participant type, or null on an unpriced trip. The thread's
+     * receipt works out a balance after a deposit from it.
+     */
+    seatPriceCents: number | null;
   };
   person: {
     id: string;
@@ -251,14 +257,12 @@ export type ReadyPageData = {
   courseStarted: boolean;
 };
 
-export async function getReadyPageData(
-  db: AppDb,
-  bookingId: string,
-  now: Date = nowDate(),
-): Promise<ReadyPageData | null> {
-  const detail = await getBookingReadinessDetail(db, bookingId);
-  if (!detail) return null;
-
+/**
+ * Everything `getReadyPageData` reads beside the readiness detail: the booking
+ * row, then one fan-out of the trip and the rest. Null when the booking or its
+ * trip is gone.
+ */
+async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
   const [row] = await db
     .select({
       shopId: bookings.shopId,
@@ -296,16 +300,21 @@ export async function getReadyPageData(
       personLocale: people.locale,
       emergencyContactName: people.emergencyContactName,
       emergencyContactPhone: people.emergencyContactPhone,
+      tripStartsAt: trips.startsAt,
+      tripCourseId: trips.courseId,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
+    // diveday:allow-deleted-trips: the window and course columns only; the
+    // trip itself is read through `getTripWithBooked`, which keeps `liveTrip()`.
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(eq(bookings.id, bookingId))
     .limit(1);
   if (!row) return null;
 
-  const trip = await getTripWithBooked(db, row.shopId, row.tripId);
-  if (!trip) return null;
+  // The trip and the refresher flag need only the booking row's columns, so
+  // they ride the fan-out below rather than going first.
 
   // **D18's offers, and the one query they are worth.** Inside 24 hours of a
   // departure nobody at the shop can act on an ask, and a diver who has not
@@ -313,12 +322,12 @@ export async function getReadyPageData(
   // answered from rows already in hand, and the refresher-course lookup only
   // runs for the small set of divers who reach the third offer.
   const reEntryOffersOpen =
-    row.diveIntent === "easing_back" && reEntryWindowOpen(trip.startsAt, now);
-  const refresherCourseOffered = reEntryOffersOpen
-    ? await hasActiveRefresherCourse(db, row.shopId)
-    : false;
+    row.diveIntent === "easing_back" && reEntryWindowOpen(row.tripStartsAt, now);
 
   const [
+    trip,
+    refresherCourseOffered,
+    materialsDoneElsewhere,
     rentalFit,
     helpRequest,
     payment,
@@ -328,6 +337,18 @@ export async function getReadyPageData(
     welcomeInputs,
     fitConfirmation,
   ] = await Promise.all([
+    getTripWithBooked(db, row.shopId, row.tripId),
+    reEntryOffersOpen ? hasActiveRefresherCourse(db, row.shopId) : false,
+    // Someone marked this student's materials done on another departure of the
+    // same course; asked only when this seat carries no mark of its own.
+    row.courseMaterialsDoneAt === null && row.tripCourseId !== null
+      ? courseMaterialsDoneByPerson(db, {
+          shopId: row.shopId,
+          courseId: row.tripCourseId,
+          personIds: [row.personId],
+          around: row.tripStartsAt,
+        }).then((done) => done.has(row.personId))
+      : false,
     getRentalFit(db, row.shopId, row.personId),
     getHelpRequestForBooking(db, row.shopId, bookingId, now),
     getBookingPayment(db, row.shopId, bookingId),
@@ -343,6 +364,55 @@ export async function getReadyPageData(
     // staffer's name comes from a join this page is the only caller of.
     fitConfirmationForDiver(db, row.shopId, row.personId),
   ]);
+  if (!trip) return null;
+  return {
+    row,
+    trip,
+    refresherCourseOffered,
+    reEntryOffersOpen,
+    rentalFit,
+    helpRequest,
+    payment,
+    stripeAccount,
+    nitroxVerified,
+    nitroxOnFile,
+    welcomeInputs,
+    fitConfirmation,
+    materialsDoneElsewhere,
+  };
+}
+
+export async function getReadyPageData(
+  db: AppDb,
+  bookingId: string,
+  now: Date = nowDate(),
+): Promise<ReadyPageData | null> {
+  // **Two chains side by side, not one after the other** (code review
+  // 2026-10-11, item 3). The readiness detail — the fail-closed engine's answer
+  // for this seat — and everything else this page reads both start from the
+  // booking id alone, so neither waits on the other: the page used to read the
+  // detail, then the booking row, then the trip, then the refresher flag, then
+  // a fan-out, five steps one after another.
+  const [detail, page] = await Promise.all([
+    getBookingReadinessDetail(db, bookingId),
+    readyPageReads(db, bookingId, now),
+  ]);
+  if (!detail || !page) return null;
+  const {
+    row,
+    trip,
+    refresherCourseOffered,
+    reEntryOffersOpen,
+    rentalFit,
+    helpRequest,
+    payment,
+    stripeAccount,
+    nitroxVerified,
+    nitroxOnFile,
+    welcomeInputs,
+    fitConfirmation,
+    materialsDoneElsewhere,
+  } = page;
   // `partly_refunded` settles too, or this page would invite a diver who has
   // already paid — and been handed part of it back — to pay the full price a
   // second time. The capability URL is shared by design, so anyone holding it
@@ -396,6 +466,7 @@ export async function getReadyPageData(
       id: row.tripId,
       plannedDives: trip.plannedDives,
       course: trip.course ? { nitroxCompatible: trip.course.nitroxCompatible } : null,
+      seatPriceCents: perDiverPriceCents,
     },
     person: {
       id: row.personId,
@@ -446,17 +517,7 @@ export async function getReadyPageData(
     }),
     welcomeShared: row.welcomeSharedAt !== null,
     learningMaterials: readLearningMaterials(trip.course?.learningMaterials),
-    courseMaterialsDone:
-      row.courseMaterialsDoneAt !== null ||
-      (trip.courseId !== null &&
-        (
-          await courseMaterialsDoneByPerson(db, {
-            shopId: row.shopId,
-            courseId: trip.courseId,
-            personIds: [row.personId],
-            around: trip.startsAt,
-          })
-        ).has(row.personId)),
+    courseMaterialsDone: row.courseMaterialsDoneAt !== null || materialsDoneElsewhere,
     courseStarted: trip.startsAt.getTime() <= now.getTime(),
   };
 }

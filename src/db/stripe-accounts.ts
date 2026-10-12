@@ -1,4 +1,5 @@
 import { and, eq, isNull, lte, ne, type SQL } from "drizzle-orm";
+import { cache } from "react";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
@@ -143,6 +144,23 @@ export async function getShopStripeAccount(
 ): Promise<ShopStripeAccount | null> {
   return payableRow(db, eq(shopStripeAccounts.shopId, shopId));
 }
+
+/**
+ * {@link getShopStripeAccount}, read once per render (code review 2026-10-11,
+ * item 26). The shop home reads the account for its setup ledger and payments
+ * row, and Today's queue reads it again for the payment rows' invoice controls;
+ * inside one render the two are one statement.
+ *
+ * Keyed on the executor as well as the shop, so a transaction handle never
+ * shares a row with the pool (`cache()` keys on argument identity), and only
+ * for a render: in an action, a route handler or a test `cache()` calls
+ * straight through. Money-moving code keeps the uncached reader — a checkout
+ * or a webhook must see the row as it is now.
+ */
+export const shopStripeAccountForRender = cache(
+  (db: AppDb, shopId: string): Promise<ShopStripeAccount | null> =>
+    getShopStripeAccount(db, shopId),
+);
 
 export async function getShopStripeAccountByAccountId(
   db: DbExecutor,

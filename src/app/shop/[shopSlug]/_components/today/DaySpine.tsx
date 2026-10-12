@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { type WaiverSendCopy, waiverSendCopy } from "@/app/actions/waiver-send-types";
 import {
   WaitlistInvite,
@@ -108,6 +109,52 @@ type RowControls = {
   helpRequestAction?: SpineHelpRequestAction;
   t: StaffTranslator;
 };
+
+/**
+ * The copy and context every row's control needs, composed once per render on
+ * the server: the controls are Client Components, so a translator never
+ * crosses the boundary.
+ */
+function rowControls(
+  base: Pick<RowControls, "shopSlug" | "shopName" | "helpRequestAction" | "t">,
+): RowControls {
+  const { t } = base;
+  return {
+    ...base,
+    waiverCopy: waiverSendCopy(t),
+    resendCopy: {
+      resending: t("today.resendConfirmation.resending"),
+      confirmationResent: t("today.resendConfirmation.confirmationResent"),
+      confirmationsResent: t("today.resendConfirmation.confirmationsResent"),
+      errors: {
+        invalid: t("today.resendConfirmation.errors.invalid"),
+        noEmail: t("today.resendConfirmation.errors.noEmail"),
+        notConfigured: t("today.resendConfirmation.errors.notConfigured"),
+        failed: t("today.resendConfirmation.errors.failed"),
+      },
+    },
+    // Same keys `WaitlistSection.tsx` uses — `WaitlistInvite` is a Client
+    // Component, so the full copy object is composed here rather than passing
+    // a translator across the boundary.
+    inviteCopy: {
+      hold: sendHoldCopy(t),
+      invitedRelative: t.raw("trips.waitlist.invitedRelative"),
+      inviteEmailed: t("trips.waitlist.inviteEmailed"),
+      reSendInvite: t("trips.waitlist.reSendInvite"),
+      emailAnInvite: t.raw("trips.waitlist.emailAnInvite"),
+      copied: t("trips.waitlist.copied"),
+      copyInviteMessage: t("trips.waitlist.copyInviteMessage"),
+      copyFailed: t("trips.waitlist.copyFailed"),
+      justNow: t("trips.waitlist.justNow"),
+      minutesAgo: t.raw("trips.waitlist.minutesAgo"),
+      hoursAgo: t.raw("trips.waitlist.hoursAgo"),
+      daysAgo: t.raw("trips.waitlist.daysAgo"),
+      emailSubject: t.raw("trips.waitlist.emailSubject"),
+      emailBody: t.raw("trips.waitlist.emailBody"),
+    },
+    paymentCopy: paymentActionCopy(t),
+  };
+}
 
 /**
  * One job, as a ledger row: its kind as a word in the row's own type, the one
@@ -391,6 +438,43 @@ function StationRows({ rows, controls }: { rows: readonly TodayAction[]; control
   );
 }
 
+/**
+ * **The high-wind rows, streamed** (code review 2026-10-11, item 1). The
+ * forecast is the one read on this page that is not the database, so the queue
+ * answers without it (`getTodayWork`'s `highWind`) and these rows arrive under
+ * their own `<Suspense>` once the provider does — after the rows they rank
+ * beside, which is why they render below them rather than pushing painted rows
+ * down. They are not in any count on the page: the list's total, the summary
+ * under the date and the empty state all read the queue as it answered.
+ */
+async function HighWindRows({
+  rows,
+  tripIds,
+  controls,
+  className,
+  closed,
+}: {
+  rows: Promise<readonly TodayAction[]>;
+  /** The departures this list stands for; a row about any other boat files elsewhere. */
+  tripIds: ReadonlySet<string>;
+  controls: RowControls;
+  className?: string;
+  /** `false` inside a station's panel, as `StationRows` passes it. */
+  closed?: boolean;
+}) {
+  const wind = (await rows).filter(
+    (action) => action.departure != null && tripIds.has(action.departure.tripId),
+  );
+  if (wind.length === 0) return null;
+  return (
+    <ul className={className}>
+      {wind.map((action) => (
+        <StationRow key={rowKey(action)} action={action} controls={controls} closed={closed} />
+      ))}
+    </ul>
+  );
+}
+
 function Stations({
   stations,
   crewedTripIds,
@@ -518,6 +602,7 @@ export function DaySpine({
   factOfScale,
   sessions,
   evening,
+  highWind,
   now,
 }: {
   spine: DaySpineData;
@@ -573,47 +658,15 @@ export function DaySpine({
   sessions?: React.ReactNode;
   /** The day's closing state. Omitted, the spine renders its morning reading alone. */
   evening?: EveningReading;
+  /**
+   * The high-wind rows, still arriving (`getTodayWork`'s `highWind`): today's
+   * under the Needs you list, tomorrow's inside its disclosure. Omitted, none.
+   */
+  highWind?: Promise<readonly TodayAction[]>;
   now: Date;
 }) {
   const t = staffTranslator(locale);
-  const controls: RowControls = {
-    shopSlug,
-    shopName,
-    helpRequestAction,
-    t,
-    waiverCopy: waiverSendCopy(t),
-    resendCopy: {
-      resending: t("today.resendConfirmation.resending"),
-      confirmationResent: t("today.resendConfirmation.confirmationResent"),
-      confirmationsResent: t("today.resendConfirmation.confirmationsResent"),
-      errors: {
-        invalid: t("today.resendConfirmation.errors.invalid"),
-        noEmail: t("today.resendConfirmation.errors.noEmail"),
-        notConfigured: t("today.resendConfirmation.errors.notConfigured"),
-        failed: t("today.resendConfirmation.errors.failed"),
-      },
-    },
-    // Same keys `WaitlistSection.tsx` uses — `WaitlistInvite` is a Client
-    // Component, so the full copy object is composed here rather than passing
-    // a translator across the boundary.
-    inviteCopy: {
-      hold: sendHoldCopy(t),
-      invitedRelative: t.raw("trips.waitlist.invitedRelative"),
-      inviteEmailed: t("trips.waitlist.inviteEmailed"),
-      reSendInvite: t("trips.waitlist.reSendInvite"),
-      emailAnInvite: t.raw("trips.waitlist.emailAnInvite"),
-      copied: t("trips.waitlist.copied"),
-      copyInviteMessage: t("trips.waitlist.copyInviteMessage"),
-      copyFailed: t("trips.waitlist.copyFailed"),
-      justNow: t("trips.waitlist.justNow"),
-      minutesAgo: t.raw("trips.waitlist.minutesAgo"),
-      hoursAgo: t.raw("trips.waitlist.hoursAgo"),
-      daysAgo: t.raw("trips.waitlist.daysAgo"),
-      emailSubject: t.raw("trips.waitlist.emailSubject"),
-      emailBody: t.raw("trips.waitlist.emailBody"),
-    },
-    paymentCopy: paymentActionCopy(t),
-  };
+  const controls = rowControls({ shopSlug, shopName, helpRequestAction, t });
   const crewed = new Set(crewedTripIds ?? []);
   const jobs = spineJobCount(spine);
   const tomorrowDate = spine.tomorrow.stations[0]?.startsAt ?? null;
@@ -909,6 +962,12 @@ export function DaySpine({
         </LedgerGroup>
       ) : null}
 
+      {highWind ? (
+        <Suspense fallback={null}>
+          <HighWindRows rows={highWind} tripIds={liveTripIds} controls={controls} />
+        </Suspense>
+      ) : null}
+
       {/* The whole week is in order — the queue's own good-news moment, and the
           only thing that stands where the work would be. It never renders for
           a shop still in first-run: that shop has no roster to make a claim
@@ -983,6 +1042,17 @@ export function DaySpine({
                   currency={currency}
                   controls={controls}
                 />
+                {highWind ? (
+                  <Suspense fallback={null}>
+                    <HighWindRows
+                      rows={highWind}
+                      tripIds={new Set(spine.tomorrow.stations.map((station) => station.tripId))}
+                      controls={controls}
+                      className="mt-4"
+                      closed={false}
+                    />
+                  </Suspense>
+                ) : null}
               </div>
             </LedgerGroup>
           ) : null}
