@@ -151,17 +151,24 @@ export async function POST(request: Request) {
   //    carries a paid seat. `listOwedShopCancellationRefunds` joins a paid
   //    booking_payment to a `cancelled` trip whose booking is *not* cancelled
   //    (the forfeit carve-out), so cancelling the trip is the whole edit.
-  const [paidSeat] = await db
-    .select({ tripId: bookings.tripId })
-    .from(bookingPayments)
-    .innerJoin(bookings, eq(bookings.id, bookingPayments.bookingId))
-    .where(
-      and(
-        eq(bookingPayments.shopId, shop.id),
-        inArray(bookingPayments.status, ["paid", "deposit_paid"]),
-      ),
-    )
-    .limit(1);
+  //    **Opt-in** (issue #2338): the departure it cancels is one of the demo's
+  //    upcoming boats, which Today, the board and the booking pages all read,
+  //    so running it on every call made every caller's picture depend on
+  //    whether this state had been seeded first.
+  const owedRefund = new URL(request.url).searchParams.get("owedRefund") === "1";
+  const [paidSeat] = owedRefund
+    ? await db
+        .select({ tripId: bookings.tripId })
+        .from(bookingPayments)
+        .innerJoin(bookings, eq(bookings.id, bookingPayments.bookingId))
+        .where(
+          and(
+            eq(bookingPayments.shopId, shop.id),
+            inArray(bookingPayments.status, ["paid", "deposit_paid"]),
+          ),
+        )
+        .limit(1)
+    : [];
   if (paidSeat) {
     await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, paidSeat.tripId));
   }
@@ -317,7 +324,7 @@ export async function POST(request: Request) {
       );
   }
 
-  // **Opt-in, unlike every other state here.** The rest write self-contained
+  // **Opt-in, like the owed refund above.** The back-office states write self-contained
   // back-office rows — a stuck deletion, an owed erasure — that only the panel
   // they belong to reads. This one changes a diver's **readiness**, which the
   // nav badges, the close-out and every blocked count read too, so seeding it
