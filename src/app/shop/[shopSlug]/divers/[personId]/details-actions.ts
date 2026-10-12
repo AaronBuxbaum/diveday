@@ -6,6 +6,7 @@ import { isDiverRemoved, updateDiver } from "@/db/divers";
 import { sendStaffReply } from "@/db/staff-reply";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { isValidCalendarDate } from "@/lib/calendar-date";
+import { readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -72,6 +73,8 @@ export async function savePersonAction(shopSlug: string, personId: string, formD
   revalidateAndRedirect(base, backTo(base, notice, "details"));
 }
 
+const replyForm = z.object({ messageId: text(), body: text() });
+
 /**
  * **Answer the diver, in the channel they wrote on** (ADR
  * 20260907-two-way-inbox).
@@ -106,7 +109,8 @@ export async function replyToDiverAction(shopSlug: string, personId: string, for
   // A posted id is caller-controlled: narrowed before it reaches a `uuid`
   // comparison, and answered with the same "no such message" a wrong-record or
   // wrong-tenant id gets.
-  const messageId = uuidParam(String(formData.get("messageId") ?? ""));
+  const form = readForm(replyForm, formData);
+  const messageId = uuidParam(form.messageId);
   if (!messageId) {
     revalidateAndRedirect(base, backTo(base, "reply-message-not-found", "reply"));
   }
@@ -121,7 +125,7 @@ export async function replyToDiverAction(shopSlug: string, personId: string, for
     shopId: staff.user.shopId,
     personId,
     messageId,
-    body: String(formData.get("body") ?? ""),
+    body: form.body,
     sentByPersonId: staff.user.personId,
   });
   // `noticeUrl` kebabs the code, so a domain reason spelt snake_case needs no

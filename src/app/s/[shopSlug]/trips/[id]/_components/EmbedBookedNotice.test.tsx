@@ -34,7 +34,11 @@ const confirmed = {
 const readyRoute = "/s/reef-shop/trips/trip-1/ready?booking=tok";
 
 function renderNotice(
-  overrides: { readinessLink?: string; emailsOnTheWay?: boolean; payNotice?: string } = {},
+  overrides: {
+    readinessLink?: string;
+    mailState?: "none" | "confirmation" | "confirmationWithWaiver";
+    payNotice?: string;
+  } = {},
 ) {
   return renderDiver(
     <EmbedBookedNotice
@@ -44,7 +48,7 @@ function renderNotice(
       trip={trip}
       confirmed={confirmed}
       readinessLink={overrides.readinessLink ?? readyRoute}
-      emailsOnTheWay={overrides.emailsOnTheWay ?? false}
+      mailState={overrides.mailState ?? "none"}
       payNotice={overrides.payNotice}
     />,
   );
@@ -55,7 +59,7 @@ afterEach(cleanup);
 describe("EmbedBookedNotice", () => {
   it("greets the diver by their first name", () => {
     renderNotice();
-    expect(screen.getByRole("heading", { name: /You’re on the boat, Ingrid/ })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /You’ve got a seat, Ingrid/ })).toBeVisible();
   });
 
   /**
@@ -121,7 +125,7 @@ describe("EmbedBookedNotice", () => {
    * the rest of the page's rhythm.
    */
   it("renders as one block with no margin of its own", () => {
-    const { container } = renderNotice({ emailsOnTheWay: true });
+    const { container } = renderNotice({ mailState: "confirmationWithWaiver" });
     expect(container.children).toHaveLength(1);
     const margins = (element: Element) =>
       [...element.classList].filter((token) => /^-?m[ty]?-/.test(token));
@@ -129,12 +133,22 @@ describe("EmbedBookedNotice", () => {
     expect(margins(container.children[0].children[0])).toEqual([]);
   });
 
-  it("promises two emails only when both actually went out", () => {
-    renderNotice({ emailsOnTheWay: false });
-    expect(screen.queryByText(/Two emails are on their way/)).toBeNull();
+  /** UX review 2026-10-11, item 7: one email per booking, the waiver its first step. */
+  it("promises one email, and the waiver only when the confirmation carried it", () => {
+    renderNotice({ mailState: "none" });
+    expect(screen.queryByText(/on its way by email/)).toBeNull();
     cleanup();
-    renderNotice({ emailsOnTheWay: true });
-    expect(screen.getByText(/Two emails are on their way/)).toBeVisible();
+    renderNotice({ mailState: "confirmation" });
+    expect(screen.getByText("Your confirmation is on its way by email.")).toBeVisible();
+    expect(screen.queryByText(/waiver/i)).toBeNull();
+    cleanup();
+    renderNotice({ mailState: "confirmationWithWaiver" });
+    expect(
+      screen.getByText(
+        "Your confirmation is on its way by email. Signing your waiver is its first step.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText(/Two emails/)).toBeNull();
   });
 
   /**

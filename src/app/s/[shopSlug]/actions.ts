@@ -14,6 +14,7 @@ import {
   diveDeclarationSchema,
   toDiveDeclaration,
 } from "@/lib/dive-declaration";
+import { blankAsAbsent, parseForm } from "@/lib/form-parse";
 import { publicAppUrl } from "@/lib/notifications";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -23,9 +24,9 @@ const joinSchema = z.object({
   // Shared diver person-field bounds (src/lib/person-fields.ts).
   fullName: diverNameSchema,
   email: diverEmailSchema,
-  phone: diverPhoneSchema.optional(),
-  availableFrom: z.string().optional(),
-  availableUntil: z.string().optional(),
+  phone: blankAsAbsent(diverPhoneSchema),
+  availableFrom: blankAsAbsent(z.string()),
+  availableUntil: blankAsAbsent(z.string()),
 });
 
 export type LastMinuteListFormState = { error?: string; success?: boolean };
@@ -53,18 +54,12 @@ export async function joinLastMinuteListAction(
     return { error: t("common.rateLimited") };
   }
 
-  const parsed = joinSchema.safeParse({
-    fullName: formData.get("fullName"),
-    email: formData.get("email"),
-    phone: formData.get("phone") || undefined,
-    availableFrom: formData.get("availableFrom") || undefined,
-    availableUntil: formData.get("availableUntil") || undefined,
-  });
+  const parsed = parseForm(joinSchema, formData);
   // Parsed apart from the identity fields on purpose: the "what can you dive?"
   // pair is optional, so a level code that fails validation is *not said* — it
   // must never be the reason a sign-up is refused (src/lib/dive-declaration.ts).
   const declaration = diveDeclarationSchema.safeParse(diveDeclarationInput(formData));
-  if (!parsed.success) return { error: t("lastMinute.errors.invalid") };
+  if (!parsed.ok) return { error: t("lastMinute.errors.invalid") };
   if (
     parsed.data.availableFrom &&
     parsed.data.availableUntil &&
@@ -137,8 +132,8 @@ export async function requestFindMyBookingAction(
   _prev: FindMyBookingFormState,
   formData: FormData,
 ): Promise<FindMyBookingFormState> {
-  const parsed = findMyBookingSchema.safeParse({ email: formData.get("email") });
-  if (!parsed.success) return { success: true };
+  const parsed = parseForm(findMyBookingSchema, formData);
+  if (!parsed.ok) return { success: true };
   const email = parsed.data.email.trim().toLowerCase();
 
   const dbi = await getDb();

@@ -21,6 +21,8 @@ import { declarations, readGlobalsCss, topLevelBlocks } from "@/test/stylesheet"
  */
 
 const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+/** The page's one wave of reads, lifted beside it so the route stays a renderer (#2353). */
+const READS_SOURCE = readFileSync(join(__dirname, "_lib/page-reads.ts"), "utf8");
 const FOOT_BAR_SOURCE = readFileSync(
   join(__dirname, "../../../../../components/PhoneFootBar.tsx"),
   "utf8",
@@ -333,14 +335,16 @@ describe("the trip page's order", () => {
     // the frame (the embed points its canonical at this page).
     expect(SOURCE).toContain('const isEmbed = embed === "1";');
     expect(SOURCE).toContain("const structuredData = isEmbed\n    ? null");
-    expect(SOURCE).toContain(
-      'isEmbed && bookingToken\n      ? verifyBookingCapability(db, { token: bookingToken, purpose: "confirm" })',
+    expect(READS_SOURCE).toContain(
+      'isEmbed && bookingToken\n      ? verifyBookingCapability(db, { token: bookingToken, purpose: "confirm" }).then(',
     );
-    // The booking behind it is read only off a capability that verified.
-    expect(SOURCE).toContain(
+    // The booking is read only off a capability that verified, and nowhere else.
+    expect(SOURCE).not.toContain("getBookingForTrip(");
+    expect(READS_SOURCE.split("getBookingForTrip(").length - 1).toBe(1);
+    expect(READS_SOURCE).toContain(
       "(capability) => (capability ? getBookingForTrip(db, tripId, capability.bookingId) : null)",
     );
-    expect(SOURCE).toContain(
+    expect(READS_SOURCE).toContain(
       "isEmbed || !shop.reviewsEnabled ? null : getShopReviewAggregate(db, shop.id)",
     );
   });
@@ -358,12 +362,13 @@ describe("the known diver's facts", () => {
   const SECTIONS = readFileSync(join(__dirname, "_components", "BookingSections.tsx"), "utf8");
 
   it("are read only through the handoff, and never on an embed", () => {
-    const read = SOURCE.indexOf("readKnownDiver(db, {");
+    const read = READS_SOURCE.indexOf("readKnownDiver(db, {");
     expect(read).toBeGreaterThan(-1);
-    const guard = SOURCE.lastIndexOf("handoffToken && !isEmbed", read);
+    const guard = READS_SOURCE.lastIndexOf("handoffToken && !isEmbed", read);
     expect(guard).toBeGreaterThan(-1);
     // One read, and one guard directly above it.
-    expect(SOURCE.split("readKnownDiver(").length - 1).toBe(1);
+    expect(SOURCE).not.toContain("readKnownDiver(");
+    expect(READS_SOURCE.split("readKnownDiver(").length - 1).toBe(1);
     expect(read - guard).toBeLessThan(120);
   });
 
@@ -375,7 +380,7 @@ describe("the known diver's facts", () => {
   it("never come from an email typed into the form", () => {
     // The cold-email path is an action that returns nothing and a form that
     // hears nothing back — the page consults no search param but the handoff.
-    expect(SOURCE).not.toMatch(/readKnownDiver\([^)]*email/);
+    expect(READS_SOURCE).not.toMatch(/readKnownDiver\([^)]*email/);
     expect(SECTIONS).toContain(
       "onLeadEmailSettled={knownDiver || tripRef.embed ? undefined : offerHandoff}",
     );

@@ -109,3 +109,18 @@ export function HeldWaiverCard({
     />
   );
 }
+
+/**
+ * The card for a waiver link that resolves no record at all, so names no shop
+ * and offers DiveDay's own door (`ExpiredLinkCard`'s shopless branch) rather
+ * than ending on a sentence with nothing to tap (UX review 2026-10-10, item 11).
+ */
+export function UnavailableWaiverLink({ t }: { t: DiverTranslator }) {
+  return (
+    <ExpiredLinkCard
+      title={t("waiver.unavailableHeading")}
+      text={t("waiver.unavailableBody")}
+      t={t}
+    />
+  );
+}

@@ -4,6 +4,7 @@ import type { SameNameHeldSeat } from "@/db/bookings";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import { type RosterArrival, RosterSection } from "./RosterSection";
+import type { RosterRecord } from "./roster-model";
 import type {
   NitroxByBooking,
   ReadinessByBooking,
@@ -103,6 +104,7 @@ export function renderRoster({
   canManageOrders = true,
   requiresPayment = false,
   arrival,
+  record,
   sameNameHeldSeats,
   heldSeatLastDiveDay,
   packageDivesByBooking,
@@ -119,6 +121,7 @@ export function renderRoster({
   canManageOrders?: boolean;
   requiresPayment?: boolean;
   arrival?: RosterArrival;
+  record?: RosterRecord;
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
   heldSeatLastDiveDay?: ReadonlyMap<string, Date | null>;
   packageDivesByBooking?: ReadonlyMap<string, number>;
@@ -168,7 +171,7 @@ export function renderRoster({
         saveEmergencyContactAction: noop,
         certifyDiverAction: certifyDefaultLevel === undefined ? undefined : noop,
       }}
-      slots={{ addDiverGroup, arrival }}
+      slots={{ addDiverGroup, arrival, record }}
     />,
   );
 }

@@ -105,15 +105,31 @@ describe("publicRouteShape", () => {
     expect(publicRouteShape(`/s/${SHOP}/trips/${TRIP_ID}/embed`)).toEqual(malformed);
   });
 
-  it("has no opinion about a path in the namespace that names no route at all", () => {
-    // Next already answers these with a real 404 of its own; asking the
-    // database about them would buy nothing and cost a read.
-    expect(publicRouteShape(`/s/${SHOP}/no-such-page`)).toBeNull();
-    expect(publicRouteShape(`/s/${SHOP}/embed`)).toBeNull();
+  it("frames a path under a shop that names no route as that shop's refusal", () => {
+    // Next would answer these with a real 404 of its own, but from the root
+    // boundary, which knows no shop: `/s/blue-mantis/anything-wrong` showed
+    // DiveDay's refusal and a button to DiveDay's sales page (UX review
+    // 2026-10-10, item 11). The one shop read buys the shop's own frame.
+    const unrouted = { kind: "malformed", shopSlug: SHOP };
+    for (const path of [
+      "anything-wrong",
+      "embed",
+      "trips",
+      "sites",
+      "courses/open-water/extra",
+      "sites/molasses-reef/extra",
+      `trips/${TRIP_ID}/nope`,
+      `trips/${TRIP_ID}/ready/extra`,
+      "a/b/c/d",
+    ]) {
+      expect(publicRouteShape(`/s/${SHOP}/${path}`), path).toEqual(unrouted);
+    }
+  });
+
+  it("leaves the link-preview images alone, because they are routes", () => {
     expect(publicRouteShape(`/s/${SHOP}/opengraph-image`)).toBeNull();
+    expect(publicRouteShape(`/s/${SHOP}/opengraph-image-1a2b3c`)).toBeNull();
     expect(publicRouteShape(`/s/${SHOP}/trips/${TRIP_ID}/opengraph-image`)).toBeNull();
-    expect(publicRouteShape(`/s/${SHOP}/courses/open-water/extra`)).toBeNull();
-    expect(publicRouteShape(`/s/${SHOP}/sites/molasses-reef/extra`)).toBeNull();
   });
 
   it("asks about the shop the page would have rendered, not the bytes in the URL", () => {

@@ -103,6 +103,15 @@ const RUNG_EVIDENCE: Record<LapsedRung, readonly string[]> = {
 };
 
 /**
+ * Every credential kind {@link lapsedRungs} reads: a lapse of one of these is
+ * already said on the departure's crew (the supervision claim), so the
+ * staffing week's expired-credential line leaves it alone.
+ */
+export const RUNG_EVIDENCE_KINDS: readonly string[] = [
+  ...new Set(Object.values(RUNG_EVIDENCE).flat()),
+];
+
+/**
  * **Which rungs a person's recorded ratings have lapsed off on `divesOn`**
  * (issue #1853, ruled 2026-09-16: "read the credential where the ratio is
  * computed").

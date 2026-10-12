@@ -125,6 +125,27 @@ describe("bankCounts", () => {
     expect(logs).toContain("- src/new.tsx: new file with 1");
   });
 
+  it("names the script that banks the section in its --absorb hint", async () => {
+    // The function-length section is banked by check-page-length.mjs, so a
+    // hint spelled from the guard name sent sessions to a script that does not
+    // exist (issue #2355).
+    const root = await repo({ "function-length": { "//": "note", "src/a.ts": 1 } });
+    const code = await bank(root, {
+      guard: "function-length",
+      script: "check-page-length",
+      counts: { "src/a.ts": 2 },
+      allowed: { "src/a.ts": 1 },
+    });
+    expect(code).toBe(1);
+    expect(logs.at(-1)).toContain('node scripts/check-page-length.mjs --absorb "<why>"');
+  });
+
+  it("defaults the hint's script to check-<guard>", async () => {
+    const root = await repo({ copy: { "//": "copy note", "src/a.tsx": 1 } });
+    await bank(root, { counts: { "src/a.tsx": 2 }, allowed: { "src/a.tsx": 1 } });
+    expect(logs.at(-1)).toContain('node scripts/check-copy.mjs --absorb "<why>"');
+  });
+
   it("refuses an --absorb with no reason, because the reason is the point", async () => {
     const root = await repo({ copy: { "//": "copy note" } });
     const code = await bank(root, { counts: { "src/a.tsx": 1 }, absorb: "" });

@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { type DiverLocale, isDiverLocale } from "@/i18n/settings";
 import { log } from "@/lib/log";
 import { personNamesMatch } from "@/lib/person-name";
@@ -254,6 +254,62 @@ export async function getMergedIntoPersonId(
     .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
     .limit(1);
   return row?.mergedInto ?? null;
+}
+
+/**
+ * **The name a merged-away person's rows are shown under** (issue #2333): for
+ * each id that a merge pointed somewhere, the full name of the record it lives
+ * on now, followed through a chain of merges. An id nobody merged away is
+ * absent, so its own name stands.
+ *
+ * Display only. A seat left behind on a merged-away record (a cancelled seat
+ * the merge did not move, issue #2177) keeps its `person_id`, and nothing here
+ * rewrites it: the departure log reads the kept record's name beside the
+ * historical row. Scoped to the shop at every hop, and bounded, so a pointer
+ * loop (which no writer makes) ends rather than spins.
+ */
+export async function survivingPersonNames(
+  db: DbExecutor,
+  shopId: string,
+  personIds: readonly string[],
+): Promise<Map<string, string>> {
+  const pointing = new Map<string, string>();
+  let frontier = [...new Set(personIds)];
+  const firstHop = new Map<string, string>();
+  const lastName = new Map<string, string>();
+  for (let hop = 0; hop < 8 && frontier.length > 0; hop += 1) {
+    const rows = await db
+      .select({
+        id: people.id,
+        fullName: people.fullName,
+        mergedInto: people.mergedIntoPersonId,
+      })
+      .from(people)
+      // diveday:allow-deleted-people: a merged-away record is soft-deleted by the merge, and following it is the point.
+      .where(and(eq(people.shopId, shopId), inArray(people.id, frontier)));
+    const next: string[] = [];
+    for (const row of rows) {
+      lastName.set(row.id, row.fullName);
+      if (row.mergedInto && !pointing.has(row.id)) {
+        pointing.set(row.id, row.mergedInto);
+        next.push(row.mergedInto);
+      }
+    }
+    if (hop === 0) for (const [id, to] of pointing) firstHop.set(id, to);
+    frontier = next.filter((id) => !lastName.has(id));
+  }
+  const names = new Map<string, string>();
+  for (const [id, to] of firstHop) {
+    let at = to;
+    const seen = new Set([id]);
+    while (pointing.has(at) && !seen.has(at)) {
+      seen.add(at);
+      at = pointing.get(at) as string;
+    }
+    const name = lastName.get(at);
+    if (name !== undefined) names.set(id, name);
+  }
+  return names;
 }
 
 /**

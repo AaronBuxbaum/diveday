@@ -13,6 +13,7 @@ import { recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
 import { createTripRequestInvitations } from "@/db/trip-invitations";
 import { getTripLens, listTripLenses } from "@/db/trip-lenses";
+import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import {
   countShopTrips,
   createTrip,
@@ -288,6 +289,11 @@ const addSchema = z.object({
     (value) => value === "true" || value === true,
     z.boolean().optional().default(false),
   ),
+  // A practice departure for training day (ADR 20261012-rehearsal-departures).
+  isRehearsal: z.preprocess(
+    (value) => value === "true" || value === true,
+    z.boolean().optional().default(false),
+  ),
   selfGuided: z.preprocess(
     (value) => value === "true" || value === true,
     z.boolean().optional().default(false),
@@ -421,12 +427,24 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     repeatIntervalWeeks,
     repeatEndsOn,
     isPrivate,
+    isRehearsal,
     selfGuided,
     diveMode,
     boatId,
     lensId,
     alsoUsualStart,
   } = parsed.data;
+  // **A rehearsal is one departure** (ADR 20261012-rehearsal-departures): a
+  // series would re-mint practice days on the board every night. Refused
+  // with its own sentence rather than quietly dropping the cadence.
+  if (isRehearsal && repeatIntervalWeeks > 0) {
+    await trackEvent({
+      name: "schedule_builder_action",
+      action: "add",
+      outcome: "invalid",
+    });
+    redirect(`${back}?builder=rehearsal-repeats`);
+  }
   const crewPersonIds = crewPersonIdsFrom(formData);
   if (!crewPersonIds) return await invalid();
 
@@ -511,6 +529,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     minimumBookings: details.patch.minimumBookings,
     minimumDecisionHours: details.patch.minimumDecisionHours,
     isPrivate,
+    isRehearsal,
     selfGuided,
     diveMode: details.patch.diveMode,
     boatId: details.patch.boatId,
@@ -584,20 +603,25 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       actorPersonId: session.user.personId,
     });
   }
-  await createTripRequestInvitations(db, {
-    shopId: shop.id,
-    tripId: created.id,
-    requestIds: requestIds.data,
-    createdByPersonId: session.user.personId,
-  });
+  // A rehearsal answers nobody's request: an invitation is a message, and a
+  // rehearsal sends none (ADR 20261012-rehearsal-departures).
+  if (!isRehearsal) {
+    await createTripRequestInvitations(db, {
+      shopId: shop.id,
+      tripId: created.id,
+      requestIds: requestIds.data,
+      createdByPersonId: session.user.personId,
+    });
+  }
   // "Add it as well": the pattern's second departure, read back off the board
   // here rather than taken from the form, so what goes up is what the shop
   // actually ran. Its own fields where the days agreed; this submission's
   // where they did not. Never on the repeat path — a series carries one
   // departure, and a second one on the anchor date alone would be a stray.
-  const also = alsoUsualStart
-    ? (await weekdayPatternFor(db, shop.id, date, shop.timezone))?.alsoUsual
-    : null;
+  const also =
+    alsoUsualStart && !isRehearsal
+      ? (await weekdayPatternFor(db, shop.id, date, shop.timezone))?.alsoUsual
+      : null;
   const addedAlso =
     also && also.startTime === alsoUsualStart
       ? await addPatternDeparture(db, shop, {
@@ -800,6 +824,7 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
     shop.id,
     parsed.data.tripId,
     wallTimeToUtc(wall, shop.timezone),
+    { actorPersonId: session.user.personId },
   );
   if (!outcome.ok) {
     await trackEvent({ name: "schedule_builder_action", action: "move", outcome: outcome.reason });
@@ -811,14 +836,26 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
     actorPersonId: session.user.personId,
     write: { code: "departure_moved", tripId: parsed.data.tripId },
   });
+  // **Tell the divers** (ux review 2026-10-11, item 1): every booked seat
+  // hears the new time after the same eight-second hold every staff send
+  // takes; the board shows "Telling 6 divers the new time" with Undo. Nothing
+  // is held for a departure with nobody on it.
+  const notice = await holdRescheduleNotice(db, {
+    shopId: shop.id,
+    tripId: parsed.data.tripId,
+    movedFrom: outcome.previousStartsAt,
+    meetingPointMoved: false,
+    actorPersonId: session.user.personId,
+  });
   // A move that had to let go of gear says so on the way back. Silence here is
   // a unit somebody still thinks is packed for this departure.
-  revalidateAndRedirect(
-    back,
-    outcome.gearReleased > 0
-      ? `${back}?builder=moved&gear=${outcome.gearReleased}`
-      : `${back}?builder=moved`,
-  );
+  const params = new URLSearchParams({ builder: "moved" });
+  if (outcome.gearReleased > 0) params.set("gear", String(outcome.gearReleased));
+  if (notice) {
+    params.set("held", notice.id);
+    params.set("tell", String(notice.told));
+  }
+  revalidateAndRedirect(back, `${back}?${params}`);
 }
 
 const duplicateSchema = z.object({

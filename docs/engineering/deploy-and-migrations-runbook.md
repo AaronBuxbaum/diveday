@@ -309,6 +309,15 @@ statement it excuses (so one marker cannot cover a file), and the reason must be
 characters. A marker that excuses nothing, names an unknown rule, or breaks the grammar is itself a
 failure — silence there would read exactly like consent.
 
+**A `drop-column` marker is also checked against the code, not just its reason.** The guard reads
+`src/db/schema/` at the previous release (the same commit `scripts/previous-release-migrations.mjs`
+resolves) and on this branch, and refuses the marker while either still declares the column: a
+declared column is named by every whole-row `select()`, `returning()` and relational query on its
+table, so that release fails on all of them for the deploy window however little it reads the value.
+No reason excuses this, H-49 ("there is no legacy") included — H-49 is about old data, not deploy
+order. Remove the declaration (and every reader) in one release; drop the column in the next. In a
+shallow clone with no reachable history only this branch's schema is checked.
+
 ### How a rename is split across releases
 
 A rename is the canonical case. `people.full_name` → `people.display_name`, in four deploys:

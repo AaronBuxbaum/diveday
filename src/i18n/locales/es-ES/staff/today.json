@@ -52,6 +52,11 @@
     "blockedCount": "{count, plural, one {# bloqueado} other {# bloqueados}}",
     "openRoster": "Ver lista"
   },
+  "yourWeek": {
+    "heading": "Tu semana",
+    "openTrip": "Abrir {title}",
+    "roleUnset": "En la tripulación"
+  },
   "actionKind": {
     "rollCallMissingDiver": "Buceador sin localizar",
     "rollCallUnfinished": "Recuento",
@@ -210,12 +215,6 @@
     "openStaffing": "Abrir personal",
     "openUnits": "Abrir unidades",
     "openDiver": "Abrir ficha del buceador"
-  },
-  "greeting": {
-    "morning": "Buenos días, {name}",
-    "afternoon": "Buenas tardes, {name}",
-    "evening": "Buenas noches, {name}",
-    "night": "Trabajando hasta tarde, {name}"
   },
   "seasonalBriefing": {
     "summer": "Aprovecha el intervalo de superficie. Busca sombra{hasShop, select, true { en {shopName}} other {}}, bebe agua y nos vemos en el próximo barco.",

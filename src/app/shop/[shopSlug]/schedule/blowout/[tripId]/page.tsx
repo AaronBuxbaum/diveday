@@ -34,8 +34,10 @@ import { callBlowoutAction, resumeBlowoutAction } from "./actions";
 // 20260804-instant-navigation.
 export const instant = true;
 
+// One title for the confirm and for either cause on the record: a run's
+// cancellation is not weather (review, 2026-10-12).
 export const metadata: Metadata = {
-  title: "Weather blow-out — DiveDay",
+  title: "Departure called off — DiveDay",
 };
 
 /**
@@ -114,7 +116,13 @@ export default async function BlowoutPage({
       // (principle 10, issue #823).
       eyebrow={t("trips.surfaces.trip")}
       eyebrowHref={tripPath}
-      title={blowout ? t("blowout.record.title") : t("blowout.confirm.title")}
+      title={
+        blowout
+          ? blowout.cause === "run_ended"
+            ? t("blowout.record.titleRunEnded")
+            : t("blowout.record.title")
+          : t("blowout.confirm.title")
+      }
       meta={
         <div className="flex flex-col gap-1 text-sm text-muted">
           <span className="font-medium text-foreground">{trip.title}</span>

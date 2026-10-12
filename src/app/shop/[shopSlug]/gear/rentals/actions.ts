@@ -26,6 +26,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { isPlausibleCardNumber } from "@/lib/card-number";
 import { nowDate } from "@/lib/clock";
 import { counterRentalCoreKinds, counterRentalDays, isOneCoreSet } from "@/lib/counter-rentals";
+import { allValues, formValue, readForm, text } from "@/lib/form-parse";
 import { GEAR_RETURN_OUTCOMES } from "@/lib/gear";
 import { majorToMinor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -69,6 +70,18 @@ const rentalSchema = z.object({
 });
 
 /**
+ * The rental form as posted: who, when and which units, then a price and a
+ * "lend anyway" tick per unit (`price-<id>`, `confirm-<id>`) and the payment
+ * on the catch-all, each read as `FormData.get` read it.
+ */
+const counterRentalForm = z
+  .object({ personId: text(), from: text(), until: text(), [UNIT_FIELD]: allValues() })
+  .catchall(formValue());
+const rentalPersonForm = z.object({ fullName: text(), email: text(), phone: text() });
+/** Where a refused card sighting lands back, read raw. */
+const cardSeenLanding = z.object({ personId: text(), from: text(), until: text() });
+
+/**
  * Lend the picked units, then charge for them the way the staffer chose:
  * record cash or a card-machine payment as a paid order, send an invoice
  * through the ordinary staff order path, or charge nothing.
@@ -84,11 +97,12 @@ export async function createCounterRentalAction(formData: FormData) {
   const session = await requireStaffSession();
   const db = await getDb();
   const slug = session.user.shopSlug;
+  const fields = readForm(counterRentalForm, formData);
   const parsed = rentalSchema.safeParse({
-    personId: String(formData.get("personId") ?? ""),
-    from: String(formData.get("from") ?? ""),
-    until: String(formData.get("until") ?? ""),
-    units: formData.getAll(UNIT_FIELD).map(String),
+    personId: fields.personId,
+    from: fields.from,
+    until: fields.until,
+    units: fields[UNIT_FIELD].map(String),
   });
   const blankForm = shopPath(slug, "gear", "rentals", "new");
   if (!parsed.success) redirect(noticeUrl(blankForm, "invalid"));
@@ -99,7 +113,7 @@ export async function createCounterRentalAction(formData: FormData) {
   if (!shop) redirect(noticeUrl(blankForm, "invalid"));
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
 
-  const payment = RENTAL_PAYMENTS.find((value) => value === formData.get(PAYMENT_FIELD));
+  const payment = RENTAL_PAYMENTS.find((value) => value === (fields[PAYMENT_FIELD] ?? null));
   if (!payment) redirect(noticeUrl(form, "needs-payment"));
   const wantsInvoice = payment === "invoice";
   if (wantsInvoice) {
@@ -121,13 +135,13 @@ export async function createCounterRentalAction(formData: FormData) {
   let setCents: number | null = null;
   if (payment !== "none") {
     for (const unitId of units) {
-      const raw = String(formData.get(`${PRICE_FIELD_PREFIX}${unitId}`) ?? "").trim();
+      const raw = String(fields[`${PRICE_FIELD_PREFIX}${unitId}`] ?? "").trim();
       if (!raw) continue;
       const price = priceSchema.safeParse(raw);
       if (!price.success) redirect(noticeUrl(form, "invalid"));
       lineCents.set(unitId, majorToMinor(price.data, shop.currency));
     }
-    const rawSet = String(formData.get(SET_PRICE_FIELD) ?? "").trim();
+    const rawSet = String(fields[SET_PRICE_FIELD] ?? "").trim();
     if (rawSet) {
       const price = priceSchema.safeParse(rawSet);
       if (!price.success) redirect(noticeUrl(form, "invalid"));
@@ -145,7 +159,7 @@ export async function createCounterRentalAction(formData: FormData) {
     // A flagged soft-goods unit the staffer ticked "lend anyway" on. Life
     // support is refused whatever is posted here.
     confirmedFlaggedIds: units.filter(
-      (unitId) => formData.get(`${CONFIRM_FIELD_PREFIX}${unitId}`) === "on",
+      (unitId) => fields[`${CONFIRM_FIELD_PREFIX}${unitId}`] === "on",
     ),
   });
   if (!outcome.ok) {
@@ -269,11 +283,7 @@ export async function addCounterRentalPersonAction(formData: FormData) {
   const db = await getDb();
   const slug = session.user.shopSlug;
   const blankForm = shopPath(slug, "gear", "rentals", "new");
-  const parsed = personSchema.safeParse({
-    fullName: String(formData.get("fullName") ?? ""),
-    email: String(formData.get("email") ?? ""),
-    phone: String(formData.get("phone") ?? ""),
-  });
+  const parsed = personSchema.safeParse(readForm(rentalPersonForm, formData));
   if (!parsed.success) redirect(noticeUrl(blankForm, "invalid"));
   const person = await createDiver(db, { shopId: session.user.shopId, ...parsed.data });
   if (!person) redirect(noticeUrl(blankForm, "duplicate"));
@@ -310,13 +320,10 @@ export async function recordCounterRentalCardAction(formData: FormData) {
   const slug = session.user.shopSlug;
   const parsed = cardSeenSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
-    const personId = String(formData.get("personId") ?? "");
+    const landing = readForm(cardSeenLanding, formData);
+    const personId = landing.personId;
     const back = z.uuid().safeParse(personId).success
-      ? counterRentalFormPath(slug, {
-          personId,
-          from: String(formData.get("from") ?? ""),
-          until: String(formData.get("until") ?? ""),
-        })
+      ? counterRentalFormPath(slug, { personId, from: landing.from, until: landing.until })
       : shopPath(slug, "gear", "rentals", "new");
     redirect(noticeUrl(back, "card-invalid"));
   }
@@ -383,19 +390,34 @@ export async function returnCounterRentalAction(formData: FormData) {
   const parsed = returnSchema.safeParse(Object.fromEntries(formData));
   const ticket = ticketLanding(session.user.shopSlug, parsed);
   if (!parsed.data) return;
+  // The units ticked "Pull for service" under a concern (issue #2345), read as
+  // the departure's return reads them: a repeated field, unit ids only. The
+  // writer reaches only units this return closes, so a forged id pulls nothing.
+  const pullGearItemIds = formData
+    .getAll("pull")
+    .filter((value): value is string => typeof value === "string")
+    .filter((value) => z.uuid().safeParse(value).success);
   const outcome = await returnCounterRental(await getDb(), {
     shopId: session.user.shopId,
     ticketId: parsed.data.ticketId,
     outcome: parsed.data.outcome,
     note: parsed.data.note,
     dives: parsed.data.dives,
+    pullGearItemIds,
   });
   // A unit flagged at the return is not "back on the wall": it waits for the
-  // bench, and the notice says so.
-  const returned = parsed.data.outcome === "service_concern" ? "returned-flagged" : "returned";
+  // bench, and the notice says so. "Pulled" only when a unit really moved.
+  const returned =
+    outcome.ok && outcome.pulled > 0
+      ? "returned-pulled"
+      : parsed.data.outcome === "service_concern"
+        ? "returned-flagged"
+        : "returned";
   revalidateAndRedirect(
     shopPath(session.user.shopSlug, "gear"),
-    noticeUrl(ticket, outcome.ok ? returned : outcome.reason),
+    noticeUrl(ticket, outcome.ok ? returned : outcome.reason, {
+      count: outcome.ok && outcome.pulled > 0 ? outcome.pulled : undefined,
+    }),
   );
 }
 

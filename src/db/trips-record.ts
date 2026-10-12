@@ -1,5 +1,6 @@
 import { and, asc, count, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
+import { sellableSeats } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
 import type { TripCrewRole } from "@/lib/crew-roles";
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
@@ -14,7 +15,7 @@ import {
 import type { TripDiveMode } from "@/lib/trip-details";
 import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import type { AppDb, DbExecutor } from "./client";
-import { recordCrewCalledOff } from "./crew-notices";
+import { flushUrgentCrewNotices, recordCrewCalledOff, recordCrewTimeMoved } from "./crew-notices";
 import { recordDeskEvent } from "./desk-events";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import type { Trip } from "./schema";
@@ -32,6 +33,7 @@ import {
   trips,
   userAccounts,
 } from "./schema";
+import { recordShopActivityWithin } from "./shop-activity";
 import { recordTripChangeEvent } from "./trip-change-events";
 import {
   normalizedDiveCount,
@@ -42,8 +44,13 @@ import {
   type TripScheduleDayInput,
   validateDiveSites,
 } from "./trips-create";
-import { liveTrip } from "./trips-live";
-import { bookedDiversCount, heldSeatCounts, seatHeld } from "./trips-queries";
+import { liveTrip, notRehearsal } from "./trips-live";
+import {
+  bookedDiversCount,
+  heldSeatCounts,
+  seatHeld,
+  tripBoatCertifiedPassengers,
+} from "./trips-queries";
 
 /**
  * One departure's own record: read it, edit its details, its dives, its
@@ -88,12 +95,19 @@ export async function tripExistsForShop(
   const rows = await db
     .select({ id: trips.id })
     .from(trips)
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    // A rehearsal is never public (ADR 20261012-rehearsal-departures): its URL
+    // is refused at the edge like a departure that does not exist.
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip(), notRehearsal()))
     .limit(1);
   return rows.length > 0;
 }
 
-/** Trip scoped to a shop (staff pages must never cross tenants), with booked count. */
+/**
+ * Trip scoped to a shop (staff pages must never cross tenants), with booked
+ * count and `sellableCapacity` — its seats on sale under the boat's
+ * certificate (H-107, #2321), which every seats-left reads. `capacity` stays
+ * the stated number the details form edits.
+ */
 export async function getTripWithBooked(db: AppDb, shopId: string, tripId: string) {
   const rows = await db
     .select({
@@ -102,6 +116,7 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
       diveSite: diveSites,
       booked: count(bookings.id),
       bookedDivers: bookedDiversCount(),
+      certifiedPassengers: tripBoatCertifiedPassengers(),
     })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
@@ -114,6 +129,7 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
   return row
     ? {
         ...row.trip,
+        sellableCapacity: sellableSeats(row.trip.capacity, row.certifiedPassengers),
         course: row.course,
         diveSite: row.diveSite,
         booked: row.booked,
@@ -410,10 +426,21 @@ export type TripPatch = {
   isPrivate?: boolean;
   /** The shop's own divemaster target stops applying to this departure (issue #973). */
   selfGuided?: boolean;
+  /** The dives went past no-decompression limits, so the recap says nothing about flying (H-84). */
+  exceedsNoDecoLimits?: boolean;
 };
 
 export type UpdateTripOutcome =
-  | { ok: true; trip: Trip }
+  | {
+      ok: true;
+      trip: Trip;
+      /**
+       * Whether the departure instant changed: the edit moved the boat. The
+       * caller writes the activity log's "moved the departure" line on it,
+       * the same line the schedule builder's move writes (issue #2313).
+       */
+      startMoved: boolean;
+    }
   | { ok: false; reason: "invalid" | "not_found" }
   | { ok: false; reason: "capacity_below_booked"; detail: { bookedCount: number } }
   | { ok: false; reason: "boat_not_found" }
@@ -428,13 +455,19 @@ export type UpdateTripOutcome =
  * already recorded a roll call against (CR-006). Both invariants fail
  * closed with a typed reason instead of silently discarding data.
  */
+/** An integer column's new value, or null on a rehearsal (ADR 20261012-rehearsal-departures). */
+function unlessRehearsal(value: number | null) {
+  return sql<number | null>`case when ${trips.isRehearsal} then null else ${value}::integer end`;
+}
+
 export async function updateTrip(
   db: AppDb,
   shopId: string,
   tripId: string,
   patch: TripPatch,
 ): Promise<UpdateTripOutcome> {
-  return db.transaction(async (tx) => {
+  let timeMoved = false;
+  const outcome = await db.transaction(async (tx): Promise<UpdateTripOutcome> => {
     const plannedDives = normalizedDiveCount(patch.plannedDives);
     if (!plannedDives) return { ok: false, reason: "invalid" };
 
@@ -449,6 +482,11 @@ export async function updateTrip(
         // calendar client re-alerts on are when the boat leaves and where it
         // goes, so both have to be compared against what the patch asks for.
         startsAt: trips.startsAt,
+        // Read so a moved start time is told to the crew of a running
+        // departure only (#2283).
+        status: trips.status,
+        // Read so a changed return time files the activity line too (#2313).
+        endsAt: trips.endsAt,
         diveSiteId: trips.diveSiteId,
         meetingPointLabel: trips.meetingPointLabel,
         meetingPointAddress: trips.meetingPointAddress,
@@ -543,8 +581,9 @@ export async function updateTrip(
       patch.diveSiteId === undefined
         ? existing.diveSiteId
         : (patch.diveSiteId ?? (drafts ? primaryDiveSiteId(drafts) : null));
+    const startMoved = patch.startsAt.getTime() !== existing.startsAt.getTime();
     const revisionMoved =
-      patch.startsAt.getTime() !== existing.startsAt.getTime() ||
+      startMoved ||
       tripSiteListChanged(beforeSites, afterSites) ||
       // The denormalized pointer counts on its own: it is what the feed reads
       // for `LOCATION` when the trip has no meeting point of its own.
@@ -573,18 +612,28 @@ export async function updateTrip(
         startsAt: patch.startsAt,
         endsAt: patch.endsAt,
         capacity: patch.capacity,
-        priceCents: patch.priceCents ?? null,
-        depositCents: patch.depositCents ?? null,
-        cancellationWindowHours: patch.cancellationWindowHours ?? null,
-        minimumBookings: patch.minimumBookings ?? null,
-        minimumDecisionHours: patch.minimumBookings ? (patch.minimumDecisionHours ?? null) : null,
+        // **A rehearsal keeps no price, deposit or minimum** (ADR
+        // 20261012-rehearsal-departures), whatever the details form posts: the
+        // same coercion `insertTripInstance` applies at creation, held here in
+        // SQL against the row's own flag so no edit can make one chargeable.
+        priceCents: unlessRehearsal(patch.priceCents ?? null),
+        depositCents: unlessRehearsal(patch.depositCents ?? null),
+        cancellationWindowHours: unlessRehearsal(patch.cancellationWindowHours ?? null),
+        minimumBookings: unlessRehearsal(patch.minimumBookings ?? null),
+        minimumDecisionHours: unlessRehearsal(
+          patch.minimumBookings ? (patch.minimumDecisionHours ?? null) : null,
+        ),
         plannedDives,
         // Each omitted rather than defaulted: a caller that did not send the
         // field is not asking for a change.
         ...(patch.diveMode === undefined ? {} : { diveMode: patch.diveMode }),
         ...(patch.boatId === undefined ? {} : { boatId: patch.boatId }),
         ...(patch.lensId === undefined ? {} : { lensId: patch.lensId }),
-        ...(patch.isPrivate === undefined ? {} : { isPrivate: patch.isPrivate }),
+        // A rehearsal stays private (`trips_rehearsal_is_private`): unticking
+        // Private on one is a no-op rather than a constraint error.
+        ...(patch.isPrivate === undefined
+          ? {}
+          : { isPrivate: sql<boolean>`(${trips.isRehearsal} or ${patch.isPrivate})` }),
         // **A course session is never self-guided** (issue #1342), the same
         // rule `insertTripInstance` applies to every creation door and for the
         // reason written out there: the mark silences only the shop's own
@@ -601,6 +650,9 @@ export async function updateTrip(
         ...(patch.selfGuided === undefined
           ? {}
           : { selfGuided: existing.courseId ? false : patch.selfGuided }),
+        ...(patch.exceedsNoDecoLimits === undefined
+          ? {}
+          : { exceedsNoDecoLimits: patch.exceedsNoDecoLimits }),
         ...(patch.diveSiteId === undefined
           ? {}
           : { diveSiteId: patch.diveSiteId ?? (drafts ? primaryDiveSiteId(drafts) : null) }),
@@ -640,8 +692,37 @@ export async function updateTrip(
         occurredAt: changedAt,
       });
     }
-    return { ok: true, trip };
+    // The crew hear a moved start time (#2283), the same notice the schedule
+    // board's move records (`moveTrip`).
+    if (existing.status === "scheduled" && startMoved) {
+      await recordCrewTimeMoved(tx, {
+        shopId,
+        tripId,
+        previousStartsAt: existing.startsAt,
+        actorPersonId: patch.changeActorPersonId ?? null,
+        now: changedAt,
+      });
+      timeMoved = true;
+    }
+    // The line the schedule builder's move files, for the same act made from
+    // the departure's own form (#2313). Only when the times actually moved, in
+    // this transaction, and in its own savepoint so the line can never undo the
+    // edit.
+    const timesMoved =
+      existing.startsAt.getTime() !== patch.startsAt.getTime() ||
+      existing.endsAt.getTime() !== patch.endsAt.getTime();
+    if (timesMoved && patch.changeActorPersonId) {
+      await recordShopActivityWithin(tx, {
+        shopId,
+        actorPersonId: patch.changeActorPersonId,
+        write: { code: "departure_moved", tripId },
+      });
+    }
+    return { ok: true, trip, startMoved };
   });
+  // Late news goes now, not on the hour (`flushUrgentCrewNotices`).
+  if (timeMoved) await flushUrgentCrewNotices(db, { shopId, tripIds: [tripId] });
+  return outcome;
 }
 
 /** Ordered dive details for a trip, scoped through the owning shop. */

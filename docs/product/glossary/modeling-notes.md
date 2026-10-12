@@ -164,7 +164,9 @@
   pointer and the departure log are untouched, while the release, order and notes tied to it move to
   the kept record with the rest of the diver's file (their `booking_id` still names the seat). Only
   the seat's own `cancelled` status qualifies; a live seat is never left behind, on a deleted
-  departure or anywhere else.
+  departure or anywhere else. Where a seat left behind is shown — the departure log and the buddy
+  teams panel — it reads under the kept record's name, followed through any later merge
+  (`survivingPersonNames`, `src/db/people.ts`; issue #2333), and the row itself is not rewritten.
 - **Remove vs. erase (a diver)** — two different operations, deliberately not the same button.
   **Removing** a diver is the reversible archive action every entity has
   ([20260719-crud-archive-semantics](../../architecture/decisions/20260719-crud-archive-semantics.md)):

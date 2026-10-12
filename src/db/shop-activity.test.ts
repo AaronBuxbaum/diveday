@@ -14,7 +14,7 @@ import {
   trips,
 } from "./schema";
 import { listShopActivityPeople, pagedShopActivity, recordShopActivity } from "./shop-activity";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff, upcomingTripsWithCounts, updateTrip } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`): every test here writes rows and
@@ -144,6 +144,55 @@ describe("recordShopActivity", () => {
         write: { code: "order_refunded", orderId: owner.id },
       }),
     ).toBe(false);
+  });
+
+  it("files a moved line when the details form changes a departure's time, and none otherwise (#2313)", async () => {
+    const { db, shop } = ctx;
+    const { trip, owner } = await bookedSeat(db, shop.id);
+    const moved = async () =>
+      db
+        .select({ id: activityEvents.id, actor: activityEvents.actorPersonId })
+        .from(activityEvents)
+        .where(
+          and(
+            eq(activityEvents.shopId, shop.id),
+            eq(activityEvents.tripId, trip.id),
+            eq(activityEvents.code, "departure_moved"),
+          ),
+        );
+    const before = (await moved()).length;
+    const save = (startsAt: Date, endsAt: Date, title = trip.title) =>
+      updateTrip(db, shop.id, trip.id, {
+        title,
+        startsAt,
+        endsAt,
+        capacity: trip.capacity,
+        plannedDives: trip.plannedDives,
+        changeActorPersonId: owner.id,
+      });
+
+    // Same times, a new title: not a move.
+    expect(await save(trip.startsAt, trip.endsAt, `${trip.title} (renamed)`)).toMatchObject({
+      ok: true,
+    });
+    expect(await moved()).toHaveLength(before);
+
+    const hour = 3_600_000;
+    expect(
+      await save(new Date(trip.startsAt.getTime() + hour), new Date(trip.endsAt.getTime() + hour)),
+    ).toMatchObject({ ok: true });
+    const lines = await moved();
+    expect(lines).toHaveLength(before + 1);
+    expect(lines.filter((line) => line.actor === owner.id)).toHaveLength(1);
+
+    // Only the return time changing is a move too.
+    expect(
+      await save(
+        new Date(trip.startsAt.getTime() + hour),
+        new Date(trip.endsAt.getTime() + 2 * hour),
+      ),
+    ).toMatchObject({ ok: true });
+    expect(await moved()).toHaveLength(before + 2);
   });
 
   it("records a departure deleted after the delete it describes", async () => {

@@ -5,9 +5,10 @@ import {
   type CancellationRefundSeen,
   sendBookingCancelledNotice,
 } from "@/db/booking-cancelled-notice";
-import { selfCancelBooking } from "@/db/bookings";
+import { addPartySeat, selfCancelBooking } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import { recordDiverSelfCancel } from "@/db/operations";
 import {
   planReadinessLinkRescue,
   type ReadinessLinkRescue,
@@ -18,7 +19,9 @@ import { diverTranslator } from "@/i18n/messages";
 import { describeCheckoutLine } from "@/i18n/participant-labels";
 import { trackEvent } from "@/lib/analytics";
 import { log } from "@/lib/log";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { diverNameSchema } from "@/lib/person-fields";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { base, bounceTarget, contextFor, refuseWhileHeld } from "./action-helpers";
@@ -118,6 +121,21 @@ export async function cancelMyBookingAction(token: string) {
       errorCode: error instanceof Error ? error.name : "unknown_error",
     });
   }
+  // The departure's trail names the diver, so the owner's "who refunded what"
+  // has an answer that is not a staffer. Caught for the same reason as the
+  // refund: the cancellation has already happened.
+  try {
+    await recordDiverSelfCancel(ctx.db, {
+      shopId: ctx.data.shop.id,
+      bookingId: ctx.bookingId,
+      refunded: refund.status === "refunded",
+    });
+  } catch (error) {
+    log("booking.self_cancel_activity_failed", "error", {
+      bookingId: ctx.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+  }
   // The written record of what just happened, with the money in it: the page
   // below says it once, and this is what the diver still has tomorrow.
   await sendBookingCancelledNotice(ctx.db, {
@@ -186,4 +204,67 @@ export async function emailFreshReadinessLinkAction(token: string) {
   }
 
   redirect(`${base(token)}?sent=${RESCUE_PARAM[await sendPlannedReadinessLink(db, plan)]}`);
+}
+
+/**
+ * **"Add a seat"** (UX review 2026-10-11, item 13): bring a friend on the
+ * booking this page belongs to. Authorized by the verified readiness token
+ * like every action here; `addPartySeat` re-checks the trip's capacity and
+ * admission inside its own transaction, so this route only maps its answer to
+ * a notice. The new seat's claim link appears in the party panel on the page
+ * the redirect lands on.
+ */
+export async function addSeatFromReady(token: string, formData: FormData) {
+  // A seat is a booking, so it spends the same per-IP budget the schedule's
+  // booking form does, on top of the token chokepoint every action here takes.
+  const ip = await clientIp();
+  if (!(await checkRateLimit(rateLimitKey("booking", ip), RATE_LIMITS.booking)).allowed) {
+    redirect(bounceTarget(token, "rate_limited"));
+  }
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  refuseWhileHeld(token, ctx.data);
+  if (!ctx.data.canAddSeat) redirect(`${base(token)}?error=seat`);
+  const parsed = diverNameSchema.safeParse(formData.get("seatName"));
+  if (!parsed.success) redirect(`${base(token)}?error=seat-name`);
+  // **Per booking, decided first** (security review of layer 8, D3): the link
+  // is shared by design, so the per-IP bucket above is not the cap on how many
+  // seats one booking can add. Every holder of this link spends from one
+  // bucket, and only once the page has said a seat may be added.
+  if (
+    !(
+      await checkRateLimit(
+        rateLimitKey("ready-add-seat", "booking", ctx.bookingId),
+        RATE_LIMITS.readyAddSeatByBooking,
+      )
+    ).allowed
+  ) {
+    redirect(bounceTarget(token, "rate_limited"));
+  }
+  const outcome = await addPartySeat(ctx.db, {
+    shopId: ctx.data.shop.id,
+    leadBookingId: ctx.bookingId,
+    seatName: parsed.data,
+  }).catch((error: unknown) => {
+    log("ready.add_seat_failed", "error", {
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+    return null;
+  });
+  if (!outcome) redirect(`${base(token)}?error=seat`);
+  if (!outcome.ok) {
+    const code =
+      outcome.reason === "trip_full" || outcome.reason === "divers_full"
+        ? "seat-full"
+        : outcome.reason === "trip_prerequisite" ||
+            outcome.reason === "course_prerequisite" ||
+            outcome.reason === "course_ratio_full"
+          ? "seat-ask-shop"
+          : outcome.reason === "party_full"
+            ? "seat-party-full"
+            : "seat";
+    redirect(`${base(token)}?error=${code}`);
+  }
+  await trackEvent({ name: "booking_completed", source: "diver", partySize: 1 });
+  revalidateAndRedirect(base(token), `${base(token)}?saved=seat#party-seats`);
 }

@@ -21,6 +21,7 @@ import { listAvailableGearUnits, reserveGearUnit } from "./gear";
 import { subscribeManifestEvents } from "./manifest-events";
 import {
   departureRollCallForBooking,
+  departureRollCallTakenTripIds,
   getTripManifest,
   getTripManifests,
   listDepartureBoardedBookingIds,
@@ -32,6 +33,7 @@ import {
 import { markBookingNoShow } from "./no-show";
 import {
   activityEvents,
+  boats,
   bookings,
   people,
   personRoles,
@@ -475,6 +477,41 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
   });
 
   /**
+   * **The diver's own "running late" reaches the captain** (#2319), and only
+   * while the seat is still one to arrive: the manifest reads the column
+   * through `runningLateShown`, so a seat the desk released stops carrying it
+   * on the same read. It moves no count either way.
+   */
+  it("carries a running-late word onto the row, and drops it once the desk releases the seat", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    // A seat still to arrive: the demo checks some of this boat in already.
+    const booking = (await getTripRoster(db, shop.id, reef.id)).find(
+      (seat) => seat.booking.status === "booked",
+    );
+    if (!booking) throw new Error("no demo seat still to arrive");
+    const saidAt = new Date(reef.startsAt.getTime() - 20 * 60_000);
+    const before = await getTripManifest(db, shop.id, reef.id);
+    await db
+      .update(bookings)
+      .set({ runningLateAt: saidAt })
+      .where(eq(bookings.id, booking.booking.id));
+    const diverOn = async () =>
+      (await getTripManifest(db, shop.id, reef.id))?.divers.find(
+        (diver) => diver.bookingId === booking.booking.id,
+      );
+    expect((await diverOn())?.runningLateAt).toEqual(saidAt);
+    expect((await getTripManifest(db, shop.id, reef.id))?.summary).toEqual(before?.summary);
+
+    await markBookingNoShow(db, {
+      shopId: shop.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      now: reef.startsAt,
+    });
+    expect((await diverOn())?.runningLateAt).toBeNull();
+  });
+
+  /**
    * The seat comes back even when it is the seat the shop has already sold.
    * Refusing would leave a person aboard whom the manifest does not carry, so
    * the boat being over is *said* instead — `summary.overCapacity`, the one
@@ -531,6 +568,23 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       .update(trips)
       .set({ capacity: aboard - 1 })
       .where(eq(trips.id, reef.id));
+    expect((await getTripManifest(db, shop.id, reef.id))?.summary.overCapacity).toBe(1);
+
+    // Measured against what the boat may carry, not only what the departure
+    // states (#2321): back at the counted number, on a hull certified for one
+    // fewer, the line still says one over.
+    await db.update(trips).set({ capacity: aboard }).where(eq(trips.id, reef.id));
+    const [hull] = await db
+      .insert(boats)
+      .values({
+        shopId: shop.id,
+        name: "Certified hull",
+        capacity: aboard,
+        certifiedPassengers: aboard - 1,
+      })
+      .returning();
+    if (!hull) throw new Error("boat not inserted");
+    await db.update(trips).set({ boatId: hull.id }).where(eq(trips.id, reef.id));
     expect((await getTripManifest(db, shop.id, reef.id))?.summary.overCapacity).toBe(1);
   });
 
@@ -3349,6 +3403,55 @@ describe("boarded at an earlier checkpoint", () => {
     expect(at("departure", sailed.booking.id)).toBe(false);
     expect(at("after_dive_1", sailed.booking.id)).toBe(true);
     expect(at("after_dive_1", joined.booking.id)).toBe(false);
+  });
+});
+
+/**
+ * **Whether a departure roll call was taken at all** (dive-domain review of UX
+ * batch 1). A finished departure's record says "No roll call taken" only when
+ * the crew recorded nothing at the dock: never because nobody boarded, and
+ * never because the seats they boarded were cancelled afterwards.
+ */
+describe("departureRollCallTakenTripIds", () => {
+  async function dockEvent(
+    status: "boarded" | "not_boarded",
+    checkpoint: "departure" | "after_dive_1" = "departure",
+  ) {
+    const { db, shop, reef, staff } = await manifestContext();
+    const [first] = await getTripRoster(db, shop.id, reef.id);
+    if (!first) throw new Error("demo roster too small");
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: first.booking.id,
+      recordedByPersonId: staff.id,
+      status,
+      checkpoint,
+      occurredAt: reef.startsAt,
+    });
+    return { db, shop, reef, bookingId: first.booking.id };
+  }
+
+  it("names nothing before the crew record anything", async () => {
+    const { db, shop, reef } = await manifestContext();
+    expect(await departureRollCallTakenTripIds(db, shop.id, [reef.id])).toEqual(new Set());
+  });
+
+  it("names a departure whose roster the crew all marked not boarded", async () => {
+    const { db, shop, reef } = await dockEvent("not_boarded");
+    expect(await departureRollCallTakenTripIds(db, shop.id, [reef.id])).toEqual(new Set([reef.id]));
+  });
+
+  it("still names it once the seat the crew boarded is cancelled", async () => {
+    const { db, shop, reef, bookingId } = await dockEvent("boarded");
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
+    expect(await listDepartureBoardedBookingIds(db, shop.id, [reef.id])).toEqual(new Set());
+    expect(await departureRollCallTakenTripIds(db, shop.id, [reef.id])).toEqual(new Set([reef.id]));
+  });
+
+  it("does not count an after-dive count as a dock roll call", async () => {
+    const { db, shop, reef } = await dockEvent("boarded", "after_dive_1");
+    expect(await departureRollCallTakenTripIds(db, shop.id, [reef.id])).toEqual(new Set());
   });
 });
 

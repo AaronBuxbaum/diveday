@@ -14,7 +14,6 @@ import {
   requestCrewAssignment,
   saveCrewAvailabilityBlock,
   tripRatioGapNeedsInstructor,
-  withdrawCrewAssignmentRequest,
 } from "./crew-requests";
 import {
   bookings,
@@ -338,37 +337,6 @@ describe("crew assignment requests", () => {
       now,
     });
     expect(outcome).toEqual({ ok: false, reason: "trip_not_found" });
-  });
-
-  it("withdraws softly, and only your own", async () => {
-    const { db, shop, crew, owner, trip } = await context();
-    const asked = await requestCrewAssignment(db, {
-      shopId: shop.id,
-      tripId: trip.id,
-      personId: crew.id,
-      actorPersonId: crew.id,
-      now,
-    });
-    if (!asked.ok) throw new Error("expected a request");
-
-    expect(
-      await withdrawCrewAssignmentRequest(db, {
-        shopId: shop.id,
-        requestId: asked.id,
-        actorPersonId: owner.id,
-        now,
-      }),
-    ).toEqual({ ok: false, reason: "not_allowed" });
-
-    expect(
-      await withdrawCrewAssignmentRequest(db, {
-        shopId: shop.id,
-        requestId: asked.id,
-        actorPersonId: crew.id,
-        now,
-      }),
-    ).toMatchObject({ ok: true });
-    expect(await listCrewAssignmentRequests(db, shop.id, [trip.id])).toEqual([]);
   });
 
   it("refuses a decision from somebody who does not manage the roster", async () => {

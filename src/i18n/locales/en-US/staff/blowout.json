@@ -12,6 +12,7 @@
   },
   "record": {
     "title": "Blow-out cascade",
+    "titleRunEnded": "Canceled with its run",
     "calledBy": "Called by {name} · {when}",
     "notified": "Notified",
     "rebooked": "Rebooked",
@@ -45,7 +46,7 @@
     "called": "Blow-out called. The trip is canceled and every diver’s message is on its way.",
     "resumed": "Retried the unsent messages.",
     "departed": "This departure is underway or has left, so nothing was canceled.",
-    "error": "That didn’t work. Try again.",
+    "error": "Nothing was canceled: this departure was deleted or couldn’t be read just now. Open it from the schedule to check it, then call the blow-out again.",
     "dayCalled": "{count, plural, one {Blow-out called. The departure is canceled and every diver’s message is on its way.} other {Blow-out called on # departures. They are canceled and every diver’s message is on its way.}}",
     "dayPartly": "{called, plural, one {# departure called.} other {# departures called.}} {skipped, plural, one {# couldn’t be called: already left or no longer scheduled.} other {# couldn’t be called: already left or no longer scheduled.}}",
     "dayNone": "Select at least one departure to call."

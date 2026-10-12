@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import { setShopDeskHours } from "@/db/desk-pings";
 import { setShopReviewUrl } from "@/db/shops";
 import { parseDeskHours } from "@/lib/desk-hours";
+import { formValue, readForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -38,6 +39,8 @@ export async function saveReviewUrlAction(formData: FormData) {
   revalidateAndRedirect(settings, noticeUrl(settings, "review-url-saved", { saved: "reviewLink" }));
 }
 
+const deskHoursForm = z.object({ deskOpens: formValue(), deskCloses: formValue() });
+
 /**
  * When somebody is at the desk: one window every day, in the shop's own zone.
  * A diver message outside it pings the staff who asked (`src/lib/desk-hours.ts`).
@@ -46,7 +49,8 @@ export async function saveDeskHoursAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
-  const hours = parseDeskHours(formData.get("deskOpens"), formData.get("deskCloses"));
+  const { deskOpens, deskCloses } = readForm(deskHoursForm, formData);
+  const hours = parseDeskHours(deskOpens, deskCloses);
   if (!hours) redirect(noticeUrl(settings, "desk-hours-invalid", { saved: "deskHours" }));
   await setShopDeskHours(await getDb(), session.user.shopId, hours);
   revalidateAndRedirect(settings, noticeUrl(settings, "desk-hours-saved", { saved: "deskHours" }));

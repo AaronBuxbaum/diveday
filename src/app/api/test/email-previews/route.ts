@@ -6,6 +6,16 @@ import { messageFor } from "@/lib/notifications/render";
 
 const dummyUuid = "00000000-0000-0000-0000-000000000001";
 
+/** A departure's meeting point as a shop would type it: sample data, not copy. */
+const pier = "North Pier";
+const SAMPLE_MEETING_POINT = {
+  label: pier,
+  address: "1 Dock St, Key Largo, FL 33037",
+  landmark: "Blue awning beside the fuel dock",
+  parking: "Free lot behind the bait shop",
+  mapQuery: `${pier}, 1 Dock St, Key Largo, FL 33037`,
+};
+
 const SAMPLES: Notification[] = [
   {
     kind: "booking_confirmation",
@@ -21,6 +31,10 @@ const SAMPLES: Notification[] = [
     timezone: "America/New_York",
     readinessUrl: "https://diveday.example/ready/sample-token",
     packingList: ["Reef-safe sunscreen", "C-card / certification proof"],
+    meetingPoint: SAMPLE_MEETING_POINT,
+    calendarUrl: "https://diveday.example/s/blue-mantis/trips/trip-1/calendar",
+    money: { due: "deposit", depositCents: 5_000, balanceCents: 10_000, currency: "usd" },
+    freeCancellationUntil: new Date("2026-08-30T13:00:00Z"),
   },
   {
     kind: "trip_reminder_24h",
@@ -40,6 +54,25 @@ const SAMPLES: Notification[] = [
       bring: ["Towel", "Certification card", "Sunglasses"],
       whoToText: "+1 305 555 0199",
     },
+    meetingPoint: SAMPLE_MEETING_POINT,
+  },
+  {
+    kind: "trip_rescheduled",
+    bookingId: dummyUuid,
+    shopId: dummyUuid,
+    to: "diver@example.com",
+    locale: DEFAULT_DIVER_LOCALE,
+    diverName: "Sam Diver",
+    shopName: "Blue Mantis Scuba",
+    tripTitle: "Two-Tank Coral Reef Departure",
+    previousStartsAt: new Date("2026-08-31T13:00:00Z"),
+    startsAt: new Date("2026-09-01T13:00:00Z"),
+    endsAt: new Date("2026-09-01T17:00:00Z"),
+    timezone: "America/New_York",
+    dockCallMinutes: 30,
+    revision: 2,
+    meetingPoint: SAMPLE_MEETING_POINT,
+    readinessUrl: "https://diveday.example/ready/sample-token",
   },
   {
     kind: "trip_recap",

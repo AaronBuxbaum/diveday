@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ROLL_CALL_PANEL_ATTRIBUTE } from "@/components/RollCallTouchCue";
 import { PanelHeight, ROLL_CALL_PANEL_HEIGHT_VAR } from "./PanelHeight";
 
 /**
@@ -101,6 +102,14 @@ describe("the pinned card publishes its own height", () => {
     expect(screen.getByRole("region", { name: "After dive 1" })).toBeInTheDocument();
     expect(screen.getByTestId("column").style.getPropertyValue(ROLL_CALL_PANEL_HEIGHT_VAR)).toBe(
       "",
+    );
+  });
+
+  it("wears the mark the touch cue's line sits under (issue #2328)", () => {
+    vi.stubGlobal("ResizeObserver", StubResizeObserver);
+    renderInColumn();
+    expect(screen.getByRole("region", { name: "After dive 1" })).toHaveAttribute(
+      ROLL_CALL_PANEL_ATTRIBUTE,
     );
   });
 });

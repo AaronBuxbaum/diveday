@@ -9,11 +9,13 @@ import { seatName } from "@/lib/held-seat";
 import { log } from "@/lib/log";
 import {
   type BuddyTeammate,
+  boardedBefore,
   buildTripManifest,
   carryForwardNotBoarded,
   isRollCallCheckpoint,
   type ManifestBuddyTeam,
   type ManifestCrewMember,
+  manifestAtCheckpoint,
   RETRACTION_SUPERSEDED,
   type RollCallCheckpoint,
   type RollCallRecord,
@@ -23,6 +25,7 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
+import { runningLateShown } from "@/lib/running-late";
 import { medicalWaiverMark } from "@/lib/waivers";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import { standingArrivalStatus } from "./arrival-provenance";
@@ -44,6 +47,7 @@ import {
   tripAssignments,
   trips,
 } from "./schema";
+import { lockSeatDeparture } from "./seat-locks";
 import { getShopById } from "./shops";
 import { crewClashes } from "./trips-crew";
 import { liveTrip } from "./trips-live";
@@ -806,6 +810,38 @@ export async function listDepartureCrewRollCallByTrip(
 }
 
 /**
+ * **The departures whose dock roll call was taken at all**: any departure
+ * checkpoint event recording a result (`boarded` or `not_boarded`), whatever
+ * has happened to its booking since and whatever later undid it.
+ *
+ * Deliberately **not** the cancelled-booking-guarded readers above: they
+ * answer who is aboard, and a seat cancelled after it was boarded is nobody.
+ * This answers whether the crew stood at the dock and counted, which that
+ * cancel does not unsay. A finished departure's record reads it (UX review
+ * 2026-10-10, item 10), so a boat whose whole roster stayed ashore, or whose
+ * boarded seats were cancelled, never reads "No roll call taken".
+ */
+export async function departureRollCallTakenTripIds(
+  db: AppDb,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Set<string>> {
+  if (tripIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ tripId: rollCallEvents.tripId })
+    .from(rollCallEvents)
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        inArray(rollCallEvents.tripId, [...tripIds]),
+        eq(rollCallEvents.checkpoint, "departure"),
+        inArray(rollCallEvents.status, ["boarded", "not_boarded"]),
+      ),
+    );
+  return new Set(rows.map((row) => row.tripId));
+}
+
+/**
  * The flat view of {@link listDepartureBoardedByTrip}: every booking aboard
  * across the given trips. This is the manifest's half of the coupling task 149
  * closes from the other side (`checkedIn` on `ManifestDiverInput`) —
@@ -906,6 +942,9 @@ export async function getTripManifests(
       ] as const;
     }),
   );
+  const riderHoldByBooking = new Map(
+    readinessRows.map((row) => [row.booking.id, row.riderMedicalHold] as const),
+  );
   // Buddy teams, reduced to the members who are actually aboard. A member
   // whose seat was since cancelled stays listed (and dissolvable) on the teams
   // panel, but is dropped here: a cancelled seat is nobody (ADR
@@ -969,7 +1008,10 @@ export async function getTripManifests(
     // The seats this boat sells, carried so the manifest can say when the head
     // count has passed them (`summary.overCapacity`). Nothing on the boarding
     // path refuses, so this is the only place the boat being over gets said.
-    capacity: trip.capacity,
+    // Capped at the boat's certificate (#2321): over the certificate is over.
+    capacity: trip.sellableCapacity,
+    // Printed beside souls on board, so a practice sheet is never read as a boat.
+    isRehearsal: trip.isRehearsal,
   };
   const diverInputs = roster.map(({ booking, person }) => {
     return {
@@ -999,6 +1041,7 @@ export async function getTripManifests(
       ),
       nitroxRequested: booking.wantsNitrox && certified.has(person.id),
       medicalWaiver: medicalByBooking.get(booking.id) ?? null,
+      riderMedicalHold: riderHoldByBooking.get(booking.id) ?? null,
       // Null/false whenever the shop holds no date of birth, so the captain's
       // list stays quiet rather than showing "unknown" down the whole boat.
       age: person.dateOfBirth ? ageOnDate(person.dateOfBirth, tripDate) : null,
@@ -1014,6 +1057,12 @@ export async function getTripManifests(
       depthAdvisory: depthByBooking.get(booking.id),
       hotelPickupLocation: booking.hotelPickupLocation,
       pickupTime: booking.pickupTime,
+      // The diver's own "running late" (#2319), cleared from an arrived or
+      // released seat the way the arrivals list clears it.
+      runningLateAt: runningLateShown({
+        bookingStatus: booking.status,
+        runningLateAt: booking.runningLateAt,
+      }),
       checkedIn: booking.status === "checked_in",
       // The other half of the same column, and the one the roster read could
       // not say before there was a writer for it (#1209): this seat was
@@ -1058,9 +1107,9 @@ export async function getTripManifests(
       divers: diverInputs.map((diver) => ({
         ...diver,
         rollCall: effectiveByBooking.get(diver.bookingId)?.[index],
-        boardedEarlier: (effectiveByBooking.get(diver.bookingId) ?? [])
-          .slice(0, index)
-          .some((record) => record?.state === "boarded"),
+        boardedEarlier: boardedBefore(
+          (effectiveByBooking.get(diver.bookingId) ?? []).slice(0, index),
+        ),
       })),
     }),
   );
@@ -1073,10 +1122,7 @@ export async function getTripManifest(
   checkpoint: RollCallCheckpoint = "departure",
 ): Promise<TripManifest | null> {
   const manifests = await getTripManifests(db, shopId, tripId);
-  if (!manifests || !isRollCallCheckpoint(checkpoint, manifests[0]?.trip.plannedDives ?? 0)) {
-    return null;
-  }
-  return manifests.find((manifest) => manifest.checkpoint === checkpoint) ?? null;
+  return manifests ? manifestAtCheckpoint(manifests, checkpoint) : null;
 }
 
 /**
@@ -1466,15 +1512,18 @@ export async function recordRollCall(
       if (existing) return { ok: true, eventId: existing.id, duplicate: true };
     }
 
-    // `FOR UPDATE`, on the same join shape `markBookingNoShow` locks — bookings
-    // then trips, in one statement, so neither transaction ends up holding what
-    // the other is waiting for. This booking row is the one object the desk and
-    // the rail share, and until this lock existed they did not share it: the
-    // counter took it `FOR UPDATE` while this read was plain, so "the diver is
-    // aboard" and "the diver never came" were decided against the same
-    // pre-state, and the boat could sail carrying a body whose seat the shop
-    // had put back on sale. Raced for real in `roll-call.postgres.test.ts`,
-    // which is red the moment this is removed.
+    // The departure, then the seat — the one order every seat writer takes
+    // (`lockSeatDeparture`, #2324), so neither this nor the desk ends up
+    // holding what the other is waiting for. The booking row `FOR UPDATE` is
+    // the one object the desk and the rail share, and until this lock existed
+    // they did not share it: the counter took it `FOR UPDATE` while this read
+    // was plain, so "the diver is aboard" and "the diver never came" were
+    // decided against the same pre-state, and the boat could sail carrying a
+    // body whose seat the shop had put back on sale. Raced for real in
+    // `roll-call.postgres.test.ts`, which is red the moment this is removed,
+    // and `seat-lock-order.postgres.test.ts`, red on the old booking-first order.
+    const lockedTripId = await lockSeatDeparture(tx, input.shopId, input.bookingId);
+    if (lockedTripId !== input.tripId) return { ok: false, reason: "booking_unavailable" };
     const [booking] = await tx
       .select({
         id: bookings.id,
@@ -1494,7 +1543,7 @@ export async function recordRollCall(
         ),
       )
       .limit(1)
-      .for("update");
+      .for("update", { of: bookings });
     if (!booking) return { ok: false, reason: "booking_unavailable" };
     if (!isRollCallCheckpoint(checkpoint, booking.plannedDives)) {
       return { ok: false, reason: "invalid_checkpoint" };
@@ -1727,7 +1776,13 @@ export async function recordCrewRollCall(
       if (existing) return { ok: true, eventId: existing.id, duplicate: true };
     }
 
-    // Same tenancy and trip-status gate the other two writers apply.
+    // Same tenancy and trip-status gate the other two writers apply — and the
+    // trip's lock, taken here, before the crew member's own seat below
+    // (#2324's one order: trip, then booking). An after-dive `not_boarded`
+    // locks that seat and then updates this row
+    // (`pauseRecapOnMissingAfterDive`); booking-then-trip deadlocked against
+    // the counter on a staffer's seat (`seat-lock-order.postgres.test.ts`).
+    // `no key update`, so the event's own foreign-key `KEY SHARE` passes.
     const [trip] = await tx
       .select({ id: trips.id, plannedDives: trips.plannedDives })
       .from(trips)
@@ -1739,7 +1794,8 @@ export async function recordCrewRollCall(
           scheduledOrCountingHeads(input.tripId),
         ),
       )
-      .limit(1);
+      .limit(1)
+      .for("no key update", { of: trips });
     if (!trip) return { ok: false, reason: "trip_unavailable" };
     if (!isRollCallCheckpoint(checkpoint, trip.plannedDives)) {
       return { ok: false, reason: "invalid_checkpoint" };
@@ -1873,9 +1929,8 @@ export async function recordCrewRollCall(
     //
     // The lookup is a probe of `bookings_trip_person_unique`, so the ordinary
     // crew member — who holds no seat — pays one index miss and locks nothing.
-    // Ahead of the insert, the locks this transaction takes stay in the order
-    // the counter takes them (the booking, then the trip through the event's
-    // foreign key), which is what keeps the pair out of a deadlock.
+    // The trip is already held (`for no key update`, above), so this takes
+    // the seat second, in the counter's own order (`lockSeatDeparture`).
     const seat = standingResultMeansSailed(checkpoint, input.status)
       ? ((
           await tx

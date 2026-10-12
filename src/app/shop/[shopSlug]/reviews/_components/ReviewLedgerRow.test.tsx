@@ -65,6 +65,7 @@ const BASE: StaffReview = {
   tripTitle: "Two-Tank Reef — French Reef",
   divedAt: new Date("2026-08-29T11:00:00.000Z"),
   createdAt: new Date("2026-08-29T22:00:00.000Z"),
+  replyBody: null,
 };
 
 function row(review: Partial<StaffReview>, group: "waiting" | "published" | "hidden" = "waiting") {

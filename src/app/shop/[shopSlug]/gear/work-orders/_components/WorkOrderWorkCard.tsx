@@ -23,6 +23,7 @@ import {
 import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
 import type { GearItemKind, GearServiceClock } from "@/lib/gear";
 import {
+  type CustomerRegulatorServiceMonths,
   suggestCareDueOn,
   WORK_ORDER_OUTCOMES,
   WORK_ORDER_TEXT_LIMITS,
@@ -50,6 +51,7 @@ type WorkPiece = { id: string | null; kind: GearItemKind; label: string };
 export function WorkOrderWorkCard({
   detail,
   previousClocks,
+  customerRegulatorMonths,
   todayLocal,
   locale,
   t,
@@ -57,6 +59,8 @@ export function WorkOrderWorkCard({
   detail: WorkOrderDetail;
   /** A shop unit's last reading of each clock, carried into the suggestions. */
   previousClocks: readonly GearServiceClock[];
+  /** The shop's interval for a customer's regulator (`shops.customer_regulator_service_months`). */
+  customerRegulatorMonths: CustomerRegulatorServiceMonths;
   todayLocal: CalendarDate;
   locale: string;
   t: StaffTranslator;
@@ -182,6 +186,7 @@ export function WorkOrderWorkCard({
                   careKind,
                   performedOn: todayLocal,
                   previous: clock,
+                  customerRegulatorMonths,
                 });
                 const careLabel = workOrderCareLabel(t, careKind);
                 const runsClock = careKind !== "note";

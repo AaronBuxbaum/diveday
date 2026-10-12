@@ -18,7 +18,7 @@ import {
   userAccounts,
   waiverRecords,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * The founder's numbers, read off the database (ADR 20261007-founder-metrics).
@@ -71,6 +71,7 @@ export async function departureRollCallEvents(
       and(
         realShop(),
         liveTrip(),
+        notRehearsal(),
         eq(rollCallEvents.checkpoint, "departure"),
         gte(localDay, range.from),
         lte(localDay, range.to),
@@ -113,7 +114,7 @@ export async function syncShopMilestones(db: AppDb): Promise<void> {
         .from(trips)
         // diveday:allow-deleted-trips: a departure that was scheduled and later deleted was still the shop's first step onto the board
         .innerJoin(shops, eq(shops.id, trips.shopId))
-        .where(realShop())
+        .where(and(realShop(), notRehearsal()))
         .groupBy(trips.shopId),
     },
     {

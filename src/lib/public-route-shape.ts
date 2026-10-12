@@ -50,8 +50,10 @@
  * row decides.
  *
  * `null` means "this module has no opinion" — the URL is outside the
- * namespace, or names no route in it at all, which Next already answers with a
- * real 404 of its own, or it names a guide that is really there.
+ * namespace, or (outside `/s/**`) names no route at all, which Next already
+ * answers with a real 404 of its own, or it names a guide that is really
+ * there. Inside `/s/**` a path naming no route is `malformed` instead, so the
+ * refusal wears the shop it sat under (see `shopNamespaceShape`).
  * `{ kind: "malformed" }` means "this names nothing and cannot name anything",
  * which needs no query; `{ kind: "absent" }` is the same verdict for a URL with
  * no shop over it, and it is the one shape that is already an answer rather
@@ -170,15 +172,42 @@ function closedListShape(namespace: string, rest: string[]): PublicRouteShape | 
 /** Real pages that sit where a closed-list segment would otherwise be read. */
 const STATIC_SIBLINGS = new Set(["switching/spreadsheet"]);
 
+/**
+ * The link-preview images Next serves from `opengraph-image.tsx` beside the
+ * storefront and beside a departure. They are routes, so the edge leaves them
+ * alone; a hashed variant (`opengraph-image-<id>`) is the same file.
+ */
+const isPreviewImage = (segment: string | undefined) =>
+  segment?.startsWith("opengraph-image") ?? false;
+
 /** Everything below `/s` — the shop's own storefront, where every segment is a row. */
 function shopNamespaceShape(segments: string[]): PublicRouteShape | null {
   const [shopSlug, ...rest] = segments;
   if (!shopSlug) return null;
   const shop = { kind: "shop", shopSlug } as const;
+  /**
+   * **A path under a shop that names no route at all is still that shop's
+   * dead link** (UX review 2026-10-10, item 11). Next answers it with a real
+   * 404 on its own, but from the root boundary, which has no shop to frame
+   * it by: `/s/blue-mantis/anything-wrong` showed DiveDay's own refusal and a
+   * button to DiveDay's sales page, to a diver who was on a shop's site. So it
+   * is refused here as `malformed`, which costs the one shop read every other
+   * refusal in the namespace already pays and buys the shop's own frame and
+   * the door back to its board.
+   *
+   * Safe by the invariant above because every route under `/s/<shop>` is
+   * named in this function: a path that falls through to here matches no
+   * `page.tsx` or `route.ts`, so there was never a page to serve.
+   * `src/app/edge-refusal-coverage.test.ts` holds that to the route tree.
+   */
+  const unrouted = { kind: "malformed", shopSlug } as const;
   const [first, second, third] = rest;
 
   if (rest.length === 0) return shop;
-  if (rest.length === 1) return first && SHOP_ONLY_CHILDREN.has(first) ? shop : null;
+  if (rest.length === 1) {
+    if (isPreviewImage(first)) return null;
+    return first && SHOP_ONLY_CHILDREN.has(first) ? shop : unrouted;
+  }
   if (rest.length === 2 && second) {
     if (first === "courses") return { kind: "course", shopSlug, courseSlug: second };
     if (first === "sites") {
@@ -191,7 +220,7 @@ function shopNamespaceShape(segments: string[]): PublicRouteShape | null {
     // again here so this function stays true on its own terms rather than by
     // an ordering two files away.
     if (first === "embed") return isEmbedWidget(second) ? shop : { kind: "malformed", shopSlug };
-    return null;
+    return unrouted;
   }
   // The framed trip page's own segment, which the proxy only ever rewrites onto
   // and refuses by name (`isInternalEmbedRoute`) before it asks for a shape.
@@ -203,7 +232,8 @@ function shopNamespaceShape(segments: string[]): PublicRouteShape | null {
   if (rest.length === 3 && first === "trips" && second && third && TRIP_CHILDREN.has(third)) {
     return tripShape(shopSlug, second);
   }
-  return null;
+  if (rest.length === 3 && first === "trips" && isPreviewImage(third)) return null;
+  return unrouted;
 }
 
 /**
